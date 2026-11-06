@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -33,6 +34,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +66,7 @@ import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.LoadingRow
 import com.siansiansu.taigikeyboard.ui.components.NoticeCard
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
+import com.siansiansu.taigikeyboard.ui.components.RetryCard
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -75,7 +78,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val DISPLAY_LIMIT = 100
+/** Load the next page once the last visible item is this close to the end of the list. */
+private const val LOAD_MORE_THRESHOLD = 10
 
 // Custom dictionary management — add, edit, import/export, and delete entries
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,8 +93,9 @@ fun CustomDictionaryScreen(
     // Captured for the non-Composable export/import callbacks; tracks the live display language.
     val stringResolver by rememberUpdatedState(LocalStringResolver.current)
 
-    val entries by viewModel.entries.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val list by viewModel.list.collectAsStateWithLifecycle()
+    // The text field's own state, not the flow: a field fed from a flow can lose keystrokes.
+    var filterText by remember { mutableStateOf(viewModel.list.value.filter) }
     val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
     val isCustomDictEnabled by viewModel.isCustomDictEnabled.collectAsStateWithLifecycle()
 
@@ -98,20 +103,21 @@ fun CustomDictionaryScreen(
     var editingEntry by remember { mutableStateOf<CustomDictionaryWord?>(null) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
-    var filterText by remember { mutableStateOf("") }
-
-    val filteredEntries =
-        if (filterText.isEmpty()) {
-            entries.take(DISPLAY_LIMIT)
-        } else {
-            val query = filterText.lowercase()
-            entries.filter {
-                it.roman.lowercase().contains(query) ||
-                    it.hanji.lowercase().contains(query)
-            }
-        }
 
     LaunchedEffect(Unit) { viewModel.load() }
+
+    val listState = rememberLazyListState()
+    val isNearEnd by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: return@derivedStateOf false
+            lastVisible >= layout.totalItemsCount - LOAD_MORE_THRESHOLD
+        }
+    }
+    // Re-evaluated after every load that lands, so staying at the end still pages on.
+    LaunchedEffect(isNearEnd, list.landedLoads) {
+        if (isNearEnd) viewModel.loadMore()
+    }
 
     // File import launcher
     val importLauncher =
@@ -205,6 +211,7 @@ fun CustomDictionaryScreen(
                     .padding(padding),
         ) {
             LazyColumn(
+                state = listState,
                 modifier =
                     Modifier
                         .weight(1f)
@@ -319,15 +326,17 @@ fun CustomDictionaryScreen(
                     }
                 }
 
-                if (isLoading) {
+                if (list.isLoading) {
                     item { SettingsCard { LoadingRow() } }
-                } else if (entries.isEmpty()) {
+                } else if (list.hasReadFailed && list.entries.isEmpty()) {
+                    item { RetryCard(text = L10n.desktopCustomDictReadFailed, onRetry = viewModel::load) }
+                } else if (list.total == 0) {
                     item { EmptyListCard(L10n.dictionaryCustomDictEmpty) }
-                } else if (filterText.isNotEmpty() && filteredEntries.isEmpty()) {
+                } else if (list.entries.isEmpty()) {
                     item { NoticeCard(L10n.dictionaryNoResults) }
                 } else {
                     itemsIndexed(
-                        items = filteredEntries,
+                        items = list.entries,
                         key = { _, entry -> entry.id },
                     ) { index, entry ->
                         Row(
@@ -361,7 +370,7 @@ fun CustomDictionaryScreen(
                                 )
                             }
                         }
-                        if (index < filteredEntries.lastIndex) {
+                        if (index < list.entries.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 20.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant,
@@ -376,7 +385,10 @@ fun CustomDictionaryScreen(
             // Filter (anchored at bottom)
             FilterSearchBar(
                 value = filterText,
-                onValueChange = { filterText = it },
+                onValueChange = {
+                    filterText = it
+                    viewModel.updateFilter(it)
+                },
                 placeholder = L10n.dictionarySearchPlaceholder,
             )
         }

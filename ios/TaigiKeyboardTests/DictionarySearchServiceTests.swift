@@ -58,10 +58,6 @@ final class DictionarySearchServiceTests: XCTestCase {
             searchCalls += 1
             return entries.filter { $0.roman.hasPrefix(query) }
         }
-
-        override func listAll() async throws -> [CustomDictionaryEntry] {
-            entries
-        }
     }
 
     private let myWord = CustomDictionaryEntry(roman: "taigi", hanji: "我的台語")

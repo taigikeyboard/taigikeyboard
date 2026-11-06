@@ -11,7 +11,11 @@ import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
  * cannot load the engine).
  */
 open class StubUserDataClient : UserDataClient {
-    override suspend fun listAll(): List<CustomDictionaryWord> = error("unused")
+    override suspend fun listCustomEntries(
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ): CustomDictionaryPage = error("unused")
 
     override suspend fun save(word: CustomDictionaryWord): Unit = error("unused")
 

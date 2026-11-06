@@ -36,6 +36,7 @@
     <string name="i18n_desktop_telexGuideHyphen">ハイフン</string>
     <string name="i18n_desktop_menuUndo">取り消す</string>
     <string name="i18n_desktop_dictionarySourcesLink">辞書の管理</string>
+    <string name="i18n_desktop_customDictReadFailed">カスタム辞書を読み込めませんでした</string>
     <string name="i18n_dictionary_customDictionary">カスタム辞書</string>
     <string name="i18n_dictionary_customDictEnabled">カスタム辞書を有効にする</string>
     <string name="i18n_dictionary_customDictEnabledInfo">オンにすると、追加した単語が候補に表示されます。</string>

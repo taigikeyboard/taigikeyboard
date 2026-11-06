@@ -47,10 +47,12 @@ extension RustEngineBridge {
 
     // MARK: - Custom dictionary
 
-    /// `limit` 0 lists every entry.
-    static func customDictionaryList(limit: UInt32 = 0) -> Taigi_Engine_CustomEntries? {
+    /// One page of the entries `filter` matches, newest edit first.
+    static func customDictionaryList(filter: String, limit: UInt32, offset: UInt32) -> Taigi_Engine_CustomEntries? {
         var list = Taigi_Engine_ListCustomEntries()
+        list.filter = filter
         list.limit = limit
+        list.offset = offset
         guard case let .customEntries(entries)? = userDataResult(
             .listCustomEntries(list),
             op: "customDictionaryList",

@@ -128,6 +128,10 @@ pub struct CustomDictionaryStore {
     entry_limit: usize,
 }
 
+/// Newest edit first; `id` breaks ties (an import stamps thousands of rows with
+/// one second), so pages cut by offset never skip or repeat a row.
+const LISTED_ORDER: &str = "updated_at DESC, id";
+
 impl CustomDictionaryStore {
     /// Most entries one dictionary holds, on every platform.
     pub const MAX_ENTRIES: usize = 30_000;
@@ -241,8 +245,8 @@ impl CustomDictionaryStore {
         })
     }
 
-    /// A page of entries for the settings list, newest edit first. The
-    /// filter and the limit are both SQL. `LIKE` is case-insensitive for
+    /// A page of entries for the settings list in `LISTED_ORDER`. The filter
+    /// and the limit are both SQL. `LIKE` is case-insensitive for
     /// ASCII, which is the romanization; Hanji have no case to fold.
     pub fn rows(
         &self,
@@ -254,14 +258,14 @@ impl CustomDictionaryStore {
         self.database.perform::<_, CustomDictionaryError>(move |connection| {
             if trimmed.is_empty() {
                 let mut statement = connection.prepare(&format!(
-                    "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nORDER BY updated_at DESC\nLIMIT ? OFFSET ?;"
+                    "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nORDER BY {LISTED_ORDER}\nLIMIT ? OFFSET ?;"
                 ))?;
                 let rows = statement.query_map(params![limit as i64, offset as i64], decode_row)?;
                 return Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?);
             }
             let (roman_pattern, hanji_pattern) = filter_patterns(&trimmed);
             let mut statement = connection.prepare(&format!(
-                "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nWHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'\nORDER BY updated_at DESC\nLIMIT ? OFFSET ?;"
+                "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nWHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'\nORDER BY {LISTED_ORDER}\nLIMIT ? OFFSET ?;"
             ))?;
             let rows = statement.query_map(params![roman_pattern, hanji_pattern, limit as i64, offset as i64], decode_row)?;
             Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)

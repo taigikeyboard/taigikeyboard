@@ -71,8 +71,6 @@ class DictionarySearchServiceTest {
             searchCalls += 1
             return words.filter { it.roman.startsWith(query) }
         }
-
-        override suspend fun listAll(): List<CustomDictionaryWord> = words
     }
 
     private fun row(

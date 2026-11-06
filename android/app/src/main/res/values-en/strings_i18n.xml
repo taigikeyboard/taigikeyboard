@@ -36,6 +36,7 @@
     <string name="i18n_desktop_telexGuideHyphen">Hyphen</string>
     <string name="i18n_desktop_menuUndo">Undo</string>
     <string name="i18n_desktop_dictionarySourcesLink">Manage Dictionaries</string>
+    <string name="i18n_desktop_customDictReadFailed">Could Not Read the Custom Dictionary</string>
     <string name="i18n_dictionary_customDictionary">Custom Dictionary</string>
     <string name="i18n_dictionary_customDictEnabled">Enable Custom Dictionary</string>
     <string name="i18n_dictionary_customDictEnabledInfo">When on, words you add appear among the candidates.</string>

@@ -28,11 +28,11 @@ class CustomDictionaryViewModel(
     private val root = CompositionRoot.shared(application)
     private val userData: UserDataClient = root.userData
 
-    private val _entries = MutableStateFlow<List<CustomDictionaryWord>>(emptyList())
-    val entries: StateFlow<List<CustomDictionaryWord>> = _entries.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private val listing =
+        CustomDictionaryListing(viewModelScope, userData) { e ->
+            root.logger.w(TAG, "[CUSTOM-DICT] list failed: ${e.message}", e)
+        }
+    val list: StateFlow<CustomDictionaryListState> = listing.state
 
     private val _isImporting = MutableStateFlow(false)
     val isImporting: StateFlow<Boolean> = _isImporting.asStateFlow()
@@ -45,12 +45,12 @@ class CustomDictionaryViewModel(
         prefs.customDictEnabled = enabled
     }
 
-    fun load() {
-        viewModelScope.launch {
-            _entries.value = quietly("load", emptyList()) { userData.listAll() }
-            _isLoading.value = false
-        }
-    }
+    /** Reads the listed rows again, so the list keeps its place. */
+    fun load() = listing.refresh()
+
+    fun updateFilter(filter: String) = listing.updateFilter(filter)
+
+    fun loadMore() = listing.loadMore()
 
     // A refused save (a full dictionary, an unsearchable romanization) is
     // logged, not shown — the screen has never surfaced one.

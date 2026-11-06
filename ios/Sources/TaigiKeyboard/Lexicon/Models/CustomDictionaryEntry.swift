@@ -19,3 +19,16 @@ struct CustomDictionaryEntry: Identifiable, Equatable, Sendable {
         self.hanji = hanji
     }
 }
+
+/// One page of the custom dictionary list, as the engine cut it.
+struct CustomDictionaryPage: Equatable, Sendable {
+    let entries: [CustomDictionaryEntry]
+    /// Every stored word.
+    let total: Int
+    /// The words the filter matches: what paging runs up to.
+    let matchingTotal: Int
+    /// The offset the page really starts at: the engine pulls the request
+    /// back to a multiple of the limit when it falls in the last page, or the
+    /// matches shrank under it (`engine/userdata/src/paging.rs`).
+    let offset: Int
+}

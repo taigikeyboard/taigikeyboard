@@ -504,6 +504,8 @@
       "comment": "Alert title when the custom-dictionary store could not be read.",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos",
           "windows",
           "linux"

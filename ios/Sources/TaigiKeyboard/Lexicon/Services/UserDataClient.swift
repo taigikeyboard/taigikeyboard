@@ -72,8 +72,9 @@ struct UserDataRefused: LocalizedError {
 /// the main actor. A protocol so view models can be driven from tests, which
 /// never open the user data (the test process shares the app's engine).
 protocol UserDataClient: Sendable {
-    /// Every word, newest edit first.
-    func listAll() async throws -> [CustomDictionaryEntry]
+    /// One page of the words `filter` matches, newest edit first; the engine
+    /// trims the filter and cuts the page. `limit` is at least 1.
+    func listCustomEntries(filter: String, limit: UInt32, offset: UInt32) async throws -> CustomDictionaryPage
     /// A refusal (a full dictionary, an unsearchable romanization) throws.
     func save(_ entry: CustomDictionaryEntry) async throws
     func delete(id: String) async throws
@@ -130,10 +131,16 @@ struct EngineUserDataClient: UserDataClient {
     /// side too so a huge file is refused before it is read into memory.
     static let maxImportFileBytes = 5 * 1024 * 1024
 
-    func listAll() async throws -> [CustomDictionaryEntry] {
-        try await engine("customDictionaryList") { RustEngineBridge.customDictionaryList() }
-            .entries
-            .map(CustomDictionaryEntry.init)
+    func listCustomEntries(filter: String, limit: UInt32, offset: UInt32) async throws -> CustomDictionaryPage {
+        let page = try await engine("customDictionaryList") {
+            RustEngineBridge.customDictionaryList(filter: filter, limit: limit, offset: offset)
+        }
+        return CustomDictionaryPage(
+            entries: page.entries.map(CustomDictionaryEntry.init),
+            total: Int(page.total),
+            matchingTotal: Int(page.matchingTotal),
+            offset: Int(page.offset),
+        )
     }
 
     func save(_ entry: CustomDictionaryEntry) async throws {
