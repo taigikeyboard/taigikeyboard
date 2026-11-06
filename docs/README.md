@@ -43,6 +43,7 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 | `architecture/macos-release.md` | macOS signing, notarization, package | Active |
 | `architecture/windows-release.md` | Windows installer, signing status, hosted build | Active |
 | `architecture/linux-release.md` | Linux packages and how they are built and attached | Active |
+| `architecture/web-release.md` | Web deploy: Pages workflow, edge cache, live check | Active |
 | `architecture/manual-release-notes.md` | Release trains, version numbers, store notes | Active |
 | `architecture/incident-log.md` | Incidents behind the rules in `contributing/known-pitfalls.md` | Reference |
 | `architecture/pr-number-migration.md` | Resolving `#NNN` written before 2026-09-07 | Reference |
