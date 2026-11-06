@@ -22,7 +22,7 @@ SHELL := /usr/bin/env sh
         fmt lint hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
-        windows-check windows-release desktop-check linux-check macos-rust-check web-check \
+        windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
         update-submodules
 
 # Every generated artefact at once — platform bindings, then the iOS xcframework,
@@ -193,6 +193,14 @@ linux-check:
 # dictionaries, clippy, biome, fmt. Any host; tools from `mise install`.
 web-check:
 	$(MAKE) -C web check
+
+# The page on http://127.0.0.1:8000, built from source.
+web-serve:
+	$(MAKE) -C web serve
+
+# Playwright in Chromium, Firefox and WebKit over the real engine and dictionaries.
+web-e2e:
+	$(MAKE) -C web e2e
 
 # Stage the THREE desktop installers on this version's draft release: the
 # package here, the Windows installer and the Linux .deb on GitHub-hosted

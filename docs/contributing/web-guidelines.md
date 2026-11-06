@@ -5,7 +5,8 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 ## Build
 
 - Run `cargo` from `web/` (`make -C web …`). Rustup reads `web/rust-toolchain.toml` from the working directory, and that file is what supplies the target.
-- `make web-check` is the gate: release build, `wasm-bindgen`, `wasm-opt`, Node smoke test, clippy, biome, fmt. It builds from source, so it has no stale-artifact step.
+- `make web-check` is the gate: release build, `wasm-bindgen`, `wasm-opt`, Node smoke test, clippy, biome, fmt. It builds from source, so it has no stale-artifact step. `make web-e2e` is the browser gate, separate because it downloads three browsers. `make web-serve` runs the page on `http://127.0.0.1:8000`.
+- `make -C web site` stages `web/src/`, the bindings and the dictionaries into `web/target/site/`, the tree the browser sees.
 - `wasm-bindgen` is pinned twice, exactly: the crate in `web/Cargo.toml`, the CLI in `mise.toml`. Move both in one change; `make -C web bindgen-version` compares them. `biome.json`'s `$schema` follows the `biome` pin.
 - The release profile keeps `strip` off. `strip = true` removes the `target_features` section that `wasm-bindgen` and `wasm-opt` read; `wasm-opt` drops the debug names instead. `wasm-opt --all-features` emits an encoding Node 26 rejects (`unknown import kind 0x7f`).
 
@@ -17,9 +18,17 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 - Anything on the key path that calls `SystemTime::now`, `Instant::now`, `std::fs` or `std::thread` compiles here and fails at run time. `cargo check` for this target proves nothing about those; the smoke test does.
 - This target has no unwinding: a panic traps the instance (`rust-ffi-safety.md` §1.2).
 
+## Page
+
+- One write path into the textarea: `surface.js`, through `execCommand`. Assigning `.value` wipes the undo history.
+- Every engine call after startup goes through `call` in `ime.js`, which turns a trap into a new instance; `start` handles its own, because a trap there would only repeat. A new instance needs a new copy of the glue module (`loader.js`): the glue keeps the instance it has.
+- A caret or text change the page did not make is found by comparing at the next key (`Surface.takeForeignChange`), not by `selectionchange`, which is asynchronous and fires on a different target per engine.
+- Hit by a real browser, not by Node: WebKit folds consecutive edits into one undo step, typed ones included, so undo can take back more than the last word.
+
 ## Tests
 
 - Native tests cover the session and the key translation, with no lexicon. The engine is one per process, so a test that asserts what it composed takes the `ENGINE` turn and leaves it idle (`taigi-web` `session.rs`, `desktop/crates/taigi-desktop-core/tests/session_language_mode.rs`).
 - The smoke test (`web/tests/`) drives the real engine and real dictionaries through the bindings the page loads, one key at a time, with `wasm-bindgen --target web` + `initSync`.
 - Expected values come from `engine/composing/tests/` fixtures, whose traces are recorded there. Never from `corpus/`, which feeds no test (`corpus/README.md`).
-- Passing in Node says nothing about a browser, a low-end machine or DOM cost.
+- Passing in Node says nothing about a browser, a low-end machine or DOM cost. Playwright (`web/e2e/`) sends real keystrokes to the staged site in Chromium, Firefox and WebKit, one test per row of the roadmap's § Text surface.
+- Playwright types on a US layout, so Option and AltGr rewrites never reach it; `key.rs`'s table tests cover those.

@@ -60,7 +60,13 @@ impl Session {
             .map_err(|error| JsError::new(&error.to_string()))
     }
 
-    /// Hands in one of `DictionaryArtifacts::FILE_NAMES`.
+    /// The files `addDictionary` takes.
+    #[wasm_bindgen(js_name = dictionaryFiles)]
+    pub fn dictionary_files(&self) -> Vec<String> {
+        DictionaryArtifacts::FILE_NAMES.map(str::to_owned).to_vec()
+    }
+
+    /// Hands in one of `dictionaryFiles`.
     #[wasm_bindgen(js_name = addDictionary)]
     pub fn add_dictionary(&self, name: &str, bytes: Vec<u8>) {
         mmap_host::register(&Path::new(DICTIONARIES_ROOT).join(name), bytes);

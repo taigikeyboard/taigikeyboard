@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `web`, `browser`, `wasm`, `wasm-bindgen`, `PWA`, `desktop-core reuse`, `McBopomofoWeb`, `kautian-mirror`
-> **Status**: Accepted 2026-11-06. Phases 0 to 3 done. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
+> **Status**: Accepted 2026-11-06. Phases 0 to 4 done. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
 > **Siblings**: `linux-roadmap.md` (the closest shell), `system-overview.md`, `data-artifacts-portability.md`.
 
 ---
@@ -40,7 +40,16 @@ Download size of the dictionaries:
 | `syllables.fst` | 17 KB | 8 KB | — |
 | **Total** | **29.6 MB** | **15.2 MB** | **11.7 MB** |
 
-**Not measured**: a real browser, a low-end Chromebook, DOM cost, or the full `process_key` path with its JSON reply, which carries the whole candidate list on every key (`desktop/crates/taigi-desktop-core/src/session/table.rs` `table_content`). All numbers come from Node on an Apple Silicon Mac. Phase 4 measures through `keyDown` in a browser on the slowest machine at hand.
+The spike did not measure a real browser, DOM cost, or the full `process_key` path with its JSON reply, which carries the whole candidate list on every key (`desktop/crates/taigi-desktop-core/src/session/table.rs` `table_content`). Phase 4 did, around the page's whole `keydown` listener (engine, JSON, DOM), on an Apple M4. Words from `engine/composing/tests` fixtures, typed as short compositions (392 keys) and as one continuous composition of about 100 characters (633 keys):
+
+| Browser | Short p50 / p99 / max | Long p50 / p99 / max |
+|---|---|---|
+| Chromium | 0.6 / 3 / 22 ms | 5.7 / 13.4 / 14.8 ms |
+| Firefox | 1 / 3 / 20 ms | 7 / 16 / 17 ms |
+| WebKit | 1 / 2 / 7 ms | 5 / 13 / 13 ms |
+| Chromium, CPU throttled 6× | 3.2 / 7.8 / 90.6 ms | 34.4 / 84.9 / 89 ms |
+
+Firefox and WebKit round their timers to 1 ms. The throttled row stands in for a slow machine; no low-end Chromebook was at hand. A 48 KB document adds about 8 ms a key, the mirror measuring the text before the caret (p50 7 to 9 ms, p99 10 to 19 ms). Nothing here asks for bounding the fetch.
 
 ## What must change in shared code (grounded in code)
 
@@ -133,7 +142,7 @@ Commit uses `document.execCommand("insertText")`, which MDN marks deprecated and
 | `pointerdown` elsewhere on the page | Same commit. `pointerdown` runs before `blur` |
 | `mousedown` on the candidate panel, Copy, Clear | `preventDefault`, so focus stays. Copy and Clear commit first |
 | `blur` with no pointer involved (another window or tab) | Nothing is written. The composition stays on screen and continues on return |
-| Caret moved or text changed by anything but this page (arrows, mouse, paste, undo) | `session.caretMoved()`. The page's own `execCommand` also fires `selectionchange`, so compare against the caret that write left, or every swap is disarmed |
+| Caret moved or text changed by anything but this page (arrows, mouse, paste, undo) | `session.caretMoved()`, found at the next `keydown` by comparing caret and text with what the page's last write left. `selectionchange` is not used: the page's own `execCommand` fires it too, and it arrives asynchronously |
 | Window loses the keyboard | `session.focusLost()`: a key held across that is released elsewhere |
 | Any `pointerdown` on the page | Also `session.caretMoved()`, so a Shift-click on a control with no caret is not a tap |
 | Textarea `scroll` | Re-anchor the panel at the caret |
@@ -221,7 +230,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 1 | Engine runs on wasm32 | `make web-check`, native suites unchanged | Done |
 | 2 | Shared session module | behaviour freeze, `make linux-check` | Done |
 | 3 | `taigi-web` crate | native + Node tests | Done |
-| 4 | Plain page, end to end | Playwright in 3 browser engines | Pending |
+| 4 | Plain page, end to end | Playwright in 3 browser engines | Done; iPad and AltGr device checks open |
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Pending |
 | 6 | Loading and offline | Playwright offline run | Pending |
 | 7 | Deploy | manual run on the real URL | Pending |
@@ -295,7 +304,8 @@ Type in a browser and get Hanji, unstyled. `web/src/` + `make web-serve`.
 - Playwright in Chromium, Firefox and WebKit, from McBopomofoWeb's pattern (`e2e/feature_input.spec.js:13-16`): type `tsiahpng`, pick, assert the textarea value. Undo after commit. Backspace through a composition. TPS keys. Shift tap. Ctrl+Alt chords.
 - Playwright for every row of the § Text surface table: click during a composition, click elsewhere then type `.` with auto-space on, selection replaced at commit, Copy mid-composition, scroll, window blur and return.
 - Repeat the latency measure through `keyDown`, JSON reply included, in a browser on the slowest machine at hand.
-- A short hardware-keyboard check on iPad Safari. A keyboard extension cannot see hardware keys (`known-pitfalls.md`), so this may be the only route to composing there. UNCONFIRMED until tried on a device.
+- Open: AltGr flags in Chrome on Windows, which Playwright's US layout cannot produce (`key.rs`).
+- Open: a short hardware-keyboard check on iPad Safari. A keyboard extension cannot see hardware keys (`known-pitfalls.md`), so this may be the only route to composing there. UNCONFIRMED until tried on a device.
 
 ### Phase 5 — Look, i18n, panels
 

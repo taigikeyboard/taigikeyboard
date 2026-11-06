@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TaigiKeyboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="ime.js"></script>
+  </head>
+  <body>
+    <main>
+      <h1>TaigiKeyboard</h1>
+      <p role="status"><span id="mode"></span> <span id="message">Loading</span></p>
+      <p id="notice">Another input method is active. Turn it off to type here.</p>
+      <div id="editor">
+        <textarea id="text" aria-label="Text" rows="20" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
+        <div id="panel" hidden>
+          <div id="preedit"></div>
+          <ol id="candidates"></ol>
+        </div>
+      </div>
+      <button id="copy" type="button">Copy</button>
+      <button id="clear" type="button">Clear</button>
+    </main>
+  </body>
+</html>

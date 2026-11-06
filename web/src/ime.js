@@ -1,0 +1,256 @@
+// Browser events → the session → the screen. The engine stays on the main
+// thread because `preventDefault` must run during `keydown`
+// (docs/architecture/web-roadmap.md § Why the main thread).
+
+import { createSession, fetchDictionaries } from "./loader.js";
+import { Panel } from "./panel.js";
+import { Surface } from "./surface.js";
+
+const SETTINGS_KEY = "taigi.settings";
+/// A call with no instance to answer it: the key is spent.
+const NOTHING = { handled: true, emits: [] };
+
+const textarea = document.getElementById("text");
+const notice = document.getElementById("notice");
+const modeSlot = document.getElementById("mode");
+const messageSlot = document.getElementById("message");
+
+const surface = new Surface(textarea);
+const panel = new Panel(document.getElementById("panel"), (position) => {
+  apply(call((session) => session.clickCandidate(position)));
+});
+
+/// `null` between instances.
+let session = null;
+
+/// What a past visit stored. The session is the judge of the document: one it
+/// refuses, or storage the browser blocks, leaves the defaults.
+function restoreSettings(target) {
+  try {
+    const stored = localStorage.getItem(SETTINGS_KEY);
+    if (stored !== null) {
+      target.setSettings(stored);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function writeSettings(settings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, settings);
+  } catch {
+    // Private windows may refuse. The session keeps the setting for this tab.
+  }
+}
+
+function platform() {
+  const name = navigator.userAgentData?.platform ?? navigator.platform;
+  if (/mac|iphone|ipad/i.test(name)) {
+    return "macos";
+  }
+  return /win/i.test(name) ? "windows" : "linux";
+}
+
+function say(message, state) {
+  messageSlot.textContent = message;
+  messageSlot.dataset.state = state;
+}
+
+/// Starts an instance. Until the dictionaries are in, keys type romanization
+/// (`runtime.rs` `install_lexicon`).
+async function start() {
+  let starting = null;
+  try {
+    starting = await createSession(platform(), navigator.language);
+    restoreSettings(starting);
+    session = starting;
+    modeSlot.textContent = starting.modeSymbol();
+    textarea.disabled = false;
+    textarea.focus();
+    say("Loading dictionaries", "loading");
+    const files = await fetchDictionaries(starting.dictionaryFiles());
+    // A trap may have replaced the instance while these downloaded.
+    if (session !== starting) {
+      return;
+    }
+    for (const [name, bytes] of files) {
+      starting.addDictionary(name, bytes);
+    }
+    starting.install();
+    say("Ready", "ready");
+  } catch (error) {
+    console.error(error);
+    if (session !== starting) {
+      return;
+    }
+    // A trap here would only repeat on the next start.
+    if (error instanceof WebAssembly.RuntimeError) {
+      session = null;
+    }
+    say("Could not load", "failed");
+    // With no instance a key would go nowhere; the text stays readable.
+    textarea.disabled = session === null;
+  }
+}
+
+/// One engine call. A trap ends the instance: the composition goes with it, the
+/// text in the textarea stays, and the key that hit it is spent.
+function call(action) {
+  if (session === null) {
+    return NOTHING;
+  }
+  try {
+    const reply = action(session);
+    return reply === undefined ? NOTHING : JSON.parse(reply);
+  } catch (error) {
+    if (!(error instanceof WebAssembly.RuntimeError)) {
+      throw error;
+    }
+    console.error(error);
+    session = null;
+    panel.clear();
+    say("Restarting", "loading");
+    start();
+    return NOTHING;
+  }
+}
+
+function applyEmit(emit) {
+  switch (emit.type) {
+    case "preedit":
+      panel.showPreedit(emit.text, emit.caret);
+      break;
+    case "clearPreedit":
+      panel.clearPreedit();
+      break;
+    case "commit":
+      // The engine has let go of this text, so it must not vanish unseen.
+      if (!surface.insert(emit.text)) {
+        say(`Could not write: ${emit.text}`, "failed");
+      }
+      break;
+    case "deleteSurrounding":
+      surface.deleteBefore(emit.count);
+      break;
+    case "lookupTable":
+      panel.showTable(emit);
+      break;
+    case "hideLookupTable":
+      panel.hideTable();
+      break;
+    case "modeChanged":
+      modeSlot.textContent = emit.symbol;
+      break;
+    case "announceMode":
+      say(emit.label, "mode");
+      break;
+    default:
+      // `openSettings`, `toggleTpsKeyboard`: their panels are Phase 5.
+      break;
+  }
+}
+
+function placePanel() {
+  if (panel.isShown) {
+    panel.place(surface.caretPoint());
+  }
+}
+
+function apply(reply) {
+  if (reply.settings) {
+    writeSettings(reply.settings);
+  }
+  if (reply.emits.length > 0) {
+    reply.emits.forEach(applyEmit);
+    placePanel();
+  }
+}
+
+function keyJson(event) {
+  return JSON.stringify({
+    key: event.key,
+    code: event.code,
+    shift: event.shiftKey,
+    ctrl: event.ctrlKey,
+    alt: event.altKey,
+    meta: event.metaKey,
+    repeat: event.repeat,
+  });
+}
+
+/// A key another input method holds is its own.
+function isForeignComposition(event) {
+  return event.isComposing || event.keyCode === 229;
+}
+
+textarea.addEventListener("keydown", (event) => {
+  if (isForeignComposition(event)) {
+    return;
+  }
+  // The auto-space swap deletes the character before the caret unseen, so its
+  // arm cannot outlive the caret it was set at.
+  if (surface.takeForeignChange()) {
+    call((current) => current.caretMoved());
+  }
+  const reply = call((current) => current.keyDown(keyJson(event)));
+  if (reply.handled) {
+    event.preventDefault();
+  }
+  apply(reply);
+});
+
+textarea.addEventListener("keyup", (event) => {
+  if (!isForeignComposition(event)) {
+    apply(call((current) => current.keyUp(keyJson(event))));
+  }
+});
+
+textarea.addEventListener("compositionstart", () => {
+  notice.toggleAttribute("data-active", true);
+});
+
+textarea.addEventListener("compositionend", () => {
+  notice.toggleAttribute("data-active", false);
+});
+
+textarea.addEventListener("scroll", placePanel);
+window.addEventListener("resize", placePanel);
+
+// Capture: this runs before the click moves the caret or `blur` takes the
+// focus `execCommand` needs. A click on a candidate belongs to the composition.
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    call((current) => current.caretMoved());
+    if (!panel.contains(event.target)) {
+      apply(call((current) => current.commitComposition()));
+    }
+  },
+  { capture: true },
+);
+
+// Nothing is written: the composition stays and continues on return.
+window.addEventListener("blur", () => {
+  call((current) => current.focusLost());
+});
+
+for (const button of document.querySelectorAll("button")) {
+  button.addEventListener("mousedown", (event) => event.preventDefault());
+}
+
+document.getElementById("copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(textarea.value);
+    say("Copied", "copied");
+  } catch (error) {
+    console.error(error);
+    say("Could not copy", "failed");
+  }
+});
+
+document.getElementById("clear").addEventListener("click", () => {
+  surface.clear();
+});
+
+start();
