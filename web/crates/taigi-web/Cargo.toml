@@ -1,0 +1,19 @@
+[package]
+name = "taigi-web"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "The browser-facing crate of the web version"
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+taigi-desktop-core = { workspace = true }
+mmap-host = { workspace = true }
+wasm-bindgen = { workspace = true }

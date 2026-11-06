@@ -15,6 +15,7 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
+use taigi_desktop_core::composing::SystemClock;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 
@@ -178,6 +179,7 @@ impl Shell {
             dictionary_version: request.dictionary_stamp,
             system_locale: Box::new(move || system_locale.clone()),
             platform: DESKTOP_PLATFORM,
+            clock: Arc::new(SystemClock),
         }
     }
 

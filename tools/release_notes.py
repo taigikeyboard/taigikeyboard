@@ -78,6 +78,8 @@ DESKTOP_CARGO_FILES = (
     LINUX_CARGO_FILE,
     MACOS_CARGO_FILE,
 )
+# Off the train, with its own version, but its lockfile pins the desktop crates.
+DESKTOP_LINKED_CARGO_FILES = ("web/Cargo.toml",)
 # Which files a train owns. A version write touches exactly one train's files
 # and leaves the other train's alone (USER 2026-08-29: mobile and desktop are
 # numbered separately so each can ship on its own cadence).
@@ -770,13 +772,13 @@ def _parse_args() -> argparse.Namespace:
 
 
 def refresh_desktop_lockfiles(repo_root: Path) -> None:
-    """Rewrite each desktop workspace's own member versions in its Cargo.lock.
+    """Rewrite the desktop crates' member versions in each lockfile that pins them.
 
     `--workspace` leaves every third-party pin alone. Without it the release
     commit carries stale member versions, and the first hosted build rewrites
     the lockfile — which its "changed nothing tracked" check refuses.
     """
-    for cargo_file in DESKTOP_CARGO_FILES:
+    for cargo_file in (*DESKTOP_CARGO_FILES, *DESKTOP_LINKED_CARGO_FILES):
         result = subprocess.run(
             ["cargo", "update", "--workspace", "--quiet", "--manifest-path", str(repo_root / cargo_file)],
             check=False,

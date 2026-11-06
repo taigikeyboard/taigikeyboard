@@ -10,6 +10,7 @@ paths:
   - "macos/crates/taigi-macos-ffi/**"
   - "linux/crates/taigi-linux-ffi/**"
   - "windows/crates/taigi-windows-tsf/**"
+  - "web/crates/taigi-web/**"
 ---
 
 # Rust FFI Safety

@@ -198,7 +198,7 @@ fn rig() -> Rig {
     let manager = ComposingManager::new(
         Arc::new(settings.clone()),
         Box::new(handle.clone()),
-        Box::new(handle),
+        Arc::new(handle),
         fresh_generation(),
     );
     Rig {

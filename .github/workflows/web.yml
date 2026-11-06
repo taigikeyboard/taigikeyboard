@@ -1,0 +1,64 @@
+name: Web
+
+# The web version's gate (`make web-check`): the wasm build, the Node smoke test
+# over the real dictionaries, clippy, biome and fmt. An engine, desktop-shared or
+# dictionary change triggers it too, because `taigi-web` links those crates and
+# asserts top candidates against that data.
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'desktop/**'
+      - 'engine/**'
+      - 'assets/dictionaries/**'
+      - 'assets/symbols/**'
+      - 'mise.toml'
+      - '.github/workflows/web.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'desktop/**'
+      - 'engine/**'
+      - 'assets/dictionaries/**'
+      - 'assets/symbols/**'
+      - 'mise.toml'
+      - '.github/workflows/web.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: wasm build + smoke + lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      # Only what the gate runs. The versions are mise.toml's, the same pins a
+      # contributor installs; protoc is there because engine/protos/build.rs
+      # shells out to it.
+      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+        with:
+          version: 2026.11.2
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome
+
+      - name: Install the toolchain (web/rust-toolchain.toml)
+        working-directory: web
+        run: rustup toolchain install --no-self-update
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: web
+
+      - name: make web-check
+        run: make web-check

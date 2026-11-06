@@ -1,0 +1,39 @@
+# Web version — its own Cargo workspace, like `linux/`: the browser-facing crate
+# lives here; everything pure is in `../desktop` and `../engine`, consumed by
+# path. Plan: docs/architecture/web-roadmap.md.
+
+[workspace]
+resolver = "2"
+members = ["crates/taigi-web"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# The floor of the desktop crates it links.
+rust-version = "1.93"
+license = "Apache-2.0"
+repository = "https://github.com/taigikeyboard/taigikeyboard"
+publish = false
+
+[workspace.dependencies]
+taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
+mmap-host = { path = "../engine/mmap-host" }
+# Exact, and equal to `wasm-bindgen` in ../mise.toml: the CLI refuses a crate of
+# any other version. `make -C web check` compares the two.
+wasm-bindgen = "=0.2.130"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+# No `strip`: wasm-bindgen and wasm-opt read the `target_features` section, and
+# wasm-opt drops the debug names itself.
+# This target has no unwinding; `panic = "abort"` traps the instance
+# (docs/architecture/web-roadmap.md § Named divergences).
+panic = "abort"

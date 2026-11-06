@@ -33,22 +33,35 @@ impl DictionaryArtifacts {
         "syllables.fst",
     ];
 
+    /// The four paths under `base_dir`, unchecked: a host with no file system
+    /// names where it registered the bytes.
+    pub fn under(base_dir: &Path) -> Self {
+        let [trie_path, dictionary_bin_path, association_bin_path, syllable_inventory_path] =
+            Self::FILE_NAMES.map(|name| base_dir.join(name));
+        Self {
+            trie_path,
+            dictionary_bin_path,
+            association_bin_path,
+            syllable_inventory_path,
+        }
+    }
+
     /// Resolves the four files under `base_dir` and checks each exists with
     /// a non-zero size. Fails on the first problem, naming the file.
     pub fn locate(base_dir: &Path) -> Result<Self, DictionaryArtifactsError> {
-        let require = |name: &str| -> Result<PathBuf, DictionaryArtifactsError> {
-            let path = base_dir.join(name);
-            match std::fs::metadata(&path) {
-                Ok(metadata) if metadata.is_file() && metadata.len() > 0 => Ok(path),
-                _ => Err(DictionaryArtifactsError::MissingOrEmpty(path)),
+        let artifacts = Self::under(base_dir);
+        for path in [
+            &artifacts.trie_path,
+            &artifacts.dictionary_bin_path,
+            &artifacts.association_bin_path,
+            &artifacts.syllable_inventory_path,
+        ] {
+            match std::fs::metadata(path) {
+                Ok(metadata) if metadata.is_file() && metadata.len() > 0 => {}
+                _ => return Err(DictionaryArtifactsError::MissingOrEmpty(path.clone())),
             }
-        };
-        Ok(Self {
-            trie_path: require(Self::FILE_NAMES[0])?,
-            dictionary_bin_path: require(Self::FILE_NAMES[1])?,
-            association_bin_path: require(Self::FILE_NAMES[2])?,
-            syllable_inventory_path: require(Self::FILE_NAMES[3])?,
-        })
+        }
+        Ok(artifacts)
     }
 
     /// A path as the engine's `InstallRequest` wants it: a UTF-8 string. The

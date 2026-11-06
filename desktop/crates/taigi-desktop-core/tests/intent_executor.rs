@@ -131,7 +131,7 @@ fn configured_rig(
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
         Box::new(EngineNextWord),
-        Box::new(SystemClock),
+        Arc::new(SystemClock),
         fresh_generation(),
     );
     Rig {
@@ -658,7 +658,7 @@ fn new_tps_rig() -> Rig {
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
         Box::new(EngineNextWord),
-        Box::new(SystemClock),
+        Arc::new(SystemClock),
         fresh_generation(),
     );
     Rig {
