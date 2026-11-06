@@ -10,7 +10,11 @@
 # A powered-off VM is started and gets SSH_WAIT_S to come up; unreachable, no
 # logged-in session, or a locked screen → that VM's scenarios are `skipped`.
 # VM setup (autologin, screen lock off, python3-evdev, gnome-screenshot,
-# passwordless sudo, build deps): memory reference_linux_dogfood_vms.
+# passwordless sudo, build deps): memory reference_linux_dogfood_vms. Nothing
+# may take keyboard focus from the host window, or every scenario times out
+# waiting for it: apport off on Ubuntu (`enabled=0` in /etc/default/apport —
+# its crash dialogs pop up over the session), and GNOME not starting in the
+# overview (Ubuntu: dash-to-dock `disable-overview-on-startup` true).
 set -euo pipefail
 
 RUN_DIR="${1:?usage: run.sh <run-dir> [scenario-id]}"
