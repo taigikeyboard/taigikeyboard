@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `web`, `browser`, `wasm`, `wasm-bindgen`, `PWA`, `desktop-core reuse`, `McBopomofoWeb`, `kautian-mirror`
-> **Status**: Accepted 2026-11-06. Phases 0 to 6 done. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
+> **Status**: Accepted 2026-11-06. Phases 0 to 7 done; live at `taigikeyboard.tw/web/`. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
 > **Siblings**: `linux-roadmap.md` (the closest shell), `system-overview.md`, `data-artifacts-portability.md`.
 
 ---
@@ -234,7 +234,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Done; iPad and AltGr device checks open |
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
 | 6 | Loading and offline | Playwright offline run | Done |
-| 7 | Deploy | manual run on the real URL | Pending |
+| 7 | Deploy | `check-live` on the real URL | Done |
 | 8 | User data | spike first, then its own plan | Pending |
 
 ### Phase 1 — Engine runs on wasm32
