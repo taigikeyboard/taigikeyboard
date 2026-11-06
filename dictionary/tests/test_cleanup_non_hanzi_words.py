@@ -35,6 +35,13 @@ def test_roman_only_word_keeps_row_without_hanzi():
     assert dropped.empty
 
 
+def test_single_precomposed_vowel_is_roman_only():
+    # trace: ê has no ASCII letter until NFD splits it into e + U+0302.
+    cleaned, dropped = _cleanup(["ê"], ["ê"])
+    assert _rows(cleaned) == {("", "ê")}
+    assert dropped.empty
+
+
 def test_two_roman_spellings_of_one_reading_collapse():
     cleaned, dropped = _cleanup(["a̋i-sat-tsuh", "a̋i-sat-tsirh"], ["a̋i-sat-tsirh", "a̋i-sat-tsirh"])
     assert _rows(cleaned) == {("", "a̋i-sat-tsirh")}

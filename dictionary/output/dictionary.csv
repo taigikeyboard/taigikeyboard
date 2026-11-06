@@ -6917,12 +6917,12 @@ hanzi,tl,kautian_main,kautian_alt_reading,kautian_accent_mask,kautian_name,frequ
 ,ám,False,False,0,False,50,ám,am2,am2,ㆰˋ,,am,am,ㆰ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,áu,False,False,0,False,50,áu,au2,au2,ㄠˋ,,au,au,ㄠ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,ân,False,False,0,False,50,ân,an5,an5,ㄢˊ,,an,an,ㄢ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
+,ê,False,False,0,False,50,ê,e5,e5,ㆤˊ,,e,e,ㆤ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,íng,False,False,0,False,50,éng,ing2,eng2,ㄧㄥˋ,,ing,eng,ㄧㄥ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,āinn,False,False,0,False,50,āiⁿ,ainn7,ainn7,ㆮ˫,,ainn,ainn,ㆮ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,ē,False,False,0,False,50,ē,e7,e7,ㆤ˫,,e,e,ㆤ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,ī,False,False,0,False,50,ī,i7,i7,ㄧ˫,,i,i,ㄧ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ,ńg,False,False,0,False,50,ńg,ng2,ng2,ㆭˋ,,ng,ng,ㆭ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
-ê,ê,False,False,0,False,50,ê,e5,e5,ㆤˊ,,e,e,ㆤ,,,,,,False,False,False,False,False,False,False,False,False,False,False,True,False
 ○,hannh,False,False,0,False,50,haⁿh,hannh4,hannh4,ㄏㆩㆷ,,hannh,hannh,ㄏㆩㆷ,,,,,,False,False,False,False,False,True,False,False,False,False,False,False,False
 ⺗,sim,False,False,0,False,50,sim,sim1,sim1,ㄒㄧㆬ,,sim,sim,ㄒㄧㆬ,,,,,,False,False,False,False,False,False,False,False,False,True,False,False,False
 ⺮,tik,False,False,0,False,50,tek,tik4,tek4,ㄉㄧㆻ,,tik,tek,ㄉㄧㆻ,,,,,,False,False,False,False,False,False,False,False,False,True,False,False,False

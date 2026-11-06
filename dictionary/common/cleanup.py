@@ -152,7 +152,11 @@ def contains_roman_in_hanzi(text):
 
 def is_roman_only_hanzi(text):
     """True for a word written only in romanization: a Latin letter, no ideograph, no kana."""
-    return contains_roman_in_hanzi(text) and not any(is_cjk(c) or is_kana(c) for c in str(text))
+    if pd.isna(text):
+        return False
+    # NFD: `ê` is a Latin letter `contains_roman_in_hanzi`'s tone list does not spell.
+    letters = unicodedata.normalize("NFD", str(text))
+    return contains_roman_in_hanzi(letters) and not any(is_cjk(c) or is_kana(c) for c in letters)
 
 
 def blank_roman_only_hanzi(text):
