@@ -24,7 +24,7 @@
     sans-serif;
   --font: var(--system-font);
   --measure: 760px;
-  --sidebar-width: 18.75rem;
+  --sidebar-width: 21rem;
   --candidate-size: 17px;
   --tps-cap-height: 2.75rem;
   --tps-keyboard-height: calc(4 * var(--tps-cap-height) + 1.25rem);
@@ -371,7 +371,8 @@ summary:focus-visible {
    textarea's corners out of its click area. */
 #editor {
   position: relative;
-  border-radius: 18px;
+  border-radius: 12px;
+  corner-shape: squircle;
   background: var(--card);
   box-shadow: var(--card-shadow);
 }
@@ -759,6 +760,12 @@ summary:focus-visible {
   padding: 0 0.75rem;
   border-radius: 8px;
   font-size: 0.9375rem;
+}
+
+.action svg {
+  display: block;
+  width: 1.0625rem;
+  height: 1.0625rem;
 }
 
 /* Asked for, so it may move what is below the textarea. `height` is set before

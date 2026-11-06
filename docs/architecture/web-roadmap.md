@@ -192,7 +192,7 @@ Taken as they are from the kautian-mirror repository (`taigikeyboard/kautian-mir
 |---|---|---|
 | Colour tokens with `light-dark()` | `src/styles.css:45-61` | `--bg`, `--card`, `--text`, `--secondary`, `--border`, `--hairline`, `--hover`, `--accent`, `--ring` unchanged. The candidate highlight uses `--accent` |
 | Theme pin | `src/styles.css:41-43` | Automatic, light, dark through `<html data-theme>` |
-| Sidebar | `src/styles.css:125-167`, `src/sidebar.js` | 18.75rem, docked above 50rem, `popover` drawer below, open by default on wide screens, closed on narrow ones |
+| Sidebar | `src/styles.css:125-167`, `src/sidebar.js` | 21rem, docked above 50rem, `popover` drawer below, open by default on wide screens, closed on narrow ones |
 | Settings to `data-*` | `src/settings.js`, `src/index.html:23-36` | One form, restored before first paint so a reload does not flash |
 | Fonts | `src/styles.css:3-38`, `scripts/subset-fonts.sh` | Same roster, CJK-only `unicode-range` |
 | Tool chain | `esbuild.config.mjs`, `node --test` | No framework |
