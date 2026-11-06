@@ -231,7 +231,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 2 | Shared session module | behaviour freeze, `make linux-check` | Done |
 | 3 | `taigi-web` crate | native + Node tests | Done |
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Done; iPad and AltGr device checks open |
-| 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Look done; i18n + fonts, panels + a11y pending |
+| 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Look, i18n + fonts done; panels + a11y pending |
 | 6 | Loading and offline | Playwright offline run | Pending |
 | 7 | Deploy | manual run on the real URL | Pending |
 | 8 | User data | spike first, then its own plan | Pending |
