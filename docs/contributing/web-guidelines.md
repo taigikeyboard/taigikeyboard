@@ -36,6 +36,7 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 - `#message` and `#notice` are read aloud, never drawn (`.unseen`). Every drawn state has a slot in the layout (`#load-slot`), so nothing that appears shifts the page. The panel flips above the caret's line rather than pass the editor's bottom, so it never covers Copy or Clear.
 - The TPS key panel's state is the desktop setting `tpsKeyboardShown` in the same document, so a chord and the sidebar row are one value. Its caps are out of the tab order: a keyboard user has the key itself. Clicks and `mousedown` keep focus in the textarea, and a pointer on the panel does not end the composition.
 - `#spoken` is the live region for the candidate list, outside `#panel`, whose `hidden` would silence it. Focus never leaves the textarea, so it says one cell rather than the page.
+- Copy and Clear are inline Font Awesome Free SVGs (`regular/`, CC BY 4.0), pasted from the npm package with their comment, which is the attribution the licence asks for: keep it. No package and no font: nothing to load, and the CSP stands.
 - The card is `#editor`, not the textarea: `border-radius` would take the textarea's corners out of its click area.
 - WebKit on a Mac skips buttons on Tab by default, so tab-order tests run in Chromium and Firefox only.
 - Hit by a real browser, not by Node: WebKit folds consecutive edits into one undo step, typed ones included, so undo can take back more than the last word.

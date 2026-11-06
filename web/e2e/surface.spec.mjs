@@ -35,7 +35,7 @@ test("a click in the textarea commits, then moves the caret", async ({
 test("a click elsewhere commits before focus leaves", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("tai");
-  await page.getByRole("heading").click();
+  await page.getByRole("heading", { level: 1 }).click();
   await expect(editor).toHaveValue("tai");
   await expect(panel(page)).toBeHidden();
 });
@@ -73,7 +73,7 @@ test("a click that leaves the caret, then punctuation: no swap", async ({
   // Caret and text compare equal here: only `pointerdown` disarms the swap.
   const editor = await open(page, { settings: AUTO_SPACE });
   await commitRomanization(editor);
-  await page.getByRole("heading").click();
+  await page.getByRole("heading", { level: 1 }).click();
   await editor.focus();
   await editor.press(".");
   await expect(editor).toHaveValue(/^tâi-uân [.。]/);

@@ -7,6 +7,7 @@ import {
   candidates,
   commitWord,
   expectState,
+  firstSection,
   inputMode,
   open,
   panel,
@@ -22,8 +23,8 @@ const pageColour = (page) =>
 test("the sidebar starts open beside the page and keeps the keyboard", async ({
   page,
 }) => {
-  const editor = await open(page);
-  await expect(inputMode(page)).toBeVisible();
+  const editor = await open(page, { folded: true });
+  await expect(firstSection(page)).toBeVisible();
   await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
   await expect(editor).toBeFocused();
   await commitWord(editor);
@@ -32,13 +33,14 @@ test("the sidebar starts open beside the page and keeps the keyboard", async ({
 
 test("the sidebar remembers being closed", async ({ page }) => {
   await open(page);
+  const section = firstSection(page);
   await toggle(page).click();
-  await expect(inputMode(page)).toBeHidden();
+  await expect(section).toBeHidden();
   await page.reload();
-  await expect(inputMode(page)).toBeHidden();
+  await expect(section).toBeHidden();
   await toggle(page).click();
   await page.reload();
-  await expect(inputMode(page)).toBeVisible();
+  await expect(section).toBeVisible();
 });
 
 test("a narrow window opens the sidebar as a drawer", async ({ page }) => {
@@ -54,24 +56,21 @@ test("a narrow window opens the sidebar as a drawer", async ({ page }) => {
   await expect(editor).toBeVisible();
 });
 
-test("the sections fold, and only the dictionaries start folded", async ({
-  page,
-}) => {
-  await open(page);
+test("every section starts folded and unfolds on a click", async ({ page }) => {
+  await open(page, { folded: true });
   const moe = page.locator('input[name="moeDictEnabled"]');
-  await expect(inputMode(page)).toBeVisible();
-  await expect(page.getByLabel("Appearance")).toBeVisible();
+  await expect(inputMode(page)).toBeHidden();
+  await expect(page.getByLabel("Appearance")).toBeHidden();
   await expect(moe).toBeHidden();
   await page.locator("summary").nth(2).click();
   await expect(moe).toBeVisible();
-  await page.locator("summary").first().click();
-  await expect(inputMode(page)).toBeHidden();
+  await page.locator("summary").nth(2).click();
+  await expect(moe).toBeHidden();
 });
 
 test("the chord opens the sidebar on its General rows", async ({ page }) => {
   // trace: Ctrl+Alt+S = OpenLastSettingsPane.
-  const editor = await open(page);
-  await page.locator("summary").first().click();
+  const editor = await open(page, { folded: true });
   await toggle(page).click();
   await editor.focus();
   await editor.press("Control+Alt+s");
@@ -271,7 +270,7 @@ test("around the textarea, only Copy and Clear", async ({ page }) => {
           width > 1 &&
           height > 1 &&
           getComputedStyle(element).visibility === "visible";
-        return isDrawn ? element.textContent : null;
+        return isDrawn ? element.getAttribute("aria-label") : null;
       },
     ).filter((text) => text !== null),
   );
@@ -344,7 +343,6 @@ test("Output Script greys under Romanization Only", async ({ page }) => {
 
 test("a dictionary row keeps its default and its value", async ({ page }) => {
   await open(page);
-  await page.locator("summary").nth(2).click();
   const moe = page.locator('input[name="moeDictEnabled"]');
   const accent = page.locator('input[name="kautianAccentLukangEnabled"]');
   await expect(moe).toBeChecked();
@@ -364,7 +362,6 @@ test("turning a source off takes its words from the list", async ({ page }) => {
   await editor.pressSequentially("taiuan");
   await expect(candidates(page).filter({ hasText: "台灣" })).not.toHaveCount(0);
   await editor.press("Escape");
-  await page.locator("summary").nth(2).click();
   for (const row of await page
     .locator(".sidebar-section:nth-of-type(3) input:not([data-requires])")
     .all()) {

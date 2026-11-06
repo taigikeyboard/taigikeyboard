@@ -2,9 +2,14 @@
 
 import { expect, test } from "@playwright/test";
 
-import { commitWord, open, seedSettings, toggle } from "./helpers.mjs";
+import {
+  commitWord,
+  firstSection,
+  open,
+  seedSettings,
+  toggle,
+} from "./helpers.mjs";
 
-const firstSection = (page) => page.locator("summary").first();
 const rootLang = (page) => page.evaluate(() => document.documentElement.lang);
 const stored = (page) =>
   page.evaluate(
@@ -59,9 +64,9 @@ test("the title and Copy, Clear stay put in every language", async ({
   page,
 }) => {
   await open(page, { settings: { displayLanguage: "ja" } });
-  await expect(page).toHaveTitle("台語齒盤：台語輸入法、台文輸入 Web");
+  await expect(page).toHaveTitle("台語齒盤 Web 版本");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "台語齒盤：台語輸入法、台文輸入 Web",
+    "台語齒盤 Web 版本",
   );
   await expect(page.getByRole("button", { name: "Copy" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear" })).toBeVisible();

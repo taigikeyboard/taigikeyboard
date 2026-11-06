@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>台語齒盤：台語輸入法、台文輸入 Web</title>
+    <title>台語齒盤 Web 版本</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/196.png">
     <link rel="apple-touch-icon" href="icons/180.png">
@@ -30,7 +30,7 @@
         </button>
       </div>
       <form id="settings">
-        <details id="general-settings" class="sidebar-section" open>
+        <details id="general-settings" class="sidebar-section">
           <summary data-i18n="desktop.generalTab">General</summary>
           <label class="setting"><span data-i18n="settings.inputScript">Input Script</span>
             <select name="inputMode">
@@ -87,7 +87,7 @@
             </select>
           </label>
         </details>
-        <details class="sidebar-section" open>
+        <details class="sidebar-section">
           <summary data-i18n="desktop.appearanceTab">Appearance</summary>
           <label class="setting"><span data-i18n="desktop.appearanceTab">Appearance</span>
             <select name="candidateAppearanceMode">
@@ -219,7 +219,7 @@
       </nav>
     </aside>
     <main>
-      <h1>台語齒盤：台語輸入法、台文輸入 Web</h1>
+      <h1>台語齒盤 Web 版本</h1>
       <div id="editor">
         <textarea id="text" placeholder=" " data-i18n-aria-label="web.textLabel" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
         <span id="text-hint" aria-hidden="true" data-i18n-keycap="web.placeholder"></span>
@@ -247,8 +247,12 @@
           <progress id="progress" aria-labelledby="message" max="1" value="0"></progress>
           <button id="retry" class="action" type="button" data-i18n="desktop.updateRetryAction">Try Again</button>
         </div>
-        <button id="copy" class="action" type="button">Copy</button>
-        <button id="clear" class="action" type="button">Clear</button>
+        <button id="copy" class="action" type="button" aria-label="Copy" title="Copy">
+          <svg aria-hidden="true" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc. --><path fill="currentColor" d="M384 336l-192 0c-8.8 0-16-7.2-16-16l0-256c0-8.8 7.2-16 16-16l133.5 0c4.2 0 8.3 1.7 11.3 4.7l58.5 58.5c3 3 4.7 7.1 4.7 11.3L400 320c0 8.8-7.2 16-16 16zM192 384l192 0c35.3 0 64-28.7 64-64l0-197.5c0-17-6.7-33.3-18.7-45.3L370.7 18.7C358.7 6.7 342.5 0 325.5 0L192 0c-35.3 0-64 28.7-64 64l0 256c0 35.3 28.7 64 64 64zM64 128c-35.3 0-64 28.7-64 64L0 448c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-16-48 0 0 16c0 8.8-7.2 16-16 16L64 464c-8.8 0-16-7.2-16-16l0-256c0-8.8 7.2-16 16-16l16 0 0-48-16 0z"/></svg>
+        </button>
+        <button id="clear" class="action" type="button" aria-label="Clear" title="Clear">
+          <svg aria-hidden="true" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc. --><path fill="currentColor" d="M166.2-16c-13.3 0-25.3 8.3-30 20.8L120 48 24 48C10.7 48 0 58.7 0 72S10.7 96 24 96l400 0c13.3 0 24-10.7 24-24s-10.7-24-24-24l-96 0-16.2-43.2C307.1-7.7 295.2-16 281.8-16L166.2-16zM32 144l0 304c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-304-48 0 0 304c0 8.8-7.2 16-16 16L96 464c-8.8 0-16-7.2-16-16l0-304-48 0zm160 72c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 176c0 13.3 10.7 24 24 24s24-10.7 24-24l0-176zm112 0c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 176c0 13.3 10.7 24 24 24s24-10.7 24-24l0-176z"/></svg>
+        </button>
       </div>
       <section id="tps-keyboard" data-i18n-aria-label="desktop.shortcutShowTpsKeyboard"></section>
       <p id="message" class="unseen" role="status" data-state="loading"></p>
