@@ -301,6 +301,11 @@ input:focus-visible {
   margin: 0;
 }
 
+#progress {
+  width: 6rem;
+  accent-color: var(--accent);
+}
+
 #load-slot {
   display: grid;
   align-items: center;
@@ -316,11 +321,6 @@ input:focus-visible {
 #load-slot[data-show="progress"] > #progress,
 #load-slot[data-show="retry"] > #retry {
   visibility: visible;
-}
-
-#progress {
-  width: 6rem;
-  accent-color: var(--accent);
 }
 
 #message[data-state="failed"] {
