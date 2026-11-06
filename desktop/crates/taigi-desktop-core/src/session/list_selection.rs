@@ -56,6 +56,13 @@ impl ListSelection {
         }
     }
 
+    pub fn expandable_mut(&mut self) -> Option<&mut ExpandableListModel> {
+        match &mut self.highlight {
+            Highlight::Paged(_) => None,
+            Highlight::Expandable(model) => Some(model),
+        }
+    }
+
     pub fn lead_cell_is_unkeyed(&self) -> bool {
         self.lead_cell_is_unkeyed
     }

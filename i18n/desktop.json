@@ -714,7 +714,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -734,7 +735,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"

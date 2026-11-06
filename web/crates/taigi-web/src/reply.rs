@@ -3,8 +3,9 @@
 //! asks the runtime for, and this is the one place that JSON's shape is named.
 
 use serde::Serialize;
+use taigi_desktop_core::candidates::{ExpandableAxis, ExpandableDisplayMode, ExpandableListModel};
 use taigi_desktop_core::keys::tps_keyboard_rows;
-use taigi_desktop_core::session::{Emit, LookupTableContent};
+use taigi_desktop_core::session::{Emit, ListSelection, LookupTableContent};
 
 /// One candidate: the two scripts apart, because the panel sets them apart.
 #[derive(Debug, Serialize)]
@@ -53,6 +54,8 @@ pub(crate) enum WireEmit<'a> {
         cursor_visible: bool,
         page_size: u32,
         vertical: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        layout: Option<WireLayout>,
     },
     HideLookupTable,
     ModeChanged {
@@ -67,6 +70,94 @@ pub(crate) enum WireEmit<'a> {
         row: usize,
         cap: usize,
     },
+}
+
+/// A collapsed cell.
+#[derive(Debug, Serialize)]
+pub(crate) struct WireCollapsedCell {
+    index: usize,
+    width: f32,
+}
+
+/// A cell of the unfolded grid, in columns.
+#[derive(Debug, Serialize)]
+pub(crate) struct WireGridCell {
+    index: usize,
+    start: usize,
+    span: usize,
+}
+
+/// What `ExpandableListModel` says about the list, in CSS pixels. A list with
+/// no `layout` is paged by the page.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WireLayout {
+    is_column: bool,
+    is_expanded: bool,
+    lead_cell_is_unkeyed: bool,
+    has_overflow: bool,
+    collapsed: Vec<WireCollapsedCell>,
+    rows: Vec<Vec<WireGridCell>>,
+    column_width: f32,
+    item_height: f32,
+    row_height: f32,
+    window_height: f32,
+    grid_height: f32,
+    /// The half row a scrolling grid shows under its last full one.
+    peek: f32,
+    scroll_y: f32,
+    selected_row: Option<usize>,
+    animation_milliseconds: f32,
+}
+
+pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
+    let model = selection.expandable()?;
+    let geometry = model.expanded_geometry();
+    let is_expanded = model.mode() == ExpandableDisplayMode::Expanded;
+    let grid_height =
+        model.grid().rows.len() as f32 * model.row_height() - ExpandableListModel::SEPARATOR_HEIGHT;
+    Some(WireLayout {
+        is_column: model.axis() == ExpandableAxis::Column,
+        is_expanded,
+        lead_cell_is_unkeyed: selection.lead_cell_is_unkeyed(),
+        has_overflow: model.has_overflow(),
+        collapsed: model
+            .collapsed_cells()
+            .iter()
+            .map(|cell| WireCollapsedCell {
+                index: cell.candidate_index,
+                width: cell.rect.width,
+            })
+            .collect(),
+        // Only an unfolded window draws them, and this goes out on every key.
+        rows: if is_expanded {
+            model
+                .grid()
+                .rows
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|cell| WireGridCell {
+                            index: cell.candidate_index,
+                            start: cell.column_start,
+                            span: cell.column_span,
+                        })
+                        .collect()
+                })
+                .collect()
+        } else {
+            Vec::new()
+        },
+        column_width: model.column_width(),
+        item_height: model.item_height(),
+        row_height: model.row_height(),
+        window_height: geometry.window_height,
+        grid_height,
+        peek: geometry.container_height - grid_height,
+        scroll_y: model.scroll_y(),
+        selected_row: model.selected_row(),
+        animation_milliseconds: ExpandableListModel::ANIMATION_DURATION_SECONDS * 1000.0,
+    })
 }
 
 /// One row of the TPS key panel for the page: `indent` in key widths.
@@ -112,7 +203,12 @@ pub(crate) struct ModeText {
     pub label: String,
 }
 
-pub(crate) fn wire_emit<'a>(emit: &'a Emit, mode: &'a ModeText) -> WireEmit<'a> {
+/// `layout` goes on a `LookupTable`, and nothing else has one.
+pub(crate) fn wire_emit<'a>(
+    emit: &'a Emit,
+    mode: &'a ModeText,
+    layout: Option<WireLayout>,
+) -> WireEmit<'a> {
     match emit {
         Emit::Preedit { text, caret } => WireEmit::Preedit {
             text,
@@ -144,6 +240,7 @@ pub(crate) fn wire_emit<'a>(emit: &'a Emit, mode: &'a ModeText) -> WireEmit<'a> 
             cursor_visible: *cursor_visible,
             page_size: *page_size,
             vertical: *vertical,
+            layout,
         },
         Emit::HideLookupTable => WireEmit::HideLookupTable,
         Emit::ModeChanged => WireEmit::ModeChanged {
@@ -170,7 +267,7 @@ mod tests {
             symbol: "台",
             label: "label".to_owned(),
         };
-        serde_json::to_string(&wire_emit(&emit, &mode)).unwrap()
+        serde_json::to_string(&wire_emit(&emit, &mode, None)).unwrap()
     }
 
     #[test]

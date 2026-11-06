@@ -11,6 +11,7 @@ use taigi_desktop_core::platform::DesktopPlatform;
 use wasm_bindgen::prelude::*;
 
 use crate::key::BrowserKey;
+use crate::layout::{Measured, TextRuler};
 use crate::reply::tps_rows_json;
 use crate::session::{WebSession, DICTIONARY_VERSION};
 
@@ -22,6 +23,13 @@ const DICTIONARIES_ROOT: &str = "/dictionaries";
 extern "C" {
     #[wasm_bindgen(js_namespace = Date)]
     fn now() -> f64;
+
+    /// The page's ruler, set before a session starts. Answers
+    /// `[maximumWindowWidth, ...widths]`. `catch`: an exception unwinding
+    /// through here would skip the drop of `&mut self`, and every later call
+    /// would be refused.
+    #[wasm_bindgen(catch, js_name = taigiMeasureCells)]
+    fn measure_cells(runs_json: &str) -> Result<Vec<f32>, JsValue>;
 }
 
 /// `SystemTime::now` panics on this target.
@@ -30,6 +38,23 @@ struct BrowserClock;
 impl Clock for BrowserClock {
     fn now_ms(&self) -> i64 {
         now() as i64
+    }
+}
+
+/// Measures in the page, which is what draws.
+#[derive(Debug)]
+struct PageRuler;
+
+impl TextRuler for PageRuler {
+    fn measure(&self, runs: &[(&str, f32)]) -> Option<Measured> {
+        // Strings and numbers only: this cannot fail.
+        let json = serde_json::to_string(runs).ok()?;
+        let answer = measure_cells(&json).ok()?;
+        let (maximum_window_width, widths) = answer.split_first()?;
+        Some(Measured {
+            maximum_window_width: *maximum_window_width,
+            widths: widths.to_vec(),
+        })
     }
 }
 
@@ -56,9 +81,16 @@ impl Session {
             "linux" => DesktopPlatform::Linux,
             other => return Err(JsError::new(&format!("unknown platform {other}"))),
         };
-        WebSession::new(settings_json, platform, locale, Arc::new(BrowserClock))
-            .map(|inner| Self { inner })
-            .map_err(|error| JsError::new(&error.to_string()))
+        let ruler = Arc::new(PageRuler);
+        WebSession::new(
+            settings_json,
+            platform,
+            locale,
+            Arc::new(BrowserClock),
+            ruler,
+        )
+        .map(|inner| Self { inner })
+        .map_err(|error| JsError::new(&error.to_string()))
     }
 
     /// The files `addDictionary` takes.
@@ -92,8 +124,9 @@ impl Session {
         Ok(self.inner.key_up(&parse_key(key_json)?))
     }
 
-    /// A click on the `position`-th cell of the current page: selects, never
-    /// commits (`click_from_panel`).
+    /// A click on a cell: selects, never commits (`click_from_panel`).
+    /// `position`: within the current page, or under a `layout` the cell's
+    /// index in the list.
     #[wasm_bindgen(js_name = clickCandidate)]
     pub fn click_candidate(&mut self, position: usize) -> String {
         self.inner.click_candidate(position)
@@ -115,6 +148,12 @@ impl Session {
     #[wasm_bindgen(js_name = turnPage)]
     pub fn turn_page(&mut self, is_forward: bool) -> String {
         self.inner.turn_page(is_forward)
+    }
+
+    /// The wheel moved the unfolded grid: the keys read the same viewport.
+    #[wasm_bindgen(js_name = viewportScrolled)]
+    pub fn viewport_scrolled(&mut self, offset: f32) {
+        self.inner.viewport_scrolled(offset);
     }
 
     #[wasm_bindgen(js_name = commitComposition)]

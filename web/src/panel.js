@@ -9,15 +9,16 @@ function span(className, text) {
   return element;
 }
 
-/// One candidate: its key, its script, and the other script when it has one. A
-/// `label` of `""` is the §34 literal, which takes no key and is centred across
-/// its cell (`CandidateItemView.isLiteralCell` on macOS); the Telex guide's rows
-/// have no label at all.
-function drawCell({ text, annotation }, label, position, { isCurrent }) {
+/// One candidate: its key, its script, and the other script when it has one.
+/// `isLiteral`: the §34 literal, which takes no key and is centred across its
+/// cell (`CandidateItemView.isLiteralCell` on macOS). The Telex guide's rows have
+/// no label at all.
+function drawCell({ text, annotation }, label, position, flags) {
+  const { isCurrent, isLiteral } = flags;
   const cell = document.createElement("li");
   cell.dataset.position = position;
   cell.setAttribute("aria-current", String(isCurrent));
-  cell.toggleAttribute("data-literal", label === "");
+  cell.toggleAttribute("data-literal", isLiteral);
   cell.append(span("index", label ?? ""), span("text", text));
   if (annotation) {
     cell.append(span("annotation", annotation));
@@ -32,21 +33,39 @@ export class Panel {
   #arrows;
   #pageUp;
   #pageDown;
+  #unfold;
+  #ruler;
   #spoken;
+  /// The `layout` on screen, `null` for a paged list.
+  #shownLayout = null;
+  /// The cells on screen, to tell a fold from a new list.
+  #shownCells = null;
+  /// Frames to move from, for the next `place` (`#startUnfold`).
+  #unfoldFrom = null;
+  #unfolding = [];
 
-  /// `onPick(position)`: a click on the `position`-th cell of the shown page.
+  /// `onPick(position)`: a click on a cell, `data-position` as drawn.
   /// `onTurnPage(isForward)`: a click on a page arrow.
+  /// `onScrolled(offset)`: the wheel moved the unfolded grid.
+  /// `ruler`: outside `root`, which `hidden` would stop laying out.
   /// `spoken`: a live region outside `root`, which `hidden` would silence.
-  constructor(root, spoken, onPick, onTurnPage) {
+  constructor(root, ruler, spoken, onPick, onTurnPage, onScrolled) {
     this.#root = root;
+    this.#ruler = ruler;
     this.#spoken = spoken;
     this.#preedit = root.querySelector("#preedit");
     this.#candidates = root.querySelector("#candidates");
     this.#arrows = root.querySelector("#page-arrows");
     this.#pageUp = root.querySelector("#page-up");
     this.#pageDown = root.querySelector("#page-down");
+    this.#unfold = root.querySelector("#unfold");
     this.#pageUp.addEventListener("click", () => onTurnPage(false));
     this.#pageDown.addEventListener("click", () => onTurnPage(true));
+    // A collapsed list's page down is its unfolding (`navigate_collapsed`).
+    this.#unfold.addEventListener("click", () => onTurnPage(true));
+    this.#candidates.addEventListener("scroll", () => {
+      onScrolled(this.#candidates.scrollTop);
+    });
     // Focus stays in the textarea, which a commit needs.
     root.addEventListener("mousedown", (event) => event.preventDefault());
     this.#candidates.addEventListener("click", (event) => {
@@ -83,36 +102,200 @@ export class Panel {
     this.#syncVisibility();
   }
 
+  /// `[maximumWindowWidth, ...widths]` of `[text, fontSize]` runs, as drawn: the
+  /// DOM rather than a canvas, whose widths fall short in WebKit under the
+  /// default font (web-guidelines.md). One write and one read.
+  measure(runsJson) {
+    const spans = JSON.parse(runsJson).map(([text, fontSize]) => {
+      const run = span("", text);
+      run.style.fontSize = `${fontSize}px`;
+      return run;
+    });
+    const windowWidth = this.#ruler.parentElement.clientWidth;
+    this.#ruler.replaceChildren(...spans);
+    const widths = spans.map((run) => run.getBoundingClientRect().width);
+    this.#ruler.replaceChildren();
+    return Float32Array.of(windowWidth, ...widths);
+  }
+
+  showTable(table) {
+    for (const animation of this.#unfolding) {
+      animation.cancel();
+    }
+    this.#unfolding = [];
+    if (table.layout) {
+      this.#showLaidOut(table);
+    } else {
+      this.#showPage(table);
+    }
+    this.#syncVisibility();
+  }
+
+  /// A list `ExpandableListModel` holds: a packed row or a column, or the grid.
+  #showLaidOut({ cells, labels, cursor, layout }) {
+    const list = this.#candidates;
+    const { collapsed, rows, isColumn, isExpanded } = layout;
+    // A new list arrives collapsed too; only the same cells fold.
+    const cellsJson = JSON.stringify(cells);
+    this.#unfoldFrom =
+      this.#shownLayout &&
+      this.#shownLayout.isExpanded !== isExpanded &&
+      this.#shownCells === cellsJson
+        ? this.#frames()
+        : null;
+    this.#shownLayout = layout;
+    this.#shownCells = cellsJson;
+    const keyed = isExpanded ? (rows[layout.selectedRow] ?? []) : collapsed;
+    const labelOf = new Map(keyed.map(({ index }, at) => [index, labels[at]]));
+    const draw = (index) =>
+      drawCell(cells[index], labelOf.get(index), index, {
+        isCurrent: index === cursor,
+        isLiteral: layout.leadCellIsUnkeyed && index === 0,
+      });
+    const drawn = isExpanded
+      ? rows.flat().map(({ index, start, span: columns }) => {
+          const cell = draw(index);
+          cell.style.gridColumn = `${start + 1} / span ${columns}`;
+          return cell;
+        })
+      : collapsed.map(({ index, width }) => {
+          const cell = draw(index);
+          if (!isColumn) {
+            cell.style.minWidth = `${width}px`;
+          }
+          return cell;
+        });
+    this.#setShape({
+      row: !isColumn && !isExpanded,
+      grid: isExpanded,
+      vertical: isColumn && !isExpanded,
+      inline: isColumn,
+    });
+    const lengths = {
+      "--candidate-item": layout.itemHeight,
+      // A column keeps its height as it unfolds, so its rows are the model's.
+      "--candidate-row": layout.itemHeight,
+      "--candidate-column": layout.columnWidth,
+      "--candidate-window": layout.windowHeight,
+      "--candidate-grid": layout.gridHeight,
+      "--candidate-peek": layout.peek,
+      "--candidate-keyed-row": (layout.selectedRow ?? 0) * layout.rowHeight,
+    };
+    for (const [name, length] of Object.entries(lengths)) {
+      list.style.setProperty(name, `${length}px`);
+    }
+    list.replaceChildren(...drawn);
+    if (isExpanded) {
+      list.scrollTop = layout.scrollY;
+    }
+    this.#speak(labelOf.get(cursor), cells[cursor]);
+    this.#arrows.hidden = isExpanded || !layout.hasOverflow;
+    this.#pageUp.hidden = true;
+    this.#pageDown.hidden = true;
+    this.#unfold.hidden = false;
+    this.#unfold.toggleAttribute("data-column", isColumn);
+  }
+
   /// The reply carries the whole list; the page in view is the cursor's.
-  showTable({ cells, labels, cursor, cursorVisible, pageSize, vertical }) {
+  #showPage({ cells, labels, cursor, cursorVisible, pageSize, vertical }) {
+    this.#forgetLayout();
+    this.#setShape({ vertical, inline: vertical });
+    this.#candidates.style.removeProperty("--candidate-row");
     const start = Math.floor(cursor / pageSize) * pageSize;
     const shown = cells.slice(start, start + pageSize);
     this.#candidates.replaceChildren(
       ...shown.map((cell, position) =>
         drawCell(cell, labels[position], position, {
           isCurrent: cursorVisible && start + position === cursor,
+          isLiteral: labels[position] === "",
         }),
       ),
     );
-    // Focus stays in the textarea, so a screen reader hears the list only here:
-    // the one cell Enter would take, not the page on every key.
     const position = cursorVisible ? cursor - start : 0;
-    this.#spoken.textContent = [
-      labels[position],
-      shown[position]?.text,
-      shown[position]?.annotation,
-    ]
-      .filter(Boolean)
-      .join(" ");
-    this.#candidates.toggleAttribute("data-vertical", vertical);
+    this.#speak(labels[position], shown[position]);
     // A column has no arrows on macOS either: it shows a scroller there.
     this.#arrows.hidden = vertical || cells.length <= pageSize;
     this.#pageUp.disabled = start === 0;
     this.#pageDown.disabled = start + pageSize >= cells.length;
-    this.#syncVisibility();
+    this.#pageUp.hidden = false;
+    this.#pageDown.hidden = false;
+    this.#unfold.hidden = true;
+  }
+
+  /// `inline`: a cell holds its scripts side by side.
+  #setShape({ row, grid, vertical, inline }) {
+    const list = this.#candidates;
+    list.toggleAttribute("data-row", Boolean(row));
+    list.toggleAttribute("data-grid", Boolean(grid));
+    list.toggleAttribute("data-vertical", Boolean(vertical));
+    list.toggleAttribute("data-inline", Boolean(inline));
+  }
+
+  #forgetLayout() {
+    this.#shownLayout = null;
+    this.#shownCells = null;
+    this.#unfoldFrom = null;
+  }
+
+  /// Focus stays in the textarea, so a screen reader hears the list only here:
+  /// the one cell Enter would take, not the page on every key.
+  #speak(label, cell) {
+    this.#spoken.textContent = [label, cell?.text, cell?.annotation]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  /// The window and each cell, relative to the window.
+  #frames() {
+    const window = this.#root.getBoundingClientRect();
+    const cells = new Map();
+    for (const cell of this.#candidates.children) {
+      const { left, top } = cell.getBoundingClientRect();
+      cells.set(cell.dataset.position, {
+        left: left - window.left,
+        top: top - window.top,
+      });
+    }
+    return { width: window.width, height: window.height, cells };
+  }
+
+  /// The window grows and the cells both modes show move. The rest appear in
+  /// place, as `ExpandableListModel::unfold_plan` says. After `place`: an
+  /// animation changes what `offsetHeight` reads.
+  #startUnfold() {
+    const from = this.#unfoldFrom;
+    this.#unfoldFrom = null;
+    if (!from || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+    const to = this.#frames();
+    const timing = {
+      duration: this.#shownLayout.animationMilliseconds,
+      easing: "ease-in-out",
+    };
+    const window = this.#root.animate(
+      {
+        width: [`${from.width}px`, `${to.width}px`],
+        height: [`${from.height}px`, `${to.height}px`],
+      },
+      timing,
+    );
+    this.#unfolding = [window];
+    for (const cell of this.#candidates.children) {
+      const start = from.cells.get(cell.dataset.position);
+      const end = to.cells.get(cell.dataset.position);
+      if (start) {
+        const shift = `${start.left - end.left}px ${start.top - end.top}px`;
+        this.#unfolding.push(
+          cell.animate({ translate: [shift, "0 0"] }, timing),
+        );
+      }
+    }
   }
 
   hideTable() {
+    this.#forgetLayout();
+    this.#setShape({});
     this.#candidates.replaceChildren();
     this.#arrows.hidden = true;
     this.#spoken.textContent = "";
@@ -138,10 +321,29 @@ export class Panel {
       editor.clientHeight,
       window.innerHeight - editor.getBoundingClientRect().top,
     );
+    this.#fitGrid(room);
     const isRoomBelow = below + root.offsetHeight <= room;
     root.style.left = `${Math.max(0, Math.min(left, roomRight))}px`;
     const above = Math.max(0, inView - root.offsetHeight);
     root.style.top = `${isRoomBelow ? below : above}px`;
+    this.#startUnfold();
+  }
+
+  /// The model's five rows and a half can pass a short editor, which would
+  /// cover Copy and Clear: the grid takes what there is and scrolls.
+  #fitGrid(room) {
+    const list = this.#candidates;
+    if (!list.hasAttribute("data-grid")) {
+      return;
+    }
+    list.style.removeProperty("max-height");
+    const excess = this.#root.offsetHeight - room;
+    if (excess > 0) {
+      list.style.maxHeight = `${list.offsetHeight - excess}px`;
+      list
+        .querySelector('[aria-current="true"]')
+        ?.scrollIntoView({ block: "nearest" });
+    }
   }
 
   #syncVisibility() {

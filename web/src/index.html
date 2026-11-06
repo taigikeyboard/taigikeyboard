@@ -107,6 +107,8 @@
           </label>
           <label class="setting"><span data-i18n="desktop.candidateWindowLayout">Candidate Window Layout</span>
             <select name="candidateLayout">
+              <option value="expandable" data-i18n="desktop.candidateLayoutExpandable">Horizontal Expandable</option>
+              <option value="verticalExpandable" data-i18n="desktop.candidateLayoutVerticalExpandable">Vertical Expandable</option>
               <option value="horizontal" data-i18n="desktop.candidateLayoutHorizontal">Horizontal</option>
               <option value="vertical" selected data-i18n="desktop.candidateLayoutVertical">Vertical</option>
             </select>
@@ -226,6 +228,9 @@
           <div id="list">
             <ol id="candidates"></ol>
             <div id="page-arrows" aria-hidden="true" hidden>
+              <button id="unfold" type="button" tabindex="-1" hidden>
+                <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 4l2.5 2.5L7.5 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
               <button id="page-up" type="button" tabindex="-1">
                 <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 6l2.5-2.5L7.5 6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
@@ -235,6 +240,7 @@
             </div>
           </div>
         </div>
+        <div id="ruler" aria-hidden="true"></div>
       </div>
       <div class="actions">
         <div id="load-slot">
