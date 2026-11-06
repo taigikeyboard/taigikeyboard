@@ -105,7 +105,7 @@ The spike's p99 of 18 ms says the main thread can afford it. If a slow machine p
 
 ### Why one reply per key, as JSON
 
-The Linux shell already answers a key with a list of signals: `KeyReply { handled, emits }` (`linux/crates/taigi-linux-core/src/session.rs:104`, `executor.rs:18`). `Emit` maps onto a browser one to one:
+The Linux shell already answers a key with a list of signals: `KeyReply { handled, emits }` (`desktop/crates/taigi-desktop-core/src/session/state.rs`, `session/executor.rs`). `Emit` maps onto a browser one to one:
 
 | `Emit` | Browser |
 |---|---|
@@ -136,7 +136,7 @@ Commit uses `document.execCommand("insertText")`, which MDN marks deprecated and
 | Caret moved or text changed by anything but this page (arrows, mouse, paste, undo) | `session.caretMoved()` |
 | Textarea `scroll` | Re-anchor the panel at the caret |
 
-The `caretMoved` row prevents real text loss. The auto-space swap deletes the character before the caret without looking at it (`Emit::DeleteSurrounding { offset: -1, count: 1 }`, `executor.rs:97-100`). Its armed state clears only on the next key or at session end, so click elsewhere, type `.`, and a real character goes.
+The `caretMoved` row prevents real text loss. The auto-space swap deletes the character before the caret without looking at it (`Emit::DeleteSurrounding { offset: -1, count: 1 }`, `session/executor.rs:97-100`). Its armed state clears only on the next key or at session end, so click elsewhere, type `.`, and a real character goes.
 
 `EditContext` is left out: MDN lists it as limited availability and experimental.
 

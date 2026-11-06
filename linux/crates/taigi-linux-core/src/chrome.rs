@@ -10,9 +10,7 @@
 //! Everything here runs under the coordinator lock where it needs the
 //! engine and emits nothing; the shell replays the returned [`Emit`]s.
 
-use crate::executor::{Emit, KeySurface, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
-use crate::selection::LookupSelection;
 use crate::session::{self, EngineState, SymbolPicker, PAGE_SIZE};
 use taigi_desktop_core::composing::{insert_symbol, represent_list, ContextToken};
 use taigi_desktop_core::keys::{
@@ -20,6 +18,9 @@ use taigi_desktop_core::keys::{
     MENU,
 };
 use taigi_desktop_core::mode_indicator::ModeIndicator;
+use taigi_desktop_core::session::{
+    Emit, KeySurface, LookupSelection, LookupTableContent, Recorder,
+};
 use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument,
@@ -386,26 +387,6 @@ fn toggle_symbol_picker(
     session::present_table(state, settings, bindings, emits);
 }
 
-/// The picker as the panel draws it: the symbols with the slot-key labels,
-/// the highlight, the layout's orientation.
-pub(crate) fn symbol_picker_table(
-    picker: &SymbolPicker,
-    settings: &SettingsDocument,
-    bindings: &ComposingKeyBindings,
-) -> LookupTableContent {
-    let slot_key_set = bindings.slot_key_set();
-    LookupTableContent {
-        candidates: picker.symbols.clone(),
-        labels: (0..PAGE_SIZE)
-            .map(|slot| slot_key_set.label_for_slot(slot))
-            .collect(),
-        cursor: picker.selection.selected_index().unwrap_or(0) as u32,
-        cursor_visible: true,
-        page_size: PAGE_SIZE as u32,
-        vertical: session::is_vertical_layout(settings),
-    }
-}
-
 /// Writes the symbol at `index`, closes the picker and moves the symbol to
 /// the front of the recents. `None` — a slot with no cell — does nothing
 /// and keeps the picker up. An attaching mark swaps with the auto space a
@@ -435,7 +416,7 @@ pub(crate) fn pick_symbol(
     runtime.prepare_for_first_key();
     let is_swap_armed = std::mem::take(&mut state.armed_auto_space);
     let mut surface = KeySurface {
-        recorder: Recorder::new(state.can_delete_surrounding()),
+        recorder: Recorder::new(state.can_delete_surrounding),
         is_swap_armed,
         selection: &mut state.selection,
         is_vertical: session::is_vertical_layout(settings),

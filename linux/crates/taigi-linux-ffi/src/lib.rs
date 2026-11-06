@@ -405,7 +405,7 @@ pub unsafe extern "C" fn taigi_engine_set_capabilities(engine: *mut TaigiEngine,
     }
     // SAFETY: non-null and, by contract, a live engine the caller owns.
     let engine = unsafe { &mut *engine };
-    engine.state.capabilities = caps;
+    session::set_capabilities(&mut engine.state, caps);
 }
 
 /// # Safety
