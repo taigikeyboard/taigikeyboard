@@ -12,7 +12,7 @@ use taigi_desktop_core::settings::{
 use taigi_desktop_core::strings::StringKey;
 
 /// The layouts a panel can take: neither expandable grid exists there, and
-/// the panel draws both vertical (`taigi-linux-core` `session.rs`).
+/// the panel draws both vertical (`taigi-desktop-core` `session/table.rs`).
 const PANEL_LAYOUTS: &[CandidateLayout] = &[CandidateLayout::Horizontal, CandidateLayout::Vertical];
 
 /// The stored layout as the panel draws it: either expandable reads as

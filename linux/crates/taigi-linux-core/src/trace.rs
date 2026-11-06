@@ -7,8 +7,7 @@ use std::path::PathBuf;
 use dispatch::trace::{event, JsonStr};
 use taigi_linux_platform::RawKeyEvent;
 
-use crate::session::{EngineState, KeyReply};
-use taigi_desktop_core::session::Emit;
+use crate::session::{Emit, EngineState, KeyReply};
 
 /// `$XDG_DATA_HOME/taigikeyboard/e2e-trace.jsonl` — the driver gives each
 /// run its own `XDG_DATA_HOME`, so the file never mixes runs.

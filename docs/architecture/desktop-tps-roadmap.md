@@ -89,7 +89,7 @@ Classifying a key never asks the engine — the Windows Test phase returns befor
 
 The keypad is read from `key_code`, which Windows already fills; the Linux and macOS key-code tables gain the nine keypad codes. No snapshot field and no proto change. With Num Lock off the keypad arrives as navigation keys and behaves as those do today.
 
-Output the Other Script is inert under TPS wherever it is bound. Under TPS these do nothing, and write no setting: the Toggle Hanji / Romanization and Cycle Candidate Display shortcuts (`windows/crates/taigi-windows-tsf/src/session.rs:888-925` and the Linux `chrome.rs` counterparts), the Telex guide shortcut, Telex keys, the letter and digit slot sets, the Shift + slot script flip, Output the Other Script (its row in the Shortcuts pane stays; its chord never fires under TPS), No Hyphens. Full-width punctuation is on regardless of the stored swap, as on mobile (`ios/.../Settings/SharedSettings.swift:737-741`).
+Output the Other Script is inert under TPS wherever it is bound. Under TPS these do nothing, and write no setting: the Toggle Hanji / Romanization and Cycle Candidate Display shortcuts (`windows/crates/taigi-windows-tsf/src/session.rs:888-925` and their counterparts in `taigi-desktop-core` `session/global.rs`), the Telex guide shortcut, Telex keys, the letter and digit slot sets, the Shift + slot script flip, Output the Other Script (its row in the Shortcuts pane stays; its chord never fires under TPS), No Hyphens. Full-width punctuation is on regardless of the stored swap, as on mobile (`ios/.../Settings/SharedSettings.swift:737-741`).
 
 ### D4 — What the list and the commit show
 

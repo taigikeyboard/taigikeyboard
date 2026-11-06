@@ -59,7 +59,7 @@ impl Default for EngineState {
 }
 
 impl EngineState {
-    pub fn clear_list(&mut self) {
+    pub(crate) fn clear_list(&mut self) {
         self.candidates.clear();
         self.selection = LookupSelection::new(0, PAGE_SIZE);
     }

@@ -88,6 +88,11 @@ impl DesktopRuntime {
         }
     }
 
+    /// Which desktop this is.
+    pub fn platform(&self) -> DesktopPlatform {
+        self.platform
+    }
+
     /// Whether the engine keeps the user's data in this process.
     pub fn is_learning(&self) -> bool {
         self.data_directory.is_some()
