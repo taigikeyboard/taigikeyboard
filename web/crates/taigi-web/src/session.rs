@@ -5,13 +5,13 @@
 use std::sync::Arc;
 
 use taigi_desktop_core::composing::{Clock, ContextToken};
-use taigi_desktop_core::keys::{ShiftTapTracker, VK_SHIFT_CODE};
+use taigi_desktop_core::keys::{CandidateNavigation, ShiftTapTracker, VK_SHIFT_CODE};
 use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::session::{
-    click_from_panel, commit_composition, mode_label, process_key, toggle_language_mode,
-    tps_keyboard_press, Emit, EngineState,
+    click_from_panel, commit_composition, mode_label, navigate_from_panel, process_key,
+    toggle_language_mode, tps_keyboard_press, Emit, EngineState,
 };
 
 use crate::key::{shift_index, BrowserKey, SHIFT_SCAN_CODES};
@@ -113,6 +113,17 @@ impl WebSession {
         self.reply(true, &emits, None)
     }
 
+    /// A click on the panel's page arrows.
+    pub(crate) fn turn_page(&mut self, is_forward: bool) -> String {
+        let direction = if is_forward {
+            CandidateNavigation::PageDown
+        } else {
+            CandidateNavigation::PageUp
+        };
+        let emits = navigate_from_panel(&self.runtime, CONTEXT, &mut self.state, direction);
+        self.reply(true, &emits, None)
+    }
+
     pub(crate) fn commit_composition(&mut self) -> String {
         let emits = commit_composition(&self.runtime, CONTEXT, &mut self.state);
         self.reply(true, &emits, None)
@@ -145,8 +156,7 @@ impl WebSession {
         self.settings.replace_from_json(json)
     }
 
-    /// The indicator as things stand, for a page that has not seen a
-    /// `modeChanged`: at load, and after its own `set_settings`.
+    /// The indicator as things stand.
     pub(crate) fn mode_symbol(&self) -> &'static str {
         let settings = self.runtime.settings.current();
         ModeIndicator::of(&settings.engine_settings(), self.state.language_mode).symbol()
@@ -525,6 +535,12 @@ mod tests {
     #[test]
     fn a_click_with_no_list_up_does_nothing() {
         let reply = parsed(session().click_candidate(0));
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn a_page_arrow_with_no_list_up_does_nothing() {
+        let reply = parsed(session().turn_page(true));
         assert_eq!(emit_types(&reply), Vec::<&str>::new());
     }
 

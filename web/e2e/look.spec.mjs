@@ -7,25 +7,22 @@ import {
   candidates,
   commitWord,
   expectState,
-  mode,
+  inputMode,
   open,
   panel,
   preedit,
   toggle,
 } from "./helpers.mjs";
 
-const inputMode = (page) => page.getByLabel("Input Mode");
 const theme = (page) =>
   page.evaluate(() => document.documentElement.dataset.theme);
 const pageColour = (page) =>
   page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
-test("the sidebar opens beside the page and keeps the keyboard", async ({
+test("the sidebar starts open beside the page and keeps the keyboard", async ({
   page,
 }) => {
   const editor = await open(page);
-  await expect(inputMode(page)).toBeHidden();
-  await toggle(page).click();
   await expect(inputMode(page)).toBeVisible();
   await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
   await expect(editor).toBeFocused();
@@ -33,20 +30,21 @@ test("the sidebar opens beside the page and keeps the keyboard", async ({
   await expect(editor).toHaveValue("台灣");
 });
 
-test("the docked sidebar is remembered", async ({ page }) => {
+test("the sidebar remembers being closed", async ({ page }) => {
   await open(page);
+  await toggle(page).click();
+  await expect(inputMode(page)).toBeHidden();
+  await page.reload();
+  await expect(inputMode(page)).toBeHidden();
   await toggle(page).click();
   await page.reload();
   await expect(inputMode(page)).toBeVisible();
-  await toggle(page).click();
-  await expect(inputMode(page)).toBeHidden();
-  await page.reload();
-  await expect(inputMode(page)).toBeHidden();
 });
 
 test("a narrow window opens the sidebar as a drawer", async ({ page }) => {
   await page.setViewportSize({ width: 500, height: 700 });
   const editor = await open(page);
+  await expect(inputMode(page)).toBeHidden();
   await toggle(page).click();
   await expect(inputMode(page)).toBeVisible();
   await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
@@ -56,13 +54,26 @@ test("a narrow window opens the sidebar as a drawer", async ({ page }) => {
   await expect(editor).toBeVisible();
 });
 
-test("the status control and the chord open the sidebar", async ({ page }) => {
-  const editor = await open(page);
-  await page.locator("#mode-button").click();
+test("the sections fold, and only the dictionaries start folded", async ({
+  page,
+}) => {
+  await open(page);
+  const moe = page.locator('input[name="moeDictEnabled"]');
   await expect(inputMode(page)).toBeVisible();
-  await toggle(page).click();
+  await expect(page.getByLabel("Appearance")).toBeVisible();
+  await expect(moe).toBeHidden();
+  await page.locator("summary").nth(2).click();
+  await expect(moe).toBeVisible();
+  await page.locator("summary").first().click();
   await expect(inputMode(page)).toBeHidden();
+});
+
+test("the chord opens the sidebar on its General rows", async ({ page }) => {
   // trace: Ctrl+Alt+S = OpenLastSettingsPane.
+  const editor = await open(page);
+  await page.locator("summary").first().click();
+  await toggle(page).click();
+  await editor.focus();
   await editor.press("Control+Alt+s");
   await expect(inputMode(page)).toBeVisible();
 });
@@ -70,23 +81,19 @@ test("the status control and the chord open the sidebar", async ({ page }) => {
 test("Input Mode reaches the session and survives a reload", async ({
   page,
 }) => {
-  // trace: tps_layout.rs KEYS '8' → ㄚ; `ModeIndicator::Tps` symbol 方.
+  // trace: tps_layout.rs KEYS '8' → ㄚ.
   const editor = await open(page);
-  await toggle(page).click();
   await inputMode(page).selectOption("tps");
-  await expect(mode(page)).toHaveText("方");
   await editor.focus();
   await editor.press("8");
   await expect(preedit(page)).toContainText("ㄚ");
   await page.reload();
-  await expect(mode(page)).toHaveText("方");
   await expect(inputMode(page)).toHaveValue("tps");
 });
 
 test("Candidate Display reaches the session", async ({ page }) => {
   // trace: `RomanOnly` shows no Hanji, so the top candidate is the romanization.
   const editor = await open(page);
-  await toggle(page).click();
   await page.getByLabel("Candidate Display").selectOption("romanOnly");
   await editor.focus();
   await commitWord(editor);
@@ -97,24 +104,21 @@ test("a chord's write shows in the form", async ({ page }) => {
   // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ.
   const editor = await open(page);
   await editor.press("Control+Alt+c");
-  await toggle(page).click();
   await expect(inputMode(page)).toHaveValue("poj");
 });
 
 test("a form change keeps what a chord wrote", async ({ page }) => {
   const editor = await open(page);
   await editor.press("Control+Alt+c");
-  await expect(mode(page)).toHaveText("白");
-  await toggle(page).click();
+  await expect(inputMode(page)).toHaveValue("poj");
   await page.getByLabel("Appearance").selectOption("dark");
-  await expect(mode(page)).toHaveText("白");
+  await expect(inputMode(page)).toHaveValue("poj");
   await page.reload();
-  await expect(mode(page)).toHaveText("白");
+  await expect(inputMode(page)).toHaveValue("poj");
 });
 
 test("Appearance pins the theme before first paint", async ({ page }) => {
   await open(page);
-  await toggle(page).click();
   await page.getByLabel("Appearance").selectOption("dark");
   await expect.poll(() => pageColour(page)).toBe("rgb(0, 0, 0)");
   await page.getByLabel("Appearance").selectOption("light");
@@ -132,9 +136,7 @@ test("Appearance pins the theme before first paint", async ({ page }) => {
 
 test("a stored value no control offers shows the default", async ({ page }) => {
   await open(page, { settings: { inputMode: "bopomofo" } });
-  await toggle(page).click();
   await expect(inputMode(page)).toHaveValue("tl");
-  await expect(mode(page)).toHaveText("台");
 });
 
 test("the panel stays clear of Copy and Clear", async ({ page }) => {
@@ -187,11 +189,9 @@ test("a document with no revision takes a form change", async ({ page }) => {
   });
   await page.reload();
   await expect(editor).toBeEnabled();
-  await toggle(page).click();
   await inputMode(page).selectOption("tps");
-  await expect(mode(page)).toHaveText("方");
   await page.reload();
-  await expect(mode(page)).toHaveText("方");
+  await expect(inputMode(page)).toHaveValue("tps");
 });
 
 test.describe(() => {
@@ -223,10 +223,185 @@ test("a state that appears shifts nothing", async ({ page }) => {
   const editor = await open(page, { ready: false });
   const before = await editor.boundingBox();
   await editor.dispatchEvent("compositionstart");
-  await expect(page.locator("#notice")).toBeVisible();
+  await expect(page.locator("#notice")).toHaveAttribute("data-active");
   await editor.dispatchEvent("compositionend");
   await expectState(page, "ready");
   await editor.pressSequentially("taiuan");
   await expect(candidates(page).first()).toBeVisible();
   expect(await editor.boundingBox()).toEqual(before);
+});
+
+test("/ moves into the textarea from anywhere but a text field", async ({
+  page,
+}) => {
+  const editor = await open(page);
+  await page.getByRole("button", { name: "Copy" }).focus();
+  await page.keyboard.press("/");
+  await expect(editor).toBeFocused();
+  await expect(editor).toHaveValue("");
+  await page.getByLabel("Auto-Space").focus();
+  await page.keyboard.press("/");
+  await expect(editor).toBeFocused();
+  await inputMode(page).focus();
+  await page.keyboard.press("/");
+  await expect(inputMode(page)).toBeFocused();
+});
+
+test("the / hint shows only over an empty textarea", async ({ page }) => {
+  const editor = await open(page);
+  const hint = page.locator("#text-hint");
+  await expect(hint.locator("kbd")).toHaveText("/");
+  await expect(hint).toBeVisible();
+  await editor.pressSequentially("tai");
+  await expect(hint).toBeHidden();
+  await editor.press("Escape");
+  await expect(hint).toBeVisible();
+  await editor.fill("台灣");
+  await expect(hint).toBeHidden();
+});
+
+test("around the textarea, only Copy and Clear", async ({ page }) => {
+  await open(page);
+  const seen = await page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll("main :is(p, button, progress)"),
+      (element) => {
+        const { width, height } = element.getBoundingClientRect();
+        const isDrawn =
+          width > 1 &&
+          height > 1 &&
+          getComputedStyle(element).visibility === "visible";
+        return isDrawn ? element.textContent : null;
+      },
+    ).filter((text) => text !== null),
+  );
+  expect(seen).toEqual(["Copy", "Clear"]);
+});
+
+test("a window that fits the page does not scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await open(page);
+  const { scrollHeight, clientHeight } = await page.evaluate(() => {
+    const { scrollHeight, clientHeight } = document.documentElement;
+    return { scrollHeight, clientHeight };
+  });
+  expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
+});
+
+test("the footer matches the converter's", async ({ page }) => {
+  await open(page);
+  const footer = page.locator("footer");
+  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持 ❤️");
+  await expect(footer.getByRole("link")).toHaveAttribute(
+    "href",
+    "https://p.ecpay.com.tw/AA663DE",
+  );
+});
+
+test("the sidebar links carry their names", async ({ page }) => {
+  await open(page, { settings: { displayLanguage: "hanji" } });
+  const links = page.locator(".sidebar-links a");
+  await expect(links.nth(0)).toHaveText("台語齒盤官方網站");
+  await expect(links.nth(1)).toHaveText("台語羅馬字轉換器");
+});
+
+test("General rows reach the session", async ({ page }) => {
+  // trace: `RomanOnly` commits romanization; `SyllableSeparator::Space` joins its
+  // syllables with a space (behavioral-invariants.md §49).
+  const editor = await open(page, {
+    settings: { candidateDisplayMode: "romanOnly" },
+  });
+  await page.getByLabel("Syllable Separator").selectOption("space");
+  await editor.focus();
+  await commitWord(editor);
+  await expect(editor).toHaveValue("tâi uân");
+});
+
+test("Output Script stores a boolean and writes romanization", async ({
+  page,
+}) => {
+  // trace: isTranslateSwapped false, Pairing: the row leads with romanization.
+  const editor = await open(page);
+  await page.getByLabel("Output Script").selectOption("false");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("taigi.settings")).values
+            .isTranslateSwapped,
+      ),
+    )
+    .toBe(false);
+  await editor.focus();
+  await commitWord(editor);
+  await expect(editor).toHaveValue("tâi-uân");
+});
+
+test("Output Script greys under Romanization Only", async ({ page }) => {
+  await open(page, { settings: { candidateDisplayMode: "romanOnly" } });
+  await expect(page.getByLabel("Output Script")).toBeDisabled();
+});
+
+test("a dictionary row keeps its default and its value", async ({ page }) => {
+  await open(page);
+  await page.locator("summary").nth(2).click();
+  const moe = page.locator('input[name="moeDictEnabled"]');
+  const accent = page.locator('input[name="kautianAccentLukangEnabled"]');
+  await expect(moe).toBeChecked();
+  await expect(
+    page.locator('input[name="iTaigiDictEnabled"]'),
+  ).not.toBeChecked();
+  await moe.uncheck();
+  await expect(accent).toBeDisabled();
+  await expect(accent).toBeChecked();
+  await moe.check();
+  await expect(accent).toBeEnabled();
+});
+
+test("turning a source off takes its words from the list", async ({ page }) => {
+  // trace: every source off leaves no entry for the word, so no Hanji is offered.
+  const editor = await open(page);
+  await editor.pressSequentially("taiuan");
+  await expect(candidates(page).filter({ hasText: "台灣" })).not.toHaveCount(0);
+  await editor.press("Escape");
+  await page.locator("summary").nth(2).click();
+  for (const row of await page
+    .locator(".sidebar-section:nth-of-type(3) input:not([data-requires])")
+    .all()) {
+    await row.uncheck();
+  }
+  await editor.focus();
+  await editor.pressSequentially("taiuan");
+  await expect(preedit(page)).toContainText("taiuan");
+  await expect(candidates(page).filter({ hasText: "台灣" })).toHaveCount(0);
+});
+
+test("Layout sets the list's shape and Size its text", async ({ page }) => {
+  const editor = await open(page, { settings: { candidateTextSize: "23" } });
+  await editor.pressSequentially("taiuan");
+  const list = page.locator("#candidates");
+  await expect(list).toHaveAttribute("data-vertical");
+  await expect(panel(page)).toHaveCSS("font-size", "23px");
+  await page.getByLabel("Candidate Window Layout").selectOption("horizontal");
+  await editor.focus();
+  await editor.pressSequentially("taiuan");
+  await expect(candidates(page).first()).toBeVisible();
+  await expect(list).not.toHaveAttribute("data-vertical");
+});
+
+test("a horizontal list keeps its scripts apart and turns pages", async ({
+  page,
+}) => {
+  const editor = await open(page, {
+    settings: { candidateLayout: "horizontal" },
+  });
+  await editor.pressSequentially("ta");
+  const first = page.locator("#candidates li").first();
+  await expect(first).toBeVisible();
+  await expect(page.locator("#page-up")).toBeDisabled();
+  const before = await first.textContent();
+  await page.locator("#page-down").click();
+  await expect(page.locator("#page-up")).toBeEnabled();
+  await expect(first).not.toHaveText(before);
+  await expect(editor).toBeFocused();
 });

@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-sidebar="open" data-font="iansui">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title data-i18n="home.appHeaderTitle">TaigiKeyboard</title>
+    <title>台語齒盤：台語輸入法、台文輸入 Web</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icons/196.png">
     <link rel="apple-touch-icon" href="icons/180.png">
@@ -30,85 +30,225 @@
         </button>
       </div>
       <form id="settings">
-        <label class="setting"><span data-i18n="desktop.appearanceTab">Appearance</span>
-          <select name="candidateAppearanceMode">
-            <option value="auto" selected data-i18n="settings.displayLanguageAutomatic">Automatic</option>
-            <option value="light" data-i18n="desktop.candidateAppearanceLight">Light</option>
-            <option value="dark" data-i18n="desktop.candidateAppearanceDark">Dark</option>
-          </select>
-        </label>
-        <label class="setting"><span data-i18n="theme.customFont">Font</span>
-          <select name="fontType">
-            <option value="system" selected data-i18n="common.fontSystemDefault">System</option>
-            <option value="openHuninn" data-i18n="common.fontOpenHuninn">Open Huninn</option>
-            <option value="iansui" data-i18n="common.fontIansui">Iansui</option>
-            <option value="genYoMin" data-i18n="common.fontGenYoMin">GenYoMin</option>
-            <option value="genYoGothic" data-i18n="common.fontGenYoGothic">GenYoGothic</option>
-          </select>
-        </label>
-        <label class="setting"><span data-i18n="settings.inputMode">Input Mode</span>
-          <select name="inputMode">
-            <option value="tl" selected data-i18n="settings.tlMode">Tâi-lô</option>
-            <option value="poj" data-i18n="settings.pojMode">Pe̍h-ōe-jī</option>
-            <option value="tps" data-i18n="settings.tpsMode">Phonetic Symbols</option>
-          </select>
-        </label>
-        <label class="setting"><span data-i18n="desktop.shortcutShowTpsKeyboard">Show Phonetic Symbols Mini Keyboard</span>
-          <input type="checkbox" name="tpsKeyboardShown">
-        </label>
-        <label class="setting"><span data-i18n="settings.candidateDisplayMode">Candidate Display</span>
-          <select name="candidateDisplayMode">
-            <option value="sideBySide" selected data-i18n="settings.candidateDisplayModeSideBySide">Hanji–Romanization Pairing</option>
-            <option value="combined" data-i18n="settings.candidateDisplayModeCombined">Hanji with Romanization</option>
-            <option value="romanOnly" data-i18n="settings.candidateDisplayModeRomanOnly">Romanization Only</option>
-          </select>
-        </label>
-        <label class="setting"><span data-i18n="settings.displayLanguage">Display Language</span>
-          <select name="displayLanguage">
-            <option value="system" selected data-i18n="settings.displayLanguageAutomatic">Automatic</option>
-            <option value="hanji">漢字</option>
-            <option value="en">English</option>
-            <option value="ja">日本語</option>
-            <option value="tailo">Tâi-lô</option>
-            <option value="poj">Pe̍h-ōe-jī</option>
-          </select>
-        </label>
+        <details id="general-settings" class="sidebar-section" open>
+          <summary data-i18n="desktop.generalTab">General</summary>
+          <label class="setting"><span data-i18n="settings.inputScript">Input Script</span>
+            <select name="inputMode">
+              <option value="tl" selected data-i18n="settings.tlMode">Tâi-lô</option>
+              <option value="poj" data-i18n="settings.pojMode">Pe̍h-ōe-jī</option>
+              <option value="tps" data-i18n="settings.tpsMode">Phonetic Symbols</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="desktop.shortcutShowTpsKeyboard">Show Phonetic Symbols Mini Keyboard</span>
+            <input type="checkbox" name="tpsKeyboardShown">
+          </label>
+          <label class="setting"><span data-i18n="settings.toneInputScheme">Tone Keys</span>
+            <select name="toneInputScheme">
+              <option value="standard" selected data-i18n="settings.toneSchemeStandard">Numeric Tones</option>
+              <option value="telex" data-i18n="settings.toneSchemeTelex">Telex</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.candidateWindow">Show Candidate Window</span>
+            <input type="checkbox" name="candidateWindowEnabled" checked>
+          </label>
+          <label class="setting"><span data-i18n="settings.literalRomanCandidate">Show Typed Text First</span>
+            <input type="checkbox" name="literalRomanCandidateEnabled">
+          </label>
+          <label class="setting"><span data-i18n="settings.outputScript">Output Script</span>
+            <select name="isTranslateSwapped" data-boolean>
+              <option value="true" selected data-i18n="settings.outputScriptHanji">Hanji</option>
+              <option value="false" data-i18n="settings.outputScriptRoman">Romanization</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.syllableSeparator">Syllable Separator</span>
+            <select name="syllableSeparator">
+              <option value="hyphen" selected data-i18n="desktop.telexGuideHyphen">Hyphen</option>
+              <option value="space" data-i18n="settings.syllableSeparatorSpace">Space</option>
+              <option value="none" data-i18n="settings.syllableSeparatorNone">None</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.nasalMarkerUppercase">Nasal mark in POJ capitals</span>
+            <select name="nasalMarkerUppercaseEnabled" data-boolean>
+              <option value="true" selected data-i18n="settings.nasalMarkerUppercaseCapital">ᴺ (SIÂᴺ)</option>
+              <option value="false" data-i18n="settings.nasalMarkerUppercaseSmall">ⁿ (SIÂⁿ)</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.autoSpace">Auto-Space</span>
+            <input type="checkbox" name="autoSpaceEnabled">
+          </label>
+          <label class="setting"><span data-i18n="settings.displayLanguage">Display Language</span>
+            <select name="displayLanguage">
+              <option value="system" selected data-i18n="settings.displayLanguageAutomatic">Automatic</option>
+              <option value="hanji">漢字</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+              <option value="tailo">Tâi-lô</option>
+              <option value="poj">Pe̍h-ōe-jī</option>
+            </select>
+          </label>
+        </details>
+        <details class="sidebar-section" open>
+          <summary data-i18n="desktop.appearanceTab">Appearance</summary>
+          <label class="setting"><span data-i18n="desktop.appearanceTab">Appearance</span>
+            <select name="candidateAppearanceMode">
+              <option value="auto" selected data-i18n="settings.displayLanguageAutomatic">Automatic</option>
+              <option value="light" data-i18n="desktop.candidateAppearanceLight">Light</option>
+              <option value="dark" data-i18n="desktop.candidateAppearanceDark">Dark</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="theme.customFont">Font</span>
+            <select name="fontType">
+              <option value="system" data-i18n="common.fontSystemDefault">System</option>
+              <option value="openHuninn" data-i18n="common.fontOpenHuninn">Open Huninn</option>
+              <option value="iansui" selected data-i18n="common.fontIansui">Iansui</option>
+              <option value="genYoMin" data-i18n="common.fontGenYoMin">GenYoMin</option>
+              <option value="genYoGothic" data-i18n="common.fontGenYoGothic">GenYoGothic</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="desktop.candidateWindowLayout">Candidate Window Layout</span>
+            <select name="candidateLayout">
+              <option value="horizontal" data-i18n="desktop.candidateLayoutHorizontal">Horizontal</option>
+              <option value="vertical" selected data-i18n="desktop.candidateLayoutVertical">Vertical</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="desktop.candidateWindowSize">Candidate Window Size</span>
+            <select name="candidateTextSize">
+              <option value="13" data-i18n="desktop.sizeExtraSmall">Extra Small</option>
+              <option value="15" data-i18n="desktop.sizeSmall">Small</option>
+              <option value="17" selected data-i18n="desktop.sizeMedium">Standard</option>
+              <option value="20" data-i18n="desktop.sizeLarge">Large</option>
+              <option value="23" data-i18n="desktop.sizeExtraLarge">Extra Large</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.candidateDisplayMode">Candidate Display</span>
+            <select name="candidateDisplayMode">
+              <option value="sideBySide" selected data-i18n="settings.candidateDisplayModeSideBySide">Hanji–Romanization Pairing</option>
+              <option value="combined" data-i18n="settings.candidateDisplayModeCombined">Hanji with Romanization</option>
+              <option value="romanOnly" data-i18n="settings.candidateDisplayModeRomanOnly">Romanization Only</option>
+            </select>
+          </label>
+        </details>
+        <details class="sidebar-section">
+          <summary data-i18n="desktop.dictionarySourcesLink">Manage Dictionaries</summary>
+          <h3 class="setting-group" data-i18n="dictionary.moeSectionTitle">MOE Characters</h3>
+          <label class="setting"><span data-i18n="common.moeDict">MOE Dictionary of Common Taiwanese Words</span>
+            <input type="checkbox" name="moeDictEnabled" checked>
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAltReading">Alternative Readings</span>
+            <input type="checkbox" name="kautianAltReadingEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentLukang">Lukang (Quanzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentLukangEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentSansia">Sansia (Quanzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentSansiaEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentTaipak">Taipei (Quanzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentTaipakEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentGilan">Yilan (Zhangzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentGilanEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentTainan">Tainan (Mixed)</span>
+            <input type="checkbox" name="kautianAccentTainanEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentKaohsiung">Kaohsiung (Mixed)</span>
+            <input type="checkbox" name="kautianAccentKaohsiungEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentKinmen">Kinmen (Quanzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentKinmenEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentMakung">Makung (Quanzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentMakungEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentSintik">Hsinchu (Quanzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentSintikEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianAccentTaichung">Taichung (Zhangzhou-leaning)</span>
+            <input type="checkbox" name="kautianAccentTaichungEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting setting-nested"><span data-i18n="dictionary.kautianNameAppendix">Surname Appendix</span>
+            <input type="checkbox" name="kautianNameAppendixEnabled" checked data-requires="moeDictEnabled">
+          </label>
+          <label class="setting"><span data-i18n="common.newwordDict">PTS Taigi New-Word Lexicon</span>
+            <input type="checkbox" name="newwordDictEnabled" checked>
+          </label>
+          <label class="setting"><span data-i18n="common.kunggeDict">NTCRI Taiwanese Craft Glossary</span>
+            <input type="checkbox" name="kunggeDictEnabled" checked>
+          </label>
+          <label class="setting"><span data-i18n="common.sttiDict">MOE Academic Subject Terminology (Taigi)</span>
+            <input type="checkbox" name="sttiDictEnabled" checked>
+          </label>
+          <h3 class="setting-group" data-i18n="dictionary.otherSectionTitle">Other Dictionaries</h3>
+          <label class="setting"><span data-i18n="common.iTaigiDict">iTaigi</span>
+            <input type="checkbox" name="iTaigiDictEnabled">
+          </label>
+          <label class="setting"><span data-i18n="common.taiwanJapanDict">Taiwanese-Japanese Dictionary (Taigi Edition)</span>
+            <input type="checkbox" name="taiwanJapanDictEnabled">
+          </label>
+          <label class="setting"><span data-i18n="common.taiHuaDict">Taigi-Mandarin Online Cross-Reference</span>
+            <input type="checkbox" name="taiHuaDictEnabled">
+          </label>
+          <label class="setting"><span data-i18n="common.taiwanPlantDict">Taiwan Plant Name Glossary</span>
+            <input type="checkbox" name="taiwanPlantDictEnabled">
+          </label>
+          <h3 class="setting-group" data-i18n="dictionary.supplementSectionTitle">Supplementary Data</h3>
+          <label class="setting"><span data-i18n="dictionary.variantDictionary">Variant Characters</span>
+            <input type="checkbox" name="variantEnabled">
+          </label>
+          <label class="setting"><span data-i18n="dictionary.khiin">Conventional Characters</span>
+            <input type="checkbox" name="khiin">
+          </label>
+          <label class="setting"><span data-i18n="common.accentDict">Accent Variations</span>
+            <input type="checkbox" name="khpooDictEnabled" checked>
+          </label>
+          <label class="setting"><span data-i18n="dictionary.lkkDict">Han-Lo Recommended Characters</span>
+            <input type="checkbox" name="lkkDictEnabled" checked>
+          </label>
+          <label class="setting"><span data-i18n="dictionary.devSupplementDict">Supplementary Word List</span>
+            <input type="checkbox" name="devDictEnabled" checked>
+          </label>
+        </details>
       </form>
       <nav class="sidebar-links" data-i18n-aria-label="web.links">
-        <a href="https://taigikeyboard.tw/" target="_blank" rel="noopener" data-i18n="home.appHeaderTitle">TaigiKeyboard</a>
-        <a href="https://taigikeyboard.tw/taigi-converter/" target="_blank" rel="noopener" data-i18n="web.converter">Converter</a>
+        <a href="https://taigikeyboard.tw/" target="_blank" rel="noopener" data-i18n="web.officialSite">TaigiKeyboard Official Website</a>
+        <a href="https://taigikeyboard.tw/taigi-converter/" target="_blank" rel="noopener" data-i18n="web.converter">Taiwanese Romanization Converter</a>
         <a href="https://taigikeyboard.tw/kautian-mirror/" target="_blank" rel="noopener" data-i18n="web.kautianMirror">Kautian Mirror</a>
       </nav>
     </aside>
     <main>
-      <h1 data-i18n="home.appHeaderTitle">TaigiKeyboard</h1>
-      <div class="status">
-        <p id="message" role="status" data-state="loading"></p>
+      <h1>台語齒盤：台語輸入法、台文輸入 Web</h1>
+      <div id="editor">
+        <textarea id="text" placeholder=" " data-i18n-aria-label="web.textLabel" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
+        <span id="text-hint" aria-hidden="true" data-i18n-keycap="web.placeholder"></span>
+        <div id="panel" hidden>
+          <div id="preedit"></div>
+          <div id="list">
+            <ol id="candidates"></ol>
+            <div id="page-arrows" aria-hidden="true" hidden>
+              <button id="page-up" type="button" tabindex="-1">
+                <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 6l2.5-2.5L7.5 6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button id="page-down" type="button" tabindex="-1">
+                <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 4l2.5 2.5L7.5 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
         <div id="load-slot">
           <progress id="progress" aria-labelledby="message" max="1" value="0"></progress>
           <button id="retry" class="action" type="button" data-i18n="desktop.updateRetryAction">Try Again</button>
         </div>
-        <button id="mode-button" type="button" data-i18n-title="settings.inputMode">
-          <span id="mode"></span>
-          <svg viewBox="0 0 10 10" aria-hidden="true">
-            <path d="M2.5 4l2.5 2.5L7.5 4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
-      <div id="editor">
-        <textarea id="text" data-i18n-aria-label="web.textLabel" data-i18n-placeholder="web.placeholder" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
-        <div id="panel" hidden>
-          <div id="preedit"></div>
-          <ol id="candidates"></ol>
-        </div>
-      </div>
-      <div class="actions">
-        <p id="notice" role="status" data-i18n="web.otherInputMethod">Another input method is active. Turn it off to type here.</p>
-        <button id="copy" class="action" type="button" data-i18n="desktop.menuCopy">Copy</button>
-        <button id="clear" class="action" type="button" data-i18n="web.clear">Clear</button>
+        <button id="copy" class="action" type="button">Copy</button>
+        <button id="clear" class="action" type="button">Clear</button>
       </div>
       <section id="tps-keyboard" data-i18n-aria-label="desktop.shortcutShowTpsKeyboard"></section>
-      <div id="spoken" aria-live="polite"></div>
+      <p id="message" class="unseen" role="status" data-state="loading"></p>
+      <p id="notice" class="unseen" role="status" data-i18n="web.otherInputMethod">Another input method is active. Turn it off to type here.</p>
+      <div id="spoken" class="unseen" aria-live="polite"></div>
     </main>
+    <footer>&copy; 2026 Bîn-hiân · <a href="https://p.ecpay.com.tw/AA663DE" target="_blank" rel="noopener">贊助支持 ❤️</a></footer>
   </body>
 </html>

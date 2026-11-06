@@ -1,5 +1,5 @@
-// Wide screens dock the sidebar and slide it in and out, remembered across
-// visits (`prepaint.js` restores it); narrow ones open it as a popover drawer.
+// Wide screens dock the sidebar, open unless a past visit closed it (`prepaint.js`
+// restores that), and slide it in and out; narrow ones open it as a popover drawer.
 
 const STORAGE_KEY = "taigi.sidebar";
 // The breakpoint of the docked `@media` block in style.css.

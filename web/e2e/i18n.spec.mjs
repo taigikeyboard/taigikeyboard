@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 
 import { commitWord, open, seedSettings, toggle } from "./helpers.mjs";
 
-const heading = (page) => page.getByRole("heading", { level: 1 });
+const firstSection = (page) => page.locator("summary").first();
 const rootLang = (page) => page.evaluate(() => document.documentElement.lang);
 const stored = (page) =>
   page.evaluate(
@@ -24,17 +24,17 @@ const facesFor = (page, family, text) =>
   );
 
 for (const [locale, title, lang] of [
-  ["en-US", "TaigiKeyboard", "en"],
-  ["ja-JP", "台湾語キーボード", "ja"],
-  ["zh-TW", "台語齒盤", "nan-Hant-TW"],
-  ["fr-FR", "台語齒盤", "nan-Hant-TW"],
+  ["en-US", "General", "en"],
+  ["ja-JP", "一般", "ja"],
+  ["zh-TW", "一般", "nan-Hant-TW"],
+  ["fr-FR", "一般", "nan-Hant-TW"],
 ]) {
   test.describe(locale, () => {
     test.use({ locale });
 
     test(`Automatic follows the browser: ${title}`, async ({ page }) => {
       await page.goto("/index.html");
-      await expect(heading(page)).toHaveText(title);
+      await expect(firstSection(page)).toHaveText(title);
       expect(await rootLang(page)).toBe(lang);
     });
   });
@@ -43,19 +43,28 @@ for (const [locale, title, lang] of [
 test("Display Language redraws the page and survives a reload", async ({
   page,
 }) => {
-  const editor = await open(page);
-  await toggle(page).click();
+  await open(page);
   await setting(page, "displayLanguage").selectOption("tailo");
-  // trace: home.appHeaderTitle / web.placeholder / web.ready tailo values.
-  await expect(heading(page)).toHaveText("Tâi-gí Khí-puânn");
-  await expect(page).toHaveTitle("Tâi-gí Khí-puânn");
-  await expect(editor).toHaveAttribute("placeholder", "Tī tsia phah-jī");
+  // trace: web.placeholder / web.ready / common.settings tailo values.
+  await expect(page.locator("#text-hint")).toHaveText("Tshi̍h / phah-jī");
   await expect(page.locator("#message")).toHaveText("Ē-sái phah-jī");
   await expect(toggle(page)).toHaveAttribute("aria-label", "Siat-tīng");
   expect(await rootLang(page)).toBe("nan-Latn-tailo");
   await page.reload();
-  await expect(heading(page)).toHaveText("Tâi-gí Khí-puânn");
+  await expect(page.locator("#text-hint")).toHaveText("Tshi̍h / phah-jī");
   await expect(setting(page, "displayLanguage")).toHaveValue("tailo");
+});
+
+test("the title and Copy, Clear stay put in every language", async ({
+  page,
+}) => {
+  await open(page, { settings: { displayLanguage: "ja" } });
+  await expect(page).toHaveTitle("台語齒盤：台語輸入法、台文輸入 Web");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "台語齒盤：台語輸入法、台文輸入 Web",
+  );
+  await expect(page.getByRole("button", { name: "Copy" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Clear" })).toBeVisible();
 });
 
 test("the session speaks the page's language", async ({ page }) => {
@@ -70,7 +79,7 @@ test("an unknown language tag reads as Hanji, as the session reads it", async ({
   page,
 }) => {
   const editor = await open(page, { settings: { displayLanguage: "xx" } });
-  await expect(heading(page)).toHaveText("台語齒盤");
+  await expect(firstSection(page)).toHaveText("一般");
   await editor.press("Control+Alt+c");
   await expect(page.locator("#message")).toContainText("白話字");
 });
@@ -79,7 +88,6 @@ test("a language change drops the session's text", async ({ page }) => {
   const editor = await open(page);
   await editor.press("Control+Alt+c");
   await expect(page.locator("#message")).toContainText("Pe̍h-ōe-jī");
-  await toggle(page).click();
   await setting(page, "displayLanguage").selectOption("ja");
   await expect(page.locator("#message")).toHaveText("");
 });
@@ -96,21 +104,22 @@ test("the markup's English stays unseen until it is translated", async ({
   await seedSettings(page, { displayLanguage: "ja" });
   await page.route("**/ime.js", (route) => route.abort());
   await page.goto("/index.html");
-  await expect(heading(page)).toBeHidden();
-  await expect(page.getByRole("button", { name: "Copy" })).toBeHidden();
+  await expect(firstSection(page)).toBeHidden();
 });
 
-test("no font downloads until one is selected", async ({ page }) => {
+test("the default font is the only one fetched", async ({ page }) => {
   const fonts = [];
   page.on("request", (request) => {
     if (request.url().includes("/fonts/")) {
-      fonts.push(request.url());
+      fonts.push(new URL(request.url()).pathname);
     }
   });
   const editor = await open(page);
   await commitWord(editor);
   await expect(editor).toHaveValue("台灣");
-  expect(fonts).toEqual([]);
+  // None at all where the machine has Iansui installed (`local()`).
+  const others = fonts.filter((path) => !path.endsWith("iansui_regular.woff2"));
+  expect(others).toEqual([]);
 });
 
 for (const [value, family] of [
@@ -123,7 +132,6 @@ for (const [value, family] of [
     page,
   }) => {
     await open(page);
-    await toggle(page).click();
     await setting(page, "fontType").selectOption(value);
     expect(await facesFor(page, family, "台")).toBe(1);
     expect(await facesFor(page, family, "tsi̍t")).toBe(0);
@@ -149,6 +157,6 @@ test("a chord's write keeps the font and the language", async ({ page }) => {
   });
   await editor.press("Control+Alt+c");
   await expect.poll(() => stored(page)).toMatchObject({ fontType: "iansui" });
-  await expect(heading(page)).toHaveText("台湾語キーボード");
+  await expect(firstSection(page)).toHaveText("一般");
   await expect(toggle(page)).toHaveAttribute("title", "設定");
 });

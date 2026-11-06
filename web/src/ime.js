@@ -15,7 +15,6 @@ const NOTHING = { handled: true, emits: [] };
 
 const textarea = document.getElementById("text");
 const notice = document.getElementById("notice");
-const modeSlot = document.getElementById("mode");
 const messageSlot = document.getElementById("message");
 const progress = document.getElementById("progress");
 const retryButton = document.getElementById("retry");
@@ -27,6 +26,9 @@ const panel = new Panel(
   document.getElementById("spoken"),
   (position) => {
     apply(call((session) => session.clickCandidate(position)));
+  },
+  (isForward) => {
+    apply(call((session) => session.turnPage(isForward)));
   },
 );
 const tpsKeyboard = new TpsKeyboard(
@@ -154,7 +156,6 @@ async function start() {
     starting = await createSession(platform(), navigator.language);
     session = starting;
     restoreSettings(starting);
-    modeSlot.textContent = starting.modeSymbol();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
     textarea.disabled = false;
     textarea.focus();
@@ -195,8 +196,10 @@ function applyEmit(emit) {
       panel.clearPreedit();
       break;
     case "commit":
-      // The engine has let go of this text, so it must not vanish unseen.
+      // The engine has let go of this text: it goes to the console and the
+      // hidden live region, nothing is drawn (maintainer 2026-11-07).
       if (!surface.insert(emit.text)) {
+        console.error("web.commit.refused", emit.text);
         say("web.writeFailed", "failed", { text: emit.text });
       }
       break;
@@ -209,13 +212,12 @@ function applyEmit(emit) {
     case "hideLookupTable":
       panel.hideTable();
       break;
-    case "modeChanged":
-      modeSlot.textContent = emit.symbol;
-      break;
     case "announceMode":
       announce(emit.label);
       break;
     case "openSettings":
+      // A sidebar that opens onto folded rows has answered nothing.
+      document.getElementById("general-settings").open = true;
       sidebar.open();
       break;
     case "toggleTpsKeyboard":
@@ -232,10 +234,7 @@ function applyEmit(emit) {
 /// with: TPS has another alphabet, so its raw buffer cannot carry over.
 function changeSettings(json) {
   apply(call((current) => current.commitComposition()));
-  call((current) => {
-    current.setSettings(json);
-    modeSlot.textContent = current.modeSymbol();
-  });
+  call((current) => current.setSettings(json));
   redrawMessage();
 }
 
@@ -331,13 +330,19 @@ for (const button of document.querySelectorAll("button")) {
   button.addEventListener("mousedown", (event) => event.preventDefault());
 }
 
-document.getElementById("mode-button").addEventListener("click", (event) => {
-  sidebar.open();
-  // From the keyboard, Tab would go on into the page. A pointer leaves the
-  // focus in the textarea: typing there must not type into the select.
-  if (event.detail === 0) {
-    document.getElementById("settings").elements.inputMode.focus();
+// `/` jumps to the textarea, as kautian-mirror's search does, from anywhere but the
+// textarea and a select, which types ahead. A checkbox just clicked gives way. No
+// select-all: the next key would replace the document.
+document.addEventListener("keydown", (event) => {
+  const { key, metaKey, ctrlKey, altKey, isComposing, target } = event;
+  if (key !== "/" || metaKey || ctrlKey || altKey || isComposing) {
+    return;
   }
+  if (target.isContentEditable || target.closest("textarea, select")) {
+    return;
+  }
+  event.preventDefault();
+  textarea.focus();
 });
 
 document.getElementById("copy").addEventListener("click", async () => {

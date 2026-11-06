@@ -1,6 +1,8 @@
 // The settings document and the sidebar form over it. One document, in desktop's
 // shape and key spellings, is what the session reads: each form control is named
-// after its key, and the markup's selected option is that key's default.
+// after its key, and the markup's selected option or `checked` is that key's
+// default. `data-boolean` marks a select over a stored boolean, `data-requires` a
+// checkbox that greys, keeping its value, while the one it names is off.
 
 import { setDisplayLanguage } from "./i18n.js";
 
@@ -24,6 +26,15 @@ function readStored() {
   return emptyDocument();
 }
 
+function storedValue(control) {
+  if (control.type === "checkbox") {
+    return control.checked;
+  }
+  return "boolean" in control.dataset
+    ? control.value === "true"
+    : control.value;
+}
+
 export class Settings {
   #form;
   #document = readStored();
@@ -33,8 +44,7 @@ export class Settings {
     this.#form = form;
     this.#show();
     form.addEventListener("change", ({ target }) => {
-      const isCheckbox = target.type === "checkbox";
-      this.#write(target.name, isCheckbox ? target.checked : target.value);
+      this.#write(target.name, storedValue(target));
       onChange(this.json);
     });
   }
@@ -68,24 +78,39 @@ export class Settings {
   #show() {
     const { values } = this.#document;
     for (const control of this.#form.elements) {
+      const value = values[control.name];
       if (control.type === "checkbox") {
-        control.checked = values[control.name] === true;
+        control.checked =
+          typeof value === "boolean" ? value : control.defaultChecked;
         continue;
       }
       const options = Array.from(control.options);
       const shown =
-        options.find((option) => option.value === values[control.name]) ??
+        options.find((option) => option.value === String(value)) ??
         options.find((option) => option.defaultSelected);
       shown.selected = true;
     }
-    const { candidateAppearanceMode, fontType, inputMode, tpsKeyboardShown } =
-      this.#form.elements;
+    const {
+      candidateAppearanceMode,
+      candidateDisplayMode,
+      candidateTextSize,
+      fontType,
+      inputMode,
+      isTranslateSwapped,
+      tpsKeyboardShown,
+    } = this.#form.elements;
+    for (const control of this.#form.querySelectorAll("[data-requires]")) {
+      control.disabled = !this.#form.elements[control.dataset.requires].checked;
+    }
     // The row stays in its place outside TPS: the choice waits for the way back.
     const isTyping = inputMode.value === "tps";
     tpsKeyboardShown.disabled = !isTyping;
+    // No Hanji to lead with: `allows_swap_toggle`.
+    isTranslateSwapped.disabled = candidateDisplayMode.value === "romanOnly";
     const root = document.documentElement;
     root.dataset.theme = candidateAppearanceMode.value;
     root.dataset.font = fontType.value;
+    root.style.setProperty("--candidate-size", `${candidateTextSize.value}px`);
     root.toggleAttribute(
       "data-tps-keyboard",
       isTyping && tpsKeyboardShown.checked,

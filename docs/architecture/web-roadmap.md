@@ -123,7 +123,7 @@ The Linux shell already answers a key with a list of signals: `KeyReply { handle
 | `Commit(text)` | Insert at the textarea caret |
 | `DeleteSurrounding` | Remove the auto space before the caret |
 | `LookupTable` / `HideLookupTable` | Render or hide the candidate list |
-| `ModeChanged` / `AnnounceMode` | Update the status control |
+| `ModeChanged` / `AnnounceMode` | Nothing drawn: `AnnounceMode` reaches the hidden live region, the sidebar shows the mode |
 | New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | Open the sidebar, show the TPS key panel |
 | New in Phase 5: `TpsKeyboardCapTyped` | Light the cap. Linux drops it in `run_launches`: its panel is another process |
 
@@ -192,14 +192,16 @@ Taken as they are from the kautian-mirror repository (`taigikeyboard/kautian-mir
 |---|---|---|
 | Colour tokens with `light-dark()` | `src/styles.css:45-61` | `--bg`, `--card`, `--text`, `--secondary`, `--border`, `--hairline`, `--hover`, `--accent`, `--ring` unchanged. The candidate highlight uses `--accent` |
 | Theme pin | `src/styles.css:41-43` | Automatic, light, dark through `<html data-theme>` |
-| Sidebar | `src/styles.css:125-167`, `src/sidebar.js` | 18.75rem, docked above 50rem, `popover` drawer below, collapsed by default |
+| Sidebar | `src/styles.css:125-167`, `src/sidebar.js` | 18.75rem, docked above 50rem, `popover` drawer below, open by default on wide screens, closed on narrow ones |
 | Settings to `data-*` | `src/settings.js`, `src/index.html:23-36` | One form, restored before first paint so a reload does not flash |
 | Fonts | `src/styles.css:3-38`, `scripts/subset-fonts.sh` | Same roster, CJK-only `unicode-range` |
 | Tool chain | `esbuild.config.mjs`, `node --test` | No framework |
 
 The `unicode-range` is required, not cosmetic: those fonts misplace combining tone marks (`tsi̍t` renders as `tsit`), so romanization must fall through to the system font.
 
-Sidebar content: Appearance, Font, Input Mode (Tâi-lô, Pe̍h-ōe-jī, TPS), Output (Candidate Display), Display Language, and links to the apps, the converter and kautian-mirror. Labels come from `i18n/` by their existing keys.
+Sidebar content follows the desktop settings panes, as sections that fold: General, Appearance and Manage Dictionaries, with the labels and row order of `GeneralSettingsView.swift`, `AppearanceSettingsView.swift` and `settings/dictionary_sources.rs`. Below them, links to the website, the converter and kautian-mirror. Labels come from `i18n/` by their existing keys. The title and Copy, Clear are fixed text.
+
+Around the textarea the page draws Copy and Clear only: no mode control, no status text. Loading is a bare progress bar, a failure a Try Again button. `#message` and `#notice` stay as hidden live regions for screen readers. A Shift tap to English shows nowhere on screen (maintainer 2026-11-07).
 
 Copy follows the project's plain-prose rules, and stays neutral between romanization systems.
 
@@ -218,6 +220,7 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 | Bare Hanji/romanization key in English mode | Types a backtick. Windows still fires it, because its global match runs above the English gate (`session.rs:168-183`, `:204`) | English mode means the key is the document's, which is what the Windows comment says too |
 | Candidate click | Selects, never commits, as on Linux and macOS (`session/key.rs` `click_from_panel`) | Same code |
 | Keyboard Layout setting | No row | `event.key` already follows the OS layout |
+| Candidate window | macOS Tahoe's look from `CandidateMetrics.swift`, unrounded lengths. The composition sits in the panel's first row; a column pages by nine rather than scrolling with a half-row peek, so the key labels stay the session's; a row wraps rather than paging by width; the highlight is `--accent`, not the system accent | A textarea has no inline marked text; `LookupSelection` owns paging. Horizontal Expandable and Vertical Expandable are pending |
 | Panic | Trap, then a new instance | No unwinding on this target |
 | Learning, Custom Dictionary | **Pending** until Phase 8 | § Decisions D5 |
 
@@ -285,7 +288,6 @@ session.tpsKeyPress(glyph) -> reply          // a click on a cap
 session.caretMoved()                         // disarms the auto-space swap, spends a Shift press
 session.focusLost()
 session.setSettings(settingsJson)
-session.modeSymbol()                         // the status control at load and after setSettings
 ```
 
 `keyJson` is `{ key, code, shift, ctrl, alt, meta, repeat }`. `locale` is there because the Telex guide and the mode labels read the system language. `Preedit.caret` counts Unicode scalars, as `Emit` does, so the page uses `Array.from(text)`. `ModeChanged` carries the indicator symbol and `AnnounceMode` its label: `reply.rs` is a wire type, not `Serialize` on `Emit`.

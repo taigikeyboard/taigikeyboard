@@ -83,11 +83,11 @@ test("progress shows only during a download", async ({ page }) => {
   await open(page, { ready: false });
   const progress = page.locator("#progress");
   await expect(progress).toBeVisible();
-  const box = await page.locator(".status").boundingBox();
+  const box = await page.locator(".actions").boundingBox();
   release();
   await expectState(page, "ready");
   await expect(progress).toBeHidden();
-  expect(await page.locator(".status").boundingBox()).toEqual(box);
+  expect(await page.locator(".actions").boundingBox()).toEqual(box);
 });
 
 test("a corrupt download keeps romanization and offers retry", async ({
@@ -146,7 +146,6 @@ test("the policy blocks an inline script and nothing the page uses", async ({
     });
   });
   await open(page);
-  await page.locator("#sidebar-toggle").click();
   await page.locator("select[name=fontType]").selectOption("openHuninn");
   await expect(page.locator("select[name=fontType]")).toHaveCSS(
     "background-image",
@@ -221,7 +220,9 @@ test.describe("a new version", () => {
     directory = mkdtempSync(join(tmpdir(), `taigi-web-${browserName}-`));
     cpSync(SITE, join(directory, "web"), {
       recursive: true,
-      filter: (source) => !source.endsWith(".woff2"),
+      // The default font is in the shell; the rest come in on use.
+      filter: (source) =>
+        !source.endsWith(".woff2") || source.endsWith("iansui_regular.woff2"),
     });
     const port = 4300 + testInfo.workerIndex;
     server = spawn("node", [SERVE, directory, String(port)], {

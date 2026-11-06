@@ -141,7 +141,7 @@ fn typing_shows_the_preedit_and_a_labelled_list_led_by_the_literal() {
     // trace: cell 0 is the literal roman; the first hanji cell is 好 hó; the
     // literal takes no key (§34, as on macOS / Windows), so the Standard slot
     // keys label the page from cell 1; vertical, cursor on the literal.
-    assert_eq!(&table.candidates[..2], ["ho", "好 hó"]);
+    assert_eq!(&table.joined_candidates()[..2], ["ho", "好 hó"]);
     assert_eq!(table.labels, ["", "q", "w", "d", "f", "z", "x", "v", "y"]);
     assert_eq!((table.cursor, table.cursor_visible), (0, true));
     assert_eq!((table.page_size, table.vertical), (9, true));
@@ -373,7 +373,7 @@ fn the_symbol_picker_neither_swaps_nor_keeps_the_arm() {
     let [Emit::LookupTable(picker)] = emits.as_slice() else {
         panic!("Ctrl+Alt+, opens the picker, got {emits:?}");
     };
-    let first = picker.candidates[0].clone();
+    let first = picker.joined_candidates()[0].clone();
     assert_eq!(
         session.press(RETURN),
         [commit(&first), Emit::HideLookupTable]
@@ -431,7 +431,7 @@ fn the_literal_stays_unkeyed_when_a_switch_presents_the_list_again() {
     let Some(Emit::LookupTable(table)) = emits.first() else {
         panic!("the refetched list is shown, got {emits:?}");
     };
-    assert_eq!(table.candidates[0], "ho");
+    assert_eq!(table.joined_candidates()[0], "ho");
     assert_eq!(table.labels[..2], ["", "q"]);
 
     // Show Typed Text First OFF: the list leads with a dictionary cell, which
@@ -444,7 +444,7 @@ fn the_literal_stays_unkeyed_when_a_switch_presents_the_list_again() {
     let Some(Emit::LookupTable(table)) = emits.first() else {
         panic!("the refetched list is shown, got {emits:?}");
     };
-    assert_ne!(table.candidates[0], "ho");
+    assert_ne!(table.joined_candidates()[0], "ho");
     assert_eq!(table.labels[0], "q");
 }
 
@@ -543,7 +543,7 @@ fn tps_opens_the_table_on_demand_and_the_number_row_picks() {
     let [Emit::LookupTable(table)] = opened.as_slice() else {
         panic!("↓ opens the table: {opened:?}");
     };
-    let second = table.candidates[1].clone();
+    let second = table.joined_candidates()[1].clone();
     assert_eq!(session.press(ESCAPE), [Emit::HideLookupTable]);
     let reopened = session.press(DOWN);
     assert!(

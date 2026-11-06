@@ -143,7 +143,9 @@ mod tests {
         emits
             .iter()
             .find_map(|emit| match emit {
-                Emit::LookupTable(table) if !table.cursor_visible => Some(table.candidates.clone()),
+                Emit::LookupTable(table) if !table.cursor_visible => {
+                    Some(table.joined_candidates())
+                }
                 _ => None,
             })
             .unwrap_or_default()
@@ -274,7 +276,7 @@ mod tests {
         };
         assert!(table.cursor_visible);
         assert_eq!(table.labels.len(), PAGE_SIZE);
-        let first = table.candidates[0].clone();
+        let first = table.joined_candidates()[0].clone();
         assert!(engine.symbol_picker.is_some());
         let emits = press(&runtime, &mut engine, RETURN, 0);
         assert_eq!(

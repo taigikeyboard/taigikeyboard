@@ -8,7 +8,7 @@
     },
     "inputMode": {
       "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop General pane labels its TL / POJ picker inputScript instead.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "輸入模式", "tailo": "Su-ji̍p bôo-sik", "poj": "Su-ji̍p bô͘-sek", "en": "Input Mode", "ja": "入力モード" }
     },
     "keyboardLayout": {
@@ -83,37 +83,37 @@
     },
     "inputScript": {
       "comment": "Desktop General pane: label of the TL / POJ picker (USER 2026-09-18: \"input/output script\"), paired with outputScript below. Mobile keeps inputMode (Input Mode) — its picker also holds TPS.",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "輸入文字", "tailo": "Su-ji̍p bûn-jī", "poj": "Su-ji̍p bûn-jī", "en": "Input Script", "ja": "入力文字" }
     },
     "outputScript": {
       "comment": "Desktop General pane: label of the Hanji / romanization picker — which script a commit writes, the same stored swap the backtick shortcut flips. Paired with inputScript above.",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "輸出文字", "tailo": "Su-tshut bûn-jī", "poj": "Su-chhut bûn-jī", "en": "Output Script", "ja": "出力文字" }
     },
     "outputScriptHanji": {
       "comment": "Picker value (default): commit writes the Hanji; the romanization is the subtitle.",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "漢字", "tailo": "Hàn-jī", "poj": "Hàn-jī", "en": "Hanji", "ja": "漢字" }
     },
     "outputScriptRoman": {
       "comment": "Picker value: commit writes the romanization; the Hanji is the subtitle. Also the desktop Shortcuts pane header above the romanization switches (USER 2026-10-16).",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization", "ja": "ローマ字" }
     },
     "syllableSeparator": {
       "comment": "Picker label: how candidate / committed romanization separates syllables — the dictionary hyphen, a space, or nothing (tâi-uân / tâi uân / tâiuân); the neutral-tone -- becomes · under Space and None. Options: desktop.telexGuideHyphen, settings.syllableSeparatorSpace, settings.syllableSeparatorNone. All five platforms (host settings) plus the mobile keyboard settings overlay.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "音節分隔", "tailo": "Im-tsiat hun-keh", "poj": "Im-chiat hun-keh", "en": "Syllable Separator", "ja": "音節の区切り" }
     },
     "syllableSeparatorSpace": {
       "comment": "Syllable Separator picker value: a space between syllables (tâi uân, hōo ·guá).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "空白", "tailo": "Khang-pe̍h", "poj": "Khang-pe̍h", "en": "Space", "ja": "スペース" }
     },
     "syllableSeparatorNone": {
       "comment": "Syllable Separator picker value: nothing between syllables (tâiuân, hōo·guá).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "無", "tailo": "Bô", "poj": "Bô", "en": "None", "ja": "なし" }
     },
     "syllableSeparatorInfo": {
@@ -123,12 +123,12 @@
     },
     "candidateWindow": {
       "comment": "Toggle label on the desktop General pane: show the candidate window at all. Off = no window, Space / Enter write the typed romanization (S33).",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "顯示選字窗", "tailo": "Hián-sī suán-jī-thang", "poj": "Hián-sī soán-jī-thang", "en": "Show Candidate Window", "ja": "候補ウィンドウを表示" }
     },
     "literalRomanCandidate": {
       "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All five platforms.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "選字窗顯示原本拍的字", "tailo": "Suán-jī-thang hián-sī guân-pún phah ê jī", "poj": "Soán-jī-thang hián-sī goân-pún phah ê jī", "en": "Show Typed Text First", "ja": "入力中の文字を先頭に表示" }
     },
     "literalRomanCandidateInfo": {
@@ -143,22 +143,22 @@
     },
     "toneInputScheme": {
       "comment": "Picker label on the desktop General pane: which keys type a tone (Standard = digits, Telex = letters); the candidate-slot keys follow from the choice.",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "聲調拍法", "tailo": "Siann-tiāu phah-huat", "poj": "Siaⁿ-tiāu phah-hoat", "en": "Tone Keys", "ja": "声調の入力方式" }
     },
     "toneSchemeStandard": {
       "comment": "toneInputScheme option: digits 1-9 type the tone, the bare letters q w d f z x v y ; pick a candidate. Named after what the user types rather than 標準 (USER 2026-09-09) — beside Telex, \"standard\" says which is the default, not which keys carry the tone.",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "數字調", "tailo": "Sòo-jī-tiāu", "poj": "Sò͘-jī-tiāu", "en": "Numeric Tones", "ja": "数字で声調" }
     },
     "toneSchemeTelex": {
       "comment": "toneInputScheme option: the letters v y d w x q type the tone, digits 1-9 pick a candidate. A scheme name, kept as-is in every language. Also the title over the floating Telex guide's key table — the scheme's own name, nothing else (USER 2026-09-0x; desktop.telexGuideTitle merged 2026-09-20).",
-      "scope": { "platforms": ["macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "Telex", "tailo": "Telex", "poj": "Telex", "en": "Telex", "ja": "Telex" }
     },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "自動插入空白", "tailo": "Tsū-tōng tshah-ji̍p khàng-pe̍h", "poj": "Chū-tōng chhah-ji̍p khàng-pe̍h", "en": "Auto-Space", "ja": "自動スペース" }
     },
     "keyboardSectionTitle": {
@@ -213,17 +213,17 @@
     },
     "nasalMarkerUppercase": {
       "comment": "Picker label: how the POJ nasal marker is written in capitals — the stored switch, true = ᴺ (nasalMarkerUppercaseCapital, the default), false = ⁿ (nasalMarkerUppercaseSmall). All five platforms (host settings) plus the mobile keyboard settings overlay.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字大本字的鼻音符號輸出", "tailo": "Pe̍h-uē-jī tuā-pún-jī ê phīnn-im hû-hō su-tshut", "poj": "Pe̍h-ōe-jī tōa-pún-jī ê phīⁿ-im hû-hō su-chhut", "en": "Nasal mark in POJ capitals", "ja": "白話字の大文字での鼻音記号" }
     },
     "nasalMarkerUppercaseCapital": {
       "comment": "Picker value (default): in capitals the nasal marker follows the letters before it, ᴺ (SIÂᴺ).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "ᴺ（SIÂᴺ）", "tailo": "ᴺ (SIÂᴺ)", "poj": "ᴺ (SIÂᴺ)", "en": "ᴺ (SIÂᴺ)", "ja": "ᴺ（SIÂᴺ）" }
     },
     "nasalMarkerUppercaseSmall": {
       "comment": "Picker value: the nasal marker is always the small ⁿ, even in capitals (SIÂⁿ).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "ⁿ（SIÂⁿ）", "tailo": "ⁿ (SIÂⁿ)", "poj": "ⁿ (SIÂⁿ)", "en": "ⁿ (SIÂⁿ)", "ja": "ⁿ（SIÂⁿ）" }
     },
     "tpsOrMapsToER": {

@@ -111,6 +111,12 @@ impl Session {
         self.inner.tps_key_press(glyph)
     }
 
+    /// A click on the panel's page arrows.
+    #[wasm_bindgen(js_name = turnPage)]
+    pub fn turn_page(&mut self, is_forward: bool) -> String {
+        self.inner.turn_page(is_forward)
+    }
+
     #[wasm_bindgen(js_name = commitComposition)]
     pub fn commit_composition(&mut self) -> String {
         self.inner.commit_composition()
@@ -124,13 +130,6 @@ impl Session {
     #[wasm_bindgen(js_name = focusLost)]
     pub fn focus_lost(&mut self) {
         self.inner.focus_lost();
-    }
-
-    /// The status control's text, at load and after `setSettings`; a key's
-    /// reply carries the change itself (`modeChanged`).
-    #[wasm_bindgen(js_name = modeSymbol)]
-    pub fn mode_symbol(&self) -> String {
-        self.inner.mode_symbol().to_owned()
     }
 
     /// A malformed document is refused and the previous one stays.

@@ -170,6 +170,7 @@ impl Engine {
 
 fn table_value(content: &LookupTableContent) -> Value<'static> {
     let labels = panel_labels(content);
+    let candidates = content.joined_candidates();
     LookupTable {
         page_size: content.page_size,
         cursor_pos: content.cursor,
@@ -180,7 +181,7 @@ fn table_value(content: &LookupTableContent) -> Value<'static> {
         } else {
             Orientation::Horizontal
         },
-        candidates: &content.candidates,
+        candidates: &candidates,
         labels: &labels,
     }
     .to_value()
@@ -540,7 +541,7 @@ mod tests {
 
     fn table(labels: &[&str]) -> LookupTableContent {
         LookupTableContent {
-            candidates: Vec::new(),
+            cells: Vec::new(),
             labels: labels.iter().map(|label| (*label).to_owned()).collect(),
             cursor: 0,
             cursor_visible: true,

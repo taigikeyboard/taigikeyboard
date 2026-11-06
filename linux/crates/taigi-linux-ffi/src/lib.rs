@@ -139,7 +139,11 @@ fn reply_emit(emit: Emit) -> Option<ReplyEmit> {
 
 fn reply_table(content: LookupTableContent) -> ReplyTable {
     ReplyTable {
-        candidates: content.candidates.iter().map(|c| c_string(c)).collect(),
+        candidates: content
+            .joined_candidates()
+            .iter()
+            .map(|c| c_string(c))
+            .collect(),
         labels: content.labels.iter().map(|l| c_string(l)).collect(),
         cursor: content.cursor,
         cursor_visible: content.cursor_visible,
@@ -753,6 +757,7 @@ pub unsafe extern "C" fn taigi_reply_free(reply: *mut TaigiReply) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use taigi_desktop_core::composing::CandidateCellContent;
 
     #[test]
     fn a_reply_round_trips_through_the_accessors() {
@@ -765,7 +770,10 @@ mod tests {
                     caret: 3,
                 },
                 Emit::LookupTable(LookupTableContent {
-                    candidates: vec!["台".into(), "tâi".into()],
+                    cells: vec![
+                        CandidateCellContent::new("台", None),
+                        CandidateCellContent::new("tâi", None),
+                    ],
                     labels: vec!["q".into(), "w".into()],
                     cursor: 1,
                     cursor_visible: true,

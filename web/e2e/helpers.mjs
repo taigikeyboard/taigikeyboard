@@ -29,7 +29,7 @@ export async function open(page, { settings, ready = true } = {}) {
 export const toggle = (page) => page.locator("#sidebar-toggle");
 export const preedit = (page) => page.locator("#preedit");
 export const candidates = (page) => page.locator("#candidates li");
-export const mode = (page) => page.locator("#mode");
+export const inputMode = (page) => page.locator('select[name="inputMode"]');
 export const panel = (page) => page.locator("#panel");
 
 export function expectState(page, state) {
