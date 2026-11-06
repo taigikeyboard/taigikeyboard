@@ -110,6 +110,8 @@ macOS 的符號：`⌃` control、`⌥` option、`⌘` command、`⇧` shift。
 | `c` `h` | tsh（白話字 chh） |
 | `f` | 連字符 - |
 
+猶未開始拍字的時，`f` 嘛是連字符，拍輕聲免揤 `-`：`ffah` → `--ah`。所以 Telex 拍袂出英文字母 f，愛拍英文就切換英文輸入法。
+
 袂記得的時，揤 `⌃` `⌘` `/`（Windows、Linux：`Ctrl` `Alt` `/`），Telex 說明會浮佇螢幕頂；閣揤一擺就收起來。
 
 ![Telex 的選字窗](shots/tone-telex.png) ![浮佇螢幕頂的 Telex 說明](shots/panel-telex-guide.png)
