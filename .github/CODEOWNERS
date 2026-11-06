@@ -1,3 +1,4 @@
-# Every change to `main` needs a maintainer's review, never the author's own
-# (docs/CODE_SIGNING_POLICY.md § Roles); the `main` ruleset enforces it.
+# A change to `main` needs a maintainer's review, never the author's own, unless a
+# maintainer bypasses it (docs/CODE_SIGNING_POLICY.md § Roles); the `main` ruleset
+# enforces it.
 * @siansiansu @madmaxieee
