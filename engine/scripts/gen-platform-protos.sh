@@ -8,7 +8,7 @@
 #     `engine/protos/proto/*.proto`)
 #
 # Prerequisites (install once, locally):
-#   brew install protobuf swift-protobuf
+#   mise install
 #
 # `--java-only` is CI's freshness check (.github/workflows/checks.yml): Java
 # bindings only, so no protoc-gen-swift, and a protoc that does not match the
@@ -31,12 +31,12 @@ SWIFT_OUT="$REPO_ROOT/ios/Sources/TaigiKeyboard/Engine/Generated"
 JAVA_OUT="$REPO_ROOT/android/app/src/main/java"
 
 if ! command -v protoc >/dev/null 2>&1; then
-    echo "error: protoc not found. Install via: brew install protobuf" >&2
+    echo "error: protoc not found. Install via: mise install" >&2
     exit 1
 fi
 
 if [[ "$JAVA_ONLY" == 0 ]] && ! command -v protoc-gen-swift >/dev/null 2>&1; then
-    echo "error: protoc-gen-swift not found. Install via: brew install swift-protobuf" >&2
+    echo "error: protoc-gen-swift not found. Install via: mise install" >&2
     exit 1
 fi
 

@@ -30,6 +30,8 @@ readonly LOG_OPTS_ALL_REFS="--full-history --all"
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+PATH="$(sh tools/mise-path-prefix.sh)$PATH"
+
 fail() {
   if [ -n "${GITHUB_ACTIONS:-}" ]; then printf '::error::%s\n' "$@" >&2; else printf '%s\n' "$@" >&2; fi
   exit 1
@@ -69,7 +71,7 @@ run() {
 
 scan_log() { run --log-opts="$LOG_OPTS_COMMON $*"; }
 
-command -v gitleaks >/dev/null 2>&1 || fail "gitleaks is not installed: brew install gitleaks"
+command -v gitleaks >/dev/null 2>&1 || fail "gitleaks is not installed: mise install"
 [ -f "$BASELINE_FILE" ] || fail "$BASELINE_FILE is missing — it records what has already been scanned."
 
 case "${1:---incremental}" in

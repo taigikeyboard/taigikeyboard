@@ -16,7 +16,7 @@
 # The proto set is globbed, so adding a `.proto` needs no edit here.
 #
 # Prerequisites (install once, locally):
-#   brew install protobuf swift-protobuf
+#   mise install
 
 set -euo pipefail
 
@@ -27,12 +27,12 @@ SWIFT_OUT="$REPO_ROOT/macos/Sources/TaigiInputMethodCore/Engine/Generated"
 SHELL_SWIFT_OUT="$REPO_ROOT/macos/Sources/TaigiInputMethodCore/DesktopCore/Generated"
 
 if ! command -v protoc >/dev/null 2>&1; then
-    echo "error: protoc not found. Install via: brew install protobuf" >&2
+    echo "error: protoc not found. Install via: mise install" >&2
     exit 1
 fi
 
 if ! command -v protoc-gen-swift >/dev/null 2>&1; then
-    echo "error: protoc-gen-swift not found. Install via: brew install swift-protobuf" >&2
+    echo "error: protoc-gen-swift not found. Install via: mise install" >&2
     exit 1
 fi
 

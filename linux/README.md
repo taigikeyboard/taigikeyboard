@@ -29,7 +29,8 @@ shell-code precedent.
 make check          # from linux/: i18n check + native tests + clippy + cross build + fmt
 ```
 
-Prerequisites on macOS: `brew install gtk4 libadwaita pkgconf zig cargo-zigbuild`,
+Prerequisites on macOS: `brew install gtk4 libadwaita pkgconf`, `mise install` at the
+repository root for `zig` and `cargo-zigbuild`,
 `rustup target add x86_64-unknown-linux-gnu` (the toolchain file does it on
 first use). `zbus` and gtk4-rs both build natively on the Mac, so every crate
 is clippy-checked here; `make check-target` cross-builds the engine binary
