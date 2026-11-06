@@ -2,7 +2,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import { commitWord, mode, open, panel, preedit } from "./helpers.mjs";
+import { commitWord, open, panel, preedit } from "./helpers.mjs";
 
 const AUTO_SPACE = { autoSpaceEnabled: true };
 
@@ -201,7 +201,9 @@ test("a Shift-click is no tap", async ({ page }) => {
   await page.keyboard.down("Shift");
   await editor.click({ position: { x: 4, y: 4 } });
   await page.keyboard.up("Shift");
-  await expect(mode(page)).toHaveText("台");
+  // Still composing: a tap would have handed the key to the page.
+  await editor.pressSequentially("a");
+  await expect(preedit(page)).toContainText("a");
 });
 
 test("a Shift held across the window losing focus is no tap", async ({
@@ -211,8 +213,9 @@ test("a Shift held across the window losing focus is no tap", async ({
   await page.keyboard.down("Shift");
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
   await page.keyboard.up("Shift");
-  await expect(mode(page)).toHaveText("台");
   await expect(editor).toBeFocused();
+  await editor.pressSequentially("a");
+  await expect(preedit(page)).toContainText("a");
 });
 
 test("the window losing focus writes nothing", async ({ page }) => {

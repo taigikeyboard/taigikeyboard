@@ -11,6 +11,9 @@ import { gzipSync } from "node:zlib";
 
 const [site, dictionarySources] = process.argv.slice(2);
 
+// The file of `data-font` on `<html>` in src/index.html.
+const DEFAULT_FONT = "fonts/iansui_regular.woff2";
+
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("base64");
 
 /// Base64 without the characters a file name cannot carry.
@@ -32,10 +35,10 @@ function isHashed(path) {
   return !/^dictionaries\/|^sw\.js$/.test(path);
 }
 
-/// Fonts stay off the first load until selected, so the service worker takes
-/// each one when it is used.
+/// The default font works offline from the first visit. The others stay off the
+/// first load until selected, so the service worker takes each one when it is used.
 function isShell({ path }) {
-  return !path.endsWith(".woff2");
+  return !path.endsWith(".woff2") || path === DEFAULT_FONT;
 }
 
 function stagedFiles() {

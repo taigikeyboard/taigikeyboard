@@ -20,7 +20,7 @@
       }
     },
     "placeholder": {
-      "comment": "Text box placeholder.",
+      "comment": "Hint in the empty text box; {key} is the \"/\" key drawn as a keycap, which focuses the box.",
       "scope": {
         "platforms": [
           "web"
@@ -30,29 +30,14 @@
         ]
       },
       "values": {
-        "hanji": "佇遮拍字",
-        "tailo": "Tī tsia phah-jī",
-        "poj": "Tī chia phah-jī",
-        "en": "Type here",
-        "ja": "ここに入力"
-      }
-    },
-    "clear": {
-      "comment": "Button that empties the text box.",
-      "scope": {
-        "platforms": [
-          "web"
-        ],
-        "surfaces": [
-          "host"
-        ]
+        "hanji": "揤 {key} 拍字",
+        "tailo": "Tshi̍h {key} phah-jī",
+        "poj": "Chhi̍h {key} phah-jī",
+        "en": "Press {key} to type",
+        "ja": "{key} を押して入力"
       },
-      "values": {
-        "hanji": "清除",
-        "tailo": "Tshing-tû",
-        "poj": "Chheng-tû",
-        "en": "Clear",
-        "ja": "クリア"
+      "placeholders": {
+        "key": "string"
       }
     },
     "links": {
@@ -73,6 +58,24 @@
         "ja": "リンク"
       }
     },
+    "officialSite": {
+      "comment": "Sidebar link to the taigikeyboard.tw website.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤官方網站",
+        "tailo": "Tâi-gí Khí-puânn kuann-hong bāng-tsām",
+        "poj": "Tâi-gí Khí-pôaⁿ koaⁿ-hong bāng-chām",
+        "en": "TaigiKeyboard Official Website",
+        "ja": "台湾語キーボード公式サイト"
+      }
+    },
     "converter": {
       "comment": "Sidebar link to taigi-converter.",
       "scope": {
@@ -84,11 +87,11 @@
         ]
       },
       "values": {
-        "hanji": "轉換器",
-        "tailo": "Tsuán-uānn-khì",
-        "poj": "Choán-ōaⁿ-khì",
-        "en": "Converter",
-        "ja": "変換ツール"
+        "hanji": "台語羅馬字轉換器",
+        "tailo": "Tâi-gí Lô-má-jī tsuán-uānn-khì",
+        "poj": "Tâi-gí Lô-má-jī choán-ōaⁿ-khì",
+        "en": "Taiwanese Romanization Converter",
+        "ja": "台湾語ローマ字変換ツール"
       }
     },
     "kautianMirror": {

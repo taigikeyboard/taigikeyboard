@@ -7,7 +7,7 @@ import {
   candidates,
   commitWord,
   expectState,
-  mode,
+  inputMode,
   open,
   panel,
   preedit,
@@ -24,11 +24,17 @@ test("Enter commits the highlighted candidate", async ({ page }) => {
   await expect(panel(page)).toBeHidden();
 });
 
+/// The cell the slot key `key` picks.
+const keyedCell = (page, key) =>
+  candidates(page).filter({
+    has: page.locator(".index", { hasText: new RegExp(`^${key}$`) }),
+  });
+
 test("a slot key picks its candidate", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("taiuan");
-  const labelled = candidates(page).filter({ hasText: /^w / });
-  const [, word] = (await labelled.textContent()).split(" ");
+  const labelled = keyedCell(page, "w");
+  const word = await labelled.locator(".text").textContent();
   await editor.press("w");
   await expect(editor).toHaveValue(word);
 });
@@ -36,8 +42,8 @@ test("a slot key picks its candidate", async ({ page }) => {
 test("a click selects, Enter commits", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("taiuan");
-  const cell = candidates(page).filter({ hasText: /^w / });
-  const [, word] = (await cell.textContent()).split(" ");
+  const cell = keyedCell(page, "w");
+  const word = await cell.locator(".text").textContent();
   await cell.click();
   await expect(editor).toBeFocused();
   await expect(cell).toHaveAttribute("aria-current", "true");
@@ -82,24 +88,19 @@ test("Backspace goes through a composition and ends it", async ({ page }) => {
 });
 
 test("TPS keys compose glyphs", async ({ page }) => {
-  // trace: tps_layout.rs KEYS '8' → ㄚ; `ModeIndicator::Tps` symbol 方.
+  // trace: tps_layout.rs KEYS '8' → ㄚ.
   const editor = await open(page, { settings: { inputMode: "tps" } });
-  await expect(mode(page)).toHaveText("方");
   await editor.press("8");
   await expect(preedit(page)).toContainText("ㄚ");
 });
 
 test("a Shift tap hands the keys to the page and back", async ({ page }) => {
-  // trace: `ModeIndicator` English 英, Tai-lo 台.
   const editor = await open(page);
-  await expect(mode(page)).toHaveText("台");
   await editor.press("Shift");
-  await expect(mode(page)).toHaveText("英");
   await editor.pressSequentially("ab");
   await expect(editor).toHaveValue("ab");
   await expect(panel(page)).toBeHidden();
   await editor.press("Shift");
-  await expect(mode(page)).toHaveText("台");
   await editor.pressSequentially("a");
   await expect(preedit(page)).toContainText("a");
   await expect(editor).toHaveValue("ab");
@@ -125,12 +126,12 @@ test("every default chord reaches the page", async ({ page }) => {
 });
 
 test("a chord that writes the settings survives a reload", async ({ page }) => {
-  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ, symbol 白.
+  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ.
   const editor = await open(page);
   await editor.press("Control+Alt+c");
-  await expect(mode(page)).toHaveText("白");
+  await expect(inputMode(page)).toHaveValue("poj");
   await page.reload();
-  await expect(mode(page)).toHaveText("白");
+  await expect(inputMode(page)).toHaveValue("poj");
 });
 
 test("the picker and the guide open and close at the caret", async ({
@@ -176,7 +177,7 @@ test("a stored document the session refuses leaves the defaults", async ({
     localStorage.setItem("taigi.settings", "[]");
   });
   const editor = await open(page);
-  await expect(mode(page)).toHaveText("台");
+  await expect(inputMode(page)).toHaveValue("tl");
   await commitWord(editor);
   await expect(editor).toHaveValue("台灣");
 });

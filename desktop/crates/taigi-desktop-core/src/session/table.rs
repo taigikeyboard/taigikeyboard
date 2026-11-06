@@ -2,6 +2,7 @@
 //! picker or the Telex guide, with labels, highlight and orientation.
 
 use super::{Emit, EngineState, LookupTableContent, SymbolPicker, PAGE_SIZE};
+use crate::composing::CandidateCellContent;
 use crate::keys::{telex_guide_rows, CandidateSlotKeySet, ComposingKeyBindings};
 use crate::runtime::DesktopRuntime;
 use crate::settings::{keys, CandidateLayout, SettingsDocument};
@@ -45,8 +46,7 @@ pub(crate) fn present_table(
     state.is_table_shown = true;
 }
 
-/// The cells as the panel draws them: the leading script, the other script
-/// (Combined) after a space; labels = the slot keys, one per position of the
+/// The cells as the panel draws them; labels = the slot keys, one per position of the
 /// CURRENT page. The §34 literal takes no key, as on macOS and Windows: on
 /// the page it begins, its label is blank and the keys start at the next
 /// cell. The panel can show that because both pages its table through the
@@ -56,15 +56,7 @@ fn table_content(
     settings: &SettingsDocument,
     slot_key_set: CandidateSlotKeySet,
 ) -> LookupTableContent {
-    let candidates = state
-        .candidates
-        .cells()
-        .into_iter()
-        .map(|cell| match cell.annotation {
-            Some(annotation) => format!("{} {annotation}", cell.text),
-            None => cell.text,
-        })
-        .collect();
+    let cells = state.candidates.cells();
     let shift = state.selection.key_slot_shift();
     let labels = (0..PAGE_SIZE)
         .map(|position| match position.checked_sub(shift) {
@@ -73,7 +65,7 @@ fn table_content(
         })
         .collect();
     LookupTableContent {
-        candidates,
+        cells,
         labels,
         cursor: state.selection.selected_index().unwrap_or(0) as u32,
         cursor_visible: true,
@@ -91,7 +83,7 @@ fn symbol_picker_table(
 ) -> LookupTableContent {
     let slot_key_set = bindings.slot_key_set();
     LookupTableContent {
-        candidates: picker.symbols.clone(),
+        cells: plain_cells(picker.symbols.iter().cloned()),
         labels: (0..PAGE_SIZE)
             .map(|slot| slot_key_set.label_for_slot(slot))
             .collect(),
@@ -117,13 +109,20 @@ fn telex_guide_table(runtime: &DesktopRuntime, settings: &SettingsDocument) -> L
     );
     let page_size = rows.len() as u32;
     LookupTableContent {
-        candidates: rows,
+        cells: plain_cells(rows),
         labels: Vec::new(),
         cursor: 0,
         cursor_visible: false,
         page_size,
         vertical: true,
     }
+}
+
+/// Rows with one script each: the picker's symbols, the Telex guide.
+fn plain_cells(rows: impl IntoIterator<Item = String>) -> Vec<CandidateCellContent> {
+    rows.into_iter()
+        .map(|row| CandidateCellContent::new(row, None))
+        .collect()
 }
 
 /// Whether the panel draws the list as a column — what it is told to draw
@@ -202,7 +201,7 @@ mod tests {
         let [Emit::LookupTable(table)] = emits.as_slice() else {
             panic!("one lookup table, got {emits:?}");
         };
-        assert_eq!(table.candidates, ["，", "。"]);
+        assert_eq!(table.joined_candidates(), ["，", "。"]);
         assert_eq!(table.labels.len(), PAGE_SIZE);
         assert!(table.labels.iter().all(|label| !label.is_empty()));
         assert!(state.is_table_shown);

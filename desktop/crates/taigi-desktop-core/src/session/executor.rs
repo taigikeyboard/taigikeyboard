@@ -10,7 +10,9 @@
 
 use super::selection::LookupSelection;
 use super::PAGE_SIZE;
-use crate::composing::{CandidateSource, ComposingEffectExecutor, IntentSurface};
+use crate::composing::{
+    CandidateCellContent, CandidateSource, ComposingEffectExecutor, IntentSurface,
+};
 use crate::engine::Effect;
 use crate::keys::{CandidateNavigation, TpsKeyCapIndex};
 
@@ -59,12 +61,26 @@ pub enum Emit {
 /// highlighted absolute index, the orientation.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LookupTableContent {
-    pub candidates: Vec<String>,
+    pub cells: Vec<CandidateCellContent>,
     pub labels: Vec<String>,
     pub cursor: u32,
     pub cursor_visible: bool,
     pub page_size: u32,
     pub vertical: bool,
+}
+
+impl LookupTableContent {
+    /// Each cell as one string, for a panel with one text column: the leading
+    /// script, then the other (Pairing, Combined) after a space.
+    pub fn joined_candidates(&self) -> Vec<String> {
+        self.cells
+            .iter()
+            .map(|cell| match &cell.annotation {
+                Some(annotation) => format!("{} {annotation}", cell.text),
+                None => cell.text.clone(),
+            })
+            .collect()
+    }
 }
 
 /// Records what one key's composing work asks of the shell.

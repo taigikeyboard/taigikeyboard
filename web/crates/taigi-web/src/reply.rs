@@ -6,6 +6,14 @@ use serde::Serialize;
 use taigi_desktop_core::keys::tps_keyboard_rows;
 use taigi_desktop_core::session::{Emit, LookupTableContent};
 
+/// One candidate: the two scripts apart, because the panel sets them apart.
+#[derive(Debug, Serialize)]
+pub(crate) struct WireCell<'a> {
+    text: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    annotation: Option<&'a str>,
+}
+
 /// One call's answer.
 #[derive(Debug, Serialize)]
 pub(crate) struct Reply<'a> {
@@ -39,7 +47,7 @@ pub(crate) enum WireEmit<'a> {
         count: u32,
     },
     LookupTable {
-        candidates: &'a [String],
+        cells: Vec<WireCell<'a>>,
         labels: &'a [String],
         cursor: u32,
         cursor_visible: bool,
@@ -117,14 +125,20 @@ pub(crate) fn wire_emit<'a>(emit: &'a Emit, mode: &'a ModeText) -> WireEmit<'a> 
             count: *count,
         },
         Emit::LookupTable(LookupTableContent {
-            candidates,
+            cells,
             labels,
             cursor,
             cursor_visible,
             page_size,
             vertical,
         }) => WireEmit::LookupTable {
-            candidates,
+            cells: cells
+                .iter()
+                .map(|cell| WireCell {
+                    text: &cell.text,
+                    annotation: cell.annotation.as_deref(),
+                })
+                .collect(),
             labels,
             cursor: *cursor,
             cursor_visible: *cursor_visible,
@@ -148,6 +162,7 @@ pub(crate) fn wire_emit<'a>(emit: &'a Emit, mode: &'a ModeText) -> WireEmit<'a> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use taigi_desktop_core::composing::CandidateCellContent;
     use taigi_desktop_core::keys::TpsKeyCapIndex;
 
     fn json(emit: Emit) -> String {
@@ -181,14 +196,14 @@ mod tests {
         );
         assert_eq!(
             json(Emit::LookupTable(LookupTableContent {
-                candidates: vec!["台".to_owned()],
+                cells: vec![CandidateCellContent::new("台", Some("tâi".to_owned()))],
                 labels: vec!["1".to_owned()],
                 cursor: 0,
                 cursor_visible: true,
                 page_size: 9,
                 vertical: false,
             })),
-            r#"{"type":"lookupTable","candidates":["台"],"labels":["1"],"cursor":0,"cursorVisible":true,"pageSize":9,"vertical":false}"#
+            r#"{"type":"lookupTable","cells":[{"text":"台","annotation":"tâi"}],"labels":["1"],"cursor":0,"cursorVisible":true,"pageSize":9,"vertical":false}"#
         );
         assert_eq!(
             json(Emit::ModeChanged),

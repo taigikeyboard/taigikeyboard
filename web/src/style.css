@@ -7,13 +7,13 @@
   color-scheme: light dark;
   --bg: light-dark(#f5f5f7, #000000);
   --card: light-dark(#ffffff, #1c1c1e);
+  --glass: light-dark(rgba(246, 246, 248, 0.72), rgba(44, 44, 46, 0.72));
   --text: light-dark(#1d1d1f, #f5f5f7);
   --secondary: light-dark(#6e6e73, #98989d);
   --hairline: light-dark(#e8e8ed, #38383a);
   --hover: light-dark(#f5f5f7, #2c2c2e);
   --accent: light-dark(#0071e3, #2997ff);
   --ring: light-dark(rgba(0, 113, 227, 0.15), rgba(41, 151, 255, 0.25));
-  --failure: light-dark(#d70015, #ff6961);
   --card-shadow:
     0 1px 3px light-dark(rgba(0, 0, 0, 0.04), transparent),
     0 4px 12px light-dark(rgba(0, 0, 0, 0.03), transparent);
@@ -25,6 +25,7 @@
   --font: var(--system-font);
   --measure: 760px;
   --sidebar-width: 18.75rem;
+  --candidate-size: 17px;
   --tps-cap-height: 2.75rem;
   --tps-keyboard-height: calc(4 * var(--tps-cap-height) + 1.25rem);
 }
@@ -56,7 +57,8 @@
 }
 
 /* The markup's English holds the slots, unseen, until i18n.js has run. */
-:root:not([data-translated]) :is([data-i18n], .setting select, .setting input) {
+:root:not([data-translated])
+  :is([data-i18n], [data-i18n-keycap], .setting select, .setting input) {
   visibility: hidden;
 }
 
@@ -125,7 +127,8 @@ button:hover {
 
 button:focus-visible,
 select:focus-visible,
-input:focus-visible {
+input:focus-visible,
+summary:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--ring);
 }
@@ -144,11 +147,17 @@ input:focus-visible {
   height: 18px;
 }
 
+/* Solid, so the docked sidebar's rows scroll behind it rather than through it. */
 #sidebar-toggle {
   position: fixed;
   top: 0.75rem;
   left: 0.75rem;
   z-index: 20;
+  background: var(--bg);
+}
+
+#sidebar-toggle:hover {
+  background: var(--hover);
 }
 
 #sidebar {
@@ -215,7 +224,7 @@ input:focus-visible {
     transition: padding-left 0.25s ease;
   }
 
-  /* Visible at once, so the mode button can move the focus into it. */
+  /* Visible at once: a Tab into it must not wait for the slide. */
   :root[data-sidebar="open"] #sidebar {
     transform: none;
     visibility: visible;
@@ -229,6 +238,49 @@ input:focus-visible {
   }
 }
 
+.sidebar-section {
+  border-bottom: 1px solid var(--hairline);
+}
+
+.sidebar-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 2.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.sidebar-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.sidebar-section summary::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: url("chevron.svg") center / contain no-repeat;
+  transform: rotate(-90deg);
+  transition: transform 0.2s;
+}
+
+.sidebar-section[open] summary::after {
+  transform: none;
+}
+
+.sidebar-section summary:focus-visible {
+  border-radius: 6px;
+}
+
+.setting-group {
+  margin: 0.75rem 0 0.25rem;
+  color: var(--secondary);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
 .setting {
   display: flex;
   align-items: center;
@@ -240,6 +292,10 @@ input:focus-visible {
 
 .setting + .setting {
   border-top: 1px solid var(--hairline);
+}
+
+.setting-nested {
+  padding-left: 1rem;
 }
 
 .setting select {
@@ -269,7 +325,7 @@ input:focus-visible {
 }
 
 /* In place outside TPS, as the desktop menu keeps its row. */
-.setting:has(input:disabled) {
+.setting:has(:disabled) {
   color: var(--secondary);
 }
 
@@ -281,24 +337,12 @@ input:focus-visible {
   font-size: 0.9375rem;
 }
 
-.status,
 .actions {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   min-height: 2.25rem;
-  color: var(--secondary);
-  font-size: 0.875rem;
-}
-
-.status {
-  justify-content: space-between;
-  margin-bottom: 0.25rem;
-}
-
-.status p,
-.actions p {
-  margin: 0;
+  margin-top: 0.5rem;
 }
 
 #progress {
@@ -309,8 +353,8 @@ input:focus-visible {
 #load-slot {
   display: grid;
   align-items: center;
-  justify-items: end;
-  margin-left: auto;
+  justify-items: start;
+  margin-right: auto;
 }
 
 #load-slot > * {
@@ -321,27 +365,6 @@ input:focus-visible {
 #load-slot[data-show="progress"] > #progress,
 #load-slot[data-show="retry"] > #retry {
   visibility: visible;
-}
-
-#message[data-state="failed"] {
-  color: var(--failure);
-}
-
-#mode-button {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-width: 3rem;
-  min-height: 2rem;
-  padding: 0 0.5rem;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-}
-
-#mode-button svg {
-  width: 10px;
-  height: 10px;
-  margin-left: auto;
 }
 
 /* The card is this box, not the textarea: rounded corners would take the
@@ -362,7 +385,7 @@ input:focus-visible {
 #text {
   display: block;
   width: 100%;
-  height: max(22rem, 100dvh - 16rem);
+  height: max(22rem, 100dvh - 17.5rem);
   min-height: 22rem;
   padding: 1.5rem;
   border: 0;
@@ -376,83 +399,269 @@ input:focus-visible {
 /* The key panel asked for takes its room from the textarea, so Copy and Clear
    stay on screen. A height the user dragged stays theirs. */
 :root[data-tps-keyboard] #text {
-  height: max(14rem, 100dvh - 16rem - var(--tps-keyboard-height));
+  height: max(14rem, 100dvh - 17.5rem - var(--tps-keyboard-height));
   min-height: 14rem;
 }
 
-#text::placeholder {
+/* A placeholder cannot draw the keycap, so `#text` keeps a blank one only to drive
+   `:placeholder-shown` (kautian-mirror's `.search-hint`). Touch has no such key. */
+#text-hint {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
   color: var(--secondary);
+  font: 1.125rem / 1.65 var(--font);
+  pointer-events: none;
+}
+
+#text-hint kbd {
+  display: inline-block;
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  font: 0.8125rem / 1.4 var(--system-font);
+  text-align: center;
+}
+
+#text:not(:placeholder-shown) ~ #text-hint {
+  display: none;
+}
+
+#text-hint:has(~ #panel:not([hidden])) {
+  visibility: hidden;
+}
+
+@media not ((hover: hover) and (pointer: fine)) {
+  #text-hint {
+    display: none;
+  }
 }
 
 #text:disabled {
   color: var(--secondary);
 }
 
+/* macOS Tahoe's candidate window (`CandidateMetrics.swift`, base values at 16 pt,
+   chrome ratio 0.7). Every length follows `--candidate-size`, unrounded. */
 #panel {
+  --candidate-annotation: calc(var(--candidate-size) * 0.875);
+  --candidate-index: calc(var(--candidate-size) * 0.625);
+  --candidate-annotation-gap: calc(var(--candidate-size) * 0.4375);
+  --candidate-index-gap: calc(var(--candidate-size) * 0.125);
+  --candidate-padding-x: calc(var(--candidate-size) * 0.39375);
+  --candidate-padding-y: calc(var(--candidate-size) * 0.525);
+  --candidate-separator-inset: calc(var(--candidate-size) * 0.35);
+  --candidate-row: calc(var(--candidate-size) + var(--candidate-padding-y));
+  --candidate-radius: 16px;
+  --candidate-highlight-inset: 4px;
   position: absolute;
   z-index: 1;
   width: max-content;
   max-width: 100%;
-  padding: 0.375rem;
-  border: 1px solid var(--hairline);
-  border-radius: 12px;
-  background: var(--card);
+  overflow: hidden;
+  border-radius: var(--candidate-radius);
+  background: var(--glass);
   box-shadow: var(--menu-shadow);
-  font-size: 1rem;
+  font-size: var(--candidate-size);
+  line-height: 1.2;
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+/* One-line cells draw a capsule, two-line cells a fixed radius. */
+#panel:has(#candidates[data-vertical]) {
+  --candidate-radius: calc(var(--candidate-row) / 2);
+  --candidate-highlight-inset: 2px;
 }
 
 #preedit {
-  padding: 0 0.375rem;
+  padding: var(--candidate-index-gap) var(--candidate-padding-x);
   color: var(--secondary);
+  font-size: var(--candidate-annotation);
+}
+
+#preedit:empty {
+  display: none;
 }
 
 #preedit span {
   color: var(--accent);
 }
 
+#list {
+  display: flex;
+}
+
 #candidates {
   display: flex;
+  flex: 1;
   flex-wrap: wrap;
-  gap: 0.125rem;
+  min-width: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-#candidates[data-vertical] {
-  flex-direction: column;
-  gap: 0;
+#candidates:empty {
+  display: none;
 }
 
 #candidates li {
-  padding: 0 0.375rem;
-  border-radius: 6px;
+  position: relative;
+  z-index: 0;
+  display: grid;
+  grid-template:
+    "index text" auto
+    "index annotation" auto / auto auto;
+  align-content: center;
+  align-items: center;
+  column-gap: var(--candidate-index-gap);
+  padding: calc(var(--candidate-padding-y) / 2) var(--candidate-padding-x);
   cursor: default;
 }
 
-#candidates li:hover {
-  background: var(--hover);
-}
-
-#candidates li span {
+#candidates .index {
+  grid-area: index;
+  min-width: calc(var(--candidate-index) + 2px);
   color: var(--secondary);
+  font: var(--candidate-index) / 1 var(--system-font);
+  text-align: center;
 }
 
-#candidates li[aria-current="true"] {
+#candidates .text {
+  grid-area: text;
+  justify-self: center;
+}
+
+#candidates .annotation {
+  grid-area: annotation;
+  justify-self: center;
+  color: var(--secondary);
+  font-size: var(--candidate-annotation);
+}
+
+/* A cell with one script keeps its line in the middle of a two-line row. */
+#candidates li:not(:has(.annotation)) .text {
+  grid-row: 1 / -1;
+}
+
+#candidates li[data-literal] .index {
+  display: none;
+}
+
+#candidates li[data-literal] .text,
+#candidates li[data-literal] .annotation {
+  grid-column: 1 / -1;
+}
+
+#candidates[data-vertical] {
+  display: grid;
+  grid-template-columns: auto auto auto;
+}
+
+/* Rows share their columns, so every annotation starts at one x. */
+#candidates[data-vertical] li {
+  grid-column: 1 / -1;
+  grid-template: auto / subgrid;
+  height: var(--candidate-row);
+  padding-block: 0;
+}
+
+#candidates[data-vertical] li + li {
+  margin-top: 1px;
+}
+
+#candidates[data-vertical] li + li::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: var(--candidate-separator-inset);
+  left: var(--candidate-separator-inset);
+  height: 1px;
+  background: var(--hairline);
+}
+
+#candidates[data-vertical] li .index {
+  grid-area: auto / 1;
+}
+
+#candidates[data-vertical] li .text {
+  grid-area: auto / 2;
+  justify-self: start;
+}
+
+#candidates[data-vertical] li .annotation {
+  grid-area: auto / 3;
+  justify-self: start;
+  margin-left: var(--candidate-annotation-gap);
+}
+
+#candidates[data-vertical] li[data-literal] .text {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+#candidates li[aria-current="true"]::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: var(--candidate-highlight-inset);
+  border-radius: calc(
+    var(--candidate-radius) -
+    var(--candidate-highlight-inset)
+  );
   background: var(--accent);
+}
+
+#candidates li[aria-current="true"] > span {
   color: #ffffff;
 }
 
-#candidates li[aria-current="true"] span {
-  color: inherit;
+/* `CandidatePageArrowView.swift`: a chevron tint marks a page to turn to. */
+#page-arrows {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  width: calc(var(--candidate-size) * 1.5);
 }
 
-.actions {
-  margin-top: 0.5rem;
+#page-arrows[hidden] {
+  display: none;
+}
+
+#page-arrows::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--candidate-separator-inset) / 2);
+  bottom: calc(var(--candidate-separator-inset) / 2);
+  left: 0;
+  width: 1px;
+  background: var(--hairline);
+}
+
+#page-arrows button {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 0;
+  background: none;
+  color: var(--secondary);
+  cursor: default;
+}
+
+#page-arrows button:disabled {
+  opacity: 0.4;
+}
+
+#page-arrows svg {
+  width: calc(var(--candidate-size) * 0.625);
+  height: calc(var(--candidate-size) * 0.625);
 }
 
 #notice {
-  margin-right: auto;
   visibility: hidden;
 }
 
@@ -544,13 +753,31 @@ input:focus-visible {
 }
 
 /* Read aloud, never drawn. Not `hidden`, which silences a live region. */
-#spoken {
+.unseen {
   position: absolute;
   width: 1px;
   height: 1px;
   overflow: hidden;
   clip-path: inset(50%);
+  margin: 0;
   white-space: nowrap;
+}
+
+footer {
+  margin-top: 2.5rem;
+  color: var(--secondary);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+footer a {
+  color: var(--secondary);
+  transition: color 0.2s;
+}
+
+footer a:hover {
+  color: var(--text);
+  text-decoration: none;
 }
 
 /* Last, to outrank the docked `@media` block. */

@@ -7,7 +7,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -316,7 +317,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host",
@@ -406,11 +408,10 @@
       }
     },
     "menuCopy": {
-      "comment": "Edit menu item (⌘C); the web page's Copy button.",
+      "comment": "Edit menu item (⌘C).",
       "scope": {
         "platforms": [
-          "macos",
-          "web"
+          "macos"
         ],
         "surfaces": [
           "host"
@@ -468,7 +469,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -649,7 +651,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -669,7 +672,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -689,7 +693,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -812,7 +817,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -832,7 +838,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -852,7 +859,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -872,7 +880,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -892,7 +901,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -912,7 +922,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"

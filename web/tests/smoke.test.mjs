@@ -46,10 +46,10 @@ function lastOf(reply, type) {
 }
 
 // The first cell a slot key picks, in its leading script: past the literal
-// roman row, which takes no key, and before the other script after the space.
+// roman row, which takes no key.
 function topCell(table) {
   const position = table.labels.findIndex((label) => label !== "");
-  return table.candidates[position].split(" ")[0];
+  return table.cells[position].text;
 }
 
 function cancel() {
@@ -132,7 +132,7 @@ test("a Shift tap hands the keys to the page and back", () => {
 test("the symbol picker chord opens the picker", () => {
   const chord = { ctrl: true, alt: true };
   const reply = press(",", "Comma", chord);
-  assert.ok(lastOf(reply, "lookupTable").candidates.length > 0);
+  assert.ok(lastOf(reply, "lookupTable").cells.length > 0);
   session.keyUp(JSON.stringify({ key: ",", code: "Comma" }));
   cancel();
 });

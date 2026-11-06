@@ -3,15 +3,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import {
-  candidates,
-  commitWord,
-  mode,
-  open,
-  panel,
-  preedit,
-  toggle,
-} from "./helpers.mjs";
+import { candidates, open, panel, preedit } from "./helpers.mjs";
 
 const keyPanel = (page) => page.locator("#tps-keyboard");
 const cap = (page, glyph) =>
@@ -53,7 +45,6 @@ test("the panel follows the mode, and the choice waits for the way back", async 
   await expect(keyPanel(page)).toBeVisible();
   await editor.press("Control+Alt+p");
   await expect(keyPanel(page)).toBeHidden();
-  await toggle(page).click();
   await expect(shownSetting(page)).toBeDisabled();
   await expect(shownSetting(page)).toBeChecked();
   await editor.press("Control+Alt+p");
@@ -63,7 +54,6 @@ test("the panel follows the mode, and the choice waits for the way back", async 
 
 test("the sidebar row shows the panel", async ({ page }) => {
   await open(page, { settings: { inputMode: "tps" } });
-  await toggle(page).click();
   await shownSetting(page).check();
   await expect(keyPanel(page)).toBeVisible();
 });
@@ -144,6 +134,14 @@ test("a click on a symbol selects it and Enter writes it", async ({ page }) => {
   await expect(editor).not.toHaveValue("");
 });
 
+/// What a cell says aloud: its drawn parts, apart.
+const readCell = (cell) =>
+  cell.evaluate((element) =>
+    Array.from(element.children, ({ textContent }) => textContent)
+      .filter(Boolean)
+      .join(" "),
+  );
+
 test("the live region says one cell and goes quiet with the list", async ({
   page,
 }) => {
@@ -151,35 +149,14 @@ test("the live region says one cell and goes quiet with the list", async ({
   const spoken = page.locator("#spoken");
   await expect(spoken).toHaveAttribute("aria-live", "polite");
   await editor.pressSequentially("taiuan");
-  await expect(spoken).toHaveText(await candidates(page).first().textContent());
+  await expect(spoken).toHaveText(await readCell(candidates(page).first()));
   await editor.press("ArrowDown");
   await expect(spoken).toHaveText(
-    await page.locator('#candidates [aria-current="true"]').textContent(),
+    await readCell(page.locator('#candidates [aria-current="true"]')),
   );
   await editor.press("Enter");
   await editor.press("Enter");
   await expect(spoken).toHaveText("");
-});
-
-test("the mode button from the keyboard moves into the sidebar", async ({
-  page,
-}) => {
-  await open(page);
-  await page.locator("#mode-button").focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByLabel("Input Mode")).toBeFocused();
-});
-
-test("the mode button by pointer leaves the keyboard in the textarea", async ({
-  page,
-}) => {
-  const editor = await open(page);
-  await page.locator("#mode-button").click();
-  await expect(page.getByLabel("Input Mode")).toBeVisible();
-  await expect(editor).toBeFocused();
-  await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
-  await expect(mode(page)).not.toHaveText("");
 });
 
 test("reduced motion stops the sidebar sliding", async ({ page }) => {
