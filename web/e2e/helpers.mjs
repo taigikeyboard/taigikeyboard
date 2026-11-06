@@ -1,18 +1,23 @@
 import { expect } from "@playwright/test";
 
+/// `settings` as if a past visit had stored them.
+export function seedSettings(page, settings) {
+  return page.addInitScript(
+    (document) => {
+      localStorage.setItem("taigi.settings", document);
+    },
+    JSON.stringify({ values: settings }),
+  );
+}
+
 /// The page with `settings` as if a past visit had stored them. `ready`: wait
 /// for the dictionaries.
 export async function open(page, { settings, ready = true } = {}) {
   if (settings) {
-    await page.addInitScript(
-      (document) => {
-        localStorage.setItem("taigi.settings", document);
-      },
-      JSON.stringify({ values: settings }),
-    );
+    await seedSettings(page, settings);
   }
   await page.goto("/index.html");
-  const editor = page.getByRole("textbox", { name: "Text" });
+  const editor = page.locator("#text");
   await expect(editor).toBeEnabled();
   await expect(editor).toBeFocused();
   if (ready) {
@@ -21,6 +26,7 @@ export async function open(page, { settings, ready = true } = {}) {
   return editor;
 }
 
+export const toggle = (page) => page.locator("#sidebar-toggle");
 export const preedit = (page) => page.locator("#preedit");
 export const candidates = (page) => page.locator("#candidates li");
 export const mode = (page) => page.locator("#mode");

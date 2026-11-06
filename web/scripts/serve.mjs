@@ -13,6 +13,7 @@ const MEDIA_TYPES = {
   ".html": "text/html",
   ".js": "text/javascript",
   ".wasm": "application/wasm",
+  ".woff2": "font/woff2",
 };
 
 const [directory, port] = process.argv.slice(2);

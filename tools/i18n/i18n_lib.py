@@ -32,7 +32,7 @@ GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 # or let a shipped one render incomplete.
 PRODUCTION_LANGUAGES = ("hanji", "en", "ja", "tailo", "poj")
 
-VALID_PLATFORMS = {"ios", "android", "macos", "windows", "linux"}
+VALID_PLATFORMS = {"ios", "android", "macos", "windows", "linux", "web"}
 VALID_SURFACES = {"host", "extension"}
 VALID_VALUE_LANGUAGES = {"hanji", "tailo", "poj", "ja", "en"}
 
@@ -74,6 +74,11 @@ MACOS_GEN_DIR = f"{MACOS_STRINGS_DIR}/Generated"
 # functions call; only this file is ever regenerated.
 WINDOWS_STRINGS_DIR = "desktop/crates/taigi-desktop-core/src/strings"
 WINDOWS_GEN_FILE = f"{WINDOWS_STRINGS_DIR}/generated.rs"
+
+# The web page's strings, one ES module of `namespace.key` maps per production language. A module and
+# not JSON: it loads with the page's own module graph, so the page has no fetch to wait for or to fail
+# before it can say anything. `{name}` placeholders stay as authored; `web/src/i18n.js` fills them.
+WEB_STRINGS_FILE = "web/src/generated/strings.js"
 
 # The Windows installer's own strings (roadmap W8). Inno Setup speaks per-language `[CustomMessages]`
 # sections, so the windows-scoped `desktop.installer*` keys are ALSO emitted as one `#include`d
@@ -1203,6 +1208,24 @@ def _emit_rust_strings(entries) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _emit_web_strings(entries) -> str:
+    # Plural arms would need a runtime the page does not have: no web key uses one, so refuse the first.
+    for namespace, key, entry in entries:
+        for lang, value in entry["values"].items():
+            if _has_plural(parse_message(value)):
+                raise ValueError(f"{namespace}:{key}: '{lang}' uses plural, which the web page cannot render")
+    strings = {
+        lang: {
+            f"{namespace}.{key}": entry["values"][lang]
+            for namespace, key, entry in entries
+            if lang in entry["values"]
+        }
+        for lang in PRODUCTION_LANGUAGES
+    }
+    body = json.dumps(strings, ensure_ascii=False, indent=2)
+    return f"// {GENERATED_HEADER}\n\nexport const STRINGS = {body};\n"
+
+
 def _bundle_name_values(all_entries):
     # The app-name entry's values, or None when the source does not carry that key.
     return next(
@@ -1313,6 +1336,11 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     installer_entries = [item for item in windows_entries if item[1].startswith(WINDOWS_INSTALLER_KEY_PREFIX)]
     if installer_entries:
         outputs[WINDOWS_INSTALLER_MESSAGES_FILE] = _emit_inno_messages(installer_entries)
+
+    web_entries = [item for item in all_entries if "web" in item[2]["scope"]["platforms"]]
+    if enforce_production_completeness:
+        validate_platform_has_keys(web_entries, "web")
+    outputs[WEB_STRINGS_FILE] = _emit_web_strings(web_entries)
 
     # The bundle's own localized name, one `InfoPlist.strings` per system language the bundle answers
     # to. Emitted from the same authored values as everything else so the product can never be named

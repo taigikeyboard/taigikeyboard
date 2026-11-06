@@ -1,0 +1,242 @@
+{
+  "namespace": "web",
+  "keys": {
+    "textLabel": {
+      "comment": "Accessible name of the page's text box.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "文字",
+        "tailo": "Bûn-jī",
+        "poj": "Bûn-jī",
+        "en": "Text",
+        "ja": "テキスト"
+      }
+    },
+    "placeholder": {
+      "comment": "Text box placeholder.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "佇遮拍字",
+        "tailo": "Tī tsia phah-jī",
+        "poj": "Tī chia phah-jī",
+        "en": "Type here",
+        "ja": "ここに入力"
+      }
+    },
+    "clear": {
+      "comment": "Button that empties the text box.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "清除",
+        "tailo": "Tshing-tû",
+        "poj": "Chheng-tû",
+        "en": "Clear",
+        "ja": "クリア"
+      }
+    },
+    "links": {
+      "comment": "Accessible name of the sidebar's link list.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "連結",
+        "tailo": "Liân-kiat",
+        "poj": "Liân-kiat",
+        "en": "Links",
+        "ja": "リンク"
+      }
+    },
+    "converter": {
+      "comment": "Sidebar link to taigi-converter.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "轉換器",
+        "tailo": "Tsuán-uānn-khì",
+        "poj": "Choán-ōaⁿ-khì",
+        "en": "Converter",
+        "ja": "変換ツール"
+      }
+    },
+    "kautianMirror": {
+      "comment": "Sidebar link to the kautian-mirror site; the hanji value is that site's own name.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "教典備援網站",
+        "tailo": "Kàu-tián pī-uān bāng-tsām",
+        "poj": "Kàu-tián pī-oān bāng-chām",
+        "en": "Kautian Mirror",
+        "ja": "教典ミラーサイト"
+      }
+    },
+    "loading": {
+      "comment": "Status slot while the engine and the dictionaries load.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "當咧載入",
+        "tailo": "Tng-teh tsài-ji̍p",
+        "poj": "Tng-teh chài-ji̍p",
+        "en": "Loading",
+        "ja": "読み込み中"
+      }
+    },
+    "ready": {
+      "comment": "Status slot once the dictionaries are in.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "會使拍字",
+        "tailo": "Ē-sái phah-jī",
+        "poj": "Ē-sái phah-jī",
+        "en": "Ready",
+        "ja": "準備完了"
+      }
+    },
+    "loadFailed": {
+      "comment": "Status slot when the engine or the dictionaries could not load.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "載入失敗",
+        "tailo": "Tsài-ji̍p sit-pāi",
+        "poj": "Chài-ji̍p sit-pāi",
+        "en": "Could not load",
+        "ja": "読み込めませんでした"
+      }
+    },
+    "copied": {
+      "comment": "Status slot after Copy.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "已經拷貝",
+        "tailo": "Í-king khó-puè",
+        "poj": "Í-keng khó-pòe",
+        "en": "Copied",
+        "ja": "コピーしました"
+      }
+    },
+    "copyFailed": {
+      "comment": "Status slot when Copy failed.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "拷貝失敗",
+        "tailo": "Khó-puè sit-pāi",
+        "poj": "Khó-pòe sit-pāi",
+        "en": "Could not copy",
+        "ja": "コピーできませんでした"
+      }
+    },
+    "writeFailed": {
+      "comment": "Status slot when the browser refused a commit; {text} is the text, so it is not lost.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "寫入失敗：{text}",
+        "tailo": "Siá-ji̍p sit-pāi: {text}",
+        "poj": "Siá-ji̍p sit-pāi: {text}",
+        "en": "Could not write: {text}",
+        "ja": "書き込めませんでした：{text}"
+      },
+      "placeholders": {
+        "text": "string"
+      }
+    },
+    "otherInputMethod": {
+      "comment": "Notice while another input method holds the keyboard.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "另外一个輸入法當咧用，關掉才會當佇遮拍字。",
+        "tailo": "Līng-guā tsi̍t ê su-ji̍p-huat tng-teh iōng, kuainn--tiāu tsiah ē-tàng tī tsia phah-jī.",
+        "poj": "Lēng-gōa chi̍t ê su-ji̍p-hoat tng-teh iōng, koaiⁿ--tiāu chiah ē-tàng tī chia phah-jī.",
+        "en": "Another input method is active. Turn it off to type here.",
+        "ja": "別の入力方法が使用中です。オフにするとここに入力できます。"
+      }
+    }
+  }
+}

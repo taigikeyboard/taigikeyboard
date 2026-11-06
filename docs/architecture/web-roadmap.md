@@ -312,7 +312,7 @@ Type in a browser and get Hanji, unstyled. `web/src/` + `make web-serve`.
 Three PRs, one round each:
 
 1. **Look**: § UI colours, sidebar, settings form with English labels. Copy and Clear. Empty, loading and error states in fixed slots, nothing that pops in and shifts the page. kautian-mirror's inline pre-paint script (`src/index.html:22-36`) moves to an external blocking file, so Phase 6's CSP allows it. The Font and Display Language rows arrive with slice 2, which brings what they select. The status control shows the mode symbol and opens the sidebar, so Input Mode has one control.
-2. **i18n + fonts**: `tools/i18n/i18n_lib.py:35`: add `web` to `VALID_PLATFORMS`, emit `web/src/generated/strings.json`, add `web` to the scope of reused keys. A round touching `i18n/**` runs the gates of every platform in the touched keys' scope. `web/scripts/subset-fonts.sh` from kautian-mirror's; fonts stay off the first load until selected.
+2. **i18n + fonts**: `tools/i18n/i18n_lib.py:35`: add `web` to `VALID_PLATFORMS`, emit `web/src/generated/strings.js`, add `web` to the scope of reused keys. A module rather than the JSON file first planned: it loads in the page's module graph, so the page has no fetch to wait on or fail before it can say anything. A round touching `i18n/**` runs the gates of every platform in the touched keys' scope. `web/scripts/subset-fonts.sh` from kautian-mirror's, run at build time because the output is 19 MB; fonts stay off the first load until selected.
 3. **Panels + a11y**: TPS key panel and symbol picker through the same panel. Keyboard focus order, `aria-live` for the candidate list, `prefers-reduced-motion`.
 
 ### Phase 6 — Loading and offline

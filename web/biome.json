@@ -5,6 +5,7 @@
       "**",
       "!target",
       "!node_modules",
+      "!src/generated",
       "!test-results",
       "!playwright-report"
     ]

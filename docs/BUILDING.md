@@ -44,7 +44,7 @@ Everything else that has a version the build checks is pinned in
 [`mise.toml`](../mise.toml):
 
 ```sh
-mise install        # protoc, protoc-gen-swift (macOS), gitleaks, swiftformat, zig, cargo-zigbuild, cargo-ndk, uv, wasm-bindgen, wasm-opt, biome
+mise install        # protoc, protoc-gen-swift (macOS), gitleaks, swiftformat, zig, cargo-zigbuild, cargo-ndk, uv, wasm-bindgen, wasm-opt, pyftsubset, biome
 ```
 
 Run it after installing Rust: `cargo-ndk` compiles with it. On macOS
@@ -100,7 +100,7 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 | macOS | `make macos-libs`, then `make -C macos build` | `make -C macos test` |
 | Windows | on Windows: [`architecture/windows-release.md`](architecture/windows-release.md); elsewhere: `make windows-check` — its `check-box` step runs on the maintainer's Windows box over ssh and fails without it; run the box-free steps in [`windows/README.md`](../windows/README.md) instead | included in `make windows-check` |
 | Linux | on Linux: `make -C linux build` (packages: `make -C linux deb`); on macOS: `make linux-check` | included in `make linux-check` |
-| Web | `make web-check` (`mise install` first: `wasm-bindgen`, `wasm-opt`, `biome`) · `make web-serve` | `make web-e2e` (downloads Playwright's browsers on first run) |
+| Web | `make web-check` (`mise install` first: `wasm-bindgen`, `wasm-opt`, `biome`) · `make web-serve` (`pyftsubset` too) | `make web-e2e` (`pyftsubset` too; downloads Playwright's browsers on first run) |
 | Desktop-shared crates | `make desktop-check` | included |
 | macOS Rust workspace (`macos/crates`, the archive the app links) | `make macos-rust-check` | included |
 | Dictionary | `make dict` | `python3 -m pytest tests`, run inside `dictionary/` (needs the `taigi-converter` submodule) |

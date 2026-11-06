@@ -2,6 +2,8 @@
 // shape and key spellings, is what the session reads: each form control is named
 // after its key, and the markup's selected option is that key's default.
 
+import { setDisplayLanguage } from "./i18n.js";
+
 const STORAGE_KEY = "taigi.settings";
 
 function emptyDocument() {
@@ -67,8 +69,12 @@ export class Settings {
         options.find((option) => option.defaultSelected);
       shown.selected = true;
     }
+    const { candidateAppearanceMode, fontType } = this.#form.elements;
     const root = document.documentElement;
-    root.dataset.theme = this.#form.elements.candidateAppearanceMode.value;
+    root.dataset.theme = candidateAppearanceMode.value;
+    root.dataset.font = fontType.value;
+    // The stored tag, not the control's: the session reads an unknown one too.
+    setDisplayLanguage(values.displayLanguage ?? "system");
   }
 
   #persist() {

@@ -4,7 +4,8 @@ name: Web
 # over the real dictionaries, clippy, biome, fmt) and `make web-e2e` (Playwright
 # in Chromium, Firefox and WebKit over the same dictionaries). An engine, desktop-shared or
 # dictionary change triggers it too, because `taigi-web` links those crates and
-# asserts top candidates against that data.
+# asserts top candidates against that data; a font or string change, because the
+# page ships them.
 on:
   pull_request:
     paths:
@@ -12,7 +13,9 @@ on:
       - 'desktop/**'
       - 'engine/**'
       - 'assets/dictionaries/**'
+      - 'assets/fonts/**'
       - 'assets/symbols/**'
+      - 'i18n/**'
       - 'mise.toml'
       - '.github/workflows/web.yml'
   push:
@@ -22,7 +25,9 @@ on:
       - 'desktop/**'
       - 'engine/**'
       - 'assets/dictionaries/**'
+      - 'assets/fonts/**'
       - 'assets/symbols/**'
+      - 'i18n/**'
       - 'mise.toml'
       - '.github/workflows/web.yml'
 
@@ -47,11 +52,11 @@ jobs:
 
       # Only what the gate runs. The versions are mise.toml's, the same pins a
       # contributor installs; protoc is there because engine/protos/build.rs
-      # shells out to it.
+      # shells out to it; uv is what mise installs fonttools with.
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.11.2
-          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome uv pipx:fonttools
 
       - name: Install the toolchain (web/rust-toolchain.toml)
         working-directory: web

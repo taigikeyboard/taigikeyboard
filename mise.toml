@@ -34,6 +34,8 @@ uv = "0.11.32"
 # pinned in web/Cargo.toml; `make -C web check` compares them.
 "github:wasm-bindgen/wasm-bindgen" = "0.2.130"
 "github:WebAssembly/binaryen" = { version = "133", version_prefix = "version_" }
+# web/scripts/subset-fonts.sh: pyftsubset, whose woff2 output needs the extra.
+"pipx:fonttools" = { version = "4.63.0", extras = "woff" }
 # JavaScript format + lint for web/.
 biome = "2.6.5"
 

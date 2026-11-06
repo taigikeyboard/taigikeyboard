@@ -18,10 +18,11 @@
     0 1px 3px light-dark(rgba(0, 0, 0, 0.04), transparent),
     0 4px 12px light-dark(rgba(0, 0, 0, 0.03), transparent);
   --menu-shadow: 0 4px 24px light-dark(rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.5));
-  --font:
+  --system-font:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Helvetica Neue", Helvetica, "PingFang TC", "Noto Sans TC", Arial,
     sans-serif;
+  --font: var(--system-font);
   --measure: 760px;
   --sidebar-width: 18.75rem;
 }
@@ -32,6 +33,29 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+}
+
+/* Set on the root with the rest of the settings, so `--font` needs no redefining
+   in each rule that reads it. */
+:root[data-font="openHuninn"] {
+  --font: "jf-openhuninn", var(--system-font);
+}
+
+:root[data-font="iansui"] {
+  --font: "Iansui", var(--system-font);
+}
+
+:root[data-font="genYoMin"] {
+  --font: "GenYoMin2 TW", var(--system-font);
+}
+
+:root[data-font="genYoGothic"] {
+  --font: "GenYoGothic2 TW", var(--system-font);
+}
+
+/* The markup's English holds the slots, unseen, until i18n.js has run. */
+:root:not([data-translated]) :is([data-i18n], .setting select) {
+  visibility: hidden;
 }
 
 * {

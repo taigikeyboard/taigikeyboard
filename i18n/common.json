@@ -95,7 +95,8 @@
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "web"
         ],
         "surfaces": [
           "host",
@@ -198,7 +199,8 @@
         "platforms": [
           "android",
           "ios",
-          "macos"
+          "macos",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -605,7 +607,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -627,7 +630,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -649,7 +653,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -671,7 +676,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -693,7 +699,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"

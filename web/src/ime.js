@@ -2,6 +2,7 @@
 // thread because `preventDefault` must run during `keydown`
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
+import { translate } from "./i18n.js";
 import { createSession, fetchDictionaries } from "./loader.js";
 import { Panel } from "./panel.js";
 import { Settings } from "./settings.js";
@@ -54,15 +55,32 @@ function platform() {
   return /win/i.test(name) ? "windows" : "linux";
 }
 
-function say(message, state) {
-  messageSlot.textContent = message;
+/// `[key, placeholders]` of what the message slot says, so a language change can
+/// redraw it. `null` for the session's own text, which arrives translated.
+let said = null;
+
+function say(key, state, placeholders) {
+  said = [key, placeholders];
+  messageSlot.textContent = translate(key, placeholders);
   messageSlot.dataset.state = state;
+}
+
+function announce(label) {
+  said = null;
+  messageSlot.textContent = label;
+  messageSlot.dataset.state = "mode";
+}
+
+/// The session's text describes the settings just replaced, so it goes.
+function redrawMessage() {
+  messageSlot.textContent = said === null ? "" : translate(...said);
 }
 
 /// Starts an instance. Until the dictionaries are in, keys type romanization
 /// (`runtime.rs` `install_lexicon`).
 async function start() {
   let starting = null;
+  say("web.loading", "loading");
   try {
     starting = await createSession(platform(), navigator.language);
     restoreSettings(starting);
@@ -70,7 +88,6 @@ async function start() {
     modeSlot.textContent = starting.modeSymbol();
     textarea.disabled = false;
     textarea.focus();
-    say("Loading dictionaries", "loading");
     const files = await fetchDictionaries(starting.dictionaryFiles());
     // A trap may have replaced the instance while these downloaded.
     if (session !== starting) {
@@ -80,7 +97,7 @@ async function start() {
       starting.addDictionary(name, bytes);
     }
     starting.install();
-    say("Ready", "ready");
+    say("web.ready", "ready");
   } catch (error) {
     console.error(error);
     if (session !== starting) {
@@ -90,7 +107,7 @@ async function start() {
     if (error instanceof WebAssembly.RuntimeError) {
       session = null;
     }
-    say("Could not load", "failed");
+    say("web.loadFailed", "failed");
     // With no instance a key would go nowhere; the text stays readable.
     textarea.disabled = session === null;
   }
@@ -112,7 +129,6 @@ function call(action) {
     console.error(error);
     session = null;
     panel.clear();
-    say("Restarting", "loading");
     start();
     return NOTHING;
   }
@@ -129,7 +145,7 @@ function applyEmit(emit) {
     case "commit":
       // The engine has let go of this text, so it must not vanish unseen.
       if (!surface.insert(emit.text)) {
-        say(`Could not write: ${emit.text}`, "failed");
+        say("web.writeFailed", "failed", { text: emit.text });
       }
       break;
     case "deleteSurrounding":
@@ -145,7 +161,7 @@ function applyEmit(emit) {
       modeSlot.textContent = emit.symbol;
       break;
     case "announceMode":
-      say(emit.label, "mode");
+      announce(emit.label);
       break;
     case "openSettings":
       sidebar.open();
@@ -164,6 +180,7 @@ function changeSettings(json) {
     current.setSettings(json);
     modeSlot.textContent = current.modeSymbol();
   });
+  redrawMessage();
 }
 
 function placePanel() {
@@ -264,10 +281,10 @@ document.getElementById("mode-button").addEventListener("click", () => {
 document.getElementById("copy").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(textarea.value);
-    say("Copied", "copied");
+    say("web.copied", "copied");
   } catch (error) {
     console.error(error);
-    say("Could not copy", "failed");
+    say("web.copyFailed", "failed");
   }
 });
 

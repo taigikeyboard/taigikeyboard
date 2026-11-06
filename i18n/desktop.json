@@ -405,10 +405,11 @@
       }
     },
     "menuCopy": {
-      "comment": "Edit menu item (⌘C).",
+      "comment": "Edit menu item (⌘C); the web page's Copy button.",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -747,7 +748,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -767,7 +769,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -787,7 +790,8 @@
         "platforms": [
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"

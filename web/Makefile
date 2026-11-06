@@ -10,8 +10,10 @@ TARGET := wasm32-unknown-unknown
 PKG := target/pkg
 WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site
+FONT_SOURCES := ../assets/fonts/font
+FONTS := target/fonts
 
-.PHONY: help bindgen-version build site serve test smoke e2e lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site serve test smoke e2e lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -20,6 +22,7 @@ help:
 	@echo "  make test    - Native tests of the session and the key translation"
 	@echo "  make build   - Release wasm, bindings and wasm-opt into $(PKG)/"
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
+	@echo "  make site    - Stage the page, bindings, dictionaries and fonts into $(SITE)/"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
 
@@ -33,22 +36,33 @@ bindgen-version:
 		exit 1; \
 	fi
 
+# `src/generated/strings.js` is written by the repo-root `make i18n`.
+i18n-check:
+	python3 ../tools/i18n/check.py
+
 build: bindgen-version
 	cargo build --release --locked --target $(TARGET) -p taigi-web
 	wasm-bindgen --target web --out-dir $(PKG) $(WASM)
 	wasm-opt -O3 --strip-debug --strip-producers $(PKG)/taigi_web_bg.wasm -o $(PKG)/taigi_web_bg.wasm
 
-site: build
+# Slow, so only when a font or the range in fonts.css changes.
+$(FONTS)/.stamp: scripts/subset-fonts.sh src/fonts.css $(wildcard $(FONT_SOURCES)/*)
+	scripts/subset-fonts.sh $(FONT_SOURCES) $(FONTS)
+	touch $@
+
+site: build $(FONTS)/.stamp
 	rm -rf $(SITE)
 	mkdir -p $(SITE)
 	cp -R src/. $(SITE)/
 	cp -R $(PKG) $(SITE)/pkg
 	cp -R ../assets/dictionaries $(SITE)/dictionaries
+	mkdir -p $(SITE)/fonts
+	cp $(FONTS)/*.woff2 ../assets/fonts/OFL-1.1.txt $(SITE)/fonts/
 
 serve: site
 	node scripts/serve.mjs $(SITE) 8000
 
-test:
+test: i18n-check
 	cargo test --locked
 
 smoke: build
