@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import ctypes
 import json
 import os
 import shutil
@@ -135,6 +136,30 @@ def wait_until(predicate, timeout_s: float, what: str) -> None:
     raise ScenarioError(f"timed out waiting for {what}")
 
 
+def disable_key_repeat() -> None:
+    """Turn off key auto-repeat on the X display.
+
+    xdotool presses and releases every key, but the server repeats a key
+    whose release arrives late: a 391 ms stall on the first key under
+    Fcitx5 turned `t` into `ttt` (2026-11-06). No step means to hold a key,
+    so a repeat is always noise. Xvfb resets every setting when its last
+    client disconnects, so this holds only while another connection stays
+    open — `Session.start` calls it once the host window has mapped. libX11
+    comes with GTK 3, which the host already needs; ctypes spares every
+    distribution an `xset` package."""
+    xlib = ctypes.CDLL("libX11.so.6")
+    xlib.XOpenDisplay.restype = ctypes.c_void_p
+    xlib.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    xlib.XAutoRepeatOff.argtypes = [ctypes.c_void_p]
+    xlib.XCloseDisplay.argtypes = [ctypes.c_void_p]
+    display = xlib.XOpenDisplay(None)
+    if not display:
+        raise ScenarioError("could not open the X display to turn off key repeat")
+    xlib.XAutoRepeatOff(display)
+    # Closing flushes the request to the server.
+    xlib.XCloseDisplay(display)
+
+
 class Session:
     """One scenario: a fresh XDG tree, framework, host window and trace."""
 
@@ -205,6 +230,8 @@ class Session:
         if not window:
             raise ScenarioError("the host window never mapped")
         self.run(["xdotool", "windowfocus", "--sync", window[0]])
+        # Xvfb only: desktop.py's start replaces this one and leaves the real session's repeat alone.
+        disable_key_repeat()
         wait_until(self.activate, STARTUP_TIMEOUT_S, "the input method to be active on the focused field")
 
     def ibus_lists_engine(self) -> bool:
