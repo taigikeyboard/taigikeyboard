@@ -275,8 +275,8 @@ def add_assets_path(path: str, effects: Effects) -> None:
     elif path.startswith("assets/symbols/"):
         effects.platforms |= {"desktop", "windows", "linux", "web", "macos"}
     elif path.startswith("assets/fonts/"):
-        # Typefaces ship as-is: no build or test gate.
-        pass
+        # Typefaces ship as-is everywhere but the web, which cuts them to a subset.
+        effects.platforms.add("web")
     else:
         effects.unmapped.append(path)
 
@@ -312,7 +312,7 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
         elif top == "tools":
             add_tools_path(path, effects)
         elif top == "i18n":
-            effects.platforms |= {"i18n", "ios", "android", "macos"}
+            effects.platforms |= {"i18n", "ios", "android", "macos", "web"}
         elif top == "desktop":
             effects.platforms |= {
                 "desktop",

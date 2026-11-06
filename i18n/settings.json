@@ -8,7 +8,7 @@
     },
     "inputMode": {
       "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop General pane labels its TL / POJ picker inputScript instead.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "輸入模式", "tailo": "Su-ji̍p bôo-sik", "poj": "Su-ji̍p bô͘-sek", "en": "Input Mode", "ja": "入力モード" }
     },
     "keyboardLayout": {
@@ -18,22 +18,22 @@
     },
     "displayLanguage": {
       "comment": "Settings row + sub-screen title for selecting the app UI display language (orthogonal to the input mode). Most option labels are endonyms (own-script, not i18n keys); the Automatic option uses displayLanguageAutomatic.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "介面語言", "tailo": "Kài-bīn gí-giân", "poj": "Kài-bīn gí-giân", "en": "Display Language", "ja": "表示言語" }
     },
     "displayLanguageAutomatic": {
       "comment": "Display-language picker option that follows the OS/device language (ja->日本語, zh->漢字, else->English). Unlike the other rows this is a translated label, not an endonym.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "自動", "tailo": "Tsū-tōng", "poj": "Chū-tōng", "en": "Automatic", "ja": "自動" }
     },
     "pojMode": {
       "comment": "Input-mode option: Pe̍h-ōe-jī (POJ) romanization. Also the iOS smartbar input-mode button a11y label (extension surface). Also the Pe̍h-ōe-jī settings section header (pojSettingsSectionTitle merged 2026-09-20).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "白話字", "tailo": "Pe̍h-uē-jī", "poj": "Pe̍h-ōe-jī", "en": "Pe̍h-ōe-jī", "ja": "Pe̍h-ōe-jī" }
     },
     "tlMode": {
       "comment": "Input-mode option: Tâi-lô (TL) romanization. Also the iOS smartbar input-mode button a11y label (extension surface).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "台羅", "tailo": "Tâi-lô", "poj": "Tâi-lô", "en": "Tâi-lô", "ja": "Tâi-lô" }
     },
     "englishMode": {
@@ -48,7 +48,7 @@
     },
     "tpsMode": {
       "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the desktop Shortcuts pane header above the TPS switch and key panel (USER 2026-10-16). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "方音符號", "tailo": "Hong-im-hû-hō", "poj": "Hong-im-hû-hō", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
     "typingSectionTitle": {
@@ -58,22 +58,22 @@
     },
     "candidateDisplayMode": {
       "comment": "Picker label: how a candidate cell renders the (Hanji, romanization) pair — side by side (today) or romanization only. Host settings + iOS/Android in-keyboard settings overlay; desktop appearance pane.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "候選詞顯示", "tailo": "Hāu-suán-sû hián-sī", "poj": "Hāu-soán-sû hián-sī", "en": "Candidate Display", "ja": "候補の表示" }
     },
     "candidateDisplayModeSideBySide": {
       "comment": "Picker value (default): cell shows hanji and romanization as primary + secondary; the 文/A key decides which leads.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "漢羅對應", "tailo": "Hàn-Lô tuì-ìng", "poj": "Hàn-Lô tùi-èng", "en": "Hanji–Romanization Pairing", "ja": "漢字とローマ字の対応" }
     },
     "candidateDisplayModeCombined": {
       "comment": "Picker value: cell shows hanji and romanization as ONE label (Hanji romanization); committing writes the hanji; the 文/A key is inert. TL/POJ only.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "漢羅濫", "tailo": "Hàn-Lô lām", "poj": "Hàn-Lô lām", "en": "Hanji with Romanization", "ja": "漢字＋ローマ字" }
     },
     "candidateDisplayModeRomanOnly": {
       "comment": "Picker value: cell shows the romanization only; committing writes the romanization; TL/POJ only.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "羅馬字", "tailo": "Lô-má-jī", "poj": "Lô-má-jī", "en": "Romanization Only", "ja": "ローマ字のみ" }
     },
     "outputBothScripts": {

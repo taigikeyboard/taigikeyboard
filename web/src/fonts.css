@@ -1,0 +1,51 @@
+/* The Font setting's faces, the roster of assets/fonts/font. CJK only: these fonts
+   misplace combining tone marks (tsi̍t renders as tsit), so romanization falls
+   through to the system font, and an installed copy (`local()`) is the full font.
+   A browser fetches a face only once text uses it. scripts/subset-fonts.sh cuts the
+   files to this one range, which every face repeats exactly. */
+@font-face {
+  font-family: "jf-openhuninn";
+  src:
+    local("jf-openhuninn-2.1"),
+    url("fonts/jf_openhuninn_2_1.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
+  font-family: "Iansui";
+  src:
+    local("Iansui Regular"),
+    local("Iansui-Regular"),
+    url("fonts/iansui_regular.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
+  font-family: "GenYoMin2 TW";
+  src:
+    local("GenYoMin2 TW R"),
+    local("GenYoMin2TW-R"),
+    url("fonts/genyomin2tw_r.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
+  font-family: "GenYoGothic2 TW";
+  src:
+    local("GenYoGothic2 TW R"),
+    local("GenYoGothic2TW-R"),
+    url("fonts/genyogothic2tw_r.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}

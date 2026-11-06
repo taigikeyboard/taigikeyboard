@@ -76,7 +76,8 @@ impl DisplayLanguage {
     /// What `System` means on a machine whose UI language is `system_locale`
     /// (a BCP-47 tag such as `ja-JP`, `en-US`, `zh-TW`): Japanese and English
     /// by subtag, everything else the base language (`DisplayLanguage.swift`
-    /// `resolveAutomatic` is the macOS twin).
+    /// `resolveAutomatic` is the macOS twin; `effectiveLanguage` in
+    /// `web/src/i18n.js` the page's, which draws before the engine loads).
     pub fn resolve_automatic(system_locale: &str) -> Self {
         let language = system_locale
             .split(['-', '_'])

@@ -26,7 +26,8 @@ copyright lines below were read out of each font's own `name` table.
 | 源樣明體 GenYoMin2 TW | `genyomin2tw_r.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Serif. |
 
 The four files live once, at `assets/fonts/font/`, and all five platforms package that
-one copy. The file names follow Android's resource-naming rules so its `res/`
+one copy. The web page serves CJK-only subsets cut from them at build time, with the licence text
+beside them. The file names follow Android's resource-naming rules so its `res/`
 merge can read the shared directory unchanged; iOS and macOS ask for the PostScript names inside
 the files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,
 `GenYoMin2TW-R`); Windows asks DirectWrite for their family names (`Iansui`,

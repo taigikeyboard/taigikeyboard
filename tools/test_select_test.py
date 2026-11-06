@@ -199,7 +199,7 @@ class PlatformSelectionTests(SelectorTestCase):
     def test_i18n_source_selects_check_and_mobile_macos(self) -> None:
         selection = self.select("i18n/settings.json")
 
-        self.assertEqual(set(selection.commands), {"i18n", "ios", "android", "macos"})
+        self.assertEqual(set(selection.commands), {"i18n", "ios", "android", "macos", "web"})
         self.assertIn("python3 tools/i18n/check.py", self.runs(selection, "i18n"))
 
     def test_dictionaries_select_data_crates_and_desktop(self) -> None:

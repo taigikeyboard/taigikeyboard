@@ -560,7 +560,7 @@ class PlaceholderTypeTest(unittest.TestCase):
 
 
 def _all_platform_key(values: dict, placeholders: dict | None = None) -> dict:
-    entry = {"scope": {"platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"]}, "values": values}
+    entry = {"scope": {"platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"]}, "values": values}
     if placeholders is not None:
         entry["placeholders"] = placeholders
     return entry
@@ -642,8 +642,8 @@ class MacOSEmitTest(unittest.TestCase):
     _outputs = staticmethod(_build_probe_outputs)
 
     def test_valid_platforms_roster(self):
-        # The scope vocabulary is the platform roster; a sixth platform must be added here first.
-        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos", "windows", "linux"})
+        # The scope vocabulary is the platform roster; a new platform must be added here first.
+        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos", "windows", "linux", "web"})
 
     def test_map_carries_every_production_language(self):
         # The whole point of the macOS shape: en/ja resolve from the generated map too, because the
@@ -715,8 +715,8 @@ class MacOSEmitTest(unittest.TestCase):
         before = self._outputs(keys)
         after = self._outputs({"k": _all_platform_key({"hanji": "字", "en": "Word"})})
         for path, content in before.items():
-            if path.startswith(i18n_lib.MACOS_GEN_DIR) or path == i18n_lib.WINDOWS_GEN_FILE:
-                continue  # the desktop artifacts are exactly what the added scope is supposed to change
+            if path.startswith(i18n_lib.MACOS_GEN_DIR) or path in (i18n_lib.WINDOWS_GEN_FILE, i18n_lib.WEB_STRINGS_FILE):
+                continue  # the desktop and web artifacts are exactly what the added scope is supposed to change
             self.assertEqual(after[path], content, path)
 
     def test_format_accessor_reuses_the_swift_facet(self):
@@ -773,6 +773,43 @@ class MacOSEmitTest(unittest.TestCase):
             with self.assertRaises(ValueError) as ctx:
                 build_outputs(repo, enforce_production_completeness=True)
             self.assertIn("no key is scoped to 'ios'", str(ctx.exception))
+
+
+class WebEmitTest(unittest.TestCase):
+    _outputs = staticmethod(_build_probe_outputs)
+
+    def _strings(self, keys):
+        text = self._outputs(keys)[i18n_lib.WEB_STRINGS_FILE]
+        return json.loads(text[text.index("{"):text.rindex("}") + 1])
+
+    def _web_key(self, values, **extra):
+        return {"scope": {"platforms": ["web"], "surfaces": ["host"]}, "values": values, **extra}
+
+    def test_only_web_keys_are_emitted_per_language(self):
+        strings = self._strings(
+            {
+                "shown": self._web_key({"hanji": "字", "en": "Word"}),
+                "macosOnly": {"scope": {"platforms": ["macos"], "surfaces": ["host"]}, "values": {"hanji": "M"}},
+            },
+        )
+        self.assertEqual(set(strings), set(i18n_lib.PRODUCTION_LANGUAGES))
+        self.assertEqual(strings["hanji"], {"probe.shown": "字"})
+        self.assertEqual(strings["en"], {"probe.shown": "Word"})
+        self.assertEqual(strings["ja"], {})
+
+    def test_placeholders_stay_as_authored(self):
+        strings = self._strings(
+            {"failed": self._web_key({"hanji": "失敗：{text}"}, placeholders={"text": "string"})},
+        )
+        self.assertEqual(strings["hanji"]["probe.failed"], "失敗：{text}")
+
+    def test_plural_is_refused(self):
+        key = self._web_key(
+            {"hanji": "{count} 字", "en": "{count, plural, one {# word} other {# words}}"},
+            placeholders={"count": "int"},
+        )
+        with self.assertRaisesRegex(ValueError, "plural"):
+            self._strings({"counted": key})
 
 
 class GlobalValidationTest(unittest.TestCase):

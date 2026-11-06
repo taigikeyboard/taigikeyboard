@@ -11,9 +11,9 @@ import {
   open,
   panel,
   preedit,
+  toggle,
 } from "./helpers.mjs";
 
-const toggle = (page) => page.locator("#sidebar-toggle");
 const inputMode = (page) => page.getByLabel("Input Mode");
 const theme = (page) =>
   page.evaluate(() => document.documentElement.dataset.theme);

@@ -28,5 +28,6 @@ ios/Localizable.xcstrings linguist-generated
 desktop/crates/taigi-desktop-core/src/strings/generated.rs linguist-generated
 windows/build-support/product_name_strings.rs linguist-generated
 windows/installer/Messages.iss linguist-generated
+web/src/generated/** linguist-generated
 assets/dictionaries/** linguist-generated
 dictionary/output/** linguist-generated

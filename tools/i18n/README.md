@@ -64,6 +64,7 @@ from what `i18n/*.json` generates):
   (`docs/architecture/behavioral-invariants.md` §37).
 - Format keys lower to `{N}` positional slots (0-based, base-text order); there is no printf
   conversion char to pick, and the message grammar cannot author a literal brace, so none needs escaping.
+
 - Rust accessors are snake_case (`desktop_update_available_message`); the validator rejects a Rust
   keyword and two keys whose camelCase names collapse to one snake_case name.
 - `windows/Makefile`, `linux/Makefile` and `desktop/Makefile` `i18n-check` gate the generated file exactly like the macOS one.
@@ -72,6 +73,12 @@ from what `i18n/*.json` generates):
   Languages = the macOS bundle's system localizations (Hanji → `chinesetraditional`, `english`,
   `japanese`); Tâi-lô / POJ have no Inno base language. Inno escaping (`%n`, `%%`, `%1`…) is the
   generator's; a `{placeholder}` becomes a positional argument for `FmtMessage`.
+
+## Generated artifacts (web)
+
+- `web/src/generated/strings.js` — `STRINGS`, a `namespace.key` map per production language, for keys
+  scoped `web`. `{name}` placeholders stay as authored and `web/src/i18n.js` fills them. A plural in
+  a web key fails generation: the page has no runtime for one.
 
 ## Source schema
 
@@ -100,7 +107,7 @@ Rules enforced by the generator (the lint config disables `MissingTranslation`, 
 the generator's job):
 
 - Duplicate JSON keys are rejected (not silently last-wins).
-- `scope.platforms` ⊆ {ios, android, macos, windows, linux}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
+- `scope.platforms` ⊆ {ios, android, macos, windows, linux, web}, `scope.surfaces` ⊆ {host, extension}, both non-empty.
   A key reaches only the platforms it is scoped to; adding a platform to an existing key's scope is
   byte-neutral for the artifacts of the other platforms.
 - Every key must define the base language (`hanji`).
