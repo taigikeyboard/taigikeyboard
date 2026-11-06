@@ -35,9 +35,6 @@ pub struct EngineState {
     /// the chord is latched until any other key or a release arrives
     /// (Windows `release_toggle_chord_on_other_key`).
     pub latched_chord: Option<ShortcutAction>,
-    /// The Telex guide is up (as a lookup table) — the first key takes it
-    /// down.
-    pub telex_guide_shown: bool,
     /// The symbol picker is up; every key is its first.
     pub symbol_picker: Option<SymbolPicker>,
     /// Taigi or English. A shell opts in by calling
@@ -56,7 +53,6 @@ impl Default for EngineState {
             is_password_field: false,
             is_table_shown: false,
             latched_chord: None,
-            telex_guide_shown: false,
             symbol_picker: None,
             language_mode: LanguageMode::default(),
         }

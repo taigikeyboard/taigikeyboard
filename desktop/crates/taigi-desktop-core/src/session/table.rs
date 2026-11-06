@@ -1,15 +1,19 @@
-//! The lookup table as the shell draws it: the candidate list or the symbol
-//! picker, with labels, highlight and orientation.
+//! The lookup table as the shell draws it: the candidate list, the symbol
+//! picker or the Telex guide, with labels, highlight and orientation.
 
 use super::{Emit, EngineState, LookupTableContent, SymbolPicker, PAGE_SIZE};
-use crate::keys::{CandidateSlotKeySet, ComposingKeyBindings};
+use crate::keys::{telex_guide_rows, CandidateSlotKeySet, ComposingKeyBindings};
+use crate::runtime::DesktopRuntime;
 use crate::settings::{keys, CandidateLayout, SettingsDocument};
+use crate::strings::StringKey;
 
 /// The lookup table as things now stand — the symbol picker while it is
-/// up, else the candidate list: shown, updated in place, or taken down.
-/// Appended after the composing signals so the preedit the list describes
-/// is already on screen. The Telex guide is emitted by its toggle alone.
+/// up, else the candidate list, else the Telex guide if it is wanted: shown,
+/// updated in place, or taken down. The guide gives way to the list because
+/// the framework has one table to draw (#684). Appended after the composing
+/// signals so the preedit the list describes is already on screen.
 pub(crate) fn present_table(
+    runtime: &DesktopRuntime,
     state: &mut EngineState,
     settings: &SettingsDocument,
     bindings: &ComposingKeyBindings,
@@ -24,7 +28,10 @@ pub(crate) fn present_table(
     }
     let slot_key_set = bindings.slot_key_set();
     if state.candidates.is_empty() {
-        if state.is_table_shown {
+        if settings.is_telex_guide_wanted() {
+            emits.push(Emit::LookupTable(telex_guide_table(runtime, settings)));
+            state.is_table_shown = true;
+        } else if state.is_table_shown {
             emits.push(Emit::HideLookupTable);
             state.is_table_shown = false;
         }
@@ -95,6 +102,30 @@ fn symbol_picker_table(
     }
 }
 
+/// The Telex key table as a lookup table: the title row, then `key  meaning`
+/// per row, no labels, no highlight, one vertical page (Linux roadmap L4 —
+/// platform-adapted presentation of `keys::telex_guide_rows`).
+fn telex_guide_table(runtime: &DesktopRuntime, settings: &SettingsDocument) -> LookupTableContent {
+    let strings = runtime.strings();
+    let mut rows = vec![strings
+        .resolve(StringKey::SettingsToneSchemeTelex)
+        .to_owned()];
+    rows.extend(
+        telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings)
+            .into_iter()
+            .map(|row| format!("{}  {}", row.key, row.meaning)),
+    );
+    let page_size = rows.len() as u32;
+    LookupTableContent {
+        candidates: rows,
+        labels: Vec::new(),
+        cursor: 0,
+        cursor_visible: false,
+        page_size,
+        vertical: true,
+    }
+}
+
 /// Whether the panel draws the list as a column — what it is told to draw
 /// and how the arrows read, from the one setting.
 pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
@@ -106,14 +137,45 @@ mod tests {
     use super::*;
     use crate::keys::ComposingKeyBindings;
     use crate::platform::test_support::TEST_PLATFORM;
+    use crate::session::test_support::runtime;
     use crate::session::LookupSelection;
 
-    fn present(state: &mut EngineState) -> Vec<Emit> {
-        let settings = SettingsDocument::default();
+    fn present_under(state: &mut EngineState, settings: SettingsDocument) -> Vec<Emit> {
         let bindings = ComposingKeyBindings::from_document(&settings, TEST_PLATFORM);
+        let runtime = runtime(settings.clone());
         let mut emits = Vec::new();
-        present_table(state, &settings, &bindings, &mut emits);
+        present_table(&runtime, state, &settings, &bindings, &mut emits);
         emits
+    }
+
+    fn present(state: &mut EngineState) -> Vec<Emit> {
+        present_under(state, SettingsDocument::default())
+    }
+
+    fn guide_wanted() -> SettingsDocument {
+        let mut settings = SettingsDocument::default();
+        settings.set_bool(&keys::TELEX_GUIDE_SHOWN, true);
+        settings
+    }
+
+    #[test]
+    fn a_wanted_guide_fills_an_empty_table_and_the_picker_covers_it() {
+        // trace: no picker, no candidates, telexGuideShown → the guide (no
+        // labels, no highlight); a picker up → the picker instead.
+        let mut state = EngineState::default();
+        let emits = present_under(&mut state, guide_wanted());
+        let [Emit::LookupTable(guide)] = emits.as_slice() else {
+            panic!("the guide, got {emits:?}");
+        };
+        assert!(!guide.cursor_visible && guide.labels.is_empty());
+        assert!(state.is_table_shown);
+
+        state.symbol_picker = Some(SymbolPicker {
+            symbols: vec!["，".to_owned()],
+            selection: LookupSelection::new(1, PAGE_SIZE),
+        });
+        let emits = present_under(&mut state, guide_wanted());
+        assert!(matches!(emits.as_slice(), [Emit::LookupTable(table)] if table.cursor_visible));
     }
 
     #[test]

@@ -482,6 +482,21 @@ pub unsafe extern "C" fn taigi_engine_menu_activate(
 /// # Safety
 /// `engine` is a live engine.
 #[no_mangle]
+pub unsafe extern "C" fn taigi_engine_begin_session(engine: *mut TaigiEngine) -> *mut TaigiReply {
+    if engine.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: non-null and, by contract, a live engine the caller owns.
+    let engine = unsafe { &mut *engine };
+    guarded("taigi_engine_begin_session", ptr::null_mut(), || {
+        let emits = session::begin_session(&engine.runtime, &mut engine.state);
+        reply_from(true, emits)
+    })
+}
+
+/// # Safety
+/// `engine` is a live engine.
+#[no_mangle]
 pub unsafe extern "C" fn taigi_engine_end_session(engine: *mut TaigiEngine) -> *mut TaigiReply {
     if engine.is_null() {
         return ptr::null_mut();

@@ -187,4 +187,4 @@ Deliberately not adopted:
 - **An asynchronous edit session from the Windows panel** — breaks W3.
 - **A physical-position (scan code) layout table** — only Windows carries full key codes today; the character table needs nine keypad codes and nothing else.
 - **A new `is_keypad` snapshot field** — `key_code` already says it, and a new field touches every snapshot literal and the macOS proto.
-- **The Linux panel as a framework lookup table**, as the Telex guide is drawn — the table is shared with the candidates and is taken down by the next key, so it cannot stay up while typing.
+- **The Linux panel as a framework lookup table**, as the Telex guide is drawn — the table is shared with the candidates, which the panel must stay up beside, so it would vanish while composing.

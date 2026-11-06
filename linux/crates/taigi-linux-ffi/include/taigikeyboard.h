@@ -110,6 +110,9 @@ void taigi_engine_set_password_field(TaigiEngine *engine, bool is_password);
  * + 8), modifier mask. `taigi_reply_handled` says whether the key was
  * consumed; the entries say what to render either way. */
 TaigiReply *taigi_engine_key(TaigiEngine *engine, uint32_t keysym, uint32_t keycode, uint32_t states);
+/* Focus gained, or a session going on after a reset: the table as things
+ * stand, which puts a wanted Telex guide back up. */
+TaigiReply *taigi_engine_begin_session(TaigiEngine *engine);
 /* Focus loss / reset / switch away: what was on screen is already written
  * (by the framework on focus loss, the client on reset, the shell on a
  * switch); the engine forgets the composition. */

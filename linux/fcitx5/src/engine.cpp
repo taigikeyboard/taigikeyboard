@@ -138,6 +138,13 @@ void State::keyEvent(KeyEvent &event) {
     }
 }
 
+void State::beginSession() {
+    if (!handle_) {
+        return;
+    }
+    replay(taigi_engine_begin_session(handle_));
+}
+
 void State::endSession() {
     if (!handle_) {
         return;
@@ -371,7 +378,11 @@ void Engine::refreshMenu(InputContext &ic) {
 }
 
 void Engine::activate(const InputMethodEntry & /*entry*/, InputContextEvent &event) {
-    refreshMenu(*event.inputContext());
+    auto *ic = event.inputContext();
+    refreshMenu(*ic);
+    if (auto *s = state(ic)) {
+        s->beginSession();
+    }
 }
 
 void Engine::deactivate(const InputMethodEntry &entry, InputContextEvent &event) {
@@ -405,6 +416,13 @@ void Engine::reset(const InputMethodEntry & /*entry*/, InputContextEvent &event)
     ic->inputPanel().reset();
     ic->updatePreedit();
     ic->updateUserInterface(UserInterfaceComponent::InputPanel);
+    /* A client's reset leaves the session running, unlike the focus loss and
+     * the switch that `deactivate` sends here. */
+    if (event.type() == EventType::InputContextReset) {
+        if (auto *s = state(ic)) {
+            s->beginSession();
+        }
+    }
 }
 
 /* The tray / kimpanel text (`Instance::inputMethodLabel`) and the compact

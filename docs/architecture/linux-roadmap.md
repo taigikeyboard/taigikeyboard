@@ -269,8 +269,9 @@ introspection XML and the `serialize` functions were read, not remembered).
   not as a second line. The auto-space swap (§23) needs the client's surrounding text
   (`IBUS_CAP_SURROUNDING_TEXT` → `DeleteSurroundingText`); a client without it gets
   the mark after the space, as typed (logged, named). The Telex guide (Windows draws a card, macOS a panel) is shown
-  as a lookup table of guide rows with no labels and a non-visible cursor, taken down by
-  the first key; the symbol picker (`toggle_symbol_picker`) is a lookup table of the
+  as a lookup table of guide rows with no labels and a non-visible cursor, while `telexGuideShown` is on
+  and neither candidates nor the picker hold the table: the framework has one table, so the guide gives way
+  while candidates are up and returns when they go (#684, named divergence). The symbol picker (`toggle_symbol_picker`) is a lookup table of the
   symbols with the slot-key labels and the category name as auxiliary text — both
   platform-adapted presentation of the same core models (`keys::telex_guide_rows`,
   `keys::symbol_picker`, `symbols::SymbolTable`). The mode flash (`flash_mode_label`) has

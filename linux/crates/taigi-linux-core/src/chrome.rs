@@ -129,6 +129,26 @@ mod tests {
         reply.emits
     }
 
+    fn is_guide_wanted(runtime: &Runtime) -> bool {
+        runtime.settings.current().is_telex_guide_wanted()
+    }
+
+    fn is_guide_wanted_stored(runtime: &Runtime) -> bool {
+        runtime.settings.current().bool(&keys::TELEX_GUIDE_SHOWN)
+    }
+
+    /// The rows of the guide table in `emits`, which has no labels and no
+    /// highlight; empty when no such table is there.
+    fn guide_rows(emits: &[Emit]) -> Vec<String> {
+        emits
+            .iter()
+            .find_map(|emit| match emit {
+                Emit::LookupTable(table) if !table.cursor_visible => Some(table.candidates.clone()),
+                _ => None,
+            })
+            .unwrap_or_default()
+    }
+
     const CTRL_ALT: u32 = state::CONTROL | state::MOD1;
     const SLASH: u32 = 0x2f;
     const COMMA: u32 = 0x2c;
@@ -146,9 +166,9 @@ mod tests {
         assert!(
             matches!(emits.as_slice(), [Emit::LookupTable(table)] if !table.cursor_visible && table.labels.is_empty())
         );
-        assert!(engine.telex_guide_shown);
+        assert!(is_guide_wanted(&runtime));
         assert!(press(&runtime, &mut engine, SLASH, CTRL_ALT).is_empty());
-        assert!(engine.telex_guide_shown);
+        assert!(is_guide_wanted(&runtime));
         let release = process_raw_key(
             &runtime,
             ContextToken(1),
@@ -162,17 +182,82 @@ mod tests {
         assert!(!release.handled);
         let emits = press(&runtime, &mut engine, SLASH, CTRL_ALT);
         assert_eq!(emits, vec![Emit::HideLookupTable]);
-        assert!(!engine.telex_guide_shown);
+        assert!(!is_guide_wanted(&runtime));
     }
 
     #[test]
-    fn the_open_guide_swallows_a_bare_escape_and_comes_down() {
+    fn an_idle_escape_reaches_the_host_and_leaves_the_guide_up() {
+        // trace: nothing composing, so Escape is PassThrough: unhandled and
+        // nothing emitted (#684).
         let (_directory, runtime) = runtime();
         let mut engine = EngineState::default();
         press(&runtime, &mut engine, SLASH, CTRL_ALT);
-        let emits = press(&runtime, &mut engine, ESCAPE, 0);
-        assert_eq!(emits, vec![Emit::HideLookupTable]);
-        assert!(!engine.telex_guide_shown);
+        let reply = process_raw_key(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            RawKeyEvent {
+                keyval: ESCAPE,
+                keycode: 0,
+                state: 0,
+            },
+        );
+        assert!(!reply.handled);
+        assert!(reply.emits.is_empty());
+        assert!(is_guide_wanted(&runtime));
+        assert!(engine.is_table_shown);
+    }
+
+    #[test]
+    fn the_guide_leaves_with_tps_and_returns_respelled_after_a_switch() {
+        // trace: TELEX_GUIDE_SHOWN survives both switches; `z` reads `ts`
+        // under TL and `ch` under POJ (`telex_guide_rows`).
+        let (_directory, runtime) = runtime();
+        let mut engine = EngineState::default();
+        press(&runtime, &mut engine, SLASH, CTRL_ALT);
+        let token = ContextToken(1);
+
+        let emits = perform_global(&runtime, token, &mut engine, ShortcutAction::ToggleTps);
+        assert!(emits.contains(&Emit::HideLookupTable));
+        assert!(is_guide_wanted_stored(&runtime));
+        assert!(!is_guide_wanted(&runtime));
+
+        let emits = perform_global(&runtime, token, &mut engine, ShortcutAction::ToggleTps);
+        assert!(guide_rows(&emits).iter().any(|row| row.contains("ts")));
+
+        let emits = perform_global(
+            &runtime,
+            token,
+            &mut engine,
+            ShortcutAction::ToggleRomanization,
+        );
+        let rows = guide_rows(&emits);
+        assert!(rows.iter().any(|row| row.contains("ch")), "{rows:?}");
+        assert!(!rows.iter().any(|row| row.contains("ts")), "{rows:?}");
+    }
+
+    #[test]
+    fn the_picker_covers_the_guide_and_it_returns_when_the_picker_closes() {
+        let (_directory, runtime) = runtime();
+        let mut engine = EngineState::default();
+        press(&runtime, &mut engine, SLASH, CTRL_ALT);
+        let token = ContextToken(1);
+
+        let emits = perform_global(
+            &runtime,
+            token,
+            &mut engine,
+            ShortcutAction::ShowSymbolPicker,
+        );
+        assert!(matches!(emits.as_slice(), [Emit::LookupTable(table)] if table.cursor_visible));
+
+        let emits = perform_global(
+            &runtime,
+            token,
+            &mut engine,
+            ShortcutAction::ShowSymbolPicker,
+        );
+        assert!(!guide_rows(&emits).is_empty());
     }
 
     #[test]
@@ -370,7 +455,7 @@ mod tests {
         assert!(engine.symbol_picker.is_none());
         assert!(!is_composing(&runtime, ContextToken(1)));
         press(&runtime, &mut engine, SLASH, CTRL_ALT);
-        assert!(engine.telex_guide_shown);
+        assert!(is_guide_wanted(&runtime));
 
         let mut control = EngineState::default();
         assert!(key(&mut control, LETTER_A).handled);

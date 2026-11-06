@@ -11,7 +11,7 @@ use taigi_linux_platform::key_translation::state::RELEASE;
 use taigi_linux_platform::{open_settings, snapshot, toggle_tps_keyboard, RawKeyEvent};
 
 pub use taigi_desktop_core::session::{
-    click_from_panel, navigate_from_panel, Emit, EngineState, KeyReply,
+    begin_session, click_from_panel, navigate_from_panel, Emit, EngineState, KeyReply,
 };
 
 /// `IBUS_CAP_SURROUNDING_TEXT` (ibus `src/ibustypes.h:124`).

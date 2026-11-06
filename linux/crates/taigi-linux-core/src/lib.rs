@@ -20,6 +20,7 @@ pub use chrome::{
 };
 pub use runtime::{dictionary_version, FirstKeySetup, Runtime};
 pub use session::{
-    click_from_panel, end_session, navigate_from_panel, process_raw_key, EngineState, KeyReply,
+    begin_session, click_from_panel, end_session, navigate_from_panel, process_raw_key,
+    EngineState, KeyReply,
 };
 pub use taigi_desktop_core::session::{Emit, LookupSelection, LookupTableContent};
