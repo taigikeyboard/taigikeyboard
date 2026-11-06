@@ -1,0 +1,56 @@
+/* Layout only, which the caret anchoring depends on. The look is Phase 5. */
+
+main {
+  max-width: 48rem;
+  margin: 0 auto;
+}
+
+#notice {
+  visibility: hidden;
+}
+
+#notice[data-active] {
+  visibility: visible;
+}
+
+#editor {
+  position: relative;
+}
+
+#text {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+}
+
+#panel {
+  position: absolute;
+  z-index: 1;
+  max-width: 100%;
+  background: Canvas;
+  color: CanvasText;
+  border: 1px solid;
+}
+
+#candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#candidates[data-vertical] {
+  flex-direction: column;
+  gap: 0;
+}
+
+#candidates li {
+  cursor: default;
+}
+
+#candidates li[aria-selected="true"] {
+  background: Highlight;
+  color: HighlightText;
+}

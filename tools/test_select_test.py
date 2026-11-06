@@ -213,7 +213,9 @@ class PlatformSelectionTests(SelectorTestCase):
             selection = self.select(path)
 
             self.assertEqual(set(selection.commands), {"web"}, path)
-            self.assertEqual(self.runs(selection, "web"), ["make web-check"])
+            self.assertEqual(
+                self.runs(selection, "web"), ["make web-check", "make web-e2e"]
+            )
 
     def test_engine_crate_web_links_selects_the_web_gate(self) -> None:
         selection = self.select("engine/mmap-host/src/registry.rs")

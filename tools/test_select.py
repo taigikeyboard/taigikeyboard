@@ -367,7 +367,7 @@ PLATFORM_COMMANDS = {
     "desktop": [Command("make desktop-check")],
     "windows": [Command("make windows-check")],
     "linux": [Command("make linux-check")],
-    "web": [Command("make web-check")],
+    "web": [Command("make web-check"), Command("make web-e2e")],
     "macos-rust": [Command("make macos-rust-check")],
     "macos": [Command("make -C macos test")],
     "ios": [Command(IOS_TEST)],

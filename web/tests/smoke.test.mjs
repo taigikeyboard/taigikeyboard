@@ -10,13 +10,6 @@ import { test } from "node:test";
 import { initSync, Session } from "../target/pkg/taigi_web.js";
 
 const dictionaries = new URL("../../assets/dictionaries/", import.meta.url);
-const FILE_NAMES = [
-  "dictionary.fst",
-  "dictionary.bin",
-  "association.bin",
-  "syllables.fst",
-];
-
 const TOP_CANDIDATES = [
   ["kau3siu7", "教授"],
   ["kausiu", "教授"],
@@ -84,7 +77,7 @@ test("keys before the install type romanization", () => {
 });
 
 test("installs the dictionaries", () => {
-  for (const name of FILE_NAMES) {
+  for (const name of session.dictionaryFiles()) {
     session.addDictionary(name, readFileSync(new URL(name, dictionaries)));
   }
   assert.ok(session.install() > 0n);
