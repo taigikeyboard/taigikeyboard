@@ -2,9 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
     <title data-i18n="home.appHeaderTitle">TaigiKeyboard</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/196.png">
+    <link rel="apple-touch-icon" href="icons/180.png">
     <link rel="stylesheet" href="fonts.css">
     <link rel="stylesheet" href="style.css">
     <script type="module" src="ime.js"></script>
@@ -80,6 +84,10 @@
       <h1 data-i18n="home.appHeaderTitle">TaigiKeyboard</h1>
       <div class="status">
         <p id="message" role="status" data-state="loading"></p>
+        <div id="load-slot">
+          <progress id="progress" aria-labelledby="message" max="1" value="0"></progress>
+          <button id="retry" class="action" type="button" data-i18n="desktop.updateRetryAction">Try Again</button>
+        </div>
         <button id="mode-button" type="button" data-i18n-title="settings.inputMode">
           <span id="mode"></span>
           <svg viewBox="0 0 10 10" aria-hidden="true">

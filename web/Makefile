@@ -12,6 +12,7 @@ WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site
 FONT_SOURCES := ../assets/fonts/font
 FONTS := target/fonts
+ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
 .PHONY: help bindgen-version i18n-check build site serve test smoke e2e lint fmt check clean
 
@@ -22,7 +23,7 @@ help:
 	@echo "  make test    - Native tests of the session and the key translation"
 	@echo "  make build   - Release wasm, bindings and wasm-opt into $(PKG)/"
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
-	@echo "  make site    - Stage the page, bindings, dictionaries and fonts into $(SITE)/"
+	@echo "  make site    - Stage the page, bindings, dictionaries, fonts and manifest into $(SITE)/"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
 
@@ -55,9 +56,11 @@ site: build $(FONTS)/.stamp
 	mkdir -p $(SITE)
 	cp -R src/. $(SITE)/
 	cp -R $(PKG) $(SITE)/pkg
-	cp -R ../assets/dictionaries $(SITE)/dictionaries
-	mkdir -p $(SITE)/fonts
+	rm $(SITE)/pkg/*.d.ts
+	mkdir -p $(SITE)/fonts $(SITE)/icons
 	cp $(FONTS)/*.woff2 ../assets/fonts/OFL-1.1.txt $(SITE)/fonts/
+	cp $(ICONS)/180.png $(ICONS)/196.png $(ICONS)/512.png $(SITE)/icons/
+	node scripts/stage-assets.mjs $(SITE) ../assets/dictionaries
 
 serve: site
 	node scripts/serve.mjs $(SITE) 8000

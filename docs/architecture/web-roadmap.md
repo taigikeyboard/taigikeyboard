@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `web`, `browser`, `wasm`, `wasm-bindgen`, `PWA`, `desktop-core reuse`, `McBopomofoWeb`, `kautian-mirror`
-> **Status**: Accepted 2026-11-06. Phases 0 to 4 done. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
+> **Status**: Accepted 2026-11-06. Phases 0 to 6 done. Decisions D1–D6 settled by the maintainer as recommended (§ Decisions). Reviewed once by a fresh-context same-model agent, findings applied; Codex skipped (no subscription, maintainer 2026-11-04).
 > **Siblings**: `linux-roadmap.md` (the closest shell), `system-overview.md`, `data-artifacts-portability.md`.
 
 ---
@@ -233,7 +233,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 3 | `taigi-web` crate | native + Node tests | Done |
 | 4 | Plain page, end to end | Playwright in 3 browser engines | Done; iPad and AltGr device checks open |
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
-| 6 | Loading and offline | Playwright offline run | Pending |
+| 6 | Loading and offline | Playwright offline run | Done |
 | 7 | Deploy | manual run on the real URL | Pending |
 | 8 | User data | spike first, then its own plan | Pending |
 
@@ -320,12 +320,12 @@ Three PRs, one round each:
 
 ### Phase 6 — Loading and offline
 
-- `web/assets-manifest.json`: file name, SHA-256, size. Names are content-hashed, so a dictionary change is a new URL.
-- First visit: progress in a fixed slot. 15 MB gzip. Verify the hash, then `addDictionary`. A failed or corrupt download leaves romanization working and offers retry.
+- `assets-manifest.json`, staged at the site root by `web/scripts/stage-assets.mjs`: file name, SHA-256, size, for the dictionaries and the shell. Names are content-hashed, so a dictionary change is a new URL. The page reads a module staged with it, `generated/dictionaries.js`, so its list never comes from a newer build than its engine; only the service worker reads the JSON.
+- First visit: progress in a fixed slot. 15 MB gzip. Verify the hash, then `addDictionary`, one file at a time. A failed or corrupt download leaves romanization working and offers retry.
 - Compression: ship `.gz` and read through `DecompressionStream`, Baseline since May 2023, so the result does not depend on what a host compresses. Brotli would save 3.5 MB and needs a decoder in the page, so it is left out.
-- Cache Storage plus a service worker for the app shell, one dictionary version kept, old ones deleted on activate. The kautian-mirror extension already uses Cache Storage the same way.
+- Cache Storage plus a service worker for the app shell, one dictionary version kept, old ones deleted on activate. The kautian-mirror extension already uses Cache Storage the same way. Registered after the dictionaries are in, so nothing is fetched twice. A new version downloads in the background and starts once every old tab has closed, with nothing on screen: no `skipWaiting`, because an open tab's trap recovery needs its own glue. A font is cached when first used, not with the shell.
 - Web app manifest, so the page installs and opens offline.
-- CSP by `<meta>` (Pages cannot set headers): `script-src 'self' 'wasm-unsafe-eval'`, no third-party origins.
+- CSP by `<meta>` (Pages cannot set headers): `script-src 'self' 'wasm-unsafe-eval'`, no third-party origins. `style-src-attr 'unsafe-inline'` is the one exception, for WebKit's `<select>` (`web-guidelines.md`).
 
 ### Phase 7 — Deploy
 
@@ -334,6 +334,7 @@ Three PRs, one round each:
 - Licences page: `NOTICE`, `THIRD_PARTY_LICENSES.md`, OFL, dictionary source credits.
 - Privacy statement: text and settings stay in the browser. No analytics.
 - Deploy runs by hand, like every other release.
+- A check after deploy that hashes the live files against `assets-manifest.json`. The worker's install fails quietly on one mismatch, and Cloudflare can cause it: Email Obfuscation rewrites HTML, and `Content-Encoding: gzip` on a `.gz` would change what the page reads. Headers of `.gz` on the real host are unverified.
 
 ### Phase 8 — User data
 

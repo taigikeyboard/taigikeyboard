@@ -10,9 +10,14 @@ import { extname, join, resolve, sep } from "node:path";
 
 const MEDIA_TYPES = {
   ".css": "text/css",
+  ".gz": "application/gzip",
   ".html": "text/html",
   ".js": "text/javascript",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
   ".wasm": "application/wasm",
+  ".webmanifest": "application/manifest+json",
   ".woff2": "font/woff2",
 };
 

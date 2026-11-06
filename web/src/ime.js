@@ -3,7 +3,7 @@
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
 import { translate } from "./i18n.js";
-import { createSession, fetchDictionaries } from "./loader.js";
+import { createSession, dictionaries, keepForOffline } from "./loader.js";
 import { Panel } from "./panel.js";
 import { Settings } from "./settings.js";
 import { Sidebar } from "./sidebar.js";
@@ -17,6 +17,9 @@ const textarea = document.getElementById("text");
 const notice = document.getElementById("notice");
 const modeSlot = document.getElementById("mode");
 const messageSlot = document.getElementById("message");
+const progress = document.getElementById("progress");
+const retryButton = document.getElementById("retry");
+const loadSlot = document.getElementById("load-slot");
 
 const surface = new Surface(textarea);
 const panel = new Panel(
@@ -89,42 +92,77 @@ function redrawMessage() {
   messageSlot.textContent = said === null ? "" : translate(...said);
 }
 
+function showLoading() {
+  say("web.loading", "loading");
+  loadSlot.dataset.show = "";
+}
+
+function showProgress(fraction) {
+  progress.value = fraction;
+  loadSlot.dataset.show = "progress";
+}
+
+function failLoading(error, starting) {
+  console.error(error);
+  if (session !== starting) {
+    return;
+  }
+  // A trap here would only repeat on the next start.
+  if (error instanceof WebAssembly.RuntimeError) {
+    session = null;
+    panel.clear();
+  }
+  say("web.loadFailed", "failed");
+  loadSlot.dataset.show = "retry";
+  // With no instance a key would go nowhere; the text stays readable.
+  textarea.disabled = session === null;
+}
+
+/// A trap may replace the instance during any of these awaits.
+async function loadDictionaries(starting) {
+  try {
+    const files = dictionaries(starting.dictionaryFiles(), (fraction) => {
+      if (session === starting) {
+        showProgress(fraction);
+      }
+    });
+    for await (const [name, bytes] of files) {
+      if (session !== starting) {
+        return;
+      }
+      starting.addDictionary(name, bytes);
+    }
+    if (session !== starting) {
+      return;
+    }
+    starting.install();
+  } catch (error) {
+    failLoading(error, starting);
+    return;
+  }
+  loadSlot.dataset.show = "";
+  say("web.ready", "ready");
+  keepForOffline();
+}
+
 /// Starts an instance. Until the dictionaries are in, keys type romanization
 /// (`runtime.rs` `install_lexicon`).
 async function start() {
   let starting = null;
-  say("web.loading", "loading");
+  showLoading();
   try {
     starting = await createSession(platform(), navigator.language);
-    restoreSettings(starting);
     session = starting;
+    restoreSettings(starting);
     modeSlot.textContent = starting.modeSymbol();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
     textarea.disabled = false;
     textarea.focus();
-    const files = await fetchDictionaries(starting.dictionaryFiles());
-    // A trap may have replaced the instance while these downloaded.
-    if (session !== starting) {
-      return;
-    }
-    for (const [name, bytes] of files) {
-      starting.addDictionary(name, bytes);
-    }
-    starting.install();
-    say("web.ready", "ready");
   } catch (error) {
-    console.error(error);
-    if (session !== starting) {
-      return;
-    }
-    // A trap here would only repeat on the next start.
-    if (error instanceof WebAssembly.RuntimeError) {
-      session = null;
-    }
-    say("web.loadFailed", "failed");
-    // With no instance a key would go nowhere; the text stays readable.
-    textarea.disabled = session === null;
+    failLoading(error, starting);
+    return;
   }
+  await loadDictionaries(starting);
 }
 
 /// One engine call. A trap ends the instance: the composition goes with it, the
@@ -310,6 +348,15 @@ document.getElementById("copy").addEventListener("click", async () => {
     console.error(error);
     say("web.copyFailed", "failed");
   }
+});
+
+retryButton.addEventListener("click", () => {
+  if (session === null) {
+    start();
+    return;
+  }
+  showLoading();
+  loadDictionaries(session);
 });
 
 document.getElementById("clear").addEventListener("click", () => {
