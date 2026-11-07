@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `chromeos`, `chrome.input.ime`, `input_components`, `manifest v3`, `service worker`, `wasm`, `linux-chromeos`, `chromeos flex`, `utm`, `rosetta`
-> **Status**: Draft 2026-11-07, decisions D1–D4 open. Phase 0 (this document, issue #759). Phase 1 (test-environment spike) next.
+> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 (test-environment spike) next.
 > **Siblings**: `web-roadmap.md` (the wasm engine this reuses), `windows-arm64-roadmap.md` (same VM-first pattern).
 
 ---
@@ -93,7 +93,7 @@ One PR per phase; each starts after the previous one merges. No version is assig
 
 | # | Phase | Content | Status |
 |---|---|---|---|
-| 0 | Roadmap | This document; issue #759 | Draft 2026-11-07 |
+| 0 | Roadmap | This document; issue #759 | Done 2026-11-07 |
 | 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | Pending |
 | 2 | Extension shell | New source dir (D2), manifest, worker glue (key mapping, Emit mapping, `keyEventHandled`), dictionaries packaged, build target + lint in `Makefile`, unit tests for the mapping | Pending |
 | 3 | Settings + i18n | Options page from the web settings form; `_locales` from `i18n/*.json`, reusing the desktop keys the web page already uses (`docs/contributing/i18n.md`) | Pending |
@@ -107,13 +107,14 @@ One PR per phase; each starts after the previous one merges. No version is assig
 - Phases 2–4: `make web-check` stays green (shared crate); new extension target's tests; manual typing in E1 / E1b.
 - Phase 6: real ChromeOS, maintainer.
 
-## Decisions (open)
+## Decisions (maintainer, 2026-11-07: "follow your recommendations")
 
-| # | Question | Options | Recommendation |
+| # | Question | Options | Decision |
 |---|---|---|---|
 | D1 | Test environment | E1 Mac + Rosetta · E1b laptop VM · E2 Flex emulated · E3 Flex USB · E4 Chromebook | E1 for the dev loop (E1b if Rosetta fails), E3 once before store submission; E4 only if tablet mode or long dogfood is wanted |
 | D2 | Source location | `web/chromeos/` beside `web/src`, sharing the `web` Cargo workspace · new top-level `chromeos/` | `web/chromeos/`: same crate, same build tools, same `make -C web` lint |
 | D3 | Android app on Chromebooks | Leave as-is (tablet mode only) · tune it for ChromeOS | Leave as-is; outside this roadmap |
+| D5 | School-managed Chromebooks (admin console allowlist, force-install) | Target · not a target | Not a target: no admin-console work or checks in this roadmap |
 | D4 | Candidate window | System window (`setCandidates`) · own window | System window: an extension cannot draw over another app's text field; Horizontal / Vertical only, no Expandable |
 
 ## Risks
