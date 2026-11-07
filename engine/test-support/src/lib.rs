@@ -19,7 +19,7 @@ mod tkdb;
 pub use files::{fst_entry, write_fst_set, write_temp};
 pub use production::{
     dictionary_cjk_py_path, dictionary_csv, dictionary_csv_or_skip, dictionary_csv_path,
-    production_artifact, DictionaryCsv, ProductionArtifacts,
+    dictionary_roman_only_cases_path, production_artifact, DictionaryCsv, ProductionArtifacts,
 };
 pub use registration::assert_every_test_file_is_declared;
 pub use tkdb::{

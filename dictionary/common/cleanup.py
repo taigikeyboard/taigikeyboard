@@ -151,7 +151,11 @@ def contains_roman_in_hanzi(text):
 
 
 def is_roman_only_hanzi(text):
-    """True for a word written only in romanization: a Latin letter, no ideograph, no kana."""
+    """True for a word written only in romanization: a Latin letter, no ideograph, no kana.
+
+    The engine's `phonetics::api::is_roman_only_spelling` is this rule for the custom
+    dictionary; both answer `tests/fixtures/roman_only_spelling_cases.tsv`, so change them together.
+    """
     if pd.isna(text):
         return False
     # NFD: `ê` is a Latin letter `contains_roman_in_hanzi`'s tone list does not spell.
