@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `windows`, `arm64`, `arm64x`, `forwarder`, `tsf`, `inno setup`, `universal installer`, `mozc`
-> **Status**: Accepted 2026-11-07. Phase 0 done; Phase 1 (spike) next. Issue #721.
+> **Status**: Accepted 2026-11-07. Phases 0–1 done (spike passed on a Windows 11 Arm VM); Phase 2 next. Issue #721.
 > **Siblings**: `windows-release.md` (§ Architectures, § What an Arm64 round would have to know), `windows-roadmap.md`.
 
 ---
@@ -37,8 +37,15 @@ Every service DLL resolves `Dictionaries\`, `Fonts\` and the settings exe from i
 
 ### Forwarder
 
-- `link /dll /noentry /machine:arm64x /defArm64Native:<arm64>.def /def:<x64>.def`, plus a VERSIONINFO resource (Microsoft, *Build Arm64X binaries* § pure forwarder).
-- Each `.def` forwards `DllGetClassObject` and `DllCanUnloadNow` only, as mozc does (`references/mozc/src/win32/tip/build_tip_forwarder_dll.py`). Registration is never run through the forwarder.
+- mozc's recipe (`references/mozc/src/win32/tip/build_tip_forwarder_dll.py:246-340`), inside a `vcvarsall.bat arm64` environment:
+  1. `cl /c empty.cc` → `empty_arm64.obj`, and `cl /c /arm64EC empty.cc` → `empty_x64.obj`.
+  2. `link /lib /machine:arm64EC /def:<x64>.def` and `link /lib /machine:arm64 /def:<arm64>.def` → one import library per view.
+  3. `link /dll /noentry /machine:arm64x /dynamicbase /highentropyva /largeaddressaware /ignore:4104 /defArm64Native:<arm64>.def /def:<x64>.def` over both objects, both libraries and a VERSIONINFO `.res`.
+- Each `.def` forwards `DllGetClassObject` and `DllCanUnloadNow` only. Registration is never run through the forwarder.
+- **Measured traps (spike 2026-11-07)**:
+  - Without the two empty objects the forwarder links with `/nodefaultlib` but warns `LNK4294` (no EC / native load config). An x64 process then reads it as a plain Arm64 DLL, follows the native forward to `TaigiKeyboardArm64.dll` and fails with error 193 — the service works in Arm64 apps and silently not in x64 ones. `dumpbin /headers` must print `AA64 machine (ARM64) (ARM64X)`; that marker is the release read-back check.
+  - `PRIVATE` on the `.def` exports removes them from the import libraries and the final link fails `LNK2001`; mozc keeps them public and passes `/ignore:4104`.
+  - The service DLLs need the Windows SDK `rc.exe` on `PATH` (`bin\10.0.*\arm64`), or they build without icon and VERSIONINFO (`build-support/resource.rs` warns).
 
 ### Registration
 
@@ -72,7 +79,7 @@ One PR per phase; each phase starts after the previous one merges.
 | # | Phase | Content | Status |
 |---|---|---|---|
 | 0 | Roadmap | This document; the issue #721 update | Done 2026-11-07 |
-| 1 | Spike (no merge) | Build the Arm64 DLL and the forwarder by hand, register them by hand in the Windows 11 Arm VM, type in Notepad (Arm64), an x64-only app and a 32-bit app. Record the result here. **Hard gate**: if the forwarder does not activate the text service, stop | Pending |
+| 1 | Spike (no merge) | Build the Arm64 DLL and the forwarder by hand, register them by hand in the Windows 11 Arm VM, type in Notepad (Arm64), an x64-only app and a 32-bit app. Record the result here. **Hard gate**: if the forwarder does not activate the text service, stop | **Passed 2026-11-07** (§ Spike result) |
 | 2 | TSF + forwarder | `build.rs` aarch64 name; registration writes the forwarder path, with tests; forwarder build script + `.def` / `.rc`; `install-dev.ps1` Arm64 path; aarch64 in `check-box.sh` and `Makefile check-msvc` | Pending |
 | 3 | Release tooling + CI | `scripts/lib/identity.sh` Arm64 names; `release-app.sh` aarch64 DLL + settings build, forwarder link, read-back checks (`AA64` / Arm64X machine, forwarded exports, runtime machine), staging, signing list; `windows-build.yml` aarch64 target, `Hostx64\arm64\link.exe`, Arm64 `cl.exe`, and a `windows-11-arm` smoke job (regsvr32, then `CoCreateInstance` of the CLSID from an Arm64 and an x64 process) | Pending |
 | 4 | Universal installer + docs | `TaigiKeyboard.iss` as above; rewrite `windows-release.md` § Architectures / § Arm64 / machine setup / installer; `docs/CODE_SIGNING_POLICY.md` file list; `windows-roadmap.md` | Pending |
@@ -82,9 +89,19 @@ One PR per phase; each phase starts after the previous one merges.
 - Phases 2–3: `make windows-check`; `python3 tools/test_select.py --run --platform windows`; a dispatched `windows-build.yml` run whose artifact holds all five binaries with the expected PE machines; the `windows-11-arm` smoke job.
 - Phase 4 (VM dogfood): install the CI installer; type Taigi in Notepad and Edge (Arm64), an x64-only app and a 32-bit app; Task Manager shows the settings window as Arm64; uninstall leaves no CLSID or profile. On an x64 machine, upgrade and uninstall behave as before.
 
-### Open questions
+### Spike result (2026-11-07)
 
-- Whether `TaigiKeyboard32.dll` works in x86-emulated apps on Arm64 (Phase 1).
+Windows 11 Arm64 VM (UTM on Apple Silicon, build 26300), `main` @ `ad13d934a`, all three DLLs built natively on the VM (VS 2022 Build Tools 17.14, MSVC 14.44, Rust 1.99.1). Registration: `regsvr32` on the x86 DLL, then on the Arm64 DLL, then `InProcServer32` rewritten by hand to the forwarder. Typed `tai5gi2` + Space through `SendInput` from the interactive session:
+
+| App | Process | Candidate window | Committed | Modules loaded |
+|---|---|---|---|---|
+| Notepad | Arm64 | yes | 台語 | `TaigiKeyboard64X.dll`, `TaigiKeyboardArm64.dll` |
+| Notepad++ | x64, emulated | yes | 台語 | `TaigiKeyboard64X.dll`, `TaigiKeyboard.dll` |
+| PowerShell ISE (`SysWOW64`) | x86, emulated | yes | 台語 | `TaigiKeyboard32.dll` (WOW64 modules are not listed by Arm64 `tasklist`) |
+
+`CoGetClassObject(CLSID)` returns `S_OK` from both an Arm64 and an x64 process, each loading only its own architecture's DLL. Explorer loads the Arm64 service through the forwarder too. One observation not yet compared with an x64 machine: in PowerShell ISE (WPF) the preedit and candidate window sit at the screen's top-left instead of the caret.
+
+### Open questions
 - Which Arm64 build tools the `windows-2025` and `windows-11-arm` runner images include (Phase 3).
 - Whether the arm64 Windows App Runtime payload carries the same file names as `windows/build-support/windows-app-runtime-files.txt` (Phase 3).
 
