@@ -312,11 +312,30 @@ test("the textarea starts short however tall the window", async ({ page }) => {
 
 test("the footer matches the converter's", async ({ page }) => {
   await open(page);
-  const footer = page.locator("footer");
+  const footer = page.locator("footer p");
   await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持 ❤️");
   await expect(footer.getByRole("link")).toHaveAttribute(
     "href",
     "https://p.ecpay.com.tw/AA663DE",
+  );
+});
+
+test("the footer's icons name their places", async ({ page }) => {
+  await open(page);
+  const links = page.locator(".social-links").getByRole("link");
+  for (const name of [
+    "Email",
+    "LINE",
+    "Discord",
+    "Facebook",
+    "GitHub Issues",
+  ]) {
+    await expect(links.filter({ hasText: name })).toBeVisible();
+  }
+  await expect(links).toHaveCount(5);
+  await expect(links.first()).toHaveAttribute(
+    "href",
+    "mailto:info@taigikeyboard.tw",
   );
 });
 

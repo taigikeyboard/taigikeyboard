@@ -915,6 +915,41 @@ footer a:hover {
   text-decoration: none;
 }
 
+footer p {
+  margin: 0;
+  text-align: center;
+}
+
+/* The official site's Issues section. */
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.social-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+
+.social-links a:hover {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.social-links a svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
 /* Last, to outrank the docked `@media` block. */
 @media (prefers-reduced-motion: reduce) {
   body,
