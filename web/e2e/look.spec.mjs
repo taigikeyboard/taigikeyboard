@@ -354,11 +354,19 @@ test("the footer's icons name their places", async ({ page }) => {
   );
 });
 
-test("the sidebar links carry their names", async ({ page }) => {
-  await open(page, { settings: { displayLanguage: "hanji" } });
+test("the sidebar links fold under their own section", async ({ page }) => {
+  await open(page, {
+    settings: { displayLanguage: "hanji" },
+    folded: true,
+  });
   const links = page.locator(".sidebar-links a");
-  await expect(links.nth(0)).toHaveText("台語齒盤官方網站");
-  await expect(links.nth(1)).toHaveText("台語羅馬字轉換器");
+  await expect(links.first()).toBeHidden();
+  await page.getByText("其他資源", { exact: true }).click();
+  await expect(links).toHaveText([
+    "台語齒盤官方網站",
+    "台語羅馬字轉換器",
+    "教典備援網站",
+  ]);
 });
 
 test("General rows reach the session", async ({ page }) => {
