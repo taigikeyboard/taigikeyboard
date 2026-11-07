@@ -51,10 +51,13 @@ test("Display Language redraws the page and survives a reload", async ({
 }) => {
   await open(page);
   await setting(page, "displayLanguage").selectOption("tailo");
-  // trace: web.placeholder / web.ready / common.settings tailo values.
+  // trace: web.placeholder / web.ready / desktop.menuSettings tailo values.
   await expect(page.locator("#text-hint")).toHaveText("Tshi̍h / phah-jī");
   await expect(page.locator("#message")).toHaveText("Ē-sái phah-jī");
-  await expect(toggle(page)).toHaveAttribute("aria-label", "Siat-tīng");
+  await expect(toggle(page)).toHaveAttribute(
+    "aria-label",
+    "Tâi-gí Khí-puânn Siat-tīng",
+  );
   expect(await rootLang(page)).toBe("nan-Latn-tailo");
   await page.reload();
   await expect(page.locator("#text-hint")).toHaveText("Tshi̍h / phah-jī");
@@ -163,5 +166,6 @@ test("a chord's write keeps the font and the language", async ({ page }) => {
   await editor.press(`${TIER}+c`);
   await expect.poll(() => stored(page)).toMatchObject({ fontType: "iansui" });
   await expect(firstSection(page)).toHaveText("一般");
-  await expect(toggle(page)).toHaveAttribute("title", "設定");
+  // trace: desktop.menuSettings ja.
+  await expect(toggle(page)).toHaveAttribute("title", "台湾語キーボードの設定");
 });

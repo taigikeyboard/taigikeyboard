@@ -253,7 +253,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
 | 6 | Loading and offline | Playwright offline run | Done |
 | 7 | Deploy | `check-live` on the real URL | Done |
-| 8 | User data: learning on (8a), Learning Records section (8b) | spike done 2026-11-07; native suites unchanged, Node + Playwright | 8a in review, 8b pending |
+| 8 | User data: learning on (8a); Learning Records section (8b) dropped | spike done 2026-11-07; native suites unchanged, Node + Playwright | 8a merged (#756); 8b dropped 2026-11-07 |
 
 ### Phase 1 — Engine runs on wasm32
 
@@ -386,7 +386,10 @@ What it took (grounded in code):
 - Page: holds the Web Lock `taigi-user-data`. The holder imports the IndexedDB snapshot, then opens the stores at load (keeps the 49 ms off the first key), and saves right after each key that commits. A save on `pagehide` or a hidden tab was tried and never landed: all three engines abort an IndexedDB write the unload interrupts. Each save copies the four files whole, about 200 KB after the spike's picks; a large custom dictionary would make that several MB per commit, to look at when Custom Dictionary comes to the web. A second tab types without learning and waits for the lock; when it gets it, it imports the latest snapshot and opens then. The stores open once per instance and an open file cannot be re-imported, so a tab that learned from an old snapshot never overwrites a newer one.
 - Tests: Node (learn, export, restore), Playwright (reload keeps a pick; a second tab does not learn until the first closes).
 
-#### 8b — Learning Records section
+#### 8b — Learning Records section (dropped)
+
+Dropped by the maintainer 2026-11-07, before merge: the web is a sidebar version and needs only learning itself (8a), not a section to list or clear it. Built in #758 and reverted there. Below is the plan as it stood.
+
 
 The desktop pane in the sidebar: `desktop-core settings/learning_records.rs` model (Frequency, Learned Phrases; delete, clear), same `dictionary.learningRecords*` keys with `web` scope, a reset row as the other sections.
 
@@ -413,8 +416,8 @@ Settled by the maintainer 2026-11-07 ("follow your recommendation"), replacing D
 
 | # | Question | Decision | Rejected alternative | Applies to |
 |---|---|---|---|---|
-| D7 | Phase 8 scope | Learning, persisted, plus the Learning Records section | Custom Dictionary and `.taigi` backup in the same round; or learning in memory only, as McBopomofoWeb | Phase 8 |
-| D8 | Shared computers | Learning on by default, as on every other platform; a user clears it in Learning Records | A "do not learn" switch only the web has | 8a, 8b |
+| D7 | Phase 8 scope | Learning, persisted (Learning Records section dropped 2026-11-07) | Custom Dictionary and `.taigi` backup in the same round; or learning in memory only, as McBopomofoWeb | Phase 8 |
+| D8 | Shared computers | Learning on by default, as on every other platform; a user clears it in Learning Records (8b dropped 2026-11-07: no clearing on the web) | A "do not learn" switch only the web has | 8a, 8b |
 | D9 | Several tabs | One tab learns, by Web Lock; the others type without learning until it closes | Every tab learns and the last save wins, losing the other tabs' picks | 8a |
 
 ## Risks

@@ -58,24 +58,6 @@
         "ja": "その他のリソース"
       }
     },
-    "officialSite": {
-      "comment": "Sidebar link to the taigikeyboard.tw website.",
-      "scope": {
-        "platforms": [
-          "web"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "台語齒盤官方網站",
-        "tailo": "Tâi-gí Khí-puânn kuann-hong bāng-tsām",
-        "poj": "Tâi-gí Khí-pôaⁿ koaⁿ-hong bāng-chām",
-        "en": "TaigiKeyboard Official Website",
-        "ja": "台湾語キーボード公式サイト"
-      }
-    },
     "converter": {
       "comment": "Sidebar link to taigi-converter.",
       "scope": {
@@ -110,6 +92,24 @@
         "poj": "Kàu-tián pī-oān bāng-chām",
         "en": "Kautian Mirror",
         "ja": "教典ミラーサイト"
+      }
+    },
+    "kautianSearchExtension": {
+      "comment": "Sidebar Other Resources link to the 教典鬥搜揣 browser extension (Chrome Web Store). Its own name, which has no English or romanized form, in every language.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "教典鬥搜揣",
+        "tailo": "教典鬥搜揣",
+        "poj": "教典鬥搜揣",
+        "en": "教典鬥搜揣",
+        "ja": "教典鬥搜揣"
       }
     },
     "loading": {

@@ -95,8 +95,7 @@
       "scope": {
         "platforms": [
           "android",
-          "ios",
-          "web"
+          "ios"
         ],
         "surfaces": [
           "host",
