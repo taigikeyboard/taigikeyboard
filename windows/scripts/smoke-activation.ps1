@@ -1,8 +1,8 @@
 # Asks COM for the text service's class object in THIS process and checks
-# which service DLL came with it — the arm64-smoke CI job runs it once from an
+# which service DLL came with it - the arm64-smoke CI job runs it once from an
 # Arm64 process and once from an x64-emulated one, after registering the Arm64
 # DLL (whose InProcServer32 names the Arm64X forwarder;
-# docs/architecture/windows-arm64-roadmap.md § Forwarder). Registration and
+# docs/architecture/windows-arm64-roadmap.md section Forwarder). Registration and
 # typing are not exercised: activation through the forwarder is the claim.
 #
 #   powershell -File smoke-activation.ps1 -Architecture ARM64 -Expected TaigiKeyboardArm64.dll -Unexpected TaigiKeyboard.dll
@@ -10,7 +10,7 @@
 
 [CmdletBinding()]
 param(
-    # This process's architecture as `PROCESSOR_ARCHITECTURE` names it — an
+    # This process's architecture as `PROCESSOR_ARCHITECTURE` names it - an
     # x64-emulated process reads AMD64 there.
     [Parameter(Mandatory = $true)] [ValidateSet('ARM64', 'AMD64')] [string] $Architecture,
     [Parameter(Mandatory = $true)] [string] $Expected,
@@ -18,6 +18,14 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Any failure names its line: a CI log otherwise shows the message alone.
+# ASCII only: Windows PowerShell 5.1 reads a BOM-less script in the ANSI code
+# page, where UTF-8 punctuation can decode to a curly quote that ends a string.
+trap {
+    Write-Host "smoke-activation.ps1 failed: $($_.Exception.Message)"
+    Write-Host $_.InvocationInfo.PositionMessage
+    exit 1
+}
 
 # guids.rs CLSID_TEXT_SERVICE; registration.rs FORWARDER_DLL.
 $Clsid = [Guid] '32C28A51-8939-4C8F-8F29-037F9FD3CF0A'
@@ -31,7 +39,7 @@ function Fail([string] $Message) {
 }
 
 if ($env:PROCESSOR_ARCHITECTURE -ne $Architecture) {
-    Fail "this process is $env:PROCESSOR_ARCHITECTURE, not $Architecture — the check would prove nothing"
+    Fail "this process is $env:PROCESSOR_ARCHITECTURE, not ${Architecture}: the check would prove nothing"
 }
 # A Windows PowerShell thread is STA already and `pwsh -STA` makes it one, so
 # the class object is created in this apartment rather than marshalled.
@@ -55,7 +63,7 @@ foreach ($name in $Forwarder, $Expected, $Unexpected) {
     $loaded[$name] = [TaigiSmoke.Native]::GetModuleHandleW($name) -ne [IntPtr]::Zero
 }
 Write-Host ("{0}: {1}" -f $Architecture, (($loaded.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ' '))
-if (-not $loaded[$Forwarder]) { Fail "$Forwarder is not loaded — InProcServer32 does not name the forwarder" }
-if (-not $loaded[$Expected]) { Fail "$Expected is not loaded — the forwarder sent this process elsewhere" }
-if ($loaded[$Unexpected]) { Fail "$Unexpected is loaded — the wrong architecture's service" }
+if (-not $loaded[$Forwarder]) { Fail "$Forwarder is not loaded: InProcServer32 does not name the forwarder" }
+if (-not $loaded[$Expected]) { Fail "$Expected is not loaded: the forwarder sent this process elsewhere" }
+if ($loaded[$Unexpected]) { Fail "$Unexpected is loaded: the wrong architecture's service" }
 Write-Host "OK  $Architecture process activated the text service through $Forwarder into $Expected"
