@@ -35,7 +35,7 @@ help:
 	@echo "  make check       - The gate: i18n check + native tests + gnu clippy + msvc check + check-box"
 	@echo "  make test        - Native tests for the host-testable crates"
 	@echo "  make check-gnu   - clippy -D warnings, full graph, target x86_64-pc-windows-gnu"
-	@echo "  make check-msvc  - cargo check for the C-free crates, target x86_64-pc-windows-msvc"
+	@echo "  make check-msvc  - cargo check for the C-free crates, targets x86_64 + aarch64-pc-windows-msvc"
 	@echo "  make check-dll   - GNU release link of TaigiKeyboard.dll + export-table check (W13)"
 	@echo "  make check-box   - Settings + platform crates: clippy, tests and the release link on the Windows box, pushed HEAD (W17)"
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
@@ -60,8 +60,10 @@ test: i18n-check
 check-gnu:
 	cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings
 
+# Both 64-bit MSVC targets that ship (x64; Arm64, docs/architecture/windows-arm64-roadmap.md).
 check-msvc:
 	cargo check $(MSVC_CHECKABLE) --all-targets --target x86_64-pc-windows-msvc
+	cargo check $(MSVC_CHECKABLE) --all-targets --target aarch64-pc-windows-msvc
 
 # The DLL really links (lto, panic=unwind) and exports the four COM entry
 # points unmangled — what regsvr32 will look for. mingw's objdump reads the

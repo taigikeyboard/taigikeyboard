@@ -1073,6 +1073,7 @@ dependencies = [
  "taigi-desktop-core",
  "taigi-desktop-storage",
  "taigi-windows-platform",
+ "tempfile",
  "windows",
  "windows-core 0.62.2",
  "windows-numerics 0.3.1",

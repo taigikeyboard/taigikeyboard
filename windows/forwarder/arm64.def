@@ -1,0 +1,6 @@
+; The Arm64-native view of TaigiKeyboard64X.dll: an Arm64 process that loads the
+; forwarder is sent to the Arm64 text service. Exports stay public
+; (scripts/build-forwarder.ps1, /ignore:4104).
+EXPORTS
+    DllGetClassObject = TaigiKeyboardArm64.DllGetClassObject
+    DllCanUnloadNow = TaigiKeyboardArm64.DllCanUnloadNow

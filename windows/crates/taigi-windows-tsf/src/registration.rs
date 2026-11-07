@@ -11,6 +11,7 @@ use crate::module::module_path;
 use crate::product_name;
 use crate::registry::{delete_tree, Key};
 use crate::wide::to_wide_nul;
+use std::path::{Path, PathBuf};
 use windows::core::{Error, Interface, Result, GUID, HRESULT};
 use windows::Win32::Foundation::{E_FAIL, E_UNEXPECTED, S_FALSE, S_OK};
 use windows::Win32::System::Com::{CoCreateInstance, IEnumGUID, CLSCTX_INPROC_SERVER};
@@ -61,10 +62,27 @@ pub fn guid_key(guid: &GUID) -> String {
     format!("{{{guid:?}}}")
 }
 
+/// The Arm64X pure forwarder that sits beside the Arm64 build
+/// (docs/architecture/windows-arm64-roadmap.md § Forwarder). It exports only
+/// `DllGetClassObject` / `DllCanUnloadNow`, forwarded to
+/// `TaigiKeyboardArm64.dll` for an Arm64 process and to `TaigiKeyboard.dll`
+/// for an x64-emulated one (`windows/forwarder/*.def`).
+pub const FORWARDER_DLL: &str = "TaigiKeyboard64X.dll";
+
+/// Whether this build names the forwarder as `InProcServer32`. Arm64-native
+/// and x64-emulated processes read the same 64-bit registry view, so the one
+/// path there has to load in both — only the forwarder does. `cfg!` rather
+/// than `#[cfg]` so every target type-checks both branches and the x64 box
+/// runs the tests for both.
+const REGISTERS_FORWARDER: bool = cfg!(target_arch = "aarch64");
+
 pub fn register_server() -> Result<()> {
-    let dll_path = module_path().ok_or_else(|| Error::from_hresult(E_UNEXPECTED))?;
-    let dll_path = dll_path.to_string_lossy().into_owned();
-    register_clsid(&dll_path)?;
+    let own_path = module_path().ok_or_else(|| Error::from_hresult(E_UNEXPECTED))?;
+    // Resolved before any registry write, so a missing forwarder leaves
+    // nothing half-registered behind.
+    let server_path = in_proc_server_path(&own_path, REGISTERS_FORWARDER)?;
+    let dll_path = own_path.to_string_lossy().into_owned();
+    register_clsid(&server_path.to_string_lossy())?;
     log::info!("tsf.register step=clsid");
     register_profile(&dll_path)?;
     log::info!("tsf.register step=profile");
@@ -237,6 +255,33 @@ fn enumeration_continues(status: HRESULT, fetched: usize) -> Result<bool> {
     Err(Error::from_hresult(status))
 }
 
+/// The DLL COM loads for this CLSID: this DLL itself, or — `forwarded` —
+/// the forwarder beside it. A forwarder that is not there fails the
+/// registration rather than registering a path no process can load. The
+/// profile's icon and display name keep this DLL's own path either way:
+/// resource loading does not depend on the reader's architecture (mozc
+/// `custom_action.cc:489-493` likewise points its profile at a real DLL).
+fn in_proc_server_path(own_path: &Path, forwarded: bool) -> Result<PathBuf> {
+    if !forwarded {
+        return Ok(own_path.to_path_buf());
+    }
+    let forwarder = own_path.with_file_name(FORWARDER_DLL);
+    if !forwarder.is_file() {
+        log::error!(
+            "tsf.register.forwarder_missing path={}",
+            forwarder.display()
+        );
+        return Err(Error::new(
+            E_FAIL,
+            format!(
+                "the Arm64X forwarder {} is missing; stage it beside this DLL, then register again",
+                forwarder.display()
+            ),
+        ));
+    }
+    Ok(forwarder)
+}
+
 /// `HKCR\CLSID\{clsid}` = description; `\InProcServer32` = DLL path,
 /// `ThreadingModel` = `Apartment` (TSF is STA).
 fn register_clsid(dll_path: &str) -> Result<()> {
@@ -375,6 +420,34 @@ mod tests {
             "{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}"
         );
         assert_eq!(CATEGORIES.len(), 6, "only the true categories (Codex W6)");
+    }
+
+    #[test]
+    fn an_unforwarded_build_registers_its_own_path() {
+        // Nothing on disk, not even the directory: the x64 / x86 builds never
+        // look for a forwarder.
+        let own = std::env::temp_dir()
+            .join("taigi-registration-unforwarded")
+            .join("TaigiKeyboard.dll");
+        assert_eq!(in_proc_server_path(&own, false).unwrap(), own);
+    }
+
+    #[test]
+    fn a_forwarded_build_registers_the_forwarder_beside_it() {
+        let directory = tempfile::tempdir().expect("create the install directory");
+        let forwarder = directory.path().join(FORWARDER_DLL);
+        std::fs::write(&forwarder, b"").expect("write the stand-in forwarder");
+        let own = directory.path().join("TaigiKeyboardArm64.dll");
+        assert_eq!(in_proc_server_path(&own, true).unwrap(), forwarder);
+    }
+
+    #[test]
+    fn a_forwarded_build_without_its_forwarder_refuses_to_register() {
+        // Registering the Arm64 DLL's own path instead would work in Arm64
+        // apps and silently not in x64-emulated ones.
+        let directory = tempfile::tempdir().expect("create the install directory");
+        let own = directory.path().join("TaigiKeyboardArm64.dll");
+        assert_eq!(in_proc_server_path(&own, true).unwrap_err().code(), E_FAIL);
     }
 
     #[test]

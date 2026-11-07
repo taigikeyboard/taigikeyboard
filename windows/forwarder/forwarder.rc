@@ -1,0 +1,38 @@
+// VERSIONINFO of the Arm64X forwarder TaigiKeyboard64X.dll. The version comes
+// from windows/Cargo.toml through `rc /d` (scripts/build-forwarder.ps1):
+//   TAIGI_VERSION         e.g. 3.9.0
+//   TAIGI_VERSION_COMMAS  e.g. 3,9,0
+// CompanyName and LegalCopyright are COMPANY_NAME and COPYRIGHT in
+// build-support/resource.rs — change both together.
+#pragma code_page(65001)
+
+#define TAIGI_STRINGIZE_TOKENS(x) #x
+#define TAIGI_STRINGIZE(x) TAIGI_STRINGIZE_TOKENS(x)
+
+1 VERSIONINFO
+FILEVERSION TAIGI_VERSION_COMMAS,0
+PRODUCTVERSION TAIGI_VERSION_COMMAS,0
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS 0x40004L
+FILETYPE 0x2L
+FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Soo Bîn-hiân 蘇民弦 <info@taigikeyboard.tw>"
+            VALUE "FileDescription", "TaigiKeyboard text service forwarder (Arm64X)"
+            VALUE "FileVersion", TAIGI_STRINGIZE(TAIGI_VERSION)
+            VALUE "LegalCopyright", "Copyright (c) 2025-2026 Soo Bîn-hiân 蘇民弦. Apache License 2.0."
+            VALUE "OriginalFilename", "TaigiKeyboard64X.dll"
+            VALUE "ProductName", "TaigiKeyboard"
+            VALUE "ProductVersion", TAIGI_STRINGIZE(TAIGI_VERSION)
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

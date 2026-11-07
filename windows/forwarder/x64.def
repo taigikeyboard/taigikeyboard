@@ -1,0 +1,6 @@
+; The x64 (Arm64EC) view of TaigiKeyboard64X.dll: an x64-emulated process that
+; loads the forwarder is sent to the x64 text service. Registration is never
+; run through the forwarder, so only the two activation entry points are here.
+EXPORTS
+    DllGetClassObject = TaigiKeyboard.DllGetClassObject
+    DllCanUnloadNow = TaigiKeyboard.DllCanUnloadNow
