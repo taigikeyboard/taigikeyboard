@@ -233,6 +233,7 @@ function Copy-Resources {
 }
 
 # The PE machine field of a binary, as dumpbin prints it (`AA64`, `8664`).
+# Twin of Get-PeMachine in smoke-installer.ps1 (scripts here share no module).
 function Get-PeMachine([string] $Path) {
     $header = New-Object byte[] 4096
     $stream = [IO.File]::OpenRead($Path)

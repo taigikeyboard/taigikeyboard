@@ -278,9 +278,7 @@ jobs:
           retention-days: 14
 
   # The installer on x64 Windows, as an UPGRADE from the last published
-  # release: silent install of the previous installer, then this one, the
-  # registrations read back, then a silent uninstall that must leave none of
-  # them (windows/scripts/smoke-installer.ps1).
+  # release (windows/scripts/smoke-installer.ps1).
   installer-x64:
     name: Installer smoke (x64 upgrade)
     needs: build

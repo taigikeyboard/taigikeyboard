@@ -34,11 +34,25 @@ $Clsid = '{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}'
 $Clsid64Key = "HKLM:\SOFTWARE\Classes\CLSID\$Clsid"
 $Clsid32Key = "HKLM:\SOFTWARE\WOW6432Node\Classes\CLSID\$Clsid"
 $TipKey = "HKLM:\SOFTWARE\Microsoft\CTF\TIP\$Clsid"
-# The OS's architecture, not this process's.
+# The OS's architecture, not this process's, and what it should be left with.
 $IsArm64 = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE -eq 'ARM64'
+$SharedFiles = @('TaigiKeyboard.dll', 'TaigiKeyboard32.dll', 'TaigiKeyboardSettings.exe')
+$Arm64Files = @('TaigiKeyboardArm64.dll', 'TaigiKeyboard64X.dll')
+if ($IsArm64) {
+    $MachineName = 'Arm64'
+    $Machine = 'AA64'
+    $NativeService = 'TaigiKeyboardArm64.dll'
+    $InProcServer = 'TaigiKeyboard64X.dll'
+} else {
+    $MachineName = 'x64'
+    $Machine = '8664'
+    $NativeService = 'TaigiKeyboard.dll'
+    $InProcServer = 'TaigiKeyboard.dll'
+}
 
 function Fail([string] $Message) { throw $Message }
 
+# Twin of Get-PeMachine in install-dev.ps1 (scripts here share no module).
 function Get-PeMachine([string] $Path) {
     $header = New-Object byte[] 4096
     $stream = [IO.File]::OpenRead($Path)
@@ -71,24 +85,21 @@ switch ($Action) {
         if (-not $Installer) { Fail '-Installer is required for -Action Install' }
         if ($Previous) { Invoke-Setup $Previous }
         Invoke-Setup $Installer
-        Write-Host "==> Reading back ($(if ($IsArm64) { 'Arm64' } else { 'x64' }))"
+        Write-Host "==> Reading back ($MachineName)"
         if (-not (Test-Path $UninstallKey)) { Fail "no uninstall entry at $UninstallKey" }
         if (-not (Test-Path $TipKey)) { Fail "no TSF registration at $TipKey" }
         Assert-Equal 'WOW6432Node InProcServer32' (Get-InProcServer $Clsid32Key) (Join-Path $AppDir 'TaigiKeyboard32.dll')
-        $native = if ($IsArm64) { 'TaigiKeyboard64X.dll' } else { 'TaigiKeyboard.dll' }
-        Assert-Equal 'InProcServer32' (Get-InProcServer $Clsid64Key) (Join-Path $AppDir $native)
+        Assert-Equal 'InProcServer32' (Get-InProcServer $Clsid64Key) (Join-Path $AppDir $InProcServer)
         # The shared TSF profile names whichever service registered last, which
         # must be the native 64-bit one (TaigiKeyboard.iss RegisterEverything).
-        $nativeService = if ($IsArm64) { 'TaigiKeyboardArm64.dll' } else { 'TaigiKeyboard.dll' }
         $profile = Get-ChildItem "$TipKey\LanguageProfile" -Recurse | Get-ItemProperty | Where-Object { $_.IconFile } | Select-Object -First 1
-        Assert-Equal 'profile icon' $profile.IconFile (Join-Path $AppDir $nativeService)
-        $machine = if ($IsArm64) { 'AA64' } else { '8664' }
-        Assert-Equal 'settings exe machine' (Get-PeMachine (Join-Path $AppDir 'TaigiKeyboardSettings.exe')) $machine
-        Assert-Equal 'runtime machine' (Get-PeMachine (Join-Path $AppDir 'microsoft.ui.xaml.dll')) $machine
-        foreach ($name in 'TaigiKeyboard.dll', 'TaigiKeyboard32.dll') {
+        Assert-Equal 'profile icon' $profile.IconFile (Join-Path $AppDir $NativeService)
+        Assert-Equal 'settings exe machine' (Get-PeMachine (Join-Path $AppDir 'TaigiKeyboardSettings.exe')) $Machine
+        Assert-Equal 'runtime machine' (Get-PeMachine (Join-Path $AppDir 'microsoft.ui.xaml.dll')) $Machine
+        foreach ($name in $SharedFiles) {
             if (-not (Test-Path (Join-Path $AppDir $name))) { Fail "$name is not installed" }
         }
-        foreach ($name in 'TaigiKeyboardArm64.dll', 'TaigiKeyboard64X.dll') {
+        foreach ($name in $Arm64Files) {
             $present = Test-Path (Join-Path $AppDir $name)
             if ($present -ne $IsArm64) { Fail "$name installed: $present, expected: $IsArm64" }
         }
@@ -107,7 +118,7 @@ switch ($Action) {
         foreach ($key in $UninstallKey, $Clsid64Key, $Clsid32Key, $TipKey) {
             if (Test-Path $key) { Fail "$key is still there after uninstalling" }
         }
-        foreach ($name in 'TaigiKeyboard.dll', 'TaigiKeyboard32.dll', 'TaigiKeyboardArm64.dll', 'TaigiKeyboard64X.dll', 'TaigiKeyboardSettings.exe') {
+        foreach ($name in $SharedFiles + $Arm64Files) {
             if (Test-Path (Join-Path $AppDir $name)) { Fail "$name is still installed" }
         }
         Write-Host 'OK  uninstalled'

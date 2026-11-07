@@ -563,10 +563,8 @@ begin
   Result := ExpandConstant('{app}\{#ServiceDll32}');
 end;
 
-// The 64-bit service that registers itself: the x64 one on x64 Windows, the
-// Arm64 one on Arm64 (which writes the forwarder as InProcServer32). The x64
-// service is never registered on Arm64 — it would overwrite InProcServer32
-// with a path Arm64 hosts cannot load.
+// The 64-bit service that registers itself. Never the x64 one on Arm64: it
+// would overwrite InProcServer32 with a path Arm64 hosts cannot load.
 function NativeDll: String;
 begin
   if IsArm64 then
