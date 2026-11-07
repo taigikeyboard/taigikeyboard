@@ -756,7 +756,8 @@ public nonisolated struct Taigi_Engine_CommitResolution: Sendable {
 /// or `f` (hyphen), either case. The engine edits the pending tail — appending
 /// or replacing the trailing tone digit — and keeps the buffer numeric-tone.
 /// A key that changes nothing (same tone twice, tone on an empty tail, `h` after
-/// `tsh` / `chh`) is a no-op. Idle + `c` or `h` enters composing with the text.
+/// `tsh` / `chh`) is a no-op. Idle + `c` or `h` enters composing with the text;
+/// idle + `f` inserts a literal `-` and stays idle, as a leading `-` does.
 public nonisolated struct Taigi_Engine_TelexKey: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
