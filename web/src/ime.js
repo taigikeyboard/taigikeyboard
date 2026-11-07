@@ -17,6 +17,7 @@ const NOTHING = { handled: true, emits: [] };
 const textarea = document.getElementById("text");
 const notice = document.getElementById("notice");
 const messageSlot = document.getElementById("message");
+const modeFlash = document.getElementById("mode-flash");
 const progress = document.getElementById("progress");
 const retryButton = document.getElementById("retry");
 const loadSlot = document.getElementById("load-slot");
@@ -94,6 +95,22 @@ function announce(label) {
   said = null;
   messageSlot.textContent = label;
   messageSlot.dataset.state = "mode";
+  flashMode(label);
+}
+
+/// As long as the desktops hold theirs (`ModeFlashPanel.swift`).
+const MODE_FLASH_HOLD = 800;
+
+let modeFlashTimer;
+
+/// Replaces a flash still up: a quick double switch reads as two states.
+function flashMode(label) {
+  clearTimeout(modeFlashTimer);
+  modeFlash.textContent = label;
+  modeFlash.hidden = false;
+  modeFlashTimer = setTimeout(() => {
+    modeFlash.hidden = true;
+  }, MODE_FLASH_HOLD);
 }
 
 /// The session's text describes the settings just replaced, so it goes.

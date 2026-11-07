@@ -123,7 +123,7 @@ The Linux shell already answers a key with a list of signals: `KeyReply { handle
 | `Commit(text)` | Insert at the textarea caret |
 | `DeleteSurrounding` | Remove the auto space before the caret |
 | `LookupTable` / `HideLookupTable` | Render or hide the candidate list |
-| `ModeChanged` / `AnnounceMode` | Nothing drawn: `AnnounceMode` reaches the hidden live region, the sidebar shows the mode |
+| `ModeChanged` / `AnnounceMode` | `AnnounceMode` reaches the hidden live region and draws the mode flash, a card held 0.8 s as on the desktops; the sidebar shows the mode |
 | New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | Open the sidebar, show the TPS key panel |
 | New in Phase 5: `TpsKeyboardCapTyped` | Light the cap. Linux drops it in `run_launches`: its panel is another process |
 
@@ -201,7 +201,7 @@ The `unicode-range` is required, not cosmetic: those fonts misplace combining to
 
 Sidebar content follows the desktop settings panes, as sections that fold: General, Appearance and Manage Dictionaries, with the labels and row order of `GeneralSettingsView.swift`, `AppearanceSettingsView.swift` and `settings/dictionary_sources.rs`. Below them, links to the website, the converter and kautian-mirror. Labels come from `i18n/` by their existing keys. The title and Copy, Clear are fixed text.
 
-Around the textarea the page draws Copy and Clear only: no mode control, no status text. Loading is a bare progress bar, a failure a Try Again button. `#message` and `#notice` stay as hidden live regions for screen readers. A Shift tap to English shows nowhere on screen (maintainer 2026-11-07).
+Around the textarea the page draws Copy and Clear only: no mode control, no standing status text. Loading is a bare progress bar, a failure a Try Again button. `#message` and `#notice` stay as hidden live regions for screen readers. A mode switch, a Shift tap to English included, draws the mode flash inside the editor for 0.8 s (maintainer 2026-11-07).
 
 Copy follows the project's plain-prose rules, and stays neutral between romanization systems.
 

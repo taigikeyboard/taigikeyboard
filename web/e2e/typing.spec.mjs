@@ -134,6 +134,36 @@ test("a chord that writes the settings survives a reload", async ({ page }) => {
   await expect(inputMode(page)).toHaveValue("poj");
 });
 
+test("a switch names the new mode, then gets out of the way", async ({
+  page,
+}) => {
+  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ; `mode_label` starts with
+  // the romanization. A Shift tap flashes `flash_label_key`. The observer keeps
+  // each label, so a slow machine cannot miss the 0.8 s the card is up.
+  const flash = page.locator("#mode-flash");
+  const editor = await open(page);
+  await flash.evaluate((card) => {
+    window.flashed = [];
+    new MutationObserver(() => {
+      if (!card.hidden) {
+        window.flashed.push(card.textContent);
+      }
+    }).observe(card, { attributes: true, childList: true });
+  });
+  const flashed = () => page.evaluate(() => window.flashed.at(-1));
+
+  await expect(flash).toBeHidden();
+  await editor.press("Control+Alt+c");
+  await expect.poll(flashed).toContain("Pe̍h-ōe-jī");
+  await expect(flash).toBeHidden();
+
+  await editor.press("Control+Alt+c");
+  await expect.poll(flashed).toContain("Tâi-lô");
+  await editor.press("Shift");
+  await expect.poll(flashed).not.toContain("Tâi-lô");
+  await expect(flash).toBeHidden();
+});
+
 test("the picker and the guide open and close at the caret", async ({
   page,
 }) => {
