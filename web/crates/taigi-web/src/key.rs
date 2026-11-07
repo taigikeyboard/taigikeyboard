@@ -40,6 +40,11 @@ pub(crate) fn core_tier_snapshot(
     })
 }
 
+/// A press of the core's tier on a Mac, which the app does not have.
+pub(crate) fn is_mac_core_tier(snapshot: &KeyEventSnapshot, platform: DesktopPlatform) -> bool {
+    platform == DesktopPlatform::MacOS && snapshot.modifiers == CORE_TIER
+}
+
 /// A global chord as the visitor presses it: ⌃⌘ on a Mac, as in the app.
 pub(crate) fn visitor_chord(
     chord: ComposingKeyChord,

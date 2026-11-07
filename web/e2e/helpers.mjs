@@ -1,5 +1,10 @@
 import { expect } from "@playwright/test";
 
+/// The global tier on the machine running the test: a Mac's page takes the
+/// Mac app's chords (`key.rs`).
+export const TIER =
+  process.platform === "darwin" ? "Control+Meta" : "Control+Alt";
+
 /// `settings` as if a past visit had stored them.
 export function seedSettings(page, settings) {
   return page.addInitScript(

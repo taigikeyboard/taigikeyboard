@@ -14,11 +14,6 @@ use crate::key::visitor_chord;
 /// The two keys of one row, spaced as `caret_chords_label` spaces its own.
 const KEY_GAP: &str = "  ";
 
-/// The desktops' chord for a settings window. The page's settings are its
-/// sidebar, already a click away, so the chord is left to the browser and has
-/// no row.
-pub(crate) const SETTINGS_WINDOW: ShortcutAction = ShortcutAction::OpenLastSettingsPane;
-
 #[derive(Debug, Serialize)]
 pub(crate) struct WireShortcuts {
     groups: Vec<Group>,
@@ -75,11 +70,7 @@ pub(crate) fn shortcuts(
             ),
             fixed_keys: None,
         };
-        actions
-            .iter()
-            .filter(|&&action| action != SETTINGS_WINDOW)
-            .map(row)
-            .collect()
+        actions.iter().map(row).collect()
     };
 
     let mut selection = composing_rows(ComposingAction::GROUPS[0]);
@@ -142,9 +133,8 @@ mod tests {
             DesktopPlatform::Linux,
         );
         let sizes: Vec<_> = wire.groups.iter().map(|group| group.rows.len()).collect();
-        // trace: GROUPS 4 + the caret row, 3, then 3, 2, 3 less the settings
-        // window.
-        assert_eq!(sizes, [5, 3, 3, 2, 2]);
+        // trace: GROUPS 4 + the caret row, 3, then 3, 2, 3.
+        assert_eq!(sizes, [5, 3, 3, 2, 3]);
         assert_eq!(wire.groups[0].title, "Candidate Selection");
     }
 

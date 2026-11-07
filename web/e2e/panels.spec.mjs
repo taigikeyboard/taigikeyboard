@@ -3,7 +3,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, open, panel, preedit } from "./helpers.mjs";
+import { candidates, open, panel, preedit, TIER } from "./helpers.mjs";
 
 const keyPanel = (page) => page.locator("#tps-keyboard");
 const cap = (page, glyph) =>
@@ -19,20 +19,20 @@ test("the chord shows and hides the key panel, and a reload keeps it", async ({
 }) => {
   // No `settings`: a seed would run again on the reload. Ctrl+Alt+P = ToggleTps.
   const editor = await open(page);
-  await editor.press("Control+Alt+p");
+  await editor.press(`${TIER}+p`);
   await expect(keyPanel(page)).toBeHidden();
-  await editor.press("Control+Alt+j");
+  await editor.press(`${TIER}+j`);
   await expect(keyPanel(page)).toBeVisible();
   await page.reload();
   await expect(cap(page, "ㄅ")).toBeVisible();
-  await editor.press("Control+Alt+j");
+  await editor.press(`${TIER}+j`);
   await expect(keyPanel(page)).toBeHidden();
 });
 
 test("the panel's chord leaves a composition standing", async ({ page }) => {
   const editor = await open(page, { settings: { inputMode: "tps" } });
   await editor.press("8");
-  await editor.press("Control+Alt+j");
+  await editor.press(`${TIER}+j`);
   await expect(preedit(page)).toContainText("ㄚ");
   await expect(editor).toHaveValue("");
 });
@@ -43,11 +43,11 @@ test("the panel follows the mode, and the choice waits for the way back", async 
   // trace: Ctrl+Alt+P = ToggleTps; `is_tps_keyboard_wanted`.
   const editor = await open(page, { settings: typingTps });
   await expect(keyPanel(page)).toBeVisible();
-  await editor.press("Control+Alt+p");
+  await editor.press(`${TIER}+p`);
   await expect(keyPanel(page)).toBeHidden();
   await expect(shownSetting(page)).toBeDisabled();
   await expect(shownSetting(page)).toBeChecked();
-  await editor.press("Control+Alt+p");
+  await editor.press(`${TIER}+p`);
   await expect(keyPanel(page)).toBeVisible();
   await expect(shownSetting(page)).toBeEnabled();
 });
@@ -109,7 +109,7 @@ test("a slot key writes a symbol, and it leads the next picker", async ({
   page,
 }) => {
   const editor = await open(page);
-  await editor.press("Control+Alt+,");
+  await editor.press(`${TIER}+,`);
   await editor.press("ArrowDown");
   const second = await candidates(page).nth(1).textContent();
   await editor.press("Enter");
@@ -118,13 +118,13 @@ test("a slot key writes a symbol, and it leads the next picker", async ({
   expect(second).toContain(symbol);
   await page.reload();
   await expect(editor).toBeEnabled();
-  await editor.press("Control+Alt+,");
+  await editor.press(`${TIER}+,`);
   await expect(candidates(page).first()).toContainText(symbol);
 });
 
 test("a click on a symbol selects it and Enter writes it", async ({ page }) => {
   const editor = await open(page);
-  await editor.press("Control+Alt+,");
+  await editor.press(`${TIER}+,`);
   const cell = candidates(page).nth(2);
   await cell.click();
   await expect(cell).toHaveAttribute("aria-current", "true");

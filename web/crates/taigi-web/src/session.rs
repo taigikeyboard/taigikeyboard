@@ -18,11 +18,11 @@ use taigi_desktop_core::session::{
 use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
 
-use crate::key::{core_tier_snapshot, shift_index, BrowserKey, SHIFT_SCAN_CODES};
+use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
 use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
-use crate::shortcuts::{shortcuts, SETTINGS_WINDOW};
+use crate::shortcuts::shortcuts;
 
 const CONTEXT: ContextToken = ContextToken(1);
 /// A stamp for the log only, until a page ships dictionaries of a version.
@@ -86,6 +86,10 @@ impl WebSession {
         // The rewrite only stands for a chord that exists: ⌃⌘F and the like
         // stay the browser's.
         let as_pressed = ShortcutAction::matching(&snapshot, &document, platform);
+        // The Mac app has no ⌃⌥ tier, so the page has none there either.
+        if as_pressed.is_some() && is_mac_core_tier(&snapshot, platform) {
+            return self.reply(false, &[], None);
+        }
         let rewritten = core_tier_snapshot(&snapshot, platform)
             .filter(|_| as_pressed.is_none())
             .and_then(|rewritten| {
@@ -96,8 +100,10 @@ impl WebSession {
             Some((action, rewritten)) => (Some(action), rewritten),
             None => (as_pressed, snapshot),
         };
-        if action == Some(SETTINGS_WINDOW) {
-            return self.reply(false, &[], None);
+        // A toggle here, where the desktops open a window: a repeat would flip
+        // it back. The core latches only its own toggles.
+        if action == Some(ShortcutAction::OpenLastSettingsPane) && key.repeat {
+            return self.reply(true, &[], None);
         }
         // The event says what the wire elsewhere cannot: this is a new press,
         // so a held chord's latch is over even if its release went to another
@@ -648,10 +654,33 @@ mod tests {
     }
 
     #[test]
-    fn the_settings_chord_stays_the_browsers() {
-        let reply = parsed(session().key_down(&chord("s", "KeyS")));
+    fn the_settings_chord_asks_for_the_sidebar_once_per_press() {
+        let mut session = session();
+        let reply = parsed(session.key_down(&chord("s", "KeyS")));
+        assert_eq!(reply["handled"], true);
+        assert_eq!(emit_types(&reply), ["openSettings"]);
+        let held = BrowserKey {
+            repeat: true,
+            ..chord("s", "KeyS")
+        };
+        let reply = parsed(session.key_down(&held));
+        assert_eq!(reply["handled"], true);
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
+    }
+
+    #[test]
+    fn the_core_tier_does_nothing_on_a_mac() {
+        // trace: ⌃⌥C reports `ç`, read back as `c` = ToggleRomanization in the
+        // core's table; the Mac app has only ⌃⌘C.
+        let mut session = session_for(DesktopPlatform::MacOS, Arc::default());
+        let reply = parsed(session.key_down(&chord("ç", "KeyC")));
         assert_eq!(reply["handled"], false);
         assert_eq!(emit_types(&reply), Vec::<&str>::new());
+        let document = session.runtime.settings.current();
+        assert_eq!(
+            document.choice::<InputMode>(&keys::INPUT_MODE),
+            InputMode::Tl
+        );
     }
 
     fn typing_tps() -> Fixture {

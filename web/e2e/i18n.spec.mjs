@@ -7,6 +7,7 @@ import {
   firstSection,
   open,
   seedSettings,
+  TIER,
   toggle,
 } from "./helpers.mjs";
 
@@ -75,7 +76,7 @@ test("the title and Copy, Clear stay put in every language", async ({
 test("the session speaks the page's language", async ({ page }) => {
   // trace: Ctrl+Alt+C → `switched_label`, settings.pojMode in the Hanji map.
   const editor = await open(page, { settings: { displayLanguage: "hanji" } });
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect(page.locator("#message")).toHaveText("白話字");
 });
 
@@ -84,13 +85,13 @@ test("an unknown language tag reads as Hanji, as the session reads it", async ({
 }) => {
   const editor = await open(page, { settings: { displayLanguage: "xx" } });
   await expect(firstSection(page)).toHaveText("一般");
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect(page.locator("#message")).toContainText("白話字");
 });
 
 test("a language change drops the session's text", async ({ page }) => {
   const editor = await open(page);
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect(page.locator("#message")).toContainText("Pe̍h-ōe-jī");
   await setting(page, "displayLanguage").selectOption("ja");
   await expect(page.locator("#message")).toHaveText("");
@@ -159,7 +160,7 @@ test("a chord's write keeps the font and the language", async ({ page }) => {
   const editor = await open(page, {
     settings: { fontType: "iansui", displayLanguage: "ja" },
   });
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect.poll(() => stored(page)).toMatchObject({ fontType: "iansui" });
   await expect(firstSection(page)).toHaveText("一般");
   await expect(toggle(page)).toHaveAttribute("title", "設定");

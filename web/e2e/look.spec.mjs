@@ -12,6 +12,7 @@ import {
   open,
   panel,
   preedit,
+  TIER,
   toggle,
 } from "./helpers.mjs";
 
@@ -84,6 +85,16 @@ test("Shortcuts lists the keys and follows the settings", async ({ page }) => {
   await expect(row("確定齒")).toBeAttached();
 });
 
+test("the settings chord opens and closes the sidebar", async ({ page }) => {
+  // trace: Ctrl+Alt+S = OpenLastSettingsPane, `Emit::OpenSettings`.
+  const editor = await open(page);
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
+  await editor.press(`${TIER}+s`);
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "false");
+  await editor.press(`${TIER}+s`);
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
+});
+
 test("Input Mode reaches the session and survives a reload", async ({
   page,
 }) => {
@@ -109,13 +120,13 @@ test("Candidate Display reaches the session", async ({ page }) => {
 test("a chord's write shows in the form", async ({ page }) => {
   // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ.
   const editor = await open(page);
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect(inputMode(page)).toHaveValue("poj");
 });
 
 test("a form change keeps what a chord wrote", async ({ page }) => {
   const editor = await open(page);
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect(inputMode(page)).toHaveValue("poj");
   await page.getByLabel("Appearance").selectOption("dark");
   await expect(inputMode(page)).toHaveValue("poj");
