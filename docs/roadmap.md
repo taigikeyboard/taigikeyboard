@@ -18,6 +18,7 @@
 - **Maintainability audit follow-up (2026-10)** — [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md), rounds over [`reports/2026-10-09-audit-all.md`](reports/2026-10-09-audit-all.md). **Paused** by the maintainer 2026-10-14; resume point is the maintainer's call.
 - **Web version** — [`architecture/web-roadmap.md`](architecture/web-roadmap.md): the Rust engine in WASM behind a browser shell. Accepted 2026-11-06 (decisions D1–D6 settled). Phase 1 done: the engine runs on wasm32 behind `make web-check`; next is Phase 2.
 - **Windows on Arm64** — [`architecture/windows-arm64-roadmap.md`](architecture/windows-arm64-roadmap.md) (issue #721): Arm64X forwarder + native Arm64 service and settings exe in one universal installer. Accepted 2026-11-07; Phase 1 spike passed (Arm64, x64 and x86 apps type through the forwarder); next is Phase 2.
+- **ChromeOS** — [`architecture/chromeos-roadmap.md`](architecture/chromeos-roadmap.md) (issue #759): an MV3 `chrome.input.ime` extension over the web version's wasm engine. Draft 2026-11-07, decisions D1–D4 open; next is the Phase 1 test-environment spike (no ChromeOS device: UTM + Rosetta, ChromeOS Flex).
 
 ### v3.9.0 fix list (Discord #issues, maintainer 2026-10-30)
 
