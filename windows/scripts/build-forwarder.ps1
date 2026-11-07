@@ -54,7 +54,7 @@ function Get-WorkspaceVersion {
 # cl / link / rc / dumpbin for an Arm64 target, in this process.
 function Enter-Arm64DevShell {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
-    if (-not (Test-Path $vswhere)) { Fail "no vswhere at $vswhere: install Visual Studio 2022 (Build Tools)" }
+    if (-not (Test-Path $vswhere)) { Fail "no vswhere at ${vswhere}; install Visual Studio 2022 (Build Tools)" }
     $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.ARM64EC -property installationPath
     if (-not $vs) { Fail 'no Visual Studio with the "MSVC ARM64/ARM64EC build tools" component' }
     # The OS's architecture, not this process's: an x64-emulated PowerShell
