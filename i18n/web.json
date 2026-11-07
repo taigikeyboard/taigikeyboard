@@ -40,8 +40,8 @@
         "key": "string"
       }
     },
-    "links": {
-      "comment": "Accessible name of the sidebar's link list.",
+    "otherResources": {
+      "comment": "Sidebar section holding the links to sibling sites.",
       "scope": {
         "platforms": [
           "web"
@@ -51,11 +51,11 @@
         ]
       },
       "values": {
-        "hanji": "連結",
-        "tailo": "Liân-kiat",
-        "poj": "Liân-kiat",
-        "en": "Links",
-        "ja": "リンク"
+        "hanji": "其他資源",
+        "tailo": "Kî-thann tsu-guân",
+        "poj": "Kî-tha chu-goân",
+        "en": "Other Resources",
+        "ja": "その他のリソース"
       }
     },
     "officialSite": {

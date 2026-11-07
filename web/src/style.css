@@ -346,7 +346,7 @@ summary:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  margin-top: 1.25rem;
+  padding-bottom: 0.75rem;
   font-size: 0.9375rem;
 }
 
