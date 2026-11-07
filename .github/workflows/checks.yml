@@ -71,6 +71,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The index stays complete under a sparse checkout, so `git ls-files`
+          # still lists every script; only these are written to disk.
+          sparse-checkout: |
+            Makefile
+            *.ps1
+          sparse-checkout-cone-mode: false
 
       - name: make lint-ps1
         run: make lint-ps1
