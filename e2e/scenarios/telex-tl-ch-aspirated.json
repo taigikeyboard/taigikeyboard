@@ -1,0 +1,10 @@
+{
+  "id": "telex-tl-ch-aspirated",
+  "source": "INVARIANT_TELEX_KEY_TABLE (USER 2026-11-05, docs/architecture/behavioral-invariants.md): `c` then `h` aspirates the affricate: `tsh` under TL.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex" },
+  "steps": [
+    { "type": "text", "value": "cha" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "tsha" }
+}

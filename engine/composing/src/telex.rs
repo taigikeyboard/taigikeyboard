@@ -8,15 +8,18 @@
 //! Two keys carry a tone pair, split by the coda (USER 2026-09-19): a
 //! syllable that ends in a stop `p t k h` can only carry tone 4 or 8, any
 //! other only 1 2 3 5 7 9, so `x` writes 1 / 4 and `v` writes 2 / 8 without
-//! ever having to choose. The free letters are `d f q v w x y z` — seven
-//! open tones plus `z` and `f` would need nine — and the pairing is what
-//! gives the two unmarked tones a key at all.
+//! ever having to choose. The free letters are `c d f q v w x y z`, and the
+//! pairing is what gives the two unmarked tones a key at all.
+//!
+//! `c` spells the affricate initial and `z` writes tone 6 (USER 2026-11-05),
+//! the same in TL and POJ. That costs POJ its spelled-out `ch`: `c` `h` is
+//! `chh`, so `cha` reaches `chha`.
 
 use phonetics::InputMode;
 
 /// Every letter the Telex scheme claims, lower case. Platforms classify on
 /// this set (uppercase folded) before the engine resolves the edit.
-pub const TELEX_KEYS: &str = "vydwxqzf";
+pub const TELEX_KEYS: &str = "vydwxqzfch";
 
 /// What one Telex key means, independent of the buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,10 +30,16 @@ enum TelexKey {
         open: char,
         checked: char,
     },
-    /// `z` → the unaspirated affricate initial (`ts` / `ch`); `zh` then
-    /// spells the aspirated one because `h` is an ordinary letter.
+    /// `c` → the unaspirated affricate initial (`ts` / `ch`); `ch` then
+    /// spells the aspirated one because `h` writes itself.
     Affricate {
         uppercase: bool,
+    },
+    /// `h`, an ordinary letter except after an aspirated affricate, where it
+    /// is a slip: POJ's spelled-out `c` `h` `h` has already written `chh` by
+    /// the first `h`. Only Telex sends `h` here, so Standard keeps its text.
+    Aspiration {
+        letter: char,
     },
     Hyphen,
 }
@@ -47,9 +56,11 @@ fn resolve(key: &str) -> Option<TelexKey> {
         'y' | 'Y' => tone('3', '3'),
         'd' | 'D' => tone('5', '5'),
         'w' | 'W' => tone('7', '7'),
+        'z' | 'Z' => tone('6', '6'),
         'q' | 'Q' => tone('9', '9'),
-        'z' => TelexKey::Affricate { uppercase: false },
-        'Z' => TelexKey::Affricate { uppercase: true },
+        'c' => TelexKey::Affricate { uppercase: false },
+        'C' => TelexKey::Affricate { uppercase: true },
+        'h' | 'H' => TelexKey::Aspiration { letter },
         'f' | 'F' => TelexKey::Hyphen,
         _ => return None,
     })
@@ -67,11 +78,18 @@ fn ends_in_stop_coda(letters: &str) -> bool {
     letters.chars().last().is_some_and(phonetics::is_stop_coda)
 }
 
+/// Whether `letters` already ends in `tsh` / `chh`, which no further `h` can
+/// extend: the initial must be followed by a vowel.
+fn ends_in_aspirated_affricate(letters: &str) -> bool {
+    let lowered = letters.to_ascii_lowercase();
+    lowered.ends_with("tsh") || lowered.ends_with("chh")
+}
+
 /// Apply one Telex key to the pending tail `raw`. `None` means the key
 /// changes nothing (unknown key, a tone on an empty or hyphen-ended tail, the
-/// same tone twice, a hyphen on an empty tail) — the transition answers with
-/// a no-op. While composing the platform swallows such a key; only from Idle
-/// does a tone letter or `f` reach the host as text.
+/// same tone twice, a hyphen on an empty tail, an `h` after `tsh` / `chh`) —
+/// the transition answers with a no-op. While composing the platform swallows
+/// such a key; only from Idle does a tone letter or `f` reach the host as text.
 ///
 /// A tone on a tail that already ends in a different digit replaces it;
 /// the same digit is left alone so a held key cannot flip-flop (Backspace
@@ -106,6 +124,12 @@ pub fn apply_telex_key(raw: &str, key: &str, mode: InputMode) -> Option<String> 
             };
             Some(format!("{raw}{initial}"))
         }
+        TelexKey::Aspiration { letter } => {
+            if ends_in_aspirated_affricate(raw) {
+                return None;
+            }
+            Some(format!("{raw}{letter}"))
+        }
         TelexKey::Hyphen => {
             if raw.is_empty() {
                 return None;
@@ -117,16 +141,18 @@ pub fn apply_telex_key(raw: &str, key: &str, mode: InputMode) -> Option<String> 
 
 #[cfg(test)]
 mod tests {
+    // INVARIANT_TELEX_KEY_TABLE (behavioral-invariants.md §62)
     use super::*;
 
     #[test]
     fn tone_letters_append_their_digit() {
-        // trace: open tail "te" — x v y d w q → 1 2 3 5 7 9
+        // trace: open tail "te" — x v y d z w q → 1 2 3 5 6 7 9
         for (key, digit) in [
             ("x", '1'),
             ("v", '2'),
             ("y", '3'),
             ("d", '5'),
+            ("z", '6'),
             ("w", '7'),
             ("q", '9'),
         ] {
@@ -239,12 +265,73 @@ mod tests {
     }
 
     #[test]
-    fn z_expands_by_mode_and_case() {
-        assert_eq!(apply_telex_key("", "z", InputMode::Tl), Some("ts".into()));
-        assert_eq!(apply_telex_key("", "Z", InputMode::Tl), Some("Ts".into()));
-        assert_eq!(apply_telex_key("", "z", InputMode::Poj), Some("ch".into()));
-        assert_eq!(apply_telex_key("", "Z", InputMode::Poj), Some("Ch".into()));
-        assert_eq!(apply_telex_key("a", "z", InputMode::Tl), Some("ats".into()));
+    fn z_is_a_single_tone_key_on_any_syllable() {
+        // trace: `tone('6', '6')` ignores the coda, as `y d w q` do; a second
+        // `z` is the same digit, another tone letter replaces it.
+        assert_eq!(
+            apply_telex_key("sit", "z", InputMode::Tl),
+            Some("sit6".into())
+        );
+        assert_eq!(
+            apply_telex_key("Te", "Z", InputMode::Poj),
+            Some("Te6".into())
+        );
+        assert_eq!(apply_telex_key("te6", "z", InputMode::Tl), None);
+        assert_eq!(
+            apply_telex_key("te2", "z", InputMode::Tl),
+            Some("te6".into())
+        );
+        assert_eq!(
+            apply_telex_key("te6", "y", InputMode::Tl),
+            Some("te3".into())
+        );
+        assert_eq!(apply_telex_key("", "z", InputMode::Tl), None);
+    }
+
+    #[test]
+    fn c_expands_by_mode_and_case() {
+        assert_eq!(apply_telex_key("", "c", InputMode::Tl), Some("ts".into()));
+        assert_eq!(apply_telex_key("", "C", InputMode::Tl), Some("Ts".into()));
+        assert_eq!(apply_telex_key("", "c", InputMode::Poj), Some("ch".into()));
+        assert_eq!(apply_telex_key("", "C", InputMode::Poj), Some("Ch".into()));
+        assert_eq!(apply_telex_key("a", "c", InputMode::Tl), Some("ats".into()));
+        assert_eq!(
+            apply_telex_key("a", "c", InputMode::Poj),
+            Some("ach".into())
+        );
+    }
+
+    #[test]
+    fn h_writes_itself_except_after_an_aspirated_affricate() {
+        // trace: `ends_in_aspirated_affricate` — `ts` / `ch` take the `h` that
+        // aspirates them; `tsh` / `chh` take no further one, in either mode or
+        // case. Every other tail keeps the letter as typed.
+        for (tail, next) in [
+            ("", "h"),
+            ("t", "th"),
+            ("ts", "tsh"),
+            ("ch", "chh"),
+            ("Ch", "Chh"),
+            ("a", "ah"),
+            ("tsh5", "tsh5h"),
+            ("tsha", "tshah"),
+        ] {
+            assert_eq!(
+                apply_telex_key(tail, "h", InputMode::Tl),
+                Some(next.into()),
+                "{tail}"
+            );
+        }
+        assert_eq!(
+            apply_telex_key("ts", "H", InputMode::Tl),
+            Some("tsH".into())
+        );
+        for tail in ["tsh", "chh", "Tsh", "Chh", "CHH", "atsh"] {
+            for mode in [InputMode::Tl, InputMode::Poj] {
+                assert_eq!(apply_telex_key(tail, "h", mode), None, "{tail}");
+                assert_eq!(apply_telex_key(tail, "H", mode), None, "{tail}");
+            }
+        }
     }
 
     #[test]
@@ -276,7 +363,7 @@ mod tests {
 
     #[test]
     fn unknown_or_multi_char_keys_are_ignored() {
-        for key in ["a", "c", "1", "", "vv", "-"] {
+        for key in ["a", "t", "1", "", "vv", "-"] {
             assert_eq!(
                 apply_telex_key("te", key, InputMode::Tl),
                 None,
