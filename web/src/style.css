@@ -10,13 +10,12 @@
   --glass: light-dark(rgba(246, 246, 248, 0.72), rgba(44, 44, 46, 0.72));
   --text: light-dark(#1d1d1f, #f5f5f7);
   --secondary: light-dark(#6e6e73, #98989d);
+  --border: light-dark(#d2d2d7, #3a3a3c);
+  --field: light-dark(#fafafa, #2c2c2e);
   --hairline: light-dark(#e8e8ed, #38383a);
   --hover: light-dark(#f5f5f7, #2c2c2e);
   --accent: light-dark(#0071e3, #2997ff);
   --ring: light-dark(rgba(0, 113, 227, 0.15), rgba(41, 151, 255, 0.25));
-  --card-shadow:
-    0 1px 3px light-dark(rgba(0, 0, 0, 0.04), transparent),
-    0 4px 12px light-dark(rgba(0, 0, 0, 0.03), transparent);
   --menu-shadow: 0 4px 24px light-dark(rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.5));
   --system-font:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
@@ -382,18 +381,22 @@ summary:focus-visible {
 
 /* The card is this box, not the textarea: rounded corners would take the
    textarea's corners out of its click area. */
+/* kautian-mirror's search field (`.search input`). */
 #editor {
   position: relative;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  corner-shape: squircle;
-  background: var(--card);
-  box-shadow: var(--card-shadow);
+  background: var(--field);
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
 #editor:focus-within {
-  box-shadow:
-    0 0 0 3px var(--ring),
-    var(--card-shadow);
+  border-color: var(--accent);
+  background: var(--card);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 #text {
