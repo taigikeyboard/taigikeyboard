@@ -158,6 +158,10 @@ test("Clear commits first and can be undone", async ({ page, browserName }) => {
 
 test("the panel follows the caret and the scroll", async ({ page }) => {
   const editor = await open(page);
+  // The scroll numbers below need more room than the height it starts at.
+  await editor.evaluate((element) => {
+    element.style.height = "440px";
+  });
   await editor.fill("\n".repeat(60));
   await editor.evaluate((element) => element.setSelectionRange(30, 30));
   await editor.pressSequentially("tai");

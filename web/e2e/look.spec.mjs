@@ -287,6 +287,13 @@ test("a window that fits the page does not scroll", async ({ page }) => {
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
 });
 
+test("the textarea starts short however tall the window", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1200 });
+  const editor = await open(page);
+  // trace: `#text` height 22rem at the 16px root.
+  expect((await editor.boundingBox()).height).toBeCloseTo(352, 0);
+});
+
 test("the footer matches the converter's", async ({ page }) => {
   await open(page);
   const footer = page.locator("footer");
