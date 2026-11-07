@@ -111,7 +111,8 @@ git -C "$REPOSITORY_DIR" fetch --quiet origin main
 
 # Dispatches `$1` (a workflow file) on main and prints the id of the run it
 # started. `gh workflow run` returns nothing that identifies the run, so the one
-# built from this commit and started after the dispatch is looked up.
+# built from this commit on main and started after the dispatch is looked up
+# (a branch may be dispatched at the same commit to test the release path).
 dispatch() {
     local workflow="$1" what="$2" run_id="" dispatched_at
     shift 2
@@ -120,8 +121,8 @@ dispatch() {
         fail "cannot dispatch the $what build"
     for _ in $(seq 1 30); do
         run_id="$(gh run list --repo "$RELEASE_REPOSITORY" --workflow "$workflow" \
-            --json databaseId,headSha,createdAt,event \
-            --jq "[.[] | select(.headSha == \"$SOURCE_COMMIT\" and .event == \"workflow_dispatch\" and .createdAt >= \"$dispatched_at\")] | first | .databaseId // empty")"
+            --json databaseId,headSha,headBranch,createdAt,event \
+            --jq "[.[] | select(.headSha == \"$SOURCE_COMMIT\" and .headBranch == \"main\" and .event == \"workflow_dispatch\" and .createdAt >= \"$dispatched_at\")] | first | .databaseId // empty")"
         [[ -n "$run_id" ]] && break
         sleep 5
     done

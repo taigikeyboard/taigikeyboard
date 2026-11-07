@@ -154,9 +154,13 @@ GitHub-hosted `windows-2025` runner — `bash windows/scripts/release-app.sh
 Runtime packages taken from version- and digest-pinned downloads, the compiler
 from the version `windows/rust-toolchain.toml` names, and the MSVC developer
 environment applied.
-`make desktop-release` dispatches it, and the dispatched run attaches its
-installer to the draft; a run fired by `release: published` rebuilds for
-provenance and publishes nothing.
+`make desktop-release` dispatches it on `main`, and that run attaches its
+installer to the draft — in a separate `attach` job, the only one holding a
+write token, after the `arm64-smoke` job has registered the Arm64 service on a
+`windows-11-arm` runner and activated it from an Arm64 and an x64 process
+(`windows/scripts/smoke-activation.ps1`). A run dispatched on any other branch
+builds and smoke-tests and attaches nothing; a run fired by `release:
+published` rebuilds for provenance and publishes nothing.
 
 It exists for provenance, not convenience. SignPath Foundation signs only "a
 valid, automated build resulting from the source code at the noted source code

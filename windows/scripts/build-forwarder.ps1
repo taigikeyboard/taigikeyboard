@@ -1,8 +1,8 @@
-# Links the Arm64X pure forwarder TaigiKeyboard64X.dll — the DLL an Arm64
+# Links the Arm64X pure forwarder TaigiKeyboard64X.dll - the DLL an Arm64
 # machine registers as InProcServer32, so Arm64-native processes load
 # TaigiKeyboardArm64.dll and x64-emulated ones load TaigiKeyboard.dll through
 # the one path both read (docs/architecture/windows-arm64-roadmap.md
-# § Forwarder). mozc's recipe: references/mozc/src/win32/tip/build_tip_forwarder_dll.py.
+# section Forwarder). mozc's recipe: references/mozc/src/win32/tip/build_tip_forwarder_dll.py.
 #
 #   .\build-forwarder.ps1 -OutDir <directory>
 #
@@ -20,7 +20,7 @@ $ErrorActionPreference = 'Stop'
 
 $WindowsDir = Split-Path -Parent $PSScriptRoot
 $ForwarderSources = Join-Path $WindowsDir 'forwarder'
-# registration.rs FORWARDER_DLL.
+# registration.rs FORWARDER_DLL; scripts/lib/identity.sh FORWARDER_DLL.
 $ForwarderDll = 'TaigiKeyboard64X.dll'
 # Resolved now: the build below runs in a temporary directory.
 $OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
@@ -36,7 +36,7 @@ function Invoke-Tool([string] $Tool, [string[]] $Arguments) {
 }
 
 # The workspace version (`[workspace.package]` in windows/Cargo.toml), the one
-# every other Windows binary's VERSIONINFO carries — the PowerShell twin of
+# every other Windows binary's VERSIONINFO carries - the PowerShell twin of
 # SHORT_VERSION in scripts/lib/identity.sh.
 function Get-WorkspaceVersion {
     $inPackage = $false
@@ -80,7 +80,7 @@ try {
     # One empty object per view pulls in that view's CRT load config. Without
     # them the link only warns (LNK4294), and an x64 process then reads the
     # forwarder as a plain Arm64 DLL, follows the native forward and fails
-    # with error 193 — the service works in Arm64 apps and silently not in x64
+    # with error 193 - the service works in Arm64 apps and silently not in x64
     # ones (spike 2026-11-07).
     Invoke-Tool 'cl.exe' @('/nologo', '/c', '/Foempty_arm64.obj', 'empty.cc')
     Invoke-Tool 'cl.exe' @('/nologo', '/c', '/arm64EC', '/Foempty_x64.obj', 'empty.cc')

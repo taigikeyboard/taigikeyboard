@@ -66,7 +66,8 @@ pub fn guid_key(guid: &GUID) -> String {
 /// (docs/architecture/windows-arm64-roadmap.md § Forwarder). It exports only
 /// `DllGetClassObject` / `DllCanUnloadNow`, forwarded to
 /// `TaigiKeyboardArm64.dll` for an Arm64 process and to `TaigiKeyboard.dll`
-/// for an x64-emulated one (`windows/forwarder/*.def`).
+/// for an x64-emulated one (`windows/forwarder/*.def`). Same name in
+/// `windows/scripts/build-forwarder.ps1` and `windows/scripts/lib/identity.sh`.
 pub const FORWARDER_DLL: &str = "TaigiKeyboard64X.dll";
 
 /// Whether this build names the forwarder as `InProcServer32`. Arm64-native
