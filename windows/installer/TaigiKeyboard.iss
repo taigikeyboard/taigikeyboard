@@ -154,31 +154,24 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 #include "Messages.iss"
 
 [Files]
-; `uninsrestartdelete` on every entry: a host that still has a payload file
-; mapped when the user uninstalls (any app the input method was active in —
-; an image section cannot be deleted while mapped) would otherwise leave it in
-; {app} for good; Inno only logs the failed delete. With the flag the
-; uninstaller queues the delete for the next restart, and CurUninstallStepChanged
-; queues the emptied directories after it. The uninstaller then offers a
-; restart, which /NORESTART suppresses.
 ; The x64 service on both machines: on Arm64 the x64-emulated hosts load it
 ; through the forwarder.
-Source: "{#Dist}\{#ServiceDll}"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete
-Source: "{#Dist}\{#ServiceDll32}"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete
-Source: "{#Dist}\{#ServiceDllArm64}"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete; Check: IsArm64
-Source: "{#Dist}\{#ForwarderDll}"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete; Check: IsArm64
+Source: "{#Dist}\{#ServiceDll}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Dist}\{#ServiceDll32}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Dist}\{#ServiceDllArm64}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
+Source: "{#Dist}\{#ForwarderDll}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
 ; The settings window and its runtime in the machine's own architecture, under
 ; one install name, so the shortcut, the uninstall icon, the update task and
 ; the updater's own-exe check are the same on both.
-Source: "{#Dist}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete; Check: not IsArm64
-Source: "{#Dist}\arm64\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete; Check: IsArm64
+Source: "{#Dist}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion; Check: not IsArm64
+Source: "{#Dist}\arm64\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
 ; W17: the Windows App Runtime files sit beside the exe (their loader looks
 ; in the exe's directory); Inno records each and removes them on uninstall.
-Source: "{#Dist}\Runtime\*"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete recursesubdirs createallsubdirs; Check: not IsArm64
-Source: "{#Dist}\RuntimeArm64\*"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete recursesubdirs createallsubdirs; Check: IsArm64
-Source: "{#Dist}\Dictionaries\*"; DestDir: "{app}\Dictionaries"; Flags: ignoreversion uninsrestartdelete
-Source: "{#Dist}\Fonts\*"; DestDir: "{app}\Fonts"; Flags: ignoreversion uninsrestartdelete
-Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion uninsrestartdelete
+Source: "{#Dist}\Runtime\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
+Source: "{#Dist}\RuntimeArm64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsArm64
+Source: "{#Dist}\Dictionaries\*"; DestDir: "{app}\Dictionaries"; Flags: ignoreversion
+Source: "{#Dist}\Fonts\*"; DestDir: "{app}\Fonts"; Flags: ignoreversion
+Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Inno's uninstall log is name-keyed, so the pre-rename "Taigi Keyboard"
 ; shortcut would sit beside the new one on a machine that ran an older build.
@@ -234,7 +227,7 @@ Type: filesandordirs; Name: "{app}\Dictionaries"
 Type: filesandordirs; Name: "{app}\Fonts"
 ; Stale copies are NOT listed here: they can sit in any subdirectory the
 ; payload has, and an [UninstallDelete] pattern does not recurse. They are
-; collected in [Code], at usPostUninstall — see DiscardStaleTree.
+; collected in [Code], at usPostUninstall — see DiscardLeftoverTree.
 ; %APPDATA%\TaigiKeyboard (settings, learning data, custom dictionary) is the
 ; user's and is deliberately NOT listed here.
 
@@ -460,30 +453,61 @@ begin
     DiscardStale(Leftover);
 end;
 
-// Every stale copy under Directory, recursively, deleted outright. Used on
-// uninstall, where nothing is coming back and a leftover would keep {app} from
-// being removed. Inno's uninstall log does not know these names — they are
-// created after it is written — and an [UninstallDelete] pattern cannot reach
-// into the payload's subdirectories, so this is where they go.
-procedure DiscardStaleTree(const Directory: String);
+// Everything the uninstaller left under Directory, recursively, then Directory
+// itself: deleted now where it can be, otherwise queued for the next restart.
+// Used on uninstall, where nothing is coming back.
+//
+// Two kinds of file survive Inno's own pass. Stale copies: Inno's uninstall log
+// does not know these names — they are created after it is written — and an
+// [UninstallDelete] pattern cannot reach into the payload's subdirectories.
+// And payload files a running host still has mapped (the service DLLs, in any
+// app the input method was active in): Inno logs "it may be in use" and moves
+// on. Those are renamed to a fresh unique stale name before being queued, never
+// queued under their own name: a reinstall before the restart writes the new
+// payload at that very path, and a delete queued against the path would take
+// the new file at boot. The unique name is also one RecoverStaleFiles can only
+// discard — it records no original, so a reinstall never resurrects an
+// uninstalled DLL. `uninsrestartdelete` in [Files] would queue the path itself,
+// which is why it is not used.
+//
+// Pending operations run in order at boot, so each directory is queued after
+// what it held, children before parents. A directory that still holds
+// something of the user's own fails that delete at boot and stays, which is
+// the right outcome. Setup's own uninstaller files are Inno's to remove.
+procedure DiscardLeftoverTree(const Directory: String);
 var
   Found: TFindRec;
-  Full: String;
+  Full, Aside: String;
 begin
   if not DirExists(Directory) then Exit;
-  if not FindFirst(AddBackslash(Directory) + '*', Found) then Exit;
+  if FindFirst(AddBackslash(Directory) + '*', Found) then
+    try
+      repeat
+        if (Found.Name = '.') or (Found.Name = '..') then
+          Continue;
+        Full := AddBackslash(Directory) + Found.Name;
+        if Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
+          DiscardLeftoverTree(Full)
+        else if SameText(ExtractFileExt(Found.Name), StaleExtension) then
+          DiscardStale(Full)
+        else if not SameText(Copy(Found.Name, 1, 5), 'unins') then begin
+          Aside := GenerateUniqueName(Directory, StaleExtension);
+          if RenameFile(Full, Aside) then begin
+            Log('uninstall: ' + Full + ' is still held — moved aside as ' + Aside);
+            DiscardStale(Aside);
+          end else
+            Log('uninstall: could not move ' + Full + ' aside; left in place');
+        end;
+      until not FindNext(Found);
+    finally
+      FindClose(Found);
+    end;
+  if RemoveDir(Directory) then Exit;
   try
-    repeat
-      if (Found.Name = '.') or (Found.Name = '..') then
-        Continue;
-      Full := AddBackslash(Directory) + Found.Name;
-      if Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
-        DiscardStaleTree(Full)
-      else if SameText(ExtractFileExt(Found.Name), StaleExtension) then
-        DiscardStale(Full);
-    until not FindNext(Found);
-  finally
-    FindClose(Found);
+    RestartReplace(Directory, '');
+    Log('uninstall: ' + Directory + ' is not empty yet — removing it at next restart');
+  except
+    Log('uninstall: could not schedule ' + Directory + ' for removal');
   end;
 end;
 
@@ -785,45 +809,8 @@ begin
   end;
 end;
 
-// Directory and every directory under it, deepest first: removed now when
-// empty, otherwise scheduled for the next restart. A payload file a host still
-// holds is scheduled by the uninstaller itself (`uninsrestartdelete` in
-// [Files]) during usUninstall, so by the time this runs its delete is already
-// queued; pending operations run in order at boot, so the files go first and
-// each directory after what it held — children before parents. A directory
-// still holding something of the user's own fails that delete at boot and
-// stays, which is the right outcome.
-procedure DiscardEmptiedTree(const Directory: String);
-var
-  Found: TFindRec;
-begin
-  if not DirExists(Directory) then Exit;
-  if FindFirst(AddBackslash(Directory) + '*', Found) then
-    try
-      repeat
-        if (Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0) and
-           (Found.Name <> '.') and (Found.Name <> '..') then
-          DiscardEmptiedTree(AddBackslash(Directory) + Found.Name);
-      until not FindNext(Found);
-    finally
-      FindClose(Found);
-    end;
-  if RemoveDir(Directory) then Exit;
-  try
-    RestartReplace(Directory, '');
-    Log('uninstall: ' + Directory + ' still holds a mapped copy — removing it at next restart');
-  except
-    Log('uninstall: could not schedule ' + Directory + ' for removal');
-  end;
-end;
-
-// After the uninstaller has removed everything it logged: collect the stale
-// copies it never knew about, then the directories, so {app} can go too.
-//
-// A copy a host still holds cannot be deleted now, only scheduled — which
-// leaves its directory non-empty, and an uninstall that leaves a folder behind
-// is one the user sees. So the directories are scheduled the same way when they
-// will not go now (DiscardEmptiedTree).
+// After the uninstaller has removed everything it logged: collect what it
+// could not (DiscardLeftoverTree), so {app} can go too.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   AppDir: String;
@@ -836,8 +823,7 @@ begin
       Log('shortcut: could not remove the localized name for ' + ShortcutPath);
   if CurUninstallStep <> usPostUninstall then Exit;
   AppDir := ExpandConstant('{app}');
-  DiscardStaleTree(AppDir);
-  DiscardEmptiedTree(AppDir);
+  DiscardLeftoverTree(AppDir);
 end;
 
 procedure CurPageChanged(CurPageID: Integer);

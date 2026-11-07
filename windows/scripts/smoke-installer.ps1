@@ -134,9 +134,9 @@ switch ($Action) {
         if (-not (Test-Path $uninstaller)) { Fail "no $uninstaller" }
         # Uninstall the way a user does: with a host still holding the 64-bit
         # service (and on Arm64 the forwarder) mapped. An image mapping blocks
-        # the delete, so those files must come out queued for the next restart
-        # (TaigiKeyboard.iss [Files] uninsrestartdelete), the directory after
-        # them; everything else must be gone now.
+        # the delete, so those files must be moved off their install names and
+        # queued for the next restart, the directory after them
+        # (TaigiKeyboard.iss DiscardLeftoverTree).
         $held = @($NativeService)
         if ($IsArm64) { $held += $InProcServer }
         $handles = foreach ($name in $held) {
@@ -146,22 +146,23 @@ switch ($Action) {
         }
         Write-Host "==> $uninstaller (holding $($held -join ', '))"
         # The uninstaller runs from a copy in %TEMP% and ends this process when
-        # it is done; the entry going away is waited on too, as the outcome.
+        # it is done; what it leaves is waited on as the outcome. Its own exe
+        # goes last, after the [Code] cleanup has queued its deletes.
         $process = Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
         if ($process.ExitCode -ne 0) { Fail "$uninstaller exited $($process.ExitCode)" }
         $deadline = (Get-Date).AddMinutes(3)
-        while ((Test-Path $UninstallKey) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
+        while (((Test-Path $UninstallKey) -or (Test-Path $uninstaller)) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
         foreach ($key in $UninstallKey, $Clsid64Key, $Clsid32Key, $TipKey) {
             if (Test-Path $key) { Fail "$key is still there after uninstalling" }
         }
-        $pending = @((Get-ItemProperty $SessionManagerKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)
         foreach ($name in $SharedFiles + $Arm64Files) {
-            $path = Join-Path $AppDir $name
-            if (-not (Test-Path $path)) { continue }
-            if ($held -notcontains $name) { Fail "$name is still installed" }
-            Assert-PendingDelete $pending $path
+            if (Test-Path (Join-Path $AppDir $name)) { Fail "$name is still installed" }
         }
-        Assert-PendingDelete $pending $AppDir
+        if (Test-Path $AppDir) {
+            $pending = @((Get-ItemProperty $SessionManagerKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)
+            foreach ($file in Get-ChildItem $AppDir -Recurse -Force -File) { Assert-PendingDelete $pending $file.FullName }
+            Assert-PendingDelete $pending $AppDir
+        }
         foreach ($handle in $handles) { [void] [TaigiSmoke.Kernel32]::FreeLibrary($handle) }
         Write-Host 'OK  uninstalled'
     }
