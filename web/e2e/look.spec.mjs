@@ -320,6 +320,26 @@ test("the footer matches the converter's", async ({ page }) => {
   );
 });
 
+test("the footer rests at the window's foot, then below the page", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1200 });
+  await open(page);
+  const footer = page.locator("footer");
+  // trace: `body` padding-bottom 2rem at the 16px root.
+  const bottom = async () => {
+    const box = await footer.boundingBox();
+    return box.y + box.height;
+  };
+  expect(await bottom()).toBeCloseTo(1200 - 32, 0);
+
+  await page.setViewportSize({ width: 1280, height: 400 });
+  const editor = await page.locator("#editor").boundingBox();
+  expect((await footer.boundingBox()).y).toBeGreaterThan(
+    editor.y + editor.height,
+  );
+});
+
 test("the footer's icons name their places", async ({ page }) => {
   await open(page);
   const links = page.locator(".social-links").getByRole("link");
