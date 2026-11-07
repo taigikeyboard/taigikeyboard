@@ -341,6 +341,18 @@ summary:focus-visible {
   color: var(--secondary);
 }
 
+/* The desktop panes' reset row, at the foot of its section. */
+.setting-reset {
+  display: block;
+  width: 100%;
+  min-height: 2.25rem;
+  margin: 0.5rem 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--field);
+  font-size: 0.9375rem;
+}
+
 .sidebar-links {
   display: flex;
   flex-direction: column;
@@ -480,7 +492,10 @@ summary:focus-visible {
   overflow: hidden;
   border-radius: var(--candidate-radius);
   background: var(--glass);
-  box-shadow: var(--menu-shadow);
+  /* A ring, not a `border`: the expandable widths have no number for one. */
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--menu-shadow);
   font-size: var(--candidate-size);
   line-height: 1.2;
   -webkit-backdrop-filter: blur(24px) saturate(180%);

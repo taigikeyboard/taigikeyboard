@@ -227,8 +227,8 @@
       "values": { "hanji": "輸入主題名稱", "tailo": "Su-ji̍p tsú-tê miâ-tshing", "poj": "Su-ji̍p chú-tê miâ-chheng", "en": "Enter a theme name", "ja": "テーマ名を入力" }
     },
     "editorResetAll": {
-      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; every desktop settings pane (macOS, Windows, Linux) reuses it for its own reset row. Mobile settings.resetSettings carries the same wording.",
-      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"] },
+      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; every desktop settings pane (macOS, Windows, Linux) and web sidebar section reuses it for its own reset row. Mobile settings.resetSettings carries the same wording.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "恢復預設設定", "tailo": "Hue-ho̍k ī-siat siat-tīng", "poj": "Hoe-ho̍k ī-siat siat-tēng", "en": "Reset to Defaults", "ja": "既定値に戻す" }
     },
     "cardMenuApply": {
