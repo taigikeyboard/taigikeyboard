@@ -2,6 +2,7 @@
 // taigi-web session's replies out (docs/architecture/chromeos-roadmap.md).
 
 import { imeCalls, isResetStorm, keyJson } from "./calls.js";
+import { Learning } from "./learning.js";
 import init, { Session } from "./pkg/taigi_web.js";
 import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
 
@@ -19,6 +20,8 @@ const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
 
 let session = null;
 let context = null;
+// A trapped session is never kept: this worker waits to be stopped.
+let trapped = false;
 // The settings document the session holds.
 let settingsJson = DEFAULT_SETTINGS;
 
@@ -74,11 +77,45 @@ async function start() {
   }
   starting.install();
   session = starting;
+  // Off the first key: opening the stores takes tens of milliseconds.
+  learning.attach(starting);
 }
+
+/// One engine call, its answer as given; `undefined` with no session. A trap
+/// ends the session for this worker: the glue keeps the instance it has and a
+/// service worker cannot import a fresh copy, so the worker is let go and the
+/// next focus starts a new one with a new session.
+function run(action) {
+  if (session === null) {
+    return undefined;
+  }
+  try {
+    return action(session);
+  } catch (error) {
+    if (!(error instanceof WebAssembly.RuntimeError)) {
+      throw error;
+    }
+    console.error("session.trapped", error);
+    session = null;
+    trapped = true;
+    letGo();
+    return undefined;
+  }
+}
+
+// What the engine learns from picks, kept in IndexedDB (`learning.js`, web
+// Phase 8a). This worker is the extension's only learner.
+const learning = new Learning(() => session, run);
 
 const started = start().catch((error) =>
   console.error("session.start.failed", error),
 );
+
+/// One engine call that answers a reply, applied; whether it took the key.
+function call(action) {
+  const reply = run(action);
+  return reply === undefined ? false : apply(reply);
+}
 
 function apply(replyJson) {
   const reply = JSON.parse(replyJson);
@@ -99,21 +136,17 @@ function apply(replyJson) {
   if (reply.settings) {
     saveSettings(reply.settings);
   }
+  // A commit is what the engine learns from.
+  if (reply.emits.some((emit) => emit.type === "commit")) {
+    learning.scheduleSave();
+  }
   return reply.handled;
 }
 
-/// Ends the composition the field has just confirmed. With no session yet
-/// there is nothing to end.
-function endComposition() {
-  if (session) {
-    apply(session.endSession());
-  }
-}
-
-/// The field lost the keyboard: its composition ends with it.
+/// The field lost the keyboard: the composition it confirmed ends with it.
 function leaveField() {
-  endComposition();
-  session?.focusLost();
+  call((current) => current.endSession());
+  run((current) => current.focusLost());
   context = null;
 }
 
@@ -123,19 +156,16 @@ chrome.input.ime.onActivate.addListener(() => keepAlive());
 // dictionaries go. onActivate wakes a stopped worker, which keeps it again.
 chrome.input.ime.onDeactivated.addListener(() => {
   leaveField();
-  chrome.offscreen
-    .closeDocument()
-    .catch((error) => console.warn("keepAlive.close.failed", error.message));
+  // A trap already let it go.
+  if (!trapped) {
+    letGo();
+  }
 });
 
 chrome.input.ime.onFocus.addListener((focused) => {
   context = focused;
   keepAlive();
-  started.then(() => {
-    if (session) {
-      apply(session.beginSession());
-    }
-  });
+  started.then(() => call((current) => current.beginSession()));
 });
 
 // A blur can arrive after the next field's focus; it ends only its own field.
@@ -149,10 +179,8 @@ chrome.input.ime.onReset.addListener(() => {
   if (isResetStorm(context)) {
     return;
   }
-  endComposition();
-  if (session) {
-    apply(session.beginSession());
-  }
+  call((current) => current.endSession());
+  call((current) => current.beginSession());
 });
 
 // A key with no focused field (a worker restarted since the last onFocus) or
@@ -162,12 +190,12 @@ chrome.input.ime.onKeyEvent.addListener((_id, keyData, requestId) => {
   started.then(() => {
     let handled = false;
     try {
-      if (session && context) {
+      if (context) {
         const json = keyJson(keyData);
-        handled = apply(
+        handled = call((current) =>
           keyData.type === "keydown"
-            ? session.keyDown(json)
-            : session.keyUp(json),
+            ? current.keyDown(json)
+            : current.keyUp(json),
         );
       }
     } catch (error) {
@@ -180,8 +208,8 @@ chrome.input.ime.onKeyEvent.addListener((_id, keyData, requestId) => {
 });
 
 chrome.input.ime.onCandidateClicked.addListener((_id, candidateID) => {
-  if (session && context) {
-    apply(session.clickCandidate(candidateID));
+  if (context) {
+    call((current) => current.clickCandidate(candidateID));
   }
 });
 
@@ -201,9 +229,11 @@ chrome.storage.onChanged.addListener((changes, area) => {
     // A document the session then refuses still ends the composition, as on
     // the page.
     try {
-      apply(session.commitComposition());
-      session.setSettings(json);
-      settingsJson = json;
+      call((current) => current.commitComposition());
+      run((current) => current.setSettings(json));
+      if (!trapped) {
+        settingsJson = json;
+      }
     } catch (error) {
       console.warn("settings.refused", error.message);
     }
@@ -218,9 +248,20 @@ chrome.runtime.onMessage.addListener(() => {});
 let keeping = null;
 
 function keepAlive() {
+  if (trapped) {
+    return;
+  }
   keeping ??= openKeepAlive().finally(() => {
     keeping = null;
   });
+}
+
+/// Stops keeping the worker: about 30 s later ChromeOS stops it, and the next
+/// event starts a new one.
+function letGo() {
+  chrome.offscreen
+    .closeDocument()
+    .catch((error) => console.warn("keepAlive.close.failed", error.message));
 }
 
 async function openKeepAlive() {
