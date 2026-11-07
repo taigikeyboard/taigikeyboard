@@ -918,7 +918,7 @@ footer a:hover {
 }
 
 footer p {
-  margin: 0;
+  margin: 0.25rem 0 0;
   text-align: center;
 }
 
@@ -928,7 +928,6 @@ footer p {
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.25rem;
-  margin-top: 0.25rem;
 }
 
 .social-links a {
