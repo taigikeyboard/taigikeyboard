@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `chromeos`, `chrome.input.ime`, `input_components`, `manifest v3`, `service worker`, `wasm`, `linux-chromeos`, `chromeos flex`, `utm`, `rosetta`
-> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 (test-environment spike) next.
+> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 gate passed 2026-11-07 (台語 typed in `linux-chromeos` on the Mac); worker-lifetime blocker open (§ Spike result).
 > **Siblings**: `web-roadmap.md` (the wasm engine this reuses), `windows-arm64-roadmap.md` (same VM-first pattern).
 
 ---
@@ -77,7 +77,7 @@ The maintainer has an M4 Mac (16 GB, 80 GB free, UTM installed; existing `Linux.
 
 | # | Environment | Host | Real ChromeOS | Cost | Use |
 |---|---|---|---|---|---|
-| E1 | `linux-chromeos` prebuilt snapshot (`Linux_ChromiumOS_Full`, x86_64, 318 MB zip, refreshed daily) in a new UTM **Apple Virtualization** Debian arm64 VM with **Rosetta for Linux** | Mac | No: ChromeOS UI and IME framework as a Linux app, stub services | Free, ~1 h setup | Daily dev loop, if it runs |
+| E1 | `linux-chromeos` prebuilt snapshot (`Linux_ChromiumOS_Full`, x86_64, 318 MB zip, refreshed daily) in a new **Apple Virtualization** Debian arm64 VM with **Rosetta for Linux** (Lima or UTM) | Mac | No: ChromeOS UI and IME framework as a Linux app, stub services | Free, ~1 h setup | Daily dev loop; runs (§ Spike result) |
 | E1b | Same snapshot in the laptop's VirtualBox amd64 VM, or a GitHub-hosted Ubuntu runner under Xvfb | Windows laptop / CI | No | Free | E1 without Rosetta; later an automated smoke test |
 | E2 | ChromeOS Flex in UTM x86_64 **emulation** | Mac | Yes, minus Play Store | Free | Expect too slow; virtual GPUs often fail Flex. Timebox 1 h |
 | E3 | ChromeOS Flex **live from USB** ("Try it first"; nothing written to disk) | Windows laptop | Yes, minus Play Store | 8 GB USB stick, maintainer at the machine | Real-OS check before store submission |
@@ -94,7 +94,7 @@ One PR per phase; each starts after the previous one merges. No version is assig
 | # | Phase | Content | Status |
 |---|---|---|---|
 | 0 | Roadmap | This document; issue #759 | Done 2026-11-07 |
-| 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | Pending |
+| 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | **Gate passed 2026-11-07**; one blocker open: worker lifetime (§ Spike result) |
 | 2 | Extension shell | New source dir (D2), manifest, worker glue (key mapping, Emit mapping, `keyEventHandled`), dictionaries packaged, build target + lint in `Makefile`, unit tests for the mapping | Pending |
 | 3 | Settings + i18n | Options page from the web settings form; `_locales` from `i18n/*.json`, reusing the desktop keys the web page already uses (`docs/contributing/i18n.md`) | Pending |
 | 4 | Learning | User data in the worker (IndexedDB), as web Phase 8a | Pending |
@@ -106,6 +106,28 @@ One PR per phase; each starts after the previous one merges. No version is assig
 - Phase 1: results table here (environment, what loaded, cold / warm key times).
 - Phases 2–4: `make web-check` stays green (shared crate); new extension target's tests; manual typing in E1 / E1b.
 - Phase 6: real ChromeOS, maintainer.
+
+### Spike result (2026-11-07)
+
+Environment E1 on the M4 Mac: Lima 2.3.0 (`--vm-type=vz --rosetta`, the same Apple Virtualization framework UTM's Apple backend uses, but scriptable), Debian 13 arm64, 4 CPU / 6 GB. `Linux_ChromiumOS_Full` r1738485 runs through Rosetta under Xvfb with `--no-sandbox`. It needs the amd64 multiarch libraries plus `libgl1:amd64 libegl1:amd64 libgl1-mesa-dri:amd64`; without `libGL.so.1` the GPU process fails and the browser aborts (`GPU process isn't usable`). Driven headless: `xdotool` into the ash host window, Chrome DevTools Protocol (`--remote-debugging-port`) to open a tab and read the textarea, worker `console.log` lines in the `--enable-logging=stderr` log.
+
+The input method is enabled without the settings UI by writing the stub user's prefs while Chrome is stopped (`test-user/Preferences`: `settings.language.enabled_extension_imes` and `preload_engines` = `_ext_ime_<extension id><component id>`), then Ctrl+Space selects it.
+
+| Check | Result |
+|---|---|
+| MV3 extension with `input_components`, loaded by `--load-extension` | Loads (needs `--disable-features=DisableLoadExtensionCommandLineSwitch`) |
+| `taigi-web` wasm (4.0 MB) + 4 dictionaries (30.9 MB) in the worker, static `import` + `WebAssembly.compileStreaming`, CSP `'wasm-unsafe-eval'` | Works, unchanged API. Worker boot 280–560 ms (wasm 130–370 ms, dictionaries 110–220 ms) |
+| `tai5gi2` + Space in a web textarea | 台語 committed. Preedit `tâigí` underlined at the caret; system candidate window with our labels (`q w d f z x v y ;`) and TL annotations |
+| `lang5` + Space in the omnibox (a views field, focus type `url`) | Committed |
+| Engine time per key (Rosetta, so slower than a real Chromebook) | First key after boot 95–234 ms, then 3–30 ms |
+| `onKeyEvent` + `keyEventHandled(requestId, handled)` | Works |
+| **Worker lifetime** | **Blocker.** The worker stops about 30 s after the last event. A key does not wake it: keys typed after a pause reach the field as raw ASCII (`goa2 `) and the worker logs nothing. A focus change (`onFocus` / `onActivate`) does wake it, so the next field works again |
+| Keepalive: `chrome.runtime.getPlatformInfo()` every 20 s | Did not help, worker gone at 30–40 s |
+| Keepalive: offscreen document pinging every 20 s | Inconclusive: no offscreen target appeared and nothing was logged |
+
+Not verified: whether real ChromeOS wakes a stopped IME worker on a key (`linux-chromeos` runs stub services, so the blocker may be this environment's). McBopomofoWeb's store build keeps its worker alive from a content-script port (`references/McBopomofoWeb/src/chromeos_ime.ts:839-881`), which suggests real ChromeOS stops it too. Not measured: worker memory, a Files rename box, E2.
+
+Next for the blocker, in order: (1) the McBopomofoWeb keepalive on E1 (needs `scripting` + host permissions); (2) E3, Flex live USB, to see real ChromeOS behaviour before choosing.
 
 ## Decisions (maintainer, 2026-11-07: "follow your recommendations")
 
