@@ -20,7 +20,6 @@ use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
 
 use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
-use crate::learning_records::LearningRecordsPage;
 use crate::page_settings::PageSettings;
 use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
 use crate::shortcuts::shortcuts;
@@ -38,7 +37,6 @@ pub(crate) struct WebSession {
     /// Which Shift keys are down, left then right. `shiftKey` cannot say:
     /// it is true for the press of the first one too.
     shifts_down: [bool; 2],
-    learning_records: LearningRecordsPage,
 }
 
 impl WebSession {
@@ -74,7 +72,6 @@ impl WebSession {
             },
             shift_tap: ShiftTapTracker::default(),
             shifts_down: [false; 2],
-            learning_records: LearningRecordsPage::default(),
         })
     }
 
@@ -229,17 +226,6 @@ impl WebSession {
             self.runtime.platform(),
         );
         serde_json::to_string(&wire).expect("plain strings")
-    }
-
-    /// The stores opened: the Learning Records section may list them.
-    pub(crate) fn user_data_opened(&mut self) {
-        self.learning_records.opened();
-    }
-
-    /// The sidebar's Learning Records section; JSON, `learning_records.rs`.
-    pub(crate) fn learning_records(&mut self, call_json: &str) -> Result<String, String> {
-        let strings = self.runtime.strings();
-        self.learning_records.answer(call_json, &strings)
     }
 
     pub(crate) fn set_settings(&self, json: &str) -> Result<(), serde_json::Error> {
@@ -802,27 +788,6 @@ mod tests {
         let settings = session.runtime.settings.current();
         assert_eq!(settings.choice(&keys::INPUT_MODE), InputMode::Poj);
         assert!(session.set_settings("{").is_err());
-    }
-
-    #[test]
-    fn learning_records_wait_for_the_stores_and_speak_the_pages_language() {
-        let mut session = session();
-        let read = r#"{"kind":0,"order":0,"filter":"","page":0,"utcOffsetSeconds":0}"#;
-        assert!(session.learning_records(read).is_err());
-        session.user_data_opened();
-        let answer: Value = serde_json::from_str(&session.learning_records(read).unwrap()).unwrap();
-        // trace: no stores in a native test, so the engine refuses the list
-        // (`user_data.rs` `EngineUnavailable`); the notice under the read
-        // title in the locale's language, the detail kept for the console.
-        assert_eq!(
-            answer["message"]["title"],
-            "Could Not Read Learning Records"
-        );
-        assert_eq!(
-            answer["message"]["detail"],
-            "the engine did not answer learningRecordsList"
-        );
-        assert_eq!(answer["empty"], "Nothing Learned Yet");
     }
 
     #[test]

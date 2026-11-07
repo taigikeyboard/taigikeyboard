@@ -43,8 +43,6 @@ export class Learning {
   /// `ime.js`'s `run`: an engine call, `undefined` after a trap, which it
   /// recovers from with a new instance.
   #run;
-  /// Called with the session whose stores just opened.
-  #onOpen;
   #holdsLock = false;
   /// The session being opened, so a second `attach` does not hand files in
   /// twice.
@@ -63,10 +61,9 @@ export class Learning {
   #stopped = false;
   #saveTimer;
 
-  constructor(current, run, onOpen) {
+  constructor(current, run) {
     this.#current = current;
     this.#run = run;
-    this.#onOpen = onOpen;
     // Without Web Locks the tabs could not agree on one learner, so none
     // learns. Every browser the page supports has them.
     navigator.locks
@@ -120,14 +117,7 @@ export class Learning {
     }
     if (this.#run((current) => current.openUserData()) === true) {
       this.#opened = session;
-      this.#onOpen(session);
     }
-  }
-
-  /// Whether the session `ime.js` calls now learns: not after a trap until the
-  /// new instance has opened its stores.
-  get isOpen() {
-    return this.#opened !== null && this.#opened === this.#current();
   }
 
   /// After a commit, which is what the engine learns from: at once, once per
@@ -137,13 +127,6 @@ export class Learning {
   scheduleSave() {
     clearTimeout(this.#saveTimer);
     this.#saveTimer = setTimeout(() => this.#save(), 0);
-  }
-
-  /// After a Learning Records write: at once, so a trap before a timer fires
-  /// cannot bring the deleted rows back with the next instance's import.
-  saveNow() {
-    clearTimeout(this.#saveTimer);
-    this.#save();
   }
 
   #save() {

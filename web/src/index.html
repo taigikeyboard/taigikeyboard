@@ -219,42 +219,6 @@
           <button class="setting-reset" type="button" data-i18n="theme.editorResetAll">Reset to Defaults</button>
         </details>
       </form>
-      <details id="learning-records" class="sidebar-section" hidden>
-        <summary data-i18n="dictionary.learningRecords">Learning Records</summary>
-        <label class="setting"><span data-i18n="dictionary.learningRecords">Learning Records</span>
-          <select id="records-kind">
-            <option value="0" data-i18n="dictionary.learningRecordsFrequency" selected>Word Frequency</option>
-            <option value="1" data-i18n="dictionary.learningRecordsPhrases">Phrases</option>
-          </select>
-        </label>
-        <label class="setting"><span data-i18n="dictionary.learningRecordsOrder">Sort By</span>
-          <select id="records-order">
-            <option value="0" data-i18n="dictionary.learningRecordsOrderMostUsed" selected>Most Used</option>
-            <option value="1" data-i18n="dictionary.learningRecordsOrderMostRecent">Most Recent</option>
-          </select>
-        </label>
-        <input id="records-filter" class="records-filter" type="search" placeholder="Type to search" data-i18n-placeholder="dictionary.searchPlaceholder" data-i18n-aria-label="dictionary.searchPlaceholder" autocomplete="off" autocapitalize="off" spellcheck="false">
-        <div class="record records-head" aria-hidden="true">
-          <span data-i18n="dictionary.romanLabel">Romanization</span>
-          <span data-i18n="dictionary.hanziLabel">Hanji</span>
-          <span class="record-count" data-i18n="dictionary.learningRecordsCount">Count</span>
-          <span class="record-last-used" data-i18n="dictionary.learningRecordsLastUsed">Last Used</span>
-        </div>
-        <ol id="records-rows" class="records-rows"></ol>
-        <p id="records-empty" class="records-empty" hidden></p>
-        <div class="records-pager">
-          <span id="records-count" class="records-count"></span>
-          <button id="records-previous" class="records-step" type="button" data-i18n-aria-label="common.pagePrevious" data-i18n-title="common.pagePrevious" disabled>
-            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M6 2.5L3.5 5 6 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-          <span id="records-page"></span>
-          <button id="records-next" class="records-step" type="button" data-i18n-aria-label="common.pageNext" data-i18n-title="common.pageNext" disabled>
-            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M4 2.5L6.5 5 4 7.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-        <p id="records-status" class="records-status" role="status"></p>
-        <button id="records-clear" class="setting-reset" type="button" data-i18n="dictionary.clearLearningRecords">Delete Learning Records</button>
-      </details>
       <details class="sidebar-section">
         <summary data-i18n="web.otherResources">Other Resources</summary>
         <nav class="sidebar-links" data-i18n-aria-label="web.otherResources">

@@ -13,7 +13,6 @@
 mod bindings;
 mod key;
 mod layout;
-mod learning_records;
 mod page_settings;
 mod reply;
 mod session;
