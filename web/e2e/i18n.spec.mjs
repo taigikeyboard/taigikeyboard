@@ -64,9 +64,9 @@ test("the title and Copy, Clear stay put in every language", async ({
   page,
 }) => {
   await open(page, { settings: { displayLanguage: "ja" } });
-  await expect(page).toHaveTitle("台語齒盤線頂版");
+  await expect(page).toHaveTitle("台語齒盤線頂 Beta 版");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "台語齒盤線頂版",
+    "台語齒盤線頂 Beta 版",
   );
   await expect(page.getByRole("button", { name: "Copy" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Clear" })).toBeVisible();
