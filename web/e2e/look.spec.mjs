@@ -312,9 +312,14 @@ test("the textarea starts short however tall the window", async ({ page }) => {
   expect((await editor.boundingBox()).height).toBeCloseTo(352, 0);
 });
 
-test("the footer names its author", async ({ page }) => {
+test("the footer matches the converter's", async ({ page }) => {
   await open(page);
-  await expect(page.locator("footer p")).toHaveText("© 2026 Bîn-hiân");
+  const footer = page.locator("footer p");
+  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持 ❤️");
+  await expect(footer.getByRole("link")).toHaveAttribute(
+    "href",
+    "https://p.ecpay.com.tw/AA663DE",
+  );
 });
 
 test("the footer rests at the window's foot, then below the page", async ({
