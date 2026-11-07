@@ -9,10 +9,20 @@
 ;   TaigiKeyboard32.dll            (x86 text service for 32-bit hosts, signed;
 ;                                   beside the x64 one — windows-release.md
 ;                                   § The 32-bit service)
-;   TaigiKeyboardSettings.exe      (signed)
+;   TaigiKeyboardArm64.dll         (Arm64 text service, signed; installed on
+;                                   an Arm64 machine only)
+;   TaigiKeyboard64X.dll           (Arm64X forwarder, signed; Arm64 only — the
+;                                   InProcServer32 that sends Arm64 hosts to
+;                                   the Arm64 service and x64-emulated hosts to
+;                                   the x64 one, docs/architecture/
+;                                   windows-arm64-roadmap.md)
+;   TaigiKeyboardSettings.exe      (x64, signed)
+;   arm64\TaigiKeyboardSettings.exe (Arm64, signed; installed under the same
+;                                   name on an Arm64 machine)
 ;   Runtime\*                      (the Windows App Runtime the settings window
 ;                                   runs on — self-contained, roadmap W17;
 ;                                   installed BESIDE the exe)
+;   RuntimeArm64\*                 (the same set for the Arm64 exe)
 ;   Dictionaries\*                 (from the repo-root assets/dictionaries)
 ;   Fonts\*                        (from the repo-root assets/fonts/font)
 ;   update-check-task.xml          (the scheduled task's definition)
@@ -45,6 +55,8 @@
 #define SettingsExe "TaigiKeyboardSettings.exe"
 #define ServiceDll "TaigiKeyboard.dll"
 #define ServiceDll32 "TaigiKeyboard32.dll"
+#define ServiceDllArm64 "TaigiKeyboardArm64.dll"
+#define ForwarderDll "TaigiKeyboard64X.dll"
 ; The one Start-menu entry, spelled once for [Icons] and for the two [Code]
 ; sites that localize and un-localize its display name.
 #define ShortcutName "{autoprograms}\" + AppName
@@ -86,15 +98,14 @@ PrivilegesRequired=admin
 ; what the app falls back to. `/LANG=english` on the command line still wins.
 ShowLanguageDialog=no
 LanguageDetectionMethod=uilanguage
-; `x64os`, not `x64compatible`: the latter also matches Arm64 Windows 11,
-; which runs x64 binaries under emulation. A text service is loaded in the
-; host process's own architecture and no Arm64 service is built, so on an
-; Arm64 machine this would install and then do nothing in every Arm64-native
-; application (Notepad, Edge, Office) while working in emulated ones. For an
-; input method that is indistinguishable from broken, so the architecture
-; check refuses it (USER 2026-09-01: no Arm64 release for now).
-ArchitecturesAllowed=x64os
-ArchitecturesInstallIn64BitMode=x64os
+; One universal installer (docs/architecture/windows-arm64-roadmap.md D3):
+; `x64compatible` matches x64 Windows and Arm64 Windows 11. A text service
+; loads in the host process's own architecture, so an Arm64 machine gets the
+; Arm64 service, the x64 one for x64-emulated hosts and the Arm64X forwarder
+; between them ([Files] `Check: IsArm64`). Arm64 Windows 10 has no x64
+; emulation and `x64compatible` does not match it, so Inno itself refuses it.
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 ; Inno's own default is 6.1sp1 (Windows 7 SP1). 17763 is Windows 10 1809,
 ; the oldest build the Windows App Runtime supports (Microsoft, Windows App
 ; SDK § supported Windows releases) — the settings window is WinUI 3 over
@@ -143,12 +154,21 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 #include "Messages.iss"
 
 [Files]
+; The x64 service on both machines: on Arm64 the x64-emulated hosts load it
+; through the forwarder.
 Source: "{#Dist}\{#ServiceDll}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Dist}\{#ServiceDll32}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#Dist}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Dist}\{#ServiceDllArm64}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
+Source: "{#Dist}\{#ForwarderDll}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
+; The settings window and its runtime in the machine's own architecture, under
+; one install name, so the shortcut, the uninstall icon, the update task and
+; the updater's own-exe check are the same on both.
+Source: "{#Dist}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion; Check: not IsArm64
+Source: "{#Dist}\arm64\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion; Check: IsArm64
 ; W17: the Windows App Runtime files sit beside the exe (their loader looks
 ; in the exe's directory); Inno records each and removes them on uninstall.
-Source: "{#Dist}\Runtime\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Dist}\Runtime\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: not IsArm64
+Source: "{#Dist}\RuntimeArm64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsArm64
 Source: "{#Dist}\Dictionaries\*"; DestDir: "{app}\Dictionaries"; Flags: ignoreversion
 Source: "{#Dist}\Fonts\*"; DestDir: "{app}\Fonts"; Flags: ignoreversion
 Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion
@@ -197,7 +217,10 @@ Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#SettingsExe} /F"; Flags: runh
 ; side creates it elevated (RegisterUpdateTask).
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteTask"
 Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll32}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"
-Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX64"
+; The native 64-bit service unregisters itself (NativeDll in [Code]). Never
+; the forwarder: it exports only the two activation entry points.
+Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX64"; Check: not IsArm64
+Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDllArm64}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterArm64"; Check: IsArm64
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Dictionaries"
@@ -277,7 +300,7 @@ var
   // moved: a restore registers only those (RestorePreviousVersion), so a
   // failed FRESH install registers nothing, and a failed upgrade from a
   // version without the 32-bit service does not register the new one.
-  HadX64Dll: Boolean;
+  HadNativeDll: Boolean;
   HadX86Dll: Boolean;
 
 // Delete, or fail that and have Windows delete it at the next restart.
@@ -518,7 +541,9 @@ begin
   Log(Format('regsvr32 %s -> %d', [Parameters, ResultCode]));
 end;
 
-function X64Regsvr32: String;
+// In 64-bit install mode `{sys}` is the native System32 on both machines, so
+// this is the x64 regsvr32 on x64 Windows and the Arm64 one on Arm64.
+function NativeRegsvr32: String;
 begin
   Result := ExpandConstant('{sys}\regsvr32.exe');
 end;
@@ -536,6 +561,16 @@ end;
 function X86Dll: String;
 begin
   Result := ExpandConstant('{app}\{#ServiceDll32}');
+end;
+
+// The 64-bit service that registers itself. Never the x64 one on Arm64: it
+// would overwrite InProcServer32 with a path Arm64 hosts cannot load.
+function NativeDll: String;
+begin
+  if IsArm64 then
+    Result := ExpandConstant('{app}\{#ServiceDllArm64}')
+  else
+    Result := X64Dll;
 end;
 
 procedure StopSettingsWindow;
@@ -563,7 +598,7 @@ begin
   // flight when it starts.
   RecoverLegacyLeftovers(X64Dll);
   RecoverStaleFiles(AppDir);
-  HadX64Dll := FileExists(X64Dll);
+  HadNativeDll := FileExists(NativeDll);
   HadX86Dll := FileExists(X86Dll);
 
   // Unregister BEFORE moving anything: it stops new activations finding the
@@ -571,8 +606,8 @@ begin
   // about to move. A failure here is logged, not fatal — the move below empties
   // the path anyway, so nothing can be loaded from it, and the new DLL's own
   // registration overwrites the same CLSID.
-  if HadX64Dll and not RegisterDll(X64Regsvr32, X64Dll, True) then
-    Log('unregister: regsvr32 /u ' + X64Dll + ' failed');
+  if HadNativeDll and not RegisterDll(NativeRegsvr32, NativeDll, True) then
+    Log('unregister: regsvr32 /u ' + NativeDll + ' failed');
   if HadX86Dll and not RegisterDll(X86Regsvr32, X86Dll, True) then
     Log('unregister: regsvr32 /u ' + X86Dll + ' failed');
 
@@ -653,8 +688,8 @@ begin
   // and registering it would leave a half-installed service active.
   if HadX86Dll and not RegisterDll(X86Regsvr32, X86Dll, False) then
     Log('restore: put ' + X86Dll + ' back but could not register it');
-  if HadX64Dll and not RegisterDll(X64Regsvr32, X64Dll, False) then
-    Log('restore: put ' + X64Dll + ' back but could not register it');
+  if HadNativeDll and not RegisterDll(NativeRegsvr32, NativeDll, False) then
+    Log('restore: put ' + NativeDll + ' back but could not register it');
 end;
 
 // The ssPostInstall path into it: this run got as far as registering the new
@@ -662,7 +697,7 @@ end;
 procedure RollBack;
 begin
   RegisterDll(X86Regsvr32, X86Dll, True);
-  RegisterDll(X64Regsvr32, X64Dll, True);
+  RegisterDll(NativeRegsvr32, NativeDll, True);
   RestorePreviousVersion;
 end;
 
@@ -691,16 +726,17 @@ end;
 // The 32-bit service registers FIRST. Each architecture writes its own
 // CLSID\InProcServer32 (the 64-bit view and WOW6432Node), but the TSF profile
 // and its categories under HKLM\SOFTWARE\Microsoft\CTF\TIP are ONE shared
-// record that the last registration overwrites — so the 64-bit DLL goes last
-// and the profile's description and icon name it, the copy every 64-bit host
-// and the Settings keyboard list read (docs/architecture/windows-release.md,
-// measured 2026-09-01).
+// record that the last registration overwrites — so the native 64-bit DLL goes
+// last and the profile's description and icon name it, the copy every 64-bit
+// host and the Settings keyboard list read (docs/architecture/windows-release.md,
+// measured 2026-09-01). On Arm64 that is the Arm64 DLL, whose InProcServer32 is
+// the forwarder; x64-emulated hosts reach the x64 DLL through it.
 procedure RegisterEverything;
 begin
   if not RegisterDll(X86Regsvr32, X86Dll, False) then
     FailStep('regsvr32 ' + X86Dll);
-  if not RegisterDll(X64Regsvr32, X64Dll, False) then
-    FailStep('regsvr32 ' + X64Dll);
+  if not RegisterDll(NativeRegsvr32, NativeDll, False) then
+    FailStep('regsvr32 ' + NativeDll);
   UpdateTaskFailed := not RegisterUpdateTask;
 end;
 
