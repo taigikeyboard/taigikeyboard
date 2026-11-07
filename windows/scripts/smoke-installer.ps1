@@ -77,6 +77,11 @@ switch ($Action) {
         Assert-Equal 'WOW6432Node InProcServer32' (Get-InProcServer $Clsid32Key) (Join-Path $AppDir 'TaigiKeyboard32.dll')
         $native = if ($IsArm64) { 'TaigiKeyboard64X.dll' } else { 'TaigiKeyboard.dll' }
         Assert-Equal 'InProcServer32' (Get-InProcServer $Clsid64Key) (Join-Path $AppDir $native)
+        # The shared TSF profile names whichever service registered last, which
+        # must be the native 64-bit one (TaigiKeyboard.iss RegisterEverything).
+        $nativeService = if ($IsArm64) { 'TaigiKeyboardArm64.dll' } else { 'TaigiKeyboard.dll' }
+        $profile = Get-ChildItem "$TipKey\LanguageProfile" -Recurse | Get-ItemProperty | Where-Object { $_.IconFile } | Select-Object -First 1
+        Assert-Equal 'profile icon' $profile.IconFile (Join-Path $AppDir $nativeService)
         $machine = if ($IsArm64) { 'AA64' } else { '8664' }
         Assert-Equal 'settings exe machine' (Get-PeMachine (Join-Path $AppDir 'TaigiKeyboardSettings.exe')) $machine
         Assert-Equal 'runtime machine' (Get-PeMachine (Join-Path $AppDir 'microsoft.ui.xaml.dll')) $machine
@@ -93,9 +98,10 @@ switch ($Action) {
         $uninstaller = Join-Path $AppDir 'unins000.exe'
         if (-not (Test-Path $uninstaller)) { Fail "no $uninstaller" }
         Write-Host "==> $uninstaller"
-        # The uninstaller relaunches itself from %TEMP% and the first process
-        # exits at once, so the end of the uninstall is its entry going away.
-        Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+        # The uninstaller runs from a copy in %TEMP% and ends this process when
+        # it is done; the entry going away is waited on too, as the outcome.
+        $process = Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+        if ($process.ExitCode -ne 0) { Fail "$uninstaller exited $($process.ExitCode)" }
         $deadline = (Get-Date).AddMinutes(3)
         while ((Test-Path $UninstallKey) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
         foreach ($key in $UninstallKey, $Clsid64Key, $Clsid32Key, $TipKey) {

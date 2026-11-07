@@ -135,7 +135,7 @@ Registration, measured with `regsvr32` and a registry dump:
 
 ### The Arm64 services
 
-Merged through #721 (2026-11); design, measurements and the spike record:
+Issue #721; design, measurements and the spike record:
 `windows-arm64-roadmap.md`.
 
 - **Why a forwarder**: one CLSID has one 64-bit `InprocServer32`, and

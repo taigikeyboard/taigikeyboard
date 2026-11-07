@@ -271,8 +271,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   first, "switch input method → sign out → sign in" guidance when a host still holds
   the DLL (rakukan `iss:317-335`). **Architectures (Codex): x64 is v1; x86 (WOW64
   hosts) ships once x64 registration/uninstall is proven on a real box; ARM64 is a
-  built target but not published without a native smoke test.** Arm64 support merged
-  2026-11 through an Arm64X forwarder (`windows-arm64-roadmap.md`). Release =
+  built target but not published without a native smoke test.** Arm64 support:
+  #721, through an Arm64X forwarder (`windows-arm64-roadmap.md`). Release =
   `windows/scripts/release-app.sh` (bash via Git Bash, mirroring
   `macos/scripts/release-app.sh`): clean-tree preflight → cargo release builds → `iscc`
   → optional `signtool` (env-gated) → SHA-256 → `windows/scripts/publish-release.sh`
