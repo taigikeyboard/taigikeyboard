@@ -20,7 +20,7 @@
       }
     },
     "placeholder": {
-      "comment": "Hint in the empty text box; {key} is the \"/\" key drawn as a keycap, which focuses the box.",
+      "comment": "Hint in the empty text box while it is not focused; {key} is the \"/\" key drawn as a keycap, which focuses the box.",
       "scope": {
         "platforms": [
           "web"
@@ -30,11 +30,11 @@
         ]
       },
       "values": {
-        "hanji": "揤 {key} 拍字",
-        "tailo": "Tshi̍h {key} phah-jī",
-        "poj": "Chhi̍h {key} phah-jī",
-        "en": "Press {key} to type",
-        "ja": "{key} を押して入力"
+        "hanji": "揤 {key} 開始拍字",
+        "tailo": "Tshi̍h {key} khai-sí phah-jī",
+        "poj": "Chhi̍h {key} khai-sí phah-jī",
+        "en": "Press {key} to start typing",
+        "ja": "{key} を押して入力を開始"
       },
       "placeholders": {
         "key": "string"
