@@ -61,6 +61,30 @@ function Get-PeMachine([string] $Path) {
     '{0:X4}' -f [BitConverter]::ToUInt16($header, $peOffset + 4)
 }
 
+$SessionManagerKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'
+# Maps a DLL as an image whatever its machine, without running it: the mapping
+# a host's loaded copy makes, as far as deleting the file is concerned.
+$LoadAsImageResource = 0x20
+Add-Type -Namespace TaigiSmoke -Name Kernel32 -MemberDefinition @'
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+public static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
+[DllImport("kernel32.dll")]
+public static extern bool FreeLibrary(IntPtr module);
+'@
+
+# PendingFileRenameOperations holds (source, target) pairs; a delete is a
+# source with an empty target. Sources are NT paths (`\??\C:\...`); some carry
+# a `*1` prefix (measured on Windows 11 Arm64, 26300).
+function Assert-PendingDelete([string[]] $Pending, [string] $Path) {
+    for ($i = 0; $i + 1 -lt $Pending.Count; $i += 2) {
+        if (($Pending[$i] -replace '^\*\d+', '') -eq "\??\$Path" -and $Pending[$i + 1] -eq '') {
+            Write-Host "  queued for restart: $Path"
+            return
+        }
+    }
+    Fail "$Path is left behind and not queued for deletion at restart"
+}
+
 function Get-InProcServer([string] $ClsidKey) {
     (Get-ItemProperty -Path "$ClsidKey\InProcServer32").'(default)'
 }
@@ -108,7 +132,19 @@ switch ($Action) {
     'Uninstall' {
         $uninstaller = Join-Path $AppDir 'unins000.exe'
         if (-not (Test-Path $uninstaller)) { Fail "no $uninstaller" }
-        Write-Host "==> $uninstaller"
+        # Uninstall the way a user does: with a host still holding the 64-bit
+        # service (and on Arm64 the forwarder) mapped. An image mapping blocks
+        # the delete, so those files must come out queued for the next restart
+        # (TaigiKeyboard.iss [Files] uninsrestartdelete), the directory after
+        # them; everything else must be gone now.
+        $held = @($NativeService)
+        if ($IsArm64) { $held += $InProcServer }
+        $handles = foreach ($name in $held) {
+            $handle = [TaigiSmoke.Kernel32]::LoadLibraryExW((Join-Path $AppDir $name), [IntPtr]::Zero, $LoadAsImageResource)
+            if ($handle -eq [IntPtr]::Zero) { Fail "could not map $name" }
+            $handle
+        }
+        Write-Host "==> $uninstaller (holding $($held -join ', '))"
         # The uninstaller runs from a copy in %TEMP% and ends this process when
         # it is done; the entry going away is waited on too, as the outcome.
         $process = Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
@@ -118,9 +154,15 @@ switch ($Action) {
         foreach ($key in $UninstallKey, $Clsid64Key, $Clsid32Key, $TipKey) {
             if (Test-Path $key) { Fail "$key is still there after uninstalling" }
         }
+        $pending = @((Get-ItemProperty $SessionManagerKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)
         foreach ($name in $SharedFiles + $Arm64Files) {
-            if (Test-Path (Join-Path $AppDir $name)) { Fail "$name is still installed" }
+            $path = Join-Path $AppDir $name
+            if (-not (Test-Path $path)) { continue }
+            if ($held -notcontains $name) { Fail "$name is still installed" }
+            Assert-PendingDelete $pending $path
         }
+        Assert-PendingDelete $pending $AppDir
+        foreach ($handle in $handles) { [void] [TaigiSmoke.Kernel32]::FreeLibrary($handle) }
         Write-Host 'OK  uninstalled'
     }
 }
