@@ -33,6 +33,8 @@ const PRODUCT_NAME: &str = "TaigiKeyboard";
 /// Exported to the crate as `TAIGI_PRODUCT_NAME_STRING_ID` so the registration
 /// code names the same resource this script wrote (`@<dll>,-<id>`).
 pub const PRODUCT_NAME_STRING_ID: u16 = 100;
+// COMPANY_NAME and COPYRIGHT are repeated in `forwarder/forwarder.rc` (the
+// Arm64X forwarder is linked by `link.exe`, not cargo) — change both together.
 const COMPANY_NAME: &str = "Soo Bîn-hiân 蘇民弦 <info@taigikeyboard.tw>";
 const COPYRIGHT: &str = "Copyright (c) 2025-2026 Soo Bîn-hiân 蘇民弦. Apache License 2.0.";
 /// The app icon: `RegisterProfile`'s icon index 0 names the first icon

@@ -4,6 +4,12 @@
 # installs into Program Files, signs, and registers a scheduled task. This
 # registers the build tree in place so a rebuild is one command.
 #
+# On an Arm64 machine it builds the Arm64 and the x64 text service, links the
+# Arm64X forwarder between them and registers a staged copy under
+# `target\arm64x-dev` (docs/architecture/windows-arm64-roadmap.md § Install
+# layout) — cargo writes both DLLs under one name, so they cannot sit side by
+# side in a target directory.
+#
 #   .\install-dev.ps1 install     build, register, refresh the indicator
 #   .\install-dev.ps1 uninstall   unregister (user data under %APPDATA% stays)
 #   .\install-dev.ps1 unlock      free the dll names the linker writes through,
@@ -53,16 +59,37 @@ if (-not [Environment]::Is64BitProcess) {
 # because that file is bash.
 $RepositoryDir = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSCommandPath))
 $WindowsDir = Join-Path $RepositoryDir 'windows'
-$ReleaseTarget = 'x86_64-pc-windows-msvc'
-$TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
-$ServiceDll = Join-Path $TargetDir 'TaigiKeyboard.dll'
-# The linker writes `release\deps\TaigiKeyboard.dll` and cargo hard-links it
-# into `release\`: TWO NAMES, ONE FILE. Moving one aside does not free the
-# other, so a loaded dll still failed the link with LNK1104 until both were
-# moved (observed 2026-08-30, fixed 2026-08-31). Every name the linker needs
-# free, in the order the sweep visits them.
-$ServiceDllNames = @($ServiceDll, (Join-Path $TargetDir 'deps\TaigiKeyboard.dll'))
-$SettingsExe = Join-Path $TargetDir 'TaigiKeyboardSettings.exe'
+$X64Target = 'x86_64-pc-windows-msvc'
+# The OS's architecture, not this process's: an x64-emulated PowerShell
+# reports AMD64 in its own environment.
+$Machine = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment').PROCESSOR_ARCHITECTURE
+$IsArm64 = $Machine -eq 'ARM64'
+# registration.rs FORWARDER_DLL; build.rs's Arm64 OriginalFilename.
+$ForwarderName = 'TaigiKeyboard64X.dll'
+$Arm64ServiceName = 'TaigiKeyboardArm64.dll'
+if ($IsArm64) {
+    $ReleaseTarget = 'aarch64-pc-windows-msvc'
+    $TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
+    # What is registered and loaded: staged copies under their install names.
+    $InstallDir = Join-Path $WindowsDir 'target\arm64x-dev'
+    $ServiceDll = Join-Path $InstallDir $Arm64ServiceName
+    $X64ServiceDll = Join-Path $InstallDir 'TaigiKeyboard.dll'
+    # Hosts map the staged copies, never cargo's output, so these are the
+    # names to free before staging again.
+    $ServiceDllNames = @($ServiceDll, $X64ServiceDll, (Join-Path $InstallDir $ForwarderName))
+} else {
+    $ReleaseTarget = $X64Target
+    $TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
+    $InstallDir = $TargetDir
+    $ServiceDll = Join-Path $TargetDir 'TaigiKeyboard.dll'
+    # The linker writes `release\deps\TaigiKeyboard.dll` and cargo hard-links it
+    # into `release\`: TWO NAMES, ONE FILE. Moving one aside does not free the
+    # other, so a loaded dll still failed the link with LNK1104 until both were
+    # moved (observed 2026-08-30, fixed 2026-08-31). Every name the linker needs
+    # free, in the order the sweep visits them.
+    $ServiceDllNames = @($ServiceDll, (Join-Path $TargetDir 'deps\TaigiKeyboard.dll'))
+}
+$SettingsExe = Join-Path $InstallDir 'TaigiKeyboardSettings.exe'
 # The one committed copy every platform packages from (#14, `f4e0fb20`);
 # it used to be reached through the iOS bundle's own folder, which no longer
 # exists.
@@ -174,6 +201,12 @@ function Build-Service {
         $env:TAIGI_REQUIRE_RESOURCES = '1'
         & cargo build --release --target $ReleaseTarget
         if ($LASTEXITCODE -ne 0) { Fail 'cargo build failed' }
+        if ($IsArm64) {
+            # The text service only: x64-emulated hosts load it through the
+            # forwarder, while the settings window runs as the Arm64 exe.
+            & cargo build --release --target $X64Target -p taigi-windows-tsf
+            if ($LASTEXITCODE -ne 0) { Fail "cargo build --target $X64Target failed" }
+        }
     } finally {
         Pop-Location
     }
@@ -183,8 +216,8 @@ function Build-Service {
 # to reproduce the layout release-app.sh stages.
 function Copy-Resources {
     Write-Host '==> Staging dictionaries and fonts beside the dll'
-    $dictionaries = Join-Path $TargetDir 'Dictionaries'
-    $fonts = Join-Path $TargetDir 'Fonts'
+    $dictionaries = Join-Path $InstallDir 'Dictionaries'
+    $fonts = Join-Path $InstallDir 'Fonts'
     New-Item -ItemType Directory -Force -Path $dictionaries, $fonts | Out-Null
     # A missing syllables.fst is a corrupt install, not an optional degrade
     # (dictionary_artifacts.rs).
@@ -199,6 +232,50 @@ function Copy-Resources {
     if (-not $faces) { Fail "no font files in $FontsSource" }
     $faces | Copy-Item -Destination $fonts -Force
     Write-Host "  4 dictionary artifacts, $($faces.Count) fonts"
+}
+
+# The PE machine field of a binary, as dumpbin prints it (`AA64`, `8664`).
+function Get-PeMachine([string] $Path) {
+    $header = New-Object byte[] 4096
+    $stream = [IO.File]::OpenRead($Path)
+    try { [void] $stream.Read($header, 0, $header.Length) } finally { $stream.Dispose() }
+    $peOffset = [BitConverter]::ToInt32($header, 0x3C)
+    '{0:X4}' -f [BitConverter]::ToUInt16($header, $peOffset + 4)
+}
+
+# The Arm64 install layout (roadmap § Install layout): both text services
+# under their install names, the forwarder between them, and the Arm64
+# settings exe with the Windows App Runtime it loads from its own directory —
+# the text service starts the exe from the DLL's directory (module.rs).
+function Copy-Arm64Install {
+    Write-Host '==> Staging the Arm64 install'
+    New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+    Copy-Item (Join-Path $TargetDir 'TaigiKeyboard.dll') $ServiceDll -Force
+    Copy-Item (Join-Path $WindowsDir "target\$X64Target\release\TaigiKeyboard.dll") $X64ServiceDll -Force
+    Copy-Item (Join-Path $TargetDir 'TaigiKeyboardSettings.exe') $SettingsExe -Force
+    $runtimeList = Join-Path $WindowsDir 'build-support\windows-app-runtime-files.txt'
+    foreach ($name in Get-Content $runtimeList) {
+        $name = $name.Trim()
+        if (-not $name -or $name.StartsWith('#')) { continue }
+        $source = Join-Path $TargetDir $name
+        if (-not (Test-Path $source)) { Fail "missing Windows App Runtime file $name in $TargetDir (windows-reactor-setup staging)" }
+        Copy-Item $source $InstallDir -Recurse -Force
+    }
+    # windows-reactor-setup caches the extracted runtime once per machine, not
+    # per architecture: after an x64 settings build it stages x64 DLLs beside
+    # the Arm64 exe, and the window never opens.
+    $xaml = Join-Path $InstallDir 'microsoft.ui.xaml.dll'
+    $machine = Get-PeMachine $xaml
+    if ($machine -ne 'AA64') {
+        Fail @"
+$xaml is PE machine $machine, not AA64: windows-reactor-setup reused an x64 runtime extraction.
+Delete the .msix_extract directory under $env:LOCALAPPDATA\windows-reactor-setup and run this again.
+"@
+    }
+    # Its own process: it enters a Visual Studio developer environment, which
+    # would otherwise stay in this one.
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'build-forwarder.ps1') -OutDir $InstallDir
+    if ($LASTEXITCODE -ne 0) { Fail "build-forwarder.ps1 exited $LASTEXITCODE" }
 }
 
 # The indicator caches what it drew; restarting the process that draws it is
@@ -250,6 +327,12 @@ function Unregister-Service {
         Write-Host '  nothing registered'
         return
     }
+    # On Arm64 the registry names the forwarder, which exports no
+    # DllUnregisterServer: the Arm64 DLL beside it registered it and is the one
+    # that unregisters it.
+    if ((Split-Path $registered -Leaf) -eq $ForwarderName) {
+        $registered = Join-Path (Split-Path $registered -Parent) $Arm64ServiceName
+    }
     if (-not (Test-Path $registered)) {
         # Deleting the keys by hand looks equivalent and is not: registration.rs
         # also unregisters four TSF categories through ITfCategoryMgr, and those
@@ -289,6 +372,7 @@ switch ($Action) {
         Stop-SettingsWindow
         Clear-BuildOutput
         Build-Service
+        if ($IsArm64) { Copy-Arm64Install }
         if (-not (Test-Path $ServiceDll)) { Fail "the build produced no $ServiceDll" }
         if (-not (Test-Path $SettingsExe)) { Fail "the build produced no $SettingsExe" }
         Copy-Resources
@@ -304,6 +388,12 @@ switch ($Action) {
         # No registration change and no build: just the names. A release build
         # runs from the same tree the dev install is registered from, and a host
         # that has the old dll mapped stops the linker replacing it.
+        if ($IsArm64) {
+            # Hosts map the staged copies under target\arm64x-dev, which the
+            # linker never writes; freeing them would only break the install.
+            Write-Host 'OK  nothing to free: an Arm64 dev install runs staged copies.'
+            return
+        }
         Write-Host '==> Freeing the build output'
         Stop-SettingsWindow
         Clear-BuildOutput
