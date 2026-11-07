@@ -221,11 +221,12 @@ done
 # list. The arm64-smoke CI job proves the x64 view activates.
 require_version_info "$FORWARDER"
 forwarder_imports="$(dumpbin -nologo -dependents "$(windows_path "$FORWARDER")" | tr -d '\r')"
-if grep -q 'has the following dependencies' <<< "$forwarder_imports"; then
+if grep -qE 'has the following( delay load)? dependencies' <<< "$forwarder_imports"; then
     echo "$forwarder_imports" >&2
     fail "$FORWARDER_DLL imports a DLL — a pure forwarder imports nothing"
 fi
-dumpbin -nologo -headers "$(windows_path "$FORWARDER")" | tr -d '\r' | grep -q 'AA64 machine (ARM64) (ARM64X)' ||
+forwarder_headers="$(dumpbin -nologo -headers "$(windows_path "$FORWARDER")" | tr -d '\r')"
+grep -qF 'AA64 machine (ARM64) (ARM64X)' <<< "$forwarder_headers" ||
     fail "$FORWARDER_DLL is not an Arm64X image"
 forwarder_exports="$(dumpbin -nologo -exports "$(windows_path "$FORWARDER")" | tr -d '\r')"
 arm64_module="${SERVICE_DLL_ARM64%.dll}"
@@ -266,9 +267,11 @@ cp "$TARGET_DIR_ARM64/$SETTINGS_EXE" "$STAGING_DIR/arm64/"
 # Fails unless dumpbin reads `file`'s PE machine as `machine` (`8664`, `14C`,
 # `AA64`).
 require_pe_machine() {
-    local file="$1" machine="$2"
-    dumpbin -nologo -headers "$(windows_path "$file")" | tr -d '\r' |
-        grep -qE "^[[:space:]]+$machine machine" ||
+    local file="$1" machine="$2" headers
+    # Captured before grep reads it: `dumpbin | grep -q` under pipefail fails
+    # at random when grep exits early and the writer takes SIGPIPE.
+    headers="$(dumpbin -nologo -headers "$(windows_path "$file")" | tr -d '\r')"
+    grep -qE "^[[:space:]]+$machine machine" <<< "$headers" ||
         fail "$file is not built for PE machine $machine"
 }
 # The services and the settings exes share a file name in their target
@@ -317,6 +320,7 @@ stage_runtime() {
     done < "$RUNTIME_LIST"
     [[ $count -gt 0 ]] || fail "no Windows App Runtime entries in $RUNTIME_LIST"
     for dll in "$destination"/*.dll; do
+        [[ -e "$dll" ]] || fail "no top-level DLL staged in $destination"
         require_pe_machine "$dll" "$machine"
     done
 }

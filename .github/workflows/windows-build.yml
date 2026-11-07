@@ -10,7 +10,7 @@ name: Windows build
 # `make windows-release` can never satisfy that, so releases are built here. The
 # signing step is a later, small addition once a certificate exists.
 #
-# It does NOT publish. A dispatched run attaches the installer to the draft, a
+# It does NOT publish. A run dispatched on `main` attaches the installer to the draft, a
 # person publishes that draft, and `tools/release/announce-release.sh` announces it.
 on:
   # How a release stages the Windows installer: `tools/release/stage-desktop.sh`
