@@ -236,7 +236,8 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 | Keyboard Layout setting | No row | `event.key` already follows the OS layout |
 | Candidate window | macOS Tahoe's look from `CandidateMetrics.swift`, unrounded lengths. The composition sits in the panel's first row; a column pages by nine rather than scrolling with a half-row peek, so the key labels stay the session's; a row wraps rather than paging by width; the highlight is `--accent`, not the system accent; the expandable grid has no scrollbar | A textarea has no inline marked text; `LookupSelection` owns paging of the two paged layouts, `ExpandableListModel` the two expandable ones, as on Windows |
 | Panic | Trap, then a new instance | No unwinding on this target |
-| Learning, Custom Dictionary | **Pending** until Phase 8 | § Decisions D5 |
+| Learning | Phase 8: on by default, as every other platform; one tab learns at a time | § Decisions D7–D9 |
+| Custom Dictionary, `.taigi` backup | None yet | Maintainer 2026-11-07: learning first |
 
 ## Phases
 
@@ -252,7 +253,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
 | 6 | Loading and offline | Playwright offline run | Done |
 | 7 | Deploy | `check-live` on the real URL | Done |
-| 8 | User data | spike first, then its own plan | Pending |
+| 8 | User data: learning on (8a), Learning Records section (8b) | spike done 2026-11-07; native suites unchanged, Node + Playwright | Pending |
 
 ### Phase 1 — Engine runs on wasm32
 
@@ -353,11 +354,43 @@ Flow: `web-release.md`. Maintainer 2026-11-07: the first public page is settings
 
 ### Phase 8 — User data
 
-Not required for a useful first page. Gate it with a spike, because this is the one part with no working proof.
+Maintainer 2026-11-07 ("follow your recommendation"): make the web learn the way the other platforms do, persisted, learning plus the Learning Records section first; Custom Dictionary and `.taigi` backup later. Decisions D7–D9.
 
-What the 2026-11-06 check found: `rusqlite` selects `sqlite-wasm-rs` by itself on this target. The build stops at `uuid`, which needs a random source feature. `engine/userdata/src/handle.rs:99` and `database.rs:290` start threads this target does not have. `engine/dispatch/src/user_data/with_stores.rs:131` and `engine/userdata/src/timestamp.rs:15` still call `SystemTime::now`, past the Phase 1 `Clock` seam, so the stores need the clock too.
+Why persisted: every other platform keeps learning in the same SQLite stores, so a web that forgets on reload would not be the same keyboard. McBopomofoWeb learns in memory only (`src/McBopomofo/KeyHandler.ts:274`, `UserOverrideModel.ts` has no save) and keeps only its user phrases, in `localStorage` (`output/example/index.js:1013-1030`); that matches its own native app, not ours.
 
-The storage choice is constrained by the main-thread decision. `sqlite-wasm-rs`'s OPFS `sahpool` VFS needs a Dedicated Worker, and the engine lives on the main thread. That leaves its IndexedDB-backed `relaxed-idb` VFS or an in-memory database saved to OPFS, to be proven by the spike. Stores stay in `engine/userdata` either way (`rust-migration-policy.md` §6). `.taigi` backup import and export lets a user carry data between the web and the apps.
+#### Spike 2026-11-07 (scratchpad, not committed)
+
+The real engine and stores in WASM, driven from Node through the page's bindings. Picking 狗岫 for `kausiu` three times put it first; the four files exported (200 KB, 0.6 ms), imported into a new process before the first key (2 ms), and 狗岫 was still first. The exported files open in the `sqlite3` CLI with the engine's `application_id`, `user_version` 2 and a rollback journal, so they are the same files the apps write.
+
+| | Without learning (main) | With learning |
+|---|---|---|
+| Key p50 / p99 (1,300 keys, Node, Apple Silicon) | 0.51 / 1.35 ms | 0.70 / 1.85 ms |
+| Enter p50 / p99 | 0.02 / 0.12 ms | 0.08 / 0.60 ms |
+| First key | 17 ms | 49 ms (opens and shapes the stores) |
+| `taigi_web_bg.wasm`, gzip | 854 KB | 1,576 KB (SQLite) |
+
+What it took (grounded in code):
+
+- `uuid` gets its `js` feature on wasm32 (`engine/userdata/Cargo.toml`; one use, `custom_dictionary.rs:100`).
+- `database.rs:290`: the spawn fails on this target and `.ok()` drops it, so every write would vanish silently. On wasm32 the queue drains on the caller's thread after each send, same order, same `INSIDE_WORKER_JOB` re-entry guard. `handle.rs:99` already finishes inline when it cannot spawn; the web asks for `in_background: false`.
+- `timestamp.rs:15` and `with_stores.rs:131` call `SystemTime::now`, which panics here: one `unix_millis_now` in `timestamp.rs`, `js_sys::Date::now` on wasm32.
+- `handle.rs:160` refuses every path, because `Path::is_absolute()` is false on this target (the same trap `LexiconPaths::validate` had in Phase 1). `database.rs:251` `create_dir_all` has no file system to call.
+- Storage: `sqlite-wasm-rs` 0.5's default VFS is in memory, files keyed by path, with `MemVfsUtil::import_db` / `export_db`. No `relaxed-idb` and no Worker needed: the page keeps the bytes in IndexedDB.
+- Journal: `Delete` on the web; the memory VFS has no shared memory for WAL.
+- Build: Apple's `ar` cannot index wasm objects ("not a mach-o file") and leaves `libwsqlite3.a` empty, so the link fails on `sqlite3_*`. `zig ar` (already in `mise.toml`) works; `web/Makefile` sets `AR_wasm32_unknown_unknown`. Ubuntu CI unverified.
+
+#### 8a — Learning on
+
+- `engine/userdata` + `dispatch`: the wasm32 seams above, native behaviour unchanged (native suites are the freeze gate).
+- `taigi-web`: depends on `dispatch` with `user-data`; data directory `/taigi`; exports import / export of the four files.
+- Page: holds the Web Lock `taigi-user-data`. The holder imports the IndexedDB snapshot, then opens the stores at load (keeps the 49 ms off the first key), and saves after a commit (debounced) and on `pagehide`. A second tab types without learning and waits for the lock; when it gets it, it imports the latest snapshot and opens then. The stores open once per instance and an open file cannot be re-imported, so a tab that learned from an old snapshot never overwrites a newer one.
+- Tests: Node (learn, export, restore), Playwright (reload keeps a pick; a second tab does not learn until the first closes).
+
+#### 8b — Learning Records section
+
+The desktop pane in the sidebar: `desktop-core settings/learning_records.rs` model (Frequency, Learned Phrases; delete, clear), same `dictionary.learningRecords*` keys with `web` scope, a reset row as the other sections.
+
+Stores stay in `engine/userdata` (`rust-migration-policy.md` §6). Outside the current slice: Custom Dictionary, `.taigi` import and export.
 
 ## Outside these phases
 
@@ -375,6 +408,14 @@ Settled by the maintainer 2026-11-06 ("follow your recommendation"). Ranked by i
 | D4 | Candidate placement | At the caret, like the desktop apps and McBopomofoWeb. Costs the mirror element and scroll handling | A fixed slot under the editor. Removes both costs and matches the fixed-slot preference for other UI, but the eye leaves the caret | Phase 4 |
 | D5 | Learning and Custom Dictionary | Ship without them, add in Phase 8 | Hold the first release for Phase 8, whose storage is unproven | Phase 8 |
 | D6 | Dictionary hosting | Same origin on Pages with a long edge cache. No CORS and one deploy | R2 at `dl.taigikeyboard.tw`: free egress and proven speed from Taiwan, at the cost of CORS and a second upload | Phase 6 |
+
+Settled by the maintainer 2026-11-07 ("follow your recommendation"), replacing D5's "add in Phase 8" with what Phase 8 does:
+
+| # | Question | Decision | Rejected alternative | Applies to |
+|---|---|---|---|---|
+| D7 | Phase 8 scope | Learning, persisted, plus the Learning Records section | Custom Dictionary and `.taigi` backup in the same round; or learning in memory only, as McBopomofoWeb | Phase 8 |
+| D8 | Shared computers | Learning on by default, as on every other platform; a user clears it in Learning Records | A "do not learn" switch only the web has | 8a, 8b |
+| D9 | Several tabs | One tab learns, by Web Lock; the others type without learning until it closes | Every tab learns and the last save wins, losing the other tabs' picks | 8a |
 
 ## Risks
 
