@@ -61,6 +61,7 @@ jobs:
         with:
           version: 2026.11.2
           install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome uv pipx:fonttools zig
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install the toolchain (web/rust-toolchain.toml)
         working-directory: web
@@ -69,6 +70,22 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: web
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make web-e2e`'s
+      # `site` step and change only with their inputs (web/Makefile's
+      # `$(FONTS)/.stamp` rule; fonttools' pin is in mise.toml). After
+      # rust-cache, which owns the rest of web/target.
+      - id: fonts
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: web/target/fonts
+          key: web-fonts-${{ hashFiles('assets/fonts/font/**', 'web/scripts/subset-fonts.sh', 'web/src/fonts.css', 'web/Makefile', 'mise.toml') }}
+
+      # The checkout gave every input a newer mtime than the restored stamp.
+      - name: Mark the restored fonts current
+        if: steps.fonts.outputs.cache-hit == 'true'
+        run: touch web/target/fonts/.stamp
 
       - name: make web-check
         run: make web-check
