@@ -1,7 +1,7 @@
 # Installs or uninstalls the release installer silently and reads back what
 # the machine was left with: the registrations each architecture should have
 # after an install, and nothing of them after an uninstall
-# (docs/architecture/windows-arm64-roadmap.md § Verification). The windows-build
+# (docs/architecture/windows-arm64-roadmap.md section Verification). The windows-build
 # CI jobs run it on an x64 and an Arm64 runner; it also runs on a dogfood VM.
 # Typing is not exercised.
 #
