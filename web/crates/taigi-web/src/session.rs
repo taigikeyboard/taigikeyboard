@@ -12,8 +12,8 @@ use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::session::{
-    click_from_panel, commit_composition, navigate_from_panel, process_key, toggle_language_mode,
-    tps_keyboard_press, Emit, EngineState, ListSelection,
+    begin_session, click_from_panel, commit_composition, end_session, navigate_from_panel,
+    process_key, toggle_language_mode, tps_keyboard_press, Emit, EngineState, ListSelection,
 };
 use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
@@ -192,6 +192,20 @@ impl WebSession {
 
     pub(crate) fn commit_composition(&mut self) -> String {
         let emits = commit_composition(&self.runtime, CONTEXT, &mut self.state);
+        self.reply(true, &emits, None)
+    }
+
+    /// The host's text field took the composition as it stood (ChromeOS
+    /// confirms the preedit itself on blur, as Linux frameworks do), so the
+    /// engine drops its copy without a commit.
+    pub(crate) fn end_session(&mut self) -> String {
+        let emits = end_session(&self.runtime, CONTEXT, &mut self.state);
+        self.reply(true, &emits, None)
+    }
+
+    /// A text field gained focus: the guide a mode keeps on screen comes back.
+    pub(crate) fn begin_session(&mut self) -> String {
+        let emits = begin_session(&self.runtime, &mut self.state);
         self.reply(true, &emits, None)
     }
 
@@ -777,6 +791,30 @@ mod tests {
             emit_types(&parsed(session.commit_composition())),
             Vec::<&str>::new()
         );
+    }
+
+    #[test]
+    fn end_session_drops_the_composition_without_a_commit() {
+        let mut session = session();
+        session.key_down(&press("a", "KeyA"));
+        let ended = parsed(session.end_session());
+        assert!(!emit_types(&ended).contains(&"commit"));
+        let reply = parsed(session.key_down(&press("b", "KeyB")));
+        let preedit = reply["emits"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|emit| emit["type"] == "preedit")
+            .unwrap();
+        // trace: "a" cancelled by end_session, so "b" opens a new composition.
+        assert_eq!(preedit["text"], "b");
+    }
+
+    #[test]
+    fn begin_session_answers_with_no_commit() {
+        let mut session = session();
+        let reply = parsed(session.begin_session());
+        assert!(!emit_types(&reply).contains(&"commit"));
     }
 
     #[test]
