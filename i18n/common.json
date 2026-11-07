@@ -53,7 +53,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host",
@@ -119,7 +120,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host",
@@ -142,7 +144,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host",

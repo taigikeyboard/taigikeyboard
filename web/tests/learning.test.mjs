@@ -103,3 +103,77 @@ test("an open file and an unknown name are refused", async () => {
   assert.throws(() => session.importUserData(name, kept.get(name)));
   assert.throws(() => session.exportUserData("settings.json"));
 });
+
+/// One Learning Records call (`learning_records.rs`), its answer parsed.
+function records(session, change = {}) {
+  const call = {
+    kind: 0,
+    order: 0,
+    filter: "",
+    page: 0,
+    utcOffsetSeconds: 0,
+    ...change,
+  };
+  return JSON.parse(session.learningRecords(JSON.stringify(call)));
+}
+
+function exported(session) {
+  return new Map(
+    session.userDataFiles().map((name) => [name, session.exportUserData(name)]),
+  );
+}
+
+test("Learning Records are refused before the stores open", async () => {
+  instanceCount += 1;
+  const glue = await import(
+    `../target/pkg/taigi_web.js?instance=${instanceCount}`
+  );
+  glue.initSync({ module: wasm });
+  const session = new glue.Session("{}", "linux", "en");
+  assert.throws(() => records(session), /the stores are not open/);
+});
+
+test("Learning Records list the picks under Word Frequency", async () => {
+  const session = await startSession(kept);
+  // trace: three picks of 狗岫 for `kausiu` above; its reading as the
+  // engine stores it, no learned phrase from single-word commits.
+  const { rows, count, empty, wrote } = records(session);
+  assert.deepEqual(
+    rows.map(({ tl, text, count: picks }) => [tl, text, picks]),
+    [["káu-siū", "狗岫", 3]],
+  );
+  assert.equal(count, "1");
+  assert.equal(empty, undefined);
+  assert.equal(wrote, false);
+  assert.equal(records(session, { filter: "tai" }).empty, "No results");
+  assert.equal(records(session, { kind: 1 }).empty, "Nothing Learned Yet");
+});
+
+test("a deleted record is gone from the files the page keeps", async () => {
+  const session = await startSession(kept);
+  const [{ id }] = records(session).rows;
+  const answer = records(session, { write: { type: "delete", id } });
+  assert.equal(answer.wrote, true);
+  assert.deepEqual(answer.rows, []);
+  const restored = await startSession(exported(session));
+  assert.deepEqual(records(restored).rows, []);
+  assert.equal(top(restored, RAW), "教授");
+});
+
+test("a delete of a record no longer listed says so and writes nothing", async () => {
+  const session = await startSession(kept);
+  const answer = records(session, { write: { type: "delete", id: 1 } });
+  assert.equal(answer.wrote, false);
+  assert.equal(answer.message.title, "This Record Is No Longer Stored");
+  assert.equal(answer.rows.length, 1, "the reload still lists the pick");
+});
+
+test("Delete Learning Records empties every kind", async () => {
+  const session = await startSession(kept);
+  const answer = records(session, { write: { type: "clear" } });
+  assert.equal(answer.wrote, true);
+  assert.equal(answer.message, undefined, "no receipt: the empty list says it");
+  assert.deepEqual(answer.rows, []);
+  assert.deepEqual(records(session, { kind: 1 }).rows, []);
+  assert.equal(top(session, RAW), "教授");
+});

@@ -4,6 +4,7 @@
 
 import { translate } from "./i18n.js";
 import { Learning } from "./learning.js";
+import { LearningRecords } from "./learning_records.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
 import { Panel } from "./panel.js";
 import { Settings } from "./settings.js";
@@ -60,7 +61,18 @@ const settings = new Settings(
 /// `null` between instances.
 let session = null;
 
-const learning = new Learning(() => session, run);
+const learningRecords = new LearningRecords(
+  document.getElementById("learning-records"),
+  run,
+  () => learning.isOpen,
+  () => learning.saveNow(),
+  () => translate("common.delete"),
+);
+const learning = new Learning(
+  () => session,
+  run,
+  () => learningRecords.show(),
+);
 
 /// The session is the judge of the stored document: one it refuses leaves the
 /// defaults.
@@ -272,6 +284,7 @@ function changeSettings(json) {
   call((current) => current.setSettings(json));
   redrawMessage();
   redrawShortcuts();
+  learningRecords.redrawIfLanguageChanged();
 }
 
 /// Keys and labels follow Tone Keys, the input mode and the language.
@@ -376,14 +389,17 @@ for (const button of document.querySelectorAll("button")) {
 }
 
 // `/` jumps to the textarea, as kautian-mirror's search does, from anywhere but the
-// textarea and a select, which types ahead. A checkbox just clicked gives way. No
+// textarea, a select, which types ahead, and a text field. A checkbox just clicked gives way. No
 // select-all: the next key would replace the document.
 document.addEventListener("keydown", (event) => {
   const { key, metaKey, ctrlKey, altKey, isComposing, target } = event;
   if (key !== "/" || metaKey || ctrlKey || altKey || isComposing) {
     return;
   }
-  if (target.isContentEditable || target.closest("textarea, select")) {
+  if (
+    target.isContentEditable ||
+    target.closest('textarea, select, input:not([type="checkbox"])')
+  ) {
     return;
   }
   event.preventDefault();

@@ -150,8 +150,22 @@ impl Session {
     /// and finishes before it returns. From here on the engine learns. Once
     /// per instance; `false` when the engine did not acknowledge it.
     #[wasm_bindgen(js_name = openUserData)]
-    pub fn open_user_data(&self) -> bool {
-        user_data::open_on_this_thread(Path::new(USER_DATA_ROOT))
+    pub fn open_user_data(&mut self) -> bool {
+        let is_open = user_data::open_on_this_thread(Path::new(USER_DATA_ROOT));
+        if is_open {
+            self.inner.user_data_opened();
+        }
+        is_open
+    }
+
+    /// The sidebar's Learning Records section: the view the page keeps and at
+    /// most one write in, the page of rows out (`learning_records.rs`).
+    /// Refused before `openUserData`.
+    #[wasm_bindgen(js_name = learningRecords)]
+    pub fn learning_records(&mut self, call_json: &str) -> Result<String, JsError> {
+        self.inner
+            .learning_records(call_json)
+            .map_err(|error| JsError::new(&error))
     }
 
     /// One of `userDataFiles` as it is now, for the page to keep. Every write

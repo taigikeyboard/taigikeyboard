@@ -253,7 +253,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
 | 6 | Loading and offline | Playwright offline run | Done |
 | 7 | Deploy | `check-live` on the real URL | Done |
-| 8 | User data: learning on (8a), Learning Records section (8b) | spike done 2026-11-07; native suites unchanged, Node + Playwright | 8a in review, 8b pending |
+| 8 | User data: learning on (8a), Learning Records section (8b) | spike done 2026-11-07; native suites unchanged, Node + Playwright | 8a merged (#756), 8b in review |
 
 ### Phase 1 — Engine runs on wasm32
 
@@ -389,6 +389,10 @@ What it took (grounded in code):
 #### 8b — Learning Records section
 
 The desktop pane in the sidebar: `desktop-core settings/learning_records.rs` model (Frequency, Learned Phrases; delete, clear), same `dictionary.learningRecords*` keys with `web` scope, a reset row as the other sections.
+
+Settled by the maintainer 2026-11-07: no count edit and no Add to Custom Dictionary (the web has no Custom Dictionary section to show the word in), and a tab that does not hold the lock shows no section at all.
+
+As built: `taigi-web` `learning_records.rs` keeps the rows on screen (a delete sends the whole record) and answers one call per change, the view the page keeps plus at most one write, with the text translated as the Shortcuts section's is; it refuses every call before `openUserData`. The page (`learning_records.js`) loads when the section opens and after its own writes, as the desktop panes do, not on each commit: a list redrawn between `pointerdown` and `click` would lose the click. A delete or clear saves at once (`Learning.saveNow`), so a trap before a timer cannot bring the rows back with the next instance's import; a reload while that save runs still aborts it, as it would a commit's.
 
 Stores stay in `engine/userdata` (`rust-migration-policy.md` §6). Outside the current slice: Custom Dictionary, `.taigi` import and export.
 

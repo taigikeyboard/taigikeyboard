@@ -111,3 +111,102 @@ test("a new instance after a trap learns from the saved copy", async ({
 
   await expectTop(page, editor, PICKED);
 });
+
+/// A digest of the page's copy in IndexedDB, `""` before the first save.
+const savedDigest = (page) =>
+  page.evaluate(async () => {
+    const { readSnapshot } = await import("./learning.js");
+    const files = (await readSnapshot()) ?? {};
+    const names = Object.keys(files).sort();
+    const bytes = new Uint8Array(
+      await new Blob(names.map((n) => files[n])).arrayBuffer(),
+    );
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return names.length === 0
+      ? ""
+      : btoa(String.fromCharCode(...new Uint8Array(digest)));
+  });
+
+/// Runs `change` and waits for the copy it saves to land: a reload aborts an
+/// IndexedDB write still running, in every engine (`learning.js`).
+async function expectSavedAfter(page, change) {
+  await expectSaved(page);
+  const before = await savedDigest(page);
+  await change();
+  await expect.poll(() => savedDigest(page)).not.toBe(before);
+}
+
+const records = (page) => page.locator("#learning-records");
+const recordRows = (page) => page.locator("#records-rows li");
+
+/// Folds the section and opens it again: it loads when opened, as the
+/// desktop panes do, not on every commit.
+async function reopenRecords(page) {
+  const summary = records(page).locator("summary");
+  await summary.click();
+  await summary.click();
+}
+
+test("Learning Records list a pick, and a deleted one stays deleted", async ({
+  page,
+}) => {
+  const editor = await open(page);
+  await expect(records(page)).toBeVisible();
+  await expect(page.locator("#records-empty")).toHaveText(
+    "Nothing Learned Yet",
+  );
+  await pickThrice(page, editor);
+  await reopenRecords(page);
+  // trace: `tests/learning.test.mjs`, three picks of 狗岫 for `kausiu`.
+  await expect(recordRows(page)).toHaveCount(1);
+  await expect(recordRows(page).first()).toHaveText(/káu-siū\s*狗岫\s*3/);
+
+  await expectSavedAfter(page, () =>
+    recordRows(page).first().getByRole("button").click(),
+  );
+  await expect(recordRows(page)).toHaveCount(0);
+  await expect(page.locator("#records-empty")).toBeVisible();
+  await page.reload();
+  await expect(recordRows(page)).toHaveCount(0);
+  await expectTop(page, editor, "教授");
+});
+
+test("Delete Learning Records empties the list for good", async ({ page }) => {
+  const editor = await open(page);
+  await pickThrice(page, editor);
+  await reopenRecords(page);
+  await expect(recordRows(page)).toHaveCount(1);
+
+  await expectSavedAfter(page, () => page.locator("#records-clear").click());
+  await expect(recordRows(page)).toHaveCount(0);
+  await page.reload();
+  await expect(records(page)).toBeVisible();
+  await expect(recordRows(page)).toHaveCount(0);
+  await expectTop(page, editor, "教授");
+});
+
+test("a tab that does not learn shows no Learning Records", async ({
+  context,
+  page,
+}) => {
+  await open(page);
+  await expect(records(page)).toBeVisible();
+
+  const second = await context.newPage();
+  await open(second);
+  await expect(records(second)).toBeHidden();
+
+  await page.close();
+  await expect(records(second)).toBeVisible();
+});
+
+test("the filter takes a slash as text", async ({ page }) => {
+  const editor = await open(page);
+  await pickThrice(page, editor);
+  const filter = page.locator("#records-filter");
+  await filter.fill("");
+  await filter.pressSequentially("k/");
+  await expect(filter).toBeFocused();
+  await expect(filter).toHaveValue("k/");
+  await expect(page.locator("#records-empty")).toHaveText("No results");
+});
