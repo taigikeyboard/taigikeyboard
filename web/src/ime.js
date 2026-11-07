@@ -47,7 +47,7 @@ const tpsKeyboard = new TpsKeyboard(
     apply(call((session) => session.tpsKeyPress(glyph)));
   },
 );
-const sidebar = new Sidebar(
+new Sidebar(
   document.getElementById("sidebar-toggle"),
   document.getElementById("sidebar"),
 );
