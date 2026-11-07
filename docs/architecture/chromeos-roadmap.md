@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `chromeos`, `chrome.input.ime`, `input_components`, `manifest v3`, `service worker`, `wasm`, `linux-chromeos`, `chromeos flex`, `utm`, `rosetta`
-> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 passed 2026-11-07 (台語 typed in `linux-chromeos` on the Mac; offscreen-document keepalive, § Spike result). Phase 2 next.
+> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 passed 2026-11-07 (台語 typed in `linux-chromeos` on the Mac; offscreen-document keepalive, § Spike result). Phase 2 merged (#765); Phase 3 in review.
 > **Siblings**: `web-roadmap.md` (the wasm engine this reuses), `windows-arm64-roadmap.md` (same VM-first pattern).
 
 ---
@@ -95,8 +95,8 @@ One PR per phase; each starts after the previous one merges. No version is assig
 |---|---|---|---|
 | 0 | Roadmap | This document; issue #759 | Done 2026-11-07 |
 | 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | **Passed 2026-11-07** (§ Spike result) |
-| 2 | Extension shell | New source dir (D2), manifest, worker glue (key mapping, Emit mapping, `keyEventHandled`), dictionaries packaged, build target + lint in `Makefile`, unit tests for the mapping; `taigi-web` gains `endSession` / `beginSession` (the field confirms the preedit on blur, Linux's model); offscreen keepalive | In review (VM: compose, blur, candidate keys, Shift tap, 90 s idle pass) |
-| 3 | Settings + i18n | Options page from the web settings form; `_locales` from `i18n/*.json`, reusing the desktop keys the web page already uses (`docs/contributing/i18n.md`) | Pending |
+| 2 | Extension shell | New source dir (D2), manifest, worker glue (key mapping, Emit mapping, `keyEventHandled`), dictionaries packaged, build target + lint in `Makefile`, unit tests for the mapping; `taigi-web` gains `endSession` / `beginSession` (the field confirms the preedit on blur, Linux's model); offscreen keepalive | Merged #765 `77f99ee8c` 2026-11-08 |
+| 3 | Settings | Options page cut at build time from the web page's settings form (`chromeos/options-form.mjs`: rows ChromeOS cannot honour hidden, expandable layouts removed, drift fails the build); same document `taigi.settings` and same i18n keys, in `chrome.storage.sync` so it follows the account; worker reads it at start, follows changes (composition written first), saves chord writes; `openSettings` opens the page. No `_locales`: the name 台語齒盤 is the same in every language | In review (VM: hidden rows, POJ change types `góa`, reload keeps it, backtick write reaches the open page, Ctrl+Alt+S opens it) |
 | 4 | Learning | User data in the worker (IndexedDB), as web Phase 8a | Pending |
 | 5 | Packaging + store | CI build of the `.zip`, store listing, privacy fields; Chrome Web Store developer account and submission are the maintainer's | Pending |
 | 6 | Real-OS check | E3 (or E4): install the packaged build, type in Chrome, Docs, Files, an Android app, a Linux app | Pending |

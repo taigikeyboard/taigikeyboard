@@ -73,8 +73,11 @@ site: build $(FONTS)/.stamp
 # dictionaries go in as they are: the package is local, so no hash and no gzip.
 chromeos: build
 	rm -rf $(CHROMEOS) target/taigi-keyboard-chromeos.zip
-	mkdir -p $(CHROMEOS)/pkg $(CHROMEOS)/dictionaries $(CHROMEOS)/icons
-	cp chromeos/manifest.json chromeos/*.js chromeos/*.html $(CHROMEOS)/
+	mkdir -p $(CHROMEOS)/pkg $(CHROMEOS)/dictionaries $(CHROMEOS)/icons $(CHROMEOS)/generated
+	cp chromeos/manifest.json chromeos/*.js chromeos/offscreen.html $(CHROMEOS)/
+	cp src/settings.js src/i18n.js src/style.css src/chevron.svg $(CHROMEOS)/
+	cp src/generated/strings.js $(CHROMEOS)/generated/
+	node scripts/stage-chromeos.mjs src/index.html chromeos/options.html $(CHROMEOS)/options.html
 	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(CHROMEOS)/pkg/
 	cp ../assets/dictionaries/* $(CHROMEOS)/dictionaries/
 	cp $(ICONS)/16.png $(ICONS)/48.png $(ICONS)/128.png $(CHROMEOS)/icons/

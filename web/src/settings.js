@@ -9,25 +9,46 @@
 
 import { setDisplayLanguage } from "./i18n.js";
 
-const STORAGE_KEY = "taigi.settings";
+/// Also the ChromeOS input method's key in chrome.storage.sync.
+export const STORAGE_KEY = "taigi.settings";
 
-function emptyDocument() {
+export function emptyDocument() {
   return { revision: 0, values: {} };
 }
 
-/// What a past visit stored. Whether the session accepts it is the session's
-/// call (`reset`).
-function readStored() {
+/// A stored document, or the empty one when `text` is missing or damaged.
+/// Whether the session accepts it is the session's call (`reset`).
+export function parseStored(text) {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const stored = JSON.parse(text);
     if (stored?.values?.constructor === Object) {
       return { ...emptyDocument(), ...stored };
     }
   } catch {
-    // Blocked storage or a damaged document.
+    // A damaged document.
   }
   return emptyDocument();
 }
+
+/// The page's store. The ChromeOS options page passes its own
+/// (`web/chromeos/options.js`).
+const LOCAL_STORE = {
+  read() {
+    try {
+      return parseStored(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      // Blocked storage.
+      return emptyDocument();
+    }
+  },
+  write(json) {
+    try {
+      localStorage.setItem(STORAGE_KEY, json);
+    } catch {
+      // Private windows may refuse. The session keeps the setting for this tab.
+    }
+  },
+};
 
 function storedValue(control) {
   if (control.type === "checkbox") {
@@ -40,11 +61,15 @@ function storedValue(control) {
 
 export class Settings {
   #form;
-  #document = readStored();
+  #store;
+  #document;
 
-  /// `onChange(json)`: the form changed the document.
-  constructor(form, onChange) {
+  /// `onChange(json)`: the form changed the document. `store`: `read()` the
+  /// stored document, `write(json)` a new one.
+  constructor(form, onChange, store = LOCAL_STORE) {
     this.#form = form;
+    this.#store = store;
+    this.#document = store.read();
     this.#show();
     form.addEventListener("change", ({ target }) => {
       this.#write(target.name, storedValue(target));
@@ -152,10 +177,6 @@ export class Settings {
   }
 
   #persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, this.json);
-    } catch {
-      // Private windows may refuse. The session keeps the setting for this tab.
-    }
+    this.#store.write(this.json);
   }
 }
