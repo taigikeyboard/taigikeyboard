@@ -40,7 +40,6 @@ pub(crate) fn shortcuts(
     platform: DesktopPlatform,
 ) -> WireShortcuts {
     let bindings = ComposingKeyBindings::from_document(document, platform);
-    let unbound = strings.resolve(StringKey::DesktopShortcutUnbound);
     let composing_rows = |actions: &[ComposingAction]| -> Vec<Row> {
         let row = |action: &ComposingAction| {
             let keys: Vec<String> = action
@@ -51,11 +50,7 @@ pub(crate) fn shortcuts(
                 .collect();
             Row {
                 label: strings.resolve(action.label_key()).to_owned(),
-                keys: if keys.is_empty() {
-                    unbound.to_owned()
-                } else {
-                    keys.join(KEY_GAP)
-                },
+                keys: keys.join(KEY_GAP),
                 fixed_keys: fixed_keys_label(*action, bindings.slot_key_set(), platform),
             }
         };
@@ -64,10 +59,11 @@ pub(crate) fn shortcuts(
     let global_rows = |actions: &[ShortcutAction]| -> Vec<Row> {
         let row = |action: &ShortcutAction| Row {
             label: strings.resolve(action.label_key()).to_owned(),
-            keys: action.chord_in(document, platform).map_or_else(
-                || unbound.to_owned(),
-                |chord| visitor_chord(chord, platform).display(platform),
-            ),
+            keys: action
+                .chord_in(document, platform)
+                .map_or_else(String::new, |chord| {
+                    visitor_chord(chord, platform).display(platform)
+                }),
             fixed_keys: None,
         };
         actions.iter().map(row).collect()
@@ -139,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn two_keys_share_a_row_and_an_empty_row_says_so() {
+    fn two_keys_share_a_row_and_an_empty_row_stays_empty() {
         let wire = shortcuts(
             &SettingsDocument::default(),
             &english(),
@@ -149,7 +145,7 @@ mod tests {
         // CommitAlternateScript has none; slot run qwdfzxvy; behind one Shift.
         assert_eq!(row(&wire, "Confirm Key").keys, "Enter  Space");
         let other = row(&wire, "Output the Other Script (Hanji / Romanization)");
-        assert_eq!(other.keys, "None");
+        assert_eq!(other.keys, "");
         assert_eq!(other.fixed_keys.as_deref(), Some("Shift+QWDFZXVY;"));
     }
 
