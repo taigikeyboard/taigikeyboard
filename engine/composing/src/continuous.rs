@@ -293,8 +293,8 @@ pub(crate) fn retain_first_by_key<K: std::hash::Hash + Eq>(
 /// block, Step 4c abbreviation vs a partial hit) would otherwise show
 /// twice. Identity catches a custom row whose stored roman differs from
 /// the dict row's only in form (NFD import, POJ spelling); the recased
-/// roman still catches a walker slot 0, whose `canonical_tl` is folded
-/// from its recased roman while a dict row's is not. Borrowed keys —
+/// roman still catches a walker slot 0, whose `canonical_tl` went through
+/// `canonical_tl_form` while a dict row's is verbatim. Borrowed keys —
 /// `existing` is not mutated during the retain, so the set holds `&str`
 /// slices into it and costs no per-keystroke String allocs.
 fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) {
@@ -1018,7 +1018,7 @@ fn fetch_walker_slot0_inner(
     };
     // §10.2 slot-0 word space. The separators the user typed are rendered
     // onto it by Step 5 (§55) like on every other row, so `canonical_tl`
-    // (folded from this join) never forks on a typed separator.
+    // (folded from a space join too) never forks on a typed separator.
     let roman = parts.join(" ");
     // A roman-only dictionary word in the path keeps the sentence's Hanji: the
     // word stands in romanization (Han-Lo mixed, MOE `VT_MIXED`). An OOV edge
@@ -1063,6 +1063,8 @@ fn fetch_walker_slot0_inner(
     // hanji-absent `display_text` fallback AND carried on `WalkerSlot0`
     // as the `(hanji, canonical-TL)` identity sidechannel, so the seam
     // (`assemble_candidates`) reads it instead of re-folding `slot0.roman`.
+    // The fold drops the per-edge recase: a pick counted under `Kóng` would
+    // rank nothing typed `kong`.
     let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
     let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
     // R5 pair-key (#7): walker synth keyed by (display_text,

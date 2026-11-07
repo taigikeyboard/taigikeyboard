@@ -23,8 +23,9 @@
 //! whose split undercuts a freq-1 two-syllable edge under the khiin cost model.
 
 use crate::common::{
-    build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v4, empty_association_bin,
-    fetch_hanji, install_lexicon, selected, Fetch, Row, Selected, NOW_MS,
+    build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v4, cell_with_hanji, config,
+    empty_association_bin, fetch_cells, fetch_hanji, install_lexicon, selected, Fetch, Row,
+    Selected, NOW_MS,
 };
 use lexicon::CustomEntry;
 use test_support::{engine_install_lock, write_temp};
@@ -321,4 +322,39 @@ fn one_syllable_pick_stays_behind_the_exact_syllable() {
     let hanji = fetch_hanji_with_freq("ko", vec![selected("講", "kóng", 10, TWO_HOURS_MS)], NOW_MS);
     assert_eq!(hanji[0], "哥", "exact syllable keeps slot 0; got {hanji:?}");
     assert_eq!(hanji[1], "講", "pick still leads the rest; got {hanji:?}");
+}
+
+// An auto-capitalized sentence start recases what the row shows, never its
+// identity: a pick counted under `Kóng` would rank nothing typed `kong`.
+#[test]
+fn capitalized_input_keeps_the_walker_identity_lowercase() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    for (raw, hanji, shown, identity) in [
+        ("Kong", "講", "Kóng", "kóng"),
+        ("Antsua", "安紙", "An tsuá", "an tsuá"),
+    ] {
+        let cells = fetch_cells(&config("tl"), raw, Fetch::default());
+        let (_, roman, _, canonical_tl) = cell_with_hanji(&cells, hanji);
+        assert_eq!(roman, shown, "the row shows the typed case; got {cells:?}");
+        assert_eq!(
+            canonical_tl, identity,
+            "identity stays lowercase; got {cells:?}"
+        );
+    }
+}
+
+#[test]
+fn a_pick_typed_lowercase_ranks_the_same_word_typed_capitalized() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    let hanji = fetch_hanji_with_freq(
+        "Antsua",
+        vec![selected("按怎", "án-tsuánn", 1, TWO_HOURS_MS)],
+        NOW_MS,
+    );
+    assert_eq!(
+        hanji[0], "按怎",
+        "pick leads under auto-capitalization; got {hanji:?}"
+    );
 }
