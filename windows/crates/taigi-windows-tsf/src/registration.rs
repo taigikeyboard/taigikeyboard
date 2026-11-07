@@ -422,40 +422,32 @@ mod tests {
         assert_eq!(CATEGORIES.len(), 6, "only the true categories (Codex W6)");
     }
 
-    /// A fresh, empty directory standing in for an install directory.
-    fn install_directory(test: &str) -> PathBuf {
-        let directory =
-            std::env::temp_dir().join(format!("taigi-registration-{test}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&directory);
-        std::fs::create_dir_all(&directory).expect("create the test directory");
-        directory
-    }
-
     #[test]
     fn an_unforwarded_build_registers_its_own_path() {
-        let own = install_directory("own").join("TaigiKeyboard.dll");
-        // Nothing on disk: the x64 / x86 builds never look for a forwarder.
+        // Nothing on disk, not even the directory: the x64 / x86 builds never
+        // look for a forwarder.
+        let own = std::env::temp_dir()
+            .join("taigi-registration-unforwarded")
+            .join("TaigiKeyboard.dll");
         assert_eq!(in_proc_server_path(&own, false).unwrap(), own);
     }
 
     #[test]
     fn a_forwarded_build_registers_the_forwarder_beside_it() {
-        let directory = install_directory("forwarded");
-        let forwarder = directory.join(FORWARDER_DLL);
+        let directory = tempfile::tempdir().expect("create the install directory");
+        let forwarder = directory.path().join(FORWARDER_DLL);
         std::fs::write(&forwarder, b"").expect("write the stand-in forwarder");
-        let own = directory.join("TaigiKeyboardArm64.dll");
+        let own = directory.path().join("TaigiKeyboardArm64.dll");
         assert_eq!(in_proc_server_path(&own, true).unwrap(), forwarder);
-        let _ = std::fs::remove_dir_all(&directory);
     }
 
     #[test]
     fn a_forwarded_build_without_its_forwarder_refuses_to_register() {
         // Registering the Arm64 DLL's own path instead would work in Arm64
         // apps and silently not in x64-emulated ones.
-        let directory = install_directory("missing");
-        let own = directory.join("TaigiKeyboardArm64.dll");
+        let directory = tempfile::tempdir().expect("create the install directory");
+        let own = directory.path().join("TaigiKeyboardArm64.dll");
         assert_eq!(in_proc_server_path(&own, true).unwrap_err().code(), E_FAIL);
-        let _ = std::fs::remove_dir_all(&directory);
     }
 
     #[test]

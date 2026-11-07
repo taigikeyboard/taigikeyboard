@@ -67,9 +67,9 @@ $IsArm64 = $Machine -eq 'ARM64'
 # registration.rs FORWARDER_DLL; build.rs's Arm64 OriginalFilename.
 $ForwarderName = 'TaigiKeyboard64X.dll'
 $Arm64ServiceName = 'TaigiKeyboardArm64.dll'
+$ReleaseTarget = if ($IsArm64) { 'aarch64-pc-windows-msvc' } else { $X64Target }
+$TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
 if ($IsArm64) {
-    $ReleaseTarget = 'aarch64-pc-windows-msvc'
-    $TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
     # What is registered and loaded: staged copies under their install names.
     $InstallDir = Join-Path $WindowsDir 'target\arm64x-dev'
     $ServiceDll = Join-Path $InstallDir $Arm64ServiceName
@@ -78,8 +78,6 @@ if ($IsArm64) {
     # names to free before staging again.
     $ServiceDllNames = @($ServiceDll, $X64ServiceDll, (Join-Path $InstallDir $ForwarderName))
 } else {
-    $ReleaseTarget = $X64Target
-    $TargetDir = Join-Path $WindowsDir "target\$ReleaseTarget\release"
     $InstallDir = $TargetDir
     $ServiceDll = Join-Path $TargetDir 'TaigiKeyboard.dll'
     # The linker writes `release\deps\TaigiKeyboard.dll` and cargo hard-links it
@@ -250,9 +248,15 @@ function Get-PeMachine([string] $Path) {
 function Copy-Arm64Install {
     Write-Host '==> Staging the Arm64 install'
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-    Copy-Item (Join-Path $TargetDir 'TaigiKeyboard.dll') $ServiceDll -Force
-    Copy-Item (Join-Path $WindowsDir "target\$X64Target\release\TaigiKeyboard.dll") $X64ServiceDll -Force
-    Copy-Item (Join-Path $TargetDir 'TaigiKeyboardSettings.exe') $SettingsExe -Force
+    $staged = [ordered] @{
+        (Join-Path $TargetDir 'TaigiKeyboard.dll') = $ServiceDll
+        (Join-Path $WindowsDir "target\$X64Target\release\TaigiKeyboard.dll") = $X64ServiceDll
+        (Join-Path $TargetDir 'TaigiKeyboardSettings.exe') = $SettingsExe
+    }
+    foreach ($built in $staged.Keys) {
+        if (-not (Test-Path $built)) { Fail "the build produced no $built" }
+        Copy-Item $built $staged[$built] -Force
+    }
     $runtimeList = Join-Path $WindowsDir 'build-support\windows-app-runtime-files.txt'
     foreach ($name in Get-Content $runtimeList) {
         $name = $name.Trim()

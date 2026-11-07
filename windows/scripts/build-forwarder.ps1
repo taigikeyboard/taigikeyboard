@@ -36,7 +36,8 @@ function Invoke-Tool([string] $Tool, [string[]] $Arguments) {
 }
 
 # The workspace version (`[workspace.package]` in windows/Cargo.toml), the one
-# every other Windows binary's VERSIONINFO carries.
+# every other Windows binary's VERSIONINFO carries — the PowerShell twin of
+# SHORT_VERSION in scripts/lib/identity.sh.
 function Get-WorkspaceVersion {
     $inPackage = $false
     foreach ($line in Get-Content (Join-Path $WindowsDir 'Cargo.toml')) {
@@ -68,6 +69,7 @@ function Enter-Arm64DevShell {
 }
 
 $version = Get-WorkspaceVersion
+$versionText = $version -join '.'
 Enter-Arm64DevShell
 $work = Join-Path ([IO.Path]::GetTempPath()) ('taigi-forwarder-' + [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Path $work | Out-Null
@@ -87,7 +89,7 @@ try {
     # fails with LNK2001.
     Invoke-Tool 'link.exe' @('/lib', '/nologo', '/machine:arm64EC', '/ignore:4104', '/def:x64.def', '/out:x64.lib')
     Invoke-Tool 'link.exe' @('/lib', '/nologo', '/machine:arm64', '/ignore:4104', '/def:arm64.def', '/out:arm64.lib')
-    Invoke-Tool 'rc.exe' @('/nologo', "/dTAIGI_VERSION=$($version -join '.')", "/dTAIGI_VERSION_COMMAS=$($version -join ',')", '/foforwarder.res', 'forwarder.rc')
+    Invoke-Tool 'rc.exe' @('/nologo', "/dTAIGI_VERSION=$versionText", "/dTAIGI_VERSION_COMMAS=$($version -join ',')", '/foforwarder.res', 'forwarder.rc')
     Invoke-Tool 'link.exe' @(
         '/dll', '/nologo', '/noentry', '/machine:arm64x',
         '/dynamicbase', '/highentropyva', '/largeaddressaware', '/ignore:4104',
@@ -102,7 +104,7 @@ try {
     }
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
     Copy-Item $ForwarderDll $OutDir -Force
-    Write-Host "  linked $(Join-Path $OutDir $ForwarderDll) ($($version -join '.'), Arm64X)"
+    Write-Host "  linked $(Join-Path $OutDir $ForwarderDll) ($versionText, Arm64X)"
 } finally {
     Pop-Location
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue

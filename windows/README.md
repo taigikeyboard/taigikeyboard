@@ -61,5 +61,13 @@ DLL resolves them from its own directory), register, refresh the input
 indicator. Needs an elevated shell: `regsvr32` writes HKLM. Underneath it is
 `scripts/install-dev.ps1`, which can be run directly with the same three
 arguments.
+
+On an Arm64 machine `make install` builds the Arm64 and the x64 text service
+and the Arm64 settings exe, links the Arm64X forwarder
+(`scripts/build-forwarder.ps1`, needs the Visual Studio "MSVC ARM64/ARM64EC
+build tools" component) and registers a staged copy under `target\arm64x-dev`
+— the layout `docs/architecture/windows-arm64-roadmap.md` § Install layout
+describes.
+
 Releases: `docs/architecture/windows-release.md` (`make windows-release` at the
 repository root); the update manifest contract: `updates/README.md`.
