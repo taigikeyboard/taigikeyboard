@@ -4682,7 +4682,7 @@
       }
     },
     "i18n_theme_editorResetAll": {
-      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; every desktop settings pane (macOS, Windows, Linux) reuses it for its own reset row. Mobile settings.resetSettings carries the same wording.",
+      "comment": "Reset-to-defaults button. Theme editor on Android and iOS; every desktop settings pane (macOS, Windows, Linux) and web sidebar section reuses it for its own reset row. Mobile settings.resetSettings carries the same wording.",
       "extractionState": "manual",
       "localizations": {
         "en": {

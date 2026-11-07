@@ -2,7 +2,10 @@
 // shape and key spellings, is what the session reads: each form control is named
 // after its key, and the markup's selected option or `checked` is that key's
 // default. `data-boolean` marks a select over a stored boolean, `data-requires` a
-// checkbox that greys, keeping its value, while the one it names is off.
+// checkbox that greys, keeping its value, while the one it names is off. A
+// section's `.setting-reset` drops its rows' keys, and the one in `data-also`, which
+// no row shows. `data-keep` marks a row it leaves: as on the desktops, a reset does
+// not switch the language under the user.
 
 import { setDisplayLanguage } from "./i18n.js";
 
@@ -47,6 +50,12 @@ export class Settings {
       this.#write(target.name, storedValue(target));
       onChange(this.json);
     });
+    form.addEventListener("click", ({ target }) => {
+      if (target.matches(".setting-reset")) {
+        this.#resetSection(target);
+        onChange(this.json);
+      }
+    });
   }
 
   get json() {
@@ -77,7 +86,7 @@ export class Settings {
 
   #show() {
     const { values } = this.#document;
-    for (const control of this.#form.elements) {
+    for (const control of this.#form.querySelectorAll("[name]")) {
       const value = values[control.name];
       if (control.type === "checkbox") {
         control.checked =
@@ -121,6 +130,22 @@ export class Settings {
 
   #write(name, value) {
     this.#document.values[name] = value;
+    this.#changed();
+  }
+
+  #resetSection(button) {
+    const { values } = this.#document;
+    const section = button.closest("details");
+    for (const { name } of section.querySelectorAll(
+      "[name]:not([data-keep])",
+    )) {
+      delete values[name];
+    }
+    delete values[button.dataset.also];
+    this.#changed();
+  }
+
+  #changed() {
     this.#document.revision += 1;
     this.#show();
     this.#persist();

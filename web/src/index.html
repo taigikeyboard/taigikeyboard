@@ -77,7 +77,7 @@
             <input type="checkbox" name="autoSpaceEnabled">
           </label>
           <label class="setting"><span data-i18n="settings.displayLanguage">Display Language</span>
-            <select name="displayLanguage">
+            <select name="displayLanguage" data-keep>
               <option value="system" selected data-i18n="settings.displayLanguageAutomatic">Automatic</option>
               <option value="hanji">漢字</option>
               <option value="en">English</option>
@@ -86,6 +86,7 @@
               <option value="poj">Pe̍h-ōe-jī</option>
             </select>
           </label>
+          <button class="setting-reset" type="button" data-also="lastRomanizationMode" data-i18n="theme.editorResetAll">Reset to Defaults</button>
         </details>
         <details class="sidebar-section">
           <summary data-i18n="desktop.appearanceTab">Appearance</summary>
@@ -129,6 +130,7 @@
               <option value="romanOnly" data-i18n="settings.candidateDisplayModeRomanOnly">Romanization Only</option>
             </select>
           </label>
+          <button class="setting-reset" type="button" data-i18n="theme.editorResetAll">Reset to Defaults</button>
         </details>
         <details class="sidebar-section">
           <summary data-i18n="desktop.shortcutsTab">Shortcuts</summary>
@@ -214,6 +216,7 @@
           <label class="setting"><span data-i18n="dictionary.devSupplementDict">Supplementary Word List</span>
             <input type="checkbox" name="devDictEnabled" checked>
           </label>
+          <button class="setting-reset" type="button" data-i18n="theme.editorResetAll">Reset to Defaults</button>
         </details>
       </form>
       <details class="sidebar-section">

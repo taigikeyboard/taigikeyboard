@@ -16,6 +16,11 @@ import {
   toggle,
 } from "./helpers.mjs";
 
+/// The reset button of the section holding the `row` selector.
+const resetSectionOf = (page, row) =>
+  page
+    .locator(".sidebar-section", { has: page.locator(row) })
+    .getByRole("button", { name: "Reset to Defaults" });
 const theme = (page) =>
   page.evaluate(() => document.documentElement.dataset.theme);
 const pageColour = (page) =>
@@ -441,6 +446,50 @@ test("turning a source off takes its words from the list", async ({ page }) => {
   await editor.pressSequentially("taiuan");
   await expect(preedit(page)).toContainText("taiuan");
   await expect(candidates(page).filter({ hasText: "台灣" })).toHaveCount(0);
+});
+
+test("a section's reset takes back its own rows and keeps the language", async ({
+  page,
+}) => {
+  const editor = await open(page, {
+    settings: {
+      inputMode: "poj",
+      displayLanguage: "en",
+      lastRomanizationMode: "poj",
+      candidateAppearanceMode: "dark",
+    },
+  });
+  await resetSectionOf(page, 'select[name="inputMode"]').click();
+  await expect(inputMode(page)).toHaveValue("tl");
+  await expect(page.locator('select[name="displayLanguage"]')).toHaveValue(
+    "en",
+  );
+  await expect(
+    page.locator('select[name="candidateAppearanceMode"]'),
+  ).toHaveValue("dark");
+  const stored = await page.evaluate(
+    () => JSON.parse(localStorage.getItem("taigi.settings")).values,
+  );
+  expect(stored).toEqual({
+    displayLanguage: "en",
+    candidateAppearanceMode: "dark",
+  });
+  // The session took it too: TL's spelling, not POJ's.
+  await editor.focus();
+  await editor.pressSequentially("tsiah");
+  await expect(preedit(page)).toContainText("tsiah");
+});
+
+test("the dictionary reset turns the sources back on", async ({ page }) => {
+  const editor = await open(page, { settings: { moeDictEnabled: false } });
+  const accent = page.locator('input[name="kautianAltReadingEnabled"]');
+  await expect(accent).toBeDisabled();
+  await resetSectionOf(page, 'input[name="moeDictEnabled"]').click();
+  await expect(accent).toBeEnabled();
+  await expect(page.locator('input[name="moeDictEnabled"]')).toBeChecked();
+  await editor.focus();
+  await editor.pressSequentially("taiuan");
+  await expect(candidates(page).filter({ hasText: "台灣" })).not.toHaveCount(0);
 });
 
 test("Layout sets the list's shape and Size its text", async ({ page }) => {
