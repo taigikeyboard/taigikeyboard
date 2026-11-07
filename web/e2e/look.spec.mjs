@@ -372,6 +372,7 @@ test("the sidebar links fold under their own section", async ({ page }) => {
     "taigikeyboard.tw",
     "台語羅馬字轉換器",
     "教典備援網站",
+    "教典鬥搜揣",
   ]);
 });
 

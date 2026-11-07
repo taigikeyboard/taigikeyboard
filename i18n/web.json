@@ -94,6 +94,24 @@
         "ja": "教典ミラーサイト"
       }
     },
+    "kautianSearchExtension": {
+      "comment": "Sidebar Other Resources link to the 教典鬥搜揣 browser extension (Chrome Web Store). Its own name, which has no English or romanized form, in every language.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "教典鬥搜揣",
+        "tailo": "教典鬥搜揣",
+        "poj": "教典鬥搜揣",
+        "en": "教典鬥搜揣",
+        "ja": "教典鬥搜揣"
+      }
+    },
     "loading": {
       "comment": "Status slot while the engine and the dictionaries load.",
       "scope": {
