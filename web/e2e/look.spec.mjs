@@ -337,18 +337,16 @@ test("the footer rests at the window's foot, then below the page", async ({
 
 test("the footer's icons name their places", async ({ page }) => {
   await open(page);
-  const links = page.locator(".social-links").getByRole("link");
-  for (const name of [
-    "Email",
+  // Social networks, the community's rooms, the code, then mail.
+  await expect(page.locator(".social-links a")).toHaveText([
+    "Facebook",
+    "Instagram",
     "LINE",
     "Discord",
-    "Facebook",
     "GitHub Issues",
-  ]) {
-    await expect(links.filter({ hasText: name })).toBeVisible();
-  }
-  await expect(links).toHaveCount(5);
-  await expect(links.first()).toHaveAttribute(
+    "Email",
+  ]);
+  await expect(page.locator(".social-links a").last()).toHaveAttribute(
     "href",
     "mailto:info@taigikeyboard.tw",
   );
