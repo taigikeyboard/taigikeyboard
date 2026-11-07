@@ -75,14 +75,30 @@ public static extern bool FreeLibrary(IntPtr module);
 # PendingFileRenameOperations holds (source, target) pairs; a delete is a
 # source with an empty target. Sources are NT paths (`\??\C:\...`); some carry
 # a `*1` prefix (measured on Windows 11 Arm64, 26300).
-function Assert-PendingDelete([string[]] $Pending, [string] $Path) {
+function Test-PendingDelete([string[]] $Pending, [string] $Path) {
     for ($i = 0; $i + 1 -lt $Pending.Count; $i += 2) {
-        if (($Pending[$i] -replace '^\*\d+', '') -eq "\??\$Path" -and $Pending[$i + 1] -eq '') {
-            Write-Host "  queued for restart: $Path"
-            return
-        }
+        if (($Pending[$i] -replace '^\*\d+', '') -eq "\??\$Path" -and $Pending[$i + 1] -eq '') { return $true }
     }
-    Fail "$Path is left behind and not queued for deletion at restart"
+    $false
+}
+
+# What an uninstall still has to finish, or $null once it is done: the
+# registrations gone, no file under its install name, and everything left in
+# {app} (files a host holds, under their moved-aside names) plus {app} itself
+# queued for deletion at restart.
+function Get-UninstallShortfall {
+    foreach ($key in $UninstallKey, $Clsid64Key, $Clsid32Key, $TipKey) {
+        if (Test-Path $key) { return "$key is still there" }
+    }
+    foreach ($name in $SharedFiles + $Arm64Files) {
+        if (Test-Path (Join-Path $AppDir $name)) { return "$name is still installed" }
+    }
+    if (-not (Test-Path $AppDir)) { return $null }
+    $pending = @((Get-ItemProperty $SessionManagerKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)
+    foreach ($path in @(Get-ChildItem $AppDir -Recurse -Force -File | ForEach-Object { $_.FullName }) + $AppDir) {
+        if (-not (Test-PendingDelete $pending $path)) { return "$path is left behind and not queued for deletion at restart" }
+    }
+    $null
 }
 
 function Get-InProcServer([string] $ClsidKey) {
@@ -145,23 +161,17 @@ switch ($Action) {
             $handle
         }
         Write-Host "==> $uninstaller (holding $($held -join ', '))"
-        # The uninstaller runs from a copy in %TEMP% and ends this process when
-        # it is done; what it leaves is waited on as the outcome. Its own exe
-        # goes last, after the [Code] cleanup has queued its deletes.
+        # The uninstaller hands over to a copy in %TEMP% and this process
+        # returns early; that copy deletes unins000.exe and the uninstall key
+        # BEFORE the [Code] cleanup runs, so neither marks the end. The outcome
+        # itself is polled for instead.
         $process = Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
         if ($process.ExitCode -ne 0) { Fail "$uninstaller exited $($process.ExitCode)" }
         $deadline = (Get-Date).AddMinutes(3)
-        while (((Test-Path $UninstallKey) -or (Test-Path $uninstaller)) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
-        foreach ($key in $UninstallKey, $Clsid64Key, $Clsid32Key, $TipKey) {
-            if (Test-Path $key) { Fail "$key is still there after uninstalling" }
-        }
-        foreach ($name in $SharedFiles + $Arm64Files) {
-            if (Test-Path (Join-Path $AppDir $name)) { Fail "$name is still installed" }
-        }
+        while (($shortfall = Get-UninstallShortfall) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
+        if ($shortfall) { Fail "after uninstalling: $shortfall" }
         if (Test-Path $AppDir) {
-            $pending = @((Get-ItemProperty $SessionManagerKey -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations)
-            foreach ($file in Get-ChildItem $AppDir -Recurse -Force -File) { Assert-PendingDelete $pending $file.FullName }
-            Assert-PendingDelete $pending $AppDir
+            Get-ChildItem $AppDir -Recurse -Force -File | ForEach-Object { Write-Host "  queued for restart: $($_.FullName)" }
         }
         foreach ($handle in $handles) { [void] [TaigiSmoke.Kernel32]::FreeLibrary($handle) }
         Write-Host 'OK  uninstalled'

@@ -471,9 +471,11 @@ end;
 // which is why it is not used.
 //
 // Pending operations run in order at boot, so each directory is queued after
-// what it held, children before parents. A directory that still holds
-// something of the user's own fails that delete at boot and stays, which is
-// the right outcome. Setup's own uninstaller files are Inno's to remove.
+// what it held, children before parents. Every other file left is treated as
+// payload, a user's own included: {app} sits under Program Files, which only an
+// administrator writes. Setup's own uninstaller files are already gone by
+// usPostUninstall; the `unins` skip covers only Inno failing to delete them,
+// which Inno handles itself.
 procedure DiscardLeftoverTree(const Directory: String);
 var
   Found: TFindRec;
