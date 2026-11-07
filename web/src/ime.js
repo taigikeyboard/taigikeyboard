@@ -6,6 +6,7 @@ import { translate } from "./i18n.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
 import { Panel } from "./panel.js";
 import { Settings } from "./settings.js";
+import { drawShortcuts } from "./shortcuts.js";
 import { Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
 import { TpsKeyboard } from "./tps_keyboard.js";
@@ -162,6 +163,7 @@ async function start() {
     starting = await createSession(platform(), navigator.language);
     session = starting;
     restoreSettings(starting);
+    redrawShortcuts();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
     textarea.disabled = false;
     textarea.focus();
@@ -242,6 +244,15 @@ function changeSettings(json) {
   apply(call((current) => current.commitComposition()));
   call((current) => current.setSettings(json));
   redrawMessage();
+  redrawShortcuts();
+}
+
+/// Keys and labels follow Tone Keys, the input mode and the language.
+function redrawShortcuts() {
+  const { groups } = call((current) => current.shortcuts());
+  if (groups) {
+    drawShortcuts(document.getElementById("shortcuts"), groups);
+  }
 }
 
 function placePanel() {
@@ -253,6 +264,7 @@ function placePanel() {
 function apply(reply) {
   if (reply.settings) {
     settings.adopt(reply.settings);
+    redrawShortcuts();
   }
   if (reply.emits.length > 0) {
     reply.emits.forEach(applyEmit);

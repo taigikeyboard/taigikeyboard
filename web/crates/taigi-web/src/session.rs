@@ -13,11 +13,13 @@ use taigi_desktop_core::session::{
     click_from_panel, commit_composition, mode_label, navigate_from_panel, process_key,
     toggle_language_mode, tps_keyboard_press, Emit, EngineState, ListSelection,
 };
+use taigi_desktop_core::settings::SettingsProvider;
 
 use crate::key::{shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
 use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
+use crate::shortcuts::shortcuts;
 
 const CONTEXT: ContextToken = ContextToken(1);
 /// A stamp for the log only, until a page ships dictionaries of a version.
@@ -159,6 +161,16 @@ impl WebSession {
         self.state.latched_chord = None;
         self.shift_tap.clear();
         self.shifts_down = [false; 2];
+    }
+
+    /// The sidebar's Shortcuts section under the current document.
+    pub(crate) fn shortcuts(&self) -> String {
+        let wire = shortcuts(
+            &self.settings.current(),
+            &self.runtime.strings(),
+            self.runtime.platform(),
+        );
+        serde_json::to_string(&wire).expect("plain strings")
     }
 
     pub(crate) fn set_settings(&self, json: &str) -> Result<(), serde_json::Error> {

@@ -172,6 +172,11 @@ impl Session {
     }
 
     /// A malformed document is refused and the previous one stays.
+    /// The sidebar's Shortcuts section; JSON, `shortcuts.rs`.
+    pub fn shortcuts(&self) -> String {
+        self.inner.shortcuts()
+    }
+
     #[wasm_bindgen(js_name = setSettings)]
     pub fn set_settings(&self, settings_json: &str) -> Result<(), JsError> {
         self.inner
