@@ -62,10 +62,26 @@ test("every section starts folded and unfolds on a click", async ({ page }) => {
   await expect(inputMode(page)).toBeHidden();
   await expect(page.getByLabel("Appearance")).toBeHidden();
   await expect(moe).toBeHidden();
-  await page.locator("summary").nth(2).click();
+  await page.locator("summary").nth(3).click();
   await expect(moe).toBeVisible();
-  await page.locator("summary").nth(2).click();
+  await page.locator("summary").nth(3).click();
   await expect(moe).toBeHidden();
+});
+
+test("Shortcuts lists the keys and follows the settings", async ({ page }) => {
+  await open(page);
+  const rows = page.locator("#shortcuts .setting");
+  const row = (name) => rows.filter({ hasText: name });
+  // trace: `shipped_chord` ConfirmHighlighted = Enter + Space, `display`.
+  await expect(row("Confirm Key").locator(".setting-keys")).toHaveText(
+    /Enter|↩/,
+  );
+  await expect(row("Output the Other Script")).toContainText("QWDFZXVY;");
+  await page.locator('[name="toneInputScheme"]').selectOption("telex");
+  // trace: the Telex slot set, behind one Shift (`shifted_slot_keys_label`).
+  await expect(row("Output the Other Script")).toContainText("123456789");
+  await page.locator('[name="displayLanguage"]').selectOption("hanji");
+  await expect(row("確定齒")).toBeAttached();
 });
 
 test("the chord opens the sidebar on its General rows", async ({ page }) => {
@@ -370,7 +386,7 @@ test("turning a source off takes its words from the list", async ({ page }) => {
   await expect(candidates(page).filter({ hasText: "台灣" })).not.toHaveCount(0);
   await editor.press("Escape");
   for (const row of await page
-    .locator(".sidebar-section:nth-of-type(3) input:not([data-requires])")
+    .locator(".sidebar-section:nth-of-type(4) input:not([data-requires])")
     .all()) {
     await row.uncheck();
   }

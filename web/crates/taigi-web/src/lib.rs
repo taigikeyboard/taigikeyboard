@@ -16,3 +16,4 @@ mod layout;
 mod page_settings;
 mod reply;
 mod session;
+mod shortcuts;

@@ -298,6 +298,19 @@ summary:focus-visible {
   padding-left: 1rem;
 }
 
+/* The greyed keys tell a row that only reads from one that changes something. */
+.setting-keys {
+  color: var(--secondary);
+  text-align: right;
+  white-space: pre-wrap;
+}
+
+.setting small {
+  display: block;
+  color: var(--secondary);
+  font-size: 0.8125rem;
+}
+
 .setting select {
   min-width: 0;
   max-width: 60%;
