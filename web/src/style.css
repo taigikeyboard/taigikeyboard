@@ -898,8 +898,10 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
+/* `auto` holds it at the window's foot; a taller page pushes it down. */
 footer {
-  margin-top: 2.5rem;
+  margin-top: auto;
+  padding-top: 2.5rem;
   color: var(--secondary);
   font-size: 13px;
   letter-spacing: -0.01em;
@@ -913,6 +915,33 @@ footer a {
 footer a:hover {
   color: var(--text);
   text-decoration: none;
+}
+
+footer p {
+  margin: 0.25rem 0 0;
+  text-align: center;
+}
+
+/* The official site's Issues icons, in the footer's quiet colour. */
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.social-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.social-links a svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
 }
 
 /* Last, to outrank the docked `@media` block. */

@@ -310,13 +310,45 @@ test("the textarea starts short however tall the window", async ({ page }) => {
   expect((await editor.boundingBox()).height).toBeCloseTo(352, 0);
 });
 
-test("the footer matches the converter's", async ({ page }) => {
+test("the footer names its author", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("footer p")).toHaveText("© 2026 Bîn-hiân");
+});
+
+test("the footer rests at the window's foot, then below the page", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1200 });
   await open(page);
   const footer = page.locator("footer");
-  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持 ❤️");
-  await expect(footer.getByRole("link")).toHaveAttribute(
+  // trace: `body` padding-bottom 2rem at the 16px root.
+  const bottom = async () => {
+    const box = await footer.boundingBox();
+    return box.y + box.height;
+  };
+  expect(await bottom()).toBeCloseTo(1200 - 32, 0);
+
+  await page.setViewportSize({ width: 1280, height: 400 });
+  const editor = await page.locator("#editor").boundingBox();
+  expect((await footer.boundingBox()).y).toBeGreaterThan(
+    editor.y + editor.height,
+  );
+});
+
+test("the footer's icons name their places", async ({ page }) => {
+  await open(page);
+  // Social networks, the community's rooms, the code, then mail.
+  await expect(page.locator(".social-links a")).toHaveText([
+    "Facebook",
+    "Instagram",
+    "LINE",
+    "Discord",
+    "GitHub Issues",
+    "Email",
+  ]);
+  await expect(page.locator(".social-links a").last()).toHaveAttribute(
     "href",
-    "https://p.ecpay.com.tw/AA663DE",
+    "mailto:info@taigikeyboard.tw",
   );
 });
 
