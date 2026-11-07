@@ -809,6 +809,7 @@ dependencies = [
 name = "userdata"
 version = "0.1.0"
 dependencies = [
+ "js-sys",
  "log",
  "phonetics",
  "protos",

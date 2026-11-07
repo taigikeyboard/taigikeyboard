@@ -8,6 +8,13 @@ pub const FREQUENCY_FILE: &str = "user_frequency.db";
 pub const ASSOCIATION_FILE: &str = "user_association.db";
 pub const CUSTOM_DICTIONARY_FILE: &str = "custom_dictionary.db";
 pub const LEARNED_PHRASES_FILE: &str = "learned_phrases.db";
+/// All four, for a platform that moves the files itself (the web).
+pub const USER_DATA_FILES: [&str; 4] = [
+    FREQUENCY_FILE,
+    ASSOCIATION_FILE,
+    CUSTOM_DICTIONARY_FILE,
+    LEARNED_PHRASES_FILE,
+];
 
 /// Where each store's file lives. The platform decides (roadmap U5): one
 /// directory everywhere except Android, whose `user_association.db` has

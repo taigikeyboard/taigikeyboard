@@ -32,11 +32,23 @@ use crate::settings::InputMode;
 /// takeover's re-derivation included — on a thread of its own. `true` once the engine acknowledged
 /// the open; it does not promise that every store is usable yet.
 pub fn open(directory: &Path, platform: DesktopPlatform) -> bool {
+    open_with(directory, journal(platform), true)
+}
+
+/// Opens the engine's stores over `directory` and finishes before it
+/// returns, under a rollback journal: the web, which has no thread to finish
+/// on and whose files sit in SQLite's memory VFS, with no shared memory for
+/// WAL. `true` once the engine acknowledged the open.
+pub fn open_on_this_thread(directory: &Path) -> bool {
+    open_with(directory, UserDataJournal::Delete, false)
+}
+
+fn open_with(directory: &Path, journal: UserDataJournal, in_background: bool) -> bool {
     let Some(answer) = user_data(
         user_data_request::Method::Open(OpenUserData {
             directory: directory.display().to_string(),
-            journal: journal(platform) as i32,
-            in_background: true,
+            journal: journal as i32,
+            in_background,
             ..OpenUserData::default()
         }),
         "userDataOpen",
