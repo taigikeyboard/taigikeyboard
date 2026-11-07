@@ -6,7 +6,8 @@
   "description": "Taigi (Taiwanese Hokkien) input method: POJ, TL, TPS, Hanji.",
   "minimum_chrome_version": "116",
   "background": { "service_worker": "worker.js", "type": "module" },
-  "permissions": ["input", "offscreen"],
+  "permissions": ["input", "offscreen", "storage"],
+  "options_page": "options.html",
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
@@ -23,6 +24,7 @@
       "indicator": "台",
       "description": "Taigi Keyboard",
       "language": "zh-TW",
+      "options_page": "options.html",
       "layouts": ["us"]
     }
   ]
