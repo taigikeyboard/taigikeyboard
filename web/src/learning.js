@@ -40,8 +40,8 @@ export async function readSnapshot() {
 export class Learning {
   /// The session `ime.js` calls now, `null` between instances.
   #current;
-  /// `ime.js`'s `run`: an engine call, `undefined` after a trap, which it
-  /// recovers from with a new instance.
+  /// The host's `run` (`ime.js`, the ChromeOS worker): an engine call,
+  /// `undefined` after a trap, which the host recovers from in its own way.
   #run;
   #holdsLock = false;
   /// The session being opened, so a second `attach` does not hand files in
