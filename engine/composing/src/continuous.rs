@@ -27,7 +27,7 @@
 //! 4. `fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
 //!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then
 //!    `insert(0, ..)`. The walker returns a [`WalkerSlot0`] and the seam
-//!    converts it to a `RawCandidate` (slot 0 is an explicit prepend, never
+//!    converts it to a `RawCandidate` (slot 0 is an explicit prepend, not
 //!    sort-compared, so `score` / `frequency` / `bitmask` stay `0`).
 //!
 //!    **Step 4b — whole-input prefix-extension scan (else-branch only).**
@@ -47,7 +47,9 @@
 //!    `(canonical_tl | roman, hanji, consumed_span)` dedupe drops extension hits
 //!    already present in the FULL block. Step 4d then re-sorts the merged
 //!    blocks by `CandidateSortKey` (tier first, USER 2026-10-12), so an
-//!    extension covering the whole input leads front-segment rows.
+//!    extension covering the whole input leads front-segment rows. A picked
+//!    multi-syllable extension then swaps above a walker sentence
+//!    ([`picked_extension_outranks_sentence`]); every other slot 0 stays.
 //! 5. POJ presentation pass: `mode == Poj` → [`recase_tl_as_poj_display`]
 //!    over every candidate's `roman` then [`dedupe_rendered_continuous`].
 //!    Skipped (not identity-called) for TL / English / TPS — the gate sits
@@ -85,7 +87,10 @@ use lexicon::{
     EngineHandle as LexiconHandle, LearnedEntry, RawCandidate, SyllableInventory,
     COVERAGE_KIND_FULL, PARTIAL_PREFIX_OUTPUT_CAP,
 };
-use ranking::{candidate_lead, sort_by_candidate_key, FrequencyMap, WALKER_COST_UNPRICED};
+use ranking::{
+    candidate_lead, sort_by_candidate_key, FrequencyMap, COVERAGE_KIND_PARTIAL_PREFIX,
+    WALKER_COST_UNPRICED,
+};
 
 /// The slot-0 walker's native result. The seam in [`assemble_candidates`]
 /// converts it to a `RawCandidate`; slot 0 is an explicit prepend, never
@@ -1085,6 +1090,26 @@ fn fetch_walker_slot0_inner(
     })
 }
 
+/// Whether the top ranked row is a picked word that takes slot 0 from the
+/// walker's sentence at `candidates[0]`.
+///
+/// The walker spans `0..raw_len`, so a word whose key extends past the input
+/// (`antsua` → 按怎 `án-tsuánn`) has no edge and could never fill slot 0
+/// however often it was picked. Only a multi-syllable word qualifies: the
+/// store keys a pick by its reading, not by what was typed, so a one-syllable
+/// pick made on `sian` would otherwise take `sia` from the sentence `sī a`,
+/// the short-word sweep the walker's own single-syllable delta scale refuses
+/// (`lattice::cost::WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`).
+fn picked_extension_outranks_sentence(candidates: &[RawCandidate], raw_len: u32) -> bool {
+    let [sentence, top_ranked, ..] = candidates else {
+        return false;
+    };
+    top_ranked.coverage_kind == COVERAGE_KIND_PARTIAL_PREFIX
+        && candidate_lead(&top_ranked.rank_facts(), raw_len).0 == 0
+        && top_ranked.syllable_count >= 2
+        && top_ranked.user_weight > sentence.user_weight
+}
+
 // ============================================================================
 // Seam orchestrator — single `with_state` scope, 6-step contract.
 // ============================================================================
@@ -1209,6 +1234,9 @@ pub(crate) fn assemble_candidates(
         // Rows ahead of the ranked list: 1 once the walker's whole-sentence
         // slot is prepended (Step 4), which no later sort may move.
         let mut walker_slot0_len = 0usize;
+        // Whether that slot is a sentence the walker composed from several
+        // edges, not one word: the only slot a picked extension may take.
+        let mut walker_slot0_is_sentence = false;
         // Whether a block was appended after the first sorted one (the §35
         // bare merge, Step 4b, Step 4c) — the only case Step 4d must re-sort.
         let mut appended_blocks = false;
@@ -1319,6 +1347,7 @@ pub(crate) fn assemble_candidates(
                         fetch_walker_slot0_inner(raw, raw_len, continuous_keys, inv, ctx)
                             .filter(|slot0| shape == ListShape::Sentence || slot0.edge_count == 1)
                     {
+                        let composed_from_edges = slot0.edge_count >= 2;
                         // R2 identity sidechannel: read the canonical TL the
                         // walker already folded once (`WalkerSlot0.canonical_tl`,
                         // from the synth `roman`) — do NOT re-fold here. In the
@@ -1389,14 +1418,14 @@ pub(crate) fn assemble_candidates(
                         let has_exact_twin = c
                             .iter()
                             .any(|x| is_same_full_span_word(x) && x.roman == slot0_cand.roman);
-                        let promote_idx = if slot0_cand.is_custom || has_exact_twin {
-                            None
-                        } else {
-                            c.iter().position(|x| {
-                                is_same_full_span_word(x)
-                                    && roman_reading_eq(&x.roman, &slot0_cand.roman)
-                            })
-                        };
+                        let same_reading_idx = c.iter().position(|x| {
+                            is_same_full_span_word(x)
+                                && roman_reading_eq(&x.roman, &slot0_cand.roman)
+                        });
+                        walker_slot0_is_sentence =
+                            composed_from_edges && same_reading_idx.is_none();
+                        let promote_idx =
+                            same_reading_idx.filter(|_| !slot0_cand.is_custom && !has_exact_twin);
                         // Slot 0 is either the promoted canonical dict row
                         // (removed from its current position) or the synth.
                         // Both then run the SAME dedupe — same word identity
@@ -1574,7 +1603,8 @@ pub(crate) fn assemble_candidates(
         // the tier: a Step 4b extension or Step 4c abbreviation covering the
         // whole input outranks a span-local row covering only its front, so
         // the concatenation is re-sorted (stable — each block's own order and
-        // its exclude → truncate are kept). The walker's slot 0 stays put.
+        // its exclude → truncate are kept). The walker's slot 0 stays put,
+        // unless a picked word the walker cannot reach outranks its sentence.
         if appended_blocks {
             let ranked = candidates.split_off(walker_slot0_len.min(candidates.len()));
             candidates.extend(sort_by_candidate_key(
@@ -1582,6 +1612,10 @@ pub(crate) fn assemble_candidates(
                 raw_len,
                 RawCandidate::rank_facts,
             ));
+            if walker_slot0_is_sentence && picked_extension_outranks_sentence(&candidates, raw_len)
+            {
+                candidates.swap(0, 1);
+            }
         }
         // ---- Step 5: presentation pass (typed separators, POJ render,
         // Syllable Separator, ⁿ case).

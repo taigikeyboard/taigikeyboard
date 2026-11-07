@@ -16,10 +16,10 @@ One `FetchAtPos` is answered by `composing::continuous::assemble_candidates` ([`
 | 1 | Syllabify the pending `raw` and build the left-anchored FST keys (all modes: TL / POJ / TPS / English) | `shadow::build_continuous_keys` |
 | 2 | No key → whole-buffer partial-prefix scan; else span-local exact fetch per key | `fetch_via_lexicon_partial_inner` / `lexicon::fetch_candidates_for_keys_with_barriers` |
 | 3 | Recase each candidate's `roman` to the user's typed segment | `recase_roman` |
-| 4 | Prepend the whole-sentence walker's best path at slot 0 (never sort-compared) | `fetch_walker_slot0_inner` |
+| 4 | Prepend the whole-sentence walker's best path at slot 0 (not sort-compared; only step 4d's picked extension can displace it) | `fetch_walker_slot0_inner` |
 | 4b | Whole-input prefix-extension scan (`COVERAGE_KIND_PARTIAL_PREFIX`) | `fetch_via_lexicon_partial_inner` |
 | 4c | Whole-buffer abbreviation lookup | `continuous.rs` Step 4c |
-| 4d | Re-sort the merged blocks by `CandidateSortKey`, keeping slot 0 in place | `ranking::sort_by_candidate_key` |
+| 4d | Re-sort the merged blocks by `CandidateSortKey`, keeping slot 0 in place; a picked multi-syllable partial prefix covering the whole input then swaps above a slot 0 composed from several edges that is not itself a dictionary word (`antsua` → 按怎 over 安紙). The walker has no edge past the input. A dictionary word at slot 0 keeps it (`ko` → 哥 over a picked 講: exact before predictive), and so does a sentence against a one-syllable pick, which is keyed by reading, not by what was typed | `ranking::sort_by_candidate_key`, `picked_extension_outranks_sentence` |
 | 5 | POJ mode only: render `roman` as POJ, then dedupe the rendered list | `recase_tl_as_poj_display`, `dedupe_rendered_continuous` |
 
 The dispatch caller runs the fetch twice: a neutral pass discovers the candidates, then their `user_frequency.db` rows are read and the fetch re-runs ranked (`engine/dispatch/src/user_data/with_stores.rs` `handle_composing` / `frequency_map`). No platform sends frequency rows.
