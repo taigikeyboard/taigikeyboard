@@ -25,6 +25,14 @@ RELEASE_TARGET="x86_64-pc-windows-msvc"
 # (docs/architecture/windows-release.md § The 32-bit service).
 SERVICE_DLL_32="TaigiKeyboard32.dll"
 RELEASE_TARGET_32="i686-pc-windows-msvc"
+# The Arm64 text service, the same rename story (cargo names it
+# `TaigiKeyboard.dll`), and the Arm64X forwarder an Arm64 machine registers as
+# InProcServer32 (docs/architecture/windows-arm64-roadmap.md § Install layout).
+# The forwarder's name is also `FORWARDER_DLL` in
+# crates/taigi-windows-tsf/src/registration.rs and in scripts/build-forwarder.ps1.
+SERVICE_DLL_ARM64="TaigiKeyboardArm64.dll"
+FORWARDER_DLL="TaigiKeyboard64X.dll"
+RELEASE_TARGET_ARM64="aarch64-pc-windows-msvc"
 
 # The first `version = "…"` after `[workspace.package]`.
 SHORT_VERSION="$(awk '
@@ -52,6 +60,9 @@ STAGING_DIR="$WINDOWS_DIR/.build/staging"
 # target directory trades a locked DLL for an App Control block on this box.
 TARGET_DIR="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET/release"
 TARGET_DIR_32="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET_32/release"
+TARGET_DIR_ARM64="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET_ARM64/release"
+# build-forwarder.ps1's output directory.
+FORWARDER_DIR="$WINDOWS_DIR/.build/forwarder"
 DICTIONARIES_SOURCE_DIR="$REPOSITORY_DIR/assets/dictionaries"
 FONTS_SOURCE_DIR="$REPOSITORY_DIR/assets/fonts/font"
 INSTALLER_SCRIPT="$WINDOWS_DIR/installer/TaigiKeyboard.iss"

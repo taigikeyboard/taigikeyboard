@@ -81,12 +81,12 @@ One PR per phase; each phase starts after the previous one merges.
 | 0 | Roadmap | This document; the issue #721 update | Done 2026-11-07 |
 | 1 | Spike (no merge) | Build the Arm64 DLL and the forwarder by hand, register them by hand in the Windows 11 Arm VM, type in Notepad (Arm64), an x64-only app and a 32-bit app. Record the result here. **Hard gate**: if the forwarder does not activate the text service, stop | **Passed 2026-11-07** (§ Spike result) |
 | 2 | TSF + forwarder | `build.rs` aarch64 name; registration writes the forwarder path, with tests; `windows/forwarder/` `.def` / `.rc` + `scripts/build-forwarder.ps1`; `install-dev.ps1` Arm64 path; aarch64 in `Makefile check-msvc` | Done 2026-11-07 (#760) |
-| 3 | Release tooling + CI | `scripts/lib/identity.sh` Arm64 names; `release-app.sh` aarch64 DLL + settings build, forwarder link, read-back checks (`AA64` / Arm64X machine, forwarded exports, runtime machine), staging, signing list; `windows-build.yml` aarch64 target, `Hostx64\arm64\link.exe`, Arm64 `cl.exe`, and a `windows-11-arm` smoke job (regsvr32, then `CoCreateInstance` of the CLSID from an Arm64 and an x64 process); the aarch64 TSF check in `check-box.sh`, once the box has the MSVC ARM64/ARM64EC build tools (moved from Phase 2: the box was off, and an aarch64 step without them fails every `make windows-check`) | Pending |
+| 3 | Release tooling + CI | `scripts/lib/identity.sh` Arm64 names; `release-app.sh` aarch64 DLL + settings build, forwarder link, read-back checks (`AA64` / Arm64X machine, forwarded exports, runtime machine), staging, signing list; `windows-build.yml` aarch64 target, `Hostx64\arm64\link.exe`, Arm64 `cl.exe`, and a `windows-11-arm` smoke job (regsvr32, then `CoCreateInstance` of the CLSID from an Arm64 and an x64 process); the aarch64 TSF check in `check-box.sh`, once the box has the MSVC ARM64/ARM64EC build tools (moved from Phase 2: the box was off, and an aarch64 step without them fails every `make windows-check`) | In progress (`feat/windows-arm64-release`); the `check-box.sh` step still waits on the box |
 | 4 | Universal installer + docs | `TaigiKeyboard.iss` as above; rewrite `windows-release.md` § Architectures / § Arm64 / machine setup / installer; `docs/CODE_SIGNING_POLICY.md` file list; `windows-roadmap.md` | Pending |
 
 ### Verification
 
-- Phases 2–3: `make windows-check`; `python3 tools/test_select.py --run --platform windows`; a dispatched `windows-build.yml` run whose artifact holds all five binaries with the expected PE machines; the `windows-11-arm` smoke job.
+- Phases 2–3: `make windows-check`; a branch can be built by dispatching `windows-build.yml` on it (only a `main` run attaches to a draft, after the smoke job passes); `python3 tools/test_select.py --run --platform windows`; a dispatched `windows-build.yml` run whose artifact holds all five binaries with the expected PE machines; the `windows-11-arm` smoke job.
 - Phase 4 (VM dogfood): install the CI installer; type Taigi in Notepad and Edge (Arm64), an x64-only app and a 32-bit app; Task Manager shows the settings window as Arm64; uninstall leaves no CLSID or profile. On an x64 machine, upgrade and uninstall behave as before.
 
 ### Spike result (2026-11-07)
@@ -102,8 +102,8 @@ Windows 11 Arm64 VM (UTM on Apple Silicon, build 26300), `main` @ `ad13d934a`, a
 `CoGetClassObject(CLSID)` returns `S_OK` from both an Arm64 and an x64 process, each loading only its own architecture's DLL. Explorer loads the Arm64 service through the forwarder too. One observation not yet compared with an x64 machine: in PowerShell ISE (WPF) the preedit and candidate window sit at the screen's top-left instead of the caret.
 
 ### Open questions
-- Which Arm64 build tools the `windows-2025` and `windows-11-arm` runner images include (Phase 3).
-- Whether the arm64 Windows App Runtime payload carries the same file names as `windows/build-support/windows-app-runtime-files.txt` (Phase 3).
+- Answered 2026-11-07: the `windows-2025` image's Visual Studio 2022 (17.14) carries the `VC.Tools.ARM64` and `VC.Tools.ARM64EC` components (actions/runner-images README); the build job cross-builds Arm64 on it, and `windows-11-arm` only runs the smoke job. If the `windows-2025` label moves to Visual Studio 2026, re-check `build-forwarder.ps1`'s `-DevCmdArguments` host argument.
+- Answered 2026-11-07: the Arm64 Windows App Runtime payload stages the same names as `windows/build-support/windows-app-runtime-files.txt`; all 28 top-level DLLs are `AA64` with no CLR header, so `release-app.sh` requires every top-level runtime DLL to match the exe's machine.
 
 ## Best practices alignment
 

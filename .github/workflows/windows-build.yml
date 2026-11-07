@@ -37,9 +37,9 @@ on:
     types: [published]
 
 permissions:
-  # Attaching the installer to the draft release is a write; the run's own
-  # GITHUB_TOKEN can do it inside this repository, so no PAT is involved.
-  contents: write
+  # Read-only by default: the build and smoke jobs run whatever ref was
+  # dispatched. Only the `attach` job, which runs for `main` alone, writes.
+  contents: read
 
 concurrency:
   group: windows-build-${{ github.ref }}
@@ -75,13 +75,14 @@ jobs:
     # Only this repository builds, and only for the desktop train. A Windows
     # runner is the most expensive gate this project has: a fork has nothing to
     # sign with, and a mobile release — should one ever be published here — has
-    # no Windows installer in it. A dispatched run attaches its installer to the
-    # draft, so only `main`, the branch a release is cut from, may dispatch one.
+    # no Windows installer in it. Any ref may be dispatched, so a branch that
+    # changes the release path can be built before it merges; only a `main`
+    # run attaches anything (the `attach` job), and this job holds a read-only
+    # token with no credential left in the checkout.
     if: >-
       github.repository == 'taigikeyboard/taigikeyboard' &&
       (github.event_name != 'release' ||
-       startsWith(github.event.release.tag_name, 'desktop-')) &&
-      (github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main')
+       startsWith(github.event.release.tag_name, 'desktop-'))
     timeout-minutes: 60
     steps:
       # core.autocrlf must be off BEFORE the checkout. Everything here is
@@ -94,6 +95,8 @@ jobs:
         run: git config --global core.autocrlf false
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # rc.exe (Windows SDK) and dumpbin (MSVC) are what the release script uses
       # to embed VERSIONINFO and to prove the binaries import no C runtime and
@@ -124,6 +127,14 @@ jobs:
           if (-not (Test-Path -LiteralPath $linker32)) { throw "no MSVC x86 link.exe at $linker32" }
           Write-Host "linker (x86): $linker32"
           "CARGO_TARGET_I686_PC_WINDOWS_MSVC_LINKER=$linker32" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # The Arm64 text service and settings exe (built third): the
+          # x64-hosted linker that targets Arm64. The bundled SQLite's cl.exe
+          # for Arm64 is found by the cc crate itself, as the x86 one is.
+          $linkerArm64 = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\arm64\link.exe'
+          if (-not (Test-Path -LiteralPath $linkerArm64)) { throw "no MSVC Arm64 link.exe at $linkerArm64" }
+          Write-Host "linker (Arm64): $linkerArm64"
+          "CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER=$linkerArm64" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
@@ -160,14 +171,14 @@ jobs:
           if (-not (Test-Path -LiteralPath $iscc)) { throw "no ISCC.exe at $iscc" }
           Split-Path -Parent $iscc | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-      # The 32-bit text service's target, added explicitly rather than trusted
-      # to rustup's handling of `windows/rust-toolchain.toml` on a runner whose
-      # image already carries a stable toolchain without it. Run from windows/
-      # so it lands on the toolchain that file pins.
-      - name: Add the i686 target
+      # The 32-bit and Arm64 text services' targets, added explicitly rather
+      # than trusted to rustup's handling of `windows/rust-toolchain.toml` on a
+      # runner whose image already carries a stable toolchain without them. Run
+      # from windows/ so they land on the toolchain that file pins.
+      - name: Add the i686 and aarch64 targets
         shell: bash
         working-directory: windows
-        run: rustup target add i686-pc-windows-msvc
+        run: rustup target add i686-pc-windows-msvc aarch64-pc-windows-msvc
 
       # What actually built this, recorded in the log. A provenance claim that
       # cannot name its compiler is worth less than one that can.
@@ -182,6 +193,8 @@ jobs:
           iscc /? 2>&1 | head -1 || true
           command -v rc.exe rc dumpbin || true
           echo "linker: $CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER"
+          echo "linker (x86): $CARGO_TARGET_I686_PC_WINDOWS_MSVC_LINKER"
+          echo "linker (Arm64): $CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER"
 
       # windows-reactor-setup's build script fetches these from NuGet with no
       # digest check, and skips the fetch when the package is already in its cache
@@ -264,11 +277,124 @@ jobs:
           include-hidden-files: true
           retention-days: 14
 
-      # Only a dispatched run stages a release. A run triggered by `release:
-      # published` is the provenance rebuild — the release it would attach to
-      # is already public, and its installer is the one people are downloading.
-      - name: Attach the installer to the draft release
-        if: github.event_name == 'workflow_dispatch'
+      # What the arm64-smoke job registers: the three 64-bit services' install
+      # names and the forwarder between them, from the staged layout.
+      - name: Upload the 64-bit services for the Arm64 smoke test
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-arm64-services
+          path: |
+            windows/.build/staging/TaigiKeyboard.dll
+            windows/.build/staging/TaigiKeyboardArm64.dll
+            windows/.build/staging/TaigiKeyboard64X.dll
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
+
+
+  # On an Arm64 machine: registers the Arm64 service, whose InProcServer32 is
+  # the Arm64X forwarder, then asks COM for the class object from an Arm64
+  # process and from an x64-emulated one, and checks each loaded its own
+  # architecture's DLL through the forwarder
+  # (docs/architecture/windows-arm64-roadmap.md § Forwarder). Activation, not
+  # typing — typing is the VM dogfood.
+  arm64-smoke:
+    name: Arm64 activation smoke
+    needs: build
+    runs-on: windows-11-arm
+    timeout-minutes: 15
+    env:
+      # An x64 process to activate from: Windows 11 on Arm ships no x64
+      # PowerShell (SysWOW64's is x86, which reads the 32-bit registry view).
+      PWSH_X64_VERSION: 7.6.9
+      PWSH_X64_SHA256: ce7484804c0f0ad4dda10c958e71acdaf7eebfb22505c1b480f89e0e9f1da94d
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: windows/scripts/smoke-activation.ps1
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-arm64-services
+          path: services
+
+      # regsvr32 is a GUI-subsystem program: started and waited on explicitly,
+      # or PowerShell returns before it exits and reports no exit code.
+      - name: Register the Arm64 service
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dll = Join-Path $PWD 'services\TaigiKeyboardArm64.dll'
+          $process = Start-Process "$env:SystemRoot\System32\regsvr32.exe" -ArgumentList '/s', "`"$dll`"" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "regsvr32 exited $($process.ExitCode)" }
+          $key = 'HKLM:\SOFTWARE\Classes\CLSID\{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}\InProcServer32'
+          $registered = (Get-ItemProperty -Path $key).'(default)'
+          $forwarder = Join-Path $PWD 'services\TaigiKeyboard64X.dll'
+          Write-Host "InProcServer32: $registered"
+          if ($registered -ne $forwarder) { throw "InProcServer32 is $registered, expected $forwarder" }
+
+      - name: Activate from an Arm64 process
+        shell: powershell
+        run: >-
+          & windows/scripts/smoke-activation.ps1 -Architecture ARM64
+          -Expected TaigiKeyboardArm64.dll -Unexpected TaigiKeyboard.dll
+
+      - name: Activate from an x64 process
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = "$env:RUNNER_TEMP\pwsh-x64.zip"
+          $dir = "$env:RUNNER_TEMP\pwsh-x64"
+          Invoke-WebRequest -UseBasicParsing -OutFile $zip -Uri `
+            "https://github.com/PowerShell/PowerShell/releases/download/v$env:PWSH_X64_VERSION/PowerShell-$env:PWSH_X64_VERSION-win-x64.zip"
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
+          if ($actual -ne $env:PWSH_X64_SHA256) { throw "PowerShell digest $actual, expected $env:PWSH_X64_SHA256" }
+          Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
+          & "$dir\pwsh.exe" -NoProfile -STA -File windows/scripts/smoke-activation.ps1 `
+            -Architecture AMD64 -Expected TaigiKeyboard.dll -Unexpected TaigiKeyboardArm64.dll
+          if ($LASTEXITCODE -ne 0) { throw "smoke-activation.ps1 exited $LASTEXITCODE" }
+
+      - name: Unregister
+        if: always()
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dll = Join-Path $PWD 'services\TaigiKeyboardArm64.dll'
+          $process = Start-Process "$env:SystemRoot\System32\regsvr32.exe" -ArgumentList '/s', '/u', "`"$dll`"" -Wait -PassThru
+          if (Test-Path 'HKLM:\SOFTWARE\Classes\CLSID\{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}') {
+            throw "regsvr32 /u exited $($process.ExitCode) and the CLSID is still registered"
+          }
+
+  # Only a dispatched run on `main` stages a release, and only once the Arm64
+  # smoke test passed. A run triggered by `release: published` is the
+  # provenance rebuild — the release it would attach to is already public, and
+  # its installer is the one people are downloading. A dispatched branch run
+  # builds and tests, and attaches nothing.
+  attach:
+    name: Attach the installer to the draft release
+    needs: [build, arm64-smoke]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      # Attaching the installer to the draft release is a write; the run's own
+      # GITHUB_TOKEN can do it inside this repository, so no PAT is involved.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: windows/Cargo.toml
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: windows-installer-unsigned
+          path: distribution
+
+      - name: Attach
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -285,7 +411,7 @@ jobs:
           # itself for a patch); this run joins it. A published release means
           # the staging order was broken — an asset added to it would be public
           # with no test — and no release at all means nothing staged yet.
-          state="$(gh release view "$tag" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
+          state="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
               echo "no release $tag: $state" >&2
               echo "stage-desktop.sh creates the draft before dispatching this run." >&2
               exit 1
@@ -295,7 +421,7 @@ jobs:
               exit 1
           }
 
-          cd windows/.build/distribution
+          cd distribution
           installer="TaigiKeyboard-$version.exe"
           [ -f "$installer" ] || { echo "no $installer in $(pwd)" >&2; exit 1; }
           # The digest beside the installer, in the same shape the macOS half

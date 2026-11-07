@@ -20,7 +20,7 @@ $ErrorActionPreference = 'Stop'
 
 $WindowsDir = Split-Path -Parent $PSScriptRoot
 $ForwarderSources = Join-Path $WindowsDir 'forwarder'
-# registration.rs FORWARDER_DLL.
+# registration.rs FORWARDER_DLL; scripts/lib/identity.sh FORWARDER_DLL.
 $ForwarderDll = 'TaigiKeyboard64X.dll'
 # Resolved now: the build below runs in a temporary directory.
 $OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
