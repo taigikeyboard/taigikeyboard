@@ -284,11 +284,6 @@ jobs:
     needs: build
     runs-on: windows-2025
     timeout-minutes: 20
-    env:
-      # The release this one upgrades. Move it to each newly published desktop
-      # release (digest from the release asset).
-      PREVIOUS_VERSION: 3.8.0
-      PREVIOUS_SHA256: 48ea85fa7f89558e1ba54b123b2feca0416ef93309f8ef87ed359c63671a3b67
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -301,17 +296,36 @@ jobs:
           name: windows-installer-unsigned
           path: distribution
 
+      # The previous release is the newest published (not draft, not
+      # prerelease) `desktop-*` release carrying an installer other than the one
+      # under test — a `release: published` run rebuilds the release that is
+      # itself newest. Its digest is GitHub's own `digest` field on the asset,
+      # so nothing here moves by hand at each release. One page of 100 releases
+      # reaches back far further than any desktop release gap.
       - name: Install over the previous release
         shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $previous = "$env:RUNNER_TEMP\TaigiKeyboard-$env:PREVIOUS_VERSION.exe"
-          Invoke-WebRequest -UseBasicParsing -OutFile $previous -Uri `
-            "https://github.com/$env:GITHUB_REPOSITORY/releases/download/desktop-$env:PREVIOUS_VERSION/TaigiKeyboard-$env:PREVIOUS_VERSION.exe"
+          $installer = Get-ChildItem distribution\TaigiKeyboard-*.exe | Select-Object -First 1
+          $releases = Invoke-RestMethod -Uri "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/releases?per_page=100" -Headers @{
+            Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
+          $asset = $releases |
+            Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -like 'desktop-*' } |
+            Sort-Object { [DateTime] $_.published_at } -Descending |
+            ForEach-Object { $_.assets } |
+            Where-Object { $_.name -match '^TaigiKeyboard-[0-9.]+\.exe$' -and $_.name -ne $installer.Name } |
+            Select-Object -First 1
+          if (-not $asset) { throw 'no published desktop release carries a TaigiKeyboard-*.exe' }
+          if ($asset.digest -notmatch '^sha256:([0-9a-f]{64})$') { throw "$($asset.name) has no sha256 digest: '$($asset.digest)'" }
+          $expected = $Matches[1]
+          Write-Host "previous release: $($asset.name) ($expected)"
+          $previous = Join-Path $env:RUNNER_TEMP $asset.name
+          Invoke-WebRequest -UseBasicParsing -OutFile $previous -Uri $asset.browser_download_url
           $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $previous).Hash.ToLower()
-          if ($actual -ne $env:PREVIOUS_SHA256) { throw "previous installer digest $actual, expected $env:PREVIOUS_SHA256" }
-          $installer = (Get-ChildItem distribution\TaigiKeyboard-*.exe | Select-Object -First 1).FullName
-          & windows/scripts/smoke-installer.ps1 -Action Install -Installer $installer -Previous $previous
+          if ($actual -ne $expected) { throw "previous installer digest $actual, expected $expected" }
+          & windows/scripts/smoke-installer.ps1 -Action Install -Installer $installer.FullName -Previous $previous
 
       - name: Uninstall
         shell: powershell
