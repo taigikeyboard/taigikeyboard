@@ -154,37 +154,29 @@ fn empty_input_returns_empty() {
 }
 
 #[test]
-fn capslock_taigi_is_known_non_idempotent() {
-    // KNOWN LIMITATION (Codex pre-impl 2026-05-21 SHOULD; extended
-    // by PR #310 r3278520895): the `rewrite_token` chain
-    // lowercases for the parse and only title-cases the assembled
-    // output via `capitalize_first` per hyphen-split sub-token, so
-    // a fully uppercase Taigi-shaped token does NOT preserve
-    // CapsLock — `TÂI-GÍ` (POJ) → `Tâi-Gí`, and `TSÁI-GÍ` (TL)
-    // also goes through the same chain. After r3278520895 the fold
-    // applies to both `Tl` and `Poj` modes, so this asymmetry
-    // appears in both. Production touch: bounded to a hanji-absent
-    // custom dict entry whose stored roman is all-caps Taigi (an
-    // extremely rare user pattern). `English` mode preserves
-    // CapsLock identically via the identity branch. Pinned here so
-    // a future symmetric fix in `rewrite_token` lands as an
-    // intentional behavior change.
-    let poj_capslock = "T\u{00c2}I-G\u{00cd}";
+fn case_is_not_identity() {
+    // CapsLock, an auto-capitalized sentence start and lowercase input all
+    // key one word; the old title-case output split them.
+    for typed in [
+        "T\u{00c2}I-G\u{00cd}",
+        "T\u{00e2}i-g\u{00ed}",
+        "t\u{00e2}i-g\u{00ed}",
+    ] {
+        assert_eq!(
+            canonical_tl_form(typed, InputMode::Tl),
+            "t\u{00e2}i-g\u{00ed}"
+        );
+    }
     assert_eq!(
-        canonical_tl_form(poj_capslock, InputMode::Poj),
-        "T\u{00e2}i-G\u{00ed}"
+        canonical_tl_form("Ch\u{00e1}u", InputMode::Poj),
+        "ts\u{00e1}u"
     );
+    assert_eq!(canonical_tl_form("Hello", InputMode::English), "Hello");
+    // Not Taigi: the user's own word keeps its case.
+    assert_eq!(canonical_tl_form("iPhone", InputMode::Tl), "iPhone");
     assert_eq!(
-        canonical_tl_form(poj_capslock, InputMode::Tl),
-        "T\u{00e2}i-G\u{00ed}"
-    );
-    // English mode preserves CapsLock — the identity branch leaves
-    // the string untouched so an all-caps English entry like
-    // `THE-IN` round-trips byte-identically (would otherwise mangle
-    // via the `th` initial + `e`/`in` finals path).
-    assert_eq!(
-        canonical_tl_form(poj_capslock, InputMode::English),
-        poj_capslock
+        canonical_tl_form("Kóng iPhone", InputMode::Tl),
+        "kóng iPhone"
     );
 }
 

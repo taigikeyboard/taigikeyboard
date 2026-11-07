@@ -103,8 +103,8 @@ pub(crate) struct WalkerSlot0 {
     pub roman: String,
     pub hanji: Option<String>,
     /// v3.6.1 R2 — canonical TL identity (`RawCandidate.canonical_tl`),
-    /// computed ONCE here from the edges' uncased romans (the single point
-    /// that knows the fold rule) so the seam reads it instead of re-folding.
+    /// computed ONCE here from the synth `roman` (the single point that
+    /// knows the fold rule) so the seam reads it instead of re-folding.
     pub canonical_tl: String,
     pub user_weight: f64,
     pub coverage_kind: u8,
@@ -1063,17 +1063,9 @@ fn fetch_walker_slot0_inner(
     // hanji-absent `display_text` fallback AND carried on `WalkerSlot0`
     // as the `(hanji, canonical-TL)` identity sidechannel, so the seam
     // (`assemble_candidates`) reads it instead of re-folding `slot0.roman`.
-    // Folded before the per-edge recase: the typed case is presentation, and
-    // a pick counted under `Kóng` would rank nothing typed `kong`.
-    let uncased_roman = any_dict.then(|| {
-        path.choices
-            .iter()
-            .map(|choice| choice.roman.as_str())
-            .collect::<Vec<_>>()
-            .join(" ")
-    });
-    let canonical_tl =
-        phonetics::api::canonical_tl_form(uncased_roman.as_deref().unwrap_or(&roman), mode);
+    // The fold drops the per-edge recase: a pick counted under `Kóng` would
+    // rank nothing typed `kong`.
+    let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
     let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
     // R5 pair-key (#7): walker synth keyed by (display_text,
     // canonical_tl); `get` returns the neutral default on a miss.
@@ -1360,7 +1352,7 @@ pub(crate) fn assemble_candidates(
                         let composed_from_edges = slot0.edge_count >= 2;
                         // R2 identity sidechannel: read the canonical TL the
                         // walker already folded once (`WalkerSlot0.canonical_tl`,
-                        // before the typed case) — do NOT re-fold here. In the
+                        // from the synth `roman`) — do NOT re-fold here. In the
                         // promote branch below `slot0_cand` is discarded and the
                         // promoted dict row carries its own `record.tl`
                         // `canonical_tl`.

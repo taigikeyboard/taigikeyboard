@@ -280,10 +280,14 @@ fn custom_entry(row: CustomDictionaryRow) -> lexicon::CustomEntry {
     }
 }
 
+/// A phrase learned before readings dropped their case may be stored
+/// `Kóng`; it ranks by the `kóng` the rest of the engine keys it under. Case
+/// only: the stored reading is already canonical TL, and a second fold would
+/// move a dictionary tone mark (`hùi`).
 fn learned_entry(phrase: LearnedPhraseRow) -> lexicon::LearnedEntry {
     lexicon::LearnedEntry {
         hanji: phrase.hanji,
-        canonical_tl: phrase.canonical_tl,
+        canonical_tl: phrase.canonical_tl.to_lowercase(),
     }
 }
 
