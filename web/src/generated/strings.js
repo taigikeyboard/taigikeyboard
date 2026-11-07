@@ -469,7 +469,7 @@ export const STRINGS = {
     "theme.customFont": "Jī-hêng siat-tēng",
     "web.textLabel": "Bûn-jī",
     "web.placeholder": "Chhi̍h {key} phah-jī",
-    "web.otherResources": "Kî-tha chu-goân",
+    "web.otherResources": "Kî-thaⁿ chu-goân",
     "web.officialSite": "Tâi-gí Khí-pôaⁿ koaⁿ-hong bāng-chām",
     "web.converter": "Tâi-gí Lô-má-jī choán-ōaⁿ-khì",
     "web.kautianMirror": "Kàu-tián pī-oān bāng-chām",
