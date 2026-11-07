@@ -386,7 +386,7 @@ summary:focus-visible {
 #text {
   display: block;
   width: 100%;
-  height: max(22rem, 100dvh - 17.5rem);
+  height: 22rem;
   min-height: 22rem;
   padding: 1.5rem;
   border: 0;
@@ -400,7 +400,7 @@ summary:focus-visible {
 /* The key panel asked for takes its room from the textarea, so Copy and Clear
    stay on screen. A height the user dragged stays theirs. */
 :root[data-tps-keyboard] #text {
-  height: max(14rem, 100dvh - 17.5rem - var(--tps-keyboard-height));
+  height: clamp(14rem, 100dvh - 17.5rem - var(--tps-keyboard-height), 22rem);
   min-height: 14rem;
 }
 
