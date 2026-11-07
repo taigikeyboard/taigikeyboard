@@ -229,7 +229,7 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 |---|---|---|
 | Next-word prediction | None, same as desktop | Physical keyboard; maintainer 2026-10-03 |
 | Target of typing | The page's textarea only | A tab cannot reach other apps |
-| Global shortcuts | The Ctrl+Alt set of Windows and Linux on every OS, minus what the browser keeps. On a Mac this is not the app's ⌃⌘ set, whose rows live in Swift (`keys/shortcut_actions.rs:219`) | Browser-reserved chords; one set of defaults in Rust |
+| Global shortcuts | The Ctrl+Alt set of Windows and Linux, minus what the browser keeps. On a Mac the page takes the app's ⌃⌘ set too and lists it (`web/crates/taigi-web/src/key.rs` `core_tier_snapshot`), ⌃⌥ still fires; a ⌃⌘ press that is no chord stays the browser's | One set of defaults in Rust; the Mac app's rows live in Swift |
 | English mode by Shift tap | Yes, as on Windows and macOS. **Linux has none** (`linux/crates/taigi-linux-core/src/chrome.rs` `mode_indicator`), so the gate is opt-in per shell | A page has no OS input-method switcher |
 | Bare Hanji/romanization key in English mode | Types a backtick. Windows still fires it, because its global match runs above the English gate (`session.rs:168-183`, `:204`) | English mode means the key is the document's, which is what the Windows comment says too |
 | Candidate click | Selects, never commits, as on Linux and macOS (`session/key.rs` `click_from_panel`) | Same code |

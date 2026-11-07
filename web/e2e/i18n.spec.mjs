@@ -73,11 +73,10 @@ test("the title and Copy, Clear stay put in every language", async ({
 });
 
 test("the session speaks the page's language", async ({ page }) => {
-  // trace: Ctrl+Alt+C → mode_label, settings.pojMode + sideBySide + the output
-  // script, each resolved in the Hanji map.
+  // trace: Ctrl+Alt+C → `switched_label`, settings.pojMode in the Hanji map.
   const editor = await open(page, { settings: { displayLanguage: "hanji" } });
   await editor.press("Control+Alt+c");
-  await expect(page.locator("#message")).toContainText("白話字 · 漢羅對應");
+  await expect(page.locator("#message")).toHaveText("白話字");
 });
 
 test("an unknown language tag reads as Hanji, as the session reads it", async ({

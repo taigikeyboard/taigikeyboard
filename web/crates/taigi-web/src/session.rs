@@ -12,12 +12,13 @@ use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::session::{
-    click_from_panel, commit_composition, mode_label, navigate_from_panel, process_key,
-    toggle_language_mode, tps_keyboard_press, Emit, EngineState, ListSelection,
+    click_from_panel, commit_composition, navigate_from_panel, process_key, toggle_language_mode,
+    tps_keyboard_press, Emit, EngineState, ListSelection,
 };
-use taigi_desktop_core::settings::SettingsProvider;
+use taigi_desktop_core::settings::presentation::output_script_label;
+use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
 
-use crate::key::{shift_index, BrowserKey, SHIFT_SCAN_CODES};
+use crate::key::{core_tier_snapshot, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
 use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
@@ -81,7 +82,21 @@ impl WebSession {
         };
         let platform = self.runtime.platform();
         let document = self.runtime.settings.current();
-        if ShortcutAction::matching(&snapshot, &document, platform) == Some(SETTINGS_WINDOW) {
+        // A chord as pressed comes first, so a stored ⌃⌘ row keeps its action.
+        // The rewrite only stands for a chord that exists: ⌃⌘F and the like
+        // stay the browser's.
+        let as_pressed = ShortcutAction::matching(&snapshot, &document, platform);
+        let rewritten = core_tier_snapshot(&snapshot, platform)
+            .filter(|_| as_pressed.is_none())
+            .and_then(|rewritten| {
+                let action = ShortcutAction::matching(&rewritten, &document, platform)?;
+                Some((action, rewritten))
+            });
+        let (action, snapshot) = match rewritten {
+            Some((action, rewritten)) => (Some(action), rewritten),
+            None => (as_pressed, snapshot),
+        };
+        if action == Some(SETTINGS_WINDOW) {
             return self.reply(false, &[], None);
         }
         // The event says what the wire elsewhere cannot: this is a new press,
@@ -91,7 +106,34 @@ impl WebSession {
             self.state.latched_chord = None;
         }
         let reply = process_key(&self.runtime, CONTEXT, &mut self.state, &snapshot);
-        self.reply(reply.handled, &reply.emits, None)
+        let announced = action
+            .filter(|_| reply.emits.contains(&Emit::AnnounceMode))
+            .and_then(|action| self.switched_label(action));
+        self.reply(reply.handled, &reply.emits, announced)
+    }
+
+    /// What a chord just switched, and only that: the macOS and Windows flash
+    /// (`TaigiInputController.performShortcutAction`, `perform_global`), not
+    /// the whole mode line Linux shows in its panel (`mode_label`).
+    fn switched_label(&self, action: ShortcutAction) -> Option<String> {
+        let document = self.runtime.settings.current();
+        let key = match action {
+            ShortcutAction::ToggleRomanization | ShortcutAction::ToggleTps => {
+                document.choice::<InputMode>(&keys::INPUT_MODE).label_key()
+            }
+            ShortcutAction::ToggleTranslateSwapped => {
+                output_script_label(document.bool(&keys::IS_HANJI_FIRST))
+            }
+            ShortcutAction::CycleCandidateDisplayMode => document
+                .engine_settings()
+                .candidate_display_mode
+                .label_key(),
+            ShortcutAction::OpenLastSettingsPane
+            | ShortcutAction::ShowSymbolPicker
+            | ShortcutAction::ShowTelexGuide
+            | ShortcutAction::ShowTpsKeyboard => return None,
+        };
+        Some(self.runtime.strings().resolve(key).to_owned())
     }
 
     /// The release: it ends a held chord, and may complete a Shift tap. Only
@@ -231,19 +273,11 @@ impl WebSession {
         u64::try_from(self.clock.now_ms()).unwrap_or(0)
     }
 
-    /// `announced` names what the flash says when it is not the mode label.
+    /// `announced` is what the flash says, for a reply that announces.
     fn reply(&self, handled: bool, emits: &[Emit], announced: Option<String>) -> String {
-        // Most keys announce nothing, and this runs on every one of them.
-        let label = match announced {
-            Some(label) => label,
-            None if emits.contains(&Emit::AnnounceMode) => {
-                mode_label(&self.runtime, &self.runtime.settings.current())
-            }
-            None => String::new(),
-        };
         let mode = ModeText {
             symbol: self.mode_symbol(),
-            label,
+            label: announced.unwrap_or_default(),
         };
         // One reply can carry two tables (a picker going down, then the list),
         // and the model belongs to the one left on screen. The Telex guide
@@ -336,17 +370,15 @@ mod tests {
     }
 
     fn session_on(clock: Arc<TestClock>) -> Fixture {
+        session_for(DesktopPlatform::Linux, clock)
+    }
+
+    fn session_for(platform: DesktopPlatform, clock: Arc<TestClock>) -> Fixture {
         let turn = ENGINE
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let session = WebSession::new(
-            "{}",
-            DesktopPlatform::Linux,
-            "en".to_owned(),
-            clock,
-            Arc::new(NoRuler),
-        )
-        .unwrap();
+        let session =
+            WebSession::new("{}", platform, "en".to_owned(), clock, Arc::new(NoRuler)).unwrap();
         Fixture {
             session,
             _turn: turn,
@@ -513,6 +545,81 @@ mod tests {
         assert!(parsed(session.key_down(&press("a", "KeyA")))
             .get("settings")
             .is_none());
+    }
+
+    fn announced(reply: &Value) -> &str {
+        let emits = reply["emits"].as_array().unwrap();
+        let last = &emits[emits.len() - 1];
+        assert_eq!(last["type"], "announceMode");
+        last["label"].as_str().unwrap()
+    }
+
+    #[test]
+    fn a_chord_announces_only_what_it_switched() {
+        // trace: `label_key`, en: POJ "Pe̍h-ōe-jī"; ` under side by side,
+        // stored swap true → false = SettingsOutputScriptRoman; Ctrl+Alt+H from
+        // side by side = the next display mode, resolved the same way.
+        let mut session = session();
+        let strings = session.runtime.strings();
+        let romanization = strings.resolve(InputMode::Poj.label_key()).to_owned();
+        let output_script = strings.resolve(output_script_label(false)).to_owned();
+        let reply = parsed(session.key_down(&chord("c", "KeyC")));
+        assert_eq!(announced(&reply), romanization);
+        session.key_up(&chord("c", "KeyC"));
+
+        let reply = parsed(session.key_down(&press("`", "Backquote")));
+        assert_eq!(announced(&reply), output_script);
+        session.key_up(&press("`", "Backquote"));
+
+        let reply = parsed(session.key_down(&chord("h", "KeyH")));
+        let display_mode = session
+            .runtime
+            .settings
+            .current()
+            .engine_settings()
+            .candidate_display_mode;
+        let expected = session.runtime.strings().resolve(display_mode.label_key());
+        assert_eq!(announced(&reply), expected);
+    }
+
+    #[test]
+    fn the_mac_app_chord_fires_and_a_browser_chord_stays_the_browsers() {
+        // trace: Ctrl+Cmd+C → ⌃⌥C in the core tier = ToggleRomanization; TL →
+        // POJ. Ctrl+Cmd+F matches nothing, so it goes out as it came.
+        let mut session = session_for(DesktopPlatform::MacOS, Arc::default());
+        let app_chord = |key: &str, code: &str| BrowserKey {
+            ctrl: true,
+            meta: true,
+            ..press(key, code)
+        };
+        let reply = parsed(session.key_down(&app_chord("c", "KeyC")));
+        assert_eq!(reply["handled"], true);
+        assert_eq!(emit_types(&reply).last(), Some(&"announceMode"));
+        session.key_up(&app_chord("c", "KeyC"));
+        let reply = parsed(session.key_down(&app_chord("f", "KeyF")));
+        assert_eq!(reply["handled"], false);
+    }
+
+    #[test]
+    fn a_stored_control_command_row_outranks_the_rewrite() {
+        // trace: raw `dc|0063` = ⌃⌘C on the Mac (`modifier_letters` d, c), on
+        // ToggleTps; the rewrite would have read ⌃⌥C = ToggleRomanization.
+        let mut session = session_for(DesktopPlatform::MacOS, Arc::default());
+        session
+            .settings
+            .replace_from_json(r#"{"values":{"globalShortcut.toggleTps":"dc|0063"}}"#)
+            .unwrap();
+        let press = BrowserKey {
+            ctrl: true,
+            meta: true,
+            ..press("c", "KeyC")
+        };
+        session.key_down(&press);
+        let document = session.runtime.settings.current();
+        assert_eq!(
+            document.choice::<InputMode>(&keys::INPUT_MODE),
+            InputMode::Tps
+        );
     }
 
     #[test]

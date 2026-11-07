@@ -141,9 +141,9 @@ test("a chord that writes the settings survives a reload", async ({ page }) => {
 test("a switch names the new mode, then gets out of the way", async ({
   page,
 }) => {
-  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ; `mode_label` starts with
-  // the romanization. A Shift tap flashes `flash_label_key`. The observer keeps
-  // each label, so a slow machine cannot miss the 0.8 s the card is up.
+  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ; `switched_label` is the
+  // romanization alone. A Shift tap flashes `flash_label_key`. The observer
+  // keeps each label, so a slow machine cannot miss the 0.8 s the card is up.
   const flash = page.locator("#mode-flash");
   const editor = await open(page);
   await flash.evaluate((card) => {
@@ -158,11 +158,11 @@ test("a switch names the new mode, then gets out of the way", async ({
 
   await expect(flash).toBeHidden();
   await editor.press("Control+Alt+c");
-  await expect.poll(flashed).toContain("Pe̍h-ōe-jī");
+  await expect.poll(flashed).toBe("Pe̍h-ōe-jī");
   await expect(flash).toBeHidden();
 
   await editor.press("Control+Alt+c");
-  await expect.poll(flashed).toContain("Tâi-lô");
+  await expect.poll(flashed).toBe("Tâi-lô");
   await editor.press("Shift");
   await expect.poll(flashed).not.toContain("Tâi-lô");
   await expect(flash).toBeHidden();
