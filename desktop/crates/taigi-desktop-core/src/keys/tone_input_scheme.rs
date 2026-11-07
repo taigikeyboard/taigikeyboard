@@ -68,12 +68,15 @@ impl ToneInputScheme {
         character.is_ascii() && Self::TELEX_KEYS.contains(character.to_ascii_lowercase())
     }
 
-    /// Whether `character` may start a composition on its own. Only `c` and
-    /// `h`, in either case: each types an initial, so it begins a syllable the
-    /// way any letter does. A tone letter or `f` has nothing to attach to when
-    /// idle, and passes to the host like an idle digit.
-    pub fn starts_composition(character: char) -> bool {
-        matches!(character, 'c' | 'C' | 'h' | 'H')
+    /// Whether `character` goes to the engine when no composition is active.
+    /// `c` and `h`, in either case, type an initial, so each begins a syllable
+    /// the way any letter does. `f` types the `-` key there: the neutral-tone
+    /// (khinsiann) marker, inserted as a literal while the engine stays idle,
+    /// so an idle `f` can no longer type the letter itself. A tone letter has
+    /// nothing to attach to when idle, and passes to the host like an idle
+    /// digit.
+    pub fn reaches_engine_when_idle(character: char) -> bool {
+        matches!(character, 'c' | 'C' | 'h' | 'H' | 'f' | 'F')
     }
 }
 
@@ -134,12 +137,18 @@ mod tests {
                 .collect::<std::collections::BTreeSet<_>>(),
             slot_letters
         );
-        for letter in ['c', 'C', 'h', 'H'] {
-            assert!(ToneInputScheme::starts_composition(letter), "{letter}");
+        for letter in ['c', 'C', 'h', 'H', 'f', 'F'] {
+            assert!(
+                ToneInputScheme::reaches_engine_when_idle(letter),
+                "{letter}"
+            );
         }
-        assert!(!ToneInputScheme::starts_composition('z'));
-        assert!(!ToneInputScheme::starts_composition('v'));
-        assert!(!ToneInputScheme::starts_composition('f'));
+        for letter in ['z', 'Z', 'v', 'x', 'y', 'd', 'w', 'q'] {
+            assert!(
+                !ToneInputScheme::reaches_engine_when_idle(letter),
+                "{letter}"
+            );
+        }
     }
 
     #[test]

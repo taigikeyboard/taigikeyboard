@@ -184,6 +184,10 @@ fn telex_key(
     match &state.phase {
         Phase::Idle => match crate::telex::apply_telex_key("", key, mode) {
             Some(text) => begin_composition(state, text, config, frequency),
+            // An idle `f` is the `-` key: the neutral-tone marker (§21).
+            None if crate::telex::is_hyphen_key(key) => {
+                begin_composition_or_insert_leading_hyphens(state, "-".into(), config, frequency)
+            }
             None => noop(state, config),
         },
         Phase::Continuous {
