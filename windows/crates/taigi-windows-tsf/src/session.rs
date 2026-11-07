@@ -26,7 +26,6 @@ use crate::text_service::TextService_Impl;
 use crate::ui::candidate_window::CandidateWindowContent;
 use crate::ui::caret::Caret;
 use crate::ui::presenter::CandidatePresenter;
-use crate::ui::telex_guide::TelexGuideContent;
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::MutexGuard;
@@ -38,8 +37,8 @@ use taigi_desktop_core::composing::{
 };
 use taigi_desktop_core::engine::Effect;
 use taigi_desktop_core::keys::{
-    telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
-    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent, TpsKeyCapIndex,
+    CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot,
+    ShortcutAction, SymbolPickerIntent, TpsKeyCapIndex,
 };
 use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{
@@ -117,8 +116,8 @@ impl TextService_Impl {
             return BOOL::from(self.tps_keyboard_click(context, lparam, phase));
         }
         // A key in this activation: it is where the user types, whatever
-        // focus events this host did or did not send (the TPS key panel).
-        self.note_tps_keyboard_focus(true);
+        // focus events this host did or did not send (the floating panels).
+        self.note_panel_focus(true);
         // Modifiers and synthetic keys build no snapshot: they leave before
         // the settings read the key's layout needs.
         if !key_translation::builds_snapshot(key_translation::virtual_key(wparam)) {
@@ -141,18 +140,6 @@ impl TextService_Impl {
         self.sync_preserved_keys(&settings);
         let global_action = ShortcutAction::matching(&snapshot, &settings, DESKTOP_PLATFORM);
 
-        // The Telex guide goes down on the first key after it came up,
-        // before that key is read: it is a card to glance at, not a mode
-        // (`TaigiInputController.handle`). Not on the global chords, so the
-        // toggle chord is not "any key"; above the read-only bail, because
-        // the preserved-key path can raise the guide over a read-only
-        // context and some key has to be able to close it there; above the
-        // English-mode bail, so a key typed as English still closes it.
-        // Bare modifier presses never reach here — `key_translation::snapshot`
-        // answers `None` for them.
-        if global_action.is_none() && self.telex_guide_takes_key(&snapshot, phase) {
-            return BOOL::from(true);
-        }
         if is_read_only(context) {
             return BOOL::from(false);
         }
@@ -325,8 +312,7 @@ impl TextService_Impl {
             return true;
         }
         log::debug!("key.tps_keyboard_click scan_code={scan_code}");
-        // The guide and the picker go down first, as for any key.
-        self.hide_telex_guide_now();
+        // The picker goes down first, as for any key.
         self.hide_symbol_picker_of(token);
         runtime.prepare_for_first_key();
         let outcome = self.run_key(
@@ -338,27 +324,6 @@ impl TextService_Impl {
             &settings,
         );
         outcome == KeyOutcome::Consumed
-    }
-
-    /// The open Telex guide's claim on `snapshot`: TRUE from the test phase
-    /// for every key while the card shows, so the delivery is guaranteed to
-    /// arrive; at delivery the card comes down, and a plain Escape is
-    /// swallowed — the user mid-word who checked the table keeps the
-    /// composition and its window. Every other key, an Escape under a host
-    /// chord included (Ctrl+3 arrives as one), goes on to do its job — the
-    /// "TRUE test, FALSE delivery" disagreement the header allows.
-    fn telex_guide_takes_key(&self, snapshot: &KeyEventSnapshot, phase: KeyPhase) -> bool {
-        let Some(guide) = self.telex_guide() else {
-            return false;
-        };
-        if !guide.borrow().is_showing() {
-            return false;
-        }
-        if phase == KeyPhase::Test {
-            return true;
-        }
-        guide.borrow_mut().hide_now();
-        snapshot.is_bare_escape()
     }
 
     /// What the engine says about this context, read without a session.
@@ -781,10 +746,9 @@ impl TextService_Impl {
         drop(held);
         let Some(token) = token else { return };
         self.hide_candidates(token);
-        // The guide and the picker belong to the context whose composition
-        // the host just ended; a click elsewhere or a focus loss takes them
-        // down with the list (`TaigiInputController.endSession`).
-        self.hide_telex_guide_of(token);
+        // The picker belongs to the context whose composition the host just
+        // ended; a click elsewhere or a focus loss takes it down with the
+        // list (`TaigiInputController.endSession`).
         self.hide_symbol_picker_of(token);
         let reset_now = match Runtime::shared().try_coordinator() {
             Some(mut coordinator) => {
@@ -958,8 +922,9 @@ impl TextService_Impl {
         if let Some(token) = token {
             self.hide_candidates(token);
         }
-        // The TPS key panel comes and goes with TPS; its stored key stays.
-        self.sync_tps_keyboard();
+        // The TPS key panel and the Telex guide come and go with TPS, their
+        // stored keys staying; the guide is respelled for a romanization.
+        self.sync_panels();
         self.flash_mode_label(runtime, &settings, mode.label_key());
     }
 
@@ -976,23 +941,7 @@ impl TextService_Impl {
             .contexts
             .entry_mut(identity)
             .map(|entry| entry.token);
-        // The guide comes down BEFORE any other action runs: a switch under
-        // an open card would leave a table spelled for the romanization the
-        // user just left (`TaigiInputController.performShortcutAction`).
-        // Owner-guarded for the switches — a chord reaching a context that
-        // did not raise the guide leaves it alone; unconditional for the
-        // settings doorway, which never reaches the session and whose window
-        // taking focus is not guaranteed to end the owning context.
-        match action {
-            ShortcutAction::ShowTelexGuide => {}
-            ShortcutAction::OpenLastSettingsPane => self.hide_telex_guide_now(),
-            _ => {
-                if let Some(token) = token {
-                    self.hide_telex_guide_of(token);
-                }
-            }
-        }
-        // And the picker, unconditionally: no global action can reach the
+        // The picker, unconditionally: no global action can reach the
         // key path that would otherwise take it down, and a romanization
         // switched under an open list is a list the user is no longer
         // looking at (`TaigiInputController.performShortcutAction`).
@@ -1061,32 +1010,17 @@ impl TextService_Impl {
                 self.flash_mode_label(runtime, &settings, mode.label_key());
             }
             ShortcutAction::ShowTelexGuide => {
-                // Spelled for the romanization in use — `z` is `ts` under TL
-                // and `ch` under POJ — and owned by this context, so the key
-                // path above and this context's focus loss are what take it
-                // down. Candidates and the composition are not touched: a
-                // glance at the table must not cost the user the word.
-                let Some(guide) = self.telex_guide() else {
+                // The user's wish, stored — every host process reads it at
+                // its next focus — then this one's guide follows, as for the
+                // TPS key panel below. The composition and its list are not
+                // touched.
+                if !runtime.update_settings("toggle_telex_guide", |document| {
+                    let shown = document.bool(&keys::TELEX_GUIDE_SHOWN);
+                    document.set_bool(&keys::TELEX_GUIDE_SHOWN, !shown);
+                }) {
                     return;
-                };
-                let Some(token) = token else {
-                    log::warn!("shortcut.telex_guide_no_context");
-                    return;
-                };
-                let settings = runtime.settings.current();
-                let strings = StringResolver::new(runtime.display_language());
-                let content = TelexGuideContent {
-                    title: strings
-                        .resolve(StringKey::SettingsToneSchemeTelex)
-                        .to_owned(),
-                    rows: telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings),
-                };
-                // Where the mode flash goes: the last caret this service saw.
-                let anchor = self.state.borrow().focused_caret;
-                let appearance: AppearanceMode = settings.choice(&keys::APPEARANCE_MODE);
-                guide
-                    .borrow_mut()
-                    .toggle(content, anchor, appearance, token);
+                }
+                self.sync_panels();
             }
             ShortcutAction::ShowTpsKeyboard => {
                 // The user's wish, stored — every host process reads it at
@@ -1099,7 +1033,7 @@ impl TextService_Impl {
                 }) {
                     return;
                 }
-                self.sync_tps_keyboard();
+                self.sync_panels();
             }
         }
         // The script, the swap and the display mode are all on the tray

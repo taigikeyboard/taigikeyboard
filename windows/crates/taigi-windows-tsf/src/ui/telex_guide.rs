@@ -1,29 +1,27 @@
-//! The floating Telex key table a global chord toggles up and any key takes
-//! down, port of `TelexGuidePanel.swift`: the same non-activating popup as
+//! The floating Telex key table a global chord keeps up while the user types
+//! (#684), port of `TelexGuidePanel.swift`: the same non-activating popup as
 //! the mode flash (`mode_flash.rs`), with NO timer — a table is read at the
-//! user's pace, not the flash's — centred in the work area of the monitor
-//! holding the last caret this service saw. Rows are key | meaning |
-//! example, built in core (`telex_guide_rows`) so the table is tested where
-//! this window cannot be.
+//! user's pace, not the flash's — at the bottom centre of the work area of the
+//! foreground window's monitor, as the TPS key panel is. Display-only: it does
+//! nothing with a click. Rows are key | meaning, built in core
+//! (`telex_guide_rows`) so the table is tested where this window cannot be.
 //!
-//! Owned by the context that raised it, the way the candidate window is
-//! (`presenter.rs`): a focus callback's posted hide names the context whose
-//! guide should come down, so a context on its way out cannot take down a
-//! guide the incoming one just put up. The key path and the toggle hide
-//! whichever is up — both run on the context the user is in.
+//! One per service activation, as `tps_keyboard.rs` is and for the same
+//! reasons: the stored key (`telexGuideShown`) is all that crosses activations
+//! and processes, only the activation with keyboard focus shows it, and every
+//! move is a posted sync that reads a source the text service installs (W3).
 
 use super::render::{RenderFactory, Surface};
 use super::theme::{SystemTheme, Theme};
-use super::window::{
-    frame_in_work_area, monitor_at, MonitorArea, PopupWindow, WindowHandler, WindowRef, BASE_DPI,
-};
+use super::tps_keyboard::{bottom_frame, foreground_monitor};
+use super::window::{PopupWindow, WindowHandler, WindowRef, BASE_DPI};
 use std::cell::RefCell;
 use std::rc::Rc;
 use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::TelexGuideRow;
 use taigi_desktop_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
-use windows::Win32::Foundation::{POINT, RECT};
+use windows::Win32::Foundation::RECT;
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_COLOR_F, D2D_SIZE_U};
 use windows::Win32::Graphics::Direct2D::{
     ID2D1HwndRenderTarget, ID2D1SolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
@@ -35,30 +33,36 @@ use windows::Win32::Graphics::DirectWrite::{
 use windows_numerics::Vector2;
 
 const WINDOW_CLASS: &str = "TaigiKeyboardTelexGuide";
-/// Larger than WinUI body / subtitle: a table the user reads across the room
-/// from the text they are typing, not a one-word notice (USER 2026-09-20).
+/// Small: the card stays up beside the text being typed, about the height of
+/// the TPS key panel that takes its place under TPS.
 /// Mirrors `TelexGuidePanel.titleFontSize` / `rowFontSize`.
-const TITLE_FONT_SIZE: f32 = 22.0;
-const ROW_FONT_SIZE: f32 = 19.0;
+const TITLE_FONT_SIZE: f32 = 14.0;
+const ROW_FONT_SIZE: f32 = 13.0;
 /// The insets and gaps of `TelexGuidePanel.makePanel` / `makeGrid`.
-const PADDING_X: f32 = 56.0;
-const PADDING_TOP: f32 = 40.0;
-const PADDING_BOTTOM: f32 = 40.0;
-const SECTION_GAP: f32 = 22.0;
-const ROW_GAP: f32 = 6.0;
-const COLUMN_GAP: f32 = 24.0;
+const PADDING_X: f32 = 16.0;
+const PADDING_TOP: f32 = 12.0;
+const PADDING_BOTTOM: f32 = 12.0;
+const SECTION_GAP: f32 = 8.0;
+const ROW_GAP: f32 = 3.0;
+const COLUMN_GAP: f32 = 16.0;
 
 /// What the card says: the title and the rows for the romanization in use,
 /// resolved by the caller, who has the display language; this module only
 /// draws. No dismiss hint — the card carries the keys and nothing else
 /// (USER 2026-09-09).
+#[derive(PartialEq)]
 pub struct TelexGuideContent {
     pub title: String,
     pub rows: Vec<TelexGuideRow>,
 }
 
+/// What to draw and the appearance to draw it in as focus and the settings
+/// stand now, or `None` when the guide should not be up
+/// (`SettingsDocument::is_telex_guide_wanted`).
+pub type TelexGuideSource = Box<dyn Fn() -> Option<(TelexGuideContent, AppearanceMode)>>;
+
+/// The guide's window; its content lives in the window's handler.
 pub struct TelexGuide {
-    content: Rc<RefCell<GuideContent>>,
     window: Option<PopupWindow>,
 }
 
@@ -92,134 +96,51 @@ struct GuideLayout {
 
 struct GuideContent {
     factory: Rc<RenderFactory>,
+    source: TelexGuideSource,
+    /// What `layout` was measured from: a sync with the same content keeps it.
+    measured: Option<TelexGuideContent>,
     layout: Option<GuideLayout>,
+    appearance: AppearanceMode,
     theme: Theme,
     dpi: f32,
-    /// The context the guide is showing for; `None` = nothing showing.
-    /// The one flag `is_showing` reads, cleared by every path that hides.
-    owner: Option<ContextToken>,
     surface: Option<Surface>,
 }
 
 impl TelexGuide {
-    pub fn new(factory: Rc<RenderFactory>) -> Self {
-        let system = SystemTheme::read();
-        Self {
-            content: Rc::new(RefCell::new(GuideContent {
-                factory,
-                layout: None,
-                theme: Theme::resolve(AppearanceMode::Auto, &system),
-                dpi: BASE_DPI,
-                owner: None,
-                surface: None,
-            })),
-            window: None,
-        }
+    /// Made with its (hidden) window, at activation: a focus callback may
+    /// neither create nor show a window (W3), and the guide can come up on
+    /// focus alone (`TpsKeyboard::new`).
+    pub fn new(factory: Rc<RenderFactory>, source: TelexGuideSource) -> Self {
+        let appearance = AppearanceMode::Auto;
+        let handler: Rc<RefCell<dyn WindowHandler>> = Rc::new(RefCell::new(GuideContent {
+            factory,
+            source,
+            measured: None,
+            layout: None,
+            appearance,
+            theme: Theme::resolve(appearance, &SystemTheme::read()),
+            dpi: BASE_DPI,
+            surface: None,
+        }));
+        let window = PopupWindow::create(WINDOW_CLASS, handler)
+            .inspect_err(|error| log::error!("ui.telex_guide_window_failed error={error}"))
+            .ok();
+        Self { window }
     }
 
-    /// Whether a guide is up, whoever raised it.
-    pub fn is_showing(&self) -> bool {
-        self.content.borrow().owner.is_some()
-    }
-
-    /// The chord's meaning: up if down, down if up — whoever raised it, as
-    /// the Mac's `toggle` (both run on the context the user is in).
-    pub fn toggle(
-        &mut self,
-        content: TelexGuideContent,
-        anchor: POINT,
-        mode: AppearanceMode,
-        owner: ContextToken,
-    ) {
-        if self.is_showing() {
-            self.hide_now();
-        } else {
-            self.show(content, anchor, mode, owner);
-        }
-    }
-
-    /// Shows the card on the monitor holding `anchor` (a physical screen
-    /// point), replacing any guide still up. Rebuilt each time: the content
-    /// follows the mode and the display language, and a card shown a few
-    /// times a day is not worth keeping warm.
-    pub fn show(
-        &mut self,
-        content: TelexGuideContent,
-        anchor: POINT,
-        mode: AppearanceMode,
-        owner: ContextToken,
-    ) {
-        let Some(monitor) = monitor_at(anchor) else {
-            return;
-        };
-        let size = {
-            let mut guide = self.content.borrow_mut();
-            // A guide is rare (a chord): reading the system theme here costs
-            // nothing worth caching.
-            guide.theme = Theme::resolve(mode, &SystemTheme::read());
-            guide.dpi = monitor.dpi;
-            let layout = GuideLayout::measure(&guide.factory, &content);
-            let size = layout.size;
-            guide.layout = Some(layout);
-            guide.surface = None;
-            guide.owner = Some(owner);
-            size
-        };
-        if self.window.is_none() {
-            let handler: Rc<RefCell<dyn WindowHandler>> = self.content.clone();
-            match PopupWindow::create(WINDOW_CLASS, handler) {
-                Ok(window) => self.window = Some(window),
-                Err(error) => {
-                    log::error!("ui.telex_guide_window_failed error={error}");
-                    self.content.borrow_mut().owner = None;
-                    return;
-                }
-            }
-        }
-        let Some(window) = self.window.as_deref() else {
-            return;
-        };
-        window.show_at(centred_frame(&monitor, size));
-    }
-
-    /// Takes the guide down only if `owner` raised it — what a context's
-    /// teardown and the other global actions want.
-    pub fn hide(&mut self, owner: ContextToken) {
-        if self.content.borrow().owner == Some(owner) {
-            self.hide_now();
-        }
-    }
-
-    /// Takes the guide down whoever raised it — the key path, the toggle,
-    /// and the settings doorway.
-    pub fn hide_now(&mut self) {
-        self.content.borrow_mut().owner = None;
+    /// Queues a sync for the message loop: the guide shows or hides as its
+    /// source says when the message runs (`TpsKeyboard::request_sync`).
+    pub fn request_sync(&self) {
         if let Some(window) = self.window.as_deref() {
-            window.hide();
-        }
-    }
-
-    /// Queues a hide for the message loop — what a focus / context callback
-    /// calls instead of `hide` (W3). `owner` = only if that context raised
-    /// it; `None` = whichever is up.
-    pub fn request_hide(&self, owner: Option<ContextToken>) {
-        if let Some(window) = self.window.as_deref() {
-            window.post_hide_request(owner);
+            window.post_sync_request();
         }
     }
 
     pub fn destroy(&mut self) {
-        self.content.borrow_mut().owner = None;
         if let Some(window) = self.window.take() {
             window.destroy();
         }
     }
-}
-
-/// The card centred in `monitor`'s work area — the hotkey path has no
-/// client, so there is no caret to anchor to (`HUDPanel.noticeFrame`).
-fn centred_frame(monitor: &MonitorArea, size: (f32, f32)) -> RECT {
-    frame_in_work_area(monitor, size, None)
 }
 
 fn font(size: f32) -> FontSpec {
@@ -333,6 +254,36 @@ impl GuideLayout {
 }
 
 impl GuideContent {
+    /// Up at the bottom of the foreground window's monitor when the source
+    /// answers content; down otherwise. With no foreground window to place
+    /// it by, nothing changes until the next sync.
+    fn sync(&mut self, window: &WindowRef) {
+        let Some((content, appearance)) = (self.source)() else {
+            window.hide();
+            return;
+        };
+        let Some(monitor) = foreground_monitor() else {
+            return;
+        };
+        self.appearance = appearance;
+        self.theme = Theme::resolve(appearance, &SystemTheme::read());
+        // The surface is sized in pixels: kept unless the scale or the card
+        // moved. The content follows the mode and the display language.
+        if monitor.dpi != self.dpi {
+            self.dpi = monitor.dpi;
+            self.surface = None;
+        }
+        if self.measured.as_ref() != Some(&content) {
+            self.layout = Some(GuideLayout::measure(&self.factory, &content));
+            self.measured = Some(content);
+            self.surface = None;
+        }
+        if let Some(layout) = &self.layout {
+            window.show_at(bottom_frame(&monitor, layout.size));
+            window.invalidate();
+        }
+    }
+
     /// Draws one cell at `origin` in `colour`, on a line `line_height` tall.
     fn draw_cell(
         &self,
@@ -425,37 +376,25 @@ impl WindowHandler for GuideContent {
 
     fn wheel(&mut self, _window: &WindowRef, _delta: f32) {}
 
-    /// The card moved to a monitor with another scale: re-centred there at
-    /// the new DPI, or left where the OS put it when the monitor cannot be
-    /// read.
-    fn dpi_changed(&mut self, window: &WindowRef, dpi: f32, suggested: RECT) {
+    /// The card moved to a monitor with another scale: placed again there.
+    fn dpi_changed(&mut self, window: &WindowRef, dpi: f32, _suggested: RECT) {
         self.dpi = dpi;
         self.surface = None;
-        let Some(layout) = self.layout.as_ref() else {
-            return;
-        };
-        let centre = POINT {
-            x: (suggested.left + suggested.right) / 2,
-            y: (suggested.top + suggested.bottom) / 2,
-        };
-        match monitor_at(centre) {
-            Some(monitor) => window.show_at(centred_frame(&monitor, layout.size)),
-            None if suggested.right > suggested.left => window.show_at(suggested),
-            None => {}
-        }
+        self.sync(window);
     }
 
     fn timer(&mut self, _window: &WindowRef, _id: usize) {}
 
-    /// A focus / context callback's posted hide: the guide goes if `owner`
-    /// raised it, or whoever did when the callback names no one.
-    fn hide_requested(&mut self, window: &WindowRef, owner: Option<ContextToken>) {
-        if owner.is_some_and(|owner| self.owner != Some(owner)) {
-            return;
-        }
-        self.owner = None;
-        window.hide();
+    /// Follows its source, not the hides a focus callback posts.
+    fn hide_requested(&mut self, _window: &WindowRef, _owner: Option<ContextToken>) {}
+
+    /// Stays up across a theme change, so it is re-coloured in place (the
+    /// window invalidates itself after this).
+    fn system_theme_changed(&mut self) {
+        self.theme = Theme::resolve(self.appearance, &SystemTheme::read());
     }
 
-    fn system_theme_changed(&mut self) {}
+    fn sync_requested(&mut self, window: &WindowRef) {
+        self.sync(window);
+    }
 }

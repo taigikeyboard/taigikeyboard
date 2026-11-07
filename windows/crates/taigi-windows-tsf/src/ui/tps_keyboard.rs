@@ -395,7 +395,7 @@ fn send_click(glyph: &str) {
 
 /// The monitor the foreground window is on — the application the user is
 /// typing in. `None` while no window is foreground (activation moving).
-fn foreground_monitor() -> Option<MonitorArea> {
+pub(super) fn foreground_monitor() -> Option<MonitorArea> {
     // SAFETY: a plain window query.
     let foreground = unsafe { GetForegroundWindow() };
     if foreground.is_invalid() {
@@ -405,7 +405,7 @@ fn foreground_monitor() -> Option<MonitorArea> {
 }
 
 /// The panel at the bottom centre of `monitor`'s work area.
-fn bottom_frame(monitor: &MonitorArea, size: (f32, f32)) -> RECT {
+pub(super) fn bottom_frame(monitor: &MonitorArea, size: (f32, f32)) -> RECT {
     frame_in_work_area(monitor, size, Some(BOTTOM_MARGIN))
 }
 
