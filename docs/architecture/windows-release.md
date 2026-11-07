@@ -366,7 +366,7 @@ every process of every user and `regsvr32` writes HKLM. In order:
   whoever registered it. A payload file a running host still has mapped (the
   service DLLs in any app the input method was active in) cannot be deleted;
   the uninstaller renames it to a unique `.stale` name and queues that name for
-  the next restart, then the emptied directories after it, so `{app}` is gone
+  the next restart, then each directory after its contents, so `{app}` is gone
   after a reboot. The queued name is never the install name: a reinstall
   before the reboot writes the new DLL there, and a delete queued against the
   path would take it at boot (which is why `uninsrestartdelete` is not used).

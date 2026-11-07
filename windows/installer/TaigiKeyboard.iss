@@ -492,7 +492,8 @@ begin
           DiscardLeftoverTree(Full)
         else if SameText(ExtractFileExt(Found.Name), StaleExtension) then
           DiscardStale(Full)
-        else if not SameText(Copy(Found.Name, 1, 5), 'unins') then begin
+        else if not SameText(Copy(Found.Name, 1, 5), 'unins') and
+                not DeleteFile(Full) then begin
           Aside := GenerateUniqueName(Directory, StaleExtension);
           if RenameFile(Full, Aside) then begin
             Log('uninstall: ' + Full + ' is still held — moved aside as ' + Aside);
