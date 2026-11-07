@@ -47,7 +47,7 @@ const tpsKeyboard = new TpsKeyboard(
     apply(call((session) => session.tpsKeyPress(glyph)));
   },
 );
-const sidebar = new Sidebar(
+new Sidebar(
   document.getElementById("sidebar-toggle"),
   document.getElementById("sidebar"),
 );
@@ -239,11 +239,6 @@ function applyEmit(emit) {
       break;
     case "announceMode":
       announce(emit.label);
-      break;
-    case "openSettings":
-      // A sidebar that opens onto folded rows has answered nothing.
-      document.getElementById("general-settings").open = true;
-      sidebar.open();
       break;
     case "toggleTpsKeyboard":
       settings.toggleTpsKeyboard();

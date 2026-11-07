@@ -116,13 +116,17 @@ test("every default chord reaches the page", async ({ page }) => {
   });
   const prevented = () => page.evaluate(() => window.lastPrevented);
 
-  for (const chord of ["s", "c", "p", "h", ",", "/", "j"]) {
+  for (const chord of ["c", "p", "h", ",", "/", "j"]) {
     await editor.press(`Control+Alt+${chord}`);
     expect(await prevented(), chord).toBe(true);
     await editor.press("Escape");
   }
   await editor.press("`");
   expect(await prevented()).toBe(true);
+
+  // The settings window's chord has no window here (`shortcuts.rs`).
+  await editor.press("Control+Alt+s");
+  expect(await prevented()).toBe(false);
 });
 
 test("a chord that writes the settings survives a reload", async ({ page }) => {

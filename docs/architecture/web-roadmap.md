@@ -124,7 +124,7 @@ The Linux shell already answers a key with a list of signals: `KeyReply { handle
 | `DeleteSurrounding` | Remove the auto space before the caret |
 | `LookupTable` / `HideLookupTable` | Render or hide the candidate list |
 | `ModeChanged` / `AnnounceMode` | `AnnounceMode` reaches the hidden live region and draws the mode flash, a card held 0.8 s as on the desktops; the sidebar shows the mode |
-| New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | Open the sidebar, show the TPS key panel |
+| New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | Never sent: the sidebar is the settings, so `Session::key_down` leaves the chord to the browser and Shortcuts has no row for it (maintainer 2026-11-07). Show the TPS key panel |
 | New in Phase 5: `TpsKeyboardCapTyped` | Light the cap. Linux drops it in `run_launches`: its panel is another process |
 
 `serde_json` is already a dependency of `taigi-desktop-core`. Proto bytes would pull a protobuf runtime into the page for no gain.

@@ -35,10 +35,6 @@ export class Sidebar {
     this.#syncExpanded();
   }
 
-  open() {
-    this.#setOpen(true);
-  }
-
   #isOpen() {
     return wideScreen.matches
       ? document.documentElement.dataset.sidebar === "open"
