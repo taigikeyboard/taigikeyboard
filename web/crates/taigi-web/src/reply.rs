@@ -64,6 +64,7 @@ pub(crate) enum WireEmit<'a> {
     AnnounceMode {
         label: &'a str,
     },
+    /// Never sent: `Session::key_down` leaves the chord to the browser.
     OpenSettings,
     ToggleTpsKeyboard,
     TpsKeyboardCapTyped {

@@ -240,11 +240,6 @@ function applyEmit(emit) {
     case "announceMode":
       announce(emit.label);
       break;
-    case "openSettings":
-      // A sidebar that opens onto folded rows has answered nothing.
-      document.getElementById("general-settings").open = true;
-      sidebar.open();
-      break;
     case "toggleTpsKeyboard":
       settings.toggleTpsKeyboard();
       call((current) => current.setSettings(settings.json));

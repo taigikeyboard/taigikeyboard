@@ -84,15 +84,6 @@ test("Shortcuts lists the keys and follows the settings", async ({ page }) => {
   await expect(row("確定齒")).toBeAttached();
 });
 
-test("the chord opens the sidebar on its General rows", async ({ page }) => {
-  // trace: Ctrl+Alt+S = OpenLastSettingsPane.
-  const editor = await open(page, { folded: true });
-  await toggle(page).click();
-  await editor.focus();
-  await editor.press("Control+Alt+s");
-  await expect(inputMode(page)).toBeVisible();
-});
-
 test("Input Mode reaches the session and survives a reload", async ({
   page,
 }) => {

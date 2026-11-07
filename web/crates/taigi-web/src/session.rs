@@ -5,7 +5,9 @@
 use std::sync::Arc;
 
 use taigi_desktop_core::composing::{Clock, ContextToken};
-use taigi_desktop_core::keys::{CandidateNavigation, ShiftTapTracker, VK_SHIFT_CODE};
+use taigi_desktop_core::keys::{
+    CandidateNavigation, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
+};
 use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
@@ -19,7 +21,7 @@ use crate::key::{shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
 use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
-use crate::shortcuts::shortcuts;
+use crate::shortcuts::{shortcuts, SETTINGS_WINDOW};
 
 const CONTEXT: ContextToken = ContextToken(1);
 /// A stamp for the log only, until a page ships dictionaries of a version.
@@ -77,6 +79,11 @@ impl WebSession {
         let Some(snapshot) = key.snapshot(self.runtime.platform()) else {
             return self.reply(false, &[], None);
         };
+        let platform = self.runtime.platform();
+        let document = self.runtime.settings.current();
+        if ShortcutAction::matching(&snapshot, &document, platform) == Some(SETTINGS_WINDOW) {
+            return self.reply(false, &[], None);
+        }
         // The event says what the wire elsewhere cannot: this is a new press,
         // so a held chord's latch is over even if its release went to another
         // window.
@@ -534,9 +541,10 @@ mod tests {
     }
 
     #[test]
-    fn the_settings_chord_opens_the_pages_panel() {
+    fn the_settings_chord_stays_the_browsers() {
         let reply = parsed(session().key_down(&chord("s", "KeyS")));
-        assert_eq!(emit_types(&reply), ["openSettings"]);
+        assert_eq!(reply["handled"], false);
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
     }
 
     fn typing_tps() -> Fixture {
