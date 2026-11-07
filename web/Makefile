@@ -14,11 +14,12 @@ export AR_wasm32_unknown_unknown := zig ar
 PKG := target/pkg
 WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site
+CHROMEOS := target/chromeos
 FONT_SOURCES := ../assets/fonts/font
 FONTS := target/fonts
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site serve test smoke e2e check-live lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site chromeos serve test smoke e2e check-live lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -28,6 +29,7 @@ help:
 	@echo "  make build   - Release wasm, bindings and wasm-opt into $(PKG)/"
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
 	@echo "  make site    - Stage the page, bindings, dictionaries, fonts and manifest into $(SITE)/"
+	@echo "  make chromeos - Stage the ChromeOS input method into $(CHROMEOS)/ and zip it"
 	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
@@ -66,6 +68,17 @@ site: build $(FONTS)/.stamp
 	cp $(FONTS)/*.woff2 ../assets/fonts/OFL-1.1.txt $(SITE)/fonts/
 	cp $(ICONS)/180.png $(ICONS)/196.png $(ICONS)/512.png $(SITE)/icons/
 	node scripts/stage-assets.mjs $(SITE) ../assets/dictionaries
+
+# The ChromeOS input method (docs/architecture/chromeos-roadmap.md). The
+# dictionaries go in as they are: the package is local, so no hash and no gzip.
+chromeos: build
+	rm -rf $(CHROMEOS) target/taigi-keyboard-chromeos.zip
+	mkdir -p $(CHROMEOS)/pkg $(CHROMEOS)/dictionaries $(CHROMEOS)/icons
+	cp chromeos/manifest.json chromeos/*.js chromeos/*.html $(CHROMEOS)/
+	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(CHROMEOS)/pkg/
+	cp ../assets/dictionaries/* $(CHROMEOS)/dictionaries/
+	cp $(ICONS)/16.png $(ICONS)/48.png $(ICONS)/128.png $(CHROMEOS)/icons/
+	cd $(CHROMEOS) && zip -qrX ../taigi-keyboard-chromeos.zip .
 
 serve: site
 	node scripts/serve.mjs $(SITE) 8000

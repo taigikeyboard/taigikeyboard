@@ -210,6 +210,18 @@ impl Session {
         self.inner.commit_composition()
     }
 
+    /// ChromeOS: the field confirmed the preedit itself (blur, reset).
+    #[wasm_bindgen(js_name = endSession)]
+    pub fn end_session(&mut self) -> String {
+        self.inner.end_session()
+    }
+
+    /// ChromeOS: a text field gained focus.
+    #[wasm_bindgen(js_name = beginSession)]
+    pub fn begin_session(&mut self) -> String {
+        self.inner.begin_session()
+    }
+
     #[wasm_bindgen(js_name = caretMoved)]
     pub fn caret_moved(&mut self) {
         self.inner.caret_moved();

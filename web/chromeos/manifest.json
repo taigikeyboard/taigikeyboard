@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "台語齒盤",
+  "short_name": "Taigi Keyboard",
+  "version": "0.1.0",
+  "description": "Taigi (Taiwanese Hokkien) input method: POJ, TL, TPS, Hanji.",
+  "minimum_chrome_version": "116",
+  "background": { "service_worker": "worker.js", "type": "module" },
+  "permissions": ["input", "offscreen"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "input_components": [
+    {
+      "name": "台語齒盤",
+      "type": "ime",
+      "id": "taigi",
+      "indicator": "台",
+      "description": "Taigi Keyboard",
+      "language": "zh-TW",
+      "layouts": ["us"]
+    }
+  ]
+}

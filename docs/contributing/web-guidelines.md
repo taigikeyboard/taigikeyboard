@@ -44,6 +44,15 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 - WebKit on a Mac skips buttons on Tab by default, so tab-order tests run in Chromium and Firefox only.
 - Hit by a real browser, not by Node: WebKit folds consecutive edits into one undo step, typed ones included, so undo can take back more than the last word.
 
+## ChromeOS input method
+
+- `web/chromeos/` is a Manifest V3 extension over the same `taigi-web` bindings: `worker.js` takes `chrome.input.ime` events, `calls.js` (pure, Node-tested) turns ChromeOS keys into `BrowserKey` JSON and replies into `chrome.input.ime` calls. `make -C web chromeos` stages `web/target/chromeos/` and zips it. Design and spike: `docs/architecture/chromeos-roadmap.md`.
+- ChromeOS confirms the preedit into the field itself on blur and reset, as Linux frameworks do, so the worker calls `endSession` there (the engine drops its copy, no commit) and `beginSession` on focus.
+- A key never wakes a stopped worker; `offscreen.html` messages it every 20 s so it never stops. Never remove the keepalive without re-running the idle test on ChromeOS.
+- ChromeOS names some keys its own way (`Down`, `Esc`, `Ctrl`, `""` for Delete): `calls.js` reads those by `code`. A reply carries the whole candidate list; ChromeOS is sent the cursor's page, with page-relative IDs, which is what `clickCandidate` takes. The preedit caret goes out in UTF-16 units.
+- `onKeyEvent` takes one listener. Google Docs and X send `onReset` while typing; `isResetStorm` skips those (from McBopomofoWeb, unverified here).
+- Dev loop without a Chromebook: Chromium's `Linux_ChromiumOS_Full` snapshot in an Apple Virtualization Linux VM with Rosetta (recipe in the roadmap's § Spike result). Chrome keeps an unpacked extension's service worker across restarts, so after a rebuild start from a new profile, or the old worker runs.
+
 ## Tests
 
 - Native tests cover the session and the key translation, with no lexicon. The engine is one per process, so a test that asserts what it composed takes the `ENGINE` turn and leaves it idle (`taigi-web` `session.rs`, `desktop/crates/taigi-desktop-core/tests/session_language_mode.rs`).
