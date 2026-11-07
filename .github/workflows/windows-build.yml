@@ -308,6 +308,11 @@ jobs:
       # PowerShell (SysWOW64's is x86, which reads the 32-bit registry view).
       PWSH_X64_VERSION: 7.6.9
       PWSH_X64_SHA256: ce7484804c0f0ad4dda10c958e71acdaf7eebfb22505c1b480f89e0e9f1da94d
+      # Where the services artifact lands, and the CLSID key the registration
+      # writes (guids.rs CLSID_TEXT_SERVICE).
+      ARM64_DLL: services\TaigiKeyboardArm64.dll
+      FORWARDER_DLL: services\TaigiKeyboard64X.dll
+      CLSID_KEY: HKLM:\SOFTWARE\Classes\CLSID\{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -326,12 +331,11 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $dll = Join-Path $PWD 'services\TaigiKeyboardArm64.dll'
+          $dll = Join-Path $PWD $env:ARM64_DLL
           $process = Start-Process "$env:SystemRoot\System32\regsvr32.exe" -ArgumentList '/s', "`"$dll`"" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "regsvr32 exited $($process.ExitCode)" }
-          $key = 'HKLM:\SOFTWARE\Classes\CLSID\{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}\InProcServer32'
-          $registered = (Get-ItemProperty -Path $key).'(default)'
-          $forwarder = Join-Path $PWD 'services\TaigiKeyboard64X.dll'
+          $registered = (Get-ItemProperty -Path "$env:CLSID_KEY\InProcServer32").'(default)'
+          $forwarder = Join-Path $PWD $env:FORWARDER_DLL
           Write-Host "InProcServer32: $registered"
           if ($registered -ne $forwarder) { throw "InProcServer32 is $registered, expected $forwarder" }
 
@@ -361,9 +365,9 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $dll = Join-Path $PWD 'services\TaigiKeyboardArm64.dll'
+          $dll = Join-Path $PWD $env:ARM64_DLL
           $process = Start-Process "$env:SystemRoot\System32\regsvr32.exe" -ArgumentList '/s', '/u', "`"$dll`"" -Wait -PassThru
-          if (Test-Path 'HKLM:\SOFTWARE\Classes\CLSID\{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}') {
+          if (Test-Path $env:CLSID_KEY) {
             throw "regsvr32 /u exited $($process.ExitCode) and the CLSID is still registered"
           }
 

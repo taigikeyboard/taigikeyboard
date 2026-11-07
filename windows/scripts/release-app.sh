@@ -183,6 +183,14 @@ powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass \
 FORWARDER="$FORWARDER_DIR/$FORWARDER_DLL"
 [[ -f "$FORWARDER" ]] || fail "no $FORWARDER_DLL in $FORWARDER_DIR"
 
+# dumpbin's report on `file` for one switch (`-headers`, `-exports`,
+# `-dependents`), CR-stripped. Callers grep the captured text: piping dumpbin
+# straight into `grep -q` under pipefail fails at random when grep exits early
+# and the writer takes SIGPIPE.
+dumpbin_read() {
+    dumpbin -nologo "$1" "$(windows_path "$2")" | tr -d '\r'
+}
+
 echo "==> Reading back what the binaries declare"
 # Proved from the files, not assumed from the compiler directives: the
 # VERSIONINFO the updater pins (taigi-windows-update::verify), and — W14,
@@ -192,7 +200,7 @@ SERVICE_DLLS=("$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR_32/$SERVICE_DLL" "$TARGET_
 SETTINGS_EXES=("$TARGET_DIR/$SETTINGS_EXE" "$TARGET_DIR_ARM64/$SETTINGS_EXE")
 for binary in "${SERVICE_DLLS[@]}" "${SETTINGS_EXES[@]}"; do
     require_version_info "$binary"
-    imports="$(dumpbin -nologo -dependents "$(windows_path "$binary")" | tr -d '\r')"
+    imports="$(dumpbin_read -dependents "$binary")"
     if grep -iqE 'vcruntime[0-9]*(d)?\.dll|msvcp[0-9]*(d)?\.dll|msvcr[0-9]*(d)?\.dll|msvcrt\.dll|ucrtbase(d)?\.dll|api-ms-win-crt-' <<< "$imports"; then
         echo "$imports" >&2
         fail "$(basename "$binary") imports the C runtime — the release must be statically linked (+crt-static)"
@@ -220,15 +228,15 @@ done
 # lists it, the x64 view's as the strings it holds, which dumpbin does not
 # list. The arm64-smoke CI job proves the x64 view activates.
 require_version_info "$FORWARDER"
-forwarder_imports="$(dumpbin -nologo -dependents "$(windows_path "$FORWARDER")" | tr -d '\r')"
+forwarder_imports="$(dumpbin_read -dependents "$FORWARDER")"
 if grep -qE 'has the following( delay load)? dependencies' <<< "$forwarder_imports"; then
     echo "$forwarder_imports" >&2
     fail "$FORWARDER_DLL imports a DLL — a pure forwarder imports nothing"
 fi
-forwarder_headers="$(dumpbin -nologo -headers "$(windows_path "$FORWARDER")" | tr -d '\r')"
+forwarder_headers="$(dumpbin_read -headers "$FORWARDER")"
 grep -qF 'AA64 machine (ARM64) (ARM64X)' <<< "$forwarder_headers" ||
     fail "$FORWARDER_DLL is not an Arm64X image"
-forwarder_exports="$(dumpbin -nologo -exports "$(windows_path "$FORWARDER")" | tr -d '\r')"
+forwarder_exports="$(dumpbin_read -exports "$FORWARDER")"
 arm64_module="${SERVICE_DLL_ARM64%.dll}"
 x64_module="${SERVICE_DLL%.dll}"
 for symbol in DllGetClassObject DllCanUnloadNow; do
@@ -245,7 +253,7 @@ for dll in "${SERVICE_DLLS[@]}"; do
     # registers nothing, and the failure surfaces on the user's machine. The
     # 32-bit exports are undecorated too (measured 2026-09-01), so one pattern
     # reads both.
-    exports="$(dumpbin -nologo -exports "$(windows_path "$dll")" | tr -d '\r')"
+    exports="$(dumpbin_read -exports "$dll")"
     for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
         grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
             fail "$dll does not export $symbol"
@@ -254,23 +262,18 @@ done
 
 echo "==> Staging the install layout"
 rm -rf "$STAGING_DIR"
-mkdir -p "$STAGING_DIR/Dictionaries" "$STAGING_DIR/Fonts" "$DISTRIBUTION_DIR"
-mkdir -p "$STAGING_DIR/arm64"
+mkdir -p "$STAGING_DIR/Dictionaries" "$STAGING_DIR/Fonts" "$STAGING_DIR/arm64" "$DISTRIBUTION_DIR"
 cp "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE" "$STAGING_DIR/"
 cp "$TARGET_DIR_32/$SERVICE_DLL" "$STAGING_DIR/$SERVICE_DLL_32"
 cp "$TARGET_DIR_ARM64/$SERVICE_DLL" "$STAGING_DIR/$SERVICE_DLL_ARM64"
 cp "$FORWARDER" "$STAGING_DIR/"
-# The Arm64 settings exe keeps the install name; the installer picks it on an
-# Arm64 machine (roadmap § Build).
 cp "$TARGET_DIR_ARM64/$SETTINGS_EXE" "$STAGING_DIR/arm64/"
 
 # Fails unless dumpbin reads `file`'s PE machine as `machine` (`8664`, `14C`,
 # `AA64`).
 require_pe_machine() {
     local file="$1" machine="$2" headers
-    # Captured before grep reads it: `dumpbin | grep -q` under pipefail fails
-    # at random when grep exits early and the writer takes SIGPIPE.
-    headers="$(dumpbin -nologo -headers "$(windows_path "$file")" | tr -d '\r')"
+    headers="$(dumpbin_read -headers "$file")"
     grep -qE "^[[:space:]]+$machine machine" <<< "$headers" ||
         fail "$file is not built for PE machine $machine"
 }
