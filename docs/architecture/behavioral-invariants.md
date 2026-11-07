@@ -1308,6 +1308,21 @@ IMK can activate a second controller (a system client) while it keeps delivering
 
 ---
 
+## §62 — Telex writes tone 6 on `z` and the affricate on `c`, the same in TL and POJ
+
+### `INVARIANT_TELEX_KEY_TABLE`
+
+The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6 and kept `c` a plain letter. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on `ToneInputScheme::TELEX_KEYS`:
+
+- **`z` / `Z` is a single-tone key**, like `y d w q`: it writes tone 6 on any syllable, a stop coda included (`sit` + `z` → `sit6`), and passes to the host when idle.
+- **`c` / `C` writes the affricate initial**: `ts` under TL, `ch` under POJ, `Ts` / `Ch` capitalized. `h` then aspirates it. It starts a composition when idle.
+- **`h` after `tsh` / `chh` does nothing**, in any letter case, so a spelled-out POJ `c` `h` `h` `i` `a` is still `chhia`. No syllable has `tshh` / `chhh`. Under Telex every `h` goes to the engine for this, and otherwise lands exactly where `Append` would. It is dropped when typed rather than folded at lookup, so the composition, a commit as typed and every lookup read the same text.
+- **Spelled-out POJ `cha` reaches `chha`.** `c` `h` could mean either initial, and both are real, so nothing short of remembering how the buffer was typed tells them apart. Accepted: TL and POJ keep one rule.
+- **A custom word spelled with a bare `c` cannot be typed under Telex**, as with the other Telex letters.
+- **Standard does not change.** It shares eight letters with Telex, swapped with the digits; `c` and `h` stay plain letters there.
+
+---
+
 ## Change protocol
 
 - Adding a new invariant: add it after the last numbered section + to the index; land a test naming its `INVARIANT_*` label in the same PR (`tools/invariant_labels.py` gates it).

@@ -1,0 +1,10 @@
+{
+  "id": "telex-tl-z-tone6",
+  "source": "INVARIANT_TELEX_KEY_TABLE (USER 2026-11-05, docs/architecture/behavioral-invariants.md): `z` writes tone 6 (U+030C, engine/phonetics/src/tables.rs); Enter commits the preedit as typed.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex" },
+  "steps": [
+    { "type": "text", "value": "tez" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "tě" }
+}

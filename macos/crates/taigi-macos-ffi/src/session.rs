@@ -911,7 +911,7 @@ mod tests {
         assert_eq!(list.anchor_end_utf16, 1);
     }
 
-    /// trace: Telex keys `vydwxqzf`; `y` after `tai` is the engine's tone 3
+    /// trace: Telex keys `vydwxqzfch`; `y` after `tai` is the engine's tone 3
     /// → "tài".
     #[test]
     fn a_telex_key_reaches_the_engine_as_a_tone() {

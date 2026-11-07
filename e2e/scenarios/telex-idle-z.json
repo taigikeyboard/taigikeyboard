@@ -1,0 +1,9 @@
+{
+  "id": "telex-idle-z",
+  "source": "INVARIANT_TELEX_KEY_TABLE (USER 2026-11-05, docs/architecture/behavioral-invariants.md): `z` passes to the host when idle.",
+  "settings": { "romanization": "tl", "continuous_input": true, "tone_input": "telex" },
+  "steps": [
+    { "type": "text", "value": "z" }
+  ],
+  "expect": { "committed": "z" }
+}
