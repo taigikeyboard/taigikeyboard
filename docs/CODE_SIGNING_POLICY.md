@@ -7,7 +7,7 @@ user can verify for themselves.
 
 | Platform | Artifact | Status |
 | --- | --- | --- |
-| Windows | `TaigiKeyboard-<version>.exe` (Inno Setup installer), `TaigiKeyboard.dll`, `TaigiKeyboard32.dll`, `TaigiKeyboardSettings.exe` | **Unsigned.** Integrity rests on the SHA-256 digest published in the update manifest. |
+| Windows | `TaigiKeyboard-<version>.exe` (Inno Setup installer), `TaigiKeyboard.dll`, `TaigiKeyboard32.dll`, `TaigiKeyboardArm64.dll`, `TaigiKeyboard64X.dll` (Arm64X forwarder), `TaigiKeyboardSettings.exe` (x64 and Arm64 builds) | **Unsigned.** Integrity rests on the SHA-256 digest published in the update manifest. |
 | Linux | `taigikeyboard_<version>_amd64.deb`, `taigikeyboard-<version>-1.x86_64.rpm`, `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | **Unsigned.** Integrity rests on the `.sha256` attached beside each package on the release (`docs/architecture/linux-release.md`). |
 | macOS | `TaigiKeyboard-<version>.pkg` | Signed and notarized with an Apple Developer ID. |
 | iOS / Android | App Store / Google Play builds | Signed by the respective store pipeline. |
@@ -124,7 +124,7 @@ input method to work or to be updated, and all of it reversed on uninstall:
 
 | Change | Why |
 | --- | --- |
-| Registers `TaigiKeyboard.dll` and `TaigiKeyboard32.dll` as a TSF text service (`regsvr32`, x64 and x86) | This is what makes the keyboard selectable at all. |
+| Registers `TaigiKeyboard32.dll` and the machine's native 64-bit service (`TaigiKeyboard.dll` on x64; `TaigiKeyboardArm64.dll` on Arm64, which names the `TaigiKeyboard64X.dll` forwarder) as a TSF text service (`regsvr32`, per architecture) | This is what makes the keyboard selectable at all. |
 | Creates the scheduled task `TaigiKeyboard Update Check` | Fetches the update manifest so the user is told a new version exists. Deleted by the uninstaller. |
 | Writes a Start-menu shortcut and the usual uninstall registry entry | Standard for an installed application. |
 

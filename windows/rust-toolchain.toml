@@ -10,8 +10,9 @@ profile = "minimal"
 #                             Office), shipped beside the x64 one as
 #                             TaigiKeyboard32.dll (docs/architecture/
 #                             windows-release.md § The 32-bit service).
-#   aarch64-pc-windows-msvc — Windows on ARM; built, not published without a
-#                             native smoke test (same entry).
+#   aarch64-pc-windows-msvc — the Arm64 TIP DLL + settings exe, behind the
+#                             Arm64X forwarder (docs/architecture/
+#                             windows-arm64-roadmap.md).
 #   x86_64-pc-windows-gnu   — NOT shipped. The macOS host has no MSVC C
 #                             toolchain, so this is the target `make
 #                             windows-check` uses to check the whole workspace

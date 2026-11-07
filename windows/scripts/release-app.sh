@@ -226,7 +226,7 @@ done
 # imports at all (it is `/noentry`, two forwarded exports and nothing else),
 # the Arm64X marker, and both views' forwards — the native view as dumpbin
 # lists it, the x64 view's as the strings it holds, which dumpbin does not
-# list. The arm64-smoke CI job proves the x64 view activates.
+# list. The installer-arm64 CI job proves the x64 view activates.
 require_version_info "$FORWARDER"
 forwarder_imports="$(dumpbin_read -dependents "$FORWARDER")"
 if grep -qE 'has the following( delay load)? dependencies' <<< "$forwarder_imports"; then

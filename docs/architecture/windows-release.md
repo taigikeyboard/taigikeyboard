@@ -62,17 +62,16 @@ that half.
 
 ## Architectures
 
-**x64 machines; x64 and 32-bit applications.** A text service is loaded into
-every process that takes text input and the DLL must match THAT process's
-architecture, so this is two separate questions — which machines can install,
-and which applications the input method works in.
+**x64 and Arm64 Windows 11 machines; Arm64, x64 and 32-bit applications.** A
+text service is loaded into every process that takes text input and the DLL
+must match THAT process's architecture, so this is two separate questions —
+which machines can install, and which applications the input method works in.
 
-`ArchitecturesAllowed=x64os`, so an **Arm64 machine is refused**.
-`x64compatible` — what this used to say — also matches Arm64 Windows 11,
-which runs x64 binaries under emulation: the installer would succeed and the
-input method would then do nothing in every Arm64-native application while
-working in emulated ones. For an input method that is indistinguishable from
-broken.
+One installer for both machines: `ArchitecturesAllowed=x64compatible`, which
+matches x64 Windows and Arm64 Windows 11 (Arm64 Windows 10 has no x64
+emulation, and Inno refuses it). An Arm64 machine gets the Arm64 service, the
+x64 one for x64-emulated hosts and the Arm64X forwarder between them, plus the
+Arm64 settings exe — § The Arm64 services.
 
 **32-bit applications get `TaigiKeyboard32.dll`**, the same text service
 built for `i686-pc-windows-msvc`. Everywhere Taiwanese is typically typed is
@@ -119,9 +118,10 @@ Registration, measured with `regsvr32` and a registry dump:
   input method registered with COM and absent from the language list. The
   pair is one transaction, and a rollback has to back up and restore both.
   The installer does: `RegisterEverything` and `RestorePreviousVersion`
-  register x86 then x64, and every unregister path (`PrepareToInstall`,
+  register x86 then the native 64-bit service (`NativeDll`: x64, or Arm64 on
+  an Arm64 machine), and every unregister path (`PrepareToInstall`,
   `RollBack`, `[UninstallRun]`) removes both. A restore re-registers only the
-  services the replaced version had (`HadX64Dll` / `HadX86Dll`, taken before
+  services the replaced version had (`HadNativeDll` / `HadX86Dll`, taken before
   anything moves): a failed fresh install registers nothing, and a failed
   upgrade from a version without the 32-bit service also removes the new
   `TaigiKeyboard32.dll` (`RemoveAddedX86Dll`), so no mixed install is left
@@ -133,18 +133,40 @@ Registration, measured with `regsvr32` and a registry dump:
   fail to activate it. Uninstalling first (which keeps `%APPDATA%`) leaves
   nothing for it to miss.
 
-### What an Arm64 round would have to know
+### The Arm64 services
 
-Investigated on 2026-09-01; the measured record.
+Merged through #721 (2026-11); design, measurements and the spike record:
+`windows-arm64-roadmap.md`.
 
-**Arm64** is a research problem. A single CLSID's `InprocServer32` is one
-path, and Arm64-native and x64-emulated processes read the SAME 64-bit
-registry view, so there is no registry-level way to serve both: Microsoft's
-answer for a 64-bit in-process COM server is an **Arm64X pure forwarder** — a
-code-less Arm64X DLL that the loader redirects to an Arm64 or an x64 DLL
-(`link /dll /noentry /machine:arm64x /defArm64Native:…`). It also needs the VS
-Arm64/Arm64EC build tools, which the release machine does not have
-(`bin/Hostx64` holds `x64` and `x86` only), and a machine to test on.
+- **Why a forwarder**: one CLSID has one 64-bit `InprocServer32`, and
+  Arm64-native and x64-emulated processes read the same 64-bit registry view.
+  `TaigiKeyboard64X.dll` is an Arm64X pure forwarder (`windows/forwarder/`,
+  linked by `windows/scripts/build-forwarder.ps1`, mozc's recipe): its Arm64
+  view forwards `DllGetClassObject` / `DllCanUnloadNow` to
+  `TaigiKeyboardArm64.dll`, its x64 view to `TaigiKeyboard.dll`.
+- **Registration**: the Arm64 build of `register_server` writes the sibling
+  forwarder as `InprocServer32` and refuses to register when it is missing;
+  the profile icon and display name stay on the Arm64 DLL. The x64 DLL is
+  never registered on an Arm64 machine. Order as above: x86 first, then the
+  Arm64 DLL with the native `{sys}\regsvr32`.
+- **Layout**: all flat in `{app}` under fixed names — the installer picks
+  `arm64\TaigiKeyboardSettings.exe` and `RuntimeArm64\*` with `Check: IsArm64`
+  under the same install names, so the shortcut, uninstall icon, update task
+  and updater see one exe either way.
+- **Build**: `release-app.sh` cross-builds `aarch64-pc-windows-msvc` (DLL +
+  settings exe) after x64 and i686 and links the forwarder; read-back checks
+  the Arm64X marker, both views' forwards, that the forwarder imports
+  nothing, and the PE machine of every staged binary and runtime DLL
+  (windows-reactor-setup's runtime extraction is shared across
+  architectures).
+- **CI**: `windows-build.yml` runs the installer on a `windows-11-arm` runner
+  (install, activation from an Arm64 and an x64 process through the
+  forwarder, uninstall) and, as an upgrade from the last release, on
+  `windows-2025` (`windows/scripts/smoke-installer.ps1`,
+  `smoke-activation.ps1`).
+- **Dev install** on an Arm64 machine: `install-dev.ps1` stages the three
+  DLLs and the Arm64 settings exe under `windows\target\arm64x-dev` and
+  registers that copy (`windows/README.md`).
 
 ## Building on a GitHub-hosted runner
 
@@ -156,9 +178,11 @@ from the version `windows/rust-toolchain.toml` names, and the MSVC developer
 environment applied.
 `make desktop-release` dispatches it on `main`, and that run attaches its
 installer to the draft — in a separate `attach` job, the only one holding a
-write token, after the `arm64-smoke` job has registered the Arm64 service on a
-`windows-11-arm` runner and activated it from an Arm64 and an x64 process
-(`windows/scripts/smoke-activation.ps1`). A run dispatched on any other branch
+write token, after the installer smoke jobs passed: a fresh install on a
+`windows-11-arm` runner, activated from an Arm64 and an x64 process, and an
+upgrade from the last release on `windows-2025`, each uninstalled clean
+(`windows/scripts/smoke-installer.ps1`, `smoke-activation.ps1`). A run
+dispatched on any other branch
 builds and smoke-tests and attaches nothing; a run fired by `release:
 published` rebuilds for provenance and publishes nothing.
 
@@ -184,7 +208,8 @@ manifest JSON), GNU **make** (`winget install ezwinports.make` — Git for Windo
 does not ship it, and every `make` target below needs it), `protoc` (the engine's
 `protos` crate runs prost-build), and:
 
-1. **Rust** with the `x86_64-pc-windows-msvc` target (`rustup target add`).
+1. **Rust** with the `x86_64-pc-windows-msvc`, `i686-pc-windows-msvc` and
+   `aarch64-pc-windows-msvc` targets (`rustup target add`).
 2. **Inno Setup 6.5 or newer** (`x64compatible` is 6.3 syntax) — `ISCC.exe` on
    `PATH`, in its default folder, or named by `ISCC=<path>`. Note that
    `release-app.sh` resolves `iscc` from `PATH` **before** it reads `ISCC`.
@@ -196,7 +221,9 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
    `dumpbin.exe` (beside `link.exe`; the import-table check) on `PATH`, plus
    `signtool.exe` **on the signed path only** (neither script asks for it
    under `--skip-sign` / `--allow-unsigned`); a Developer Command Prompt puts
-   all three there.
+   all three there. The Visual Studio component **MSVC ARM64/ARM64EC build
+   tools** too: the Arm64 build's bundled SQLite and the Arm64X forwarder
+   need it.
 4. **A code-signing certificate** — *not held today; skip this item and pass
    `--skip-sign`* (§ Signing status). When one exists: in the current user's
    certificate store, named by its SHA-1 thumbprint,

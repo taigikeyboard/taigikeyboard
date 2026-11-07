@@ -1,7 +1,7 @@
 # Asks COM for the text service's class object in THIS process and checks
-# which service DLL came with it - the arm64-smoke CI job runs it once from an
-# Arm64 process and once from an x64-emulated one, after registering the Arm64
-# DLL (whose InProcServer32 names the Arm64X forwarder;
+# which service DLL came with it - the installer-arm64 CI job runs it once from an
+# Arm64 process and once from an x64-emulated one, after installing (the Arm64
+# DLL registers the Arm64X forwarder as InProcServer32;
 # docs/architecture/windows-arm64-roadmap.md section Forwarder). Registration and
 # typing are not exercised: activation through the forwarder is the claim.
 #
