@@ -368,7 +368,8 @@ test("the sidebar links fold under their own section", async ({ page }) => {
   await expect(links.first()).toBeHidden();
   await page.getByText("其他資源", { exact: true }).click();
   await expect(links).toHaveText([
-    "台語齒盤官方網站",
+    // trace: home.websiteLink, the desktop About page's link.
+    "taigikeyboard.tw",
     "台語羅馬字轉換器",
     "教典備援網站",
   ]);
