@@ -11,6 +11,7 @@ import {
   open,
   panel,
   preedit,
+  TIER,
 } from "./helpers.mjs";
 
 test("Enter commits the highlighted candidate", async ({ page }) => {
@@ -116,23 +117,19 @@ test("every default chord reaches the page", async ({ page }) => {
   });
   const prevented = () => page.evaluate(() => window.lastPrevented);
 
-  for (const chord of ["c", "p", "h", ",", "/", "j"]) {
-    await editor.press(`Control+Alt+${chord}`);
+  for (const chord of ["s", "c", "p", "h", ",", "/", "j"]) {
+    await editor.press(`${TIER}+${chord}`);
     expect(await prevented(), chord).toBe(true);
     await editor.press("Escape");
   }
   await editor.press("`");
   expect(await prevented()).toBe(true);
-
-  // The settings window's chord has no window here (`shortcuts.rs`).
-  await editor.press("Control+Alt+s");
-  expect(await prevented()).toBe(false);
 });
 
 test("a chord that writes the settings survives a reload", async ({ page }) => {
   // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ.
   const editor = await open(page);
-  await editor.press("Control+Alt+c");
+  await editor.press(`${TIER}+c`);
   await expect(inputMode(page)).toHaveValue("poj");
   await page.reload();
   await expect(inputMode(page)).toHaveValue("poj");
@@ -141,9 +138,9 @@ test("a chord that writes the settings survives a reload", async ({ page }) => {
 test("a switch names the new mode, then gets out of the way", async ({
   page,
 }) => {
-  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ; `mode_label` starts with
-  // the romanization. A Shift tap flashes `flash_label_key`. The observer keeps
-  // each label, so a slow machine cannot miss the 0.8 s the card is up.
+  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ; `switched_label` is the
+  // romanization alone. A Shift tap flashes `flash_label_key`. The observer
+  // keeps each label, so a slow machine cannot miss the 0.8 s the card is up.
   const flash = page.locator("#mode-flash");
   const editor = await open(page);
   await flash.evaluate((card) => {
@@ -157,12 +154,12 @@ test("a switch names the new mode, then gets out of the way", async ({
   const flashed = () => page.evaluate(() => window.flashed.at(-1));
 
   await expect(flash).toBeHidden();
-  await editor.press("Control+Alt+c");
-  await expect.poll(flashed).toContain("Pe̍h-ōe-jī");
+  await editor.press(`${TIER}+c`);
+  await expect.poll(flashed).toBe("Pe̍h-ōe-jī");
   await expect(flash).toBeHidden();
 
-  await editor.press("Control+Alt+c");
-  await expect.poll(flashed).toContain("Tâi-lô");
+  await editor.press(`${TIER}+c`);
+  await expect.poll(flashed).toBe("Tâi-lô");
   await editor.press("Shift");
   await expect.poll(flashed).not.toContain("Tâi-lô");
   await expect(flash).toBeHidden();
@@ -172,14 +169,14 @@ test("the picker and the guide open and close at the caret", async ({
   page,
 }) => {
   const editor = await open(page);
-  await editor.press("Control+Alt+,");
+  await editor.press(`${TIER}+,`);
   await expect(candidates(page).first()).toBeVisible();
   await editor.press("Escape");
   await expect(panel(page)).toBeHidden();
 
-  await editor.press("Control+Alt+/");
+  await editor.press(`${TIER}+/`);
   await expect(candidates(page).first()).toBeVisible();
-  await editor.press("Control+Alt+/");
+  await editor.press(`${TIER}+/`);
   await expect(panel(page)).toBeHidden();
 });
 

@@ -124,7 +124,7 @@ The Linux shell already answers a key with a list of signals: `KeyReply { handle
 | `DeleteSurrounding` | Remove the auto space before the caret |
 | `LookupTable` / `HideLookupTable` | Render or hide the candidate list |
 | `ModeChanged` / `AnnounceMode` | `AnnounceMode` reaches the hidden live region and draws the mode flash, a card held 0.8 s as on the desktops; the sidebar shows the mode |
-| New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | Never sent: the sidebar is the settings, so `Session::key_down` leaves the chord to the browser and Shortcuts has no row for it (maintainer 2026-11-07). Show the TPS key panel |
+| New in Phase 2: `OpenSettings`, `ToggleTpsKeyboard` | The settings chord opens or closes the sidebar, the page's settings (maintainer 2026-11-07), one toggle per press. Show the TPS key panel |
 | New in Phase 5: `TpsKeyboardCapTyped` | Light the cap. Linux drops it in `run_launches`: its panel is another process |
 
 `serde_json` is already a dependency of `taigi-desktop-core`. Proto bytes would pull a protobuf runtime into the page for no gain.
@@ -229,7 +229,7 @@ Named divergences (`cross-platform-alignment.md` §3), all intentional unless ma
 |---|---|---|
 | Next-word prediction | None, same as desktop | Physical keyboard; maintainer 2026-10-03 |
 | Target of typing | The page's textarea only | A tab cannot reach other apps |
-| Global shortcuts | The Ctrl+Alt set of Windows and Linux on every OS, minus what the browser keeps. On a Mac this is not the app's ⌃⌘ set, whose rows live in Swift (`keys/shortcut_actions.rs:219`) | Browser-reserved chords; one set of defaults in Rust |
+| Global shortcuts | The Ctrl+Alt set of Windows and Linux, minus what the browser keeps. On a Mac the page takes the app's ⌃⌘ set and lists it (`web/crates/taigi-web/src/key.rs` `core_tier_snapshot`), ⌃⌥ does nothing there; a ⌃⌘ press that is no chord stays the browser's. The settings chord toggles the sidebar | One set of defaults in Rust; the Mac app's rows live in Swift |
 | English mode by Shift tap | Yes, as on Windows and macOS. **Linux has none** (`linux/crates/taigi-linux-core/src/chrome.rs` `mode_indicator`), so the gate is opt-in per shell | A page has no OS input-method switcher |
 | Bare Hanji/romanization key in English mode | Types a backtick. Windows still fires it, because its global match runs above the English gate (`session.rs:168-183`, `:204`) | English mode means the key is the document's, which is what the Windows comment says too |
 | Candidate click | Selects, never commits, as on Linux and macOS (`session/key.rs` `click_from_panel`) | Same code |

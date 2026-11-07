@@ -15,10 +15,50 @@
 
 use serde::Deserialize;
 use taigi_desktop_core::keys::{
-    KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey, LEFT_SHIFT_SCAN_CODE,
-    RIGHT_SHIFT_SCAN_CODE, SEMICOLON_KEY_CODE,
+    ComposingKeyChord, KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey,
+    LEFT_SHIFT_SCAN_CODE, RIGHT_SHIFT_SCAN_CODE, SEMICOLON_KEY_CODE,
 };
 use taigi_desktop_core::platform::DesktopPlatform;
+
+/// The global tier in the core's defaults (`ShortcutAction::default_chord`).
+const CORE_TIER: KeyModifiers = KeyModifiers::CONTROL.with(KeyModifiers::ALT);
+/// The same tier in the Mac app, whose rows live in Swift
+/// (`ShortcutActions.swift`).
+const MAC_APP_TIER: KeyModifiers = KeyModifiers::CONTROL.with(KeyModifiers::WIN);
+
+/// A Mac app chord as the core's table spells it, so ⌃⌘C does on the page what
+/// it does in the app. `None` for any other press.
+pub(crate) fn core_tier_snapshot(
+    snapshot: &KeyEventSnapshot,
+    platform: DesktopPlatform,
+) -> Option<KeyEventSnapshot> {
+    (platform == DesktopPlatform::MacOS && snapshot.modifiers == MAC_APP_TIER).then(|| {
+        KeyEventSnapshot {
+            modifiers: CORE_TIER,
+            ..snapshot.clone()
+        }
+    })
+}
+
+/// A press of the core's tier on a Mac, which the app does not have.
+pub(crate) fn is_mac_core_tier(snapshot: &KeyEventSnapshot, platform: DesktopPlatform) -> bool {
+    platform == DesktopPlatform::MacOS && snapshot.modifiers == CORE_TIER
+}
+
+/// A global chord as the visitor presses it: ⌃⌘ on a Mac, as in the app.
+pub(crate) fn visitor_chord(
+    chord: ComposingKeyChord,
+    platform: DesktopPlatform,
+) -> ComposingKeyChord {
+    if platform == DesktopPlatform::MacOS && chord.modifiers == CORE_TIER {
+        ComposingKeyChord {
+            modifiers: MAC_APP_TIER,
+            ..chord
+        }
+    } else {
+        chord
+    }
+}
 
 /// The fields of a `KeyboardEvent` the page sends.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Eq)]
@@ -481,6 +521,23 @@ mod tests {
                 "{key}"
             );
         }
+    }
+
+    #[test]
+    fn only_the_macs_control_command_reads_as_the_core_tier() {
+        let event = BrowserKey {
+            ctrl: true,
+            meta: true,
+            ..press("c", "KeyC")
+        };
+        let rewritten = core_tier_snapshot(&event.snapshot(MAC).unwrap(), MAC).unwrap();
+        assert_eq!(rewritten.modifiers, CORE_TIER);
+        assert!(core_tier_snapshot(&event.snapshot(LINUX).unwrap(), LINUX).is_none());
+        let plain_command = BrowserKey {
+            meta: true,
+            ..press("c", "KeyC")
+        };
+        assert!(core_tier_snapshot(&plain_command.snapshot(MAC).unwrap(), MAC).is_none());
     }
 
     #[test]

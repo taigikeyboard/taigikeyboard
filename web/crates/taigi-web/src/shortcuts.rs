@@ -9,13 +9,10 @@ use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
+use crate::key::visitor_chord;
+
 /// The two keys of one row, spaced as `caret_chords_label` spaces its own.
 const KEY_GAP: &str = "  ";
-
-/// The desktops' chord for a settings window. The page's settings are its
-/// sidebar, already a click away, so the chord is left to the browser and has
-/// no row.
-pub(crate) const SETTINGS_WINDOW: ShortcutAction = ShortcutAction::OpenLastSettingsPane;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct WireShortcuts {
@@ -67,16 +64,13 @@ pub(crate) fn shortcuts(
     let global_rows = |actions: &[ShortcutAction]| -> Vec<Row> {
         let row = |action: &ShortcutAction| Row {
             label: strings.resolve(action.label_key()).to_owned(),
-            keys: action
-                .chord_in(document, platform)
-                .map_or_else(|| unbound.to_owned(), |chord| chord.display(platform)),
+            keys: action.chord_in(document, platform).map_or_else(
+                || unbound.to_owned(),
+                |chord| visitor_chord(chord, platform).display(platform),
+            ),
             fixed_keys: None,
         };
-        actions
-            .iter()
-            .filter(|&&action| action != SETTINGS_WINDOW)
-            .map(row)
-            .collect()
+        actions.iter().map(row).collect()
     };
 
     let mut selection = composing_rows(ComposingAction::GROUPS[0]);
@@ -139,9 +133,8 @@ mod tests {
             DesktopPlatform::Linux,
         );
         let sizes: Vec<_> = wire.groups.iter().map(|group| group.rows.len()).collect();
-        // trace: GROUPS 4 + the caret row, 3, then 3, 2, 3 less the settings
-        // window.
-        assert_eq!(sizes, [5, 3, 3, 2, 2]);
+        // trace: GROUPS 4 + the caret row, 3, then 3, 2, 3.
+        assert_eq!(sizes, [5, 3, 3, 2, 3]);
         assert_eq!(wire.groups[0].title, "Candidate Selection");
     }
 
@@ -163,13 +156,13 @@ mod tests {
     #[test]
     fn the_keys_are_spelled_for_the_visitors_machine() {
         let document = SettingsDocument::default();
-        // trace: `default_chord` ToggleTps = Ctrl+Alt+P; `display` on the Mac
-        // takes glyphs and no separator.
+        // trace: `default_chord` ToggleTps = Ctrl+Alt+P; `visitor_chord` makes
+        // it ⌃⌘ on the Mac, and `display` there takes glyphs and no separator.
         let label = "Switch Phonetic Symbols";
         let linux = shortcuts(&document, &english(), DesktopPlatform::Linux);
         assert_eq!(row(&linux, label).keys, "Ctrl+Alt+P");
         let mac = shortcuts(&document, &english(), DesktopPlatform::MacOS);
-        assert_eq!(row(&mac, label).keys, "⌃⌥P");
+        assert_eq!(row(&mac, label).keys, "⌃⌘P");
     }
 
     #[test]

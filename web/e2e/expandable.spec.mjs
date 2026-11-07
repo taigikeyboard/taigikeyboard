@@ -4,7 +4,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, open, panel } from "./helpers.mjs";
+import { candidates, open, panel, TIER } from "./helpers.mjs";
 
 const ROW = { candidateLayout: "expandable" };
 const COLUMN = { candidateLayout: "verticalExpandable" };
@@ -152,7 +152,7 @@ test("Page Down after the wheel starts from what the wheel left", async ({
 
 test("the symbol picker lays out as a list does", async ({ page }) => {
   const editor = await open(page, { settings: ROW });
-  await editor.press("Control+Alt+Comma");
+  await editor.press(`${TIER}+Comma`);
   await expect(list(page)).toHaveAttribute("data-row");
   await editor.press("ArrowDown");
   await expectExpanded(page);
@@ -238,8 +238,8 @@ test("a table taken down mid-word leaves no empty grid", async ({ page }) => {
   await editor.pressSequentially(LONG_LIST);
   await editor.press("ArrowDown");
   await expectExpanded(page);
-  await editor.press("Control+Alt+Comma");
-  await editor.press("Control+Alt+Comma");
+  await editor.press(`${TIER}+Comma`);
+  await editor.press(`${TIER}+Comma`);
   await expect(panel(page)).toBeHidden();
   await expect(list(page)).not.toHaveAttribute("data-grid");
 });

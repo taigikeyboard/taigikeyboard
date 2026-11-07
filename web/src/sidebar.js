@@ -20,9 +20,7 @@ export class Sidebar {
   constructor(toggle, root) {
     this.#toggle = toggle;
     this.#root = root;
-    toggle.addEventListener("click", () => {
-      this.#setOpen(!this.#isOpen());
-    });
+    toggle.addEventListener("click", () => this.toggle());
     root.addEventListener("toggle", () => this.#syncExpanded());
     // A drawer left open while the window widens would sit in the top layer,
     // over the docked sidebar.
@@ -33,6 +31,10 @@ export class Sidebar {
       this.#syncExpanded();
     });
     this.#syncExpanded();
+  }
+
+  toggle() {
+    this.#setOpen(!this.#isOpen());
   }
 
   #isOpen() {
