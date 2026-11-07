@@ -26,6 +26,7 @@ use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v4, empty_association_bin,
     fetch_hanji, install_lexicon, selected, Fetch, Row, Selected, NOW_MS,
 };
+use lexicon::CustomEntry;
 use test_support::{engine_install_lock, write_temp};
 
 const TWO_HOURS_MS: i64 = 2 * 60 * 60 * 1000;
@@ -63,13 +64,16 @@ fn fixture_rows() -> Vec<Row> {
     ]
 }
 
-fn install_fixture() {
-    let rows = fixture_rows();
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v4(&rows));
-    let fst_path = build_dictionary_fst_tl_toned(&rows);
+fn install_rows(rows: &[Row], syllables: &[&str]) {
+    let dict_path = write_temp("dictionary.bin", &build_tkdb_v4(rows));
+    let fst_path = build_dictionary_fst_tl_toned(rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst_tl(&["king1", "king3", "sin1", "sin5"]);
+    let syllables_path = build_syllables_fst_tl(syllables);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
+}
+
+fn install_fixture() {
+    install_rows(&fixture_rows(), &["king1", "king3", "sin1", "sin5"]);
 }
 
 /// Candidate hanji in display order; the §34 literal-roman row at index 0
@@ -180,4 +184,141 @@ fn selection_without_wall_clock_is_neutral() {
         hanji[0], "敬神",
         "no clock → cold-start order; got {hanji:?}"
     );
+}
+
+// The picked word's key extends past the input, so only the Step 4b scan
+// finds it (`tsua` is a strict prefix of `tsuann`, `ko` of `kong`).
+fn partial_pick_rows() -> Vec<Row> {
+    let row = |toneless_key, hanji, tl, syll, freq| Row {
+        toneless_key,
+        hanji,
+        tl,
+        syll,
+        freq,
+    };
+    vec![
+        row("an", "安", "an", 1, 9000),
+        row("tsua", "紙", "tsuá", 1, 9000),
+        row("tsuann", "怎", "tsuánn", 1, 20),
+        row("ko", "哥", "ko", 1, 9000),
+        row("kong", "講", "kóng", 1, 9000),
+        row("antsuann", "按怎", "án-tsuánn", 2, 500),
+        row("anko", "安哥", "an-ko", 2, 500),
+        row("ankong", "按講", "àn-kóng", 2, 500),
+        row("a", "阿", "a", 1, 9000),
+        row("tsu", "資", "tsu", 1, 9000),
+        row("tsuan", "全", "tsuân", 1, 20),
+        row("si", "是", "sī", 1, 9000),
+        row("sian", "先", "sian", 1, 20),
+        row("hoo", "予", "hōo", 1, 9000),
+        row("gua", "我", "guá", 1, 9000),
+        row("hoogua", "予我", "hōo--guá", 2, 1),
+    ]
+}
+
+fn install_partial_pick_fixture() {
+    install_rows(
+        &partial_pick_rows(),
+        &[
+            "a1", "an1", "an3", "tsu1", "tsua2", "tsuan5", "tsuann2", "ko1", "kong2", "si7",
+            "sian1", "hoo7", "gua2", "guan2",
+        ],
+    );
+}
+
+#[test]
+fn never_picked_partial_word_stays_behind_the_sentence() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    let hanji = fetch_hanji_with_freq("antsua", Vec::new(), 0);
+    assert_eq!(
+        hanji[0], "安紙",
+        "cold start keeps the walker; got {hanji:?}"
+    );
+    // trace: `an` + `tsua` is the walk; Step 4b adds 按怎; `an` alone is the
+    // one front row. Fixture rule: the strict-prefix syllables `a` (leaves
+    // `ntsua` unwalkable), `tsu` and `tsuan` reach no row of their own.
+    assert_eq!(hanji, ["安紙", "按怎", "安"]);
+}
+
+#[test]
+fn picked_partial_word_takes_slot0_from_the_sentence() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    let hanji = fetch_hanji_with_freq(
+        "antsua",
+        vec![selected("按怎", "án-tsuánn", 1, TWO_HOURS_MS)],
+        NOW_MS,
+    );
+    assert_eq!(hanji[0], "按怎", "picked word must lead; got {hanji:?}");
+    assert_eq!(hanji[1], "安紙", "sentence directly behind; got {hanji:?}");
+}
+
+#[test]
+fn picked_partial_word_stays_behind_a_dictionary_word_at_slot0() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    // `anko` is an exact dictionary word: predictive stays behind exact.
+    let hanji = fetch_hanji_with_freq(
+        "anko",
+        vec![selected("按講", "àn-kóng", 10, TWO_HOURS_MS)],
+        NOW_MS,
+    );
+    assert_eq!(hanji[0], "安哥", "exact word keeps slot 0; got {hanji:?}");
+    assert_eq!(hanji[1], "按講", "pick still leads the rest; got {hanji:?}");
+}
+
+#[test]
+fn picked_partial_word_stays_behind_a_dictionary_word_the_custom_path_spells() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    // A rare 予我 loses the walk to its split; the custom 予 then walks
+    // `hōo guá`, which no promotion may replace, yet it is still that word.
+    let hanji = fetch_hanji(
+        "hoogua",
+        "tl",
+        Fetch {
+            custom: vec![
+                CustomEntry {
+                    roman: "hōo".to_string(),
+                    hanji: Some("予".to_string()),
+                },
+                CustomEntry {
+                    roman: "hōo-guán".to_string(),
+                    hanji: Some("予阮".to_string()),
+                },
+            ],
+            frequency: vec![selected("予阮", "hōo-guán", 5, TWO_HOURS_MS)],
+            now_ms: NOW_MS,
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        hanji[0], "予我",
+        "dictionary word keeps slot 0; got {hanji:?}"
+    );
+}
+
+#[test]
+fn one_syllable_pick_stays_behind_a_sentence() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    // `sia` walks 是 + 阿; 先 `sian` extends the input by one letter.
+    let hanji = fetch_hanji_with_freq(
+        "sia",
+        vec![selected("先", "sian", 10, TWO_HOURS_MS)],
+        NOW_MS,
+    );
+    assert_eq!(hanji[0], "是阿", "sentence keeps slot 0; got {hanji:?}");
+    assert_eq!(hanji[1], "先", "pick still leads the rest; got {hanji:?}");
+}
+
+#[test]
+fn one_syllable_pick_stays_behind_the_exact_syllable() {
+    let _lock = engine_install_lock();
+    install_partial_pick_fixture();
+    // The store keys 講 by its reading, so this row may come from `kong`.
+    let hanji = fetch_hanji_with_freq("ko", vec![selected("講", "kóng", 10, TWO_HOURS_MS)], NOW_MS);
+    assert_eq!(hanji[0], "哥", "exact syllable keeps slot 0; got {hanji:?}");
+    assert_eq!(hanji[1], "講", "pick still leads the rest; got {hanji:?}");
 }
