@@ -116,9 +116,9 @@ fn hanji_leads(config: &AppConfig) -> bool {
 }
 
 /// What committing `script` of the pick `(roman, hanji)` writes, or `None`
-/// when that script does not exist (`Other` on a one-script pick or under
-/// Romanization Only) — the commit is then ignored. An empty `hanji` is no
-/// Hanji.
+/// when that script does not exist (`Other` under Romanization Only) — the
+/// commit is then ignored. A pick with no Hanji has one script, so `Other`
+/// writes it as `Lead` does. An empty `hanji` is no Hanji.
 pub(crate) fn resolve_commit_text(
     script: CommitScript,
     roman: &str,
@@ -136,7 +136,6 @@ pub(crate) fn resolve_commit_text(
             })
         }
         (CommitScript::Roman, _) if !roman.is_empty() => Some(ResolvedCommit::romanization(roman)),
-        (CommitScript::Other, None) => None,
         (CommitScript::Other, Some(hanji)) => scripts.shows_hanji.then(|| {
             if scripts.hanji_leads {
                 ResolvedCommit::romanization(roman)
@@ -144,7 +143,8 @@ pub(crate) fn resolve_commit_text(
                 ResolvedCommit::hanji(hanji)
             }
         }),
-        // Lead, and a split cell whose own script is missing.
+        // Lead, Other on a one-script pick, and a split cell whose own
+        // script is missing.
         (_, hanji) => Some(lead(roman, hanji, &scripts)),
     }
 }
@@ -293,8 +293,13 @@ mod tests {
             (Other, true, false, SideBySide, R, H, roman(R)),
             (Other, false, false, SideBySide, R, H, hanji("台語")),
             (Other, false, false, Combined, R, H, roman(R)),
-            (Other, true, false, SideBySide, R, None, None),
-            (Other, true, false, SideBySide, R, Some(""), None),
+            // A one-script pick has nothing to flip to: Other writes what
+            // Lead writes (USER 2026-11-07), under every mode.
+            (Other, true, false, SideBySide, R, None, roman(R)),
+            (Other, true, false, SideBySide, R, Some(""), roman(R)),
+            (Other, false, true, SideBySide, R, None, roman(R)),
+            (Other, true, false, Combined, R, None, roman(R)),
+            (Other, false, false, RomanOnly, R, None, roman(R)),
             (Other, true, true, RomanOnly, R, H, None),
         ];
         for (script, swapped, brackets, display, roman, hanji, expected) in rows {

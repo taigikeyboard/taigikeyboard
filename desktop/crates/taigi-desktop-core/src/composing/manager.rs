@@ -412,8 +412,8 @@ impl ComposingManager {
     /// Commits `candidate`, which must come from the `fetch_candidates` call
     /// that produced the list the user is looking at. `script` picks WHICH of
     /// the candidate's two renderings the document gets; the engine resolves
-    /// the text under the same settings snapshot, answers `Ignored` for a
-    /// script the candidate does not have (Space on a one-script cell), and —
+    /// the text under the same settings snapshot (a one-script candidate
+    /// writes its one script whichever is asked for), and —
     /// with the user data open — counts the pick under its `(display text,
     /// canonical TL)` identity (Core Principle #7), never the rendering.
     pub fn commit_candidate(

@@ -64,8 +64,8 @@ pub enum CandidateCommitOutcome {
     /// The round-trip never reached the engine.
     Unavailable,
     /// The engine rejected the commit — a stale offset, a composition that
-    /// had already gone, or a script the candidate does not have (Space on a
-    /// one-script cell). Nothing changed.
+    /// had already gone, or the other script under Romanization Only.
+    /// Nothing changed.
     Ignored,
     /// The segment was nailed and the composition continues. Under Model B
     /// this writes nothing to the document. `refetch` is whether the engine
