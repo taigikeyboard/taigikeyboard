@@ -26,8 +26,12 @@ function drawCell({ text, annotation }, label, position, flags) {
   return cell;
 }
 
+/// Between the composition and a list beside it.
+const LIST_GAP = 8;
+
 export class Panel {
   #root;
+  #editor;
   #preedit;
   #candidates;
   #arrows;
@@ -53,7 +57,8 @@ export class Panel {
     this.#root = root;
     this.#ruler = ruler;
     this.#spoken = spoken;
-    this.#preedit = root.querySelector("#preedit");
+    this.#editor = root.parentElement;
+    this.#preedit = this.#editor.querySelector("#preedit");
     this.#candidates = root.querySelector("#candidates");
     this.#arrows = root.querySelector("#page-arrows");
     this.#pageUp = root.querySelector("#page-up");
@@ -67,7 +72,9 @@ export class Panel {
       onScrolled(this.#candidates.scrollTop);
     });
     // Focus stays in the textarea, which a commit needs.
-    root.addEventListener("mousedown", (event) => event.preventDefault());
+    for (const part of [root, this.#preedit]) {
+      part.addEventListener("mousedown", (event) => event.preventDefault());
+    }
     this.#candidates.addEventListener("click", (event) => {
       const cell = event.target.closest("li");
       if (cell) {
@@ -77,11 +84,11 @@ export class Panel {
   }
 
   get isShown() {
-    return !this.#root.hidden;
+    return !this.#root.hidden || this.#preedit.hasChildNodes();
   }
 
   contains(node) {
-    return this.#root.contains(node);
+    return this.#root.contains(node) || this.#preedit.contains(node);
   }
 
   /// `caret` counts Unicode scalars.
@@ -94,12 +101,10 @@ export class Panel {
       mark,
       characters.slice(caret).join(""),
     );
-    this.#syncVisibility();
   }
 
   clearPreedit() {
     this.#preedit.replaceChildren();
-    this.#syncVisibility();
   }
 
   /// `[maximumWindowWidth, ...widths]` of `[text, fontSize]` runs, as drawn: the
@@ -307,25 +312,45 @@ export class Panel {
     this.hideTable();
   }
 
-  /// Under the caret's line, kept inside the editor; above the line when the
-  /// editor or the window has no room below it, so Copy and Clear stay clear,
-  /// but never past the editor's top, where it could not be scrolled to.
-  /// A caret scrolled out of view leaves the panel at the textarea's edge.
+  /// The composition on the caret's own line, over the text there, and the list
+  /// under that line, or above it, or beside it where neither has the room: it
+  /// never covers the composition, Copy or Clear. A caret scrolled out of view
+  /// leaves both at the textarea's edge.
   place({ left, top, lineHeight }) {
-    const root = this.#root;
-    const editor = root.offsetParent;
-    const roomRight = editor.clientWidth - root.offsetWidth;
-    const inView = Math.max(0, Math.min(top, editor.clientHeight));
-    const below = inView + lineHeight;
+    const editor = this.#editor;
+    const preedit = this.#preedit;
+    const lineTop = Math.max(0, Math.min(top, editor.clientHeight));
+    const start = Math.max(
+      0,
+      Math.min(left, editor.clientWidth - preedit.offsetWidth),
+    );
+    preedit.style.left = `${start}px`;
+    const height = preedit.offsetHeight || lineHeight;
+    const line = Math.max(0, Math.min(lineTop, editor.clientHeight - height));
+    preedit.style.top = `${line}px`;
+
     const room = Math.min(
       editor.clientHeight,
       window.innerHeight - editor.getBoundingClientRect().top,
     );
     this.#fitGrid(room);
-    const isRoomBelow = below + root.offsetHeight <= room;
-    root.style.left = `${Math.max(0, Math.min(left, roomRight))}px`;
-    const above = Math.max(0, inView - root.offsetHeight);
-    root.style.top = `${isRoomBelow ? below : above}px`;
+    const root = this.#root;
+    const below = line + height;
+    const above = line - root.offsetHeight;
+    const roomRight = editor.clientWidth - root.offsetWidth;
+    let listLeft = Math.max(0, Math.min(start, roomRight));
+    let listTop = below;
+    if (below + root.offsetHeight > room) {
+      listTop = above;
+      if (above < 0) {
+        const after = start + preedit.offsetWidth + LIST_GAP;
+        const before = start - root.offsetWidth - LIST_GAP;
+        listLeft = after <= roomRight ? after : Math.max(0, before);
+        listTop = Math.max(0, Math.min(line, room - root.offsetHeight));
+      }
+    }
+    root.style.left = `${listLeft}px`;
+    root.style.top = `${listTop}px`;
     this.#startUnfold();
   }
 
@@ -347,7 +372,6 @@ export class Panel {
   }
 
   #syncVisibility() {
-    this.#root.hidden =
-      !this.#preedit.hasChildNodes() && !this.#candidates.hasChildNodes();
+    this.#root.hidden = !this.#candidates.hasChildNodes();
   }
 }

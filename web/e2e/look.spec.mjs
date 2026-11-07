@@ -425,3 +425,39 @@ test("a horizontal list keeps its scripts apart and turns pages", async ({
   await expect(first).not.toHaveText(before);
   await expect(editor).toBeFocused();
 });
+
+test("the composition sits on the caret's line, clear of the list", async ({
+  page,
+}) => {
+  const editor = await open(page);
+  const rect = (element) => {
+    const { x, y, right, bottom } = element.getBoundingClientRect();
+    return { x, y, right, bottom };
+  };
+  // From the first line to past the last: below, beside, above, then scrolled.
+  for (let line = 0; line < 14; line += 1) {
+    await editor.fill("\n".repeat(line));
+    await editor.press("End");
+    await editor.pressSequentially("tai");
+    await expect(candidates(page).first()).toBeVisible();
+    const composition = await preedit(page).evaluate(rect);
+    const list = await panel(page).evaluate(rect);
+    const box = await editor.evaluate(rect);
+    const lineHeight = 1.65 * 18;
+    // Past that the textarea scrolls, which WebKit animates.
+    if (line < 10) {
+      // trace: `#text` padding 1.5rem, line-height 1.65 at 1.125rem.
+      const expected = box.y + 24 + line * lineHeight;
+      expect(Math.abs(composition.y - expected)).toBeLessThanOrEqual(2);
+    }
+    // `offsetHeight` rounds, so up to a pixel either way.
+    const isClear =
+      list.right <= composition.x ||
+      list.x >= composition.right ||
+      list.bottom <= composition.y + 1 ||
+      list.y >= composition.bottom - 1;
+    expect(isClear, `line ${line}`).toBe(true);
+    expect(list.bottom).toBeLessThanOrEqual(box.bottom + 1);
+    await editor.press("Escape");
+  }
+});

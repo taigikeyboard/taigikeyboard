@@ -442,6 +442,7 @@ summary:focus-visible {
   display: none;
 }
 
+#text-hint:has(~ #preedit:not(:empty)),
 #text-hint:has(~ #panel:not([hidden])) {
   visibility: hidden;
 }
@@ -506,10 +507,18 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
+/* Reads as the line it sits on: the textarea's font, its background over what
+   the composition covers. */
 #preedit {
-  padding: var(--candidate-index-gap) var(--candidate-padding-x);
-  color: var(--secondary);
-  font-size: var(--candidate-annotation);
+  position: absolute;
+  z-index: 1;
+  width: max-content;
+  max-width: 100%;
+  background: var(--card);
+  font: 1.125rem / 1.65 var(--font);
+  text-decoration: underline var(--accent);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 #preedit:empty {
