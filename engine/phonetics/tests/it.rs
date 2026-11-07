@@ -9,6 +9,7 @@ mod fixtures;
 mod invariants;
 mod normalize_tone_nasal_case;
 mod op_coverage;
+mod roman_only_spelling_parity;
 mod roundtrip;
 
 /// Every `tests/*.rs` is a `[[test]]` root in `Cargo.toml` or a `mod` of one,

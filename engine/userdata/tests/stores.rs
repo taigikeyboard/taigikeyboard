@@ -1037,6 +1037,59 @@ fn the_hanji_keeps_a_compatibility_ideograph() {
     assert_eq!(stored.roman, "kh\u{ed}");
 }
 
+// A word written only in romanization has no Hanji (2026-11-07: an imported
+// `lán,lán` became a two-script word beside the shipped hanzi-less `lán`).
+
+#[test]
+fn every_write_path_stores_a_roman_only_spelling_as_no_hanji() {
+    // trace: `stored_hanji` — the pipeline's `blank_roman_only_hanzi` rule
+    // through `phonetics::api::is_roman_only_spelling`.
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    let upserted = CustomDictionaryRow::new("lán", "lán");
+    store.upsert(&upserted).unwrap();
+    assert_eq!(stored_row(&store, &upserted.id).hanji, "");
+
+    let added = CustomDictionaryRow::new("a-lú-mih", "a-lú-mih");
+    store.add_unless_stored(&added).unwrap();
+    assert_eq!(stored_row(&store, &added.id).hanji, "");
+
+    // In one file, `ê,ê` and `ê,` are one word; a file row that matches a
+    // stored word once its Hanji is blanked is skipped.
+    let result = store
+        .batch_import(&[
+            CustomDictionaryRow::new("ê", "ê"),
+            CustomDictionaryRow::new("ê", ""),
+            CustomDictionaryRow::new("lán", ""),
+        ])
+        .unwrap();
+    assert_eq!((result.imported, result.skipped), (1, 2));
+    assert_eq!(store.count().unwrap(), 3);
+}
+
+#[test]
+fn a_hanji_with_an_ideograph_or_kana_is_kept_as_written() {
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    for (roman, hanji) in [
+        ("pe̍h-phau-phau", "白phau-phau"),
+        ("jīn-jîn", "にんじん"),
+        ("tâi-gí", "台語"),
+    ] {
+        let row = CustomDictionaryRow::new(roman, hanji);
+        store.upsert(&row).unwrap();
+        assert_eq!(stored_row(&store, &row.id).hanji, hanji);
+    }
+}
+
 #[test]
 fn the_list_filter_finds_a_word_typed_in_either_form() {
     let directory = scratch();
@@ -1056,7 +1109,7 @@ fn the_list_filter_finds_a_word_typed_in_either_form() {
 
 #[test]
 fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
-    // trace: `CustomDictionaryStore::normalize_stored_romans_if_needed`,
+    // trace: `CustomDictionaryStore::normalize_stored_rows_if_needed`,
     // driven through the launch entry point.
     let directory = scratch();
     drop(custom_store(
@@ -1089,6 +1142,38 @@ fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
     assert_eq!(stored_row(&store, "B").roman, PRECOMPOSED_LI);
     assert_eq!(stored_row(&store, "D").roman, "a\u{30d}-o\u{358}");
     assert_eq!(store.count().unwrap(), 4, "no row is deleted");
+}
+
+#[test]
+fn a_launch_clears_a_stored_roman_only_spelling() {
+    // trace: `CustomDictionaryStore::normalize_stored_rows_if_needed` — a
+    // row an older build stored as `lán,lán`, and one needing both repairs.
+    let directory = scratch();
+    drop(custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    ));
+    insert_raw_row(&directory, "A", "lán", "lán");
+    insert_raw_row(&directory, "B", "la\u{301}n", "la\u{301}n");
+    insert_raw_row(&directory, "C", "pe̍h-phau-phau", "白phau-phau");
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    store.finish_takeover();
+
+    let a = stored_row(&store, "A");
+    assert_eq!((a.roman.as_str(), a.hanji.as_str()), ("lán", ""));
+    assert_eq!(
+        a.updated_at, "2026-08-26 07:28:12",
+        "a repair is not an edit"
+    );
+    let b = stored_row(&store, "B");
+    assert_eq!((b.roman.as_str(), b.hanji.as_str()), ("lán", ""));
+    assert_eq!(stored_row(&store, "C").hanji, "白phau-phau");
+    assert_eq!(store.count().unwrap(), 3, "no row is deleted");
 }
 
 #[test]

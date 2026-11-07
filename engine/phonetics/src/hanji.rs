@@ -8,6 +8,10 @@
 //!   inline 16-bit `Char.code` check (parity correction — that inline check
 //!   silently missed Extensions B/C/D/E because Kotlin `Char.code` tops out
 //!   at 0xFFFF).
+//! - `is_roman_only_spelling` — whether the spelling in a word's Hanji column
+//!   is written only in romanization (`lán`), so the word has no Hanji: the
+//!   custom dictionary's write boundary (`userdata`), the rule the dictionary
+//!   pipeline applies to the shipped rows.
 //!
 //! Pure functions — no I/O, no engine handle. INVARIANT contracts live in
 //! `docs/architecture/behavioral-invariants.md` under the umbrella label
@@ -34,6 +38,36 @@ pub fn is_hanji(text: &str) -> bool {
             .iter()
             .any(|&(low, high)| (low..=high).contains(&cp))
     })
+}
+
+/// The non-ASCII characters of the pipeline's romanization class that NFD
+/// leaves standing: superscript ⁿ and the combining grave, macron and caron
+/// the class spells out (its precomposed letters decompose onto ASCII).
+const ROMAN_MARKS: [char; 4] = ['\u{207F}', '\u{0300}', '\u{0304}', '\u{030C}'];
+
+/// Hiragana or Katakana block, the prolonged sound mark included — the
+/// pipeline's `cjk.py` `is_kana`.
+fn is_kana(c: char) -> bool {
+    ('\u{3040}'..='\u{30FF}').contains(&c)
+}
+
+/// Returns `true` iff the spelling `text` — what a word's Hanji column holds —
+/// is written only in romanization: a Latin letter, no ideograph, no kana
+/// (`lán`, `a-lú-mih`; not the Han-Lo `白phau-phau`, not `にんじん`). Such a
+/// word has no Hanji. The port of
+/// the dictionary pipeline's `dictionary/common/cleanup.py`
+/// `is_roman_only_hanzi`, kept equal by the `roman_only_spelling_parity` test;
+/// read in NFD, so `ê` counts by its `e`.
+pub fn is_roman_only_spelling(text: &str) -> bool {
+    use unicode_normalization::UnicodeNormalization;
+    let mut has_roman = false;
+    for c in text.nfd() {
+        if is_hanji(c.encode_utf8(&mut [0; 4])) || is_kana(c) {
+            return false;
+        }
+        has_roman |= c.is_ascii_alphabetic() || ROMAN_MARKS.contains(&c);
+    }
+    has_roman
 }
 
 #[cfg(test)]

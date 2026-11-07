@@ -57,6 +57,13 @@ pub fn dictionary_cjk_py_path() -> PathBuf {
     repo_root().join("dictionary/common/cjk.py")
 }
 
+/// `dictionary/tests/fixtures/roman_only_spelling_cases.tsv` — the cases the
+/// pipeline's `is_roman_only_hanzi` and `phonetics::api::is_roman_only_spelling`
+/// both answer.
+pub fn dictionary_roman_only_cases_path() -> PathBuf {
+    repo_root().join("dictionary/tests/fixtures/roman_only_spelling_cases.tsv")
+}
+
 /// `dictionary.csv`, read once per test process and shared by every test in
 /// it. `None` when the file is absent (lean checkout; the answer is cached
 /// for the process); a read failure panics. The file must not be rebuilt

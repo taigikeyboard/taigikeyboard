@@ -694,7 +694,7 @@ pub use crate::custom_search::{
     custom_search_reading, derive_custom_query_key, derive_custom_search_keys, CustomSearchKey,
 };
 
-pub use crate::hanji::{is_hanji, CJK_RANGES};
+pub use crate::hanji::{is_hanji, is_roman_only_spelling, CJK_RANGES};
 
 /// The syllables of a canonical TL string — `-` inside a word, ` ` between
 /// the words of a multi-word entry (`iā sī`); an empty piece (the khinsiann
