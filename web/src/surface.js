@@ -99,6 +99,9 @@ export class Surface {
     const before = value.slice(0, selectionStart);
     mirror.replaceChildren(before, this.#caretMark, wordRest);
     const mark = this.#caretMark;
+    // The mark's box is the font's, inside the line's.
+    const lineHeight = Number.parseFloat(style.lineHeight);
+    const leading = (lineHeight - mark.offsetHeight) / 2;
     return {
       left:
         textarea.offsetLeft +
@@ -109,8 +112,9 @@ export class Surface {
         textarea.offsetTop +
         textarea.clientTop +
         mark.offsetTop -
+        leading -
         textarea.scrollTop,
-      lineHeight: mark.offsetHeight,
+      lineHeight,
     };
   }
 
