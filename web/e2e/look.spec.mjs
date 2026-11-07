@@ -349,19 +349,14 @@ test("the footer rests at the window's foot, then below the page", async ({
 
 test("the footer's icons name their places", async ({ page }) => {
   await open(page);
-  // Social networks, the community's rooms, the code, then mail.
+  // Social networks, the community's rooms, then the code.
   await expect(page.locator(".social-links a")).toHaveText([
     "Facebook",
     "Instagram",
     "LINE",
     "Discord",
     "GitHub Issues",
-    "Email",
   ]);
-  await expect(page.locator(".social-links a").last()).toHaveAttribute(
-    "href",
-    "mailto:info@taigikeyboard.tw",
-  );
 });
 
 test("the sidebar links fold under their own section", async ({ page }) => {
