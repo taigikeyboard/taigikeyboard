@@ -159,7 +159,14 @@ fn requested_paths(open: &OpenUserData) -> Result<UserDataPaths, RequestError> {
 
 fn absolute(path: &str) -> Result<PathBuf, RequestError> {
     let path = PathBuf::from(path);
-    if path.is_absolute() {
+    // On the web `is_absolute` is false for every path; its files live in
+    // SQLite's memory VFS under rooted names (`engine/lexicon/src/paths.rs`).
+    let is_absolute = if cfg!(target_family = "wasm") {
+        path.has_root()
+    } else {
+        path.is_absolute()
+    };
+    if is_absolute {
         Ok(path)
     } else {
         Err(RequestError::Invalid(

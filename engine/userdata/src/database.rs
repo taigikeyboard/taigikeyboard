@@ -9,9 +9,8 @@ use std::cell::Cell;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{self, SyncSender, TrySendError};
+use std::sync::mpsc::{self, SendError, SyncSender, TrySendError};
 use std::sync::{Arc, Mutex, OnceLock};
-use std::thread;
 use std::time::Duration;
 
 /// Why work the user asked for could not run.
@@ -135,7 +134,7 @@ pub struct UserDataDatabase {
     schema: StoreSchema,
     reader: Arc<Mutex<Option<Connection>>>,
     is_open: Arc<AtomicBool>,
-    worker: OnceLock<SyncSender<WorkerMessage>>,
+    worker: OnceLock<Worker>,
     open_requested: AtomicBool,
 }
 
@@ -240,8 +239,9 @@ impl UserDataDatabase {
     ) -> Result<(Connection, Connection), UserDataDatabaseError> {
         // The directory too: the files are the engine's, so a fresh install
         // (Android's `databases/` before anything wrote there) must not
-        // depend on a platform having made it first.
-        if let Some(directory) = path.parent() {
+        // depend on a platform having made it first. The web's files live in
+        // SQLite's memory VFS, keyed by path, with no directory to make.
+        if let Some(directory) = path.parent().filter(|_| HAS_FILE_SYSTEM) {
             std::fs::create_dir_all(directory)?;
         }
         let writer = Connection::open_with_flags(
@@ -259,7 +259,9 @@ impl UserDataDatabase {
             ));
         }
         let taken_over = is_taken_over(&writer)?;
-        if !taken_over && has_tables(&writer)? {
+        // The web reopens only files it exported itself, already taken over,
+        // and has no file system beside them for the copy.
+        if !taken_over && HAS_FILE_SYSTEM && has_tables(&writer)? {
             snapshot_before_takeover(&writer, path)?;
         }
         writer.pragma_update(None, "journal_mode", journal.pragma())?;
@@ -283,35 +285,9 @@ impl UserDataDatabase {
         Ok((writer, read_only))
     }
 
-    fn worker(&self) -> &SyncSender<WorkerMessage> {
-        self.worker.get_or_init(|| {
-            let (sender, receiver) = mpsc::sync_channel::<WorkerMessage>(Self::QUEUE_CAPACITY);
-            let name = self.name;
-            thread::Builder::new()
-                .name(format!("taigi-store-{name}"))
-                .spawn(move || {
-                    let mut writer: Option<Connection> = None;
-                    while let Ok(message) = receiver.recv() {
-                        match message {
-                            WorkerMessage::Open(open) => {
-                                if writer.is_none() {
-                                    writer = open();
-                                }
-                            }
-                            WorkerMessage::Run(job) => {
-                                INSIDE_WORKER_JOB.with(|inside| inside.set(true));
-                                job(writer.as_ref());
-                                INSIDE_WORKER_JOB.with(|inside| inside.set(false));
-                            }
-                            WorkerMessage::Barrier(done) => {
-                                done.send(()).ok();
-                            }
-                        }
-                    }
-                })
-                .ok();
-            sender
-        })
+    fn worker(&self) -> &Worker {
+        self.worker
+            .get_or_init(|| Worker::start(self.name, Self::QUEUE_CAPACITY))
     }
 
     /// Queues a write. Silently does nothing until the store is ready, or
@@ -431,6 +407,95 @@ enum WorkerMessage {
     Open(Box<dyn FnOnce() -> Option<Connection> + Send>),
     Run(Job),
     Barrier(mpsc::Sender<()>),
+}
+
+/// False on the web (`wasm32-unknown-unknown`), where `std::fs` and
+/// `std::thread` compile and fail at run time.
+const HAS_FILE_SYSTEM: bool = !cfg!(target_family = "wasm");
+
+/// The queue into a store's worker, which owns the writer connection.
+/// Natively a thread drains it. The web cannot spawn one, so there each send
+/// drains the queue on the caller's thread before returning: the same order,
+/// and the same `INSIDE_WORKER_JOB` guard against re-entry.
+struct Worker {
+    sender: SyncSender<WorkerMessage>,
+    /// What the thread owns natively: the queue's far end and the writer.
+    #[cfg(target_family = "wasm")]
+    inline: Mutex<(mpsc::Receiver<WorkerMessage>, Option<Connection>)>,
+}
+
+impl Worker {
+    fn start(name: &'static str, capacity: usize) -> Self {
+        let (sender, receiver) = mpsc::sync_channel::<WorkerMessage>(capacity);
+        #[cfg(not(target_family = "wasm"))]
+        {
+            std::thread::Builder::new()
+                .name(format!("taigi-store-{name}"))
+                .spawn(move || {
+                    let mut writer: Option<Connection> = None;
+                    while let Ok(message) = receiver.recv() {
+                        run_message(&mut writer, message);
+                    }
+                })
+                .ok();
+            Self { sender }
+        }
+        #[cfg(target_family = "wasm")]
+        {
+            let _ = name;
+            Self {
+                sender,
+                inline: Mutex::new((receiver, None)),
+            }
+        }
+    }
+
+    fn send(&self, message: WorkerMessage) -> Result<(), SendError<WorkerMessage>> {
+        self.sender.send(message)?;
+        self.drain();
+        Ok(())
+    }
+
+    fn try_send(&self, message: WorkerMessage) -> Result<(), TrySendError<WorkerMessage>> {
+        self.sender.try_send(message)?;
+        self.drain();
+        Ok(())
+    }
+
+    #[cfg(not(target_family = "wasm"))]
+    fn drain(&self) {}
+
+    /// A send from inside a job finds the lock held and returns: the loop
+    /// running that job takes the message next.
+    #[cfg(target_family = "wasm")]
+    fn drain(&self) {
+        let Ok(mut inline) = self.inline.try_lock() else {
+            return;
+        };
+        let (receiver, writer) = &mut *inline;
+        while let Ok(message) = receiver.try_recv() {
+            run_message(writer, message);
+        }
+    }
+}
+
+/// One message on the worker, which keeps the writer `Open` hands it.
+fn run_message(writer: &mut Option<Connection>, message: WorkerMessage) {
+    match message {
+        WorkerMessage::Open(open) => {
+            if writer.is_none() {
+                *writer = open();
+            }
+        }
+        WorkerMessage::Run(job) => {
+            INSIDE_WORKER_JOB.with(|inside| inside.set(true));
+            job(writer.as_ref());
+            INSIDE_WORKER_JOB.with(|inside| inside.set(false));
+        }
+        WorkerMessage::Barrier(done) => {
+            done.send(()).ok();
+        }
+    }
 }
 
 /// True when the file already holds a table — a store written before, by this
@@ -568,6 +633,36 @@ mod tests {
             max_known_version: 0,
             marks_takeover_on_open: true,
         }
+    }
+
+    #[test]
+    fn a_write_queued_from_inside_a_job_runs_after_that_job() {
+        // trace: the job pushes "job" after queueing the write that pushes
+        // "nested"; the worker runs one message at a time, so "nested" lands
+        // second. The web's inline drain (`Worker::drain`) keeps this order by
+        // leaving a nested send to the loop already running.
+        let directory = tempfile::tempdir().unwrap();
+        let database = Arc::new(UserDataDatabase::new(
+            "Probe",
+            directory.path().join("probe.db"),
+            JournalMode::Wal,
+            probe_schema(),
+        ));
+        database.open_blocking();
+        let order = Arc::new(Mutex::new(Vec::new()));
+        let (inner, job_order) = (Arc::clone(&database), Arc::clone(&order));
+        let outcome: Result<(), UserDataDatabaseError> = database.perform(move |_| {
+            let nested_order = Arc::clone(&job_order);
+            inner.write(move |_| {
+                nested_order.lock().unwrap().push("nested");
+                Ok(())
+            });
+            job_order.lock().unwrap().push("job");
+            Ok(())
+        });
+        outcome.unwrap();
+        database.wait_for_queued_writes();
+        assert_eq!(*order.lock().unwrap(), ["job", "nested"]);
     }
 
     #[test]

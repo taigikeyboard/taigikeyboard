@@ -50,7 +50,8 @@ pub use handle::UserDataHandle;
 pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{
     UserDataPaths, ASSOCIATION_FILE, CUSTOM_DICTIONARY_FILE, FREQUENCY_FILE, LEARNED_PHRASES_FILE,
+    USER_DATA_FILES,
 };
 pub use requests::RequestError;
 pub use stores::{derive_custom_search_keys, UserDataStores};
-pub use timestamp::{unix_seconds_now, utc_timestamp_now};
+pub use timestamp::{unix_millis_now, unix_seconds_now, utc_timestamp_now};

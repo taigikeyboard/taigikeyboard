@@ -4,9 +4,11 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use sqlite_wasm_rs::{MemVfsUtil, WasmOsCallback};
+
 use taigi_desktop_core::composing::Clock;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::lexicon_install;
+use taigi_desktop_core::engine::{lexicon_install, user_data};
 use taigi_desktop_core::platform::DesktopPlatform;
 use wasm_bindgen::prelude::*;
 
@@ -18,6 +20,20 @@ use crate::session::{WebSession, DICTIONARY_VERSION};
 /// Where the dictionary bytes are registered. No file exists there; the
 /// engine only needs a rooted name to ask `mmap_host` for.
 const DICTIONARIES_ROOT: &str = "/dictionaries";
+
+/// Where the user's stores live: SQLite's memory VFS, which keys its files by
+/// path. The page keeps their bytes (`userDataFiles`).
+const USER_DATA_ROOT: &str = "/taigi";
+
+/// The memory VFS path of one of `userDataFiles`, or a refusal for any other
+/// name.
+fn user_data_path(name: &str) -> Result<String, JsError> {
+    if userdata::USER_DATA_FILES.contains(&name) {
+        Ok(format!("{USER_DATA_ROOT}/{name}"))
+    } else {
+        Err(JsError::new(&format!("{name} is not a user-data file")))
+    }
+}
 
 #[wasm_bindgen]
 extern "C" {
@@ -112,6 +128,39 @@ impl Session {
         lexicon_install(&artifacts, DICTIONARY_VERSION)
             .map(|stats| stats.dictionary_record_count)
             .ok_or_else(|| JsError::new("the engine refused the dictionaries"))
+    }
+
+    /// The files the page keeps the user's data in, by name.
+    #[wasm_bindgen(js_name = userDataFiles)]
+    pub fn user_data_files(&self) -> Vec<String> {
+        userdata::USER_DATA_FILES.map(str::to_owned).to_vec()
+    }
+
+    /// Hands in one of `userDataFiles` as the page kept it. Before
+    /// `openUserData` only: an open file is refused.
+    #[wasm_bindgen(js_name = importUserData)]
+    pub fn import_user_data(&self, name: &str, bytes: &[u8]) -> Result<(), JsError> {
+        // The VFS is registered once per instance; `new` finds it.
+        MemVfsUtil::<WasmOsCallback>::new()
+            .import_db(&user_data_path(name)?, bytes)
+            .map_err(|error| JsError::new(&format!("{name}: {error}")))
+    }
+
+    /// Opens the stores over what was imported, a new file for each one not,
+    /// and finishes before it returns. From here on the engine learns. Once
+    /// per instance; `false` when the engine did not acknowledge it.
+    #[wasm_bindgen(js_name = openUserData)]
+    pub fn open_user_data(&self) -> bool {
+        user_data::open_on_this_thread(Path::new(USER_DATA_ROOT))
+    }
+
+    /// One of `userDataFiles` as it is now, for the page to keep. Every write
+    /// has landed: the stores' queues drain on this thread (`database.rs`).
+    #[wasm_bindgen(js_name = exportUserData)]
+    pub fn export_user_data(&self, name: &str) -> Result<Vec<u8>, JsError> {
+        MemVfsUtil::<WasmOsCallback>::new()
+            .export_db(&user_data_path(name)?)
+            .map_err(|error| JsError::new(&format!("{name}: {error}")))
     }
 
     #[wasm_bindgen(js_name = keyDown)]

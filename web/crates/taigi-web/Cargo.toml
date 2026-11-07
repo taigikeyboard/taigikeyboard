@@ -16,6 +16,12 @@ workspace = true
 [dependencies]
 taigi-desktop-core = { workspace = true }
 mmap-host = { workspace = true }
+# The engine keeps what the user picks (web-roadmap Phase 8).
+dispatch = { workspace = true, features = ["user-data"] }
+userdata = { workspace = true }
 wasm-bindgen = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+sqlite-wasm-rs = { workspace = true }

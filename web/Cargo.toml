@@ -18,6 +18,11 @@ publish = false
 [workspace.dependencies]
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 mmap-host = { path = "../engine/mmap-host" }
+# `user-data` on its own edge (user-data-engine-roadmap U11), as each shell does.
+dispatch = { path = "../engine/dispatch", default-features = false }
+userdata = { path = "../engine/userdata" }
+# The memory VFS `rusqlite` runs on here; its version is the one `rusqlite` links.
+sqlite-wasm-rs = "0.5"
 # Exact, and equal to `wasm-bindgen` in ../mise.toml: the CLI refuses a crate of
 # any other version. `make -C web check` compares the two.
 wasm-bindgen = "=0.2.130"

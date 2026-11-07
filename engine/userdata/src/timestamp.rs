@@ -3,8 +3,6 @@
 //! the macOS formatter binds, so the stored text sorts the way the query
 //! orders by it regardless of locale or time zone.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 /// Now, as `yyyy-MM-dd HH:mm:ss` in UTC.
 pub fn utc_timestamp_now() -> String {
     format_utc_timestamp(unix_seconds_now())
@@ -12,9 +10,24 @@ pub fn utc_timestamp_now() -> String {
 
 /// Seconds since the Unix epoch, now (0 on a clock set before 1970).
 pub fn unix_seconds_now() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |elapsed| elapsed.as_secs())
+    u64::try_from(unix_millis_now() / 1000).unwrap_or(0)
+}
+
+/// Milliseconds since the Unix epoch, now (0 on a clock set before 1970).
+#[cfg(not(target_family = "wasm"))]
+pub fn unix_millis_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| {
+            i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX)
+        })
+}
+
+/// Milliseconds since the Unix epoch, now: the browser's clock, because
+/// `SystemTime::now` panics on `wasm32-unknown-unknown`.
+#[cfg(target_family = "wasm")]
+pub fn unix_millis_now() -> i64 {
+    (js_sys::Date::now() as i64).max(0)
 }
 
 /// `seconds` since the Unix epoch as RFC 3339 UTC, `yyyy-MM-ddTHH:mm:ssZ` —

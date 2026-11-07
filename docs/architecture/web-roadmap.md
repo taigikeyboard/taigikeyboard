@@ -253,7 +253,7 @@ Each phase is one PR of 200–500 LOC unless noted. No phase is assigned to a re
 | 5 | Look, then i18n + fonts, then panels + a11y (3 PRs) | Playwright, i18n gates | Done |
 | 6 | Loading and offline | Playwright offline run | Done |
 | 7 | Deploy | `check-live` on the real URL | Done |
-| 8 | User data: learning on (8a), Learning Records section (8b) | spike done 2026-11-07; native suites unchanged, Node + Playwright | Pending |
+| 8 | User data: learning on (8a), Learning Records section (8b) | spike done 2026-11-07; native suites unchanged, Node + Playwright | 8a in review, 8b pending |
 
 ### Phase 1 — Engine runs on wasm32
 
@@ -377,13 +377,13 @@ What it took (grounded in code):
 - `handle.rs:160` refuses every path, because `Path::is_absolute()` is false on this target (the same trap `LexiconPaths::validate` had in Phase 1). `database.rs:251` `create_dir_all` has no file system to call.
 - Storage: `sqlite-wasm-rs` 0.5's default VFS is in memory, files keyed by path, with `MemVfsUtil::import_db` / `export_db`. No `relaxed-idb` and no Worker needed: the page keeps the bytes in IndexedDB.
 - Journal: `Delete` on the web; the memory VFS has no shared memory for WAL.
-- Build: Apple's `ar` cannot index wasm objects ("not a mach-o file") and leaves `libwsqlite3.a` empty, so the link fails on `sqlite3_*`. `zig ar` (already in `mise.toml`) works; `web/Makefile` sets `AR_wasm32_unknown_unknown`. Ubuntu CI unverified.
+- Build: Apple's `ar` cannot index wasm objects ("not a mach-o file") and leaves `libwsqlite3.a` empty, so the link fails on `sqlite3_*`. `zig ar` (already in `mise.toml`) works; `web/Makefile` sets `AR_wasm32_unknown_unknown`, `web.yml` installs zig, and the `web` repo's deploy must too.
 
 #### 8a — Learning on
 
 - `engine/userdata` + `dispatch`: the wasm32 seams above, native behaviour unchanged (native suites are the freeze gate).
 - `taigi-web`: depends on `dispatch` with `user-data`; data directory `/taigi`; exports import / export of the four files.
-- Page: holds the Web Lock `taigi-user-data`. The holder imports the IndexedDB snapshot, then opens the stores at load (keeps the 49 ms off the first key), and saves after a commit (debounced) and on `pagehide`. A second tab types without learning and waits for the lock; when it gets it, it imports the latest snapshot and opens then. The stores open once per instance and an open file cannot be re-imported, so a tab that learned from an old snapshot never overwrites a newer one.
+- Page: holds the Web Lock `taigi-user-data`. The holder imports the IndexedDB snapshot, then opens the stores at load (keeps the 49 ms off the first key), and saves right after each key that commits. A save on `pagehide` or a hidden tab was tried and never landed: all three engines abort an IndexedDB write the unload interrupts. Each save copies the four files whole, about 200 KB after the spike's picks; a large custom dictionary would make that several MB per commit, to look at when Custom Dictionary comes to the web. A second tab types without learning and waits for the lock; when it gets it, it imports the latest snapshot and opens then. The stores open once per instance and an open file cannot be re-imported, so a tab that learned from an old snapshot never overwrites a newer one.
 - Tests: Node (learn, export, restore), Playwright (reload keeps a pick; a second tab does not learn until the first closes).
 
 #### 8b — Learning Records section

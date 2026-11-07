@@ -29,6 +29,13 @@ serde_json = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 
+# The web (`wasm32-unknown-unknown`): `uuid` draws its randomness from the
+# browser, and the clock is the browser's (`timestamp.rs`). SQLite there is
+# `rusqlite`'s own `sqlite-wasm-rs`, whose default VFS keeps the files in memory.
+[target.'cfg(target_family = "wasm")'.dependencies]
+uuid = { workspace = true, features = ["js"] }
+js-sys = { workspace = true }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 test-support = { workspace = true }

@@ -7,6 +7,10 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 SHELL := /bin/bash
 
 TARGET := wasm32-unknown-unknown
+# SQLite's C (`sqlite-wasm-rs`) is archived for this target: Apple's `ar` cannot
+# index wasm objects ("not a mach-o file") and GNU `ar` does not know them, so
+# the link would miss every `sqlite3_*`. zig is in mise.toml.
+export AR_wasm32_unknown_unknown := zig ar
 PKG := target/pkg
 WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site

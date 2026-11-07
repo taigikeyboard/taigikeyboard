@@ -3,6 +3,7 @@
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
 import { translate } from "./i18n.js";
+import { Learning } from "./learning.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
 import { Panel } from "./panel.js";
 import { Settings } from "./settings.js";
@@ -58,6 +59,8 @@ const settings = new Settings(
 
 /// `null` between instances.
 let session = null;
+
+const learning = new Learning(() => session, run);
 
 /// The session is the judge of the stored document: one it refuses leaves the
 /// defaults.
@@ -180,6 +183,8 @@ async function start() {
     starting = await createSession(platform(), navigator.language);
     session = starting;
     restoreSettings(starting);
+    // Off the first key: opening the stores takes tens of milliseconds.
+    learning.attach(starting);
     redrawShortcuts();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
     textarea.disabled = false;
@@ -191,15 +196,15 @@ async function start() {
   await loadDictionaries(starting);
 }
 
-/// One engine call. A trap ends the instance: the composition goes with it, the
-/// text in the textarea stays, and the key that hit it is spent.
-function call(action) {
+/// One engine call, its answer as given; `undefined` with no instance. A trap
+/// ends the instance: the composition goes with it, the text in the textarea
+/// stays, and the key that hit it is spent.
+function run(action) {
   if (session === null) {
-    return NOTHING;
+    return undefined;
   }
   try {
-    const reply = action(session);
-    return reply === undefined ? NOTHING : JSON.parse(reply);
+    return action(session);
   } catch (error) {
     if (!(error instanceof WebAssembly.RuntimeError)) {
       throw error;
@@ -208,8 +213,14 @@ function call(action) {
     session = null;
     panel.clear();
     start();
-    return NOTHING;
+    return undefined;
   }
+}
+
+/// One engine call that answers a reply.
+function call(action) {
+  const reply = run(action);
+  return reply === undefined ? NOTHING : JSON.parse(reply);
 }
 
 function applyEmit(emit) {
@@ -227,6 +238,7 @@ function applyEmit(emit) {
         console.error("web.commit.refused", emit.text);
         say("web.writeFailed", "failed", { text: emit.text });
       }
+      learning.scheduleSave();
       break;
     case "deleteSurrounding":
       surface.deleteBefore(emit.count);
