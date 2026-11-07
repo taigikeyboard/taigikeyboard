@@ -1,0 +1,107 @@
+# Windows on Arm64 — Roadmap
+
+> **Type**: Planning (forward-looking)
+> **Keywords**: `windows`, `arm64`, `arm64x`, `forwarder`, `tsf`, `inno setup`, `universal installer`, `mozc`
+> **Status**: Accepted 2026-11-07. Phase 0 done; Phase 1 (spike) next. Issue #721.
+> **Siblings**: `windows-release.md` (§ Architectures, § What an Arm64 round would have to know), `windows-roadmap.md`.
+
+---
+
+## Summary
+
+- **Goal**: Windows 11 on Arm64 machines can install Taigi Keyboard, and the input method works in Arm64-native apps (Notepad, Edge, Office), x64-emulated apps and x86-emulated apps.
+- **Why it is refused today**: a text service loads in the host process's own architecture. An x64-only install would work in emulated apps and do nothing in native ones, so the installer refuses Arm64 (`windows/installer/TaigiKeyboard.iss:89-97`, `ArchitecturesAllowed=x64os`).
+- **Approach**: the mainstream one — an Arm64X pure forwarder named by `InProcServer32`, a native Arm64 TSF DLL beside the x64 one, a native Arm64 settings exe, all in one universal installer. mozc ships its TSF TIP the same way.
+
+## Decisions (maintainer, 2026-11-07)
+
+| # | Question | Decision |
+|---|---|---|
+| D1 | Test environment | A Windows 11 Arm VM on an Apple Silicon Mac for dogfood, plus a `windows-11-arm` CI smoke job |
+| D2 | Settings exe on Arm64 | Native Arm64 build (Microsoft recommends native builds for production apps) |
+| D3 | Installer shape | One universal installer; the updater and download links stay single-file |
+
+## Design (grounded in code)
+
+### Install layout on an Arm64 machine
+
+| File in `{app}` | Machine | Role |
+|---|---|---|
+| `TaigiKeyboard.dll` | x64 | Name unchanged, so an x64 machine's layout is identical to today. Loaded by x64-emulated hosts through the forwarder |
+| `TaigiKeyboardArm64.dll` | Arm64 | Loaded by Arm64-native hosts |
+| `TaigiKeyboard64X.dll` | Arm64X pure forwarder | Named by `InProcServer32`: Arm64-native and x64-emulated processes read the same 64-bit registry view, so one path has to serve both |
+| `TaigiKeyboard32.dll` | x86 | Unchanged; WOW64 hosts read the 32-bit registry view |
+| `TaigiKeyboardSettings.exe` + runtime | Arm64 | Same install name, so the shortcut, uninstall icon, update task XML and the updater's `current_exe()` check stay unchanged |
+
+Every service DLL resolves `Dictionaries\`, `Fonts\` and the settings exe from its own directory (`windows/crates/taigi-windows-tsf/src/module.rs:34-36`), so all of them sit flat in `{app}`.
+
+### Forwarder
+
+- `link /dll /noentry /machine:arm64x /defArm64Native:<arm64>.def /def:<x64>.def`, plus a VERSIONINFO resource (Microsoft, *Build Arm64X binaries* § pure forwarder).
+- Each `.def` forwards `DllGetClassObject` and `DllCanUnloadNow` only, as mozc does (`references/mozc/src/win32/tip/build_tip_forwarder_dll.py`). Registration is never run through the forwarder.
+
+### Registration
+
+- Today `register_server` writes its own `module_path()` as `InProcServer32` and as the profile icon / display-name resource (`windows/crates/taigi-windows-tsf/src/registration.rs:64-75, 242-248, 253-308`).
+- The aarch64 build (`cfg(target_arch = "aarch64")`) writes the sibling forwarder's path as `InProcServer32` instead, and fails registration when that file is missing rather than registering a path that cannot load.
+- The profile icon and display name keep the Arm64 DLL's own path: resource loading does not depend on the reader's architecture. mozc likewise points its profile at a non-forwarder DLL (`references/mozc/src/win32/custom_action/custom_action.cc:489-493`).
+- Installer order on Arm64: the x86 DLL first, the Arm64 DLL (`{sys}\regsvr32`, native) last, so the last write wins on the shared profile — today's x64-last rule (`TaigiKeyboard.iss:691-705`). The x64 DLL is never self-registered on Arm64; that would overwrite `InProcServer32` with an x64-only path.
+
+### Build
+
+- `windows/crates/taigi-windows-tsf/build.rs:12-15` gains an `aarch64` arm: OriginalFilename `TaigiKeyboardArm64.dll`.
+- The settings exe is built per target; `windows-reactor-setup` already picks the `win10-arm64` Windows App Runtime payload from the same pinned nupkg.
+- **Hazard**: `windows-reactor-setup`'s `.msix_extract` cache is not keyed by architecture (windows-rs rev `dc720b36`, `crates/libs/reactor-setup/src/lib.rs:155-164`). Built after x64, the Arm64 build would silently stage x64 runtime DLLs. `release-app.sh` clears that cache before each architecture's build and reads back the PE machine of every staged runtime DLL.
+- Bundled SQLite (`engine/Cargo.toml:56`, via `cc`) needs an Arm64 `cl.exe`: the VS "MSVC ARM64/ARM64EC build tools" component.
+- Staging adds `arm64\TaigiKeyboardSettings.exe` and `RuntimeArm64\`; the installer picks them with `Check: IsArm64` under the same `DestName`.
+
+### Installer
+
+- `ArchitecturesAllowed=x64compatible`, `ArchitecturesInstallIn64BitMode=x64compatible`.
+- `IsArm64` branches in `[Files]`, `[UninstallRun]` and the Pascal register / restore / rollback code (`TaigiKeyboard.iss:280-281, 508-705`); new `HadArm64Dll` / `HadForwarder` flags for upgrade and rollback.
+- `MinVersion` stays 10.0.17763 for x64. Arm64 also requires Windows 11 (build 22000): Windows 10 on Arm has no x64 emulation, so the forwarder's x64 half could not load. Checked in `InitializeSetup` with a clear message.
+
+### Updater
+
+Unchanged: one installer asset per release (`windows/updates/README.md`).
+
+## Phases
+
+One PR per phase; each phase starts after the previous one merges.
+
+| # | Phase | Content | Status |
+|---|---|---|---|
+| 0 | Roadmap | This document; the issue #721 update | Done 2026-11-07 |
+| 1 | Spike (no merge) | Build the Arm64 DLL and the forwarder by hand, register them by hand in the Windows 11 Arm VM, type in Notepad (Arm64), an x64-only app and a 32-bit app. Record the result here. **Hard gate**: if the forwarder does not activate the text service, stop | Pending |
+| 2 | TSF + forwarder | `build.rs` aarch64 name; registration writes the forwarder path, with tests; forwarder build script + `.def` / `.rc`; `install-dev.ps1` Arm64 path; aarch64 in `check-box.sh` and `Makefile check-msvc` | Pending |
+| 3 | Release tooling + CI | `scripts/lib/identity.sh` Arm64 names; `release-app.sh` aarch64 DLL + settings build, forwarder link, read-back checks (`AA64` / Arm64X machine, forwarded exports, runtime machine), staging, signing list; `windows-build.yml` aarch64 target, `Hostx64\arm64\link.exe`, Arm64 `cl.exe`, and a `windows-11-arm` smoke job (regsvr32, then `CoCreateInstance` of the CLSID from an Arm64 and an x64 process) | Pending |
+| 4 | Universal installer + docs | `TaigiKeyboard.iss` as above; rewrite `windows-release.md` § Architectures / § Arm64 / machine setup / installer; `docs/CODE_SIGNING_POLICY.md` file list; `windows-roadmap.md` | Pending |
+
+### Verification
+
+- Phases 2–3: `make windows-check`; `python3 tools/test_select.py --run --platform windows`; a dispatched `windows-build.yml` run whose artifact holds all five binaries with the expected PE machines; the `windows-11-arm` smoke job.
+- Phase 4 (VM dogfood): install the CI installer; type Taigi in Notepad and Edge (Arm64), an x64-only app and a 32-bit app; Task Manager shows the settings window as Arm64; uninstall leaves no CLSID or profile. On an x64 machine, upgrade and uninstall behave as before.
+
+### Open questions
+
+- Whether `TaigiKeyboard32.dll` works in x86-emulated apps on Arm64 (Phase 1).
+- Which Arm64 build tools the `windows-2025` and `windows-11-arm` runner images include (Phase 3).
+- Whether the arm64 Windows App Runtime payload carries the same file names as `windows/build-support/windows-app-runtime-files.txt` (Phase 3).
+
+## Best practices alignment
+
+| Mainstream practice | Source | This plan |
+|---|---|---|
+| Arm64X pure forwarder for a 64-bit in-process COM server | learn.microsoft.com/windows/arm/arm64x-build § pure forwarder; `references/mozc/src/win32/tip/build_tip_forwarder_dll.py` | Phase 2 |
+| The installer registers the forwarder on Arm64 machines | `references/mozc/src/win32/custom_action/custom_action.cc:457-476` | Phases 2, 4 |
+| Profile resources from a real DLL, not the forwarder | `references/mozc/src/win32/custom_action/custom_action.cc:489-493` | Phase 2 |
+| One installer for x64 and Arm64 | mozc `win_universal_installer` (`references/mozc/docs/build_mozc_in_windows.md:134-148`) | Phase 4 |
+| Native Arm64 builds for production apps | learn.microsoft.com/windows/arm/add-arm-support | Phase 3 |
+| Spike an OS capability before building on it | `docs/contributing/known-pitfalls.md` § Tests and diagnosis | Phase 1 |
+
+### Deliberately not adopted
+
+- **Arm64EC service DLL** — one binary for both, but every crate would build as EC; mozc ships separate DLLs plus a forwarder.
+- **Separate Arm64 installer** — D3.
+- **Runtime architecture detection inside the DLL** — only the aarch64 build ever sits beside a forwarder, so `cfg(target_arch)` decides at compile time.
+- **Arm64 on Windows 10** — no x64 emulation there.
