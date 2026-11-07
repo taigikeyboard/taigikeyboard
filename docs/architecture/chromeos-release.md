@@ -54,8 +54,11 @@ The candidate window over a text field, and the settings page (Display Language 
 - Users add it in Settings → Keyboard and inputs → Input methods → Add input methods. The manifest files it under Chinese (Traditional, Taiwan) (`language: zh-TW`); where ChromeOS shows it in that list is not verified on a real device.
 - Phase 6 of the roadmap (real ChromeOS, Flex from USB) checks the published build.
 
+## Timing
+
+Maintainer 2026-11-08: "no rush to release; handle it when releasing v3.9.0 together with the other desktops". The first upload goes out with the desktop v3.9.0 release, as version 3.9.0.
+
 ## Open (maintainer)
 
-- First `version` number.
 - Whether the website's download page gets a ChromeOS link.
 - Store listing description text (short and neutral, as the other stores').
