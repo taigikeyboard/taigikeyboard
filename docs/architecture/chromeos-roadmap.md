@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `chromeos`, `chrome.input.ime`, `input_components`, `manifest v3`, `service worker`, `wasm`, `linux-chromeos`, `chromeos flex`, `utm`, `rosetta`
-> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 gate passed 2026-11-07 (台語 typed in `linux-chromeos` on the Mac); worker-lifetime blocker open (§ Spike result).
+> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 passed 2026-11-07 (台語 typed in `linux-chromeos` on the Mac; offscreen-document keepalive, § Spike result). Phase 2 next.
 > **Siblings**: `web-roadmap.md` (the wasm engine this reuses), `windows-arm64-roadmap.md` (same VM-first pattern).
 
 ---
@@ -94,7 +94,7 @@ One PR per phase; each starts after the previous one merges. No version is assig
 | # | Phase | Content | Status |
 |---|---|---|---|
 | 0 | Roadmap | This document; issue #759 | Done 2026-11-07 |
-| 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | **Gate passed 2026-11-07**; one blocker open: worker lifetime (§ Spike result) |
+| 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | **Passed 2026-11-07** (§ Spike result) |
 | 2 | Extension shell | New source dir (D2), manifest, worker glue (key mapping, Emit mapping, `keyEventHandled`), dictionaries packaged, build target + lint in `Makefile`, unit tests for the mapping | Pending |
 | 3 | Settings + i18n | Options page from the web settings form; `_locales` from `i18n/*.json`, reusing the desktop keys the web page already uses (`docs/contributing/i18n.md`) | Pending |
 | 4 | Learning | User data in the worker (IndexedDB), as web Phase 8a | Pending |
@@ -121,13 +121,13 @@ The input method is enabled without the settings UI by writing the stub user's p
 | `lang5` + Space in the omnibox (a views field, focus type `url`) | Committed |
 | Engine time per key (Rosetta, so slower than a real Chromebook) | First key after boot 95–234 ms, then 3–30 ms |
 | `onKeyEvent` + `keyEventHandled(requestId, handled)` | Works |
-| **Worker lifetime** | **Blocker.** The worker stops about 30 s after the last event. A key does not wake it: keys typed after a pause reach the field as raw ASCII (`goa2 `) and the worker logs nothing. A focus change (`onFocus` / `onActivate`) does wake it, so the next field works again |
+| **Worker lifetime** (without keepalive) | The worker stops about 30 s after the last event. A key does not wake it: keys typed after a pause reach the field as raw ASCII (`goa2 `) and the worker logs nothing. A focus change (`onFocus` / `onActivate`) does wake it, so the next field works again |
 | Keepalive: `chrome.runtime.getPlatformInfo()` every 20 s | Did not help, worker gone at 30–40 s |
-| Keepalive: offscreen document pinging every 20 s | Inconclusive: no offscreen target appeared and nothing was logged |
+| **Keepalive: offscreen document** (`chrome.offscreen`, reason `WORKERS`) that sends `chrome.runtime.sendMessage` every 20 s | **Works.** Worker alive through 160 s idle, the key after the pause composes (`li2` → 你). Created from the worker's top level and again on `onActivate` / `onFocus` when `chrome.offscreen.hasDocument()` is false. Two traced fresh launches created it in under 1 s; one earlier untraced launch logged neither success nor failure and was not reproduced |
 
-Not verified: whether real ChromeOS wakes a stopped IME worker on a key (`linux-chromeos` runs stub services, so the blocker may be this environment's). McBopomofoWeb's store build keeps its worker alive from a content-script port (`references/McBopomofoWeb/src/chromeos_ime.ts:839-881`), which suggests real ChromeOS stops it too. Not measured: worker memory, a Files rename box, E2.
+**Chosen for Phase 2: the offscreen-document keepalive.** It needs only the `offscreen` permission, no host permissions. McBopomofoWeb's content-script port (`references/McBopomofoWeb/src/chromeos_ime.ts:839-881`) needs `scripting` + `<all_urls>` and only works while an http(s) tab is open.
 
-Next for the blocker, in order: (1) the McBopomofoWeb keepalive on E1 (needs `scripting` + host permissions); (2) E3, Flex live USB, to see real ChromeOS behaviour before choosing.
+Not verified: whether real ChromeOS wakes a stopped IME worker on a key (`linux-chromeos` runs stub services); runs past 5 minutes idle; worker memory; a Files rename box; E2. Phase 6 (E3) re-checks the keepalive on real ChromeOS.
 
 ## Decisions (maintainer, 2026-11-07: "follow your recommendations")
 
