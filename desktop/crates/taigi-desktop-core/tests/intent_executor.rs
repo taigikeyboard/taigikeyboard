@@ -452,28 +452,25 @@ fn confirm_commits_the_highlighted_cell_and_the_other_script_row_its_other_scrip
 }
 
 #[test]
-fn enter_on_the_literal_writes_it_spaced_and_space_on_it_writes_nothing() {
+fn both_commit_keys_write_the_literal_spaced() {
     // trace: cell 0 is the §34 literal `ho` (no Hanji). Enter = LEAD → the
-    // romanization, which earns the space; Space = OTHER → the engine has no
-    // other script to write → IGNORED: nothing written, the list refetched.
-    let mut rig = new_rig(true);
-    rig.type_word("ho");
-    rig.surface.selected = Some(0);
-    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
-    assert_eq!(
-        rig.calls(),
-        ["commit ho", "list closed", "insert \" \"", "arm"]
-    );
-
-    drop(rig);
-    let mut rig = new_rig(true);
-    rig.type_word("ho");
-    rig.surface.selected = Some(0);
-    let open = rig.list.len();
-    assert!(rig.run(ComposingKeyIntent::CommitAlternateScript, &no_key()));
-    assert_eq!(rig.calls(), [format!("list {open}")]);
-    assert!(rig.manager.is_composing(), "the composition is untouched");
-    assert_eq!(rig.manager.raw_input(), "ho");
+    // romanization, which earns the space; Output the Other Script = OTHER
+    // on a one-script pick → the engine writes that one script, the same.
+    for intent in [
+        ComposingKeyIntent::CommitHighlightedCandidate,
+        ComposingKeyIntent::CommitAlternateScript,
+    ] {
+        let mut rig = new_rig(true);
+        rig.type_word("ho");
+        rig.surface.selected = Some(0);
+        assert!(rig.run(intent.clone(), &no_key()));
+        assert_eq!(
+            rig.calls(),
+            ["commit ho", "list closed", "insert \" \"", "arm"],
+            "{intent:?}"
+        );
+        assert!(!rig.manager.is_composing());
+    }
 }
 
 #[test]

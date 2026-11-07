@@ -321,16 +321,14 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    /// A candidate with only one script declines the key rather than writing
-    /// that script twice — the answer `⌃7` gets on a page with no seventh slot.
-    /// Letting it through instead would drop a raw space into a document that
-    /// still has a composition marked in it.
+    /// A candidate with only one script has nothing to flip to, so Output the
+    /// Other Script writes that one script, as Return does (USER 2026-11-07).
     ///
     /// Driven through the real production source of a hanji-less candidate: the
     /// §34 literal-romanization candidate, which the engine prepends at index 0
     /// under the shipped Show Typed Text First default, and which the bar opens
     /// highlighted.
-    func testSpace_onASingleScriptCandidate_writesNothing() throws {
+    func testSpace_onASingleScriptCandidate_writesItsOneScript() throws {
         let session = try composedSession()
         let leading = try XCTUnwrap(session.presenter.shownContent).cells[0]
         XCTAssertNil(leading.annotation, "the literal candidate has no second script to offer")
@@ -340,7 +338,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
 
-        XCTAssertTrue(session.client.insertedTexts.isEmpty)
+        XCTAssertEqual(session.client.insertedTexts.last, leading.text)
     }
 
     // MARK: - Hanji with Romanization: two cells per candidate

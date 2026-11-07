@@ -66,7 +66,8 @@ pub enum CaretDirection {
 pub enum CommitScript {
     /// What the output settings lead with (Enter / a tap).
     Lead,
-    /// The other script of the lead (desktop Space).
+    /// The other script of the lead (desktop Output the Other Script); a
+    /// one-script pick writes its one script.
     Other,
     /// A §42 split Hanji cell.
     Hanji,

@@ -157,15 +157,7 @@ fn invalid_pick_and_empty_literal_leave_the_composition_and_learning_untouched()
     start(&mut engine, "tai", &config);
     let mut missing_script = pick(3);
     missing_script.script = CommitScript::Unspecified as i32;
-    let mut unavailable_script = pick(3);
-    unavailable_script.script = CommitScript::Other as i32;
-    unavailable_script.hanji = None;
-    for (candidate, text) in [
-        (pick(1000), "?"),
-        (missing_script, "?"),
-        (unavailable_script, "?"),
-        (pick(3), ""),
-    ] {
+    for (candidate, text) in [(pick(1000), "?"), (missing_script, "?"), (pick(3), "")] {
         let before = engine.snapshot_state();
         let applied = insert(&mut engine, Some(candidate), text, true, &config);
         assert!(applied.response.effect.is_empty());

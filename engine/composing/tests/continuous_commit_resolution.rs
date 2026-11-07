@@ -137,26 +137,46 @@ fn a_stale_generation_is_ignored_and_counts_nothing() {
 
 #[test]
 fn a_rejected_pick_is_ignored_and_changes_nothing() {
-    // trace: Space on a one-script cell (desktop `resolved_alternate` →
-    // None → `Ignored` without reaching the engine), and a pick without the
-    // identity key (no fallback on the R5 path).
+    // trace: a pick without the identity key (no fallback on the R5 path).
     let config = config_tl();
     let handle = continuous("tai", 1, &config);
-    let no_other_script = pick(CommitScript::Other, "tâi", None, "tâi", 3);
     let mut no_identity = pick(CommitScript::Lead, "tâi", Some("台"), "tâi", 3);
     if let Method::CommitContinuous(commit) = &mut no_identity {
         commit.canonical_text.clear();
     }
-    for method in [no_other_script, no_identity] {
-        let applied = send(&handle, 1, method, &config);
-        assert_eq!(applied.response.commit, Some(ignored()));
-        assert_eq!(applied.usage, None);
-        assert!(applied.response.effect.is_empty());
-        assert!(
-            applied.response.is_composing,
-            "the composition is untouched"
-        );
-    }
+    let applied = send(&handle, 1, no_identity, &config);
+    assert_eq!(applied.response.commit, Some(ignored()));
+    assert_eq!(applied.usage, None);
+    assert!(applied.response.effect.is_empty());
+    assert!(
+        applied.response.is_composing,
+        "the composition is untouched"
+    );
+}
+
+#[test]
+fn the_other_script_of_a_one_script_pick_is_its_romanization() {
+    // trace: a hanji-less pick (§34 literal, roman-only dictionary row) has
+    // one script, so Output the Other Script writes it as Enter does — the
+    // romanization, spaced — counted under `(roman, TL)`.
+    let config = config_tl();
+    let handle = continuous("tai", 1, &config);
+    let applied = send(
+        &handle,
+        1,
+        pick(CommitScript::Other, "tâi", None, "tâi", 3),
+        &config,
+    );
+    let expected = resolution(CommitOutcome::Finalized, "tâi", true, true);
+    assert_eq!(applied.response.commit, Some(expected));
+    assert_eq!(applied.usage, usage("tâi", "tâi", None));
+    assert_eq!(commit_text(&applied.response).as_deref(), Some("tâi"));
+}
+
+#[test]
+fn the_other_script_of_a_hanji_pick_is_counted_under_its_identity() {
+    let config = config_tl();
+    let handle = continuous("tai", 1, &config);
     let applied = send(
         &handle,
         1,
