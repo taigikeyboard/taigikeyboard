@@ -433,7 +433,8 @@ summary:focus-visible {
 }
 
 /* A placeholder cannot draw the keycap, so `#text` keeps a blank one only to drive
-   `:placeholder-shown` (kautian-mirror's `.search-hint`). Touch has no such key. */
+   `:placeholder-shown` (kautian-mirror's `.search-hint`). Touch has no such key.
+   `/` only focuses the box, so a focused box hides the hint. */
 #text-hint {
   position: absolute;
   top: 1.5rem;
@@ -453,7 +454,8 @@ summary:focus-visible {
   text-align: center;
 }
 
-#text:not(:placeholder-shown) ~ #text-hint {
+#text:not(:placeholder-shown) ~ #text-hint,
+#text:focus ~ #text-hint {
   display: none;
 }
 

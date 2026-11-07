@@ -269,16 +269,20 @@ test("/ moves into the textarea from anywhere but a text field", async ({
   await expect(inputMode(page)).toBeFocused();
 });
 
-test("the / hint shows only over an empty textarea", async ({ page }) => {
+test("the / hint shows only over an empty, unfocused textarea", async ({
+  page,
+}) => {
   const editor = await open(page);
   const hint = page.locator("#text-hint");
   await expect(hint.locator("kbd")).toHaveText("/");
-  await expect(hint).toBeVisible();
-  await editor.pressSequentially("tai");
   await expect(hint).toBeHidden();
-  await editor.press("Escape");
+  await editor.blur();
   await expect(hint).toBeVisible();
+  await page.keyboard.press("/");
+  await expect(editor).toBeFocused();
+  await expect(hint).toBeHidden();
   await editor.fill("台灣");
+  await editor.blur();
   await expect(hint).toBeHidden();
 });
 
