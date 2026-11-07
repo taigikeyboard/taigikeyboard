@@ -89,6 +89,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: macos
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build the engine xcframework (arm64)
         run: bash engine/scripts/build-macos-xcframework.sh
@@ -131,6 +132,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: macos
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo test (macos)
         run: cargo test --manifest-path macos/Cargo.toml --workspace --locked --no-fail-fast
@@ -194,6 +196,7 @@ jobs:
         with:
           workspaces: macos
           key: msrv
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo check --all-targets
         run: cargo check --manifest-path macos/Cargo.toml --workspace --all-targets --locked

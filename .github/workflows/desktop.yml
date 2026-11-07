@@ -75,6 +75,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: desktop
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo test (desktop-shared crates)
         run: cargo test --workspace --manifest-path desktop/Cargo.toml
@@ -120,6 +121,7 @@ jobs:
         with:
           workspaces: desktop
           key: msrv
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo check --all-targets
         run: cargo check --manifest-path desktop/Cargo.toml --workspace --all-targets --locked

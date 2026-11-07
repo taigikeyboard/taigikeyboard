@@ -78,10 +78,14 @@ jobs:
           cargo --version && rustc --version && protoc --version
 
       # Cached across runs by Cargo.lock hash. The workspace's own crates are
-      # rebuilt every time; only dependencies come from the cache.
+      # rebuilt every time; only dependencies come from the cache. Every
+      # rust-cache step saves from main only: pull requests restore main's
+      # entry instead of each adding ~1 GB of its own, which kept the repo at
+      # the 10 GB Actions cache cap and evicted main's entries.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: engine
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # --no-fail-fast so one red crate does not hide the others' results.
       - name: cargo test
@@ -136,6 +140,7 @@ jobs:
         with:
           workspaces: engine
           key: msrv
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo check --all-targets
         run: cargo check --manifest-path engine/Cargo.toml --workspace --all-targets --locked
@@ -167,6 +172,7 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: engine
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: shipped feature graph has no e2e-trace
         working-directory: engine
