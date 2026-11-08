@@ -30,14 +30,32 @@
         ]
       },
       "values": {
-        "hanji": "請使用英語輸入法，揤 {key} 開始拍字",
-        "tailo": "Tshiánn sú-iōng Ing-gí su-ji̍p-huat, tshi̍h {key} khai-sí phah-jī",
-        "poj": "Chhiáⁿ sú-iōng Eng-gí su-ji̍p-hoat, chhi̍h {key} khai-sí phah-jī",
-        "en": "Use an English input method, then press {key} to start typing",
-        "ja": "英語入力に切り替えて、{key} を押して入力を開始"
+        "hanji": "揤 {key} 開始拍字",
+        "tailo": "Tshi̍h {key} khai-sí phah-jī",
+        "poj": "Chhi̍h {key} khai-sí phah-jī",
+        "en": "Press {key} to start typing",
+        "ja": "{key} を押して入力を開始"
       },
       "placeholders": {
         "key": "string"
+      }
+    },
+    "subtitle": {
+      "comment": "Subtitle under the page title: desktop-only support, switch to an English input method first.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "目前干焦支援電腦版，使用進前，請先切換去英文輸入法",
+        "tailo": "Bo̍k-tsiân kan-na tsi-uān tiān-náu-pán, sú-iōng tsìn-tsîng, tshiánn sing tshiat-uānn khì Ing-bûn su-ji̍p-huat",
+        "poj": "Bo̍k-chiân kan-na chi-oān tiān-náu-pán, sú-iōng chìn-chêng, chhiáⁿ seng chhiat-oāⁿ khì Eng-bûn su-ji̍p-hoat",
+        "en": "Currently desktop only. Switch to an English input method before you start.",
+        "ja": "現在はパソコンのみ対応。ご利用前に英語入力に切り替えてください。"
       }
     },
     "otherResources": {
