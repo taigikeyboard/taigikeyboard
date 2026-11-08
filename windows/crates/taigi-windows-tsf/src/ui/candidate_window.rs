@@ -127,20 +127,23 @@ enum CellPart {
     Annotation,
 }
 
-/// A cached DirectWrite layout is exact for its text (the cell index, the
-/// list generation being the cache's lifetime) and its box.
+/// A cached DirectWrite layout is exact for its text and its box, the list
+/// generation being the cache's lifetime. `subject` names the text: the
+/// candidate index for its own scripts, the key slot for an index label —
+/// a candidate's label changes within one list (an unfold re-numbers the
+/// grid row, a vertical list scrolls), the text a slot shows does not.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 struct LayoutKey {
-    index: usize,
+    subject: usize,
     part: CellPart,
     width_centi: u32,
     height_centi: u32,
 }
 
 impl LayoutKey {
-    fn of(index: usize, part: CellPart, width: f32, height: f32) -> Self {
+    fn of(subject: usize, part: CellPart, width: f32, height: f32) -> Self {
         Self {
-            index,
+            subject,
             part,
             width_centi: (width * 100.0).round() as u32,
             height_centi: (height * 100.0).round() as u32,
@@ -737,33 +740,31 @@ impl CandidateWindow {
         }
     }
 
-    fn index_label(&self, candidate_index: usize) -> String {
+    /// The key slot that names `candidate_index` in the row (or column)
+    /// the keys number now, if any.
+    fn key_slot_of(&self, candidate_index: usize) -> Option<usize> {
         // Resolved once per lookup: the shift is a property of the row being
         // drawn, not of the slot scanned for it.
         let shift = CandidateIndexLabel::key_slot_shift(self.lead_cell_is_unkeyed, |slot| {
             self.candidate_index_for_slot(slot)
         });
-        for slot in 0..HorizontalPageLayout::PAGE_SIZE {
-            if self.candidate_index_for_slot(slot + shift) == Some(candidate_index) {
-                return CandidateIndexLabel::text_for_slot(slot, self.slot_key_set);
-            }
-        }
-        String::new()
+        (0..HorizontalPageLayout::PAGE_SIZE)
+            .find(|slot| self.candidate_index_for_slot(slot + shift) == Some(candidate_index))
     }
 
-    /// The layout for `part` of cell `index` in a `width` × `height` box,
-    /// built once per list and box (a page turn or an unfold changes the
-    /// box; a repaint does not).
+    /// The layout for `part` of `subject` (`LayoutKey`) in a `width` ×
+    /// `height` box, built once per list and box (a page turn or an unfold
+    /// changes the box; a repaint does not).
     fn cached_layout(
         &self,
-        index: usize,
+        subject: usize,
         part: CellPart,
         text: &str,
         font: taigi_desktop_core::candidates::FontSpec,
         width: f32,
         height: f32,
     ) -> Option<IDWriteTextLayout> {
-        let key = LayoutKey::of(index, part, width, height);
+        let key = LayoutKey::of(subject, part, width, height);
         if let Some(layout) = self.layouts.borrow().get(&key) {
             return Some(layout.clone());
         }
@@ -1069,14 +1070,14 @@ impl CandidateWindow {
         &self,
         target: &ID2D1HwndRenderTarget,
         brush: &ID2D1SolidColorBrush,
-        index: usize,
+        subject: usize,
         part: CellPart,
         text: &str,
         font: taigi_desktop_core::candidates::FontSpec,
         area: Rect,
         color: D2D1_COLOR_F,
     ) {
-        let Some(layout) = self.cached_layout(index, part, text, font, area.width, area.height)
+        let Some(layout) = self.cached_layout(subject, part, text, font, area.width, area.height)
         else {
             return;
         };
@@ -1124,18 +1125,21 @@ impl CandidateWindow {
             (theme.text, theme.secondary_text)
         };
         let padding = metrics.horizontal_padding();
-        let label = self.index_label(index);
-        if !label.is_empty() {
-            self.draw_text(
-                target,
-                brush,
-                index,
-                CellPart::Index,
-                &label,
-                metrics.index_font(),
-                Rect::new(rect.x + padding, rect.y, metrics.index_width(), rect.height),
-                secondary,
-            );
+        if let Some(slot) = self.key_slot_of(index) {
+            let label = CandidateIndexLabel::text_for_slot(slot, self.slot_key_set);
+            if !label.is_empty() {
+                // Cached by slot: the cell keeps its index, its label does not.
+                self.draw_text(
+                    target,
+                    brush,
+                    slot,
+                    CellPart::Index,
+                    &label,
+                    metrics.index_font(),
+                    Rect::new(rect.x + padding, rect.y, metrics.index_width(), rect.height),
+                    secondary,
+                );
+            }
         }
         // The text area starts after the key column — a row's candidates line
         // up with each other — except a STACKED literal cell, which names no
