@@ -26,7 +26,7 @@ make check          # from windows/: i18n check + native tests + gnu clippy + ms
 ```
 
 `check-box` runs clippy and tests for the settings and platform crates, the
-settings exe build and an i686 check of the DLL on the maintainer's Windows box
+settings exe build and i686 + Arm64 checks of the DLL on the maintainer's Windows box
 over ssh (`scripts/check-box.sh`), against the pushed `HEAD`; an unreachable box
 is a failure, never a skip, so `make check` fails for anyone without that box.
 Run the steps that need none:

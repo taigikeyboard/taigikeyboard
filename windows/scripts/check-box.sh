@@ -56,7 +56,12 @@ remote+="; cargo build -p taigi-windows-settings; if (\$LASTEXITCODE -ne 0) { ex
 # macOS gnu check is 64-bit only, so a pointer-width mistake (an `as isize`
 # where the i686 `windows` crate takes an `i32`) surfaces only here. A type
 # check is enough to catch that; release-app.sh proves the i686 link.
-remote+="; cargo check -p taigi-windows-tsf --target i686-pc-windows-msvc; exit \$LASTEXITCODE"
+remote+="; cargo check -p taigi-windows-tsf --target i686-pc-windows-msvc; if (\$LASTEXITCODE -ne 0) { exit 1 }"
+# The Arm64 text service the installer ships (docs/architecture/
+# windows-arm64-roadmap.md). The macOS `check-msvc` cannot reach it: the
+# engine's bundled SQLite needs the MSVC ARM64 C compiler, which the box has
+# (windows-release.md machine setup). release-app.sh proves the Arm64 link.
+remote+="; cargo check -p taigi-windows-tsf --target aarch64-pc-windows-msvc; exit \$LASTEXITCODE"
 
 echo "==> check-box: $BOX ($BOX_REPO) @ $sha"
 ssh -o BatchMode=yes -o ConnectTimeout=15 "$BOX" "$remote" ||
