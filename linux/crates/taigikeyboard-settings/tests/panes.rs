@@ -343,16 +343,36 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
     assert!(find_all::<gtk::Label>(page.widget.upcast_ref())
         .iter()
         .any(|label| label.label() == "A&B <b>"));
-    let search = taigikeyboard_settings::pages::build(
-        SettingsPane::DictionarySearch,
+    // The search lives in Manage Dictionaries' bottom bar (#792), and only
+    // there.
+    let sources = taigikeyboard_settings::pages::build(
+        SettingsPane::DictionarySources,
         window,
         &strings,
         &document,
         true,
         window.job_slot(),
     );
-    assert!(find_first::<gtk::SearchEntry>(search.widget.upcast_ref()).is_some());
-    eprintln!("panes: custom dictionary lists the store; search page mounts");
+    assert!(find_first::<gtk::SearchEntry>(sources.widget.upcast_ref()).is_some());
+    let form = find_first::<adw::PreferencesPage>(sources.widget.upcast_ref())
+        .expect("the toggles' scrolling page");
+    assert!(
+        find_first::<gtk::SearchEntry>(form.upcast_ref()).is_none(),
+        "the search is the pinned bar, not part of what scrolls"
+    );
+    let without_user_data = taigikeyboard_settings::pages::build(
+        SettingsPane::DictionarySources,
+        window,
+        &strings,
+        &document,
+        false,
+        window.job_slot(),
+    );
+    assert!(
+        find_first::<gtk::SearchEntry>(without_user_data.widget.upcast_ref()).is_none(),
+        "no user data, no search bar"
+    );
+    eprintln!("panes: custom dictionary lists the store; Manage Dictionaries mounts its search");
 }
 
 /// One pick, as the IME reports it: the engine counts `(word, tl)`.

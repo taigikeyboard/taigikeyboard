@@ -361,9 +361,9 @@ impl SettingChoice for CandidateFontChoice {
 }
 
 /// The settings window's panes. `SIDEBAR` is what the sidebar lists, in
-/// order; `DictionarySearch` is built but unlisted, and `About` is listed
-/// nowhere but the input-source menu (USER 2026-09-20). macOS keeps a Swift
-/// twin: `SettingsSplitView.swift` `SettingsPane.sidebar`.
+/// order; `About` is listed nowhere but the input-source menu (USER
+/// 2026-09-20). macOS keeps a Swift twin: `SettingsSplitView.swift`
+/// `SettingsPane.sidebar`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SettingsPane {
     General,
@@ -379,7 +379,6 @@ pub enum SettingsPane {
     /// Last in the sidebar (USER 2026-09-08): what the input method draws IN,
     /// after what it draws FROM.
     FontManagement,
-    DictionarySearch,
     About,
 }
 
@@ -397,11 +396,11 @@ impl SettingsPane {
     ];
 
     /// The sidebar row label's i18n key, and the window title
-    /// (`SettingsSplitView.swift` `labelKey` is the macOS twin). `None` for the
-    /// unlisted search page; About has a title without a row.
-    pub fn title_key(self) -> Option<crate::strings::StringKey> {
+    /// (`SettingsSplitView.swift` `labelKey` is the macOS twin). About has a
+    /// title without a row.
+    pub fn title_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
-        Some(match self {
+        match self {
             Self::General => StringKey::DesktopGeneralTab,
             Self::Appearance => StringKey::DesktopAppearanceTab,
             Self::Shortcuts => StringKey::DesktopShortcutsTab,
@@ -410,8 +409,7 @@ impl SettingsPane {
             Self::DictionarySources => StringKey::DesktopDictionarySourcesLink,
             Self::FontManagement => StringKey::DesktopFontManagementTab,
             Self::About => StringKey::HomeAboutKeyboard,
-            Self::DictionarySearch => return None,
-        })
+        }
     }
 
     /// The sidebar row's Segoe Fluent Icons / MDL2 Assets glyph — the same
@@ -427,7 +425,7 @@ impl SettingsPane {
             Self::CustomDictionary => "\u{E82D}",
             // History, matching the Mac's `clock.arrow.circlepath`.
             Self::LearningRecords => "\u{E81C}",
-            Self::DictionarySources | Self::DictionarySearch => "\u{E8F1}",
+            Self::DictionarySources => "\u{E8F1}",
             // Font, the glyph Windows itself puts on a typeface list —
             // matching the Mac's `textformat`.
             Self::FontManagement => "\u{E8D2}",
@@ -446,7 +444,6 @@ impl SettingChoice for SettingsPane {
         Self::LearningRecords,
         Self::DictionarySources,
         Self::FontManagement,
-        Self::DictionarySearch,
         Self::About,
     ];
     const DEFAULT: Self = Self::General;
@@ -459,7 +456,6 @@ impl SettingChoice for SettingsPane {
             Self::LearningRecords => "learningRecords",
             Self::DictionarySources => "dictionarySources",
             Self::FontManagement => "fontManagement",
-            Self::DictionarySearch => "dictionarySearch",
             Self::About => "about",
         }
     }
@@ -538,14 +534,23 @@ mod tests {
     }
 
     #[test]
-    fn dictionary_search_is_a_pane_but_not_in_the_sidebar() {
-        assert!(SettingsPane::ALL.contains(&SettingsPane::DictionarySearch));
-        assert!(!SettingsPane::SIDEBAR.contains(&SettingsPane::DictionarySearch));
+    fn the_sidebar_opens_on_general() {
         assert_eq!(SettingsPane::SIDEBAR[0], SettingsPane::General);
-        assert!(SettingsPane::DictionarySearch.title_key().is_none());
-        assert!(SettingsPane::SIDEBAR
-            .iter()
-            .all(|pane| pane.title_key().is_some()));
+    }
+
+    /// `dictionarySearch` was a built-but-unlisted pane until its search moved
+    /// into Manage Dictionaries (#792): a stored or `--pane` value of it is
+    /// now unknown, so the stored pane's default (General) wins.
+    #[test]
+    fn the_retired_search_pane_is_unknown() {
+        use crate::settings::{keys, SettingsDocument};
+        assert_eq!(SettingsPane::from_raw("dictionarySearch"), None);
+        let mut document = SettingsDocument::default();
+        document.set_raw_string(keys::SELECTED_SETTINGS_PANE.name, "dictionarySearch");
+        assert_eq!(
+            document.choice(&keys::SELECTED_SETTINGS_PANE),
+            SettingsPane::General
+        );
     }
 
     /// About is a pane — it persists, it titles the window — but not a row:
@@ -556,7 +561,7 @@ mod tests {
         assert!(!SettingsPane::SIDEBAR.contains(&SettingsPane::About));
         assert_eq!(
             SettingsPane::About.title_key(),
-            Some(crate::strings::StringKey::HomeAboutKeyboard)
+            crate::strings::StringKey::HomeAboutKeyboard
         );
         assert_eq!(SettingsPane::from_raw("about"), Some(SettingsPane::About));
     }

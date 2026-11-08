@@ -12,7 +12,7 @@
 //! It also holds what both settings WINDOWS draw from, toolkit-neutral:
 //! `presentation` (labels, links, page notices), `launch` (the command
 //! line), `dictionary_sources` (that pane's roster), `dictionary_search`
-//! (that pane's result limit and debounce), `custom_dictionary` and
+//! (Manage Dictionaries' search: result limit and debounce), `custom_dictionary` and
 //! `learning_records` (those panes' models over the engine's user-data ops)
 //! and `listing` (the paged list both draw).
 

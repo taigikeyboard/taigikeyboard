@@ -1,7 +1,8 @@
-//! Dictionary Search: a search field, the first five hits, each with its source
-//! badges and a menu to look the reading up in the MOE dictionary or ChhoeTaigi. Built
-//! but UNLISTED (not released yet, USER 2026-08-21): reached only by
-//! `--pane dictionarySearch`.
+//! The Manage Dictionaries search, pinned under that pane's form (#792; the
+//! window draws the footer it sits in): a search field, and above it the
+//! first five hits, each with its source badges and a menu to look the
+//! reading up in the MOE dictionary or ChhoeTaigi — mobile's
+//! `DictionarySearchPanel`, in WinUI controls.
 //! The lookup (`taigi_desktop_core::engine::dictionary_search`) — the
 //! engine's dictionaries and the custom-dictionary query, plus the
 //! dictionaries' first load — runs off the UI thread; the newest query
@@ -12,7 +13,9 @@ use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
-use taigi_desktop_core::settings::dictionary_search::{DEBOUNCE, VISIBLE_RESULT_LIMIT};
+use taigi_desktop_core::settings::dictionary_search::{
+    DEBOUNCE, RESULTS_MAX_HEIGHT, VISIBLE_RESULT_LIMIT,
+};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
@@ -195,14 +198,39 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let model = window.dictionary_search();
-    if window.is_read_only() {
-        return TextBlock::new()
+    let has_query = !model.query.trim().is_empty();
+    // Results ABOVE the box, as mobile pops them up over its bar; an empty
+    // query collapses the footer to the box alone. Keyed by state: the slot
+    // changes type with the query, and an unkeyed type change is the
+    // `InsertChild` E_BOUNDS abort `window.rs` keys its page slot against.
+    let (state, results) = if !has_query {
+        ("idle", View::empty())
+    } else if model.results.is_empty() && !model.is_searching {
+        let none = TextBlock::new()
             .text(strings.resolve(StringKey::DictionaryNoResults))
             .opacity(SECONDARY_OPACITY)
             .into();
-    }
-    let has_query = !model.query.trim().is_empty();
-    View::fragment((
+        ("none", none)
+    } else {
+        let hits = ScrollViewer::new()
+            .vertical_scroll_bar_visibility(ScrollBarVisibility::Auto)
+            .max_height(f64::from(RESULTS_MAX_HEIGHT))
+            .content(
+                StackPanel::new()
+                    .spacing(cards::CARD_SPACING)
+                    .children([View::keyed_fragment(
+                        model
+                            .results
+                            .iter()
+                            .take(VISIBLE_RESULT_LIMIT)
+                            .map(|result| (result.key(), result_row(result, strings, context)))
+                            .collect::<Vec<_>>(),
+                    )]),
+            );
+        ("hits", hits)
+    };
+    StackPanel::new().spacing(ROW_GAP).children((
+        View::keyed_fragment([(state, results)]),
         TextBox::new()
             .text(model.query.clone())
             .placeholder_text(strings.resolve(StringKey::DictionarySearchPlaceholder))
@@ -210,23 +238,6 @@ pub fn view(
                 context
                     .callback(|text| WindowMessage::DictionarySearch(Message::QueryChanged(text))),
             ),
-        if has_query && model.results.is_empty() && !model.is_searching {
-            TextBlock::new()
-                .text(strings.resolve(StringKey::DictionaryNoResults))
-                .opacity(SECONDARY_OPACITY)
-                .margin(Thickness::new(0.0, ROW_GAP, 0.0, 0.0))
-                .into()
-        } else {
-            View::empty()
-        },
-        View::keyed_fragment(
-            model
-                .results
-                .iter()
-                .take(VISIBLE_RESULT_LIMIT)
-                .map(|result| (result.key(), result_row(result, strings, context)))
-                .collect::<Vec<_>>(),
-        ),
     ))
 }
 
