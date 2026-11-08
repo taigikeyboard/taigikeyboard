@@ -1973,7 +1973,7 @@ public nonisolated struct Taigi_DesktopShell_DictionarySearchHit: Sendable {
   /// One i18n key per badge (`i18n_dictionary_kautianTag`), deduplicated.
   public var badgeKeys: [String] = []
 
-  /// Unset for a custom entry, which has no web page.
+  /// Unset when the reading makes no URL (`engine::external_lookup`).
   public var moeURL: String {
     get {_moeURL ?? String()}
     set {_moeURL = newValue}

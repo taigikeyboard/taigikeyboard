@@ -286,9 +286,8 @@ fn result_row(
                     .vertical_alignment(VerticalAlignment::Center)
                     .grid_column(0)
                     .children((
-                        TextBlock::new()
-                            .text(result.roman.clone())
-                            .opacity(SECONDARY_OPACITY),
+                        // Full strength, as iOS and Android draw it.
+                        TextBlock::new().text(result.roman.clone()),
                         TextBlock::new().text_optional(result.hanji.clone()),
                     )),
                 StackPanel::new()

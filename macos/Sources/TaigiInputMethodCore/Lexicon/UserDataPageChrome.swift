@@ -178,16 +178,17 @@ private struct UserDataPageChrome: ViewModifier {
 }
 
 extension View {
-    /// Reloads a list once its filter has settled.
+    /// Reloads a list once its filter has settled for `delay`.
     ///
     /// Debounced because every change runs a query, and a fast typist would
     /// otherwise queue one per keystroke behind the first.
     func reloadWhenFilterSettles(
         _ filter: String,
+        after delay: Duration = .milliseconds(200),
         load: @escaping @Sendable () async -> Void,
     ) -> some View {
         task(id: filter) {
-            try? await Task.sleep(for: .milliseconds(200))
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             await load()
         }

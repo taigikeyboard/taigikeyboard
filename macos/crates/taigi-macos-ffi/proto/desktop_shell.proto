@@ -602,7 +602,7 @@ message DictionarySearchHit {
   optional string hanji = 3;
   // One i18n key per badge (`i18n_dictionary_kautianTag`), deduplicated.
   repeated string badge_keys = 4;
-  // Unset for a custom entry, which has no web page.
+  // Unset when the reading makes no URL (`engine::external_lookup`).
   optional string moe_url = 5;
   optional string chhoe_url = 6;
 }

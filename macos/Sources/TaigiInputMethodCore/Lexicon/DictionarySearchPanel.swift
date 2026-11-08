@@ -30,7 +30,8 @@ struct DictionarySearchPanel: View {
         .padding(Metrics.padding)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
-        .reloadWhenFilterSettles(model.trimmedQuery) { await model.search() }
+        // iOS and Android wait 300 ms (`DictionarySearchViewModel`).
+        .reloadWhenFilterSettles(model.trimmedQuery, after: .milliseconds(300)) { await model.search() }
         .openURLFailureAlert($failedLink)
     }
 
@@ -59,7 +60,6 @@ struct DictionarySearchPanel: View {
     private func row(_ hit: DictionarySearchModel.Hit) -> some View {
         HStack(spacing: Metrics.spacing) {
             Text(verbatim: hit.roman)
-                .foregroundStyle(.secondary)
             if hit.hasHanji {
                 Text(verbatim: hit.hanji)
             }
@@ -68,7 +68,7 @@ struct DictionarySearchPanel: View {
                 Badge(text: language.string(key))
             }
             Spacer()
-            // None for a custom entry, which has no page.
+            // None when the reading makes no URL.
             if hit.hasMoeURL || hit.hasChhoeURL {
                 Menu {
                     if hit.hasMoeURL {

@@ -47,7 +47,8 @@ pub enum DictionarySource {
 
 impl DictionarySource {
     /// The badge a search result wears for this source: the three
-    /// supplements share one word, the custom dictionary its pane's name.
+    /// supplements and the custom dictionary share one, as on iOS and
+    /// Android (`DictionarySearchPanel.tagKey`, `DictionarySource.tagKey`).
     pub fn badge_key(self) -> StringKey {
         match self {
             Self::Kautian => StringKey::DictionaryKautianTag,
@@ -59,8 +60,9 @@ impl DictionarySource {
             Self::Kungge => StringKey::DictionaryKunggeTag,
             Self::Stti => StringKey::DictionarySttiTag,
             Self::Lkk => StringKey::DictionaryLkkTag,
-            Self::Khpoo | Self::Khiin | Self::Dev => StringKey::DictionarySupplementSectionTitle,
-            Self::Custom => StringKey::DictionaryCustomDictionary,
+            Self::Khpoo | Self::Khiin | Self::Dev | Self::Custom => {
+                StringKey::DictionarySupplementSectionTitle
+            }
         }
     }
 
