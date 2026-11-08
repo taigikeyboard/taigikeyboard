@@ -220,6 +220,15 @@
         </details>
       </form>
       <details class="sidebar-section">
+        <summary data-i18n="common.save">Save</summary>
+        <h3 class="setting-group" data-i18n="web.saveFormat">Select save format</h3>
+        <div id="save-formats" class="save-formats">
+          <button class="save-format" type="button" data-format="markdown">Markdown</button>
+          <button class="save-format" type="button" data-format="html">HTML</button>
+          <button class="save-format" type="button" data-format="text" data-i18n="web.plainText">Plain Text</button>
+        </div>
+      </details>
+      <details class="sidebar-section">
         <summary data-i18n="web.otherResources">Other Resources</summary>
         <nav class="sidebar-links" data-i18n-aria-label="web.otherResources">
           <a href="https://taigikeyboard.tw/" target="_blank" rel="noopener" data-i18n="web.desktopApp">TaigiKeyboard for Desktop</a>
@@ -232,8 +241,18 @@
       </details>
     </aside>
     <main>
-      <h1>台語齒盤線頂 Beta 版</h1>
-      <p id="subtitle" data-i18n="web.subtitle">Currently desktop only. Switch to an English input method before you start.</p>
+      <div id="title-line" class="header-line">
+        <h1>台語齒盤線頂 Beta 版</h1>
+        <button class="corner-button header-delete" type="button" data-i18n-aria-label="common.delete" data-i18n-title="common.delete">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div id="subtitle-line" class="header-line">
+        <p id="subtitle" data-i18n="web.subtitle">Currently desktop only. Switch to an English input method before you start.</p>
+        <button class="corner-button header-delete" type="button" data-i18n-aria-label="common.delete" data-i18n-title="common.delete">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
       <div id="editor">
         <textarea id="text" placeholder=" " data-i18n-aria-label="web.textLabel" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
         <span id="text-hint" aria-hidden="true" data-i18n-keycap="web.placeholder"></span>

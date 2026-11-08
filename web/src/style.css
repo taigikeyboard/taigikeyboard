@@ -94,13 +94,43 @@ a:hover {
   text-decoration: underline;
 }
 
+/* ZenPen's page (zenpen.io): one centered column, the text filling the window. */
 main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   width: 100%;
   max-width: var(--measure);
 }
 
+/* A deleted line is gone for good (`header.js`). */
+.header-line {
+  position: relative;
+}
+
+:root[data-hidden-header~="title-line"] #title-line,
+:root[data-hidden-header~="subtitle-line"] #subtitle-line {
+  display: none;
+}
+
+/* A `.corner-button` beside the line, seen on hover or focus only (always on
+   touch, in the `@media` block with `#text-hint`). */
+.header-delete {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  opacity: 0;
+  translate: 0 -50%;
+}
+
+.header-line:hover .header-delete,
+.header-delete:focus-visible {
+  opacity: 1;
+}
+
 h1 {
   margin: 0 0 0.5rem;
+  padding-inline: 2.5rem;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -110,6 +140,7 @@ h1 {
 
 #subtitle {
   margin: 0 0 1.5rem;
+  padding-inline: 2.5rem;
   color: var(--secondary);
   font-size: 0.9375rem;
   text-align: center;
@@ -348,16 +379,31 @@ summary:focus-visible {
   color: var(--secondary);
 }
 
-/* The desktop panes' reset row, at the foot of its section. */
-.setting-reset {
-  display: block;
-  width: 100%;
+/* The desktop panes' reset button; Save's format buttons share its look. */
+.setting-reset,
+.save-format {
   min-height: 2.25rem;
-  margin: 0.5rem 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--field);
   font-size: 0.9375rem;
+}
+
+/* A row at the foot of its section. */
+.setting-reset {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.save-formats {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+}
+
+.save-format {
+  flex: 1;
 }
 
 .sidebar-links {
@@ -398,45 +444,29 @@ summary:focus-visible {
   visibility: visible;
 }
 
-/* The card is this box, not the textarea: rounded corners would take the
-   textarea's corners out of its click area. */
-/* kautian-mirror's search field (`.search input`). */
+/* No box: the text sits on the page, as in ZenPen. It takes the window's room
+   left over, so the key panel, Copy and Clear stay on screen. */
 #editor {
+  --editor-font: 1.25rem / 1.8 var(--font);
   position: relative;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--field);
-  transition:
-    border-color 0.2s,
-    background 0.2s,
-    box-shadow 0.2s;
-}
-
-#editor:focus-within {
-  border-color: var(--accent);
-  background: var(--card);
-  box-shadow: 0 0 0 3px var(--ring);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 14rem;
 }
 
 #text {
   display: block;
+  flex: 1;
   width: 100%;
-  height: 22rem;
-  min-height: 22rem;
-  padding: 1.5rem;
+  min-height: 0;
+  padding: 1rem 0;
   border: 0;
   outline: none;
   background: none;
   color: inherit;
-  font: 1.125rem / 1.65 var(--font);
-  resize: vertical;
-}
-
-/* The key panel asked for takes its room from the textarea, so Copy and Clear
-   stay on screen. A height the user dragged stays theirs. */
-:root[data-tps-keyboard] #text {
-  height: clamp(14rem, 100dvh - 17.5rem - var(--tps-keyboard-height), 22rem);
-  min-height: 14rem;
+  font: var(--editor-font);
+  resize: none;
 }
 
 /* A placeholder cannot draw the keycap, so `#text` keeps a blank one only to drive
@@ -444,10 +474,10 @@ summary:focus-visible {
    `/` only focuses the box, so a focused box hides the hint. */
 #text-hint {
   position: absolute;
-  top: 1.5rem;
-  left: 1.5rem;
+  top: 1rem;
+  left: 0;
   color: var(--secondary);
-  font: 1.125rem / 1.65 var(--font);
+  font: var(--editor-font);
   pointer-events: none;
 }
 
@@ -474,6 +504,10 @@ summary:focus-visible {
 @media not ((hover: hover) and (pointer: fine)) {
   #text-hint {
     display: none;
+  }
+
+  .header-delete {
+    opacity: 1;
   }
 }
 
@@ -541,8 +575,8 @@ summary:focus-visible {
   z-index: 1;
   width: max-content;
   max-width: 100%;
-  background: var(--card);
-  font: 1.125rem / 1.65 var(--font);
+  background: var(--bg);
+  font: var(--editor-font);
   text-decoration: underline var(--accent);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

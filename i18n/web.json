@@ -312,6 +312,42 @@
         "en": "Another input method is active. Turn it off to type here.",
         "ja": "別の入力方法が使用中です。オフにするとここに入力できます。"
       }
+    },
+    "saveFormat": {
+      "comment": "Heading above the sidebar's Save buttons (Markdown, HTML, Plain Text), which download the text as a file.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "揀儲存格式",
+        "tailo": "Kíng thú-tsûn keh-sik",
+        "poj": "Kéng thú-chûn keh-sek",
+        "en": "Select save format",
+        "ja": "保存形式を選択"
+      }
+    },
+    "plainText": {
+      "comment": "Save button: download the text as a .txt file. Its siblings Markdown and HTML are names, not translated.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "純文字",
+        "tailo": "Sûn bûn-jī",
+        "poj": "Sûn bûn-jī",
+        "en": "Plain Text",
+        "ja": "プレーンテキスト"
+      }
     }
   }
 }

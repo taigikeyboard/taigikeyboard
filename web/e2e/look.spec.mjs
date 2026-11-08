@@ -286,11 +286,14 @@ test("the / hint shows only over an empty, unfocused textarea", async ({
   await expect(hint).toBeHidden();
 });
 
+// The header lines' Delete buttons belong to the header (`editor.spec.mjs`).
 test("around the textarea, only Copy and Clear", async ({ page }) => {
   await open(page);
   const seen = await page.evaluate(() =>
     Array.from(
-      document.querySelectorAll("main :is(p, button, progress)"),
+      document.querySelectorAll(
+        "main :is(p, button:not(.header-delete), progress)",
+      ),
       (element) => {
         const { width, height } = element.getBoundingClientRect();
         const isDrawn =
@@ -314,11 +317,15 @@ test("a window that fits the page does not scroll", async ({ page }) => {
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
 });
 
-test("the textarea starts short however tall the window", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 1200 });
+test("the textarea takes the window's room left over", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   const editor = await open(page);
-  // trace: `#text` height 22rem at the 16px root.
-  expect((await editor.boundingBox()).height).toBeCloseTo(352, 0);
+  const short = (await editor.boundingBox()).height;
+  await page.setViewportSize({ width: 1280, height: 1200 });
+  // Every pixel the window gains goes to the textarea.
+  await expect
+    .poll(async () => (await editor.boundingBox()).height)
+    .toBeCloseTo(short + 400, 0);
 });
 
 test("the footer matches the converter's", async ({ page }) => {
@@ -542,11 +549,11 @@ test("the composition sits on the caret's line, clear of the list", async ({
     const composition = await preedit(page).evaluate(rect);
     const list = await panel(page).evaluate(rect);
     const box = await editor.evaluate(rect);
-    const lineHeight = 1.65 * 18;
+    const lineHeight = 1.8 * 20;
     // Past that the textarea scrolls, which WebKit animates.
-    if (line < 10) {
-      // trace: `#text` padding 1.5rem, line-height 1.65 at 1.125rem.
-      const expected = box.y + 24 + line * lineHeight;
+    if (line < 8) {
+      // trace: `#text` padding-top 1rem, line-height 1.8 at 1.25rem.
+      const expected = box.y + 16 + line * lineHeight;
       expect(Math.abs(composition.y - expected)).toBeLessThanOrEqual(2);
     }
     // `offsetHeight` rounds, so up to a pixel either way.

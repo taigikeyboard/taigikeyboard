@@ -2,6 +2,8 @@
 
 export const STRINGS = {
   "hanji": {
+    "common.delete": "刪除",
+    "common.save": "儲存",
     "common.close": "關閉",
     "common.moeDict": "教育部臺灣台語常用詞辭典",
     "common.newwordDict": "公視台語台台語新詞辭庫",
@@ -100,9 +102,13 @@ export const STRINGS = {
     "web.copied": "已經拷貝",
     "web.copyFailed": "拷貝失敗",
     "web.writeFailed": "寫入失敗：{text}",
-    "web.otherInputMethod": "另外一个輸入法當咧用，關掉才會當佇遮拍字。"
+    "web.otherInputMethod": "另外一个輸入法當咧用，關掉才會當佇遮拍字。",
+    "web.saveFormat": "揀儲存格式",
+    "web.plainText": "純文字"
   },
   "en": {
+    "common.delete": "Delete",
+    "common.save": "Save",
     "common.close": "Close",
     "common.moeDict": "MOE Dictionary of Common Taiwanese Words",
     "common.newwordDict": "PTS Taigi New-Word Lexicon",
@@ -201,9 +207,13 @@ export const STRINGS = {
     "web.copied": "Copied",
     "web.copyFailed": "Could not copy",
     "web.writeFailed": "Could not write: {text}",
-    "web.otherInputMethod": "Another input method is active. Turn it off to type here."
+    "web.otherInputMethod": "Another input method is active. Turn it off to type here.",
+    "web.saveFormat": "Select save format",
+    "web.plainText": "Plain Text"
   },
   "ja": {
+    "common.delete": "削除",
+    "common.save": "保存",
     "common.close": "閉じる",
     "common.moeDict": "教育部 台湾語常用語辞典",
     "common.newwordDict": "公視台語台 台湾語新語辞書",
@@ -302,9 +312,13 @@ export const STRINGS = {
     "web.copied": "コピーしました",
     "web.copyFailed": "コピーできませんでした",
     "web.writeFailed": "書き込めませんでした：{text}",
-    "web.otherInputMethod": "別の入力方法が使用中です。オフにするとここに入力できます。"
+    "web.otherInputMethod": "別の入力方法が使用中です。オフにするとここに入力できます。",
+    "web.saveFormat": "保存形式を選択",
+    "web.plainText": "プレーンテキスト"
   },
   "tailo": {
+    "common.delete": "San-tî",
+    "common.save": "Thú-tsûn",
     "common.close": "Kuan-pì",
     "common.moeDict": "Kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián",
     "common.newwordDict": "Kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo",
@@ -403,9 +417,13 @@ export const STRINGS = {
     "web.copied": "Í-king khó-puè",
     "web.copyFailed": "Khó-puè sit-pāi",
     "web.writeFailed": "Siá-ji̍p sit-pāi: {text}",
-    "web.otherInputMethod": "Līng-guā tsi̍t ê su-ji̍p-huat tng-teh iōng, kuainn--tiāu tsiah ē-tàng tī tsia phah-jī."
+    "web.otherInputMethod": "Līng-guā tsi̍t ê su-ji̍p-huat tng-teh iōng, kuainn--tiāu tsiah ē-tàng tī tsia phah-jī.",
+    "web.saveFormat": "Kíng thú-tsûn keh-sik",
+    "web.plainText": "Sûn bûn-jī"
   },
   "poj": {
+    "common.delete": "San-tî",
+    "common.save": "Thú-chûn",
     "common.close": "Koan-pì",
     "common.moeDict": "Kàu-io̍k-pō͘ tâi-oân-tâi-gí siâng-iōng-sû sû-tián",
     "common.newwordDict": "Kong-sī tâi-gí-tâi tâi-gí sin sû sî khò͘",
@@ -504,6 +522,8 @@ export const STRINGS = {
     "web.copied": "Í-keng khó-pòe",
     "web.copyFailed": "Khó-pòe sit-pāi",
     "web.writeFailed": "Siá-ji̍p sit-pāi: {text}",
-    "web.otherInputMethod": "Lēng-gōa chi̍t ê su-ji̍p-hoat tng-teh iōng, koaiⁿ--tiāu chiah ē-tàng tī chia phah-jī."
+    "web.otherInputMethod": "Lēng-gōa chi̍t ê su-ji̍p-hoat tng-teh iōng, koaiⁿ--tiāu chiah ē-tàng tī chia phah-jī.",
+    "web.saveFormat": "Kéng thú-chûn keh-sek",
+    "web.plainText": "Sûn bûn-jī"
   }
 };

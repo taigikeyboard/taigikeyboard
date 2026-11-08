@@ -53,7 +53,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host",
@@ -69,14 +70,15 @@
       }
     },
     "save": {
-      "comment": "Generic Save button: custom-dictionary add/edit entry dialog (all platforms), theme editor / name dialog (mobile). Merged 2026-09-20 from dictionary.save (儉起來) / theme.editorSave (儲存) — 儲存 matches system UI.",
+      "comment": "Generic Save button: custom-dictionary add/edit entry dialog (all platforms), theme editor / name dialog (mobile), web sidebar Save section. Merged 2026-09-20 from dictionary.save (儉起來) / theme.editorSave (儲存) — 儲存 matches system UI.",
       "scope": {
         "platforms": [
           "android",
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"

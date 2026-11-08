@@ -2,10 +2,13 @@
 // thread because `preventDefault` must run during `keydown`
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
+import { keepDraft } from "./draft.js";
+import { wireHeaderDelete } from "./header.js";
 import { translate } from "./i18n.js";
 import { Learning } from "./learning.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
 import { Panel } from "./panel.js";
+import { wireSave } from "./save.js";
 import { Settings } from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
 import { Sidebar } from "./sidebar.js";
@@ -24,6 +27,9 @@ const retryButton = document.getElementById("retry");
 const loadSlot = document.getElementById("load-slot");
 
 const surface = new Surface(textarea);
+keepDraft(textarea, surface);
+wireSave(document.getElementById("save-formats"), textarea);
+wireHeaderDelete(document.querySelectorAll(".header-delete"), textarea);
 const panel = new Panel(
   document.getElementById("panel"),
   document.getElementById("ruler"),
