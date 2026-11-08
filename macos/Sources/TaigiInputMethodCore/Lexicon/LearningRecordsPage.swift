@@ -28,21 +28,24 @@ final class LearningRecordsPageModel {
     /// starts, which for the filter is after it settles. A new kind or
     /// order also drops the selection, as desktop-core's `Listing::rewind`
     /// does: row ids are per store, so the same id in the other store is a
-    /// different word.
-    var kind: Taigi_Engine_LearningRecordKind = .frequency {
+    /// different word. Kind and order start from, and are kept in, the
+    /// settings store, so the page reopens on the last pick (#773).
+    var kind: Taigi_Engine_LearningRecordKind {
         didSet {
             if oldValue != kind {
                 list.invalidate()
                 list.selectedID = nil
+                settings.learningRecordsKind = kind
             }
         }
     }
 
-    var order: Taigi_Engine_LearningRecordOrder = .mostUsed {
+    var order: Taigi_Engine_LearningRecordOrder {
         didSet {
             if oldValue != order {
                 list.invalidate()
                 list.selectedID = nil
+                settings.learningRecordsOrder = order
             }
         }
     }
@@ -65,9 +68,13 @@ final class LearningRecordsPageModel {
     }
 
     private let client: any UserDataClient
+    private let settings: SettingsStore
 
-    init(client: any UserDataClient) {
+    init(client: any UserDataClient, settings: SettingsStore) {
         self.client = client
+        self.settings = settings
+        kind = settings.learningRecordsKind
+        order = settings.learningRecordsOrder
     }
 
     func pageBackward() async {
@@ -198,7 +205,7 @@ struct LearningRecordsPage: View {
     @State private var editing: Taigi_Engine_LearningRecord?
 
     init(client: any UserDataClient) {
-        _model = State(initialValue: LearningRecordsPageModel(client: client))
+        _model = State(initialValue: LearningRecordsPageModel(client: client, settings: SettingsStore()))
     }
 
     var body: some View {

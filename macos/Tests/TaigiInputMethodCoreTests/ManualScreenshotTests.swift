@@ -39,6 +39,8 @@ final class ManualScreenshotTests: XCTestCase {
         SettingsStore.Keys.fontType.name,
         SettingsStore.Keys.toneInputScheme.name,
         SettingsStore.Keys.selectedSettingsPane.name,
+        SettingsStore.Keys.learningRecordsKind.name,
+        SettingsStore.Keys.learningRecordsOrder.name,
         SettingsStore.Keys.displayLanguage.name,
         SettingsStore.Keys.isTpsKeyboardShown.name,
         SettingsStore.Keys.isTelexGuideShown.name,

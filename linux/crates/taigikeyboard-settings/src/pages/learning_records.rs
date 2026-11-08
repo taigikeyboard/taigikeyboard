@@ -26,6 +26,7 @@ use std::rc::Rc;
 use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder,
 };
+use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::learning_records::{
     add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
     order_label, set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
@@ -35,6 +36,15 @@ use taigi_desktop_core::settings::listing::{
 };
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
+
+/// `value`'s row in a picker over `roster`; the first row for a value the
+/// roster does not list.
+fn roster_index<T: PartialEq, const N: usize>(roster: [T; N], value: T) -> u32 {
+    roster
+        .iter()
+        .position(|listed| *listed == value)
+        .unwrap_or(0) as u32
+}
 
 struct State {
     listing: Listing,
@@ -102,12 +112,16 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
 impl LearningRecordsPage {
     fn new(context: &PageContext<'_>, page: &adw::PreferencesPage) -> Rc<Self> {
         let strings = *context.strings;
-        // Which rows, in what order.
+        // Which rows, in what order: the last pick (#773). Selected at
+        // build, before `connect`, so restoring it is no pick of its own.
+        let restored_kind = context.document.choice(&keys::LEARNING_RECORDS_KIND);
+        let restored_order = context.document.choice(&keys::LEARNING_RECORDS_ORDER);
         let pickers = adw::PreferencesGroup::new();
         let kind_labels: Vec<&str> = KINDS.iter().map(|(_, key)| strings.resolve(*key)).collect();
         let kind = adw::ComboRow::builder()
             .title(strings.resolve(StringKey::DictionaryLearningRecords))
             .model(&gtk::StringList::new(&kind_labels))
+            .selected(roster_index(KINDS.map(|(kind, _)| kind), restored_kind))
             .build();
         let order_labels: Vec<&str> = ORDERS
             .iter()
@@ -116,6 +130,7 @@ impl LearningRecordsPage {
         let order = adw::ComboRow::builder()
             .title(strings.resolve(StringKey::DictionaryLearningRecordsOrder))
             .model(&gtk::StringList::new(&order_labels))
+            .selected(roster_index(ORDERS, restored_order))
             .build();
         pickers.add(&kind);
         pickers.add(&order);
@@ -198,8 +213,8 @@ impl LearningRecordsPage {
             job_slot: context.job_slot.clone(),
             state: RefCell::new(State {
                 listing: Listing::default(),
-                kind: KINDS[0].0,
-                order: ORDERS[0],
+                kind: restored_kind,
+                order: restored_order,
                 job: JobState::default(),
             }),
             is_rendering: Cell::new(false),
@@ -234,6 +249,8 @@ impl LearningRecordsPage {
         kind.connect_selected_notify(move |row| {
             let Some(page) = weak.upgrade() else { return };
             if let Some((kind, _)) = KINDS.get(row.selected() as usize).copied() {
+                page.shell
+                    .update(|document| document.set_choice(&keys::LEARNING_RECORDS_KIND, kind));
                 page.show_from_first_page(|state| state.kind = kind);
             }
         });
@@ -241,6 +258,8 @@ impl LearningRecordsPage {
         order.connect_selected_notify(move |row| {
             let Some(page) = weak.upgrade() else { return };
             if let Some(order) = ORDERS.get(row.selected() as usize).copied() {
+                page.shell
+                    .update(|document| document.set_choice(&keys::LEARNING_RECORDS_ORDER, order));
                 page.show_from_first_page(|state| state.order = order);
             }
         });

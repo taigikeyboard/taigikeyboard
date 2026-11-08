@@ -519,6 +519,7 @@ impl Component for SettingsWindow {
         } else {
             SettingsWriter::new(live)
         };
+        let learning_records = LearningRecordsModel::restored(settings.document());
         let mut window = Self {
             settings,
             pane: if listed {
@@ -530,7 +531,7 @@ impl Component for SettingsWindow {
             message: None,
             updates: UpdateState::new(),
             custom_dictionary: CustomDictionaryModel::default(),
-            learning_records: LearningRecordsModel::default(),
+            learning_records,
             font_management: FontManagementModel::default(),
             dictionary_search: DictionarySearchModel::default(),
             recorder: Recorder::default(),
@@ -642,6 +643,7 @@ impl Component for SettingsWindow {
                 pages::learning_records::update(
                     &mut self.learning_records,
                     message,
+                    &mut self.settings,
                     &mut self.message,
                     context,
                 );

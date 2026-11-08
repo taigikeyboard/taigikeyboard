@@ -7,6 +7,7 @@
 //!
 //! Design: `docs/architecture/learning-records-page-roadmap.md`.
 
+use super::choices::SettingChoice;
 use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
 use super::presentation::PageMessage;
 use crate::engine::user_data::{
@@ -46,6 +47,32 @@ pub const ORDERS: [LearningRecordOrder; 2] = [
     LearningRecordOrder::MostUsed,
     LearningRecordOrder::MostRecent,
 ];
+
+/// The kind the page reopens on (`keys::LEARNING_RECORDS_KIND`). `ALL` / `DEFAULT`
+/// mirror [`KINDS`] (tested); Swift twin: `SettingsStore.swift` `learningRecordsKind`.
+impl SettingChoice for LearningRecordKind {
+    const ALL: &'static [Self] = &[KINDS[0].0, KINDS[1].0];
+    const DEFAULT: Self = KINDS[0].0;
+    fn raw(self) -> &'static str {
+        match self {
+            Self::Frequency => "frequency",
+            Self::LearnedPhrase => "learnedPhrase",
+        }
+    }
+}
+
+/// The order the page reopens on (`keys::LEARNING_RECORDS_ORDER`). `ALL` / `DEFAULT`
+/// mirror [`ORDERS`] (tested); Swift twin: `SettingsStore.swift` `learningRecordsOrder`.
+impl SettingChoice for LearningRecordOrder {
+    const ALL: &'static [Self] = &ORDERS;
+    const DEFAULT: Self = ORDERS[0];
+    fn raw(self) -> &'static str {
+        match self {
+            Self::MostUsed => "mostUsed",
+            Self::MostRecent => "mostRecent",
+        }
+    }
+}
 
 /// The largest count the edit field offers; the engine clamps to the same
 /// (`engine/userdata` `set_count`).
@@ -210,6 +237,50 @@ mod tests {
         assert_eq!(
             order_label(LearningRecordOrder::MostRecent),
             StringKey::DictionaryLearningRecordsOrderMostRecent
+        );
+    }
+
+    #[test]
+    fn the_remembered_kind_and_order_are_the_pickers_rows_under_the_macos_spellings() {
+        // The stored rosters are the pickers' rows, defaults their first rows.
+        assert_eq!(LearningRecordKind::ALL, KINDS.map(|(kind, _)| kind));
+        assert_eq!(LearningRecordKind::DEFAULT, LearningRecordKind::Frequency);
+        assert_eq!(LearningRecordOrder::ALL, ORDERS);
+        assert_eq!(LearningRecordOrder::DEFAULT, LearningRecordOrder::MostUsed);
+        // trace: the raw strings the Swift twin writes (`SettingsStore.swift`).
+        assert_eq!(LearningRecordKind::LearnedPhrase.raw(), "learnedPhrase");
+        assert_eq!(LearningRecordOrder::MostRecent.raw(), "mostRecent");
+        assert_eq!(LearningRecordKind::from_raw("association"), None);
+    }
+
+    #[test]
+    fn the_remembered_kind_and_order_round_trip_through_settings_json() {
+        use crate::settings::{keys, SettingsDocument};
+        let mut document = SettingsDocument::default();
+        assert_eq!(
+            document.choice(&keys::LEARNING_RECORDS_KIND),
+            LearningRecordKind::Frequency
+        );
+        assert_eq!(
+            document.choice(&keys::LEARNING_RECORDS_ORDER),
+            LearningRecordOrder::MostUsed
+        );
+        document.set_choice(
+            &keys::LEARNING_RECORDS_KIND,
+            LearningRecordKind::LearnedPhrase,
+        );
+        document.set_choice(
+            &keys::LEARNING_RECORDS_ORDER,
+            LearningRecordOrder::MostRecent,
+        );
+        let reread = SettingsDocument::from_json(&document.to_json()).unwrap();
+        assert_eq!(
+            reread.choice(&keys::LEARNING_RECORDS_KIND),
+            LearningRecordKind::LearnedPhrase
+        );
+        assert_eq!(
+            reread.choice(&keys::LEARNING_RECORDS_ORDER),
+            LearningRecordOrder::MostRecent
         );
     }
 

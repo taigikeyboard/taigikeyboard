@@ -451,6 +451,23 @@ fn the_learning_records_list_what_the_keyboard_learned(window: &Rc<SettingsWindo
         records.shown_rows().is_empty(),
         "the phrases store is empty"
     );
+    // The pick is kept (#773): a page built again opens on Phrases.
+    let document = window.writer().borrow().document().clone();
+    assert_eq!(
+        document.choice(&keys::LEARNING_RECORDS_KIND),
+        user_data::LearningRecordKind::LearnedPhrase
+    );
+    let reopened = taigikeyboard_settings::pages::build(
+        SettingsPane::LearningRecords,
+        window,
+        &strings,
+        &document,
+        true,
+        window.job_slot(),
+    );
+    let reopened_kind =
+        find_first::<adw::ComboRow>(reopened.widget.upcast_ref()).expect("the kind picker");
+    assert_eq!(reopened_kind.selected(), 1);
     eprintln!("panes: learning records list the engine's rows and switch kind");
 }
 
