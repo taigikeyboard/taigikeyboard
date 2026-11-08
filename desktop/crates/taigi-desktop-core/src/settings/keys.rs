@@ -25,6 +25,7 @@ use super::engine_settings::{
     CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, Romanization,
     SyllableSeparator,
 };
+use crate::engine::user_data::{LearningRecordKind, LearningRecordOrder};
 use crate::strings::DisplayLanguage;
 
 const ENGINE_DEFAULTS: EngineSettings = EngineSettings::DEFAULT;
@@ -186,6 +187,15 @@ pub const RECENT_SYMBOLS: SettingsKey<&'static [&'static str]> =
 /// The settings-window pane the sidebar reopens on.
 pub const SELECTED_SETTINGS_PANE: SettingsKey<SettingsPane> =
     SettingsKey::new("selectedSettingsPane", SettingsPane::General);
+
+/// The Learning Records page's kind and order pickers, kept like the pane
+/// above so the page reopens on the last pick (#773). Not reset by any
+/// pane's reset. macOS keeps Swift twins: `SettingsStore.swift`
+/// `learningRecordsKind` / `learningRecordsOrder`.
+pub const LEARNING_RECORDS_KIND: SettingsKey<LearningRecordKind> =
+    SettingsKey::new("learningRecordsKind", LearningRecordKind::DEFAULT);
+pub const LEARNING_RECORDS_ORDER: SettingsKey<LearningRecordOrder> =
+    SettingsKey::new("learningRecordsOrder", LearningRecordOrder::DEFAULT);
 
 /// Presentation choices the candidate window and settings window read.
 /// Spellings are iOS's where a matching iOS setting exists (`fontType`), the
@@ -353,6 +363,9 @@ mod tests {
             CANDIDATE_DISPLAY_MODE.default,
             CandidateDisplayMode::SideBySide
         );
+        // The macOS twin's spellings (`SettingsStore.swift` `Keys`).
+        assert_eq!(LEARNING_RECORDS_KIND.name, "learningRecordsKind");
+        assert_eq!(LEARNING_RECORDS_ORDER.name, "learningRecordsOrder");
     }
 
     #[test]

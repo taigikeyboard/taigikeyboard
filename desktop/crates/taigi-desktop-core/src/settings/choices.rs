@@ -501,6 +501,8 @@ mod tests {
         round_trips::<CandidateFontChoice>();
         round_trips::<SettingsPane>();
         round_trips::<crate::settings::InputMode>();
+        round_trips::<protos::engine::LearningRecordKind>();
+        round_trips::<protos::engine::LearningRecordOrder>();
     }
 
     #[test]

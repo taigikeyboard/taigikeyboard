@@ -31,7 +31,9 @@ use taigi_desktop_core::settings::learning_records::{
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
+use taigi_desktop_core::settings::{keys, SettingsDocument};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_storage::SettingsWriter;
 use windows_reactor::*;
 
 const DIALOG_FIELD_WIDTH: f64 = 320.0;
@@ -100,13 +102,15 @@ pub struct LearningRecordsModel {
     job: JobState,
 }
 
-impl Default for LearningRecordsModel {
-    fn default() -> Self {
+impl LearningRecordsModel {
+    /// The page as the window opens it: on the kind and order last picked
+    /// (#773), nothing fetched yet.
+    pub fn restored(document: &SettingsDocument) -> Self {
         Self {
             listing: Listing::default(),
             last_used: Vec::new(),
-            kind: KINDS[0].0,
-            order: ORDERS[0],
+            kind: document.choice(&keys::LEARNING_RECORDS_KIND),
+            order: document.choice(&keys::LEARNING_RECORDS_ORDER),
             is_first_load_requested: false,
             settled: SettledRows::default(),
             editing: None,
@@ -124,10 +128,12 @@ pub fn ensure_loaded(model: &mut LearningRecordsModel, context: &ComponentContex
     load(model, context);
 }
 
-/// `alert` is the window's one notice: what a finished job has to say.
+/// `alert` is the window's one notice: what a finished job has to say;
+/// `settings` keeps the kind and order picked, for the next open.
 pub fn update(
     model: &mut LearningRecordsModel,
     message: Message,
+    settings: &mut SettingsWriter,
     alert: &mut Option<PageMessage>,
     context: &ComponentContext<SettingsWindow>,
 ) {
@@ -135,12 +141,15 @@ pub fn update(
         Message::ChooseKind(Some((kind, _))) => {
             if kind != model.kind {
                 model.kind = kind;
+                settings.update(|document| document.set_choice(&keys::LEARNING_RECORDS_KIND, kind));
                 show_from_first_page(model, context);
             }
         }
         Message::ChooseOrder(Some(order)) => {
             if order != model.order {
                 model.order = order;
+                settings
+                    .update(|document| document.set_choice(&keys::LEARNING_RECORDS_ORDER, order));
                 show_from_first_page(model, context);
             }
         }
