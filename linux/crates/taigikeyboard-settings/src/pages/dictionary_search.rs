@@ -212,9 +212,11 @@ impl DictionarySearchBar {
     }
 
     /// One hit: the romanization and the hanji, the source badges as the
-    /// subtitle (one per distinct word — the three supplements share one),
-    /// and the two lookups as buttons.
-    fn result_row(&self, result: &DictionarySearchResult) -> adw::ActionRow {
+    /// subtitle (one per distinct word — the three supplements share one).
+    /// A click anywhere on the row unfolds its lookups under it, one row
+    /// each, and folds any other open hit — Android's `SearchResultRow`, in
+    /// libadwaita's own expanding row.
+    fn result_row(&self, result: &DictionarySearchResult) -> gtk::Widget {
         let badges: Vec<&str> = result
             .badge_keys()
             .into_iter()
@@ -224,27 +226,55 @@ impl DictionarySearchBar {
             Some(hanji) => format!("{}  {hanji}", result.roman),
             None => result.roman.clone(),
         };
-        // Dictionary and user text, never markup.
-        let row = adw::ActionRow::builder()
+        let lookups: Vec<(String, StringKey)> = [
+            (result.moe_url(), StringKey::DictionaryLookupMoe),
+            (result.chhoe_url(), StringKey::DictionaryLookupChhoe),
+        ]
+        .into_iter()
+        .filter_map(|(url, label)| url.map(|url| (url, label)))
+        .collect();
+        if lookups.is_empty() {
+            // A reading that makes no URL: the row, with nothing to unfold.
+            // Dictionary and user text, never markup.
+            return adw::ActionRow::builder()
+                .title(title)
+                .subtitle(badges.join(" · "))
+                .use_markup(false)
+                .build()
+                .upcast();
+        }
+        let row = adw::ExpanderRow::builder()
             .title(title)
             .subtitle(badges.join(" · "))
             .use_markup(false)
             .build();
-        for (url, label) in [
-            (result.moe_url(), StringKey::DictionaryLookupMoe),
-            (result.chhoe_url(), StringKey::DictionaryLookupChhoe),
-        ] {
-            let Some(url) = url else { continue };
-            let button = gtk::Button::builder()
-                .label(self.strings.resolve(label))
-                .valign(gtk::Align::Center)
-                .css_classes(["flat"])
+        for (url, label) in lookups {
+            let lookup = adw::ActionRow::builder()
+                .title(self.strings.resolve(label))
+                .activatable(true)
                 .build();
+            lookup.add_suffix(&gtk::Image::from_icon_name("adw-external-link-symbolic"));
             let shell = self.shell.clone();
-            button.connect_clicked(move |_| shell.open_url(&url));
-            row.add_suffix(&button);
+            lookup.connect_activated(move |_| shell.open_url(&url));
+            row.add_row(&lookup);
         }
-        row
+        let list = self.results.downgrade();
+        row.connect_expanded_notify(move |opened| {
+            let Some(list) = list.upgrade() else { return };
+            if !opened.is_expanded() {
+                return;
+            }
+            let mut index = 0;
+            while let Some(other) = list.row_at_index(index) {
+                if let Some(other) = other.downcast_ref::<adw::ExpanderRow>() {
+                    if other != opened {
+                        other.set_expanded(false);
+                    }
+                }
+                index += 1;
+            }
+        });
+        row.upcast()
     }
 }
 

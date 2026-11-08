@@ -13,6 +13,8 @@ struct DictionarySearchPanel: View {
     @State private var model: DictionarySearchModel
     /// The page that could not be opened, for the alert.
     @State private var failedLink: String?
+    /// The hit whose lookups the dialog offers.
+    @State private var selectedHit: DictionarySearchModel.Hit?
 
     /// `model` is the live search; tests pass one over a stand-in lookup.
     init(model: DictionarySearchModel = DictionarySearchModel()) {
@@ -33,6 +35,23 @@ struct DictionarySearchPanel: View {
         // iOS and Android wait 300 ms (`DictionarySearchViewModel`).
         .reloadWhenFilterSettles(model.trimmedQuery, after: .milliseconds(300)) { await model.search() }
         .openURLFailureAlert($failedLink)
+        .confirmationDialog(
+            "",
+            isPresented: Binding(get: { selectedHit != nil }, set: {
+                if !$0 {
+                    selectedHit = nil
+                }
+            }),
+            presenting: selectedHit,
+        ) { hit in
+            if hit.hasMoeURL {
+                Button(language.string(.dictionaryLookupMoe)) { open(hit.moeURL) }
+            }
+            if hit.hasChhoeURL {
+                Button(language.string(.dictionaryLookupChhoe)) { open(hit.chhoeURL) }
+            }
+            Button(language.string(.commonCancel), role: .cancel) {}
+        }
     }
 
     @ViewBuilder
@@ -57,44 +76,47 @@ struct DictionarySearchPanel: View {
         }
     }
 
+    /// One hit as a whole-row button: a click anywhere asks which page to
+    /// look the reading up on, as iOS's row does (`confirmationDialog`).
+    /// Disabled when the reading makes no URL.
     private func row(_ hit: DictionarySearchModel.Hit) -> some View {
-        HStack(spacing: Metrics.spacing) {
-            Text(verbatim: hit.roman)
-            if hit.hasHanji {
-                Text(verbatim: hit.hanji)
-            }
-            // A key this build does not know is dropped, not shown raw.
-            ForEach(hit.badgeKeys.compactMap(StringKey.init(rawValue:)), id: \.self) { key in
-                Badge(text: language.string(key))
-            }
-            Spacer()
-            // None when the reading makes no URL.
-            if hit.hasMoeURL || hit.hasChhoeURL {
-                Menu {
-                    if hit.hasMoeURL {
-                        Button(language.string(.dictionaryLookupMoe)) { open(hit.moeURL) }
-                    }
-                    if hit.hasChhoeURL {
-                        Button(language.string(.dictionaryLookupChhoe)) { open(hit.chhoeURL) }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.forward.square")
+        Button {
+            selectedHit = hit
+        } label: {
+            HStack(spacing: Metrics.spacing) {
+                Text(verbatim: hit.roman)
+                if hit.hasHanji {
+                    Text(verbatim: hit.hanji)
                 }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
+                // A key this build does not know is dropped, not shown raw.
+                ForEach(hit.badgeKeys.compactMap(StringKey.init(rawValue:)), id: \.self) { key in
+                    Badge(text: language.string(key))
+                }
+                Spacer()
+                Image(systemName: "arrow.up.forward.square")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
             }
+            .padding(.vertical, Metrics.rowInset)
+            // The whole row, not only its text, takes the click.
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, Metrics.rowInset)
+        .buttonStyle(.plain)
+        .disabled(!hit.hasMoeURL && !hit.hasChhoeURL)
+        // Read as one element: the word, then its source badges.
+        .accessibilityElement(children: .combine)
     }
 
     /// A lookup that silently does nothing reads as a broken one
     /// (`ExternalLinkButton`).
+    /// Called from the lookup dialog: the failure alert is raised on the
+    /// next turn of the main actor, once the dialog has gone, so the one
+    /// presentation does not swallow the other.
     private func open(_ link: String) {
         if let url = URL(string: link), NSWorkspace.shared.open(url) {
             return
         }
-        failedLink = link
+        Task { @MainActor in failedLink = link }
     }
 
     /// One source's compact label.
