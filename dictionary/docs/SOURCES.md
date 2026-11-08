@@ -146,10 +146,13 @@ current-at-release values when cutting a dictionary refresh.
 ### dev — 開發者補充辭典 (supplementary/dev/)
 - **Publisher**: TaigiKeyboard maintainers
 - **Origin URL**: internal (repo-native)
-- **Format**: CSV (`data/dev.csv`)
+- **Format**: CSV (`data/dev.csv`, `data/khinsiann.csv`)
 - **Captured**: repo-native; maintained by hand
 - **Licence**: same as repo
-- **Notes**: Targeted coverage gaps uncovered during dogfooding.
+- **Notes**: `dev.csv` — targeted coverage gaps uncovered during dogfooding.
+  `khinsiann.csv` — neutral-tone pieces that open with `--` (`--ah`, 起來
+  `--khí-lâi`), imported from the maintainer's Han-Lo lexicon; Hanji
+  spellings drop the leading `--`, fully romanized ones are stored without hanzi.
 
 ### lkk — LKK-derived spelling supplement (supplementary/lkk/)
 - **Maintainer**: This project maintains the selected spelling/reading pairs.
