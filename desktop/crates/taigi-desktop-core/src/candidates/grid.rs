@@ -52,6 +52,41 @@ impl ExpandedGridLayout {
         Self { rows, column_count }
     }
 
+    /// One page of a column-major list, transposed into visual rows: column
+    /// `c` holds candidates `c * rows_per_column ..`, the page shows `columns`
+    /// of them from `first_column`, and visual row `r` holds each shown
+    /// column's `r`-th candidate at `column_start` = its column within the
+    /// page. Every cell spans one column; a short last column leaves its
+    /// lower rows without that cell.
+    pub fn column_major_page(
+        count: usize,
+        rows_per_column: usize,
+        first_column: usize,
+        columns: usize,
+    ) -> Self {
+        let rows_per_column = rows_per_column.max(1);
+        let columns = columns.max(1);
+        let rows = (0..rows_per_column)
+            .map(|row| {
+                (0..columns)
+                    .filter_map(|column| {
+                        let candidate_index = (first_column + column) * rows_per_column + row;
+                        (candidate_index < count).then_some(GridCell {
+                            candidate_index,
+                            column_start: column,
+                            column_span: 1,
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .take_while(|row| !row.is_empty())
+            .collect();
+        Self {
+            rows,
+            column_count: columns,
+        }
+    }
+
     pub fn position_of(&self, candidate_index: usize) -> Option<(usize, GridCell)> {
         self.rows.iter().enumerate().find_map(|(row_index, row)| {
             row.iter()
@@ -171,5 +206,21 @@ mod tests {
         assert_eq!(layout.vertical_target(4, 1), None);
         let tiebreak = grid(&[40.0, 20.0, 10.0, 10.0, 10.0, 30.0]);
         assert_eq!(tiebreak.vertical_target(5, -1), Some(1));
+    }
+
+    #[test]
+    fn column_major_page_transposes_the_shown_columns() {
+        // trace: 3 a column, 10 candidates → columns 0-2 / 3-5 / 6-8 / 9;
+        // the page from column 2, 2 wide, shows 6-8 and 9.
+        let page = ExpandedGridLayout::column_major_page(10, 3, 2, 2);
+        assert_eq!(page.column_count, 2);
+        assert_eq!(
+            shape(&page),
+            [vec![[6, 0, 1], [9, 1, 1]], vec![[7, 0, 1]], vec![[8, 0, 1]]]
+        );
+        // Past the list: no rows, the width still a page's.
+        let empty = ExpandedGridLayout::column_major_page(4, 3, 2, 2);
+        assert!(empty.rows.is_empty());
+        assert_eq!(empty.column_count, 2);
     }
 }

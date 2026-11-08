@@ -969,9 +969,13 @@ impl CandidateWindow {
                 };
                 target.PushAxisAlignedClip(&clip, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
                 let offset = model.scroll_y();
-                if let Some(row) = model.selected_row_rect() {
-                    // The row the slot keys address, tinted so its numbers read
-                    // as a group.
+                // An unfolded column aligns its annotations like the collapsed one.
+                let column = model
+                    .expanded_primary_column_width()
+                    .map(|primary| (primary, metrics.horizontal_padding()));
+                if let Some(row) = model.keyed_band_rect() {
+                    // The row (or column) the slot keys address, tinted so its
+                    // numbers read as a group.
                     self.fill(
                         target,
                         brush,
@@ -994,7 +998,7 @@ impl CandidateWindow {
                             metrics,
                             cell.candidate_index,
                             on_screen,
-                            None,
+                            column,
                             model.selected_index() == cell.candidate_index,
                         );
                     }
@@ -1014,6 +1018,21 @@ impl CandidateWindow {
                             self.theme.separator,
                         );
                     }
+                }
+                // The chevron shows while another page follows; its column
+                // stays reserved on the last page.
+                if let Some(chevron) = model
+                    .has_next_page()
+                    .then(|| model.expanded_chevron_rect())
+                    .flatten()
+                {
+                    self.draw_chevron(
+                        target,
+                        brush,
+                        metrics,
+                        chevron,
+                        model.axis().unfold_direction(),
+                    );
                 }
                 if geometry.needs_scrolling {
                     self.draw_scroller(
@@ -1408,6 +1427,15 @@ impl CandidateWindow {
                     && model.chevron_rect().contains(p)
                 {
                     change = model.expand();
+                    return self.after_change(before, change);
+                }
+                // An unfolded column's chevron turns to its next page.
+                if model.mode() == ExpandableDisplayMode::Expanded
+                    && model
+                        .expanded_chevron_rect()
+                        .is_some_and(|chevron| chevron.contains(p))
+                {
+                    change = model.navigate(CandidateNavigation::PageDown);
                     return self.after_change(before, change);
                 }
                 if let Some(index) = model.hit_test(p) {

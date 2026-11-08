@@ -150,19 +150,23 @@ export class Panel {
         : null;
     this.#shownLayout = layout;
     this.#shownCells = cellsJson;
-    const keyed = isExpanded ? (rows[layout.selectedRow] ?? []) : collapsed;
-    const labelOf = new Map(keyed.map(({ index }, at) => [index, labels[at]]));
+    const labelOf = new Map(
+      layout.keyed.map((index, at) => [index, labels[at]]),
+    );
     const draw = (index) =>
       drawCell(cells[index], labelOf.get(index), index, {
         isCurrent: index === cursor,
         isLiteral: layout.leadCellIsUnkeyed && index === 0,
       });
     const drawn = isExpanded
-      ? rows.flat().map(({ index, start, span: columns }) => {
-          const cell = draw(index);
-          cell.style.gridColumn = `${start + 1} / span ${columns}`;
-          return cell;
-        })
+      ? rows.flatMap((row, at) =>
+          row.map(({ index, start, span: columns }) => {
+            const cell = draw(index);
+            cell.style.gridRow = `${at + 1}`;
+            cell.style.gridColumn = `${start + 1} / span ${columns}`;
+            return cell;
+          }),
+        )
       : collapsed.map(({ index, width }) => {
           const cell = draw(index);
           if (!isColumn) {
@@ -184,20 +188,27 @@ export class Panel {
       "--candidate-window": layout.windowHeight,
       "--candidate-grid": layout.gridHeight,
       "--candidate-peek": layout.peek,
-      "--candidate-keyed-row": (layout.selectedRow ?? 0) * layout.rowHeight,
+      "--candidate-band-x": layout.keyedBand?.x ?? 0,
+      "--candidate-band-y": layout.keyedBand?.y ?? 0,
+      "--candidate-band-width": layout.keyedBand?.width ?? 0,
+      "--candidate-band-height": layout.keyedBand?.height ?? 0,
+      "--candidate-primary": layout.primaryColumn ?? 0,
     };
     for (const [name, length] of Object.entries(lengths)) {
       list.style.setProperty(name, `${length}px`);
     }
+    // A count, not a length: the `px` loop above would break `repeat()`.
+    list.style.setProperty("--candidate-columns", `${layout.columns}`);
     list.replaceChildren(...drawn);
     if (isExpanded) {
       list.scrollTop = layout.scrollY;
     }
     this.#speak(labelOf.get(cursor), cells[cursor]);
-    this.#arrows.hidden = isExpanded || !layout.hasOverflow;
+    // An unfolded column that pages keeps its chevron column on every page.
+    this.#arrows.hidden = isExpanded ? !layout.isPaged : !layout.hasOverflow;
     this.#pageUp.hidden = true;
     this.#pageDown.hidden = true;
-    this.#unfold.hidden = false;
+    this.#unfold.hidden = isExpanded && !layout.hasNextPage;
     this.#unfold.toggleAttribute("data-column", isColumn);
   }
 

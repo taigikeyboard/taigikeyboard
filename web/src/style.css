@@ -650,7 +650,10 @@ summary:focus-visible {
   display: grid;
   flex: none;
   box-sizing: border-box;
-  grid-template-columns: repeat(6, var(--candidate-column));
+  grid-template-columns: repeat(
+      var(--candidate-columns, 6),
+      var(--candidate-column)
+    );
   grid-auto-rows: var(--candidate-item);
   row-gap: 1px;
   align-content: start;
@@ -671,14 +674,14 @@ summary:focus-visible {
   display: none;
 }
 
-/* The row the keys number. */
+/* The row (or column) the keys number: `keyed_band_rect`. */
 #candidates[data-grid]::before {
   content: "";
   position: absolute;
-  top: var(--candidate-keyed-row);
-  right: 0;
-  left: 0;
-  height: var(--candidate-item);
+  top: var(--candidate-band-y);
+  left: var(--candidate-band-x);
+  width: var(--candidate-band-width);
+  height: var(--candidate-band-height);
   background: var(--hairline);
 }
 
@@ -686,8 +689,9 @@ summary:focus-visible {
   margin-top: 1px;
 }
 
+/* An unfolded column: every annotation at one x, as in the collapsed column. */
 #candidates[data-grid][data-inline] li {
-  grid-template: auto / auto auto auto;
+  grid-template: auto / auto minmax(var(--candidate-primary), auto) auto;
   justify-content: start;
 }
 
