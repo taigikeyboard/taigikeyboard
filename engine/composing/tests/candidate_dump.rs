@@ -42,8 +42,9 @@
 //! and `hanji` per candidate.
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
+use protos::engine::DictionarySourceToggles;
 
-use crate::common::{config, fetch_at_pos_response, Fetch, Selected};
+use crate::common::{config, config_with_sources, fetch_at_pos_response, Fetch, Selected};
 use lexicon::{CustomEntry, LearnedEntry};
 
 const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";
@@ -107,12 +108,15 @@ fn dump_continuous_candidates() {
             .collect(),
     };
     // DUMP_BITMASK lets a run mimic the device's source-toggle filter
-    // (e.g. dev on + itaigi off). Default: every source.
-    let bitmask: u32 = std::env::var("DUMP_BITMASK")
+    // (e.g. dev on + itaigi off) — the source / variant bits 0-12, sent as
+    // the config's switches. Default: every source.
+    let cfg = match std::env::var("DUMP_BITMASK")
         .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(u32::MAX);
-    let cfg = config(&mode);
+        .and_then(|s| s.parse::<u32>().ok())
+    {
+        Some(bitmask) => config_with_sources(&mode, sources_from_bitmask(bitmask)),
+        None => config(&mode),
+    };
 
     // DUMP_FREQ="更新:king-sin:10;羽:ú:10:7200000" — simulated
     // user_frequency rows `display:tl:count[:age_ms]`, default age 1 s.
@@ -161,7 +165,6 @@ fn dump_continuous_candidates() {
             &cfg,
             raw,
             Fetch {
-                enabled_sources_bitmask: bitmask,
                 frequency: freq.clone(),
                 now_ms,
                 custom: custom.clone(),
@@ -184,5 +187,28 @@ fn dump_continuous_candidates() {
                 cand.hanji.as_deref().unwrap_or(""),
             );
         }
+    }
+}
+
+/// The switches whose `dictionary_filter_bitmask` is `bitmask`'s source /
+/// variant bits 0-12 (`lexicon::dictionary_filters` layout); the kautian
+/// subcollection region is not modelled.
+fn sources_from_bitmask(bitmask: u32) -> DictionarySourceToggles {
+    let on = |bit: u32| bitmask & (1 << bit) != 0;
+    DictionarySourceToggles {
+        kautian: on(0),
+        taigitv: on(1),
+        itaigi: on(2),
+        sitbut: on(3),
+        taihoa: on(4),
+        taijit: on(5),
+        kungge: on(6),
+        stti: on(7),
+        khpoo: on(8),
+        khiin: on(9),
+        dev: on(10),
+        lkk: on(11),
+        variant: on(12),
+        kautian_subcollections: None,
     }
 }

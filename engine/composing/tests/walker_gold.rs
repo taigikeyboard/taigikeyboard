@@ -33,9 +33,11 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 
-use protos::engine::CandidateMessage;
+use protos::engine::{CandidateMessage, DictionarySourceToggles};
 
-use crate::common::{config, default_sources_bitmask, fetch_at_pos_response, Fetch};
+use crate::common::{
+    config, config_with_sources, default_source_toggles, fetch_at_pos_response, Fetch,
+};
 
 const DEFAULT_SPLITS: &str = "dev,calib";
 const HELD_OUT_SPLIT: &str = "final";
@@ -379,12 +381,20 @@ fn emit_table<T>(
     }
 }
 
-fn candidates_for(mode: &str, raw: &str, enabled_sources_bitmask: u32) -> Vec<CandidateMessage> {
+/// The candidates for `raw` under `sources` (`None` = every source).
+fn candidates_for(
+    mode: &str,
+    raw: &str,
+    sources: Option<DictionarySourceToggles>,
+) -> Vec<CandidateMessage> {
+    let app_config = match sources {
+        Some(sources) => config_with_sources(mode, sources),
+        None => config(mode),
+    };
     let response = fetch_at_pos_response(
-        &config(mode),
+        &app_config,
         raw,
         Fetch {
-            enabled_sources_bitmask,
             literal_roman_candidate_disabled: true,
             ..Default::default()
         },
@@ -416,7 +426,7 @@ fn walker_gold_metrics() {
     }
     let splits = gold_splits(true);
     let show_failures = std::env::var("GOLD_FAILURES").is_ok_and(|v| v == "1");
-    let bitmask = default_sources_bitmask();
+    let sources = default_source_toggles();
     let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
     let mut slot0_rows = vec!["id\tvariant\tslot0\tword_syllables\tshown".to_string()];
     for item in read_gold()
@@ -425,7 +435,7 @@ fn walker_gold_metrics() {
     {
         let is_listed = item.split != HELD_OUT_SPLIT;
         for (variant, raw) in &item.inputs {
-            let candidates = candidates_for(variant_mode(variant), raw, bitmask);
+            let candidates = candidates_for(variant_mode(variant), raw, Some(sources));
             let outcome = score(item, raw, &candidates, variant != TYPED_SEPARATOR_VARIANT);
             for key in [
                 format!("{}\tall\tall", item.split),
@@ -489,13 +499,13 @@ fn walker_gold_word_ranks() {
     let splits = gold_splits(false);
     let (header, words) = read_tsv(&output_dir().join("word_inputs.tsv"));
     let variants = &header[WORD_COLUMNS..];
-    let bitmask = default_sources_bitmask();
+    let sources = default_source_toggles();
     let mut tallies: BTreeMap<String, WordRankTally> = BTreeMap::new();
     let mut rank_rows = vec!["id\tword\tvariant\thanji\trank".to_string()];
     for word in words.iter().filter(|word| splits.contains(&word["split"])) {
         for variant in variants {
             let raw = &word[variant];
-            let candidates = candidates_for(variant_mode(variant), raw, bitmask);
+            let candidates = candidates_for(variant_mode(variant), raw, Some(sources));
             let rank = whole_buffer_rank(&candidates, raw, WORD_RANK_CAP, |hanji| {
                 hanji == word["hanji"]
             });
@@ -537,11 +547,11 @@ fn walker_edge_picks() {
     }
     let (_, keys) = read_tsv(&output_dir().join("edge_keys.tsv"));
     let mut rows = vec!["key\tsources\tpick\tslot0".to_string()];
-    for (sources, bitmask) in [("default", default_sources_bitmask()), ("all", u32::MAX)] {
+    for (sources, toggles) in [("default", Some(default_source_toggles())), ("all", None)] {
         for key_row in &keys {
             let key = &key_row["key"];
             let homophones: BTreeSet<&str> = key_row["homophones"].split('|').collect();
-            let candidates = candidates_for("tl", key, bitmask);
+            let candidates = candidates_for("tl", key, toggles);
             let pick = candidates
                 .iter()
                 .find(|c| {

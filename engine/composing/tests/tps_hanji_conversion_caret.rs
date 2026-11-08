@@ -414,9 +414,8 @@ fn a_changed_source_filter_walks_again_before_the_step() {
     install_fixture_with(&[]);
     let every_source = config_converting("tps");
     let every_dictionary_off = AppConfig {
-        hanji_conversion: Some(HanjiConversion {
-            toggles: Some(DictionarySourceToggles::default()),
-        }),
+        hanji_conversion: Some(HanjiConversion {}),
+        dictionary_sources: Some(DictionarySourceToggles::default()),
         ..config("tps")
     };
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &every_source);

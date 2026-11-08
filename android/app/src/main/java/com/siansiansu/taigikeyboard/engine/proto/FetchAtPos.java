@@ -27,16 +27,13 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `user_weight = 0.0` for every candidate — see
  * `engine/ranking/src/score.rs::decayed_user_weight_delta`.
  *
- * `toggles` are the user's dictionary switches — the same message Tab3
- * browse (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine
- * resolves them into the source filter itself with the encoder behind
- * `DictionaryFilters`, so keyboard candidates honour the same 12 source
- * toggles + kautian subcollection toggles as browse and no platform
- * computes a bitmask. Absent `toggles` keeps every source on — a default for
- * test fixtures, like fields 6 and 8: the engine ships inside each app, so
- * no platform build without the field reaches it, and every platform in this
- * repository sends them. Toggles with every dictionary off offer no
- * dictionary candidates (§57).
+ * The source filter is the request config's `AppConfig.dictionary_sources`
+ * — the user's dictionary switches, the same message Tab3 browse
+ * (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine resolves
+ * them with the encoder behind `DictionaryFilters`, so keyboard candidates
+ * honour the same 12 source toggles + kautian subcollection toggles as browse
+ * and no platform computes a bitmask. Absent switches keep every source on;
+ * every dictionary off offers no dictionary candidates (§57).
  *
  * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
  * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
@@ -74,7 +71,6 @@ public  final class FetchAtPos extends
     FetchAtPosOrBuilder {
   private FetchAtPos() {
   }
-  private int bitField0_;
   public static final int NOW_MS_FIELD_NUMBER = 3;
   private long nowMs_;
   /**
@@ -169,53 +165,6 @@ public  final class FetchAtPos extends
   private void clearCustomDictionaryDisabled() {
 
     customDictionaryDisabled_ = false;
-  }
-
-  public static final int TOGGLES_FIELD_NUMBER = 9;
-  private com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles toggles_;
-  /**
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-   */
-  @java.lang.Override
-  public boolean hasToggles() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles() {
-    return toggles_ == null ? com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.getDefaultInstance() : toggles_;
-  }
-  /**
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-   */
-  private void setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-    java.util.Objects.requireNonNull(value);
-    toggles_ = value;
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-   */
-  @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-    java.util.Objects.requireNonNull(value);
-    if (toggles_ != null &&
-        toggles_ != com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.getDefaultInstance()) {
-      toggles_ =
-        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.newBuilder(toggles_).mergeFrom(value).buildPartial();
-    } else {
-      toggles_ = value;
-    }
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-   */
-  private void clearToggles() {
-    toggles_ = null;
-    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
@@ -323,16 +272,13 @@ public  final class FetchAtPos extends
    * `user_weight = 0.0` for every candidate — see
    * `engine/ranking/src/score.rs::decayed_user_weight_delta`.
    *
-   * `toggles` are the user's dictionary switches — the same message Tab3
-   * browse (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine
-   * resolves them into the source filter itself with the encoder behind
-   * `DictionaryFilters`, so keyboard candidates honour the same 12 source
-   * toggles + kautian subcollection toggles as browse and no platform
-   * computes a bitmask. Absent `toggles` keeps every source on — a default for
-   * test fixtures, like fields 6 and 8: the engine ships inside each app, so
-   * no platform build without the field reaches it, and every platform in this
-   * repository sends them. Toggles with every dictionary off offer no
-   * dictionary candidates (§57).
+   * The source filter is the request config's `AppConfig.dictionary_sources`
+   * — the user's dictionary switches, the same message Tab3 browse
+   * (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine resolves
+   * them with the encoder behind `DictionaryFilters`, so keyboard candidates
+   * honour the same 12 source toggles + kautian subcollection toggles as browse
+   * and no platform computes a bitmask. Absent switches keep every source on;
+   * every dictionary off offers no dictionary candidates (§57).
    *
    * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
    * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
@@ -475,53 +421,6 @@ public  final class FetchAtPos extends
       return this;
     }
 
-    /**
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-     */
-    @java.lang.Override
-    public boolean hasToggles() {
-      return instance.hasToggles();
-    }
-    /**
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles() {
-      return instance.getToggles();
-    }
-    /**
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-     */
-    public Builder setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-      copyOnWrite();
-      instance.setToggles(value);
-      return this;
-      }
-    /**
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-     */
-    public Builder setToggles(
-        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.Builder builderForValue) {
-      copyOnWrite();
-      instance.setToggles(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-     */
-    public Builder mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-      copyOnWrite();
-      instance.mergeToggles(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
-     */
-    public Builder clearToggles() {  copyOnWrite();
-      instance.clearToggles();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -538,15 +437,13 @@ public  final class FetchAtPos extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "bitField0_",
             "nowMs_",
             "literalRomanCandidateDisabled_",
             "customDictionaryDisabled_",
-            "toggles_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0001\u0003\t\u0004\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
-              "\b\u0007\t\u1009\u0000";
+              "\u0000\u0003\u0000\u0000\u0003\b\u0003\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
+              "\b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

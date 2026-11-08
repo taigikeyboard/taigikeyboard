@@ -22,7 +22,6 @@ use protos::engine::{
 use crate::keys::CaretDirection;
 
 use super::bridge::{app_config, record_failure, roundtrip};
-use super::lexicon::dictionary_toggles;
 use super::transition::{
     CommitResult, ComposingTransition, ContinuousCandidate, ContinuousFetchResult,
 };
@@ -188,7 +187,8 @@ pub fn reset(generation: u64) -> Option<ComposingTransition> {
 ///
 /// `now_ms` is the clock the engine's recency ranking reads. The user's own
 /// data is not an argument: the engine reads its stores itself and ranks in
-/// one call (user-data-engine-roadmap P3b / P5).
+/// one call (user-data-engine-roadmap P3b / P5). The source filter is the
+/// config's dictionary switches (`app_config`).
 pub fn fetch_at_pos(
     settings: &EngineSettings,
     generation: u64,
@@ -196,8 +196,6 @@ pub fn fetch_at_pos(
 ) -> Option<ContinuousFetchResult> {
     let fetch = FetchAtPos {
         now_ms,
-        // The engine resolves the toggles into its source filter itself.
-        toggles: Some(dictionary_toggles(&settings.dictionary_sources)),
         // §34/S22 — positive platform setting → inverted proto disable gate
         // (the field's own comment carries why), so Show Typed Text First ON leaves the
         // preedit literal leading the list and Enter commits what was typed.

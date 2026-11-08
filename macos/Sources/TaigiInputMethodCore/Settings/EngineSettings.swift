@@ -170,8 +170,8 @@ struct EngineSettings: Sendable {
     let isCustomDictEnabled: Bool
 
     /// Which bundled dictionaries the engine may draw candidates from. Reaches
-    /// the engine as `FetchAtPos.toggles`, which it resolves into its source
-    /// filter.
+    /// the engine as `AppConfig.dictionary_sources`, which it resolves into its
+    /// source filter.
     let dictionarySources: DictionarySourceToggles
 
     /// What a fresh install types with. Every value matches the iOS and Android

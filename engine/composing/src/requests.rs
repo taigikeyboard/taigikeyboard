@@ -10,7 +10,8 @@
 //! the pure transition table. After v3.5.9 A2 the candidate-assembly
 //! 6-step seam lives in [`crate::continuous::assemble_candidates`];
 //! dispatch only handles the phase/hanji guards, the proto →
-//! domain hoists (`mode`, the source filter from the toggles), and wire encoding.
+//! domain hoists (`mode`, the source filter from `AppConfig.dictionary_sources`),
+//! and wire encoding.
 //!
 //! The mode-aware key construction lives in `composing::continuous`
 //! per the Phase 5 module contract pinned in
@@ -35,7 +36,7 @@ use lexicon::{
 use phonetics::api::roman_reading_eq;
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
-    ComposingRequest, ComposingResponse, ContinuousResponse, DictionarySourceToggles, FetchAtPos,
+    ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,
 };
 use ranking::WALKER_COST_UNPRICED;
 
@@ -109,10 +110,8 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
 }
 
 /// The fetch intent for a wire `FetchAtPos`, ranked with `user_rows` and
-/// `context`. Its source filter is the request's toggles resolved by the
-/// lexicon encoder (every dictionary off → `0`, no dictionary candidates,
-/// §57), or every source when the request carries no toggles (fixtures, an
-/// un-wired sender — see the `FetchAtPos` proto comment).
+/// `context`. Its source filter is the request config's
+/// (`source_filter_bitmask`), resolved when the fetch is answered.
 pub fn fetch_at_pos_intent(
     fetch: &FetchAtPos,
     user_rows: UserRows,
@@ -120,17 +119,21 @@ pub fn fetch_at_pos_intent(
 ) -> Intent {
     Intent::FetchAtPos {
         now_ms: fetch.now_ms,
-        enabled_sources_bitmask: source_filter_bitmask(fetch.toggles.as_ref()),
         literal_roman_candidate_disabled: fetch.literal_roman_candidate_disabled,
         user_rows,
         context,
     }
 }
 
-/// The dictionary source filter `toggles` resolve to: every source when a
-/// request names none, `0` when it turns every dictionary off (§57).
-pub(crate) fn source_filter_bitmask(toggles: Option<&DictionarySourceToggles>) -> u32 {
-    toggles.map_or(u32::MAX, lexicon::api::dictionary_filter_bitmask)
+/// The dictionary source filter `config.dictionary_sources` resolves to — the
+/// one filter the fetch, the TPS Hanji conversion and the nailed-join compound
+/// oracle apply: every source when the request names no switches (fixtures,
+/// an un-wired sender), `0` when it turns every dictionary off (§57).
+pub(crate) fn source_filter_bitmask(config: &AppConfig) -> u32 {
+    config
+        .dictionary_sources
+        .as_ref()
+        .map_or(u32::MAX, lexicon::api::dictionary_filter_bitmask)
 }
 
 /// Pure dispatch entry: decode the proto request into an `Intent` and
@@ -169,7 +172,6 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
     match intent {
         Intent::FetchAtPos {
             now_ms,
-            enabled_sources_bitmask,
             literal_roman_candidate_disabled,
             user_rows,
             context,
@@ -178,7 +180,6 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             *now_ms,
             user_rows,
             context,
-            *enabled_sources_bitmask,
             *literal_roman_candidate_disabled,
             config,
         ),
@@ -208,7 +209,6 @@ fn handle_fetch_at_pos(
     now_ms: i64,
     user_rows: &UserRows,
     context: &ranking::ContextRanks,
-    enabled_sources_bitmask: u32,
     literal_roman_candidate_disabled: bool,
     config: &AppConfig,
 ) -> ComposingResponse {
@@ -257,9 +257,9 @@ fn handle_fetch_at_pos(
     // (key build → span-local/partial fetch → recase → walker slot-0
     // prepend → POJ presentation pass → return). Wire encoding (step 6)
     // happens below via `raw_to_proto_candidate` + `with_continuous`.
-    // `enabled_sources_bitmask` (resolved at decode) flows into
-    // `ContinuousFetchCtx` so the span-local + partial-prefix fetchers
-    // apply the same `Filter` the Tab3 browse path uses.
+    // The config's source filter flows into `ContinuousFetchCtx` so the
+    // span-local + partial-prefix fetchers apply the same `Filter` the Tab3
+    // browse path uses.
     let mut candidates = assemble_candidates(
         raw,
         &user_rows.frequency,
@@ -267,7 +267,7 @@ fn handle_fetch_at_pos(
         &user_rows.custom,
         &learned,
         mode,
-        enabled_sources_bitmask,
+        source_filter_bitmask(config),
         context,
         config.rendered_syllable_joiner(),
         config.force_lowercase_nasal_marker,

@@ -20,7 +20,7 @@ use protos::engine::{
 fn tps_converting() -> AppConfig {
     AppConfig {
         input_mode: "tps".to_owned(),
-        hanji_conversion: Some(HanjiConversion { toggles: None }),
+        hanji_conversion: Some(HanjiConversion {}),
         ..AppConfig::default()
     }
 }

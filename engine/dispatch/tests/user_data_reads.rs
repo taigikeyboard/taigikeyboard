@@ -163,7 +163,6 @@ fn engine_reads_answer_what_the_same_rows_answer() {
             &Intent::FetchAtPos {
                 context: ranking::ContextRanks::new(),
                 now_ms: NOW_MS,
-                enabled_sources_bitmask: u32::MAX,
                 literal_roman_candidate_disabled: false,
                 user_rows: rows,
             },

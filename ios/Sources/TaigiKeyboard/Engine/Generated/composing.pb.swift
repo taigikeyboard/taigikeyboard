@@ -516,16 +516,13 @@ public nonisolated struct Taigi_Engine_Reset: Sendable {
 /// `user_weight = 0.0` for every candidate — see
 /// `engine/ranking/src/score.rs::decayed_user_weight_delta`.
 ///
-/// `toggles` are the user's dictionary switches — the same message Tab3
-/// browse (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine
-/// resolves them into the source filter itself with the encoder behind
-/// `DictionaryFilters`, so keyboard candidates honour the same 12 source
-/// toggles + kautian subcollection toggles as browse and no platform
-/// computes a bitmask. Absent `toggles` keeps every source on — a default for
-/// test fixtures, like fields 6 and 8: the engine ships inside each app, so
-/// no platform build without the field reaches it, and every platform in this
-/// repository sends them. Toggles with every dictionary off offer no
-/// dictionary candidates (§57).
+/// The source filter is the request config's `AppConfig.dictionary_sources`
+/// — the user's dictionary switches, the same message Tab3 browse
+/// (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine resolves
+/// them with the encoder behind `DictionaryFilters`, so keyboard candidates
+/// honour the same 12 source toggles + kautian subcollection toggles as browse
+/// and no platform computes a bitmask. Absent switches keep every source on;
+/// every dictionary off offers no dictionary candidates (§57).
 ///
 /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
 /// preedit-literal roman candidate (the `derived_display` WYSIWYG row that
@@ -565,20 +562,9 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   /// un-wired build keeps the dictionary on.
   public var customDictionaryDisabled: Bool = false
 
-  public var toggles: Taigi_Engine_DictionarySourceToggles {
-    get {_toggles ?? Taigi_Engine_DictionarySourceToggles()}
-    set {_toggles = newValue}
-  }
-  /// Returns true if `toggles` has been explicitly set.
-  public var hasToggles: Bool {self._toggles != nil}
-  /// Clears the value of `toggles`. Subsequent reads from it will return its default value.
-  public mutating func clearToggles() {self._toggles = nil}
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _toggles: Taigi_Engine_DictionarySourceToggles? = nil
 }
 
 /// v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
@@ -1865,7 +1851,7 @@ nonisolated extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._
 
 nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{3}now_ms\0\u{4}\u{3}literal_roman_candidate_disabled\0\u{4}\u{2}custom_dictionary_disabled\0\u{1}toggles\0\u{b}position\0\u{b}frequency_entries\0\u{b}custom_entries\0\u{b}learned_entries\0\u{b}enabled_sources_bitmask\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{4}\u{1}\u{c}\u{7}\u{1}\u{c}\u{5}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{3}now_ms\0\u{4}\u{3}literal_roman_candidate_disabled\0\u{4}\u{2}custom_dictionary_disabled\0\u{b}position\0\u{b}frequency_entries\0\u{b}custom_entries\0\u{b}learned_entries\0\u{b}enabled_sources_bitmask\0\u{b}toggles\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{4}\u{1}\u{c}\u{7}\u{1}\u{c}\u{5}\u{1}\u{c}\u{9}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1876,17 +1862,12 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.literalRomanCandidateDisabled) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryDisabled) }()
-      case 9: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
     if self.nowMs != 0 {
       try visitor.visitSingularInt64Field(value: self.nowMs, fieldNumber: 3)
     }
@@ -1896,9 +1877,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if self.customDictionaryDisabled != false {
       try visitor.visitSingularBoolField(value: self.customDictionaryDisabled, fieldNumber: 8)
     }
-    try { if let v = self._toggles {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1906,7 +1884,6 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.literalRomanCandidateDisabled != rhs.literalRomanCandidateDisabled {return false}
     if lhs.customDictionaryDisabled != rhs.customDictionaryDisabled {return false}
-    if lhs._toggles != rhs._toggles {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

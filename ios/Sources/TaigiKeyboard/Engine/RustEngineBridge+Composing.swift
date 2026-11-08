@@ -393,16 +393,15 @@ public extension RustEngineBridge {
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.nowMs = nowMs
-        // The dictionary toggles the Tab3 browse path resolves too; the engine
-        // turns them into its source filter (every dictionary off offers no
-        // dictionary candidates, §57).
-        payload.toggles = dictionaryTogglesProto(DictionaryToggles(from: settings))
         payload.literalRomanCandidateDisabled = literalRomanCandidateDisabled
         payload.customDictionaryDisabled = customDictionaryDisabled
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",
             generation: generation,
+            // Carries the dictionary toggles the Tab3 browse path resolves too as
+            // the fetch's source filter (every dictionary off offers no
+            // dictionary candidates, §57).
             config: continuousAppConfig(settings),
         )
     }

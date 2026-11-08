@@ -456,9 +456,7 @@ fn nailed_join(
     if !eligible {
         return nailed_prefix_with_oracle(nailed, text, space, syllable_joiner, |_, _, _| false);
     }
-    let filter = Filter::from_enabled_bitmask(crate::requests::source_filter_bitmask(
-        config.dictionary_sources.as_ref(),
-    ));
+    let filter = Filter::from_enabled_bitmask(crate::requests::source_filter_bitmask(config));
     LexiconHandle::with_state(|state| {
         let (Some(prefix), Some(dict)) = (state.prefix_index.as_ref(), state.dictionary.as_ref())
         else {
@@ -644,10 +642,9 @@ pub enum Intent {
     /// ([`UserRows`]) — the engine reads them from its stores, a wire
     /// request decodes with none.
     ///
-    /// `enabled_sources_bitmask` is the `dictionary.bin` source filter the
-    /// fetch applies, the same as Tab3 browse — resolved from
-    /// `FetchAtPos.toggles` at decode ([`crate::requests::fetch_at_pos_intent`]);
-    /// `u32::MAX` = every source, `0` = none.
+    /// The `dictionary.bin` source filter the fetch applies, the same as Tab3
+    /// browse, is the request config's `dictionary_sources`, resolved when the
+    /// fetch is answered (`crate::requests::source_filter_bitmask`).
     /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
     /// preedit-literal roman candidate (index-0 `derived_display` WYSIWYG row
     /// for Hanji-romanization one-tap). Decoded verbatim from `FetchAtPos`; OFF suppresses
@@ -655,7 +652,6 @@ pub enum Intent {
     /// wire/sentinel contract: the `FetchAtPos` proto comment.
     FetchAtPos {
         now_ms: i64,
-        enabled_sources_bitmask: u32,
         literal_roman_candidate_disabled: bool,
         user_rows: UserRows,
         /// The previous word's continuations, user-learned and bundled

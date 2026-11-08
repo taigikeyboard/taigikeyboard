@@ -7,12 +7,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * The dictionary toggles `composingFetchAtPos` puts in `FetchAtPos.toggles` (and
- * `dictionaryFilters` / `nextwordPredictNext` send): the engine resolves them into
+ * The dictionary toggles `continuousAppConfig` puts in `AppConfig.dictionarySources`
+ * (and `dictionaryFilters` / `nextwordPredictNext` send): the engine resolves them into
  * its source filter, so every dictionary off offers no dictionary candidates
  * (`behavioral-invariants.md` §57). JVM tests cannot load the engine; the builder
  * only builds a proto. Engine side: `golden_fetch_at_pos.rs`
- * `fetch_at_pos_resolves_the_dictionary_toggles_it_carries`.
+ * `fetch_at_pos_filters_by_the_config_dictionary_sources`.
  */
 class DictionaryTogglesProtoTest {
     // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)

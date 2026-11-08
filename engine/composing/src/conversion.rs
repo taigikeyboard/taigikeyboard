@@ -205,14 +205,14 @@ fn utf16_len(text: &str) -> usize {
     text.encode_utf16().count()
 }
 
-/// The source filter `config` asks a conversion with — every source when it
-/// names no toggles, as a `FetchAtPos` without them — or `None` when it asks
-/// for none.
+/// The source filter `config` asks a conversion with — its
+/// `dictionary_sources`, the fetch's filter — or `None` when it asks for no
+/// conversion (`hanji_conversion` absent).
 fn requested_sources(config: &AppConfig) -> Option<u32> {
     config
         .hanji_conversion
         .as_ref()
-        .map(|conversion| crate::requests::source_filter_bitmask(conversion.toggles.as_ref()))
+        .map(|_| crate::requests::source_filter_bitmask(config))
 }
 
 /// Whether `config` asks for the conversion of the pending text `raw`: the

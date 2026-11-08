@@ -1105,8 +1105,8 @@ fn picked_extension_outranks_sentence(candidates: &[RawCandidate], raw_len: u32)
 /// dropped the prior `is_poj: bool` arg.
 ///
 /// `enabled_sources_bitmask` is the user's dictionary source filter,
-/// resolved from the fetch's toggles at decode (`u32::MAX` = every
-/// source, `0` = none). It flows
+/// resolved from the request's `AppConfig.dictionary_sources` (`u32::MAX` =
+/// every source, `0` = none). It flows
 /// straight into `ContinuousFetchCtx` so both inner fetchers decode it
 /// via `Filter::from_enabled_bitmask` — identical filtering to the Tab3
 /// browse path (12 sources + variant + khiin + kautian subcollection).
@@ -1144,7 +1144,7 @@ pub(crate) fn assemble_candidates(
         // `dictionary` resolved; either inner fetcher (span-local or
         // partial-prefix) needs both.
         // `enabled_sources_bitmask` is the user's source filter
-        // (resolved from the fetch's toggles at decode), so
+        // (resolved from the request's `AppConfig.dictionary_sources`), so
         // the span-local + partial-prefix fetchers apply the SAME
         // `Filter` (sources + variant + khiin + kautian subcollection)
         // the Tab3 browse path applies. `u32::MAX` keeps every source on.

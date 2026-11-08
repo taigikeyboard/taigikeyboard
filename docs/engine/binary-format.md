@@ -392,7 +392,7 @@ ENCODE: `compute_filters` sets bit 13 + the enable mask from
 is the active sentinel). Every platform always sends it; a caller that leaves
 it absent keeps the gate off = legacy all-on. The same mask gates the Tab3
 dictionary-browse path and the keyboard fetch (`engine/composing/src/requests.rs`
-`source_filter_bitmask` resolves the fetch's `toggles`). NextWord filters with
+`source_filter_bitmask` resolves the request's `AppConfig.dictionary_sources`). NextWord filters with
 the source-only association mask, so subcollection toggles do not reach it.
 
 ---
