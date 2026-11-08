@@ -24,7 +24,7 @@ to decide which version / verify what a version added), never the data pipe.
    |---|---|
    | 15.1 | `release-44` |
    | 16.0 | `release-46` |
-   | 17.0 | `release-48` (verify on https://github.com/unicode-org/cldr/tags) |
+   | 17.0 | `release-48` |
 
    If unsure, check `https://github.com/unicode-org/cldr/tags` for the newest release whose
    notes cite the target Emoji version.
