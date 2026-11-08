@@ -306,3 +306,76 @@ test("typing in the grid starts a new list with no fold", async ({ page }) => {
     await panel(page).evaluate((root) => root.getAnimations().length),
   ).toBe(0);
 });
+
+/// Records every still copy the panel lays over a mode change: whether it is
+/// out of reach of the pointer and screen readers, and whether it went again.
+function watchCopies(page) {
+  return panel(page).evaluate((root) => {
+    window.copies = [];
+    new MutationObserver((changes) => {
+      for (const change of changes) {
+        for (const node of change.addedNodes) {
+          if (node.dataset?.ghost !== undefined) {
+            window.copies.push({
+              ids: node.querySelectorAll("[id]").length + (node.id ? 1 : 0),
+              hidden: node.getAttribute("aria-hidden"),
+              pointer: node.style.pointerEvents,
+              removed: false,
+            });
+          }
+        }
+        for (const node of change.removedNodes) {
+          if (node.dataset?.ghost !== undefined) {
+            window.copies.at(-1).removed = true;
+          }
+        }
+      }
+    }).observe(root, { childList: true });
+  });
+}
+
+const copies = (page) => page.evaluate(() => window.copies);
+
+test("a mode change plays over a still copy that leaves no trace", async ({
+  page,
+}) => {
+  const editor = await open(page, { settings: COLUMN });
+  await editor.pressSequentially(LONG_LIST);
+  await settled(page);
+  await watchCopies(page);
+  await editor.press("ArrowRight");
+  await expectExpanded(page);
+  await settled(page);
+  await editor.press("ArrowLeft");
+  await editor.press("ArrowLeft");
+  await expectCollapsed(page);
+  await settled(page);
+  const copy = { ids: 0, hidden: "true", pointer: "none", removed: true };
+  expect(await copies(page)).toEqual([copy, copy]);
+  await expect(page.locator("[data-ghost]")).toHaveCount(0);
+});
+
+test("a key mid-change ends it where the page is", async ({ page }) => {
+  const editor = await open(page, { settings: ROW });
+  await editor.pressSequentially(LONG_LIST);
+  await settled(page);
+  await editor.press("ArrowDown");
+  await editor.press("ArrowUp");
+  await expectCollapsed(page);
+  await settled(page);
+  await expect(page.locator("[data-ghost]")).toHaveCount(0);
+  const moving = await candidates(page).evaluateAll((cells) =>
+    cells.filter((cell) => cell.getAnimations().length > 0),
+  );
+  expect(moving).toHaveLength(0);
+});
+
+test("reduced motion changes mode in one frame", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const editor = await open(page, { settings: COLUMN });
+  await editor.pressSequentially(LONG_LIST);
+  await watchCopies(page);
+  await editor.press("ArrowRight");
+  await expectExpanded(page);
+  expect(await copies(page)).toEqual([]);
+});

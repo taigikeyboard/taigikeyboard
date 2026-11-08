@@ -31,8 +31,10 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// How many columns an unfolded column shows at once at most — a third of
     /// a page, Microsoft Bopomofo's three.
     private static let columnsPerPage = HorizontalPageLayout.pageSize / 3
-    /// Upstream's measured ease and duration for the unfold.
-    private static let animationDuration: TimeInterval = 0.183
+    /// The unfold's duration: quicker than upstream's measured 0.183 s, so the
+    /// grid never reads as a wait (USER 2026-11-08). Twin of
+    /// `ExpandableListModel::ANIMATION_DURATION_SECONDS`.
+    private static let animationDuration: TimeInterval = 0.13
     private static let separatorHeight: CGFloat = 1
 
     enum DisplayMode {
@@ -311,7 +313,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     ///
     /// The mode is remembered rather than re-derived from the selection: a
     /// grid that folded to its row and unfolded again would spend a visible
-    /// frame one row tall and then play the 0.183s unfold, which reads as the
+    /// frame one row tall and then play the unfold, which reads as the
     /// window blinking rather than its text changing (USER 2026-08-23). The
     /// relayout runs through `rebuildCollapsed`, which resets the mode as a
     /// side effect of tearing the cells down, so the answer is taken before it

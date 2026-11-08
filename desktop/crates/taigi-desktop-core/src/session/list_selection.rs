@@ -161,6 +161,7 @@ impl ListSelection {
                 model.select(kept.min(model.count().saturating_sub(1)));
                 if was_expanded {
                     model.expand();
+                    model.forget_transition();
                 }
                 self.highlight = Highlight::Expandable(model);
             }
@@ -247,6 +248,7 @@ mod tests {
         assert!(selection.lead_cell_is_unkeyed());
         let model = selection.expandable().expect("a model");
         assert_eq!(model.mode(), ExpandableDisplayMode::Expanded);
+        assert_eq!(model.mode_transition(), None, "no change to play");
     }
 
     #[test]

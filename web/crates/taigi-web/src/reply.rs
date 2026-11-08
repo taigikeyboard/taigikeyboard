@@ -3,7 +3,10 @@
 //! asks the runtime for, and this is the one place that JSON's shape is named.
 
 use serde::Serialize;
-use taigi_desktop_core::candidates::{ExpandableAxis, ExpandableDisplayMode, ExpandableListModel};
+use taigi_desktop_core::candidates::{
+    CellLayer, ExpandableAxis, ExpandableDisplayMode, ExpandableListModel, ExpandableModeChange,
+    ModeTransition, Rect, Track,
+};
 use taigi_desktop_core::keys::tps_keyboard_rows;
 use taigi_desktop_core::session::{Emit, ListSelection, LookupTableContent};
 
@@ -120,6 +123,9 @@ pub(crate) struct WireLayout {
     is_paged: bool,
     has_next_page: bool,
     animation_milliseconds: f32,
+    /// Only on the reply whose key changed the mode: what to play over it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    transition: Option<WireTransition>,
 }
 
 #[derive(Debug, Serialize)]
@@ -128,6 +134,84 @@ pub(crate) struct WireRect {
     y: f32,
     width: f32,
     height: f32,
+}
+
+impl From<Rect> for WireRect {
+    fn from(rect: Rect) -> Self {
+        Self {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+        }
+    }
+}
+
+/// `Track`: a drawing's frame (content coordinates) and opacity, start and end.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WireTrack {
+    from: WireRect,
+    to: WireRect,
+    from_alpha: f32,
+    to_alpha: f32,
+}
+
+impl From<Track> for WireTrack {
+    fn from(track: Track) -> Self {
+        Self {
+            from: track.from.into(),
+            to: track.to.into(),
+            from_alpha: track.from_alpha,
+            to_alpha: track.to_alpha,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct WireCellTrack {
+    index: usize,
+    /// `collapsed`, `expanded` or `shared` (`CellLayer`).
+    layer: &'static str,
+    #[serde(flatten)]
+    track: WireTrack,
+}
+
+/// `ModeTransition`, oriented the way it plays, less its still cells.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WireTransition {
+    is_expanding: bool,
+    cells: Vec<WireCellTrack>,
+    chevron: WireTrack,
+}
+
+impl From<&ModeTransition> for WireTransition {
+    fn from(transition: &ModeTransition) -> Self {
+        Self {
+            is_expanding: transition.change == ExpandableModeChange::Expand,
+            // The page draws a still cell where it lays it out: only the moving
+            // and fading ones go out, a row's whole list otherwise.
+            cells: transition
+                .cells
+                .iter()
+                .filter(|cell| {
+                    let track = cell.track;
+                    track.from != track.to || track.from_alpha != track.to_alpha
+                })
+                .map(|cell| WireCellTrack {
+                    index: cell.candidate_index,
+                    layer: match cell.layer {
+                        CellLayer::Collapsed => "collapsed",
+                        CellLayer::Expanded => "expanded",
+                        CellLayer::Shared => "shared",
+                    },
+                    track: cell.track.into(),
+                })
+                .collect(),
+            chevron: transition.chevron.into(),
+        }
+    }
 }
 
 pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
@@ -180,15 +264,11 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
         keyed: (0..)
             .map_while(|slot| model.candidate_index_for_slot(slot))
             .collect(),
-        keyed_band: model.keyed_band_rect().map(|rect| WireRect {
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
-        }),
+        keyed_band: model.keyed_band_rect().map(WireRect::from),
         is_paged: model.is_paged(),
         has_next_page: model.has_next_page(),
         animation_milliseconds: ExpandableListModel::ANIMATION_DURATION_SECONDS * 1000.0,
+        transition: model.mode_transition().map(WireTransition::from),
     })
 }
 

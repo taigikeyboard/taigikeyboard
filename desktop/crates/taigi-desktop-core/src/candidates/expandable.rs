@@ -1,8 +1,8 @@
 //! The expandable window's two modes — a packed row (or a column) that
 //! unfolds into a grid — and its navigation; macOS keeps a Swift twin in
-//! `ExpandableCandidatePanel.swift`. The unfold's timing and drawing are
-//! the renderer's, its
-//! geometry (which cell moves where) is computed here.
+//! `ExpandableCandidatePanel.swift`. The mode change's choreography —
+//! which drawing moves where and fades how (`ModeTransition`) — is computed
+//! here; the renderer plays it.
 
 use super::grid::ExpandedGridLayout;
 use super::horizontal::HorizontalPageLayout;
@@ -102,22 +102,139 @@ pub struct ExpandedGeometry {
     pub needs_scrolling: bool,
 }
 
-/// One candidate's frame in both modes, for the unfold animation.
+/// One drawing's journey through a mode change: a frame in CONTENT
+/// coordinates (the renderer applies the viewport's scroll offset to every
+/// track alike, as macOS lays both modes in one scrolled document) and an
+/// opacity, each interpolated by the eased progress.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CellMove {
-    pub candidate_index: usize,
-    pub collapsed: Rect,
-    pub expanded: Rect,
+pub struct Track {
+    pub from: Rect,
+    pub to: Rect,
+    pub from_alpha: f32,
+    pub to_alpha: f32,
 }
 
-/// The unfold's geometry: cells the collapsed row shows move to their grid
-/// frames; cells only the grid shows appear in place.
+impl Track {
+    fn still(rect: Rect) -> Self {
+        Self::new(rect, rect, 1.0, 1.0)
+    }
+
+    fn new(from: Rect, to: Rect, from_alpha: f32, to_alpha: f32) -> Self {
+        Self {
+            from,
+            to,
+            from_alpha,
+            to_alpha,
+        }
+    }
+
+    /// The frame and opacity at `eased` (0 = start, 1 = end).
+    pub fn at(&self, eased: f32) -> (Rect, f32) {
+        let lerp = |from: f32, to: f32| from + (to - from) * eased;
+        (
+            Rect::new(
+                lerp(self.from.x, self.to.x),
+                lerp(self.from.y, self.to.y),
+                lerp(self.from.width, self.to.width),
+                lerp(self.from.height, self.to.height),
+            ),
+            lerp(self.from_alpha, self.to_alpha),
+        )
+    }
+
+    fn reversed(self) -> Self {
+        Self::new(self.to, self.from, self.to_alpha, self.from_alpha)
+    }
+}
+
+/// Which drawing of a candidate a track moves. Beside a column the two
+/// modes align their annotations on different candidate columns, so a cell
+/// cross-fades between its two drawings; under a row a survivor is one
+/// drawing in both modes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CellLayer {
+    /// Drawn as the collapsed list draws it (`collapsed_primary_column_width`).
+    Collapsed,
+    /// Drawn as the grid draws it (`expanded_primary_column_width`).
+    Expanded,
+    /// One drawing in both modes, decorated (key label, highlight) as the
+    /// current mode decorates it.
+    Shared,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CellTrack {
+    pub candidate_index: usize,
+    pub layer: CellLayer,
+    pub track: Track,
+}
+
+/// The last mode change's choreography — macOS
+/// `ExpandableCandidatePanel`'s `rowUnfoldAnimations` /
+/// `columnUnfoldAnimations` and their fold twins — oriented the way it
+/// plays: every drawing the renderer draws while the window eases between
+/// the two sizes over `ANIMATION_DURATION_SECONDS` (`ease_in_out`).
 #[derive(Clone, Debug, PartialEq)]
-pub struct UnfoldPlan {
-    pub moves: Vec<CellMove>,
-    /// Grid cells with no collapsed counterpart (their frames are
-    /// `grid_cell_rect`), in display order.
-    pub appearing: Vec<usize>,
+pub struct ModeTransition {
+    pub change: ExpandableModeChange,
+    /// In drawing order; a cell with no track is not drawn.
+    pub cells: Vec<CellTrack>,
+    /// The chevron column; its alpha is the separator's and glyph's.
+    pub chevron: Track,
+    /// The keyed band, fading in where it lands or out where it was.
+    pub band: Option<Rect>,
+}
+
+impl ModeTransition {
+    /// The same choreography played the other way.
+    fn reversed(self) -> Self {
+        Self {
+            change: match self.change {
+                ExpandableModeChange::Expand => ExpandableModeChange::Collapse,
+                ExpandableModeChange::Collapse => ExpandableModeChange::Expand,
+            },
+            cells: self
+                .cells
+                .into_iter()
+                .map(|cell| CellTrack {
+                    track: cell.track.reversed(),
+                    ..cell
+                })
+                .collect(),
+            chevron: self.chevron.reversed(),
+            band: self.band,
+        }
+    }
+
+    /// The keyed band's opacity at `eased`.
+    pub fn band_alpha(&self, eased: f32) -> f32 {
+        match self.change {
+            ExpandableModeChange::Expand => eased,
+            ExpandableModeChange::Collapse => 1.0 - eased,
+        }
+    }
+}
+
+/// The ease-in-out cubic bezier (0.42, 0, 0.58, 1) — CSS `ease-in-out` and
+/// macOS `CAMediaTimingFunction(.easeInEaseOut)` — at linear `progress`,
+/// solved by Newton iteration as macOS `ExpandableCandidatePanel.easeInOut`.
+pub fn ease_in_out(progress: f32) -> f32 {
+    let x = progress.clamp(0.0, 1.0);
+    let (x1, x2) = (0.42, 0.58);
+    let mut t = x;
+    for _ in 0..8 {
+        let mt = 1.0 - t;
+        let error = 3.0 * mt * mt * t * x1 + 3.0 * mt * t * t * x2 + t * t * t - x;
+        if error.abs() < 1e-7 {
+            break;
+        }
+        let derivative = 3.0 * mt * mt * x1 + 6.0 * mt * t * (x2 - x1) + 3.0 * t * t * (1.0 - x2);
+        if derivative.abs() < 1e-7 {
+            break;
+        }
+        t -= error / derivative;
+    }
+    3.0 * t * t - 2.0 * t * t * t
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -151,6 +268,8 @@ pub struct ExpandableListModel {
     selected_index: usize,
     /// The expanded viewport's scroll offset in points.
     scroll_y: f32,
+    /// The last mode change's choreography, set by `expand` / `collapse`.
+    transition: Option<ModeTransition>,
 }
 
 impl ExpandableListModel {
@@ -164,8 +283,10 @@ impl ExpandableListModel {
     /// How many columns an unfolded column shows at once at most — a third of
     /// a page, Microsoft Bopomofo's three.
     pub const COLUMNS_PER_PAGE: usize = HorizontalPageLayout::PAGE_SIZE / 3;
-    /// The unfold's duration, for the renderer.
-    pub const ANIMATION_DURATION_SECONDS: f32 = 0.183;
+    /// The unfold's duration, for the renderer: quicker than upstream's
+    /// measured 0.183 s, so the grid never reads as a wait (USER 2026-11-08).
+    /// Twin of macOS `ExpandableCandidatePanel.animationDuration`.
+    pub const ANIMATION_DURATION_SECONDS: f32 = 0.13;
 
     /// Lays out `measured_widths` (one per candidate; capped at
     /// [`MAX_DISPLAY_CANDIDATES`] here) under `geometry`.
@@ -239,6 +360,7 @@ impl ExpandableListModel {
             mode: ExpandableDisplayMode::Collapsed,
             selected_index: 0,
             scroll_y: 0.0,
+            transition: None,
         }
     }
 
@@ -637,30 +759,141 @@ impl ExpandableListModel {
         })
     }
 
-    /// The unfold's geometry from the current collapsed row.
-    pub fn unfold_plan(&self) -> UnfoldPlan {
-        let moves: Vec<CellMove> = self
-            .collapsed_cells
-            .iter()
-            .filter_map(|cell| {
-                Some(CellMove {
-                    candidate_index: cell.candidate_index,
-                    collapsed: cell.rect,
-                    expanded: self.grid_cell_rect(cell.candidate_index)?,
-                })
-            })
-            .collect();
-        // The grid in display order: the whole list under a row, the shown
-        // page beside a column.
-        let appearing = self
-            .grid
-            .rows
-            .iter()
-            .flatten()
-            .map(|cell| cell.candidate_index)
-            .filter(|&index| index >= self.collapsed_cells.len())
-            .collect();
-        UnfoldPlan { moves, appearing }
+    /// The choreography of the mode change the last `navigate` / `select` /
+    /// `expand` / `collapse` reported — `None` after a call that changed no
+    /// mode — for the renderer to play once.
+    pub fn mode_transition(&self) -> Option<&ModeTransition> {
+        self.transition.as_ref()
+    }
+
+    /// Drops the transition: a list laid out again comes back in the mode it
+    /// was in, which is no change to play.
+    pub(crate) fn forget_transition(&mut self) {
+        self.transition = None;
+    }
+
+    /// The unfold between the collapsed cells and the grid as it stands —
+    /// the page on screen beside a column — which a fold plays backwards.
+    /// Under a row, the collapsed cells on grid row 0 glide to it (one
+    /// drawing); the rest — the overflow — slide out right fading, while
+    /// their grid twins slide in from the left; every other grid cell stands
+    /// still. Beside a column, each cell cross-fades from its collapsed
+    /// frame into its grid frame. The chevron is pushed to the grid's edge
+    /// fading, or to a paged column's chevron column, its `›` kept while a
+    /// next page follows.
+    fn unfold_transition(&self, band: Option<Rect>) -> ModeTransition {
+        let collapsed_at = |index: usize| {
+            self.collapsed_cells
+                .iter()
+                .find(|cell| cell.candidate_index == index)
+                .map(|cell| cell.rect)
+        };
+        let grid_cells = || {
+            self.grid
+                .rows
+                .iter()
+                .flatten()
+                .map(|cell| cell.candidate_index)
+        };
+        let mut cells = Vec::new();
+        match self.axis {
+            ExpandableAxis::Row => {
+                let row0: Vec<usize> = self
+                    .grid
+                    .rows
+                    .first()
+                    .map(|row| row.iter().map(|cell| cell.candidate_index).collect())
+                    .unwrap_or_default();
+                let exit_x = self.collapsed_window_width();
+                for cell in &self.collapsed_cells {
+                    let index = cell.candidate_index;
+                    cells.push(match self.grid_cell_rect(index) {
+                        Some(to) if row0.contains(&index) => CellTrack {
+                            candidate_index: index,
+                            layer: CellLayer::Shared,
+                            track: Track::new(cell.rect, to, 1.0, 1.0),
+                        },
+                        _ => CellTrack {
+                            candidate_index: index,
+                            layer: CellLayer::Collapsed,
+                            track: Track::new(
+                                cell.rect,
+                                Rect {
+                                    x: exit_x,
+                                    ..cell.rect
+                                },
+                                1.0,
+                                0.0,
+                            ),
+                        },
+                    });
+                }
+                for index in grid_cells().filter(|index| !row0.contains(index)) {
+                    let Some(to) = self.grid_cell_rect(index) else {
+                        continue;
+                    };
+                    // The collapsed cells are candidates 0.., so a lower index is
+                    // an overflow cell's twin.
+                    let track = if index < self.collapsed_cells.len() {
+                        Track::new(
+                            Rect {
+                                x: -(to.x + to.width),
+                                ..to
+                            },
+                            to,
+                            0.0,
+                            1.0,
+                        )
+                    } else {
+                        Track::still(to)
+                    };
+                    cells.push(CellTrack {
+                        candidate_index: index,
+                        layer: CellLayer::Expanded,
+                        track,
+                    });
+                }
+            }
+            ExpandableAxis::Column => {
+                for cell in &self.collapsed_cells {
+                    let to = self
+                        .grid_cell_rect(cell.candidate_index)
+                        .unwrap_or(cell.rect);
+                    cells.push(CellTrack {
+                        candidate_index: cell.candidate_index,
+                        layer: CellLayer::Collapsed,
+                        track: Track::new(cell.rect, to, 1.0, 0.0),
+                    });
+                }
+                for index in grid_cells() {
+                    let Some(to) = self.grid_cell_rect(index) else {
+                        continue;
+                    };
+                    cells.push(CellTrack {
+                        candidate_index: index,
+                        layer: CellLayer::Expanded,
+                        track: Track::new(collapsed_at(index).unwrap_or(to), to, 0.0, 1.0),
+                    });
+                }
+            }
+        }
+        let from = self.chevron_rect();
+        let chevron_to = self.expanded_chevron_rect().unwrap_or(Rect {
+            x: (self.grid_width() - from.width).max(from.x),
+            ..from
+        });
+        let shown = |is_shown: bool| if is_shown { 1.0 } else { 0.0 };
+        ModeTransition {
+            change: ExpandableModeChange::Expand,
+            cells,
+            chevron: Track::new(
+                from,
+                chevron_to,
+                shown(self.has_overflow()),
+                shown(self.has_next_page()),
+            ),
+            band,
+        }
     }
 
     /// The candidate under `point` in WINDOW coordinates, for the current
@@ -737,6 +970,8 @@ impl ExpandableListModel {
     }
 
     pub fn navigate(&mut self, direction: CandidateNavigation) -> Option<ExpandableModeChange> {
+        // A transition describes only the change this call reports.
+        self.transition = None;
         if self.count == 0 {
             return None;
         }
@@ -907,6 +1142,7 @@ impl ExpandableListModel {
     /// Selects `index` (a click, a walk). A candidate the collapsed row does
     /// not show unfolds the window.
     pub fn select(&mut self, index: usize) -> Option<ExpandableModeChange> {
+        self.transition = None;
         if index >= self.count {
             return None;
         }
@@ -921,19 +1157,25 @@ impl ExpandableListModel {
     }
 
     pub fn expand(&mut self) -> Option<ExpandableModeChange> {
+        self.transition = None;
         if self.mode == ExpandableDisplayMode::Expanded {
             return None;
         }
         self.mode = ExpandableDisplayMode::Expanded;
         self.scroll_y = 0.0;
         self.follow_selection();
+        // After the selection settled: it decides the page a column unfolds onto.
+        self.transition = Some(self.unfold_transition(self.keyed_band_rect()));
         Some(ExpandableModeChange::Expand)
     }
 
     pub fn collapse(&mut self) -> Option<ExpandableModeChange> {
+        self.transition = None;
         if self.mode == ExpandableDisplayMode::Collapsed {
             return None;
         }
+        // The band fades out where it was, before the selection moves.
+        let band = self.keyed_band_rect();
         self.mode = ExpandableDisplayMode::Collapsed;
         self.scroll_y = 0.0;
         // A selection beyond the collapsed cells clamps to the last of them;
@@ -946,6 +1188,10 @@ impl ExpandableListModel {
             self.selected_index = self.collapsed_cells.len().saturating_sub(1);
         }
         self.follow_selection();
+        // The unfold backwards: every fold starts on the first page (`←` in
+        // the first column, `↑` on 0, PageUp on page 0), the grid that
+        // page, and the viewport scrolled home, as macOS folds.
+        self.transition = Some(self.unfold_transition(band).reversed());
         Some(ExpandableModeChange::Collapse)
     }
 
@@ -1217,25 +1463,99 @@ mod tests {
     }
 
     #[test]
-    fn unfold_plan_maps_row_cells_to_grid_frames() {
-        // 20 × 5: collapsed cells are 10 wide (slot floor), grid columns 15.
-        let m = model(&[5.0; 20]);
-        let plan = m.unfold_plan();
-        assert_eq!(plan.moves.len(), 9);
-        assert_eq!(plan.moves[1].collapsed, Rect::new(10.0, 0.0, 10.0, 30.0));
-        assert_eq!(plan.moves[1].expanded, Rect::new(15.0, 0.0, 15.0, 30.0));
-        assert_eq!(
-            plan.moves[6].expanded,
-            Rect::new(0.0, 31.0, 15.0, 30.0),
-            "wraps to row 1"
-        );
-        assert_eq!(plan.appearing, (9..20).collect::<Vec<_>>());
+    fn row_unfold_glides_survivors_and_swaps_the_overflow() {
+        // trace: 20 × 5 → collapsed cells 10 wide (slot floor) at x 0..90,
+        // chevron 90..110; grid columns 15, six a row: rows 0-5 / 6-11 / …
+        let mut m = model(&[5.0; 20]);
+        assert_eq!(m.mode_transition(), None, "no mode change yet");
         assert_eq!(m.chevron_rect(), Rect::new(90.0, 0.0, 20.0, 30.0));
         assert_eq!(m.grid_cell_rect(20), None);
-        let mut m = m;
-        m.select(7);
         m.expand();
+        let plan = m.mode_transition().unwrap().clone();
+        assert_eq!(plan.change, ExpandableModeChange::Expand);
+        // 9 collapsed drawings + the 14 grid cells off row 0.
+        assert_eq!(plan.cells.len(), 23);
+        assert_eq!(
+            plan.cells[1],
+            CellTrack {
+                candidate_index: 1,
+                layer: CellLayer::Shared,
+                track: Track::new(
+                    Rect::new(10.0, 0.0, 10.0, 30.0),
+                    Rect::new(15.0, 0.0, 15.0, 30.0),
+                    1.0,
+                    1.0
+                ),
+            },
+            "a survivor glides to its column"
+        );
+        // trace: 6 is past grid row 0 → slides out to the window's edge (110).
+        assert_eq!(
+            plan.cells[6],
+            CellTrack {
+                candidate_index: 6,
+                layer: CellLayer::Collapsed,
+                track: Track::new(
+                    Rect::new(60.0, 0.0, 10.0, 30.0),
+                    Rect::new(110.0, 0.0, 10.0, 30.0),
+                    1.0,
+                    0.0
+                ),
+            }
+        );
+        // trace: its grid twin at (0, 31) enters from x = -(0 + 15).
+        assert_eq!(
+            plan.cells[9],
+            CellTrack {
+                candidate_index: 6,
+                layer: CellLayer::Expanded,
+                track: Track::new(
+                    Rect::new(-15.0, 31.0, 15.0, 30.0),
+                    Rect::new(0.0, 31.0, 15.0, 30.0),
+                    0.0,
+                    1.0
+                ),
+            }
+        );
+        // trace: 9 is only on the grid (row 1, column 3) → stands still.
+        assert_eq!(
+            plan.cells[12].track,
+            Track::still(Rect::new(45.0, 31.0, 15.0, 30.0))
+        );
+        // trace: grid 90 wide → chevron to max(90 − 20, 90) = 90, fading.
+        assert_eq!(
+            plan.chevron,
+            Track::new(
+                Rect::new(90.0, 0.0, 20.0, 30.0),
+                Rect::new(90.0, 0.0, 20.0, 30.0),
+                1.0,
+                0.0
+            )
+        );
+        assert_eq!(plan.band, Some(Rect::new(0.0, 0.0, 90.0, 30.0)));
+
+        // The fold plays the same choreography backwards.
+        m.collapse();
+        let fold = m.mode_transition().unwrap();
+        assert_eq!(fold.change, ExpandableModeChange::Collapse);
+        assert_eq!(*fold, plan.clone().reversed());
+
+        m.select(7);
         assert_eq!(m.keyed_band_rect(), Some(Rect::new(0.0, 31.0, 90.0, 30.0)));
+    }
+
+    #[test]
+    fn ease_in_out_is_the_symmetric_css_curve() {
+        assert_eq!(ease_in_out(0.0), 0.0);
+        assert_eq!(ease_in_out(1.0), 1.0);
+        assert!((ease_in_out(0.5) - 0.5).abs() < 1e-5);
+        // trace: cubic-bezier(0.42, 0, 0.58, 1) is point-symmetric about 0.5.
+        assert!((ease_in_out(0.25) + ease_in_out(0.75) - 1.0).abs() < 1e-5);
+        assert!(ease_in_out(0.25) < 0.25, "slow start");
+        let samples: Vec<f32> = (0..=20).map(|i| ease_in_out(i as f32 / 20.0)).collect();
+        assert!(samples.windows(2).all(|pair| pair[0] <= pair[1]));
+        assert_eq!(ease_in_out(-1.0), 0.0);
+        assert_eq!(ease_in_out(2.0), 1.0);
     }
 
     #[test]
@@ -1447,6 +1767,35 @@ mod tests {
     }
 
     #[test]
+    fn paged_column_transition_keeps_the_chevron_and_folds_the_band_where_it_was() {
+        let metrics = inline_metrics();
+        // trace: 60 → 7 columns, 3 a page; the chevron column at 3w.
+        let mut m = column_model(&metrics, 5.0, 60);
+        let w = m.column_width();
+        m.expand();
+        let chevron_column = Rect::new(3.0 * w, 0.0, 20.0, 278.0);
+        assert_eq!(
+            m.mode_transition().unwrap().chevron,
+            Track::new(m.chevron_rect(), chevron_column, 1.0, 1.0),
+            "pushed into its column, `›` kept for page 1"
+        );
+        // trace: 26 = page 0 column 2; PageUp folds onto row 26 % 9 = 8.
+        m.select(26);
+        assert_eq!(m.navigate(PageUp), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 8);
+        let fold = m.mode_transition().unwrap();
+        assert_eq!(fold.band, Some(Rect::new(2.0 * w, 0.0, w, 278.0)));
+        assert_eq!(fold.band_alpha(0.0), 1.0);
+        assert_eq!(fold.band_alpha(1.0), 0.0);
+        assert_eq!(
+            fold.chevron,
+            Track::new(chevron_column, m.chevron_rect(), 1.0, 1.0)
+        );
+        assert_eq!(m.navigate(Up), None);
+        assert_eq!(m.mode_transition(), None, "a walk changes no mode");
+    }
+
+    #[test]
     fn a_narrow_screen_pages_one_column_at_a_time() {
         let metrics = inline_metrics();
         let w = column_model(&metrics, 5.0, 20).column_width();
@@ -1484,9 +1833,27 @@ mod tests {
         assert_eq!(m.navigate(Down), Some(ExpandableModeChange::Expand));
         assert_eq!(m.selected_index(), 9);
         assert_eq!(m.grid_cell_rect(0), None);
-        let plan = m.unfold_plan();
-        assert!(plan.moves.is_empty());
-        assert_eq!(plan.appearing, (9..18).collect::<Vec<_>>());
+        // Nothing shared to glide: the column fades out in place as page 1
+        // fades in.
+        let plan = m.mode_transition().unwrap();
+        let (collapsed, expanded): (Vec<&CellTrack>, Vec<&CellTrack>) = plan
+            .cells
+            .iter()
+            .partition(|cell| cell.layer == CellLayer::Collapsed);
+        assert_eq!(collapsed.len(), 9);
+        assert!(collapsed
+            .iter()
+            .all(|cell| cell.track.from == cell.track.to && cell.track.to_alpha == 0.0));
+        assert_eq!(
+            expanded
+                .iter()
+                .map(|cell| cell.candidate_index)
+                .collect::<Vec<_>>(),
+            (9..18).collect::<Vec<_>>()
+        );
+        assert!(expanded
+            .iter()
+            .all(|cell| cell.track.from == cell.track.to && cell.track.from_alpha == 0.0));
         assert_eq!(m.navigate(Left), None);
         assert_eq!(m.selected_index(), 0);
         assert_eq!(m.grid().rows[0][0].candidate_index, 0);
@@ -1527,7 +1894,7 @@ mod tests {
     }
 
     #[test]
-    fn collapsed_column_hit_test_and_unfold_plan() {
+    fn collapsed_column_hit_test_and_cross_fade() {
         let metrics = inline_metrics();
         let mut m = column_model(&metrics, 5.0, 20);
         let width = m.collapsed_content_width();
@@ -1543,17 +1910,42 @@ mod tests {
             "the chevron"
         );
         assert_eq!(m.chevron_rect(), Rect::new(width, 0.0, 20.0, 278.0));
-        let plan = m.unfold_plan();
-        assert_eq!(plan.moves.len(), 9);
-        assert_eq!(plan.moves[1].collapsed, Rect::new(0.0, 31.0, width, 30.0));
-        assert_eq!(
-            plan.moves[1].expanded, plan.moves[1].collapsed,
-            "column 0 holds still"
-        );
-        // trace: page rows [0, 9, 18] / [1, 10, 19] / [2, 11] … in display order.
-        assert_eq!(plan.appearing, [9, 18, 10, 19, 11, 12, 13, 14, 15, 16, 17]);
 
         m.expand();
+        let plan = m.mode_transition().unwrap();
+        let row1 = Rect::new(0.0, 31.0, width, 30.0);
+        // Each cell cross-fades between its two drawings; column 0 holds still.
+        assert_eq!(
+            plan.cells[1],
+            CellTrack {
+                candidate_index: 1,
+                layer: CellLayer::Collapsed,
+                track: Track::new(row1, row1, 1.0, 0.0),
+            }
+        );
+        let expanded: Vec<_> = plan.cells[9..].iter().collect();
+        // trace: page rows [0, 9, 18] / [1, 10, 19] / [2, 11] … in display order.
+        assert_eq!(
+            expanded
+                .iter()
+                .map(|cell| cell.candidate_index)
+                .collect::<Vec<_>>(),
+            [0, 9, 18, 1, 10, 19, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 16, 8, 17]
+        );
+        assert!(expanded
+            .iter()
+            .all(|cell| cell.layer == CellLayer::Expanded));
+        assert_eq!(expanded[3].track, Track::new(row1, row1, 0.0, 1.0));
+        // trace: 9 has no collapsed frame → fades in at column 1 row 0.
+        let at_9 = Rect::new(width, 0.0, width, 30.0);
+        assert_eq!(expanded[1].track, Track::new(at_9, at_9, 0.0, 1.0));
+        // trace: one page, no chevron column → pushed to max(3w − 20, w), fading.
+        assert_eq!(
+            plan.chevron.to,
+            Rect::new(3.0 * width - 20.0, 0.0, 20.0, 278.0)
+        );
+        assert_eq!(plan.chevron.to_alpha, 0.0);
+
         // trace: column 1 row 1 → 10; column 2 row 2 → 20, past the list.
         assert_eq!(
             m.hit_test(Point {
