@@ -19,9 +19,7 @@ use std::sync::OnceLock;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
-use taigi_desktop_core::settings::dictionary_search::{
-    DEBOUNCE, VISIBLE_RESULT_LIMIT,
-};
+use taigi_desktop_core::settings::dictionary_search::{DEBOUNCE, VISIBLE_RESULT_LIMIT};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
