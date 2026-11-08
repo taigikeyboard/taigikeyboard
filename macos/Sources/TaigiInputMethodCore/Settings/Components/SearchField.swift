@@ -36,6 +36,24 @@ struct SearchField: NSViewRepresentable {
         if field.stringValue != text {
             field.stringValue = text
         }
+        // A wrapped control does not take SwiftUI's `.controlSize` on its own:
+        // the size and its font are handed over here.
+        let size = Self.appKitSize(context.environment.controlSize)
+        if field.controlSize != size {
+            field.controlSize = size
+            field.font = .systemFont(ofSize: NSFont.systemFontSize(for: size))
+            field.invalidateIntrinsicContentSize()
+        }
+    }
+
+    private static func appKitSize(_ size: ControlSize) -> NSControl.ControlSize {
+        switch size {
+        case .mini: .mini
+        case .small: .small
+        case .regular: .regular
+        case .large, .extraLarge: .large
+        @unknown default: .regular
+        }
     }
 
     /// Width from the row it sits in, height from the control: a search field

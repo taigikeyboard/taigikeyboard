@@ -27,7 +27,10 @@ struct DictionarySearchPanel: View {
             if !model.trimmedQuery.isEmpty {
                 results
             }
+            // The pane's one control at its foot, sized up to stand out, as
+            // mobile's search bar does.
             SearchField(placeholder: language.string(.dictionarySearchPlaceholder), text: $model.query)
+                .controlSize(.large)
         }
         .padding(Metrics.padding)
         .background(.bar)
@@ -61,10 +64,9 @@ struct DictionarySearchPanel: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            // At most five one-line rows (the core's `VISIBLE_RESULT_LIMIT`):
-            // shorter than the other desktops' 200 px scroll cap, so no
-            // scroller. A new query's rows replace the last one's when they
-            // arrive, as on iOS, Windows and Linux.
+            // At most five one-line rows (the core's `VISIBLE_RESULT_LIMIT`),
+            // all at full height, so no scroller. A new query's rows replace
+            // the last one's when they arrive, as on iOS, Windows and Linux.
             VStack(spacing: 0) {
                 ForEach(model.hits, id: \.key) { hit in
                     row(hit)
@@ -135,6 +137,7 @@ struct DictionarySearchPanel: View {
     private enum Metrics {
         static let spacing: CGFloat = 8
         static let padding: CGFloat = 12
-        static let rowInset: CGFloat = 6
+        /// About a 36 pt row, a settings list's row height.
+        static let rowInset: CGFloat = 10
     }
 }
