@@ -103,6 +103,10 @@ class TaigiConverter:
 
     def __init__(self) -> None:
         self._process: subprocess.Popen[str] | None = None
+        # The converter is a pure function of its request, and the pipeline
+        # asks the same syllables and readings hundreds of thousands of times.
+        # Only completed replies are stored; an IPC failure raises before it.
+        self._replies: dict[tuple, dict] = {}
         self._stderr_path = Path("/tmp") / f"taigi_batch.stderr.{id(self)}.log"
         self._stderr_file: TextIO | None = None
 
@@ -141,6 +145,10 @@ class TaigiConverter:
         PR #334 post-impl review #2 caught the original raise that
         only covered the EOF case.
         """
+        key = (op, *sorted(kwargs.items()))
+        cached = self._replies.get(key)
+        if cached is not None:
+            return cached
         self._ensure_started()
         assert self._process is not None and self._process.stdin is not None
         assert self._process.stdout is not None
@@ -158,11 +166,13 @@ class TaigiConverter:
                 "taigi-converter subprocess closed unexpectedly"
             )
         try:
-            return json.loads(line)
+            reply = json.loads(line)
         except json.JSONDecodeError as exc:
             raise BridgeDeadError(
                 f"taigi-converter emitted malformed JSON: {exc} (raw: {line!r})"
             ) from exc
+        self._replies[key] = reply
+        return reply
 
     def convert(self, text: str, source: str, target: str) -> str:
         """Convert between romanization systems (tl, poj)."""

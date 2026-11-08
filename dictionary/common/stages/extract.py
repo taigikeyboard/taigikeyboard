@@ -2,7 +2,7 @@
 
 Dispatches on `input_format`:
 
-- `ods`   (kautian): read all sheets with `engine=odf`; populate `ctx._sheets`.
+- `ods`   (kautian): read all sheets with `engine=calamine`; populate `ctx._sheets`.
                      The `select` stage then pivots columns per-sheet.
 - `json`  (taigitv, kungge): read JSON array, map configured fields to
                               (hanzi, tl). `tl_is_array: true` expands array
@@ -47,7 +47,7 @@ def run(ctx: PipelineContext) -> None:
 
 def _extract_ods(ctx: PipelineContext, path: Path, opts: dict) -> None:
     """kautian — read every sheet, stage them under `ctx._sheets` for `select`."""
-    sheets = pd.read_excel(path, sheet_name=None, engine="odf")
+    sheets = pd.read_excel(path, sheet_name=None, engine="calamine")
     sheets_named = {f"{name}.csv": df for name, df in sheets.items()}
     ctx.logger.info(f"Loaded {len(sheets_named)} sheets from {path.name}")
     for name, df in sheets_named.items():
