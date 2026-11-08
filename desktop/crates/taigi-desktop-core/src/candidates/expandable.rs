@@ -283,8 +283,10 @@ impl ExpandableListModel {
     /// How many columns an unfolded column shows at once at most — a third of
     /// a page, Microsoft Bopomofo's three.
     pub const COLUMNS_PER_PAGE: usize = HorizontalPageLayout::PAGE_SIZE / 3;
-    /// The unfold's duration, for the renderer.
-    pub const ANIMATION_DURATION_SECONDS: f32 = 0.183;
+    /// The unfold's duration, for the renderer: quicker than upstream's
+    /// measured 0.183 s, so the grid never reads as a wait (USER 2026-11-08).
+    /// Twin of macOS `ExpandableCandidatePanel.animationDuration`.
+    pub const ANIMATION_DURATION_SECONDS: f32 = 0.13;
 
     /// Lays out `measured_widths` (one per candidate; capped at
     /// [`MAX_DISPLAY_CANDIDATES`] here) under `geometry`.
