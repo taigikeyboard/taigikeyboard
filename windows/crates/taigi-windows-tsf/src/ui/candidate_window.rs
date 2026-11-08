@@ -957,9 +957,7 @@ impl CandidateWindow {
         match model.mode() {
             ExpandableDisplayMode::Collapsed => {
                 // A column aligns its annotations like the vertical list.
-                let column = model
-                    .collapsed_primary_column_width()
-                    .map(|primary| (primary, metrics.horizontal_padding()));
+                let column = aligned_column(model, ExpandableDisplayMode::Collapsed, metrics);
                 for cell in model.collapsed_cells() {
                     self.draw_cell(
                         target,
@@ -993,9 +991,7 @@ impl CandidateWindow {
                 target.PushAxisAlignedClip(&clip, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
                 let offset = model.scroll_y();
                 // An unfolded column aligns its annotations like the collapsed one.
-                let column = model
-                    .expanded_primary_column_width()
-                    .map(|primary| (primary, metrics.horizontal_padding()));
+                let column = aligned_column(model, ExpandableDisplayMode::Expanded, metrics);
                 if let Some(row) = model.keyed_band_rect() {
                     // The row (or column) the slot keys address, tinted so its
                     // numbers read as a group.
@@ -1098,12 +1094,7 @@ impl CandidateWindow {
         plan: &ModeTransition,
         eased: f32,
     ) {
-        let clip = D2D_RECT_F {
-            left: 0.0,
-            top: 0.0,
-            right: self.size.width,
-            bottom: self.size.height,
-        };
+        let clip = d2d_rect(Rect::new(0.0, 0.0, self.size.width, self.size.height));
         target.PushAxisAlignedClip(&clip, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
         let offset = model.scroll_y();
         let scrolled = |rect: Rect| Rect::new(rect.x, rect.y - offset, rect.width, rect.height);
@@ -1115,22 +1106,14 @@ impl CandidateWindow {
             });
         }
         self.draw_expandable_separators(target, brush, model, offset);
-        let padding = metrics.horizontal_padding();
-        let collapsed = model
-            .collapsed_primary_column_width()
-            .map(|primary| (primary, padding));
-        let expanded = model
-            .expanded_primary_column_width()
-            .map(|primary| (primary, padding));
         for cell in &plan.cells {
             let (rect, alpha) = cell.track.at(eased);
-            let column = match (cell.layer, model.mode()) {
-                (CellLayer::Collapsed, _)
-                | (CellLayer::Shared, ExpandableDisplayMode::Collapsed) => collapsed,
-                (CellLayer::Expanded, _) | (CellLayer::Shared, ExpandableDisplayMode::Expanded) => {
-                    expanded
-                }
+            let mode = match cell.layer {
+                CellLayer::Collapsed => ExpandableDisplayMode::Collapsed,
+                CellLayer::Expanded => ExpandableDisplayMode::Expanded,
+                CellLayer::Shared => model.mode(),
             };
+            let column = aligned_column(model, mode, metrics);
             self.with_opacity(target, layer.as_ref(), alpha, || {
                 self.draw_cell(
                     target,
@@ -1610,6 +1593,20 @@ impl CandidateWindow {
     }
 }
 
+/// The candidate column `mode`'s cells align their annotations on, with the
+/// trailing padding `draw_cell` takes; `None` for a row, whose cells keep
+/// their scripts inline.
+fn aligned_column(
+    model: &ExpandableListModel,
+    mode: ExpandableDisplayMode,
+    metrics: &CandidateMetrics,
+) -> Option<(f32, f32)> {
+    match mode {
+        ExpandableDisplayMode::Collapsed => model.collapsed_primary_column_width(),
+        ExpandableDisplayMode::Expanded => model.expanded_primary_column_width(),
+    }
+    .map(|primary| (primary, metrics.horizontal_padding()))
+}
 fn d2d_rect(rect: Rect) -> D2D_RECT_F {
     D2D_RECT_F {
         left: rect.x,
