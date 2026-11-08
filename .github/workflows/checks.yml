@@ -117,7 +117,7 @@ jobs:
       - name: Install swiftformat ${{ env.SWIFTFORMAT_VERSION }}
         run: |
           set -euo pipefail
-          curl -sSfL -o "$RUNNER_TEMP/swiftformat.zip" \
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/swiftformat.zip" \
             "https://github.com/nicklockwood/SwiftFormat/releases/download/${SWIFTFORMAT_VERSION}/swiftformat_linux.zip"
           echo "${SWIFTFORMAT_SHA256}  $RUNNER_TEMP/swiftformat.zip" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/bin"
@@ -151,7 +151,7 @@ jobs:
       - name: Install protoc ${{ env.PROTOC_JAVA_VERSION }}
         run: |
           set -euo pipefail
-          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/protoc.zip" \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_JAVA_VERSION}/protoc-${PROTOC_JAVA_VERSION}-linux-x86_64.zip"
           echo "${PROTOC_JAVA_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
           unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"

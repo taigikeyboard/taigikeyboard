@@ -68,7 +68,7 @@ jobs:
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
-          curl -sSL -o /tmp/protoc.zip \
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
           sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
           protoc --version
@@ -245,7 +245,7 @@ jobs:
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
-          curl -sSL -o /tmp/protoc.zip \
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
           sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
 
@@ -286,7 +286,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
-          curl -sSL -o /tmp/protoc.zip \
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
           unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
 
@@ -335,7 +335,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
-          curl -sSL -o /tmp/protoc.zip \
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -o /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
           unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
 
