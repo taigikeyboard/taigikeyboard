@@ -331,34 +331,70 @@ pub fn link_group(rows: impl IntoViews) -> View {
 
 /// One row of a `link_group`.
 pub fn link_row(mark: impl Into<View>, title: &str, on_click: Callback<()>) -> View {
-    Button::new()
+    row_button(
+        Grid::new()
+            .columns([GridLength::Auto, GridLength::STAR, GridLength::Auto])
+            .column_spacing(LINK_MARK_GAP)
+            .children((
+                Border::new()
+                    .grid_column(0)
+                    .vertical_alignment(VerticalAlignment::Center)
+                    .content(mark),
+                TextBlock::new()
+                    .text(title)
+                    .vertical_alignment(VerticalAlignment::Center)
+                    .grid_column(1),
+                open_in_new_glyph().grid_column(2),
+            )),
+        title,
+        RowAction::Click(on_click),
+    )
+}
+
+/// What a `row_button` does when clicked.
+pub enum RowAction {
+    Click(Callback<()>),
+    /// Opens the menu under the row — the button's own flyout, so the
+    /// whole row, not a glyph at its end, is what takes the click.
+    Menu(Menu),
+    /// Nothing: the row is shown, disabled.
+    None,
+}
+
+/// A `link_group` row whose whole width is the button and whose content is
+/// the caller's — `link_row`'s shape for any row that acts. `name` is what
+/// a screen reader announces.
+pub fn row_button(content: impl Into<View>, name: &str, action: RowAction) -> View {
+    let button = Button::new()
         .style(ButtonStyle::Subtle)
-        .on_click(on_click)
         .horizontal_alignment(HorizontalAlignment::Stretch)
         .horizontal_content_alignment(HorizontalAlignment::Stretch)
         .min_height(SUB_ROW_MIN_HEIGHT)
-        .automation_name(title)
-        .content(
-            Grid::new()
-                .columns([GridLength::Auto, GridLength::STAR, GridLength::Auto])
-                .column_spacing(LINK_MARK_GAP)
-                .margin(Thickness::xy(LINK_ROW_INSET, 0.0))
-                .children((
-                    Border::new()
-                        .grid_column(0)
-                        .vertical_alignment(VerticalAlignment::Center)
-                        .content(mark),
-                    TextBlock::new()
-                        .text(title)
-                        .vertical_alignment(VerticalAlignment::Center)
-                        .grid_column(1),
-                    FontIcon::new()
-                        .glyph(OPEN_IN_NEW_WINDOW_GLYPH)
-                        .vertical_alignment(VerticalAlignment::Center)
-                        .opacity(0.65)
-                        .grid_column(2),
-                )),
-        )
+        .automation_name(name);
+    let button = match &action {
+        RowAction::Click(on_click) => button.on_click(on_click.clone()),
+        RowAction::Menu(_) => button,
+        RowAction::None => button.is_enabled(false),
+    };
+    let row = button.content(
+        Border::new()
+            .margin(Thickness::xy(LINK_ROW_INSET, 0.0))
+            .content(content),
+    );
+    match action {
+        // `.menu` goes on the Button itself: the reactor attaches a menu
+        // only to a Button's flyout (`StructureUnsupported` otherwise).
+        RowAction::Menu(menu) => row.menu(menu),
+        RowAction::Click(_) | RowAction::None => row,
+    }
+}
+
+/// The leave-the-app glyph at a link row's right, in the secondary weight.
+pub fn open_in_new_glyph() -> FontIcon {
+    FontIcon::new()
+        .glyph(OPEN_IN_NEW_WINDOW_GLYPH)
+        .vertical_alignment(VerticalAlignment::Center)
+        .opacity(0.65)
 }
 
 /// A section's title with a count at the line's right (`{matched} / {total}`).

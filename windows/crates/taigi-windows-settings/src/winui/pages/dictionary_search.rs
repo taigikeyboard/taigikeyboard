@@ -22,7 +22,6 @@ use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 const ROW_GAP: f64 = 8.0;
-const LOOKUP_GLYPH: &str = "\u{E8A7}";
 const SECONDARY_OPACITY: f64 = 0.65;
 const BADGE_GAP: f64 = 4.0;
 
@@ -215,18 +214,15 @@ pub fn view(
         let hits = ScrollViewer::new()
             .vertical_scroll_bar_visibility(ScrollBarVisibility::Auto)
             .max_height(f64::from(RESULTS_MAX_HEIGHT))
-            .content(
-                StackPanel::new()
-                    .spacing(cards::CARD_SPACING)
-                    .children([View::keyed_fragment(
-                        model
-                            .results
-                            .iter()
-                            .take(VISIBLE_RESULT_LIMIT)
-                            .map(|result| (result.key(), result_row(result, strings, context)))
-                            .collect::<Vec<_>>(),
-                    )]),
-            );
+            // One card of rows, as mobile lists its hits.
+            .content(cards::link_group([View::keyed_fragment(
+                model
+                    .results
+                    .iter()
+                    .take(VISIBLE_RESULT_LIMIT)
+                    .map(|result| result_row(result, strings, context))
+                    .collect::<Vec<_>>(),
+            )]));
         ("hits", hits)
     };
     StackPanel::new().spacing(ROW_GAP).children((
@@ -241,18 +237,15 @@ pub fn view(
     ))
 }
 
+/// One hit as a whole-row button, keyed: the row and its lookup menu (as
+/// mobile opens its lookups from a tap anywhere on the row). The key carries
+/// whether the row has a menu, so a row that changed shape is replaced,
+/// never retyped in place.
 fn result_row(
     result: &DictionarySearchResult,
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
-) -> View {
-    let badges = View::keyed_fragment(
-        result
-            .badge_keys()
-            .into_iter()
-            .map(|key| (format!("{key:?}"), cards::badge(strings.resolve(key))))
-            .collect::<Vec<_>>(),
-    );
+) -> (String, View) {
     // The URLs travel WITH the callback, not an index into a list a
     // background completion may have replaced by the time the menu is
     // used.
@@ -271,46 +264,69 @@ fn result_row(
             strings.resolve(StringKey::DictionaryLookupChhoe),
         ));
     }
-    let lookup = if items.is_empty() {
+    let badge_labels: Vec<&str> = result
+        .badge_keys()
+        .into_iter()
+        .map(|key| strings.resolve(key))
+        .collect();
+    let badges = View::keyed_fragment(
+        badge_labels
+            .iter()
+            .map(|label| (*label, cards::badge(label)))
+            .collect::<Vec<_>>(),
+    );
+    // What a screen reader announces: the word, then its sources.
+    let name = [result.roman.as_str()]
+        .into_iter()
+        .chain(result.hanji.as_deref())
+        .chain(badge_labels.iter().copied())
+        .collect::<Vec<_>>()
+        .join(" ");
+    // The leave-the-app mark only on a row that opens something.
+    let glyph = if items.is_empty() {
         View::empty()
     } else {
-        Button::new()
-            .content(FontIcon::new().glyph(LOOKUP_GLYPH))
-            .menu(Menu::new(
-                items,
-                context.callback(move |item: String| {
-                    let url = if item == MOE_ITEM { &moe } else { &chhoe };
-                    // A menu item that silently does nothing reads as a
-                    // broken one; an empty URL is one no item offered.
-                    WindowMessage::OpenUrl(url.clone().unwrap_or_default())
-                }),
-            ))
+        cards::open_in_new_glyph().grid_column(2).into()
     };
-    cards::frame(
-        Grid::new()
-            .columns([GridLength::Auto, GridLength::STAR, GridLength::Auto])
-            .column_spacing(ROW_GAP)
-            .children((
-                StackPanel::new()
-                    .orientation(Orientation::Horizontal)
-                    .spacing(ROW_GAP)
-                    .vertical_alignment(VerticalAlignment::Center)
-                    .grid_column(0)
-                    .children((
-                        // Full strength, as iOS and Android draw it.
-                        TextBlock::new().text(result.roman.clone()),
-                        TextBlock::new().text_optional(result.hanji.clone()),
-                    )),
-                StackPanel::new()
-                    .orientation(Orientation::Horizontal)
-                    .spacing(BADGE_GAP)
-                    .vertical_alignment(VerticalAlignment::Center)
-                    .grid_column(1)
-                    .children([badges]),
-                Border::new()
-                    .grid_column(2)
-                    .vertical_alignment(VerticalAlignment::Center)
-                    .content(lookup),
-            )),
+    let content = Grid::new()
+        .columns([GridLength::Auto, GridLength::STAR, GridLength::Auto])
+        .column_spacing(ROW_GAP)
+        .children((
+            StackPanel::new()
+                .orientation(Orientation::Horizontal)
+                .spacing(ROW_GAP)
+                .vertical_alignment(VerticalAlignment::Center)
+                .grid_column(0)
+                .children((
+                    // Full strength, as iOS and Android draw it.
+                    TextBlock::new().text(result.roman.clone()),
+                    TextBlock::new().text_optional(result.hanji.clone()),
+                )),
+            StackPanel::new()
+                .orientation(Orientation::Horizontal)
+                .spacing(BADGE_GAP)
+                .vertical_alignment(VerticalAlignment::Center)
+                .grid_column(1)
+                .children([badges]),
+            glyph,
+        ));
+    let (shape, action) = if items.is_empty() {
+        // A reading that makes no URL: the row, with nothing to open.
+        ("plain", cards::RowAction::None)
+    } else {
+        let menu = Menu::new(
+            items,
+            context.callback(move |item: String| {
+                let url = if item == MOE_ITEM { &moe } else { &chhoe };
+                // A menu item that silently does nothing reads as a
+                // broken one; an empty URL is one no item offered.
+                WindowMessage::OpenUrl(url.clone().unwrap_or_default())
+            }),
+        );
+        ("menu", cards::RowAction::Menu(menu))
+    };
+    (
+        format!("{}:{shape}", result.key()),
+        cards::row_button(content, &name, action),
     )
 }
