@@ -35,9 +35,21 @@ Work order = row order. One round per row; a bug row starts with a repro (`AGENT
 | 7 | Custom layouts: user-editable long-press callouts (half-width symbols on half-width `,` `.`; `{ }` on `( )`) | feature | iOS, Android | Done #577, #579: long-press lists editable per key. #691 adds the second symbol page to the board (`{` `«` `€` `→`; `{` types `｛` under full-width punctuation) and dims tray characters a selected key cannot take. Dogfood S133 |
 | 8 | Custom layouts are not separated by TL / POJ, so picking one when switching romanization is hard | feature | iOS, Android | Done #666: Tâi-lô and Pe̍h-ōe-jī each remember their own layout (built-in or custom), switching scripts brings it back; Save picks where a custom layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī dropdown). Dogfood S130 |
 | 9 | `c` types `ch` / `ts` (toggle); desktop Hanji → romanization reverse lookup | feature | desktop | Decision: toggle vs. losing a selection key; reverse lookup scope |
-| 10 | TPS requests: confirm key commits TPS symbols; desktop TPS layout (awaiting reporter: where ㄝ goes); mobile TPS layout; ↓ selection side; custom-dictionary ↓ pick; tone-8 `˙` placement vs. converter | feature (6 parts) | desktop, mobile | Split into separate items, then decide |
+| 10 | TPS requests (6 parts) | feature | desktop, mobile | Split 2026-11-08, maintainer approved the recommended arms — see § Row 10 below |
 | 11 | Neutral-tone candidates for 起來 / 起去 / 一下 / ah | feature | engine | Needs input → expected-output examples |
 | 12 | Dialectal D spellings for L / J readings | feature | engine | Maintainer call; phonetics rules need an authoritative source (`docs/contributing/phonetics.md`) |
+
+#### Row 10 — TPS requests (Discord 1561728886658830456, maintainer 2026-11-08 「依據使用者建議+你的建議處理」)
+
+One PR per part, in this order. The mobile layout (reporter's second image) is a separate mobile round, not scheduled here.
+
+| Part | Today (`file:line`) | Change | Status |
+|---|---|---|---|
+| 10a Window off = glyph mode | `desktop-core/src/engine/bridge.rs` asks for the Hanji conversion under TPS whatever Show Candidate Window says; with the window off ↓ commits Hanji (`keys/intent.rs` `tps_window_key`) | No conversion while the window is off, so Enter writes the glyphs — as TL / POJ write the romanization with the window off (S33) | Pending |
+| 10b Tone-8 dot | Keyboards type U+02D9 (`keys/tps_layout.rs` `7`, mobile too); the converter writes U+0307 over a stop coda (`engine/phonetics/src/tps.rs` `ZHUYIN_TONES`) | The engine stores U+0307 for a tone-8 dot typed right after ㆴ ㆵ ㆻ ㆷ (all platforms) | Pending |
+| 10c Desktop layout | `keys/tps_layout.rs` `KEYS` | Reporter's first image: `m` ㆨ, `.` / `>` ㆦ / ㆧ, `/` / `?` ㄥ / ㆭ, `-` / `_` ㆲ / ㆱ, Shift+`p` ㆬ, stop codas `t` ㆴ `g` ㆵ `b` ㆻ; the hyphen moves to `=`. Dachen-shared keys unchanged | Pending |
+| 10d ↓ lists the word before the caret | After a pick, a caret at the tail's start lists the next word (H-P5 accepted boundary, `engine/composing/src/conversion.rs` `anchor`) | ↓ at the tail's start re-opens the last nailed word, as ← there does — the list is always the word before the caret | Pending |
+| 10e Custom words in the walk | The TPS walk passes no custom rows (`conversion.rs` `convert`, `custom: &[]`), so 陳三 shows as 陳相 and lists only from 陳 | Custom-dictionary words become walk edges, as they rank in TL / POJ | Pending |
 
 ---
 
