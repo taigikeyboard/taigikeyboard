@@ -88,23 +88,23 @@ def _run_generate(ctx: PipelineContext, variants_path: Path) -> None:
 
 
 def _run_mark(ctx: PipelineContext, variants_path: Path) -> None:
-    variant_entries = _load_variant_entries(ctx, variants_path)
+    variant_entries = set(_load_variant_entries(ctx, variants_path))
+    variant_lengths = sorted({len(word) for word, _ in variant_entries})
     df = ctx.current_df().copy()
     ctx.logger.info(f"Loaded dictionary: {len(df)} records")
 
+    # Probe each window of `hanzi` against the entry set instead of scanning
+    # every entry per row: hanzi is a few characters, the entry list is
+    # thousands long.
     def check_is_variant(row) -> bool:
         hanzi = str(row["hanzi"]).strip()
         tl = str(row["tl"]).strip().lower()
         syllables = tl.replace("--", "-").split("-")
-        for variant_word, variant_syllables in variant_entries:
-            variant_len = len(variant_word)
-            idx = hanzi.find(variant_word)
-            while idx != -1:
+        for variant_len in variant_lengths:
+            for idx in range(min(len(hanzi), len(syllables)) - variant_len + 1):
                 end_idx = idx + variant_len
-                if end_idx <= len(syllables):
-                    if tuple(syllables[idx:end_idx]) == variant_syllables:
-                        return True
-                idx = hanzi.find(variant_word, idx + 1)
+                if (hanzi[idx:end_idx], tuple(syllables[idx:end_idx])) in variant_entries:
+                    return True
         return False
 
     df["is_variant"] = df.apply(check_is_variant, axis=1)
