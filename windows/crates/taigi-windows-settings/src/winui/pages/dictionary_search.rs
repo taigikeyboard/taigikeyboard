@@ -235,17 +235,11 @@ fn result_row(
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
-    // One badge per distinct word: the three supplements share one.
-    let mut seen = Vec::new();
-    for source in &result.sources {
-        let key = source.badge_key();
-        if !seen.contains(&key) {
-            seen.push(key);
-        }
-    }
     let badges = View::keyed_fragment(
-        seen.iter()
-            .map(|key| (format!("{key:?}"), cards::badge(strings.resolve(*key))))
+        result
+            .badge_keys()
+            .into_iter()
+            .map(|key| (format!("{key:?}"), cards::badge(strings.resolve(key))))
             .collect::<Vec<_>>(),
     );
     // The URLs travel WITH the callback, not an index into a list a

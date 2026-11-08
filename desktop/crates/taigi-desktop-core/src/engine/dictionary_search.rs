@@ -9,6 +9,7 @@ use super::{
     tl_to_poj, DictionarySource, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
 use crate::settings::{keys, InputMode, SettingsDocument};
+use crate::strings::StringKey;
 
 /// `DictionarySearchService.resultLimit`.
 const RESULT_LIMIT: u32 = 20;
@@ -47,6 +48,19 @@ impl DictionarySearchResult {
 
     pub fn chhoe_url(&self) -> Option<String> {
         self.lookup_tl.as_deref().and_then(chhoe_url)
+    }
+
+    /// The badges the row wears, one per distinct word in `sources` order:
+    /// the three supplements share one (`DictionarySource::badge_key`).
+    pub fn badge_keys(&self) -> Vec<StringKey> {
+        let mut keys = Vec::new();
+        for source in &self.sources {
+            let key = source.badge_key();
+            if !keys.contains(&key) {
+                keys.push(key);
+            }
+        }
+        keys
     }
 }
 
@@ -128,4 +142,35 @@ fn custom_results(
             sources: vec![DictionarySource::Custom],
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn badge_keys_dedup_by_word_in_source_order() {
+        // trace: Khpoo / Khiin / Dev all badge as DictionarySupplementSectionTitle
+        // (`DictionarySource::badge_key`), so three supplements read once,
+        // where the first of them stood.
+        let result = DictionarySearchResult {
+            id: ResultId::System(1),
+            roman: "tsia̍h".to_owned(),
+            lookup_tl: Some("tsia̍h".to_owned()),
+            hanji: Some("食".to_owned()),
+            sources: vec![
+                DictionarySource::Khpoo,
+                DictionarySource::Kautian,
+                DictionarySource::Khiin,
+                DictionarySource::Dev,
+            ],
+        };
+        assert_eq!(
+            result.badge_keys(),
+            [
+                StringKey::DictionarySupplementSectionTitle,
+                StringKey::DictionaryKautianTag
+            ]
+        );
+    }
 }

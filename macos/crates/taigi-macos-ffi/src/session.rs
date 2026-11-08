@@ -1996,4 +1996,42 @@ mod tests {
             }
         });
     }
+
+    /// rust-ffi-safety.md §6 T3: the Manage Dictionaries search, sent from
+    /// the settings pane's background task, runs beside the key path — no
+    /// Shell lock of its own, the engine's per-request locks ordering the
+    /// two — and both answer.
+    #[test]
+    fn a_dictionary_search_runs_beside_the_key_path() {
+        use crate::proto::DictionarySearchRequest;
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        let snapshot = SettingsSnapshot {
+            entries: vec![text("inputMode", "tl")],
+        };
+        std::thread::scope(|scope| {
+            let searches: Vec<_> = (0..4)
+                .map(|_| {
+                    scope.spawn(|| {
+                        shell.serve(
+                            Request::DictionarySearch(DictionarySearchRequest {
+                                query: "tsiah".to_owned(),
+                            }),
+                            Some(&snapshot),
+                        )
+                    })
+                })
+                .collect();
+            for character in ["t", "s", "i", "a", "h"] {
+                assert!(typist.key(typed(character), no_list()).handled);
+            }
+            for search in searches {
+                let reply = search.join().expect("no panic escapes");
+                assert!(
+                    matches!(&reply, Ok(Reply::DictionarySearch(found)) if !found.hits.is_empty()),
+                    "{reply:?}"
+                );
+            }
+        });
+    }
 }

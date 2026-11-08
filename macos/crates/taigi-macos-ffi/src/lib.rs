@@ -7,8 +7,9 @@
 //! bytes out — protobuf envelopes, no handle crosses, no `unsafe` here
 //! (docs/contributing/rust-ffi-safety.md §1.1). The shell's requests reach
 //! the `taigi-desktop-core` runtime (`runtime.rs`), the composing session
-//! (`session.rs`, with `key_translation.rs`) and the key-path settings
-//! snapshot each request may carry (`settings.rs`).
+//! (`session.rs`, with `key_translation.rs`), the key rules (`key_rules.rs`),
+//! the Manage Dictionaries search (`dictionary_search.rs`) and the key-path
+//! settings snapshot each request may carry (`settings.rs`).
 
 // Links the engine seam into this archive. Nothing here calls into it; without
 // the `extern crate` rustc would not link an rlib this crate never names, and
@@ -17,6 +18,7 @@ extern crate rust_taigi;
 
 #[cfg(test)]
 mod chord_rules;
+mod dictionary_search;
 mod key_rules;
 mod key_translation;
 mod runtime;

@@ -19,13 +19,13 @@ use taigi_desktop_core::composing::SystemClock;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 
-use crate::key_rules;
 use crate::proto::{
     desktop_request, desktop_response, ConfigureReply, ConfigureRequest, LexiconStats,
     PrepareReply, SettingsSnapshot, VersionReply,
 };
 use crate::session::Session;
 use crate::settings::{self, SnapshotSettings};
+use crate::{dictionary_search, key_rules};
 
 /// Which desktop this is: every desktop-core rule that differs per desktop
 /// is handed it (roadmap D6) — the `DELETE` user-data journal, the Mac
@@ -71,6 +71,13 @@ impl Shell {
     ) -> Result<desktop_response::Reply, Refusal> {
         if let Some(answer) = key_rules::answer(&request, snapshot) {
             return answer;
+        }
+        // Before the session lock: a search may come from a background
+        // thread while the key path runs (`dictionary_search.rs`).
+        if let desktop_request::Request::DictionarySearch(search) = &request {
+            self.runtime()?;
+            return dictionary_search::answer(search, snapshot)
+                .map(desktop_response::Reply::DictionarySearch);
         }
         let mut session = self.lock_session();
         let previous = snapshot
@@ -126,8 +133,10 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
-            // Answered by `key_rules::answer` before the session is locked.
-            Request::Press(_)
+            // Answered by `key_rules::answer` or `dictionary_search::answer`
+            // before the session is locked.
+            Request::DictionarySearch(_)
+            | Request::Press(_)
             | Request::Chord(_)
             | Request::ComposingShortcuts(_)
             | Request::SymbolPickerKey(_)
@@ -306,6 +315,49 @@ mod tests {
             InputMode::DEFAULT,
             "a removed key reads as its default"
         );
+    }
+
+    /// The dictionary search (#792) is refused before Configure and without
+    /// a snapshot, and — answered or refused — leaves the snapshot the key
+    /// path reads as it was. trace: no dictionaries directory, so the
+    /// engine has no lexicon and the answer is empty; the snapshot path is
+    /// what is under test.
+    #[test]
+    fn the_dictionary_search_never_puts_its_snapshot_in_force() {
+        use crate::proto::DictionarySearchRequest;
+        // The search reaches the process's one engine.
+        let _engine = crate::test_support::engine_lock();
+        let search = || {
+            desktop_request::Request::DictionarySearch(DictionarySearchRequest {
+                query: "tsiah".to_owned(),
+            })
+        };
+        let tl = snapshot(vec![text("inputMode", "tl")]);
+        let shell = Shell::default();
+        assert_eq!(
+            shell.serve(search(), Some(&tl)),
+            Err(Refusal::NotConfigured)
+        );
+        shell
+            .serve(
+                desktop_request::Request::Configure(configure_request(None, None)),
+                Some(&snapshot(vec![text("inputMode", "poj")])),
+            )
+            .unwrap();
+        assert_eq!(
+            shell.serve(search(), None),
+            Err(Refusal::Missing("settings"))
+        );
+        let refused = snapshot(vec![text("notASetting", "")]);
+        assert!(matches!(
+            shell.serve(search(), Some(&refused)),
+            Err(Refusal::Settings(_))
+        ));
+        assert!(matches!(
+            shell.serve(search(), Some(&tl)),
+            Ok(desktop_response::Reply::DictionarySearch(_))
+        ));
+        assert_eq!(input_mode(&shell), InputMode::Poj, "the key path's stays");
     }
 
     /// The key rules (P14) are answered before Configure, under the snapshot
