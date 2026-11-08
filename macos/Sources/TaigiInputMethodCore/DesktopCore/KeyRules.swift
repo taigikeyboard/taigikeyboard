@@ -178,7 +178,6 @@ enum KeyRules {
         }
         return value
     }
-
 }
 
 extension ComposingShortcuts {

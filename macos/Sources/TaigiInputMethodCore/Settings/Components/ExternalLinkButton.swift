@@ -101,7 +101,11 @@ private struct OpenURLFailureAlert: ViewModifier {
     func body(content: Content) -> some View {
         content.alert(
             language.string(.desktopOpenURLFailed),
-            isPresented: Binding(get: { failedLink != nil }, set: { if !$0 { failedLink = nil } }),
+            isPresented: Binding(get: { failedLink != nil }, set: {
+                if !$0 {
+                    failedLink = nil
+                }
+            }),
         ) {
             Button(language.string(.commonOk)) {}
         } message: {
