@@ -20,4 +20,59 @@ public interface AddLearningRecordToCustomDictionaryOrBuilder extends
    * @return The record.
    */
   com.siansiansu.taigikeyboard.engine.proto.LearningRecord getRecord();
+
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @return Whether the roman field is set.
+   */
+  boolean hasRoman();
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @return The roman.
+   */
+  java.lang.String getRoman();
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @return The bytes for roman.
+   */
+  com.google.protobuf.ByteString
+      getRomanBytes();
+
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @return Whether the hanji field is set.
+   */
+  boolean hasHanji();
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @return The hanji.
+   */
+  java.lang.String getHanji();
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @return The bytes for hanji.
+   */
+  com.google.protobuf.ByteString
+      getHanjiBytes();
 }

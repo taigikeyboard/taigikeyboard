@@ -7,8 +7,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Adds one row's word to the custom dictionary (roman = `record.tl`,
- * hanji = `record.text`) unless the dictionary already holds that word —
+ * Adds one row's word to the custom dictionary (roman = `roman`, else
+ * `record.tl`; hanji = `hanji`, else `record.text`) unless the dictionary
+ * already holds that word —
  * the same Hanji with the same canonical TL, however its roman is spelled.
  * What happens to the row after depends on its kind:
  * - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
@@ -16,10 +17,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * phrase from then on, as the learned phrase did, so nothing is lost;
  * - a word-frequency row stays as it is: it keeps weighting the word it
  * counts.
- * Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
- * derives no search key), and a refused add keeps the row. A row whose
- * `can_add_to_custom_dictionary` the engine would answer false (an
- * association, or no Hanji) is `FAIL_INVARIANT`.
+ * Refused as `SaveCustomEntry` is (EMPTY_ROMAN, FULL, or UNSEARCHABLE for
+ * a roman that derives no search key), and a refused add keeps the row. A
+ * row whose `can_add_to_custom_dictionary` the engine would answer false
+ * (an association, or no Hanji) is `FAIL_INVARIANT` — decided from the
+ * row's own text, whatever the edited word is.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AddLearningRecordToCustomDictionary}
@@ -31,6 +33,8 @@ public  final class AddLearningRecordToCustomDictionary extends
     // @@protoc_insertion_point(message_implements:taigi.engine.AddLearningRecordToCustomDictionary)
     AddLearningRecordToCustomDictionaryOrBuilder {
   private AddLearningRecordToCustomDictionary() {
+    roman_ = "";
+    hanji_ = "";
   }
   private int bitField0_;
   public static final int RECORD_FIELD_NUMBER = 1;
@@ -78,6 +82,158 @@ public  final class AddLearningRecordToCustomDictionary extends
   private void clearRecord() {
     record_ = null;
     bitField0_ = (bitField0_ & ~0x00000001);
+  }
+
+  public static final int ROMAN_FIELD_NUMBER = 2;
+  private java.lang.String roman_;
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @return Whether the roman field is set.
+   */
+  @java.lang.Override
+  public boolean hasRoman() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @return The roman.
+   */
+  @java.lang.Override
+  public java.lang.String getRoman() {
+    return roman_;
+  }
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @return The bytes for roman.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRomanBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(roman_);
+  }
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @param value The roman to set.
+   */
+  private void setRoman(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    bitField0_ |= 0x00000002;
+    roman_ = value;
+  }
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   */
+  private void clearRoman() {
+    bitField0_ = (bitField0_ & ~0x00000002);
+    roman_ = getDefaultInstance().getRoman();
+  }
+  /**
+   * <pre>
+   * The word as the user edited it in the Add Word sheet the action opens
+   * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+   * word). Absent = the record's own `tl` / `text`, so an older sender
+   * files the row as it is.
+   * </pre>
+   *
+   * <code>optional string roman = 2;</code>
+   * @param value The bytes for roman to set.
+   */
+  private void setRomanBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    roman_ = value.toStringUtf8();
+    bitField0_ |= 0x00000002;
+  }
+
+  public static final int HANJI_FIELD_NUMBER = 3;
+  private java.lang.String hanji_;
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @return Whether the hanji field is set.
+   */
+  @java.lang.Override
+  public boolean hasHanji() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @return The hanji.
+   */
+  @java.lang.Override
+  public java.lang.String getHanji() {
+    return hanji_;
+  }
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @return The bytes for hanji.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getHanjiBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(hanji_);
+  }
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @param value The hanji to set.
+   */
+  private void setHanji(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    bitField0_ |= 0x00000004;
+    hanji_ = value;
+  }
+  /**
+   * <code>optional string hanji = 3;</code>
+   */
+  private void clearHanji() {
+    bitField0_ = (bitField0_ & ~0x00000004);
+    hanji_ = getDefaultInstance().getHanji();
+  }
+  /**
+   * <code>optional string hanji = 3;</code>
+   * @param value The bytes for hanji to set.
+   */
+  private void setHanjiBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    hanji_ = value.toStringUtf8();
+    bitField0_ |= 0x00000004;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary parseFrom(
@@ -165,8 +321,9 @@ public  final class AddLearningRecordToCustomDictionary extends
 
   /**
    * <pre>
-   * Adds one row's word to the custom dictionary (roman = `record.tl`,
-   * hanji = `record.text`) unless the dictionary already holds that word —
+   * Adds one row's word to the custom dictionary (roman = `roman`, else
+   * `record.tl`; hanji = `hanji`, else `record.text`) unless the dictionary
+   * already holds that word —
    * the same Hanji with the same canonical TL, however its roman is spelled.
    * What happens to the row after depends on its kind:
    * - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
@@ -174,10 +331,11 @@ public  final class AddLearningRecordToCustomDictionary extends
    * phrase from then on, as the learned phrase did, so nothing is lost;
    * - a word-frequency row stays as it is: it keeps weighting the word it
    * counts.
-   * Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
-   * derives no search key), and a refused add keeps the row. A row whose
-   * `can_add_to_custom_dictionary` the engine would answer false (an
-   * association, or no Hanji) is `FAIL_INVARIANT`.
+   * Refused as `SaveCustomEntry` is (EMPTY_ROMAN, FULL, or UNSEARCHABLE for
+   * a roman that derives no search key), and a refused add keeps the row. A
+   * row whose `can_add_to_custom_dictionary` the engine would answer false
+   * (an association, or no Hanji) is `FAIL_INVARIANT` — decided from the
+   * row's own text, whatever the edited word is.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AddLearningRecordToCustomDictionary}
@@ -240,6 +398,162 @@ public  final class AddLearningRecordToCustomDictionary extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The word as the user edited it in the Add Word sheet the action opens
+     * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+     * word). Absent = the record's own `tl` / `text`, so an older sender
+     * files the row as it is.
+     * </pre>
+     *
+     * <code>optional string roman = 2;</code>
+     * @return Whether the roman field is set.
+     */
+    @java.lang.Override
+    public boolean hasRoman() {
+      return instance.hasRoman();
+    }
+    /**
+     * <pre>
+     * The word as the user edited it in the Add Word sheet the action opens
+     * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+     * word). Absent = the record's own `tl` / `text`, so an older sender
+     * files the row as it is.
+     * </pre>
+     *
+     * <code>optional string roman = 2;</code>
+     * @return The roman.
+     */
+    @java.lang.Override
+    public java.lang.String getRoman() {
+      return instance.getRoman();
+    }
+    /**
+     * <pre>
+     * The word as the user edited it in the Add Word sheet the action opens
+     * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+     * word). Absent = the record's own `tl` / `text`, so an older sender
+     * files the row as it is.
+     * </pre>
+     *
+     * <code>optional string roman = 2;</code>
+     * @return The bytes for roman.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getRomanBytes() {
+      return instance.getRomanBytes();
+    }
+    /**
+     * <pre>
+     * The word as the user edited it in the Add Word sheet the action opens
+     * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+     * word). Absent = the record's own `tl` / `text`, so an older sender
+     * files the row as it is.
+     * </pre>
+     *
+     * <code>optional string roman = 2;</code>
+     * @param value The roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoman(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setRoman(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The word as the user edited it in the Add Word sheet the action opens
+     * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+     * word). Absent = the record's own `tl` / `text`, so an older sender
+     * files the row as it is.
+     * </pre>
+     *
+     * <code>optional string roman = 2;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRoman() {
+      copyOnWrite();
+      instance.clearRoman();
+      return this;
+    }
+    /**
+     * <pre>
+     * The word as the user edited it in the Add Word sheet the action opens
+     * (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+     * word). Absent = the record's own `tl` / `text`, so an older sender
+     * files the row as it is.
+     * </pre>
+     *
+     * <code>optional string roman = 2;</code>
+     * @param value The bytes for roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRomanBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setRomanBytes(value);
+      return this;
+    }
+
+    /**
+     * <code>optional string hanji = 3;</code>
+     * @return Whether the hanji field is set.
+     */
+    @java.lang.Override
+    public boolean hasHanji() {
+      return instance.hasHanji();
+    }
+    /**
+     * <code>optional string hanji = 3;</code>
+     * @return The hanji.
+     */
+    @java.lang.Override
+    public java.lang.String getHanji() {
+      return instance.getHanji();
+    }
+    /**
+     * <code>optional string hanji = 3;</code>
+     * @return The bytes for hanji.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getHanjiBytes() {
+      return instance.getHanjiBytes();
+    }
+    /**
+     * <code>optional string hanji = 3;</code>
+     * @param value The hanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHanji(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setHanji(value);
+      return this;
+    }
+    /**
+     * <code>optional string hanji = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHanji() {
+      copyOnWrite();
+      instance.clearHanji();
+      return this;
+    }
+    /**
+     * <code>optional string hanji = 3;</code>
+     * @param value The bytes for hanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHanjiBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setHanjiBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AddLearningRecordToCustomDictionary)
   }
   @java.lang.Override
@@ -258,9 +572,12 @@ public  final class AddLearningRecordToCustomDictionary extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "bitField0_",
             "record_",
+            "roman_",
+            "hanji_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0001\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u1009\u0000";
+              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u1009\u0000\u0002" +
+              "\u1208\u0001\u0003\u1208\u0002";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

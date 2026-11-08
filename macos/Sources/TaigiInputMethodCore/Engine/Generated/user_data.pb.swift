@@ -1127,8 +1127,9 @@ public nonisolated struct Taigi_Engine_LearningRecordDeleted: Sendable {
   public init() {}
 }
 
-/// Adds one row's word to the custom dictionary (roman = `record.tl`,
-/// hanji = `record.text`) unless the dictionary already holds that word —
+/// Adds one row's word to the custom dictionary (roman = `roman`, else
+/// `record.tl`; hanji = `hanji`, else `record.text`) unless the dictionary
+/// already holds that word —
 /// the same Hanji with the same canonical TL, however its roman is spelled.
 /// What happens to the row after depends on its kind:
 /// - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
@@ -1136,10 +1137,11 @@ public nonisolated struct Taigi_Engine_LearningRecordDeleted: Sendable {
 ///   phrase from then on, as the learned phrase did, so nothing is lost;
 /// - a word-frequency row stays as it is: it keeps weighting the word it
 ///   counts.
-/// Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
-/// derives no search key), and a refused add keeps the row. A row whose
-/// `can_add_to_custom_dictionary` the engine would answer false (an
-/// association, or no Hanji) is `FAIL_INVARIANT`.
+/// Refused as `SaveCustomEntry` is (EMPTY_ROMAN, FULL, or UNSEARCHABLE for
+/// a roman that derives no search key), and a refused add keeps the row. A
+/// row whose `can_add_to_custom_dictionary` the engine would answer false
+/// (an association, or no Hanji) is `FAIL_INVARIANT` — decided from the
+/// row's own text, whatever the edited word is.
 public nonisolated struct Taigi_Engine_AddLearningRecordToCustomDictionary: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1154,11 +1156,35 @@ public nonisolated struct Taigi_Engine_AddLearningRecordToCustomDictionary: Send
   /// Clears the value of `record`. Subsequent reads from it will return its default value.
   public mutating func clearRecord() {self._record = nil}
 
+  /// The word as the user edited it in the Add Word sheet the action opens
+  /// (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+  /// word). Absent = the record's own `tl` / `text`, so an older sender
+  /// files the row as it is.
+  public var roman: String {
+    get {_roman ?? String()}
+    set {_roman = newValue}
+  }
+  /// Returns true if `roman` has been explicitly set.
+  public var hasRoman: Bool {self._roman != nil}
+  /// Clears the value of `roman`. Subsequent reads from it will return its default value.
+  public mutating func clearRoman() {self._roman = nil}
+
+  public var hanji: String {
+    get {_hanji ?? String()}
+    set {_hanji = newValue}
+  }
+  /// Returns true if `hanji` has been explicitly set.
+  public var hasHanji: Bool {self._hanji != nil}
+  /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
+  public mutating func clearHanji() {self._hanji = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _record: Taigi_Engine_LearningRecord? = nil
+  fileprivate var _roman: String? = nil
+  fileprivate var _hanji: String? = nil
 }
 
 public nonisolated struct Taigi_Engine_LearningRecordAddedToCustomDictionary: Sendable {
@@ -2870,7 +2896,7 @@ nonisolated extension Taigi_Engine_LearningRecordDeleted: SwiftProtobuf.Message,
 
 nonisolated extension Taigi_Engine_AddLearningRecordToCustomDictionary: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AddLearningRecordToCustomDictionary"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}record\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}record\0\u{1}roman\0\u{1}hanji\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2879,6 +2905,8 @@ nonisolated extension Taigi_Engine_AddLearningRecordToCustomDictionary: SwiftPro
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._record) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._roman) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
       default: break
       }
     }
@@ -2892,11 +2920,19 @@ nonisolated extension Taigi_Engine_AddLearningRecordToCustomDictionary: SwiftPro
     try { if let v = self._record {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    try { if let v = self._roman {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try { if let v = self._hanji {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_AddLearningRecordToCustomDictionary, rhs: Taigi_Engine_AddLearningRecordToCustomDictionary) -> Bool {
     if lhs._record != rhs._record {return false}
+    if lhs._roman != rhs._roman {return false}
+    if lhs._hanji != rhs._hanji {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

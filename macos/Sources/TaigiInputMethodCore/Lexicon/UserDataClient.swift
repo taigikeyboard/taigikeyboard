@@ -76,12 +76,17 @@ protocol UserDataClient: Sendable {
     func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool
     /// False when the row is gone, as for `setLearningRecordCount`.
     func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool
-    /// Adds a row's word to the custom dictionary — unless the word is stored
-    /// there already — then forgets a learned phrase (a frequency row stays).
-    /// A refusal (a full dictionary,
-    /// a reading that cannot be searched) keeps the row and is thrown as
-    /// `UserDataClientError.refused`.
-    func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws
+    /// Adds a row's word to the custom dictionary, filed as `roman` / `hanji`
+    /// (the word as the user edited it in the Add Word sheet; the engine
+    /// trims both) — unless the word is stored there already — then forgets
+    /// a learned phrase (a frequency row stays). A refusal (no romanization,
+    /// a full dictionary, a reading that cannot be searched) keeps the row
+    /// and is thrown as `UserDataClientError.refused`.
+    func addLearningRecordToCustomDictionary(
+        _ record: Taigi_Engine_LearningRecord,
+        roman: String,
+        hanji: String,
+    ) throws
 }
 
 /// The shipped client: the engine's user-data ops.
@@ -190,8 +195,16 @@ struct EngineUserDataClient: UserDataClient {
         return removed
     }
 
-    func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws {
-        guard let added = RustEngineBridge.learningRecordAddToCustomDictionary(record) else {
+    func addLearningRecordToCustomDictionary(
+        _ record: Taigi_Engine_LearningRecord,
+        roman: String,
+        hanji: String,
+    ) throws {
+        guard let added = RustEngineBridge.learningRecordAddToCustomDictionary(
+            record,
+            roman: roman,
+            hanji: hanji,
+        ) else {
             throw UserDataClientError.engineUnavailable(op: "learningRecordAddToCustomDictionary")
         }
         guard added.refusal == .none else { throw UserDataClientError.refused(detail: added.detail) }

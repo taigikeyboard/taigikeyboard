@@ -130,12 +130,18 @@ pub fn delete_job(record: LearningRecord) -> JobOutcome {
     )
 }
 
-/// Makes `record`'s word a custom word; the receipt says where it went — the
-/// reload takes a learned phrase off its list, a frequency row stays. The page
-/// offers this on a row whose `can_add_to_custom_dictionary` is set.
-pub fn add_to_custom_dictionary_job(record: LearningRecord) -> JobOutcome {
+/// Makes `record`'s word a custom word, filed as `roman` / `hanji` — what
+/// the user left in the Add Word sheet the action opens, pre-filled with the
+/// row's `tl` / `text`; the receipt says where it went — the reload takes a
+/// learned phrase off its list, a frequency row stays. The page offers this
+/// on a row whose `can_add_to_custom_dictionary` is set.
+pub fn add_to_custom_dictionary_job(
+    record: LearningRecord,
+    roman: &str,
+    hanji: &str,
+) -> JobOutcome {
     applied(
-        user_data::add_learning_record_to_custom_dictionary(record).map(|()| true),
+        user_data::add_learning_record_to_custom_dictionary(record, roman, hanji).map(|()| true),
         Some(StringKey::DictionaryLearningRecordsAddedToCustomDictionary),
         LearningRecord::WRITE_FAILED,
     )

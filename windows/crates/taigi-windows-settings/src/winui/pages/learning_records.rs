@@ -3,7 +3,8 @@
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / delete pair — plus Add to Custom
-//! Dictionary — and the pager under it, then Delete Learning Records under
+//! Dictionary, which opens Custom Dictionary's Add Word dialog over the
+//! row's word — and the pager under it, then Delete Learning Records under
 //! the card: it empties every learning store, whichever kind is on screen,
 //! on the press. No add — a word the user wants is a custom word.
 //!
@@ -21,6 +22,7 @@ use crate::winui::list_pager::{
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::pages::choice_row;
+use crate::winui::pages::custom_dictionary::{word_dialog, EntryField};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
@@ -63,9 +65,13 @@ pub enum Message {
     Select(Option<usize>),
     Edit,
     Delete,
-    /// The selected row's word becomes a custom word: a learned phrase then
-    /// leaves this list, a frequency row stays.
+    /// Opens Custom Dictionary's Add Word dialog over the selected row's
+    /// typed form and word, for the user to tweak before Save.
     AddToCustomDictionary,
+    AddWordFieldChanged(EntryField, String),
+    /// Save files the word as edited: a learned phrase then leaves this
+    /// list, a frequency row stays. Cancel does nothing.
+    AddWordDialogClosed(ContentDialogResult),
     /// The count field's value; `None` while it is cleared.
     CountChanged(Option<f64>),
     CountDialogClosed(ContentDialogResult),
@@ -86,6 +92,14 @@ struct EditingCount {
     count: Option<f64>,
 }
 
+/// The row whose word is being filed in the Add Word dialog, and the word
+/// as the user has edited it so far.
+struct AddingWord {
+    record: LearningRecord,
+    roman: String,
+    hanji: String,
+}
+
 pub struct LearningRecordsModel {
     listing: Listing,
     /// `listing.rows`' last-used days, index for index; replaced with them.
@@ -97,6 +111,7 @@ pub struct LearningRecordsModel {
     /// XAML a render after the rows it counts do (`list_selection`).
     settled: SettledRows,
     editing: Option<EditingCount>,
+    adding: Option<AddingWord>,
     /// The page's one work slot: the job it waits on, and whether the
     /// overlay shows.
     job: JobState,
@@ -114,6 +129,7 @@ impl LearningRecordsModel {
             is_first_load_requested: false,
             settled: SettledRows::default(),
             editing: None,
+            adding: None,
             job: JobState::default(),
         }
     }
@@ -214,10 +230,39 @@ pub fn update(
             begin_job(model, context, move || delete_job(row));
         }
         Message::AddToCustomDictionary => {
-            let Some(row) = model.listing.selected_row().cloned() else {
+            if let Some(row) = model.listing.selected_row() {
+                model.adding = Some(AddingWord {
+                    roman: row.tl.clone(),
+                    hanji: row.text.clone(),
+                    record: row.clone(),
+                });
+            }
+        }
+        Message::AddWordFieldChanged(field, text) => {
+            if let Some(adding) = model.adding.as_mut() {
+                match field {
+                    EntryField::Roman => adding.roman = text,
+                    EntryField::Hanji => adding.hanji = text,
+                }
+            }
+        }
+        Message::AddWordDialogClosed(result) => {
+            let Some(AddingWord {
+                record,
+                roman,
+                hanji,
+            }) = model.adding.take()
+            else {
                 return;
             };
-            begin_job(model, context, move || add_to_custom_dictionary_job(row));
+            // The primary button is disabled without a romanization, so
+            // this is the belt.
+            if result != ContentDialogResult::Primary || roman.trim().is_empty() {
+                return;
+            }
+            begin_job(model, context, move || {
+                add_to_custom_dictionary_job(record, &roman, &hanji)
+            });
         }
         Message::CountChanged(count) => {
             if let Some(editing) = model.editing.as_mut() {
@@ -389,7 +434,36 @@ pub fn view(
             strings,
         ),
         count_dialog(model, strings, context),
+        add_word_dialog(model, strings, context),
     ))
+}
+
+/// Add to Custom Dictionary: Custom Dictionary's Add Word dialog over the
+/// row's typed form and word, for the user to tweak (hyphens, capitals)
+/// before Save files it.
+fn add_word_dialog(
+    model: &LearningRecordsModel,
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+) -> View {
+    let Some(adding) = model.adding.as_ref() else {
+        return View::empty();
+    };
+    word_dialog(
+        true,
+        &adding.roman,
+        &adding.hanji,
+        strings,
+        context.callback(|result| {
+            WindowMessage::LearningRecords(Message::AddWordDialogClosed(result))
+        }),
+        context.callback(|text| {
+            WindowMessage::LearningRecords(Message::AddWordFieldChanged(EntryField::Roman, text))
+        }),
+        context.callback(|text| {
+            WindowMessage::LearningRecords(Message::AddWordFieldChanged(EntryField::Hanji, text))
+        }),
+    )
 }
 
 /// One row's cells, or the header's, on the table's four columns.

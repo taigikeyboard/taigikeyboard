@@ -211,7 +211,7 @@ struct CustomDictionaryPage: View {
         .formStyle(.grouped)
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
         .sheet(item: $editing) { row in
-            CustomDictionaryEntrySheet(row: row) { edited in
+            CustomDictionaryEntrySheet(row: row, isNew: row.roman.isEmpty) { edited in
                 Task { await model.save(edited) }
             }
         }
@@ -318,7 +318,8 @@ struct CustomDictionaryPage: View {
     }
 }
 
-/// Add or edit one entry.
+/// Add or edit one entry. Learning Records opens it as Add Word over a row's
+/// word (`LearningRecordsPage`), so a new entry may arrive pre-filled.
 ///
 /// A sheet rather than another pushed page: it is a two-field form the user
 /// finishes and dismisses, and pushing it would put a back button where a
@@ -330,10 +331,12 @@ struct CustomDictionaryEntrySheet: View {
     @State private var roman: String
     @State private var hanji: String
     private let original: CustomDictionaryRow
+    private let isNew: Bool
     private let onSave: (CustomDictionaryRow) -> Void
 
-    init(row: CustomDictionaryRow, onSave: @escaping (CustomDictionaryRow) -> Void) {
+    init(row: CustomDictionaryRow, isNew: Bool, onSave: @escaping (CustomDictionaryRow) -> Void) {
         original = row
+        self.isNew = isNew
         self.onSave = onSave
         _roman = State(initialValue: row.roman)
         _hanji = State(initialValue: row.hanji)
@@ -341,7 +344,7 @@ struct CustomDictionaryEntrySheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(language.string(original.roman.isEmpty ? .dictionaryAddEntry : .dictionaryEditEntry))
+            Text(language.string(isNew ? .dictionaryAddEntry : .dictionaryEditEntry))
                 .font(.headline)
             Form {
                 TextField(language.string(.dictionaryRomanLabel), text: $roman)

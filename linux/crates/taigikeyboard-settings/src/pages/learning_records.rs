@@ -13,6 +13,7 @@
 //! Windows pane; this file draws them and runs them, off the UI thread, in
 //! the window's one work slot (`JobSlot`) — as Custom Dictionary does.
 
+use super::custom_dictionary::word_dialog;
 use super::{
     append_pager, busy_indicator, destructive_row, icon_button, remove_rows, table_line,
     PageContext,
@@ -318,7 +319,7 @@ impl LearningRecordsPage {
                 let Some(row) = page.state.borrow().listing.selected_row().cloned() else {
                     return;
                 };
-                page.begin_job(move || add_to_custom_dictionary_job(row));
+                page.add_word_dialog(row);
             });
         let weak = Rc::downgrade(self);
         self.widgets.previous.connect_clicked(move |_| {
@@ -507,6 +508,26 @@ impl LearningRecordsPage {
             page.begin_job(move || set_count_job(record, value));
         });
         dialog.present(self.shell.window().as_ref());
+    }
+
+    /// Add to Custom Dictionary: Custom Dictionary's Add Word dialog over
+    /// the row's typed form and word, for the user to tweak (hyphens,
+    /// capitals) before Save files it — and forgets a learned phrase.
+    fn add_word_dialog(self: &Rc<Self>, record: LearningRecord) {
+        let weak = Rc::downgrade(self);
+        let (roman, hanji) = (record.tl.clone(), record.text.clone());
+        word_dialog(
+            &self.shell,
+            self.strings,
+            true,
+            &roman,
+            &hanji,
+            move |roman, hanji| {
+                let Some(page) = weak.upgrade() else { return };
+                let record = record.clone();
+                page.begin_job(move || add_to_custom_dictionary_job(record, &roman, &hanji));
+            },
+        );
     }
 
     fn report(&self, message: PageMessage) {

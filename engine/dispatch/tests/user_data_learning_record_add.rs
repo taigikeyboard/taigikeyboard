@@ -43,6 +43,7 @@ fn add_to_custom_dictionary(record: LearningRecord) -> Response {
         user_data_request::Method::AddLearningRecordToCustomDictionary(
             AddLearningRecordToCustomDictionary {
                 record: Some(record),
+                ..AddLearningRecordToCustomDictionary::default()
             },
         ),
     )
