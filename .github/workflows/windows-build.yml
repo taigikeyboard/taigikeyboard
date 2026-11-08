@@ -143,7 +143,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $zip = "$env:RUNNER_TEMP\protoc.zip"
           $dir = "$env:RUNNER_TEMP\protoc"
-          Invoke-WebRequest -UseBasicParsing -Uri `
+          Invoke-WebRequest -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 10 -Uri `
             "https://github.com/protocolbuffers/protobuf/releases/download/v$env:PROTOC_VERSION/protoc-$env:PROTOC_VERSION-win64.zip" `
             -OutFile $zip
           $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
@@ -159,7 +159,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $exe = "$env:RUNNER_TEMP\innosetup.exe"
           $tag = "is-" + $env:INNO_SETUP_VERSION.Replace('.', '_')
-          Invoke-WebRequest -UseBasicParsing -Uri `
+          Invoke-WebRequest -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 10 -Uri `
             "https://github.com/jrsoftware/issrc/releases/download/$tag/innosetup-$env:INNO_SETUP_VERSION.exe" `
             -OutFile $exe
           $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLower()
@@ -212,7 +212,7 @@ jobs:
           foreach ($package in $packages) {
             $name, $version, $expected = $package
             $file = "$cache\$name.$version.nupkg"
-            Invoke-WebRequest -UseBasicParsing -OutFile $file -Uri `
+            Invoke-WebRequest -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 10 -OutFile $file -Uri `
               "https://www.nuget.org/api/v2/package/$name/$version"
             $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLower()
             if ($actual -ne $expected) { throw "$name digest $actual, expected $expected" }
