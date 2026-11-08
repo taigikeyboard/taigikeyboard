@@ -1296,6 +1296,12 @@ fn fused_shadow_with_barriers(
 /// its own space handling (the separator pass strips it).
 pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
     let reading = match mode {
+        // A TL / POJ stored reading is keyed by its Bopomofo face — what a
+        // TPS user types for it, and the dictionary's own `tps:` face
+        // (`phonetics::tps_notone_from_tl`). A Bopomofo row keys as typed.
+        InputMode::Tps if phonetics::api::stored_roman_mode(roman, mode) == InputMode::Tl => {
+            phonetics::tps_notone_from_tl(&phonetics::api::custom_search_reading(roman))
+        }
         InputMode::Tps => roman.to_owned(),
         InputMode::Tl | InputMode::Poj | InputMode::English => roman.replace(' ', "-"),
     };
@@ -2239,6 +2245,18 @@ mod tests {
             custom_toneless_key("ㄍㄠ ㄉㄞ", InputMode::Tps),
             custom_toneless_key("ㄍㄠㄉㄞ", InputMode::Tps)
         );
+    }
+
+    #[test]
+    fn custom_toneless_key_tps_keys_a_latin_reading_by_its_bopomofo_face() {
+        // trace: 陳三 `Tân Sann` → custom_search_reading (TL, unchanged) →
+        // tps_notone_from_tl → `ㄉㄢㄙㆩ`; the typed `ㄉㄢˊㄙㆩ` strips its ˊ
+        // to the same body. POJ `Tân Saⁿ` folds to the same TL first.
+        let typed = custom_toneless_key("ㄉㄢˊㄙㆩ", InputMode::Tps);
+        assert_eq!(typed.as_deref(), Some("tps:ㄉㄢㄙㆩ"));
+        assert_eq!(custom_toneless_key("Tân Sann", InputMode::Tps), typed);
+        assert_eq!(custom_toneless_key("tân-sann", InputMode::Tps), typed);
+        assert_eq!(custom_toneless_key("Tân Saⁿ", InputMode::Tps), typed);
     }
 
     #[test]

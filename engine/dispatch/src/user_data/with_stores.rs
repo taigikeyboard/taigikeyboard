@@ -64,7 +64,7 @@ pub(super) fn handle_composing(
 ) -> Result<ComposingResponse, ComposingError> {
     let composing = composing::EngineHandle::instance();
     let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
-        let frequency = StoredFrequency { stores };
+        let frequency = StoredFrequency { stores, config };
         let applied = composing.handle_ranked(request, config, generation, Some(&frequency))?;
         if let Some(learned) = applied.learned {
             stores
@@ -87,12 +87,7 @@ pub(super) fn handle_composing(
         return Ok(composing::Engine::idle_snapshot(config));
     };
     let snapshot = engine.pending_snapshot(config);
-    let mut rows = buffer_rows(
-        stores,
-        &snapshot.listed_raw,
-        config,
-        sent.custom_dictionary_disabled,
-    );
+    let mut rows = buffer_rows(stores, &snapshot.listed_raw, config);
     let context = context_ranks(stores, &snapshot, sent.now_ms);
     let fetch = |rows, context| {
         composing::requests::query(
@@ -109,13 +104,45 @@ pub(super) fn handle_composing(
     Ok(fetch(rows, context))
 }
 
-/// The learned counts a Hanji conversion walk ranks with: the open
-/// `user_frequency.db`, at the wall clock (the composing engine keeps none).
+/// The user data a Hanji conversion walk ranks with: the open
+/// `user_frequency.db` at the wall clock (the composing engine keeps none),
+/// and the custom words (unless `config` turns the dictionary off) and
+/// learned phrases filed under the walk's edges.
 struct StoredFrequency<'a> {
     stores: &'a UserDataStores,
+    config: &'a AppConfig,
 }
 
 impl ConversionFrequency for StoredFrequency<'_> {
+    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> UserRows {
+        let query_keys: Vec<_> = edge_keys
+            .iter()
+            .map(|body| phonetics::api::tps_toneless_edge_key(body))
+            .collect();
+        let custom = if self.config.custom_dictionary_disabled {
+            Vec::new()
+        } else {
+            self.stores
+                .custom_dictionary
+                .rows_with_keys(&query_keys, CustomDictionaryStore::KEYSTROKE_LIMIT)
+                .into_iter()
+                .map(custom_entry)
+                .collect()
+        };
+        let learned = self
+            .stores
+            .learned_phrases
+            .rows_matching_any(&query_keys, LearnedPhraseStore::KEYSTROKE_LIMIT)
+            .into_iter()
+            .map(learned_entry)
+            .collect();
+        UserRows {
+            custom,
+            learned,
+            ..UserRows::default()
+        }
+    }
+
     fn rows_for_words(&self, words: &[String]) -> FrequencyMap {
         self.stores
             .frequency
@@ -152,19 +179,14 @@ fn context_ranks(stores: &UserDataStores, snapshot: &PendingSnapshot, now_ms: i6
 /// The custom-dictionary rows (unless the user turned the dictionary off)
 /// and the learned phrases for `raw`, keyed the way the platforms keyed
 /// them — no frequency rows yet.
-fn buffer_rows(
-    stores: &UserDataStores,
-    raw: &str,
-    config: &AppConfig,
-    custom_dictionary_disabled: bool,
-) -> UserRows {
+fn buffer_rows(stores: &UserDataStores, raw: &str, config: &AppConfig) -> UserRows {
     let Some(key) = (!raw.is_empty())
         .then(|| phonetics::api::derive_custom_query_key(raw, &config.input_mode))
         .flatten()
     else {
         return UserRows::default();
     };
-    let custom = if custom_dictionary_disabled {
+    let custom = if config.custom_dictionary_disabled {
         Vec::new()
     } else {
         stores
@@ -350,18 +372,81 @@ mod tests {
             ..AppConfig::default()
         };
 
-        let rows = buffer_rows(&stores, "taiuan", &config, false);
+        let rows = buffer_rows(&stores, "taiuan", &config);
         assert_eq!(rows.custom.len(), CustomDictionaryStore::KEYSTROKE_LIMIT);
         assert_eq!(rows.custom.len(), 20);
         assert_eq!(rows.learned.len(), 5);
 
-        let disabled = buffer_rows(&stores, "taiuan", &config, true);
+        let disabled_config = AppConfig {
+            custom_dictionary_disabled: true,
+            ..config.clone()
+        };
+        let disabled = buffer_rows(&stores, "taiuan", &disabled_config);
         assert!(disabled.custom.is_empty(), "the user turned it off");
         assert_eq!(
             disabled.learned.len(),
             5,
             "learning data is not the dictionary"
         );
+    }
+
+    #[test]
+    fn a_conversion_walk_reads_the_rows_filed_under_its_edges() {
+        // trace: 陳三 `Tân Sann` files `tps:notone` `ㄉㄢㄙㆩ`; 刀 `to` files
+        // `ㄉㄜ` and its variant `ㄉㄛ`. A walk's edge bodies match whole — a
+        // custom word anywhere in the walked text, not only one the whole
+        // text prefixes — and the dictionary setting off reads no custom
+        // rows; learned phrases are not the dictionary.
+        let directory = tempfile::tempdir().unwrap();
+        let stores = UserDataStores::at(
+            userdata::UserDataPaths::in_directory(directory.path()),
+            JournalMode::Delete,
+        );
+        stores.open_blocking();
+        for (roman, hanji) in [("Tân Sann", "陳三"), ("to", "刀")] {
+            stores
+                .custom_dictionary
+                .upsert(&CustomDictionaryRow::new(roman, hanji))
+                .unwrap();
+        }
+        stores.learned_phrases.learn_phrase("陳三", "tân-sann");
+        assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 1);
+        let config = AppConfig {
+            input_mode: "tps".into(),
+            ..AppConfig::default()
+        };
+        let rows = |config: &AppConfig, keys: &[&str]| {
+            let keys: Vec<String> = keys.iter().map(|key| (*key).to_owned()).collect();
+            StoredFrequency {
+                stores: &stores,
+                config,
+            }
+            .rows_for_edge_keys(&keys)
+        };
+        let hanji = |rows: &UserRows| -> Vec<String> {
+            rows.custom
+                .iter()
+                .filter_map(|entry| entry.hanji.clone())
+                .collect()
+        };
+
+        let found = rows(&config, &["ㄍㄚ", "ㄉㄢㄙㆩ", "ㄉㄢ"]);
+        assert_eq!(hanji(&found), vec!["陳三"]);
+        assert_eq!(found.learned.len(), 1);
+        assert_eq!(hanji(&rows(&config, &["ㄉㄛ"])), vec!["刀"]);
+        assert_eq!(
+            hanji(&rows(&config, &["ㄉㄜ", "ㄉㄛ"])),
+            vec!["刀"],
+            "one entry once"
+        );
+
+        let disabled = AppConfig {
+            custom_dictionary_disabled: true,
+            ..config.clone()
+        };
+        let without_custom = rows(&disabled, &["ㄉㄢㄙㆩ"]);
+        assert!(without_custom.custom.is_empty());
+        assert_eq!(without_custom.learned.len(), 1);
     }
 
     #[test]
@@ -383,7 +468,7 @@ mod tests {
             input_mode: "tl".into(),
             ..AppConfig::default()
         };
-        let custom_count = |raw: &str| buffer_rows(&stores, raw, &config, false).custom.len();
+        let custom_count = |raw: &str| buffer_rows(&stores, raw, &config).custom.len();
         assert_eq!(custom_count("tkt"), 1);
         assert_eq!(custom_count("tk"), 0);
         assert_eq!(custom_count("tankiant"), 1);

@@ -202,8 +202,6 @@ pub fn fetch_at_pos(
         // CROSS-PLATFORM INVARIANT — iOS `ComposingManager.swift` inverts the same
         // setting onto the same field.
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
-        // The engine reads the user's dictionary only with this setting on.
-        custom_dictionary_disabled: !settings.is_custom_dict_enabled,
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),

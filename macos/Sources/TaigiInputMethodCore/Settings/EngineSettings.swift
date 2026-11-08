@@ -164,7 +164,7 @@ struct EngineSettings: Sendable {
 
     /// Whether the user's own dictionary contributes candidates. Gates the
     /// lookup itself, not just the display: with it off nothing is read from
-    /// `custom_dictionary.db` (`FetchAtPos.custom_dictionary_disabled`).
+    /// `custom_dictionary.db` (`AppConfig.custom_dictionary_disabled`).
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:51,
     /// which defaults it ON.
     let isCustomDictEnabled: Bool

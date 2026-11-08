@@ -105,7 +105,8 @@ pub(super) fn record_failure(op: &str, message: &str) {
 ///
 /// Every request carries the user's dictionary switches: the one source
 /// filter the fetch, the conversion walk (a key carries no fetch) and the
-/// nailed-join compound oracle read (#772).
+/// nailed-join compound oracle read (#772) — and the custom-dictionary
+/// setting, which both the fetch and the conversion walk read.
 pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
@@ -118,6 +119,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
         hanji_conversion: (settings.input_mode == InputMode::Tps).then_some(HanjiConversion {}),
         dictionary_sources: Some(dictionary_toggles(&settings.dictionary_sources)),
+        custom_dictionary_disabled: !settings.is_custom_dict_enabled,
         ..Default::default()
     }
 }
@@ -243,6 +245,18 @@ mod tests {
             app_config(&settings).hanji_conversion,
             Some(HanjiConversion {})
         );
+    }
+
+    #[test]
+    fn the_custom_dictionary_setting_rides_the_config() {
+        let on = EngineSettings::default();
+        assert!(on.is_custom_dict_enabled);
+        assert!(!app_config(&on).custom_dictionary_disabled);
+        let off = EngineSettings {
+            is_custom_dict_enabled: false,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&off).custom_dictionary_disabled);
     }
 
     #[test]

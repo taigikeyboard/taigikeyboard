@@ -208,6 +208,41 @@ impl CustomDictionaryStore {
             .unwrap_or_default()
     }
 
+    /// The entries one of whose search keys EQUALS one of `query_keys` — the
+    /// toneless bodies of a TPS walk's edges
+    /// (`phonetics::api::tps_toneless_edge_key`), so a custom word anywhere in
+    /// the walked text meets its edge — at most `limit` per key, each entry
+    /// once, in one read: the store answers every key or none. Best-effort
+    /// like [`keystroke_rows`](Self::keystroke_rows).
+    pub fn rows_with_keys(
+        &self,
+        query_keys: &[CustomSearchKey],
+        limit: usize,
+    ) -> Vec<CustomDictionaryRow> {
+        self.database
+            .read(|connection| {
+                let mut statement = connection.prepare_cached(&format!(
+                    "SELECT DISTINCT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE search_key.family = ?1 AND search_key.form = ?2 AND search_key.key = ?3\nORDER BY entry.roman, entry.id\nLIMIT ?4;"
+                ))?;
+                let mut seen = HashSet::new();
+                let mut rows = Vec::new();
+                for query_key in query_keys {
+                    let matched = statement.query_map(
+                        params![query_key.family, query_key.form, query_key.key, limit as i64],
+                        decode_row,
+                    )?;
+                    for row in matched {
+                        let row = row?;
+                        if seen.insert(row.id.clone()) {
+                            rows.push(row);
+                        }
+                    }
+                }
+                Ok(rows)
+            })
+            .unwrap_or_default()
+    }
+
     // Settings path
 
     /// The entries matching `query_key` for the dictionary search page,

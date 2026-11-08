@@ -123,50 +123,6 @@ public  final class FetchAtPos extends
     literalRomanCandidateDisabled_ = false;
   }
 
-  public static final int CUSTOM_DICTIONARY_DISABLED_FIELD_NUMBER = 8;
-  private boolean customDictionaryDisabled_;
-  /**
-   * <pre>
-   * The user's "use my custom dictionary" setting, OFF: the engine reads no
-   * custom-dictionary rows for this fetch. Negative like field 6, so an
-   * un-wired build keeps the dictionary on.
-   * </pre>
-   *
-   * <code>bool custom_dictionary_disabled = 8;</code>
-   * @return The customDictionaryDisabled.
-   */
-  @java.lang.Override
-  public boolean getCustomDictionaryDisabled() {
-    return customDictionaryDisabled_;
-  }
-  /**
-   * <pre>
-   * The user's "use my custom dictionary" setting, OFF: the engine reads no
-   * custom-dictionary rows for this fetch. Negative like field 6, so an
-   * un-wired build keeps the dictionary on.
-   * </pre>
-   *
-   * <code>bool custom_dictionary_disabled = 8;</code>
-   * @param value The customDictionaryDisabled to set.
-   */
-  private void setCustomDictionaryDisabled(boolean value) {
-
-    customDictionaryDisabled_ = value;
-  }
-  /**
-   * <pre>
-   * The user's "use my custom dictionary" setting, OFF: the engine reads no
-   * custom-dictionary rows for this fetch. Negative like field 6, so an
-   * un-wired build keeps the dictionary on.
-   * </pre>
-   *
-   * <code>bool custom_dictionary_disabled = 8;</code>
-   */
-  private void clearCustomDictionaryDisabled() {
-
-    customDictionaryDisabled_ = false;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -375,52 +331,6 @@ public  final class FetchAtPos extends
       return this;
     }
 
-    /**
-     * <pre>
-     * The user's "use my custom dictionary" setting, OFF: the engine reads no
-     * custom-dictionary rows for this fetch. Negative like field 6, so an
-     * un-wired build keeps the dictionary on.
-     * </pre>
-     *
-     * <code>bool custom_dictionary_disabled = 8;</code>
-     * @return The customDictionaryDisabled.
-     */
-    @java.lang.Override
-    public boolean getCustomDictionaryDisabled() {
-      return instance.getCustomDictionaryDisabled();
-    }
-    /**
-     * <pre>
-     * The user's "use my custom dictionary" setting, OFF: the engine reads no
-     * custom-dictionary rows for this fetch. Negative like field 6, so an
-     * un-wired build keeps the dictionary on.
-     * </pre>
-     *
-     * <code>bool custom_dictionary_disabled = 8;</code>
-     * @param value The customDictionaryDisabled to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCustomDictionaryDisabled(boolean value) {
-      copyOnWrite();
-      instance.setCustomDictionaryDisabled(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The user's "use my custom dictionary" setting, OFF: the engine reads no
-     * custom-dictionary rows for this fetch. Negative like field 6, so an
-     * un-wired build keeps the dictionary on.
-     * </pre>
-     *
-     * <code>bool custom_dictionary_disabled = 8;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCustomDictionaryDisabled() {
-      copyOnWrite();
-      instance.clearCustomDictionaryDisabled();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -439,11 +349,10 @@ public  final class FetchAtPos extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "nowMs_",
             "literalRomanCandidateDisabled_",
-            "customDictionaryDisabled_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0003\b\u0003\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
-              "\b\u0007";
+              "\u0000\u0002\u0000\u0000\u0003\u0006\u0002\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -591,6 +591,56 @@ public  final class AppConfig extends
     bitField0_ = (bitField0_ & ~0x00000002);
   }
 
+  public static final int CUSTOM_DICTIONARY_DISABLED_FIELD_NUMBER = 16;
+  private boolean customDictionaryDisabled_;
+  /**
+   * <pre>
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+   * Hanji conversion walk. Negative, so an un-wired sender keeps the
+   * dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+   * until the conversion walk read custom rows too (2026-11-09).
+   * </pre>
+   *
+   * <code>bool custom_dictionary_disabled = 16;</code>
+   * @return The customDictionaryDisabled.
+   */
+  @java.lang.Override
+  public boolean getCustomDictionaryDisabled() {
+    return customDictionaryDisabled_;
+  }
+  /**
+   * <pre>
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+   * Hanji conversion walk. Negative, so an un-wired sender keeps the
+   * dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+   * until the conversion walk read custom rows too (2026-11-09).
+   * </pre>
+   *
+   * <code>bool custom_dictionary_disabled = 16;</code>
+   * @param value The customDictionaryDisabled to set.
+   */
+  private void setCustomDictionaryDisabled(boolean value) {
+
+    customDictionaryDisabled_ = value;
+  }
+  /**
+   * <pre>
+   * The user's "use my custom dictionary" setting, OFF: the engine reads no
+   * custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+   * Hanji conversion walk. Negative, so an un-wired sender keeps the
+   * dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+   * until the conversion walk read custom rows too (2026-11-09).
+   * </pre>
+   *
+   * <code>bool custom_dictionary_disabled = 16;</code>
+   */
+  private void clearCustomDictionaryDisabled() {
+
+    customDictionaryDisabled_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1298,6 +1348,58 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The user's "use my custom dictionary" setting, OFF: the engine reads no
+     * custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+     * Hanji conversion walk. Negative, so an un-wired sender keeps the
+     * dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+     * until the conversion walk read custom rows too (2026-11-09).
+     * </pre>
+     *
+     * <code>bool custom_dictionary_disabled = 16;</code>
+     * @return The customDictionaryDisabled.
+     */
+    @java.lang.Override
+    public boolean getCustomDictionaryDisabled() {
+      return instance.getCustomDictionaryDisabled();
+    }
+    /**
+     * <pre>
+     * The user's "use my custom dictionary" setting, OFF: the engine reads no
+     * custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+     * Hanji conversion walk. Negative, so an un-wired sender keeps the
+     * dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+     * until the conversion walk read custom rows too (2026-11-09).
+     * </pre>
+     *
+     * <code>bool custom_dictionary_disabled = 16;</code>
+     * @param value The customDictionaryDisabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCustomDictionaryDisabled(boolean value) {
+      copyOnWrite();
+      instance.setCustomDictionaryDisabled(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The user's "use my custom dictionary" setting, OFF: the engine reads no
+     * custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+     * Hanji conversion walk. Negative, so an un-wired sender keeps the
+     * dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+     * until the conversion walk read custom rows too (2026-11-09).
+     * </pre>
+     *
+     * <code>bool custom_dictionary_disabled = 16;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCustomDictionaryDisabled() {
+      copyOnWrite();
+      instance.clearCustomDictionaryDisabled();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -1326,11 +1428,12 @@ public  final class AppConfig extends
             "hanjiConversion_",
             "syllableSeparator_",
             "dictionarySources_",
+            "customDictionaryDisabled_",
           };
           java.lang.String info =
-              "\u0000\u000b\u0000\u0001\u0002\u000f\u000b\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
-              "\u0004\u0007\u0005\u0007\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e\f\u000f" +
-              "\u1009\u0001";
+              "\u0000\f\u0000\u0001\u0002\u0010\f\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004" +
+              "\u0007\u0005\u0007\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e\f\u000f\u1009" +
+              "\u0001\u0010\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -159,17 +159,37 @@ impl LearnedPhraseStore {
         query_key: &CustomSearchKey,
         limit: usize,
     ) -> Vec<LearnedPhraseRow> {
+        self.rows_matching_any(std::slice::from_ref(query_key), limit)
+    }
+
+    /// [`rows_matching`](Self::rows_matching) for each of `query_keys` — a
+    /// TPS walk's edge bodies — each phrase once, in one read: the store
+    /// answers every key or none.
+    pub fn rows_matching_any(
+        &self,
+        query_keys: &[CustomSearchKey],
+        limit: usize,
+    ) -> Vec<LearnedPhraseRow> {
         self.database
             .read(|connection| {
                 // Cached: the one statement the keystroke path runs here.
                 let mut statement = connection.prepare_cached(&format!(
                     "SELECT p.hanzi, p.roman, p.learn_count\nFROM {TABLE_NAME} p\nJOIN {SEARCH_KEY_TABLE_NAME} k ON k.phrase_id = p.id\nWHERE k.family = ? AND k.form = ? AND k.key = ?\nORDER BY p.learn_count DESC, p.updated_at DESC\nLIMIT ?;"
                 ))?;
-                let rows = statement.query_map(
-                    params![query_key.family, query_key.form, query_key.key, limit as i64],
-                    decode_row,
-                )?;
-                rows.collect()
+                let mut rows: Vec<LearnedPhraseRow> = Vec::new();
+                for query_key in query_keys {
+                    let matched = statement.query_map(
+                        params![query_key.family, query_key.form, query_key.key, limit as i64],
+                        decode_row,
+                    )?;
+                    for row in matched {
+                        let row = row?;
+                        if !rows.contains(&row) {
+                            rows.push(row);
+                        }
+                    }
+                }
+                Ok(rows)
             })
             .unwrap_or_default()
     }

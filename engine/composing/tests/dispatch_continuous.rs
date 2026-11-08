@@ -136,7 +136,6 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
             literal_roman_candidate_disabled: false,
-            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -173,7 +172,6 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             // lexicon, which is orthogonal to "lexicon NotInitialized yields no
             // DICT candidates". Doubles as OFF-gate coverage.
             literal_roman_candidate_disabled: true,
-            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -208,7 +206,6 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
             &req(Method::FetchAtPos(FetchAtPos {
                 now_ms: 0,
                 literal_roman_candidate_disabled: disabled,
-                ..FetchAtPos::default()
             })),
             &mut engine,
             &config_tl(),
@@ -280,7 +277,6 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
             literal_roman_candidate_disabled: false,
-            ..FetchAtPos::default()
         })),
         &mut engine,
         &config_tl(),
@@ -318,7 +314,6 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
             &req(Method::FetchAtPos(FetchAtPos {
                 now_ms: 0,
                 literal_roman_candidate_disabled: false,
-                ..FetchAtPos::default()
             })),
             &mut engine,
             &config_tl(),

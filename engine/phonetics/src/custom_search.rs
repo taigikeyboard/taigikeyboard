@@ -122,6 +122,18 @@ pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSe
     })
 }
 
+/// READ side — the stored `tps:notone` key a toneless TPS walker edge body
+/// (`ㄉㄢㄙㆩ`) equals. The body is already the fused toneless face the
+/// write side stores (`tps_notone_from_tl`, plus its ㄜ→ㄛ variant row), so
+/// it is matched whole, never as a prefix.
+pub fn tps_toneless_edge_key(body: &str) -> CustomSearchKey {
+    CustomSearchKey {
+        family: KeyFamily::Tps.tag(),
+        form: FORM_NOTONE,
+        key: body.to_owned(),
+    }
+}
+
 // ---- WRITE helpers ------------------------------------------------------
 
 fn push_latin_family(keys: &mut Vec<CustomSearchKey>, family: KeyFamily, display: &str) {

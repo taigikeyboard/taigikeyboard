@@ -155,6 +155,12 @@ message AppConfig {
   // compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
   // read it. Absent = un-wired sender (test fixtures): every source on.
   DictionarySourceToggles dictionary_sources = 15;
+  // The user's "use my custom dictionary" setting, OFF: the engine reads no
+  // custom-dictionary rows — not for the `FetchAtPos` list, not for the TPS
+  // Hanji conversion walk. Negative, so an un-wired sender keeps the
+  // dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
+  // until the conversion walk read custom rows too (2026-11-09).
+  bool custom_dictionary_disabled = 16;
 }
 
 // Hanji conversion in the preedit

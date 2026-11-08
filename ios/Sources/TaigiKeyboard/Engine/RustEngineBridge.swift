@@ -158,6 +158,9 @@ public enum RustEngineBridge {
         syllableSeparator: SyllableSeparator = .hyphen,
         isTpsOrMappedToER: Bool = false,
         dictionarySources: Taigi_Engine_DictionarySourceToggles? = nil,
+        // Invert of the Enable Custom Dictionary setting: the engine reads the
+        // user's dictionary only with it on. Default `false` = read it.
+        isCustomDictionaryDisabled: Bool = false,
     ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
         // The raw values are the engine's `input_mode` strings.
@@ -176,6 +179,7 @@ public enum RustEngineBridge {
         if let dictionarySources {
             cfg.dictionarySources = dictionarySources
         }
+        cfg.customDictionaryDisabled = isCustomDictionaryDisabled
         return cfg
     }
 }

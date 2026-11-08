@@ -283,12 +283,14 @@ pub(super) fn custom_entry_to_candidate(
     // for both the hanji-absent `display_text` fallback and the
     // `(hanji, canonical-TL)` identity key. Populated for hanji-PRESENT
     // entries too (Codex pre-impl 2026-06-03 BLOCK: identity is the pair,
-    // not gated on hanji). TPS-mode `canonical_tl_form` is identity
-    // (Bopomofo, no TL) → `canonical_tl` stays Bopomofo for a TPS-OOV
-    // hanji-absent custom entry; the platform treats a non-TL form as
-    // "no canonical TL" only for the wire-empty case, so the existing
-    // TPS round-trip is unchanged.
-    let canonical_tl = phonetics::api::canonical_tl_form(&roman, input_mode);
+    // not gated on hanji). Under TPS a TL / POJ stored roman folds as TL
+    // mode folds it, so a word committed from a TPS walk shares the
+    // (hanji, canonical TL) identity of the same word committed under TL
+    // (Core Principle 6). TPS-mode `canonical_tl_form` is identity
+    // (Bopomofo, no TL) → `canonical_tl` stays Bopomofo for a Bopomofo
+    // stored row; the platform treats a non-TL form as "no canonical TL"
+    // only for the wire-empty case.
+    let canonical_tl = custom_canonical_tl(&roman, input_mode);
     let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
     // R5 pair-key (#7): same `(display_text, canonical_tl)` identity as
     // `record_to_candidate`. For a hanji-absent custom/OOV entry
@@ -444,6 +446,23 @@ fn dedupe_by_reading(out: &mut Vec<RawCandidate>, reading: fn(&RawCandidate) -> 
         idx += 1;
         keep
     });
+}
+
+/// The canonical TL a custom entry's stored `roman` takes under
+/// `input_mode` — the TL half of its `(hanji, canonical TL)` identity, read
+/// in [`phonetics::api::stored_roman_mode`].
+fn custom_canonical_tl(roman: &str, input_mode: phonetics::InputMode) -> String {
+    phonetics::api::canonical_tl_form(roman, phonetics::api::stored_roman_mode(roman, input_mode))
+}
+
+impl CustomEntry {
+    /// The word this entry commits and counts as under `input_mode`: its
+    /// Hanji, or its canonical TL when it has none.
+    pub fn word(&self, input_mode: phonetics::InputMode) -> String {
+        self.hanji
+            .clone()
+            .unwrap_or_else(|| custom_canonical_tl(&self.roman, input_mode))
+    }
 }
 
 #[cfg(test)]

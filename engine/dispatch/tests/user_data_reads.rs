@@ -38,10 +38,20 @@ fn composing(method: composing_request::Method) -> Response {
 }
 
 fn fetch(fetch: FetchAtPos) -> ContinuousResponse {
-    let response = composing(composing_request::Method::FetchAtPos(FetchAtPos {
-        now_ms: NOW_MS,
-        ..fetch
-    }));
+    fetch_with(tl_config(true), fetch)
+}
+
+fn fetch_with(config: protos::engine::AppConfig, fetch: FetchAtPos) -> ContinuousResponse {
+    let response = common::roundtrip(
+        config,
+        COMPOSING_GENERATION,
+        request::Payload::Composing(ComposingRequest {
+            method: Some(composing_request::Method::FetchAtPos(FetchAtPos {
+                now_ms: NOW_MS,
+                ..fetch
+            })),
+        }),
+    );
     match response.payload {
         Some(response::Payload::Composing(composing)) => {
             composing.continuous.expect("FetchAtPos answers candidates")
@@ -203,11 +213,11 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     };
     assert_eq!(others(&learned), others(&bundled_only));
     // The custom-dictionary setting, off: the engine reads no custom rows.
-    let without_custom = fetch(FetchAtPos {
+    let off = protos::engine::AppConfig {
         custom_dictionary_disabled: true,
-        ..FetchAtPos::default()
-    });
-    assert!(without_custom
+        ..tl_config(true)
+    };
+    assert!(fetch_with(off, FetchAtPos::default())
         .candidates
         .iter()
         .all(|candidate| candidate.hanji.as_deref() != Some("食茶")));

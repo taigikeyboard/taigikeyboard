@@ -313,7 +313,7 @@ pub struct EngineSettings {
     /// a Swift twin: `macos/.../EngineSettings.swift` `isNasalMarkerUppercaseEnabled`.
     pub is_nasal_marker_uppercase_enabled: bool,
     /// Gates the custom-dictionary lookup itself: off means the engine reads
-    /// no custom rows (`FetchAtPos.custom_dictionary_disabled`). CROSS-PLATFORM INVARIANT —
+    /// no custom rows (`AppConfig.custom_dictionary_disabled`). CROSS-PLATFORM INVARIANT —
     /// `SharedSettings.swift` `isCustomDictEnabledKey` (ON).
     pub is_custom_dict_enabled: bool,
     pub dictionary_sources: DictionarySourceToggles,

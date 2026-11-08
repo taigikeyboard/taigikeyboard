@@ -11,8 +11,8 @@
 use std::cell::RefCell;
 
 use composing::api::{CaretDirection, CommitScript};
-use composing::{requests, ConversionFrequency, Engine, Intent, ListContext, Phase};
-use lexicon::LearnedEntry;
+use composing::{requests, ConversionFrequency, Engine, Intent, ListContext, Phase, UserRows};
+use lexicon::{CustomEntry, LearnedEntry};
 use proptest::prelude::*;
 use proptest::test_runner::{Config as ProptestConfig, TestRunner};
 use protos::engine::effect::Kind;
@@ -478,23 +478,40 @@ fn commit_raw_after_an_unpicked_segment_teaches_nothing() {
     );
 }
 
-/// A store of learned counts: the rows it holds, and every word a walk asked
-/// it for.
+/// A store of the user's data: the learned counts, custom words and learned
+/// phrases it holds, every word a walk asked it for and every edge key.
 struct Counts {
     rows: Vec<Selected>,
+    user_rows: UserRows,
     asked: RefCell<Vec<String>>,
+    asked_edge_keys: RefCell<Vec<String>>,
 }
 
 impl Counts {
     fn new(rows: Vec<Selected>) -> Self {
+        Self::with_user_rows(rows, UserRows::default())
+    }
+
+    fn with_user_rows(rows: Vec<Selected>, user_rows: UserRows) -> Self {
         Self {
             rows,
+            user_rows,
             asked: RefCell::new(Vec::new()),
+            asked_edge_keys: RefCell::new(Vec::new()),
         }
     }
 }
 
 impl ConversionFrequency for Counts {
+    // The store's key match is `dispatch`'s; every row is handed over, and
+    // the walk keys them itself.
+    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> UserRows {
+        self.asked_edge_keys
+            .borrow_mut()
+            .extend(edge_keys.iter().cloned());
+        self.user_rows.clone()
+    }
+
     fn rows_for_words(&self, words: &[String]) -> FrequencyMap {
         self.asked.borrow_mut().extend(words.iter().cloned());
         frequency_map(
@@ -558,6 +575,156 @@ fn an_open_reading_asks_for_no_counts() {
         Some(&counts),
     );
     assert!(counts.asked.borrow().is_empty());
+}
+
+fn custom(roman: &str, hanji: &str) -> CustomEntry {
+    CustomEntry {
+        roman: roman.into(),
+        hanji: Some(hanji.into()),
+    }
+}
+
+/// The walk of `raw` with `user_rows` and `rows`' counts: the engine (for
+/// its conversion) and the store (for what the walk asked).
+fn walk_with(raw: &str, rows: Vec<Selected>, user_rows: UserRows) -> (Engine, Counts) {
+    let config = config_converting("tps");
+    let counts = Counts::with_user_rows(rows, user_rows);
+    let mut engine = Engine::new();
+    engine.apply_ranked(Intent::Start { text: raw.into() }, &config, Some(&counts));
+    (engine, counts)
+}
+
+/// The words of the conversion, with their `(Hanji, canonical TL)`.
+fn converted_identity(engine: &Engine) -> Vec<((usize, usize), Option<String>, String)> {
+    match engine.snapshot_state().phase {
+        Phase::Continuous {
+            conversion: Some(conversion),
+            ..
+        } => conversion
+            .segments
+            .into_iter()
+            .map(|segment| (segment.raw_span, segment.hanji, segment.canonical_tl))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+// A custom word is a walk edge, as in a TL / POJ walk (row 10e: a custom 陳三
+// showed as 陳相). trace: "ㄒㄧˋㄒㄧ " walks 死 (0, 8) + 詩 (8, 15) neutral. A
+// custom 西施 stored in TL as `sí-si` keys by its Bopomofo face
+// `tps_notone_from_tl("sí-si")` = `ㄒㄧㄒㄧ`, the edge (0, 15)'s toneless
+// body; its reading passes the typed ˋ (tone 2) and the Space pin (tone 1),
+// and the custom-word cost caps the span, so the path is the one word. Its
+// identity is the TL-mode pair (西施, `sí-si`), not the stored roman. The walk
+// asked the store for every edge's body, and for 西施's count.
+#[test]
+fn a_custom_word_is_a_walk_edge() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let raw = "ㄒㄧˋㄒㄧ ";
+    let (neutral, _) = walk_with(raw, Vec::new(), UserRows::default());
+    assert_eq!(
+        converted_words(&neutral),
+        vec![((0, 8), "死".to_string()), ((8, 15), "詩".to_string())]
+    );
+
+    let user_rows = UserRows {
+        custom: vec![custom("Sí-si", "西施")],
+        ..UserRows::default()
+    };
+    let (engine, counts) = walk_with(raw, Vec::new(), user_rows);
+    assert_eq!(
+        converted_identity(&engine),
+        vec![((0, 15), Some("西施".to_string()), "sí-si".to_string())]
+    );
+    assert!(counts
+        .asked_edge_keys
+        .borrow()
+        .contains(&"ㄒㄧㄒㄧ".to_string()));
+    assert!(counts.asked.borrow().contains(&"西施".to_string()));
+}
+
+// A walk keeps the custom-dictionary setting it ran with: once the setting
+// is off (the store then hands over no custom rows), the next request walks
+// again rather than re-using 西施. trace: as above; a caret step keeps the
+// raw, so only `Conversion::is_for` decides the re-walk.
+#[test]
+fn turning_the_custom_dictionary_off_walks_again() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let user_rows = UserRows {
+        custom: vec![custom("sí-si", "西施")],
+        ..UserRows::default()
+    };
+    let (mut engine, _) = walk_with("ㄒㄧˋㄒㄧ ", Vec::new(), user_rows);
+    assert_eq!(
+        converted_words(&engine),
+        vec![((0, 15), "西施".to_string())]
+    );
+    let off = AppConfig {
+        custom_dictionary_disabled: true,
+        ..config_converting("tps")
+    };
+    let no_custom = Counts::new(Vec::new());
+    engine.apply_ranked(
+        Intent::MoveCaret {
+            direction: Some(CaretDirection::Left),
+        },
+        &off,
+        Some(&no_custom),
+    );
+    assert_eq!(
+        converted_words(&engine),
+        vec![((0, 8), "死".to_string()), ((8, 15), "詩".to_string())]
+    );
+}
+
+// The same for a POJ-stored roman and a learned phrase (§50). trace: POJ
+// `sí-si` folds to TL `sí-si` (no POJ-only letters), the same face; a learned
+// row's canonical TL keys directly. A custom whose first reading disagrees
+// with the typed ˋ (`sī`, tone 7) is not the word typed: the walk stays 死詩.
+#[test]
+fn learned_phrases_and_typed_tones_answer_the_walk_too() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let raw = "ㄒㄧˋㄒㄧ ";
+    let shown = |user_rows| converted_words(&walk_with(raw, Vec::new(), user_rows).0);
+    let one_word = vec![((0, 15), "西施".to_string())];
+    let learned = UserRows {
+        learned: vec![LearnedEntry {
+            hanji: "西施".into(),
+            canonical_tl: "sí-si".into(),
+        }],
+        ..UserRows::default()
+    };
+    assert_eq!(shown(learned), one_word);
+    let wrong_tone = UserRows {
+        custom: vec![custom("sī-si", "西施")],
+        ..UserRows::default()
+    };
+    assert_eq!(
+        shown(wrong_tone),
+        vec![((0, 8), "死".to_string()), ((8, 15), "詩".to_string())]
+    );
+}
+
+// Picks rank above a custom word on the same edge (custom = boost below
+// picks). trace: "ㄒㄧ " (Space pins tone 1) — 詩 (50), 絲 (10), a custom 師
+// `si`; a count for 詩 / `si` leads the edge's pick (user weight first).
+#[test]
+fn a_picked_word_ranks_above_a_custom_word() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let user_rows = UserRows {
+        custom: vec![custom("si", "師")],
+        ..UserRows::default()
+    };
+    let shown = |rows| converted_words(&walk_with("ㄒㄧ ", rows, user_rows.clone()).0);
+    assert_eq!(shown(Vec::new()), vec![((0, 7), "師".to_string())]);
+    assert_eq!(
+        shown(vec![selected("詩", "si", 5, 1_000)]),
+        vec![((0, 7), "詩".to_string())]
+    );
 }
 
 /// One step of a random session under the conversion.
