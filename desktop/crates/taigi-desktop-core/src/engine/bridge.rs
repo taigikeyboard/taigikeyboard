@@ -103,7 +103,12 @@ pub(super) fn record_failure(op: &str, message: &str) {
 /// (`desktop-tps-hanji-conversion-roadmap.md` H2), with the user's dictionary
 /// switches as its source filter: a key carries no fetch. The engine reads it
 /// only for a TPS composition, so TL and POJ requests never carry it.
+///
+/// Every request carries the dictionary switches themselves too: the
+/// nailed-join compound oracle reads them on every composing op that renders
+/// the composition (#772).
 pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
+    let toggles = dictionary_toggles(&settings.dictionary_sources);
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
         oo_doubletap_enabled: true,
@@ -113,9 +118,10 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         syllable_separator: settings.syllable_separator.wire() as i32,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
         tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
-        hanji_conversion: (settings.input_mode == InputMode::Tps).then(|| HanjiConversion {
-            toggles: Some(dictionary_toggles(&settings.dictionary_sources)),
+        hanji_conversion: (settings.input_mode == InputMode::Tps).then_some(HanjiConversion {
+            toggles: Some(toggles),
         }),
+        dictionary_sources: Some(toggles),
         ..Default::default()
     }
 }
@@ -244,6 +250,21 @@ mod tests {
             .toggles
             .expect("with the dictionary switches");
         assert!(!toggles.itaigi && toggles.kautian);
+    }
+
+    #[test]
+    fn every_mode_carries_the_dictionary_switches() {
+        for mode in [InputMode::Tl, InputMode::Poj, InputMode::Tps] {
+            let mut settings = EngineSettings {
+                input_mode: mode,
+                ..EngineSettings::default()
+            };
+            settings.dictionary_sources.taihoa = false;
+            let sources = app_config(&settings)
+                .dictionary_sources
+                .expect("the compound oracle reads the switches");
+            assert!(!sources.taihoa && sources.kautian, "{mode:?}");
+        }
     }
 
     #[test]

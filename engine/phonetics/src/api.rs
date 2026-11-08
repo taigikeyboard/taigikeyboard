@@ -660,7 +660,7 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
 /// (`taigi`) and a normal-commit canonical next_tl (`tâi-gí`) are the
 /// same reading and must not surface as two predictions of one word.
 ///
-/// **Tone-INSENSITIVE** — unlike `composing::roman_reading_eq` (which is
+/// **Tone-INSENSITIVE** — unlike [`roman_reading_eq`] (which is
 /// separator-insensitive but tone-PRESERVING), this folds tones away so
 /// `tāng` (重量) and `tàng` both key to `tang`; the caller is responsible
 /// for keeping genuinely distinct readings (Core Principle #7) apart by
@@ -676,6 +676,31 @@ pub fn canonical_tl_form(text: &str, mode: InputMode) -> String {
 /// the common same-family case.
 pub fn toneless_reading_key(roman: &str) -> String {
     crate::derivation::derive_notone(roman)
+}
+
+/// Two romanizations are the **same reading** when they differ only in
+/// syllable separators: ASCII space (walker synth multi-word join), `-`
+/// (hyphen compound), or `--` (neutral-tone khinsiann, two `-` chars). Tone
+/// diacritics live inside the syllable letters and are NOT stripped, so
+/// the comparison is tone-preserving:
+///
+/// * `roman_reading_eq("hōo guá", "hōo--guá")` → `true` (予我: synth
+///   space-join vs dict khinsiann form — the same reading).
+/// * `roman_reading_eq("hōo guá", "hōo-guā")` → `false` (戶外: guā tone 7
+///   ≠ guá tone 2 — a different word, Core Principle #6).
+///
+/// Callers: the composing slot-0 promote and learned-pair fold
+/// (`composing::continuous`, `composing::requests`) and the nailed-join
+/// compound oracle (`lexicon::compound_hanji_exists`).
+pub fn roman_reading_eq(a: &str, b: &str) -> bool {
+    fn is_kept(c: &char) -> bool {
+        *c != ' ' && *c != '-'
+    }
+    // Allocation-free: compare the separator-filtered char streams
+    // directly (`Iterator::eq`). This runs per candidate in the per-
+    // keystroke slot-0 scan, so it must not heap-allocate a stripped
+    // `String` for each comparison.
+    a.chars().filter(is_kept).eq(b.chars().filter(is_kept))
 }
 
 // In-process search-key derivation for the engine's own user-data stores
@@ -767,6 +792,25 @@ fn rewrite_token(token: &str, target: System, keep_tl_finals: bool, case: Displa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn roman_reading_eq_matches_separator_variants_preserves_tone() {
+        // 予我: walker space-join vs dict khinsiann — same reading.
+        assert!(roman_reading_eq("hōo guá", "hōo--guá"));
+        // Hyphen vs space — same reading.
+        assert!(roman_reading_eq("tâi gí", "tâi-gí"));
+        // 戶外: tone 7 `guā` ≠ tone 2 `guá` — different reading despite
+        // sharing the separator-stripped consonant/vowel skeleton.
+        assert!(!roman_reading_eq("hōo guá", "hōo-guā"));
+        // Identical strings (also-是 `iā sī` synth == dict) trivially eq.
+        assert!(roman_reading_eq("iā sī", "iā sī"));
+        // Different syllables entirely — not a reading match.
+        assert!(!roman_reading_eq("hōo guá", "tâi gí"));
+        // The nailed-join oracle's shape: per-syllable picks concatenated
+        // without a separator against the dictionary row.
+        assert!(roman_reading_eq("ánniâ", "án-niâ"));
+        assert!(!roman_reading_eq("ánniâ", "án-nia"));
+    }
 
     #[test]
     fn composing_mode_reads_the_tps_layout_as_tl() {

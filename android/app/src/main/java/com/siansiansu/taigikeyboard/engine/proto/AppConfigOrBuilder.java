@@ -129,4 +129,31 @@ public interface AppConfigOrBuilder extends
    * @return The syllableSeparator.
    */
   com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator getSyllableSeparator();
+
+  /**
+   * <pre>
+   * The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
+   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
+   * Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
+   * and `HanjiConversion.toggles` carry the same switches; remove them once the
+   * fetch and the conversion read this field.
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySourceToggles dictionary_sources = 15;</code>
+   * @return Whether the dictionarySources field is set.
+   */
+  boolean hasDictionarySources();
+  /**
+   * <pre>
+   * The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
+   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
+   * Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
+   * and `HanjiConversion.toggles` carry the same switches; remove them once the
+   * fetch and the conversion read this field.
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySourceToggles dictionary_sources = 15;</code>
+   * @return The dictionarySources.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getDictionarySources();
 }

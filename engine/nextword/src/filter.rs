@@ -229,22 +229,15 @@ fn select_canonical_row(rows: &[MergedRow], indices: &[usize]) -> Option<usize> 
     // All separator-bearing rows must be the same reading (separators
     // stripped, tones kept). Two distinct multi-syllable readings sharing
     // the toneless key (`tāng-bīn` vs `tàng-bīn`) make the group ambiguous.
-    let canonical_reading = separatorless_form(&rows[canonical].tl);
-    for i in separator_rows {
-        if separatorless_form(&rows[i].tl) != canonical_reading {
-            return None;
-        }
+    let canonical_tl = &rows[canonical].tl;
+    if separator_rows.any(|i| !phonetics::api::roman_reading_eq(&rows[i].tl, canonical_tl)) {
+        return None;
     }
     Some(canonical)
 }
 
 fn has_separator(tl: &str) -> bool {
     tl.contains('-') || tl.contains(' ')
-}
-
-// Separator-stripped, tone-preserving reading form — same normalization as composing::roman_reading_eq.
-fn separatorless_form(tl: &str) -> String {
-    tl.chars().filter(|&c| c != '-' && c != ' ').collect()
 }
 
 fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction> {
@@ -299,6 +292,7 @@ mod tests {
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
             hanji_conversion: None,
+            dictionary_sources: None,
         }
     }
 
@@ -314,6 +308,7 @@ mod tests {
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
             hanji_conversion: None,
+            dictionary_sources: None,
         }
     }
 

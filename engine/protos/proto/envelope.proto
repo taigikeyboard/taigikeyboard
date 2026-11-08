@@ -149,6 +149,12 @@ message AppConfig {
   HanjiConversion hanji_conversion = 13;
   // Syllable Separator as stored, without the TPS fold.
   SyllableSeparator syllable_separator = 14;
+  // The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
+  // compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
+  // Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
+  // and `HanjiConversion.toggles` carry the same switches; remove them once the
+  // fetch and the conversion read this field.
+  DictionarySourceToggles dictionary_sources = 15;
 }
 
 // Hanji conversion in the preedit

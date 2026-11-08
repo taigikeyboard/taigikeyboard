@@ -52,9 +52,25 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         }
     }
 
+    /// #772: every composing op carries the dictionary switches, so the nailed-join compound oracle
+    /// filters by them (an absent field would read as every source on).
+    func testContinuousAppConfig_carriesTheDictionarySwitches() {
+        var settings = StubEngineSettings()
+        settings.isTaiHuaDictEnabled = false
+
+        let config = RustEngineBridge.continuousAppConfig(settings)
+
+        XCTAssertTrue(config.hasDictionarySources)
+        XCTAssertFalse(config.dictionarySources.taihoa)
+        XCTAssertTrue(config.dictionarySources.kautian)
+        XCTAssertTrue(config.dictionarySources.hasKautianSubcollections)
+    }
+
     /// Nextword and case transform pass only what they read; the rest keeps the proto defaults.
     func testAppConfig_unpassedFields_keepTheProtoDefaults() {
         let config = RustEngineBridge.appConfig(mode: .tps, isHanjiFirst: true)
+
+        XCTAssertFalse(config.hasDictionarySources)
 
         XCTAssertEqual(config.inputMode, "tps")
         XCTAssertTrue(config.isHanjiFirst)

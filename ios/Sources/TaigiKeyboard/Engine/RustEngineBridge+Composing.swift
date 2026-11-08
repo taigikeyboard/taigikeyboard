@@ -492,6 +492,7 @@ public extension RustEngineBridge {
             candidateDisplayMode: settings.candidateDisplayMode,
             syllableSeparator: settings.syllableSeparator,
             isTpsOrMappedToER: settings.isTpsOrMappedToER,
+            dictionarySources: dictionaryTogglesProto(DictionaryToggles(from: settings)),
         )
     }
 

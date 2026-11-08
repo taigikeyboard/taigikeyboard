@@ -36,7 +36,7 @@ use test_support::{
     TKDB_VERSION,
 };
 
-const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
+pub const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
 
 /// One dictionary fixture row. Empty `hanji` ⇒ TAILO (no hanji). `rowid` is
 /// the 1-based slice index, shared between `dictionary.bin` (offset-table
@@ -61,10 +61,28 @@ pub fn build_tkdb_v4(rows: &[Row]) -> Vec<u8> {
 /// [`build_tkdb_v4`] with each row's walker cost from `walker_cost`, for
 /// fixtures where the corpus cost and the frequency disagree on purpose.
 pub fn build_tkdb_v4_costed(rows: &[Row], walker_cost: impl Fn(&Row) -> u16) -> Vec<u8> {
+    build_tkdb_v4_rows(rows, |_| RANK_NEUTRAL_BITMASK, walker_cost)
+}
+
+/// [`build_tkdb_v4`] with each row's source bitmask from `source_bitmask`,
+/// for fixtures that pin the user's dictionary switches. Rows a plain
+/// [`build_tkdb_v4`] builds carry [`RANK_NEUTRAL_BITMASK`] (the LKK bit),
+/// which [`default_source_toggles`] keeps on.
+pub fn build_tkdb_v4_sourced(rows: &[Row], source_bitmask: impl Fn(&Row) -> u16) -> Vec<u8> {
+    build_tkdb_v4_rows(rows, source_bitmask, |row| {
+        walker_cost_from_fixture_frequency(row.freq)
+    })
+}
+
+fn build_tkdb_v4_rows(
+    rows: &[Row],
+    source_bitmask: impl Fn(&Row) -> u16,
+    walker_cost: impl Fn(&Row) -> u16,
+) -> Vec<u8> {
     let tkdb_rows: Vec<TkdbRow<'_>> = rows
         .iter()
         .map(|row| TkdbRow {
-            bitmask: RANK_NEUTRAL_BITMASK,
+            bitmask: source_bitmask(row),
             frequency: row.freq,
             syllable_count: Some(row.syll),
             kautian_subtag: Some(0),
@@ -438,10 +456,11 @@ impl Default for Fetch {
     }
 }
 
-/// The sources a fresh install enables on every platform (desktop
-/// `DictionarySourceToggles::DEFAULT`; iOS / Android defaults agree).
-pub fn default_sources_bitmask() -> u32 {
-    lexicon::api::dictionary_filter_bitmask(&DictionarySourceToggles {
+/// The switches a fresh install has on every platform (desktop
+/// `DictionarySourceToggles::DEFAULT`; iOS / Android defaults agree):
+/// every other source (Taihoa and iTaigi among them) off.
+pub fn default_source_toggles() -> DictionarySourceToggles {
+    DictionarySourceToggles {
         kautian: true,
         taigitv: true,
         kungge: true,
@@ -450,7 +469,12 @@ pub fn default_sources_bitmask() -> u32 {
         lkk: true,
         dev: true,
         ..Default::default()
-    })
+    }
+}
+
+/// [`default_source_toggles`] as the fetch's source filter.
+pub fn default_sources_bitmask() -> u32 {
+    lexicon::api::dictionary_filter_bitmask(&default_source_toggles())
 }
 
 /// `rows` as the frequency map a ranking reads.
@@ -485,6 +509,15 @@ impl Fetch {
 
 pub fn config_tl() -> AppConfig {
     config("tl")
+}
+
+/// [`config_tl`] carrying the user's dictionary switches, as every composing
+/// op the platforms send does (`AppConfig.dictionary_sources`, #772).
+pub fn config_tl_with_sources(sources: DictionarySourceToggles) -> AppConfig {
+    AppConfig {
+        dictionary_sources: Some(sources),
+        ..config_tl()
+    }
 }
 
 /// The `ComposingResponse.commit` a pick answers with.

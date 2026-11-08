@@ -10,6 +10,7 @@ import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
 import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
+import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles as ProtoDictionarySourceToggles
 import com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator as ProtoSyllableSeparator
 
 /**
@@ -26,6 +27,10 @@ import com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator as ProtoSylla
  * them: the engine applies the TPS fold itself (`AppConfig::renders_hanji_first`
  * / `rendered_syllable_joiner`, `engine/protos/src/lib.rs`).
  *
+ * [dictionarySources] is the user's dictionary switches. Only composing sends
+ * them — the nailed-join compound oracle reads them (#772); `null` leaves the
+ * field absent, which the engine reads as every source on.
+ *
  * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift appConfig.
  * Drift causes silent divergence (one platform renders TPS or the swap differently).
  */
@@ -37,6 +42,7 @@ internal fun appConfig(
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isTpsOrMappedToER: Boolean = false,
+    dictionarySources: ProtoDictionarySourceToggles? = null,
 ): AppConfig =
     AppConfig
         .newBuilder()
@@ -53,6 +59,7 @@ internal fun appConfig(
         .setCandidateDisplayMode(candidateDisplayMode.toProto())
         .setSyllableSeparator(syllableSeparator.toProto())
         .setTpsOrMapsToEr(isTpsOrMappedToER)
+        .apply { if (dictionarySources != null) setDictionarySources(dictionarySources) }
         .build()
 
 /**
@@ -89,6 +96,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
         candidateDisplayMode = settings.candidateDisplayMode,
         syllableSeparator = settings.syllableSeparator,
         isTpsOrMappedToER = settings.isTpsOrMappedToER,
+        dictionarySources = dictionaryTogglesProto(RustEngineBridge.DictionaryToggles.from(settings)),
     )
 
 /**
