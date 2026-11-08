@@ -148,23 +148,24 @@ mod tests {
 
     #[test]
     fn the_shift_layers_with_no_glyph_are_the_ones_the_layout_leaves_out() {
-        // trace: KEYS, row by row — no `@ $ % & _ +` (digits 2 4 5 7 and
-        // `-` `=`), no capital for Q W T I / S F G H K / Z X C V B N, no `<`
-        // `>` `?` (on `,` `.` `/`); `!` `#` `^` `*` `(` `)` `:` and the other
-        // capitals type glyphs.
+        // trace: KEYS, row by row — no `@ $ % & +` (digits 2 4 5 7 and `=`),
+        // no capital for Q W T I / A S F G H K / Z X C V B N M, no `:` (on
+        // `;`), no `<` (on `,`); `!` `#` `^` `*` `(` `)` `_` `>` `?` and the
+        // other capitals type glyphs.
         let bare: String = tps_keyboard_rows()
             .iter()
             .flat_map(|row| row.caps.iter())
             .filter(|cap| cap.shift_glyph.is_none())
             .map(|cap| cap.label)
             .collect();
-        assert_eq!(bare, "2457-=QWTISFGHKZXCVBN,./");
+        assert_eq!(bare, "2457=QWTIASFGHK;ZXCVBNM,");
     }
 
     #[test]
     fn a_cap_carries_its_label_and_both_layers() {
         // trace: KEYS — `e` ㄍ / `E` ㆣ; `1` ㄅ / `!` ㆠ; `6` ˊ / `^` ˆ;
-        // `q` ㄆ with no Shift glyph; `-` types the hyphen, `_` nothing.
+        // `q` ㄆ with no Shift glyph; `-` ㆲ / `_` ㆱ; `=` types the hyphen,
+        // `+` nothing.
         assert_eq!(
             cap('E'),
             TpsKeyCap {
@@ -177,8 +178,10 @@ mod tests {
         assert_eq!(cap('6').glyph, "\u{02ca}");
         assert_eq!(cap('6').shift_glyph, Some("\u{02c6}"));
         assert_eq!(cap('Q').shift_glyph, None);
-        assert_eq!(cap('-').glyph, "-");
-        assert_eq!(cap('-').shift_glyph, None);
+        assert_eq!(cap('-').glyph, "ㆲ");
+        assert_eq!(cap('-').shift_glyph, Some("ㆱ"));
+        assert_eq!(cap('=').glyph, "-");
+        assert_eq!(cap('=').shift_glyph, None);
     }
 
     #[test]
@@ -192,14 +195,16 @@ mod tests {
     #[test]
     fn a_glyph_names_its_cap_on_either_layer() {
         // trace: ROWS — `1` is row 0 cap 0 (ㄅ bare, ㆠ on `!`); `e` is row 1
-        // cap 2 (q w e; ㄍ bare, ㆣ on `E`); `-` is row 0 cap 10 (1 2 3 4 5 6
-        // 7 8 9 0 -), typing the hyphen.
+        // cap 2 (q w e; ㄍ bare, ㆣ on `E`); `=` is row 0 cap 11 (1 2 3 4 5 6
+        // 7 8 9 0 - =), typing the hyphen; `-` (cap 10) types ㆲ, ㆱ on `_`.
         let index = |row, cap| Some(TpsKeyCapIndex { row, cap });
         assert_eq!(tps_keyboard_cap_of("ㄅ"), index(0, 0));
         assert_eq!(tps_keyboard_cap_of("ㆠ"), index(0, 0));
         assert_eq!(tps_keyboard_cap_of("ㄍ"), index(1, 2));
         assert_eq!(tps_keyboard_cap_of("ㆣ"), index(1, 2));
-        assert_eq!(tps_keyboard_cap_of("-"), index(0, 10));
+        assert_eq!(tps_keyboard_cap_of("-"), index(0, 11));
+        assert_eq!(tps_keyboard_cap_of("ㆲ"), index(0, 10));
+        assert_eq!(tps_keyboard_cap_of("ㆱ"), index(0, 10));
     }
 
     #[test]

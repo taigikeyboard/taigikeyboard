@@ -42,18 +42,19 @@ const KEYS: &[(char, &str)] = &[
     ('h', "ㄘ"),
     ('n', "ㄙ"),
     // Vowels and nasalized vowels. ㄛ ㄜ ㄝ keep their Dachen keys (TL `o`
-    // is ㄛ, ㄜ is `er` / `or`, `engine/phonetics/src/tps.rs`); ㆦ takes the
-    // Dachen ㄩ key, ㆨ the ㄡ key, both free under TPS.
+    // is ㄛ, ㄜ is `er` / `or`, `engine/phonetics/src/tps.rs`); ㆨ takes the
+    // Dachen ㄩ key, so ㄧ ㄨ ㆨ stand in one column, and ㆦ the ㄡ key, the
+    // sound it is closest to — both free under TPS.
     ('8', "ㄚ"),
     ('*', "ㆩ"),
     ('i', "ㄛ"),
     ('k', "ㄜ"),
     ('o', "ㆤ"),
     ('O', "ㆥ"),
-    ('m', "ㆦ"),
-    ('M', "ㆧ"),
+    ('m', "ㆨ"),
+    ('.', "ㆦ"),
+    ('>', "ㆧ"),
     (',', "ㄝ"),
-    ('.', "ㆨ"),
     ('u', "ㄧ"),
     ('U', "ㆪ"),
     ('j', "ㄨ"),
@@ -62,20 +63,22 @@ const KEYS: &[(char, &str)] = &[
     ('(', "ㆮ"),
     ('l', "ㄠ"),
     ('L', "ㆯ"),
-    // Nasal finals; the syllabic nasals on Shift of ㄇ and ㄣ, ㆱ on the free `=`.
+    // Nasal finals, each with its sister on Shift: ㄣ ㆬ (n / m), ㄥ ㆭ
+    // (ng), ㄢ ㆰ (an / am), ㆲ ㆱ (ong / om) — ㆲ, the common one, bare on
+    // the free Dachen ㄦ key.
     ('0', "ㄢ"),
     (')', "ㆰ"),
     (';', "ㄤ"),
-    (':', "ㆲ"),
-    ('=', "ㆱ"),
-    ('A', "ㆬ"),
+    ('-', "ㆲ"),
+    ('_', "ㆱ"),
     ('p', "ㄣ"),
-    ('P', "ㆭ"),
+    ('P', "ㆬ"),
     ('/', "ㄥ"),
-    // Stop codas.
-    ('b', "ㆴ"),
-    ('t', "ㆵ"),
-    ('g', "ㆻ"),
+    ('?', "ㆭ"),
+    // Stop codas in p t k order down one column, ㆷ on `z`.
+    ('t', "ㆴ"),
+    ('g', "ㆵ"),
+    ('b', "ㆻ"),
     ('z', "ㆷ"),
     // Tone marks 2, 3, 5, 6, 7, 8 and 9; tones 1 and 4 are Space. Tone 8 is
     // U+02D9, what mobile types; the engine folds it for lookup. `3` is tone
@@ -87,8 +90,9 @@ const KEYS: &[(char, &str)] = &[
     ('5', "\u{02eb}"),
     ('7', "\u{02d9}"),
     ('^', "\u{02c6}"),
-    // The hyphen (`--` writes the neutral tone).
-    ('-', "-"),
+    // The hyphen (`--` writes the neutral tone), on the free `=` since ㆲ
+    // took `-`.
+    ('=', "-"),
 ];
 
 /// The glyph `event` types under TPS, or `None` for a key the layout does not
@@ -174,14 +178,21 @@ mod tests {
 
     #[test]
     fn shift_selects_the_tps_only_layer() {
-        // trace: Shift+e types `E` → ㆣ; Shift+1 types `!` → ㆠ; Shift+p → ㆭ;
-        // Shift+3 types `#` → ˇ.
+        // trace: Shift+e types `E` → ㆣ; Shift+1 types `!` → ㆠ; Shift+p → ㆬ;
+        // Shift+/ types `?` → ㆭ; Shift+- types `_` → ㆱ; Shift+. types `>`
+        // → ㆧ; Shift+3 types `#` → ˇ.
         assert_eq!(glyph("e", KeyModifiers::NONE), Some("ㄍ"));
         assert_eq!(glyph("E", KeyModifiers::SHIFT), Some("ㆣ"));
         assert_eq!(glyph("1", KeyModifiers::NONE), Some("ㄅ"));
         assert_eq!(glyph("!", KeyModifiers::SHIFT), Some("ㆠ"));
         assert_eq!(glyph("p", KeyModifiers::NONE), Some("ㄣ"));
-        assert_eq!(glyph("P", KeyModifiers::SHIFT), Some("ㆭ"));
+        assert_eq!(glyph("P", KeyModifiers::SHIFT), Some("ㆬ"));
+        assert_eq!(glyph("/", KeyModifiers::NONE), Some("ㄥ"));
+        assert_eq!(glyph("?", KeyModifiers::SHIFT), Some("ㆭ"));
+        assert_eq!(glyph("-", KeyModifiers::NONE), Some("ㆲ"));
+        assert_eq!(glyph("_", KeyModifiers::SHIFT), Some("ㆱ"));
+        assert_eq!(glyph(".", KeyModifiers::NONE), Some("ㆦ"));
+        assert_eq!(glyph(">", KeyModifiers::SHIFT), Some("ㆧ"));
         assert_eq!(glyph("#", KeyModifiers::SHIFT), Some("\u{02c7}"));
         assert_eq!(glyph("^", KeyModifiers::SHIFT), Some("\u{02c6}"));
     }
@@ -196,12 +207,12 @@ mod tests {
 
     #[test]
     fn an_unassigned_shift_cell_or_a_chord_is_not_a_tps_key() {
-        // trace: Shift+q (`Q`), Shift+k (`K`), Shift+2 (`@`) and Shift+/ (`?`)
-        // have no TPS glyph; nor has the bare `'`.
-        assert_eq!(glyph("Q", KeyModifiers::SHIFT), None);
-        assert_eq!(glyph("K", KeyModifiers::SHIFT), None);
-        assert_eq!(glyph("@", KeyModifiers::SHIFT), None);
-        assert_eq!(glyph("?", KeyModifiers::SHIFT), None);
+        // trace: Shift+q (`Q`), Shift+k (`K`), Shift+2 (`@`), Shift+a (`A`),
+        // Shift+m (`M`), Shift+; (`:`) and Shift+= (`+`) have no TPS glyph;
+        // nor has the bare `'`.
+        for shifted in ["Q", "K", "@", "A", "M", ":", "+"] {
+            assert_eq!(glyph(shifted, KeyModifiers::SHIFT), None, "{shifted:?}");
+        }
         assert_eq!(glyph("'", KeyModifiers::NONE), None);
         assert_eq!(glyph("e", KeyModifiers::CONTROL), None);
         assert_eq!(glyph("e", KeyModifiers::ALT), None);
@@ -247,6 +258,15 @@ mod tests {
         for (key, mark) in tones {
             assert_eq!(glyph(key, KeyModifiers::NONE), Some(mark), "{key}");
         }
-        assert_eq!(glyph("-", KeyModifiers::NONE), Some("-"));
+        assert_eq!(glyph("=", KeyModifiers::NONE), Some("-"));
+    }
+
+    #[test]
+    fn the_stop_codas_run_p_t_k_down_one_column() {
+        // trace: reporter layout (Discord 2026-10-19) — `t` ㆴ (p), `g` ㆵ (t),
+        // `b` ㆻ (k); `z` ㆷ (h).
+        for (key, coda) in [("t", "ㆴ"), ("g", "ㆵ"), ("b", "ㆻ"), ("z", "ㆷ")] {
+            assert_eq!(glyph(key, KeyModifiers::NONE), Some(coda), "{key}");
+        }
     }
 }
