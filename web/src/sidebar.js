@@ -1,4 +1,4 @@
-// Wide screens dock the sidebar, open unless a past visit closed it (`prepaint.js`
+// Wide screens dock the sidebar, closed unless a past visit opened it (`prepaint.js`
 // restores that), and slide it in and out; narrow ones open it as a popover drawer.
 
 const STORAGE_KEY = "taigi.sidebar";
@@ -31,6 +31,12 @@ export class Sidebar {
       this.#syncExpanded();
     });
     this.#syncExpanded();
+    // The state `prepaint.js` restored is drawn as it is; only a toggle slides.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        document.documentElement.dataset.animated = "";
+      }),
+    );
   }
 
   toggle() {

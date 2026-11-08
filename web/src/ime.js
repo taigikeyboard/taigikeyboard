@@ -2,8 +2,8 @@
 // thread because `preventDefault` must run during `keydown`
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
-import { keepDraft } from "./draft.js";
-import { wireHeaderDelete } from "./header.js";
+import { Draft } from "./draft.js";
+import { keepTitle } from "./header.js";
 import { translate } from "./i18n.js";
 import { Learning } from "./learning.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
@@ -27,9 +27,13 @@ const retryButton = document.getElementById("retry");
 const loadSlot = document.getElementById("load-slot");
 
 const surface = new Surface(textarea);
-keepDraft(textarea, surface);
-wireSave(document.getElementById("save-formats"), textarea);
-wireHeaderDelete(document.querySelectorAll(".header-delete"), textarea);
+wireSave(
+  document.getElementById("save-formats"),
+  textarea,
+  document.getElementById("title"),
+);
+// Before `Settings`, which translates the page.
+keepTitle(document.getElementById("title"), textarea);
 const panel = new Panel(
   document.getElementById("panel"),
   document.getElementById("ruler"),
@@ -62,6 +66,7 @@ const settings = new Settings(
   document.getElementById("settings"),
   changeSettings,
 );
+const draft = new Draft(textarea, surface, translate("web.intro"));
 
 /// `null` between instances.
 let session = null;
@@ -278,6 +283,7 @@ function changeSettings(json) {
   call((current) => current.setSettings(json));
   redrawMessage();
   redrawShortcuts();
+  draft.translateIntro(translate("web.intro"));
 }
 
 /// Keys and labels follow Tone Keys, the input mode and the language.
@@ -396,16 +402,6 @@ document.addEventListener("keydown", (event) => {
   textarea.focus();
 });
 
-document.getElementById("copy").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(textarea.value);
-    say("web.copied", "copied");
-  } catch (error) {
-    console.error(error);
-    say("web.copyFailed", "failed");
-  }
-});
-
 retryButton.addEventListener("click", () => {
   if (session === null) {
     start();
@@ -413,10 +409,6 @@ retryButton.addEventListener("click", () => {
   }
   showLoading();
   loadDictionaries(session);
-});
-
-document.getElementById("clear").addEventListener("click", () => {
-  surface.clear();
 });
 
 start();

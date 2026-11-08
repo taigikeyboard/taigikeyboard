@@ -5,10 +5,11 @@
 /* Follows the system unless Appearance pins one. "auto" pins none. */
 :root {
   color-scheme: light dark;
-  --bg: light-dark(#f5f5f7, #000000);
+  /* ZenPen's `.yin` (light) and `.yang` (dark). */
+  --bg: light-dark(#fdfdfd, #111111);
   --card: light-dark(#ffffff, #1c1c1e);
   --glass: light-dark(rgba(246, 246, 248, 0.72), rgba(44, 44, 46, 0.72));
-  --text: light-dark(#1d1d1f, #f5f5f7);
+  --text: light-dark(#111111, #fafafa);
   --secondary: light-dark(#6e6e73, #98989d);
   --border: light-dark(#d2d2d7, #3a3a3c);
   --field: light-dark(#fafafa, #2c2c2e);
@@ -22,9 +23,10 @@
     "Helvetica Neue", Helvetica, "PingFang TC", "Noto Sans TC", Arial,
     sans-serif;
   --font: var(--system-font);
-  /* ZenPen's `article`: the textarea and the subtitle. */
+  /* ZenPen's `article`: the textarea. */
   --editor-font: 22px / 30px var(--font);
-  --measure: 760px;
+  /* ZenPen's `section`. */
+  --measure: 600px;
   --sidebar-width: 21rem;
   --candidate-size: 17px;
   --tps-cap-height: 2.75rem;
@@ -57,9 +59,10 @@
   --font: "GenYoGothic2 TW", var(--system-font);
 }
 
-/* The markup's English holds the slots, unseen, until i18n.js has run. */
+/* The markup's English holds the slots, unseen, until i18n.js has run; by then
+   `header.js` has put back an edited title. */
 :root:not([data-translated])
-  :is([data-i18n], [data-i18n-keycap], .setting select, .setting input) {
+  :is([data-i18n], #title, .setting select, .setting input) {
   visibility: hidden;
 }
 
@@ -105,48 +108,17 @@ main {
   max-width: var(--measure);
 }
 
-/* A deleted line is gone for good (`header.js`). */
-.header-line {
-  position: relative;
-}
-
-:root[data-hidden-header~="title-line"] #title-line,
-:root[data-hidden-header~="subtitle-line"] #subtitle-line {
-  display: none;
-}
-
-/* A `.corner-button` beside the line, seen on hover or focus only (always on
-   touch, in the `@media` block with `#text-hint`). */
-.header-delete {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  opacity: 0;
-  translate: 0 -50%;
-}
-
-.header-line:hover .header-delete,
-.header-delete:focus-visible {
-  opacity: 1;
-}
-
-/* ZenPen's `header`: 38px bold, on the column's left. Room on the right for
-   the Delete button. */
+/* ZenPen's `header`: 38px bold at the font's own line height, on the column's
+   left, edited in place (`header.js`) with no box or ring. An emptied title
+   keeps its line, so a click can write it again. */
 h1 {
+  min-height: 1lh;
   margin: 0;
-  padding-right: 2.5rem;
+  outline: none;
   font-size: 38px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: normal;
   overflow-wrap: break-word;
-}
-
-/* Body text, as ZenPen's `article` (22px apart from the title) and the
-   textarea under it. */
-#subtitle {
-  margin: 22px 0 0;
-  padding-right: 2.5rem;
-  font: var(--editor-font);
 }
 
 button {
@@ -220,7 +192,10 @@ summary:focus-visible {
     display 0.25s allow-discrete;
 }
 
+/* A column, so the footer can sit at its foot. */
 #sidebar:popover-open {
+  display: flex;
+  flex-direction: column;
   transform: none;
 }
 
@@ -240,12 +215,13 @@ summary:focus-visible {
   margin: -0.25rem -0.5rem 0 0;
 }
 
-/* Docked, and out of the tab order while closed. `display: block` overrides the
+/* Docked, and out of the tab order while closed. `display: flex` overrides the
    closed popover's `none` so it can slide. Same width as sidebar.js. */
 @media (min-width: 50rem) {
   #sidebar {
     position: fixed;
-    display: block;
+    display: flex;
+    flex-direction: column;
     padding-top: 3.5rem;
     box-shadow: none;
     visibility: hidden;
@@ -448,7 +424,7 @@ summary:focus-visible {
 }
 
 /* No box: the text sits on the page, as in ZenPen. It takes the window's room
-   left over, so the key panel, Copy and Clear stay on screen. */
+   left over, so the key panel stays on screen. */
 #editor {
   position: relative;
   display: flex;
@@ -462,55 +438,14 @@ summary:focus-visible {
   flex: 1;
   width: 100%;
   min-height: 0;
-  padding: 1rem 0;
+  /* ZenPen's `article` sits 22px under the title. */
+  padding: 22px 0 0;
   border: 0;
   outline: none;
   background: none;
   color: inherit;
   font: var(--editor-font);
   resize: none;
-}
-
-/* A placeholder cannot draw the keycap, so `#text` keeps a blank one only to drive
-   `:placeholder-shown` (kautian-mirror's `.search-hint`). Touch has no such key.
-   `/` only focuses the box, so a focused box hides the hint. */
-#text-hint {
-  position: absolute;
-  top: 1rem;
-  left: 0;
-  color: var(--secondary);
-  font: var(--editor-font);
-  pointer-events: none;
-}
-
-#text-hint kbd {
-  display: inline-block;
-  min-width: 1.25rem;
-  padding: 0 0.3rem;
-  border: 1px solid var(--hairline);
-  border-radius: 5px;
-  font: 0.8125rem / 1.4 var(--system-font);
-  text-align: center;
-}
-
-#text:not(:placeholder-shown) ~ #text-hint,
-#text:focus ~ #text-hint {
-  display: none;
-}
-
-#text-hint:has(~ #preedit:not(:empty)),
-#text-hint:has(~ #panel:not([hidden])) {
-  visibility: hidden;
-}
-
-@media not ((hover: hover) and (pointer: fine)) {
-  #text-hint {
-    display: none;
-  }
-
-  .header-delete {
-    opacity: 1;
-  }
 }
 
 #text:disabled {
@@ -965,8 +900,10 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
-/* `auto` holds it at the window's foot; a taller page pushes it down. */
+/* At the sidebar's foot, so it closes with the sidebar; `auto` holds it at the
+   window's foot, and open sections push it down. */
 footer {
+  flex: none;
   margin-top: auto;
   padding-top: 2.5rem;
   color: var(--secondary);
@@ -1011,7 +948,13 @@ footer p {
   height: 15px;
 }
 
-/* Last, to outrank the docked `@media` block. */
+/* Last, to outrank the docked `@media` block. The sidebar `prepaint.js` opened
+   is there from the first frame, not slid in: `sidebar.js` sets
+   `data-animated` once that frame is drawn. */
+:root:not([data-animated]) :is(body, #sidebar) {
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   body,
   button,

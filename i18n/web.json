@@ -19,8 +19,8 @@
         "ja": "テキスト"
       }
     },
-    "placeholder": {
-      "comment": "Hint in the empty text box while it is not focused; {key} is the \"/\" key drawn as a keycap, which focuses the box.",
+    "intro": {
+      "comment": "The text box's content on a first visit, ZenPen-style: the user deletes it and writes. Two paragraphs (\\n\\n): what TaigiKeyboard is, then desktop-only support and switching to an English input method first. Hanji authored by the maintainer 2026-11-09; tailo / poj / en / ja follow home.aboutIntro's wording.",
       "scope": {
         "platforms": [
           "web"
@@ -30,32 +30,11 @@
         ]
       },
       "values": {
-        "hanji": "揤 {key} 開始拍字",
-        "tailo": "Tshi̍h {key} khai-sí phah-jī",
-        "poj": "Chhi̍h {key} khai-sí phah-jī",
-        "en": "Press {key} to start typing",
-        "ja": "{key} を押して入力を開始"
-      },
-      "placeholders": {
-        "key": "string"
-      }
-    },
-    "subtitle": {
-      "comment": "Subtitle under the page title: desktop-only support, switch to an English input method first.",
-      "scope": {
-        "platforms": [
-          "web"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "目前干焦支援電腦版，使用進前，請先切換去英文輸入法",
-        "tailo": "Bo̍k-tsiân kan-na tsi-uān tiān-náu-pán, sú-iōng tsìn-tsîng, tshiánn sing tshiat-uānn khì Ing-bûn su-ji̍p-huat",
-        "poj": "Bo̍k-chiân kan-na chi-oān tiān-náu-pán, sú-iōng chìn-chêng, chhiáⁿ seng chhiat-oāⁿ khì Eng-bûn su-ji̍p-hoat",
-        "en": "Currently desktop only. Switch to an English input method before you start.",
-        "ja": "現在はパソコンのみ対応。ご利用前に英語入力に切り替えてください。"
+        "hanji": "台語齒盤是一个免費、開源 ê 台灣話拍字家私，拍字 ia̋n-jín 由台灣人家己開發，台語齒盤永遠免費、無廣告，嘛袂推出付費功能。毋管是一般使用者、學生、先生、學校抑是台語教育團體，攏會當自由使用。向望逐家寫台文、教台語 ê 時，免有額外 ê 負擔。\n\n線頂版本目前干焦支援電腦，使用進前，請先切去英語輸入法就會當開始拍台文，毋免安裝任何台語輸入法。",
+        "tailo": "Tâi-gí Khí-puânn sī tsi̍t ê bián-huì, khai-guân ê Tâi-uân-uē phah-jī ke-si, phah-jī ia̋n-jín iû Tâi-uân-lâng ka-tī khai-huat, Tâi-gí Khí-puânn íng-uán bián-huì, bô kóng-kò, mā bē tshui-tshut hù-huì kong-lîng. M̄-kuán sī it-puann sú-iōng-tsiá, ha̍k-sing, sian-sinn, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thuân-thé, lóng ē-tàng tsū-iû sú-iōng. Ǹg-bāng ta̍k-ke siá Tâi-bûn, kà Tâi-gí ê sî, bián ū gia̍h-guā ê hū-tam.\n\nSuànn-tíng pán-pún bo̍k-tsiân kan-na tsi-uān tiān-náu, sú-iōng tsìn-tsîng, tshiánn sing tshiat khì Ing-gí su-ji̍p-huat tō ē-tàng khai-sí phah Tâi-bûn, m̄-bián an-tsong jīm-hô Tâi-gí su-ji̍p-huat.",
+        "poj": "Tâi-gí Khí-pôaⁿ sī chi̍t ê bián-hùi, khai-goân ê Tâi-oân-ōe phah-jī ke-si, phah-jī ia̋n-jín iû Tâi-oân-lâng ka-tī khai-hoat, Tâi-gí Khí-pôaⁿ éng-oán bián-hùi, bô kóng-kò, mā bē chhui-chhut hù-hùi kong-lêng. M̄-koán sī it-poaⁿ sú-iōng-chiá, ha̍k-seng, sian-siⁿ, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thoân-thé, lóng ē-tàng chū-iû sú-iōng. Ǹg-bāng ta̍k-ke siá Tâi-bûn, kà Tâi-gí ê sî, bián ū gia̍h-gōa ê hū-tam.\n\nSòaⁿ-téng pán-pún bo̍k-chiân kan-na chi-oān tiān-náu, sú-iōng chìn-chêng, chhiáⁿ seng chhiat khì Eng-gí su-ji̍p-hoat tō ē-tàng khai-sí phah Tâi-bûn, m̄-bián an-chong jīm-hô Tâi-gí su-ji̍p-hoat.",
+        "en": "TaigiKeyboard is a free, open-source Taiwanese typing tool, its typing engine developed by Taiwanese people themselves. TaigiKeyboard is free forever, with no ads and no paid features ever. Everyday users, students, teachers, schools and Taiwanese-language education groups are all free to use it. The hope is that writing and teaching Taiwanese comes with no extra burden.\n\nThe online version currently supports computers only. Switch to an English input method and you can start typing Taiwanese, with no Taiwanese input method to install.",
+        "ja": "台語齒盤は、無料でオープンソースの台湾語入力ツールです。入力エンジンは台湾の人たち自身が開発しています。台語齒盤はずっと無料で、広告もなく、有料機能を出すこともありません。一般の利用者、学生、先生、学校、台湾語教育団体のどなたでも自由に使えます。台湾語を書くとき、教えるときに、余計な負担がないことを願っています。\n\nオンライン版は現在パソコンのみ対応しています。英語入力に切り替えれば、台湾語入力ソフトをインストールしなくても、すぐに台湾語を入力できます。"
       }
     },
     "otherResources": {
@@ -238,42 +217,6 @@
         "ja": "読み込めませんでした"
       }
     },
-    "copied": {
-      "comment": "Status slot after Copy.",
-      "scope": {
-        "platforms": [
-          "web"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "已經拷貝",
-        "tailo": "Í-king khó-puè",
-        "poj": "Í-keng khó-pòe",
-        "en": "Copied",
-        "ja": "コピーしました"
-      }
-    },
-    "copyFailed": {
-      "comment": "Status slot when Copy failed.",
-      "scope": {
-        "platforms": [
-          "web"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "拷貝失敗",
-        "tailo": "Khó-puè sit-pāi",
-        "poj": "Khó-pòe sit-pāi",
-        "en": "Could not copy",
-        "ja": "コピーできませんでした"
-      }
-    },
     "writeFailed": {
       "comment": "Status slot when the browser refused a commit; {text} is the text, so it is not lost.",
       "scope": {
@@ -311,24 +254,6 @@
         "poj": "Lēng-gōa chi̍t ê su-ji̍p-hoat tng-teh iōng, koaiⁿ--tiāu chiah ē-tàng tī chia phah-jī.",
         "en": "Another input method is active. Turn it off to type here.",
         "ja": "別の入力方法が使用中です。オフにするとここに入力できます。"
-      }
-    },
-    "saveFormat": {
-      "comment": "Heading above the sidebar's Save buttons (Markdown, HTML, Plain Text), which download the text as a file.",
-      "scope": {
-        "platforms": [
-          "web"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "揀儲存格式",
-        "tailo": "Kíng thú-tsûn keh-sik",
-        "poj": "Kéng thú-chûn keh-sek",
-        "en": "Select save format",
-        "ja": "保存形式を選択"
       }
     },
     "plainText": {

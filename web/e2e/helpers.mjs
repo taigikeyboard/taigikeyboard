@@ -17,10 +17,13 @@ export function seedSettings(page, settings) {
 
 /// The page with `settings` as if a past visit had stored them. `ready`: wait
 /// for the dictionaries. `folded`: leave the sidebar's sections as a visit finds
-/// them, rather than open for a test that works on their rows.
+/// them, rather than open for a test that works on their rows. `docked`: the
+/// sidebar open, as a past visit that opened it left it (it starts closed).
+/// `intro`: keep the intro text a first visit finds, rather than an empty box
+/// for a test that asserts what it typed.
 export async function open(
   page,
-  { settings, ready = true, folded = false } = {},
+  { settings, ready = true, folded = false, docked = true, intro = false } = {},
 ) {
   if (settings) {
     await seedSettings(page, settings);
@@ -28,14 +31,35 @@ export async function open(
   if (!folded) {
     await unfoldSections(page);
   }
+  if (docked) {
+    // The first load only: a test that closes it and reloads sees it closed.
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("test.docked") === null) {
+        sessionStorage.setItem("test.docked", "");
+        localStorage.setItem("taigi.sidebar", "open");
+      }
+    });
+  }
   await page.goto("/index.html");
   const editor = page.locator("#text");
   await expect(editor).toBeEnabled();
   await expect(editor).toBeFocused();
+  if (!intro) {
+    await emptyBox(editor);
+  }
   if (ready) {
     await expectState(page, "ready");
   }
   return editor;
+}
+
+/// Takes the intro an empty box opens on out of `editor`, for a test that
+/// asserts what it types. No `input`: nothing is stored, as for a box the user
+/// has not touched, so a reload brings the intro back.
+export function emptyBox(editor) {
+  return editor.evaluate((element) => {
+    element.value = "";
+  });
 }
 
 /// On every load, so a reload keeps them open.

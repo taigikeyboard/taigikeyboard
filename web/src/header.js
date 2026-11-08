@@ -1,21 +1,31 @@
-// The title and the subtitle each carry a delete button. A deleted line stays
-// gone across visits: `<html data-hidden-header>` lists the ids style.css hides,
-// stored as is in `taigi.hiddenHeader`, which `prepaint.js` restores before first paint.
+// The title is the user's to edit or delete, as ZenPen's header is. An edited
+// title is kept in `localStorage`; it names a saved file (`save.js`). Its keys go
+// straight to it: the engine composes only in the textarea.
 
-export function wireHeaderDelete(buttons, textarea) {
-  const root = document.documentElement;
-  for (const button of buttons) {
-    button.addEventListener("click", () => {
-      const hidden = (root.dataset.hiddenHeader ?? "").split(" ");
-      hidden.push(button.closest(".header-line").id);
-      root.dataset.hiddenHeader = hidden.filter(Boolean).join(" ");
-      try {
-        localStorage.setItem("taigi.hiddenHeader", root.dataset.hiddenHeader);
-      } catch {
-        // Blocked storage: gone for this visit only.
-      }
-      // The button that had the focus is gone with its line.
-      textarea.focus();
-    });
+const STORAGE_KEY = "taigi.title";
+
+export function keepTitle(title, textarea) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    // ZenPen's `loadState`: an empty title opens on the default one.
+    if (stored) {
+      title.textContent = stored;
+    }
+  } catch {
+    // Blocked storage: the markup's title shows.
   }
+  title.addEventListener("input", () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, title.textContent);
+    } catch {
+      // Blocked storage: the edit lasts for this visit.
+    }
+  });
+  // One line: Enter moves on to the text.
+  title.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.isComposing) {
+      event.preventDefault();
+      textarea.focus();
+    }
+  });
 }

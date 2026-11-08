@@ -72,11 +72,6 @@ export class Surface {
     this.#textarea.setSelectionRange(text.length, text.length);
   }
 
-  clear() {
-    this.#textarea.select();
-    this.#write("delete");
-  }
-
   /// Whether anything but this page moved the caret or changed the text since
   /// its last write: arrows, the mouse, paste, undo. Asked at the next key, the
   /// one moment it matters, which `selectionchange` would answer too late.
