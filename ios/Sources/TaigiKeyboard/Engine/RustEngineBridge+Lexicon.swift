@@ -207,7 +207,7 @@ public extension RustEngineBridge {
     }
 
     /// Proto form of the user's dictionary toggles, shared by
-    /// `lexiconDictionaryFilters`, `composingFetchAtPos` and `nextwordPredictNext`.
+    /// `lexiconDictionaryFilters`, `continuousAppConfig` and `nextwordPredictNext`.
     static func dictionaryTogglesProto(_ toggles: DictionaryToggles) -> Taigi_Engine_DictionarySourceToggles {
         var togglesProto = Taigi_Engine_DictionarySourceToggles()
         togglesProto.kautian = toggles.kautian

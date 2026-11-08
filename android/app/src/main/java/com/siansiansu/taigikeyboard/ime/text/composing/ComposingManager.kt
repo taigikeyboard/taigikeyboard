@@ -325,13 +325,12 @@ class ComposingManager(
     suspend fun fetchContinuousCandidates(): List<RustEngineBridge.ContinuousCandidate> {
         val settings = settingsProvider.current
         return RustEngineBridge.composingFetchAtPos(
+            // Carries the dictionary toggles the Tab3 browse path resolves too
+            // (12 source toggles + kautian subcollections) as the fetch's source
+            // filter; every dictionary off offers no dictionary candidates (§57).
             config = continuousAppConfig(settings),
             generation = currentGeneration,
             nowMs = System.currentTimeMillis(),
-            // The dictionary toggles the Tab3 browse path resolves too (12 source
-            // toggles + kautian subcollections); every dictionary off offers no
-            // dictionary candidates (§57).
-            dictionaryToggles = RustEngineBridge.DictionaryToggles.from(settings),
             // §34/S22 — invert of the Show Typed Text First setting.
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
             customDictionaryDisabled = !settings.isCustomDictEnabled,

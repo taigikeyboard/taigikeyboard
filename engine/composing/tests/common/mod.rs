@@ -373,7 +373,7 @@ pub fn config(input_mode: &str) -> AppConfig {
 /// dictionary source on.
 pub fn config_converting(input_mode: &str) -> AppConfig {
     AppConfig {
-        hanji_conversion: Some(protos::engine::HanjiConversion { toggles: None }),
+        hanji_conversion: Some(protos::engine::HanjiConversion {}),
         ..config(input_mode)
     }
 }
@@ -430,30 +430,16 @@ pub fn selected(hanji: &str, canonical_tl: &str, count: i32, age_ms: i64) -> Sel
 
 /// A `FetchAtPos` as the engine runs it: the settings a platform sends plus
 /// the user rows the engine reads from its stores (`composing::UserRows`).
-/// The default filter is every source, as for a `FetchAtPos` without toggles.
-#[derive(Clone, Debug)]
+/// Its source filter is the config's `dictionary_sources` (absent = every
+/// source).
+#[derive(Clone, Debug, Default)]
 pub struct Fetch {
     pub now_ms: i64,
-    pub enabled_sources_bitmask: u32,
     pub literal_roman_candidate_disabled: bool,
     pub frequency: Vec<Selected>,
     pub custom: Vec<CustomEntry>,
     pub learned: Vec<LearnedEntry>,
     pub context: ranking::ContextRanks,
-}
-
-impl Default for Fetch {
-    fn default() -> Self {
-        Self {
-            now_ms: 0,
-            enabled_sources_bitmask: u32::MAX,
-            literal_roman_candidate_disabled: false,
-            frequency: Vec::new(),
-            custom: Vec::new(),
-            learned: Vec::new(),
-            context: ranking::ContextRanks::default(),
-        }
-    }
 }
 
 /// The switches a fresh install has on every platform (desktop
@@ -472,9 +458,14 @@ pub fn default_source_toggles() -> DictionarySourceToggles {
     }
 }
 
-/// [`default_source_toggles`] as the fetch's source filter.
-pub fn default_sources_bitmask() -> u32 {
-    lexicon::api::dictionary_filter_bitmask(&default_source_toggles())
+/// [`config`] carrying the user's dictionary switches, as every composing op
+/// the platforms send does (`AppConfig.dictionary_sources`) — the fetch's and
+/// the conversion's source filter.
+pub fn config_with_sources(input_mode: &str, sources: DictionarySourceToggles) -> AppConfig {
+    AppConfig {
+        dictionary_sources: Some(sources),
+        ..config(input_mode)
+    }
 }
 
 /// `rows` as the frequency map a ranking reads.
@@ -495,7 +486,6 @@ impl Fetch {
         let frequency = frequency_map(self.frequency);
         Intent::FetchAtPos {
             now_ms: self.now_ms,
-            enabled_sources_bitmask: self.enabled_sources_bitmask,
             literal_roman_candidate_disabled: self.literal_roman_candidate_disabled,
             user_rows: UserRows {
                 frequency,
@@ -511,13 +501,10 @@ pub fn config_tl() -> AppConfig {
     config("tl")
 }
 
-/// [`config_tl`] carrying the user's dictionary switches, as every composing
-/// op the platforms send does (`AppConfig.dictionary_sources`, #772).
+/// [`config_tl`] carrying the user's dictionary switches
+/// ([`config_with_sources`]).
 pub fn config_tl_with_sources(sources: DictionarySourceToggles) -> AppConfig {
-    AppConfig {
-        dictionary_sources: Some(sources),
-        ..config_tl()
-    }
+    config_with_sources("tl", sources)
 }
 
 /// The `ComposingResponse.commit` a pick answers with.

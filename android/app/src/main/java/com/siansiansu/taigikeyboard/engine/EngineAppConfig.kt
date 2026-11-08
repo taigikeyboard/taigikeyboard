@@ -28,7 +28,8 @@ import com.siansiansu.taigikeyboard.engine.proto.SyllableSeparator as ProtoSylla
  * / `rendered_syllable_joiner`, `engine/protos/src/lib.rs`).
  *
  * [dictionarySources] is the user's dictionary switches. Only composing sends
- * them — the nailed-join compound oracle reads them (#772); `null` leaves the
+ * them — the fetch and the nailed-join compound oracle (#772) read
+ * them as the source filter; `null` leaves the
  * field absent, which the engine reads as every source on.
  *
  * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift appConfig.

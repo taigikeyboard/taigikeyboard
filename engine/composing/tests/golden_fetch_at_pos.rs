@@ -58,7 +58,7 @@ use crate::common::{
     fetch_at_pos_response, install_lexicon, wire_fetch_at_pos_response, Fetch, Row, Selected,
 };
 use lexicon::CustomEntry;
-use protos::engine::{DictionarySourceToggles, FetchAtPos};
+use protos::engine::{AppConfig, DictionarySourceToggles, FetchAtPos};
 use test_support::{engine_install_lock, fst_entry, write_fst_set, write_temp};
 
 // --- golden-only fixture builder (union of every key family) ---------------
@@ -277,9 +277,9 @@ struct Case {
     freq: Vec<Selected>,
     now_ms: i64,
     custom: Vec<CustomEntry>,
-    // The fetch's resolved source filter: `u32::MAX` = every source (what a
-    // `FetchAtPos` without toggles gets). A restrictive case sets a real mask.
-    enabled_sources_bitmask: u32,
+    // The config's dictionary switches, the fetch's source filter: `None` =
+    // every source (an un-wired sender). A restrictive case sets real ones.
+    dictionary_sources: Option<DictionarySourceToggles>,
 }
 
 fn case(name: &'static str, raw: &'static str, input_mode: &'static str) -> Case {
@@ -290,7 +290,7 @@ fn case(name: &'static str, raw: &'static str, input_mode: &'static str) -> Case
         freq: Vec::new(),
         now_ms: 0,
         custom: Vec::new(),
-        enabled_sources_bitmask: u32::MAX,
+        dictionary_sources: None,
     }
 }
 
@@ -355,7 +355,7 @@ fn matrix() -> Vec<Case> {
                 roman: "tâi-gí".into(),
                 hanji: Some("台語".into()),
             }],
-            enabled_sources_bitmask: u32::MAX,
+            dictionary_sources: None,
         },
         case("mixed", "iausi", "tl"),
         case("tailo_no_hanji", "li", "tl"),
@@ -374,7 +374,7 @@ fn matrix() -> Vec<Case> {
             }],
             now_ms: 1_000_000_000_000,
             custom: Vec::new(),
-            enabled_sources_bitmask: u32::MAX,
+            dictionary_sources: None,
         },
         case("all_oov_partial_prefix", "g", "tl"),
         // Step 4b prefix-extension (2026-05-29): input `taigi` MUST
@@ -400,8 +400,8 @@ fn matrix() -> Vec<Case> {
         // PR-9.6 — source-toggle filtering reaches the continuous path.
         // Every fixture row is tagged source bit 11 (`lkk`) via
         // `RANK_NEUTRAL_BITMASK`; a dev-only mask (bit 10 set, `lkk` OFF)
-        // must drop the `lkk`-tagged FST hits, proving the bitmask threads
-        // from the fetch intent through dispatch →
+        // must drop the `lkk`-tagged FST hits, proving the config's switches
+        // thread from `AppConfig.dictionary_sources` through dispatch →
         // `ContinuousFetchCtx` → `Filter::from_enabled_bitmask` →
         // `passes_filter`. Contrast with `headline_ranking` (same raw,
         // every source on) which keeps them — the
@@ -413,7 +413,11 @@ fn matrix() -> Vec<Case> {
             freq: Vec::new(),
             now_ms: 0,
             custom: Vec::new(),
-            enabled_sources_bitmask: (1 << 10), // dev only; lkk (bit 11) off
+            // dev only (filter bit 10); lkk (bit 11) off
+            dictionary_sources: Some(DictionarySourceToggles {
+                dev: true,
+                ..DictionarySourceToggles::default()
+            }),
         },
         // v3.5.9 B-2 — POJ first-class: `choa` is the POJ ASCII form
         // (POJ `chóa` → toneless `choa`). The `poj:choa` key in
@@ -450,7 +454,7 @@ fn matrix() -> Vec<Case> {
                 roman: "tâi-gí-khí-pôaⁿ".into(),
                 hanji: Some("台語齒盤".into()),
             }],
-            enabled_sources_bitmask: u32::MAX,
+            dictionary_sources: None,
         },
         // ≥6-syllable long-OOV-vs-dict: `tai`/`taigi` dict-covered,
         // `lang`/`kang`/`tan`/`lai` proven-valid + dict-absent → OOV path
@@ -506,7 +510,10 @@ fn matrix() -> Vec<Case> {
 /// Drive one case through `Start → FetchAtPos` on a
 /// fresh `Engine` and format its candidate vector as a golden block.
 fn run_case(c: &Case) -> String {
-    let cfg = config(c.input_mode);
+    let cfg = AppConfig {
+        dictionary_sources: c.dictionary_sources,
+        ..config(c.input_mode)
+    };
     let resp = fetch_at_pos_response(
         &cfg,
         c.raw,
@@ -514,7 +521,6 @@ fn run_case(c: &Case) -> String {
             frequency: c.freq.clone(),
             now_ms: c.now_ms,
             custom: c.custom.clone(),
-            enabled_sources_bitmask: c.enabled_sources_bitmask,
             // §34/S22: all golden cases keep the literal-roman candidate ON
             // (the toggle OFF path is covered by a focused dispatch unit test).
             literal_roman_candidate_disabled: false,
@@ -610,17 +616,15 @@ fn first_drift_section(expected: &str, actual: &str) -> String {
     }
 }
 
-/// The hanji a wire `FetchAtPos` for `taiuantaigi` offers under `toggles`
-/// (every fixture row is tagged `lkk`), plus whether the §34 literal leads.
-fn wire_fetch(toggles: Option<DictionarySourceToggles>) -> (Vec<String>, bool) {
-    let response = wire_fetch_at_pos_response(
-        &config("tl"),
-        "taiuantaigi",
-        FetchAtPos {
-            toggles,
-            ..FetchAtPos::default()
-        },
-    );
+/// The hanji a wire `FetchAtPos` for `taiuantaigi` offers under the config's
+/// `dictionary_sources` (every fixture row is tagged `lkk`), plus whether the
+/// §34 literal leads.
+fn wire_fetch(dictionary_sources: Option<DictionarySourceToggles>) -> (Vec<String>, bool) {
+    let config = AppConfig {
+        dictionary_sources,
+        ..config("tl")
+    };
+    let response = wire_fetch_at_pos_response(&config, "taiuantaigi", FetchAtPos::default());
     let candidates = response.continuous.expect("continuous carrier").candidates;
     let literal_leads = candidates
         .first()
@@ -631,14 +635,14 @@ fn wire_fetch(toggles: Option<DictionarySourceToggles>) -> (Vec<String>, bool) {
 
 // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
 #[test]
-fn fetch_at_pos_resolves_the_dictionary_toggles_it_carries() {
+fn fetch_at_pos_filters_by_the_config_dictionary_sources() {
     let _lock = engine_install_lock();
     install_union_fixture();
 
     let (unwired, _) = wire_fetch(None);
     assert!(
         unwired.contains(&"台灣".to_owned()),
-        "no toggles keeps every source on: {unwired:?}"
+        "no switches keeps every source on: {unwired:?}"
     );
 
     let (all_off, literal_leads) = wire_fetch(Some(DictionarySourceToggles::default()));

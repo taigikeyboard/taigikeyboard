@@ -277,11 +277,11 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   /// Syllable Separator as stored, without the TPS fold.
   public var syllableSeparator: Taigi_Engine_SyllableSeparator = .unspecified
 
-  /// The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
-  /// compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
-  /// Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
-  /// and `HanjiConversion.toggles` carry the same switches; remove them once the
-  /// fetch and the conversion read this field.
+  /// The user's dictionary switches — the one carrier of the composing source
+  /// filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
+  /// `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
+  /// compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+  /// read it. Absent = un-wired sender (test fixtures): every source on.
   public var dictionarySources: Taigi_Engine_DictionarySourceToggles {
     get {_dictionarySources ?? Taigi_Engine_DictionarySourceToggles()}
     set {_dictionarySources = newValue}
@@ -310,28 +310,17 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 /// `CommitAsTyped` write the composition. A walk ranks with the user's learned
 /// counts when the engine holds the user-data stores.
 /// `Preedit.raw_input` stays the glyphs. TL / POJ buffers are never converted.
+///
+/// Presence is the switch; the walk's source filter is
+/// `AppConfig.dictionary_sources`, the fetch's.
 public nonisolated struct Taigi_Engine_HanjiConversion: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-  /// fetch, so the conversion's source filter rides the config. Absent keeps
-  /// every source on.
-  public var toggles: Taigi_Engine_DictionarySourceToggles {
-    get {_toggles ?? Taigi_Engine_DictionarySourceToggles()}
-    set {_toggles = newValue}
-  }
-  /// Returns true if `toggles` has been explicitly set.
-  public var hasToggles: Bool {self._toggles != nil}
-  /// Clears the value of `toggles`. Subsequent reads from it will return its default value.
-  public mutating func clearToggles() {self._toggles = nil}
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
-
-  fileprivate var _toggles: Taigi_Engine_DictionarySourceToggles? = nil
 }
 
 public nonisolated struct Taigi_Engine_Request: @unchecked Sendable {
@@ -604,33 +593,18 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension Taigi_Engine_HanjiConversion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".HanjiConversion"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}toggles\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{b}toggles\0\u{c}\u{1}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._toggles) }()
-      default: break
-      }
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._toggles {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_HanjiConversion, rhs: Taigi_Engine_HanjiConversion) -> Bool {
-    if lhs._toggles != rhs._toggles {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

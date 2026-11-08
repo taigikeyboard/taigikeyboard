@@ -18,6 +18,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `CommitAsTyped` write the composition. A walk ranks with the user's learned
  * counts when the engine holds the user-data stores.
  * `Preedit.raw_input` stays the glyphs. TL / POJ buffers are never converted.
+ *
+ * Presence is the switch; the walk's source filter is
+ * `AppConfig.dictionary_sources`, the fetch's.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.HanjiConversion}
@@ -30,84 +33,6 @@ public  final class HanjiConversion extends
     HanjiConversionOrBuilder {
   private HanjiConversion() {
   }
-  private int bitField0_;
-  public static final int TOGGLES_FIELD_NUMBER = 1;
-  private com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles toggles_;
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   */
-  @java.lang.Override
-  public boolean hasToggles() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles() {
-    return toggles_ == null ? com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.getDefaultInstance() : toggles_;
-  }
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   */
-  private void setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-    java.util.Objects.requireNonNull(value);
-    toggles_ = value;
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   */
-  @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-    java.util.Objects.requireNonNull(value);
-    if (toggles_ != null &&
-        toggles_ != com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.getDefaultInstance()) {
-      toggles_ =
-        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.newBuilder(toggles_).mergeFrom(value).buildPartial();
-    } else {
-      toggles_ = value;
-    }
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   */
-  private void clearToggles() {
-    toggles_ = null;
-    bitField0_ = (bitField0_ & ~0x00000001);
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.HanjiConversion parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -204,6 +129,9 @@ public  final class HanjiConversion extends
    * `CommitAsTyped` write the composition. A walk ranks with the user's learned
    * counts when the engine holds the user-data stores.
    * `Preedit.raw_input` stays the glyphs. TL / POJ buffers are never converted.
+   *
+   * Presence is the switch; the walk's source filter is
+   * `AppConfig.dictionary_sources`, the fetch's.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.HanjiConversion}
@@ -218,89 +146,6 @@ public  final class HanjiConversion extends
       super(DEFAULT_INSTANCE);
     }
 
-
-    /**
-     * <pre>
-     * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-     * fetch, so the conversion's source filter rides the config. Absent keeps
-     * every source on.
-     * </pre>
-     *
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-     */
-    @java.lang.Override
-    public boolean hasToggles() {
-      return instance.hasToggles();
-    }
-    /**
-     * <pre>
-     * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-     * fetch, so the conversion's source filter rides the config. Absent keeps
-     * every source on.
-     * </pre>
-     *
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles() {
-      return instance.getToggles();
-    }
-    /**
-     * <pre>
-     * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-     * fetch, so the conversion's source filter rides the config. Absent keeps
-     * every source on.
-     * </pre>
-     *
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-     */
-    public Builder setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-      copyOnWrite();
-      instance.setToggles(value);
-      return this;
-      }
-    /**
-     * <pre>
-     * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-     * fetch, so the conversion's source filter rides the config. Absent keeps
-     * every source on.
-     * </pre>
-     *
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-     */
-    public Builder setToggles(
-        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.Builder builderForValue) {
-      copyOnWrite();
-      instance.setToggles(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-     * fetch, so the conversion's source filter rides the config. Absent keeps
-     * every source on.
-     * </pre>
-     *
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-     */
-    public Builder mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
-      copyOnWrite();
-      instance.mergeToggles(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-     * fetch, so the conversion's source filter rides the config. Absent keeps
-     * every source on.
-     * </pre>
-     *
-     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-     */
-    public Builder clearToggles() {  copyOnWrite();
-      instance.clearToggles();
-      return this;
-    }
 
     // @@protoc_insertion_point(builder_scope:taigi.engine.HanjiConversion)
   }
@@ -317,12 +162,9 @@ public  final class HanjiConversion extends
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
-          java.lang.Object[] objects = new java.lang.Object[] {
-            "bitField0_",
-            "toggles_",
-          };
+          java.lang.Object[] objects = null;
           java.lang.String info =
-              "\u0000\u0001\u0000\u0001\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u1009\u0000";
+              "\u0000\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

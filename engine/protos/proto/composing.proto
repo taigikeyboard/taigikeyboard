@@ -138,16 +138,13 @@ message Reset {}
 // `user_weight = 0.0` for every candidate — see
 // `engine/ranking/src/score.rs::decayed_user_weight_delta`.
 //
-// `toggles` are the user's dictionary switches — the same message Tab3
-// browse (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine
-// resolves them into the source filter itself with the encoder behind
-// `DictionaryFilters`, so keyboard candidates honour the same 12 source
-// toggles + kautian subcollection toggles as browse and no platform
-// computes a bitmask. Absent `toggles` keeps every source on — a default for
-// test fixtures, like fields 6 and 8: the engine ships inside each app, so
-// no platform build without the field reaches it, and every platform in this
-// repository sends them. Toggles with every dictionary off offer no
-// dictionary candidates (§57).
+// The source filter is the request config's `AppConfig.dictionary_sources`
+// — the user's dictionary switches, the same message Tab3 browse
+// (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine resolves
+// them with the encoder behind `DictionaryFilters`, so keyboard candidates
+// honour the same 12 source toggles + kautian subcollection toggles as browse
+// and no platform computes a bitmask. Absent switches keep every source on;
+// every dictionary off offers no dictionary candidates (§57).
 //
 // §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
 // preedit-literal roman candidate (the `derived_display` WYSIWYG row that
@@ -192,7 +189,10 @@ message FetchAtPos {
   // custom-dictionary rows for this fetch. Negative like field 6, so an
   // un-wired build keeps the dictionary on.
   bool custom_dictionary_disabled          = 8;
-  DictionarySourceToggles toggles          = 9;
+  // Was the user's dictionary switches; the fetch reads
+  // `AppConfig.dictionary_sources` instead (2026-11-08).
+  reserved 9;
+  reserved "toggles";
 }
 
 // v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The

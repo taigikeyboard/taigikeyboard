@@ -132,11 +132,11 @@ public interface AppConfigOrBuilder extends
 
   /**
    * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
-   * Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
-   * and `HanjiConversion.toggles` carry the same switches; remove them once the
-   * fetch and the conversion read this field.
+   * The user's dictionary switches — the one carrier of the composing source
+   * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
+   * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
+   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
    * <code>.taigi.engine.DictionarySourceToggles dictionary_sources = 15;</code>
@@ -145,11 +145,11 @@ public interface AppConfigOrBuilder extends
   boolean hasDictionarySources();
   /**
    * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
-   * Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
-   * and `HanjiConversion.toggles` carry the same switches; remove them once the
-   * fetch and the conversion read this field.
+   * The user's dictionary switches — the one carrier of the composing source
+   * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
+   * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
+   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
    * <code>.taigi.engine.DictionarySourceToggles dictionary_sources = 15;</code>

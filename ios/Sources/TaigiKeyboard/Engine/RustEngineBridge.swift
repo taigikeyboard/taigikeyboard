@@ -144,7 +144,8 @@ public enum RustEngineBridge {
     /// `engine/protos/src/lib.rs`).
     ///
     /// `dictionarySources` is the user's dictionary switches. Only composing sends
-    /// them — the nailed-join compound oracle reads them (#772); `nil` leaves the
+    /// them — the fetch and the nailed-join compound oracle (#772) read
+    /// them as the source filter; `nil` leaves the
     /// field absent, which the engine reads as every source on.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/EngineAppConfig.kt appConfig.
     // Drift causes silent divergence (one platform renders TPS or the swap differently).

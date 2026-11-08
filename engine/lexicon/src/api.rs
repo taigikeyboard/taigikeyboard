@@ -10,8 +10,8 @@ use protos::engine::{
 };
 
 use crate::classification;
-// The source filter alone, for an engine fetch that carries the toggles
-// itself (`FetchAtPos.toggles`).
+// The source filter alone, for an engine composing request that carries the
+// toggles in its config (`AppConfig.dictionary_sources`).
 pub use crate::dictionary_filters::{association_bitmask, dictionary_filter_bitmask};
 use crate::dictionary_filters::{compute_filters, source_codes};
 use crate::error::LexiconError;

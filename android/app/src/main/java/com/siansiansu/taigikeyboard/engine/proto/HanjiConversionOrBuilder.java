@@ -9,27 +9,4 @@ package com.siansiansu.taigikeyboard.engine.proto;
 public interface HanjiConversionOrBuilder extends
     // @@protoc_insertion_point(interface_extends:taigi.engine.HanjiConversion)
     com.google.protobuf.MessageLiteOrBuilder {
-
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   * @return Whether the toggles field is set.
-   */
-  boolean hasToggles();
-  /**
-   * <pre>
-   * The user's dictionary switches, as `FetchAtPos.toggles`: a key carries no
-   * fetch, so the conversion's source filter rides the config. Absent keeps
-   * every source on.
-   * </pre>
-   *
-   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
-   * @return The toggles.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles();
 }

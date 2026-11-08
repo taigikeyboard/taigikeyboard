@@ -161,13 +161,11 @@ fun RustEngineBridge.composingReset(generation: Long): RustEngineBridge.Composin
  */
 fun RustEngineBridge.composingFetchAtPos(
     // Built once by the caller (`continuousAppConfig`) from
-    // one snapshot of the live settings.
+    // one snapshot of the live settings; its `dictionarySources` is the
+    // fetch's source filter.
     config: AppConfig,
     generation: Long,
     nowMs: Long,
-    // The user's dictionary toggles (the ones Tab3 browse resolves); the
-    // engine turns them into its source filter.
-    dictionaryToggles: RustEngineBridge.DictionaryToggles,
     // §34/S22 — invert of the Show Typed Text First setting. Default `false` = show
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
@@ -181,7 +179,6 @@ fun RustEngineBridge.composingFetchAtPos(
         .setNowMs(nowMs)
         .setLiteralRomanCandidateDisabled(literalRomanCandidateDisabled)
         .setCustomDictionaryDisabled(customDictionaryDisabled)
-        .setToggles(dictionaryTogglesProto(dictionaryToggles))
         .build()
     return composingFetchDispatch(
         methodSetter = { it.fetchAtPos = payload },

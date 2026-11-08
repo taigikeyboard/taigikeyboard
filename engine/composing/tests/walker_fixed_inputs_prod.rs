@@ -5,14 +5,20 @@
 //! (狗岫 picked for the edge before P5a); the rest pin what the walker already
 //! got right.
 
+use protos::engine::AppConfig;
+
 use crate::common::{
-    config, default_sources_bitmask, fetch_cells, production_lexicon_ready, Fetch,
+    config_with_sources, default_source_toggles, fetch_cells, production_lexicon_ready, Fetch,
 };
 
-/// A fresh install's sources, no literal roman row.
+/// `input_mode` with a fresh install's sources.
+fn fresh_install_config(input_mode: &str) -> AppConfig {
+    config_with_sources(input_mode, default_source_toggles())
+}
+
+/// A fetch with no literal roman row.
 fn fresh_install_fetch() -> Fetch {
     Fetch {
-        enabled_sources_bitmask: default_sources_bitmask(),
         literal_roman_candidate_disabled: true,
         ..Default::default()
     }
@@ -45,7 +51,7 @@ fn fixed_inputs_put_the_intended_word_at_slot_0() {
         ),
     ];
     for (raw, hanji, roman) in cases {
-        let cells = fetch_cells(&config("tl"), raw, fresh_install_fetch());
+        let cells = fetch_cells(&fresh_install_config("tl"), raw, fresh_install_fetch());
         let (slot0_hanji, slot0_roman, _, _) = cells.first().expect("slot 0");
         assert_eq!(
             (slot0_hanji.as_deref(), slot0_roman.as_str()),
@@ -74,7 +80,7 @@ fn walker_bigram_keeps_the_reported_words_whole() {
         ("poj", "oe5", "鞋"),
     ];
     for (mode, raw, hanji) in cases {
-        let cells = fetch_cells(&config(mode), raw, fresh_install_fetch());
+        let cells = fetch_cells(&fresh_install_config(mode), raw, fresh_install_fetch());
         assert_eq!(
             cells.first().and_then(|(h, ..)| h.as_deref()),
             Some(hanji),
@@ -92,7 +98,11 @@ fn list_orders_the_words_after_slot_0_by_corpus_count() {
     // E1 P5b — the list shares slot 0's corpus scale. trace (word_unigrams,
     // default sources): taiuanlang's partial spans 台灣/tâi-uân 4,084 > 大/tāi
     // 1,281 > 台/tâi 1,006; on the old frequency 台 (31,281) led 台灣 (1,379).
-    let cells = fetch_cells(&config("tl"), "taiuanlang", fresh_install_fetch());
+    let cells = fetch_cells(
+        &fresh_install_config("tl"),
+        "taiuanlang",
+        fresh_install_fetch(),
+    );
     let position = |hanji: &str| {
         cells
             .iter()
@@ -121,7 +131,7 @@ fn tps_typed_marks_and_spaces_pin_the_reading() {
         ("ㄏㄛˋㄇㄚˋ", "好馬"),
     ];
     for (raw, hanji) in slot0 {
-        let cells = fetch_cells(&config("tps"), raw, fresh_install_fetch());
+        let cells = fetch_cells(&fresh_install_config("tps"), raw, fresh_install_fetch());
         assert_eq!(
             cells.first().and_then(|(h, ..)| h.as_deref()),
             Some(hanji),
@@ -139,7 +149,7 @@ fn tps_typed_marks_and_spaces_pin_the_reading() {
         ("ㄌㄧ ㄫ", "靈"),
     ];
     for (raw, hanji) in absent {
-        let cells = fetch_cells(&config("tps"), raw, fresh_install_fetch());
+        let cells = fetch_cells(&fresh_install_config("tps"), raw, fresh_install_fetch());
         assert!(
             !cells.iter().any(|(h, ..)| h.as_deref() == Some(hanji)),
             "{raw} lists {hanji}: {cells:?}"
@@ -153,7 +163,7 @@ fn tps_typed_marks_and_spaces_pin_the_reading() {
         ("ㄍㄠ ㄉㄞ˪", "交代"),
         ("ㄇ ㄒㄧ", "毋是"),
     ] {
-        let cells = fetch_cells(&config("tps"), raw, fresh_install_fetch());
+        let cells = fetch_cells(&fresh_install_config("tps"), raw, fresh_install_fetch());
         assert_eq!(
             cells.first().and_then(|(h, ..)| h.as_deref()),
             Some(hanji),

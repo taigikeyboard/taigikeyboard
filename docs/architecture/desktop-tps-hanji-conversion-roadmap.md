@@ -97,7 +97,7 @@ Names and wire shapes are settled in each phase's pre-implementation review; the
 
 | Piece | Contract |
 |---|---|
-| Switch | `AppConfig.hanji_conversion` turns H2 on for the request by being present. It carries the dictionary source toggles (`FetchAtPos.toggles`' message): a key carries no fetch, so the walk's source filter rides the config |
+| Switch | `AppConfig.hanji_conversion` turns H2 on for the request by being present (an empty message). The walk's source filter is `AppConfig.dictionary_sources`, the fetch's: a key carries no fetch, so the filter rides the config |
 | The word's list | `FetchAtPos` under the switch lists the word before the caret (as built: no new field — see As built in H-P3); the engine resolves the anchor from its own segments. Frequency rows are looked up for the walker's edge alternatives too, not only for the rows listed |
 | Pick | `CommitContinuous`, under H2, nails the words before the anchor itself (not picked), then the pick, and keeps the composition |
 | Commit as shown | A new intent: writes nailed text + conversion + open reading and goes idle. Enter, a printable that commits first, a mode switch and a host's Finalize use it |

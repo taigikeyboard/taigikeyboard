@@ -1,7 +1,7 @@
 // Which dictionaries a fresh install searches.
 
-/// The default dictionary source preferences, in the shape `FetchAtPos`
-/// carries them.
+/// The default dictionary source preferences, in the shape
+/// `AppConfig.dictionary_sources` carries them.
 ///
 /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionarySourceToggles`
 /// and desktop-core's `DictionarySourceToggles` (`settings/engine_settings.rs`).

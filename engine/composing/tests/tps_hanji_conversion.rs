@@ -485,9 +485,8 @@ fn a_changed_source_filter_is_not_served_the_old_words() {
     assert_eq!(display(&response), "死");
 
     let every_dictionary_off = AppConfig {
-        hanji_conversion: Some(HanjiConversion {
-            toggles: Some(DictionarySourceToggles::default()),
-        }),
+        hanji_conversion: Some(HanjiConversion {}),
+        dictionary_sources: Some(DictionarySourceToggles::default()),
         ..config("tps")
     };
     assert_eq!(display(&engine.snapshot(&every_dictionary_off)), "ㄒㄧˋ");

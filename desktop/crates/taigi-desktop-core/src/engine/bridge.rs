@@ -100,15 +100,13 @@ pub(super) fn record_failure(op: &str, message: &str) {
 /// macOS sends this same builder's config.
 ///
 /// Under TPS every request asks for the Hanji conversion of the preedit
-/// (`desktop-tps-hanji-conversion-roadmap.md` H2), with the user's dictionary
-/// switches as its source filter: a key carries no fetch. The engine reads it
-/// only for a TPS composition, so TL and POJ requests never carry it.
+/// (`desktop-tps-hanji-conversion-roadmap.md` H2). The engine reads it only
+/// for a TPS composition, so TL and POJ requests never carry it.
 ///
-/// Every request carries the dictionary switches themselves too: the
-/// nailed-join compound oracle reads them on every composing op that renders
-/// the composition (#772).
+/// Every request carries the user's dictionary switches: the one source
+/// filter the fetch, the conversion walk (a key carries no fetch) and the
+/// nailed-join compound oracle read (#772).
 pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
-    let toggles = dictionary_toggles(&settings.dictionary_sources);
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
         oo_doubletap_enabled: true,
@@ -118,10 +116,8 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         syllable_separator: settings.syllable_separator.wire() as i32,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
         tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
-        hanji_conversion: (settings.input_mode == InputMode::Tps).then_some(HanjiConversion {
-            toggles: Some(toggles),
-        }),
-        dictionary_sources: Some(toggles),
+        hanji_conversion: (settings.input_mode == InputMode::Tps).then_some(HanjiConversion {}),
+        dictionary_sources: Some(dictionary_toggles(&settings.dictionary_sources)),
         ..Default::default()
     }
 }
@@ -231,7 +227,7 @@ mod tests {
     }
 
     #[test]
-    fn only_tps_asks_for_the_hanji_conversion_with_the_dictionary_switches() {
+    fn only_tps_asks_for_the_hanji_conversion() {
         for mode in [InputMode::Tl, InputMode::Poj] {
             let settings = EngineSettings {
                 input_mode: mode,
@@ -239,17 +235,14 @@ mod tests {
             };
             assert_eq!(app_config(&settings).hanji_conversion, None, "{mode:?}");
         }
-        let mut settings = EngineSettings {
+        let settings = EngineSettings {
             input_mode: InputMode::Tps,
             ..EngineSettings::default()
         };
-        settings.dictionary_sources.itaigi = false;
-        let toggles = app_config(&settings)
-            .hanji_conversion
-            .expect("TPS asks for the conversion")
-            .toggles
-            .expect("with the dictionary switches");
-        assert!(!toggles.itaigi && toggles.kautian);
+        assert_eq!(
+            app_config(&settings).hanji_conversion,
+            Some(HanjiConversion {})
+        );
     }
 
     #[test]
