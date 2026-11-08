@@ -4,7 +4,7 @@
 import { expect, test } from "@playwright/test";
 import { open } from "./helpers.mjs";
 
-const TITLE = "台語齒盤網頁版";
+const TITLE = "台語齒盤網頁版 - 台語簿仔紙";
 
 test("an empty box opens on the intro, caret at its end", async ({ page }) => {
   const editor = await open(page, { intro: true });
@@ -17,8 +17,8 @@ test("an empty box opens on the intro, caret at its end", async ({ page }) => {
   expect(caret).toBe(length);
   await editor.press("Backspace");
   await editor.press("Backspace");
-  // trace: web.intro en ends "to install."
-  await expect(editor).toHaveValue(/to instal$/);
+  // trace: web.intro en ends on the signature "Bîn-hiân".
+  await expect(editor).toHaveValue(/Bîn-hi$/);
 });
 
 test("an emptied box opens on the intro again", async ({ page }) => {
