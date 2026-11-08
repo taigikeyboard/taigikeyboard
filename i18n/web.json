@@ -94,6 +94,42 @@
         "ja": "台湾語ローマ字変換ツール"
       }
     },
+    "iosApp": {
+      "comment": "Sidebar Other Resources link to TaigiKeyboard on the App Store.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤 iOS 版",
+        "tailo": "Tâi-gí Khí-puânn iOS pán",
+        "poj": "Tâi-gí Khí-pôaⁿ iOS pán",
+        "en": "TaigiKeyboard for iOS",
+        "ja": "台湾語キーボード iOS 版"
+      }
+    },
+    "androidApp": {
+      "comment": "Sidebar Other Resources link to TaigiKeyboard on Google Play.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤 Android 版",
+        "tailo": "Tâi-gí Khí-puânn Android pán",
+        "poj": "Tâi-gí Khí-pôaⁿ Android pán",
+        "en": "TaigiKeyboard for Android",
+        "ja": "台湾語キーボード Android 版"
+      }
+    },
     "kautianMirror": {
       "comment": "Sidebar link to the kautian-mirror site; the hanji value is that site's own name.",
       "scope": {
