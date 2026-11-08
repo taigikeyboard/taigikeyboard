@@ -992,7 +992,7 @@ fn nail_segment(
         let terminal = next_word_terminal(canonical, next_word_roman, nailed);
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
-        let learned = learned_phrase(&new_nailed);
+        let learned = learned_phrase(&new_nailed, config);
         let applied = Applied {
             response: finalize(state, combined, terminal),
             learned,
@@ -1181,7 +1181,10 @@ fn commit_as_shown(state: &mut EngineState, config: &AppConfig) -> Applied {
         return noop(state, config).into();
     }
     let (terminal, learned) = if raw.is_empty() {
-        (next_word_nailed_terminal(nailed), learned_phrase(nailed))
+        (
+            next_word_nailed_terminal(nailed),
+            learned_phrase(nailed, config),
+        )
     } else {
         (next_word_clear_for_new_composing(), None)
     };
@@ -1597,7 +1600,7 @@ fn next_word_word_selected(
 /// separator, USER 2026-09-22). The cap counts
 /// the joined TL, not the segments' echoed `syllable_count` — that is
 /// platform input, and the TL is what the phrase stores.
-fn learned_phrase(nailed: &[NailedSegment]) -> Option<LearnedEntry> {
+fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<LearnedEntry> {
     if nailed.len() < 2 {
         return None;
     }
@@ -1613,7 +1616,7 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<LearnedEntry> {
         }
         hanji.push_str(h);
     }
-    let canonical_tl = canonical_separators(&crate::api::learned_reading(nailed));
+    let canonical_tl = canonical_separators(&crate::api::learned_reading(nailed, config));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();
     if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
         return None;

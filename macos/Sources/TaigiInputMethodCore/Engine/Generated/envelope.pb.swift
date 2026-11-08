@@ -277,11 +277,26 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   /// Syllable Separator as stored, without the TPS fold.
   public var syllableSeparator: Taigi_Engine_SyllableSeparator = .unspecified
 
+  /// The user's dictionary switches, as `FetchAtPos.toggles`, for the nailed-join
+  /// compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772).
+  /// Absent = un-wired sender: every source on. Temporary: `FetchAtPos.toggles`
+  /// and `HanjiConversion.toggles` carry the same switches; remove them once the
+  /// fetch and the conversion read this field.
+  public var dictionarySources: Taigi_Engine_DictionarySourceToggles {
+    get {_dictionarySources ?? Taigi_Engine_DictionarySourceToggles()}
+    set {_dictionarySources = newValue}
+  }
+  /// Returns true if `dictionarySources` has been explicitly set.
+  public var hasDictionarySources: Bool {self._dictionarySources != nil}
+  /// Clears the value of `dictionarySources`. Subsequent reads from it will return its default value.
+  public mutating func clearDictionarySources() {self._dictionarySources = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _hanjiConversion: Taigi_Engine_HanjiConversion? = nil
+  fileprivate var _dictionarySources: Taigi_Engine_DictionarySourceToggles? = nil
 }
 
 /// Hanji conversion in the preedit
@@ -505,7 +520,7 @@ nonisolated extension Taigi_Engine_SyllableSeparator: SwiftProtobuf._ProtoNamePr
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{3}dictionary_sources\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -523,6 +538,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 12: try { try decoder.decodeSingularBoolField(value: &self.tpsOrMapsToEr) }()
       case 13: try { try decoder.decodeSingularMessageField(value: &self._hanjiConversion) }()
       case 14: try { try decoder.decodeSingularEnumField(value: &self.syllableSeparator) }()
+      case 15: try { try decoder.decodeSingularMessageField(value: &self._dictionarySources) }()
       default: break
       }
     }
@@ -563,6 +579,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.syllableSeparator != .unspecified {
       try visitor.visitSingularEnumField(value: self.syllableSeparator, fieldNumber: 14)
     }
+    try { if let v = self._dictionarySources {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -577,6 +596,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.tpsOrMapsToEr != rhs.tpsOrMapsToEr {return false}
     if lhs._hanjiConversion != rhs._hanjiConversion {return false}
     if lhs.syllableSeparator != rhs.syllableSeparator {return false}
+    if lhs._dictionarySources != rhs._dictionarySources {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

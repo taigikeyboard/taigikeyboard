@@ -25,13 +25,14 @@
 use crate::api::{
     CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent, Phase, UserRows,
 };
-use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq, ListShape};
+use crate::continuous::{assemble_candidates, retain_first_by_key, ListShape};
 use crate::derived::buffer_input_mode;
 use lexicon::dictionary_reader::NO_ROWID;
 use lexicon::{
     classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
     COVERAGE_KIND_FULL,
 };
+use phonetics::api::roman_reading_eq;
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
     ComposingRequest, ComposingResponse, ContinuousResponse, DictionarySourceToggles, FetchAtPos,
@@ -663,6 +664,7 @@ mod tests {
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
             hanji_conversion: None,
+            dictionary_sources: None,
         }
     }
 

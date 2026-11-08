@@ -25,14 +25,17 @@
 use composing::api::Engine;
 use composing::{requests, CommitScript, Intent, Phase};
 use protos::engine::composing_request::Method;
-use protos::engine::{CandidateMessage, CommitContinuous, FetchAtPos, Start};
+use protos::engine::{
+    AppConfig, CandidateMessage, CommitContinuous, DictionarySourceToggles, FetchAtPos, Start,
+};
 
 use crate::common;
 use crate::common::Fetch;
 use crate::common::{
-    build_dictionary_fst, build_syllables_fst, build_tkdb_v4, config_tl, effect_kinds,
-    empty_association_bin, engine_in_continuous, fetch_at_pos_response, fetch_cells, fetch_hanji,
-    install_lexicon, req, selected, Cell, Row, NOW_MS,
+    build_dictionary_fst, build_syllables_fst, build_tkdb_v4, build_tkdb_v4_sourced, commit_text,
+    config_tl, config_tl_with_sources, default_source_toggles, effect_kinds, empty_association_bin,
+    engine_in_continuous, fetch_at_pos_response, fetch_cells, fetch_hanji, install_lexicon, req,
+    selected, Cell, Row, NOW_MS, RANK_NEUTRAL_BITMASK,
 };
 use lexicon::{CustomEntry, LearnedEntry};
 use test_support::{engine_install_lock, write_temp};
@@ -393,6 +396,132 @@ fn a_multi_word_dictionary_tl_learns_with_its_space() {
             &[(Some("我"), "guá", 3, 1), (Some("也是"), "iā sī", 4, 2)]
         ),
         phrase("我也是", "guá iā sī")
+    );
+}
+
+/// Taihoa's record bit, as the source filter maps `DictionarySourceToggles.taihoa`.
+fn taihoa_bit() -> u16 {
+    let mask = lexicon::api::dictionary_filter_bitmask(&DictionarySourceToggles {
+        taihoa: true,
+        ..DictionarySourceToggles::default()
+    });
+    u16::try_from(mask).expect("a source bit fits the record bitmask")
+}
+
+/// #772 fixture: 俺娘 `án-niâ` only in Taihoa (off by default), 查某
+/// `tsa-bóo` in an always-on source, 查 under two readings.
+fn source_rows() -> [Row; 7] {
+    [
+        ("an", "俺", "án", 1, 3000),
+        ("nia", "娘", "niâ", 1, 3000),
+        ("annia", "俺娘", "án-niâ", 2, 500),
+        ("tsa", "查", "tsa", 1, 3000),
+        ("tsa", "查", "tshâ", 1, 2000),
+        ("boo", "某", "bóo", 1, 3000),
+        ("tsaboo", "查某", "tsa-bóo", 2, 500),
+    ]
+    .map(|(toneless_key, hanji, tl, syll, freq)| Row {
+        toneless_key,
+        hanji,
+        tl,
+        syll,
+        freq,
+    })
+}
+
+/// Install [`source_rows`] (call under the install lock).
+fn install_source_rows() {
+    let rows = source_rows();
+    let dict_path = write_temp(
+        "dictionary.bin",
+        &build_tkdb_v4_sourced(&rows, |row| {
+            if row.hanji == "俺娘" {
+                taihoa_bit()
+            } else {
+                RANK_NEUTRAL_BITMASK
+            }
+        }),
+    );
+    let fst_path = build_dictionary_fst(&rows);
+    let association_path = write_temp("association.bin", &empty_association_bin());
+    let syllables_path = build_syllables_fst(&["an2", "nia5", "tsa1", "tsha5", "boo2"]);
+    install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
+}
+
+/// The picks' last commit under `config` over the installed lexicon: what it
+/// learned and the text it wrote. Each pick shows its romanization, as a TL
+/// candidate does.
+fn commit_picks(
+    raw: &str,
+    picks: &[Pick<'_>],
+    config: &AppConfig,
+) -> (Option<LearnedEntry>, Option<String>) {
+    let mut e = engine_in_continuous(raw);
+    let mut last = None;
+    for p in picks {
+        let mut intent = pick(*p);
+        if let Intent::CommitContinuous { roman, .. } = &mut intent {
+            p.1.clone_into(roman);
+        }
+        last = Some(e.apply_learning(intent, config));
+    }
+    let applied = last.expect("at least one pick");
+    (applied.learned, commit_text(&applied.response))
+}
+
+#[test]
+fn a_compound_only_a_disabled_source_carries_joins_with_a_space() {
+    // #772: Taihoa off (the shipped default) — 俺 + 娘 learns and writes
+    // `án niâ`, as the walker's sentence 俺 + 娘 renders; Taihoa on — the
+    // dictionary word, `án-niâ`, both ways.
+    let _lock = engine_install_lock();
+    install_source_rows();
+    let picks = [(Some("俺"), "án", 3, 1), (Some("娘"), "niâ", 4, 1)];
+    assert_eq!(
+        commit_picks(
+            "an2nia5",
+            &picks,
+            &config_tl_with_sources(default_source_toggles())
+        ),
+        (phrase("俺娘", "án niâ"), Some("án niâ".into()))
+    );
+    let taihoa_on = DictionarySourceToggles {
+        taihoa: true,
+        ..default_source_toggles()
+    };
+    assert_eq!(
+        commit_picks("an2nia5", &picks, &config_tl_with_sources(taihoa_on)),
+        (phrase("俺娘", "án-niâ"), Some("án-niâ".into()))
+    );
+    // No switches on the wire (an un-wired sender): every source on.
+    assert_eq!(
+        commit_picks("an2nia5", &picks, &config_tl()),
+        (phrase("俺娘", "án-niâ"), Some("án-niâ".into()))
+    );
+}
+
+#[test]
+fn a_compound_needs_the_reading_the_user_picked() {
+    // Word identity (Core Principle #6): 查 `tshâ` + 某 is not the word
+    // 查某 `tsa-bóo`, so it joins with a space; 查 `tsa` + 某 is.
+    let _lock = engine_install_lock();
+    install_source_rows();
+    let config = config_tl_with_sources(default_source_toggles());
+    assert_eq!(
+        commit_picks(
+            "tsha5boo2",
+            &[(Some("查"), "tshâ", 5, 1), (Some("某"), "bóo", 4, 1)],
+            &config
+        ),
+        (phrase("查某", "tshâ bóo"), Some("tshâ bóo".into()))
+    );
+    assert_eq!(
+        commit_picks(
+            "tsa1boo2",
+            &[(Some("查"), "tsa", 4, 1), (Some("某"), "bóo", 4, 1)],
+            &config
+        ),
+        (phrase("查某", "tsa-bóo"), Some("tsa-bóo".into()))
     );
 }
 

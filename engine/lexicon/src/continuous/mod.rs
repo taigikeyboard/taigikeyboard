@@ -1279,24 +1279,36 @@ pub struct EdgeBest {
 /// lattice-walk time instead of at commit-join time; this extension is
 /// the manual-nail-flow-compatible analog and is intentionally narrower
 /// in scope (an isolated UX heuristic, not a general best practice).
+///
+/// **#772 — word identity, source toggles.** A record counts only when it
+/// is the same word the picks spell (Core Principle #6: `(漢字, TL)`):
+/// its `tl` must equal `reading` up to separators
+/// ([`phonetics::api::roman_reading_eq`], tone-preserving), and it must
+/// pass the user's source `filter` (the same [`Filter`] the candidate
+/// fetch applies). A compound only a disabled
+/// source carries — 俺娘 `án-niâ` with Taihoa off — no longer hyphenates
+/// a 俺 + 娘 run the walker itself renders `án niâ`. An empty `reading`
+/// matches nothing.
 pub fn compound_hanji_exists(
     hanji: &str,
+    reading: &str,
     syllable_count: u8,
+    filter: &Filter,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> bool {
-    if syllable_count < 2 {
+    if syllable_count < 2 || reading.is_empty() {
         return false;
     }
     let key = format!("{HANJI_KEY_PREFIX}{hanji}");
-    for rowid in prefix_index.lookup_exact(&key) {
-        if let Some(record) = dict.record(rowid) {
-            if record.syllable_count == syllable_count && record.hanji.as_deref() == Some(hanji) {
-                return true;
-            }
-        }
-    }
-    false
+    prefix_index.lookup_exact(&key).into_iter().any(|rowid| {
+        dict.record(rowid).is_some_and(|record| {
+            record.syllable_count == syllable_count
+                && record.hanji.as_deref() == Some(hanji)
+                && DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, filter)
+                && phonetics::api::roman_reading_eq(&record.tl, reading)
+        })
+    })
 }
 
 /// Whole-buffer abbreviation lookup — every dictionary row indexed under

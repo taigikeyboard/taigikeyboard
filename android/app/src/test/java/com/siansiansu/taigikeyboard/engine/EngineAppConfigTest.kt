@@ -71,10 +71,24 @@ class EngineAppConfigTest {
         }
     }
 
+    // #772: every composing op carries the dictionary switches, so the nailed-join
+    // compound oracle filters by them (an absent field would read as every source on).
+    @Test
+    fun continuousAppConfig_carriesTheDictionarySwitches() {
+        val config = continuousAppConfig(StubEngineSettings(isTaiHuaDictEnabled = false))
+
+        assertTrue(config.hasDictionarySources())
+        assertFalse(config.dictionarySources.taihoa)
+        assertTrue(config.dictionarySources.kautian)
+        assertTrue(config.dictionarySources.hasKautianSubcollections())
+    }
+
     // Nextword and case transform pass only what they read; the rest keeps the proto defaults.
     @Test
     fun appConfig_unpassedFields_keepTheProtoDefaults() {
         val config = appConfig("tps", isHanjiFirst = true)
+
+        assertFalse(config.hasDictionarySources())
 
         assertEquals("tps", config.inputMode)
         assertTrue(config.isHanjiFirst)

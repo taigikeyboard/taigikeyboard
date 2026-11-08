@@ -35,7 +35,14 @@ There is no composing-text cell in the candidate strip. Slot 0 is the engine's t
 
 **Segmented-spacing contract.** Adjacent nailed segments, and the nailed prefix ↔ pending tail, are joined by one ASCII space **iff the rendered script is roman-ish**: `api::continuous_word_space` = `!config.renders_hanji_first() || config.output_both_scripts` (`renders_hanji_first` = hanji-first output or the TPS layout). Hanji-first and TPS join with nothing. No separator follows a hyphen-continuation segment (`tai-`). The separator is never stored in `NailedSegment.display_text` — backspace restores the tail from the separator-free `raw_text` — and the hard finalize writes the same joined string.
 
-**Compound-hyphen.** When roman-ish, the longest run (n ≥ 2) of adjacent single-syllable nailed segments whose concatenated `canonical_text` is a known n-syllable dictionary word (`lexicon::compound_hanji_exists`: an exact `hanzi:` key with a record of that `syllable_count` and that `hanji`) is joined with the syllable joiner instead of a space — 查某 tapped as two syllables renders `tsa-bóo`. The `syllable_count` gate is load-bearing (先生 is two CJK characters but not this compound). Hanji-less segments never match. Derived on every render; no state.
+**Compound-hyphen.** When roman-ish, the longest run (n ≥ 2) of adjacent single-syllable nailed segments that spells a known n-syllable dictionary word is joined with the syllable joiner instead of a space. The word test (`lexicon::compound_hanji_exists`) asks for a record under the exact `hanzi:` key with:
+
+- that `syllable_count` — load-bearing: 先生 is two CJK characters but not this compound;
+- that `hanji` (the run's concatenated `canonical_text`);
+- a `tl` equal to the run's concatenated `association_tl` up to separators (`phonetics::api::roman_reading_eq`, tone-preserving — word identity, Core Principle #6);
+- a source the user has on (`AppConfig.dictionary_sources`; absent = every source).
+
+查 `tsa` + 某 renders `tsa-bóo`; 查 `tshâ` + 某 renders `tshâ bóo`; 俺 + 娘 renders `án niâ` while Taihoa (the only source of 俺娘 `án-niâ`) is off, as the walker renders the same sentence (#772). Hanji-less or reading-less segments never match. Derived on every render; no state.
 
 **Per-segment case.** A candidate's `roman` is recased to the user's typed bytes for its own span (`continuous::recase_roman`; `Hittui` → `Hit`, `tui`). The engine is the only casing source; `display_text` and `hanji` are untouched.
 

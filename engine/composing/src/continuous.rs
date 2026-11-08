@@ -87,6 +87,7 @@ use lexicon::{
     EngineHandle as LexiconHandle, LearnedEntry, RawCandidate, SyllableInventory,
     COVERAGE_KIND_FULL, PARTIAL_PREFIX_OUTPUT_CAP,
 };
+use phonetics::api::roman_reading_eq;
 use ranking::{
     candidate_lead, sort_by_candidate_key, FrequencyMap, COVERAGE_KIND_PARTIAL_PREFIX,
     WALKER_COST_UNPRICED,
@@ -315,34 +316,6 @@ fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) 
         !seen.contains(&(x.canonical_tl.as_str(), x.hanji.as_deref(), x.consumed_span))
             && !seen.contains(&(x.roman.as_str(), x.hanji.as_deref(), x.consumed_span))
     });
-}
-
-/// Two romanizations are the **same reading** when they differ only in
-/// syllable separators: ASCII space (walker synth multi-word join), `-`
-/// (hyphen compound), or `--` (neutral-tone khinsiann, two `-` chars). Tone
-/// diacritics live inside the syllable letters and are NOT stripped, so
-/// the comparison is tone-preserving:
-///
-/// * `roman_reading_eq("hōo guá", "hōo--guá")` → `true` (予我: synth
-///   space-join vs dict khinsiann form — the same reading).
-/// * `roman_reading_eq("hōo guá", "hōo-guā")` → `false` (戶外: guā tone 7
-///   ≠ guá tone 2 — a different word per Core Principle #7).
-///
-/// Used by the slot-0 promote at [`assemble_candidates`] Step 4 to
-/// recognize when the walker's space-joined synth is a malformed
-/// rendering of an existing full-span dict word, so the dict word's
-/// canonical separator form can take slot 0 instead, and by
-/// `requests::first_learned_per_reading` to fold the same learned pair stored
-/// under two typed separators.
-pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
-    fn is_kept(c: &char) -> bool {
-        *c != ' ' && *c != '-'
-    }
-    // Allocation-free: compare the separator-filtered char streams
-    // directly (`Iterator::eq`). This runs per candidate in the per-
-    // keystroke slot-0 scan, so it must not heap-allocate a stripped
-    // `String` for each comparison.
-    a.chars().filter(is_kept).eq(b.chars().filter(is_kept))
 }
 
 /// TPS-mode visual dedupe: collapse candidates sharing `(hanji,
@@ -1753,23 +1726,6 @@ mod tests {
     // by `composing::shadow`'s tests plus the integration suite
     // (`engine/composing/tests/continuous_keys_tps.rs` covers the new
     // mode-aware TPS key emission against an inline `tps:` inventory).
-
-    // ----- `hoogua` bug — slot-0 separator-insensitive reading match -----
-
-    #[test]
-    fn roman_reading_eq_matches_separator_variants_preserves_tone() {
-        // 予我: walker space-join vs dict khinsiann — same reading.
-        assert!(roman_reading_eq("hōo guá", "hōo--guá"));
-        // Hyphen vs space — same reading.
-        assert!(roman_reading_eq("tâi gí", "tâi-gí"));
-        // 戶外: tone 7 `guā` ≠ tone 2 `guá` — different reading despite
-        // sharing the separator-stripped consonant/vowel skeleton.
-        assert!(!roman_reading_eq("hōo guá", "hōo-guā"));
-        // Identical strings (also-是 `iā sī` synth == dict) trivially eq.
-        assert!(roman_reading_eq("iā sī", "iā sī"));
-        // Different syllables entirely — not a reading match.
-        assert!(!roman_reading_eq("hōo guá", "tâi gí"));
-    }
 
     // ----- v3.5.8 S2 — synth_consumed_span trailing-hyphen guard -----
     // (Codex post-impl S2 P1 regression). Production runs
