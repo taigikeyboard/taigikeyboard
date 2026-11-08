@@ -8,9 +8,9 @@ The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigik
 
 ## Deploy
 
-Every push to `main` that `.github/workflows/web.yml` runs on and passes starts a deploy of that commit, so a change to the docs alone deploys nothing. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
+`.github/workflows/web.yml` deploys nightly at 00:00 Taiwan time (16:00 UTC; GitHub may start a scheduled run late): it runs its gates on `main`'s head and, when they pass, starts a deploy of that commit. A night whose head is the one the last successful nightly run had deploys nothing. A push to `main` runs the gates only. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
 
-The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next push replaces the site.
+The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next nightly deploy replaces the site.
 
 To deploy by hand, or to go back to a commit: `taigikeyboard/web` → Actions → Deploy → Run workflow, with the full commit.
 
