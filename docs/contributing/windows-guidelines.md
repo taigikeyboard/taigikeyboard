@@ -1,11 +1,11 @@
 # Windows Project Guidelines
 
-Mandatory rules for the Windows input method (`windows/`, Rust: TSF DLL + settings exe over the
+Rules for the Windows input method (`windows/`, Rust: TSF DLL + settings exe over the
 shared engine). Read before modifying Windows code. Design record: `docs/architecture/windows-roadmap.md`.
 
-## Authored without a Windows machine
+## Host gates prove compilation
 
-- The platform was written blind (developed on macOS; a Windows box is used over ssh). Every PR passes `make windows-check`
+- Development happens on macOS; the Windows box is reached over ssh. Every PR passes `make windows-check`
   (`windows/Makefile` `check`) on the macOS host: the i18n check, `cargo test` for the
   `HOST_TESTABLE` crates (native), `cargo clippy --workspace --all-targets --target
   x86_64-pc-windows-gnu -- -D warnings` (full graph incl. rusqlite via mingw-w64), `cargo check`
@@ -20,7 +20,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   Windows, Linux and both macOS gates, the macOS ones behind `make build`).
 - Pin UI-framework versions to what has actually run on the Windows box: `windows-reactor` is a
   git dependency pinned to a commit SHA (W17; crates.io has only placeholders) — bump only in its
-  own round, built and smoke-run on the box. The settings crate's real gate is `make check-box`
+  own round, built and smoke-run on the box. The settings crate's real gate is `make -C windows check-box`
   (ssh MSVC clippy); the macOS gnu check is a type-check only (`reactor-setup` refuses gnu).
 - The TSF DLL never links or loads WinUI / the Windows App Runtime (release-script import +
   manifest-marker gates). Bumping the `windows-reactor` pin changes the staged runtime set: the

@@ -1,8 +1,8 @@
 # Rust FFI Safety
 
-Mandatory rules for the Rust ↔ platform boundary: the seam as built, panic / thread / error / logging discipline, domain↔proto layering, `unsafe` discipline, the opaque-handle pattern, enforcement hooks and the test contract. General Rust hygiene (workspace, errors, crates, tests, versions) stays in `docs/contributing/rust-best-practices.md`.
+Rules for the Rust ↔ platform boundary: the seam as built, panic / thread / error / logging discipline, domain↔proto layering, `unsafe` discipline, the opaque-handle pattern, enforcement hooks and the test contract. General Rust hygiene (workspace, errors, crates, tests, versions) stays in `docs/contributing/rust-best-practices.md`.
 
-**Active window**: every Rust PR touching `engine/swift-ffi/`, `engine/android-jni/`, `engine/dispatch`, `engine/protos/`, any domain crate's RPC façade, `linux/crates/taigi-linux-ffi/`, `macos/crates/taigi-macos-ffi/` or a `windows/crates/taigi-windows-tsf/` COM entry.
+**Active window**: every Rust PR touching `engine/swift-ffi/`, `engine/android-jni/`, `engine/dispatch`, `engine/protos/`, any domain crate's RPC façade, `linux/crates/taigi-linux-ffi/`, `macos/crates/taigi-macos-ffi/`, `web/crates/taigi-web/` or a `windows/crates/taigi-windows-tsf/` COM entry.
 
 ## 1. FFI boundary discipline `[S]`
 

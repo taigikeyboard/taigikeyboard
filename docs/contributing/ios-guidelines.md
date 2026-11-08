@@ -12,7 +12,7 @@ The extension runs under a ~64 MB cap and is re-shown many times per process, so
 
 - Views never hold `KeyboardViewController`; `setupKeyboardView { [unowned self] _ in … }` ignores the controller parameter and uses `self.state` / `self.services`.
 - Service delegates are `weak`.
-- `viewWillDisappear` unparents the KeyboardKit hosting child (`KeyboardViewController+Cleanup.swift`); a child left parented keeps the dismissed controller alive (#480).
+- `viewWillDisappear` unparents the KeyboardKit hosting child (`KeyboardViewController+Cleanup.swift`); a child left parented keeps the dismissed controller alive.
 - A PR that changes ownership or teardown says what it risks.
 
 ## User data and Full Access

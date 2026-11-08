@@ -1,6 +1,6 @@
 # Rust Best Practices
 
-Mandatory rules for Rust shared-core development. Read before any Rust code lands in the engine. FFI / proto-boundary / `unsafe` / opaque-handle / enforcement rules are split into `docs/contributing/rust-ffi-safety.md`.
+Rules for Rust shared-core development. Read before any Rust code lands in the engine. FFI / proto-boundary / `unsafe` / opaque-handle / enforcement rules are split into `docs/contributing/rust-ffi-safety.md`.
 
 **Three goals** every rule below serves at least one of:
 
@@ -84,9 +84,9 @@ Type-shape preferences that cross FFI:
 
 ## 7. CI gate + supply chain `[A]`
 
-CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/desktop.yml` runs the desktop-shared workspace's tests + clippy and the desktop + Windows fmt check on PRs touching `desktop/`, `windows/` or `engine/`; `.github/workflows/macos.yml` runs the `macos/` workspace's tests, clippy and fmt check plus the archive build and `make -C macos test` on PRs touching `macos/`, `desktop/` or `engine/`; `.github/workflows/linux-build.yml` (nightly, on release and on manual dispatch — not per PR) runs the `linux/` workspace's clippy, tests, fmt check and release build; `.github/workflows/web.yml` runs `make web-check` on PRs touching `web/`, `desktop/`, `engine/`, `assets/dictionaries/`, `assets/symbols/` or `mise.toml`; `.github/workflows/security.yml` runs `cargo-audit` over all six Cargo workspaces + `cargo-deny` over the engine and macOS (`engine/deny.toml`) on PRs touching Cargo manifests / lockfiles and weekly; `.github/workflows/security-windows.yml` runs `cargo-deny` over Windows (`windows/deny.toml`) on PRs touching the Windows, engine or desktop manifests and weekly. Post-PR verification follows AGENTS.md § Build & Test.
+CI per workspace (`.github/workflows/`): `engine.yml` — `cargo test --workspace`, `cargo fmt --check`, `cargo clippy -D warnings`; `desktop.yml` — desktop-shared tests + clippy, desktop + Windows fmt; `macos.yml` — `macos/` tests, clippy, fmt, archive build, `make -C macos test`; `linux-build.yml` — nightly, on release and on dispatch, never per PR: `linux/` clippy, tests, fmt, release build; `web.yml` — `make web-check`; `security.yml` — `cargo-audit` over all six workspaces + `cargo-deny` over engine and macOS (`engine/deny.toml`), also weekly; `security-windows.yml` — `cargo-deny` over Windows (`windows/deny.toml`), also weekly. Each workflow's `on.pull_request.paths` is the only record of what triggers it. Post-PR verification follows AGENTS.md § Build & Test.
 
-- `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
+- `make help` lists the root targets.
 - **`cargo-audit`** scans against the RustSec advisory DB (CI `security.yml`; locally, install via `cargo install cargo-audit --locked`).
 - **`cargo-deny check`** enforces dependency policy via `engine/deny.toml`: license allow-list (MIT / Apache-2.0 / BSD / ISC / Unicode-DFS-2016 / Unicode-3.0 / Zlib), `multiple-versions = warn`, `unknown-git = deny`, `unknown-registry = deny`. Runs in CI `security.yml`; locally, install via `cargo install cargo-deny --locked`.
 - **FFI integration tests** are run on representative Android emulator + iOS simulator targets when relevant to the round — user-gated, no CI matrix, no fixed schedule.

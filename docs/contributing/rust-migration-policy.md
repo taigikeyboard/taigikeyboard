@@ -1,6 +1,6 @@
 # Rust Migration Policy
 
-Mandatory rules before any platform impl → Rust engine swap, new Rust slice, `.proto` addition, or platform-mirror delete. Companion to `docs/contributing/rust-best-practices.md` (how the Rust code itself should look).
+Rules for any platform impl → Rust engine swap, new Rust slice, `.proto` addition, or platform-mirror delete. Companion to `docs/contributing/rust-best-practices.md` (how the Rust code itself should look).
 
 ## 1. Four design goals per slice
 

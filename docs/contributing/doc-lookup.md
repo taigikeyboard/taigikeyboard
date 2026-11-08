@@ -1,10 +1,10 @@
 # Documentation Lookup (platform IME / framework APIs)
 
-Mandatory rule. Read **before** adding or changing a call to (or a contract with) a framework/OS API whose current surface you are not certain of from the repo itself — in particular **KeyboardKit**, Apple **`UIInputViewController` / `UITextDocumentProxy`**, Android **`InputMethodService` / `InputConnection` / `EditorInfo`**, **Jetpack Compose**, **DataStore**. Trivial edits that do not introduce or alter a framework API call (rename, comment, formatting, pure-Swift/Kotlin logic) do not trigger this.
+Read before adding or changing a call to (or a contract with) a framework/OS API whose current surface the repo itself does not settle — in particular KeyboardKit, Apple `UIInputViewController` / `UITextDocumentProxy`, Android `InputMethodService` / `InputConnection` / `EditorInfo`, Jetpack Compose, DataStore. Edits that do not introduce or alter a framework API call (rename, comment, formatting, pure-Swift/Kotlin logic) do not trigger this.
 
 ## The rule
 
-**Never code a platform IME / framework API from memory. Verify the current API against authoritative docs first.** Pre-trained knowledge of KeyboardKit / Android IME APIs drifts between versions (confirmed: KeyboardKit's setup API moved to `setupKeyboardKit(for:)` across versions; this repo deliberately keeps the legacy `KeyboardSettings.setupStore(for:)` path — read `KeyboardExtension/KeyboardViewController+Setup.swift` before touching it).
+Verify a platform IME / framework API against current docs before coding it: KeyboardKit and Android IME APIs drift between versions (KeyboardKit's setup API moved to `setupKeyboardKit(for:)`; this repo deliberately keeps the legacy `KeyboardSettings.setupStore(for:)` path — read `KeyboardExtension/KeyboardViewController+Setup.swift` before touching it).
 
 ## How (in priority order)
 
@@ -15,7 +15,7 @@ Mandatory rule. Read **before** adding or changing a call to (or a contract with
      - Apple keyboard-extension primitives (when not via KeyboardKit): resolve per task — `ctx7 library "apple swift uikit UIInputViewController"`.
    - `ctx7 library <name> "<task question>"` → `ctx7 docs <id> "<task question>"`.
 2. **Local authoritative fallback** (offline / version-pinned — **MAIN repo only**, gitignored, not in git worktrees):
-   - `references/KeyboardKit-Documentation/` — DocC archive pinned to the cloned KK version (`documentation/keyboardkit/` JSON). Treat as gospel before a web search (per `docs/references/mainstream-ime-comparison.md`).
+   - `references/KeyboardKit-Documentation/` — DocC archive pinned to the cloned KK version (`documentation/keyboardkit/` JSON). Prefer it over a web search (per `docs/references/mainstream-ime-comparison.md`).
    - `references/keyboardkit9.9.0/Sources/KeyboardKit/` — last open-source KK tree (10.x and later are closed-source); symbol names lag the current 11.x API, confirm via `ctx7`.
    - Android has **no** local clone → use `ctx7` or https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method.
 3. **The vendor docs site** — a specific Apple/Android doc URL or release notes when Context7 lacks coverage.
