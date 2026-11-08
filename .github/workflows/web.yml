@@ -83,8 +83,8 @@ jobs:
 
       # Only what the gate runs. The versions are mise.toml's, the same pins a
       # contributor installs; protoc is there because engine/protos/build.rs
-      # shells out to it; uv is what mise installs fonttools with; zig archives
-      # SQLite's wasm objects (web/Makefile).
+      # shells out to it; uv is what mise installs fonttools with; zig compiles
+      # and archives SQLite's wasm objects (web/Makefile).
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.11.2
