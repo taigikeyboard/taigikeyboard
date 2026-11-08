@@ -336,13 +336,15 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
         entries.selected_row().is_some(),
         "the selection is kept by id across a reload"
     );
-    // Text that would be markup is shown as typed.
-    user_data::save_custom_entry("", "a-b", "A&B <b>").expect("save");
+    // Text that would be markup is shown as typed. The Hanji keeps an
+    // ideograph: a roman-only spelling is stored as no Hanji at all
+    // (`custom_dictionary.rs` `stored_hanji`).
+    user_data::save_custom_entry("", "a-b", "飯&B <b>").expect("save");
     dictionary.reload();
     pump_until(|| dictionary.shown_row_count() == 3);
     assert!(find_all::<gtk::Label>(page.widget.upcast_ref())
         .iter()
-        .any(|label| label.label() == "A&B <b>"));
+        .any(|label| label.label() == "飯&B <b>"));
     // The search lives in Manage Dictionaries' bottom bar (#792), and only
     // there.
     let sources = taigikeyboard_settings::pages::build(
