@@ -33,9 +33,7 @@ pub fn strings_for(document: &SettingsDocument, system_locale: &str) -> StringRe
 
 /// The window title = the selected pane's label (`SettingsSplitViewController`).
 pub fn pane_title(strings: &StringResolver, pane: SettingsPane) -> String {
-    strings
-        .resolve(pane.title_key().unwrap_or(StringKey::DesktopGeneralTab))
-        .to_owned()
+    strings.resolve(pane.title_key()).to_owned()
 }
 
 /// A language picker row: the endonym, so a user can find their own

@@ -68,8 +68,8 @@ Application (GTK / Qt / Chromium / Electron / terminal) ── IBus client modul
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │ taigikeyboard-settings (crate taigikeyboard-settings, bin; gtk4-rs + libadwaita)         │
 │  adw::ApplicationWindow + NavigationSplitView sidebar: General / Appearance /            │
-│  Shortcuts / Dictionary Sources / Custom Dictionary / Learning Records / About (+ unlisted│
-│  Dictionary Search); PreferencesPage / PreferencesGroup / ActionRow /                    │
+│  Shortcuts / Dictionary Sources (+ pinned search) / Custom Dictionary / Learning         │
+│  Records / About (unlisted); PreferencesPage / PreferencesGroup / ActionRow /            │
 │  SwitchRow / ComboRow; AlertDialog; Banner; ColumnView table; gtk::FileDialog CSV        │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 Runtime data: $XDG_CONFIG_HOME/taigikeyboard/settings.json ·

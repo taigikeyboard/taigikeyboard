@@ -59,14 +59,12 @@ const PANES: [(SettingsPane, PageView); 7] = [
     (SettingsPane::FontManagement, pages::font_management::view),
 ];
 
-/// The page for a pane the sidebar does not list: built, reachable only by
-/// `--pane dictionarySearch` (USER 2026-08-21) and the tray menu's `--pane
-/// about` (USER 2026-09-20), exactly as on macOS.
+/// The page for a pane: a listed one's, or About's — built without a row,
+/// reachable only by the tray menu's `--pane about` (USER 2026-09-20),
+/// exactly as on macOS.
 fn page_view(pane: SettingsPane) -> Option<PageView> {
-    match pane {
-        SettingsPane::DictionarySearch => return Some(pages::dictionary_search::view),
-        SettingsPane::About => return Some(pages::about::view),
-        _ => {}
+    if pane == SettingsPane::About {
+        return Some(pages::about::view);
     }
     PANES
         .iter()
@@ -88,6 +86,9 @@ const MINIMUM_HEIGHT: f64 = 470.0;
 const TITLE_FONT_SIZE: f64 = 28.0;
 /// Space between a pane's content and the window's edge.
 const FORM_INSET: f64 = 24.0;
+/// Above and below the pinned footer's content: half the form's inset, the
+/// rule over it already sets it apart.
+const FOOTER_INSET: f64 = FORM_INSET / 2.0;
 /// While a check or a download is in flight the answer is wanted sooner
 /// than the idle beat.
 const BUSY_REFRESH_INTERVAL: Duration = Duration::from_millis(100);
@@ -710,10 +711,7 @@ impl Component for SettingsWindow {
         );
 
         let items = PANES.map(|(pane, _)| {
-            let label = pane
-                .title_key()
-                .map_or("", |key| strings.resolve(key))
-                .to_owned();
+            let label = strings.resolve(pane.title_key()).to_owned();
             KeyedView::new(
                 pane.raw(),
                 NavigationViewItem::new()
@@ -736,8 +734,9 @@ impl Component for SettingsWindow {
         // native StackPanel does not reach until the deferred child sync runs
         // — `InsertChild` E_BOUNDS, which reactor turns into an abort
         // (Shortcuts ⇄ Dictionary Sources, 2026-10-08).
-        let content = ScrollViewer::new()
+        let form = ScrollViewer::new()
             .vertical_scroll_bar_visibility(ScrollBarVisibility::Auto)
+            .grid_row(0)
             .content(
                 StackPanel::new()
                     .spacing(cards::CARD_SPACING)
@@ -748,6 +747,24 @@ impl Component for SettingsWindow {
                         self.dialogs(&strings, context),
                     )),
             );
+        // Every pane's content is the same Grid, so a pane switch never
+        // changes the Content slot's type. Only Manage Dictionaries fills the
+        // footer row: its search, pinned under the scrolling form as on
+        // mobile (#792) — not in a read-only window, which has no custom
+        // dictionary to search. Keyed by pane for the same reason as the page.
+        let footer = if self.pane == SettingsPane::DictionarySources && !self.is_read_only() {
+            Border::new()
+                .grid_row(1)
+                .border_brush(ThemeBrush::CardStroke)
+                .border_thickness(Thickness::new(0.0, 1.0, 0.0, 0.0))
+                .padding(Thickness::xy(FORM_INSET, FOOTER_INSET))
+                .content(pages::dictionary_search::view(self, &strings, context))
+        } else {
+            View::empty()
+        };
+        let content = Grid::new()
+            .rows([GridLength::STAR, GridLength::Auto])
+            .children((form, View::keyed_fragment([(self.pane.raw(), footer)])));
 
         NavigationView::new()
             .pane_display_mode(NavigationViewPaneDisplayMode::Left)
@@ -794,11 +811,10 @@ mod tests {
     }
 
     #[test]
-    fn every_pane_has_a_page_and_only_the_search_one_is_unlisted() {
+    fn every_listed_pane_has_a_page() {
         // trace: the roster and the dispatch are one table, so a pane
-        // cannot be listed without a page or drawn without a row — and
-        // Dictionary Search is built but unlisted, reachable only by `--pane`
-        // (macOS does the same, USER 2026-08-21).
+        // cannot be listed without a page or drawn without a row; About is
+        // the one page without a row.
         for pane in SettingsPane::SIDEBAR {
             assert!(
                 PANES.iter().any(|(listed, _)| *listed == pane),
@@ -809,12 +825,6 @@ mod tests {
         // The sidebar draws `PANES`, so its order has to be `SIDEBAR`'s —
         // a reorder in one place alone changes nothing on screen.
         assert_eq!(PANES.map(|(pane, _)| pane), SettingsPane::SIDEBAR);
-        assert!(page_view(SettingsPane::DictionarySearch).is_some());
-        assert!(
-            !PANES
-                .iter()
-                .any(|(listed, _)| *listed == SettingsPane::DictionarySearch),
-            "辭典搜尋 stays out of the sidebar"
-        );
+        assert!(page_view(SettingsPane::About).is_some());
     }
 }

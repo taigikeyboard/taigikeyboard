@@ -55,7 +55,7 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
 │ TaigiKeyboardSettings.exe (crate taigi-windows-settings, WinUI 3 via windows-reactor│
 │  — WinUI 3 since the W17-C cutover) · self-contained Windows App Runtime beside it  │
 │  NavigationView: General / Appearance / Shortcuts / Custom Dictionary /             │
-│  Dictionary Sources (+ unlisted Dictionary Search)                                  │
+│  Dictionary Sources (+ pinned search)                                               │
 │  custom-dict CRUD + CSV · shortcut recorder (WH_KEYBOARD thread hook) · update      │
 │  check/download/verify/install · `--check-updates` headless (per-user scheduled task)│
 │  The TSF DLL never links or loads WinUI (artifact-inspected, W17).                  │
