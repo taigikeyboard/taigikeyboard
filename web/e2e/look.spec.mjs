@@ -372,8 +372,10 @@ test("the sidebar links fold under their own section", async ({ page }) => {
   await expect(links.first()).toBeHidden();
   await page.getByText("其他資源", { exact: true }).click();
   await expect(links).toHaveText([
-    // trace: home.websiteLink, the desktop About page's link.
-    "taigikeyboard.tw",
+    // trace: web.desktopApp / web.iosApp / web.androidApp hanji (i18n/web.json).
+    "台語齒盤電腦版",
+    "台語齒盤 iOS",
+    "台語齒盤 Android",
     "台語羅馬字轉換器",
     "教典備援網站",
     "教典鬥搜揣",
