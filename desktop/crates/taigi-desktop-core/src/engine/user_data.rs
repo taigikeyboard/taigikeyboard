@@ -376,18 +376,23 @@ pub fn delete_learning_record(record: LearningRecord) -> Result<bool, UserDataEr
     }
 }
 
-/// Makes `record`'s word a custom word — a learned phrase is then forgotten,
-/// a frequency row stays; a word the dictionary holds already is not added
-/// twice. A refusal (no search key, a full dictionary) is
-/// `UserDataError::Refused` and keeps the row.
+/// Makes `record`'s word a custom word, filed as `roman` / `hanji` (the
+/// word as the user edited it; the engine trims both) — a learned phrase is
+/// then forgotten, a frequency row stays; a word the dictionary holds
+/// already is not added twice. A refusal (no romanization, no search key, a
+/// full dictionary) is `UserDataError::Refused` and keeps the row.
 pub fn add_learning_record_to_custom_dictionary(
     record: LearningRecord,
+    roman: &str,
+    hanji: &str,
 ) -> Result<(), UserDataError> {
     let op = "learningRecordAddToCustomDictionary";
     match page_request(
         user_data_request::Method::AddLearningRecordToCustomDictionary(
             AddLearningRecordToCustomDictionary {
                 record: Some(record),
+                roman: Some(roman.to_owned()),
+                hanji: Some(hanji.to_owned()),
             },
         ),
         op,

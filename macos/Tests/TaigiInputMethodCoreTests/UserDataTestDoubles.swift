@@ -183,16 +183,22 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     /// Set to refuse every add, as the engine does for a full dictionary.
     var refusesLearningRecordAdds = false
 
-    /// Files the row's word as a custom word unless that word is stored
-    /// already, then forgets a learned phrase and keeps a frequency row; a
-    /// refusal keeps it — as the engine does.
-    func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) throws {
+    /// Files the word as edited (`roman` / `hanji`, trimmed) as a custom word
+    /// unless that word is stored already, then forgets a learned phrase and
+    /// keeps a frequency row; a refusal keeps it — as the engine does.
+    func addLearningRecordToCustomDictionary(
+        _ record: Taigi_Engine_LearningRecord,
+        roman: String,
+        hanji: String,
+    ) throws {
         try lock.withLock {
             if refusesLearningRecordAdds {
                 throw UserDataClientError.refused(detail: "custom dictionary is full (max 30000 entries)")
             }
-            if !rows.contains(where: { $0.roman == record.tl && $0.hanji == record.text }) {
-                rows.insert(CustomDictionaryRow(roman: record.tl, hanji: record.text), at: 0)
+            let roman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
+            let hanji = hanji.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !rows.contains(where: { $0.roman == roman && $0.hanji == hanji }) {
+                rows.insert(CustomDictionaryRow(roman: roman, hanji: hanji), at: 0)
             }
             if record.kind == .learnedPhrase {
                 learningRecords.removeAll { Self.isSameRow($0, record) }

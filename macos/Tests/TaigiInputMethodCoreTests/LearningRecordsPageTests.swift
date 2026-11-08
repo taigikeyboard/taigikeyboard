@@ -163,7 +163,8 @@ final class LearningRecordsPageTests: XCTestCase {
         model.kind = .learnedPhrase
         await model.loadFirstPage()
 
-        try await model.addToCustomDictionary(XCTUnwrap(model.list.rows.first { $0.id == 1 }))
+        let listed = try XCTUnwrap(model.list.rows.first { $0.id == 1 })
+        await model.addToCustomDictionary(listed, roman: listed.tl, hanji: listed.text)
 
         XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
         XCTAssertEqual(model.list.rows.map(\.id), [2])
@@ -174,13 +175,31 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertFalse(model.activity.isWorking)
     }
 
+    /// The word as the user edited it in the Add Word sheet is what lands in
+    /// the custom dictionary; the phrase still leaves this list.
+    func testAddToCustomDictionary_filesTheEditedWord() async throws {
+        let (model, client) = makeModel([record(.learnedPhrase, id: 1)])
+        model.kind = .learnedPhrase
+        await model.loadFirstPage()
+
+        let listed = try XCTUnwrap(model.list.rows.first)
+        await model.addToCustomDictionary(listed, roman: " Ji-1 ", hanji: "字一")
+
+        XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
+        XCTAssertTrue(model.list.rows.isEmpty)
+        let custom = try client.list(filter: "", limit: 10, offset: 0).rows
+        XCTAssertEqual(custom.map(\.roman), ["Ji-1"])
+        XCTAssertEqual(custom.map(\.hanji), ["字一"])
+    }
+
     /// A frequency row's word lands in the custom dictionary and the add is
     /// said; the row stays listed, still weighting its word.
     func testAddToCustomDictionary_filesTheWordAndKeepsTheFrequencyRow() async throws {
         let (model, client) = makeModel([record(.frequency, id: 1), record(.frequency, id: 2)])
         await model.loadFirstPage()
 
-        try await model.addToCustomDictionary(XCTUnwrap(model.list.rows.first { $0.id == 1 }))
+        let listed = try XCTUnwrap(model.list.rows.first { $0.id == 1 })
+        await model.addToCustomDictionary(listed, roman: listed.tl, hanji: listed.text)
 
         XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
         XCTAssertEqual(model.list.rows.map(\.id), [1, 2])
@@ -195,7 +214,8 @@ final class LearningRecordsPageTests: XCTestCase {
         model.kind = .learnedPhrase
         await model.loadFirstPage()
 
-        try await model.addToCustomDictionary(XCTUnwrap(model.list.rows.first))
+        let listed = try XCTUnwrap(model.list.rows.first)
+        await model.addToCustomDictionary(listed, roman: listed.tl, hanji: listed.text)
 
         guard case .failure(.dictionaryLearningRecordsWriteFailed, _)? = model.message else {
             return XCTFail("expected the write-failed alert, got \(String(describing: model.message))")

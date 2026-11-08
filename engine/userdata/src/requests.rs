@@ -7,13 +7,14 @@
 use std::fmt::Display;
 
 use protos::engine::{
-    user_data_request, user_data_response, BackupExported, BackupImported, BackupRefusal,
-    CustomCsvExported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
-    CustomEntries, CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ImportBackup,
-    ImportCustomCsv, LearningRecord, LearningRecordAddedToCustomDictionary, LearningRecordDeleted,
-    LearningRecordKind, LearningRecordOrder, LearningRecordSaved, LearningRecords,
-    ListCustomEntries, ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry,
-    SearchCustomEntries, UserDataReset,
+    user_data_request, user_data_response, AddLearningRecordToCustomDictionary, BackupExported,
+    BackupImported, BackupRefusal, CustomCsvExported, CustomCsvImported, CustomDictionaryEntry,
+    CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted, CustomEntryMatches,
+    CustomEntrySaved, ImportBackup, ImportCustomCsv, LearningRecord,
+    LearningRecordAddedToCustomDictionary, LearningRecordDeleted, LearningRecordKind,
+    LearningRecordOrder, LearningRecordSaved, LearningRecords, ListCustomEntries,
+    ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry, SearchCustomEntries,
+    UserDataReset,
 };
 
 use crate::paging::{last_page_offset, saturated_u32};
@@ -98,9 +99,8 @@ impl UserDataHandle {
                 Answer::LearningRecordDeleted(LearningRecordDeleted { removed })
             }
             Method::AddLearningRecordToCustomDictionary(add) => {
-                let (kind, record) = named_learning_record(add.record.as_ref())?;
                 Answer::LearningRecordAddedToCustomDictionary(Self::add_to_custom_dictionary(
-                    stores, kind, record,
+                    stores, add,
                 )?)
             }
             // Answered by `handle` before a page request is looked at.
@@ -186,13 +186,12 @@ impl UserDataHandle {
             entry: None,
             detail,
         };
-        let roman = save.roman.trim();
-        if roman.is_empty() {
+        let Some(roman) = required_roman(&save.roman) else {
             return Ok(refused(
                 CustomDictionaryRefusal::EmptyRoman,
-                "an entry needs a romanization".into(),
+                EMPTY_ROMAN_DETAIL.into(),
             ));
-        }
+        };
         let hanji = save.hanji.trim();
         let row = match save.id.as_deref() {
             Some(id) if !id.is_empty() => CustomDictionaryRow::with_id(id, roman, hanji),
@@ -213,7 +212,8 @@ impl UserDataHandle {
         })
     }
 
-    /// A row's word made a custom word: added unless it is stored already.
+    /// A row's word — as the user edited it in the Add Word sheet, else the
+    /// row's own — made a custom word: added unless it is stored already.
     /// A learned phrase is then forgotten — the custom word offers it whole
     /// from now on; a frequency row stays, still weighting its word. Two
     /// files, so no one transaction: the add comes first and a refused or
@@ -221,23 +221,34 @@ impl UserDataHandle {
     /// error, and the retry finds the word stored and forgets the phrase.
     fn add_to_custom_dictionary(
         stores: &UserDataStores,
-        kind: LearningRecordKind,
-        record: &LearningRecord,
+        add: &AddLearningRecordToCustomDictionary,
     ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
-        // Decided again from the row's own text: the request's
+        let (kind, record) = named_learning_record(add.record.as_ref())?;
+        // Decided again from the row's own text — the row that offered the
+        // action, not the edited word: the request's
         // `can_add_to_custom_dictionary` is the page's copy, not a permission.
         if !learning_records::can_add_to_custom_dictionary(&record.text) {
             return Err(RequestError::Invalid(
                 "only a learning record with Hanji is added",
             ));
         }
-        let row = CustomDictionaryRow::new(record.tl.trim(), record.text.trim());
+        let refused = |refusal: CustomDictionaryRefusal, detail: String| {
+            LearningRecordAddedToCustomDictionary {
+                refusal: refusal as i32,
+                detail,
+            }
+        };
+        let Some(roman) = required_roman(add.roman.as_deref().unwrap_or(&record.tl)) else {
+            return Ok(refused(
+                CustomDictionaryRefusal::EmptyRoman,
+                EMPTY_ROMAN_DETAIL.into(),
+            ));
+        };
+        let hanji = add.hanji.as_deref().unwrap_or(&record.text).trim();
+        let row = CustomDictionaryRow::new(roman, hanji);
         if let Err(error) = stores.custom_dictionary.add_unless_stored(&row) {
             return match refusal(&error) {
-                Some(refusal) => Ok(LearningRecordAddedToCustomDictionary {
-                    refusal: refusal as i32,
-                    detail: error.to_string(),
-                }),
+                Some(refusal) => Ok(refused(refusal, error.to_string())),
                 None => Err(store_error(error)),
             };
         }
@@ -380,6 +391,15 @@ fn named_learning_record(
 ) -> Result<(LearningRecordKind, &LearningRecord), RequestError> {
     let record = record.ok_or(RequestError::Invalid("no learning record named"))?;
     Ok((learning_record_kind(record.kind)?, record))
+}
+
+const EMPTY_ROMAN_DETAIL: &str = "an entry needs a romanization";
+
+/// A custom word's romanization trimmed; `None` when nothing is left — the
+/// `EMPTY_ROMAN` refusal, the one check before the store's own. Its Hanji
+/// may be empty: a roman-only word.
+fn required_roman(roman: &str) -> Option<&str> {
+    Some(roman.trim()).filter(|roman| !roman.is_empty())
 }
 
 fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
@@ -726,15 +746,27 @@ mod tests {
         learning_records(handle, LearningRecordKind::Frequency)
     }
 
+    /// The row filed as it is — what a sender without the edited fields asks.
     fn add_to_custom_dictionary(
         handle: &UserDataHandle,
         record: LearningRecord,
     ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
+        add_edited_to_custom_dictionary(handle, record, None)
+    }
+
+    /// The row filed as `edited` (`roman`, `hanji`) from the Add Word sheet.
+    fn add_edited_to_custom_dictionary(
+        handle: &UserDataHandle,
+        record: LearningRecord,
+        edited: Option<(&str, &str)>,
+    ) -> Result<LearningRecordAddedToCustomDictionary, RequestError> {
         let request = UserDataRequest {
             method: Some(
                 user_data_request::Method::AddLearningRecordToCustomDictionary(
-                    protos::engine::AddLearningRecordToCustomDictionary {
+                    AddLearningRecordToCustomDictionary {
                         record: Some(record),
+                        roman: edited.map(|(roman, _)| roman.to_owned()),
+                        hanji: edited.map(|(_, hanji)| hanji.to_owned()),
                     },
                 ),
             ),
@@ -784,12 +816,99 @@ mod tests {
         assert_eq!(search(&handle, "tsiahpng"), ["食飯"]);
         assert_eq!(list(&handle, "").total, seeded + 1);
         assert!(learned_phrases(&handle).is_empty());
+        // No edited word sent: the row's own reading and text.
+        let [entry] = list(&handle, "食飯").entries.try_into().unwrap();
+        assert_eq!(
+            (entry.roman, entry.hanji),
+            (phrase.tl.clone(), phrase.text.clone())
+        );
 
         // The page still listed it: the word is stored, the phrase already
         // gone — not a second custom word.
         let again = add_to_custom_dictionary(&handle, phrase).unwrap();
         assert_eq!(again.refusal(), CustomDictionaryRefusal::None);
         assert_eq!(list(&handle, "").total, seeded + 1);
+    }
+
+    #[test]
+    fn an_edited_phrase_is_filed_as_edited_and_no_longer_learned() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = handle_with_a_learned_phrase(&directory);
+        let seeded = list(&handle, "").total;
+        let [phrase] = learned_phrases(&handle).try_into().unwrap();
+
+        let edited = Some((" Tsia̍h pn̄g ", " 食飯！ "));
+        let added = add_edited_to_custom_dictionary(&handle, phrase, edited).unwrap();
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(list(&handle, "").total, seeded + 1);
+        // Trimmed as `SaveCustomEntry` trims, otherwise as the user typed it.
+        let [entry] = list(&handle, "食飯").entries.try_into().unwrap();
+        assert_eq!(
+            (entry.roman.as_str(), entry.hanji.as_str()),
+            ("Tsia̍h pn̄g", "食飯！")
+        );
+        assert_eq!(search(&handle, "tsiahpng"), ["食飯！"]);
+        assert!(learned_phrases(&handle).is_empty());
+    }
+
+    #[test]
+    fn an_edit_onto_a_stored_word_files_nothing_new_and_forgets_the_phrase() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = handle_with_a_learned_phrase(&directory);
+        let [phrase] = learned_phrases(&handle).try_into().unwrap();
+        add_edited_to_custom_dictionary(&handle, phrase.clone(), Some(("tsia̍h-pn̄g", "食飯")))
+            .unwrap();
+        let stored = list(&handle, "").total;
+        handle
+            .stores()
+            .unwrap()
+            .learned_phrases
+            .learn_phrase("食飯", "tsia̍h-pn̄g");
+        handle
+            .stores()
+            .unwrap()
+            .learned_phrases
+            .database
+            .wait_for_queued_writes();
+        let [relearned] = learned_phrases(&handle).try_into().unwrap();
+
+        // Stored already, up to case (`canonical_tl_form`): the add answers
+        // as the unedited add does — nothing new filed, the phrase forgotten.
+        let added =
+            add_edited_to_custom_dictionary(&handle, relearned, Some(("Tsia̍h-pn̄g", "食飯")))
+                .unwrap();
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(list(&handle, "").total, stored);
+        assert!(learned_phrases(&handle).is_empty());
+    }
+
+    #[test]
+    fn a_refused_edit_keeps_the_phrase_and_files_nothing() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = handle_with_a_learned_phrase(&directory);
+        let seeded = list(&handle, "").total;
+        let [phrase] = learned_phrases(&handle).try_into().unwrap();
+
+        let refused =
+            add_edited_to_custom_dictionary(&handle, phrase.clone(), Some(("  ", "食飯"))).unwrap();
+        assert_eq!(refused.refusal(), CustomDictionaryRefusal::EmptyRoman);
+        assert_eq!(refused.detail, EMPTY_ROMAN_DETAIL);
+        assert_eq!(list(&handle, "").total, seeded);
+        assert_eq!(learned_phrases(&handle), [phrase]);
+    }
+
+    #[test]
+    fn an_edited_word_does_not_make_a_row_without_hanji_addable() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = handle_with_frequency_rows(&directory, &[("guá sī", "guá sī")]);
+        let seeded = list(&handle, "").total;
+        let [row] = frequency_rows(&handle).try_into().unwrap();
+
+        assert_eq!(
+            add_edited_to_custom_dictionary(&handle, row, Some(("guá sī", "我是"))).unwrap_err(),
+            RequestError::Invalid("only a learning record with Hanji is added")
+        );
+        assert_eq!(list(&handle, "").total, seeded);
     }
 
     #[test]

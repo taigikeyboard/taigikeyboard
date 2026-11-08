@@ -389,8 +389,9 @@ message DeleteLearningRecord { LearningRecord record = 1; }
 
 message LearningRecordDeleted { bool removed = 1; }
 
-// Adds one row's word to the custom dictionary (roman = `record.tl`,
-// hanji = `record.text`) unless the dictionary already holds that word —
+// Adds one row's word to the custom dictionary (roman = `roman`, else
+// `record.tl`; hanji = `hanji`, else `record.text`) unless the dictionary
+// already holds that word —
 // the same Hanji with the same canonical TL, however its roman is spelled.
 // What happens to the row after depends on its kind:
 // - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
@@ -398,11 +399,20 @@ message LearningRecordDeleted { bool removed = 1; }
 //   phrase from then on, as the learned phrase did, so nothing is lost;
 // - a word-frequency row stays as it is: it keeps weighting the word it
 //   counts.
-// Refused as `SaveCustomEntry` is (FULL, or UNSEARCHABLE for a TL that
-// derives no search key), and a refused add keeps the row. A row whose
-// `can_add_to_custom_dictionary` the engine would answer false (an
-// association, or no Hanji) is `FAIL_INVARIANT`.
-message AddLearningRecordToCustomDictionary { LearningRecord record = 1; }
+// Refused as `SaveCustomEntry` is (EMPTY_ROMAN, FULL, or UNSEARCHABLE for
+// a roman that derives no search key), and a refused add keeps the row. A
+// row whose `can_add_to_custom_dictionary` the engine would answer false
+// (an association, or no Hanji) is `FAIL_INVARIANT` — decided from the
+// row's own text, whatever the edited word is.
+message AddLearningRecordToCustomDictionary {
+  LearningRecord record = 1;
+  // The word as the user edited it in the Add Word sheet the action opens
+  // (trimmed like `SaveCustomEntry`'s; an empty `hanji` files a roman-only
+  // word). Absent = the record's own `tl` / `text`, so an older sender
+  // files the row as it is.
+  optional string roman = 2;
+  optional string hanji = 3;
+}
 
 message LearningRecordAddedToCustomDictionary {
   CustomDictionaryRefusal refusal = 1;

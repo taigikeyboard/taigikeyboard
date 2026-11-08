@@ -543,9 +543,7 @@ fn csv_row(
         ))
 }
 
-/// Add or edit one entry (`CustomDictionaryEntrySheet`). Enter and Escape
-/// are the dialog's own: `ContentDialog` gives the primary and close
-/// buttons those keys, which is what the egui sheet hand-rolled.
+/// Add or edit one entry (`CustomDictionaryEntrySheet`).
 fn entry_dialog(
     model: &CustomDictionaryModel,
     strings: &StringResolver,
@@ -554,7 +552,44 @@ fn entry_dialog(
     let Some(editing) = model.editing.as_ref() else {
         return View::empty();
     };
-    let is_new = editing.original.roman.is_empty();
+    word_dialog(
+        editing.original.roman.is_empty(),
+        &editing.roman,
+        &editing.hanji,
+        strings,
+        context
+            .callback(|result| WindowMessage::CustomDictionary(Message::EntryDialogClosed(result))),
+        context.callback(|text| {
+            WindowMessage::CustomDictionary(Message::EntryFieldChanged(EntryField::Roman, text))
+        }),
+        context.callback(|text| {
+            WindowMessage::CustomDictionary(Message::EntryFieldChanged(EntryField::Hanji, text))
+        }),
+    )
+}
+
+/// The Add Word / Edit Word dialog over `roman` / `hanji` as typed so far;
+/// the page keeps the fields (`on_roman_changed` / `on_hanji_changed`) and
+/// acts on the close. Enter and Escape are the dialog's own: `ContentDialog`
+/// gives the primary and close buttons those keys, which is what the egui
+/// sheet hand-rolled. Learning Records opens it as Add Word over a row's
+/// word (`learning_records.rs`).
+pub(super) fn word_dialog(
+    is_new: bool,
+    roman: &str,
+    hanji: &str,
+    strings: &StringResolver,
+    on_closed: Callback<ContentDialogResult>,
+    on_roman_changed: Callback<String>,
+    on_hanji_changed: Callback<String>,
+) -> View {
+    let field = |text: &str, on_changed: Callback<String>, header: StringKey| {
+        TextBox::new()
+            .text(text.to_owned())
+            .width(DIALOG_FIELD_WIDTH)
+            .on_text_changed(on_changed)
+            .slot(TextBoxSlot::Header, strings.resolve(header))
+    };
     ContentDialog::new()
         .title(strings.resolve(if is_new {
             StringKey::DictionaryAddEntry
@@ -565,41 +600,11 @@ fn entry_dialog(
         .close_button_text(strings.resolve(StringKey::CommonCancel))
         // A romanization is what the entry is found by; without one there
         // is nothing to store it under.
-        .is_primary_button_enabled(!editing.roman.trim().is_empty())
+        .is_primary_button_enabled(!roman.trim().is_empty())
         .is_open(true)
-        .on_closed(
-            context.callback(|result| {
-                WindowMessage::CustomDictionary(Message::EntryDialogClosed(result))
-            }),
-        )
-        .content(
-            StackPanel::new().spacing(CONTROL_GAP).children((
-                TextBox::new()
-                    .text(editing.roman.clone())
-                    .width(DIALOG_FIELD_WIDTH)
-                    .on_text_changed(context.callback(|text| {
-                        WindowMessage::CustomDictionary(Message::EntryFieldChanged(
-                            EntryField::Roman,
-                            text,
-                        ))
-                    }))
-                    .slot(
-                        TextBoxSlot::Header,
-                        strings.resolve(StringKey::DictionaryRomanLabel),
-                    ),
-                TextBox::new()
-                    .text(editing.hanji.clone())
-                    .width(DIALOG_FIELD_WIDTH)
-                    .on_text_changed(context.callback(|text| {
-                        WindowMessage::CustomDictionary(Message::EntryFieldChanged(
-                            EntryField::Hanji,
-                            text,
-                        ))
-                    }))
-                    .slot(
-                        TextBoxSlot::Header,
-                        strings.resolve(StringKey::DictionaryHanziLabel),
-                    ),
-            )),
-        )
+        .on_closed(on_closed)
+        .content(StackPanel::new().spacing(CONTROL_GAP).children((
+            field(roman, on_roman_changed, StringKey::DictionaryRomanLabel),
+            field(hanji, on_hanji_changed, StringKey::DictionaryHanziLabel),
+        )))
 }

@@ -434,67 +434,21 @@ impl CustomDictionaryPage {
         });
     }
 
-    /// Add or edit one entry (`CustomDictionaryEntrySheet`): two entry rows
-    /// in an alert dialog; Save only with a romanization, which is what the
-    /// entry is found by.
+    /// Add or edit one entry (`CustomDictionaryEntrySheet`).
     fn entry_dialog(self: &Rc<Self>, original: CustomDictionaryEntry) {
-        let is_new = original.roman.is_empty();
-        let strings = self.strings;
-        let dialog = adw::AlertDialog::new(
-            Some(strings.resolve(if is_new {
-                StringKey::DictionaryAddEntry
-            } else {
-                StringKey::DictionaryEditEntry
-            })),
-            None,
-        );
-        let fields = gtk::ListBox::builder()
-            .selection_mode(gtk::SelectionMode::None)
-            .css_classes(["boxed-list"])
-            .build();
-        let roman = adw::EntryRow::builder()
-            .title(strings.resolve(StringKey::DictionaryRomanLabel))
-            .text(&original.roman)
-            .use_markup(false)
-            .build();
-        let hanji = adw::EntryRow::builder()
-            .title(strings.resolve(StringKey::DictionaryHanziLabel))
-            .text(&original.hanji)
-            .use_markup(false)
-            .build();
-        fields.append(&roman);
-        fields.append(&hanji);
-        dialog.set_extra_child(Some(&fields));
-        dialog.add_response("cancel", strings.resolve(StringKey::CommonCancel));
-        dialog.add_response("save", strings.resolve(StringKey::CommonSave));
-        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
-        dialog.set_default_response(Some("save"));
-        dialog.set_close_response("cancel");
-        dialog.set_response_enabled("save", !original.roman.trim().is_empty());
-        // Weak: the dialog holds the row, and a row holding the dialog back
-        // would keep both alive after the dialog closed.
-        let dialog_weak = dialog.downgrade();
-        roman.connect_changed(move |entry| {
-            if let Some(dialog) = dialog_weak.upgrade() {
-                dialog.set_response_enabled("save", !entry.text().trim().is_empty());
-            }
-        });
         let weak = Rc::downgrade(self);
-        let (roman_field, hanji_field) = (roman.clone(), hanji.clone());
-        dialog.connect_response(None, move |_, response| {
-            if response != "save" {
-                return;
-            }
-            let Some(page) = weak.upgrade() else { return };
-            let roman = roman_field.text().to_string();
-            if roman.trim().is_empty() {
-                return;
-            }
-            let id = original.id.clone();
-            let hanji = hanji_field.text().to_string();
-            page.begin_job(move || save_entry_job(&id, &roman, &hanji));
-        });
-        dialog.present(self.shell.window().as_ref());
+        word_dialog(
+            &self.shell,
+            self.strings,
+            original.roman.is_empty(),
+            &original.roman,
+            &original.hanji,
+            move |roman, hanji| {
+                let Some(page) = weak.upgrade() else { return };
+                let id = original.id.clone();
+                page.begin_job(move || save_entry_job(&id, &roman, &hanji));
+            },
+        );
     }
 
     fn export(self: &Rc<Self>) {
@@ -632,6 +586,72 @@ impl CustomDictionaryPage {
         self.widgets.edit.set_sensitive(!is_busy && has_selection);
         self.widgets.delete.set_sensitive(!is_busy && has_selection);
     }
+}
+
+/// The Add Word / Edit Word dialog, pre-filled with `roman` / `hanji`: two
+/// entry rows in an alert dialog; Save only with a romanization, which is
+/// what the entry is found by, and Save hands `on_save` the fields as typed.
+/// Cancel does nothing. Learning Records opens it as Add Word over a row's
+/// word (`learning_records.rs`).
+pub(super) fn word_dialog(
+    shell: &Shell,
+    strings: StringResolver,
+    is_new: bool,
+    roman: &str,
+    hanji: &str,
+    on_save: impl Fn(String, String) + 'static,
+) {
+    let dialog = adw::AlertDialog::new(
+        Some(strings.resolve(if is_new {
+            StringKey::DictionaryAddEntry
+        } else {
+            StringKey::DictionaryEditEntry
+        })),
+        None,
+    );
+    let fields = gtk::ListBox::builder()
+        .selection_mode(gtk::SelectionMode::None)
+        .css_classes(["boxed-list"])
+        .build();
+    let roman_field = adw::EntryRow::builder()
+        .title(strings.resolve(StringKey::DictionaryRomanLabel))
+        .text(roman)
+        .use_markup(false)
+        .build();
+    let hanji_field = adw::EntryRow::builder()
+        .title(strings.resolve(StringKey::DictionaryHanziLabel))
+        .text(hanji)
+        .use_markup(false)
+        .build();
+    fields.append(&roman_field);
+    fields.append(&hanji_field);
+    dialog.set_extra_child(Some(&fields));
+    dialog.add_response("cancel", strings.resolve(StringKey::CommonCancel));
+    dialog.add_response("save", strings.resolve(StringKey::CommonSave));
+    dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+    dialog.set_default_response(Some("save"));
+    dialog.set_close_response("cancel");
+    dialog.set_response_enabled("save", !roman.trim().is_empty());
+    // Weak: the dialog holds the row, and a row holding the dialog back
+    // would keep both alive after the dialog closed.
+    let dialog_weak = dialog.downgrade();
+    roman_field.connect_changed(move |entry| {
+        if let Some(dialog) = dialog_weak.upgrade() {
+            dialog.set_response_enabled("save", !entry.text().trim().is_empty());
+        }
+    });
+    let (roman_entry, hanji_entry) = (roman_field.clone(), hanji_field.clone());
+    dialog.connect_response(None, move |_, response| {
+        if response != "save" {
+            return;
+        }
+        let roman = roman_entry.text().to_string();
+        if roman.trim().is_empty() {
+            return;
+        }
+        on_save(roman, hanji_entry.text().to_string());
+    });
+    dialog.present(shell.window().as_ref());
 }
 
 /// An activatable row that runs a command (import, export).

@@ -5,7 +5,8 @@
 // table, a count sheet and `−`, then Delete Learning Records, which empties
 // every learning store whichever kind is on screen. Nothing is added here by
 // hand — a word the user wants is a custom word, so a listed row's word can be
-// filed there (Add to Custom Dictionary).
+// filed there (Add to Custom Dictionary, through Custom Dictionary's Add Word
+// sheet, pre-filled and editable).
 // Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 import SwiftUI
@@ -127,12 +128,13 @@ final class LearningRecordsPageModel {
         await perform { try $0.deleteLearningRecord(record) }
     }
 
-    /// Files the row's word in the custom dictionary; the engine then forgets
-    /// a learned phrase and keeps a frequency row. The receipt is always said
-    /// — added or already stored — as desktop-core's job does.
-    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async {
+    /// Files the row's word in the custom dictionary as `roman` / `hanji` —
+    /// what the user left in the Add Word sheet the action opens; the engine
+    /// then forgets a learned phrase and keeps a frequency row. The receipt
+    /// is always said — added or already stored — as desktop-core's job does.
+    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord, roman: String, hanji: String) async {
         await perform(receipt: .done(.dictionaryLearningRecordsAddedToCustomDictionary)) {
-            try $0.addLearningRecordToCustomDictionary(record)
+            try $0.addLearningRecordToCustomDictionary(record, roman: roman, hanji: hanji)
             return true
         }
     }
@@ -203,6 +205,8 @@ struct LearningRecordsPage: View {
 
     @State private var model: LearningRecordsPageModel
     @State private var editing: Taigi_Engine_LearningRecord?
+    /// The row whose word the Add Word sheet is filing.
+    @State private var adding: Taigi_Engine_LearningRecord?
 
     init(client: any UserDataClient) {
         _model = State(initialValue: LearningRecordsPageModel(client: client, settings: SettingsStore()))
@@ -253,6 +257,17 @@ struct LearningRecordsPage: View {
                 Task { await model.setCount(of: record, to: count) }
             }
         }
+        // Add to Custom Dictionary: Custom Dictionary's Add Word sheet over
+        // the row's typed form and word, for the user to tweak (hyphens,
+        // capitals) before Save files it.
+        .sheet(item: $adding) { record in
+            CustomDictionaryEntrySheet(
+                row: CustomDictionaryRow(roman: record.tl, hanji: record.text),
+                isNew: true,
+            ) { edited in
+                Task { await model.addToCustomDictionary(record, roman: edited.roman, hanji: edited.hanji) }
+            }
+        }
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }
 
@@ -300,7 +315,7 @@ struct LearningRecordsPage: View {
                 Button(language.string(.dictionaryLearningRecordsEditCount)) { editing = record }
                 if record.canAddToCustomDictionary {
                     Button(language.string(.dictionaryLearningRecordsAddToCustomDictionary)) {
-                        Task { await model.addToCustomDictionary(record) }
+                        adding = record
                     }
                 }
                 Button(language.string(.commonDelete), role: .destructive) {
@@ -355,10 +370,7 @@ struct LearningRecordsPage: View {
         (
             .dictionaryLearningRecordsAddToCustomDictionary,
             model.list.selectedRow?.canAddToCustomDictionary == true,
-            {
-                guard let selectedRecord = model.list.selectedRow else { return }
-                Task { await model.addToCustomDictionary(selectedRecord) }
-            },
+            { adding = model.list.selectedRow },
         )
     }
 
