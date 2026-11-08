@@ -110,6 +110,7 @@ fn telex_key_writes_the_tone_and_c_spells_the_mode_affricate() {
 fn tps_settings() -> EngineSettings {
     EngineSettings {
         input_mode: InputMode::Tps,
+        is_hanji_conversion_enabled: true,
         ..EngineSettings::default()
     }
 }

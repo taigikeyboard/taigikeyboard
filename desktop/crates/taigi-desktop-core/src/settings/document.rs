@@ -364,6 +364,8 @@ impl SettingsDocument {
             is_nasal_marker_uppercase_enabled: self.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
             dictionary_sources: self.dictionary_sources(),
+            is_hanji_conversion_enabled: input_mode == InputMode::Tps
+                && self.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
         }
     }
 
@@ -886,6 +888,7 @@ mod tests {
                 },
                 ..DictionarySourceToggles::DEFAULT
             },
+            is_hanji_conversion_enabled: false,
         };
         assert_eq!(doc.engine_settings(), expected);
     }
@@ -903,6 +906,18 @@ mod tests {
         doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
         assert_eq!(doc.choice(&keys::INPUT_MODE), InputMode::Tps);
         assert!(doc.engine_settings().is_full_width_punctuation);
+    }
+
+    #[test]
+    fn only_tps_with_the_candidate_window_on_converts_to_hanji() {
+        // trace: `engine_settings` — `input_mode == Tps &&
+        // IS_CANDIDATE_WINDOW_ENABLED` (default on).
+        let mut doc = SettingsDocument::default();
+        assert!(!doc.engine_settings().is_hanji_conversion_enabled);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(doc.engine_settings().is_hanji_conversion_enabled);
+        doc.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+        assert!(!doc.engine_settings().is_hanji_conversion_enabled);
     }
 
     #[test]

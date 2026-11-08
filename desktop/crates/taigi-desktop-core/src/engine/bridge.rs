@@ -6,7 +6,7 @@ use prost::Message;
 use protos::engine::{request, response, AppConfig, ErrorCode, HanjiConversion, Request, Response};
 
 use super::lexicon::dictionary_toggles;
-use crate::settings::{EngineSettings, InputMode};
+use crate::settings::EngineSettings;
 
 static LAST_REQUEST_ID: AtomicU32 = AtomicU32::new(0);
 
@@ -99,8 +99,9 @@ pub(super) fn record_failure(op: &str, message: &str) {
 /// that renders the composition and by every next-word request, matching iOS;
 /// macOS sends this same builder's config.
 ///
-/// Under TPS every request asks for the Hanji conversion of the preedit
-/// (`desktop-tps-hanji-conversion-roadmap.md` H2). The engine reads it only
+/// Under TPS with Show Candidate Window on, every request asks for the Hanji
+/// conversion of the preedit (`desktop-tps-hanji-conversion-roadmap.md` H2;
+/// `EngineSettings::is_hanji_conversion_enabled`). The engine reads it only
 /// for a TPS composition, so TL and POJ requests never carry it.
 ///
 /// Every request carries the user's dictionary switches: the one source
@@ -116,7 +117,9 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         syllable_separator: settings.syllable_separator.wire() as i32,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
         tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
-        hanji_conversion: (settings.input_mode == InputMode::Tps).then_some(HanjiConversion {}),
+        hanji_conversion: settings
+            .is_hanji_conversion_enabled
+            .then_some(HanjiConversion {}),
         dictionary_sources: Some(dictionary_toggles(&settings.dictionary_sources)),
         ..Default::default()
     }
@@ -227,20 +230,21 @@ mod tests {
     }
 
     #[test]
-    fn only_tps_asks_for_the_hanji_conversion() {
-        for mode in [InputMode::Tl, InputMode::Poj] {
-            let settings = EngineSettings {
-                input_mode: mode,
-                ..EngineSettings::default()
-            };
-            assert_eq!(app_config(&settings).hanji_conversion, None, "{mode:?}");
-        }
+    fn the_conversion_switch_carries_the_hanji_conversion_request() {
+        // trace: `app_config` maps `is_hanji_conversion_enabled` straight onto
+        // `hanji_conversion`; which settings turn it on is
+        // `SettingsDocument::engine_settings`'s rule.
         let settings = EngineSettings {
             input_mode: InputMode::Tps,
             ..EngineSettings::default()
         };
+        assert_eq!(app_config(&settings).hanji_conversion, None);
+        let converting = EngineSettings {
+            is_hanji_conversion_enabled: true,
+            ..settings
+        };
         assert_eq!(
-            app_config(&settings).hanji_conversion,
+            app_config(&converting).hanji_conversion,
             Some(HanjiConversion {})
         );
     }

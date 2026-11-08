@@ -317,6 +317,12 @@ pub struct EngineSettings {
     /// `SharedSettings.swift` `isCustomDictEnabledKey` (ON).
     pub is_custom_dict_enabled: bool,
     pub dictionary_sources: DictionarySourceToggles,
+    /// Whether the preedit converts TPS readings to Hanji
+    /// (`desktop-tps-hanji-conversion-roadmap.md` H2) — `AppConfig.hanji_conversion`.
+    /// TPS with Show Candidate Window on only: with the window off there is
+    /// no list to correct a conversion from, so the preedit keeps the glyphs
+    /// and Enter writes them, as TL / POJ write the romanization (S33).
+    pub is_hanji_conversion_enabled: bool,
 }
 
 impl EngineSettings {
@@ -343,6 +349,7 @@ impl EngineSettings {
             is_nasal_marker_uppercase_enabled: true,
             is_custom_dict_enabled: true,
             dictionary_sources: DictionarySourceToggles::DEFAULT,
+            is_hanji_conversion_enabled: false,
         }
     };
 }
