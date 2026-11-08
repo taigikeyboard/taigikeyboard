@@ -1,6 +1,6 @@
 //! Lexicon slice of the engine bridge: loading the dictionary data and
 //! resolving the user's source toggles into the engine's bitmask, and the
-//! dictionary-search page's two lookups. Twin of iOS
+//! Manage Dictionaries search's two lookups. Twin of iOS
 //! `RustEngineBridge+Lexicon.swift`.
 
 use std::collections::BTreeSet;
@@ -211,7 +211,7 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDicti
     }
 }
 
-/// One dictionary record as the Dictionary Search page lists it.
+/// One dictionary record as the Manage Dictionaries search lists it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LexiconRow {
     pub id: i64,
@@ -245,7 +245,7 @@ fn wire_input_mode(mode: InputMode) -> i32 {
     }
 }
 
-/// The Dictionary Search page's all-source romanization lookup.
+/// The Manage Dictionaries search's all-source romanization lookup.
 pub fn search_with_sources(
     input: &str,
     mode: InputMode,
@@ -274,7 +274,7 @@ pub fn search_with_sources(
     }
 }
 
-/// The Dictionary Search page's hanji-prefix lookup.
+/// The Manage Dictionaries search's hanji-prefix lookup.
 pub fn search_by_hanji(
     query: &str,
     mode: InputMode,

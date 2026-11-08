@@ -1,7 +1,8 @@
-//! Dictionary Search: a search field, the first five hits, each with its source
-//! badges and buttons to look the reading up in the MOE dictionary or ChhoeTaigi. Port of
-//! the Windows `dictionary_search.rs`. Built but UNLISTED, as on Windows:
-//! reached only by `--pane dictionarySearch`. The lookup
+//! The Manage Dictionaries search, the bottom bar of that pane's toolbar
+//! view (#792): a search field, and above it the first five hits, each with
+//! its source badges and buttons to look the reading up in the MOE
+//! dictionary or ChhoeTaigi — mobile's `DictionarySearchPanel`, in
+//! libadwaita widgets. Port of the Windows `dictionary_search.rs`. The lookup
 //! (`taigi_desktop_core::engine::dictionary_search`) — the engine's
 //! dictionaries and the custom-dictionary query, plus the dictionaries'
 //! first load — runs off the UI thread; the newest query wins by
@@ -18,7 +19,9 @@ use std::sync::OnceLock;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
-use taigi_desktop_core::settings::dictionary_search::{DEBOUNCE, VISIBLE_RESULT_LIMIT};
+use taigi_desktop_core::settings::dictionary_search::{
+    DEBOUNCE, RESULTS_MAX_HEIGHT, VISIBLE_RESULT_LIMIT,
+};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
@@ -39,24 +42,24 @@ struct State {
     document: SettingsDocument,
 }
 
-pub struct DictionarySearchPage {
+/// Around the bar's content, the toolbar's own spacing.
+const BAR_INSET: i32 = 6;
+
+pub struct DictionarySearchBar {
     shell: Shell,
     strings: StringResolver,
     state: RefCell<State>,
     results: gtk::ListBox,
+    /// The hits' scroller, hidden while the query is empty so the bar is
+    /// the field alone.
+    scroller: gtk::ScrolledWindow,
     empty: gtk::Label,
 }
 
-pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
-    let group = adw::PreferencesGroup::new();
+/// Adds the search as `view`'s bottom bar — none in a window without user
+/// data, which has no custom dictionary to search.
+pub fn build<'a>(mut context: PageContext<'a>, view: &adw::ToolbarView) -> PageContext<'a> {
     if !context.has_user_data {
-        group.add(
-            &gtk::Label::builder()
-                .label(context.strings.resolve(StringKey::DictionaryNoResults))
-                .css_classes(["dim-label"])
-                .build(),
-        );
-        page.add(&group);
         return context;
     }
     let query = gtk::SearchEntry::new();
@@ -65,7 +68,6 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
             .strings
             .resolve(StringKey::DictionarySearchPlaceholder),
     ));
-    group.add(&query);
     let results = gtk::ListBox::builder()
         .selection_mode(gtk::SelectionMode::None)
         .css_classes(["boxed-list"])
@@ -78,9 +80,27 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         .visible(false)
         .build();
     results.set_placeholder(Some(&empty));
-    group.add(&results);
-    page.add(&group);
-    let this = Rc::new(DictionarySearchPage {
+    // Results ABOVE the field, as mobile pops them up over its bar.
+    let scroller = gtk::ScrolledWindow::builder()
+        .hscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .max_content_height(i32::from(RESULTS_MAX_HEIGHT))
+        .child(&results)
+        .visible(false)
+        .build();
+    let panel = gtk::Box::builder()
+        .orientation(gtk::Orientation::Vertical)
+        .spacing(BAR_INSET)
+        .margin_top(BAR_INSET)
+        .margin_bottom(BAR_INSET)
+        .margin_start(BAR_INSET)
+        .margin_end(BAR_INSET)
+        .build();
+    panel.append(&scroller);
+    panel.append(&query);
+    // The same width as the page's groups above it.
+    view.add_bottom_bar(&adw::Clamp::builder().child(&panel).build());
+    let this = Rc::new(DictionarySearchBar {
         shell: context.shell.clone(),
         strings: *context.strings,
         state: RefCell::new(State {
@@ -88,6 +108,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
             ..State::default()
         }),
         results,
+        scroller,
         empty,
     });
     // `changed`, not `search-changed` (GTK's own 150 ms delay): the
@@ -110,7 +131,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     context
 }
 
-impl DictionarySearchPage {
+impl DictionarySearchBar {
     fn query_changed(self: &Rc<Self>, query: String) {
         let generation = {
             let mut state = self.state.borrow_mut();
@@ -183,9 +204,11 @@ impl DictionarySearchPage {
         for result in state.results.iter().take(VISIBLE_RESULT_LIMIT) {
             self.results.append(&self.result_row(result));
         }
-        let has_query = !state.query.trim().is_empty();
+        // The label is the list's placeholder, inside the scroller: hidden
+        // with it while the query is empty.
+        self.scroller.set_visible(!state.query.trim().is_empty());
         self.empty
-            .set_visible(has_query && state.results.is_empty() && !state.is_searching);
+            .set_visible(state.results.is_empty() && !state.is_searching);
     }
 
     /// One hit: the romanization and the hanji, the source badges as the

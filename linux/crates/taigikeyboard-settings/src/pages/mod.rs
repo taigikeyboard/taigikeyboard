@@ -20,16 +20,15 @@ use std::rc::Rc;
 use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey, SettingsPane};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
-/// The panes this crate draws, listed or not (Dictionary Search and About have no
-/// sidebar row, as on the other desktops).
-pub const BUILT: [SettingsPane; 8] = [
+/// The panes this crate draws, listed or not (About has no sidebar row, as on
+/// the other desktops).
+pub const BUILT: [SettingsPane; 7] = [
     SettingsPane::General,
     SettingsPane::Appearance,
     SettingsPane::Shortcuts,
     SettingsPane::DictionarySources,
     SettingsPane::CustomDictionary,
     SettingsPane::LearningRecords,
-    SettingsPane::DictionarySearch,
     SettingsPane::About,
 ];
 
@@ -37,9 +36,9 @@ pub const BUILT: [SettingsPane; 8] = [
 type Refresher = Box<dyn Fn(&SettingsDocument)>;
 
 pub struct Page {
-    pub widget: adw::PreferencesPage,
+    pub widget: gtk::Widget,
     refreshers: Vec<Refresher>,
-    /// A page's own state object (Custom Dictionary, Learning Records, Dictionary Search), kept for the page's
+    /// A page's own state object (Custom Dictionary, Learning Records, the Manage Dictionaries search), kept for the page's
     /// life; its widgets hold it weakly.
     retained: Vec<Rc<dyn Any>>,
     /// Set while `refresh` runs, so a row's notify handler does not write
@@ -100,7 +99,7 @@ impl<'a> PageContext<'a> {
         }
     }
 
-    fn finish(self, widget: adw::PreferencesPage) -> Page {
+    fn finish(self, widget: gtk::Widget) -> Page {
         Page {
             widget,
             refreshers: self.refreshers,
@@ -278,14 +277,26 @@ pub fn build(
         SettingsPane::General => general::build(context, &widget),
         SettingsPane::Appearance => appearance::build(context, &widget),
         SettingsPane::Shortcuts => shortcuts::build(context, &widget),
-        SettingsPane::DictionarySources => dictionary_sources::build(context, &widget),
+        SettingsPane::DictionarySources => {
+            let context = dictionary_sources::build(context, &widget);
+            return with_search_bar(context, widget);
+        }
         SettingsPane::CustomDictionary => custom_dictionary::build(context, &widget),
         SettingsPane::LearningRecords => learning_records::build(context, &widget),
-        SettingsPane::DictionarySearch => dictionary_search::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
         other => unreachable!("{other:?} is not in pages::BUILT"),
     };
-    context.finish(widget)
+    context.finish(widget.upcast())
+}
+
+/// Manage Dictionaries' search, pinned under the scrolling page as on mobile
+/// (#792): a raised bottom bar stays put while the toggles scroll.
+fn with_search_bar(context: PageContext<'_>, page: adw::PreferencesPage) -> Page {
+    let view = adw::ToolbarView::builder()
+        .content(&page)
+        .bottom_bar_style(adw::ToolbarStyle::Raised)
+        .build();
+    dictionary_search::build(context, &view).finish(view.upcast())
 }
 
 /// Removes the rows and nothing else: `remove_all` would take the
