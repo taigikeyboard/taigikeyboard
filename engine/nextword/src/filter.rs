@@ -293,6 +293,7 @@ mod tests {
             tps_or_maps_to_er: false,
             hanji_conversion: None,
             dictionary_sources: None,
+            custom_dictionary_disabled: false,
         }
     }
 
@@ -309,6 +310,7 @@ mod tests {
             tps_or_maps_to_er: false,
             hanji_conversion: None,
             dictionary_sources: None,
+            custom_dictionary_disabled: false,
         }
     }
 

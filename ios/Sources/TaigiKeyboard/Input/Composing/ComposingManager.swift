@@ -152,7 +152,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             nowMs: Int64(Date().timeIntervalSince1970 * 1000),
             // §34/S22 — invert of the Show Typed Text First setting.
             literalRomanCandidateDisabled: !settings.isLiteralRomanCandidateEnabled,
-            customDictionaryDisabled: !settings.isCustomDictEnabled,
         )
         if fetched.isBridgeFailure {
             return []

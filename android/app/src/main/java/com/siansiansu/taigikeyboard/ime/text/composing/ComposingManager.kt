@@ -333,7 +333,6 @@ class ComposingManager(
             nowMs = System.currentTimeMillis(),
             // §34/S22 — invert of the Show Typed Text First setting.
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
-            customDictionaryDisabled = !settings.isCustomDictEnabled,
         )
     }
 

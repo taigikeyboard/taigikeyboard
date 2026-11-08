@@ -185,10 +185,10 @@ message FetchAtPos {
   reserved "enabled_sources_bitmask";
   int64 now_ms                             = 3;
   bool literal_roman_candidate_disabled    = 6;
-  // The user's "use my custom dictionary" setting, OFF: the engine reads no
-  // custom-dictionary rows for this fetch. Negative like field 6, so an
-  // un-wired build keeps the dictionary on.
-  bool custom_dictionary_disabled          = 8;
+  // Was the user's "use my custom dictionary" setting; the fetch reads
+  // `AppConfig.custom_dictionary_disabled` instead (2026-11-09).
+  reserved 8;
+  reserved "custom_dictionary_disabled";
   // Was the user's dictionary switches; the fetch reads
   // `AppConfig.dictionary_sources` instead (2026-11-08).
   reserved 9;

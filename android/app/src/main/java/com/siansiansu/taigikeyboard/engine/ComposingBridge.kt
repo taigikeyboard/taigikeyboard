@@ -170,15 +170,11 @@ fun RustEngineBridge.composingFetchAtPos(
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
     literalRomanCandidateDisabled: Boolean = false,
-    // Invert of the Enable Custom Dictionary setting: the engine reads the
-    // user's dictionary only with it on. Default `false` = read it.
-    customDictionaryDisabled: Boolean = false,
 ): List<RustEngineBridge.ContinuousCandidate> {
     val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
         .newBuilder()
         .setNowMs(nowMs)
         .setLiteralRomanCandidateDisabled(literalRomanCandidateDisabled)
-        .setCustomDictionaryDisabled(customDictionaryDisabled)
         .build()
     return composingFetchDispatch(
         methodSetter = { it.fetchAtPos = payload },

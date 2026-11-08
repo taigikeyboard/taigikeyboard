@@ -387,14 +387,10 @@ public extension RustEngineBridge {
         // (proto3-absent sentinel → engine prepends the literal-roman
         // candidate, the pre-toggle always-on behaviour for callers/tests).
         literalRomanCandidateDisabled: Bool = false,
-        // Invert of the Enable Custom Dictionary setting: the engine reads the
-        // user's dictionary only with it on. Default `false` = read it.
-        customDictionaryDisabled: Bool = false,
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.nowMs = nowMs
         payload.literalRomanCandidateDisabled = literalRomanCandidateDisabled
-        payload.customDictionaryDisabled = customDictionaryDisabled
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",
@@ -492,6 +488,7 @@ public extension RustEngineBridge {
             syllableSeparator: settings.syllableSeparator,
             isTpsOrMappedToER: settings.isTpsOrMappedToER,
             dictionarySources: dictionaryTogglesProto(DictionaryToggles(from: settings)),
+            isCustomDictionaryDisabled: !settings.isCustomDictEnabled,
         )
     }
 

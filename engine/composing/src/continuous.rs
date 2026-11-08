@@ -435,16 +435,6 @@ fn fetch_via_lexicon_partial_inner_impl(
     out
 }
 
-/// v3.5.8 S6 — per-fetch map from a user row's walker edge key to the rows
-/// under it, in `rows` order (the edge pick's dedupe insertion order,
-/// Codex Q6). `key_of` MUST run the same shadow pipeline the
-/// lattice edge keys run for this fetch's `mode` so a hit is
-/// byte-identical to a `tl:` / `poj:` edge key. Registers the nasal-`oo`
-/// alias beside the canonical key: the dictionary build indexes the `o͘ⁿ`
-/// rendering of the nasal final, but it cannot reach a user row, so typing
-/// 好玄 as `ho͘nnhian` (edge key `tl:hoonnhian`) must still find a row
-/// stored canonically — safe on a fused body because an alias key is
-/// disjoint from every canonical key (`phonetics::nasal_oo_alias_spelling`).
 /// The rows `map` holds under an edge's `key` that `admits` lets through,
 /// in `map` order.
 fn rows_for_edge<'a, T>(
@@ -460,6 +450,20 @@ fn rows_for_edge<'a, T>(
         .collect()
 }
 
+/// v3.5.8 S6 — per-fetch map from a user row's walker edge key to the rows
+/// under it, in `rows` order (the edge pick's dedupe insertion order,
+/// Codex Q6). `key_of` MUST run the same shadow pipeline the
+/// lattice edge keys run for this fetch's `mode` so a hit is
+/// byte-identical to a `tl:` / `poj:` edge key. Registers the nasal-`oo`
+/// alias beside the canonical key: the dictionary build indexes the `o͘ⁿ`
+/// rendering of the nasal final, but it cannot reach a user row, so typing
+/// 好玄 as `ho͘nnhian` (edge key `tl:hoonnhian`) must still find a row
+/// stored canonically — safe on a fused body because an alias key is
+/// disjoint from every canonical key (`phonetics::nasal_oo_alias_spelling`).
+/// A TPS key with ㄜ also registers its ㄛ variant, the second toneless key
+/// the build files a dictionary row under (`phonetics::tps_notone_or_variant`):
+/// that alias is not disjoint — TL `to` is canonically ㄉㄛ — and need not be,
+/// since the dictionary itself answers both spellings with the row.
 fn edge_key_map<'a, T>(
     rows: &'a [T],
     key_of: impl Fn(&T) -> Option<String>,
@@ -470,6 +474,10 @@ fn edge_key_map<'a, T>(
         if let Some(key) = key_of(row) {
             if let Some(alias) = phonetics::nasal_oo_alias_spelling(&key) {
                 map.entry(alias).or_default().push(row);
+            }
+            let or_variant = phonetics::tps_notone_or_variant(&key);
+            if !or_variant.is_empty() {
+                map.entry(or_variant).or_default().push(row);
             }
             map.entry(key).or_default().push(row);
         }
@@ -482,8 +490,10 @@ fn edge_key_map<'a, T>(
 /// lattice edges of a typed POJ buffer carry), then the same
 /// [`custom_toneless_key`] pipeline a custom roman goes through, which also
 /// folds a multi-word dictionary TL's space (`iā sī`) into the hyphen it is
-/// between syllables. TPS input keys Bopomofo bodies only, so a learned row
-/// is never a TPS walker edge — the limit a custom row has today.
+/// between syllables. Under TPS input the same pipeline keys it by its
+/// Bopomofo face, through the derivation `learned_phrases.db` files its
+/// `tps:notone` key with (`custom_search_reading`), so the row the store
+/// returns for an edge lands on that edge.
 fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<String> {
     match mode {
         phonetics::InputMode::Poj => custom_toneless_key(
@@ -583,8 +593,8 @@ fn edge_lookup(
 /// Every word the dictionary offers any edge of `continuous_keys`' lattice,
 /// deduplicated, in edge order — the words whose user counts can change what
 /// [`walk_buffer`] picks (the homophone it shows, and the user weight that
-/// prices the edge). Custom and learned rows are not looked up: a TPS walk
-/// takes neither.
+/// prices the edge). The dictionary's only: the caller adds the custom and
+/// learned rows' words.
 pub(crate) fn edge_homophone_words(
     continuous_keys: &crate::shadow::ContinuousKeys,
     ctx: &ContinuousFetchCtx<'_>,
@@ -612,6 +622,24 @@ pub(crate) fn edge_homophone_words(
         );
     }
     words
+}
+
+/// The toneless body of every edge of `continuous_keys`' lattice,
+/// deduplicated, in edge order — the keys a custom word or a learned phrase
+/// is filed under when it can be one of the walk's edges.
+pub(crate) fn edge_toneless_bodies(
+    continuous_keys: &crate::shadow::ContinuousKeys,
+    mode: phonetics::InputMode,
+) -> Vec<String> {
+    let mut seen = std::collections::HashSet::new();
+    continuous_keys
+        .lattice
+        .edges()
+        .iter()
+        .filter_map(|&(start, end)| edge_lookup(continuous_keys, start, end, mode))
+        .map(|lookup| lookup.toneless)
+        .filter(|body| seen.insert(body.clone()))
+        .collect()
 }
 
 /// The walker bigram over the loaded `dictionary.bin` v6 pair counts
@@ -732,19 +760,11 @@ pub(crate) fn walk_buffer(
             // key enters the pick, so an entry that carries the typed tone is
             // never hidden behind one that does not.
             //
-            // **§41 branch unreachable in TPS today, kept for architectural
-            // symmetry.** `custom_toneless_key` (`shadow.rs`) rejects a TPS
-            // body that is not all-Bopomofo, and `custom_dictionary.db` stores
-            // TL / POJ romans — so no custom entry currently lands in
-            // `custom_map` under `InputMode::Tps`, and the TPS tests bite the
-            // lexicon merge, not this branch. The gate is here so BOTH edge
-            // sources answer the same pin the day custom keys gain a TPS form
-            // (§35 follow-up 4, the platform pre-query architecture): a custom
-            // entry synthesized past the pin becomes slot 0, where no
-            // downstream lexicon filter can reach it. Raised by Codex post-impl
-            // 2026-08-20; the "already fires today" part of that finding did
-            // not survive verification. The §17 branch DOES fire: TL/POJ custom
-            // entries are the common case.
+            // Both pins fire in every mode: a TL / POJ stored custom roman keys
+            // under TPS by its Bopomofo face (`custom_toneless_key`), and a
+            // custom entry synthesized past the pin becomes slot 0, where no
+            // downstream lexicon filter can reach it (Codex post-impl
+            // 2026-08-20).
             let custom_key = format!("{key_prefix}{toneless}");
             // Custom rows and learned phrases (§50) under this edge's key join
             // the dictionary's own edge pick

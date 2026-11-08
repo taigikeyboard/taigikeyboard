@@ -207,11 +207,12 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     }
 
     private func fetchedHanji(_ raw: String, settings: StubEngineSettings) -> [String] {
+        var settings = settings
+        settings.isCustomDictEnabled = false
         _ = RustEngineBridge.composingStart(raw, settings: settings, generation: envelopeGen)
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
             nowMs: 0,
-            customDictionaryDisabled: true,
         )
         return (result.candidates ?? []).compactMap(\.hanji)
     }

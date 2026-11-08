@@ -604,6 +604,17 @@ pub fn push_syllable_joiner_run(out: &mut String, run_len: usize, joiner: &str) 
     }
 }
 
+/// The mode a stored custom-dictionary `roman` is read in when the user types
+/// in `mode`: under TPS a TL / POJ roman (no Bopomofo) is read as TL, so its
+/// walker key and its `(hanji, canonical TL)` identity agree with TL mode's;
+/// otherwise `mode` itself. The one rule both derive from.
+pub fn stored_roman_mode(roman: &str, mode: InputMode) -> InputMode {
+    match mode {
+        InputMode::Tps if !contains_tps(roman) => InputMode::Tl,
+        mode => mode,
+    }
+}
+
 /// v3.5.9 B-4 — mode-aware canonicalizer for the `user_frequency.db`
 /// commit key (`RawCandidate.display_text`). Folds Taigi-script
 /// romanization onto canonical TL display form so a romanization-only
@@ -708,7 +719,8 @@ pub fn roman_reading_eq(a: &str, b: &str) -> bool {
 // op: the read side answers `SearchCustomEntries` (the `DeriveCustomQueryKey`
 // op went with its last caller on 2026-09-30).
 pub use crate::custom_search::{
-    custom_search_reading, derive_custom_query_key, derive_custom_search_keys, CustomSearchKey,
+    custom_search_reading, derive_custom_query_key, derive_custom_search_keys,
+    tps_toneless_edge_key, CustomSearchKey,
 };
 
 pub use crate::hanji::{is_hanji, is_roman_only_spelling, CJK_RANGES};

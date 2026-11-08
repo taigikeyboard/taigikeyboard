@@ -87,6 +87,7 @@ fn tl_config() -> AppConfig {
         tps_or_maps_to_er: false,
         hanji_conversion: None,
         dictionary_sources: None,
+        custom_dictionary_disabled: false,
     }
 }
 
@@ -103,6 +104,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         tps_or_maps_to_er: false,
         hanji_conversion: None,
         dictionary_sources: None,
+        custom_dictionary_disabled: false,
     }
 }
 

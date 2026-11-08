@@ -44,6 +44,9 @@ internal fun appConfig(
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isTpsOrMappedToER: Boolean = false,
     dictionarySources: ProtoDictionarySourceToggles? = null,
+    // Invert of the Enable Custom Dictionary setting: the engine reads the
+    // user's dictionary only with it on. Default `false` = read it.
+    isCustomDictionaryDisabled: Boolean = false,
 ): AppConfig =
     AppConfig
         .newBuilder()
@@ -61,6 +64,7 @@ internal fun appConfig(
         .setSyllableSeparator(syllableSeparator.toProto())
         .setTpsOrMapsToEr(isTpsOrMappedToER)
         .apply { if (dictionarySources != null) setDictionarySources(dictionarySources) }
+        .setCustomDictionaryDisabled(isCustomDictionaryDisabled)
         .build()
 
 /**
@@ -98,6 +102,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
         syllableSeparator = settings.syllableSeparator,
         isTpsOrMappedToER = settings.isTpsOrMappedToER,
         dictionarySources = dictionaryTogglesProto(RustEngineBridge.DictionaryToggles.from(settings)),
+        isCustomDictionaryDisabled = !settings.isCustomDictEnabled,
     )
 
 /**

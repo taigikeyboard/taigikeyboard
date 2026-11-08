@@ -24,17 +24,24 @@ use phonetics::InputMode;
 use protos::engine::AppConfig;
 
 use crate::api::{CaretDirection, NailedSegment};
-use crate::continuous::{edge_homophone_words, synth_consumed_span, walk_buffer};
+use crate::continuous::{
+    edge_homophone_words, edge_toneless_bodies, synth_consumed_span, walk_buffer,
+};
 use crate::derived::{buffer_input_mode, tps_slice_display};
 use crate::shadow::{
     build_continuous_keys, build_shadow_lattice_with_barriers, whole_buffer_tone_pin,
     ContinuousKeys, ShadowLattice,
 };
 
-/// The user's learned counts a conversion walk ranks with (H5). The engine
-/// holds neither the user-data stores nor a clock; the dispatch layer, which
-/// holds both, supplies one with a mutation's request.
+/// The user data a conversion walk ranks with (H5): the learned counts, and
+/// the custom words and learned phrases that join the walk as edges, as they
+/// do in a TL / POJ walk. The engine holds neither the user-data stores nor a
+/// clock; the dispatch layer, which holds both, supplies one with a
+/// mutation's request.
 pub trait ConversionFrequency {
+    /// The custom-dictionary rows and learned phrases filed under any of the
+    /// toneless TPS `edge_keys` (`ㄉㄢㄙㆩ`); `frequency` is not read.
+    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> crate::api::UserRows;
     /// The learned rows for `words`, keyed by the `(word, canonical TL)`
     /// pair the ranking reads.
     fn rows_for_words(&self, words: &[String]) -> ranking::FrequencyMap;
@@ -54,6 +61,10 @@ pub struct Conversion {
     /// The dictionary source filter the walk ran with. A request asking for
     /// another filter neither shows nor re-uses this conversion.
     pub enabled_sources_bitmask: u32,
+    /// Whether the walk ran with the custom dictionary off
+    /// (`AppConfig.custom_dictionary_disabled`); a request with the other
+    /// setting neither shows nor re-uses this conversion.
+    pub custom_dictionary_disabled: bool,
 }
 
 /// One word of the walker's path over the closed part.
@@ -120,6 +131,7 @@ impl Conversion {
     /// Whether `config` asks for the conversion this one was walked for.
     pub(crate) fn is_for(&self, config: &AppConfig) -> bool {
         requested_sources(config) == Some(self.enabled_sources_bitmask)
+            && config.custom_dictionary_disabled == self.custom_dictionary_disabled
     }
 
     /// The pending tail as the preedit shows it — each word as its display
@@ -314,15 +326,22 @@ pub(crate) fn convert(
                 continuous_keys.shadow.len(),
                 closed.len() as u32,
             )?;
-            // No custom or learned rows (TPS keys neither as a walker edge)
-            // and no previous-word context.
+            // The custom words and learned phrases filed under an edge's
+            // body join that edge's pick, as in a TL / POJ walk. No
+            // previous-word context.
+            let user_rows = frequency
+                .map(|frequency| {
+                    frequency
+                        .rows_for_edge_keys(&edge_toneless_bodies(&continuous_keys, InputMode::Tps))
+                })
+                .unwrap_or_default();
             let mut ctx = ContinuousFetchCtx {
                 enabled_sources_bitmask,
                 freq_map: &ranking::FrequencyMap::new(),
                 context: ranking::ContextRanks::empty(),
                 now_ms: 0,
-                custom: &[],
-                learned: &[],
+                custom: &user_rows.custom,
+                learned: &user_rows.learned,
                 prefix_index,
                 dict,
                 mode: InputMode::Tps,
@@ -330,11 +349,20 @@ pub(crate) fn convert(
                 tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps, None),
                 whole_buffer_key: None,
             };
-            // The user's counts for every word an edge could take: user
-            // weight both picks an edge's word and prices its span.
+            // The user's counts for every word an edge could take, the
+            // custom and learned ones included: user weight both picks an
+            // edge's word and prices its span.
             let rows = frequency
                 .map(|frequency| {
-                    let words = edge_homophone_words(&continuous_keys, &ctx);
+                    let mut words = edge_homophone_words(&continuous_keys, &ctx);
+                    let mut seen: std::collections::HashSet<String> =
+                        words.iter().cloned().collect();
+                    let user_words = user_rows
+                        .custom
+                        .iter()
+                        .map(|entry| entry.word(InputMode::Tps))
+                        .chain(user_rows.learned.iter().map(|entry| entry.hanji.clone()));
+                    words.extend(user_words.filter(|word| seen.insert(word.clone())));
                     (frequency.rows_for_words(&words), frequency.now_ms())
                 })
                 .unwrap_or_default();
@@ -390,6 +418,7 @@ pub(crate) fn convert(
         let conversion = segments.map(|segments| Conversion {
             segments,
             enabled_sources_bitmask,
+            custom_dictionary_disabled: config.custom_dictionary_disabled,
         });
         Ok((conversion, caret))
     })
