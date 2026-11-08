@@ -27,7 +27,10 @@ struct DictionarySearchPanel: View {
             if !model.trimmedQuery.isEmpty {
                 results
             }
+            // The pane's one control at its foot, sized up to stand out, as
+            // mobile's search bar does.
             SearchField(placeholder: language.string(.dictionarySearchPlaceholder), text: $model.query)
+                .controlSize(.large)
         }
         .padding(Metrics.padding)
         .background(.bar)
@@ -134,6 +137,7 @@ struct DictionarySearchPanel: View {
     private enum Metrics {
         static let spacing: CGFloat = 8
         static let padding: CGFloat = 12
-        static let rowInset: CGFloat = 6
+        /// About a 36 pt row, a settings list's row height.
+        static let rowInset: CGFloat = 10
     }
 }
