@@ -58,9 +58,9 @@ test("the sidebar row shows the panel", async ({ page }) => {
   await expect(keyPanel(page)).toBeVisible();
 });
 
-test("the panel leaves Copy and Clear on screen", async ({ page }) => {
-  await open(page, { settings: typingTps });
-  await expect(page.locator("#copy")).toBeInViewport();
+test("the panel leaves the text on screen", async ({ page }) => {
+  const editor = await open(page, { settings: typingTps });
+  await expect(editor).toBeInViewport();
   await expect(cap(page, "ㄅ")).toBeInViewport();
 });
 
@@ -100,9 +100,10 @@ test("the caps are out of the tab order", async ({ page, browserName }) => {
   test.skip(browserName === "webkit", "Tab skips buttons in WebKit on a Mac");
   const editor = await open(page, { settings: typingTps });
   await editor.press("Tab");
-  await expect(page.locator("#copy")).toBeFocused();
-  await page.keyboard.press("Tab");
-  await expect(page.locator("#clear")).toBeFocused();
+  const isOnCap = await page.evaluate(
+    () => document.activeElement.closest("#tps-keyboard") !== null,
+  );
+  expect(isOnCap).toBe(false);
 });
 
 test("a slot key writes a symbol, and it leads the next picker", async ({

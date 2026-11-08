@@ -63,9 +63,13 @@ export class Surface {
     this.#write("delete");
   }
 
-  clear() {
-    this.#textarea.select();
-    this.#write("delete");
+  /// The whole text, from outside this tab's editing: the stored draft at load,
+  /// another tab's save. No `execCommand`, so the undo history starts over, and
+  /// the caret goes to the end. Not remembered: the next key sees it as a
+  /// foreign change.
+  replaceAll(text) {
+    this.#textarea.value = text;
+    this.#textarea.setSelectionRange(text.length, text.length);
   }
 
   /// Whether anything but this page moved the caret or changed the text since

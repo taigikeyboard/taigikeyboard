@@ -224,15 +224,15 @@ test("a guide and a list in one reply draw the list", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test("the grid stays clear of Copy and Clear", async ({ page }) => {
+test("the grid stays inside the editor", async ({ page }) => {
   const editor = await open(page, { settings: ROW });
   await editor.pressSequentially(LONG_LIST);
   await editor.press("ArrowDown");
   await expectExpanded(page);
   await settled(page);
   const grid = await panel(page).boundingBox();
-  const copy = await page.locator("#copy").boundingBox();
-  expect(grid.y + grid.height).toBeLessThanOrEqual(copy.y);
+  const box = await editor.boundingBox();
+  expect(grid.y + grid.height).toBeLessThanOrEqual(box.y + box.height);
 });
 
 test("a key during the unfold is not lost", async ({ page }) => {
@@ -259,7 +259,7 @@ test("the unfold animates, unless motion is reduced", async ({ page }) => {
   expect(await running()).toBe(0);
 });
 
-test("a short editor keeps the grid off Copy and Clear", async ({ page }) => {
+test("a short editor keeps the grid inside it", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 480 });
   const editor = await open(page, {
     settings: { ...ROW, candidateTextSize: 23 },

@@ -126,42 +126,11 @@ test("a commit replaces the selection", async ({ page }) => {
   await expect(editor).not.toHaveValue(/台灣/);
 });
 
-test("Copy commits first and keeps the focus", async ({ page }) => {
-  await page.addInitScript(() => {
-    navigator.clipboard.writeText = async (text) => {
-      window.copied = text;
-    };
-  });
-  const editor = await open(page);
-  await editor.pressSequentially("tai");
-  await page.getByRole("button", { name: "Copy" }).click();
-  await expect(editor).toBeFocused();
-  await expect(editor).toHaveValue("tai");
-  expect(await page.evaluate(() => window.copied)).toBe("tai");
-});
-
-test("Clear commits first and can be undone", async ({ page, browserName }) => {
-  const editor = await open(page);
-  await commitWord(editor);
-  await editor.pressSequentially("tai");
-  await page.getByRole("button", { name: "Clear" }).click();
-  await expect(editor).toHaveValue("");
-  await expect(panel(page)).toBeHidden();
-  await expect(editor).toBeFocused();
-  // WebKit folds these edits into one step, as it does for ones typed by hand:
-  // undo takes back the words too.
-  if (browserName !== "webkit") {
-    await editor.press("ControlOrMeta+z");
-    await expect(editor).toHaveValue("台灣tai");
-  }
-});
-
 test("the panel follows the caret and the scroll", async ({ page }) => {
+  // The textarea takes the window's room left over: a tall window gives the
+  // list room below the caret at both scroll positions.
+  await page.setViewportSize({ width: 1280, height: 1000 });
   const editor = await open(page);
-  // The scroll numbers below need more room than the height it starts at.
-  await editor.evaluate((element) => {
-    element.style.height = "440px";
-  });
   await editor.fill("\n".repeat(60));
   await editor.evaluate((element) => element.setSelectionRange(30, 30));
   await editor.pressSequentially("tai");
@@ -172,9 +141,11 @@ test("the panel follows the caret and the scroll", async ({ page }) => {
       await new Promise(requestAnimationFrame);
     }, position);
   const panelTop = () => panel(page).evaluate((element) => element.offsetTop);
-  await scrollTo(565);
+  // trace: line 30 at 16 + 30 × 30 = 916px; 856 and 806 put it 60px and
+  // 110px down the box.
+  await scrollTo(856);
   const before = await panelTop();
-  await scrollTo(515);
+  await scrollTo(806);
   expect(await panelTop()).toBe(before + 50);
 });
 

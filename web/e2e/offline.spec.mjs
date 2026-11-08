@@ -16,7 +16,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
-import { candidates, commitWord, expectState, open } from "./helpers.mjs";
+import {
+  candidates,
+  commitWord,
+  emptyBox,
+  expectState,
+  open,
+} from "./helpers.mjs";
 
 const SITE = fileURLToPath(new URL("../target/site", import.meta.url));
 const SERVE = fileURLToPath(new URL("../scripts/serve.mjs", import.meta.url));
@@ -58,6 +64,7 @@ test("a visit types Hanji offline from then on", async ({ page, context }) => {
   await page.reload();
   const editor = page.locator("#text");
   await expectState(page, "ready");
+  await emptyBox(editor);
   await commitWord(editor);
   await expect(editor).toHaveValue("台灣");
 });
@@ -130,6 +137,7 @@ test("a damaged stored dictionary downloads again", async ({ page }) => {
   await expectState(page, "failed");
   await page.locator("#retry").click();
   await expectState(page, "ready");
+  await emptyBox(page.locator("#text"));
   await commitWord(page.locator("#text"));
   await expect(page.locator("#text")).toHaveValue("台灣");
 });
@@ -275,6 +283,7 @@ test.describe("a new version", () => {
     const stored = await storedDictionaryText(next);
     expect(stored).toContain(renamed);
     expect(stored).not.toContain(old);
+    await emptyBox(next.locator("#text"));
     await commitWord(next.locator("#text"));
     await expect(next.locator("#text")).toHaveValue("台灣");
     await expect(candidates(next)).toHaveCount(0);

@@ -51,10 +51,9 @@ test("Display Language redraws the page and survives a reload", async ({
 }) => {
   await open(page);
   await setting(page, "displayLanguage").selectOption("tailo");
-  // trace: web.placeholder / web.ready / desktop.menuSettings tailo values.
-  await expect(page.locator("#text-hint")).toHaveText(
-    "Tshi̍h / khai-sí phah-jī",
-  );
+  const plainText = page.locator('[data-format="text"]');
+  // trace: web.plainText / web.ready / desktop.menuSettings tailo values.
+  await expect(plainText).toHaveText("Sûn bûn-jī");
   await expect(page.locator("#message")).toHaveText("Ē-sái phah-jī");
   await expect(toggle(page)).toHaveAttribute(
     "aria-label",
@@ -62,22 +61,16 @@ test("Display Language redraws the page and survives a reload", async ({
   );
   expect(await rootLang(page)).toBe("nan-Latn-tailo");
   await page.reload();
-  await expect(page.locator("#text-hint")).toHaveText(
-    "Tshi̍h / khai-sí phah-jī",
-  );
+  await expect(plainText).toHaveText("Sûn bûn-jī");
   await expect(setting(page, "displayLanguage")).toHaveValue("tailo");
 });
 
-test("the title and Copy, Clear stay put in every language", async ({
-  page,
-}) => {
+test("the title stays put in every language", async ({ page }) => {
   await open(page, { settings: { displayLanguage: "ja" } });
-  await expect(page).toHaveTitle("台語齒盤線頂 Beta 版");
+  await expect(page).toHaveTitle("台語齒盤網頁版 - 台語簿仔紙");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "台語齒盤線頂 Beta 版",
+    "台語齒盤網頁版 - 台語簿仔紙",
   );
-  await expect(page.getByRole("button", { name: "Copy" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Clear" })).toBeVisible();
 });
 
 test("the session speaks the page's language", async ({ page }) => {

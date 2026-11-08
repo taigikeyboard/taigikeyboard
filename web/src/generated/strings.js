@@ -2,6 +2,8 @@
 
 export const STRINGS = {
   "hanji": {
+    "common.delete": "刪除",
+    "common.save": "儲存",
     "common.close": "關閉",
     "common.moeDict": "教育部臺灣台語常用詞辭典",
     "common.newwordDict": "公視台語台台語新詞辭庫",
@@ -85,8 +87,7 @@ export const STRINGS = {
     "theme.customFont": "字型設定",
     "theme.editorResetAll": "恢復預設設定",
     "web.textLabel": "文字",
-    "web.placeholder": "揤 {key} 開始拍字",
-    "web.subtitle": "目前干焦支援電腦版，使用進前，請先切換去英文輸入法",
+    "web.intro": "台語齒盤是一个免費、開源 ê 台灣話拍字家私，拍字 ia̋n-jín 由台灣人家己開發，台語齒盤永遠免費、無廣告，嘛袂推出付費功能。毋管是一般使用者、學生、先生、學校抑是台語教育團體，攏會當自由使用。向望逐家寫台文、教台語 ê 時，免有額外 ê 負擔。\n\n台語齒盤網頁版目前干焦支援電腦，使用進前，請先切去英語輸入法就會當開始拍台文，毋免安裝任何台語輸入法。\n\n文字刪掉就會當開始使用，標題嘛會當改。倒手爿邊仔有設定頁面，毋管是台羅、白話字攏會當拍、嘛有辭典開關、快速齒、選字窗外觀、色水 ê 功能會當調整。\n\n維持台語齒盤運作需要誠濟所費，若台語齒盤對你有幫助，歡迎贊助寄付，你 ê 支持予我力量繼續為著台語拍拚。\n\nBîn-hiân",
     "web.otherResources": "其他資源",
     "web.converter": "台語羅馬字轉換器",
     "web.desktopApp": "台語齒盤電腦版",
@@ -97,12 +98,13 @@ export const STRINGS = {
     "web.loading": "當咧載入",
     "web.ready": "會使拍字",
     "web.loadFailed": "載入失敗",
-    "web.copied": "已經拷貝",
-    "web.copyFailed": "拷貝失敗",
     "web.writeFailed": "寫入失敗：{text}",
-    "web.otherInputMethod": "另外一个輸入法當咧用，關掉才會當佇遮拍字。"
+    "web.otherInputMethod": "另外一个輸入法當咧用，關掉才會當佇遮拍字。",
+    "web.plainText": "純文字"
   },
   "en": {
+    "common.delete": "Delete",
+    "common.save": "Save",
     "common.close": "Close",
     "common.moeDict": "MOE Dictionary of Common Taiwanese Words",
     "common.newwordDict": "PTS Taigi New-Word Lexicon",
@@ -186,8 +188,7 @@ export const STRINGS = {
     "theme.customFont": "Font",
     "theme.editorResetAll": "Reset to Defaults",
     "web.textLabel": "Text",
-    "web.placeholder": "Press {key} to start typing",
-    "web.subtitle": "Currently desktop only. Switch to an English input method before you start.",
+    "web.intro": "TaigiKeyboard is a free, open-source Taiwanese typing tool, its typing engine developed by Taiwanese people themselves. TaigiKeyboard is free forever, with no ads and no paid features ever. Everyday users, students, teachers, schools and Taiwanese-language education groups are all free to use it. The hope is that writing and teaching Taiwanese comes with no extra burden.\n\nTaigiKeyboard for the web currently supports computers only. Switch to an English input method and you can start typing Taiwanese, with no Taiwanese input method to install.\n\nDelete this text to begin; the title can be changed too. The settings are in the sidebar on the left: type in Tâi-lô or Pe̍h-ōe-jī, and adjust the dictionaries, shortcuts, the candidate window's look and its colours.\n\nKeeping TaigiKeyboard running takes a lot. If it helps you, sponsorship is welcome: your support gives me the strength to keep working for Taiwanese.\n\nBîn-hiân",
     "web.otherResources": "Other Resources",
     "web.converter": "Taiwanese Romanization Converter",
     "web.desktopApp": "TaigiKeyboard for Desktop",
@@ -198,12 +199,13 @@ export const STRINGS = {
     "web.loading": "Loading",
     "web.ready": "Ready",
     "web.loadFailed": "Could not load",
-    "web.copied": "Copied",
-    "web.copyFailed": "Could not copy",
     "web.writeFailed": "Could not write: {text}",
-    "web.otherInputMethod": "Another input method is active. Turn it off to type here."
+    "web.otherInputMethod": "Another input method is active. Turn it off to type here.",
+    "web.plainText": "Plain Text"
   },
   "ja": {
+    "common.delete": "削除",
+    "common.save": "保存",
     "common.close": "閉じる",
     "common.moeDict": "教育部 台湾語常用語辞典",
     "common.newwordDict": "公視台語台 台湾語新語辞書",
@@ -287,8 +289,7 @@ export const STRINGS = {
     "theme.customFont": "フォント",
     "theme.editorResetAll": "既定値に戻す",
     "web.textLabel": "テキスト",
-    "web.placeholder": "{key} を押して入力を開始",
-    "web.subtitle": "現在はパソコンのみ対応。ご利用前に英語入力に切り替えてください。",
+    "web.intro": "台語齒盤は、無料でオープンソースの台湾語入力ツールです。入力エンジンは台湾の人たち自身が開発しています。台語齒盤はずっと無料で、広告もなく、有料機能を出すこともありません。一般の利用者、学生、先生、学校、台湾語教育団体のどなたでも自由に使えます。台湾語を書くとき、教えるときに、余計な負担がないことを願っています。\n\n台語齒盤ウェブ版は現在パソコンのみ対応しています。英語入力に切り替えれば、台湾語入力ソフトをインストールしなくても、すぐに台湾語を入力できます。\n\nこの文章を消せばすぐに使い始められます。タイトルも変更できます。左側に設定ページがあり、台羅・白話字のどちらでも入力でき、辞書の切り替え、ショートカット、候補ウィンドウの外観、色を調整できます。\n\n台語齒盤の運営には多くの費用がかかります。お役に立てているなら、ご支援・ご寄付をお待ちしています。皆さまの支えが、台湾語のために頑張り続ける力になります。\n\nBîn-hiân",
     "web.otherResources": "その他のリソース",
     "web.converter": "台湾語ローマ字変換ツール",
     "web.desktopApp": "台湾語キーボード パソコン版",
@@ -299,12 +300,13 @@ export const STRINGS = {
     "web.loading": "読み込み中",
     "web.ready": "準備完了",
     "web.loadFailed": "読み込めませんでした",
-    "web.copied": "コピーしました",
-    "web.copyFailed": "コピーできませんでした",
     "web.writeFailed": "書き込めませんでした：{text}",
-    "web.otherInputMethod": "別の入力方法が使用中です。オフにするとここに入力できます。"
+    "web.otherInputMethod": "別の入力方法が使用中です。オフにするとここに入力できます。",
+    "web.plainText": "プレーンテキスト"
   },
   "tailo": {
+    "common.delete": "San-tî",
+    "common.save": "Thú-tsûn",
     "common.close": "Kuan-pì",
     "common.moeDict": "Kàu-io̍k-pōo tâi-uân-tâi-gí siâng-iōng-sû sû-tián",
     "common.newwordDict": "Kong-sī tâi-gí-tâi tâi-gí sin sû sî khòo",
@@ -388,8 +390,7 @@ export const STRINGS = {
     "theme.customFont": "Jī-hîng siat-tīng",
     "theme.editorResetAll": "Hue-ho̍k ī-siat siat-tīng",
     "web.textLabel": "Bûn-jī",
-    "web.placeholder": "Tshi̍h {key} khai-sí phah-jī",
-    "web.subtitle": "Bo̍k-tsiân kan-na tsi-uān tiān-náu-pán, sú-iōng tsìn-tsîng, tshiánn sing tshiat-uānn khì Ing-bûn su-ji̍p-huat",
+    "web.intro": "Tâi-gí Khí-puânn sī tsi̍t ê bián-huì, khai-guân ê Tâi-uân-uē phah-jī ke-si, phah-jī ia̋n-jín iû Tâi-uân-lâng ka-tī khai-huat, Tâi-gí Khí-puânn íng-uán bián-huì, bô kóng-kò, mā bē tshui-tshut hù-huì kong-lîng. M̄-kuán sī it-puann sú-iōng-tsiá, ha̍k-sing, sian-sinn, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thuân-thé, lóng ē-tàng tsū-iû sú-iōng. Ǹg-bāng ta̍k-ke siá Tâi-bûn, kà Tâi-gí ê sî, bián ū gia̍h-guā ê hū-tam.\n\nTâi-gí Khí-puânn bāng-ia̍h-pán bo̍k-tsiân kan-na tsi-uān tiān-náu, sú-iōng tsìn-tsîng, tshiánn sing tshiat khì Ing-gí su-ji̍p-huat tō ē-tàng khai-sí phah Tâi-bûn, m̄-bián an-tsong jīm-hô Tâi-gí su-ji̍p-huat.\n\nBûn-jī san-tiāu tō ē-tàng khai-sí sú-iōng, piau-tê mā ē-tàng kái. Tò-tshiú-pîng pinn-á ū siat-tīng ia̍h-bīn, m̄-kuán sī Tâi-lô, Pe̍h-uē-jī lóng ē-tàng phah, mā ū sû-tián khui-kuan, khuài-sok khí, suán-jī-thang guā-kuan, sik-tsuí ê kong-lîng ē-tàng tiâu-tsíng.\n\nUî-tshî Tâi-gí Khí-puânn ūn-tsok su-iàu tsiânn tsē sóo-huì, nā Tâi-gí Khí-puânn tuì lí ū pang-tsōo, huan-gîng tsàn-tsōo kià-hù, lí ê tsi-tshî hōo guá li̍k-liōng kè-sio̍k uī-tio̍h Tâi-gí phah-piànn.\n\nBîn-hiân",
     "web.otherResources": "Kî-thann tsu-guân",
     "web.converter": "Tâi-gí Lô-má-jī tsuán-uānn-khì",
     "web.desktopApp": "Tâi-gí Khí-puânn tiān-náu-pán",
@@ -400,12 +401,13 @@ export const STRINGS = {
     "web.loading": "Tng-teh tsài-ji̍p",
     "web.ready": "Ē-sái phah-jī",
     "web.loadFailed": "Tsài-ji̍p sit-pāi",
-    "web.copied": "Í-king khó-puè",
-    "web.copyFailed": "Khó-puè sit-pāi",
     "web.writeFailed": "Siá-ji̍p sit-pāi: {text}",
-    "web.otherInputMethod": "Līng-guā tsi̍t ê su-ji̍p-huat tng-teh iōng, kuainn--tiāu tsiah ē-tàng tī tsia phah-jī."
+    "web.otherInputMethod": "Līng-guā tsi̍t ê su-ji̍p-huat tng-teh iōng, kuainn--tiāu tsiah ē-tàng tī tsia phah-jī.",
+    "web.plainText": "Sûn bûn-jī"
   },
   "poj": {
+    "common.delete": "San-tî",
+    "common.save": "Thú-chûn",
     "common.close": "Koan-pì",
     "common.moeDict": "Kàu-io̍k-pō͘ tâi-oân-tâi-gí siâng-iōng-sû sû-tián",
     "common.newwordDict": "Kong-sī tâi-gí-tâi tâi-gí sin sû sî khò͘",
@@ -489,8 +491,7 @@ export const STRINGS = {
     "theme.customFont": "Jī-hêng siat-tēng",
     "theme.editorResetAll": "Hoe-ho̍k ī-siat siat-tēng",
     "web.textLabel": "Bûn-jī",
-    "web.placeholder": "Chhi̍h {key} khai-sí phah-jī",
-    "web.subtitle": "Bo̍k-chiân kan-na chi-oān tiān-náu-pán, sú-iōng chìn-chêng, chhiáⁿ seng chhiat-oāⁿ khì Eng-bûn su-ji̍p-hoat",
+    "web.intro": "Tâi-gí Khí-pôaⁿ sī chi̍t ê bián-hùi, khai-goân ê Tâi-oân-ōe phah-jī ke-si, phah-jī ia̋n-jín iû Tâi-oân-lâng ka-tī khai-hoat, Tâi-gí Khí-pôaⁿ éng-oán bián-hùi, bô kóng-kò, mā bē chhui-chhut hù-hùi kong-lêng. M̄-koán sī it-poaⁿ sú-iōng-chiá, ha̍k-seng, sian-siⁿ, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thoân-thé, lóng ē-tàng chū-iû sú-iōng. Ǹg-bāng ta̍k-ke siá Tâi-bûn, kà Tâi-gí ê sî, bián ū gia̍h-gōa ê hū-tam.\n\nTâi-gí Khí-pôaⁿ bāng-ia̍h-pán bo̍k-chiân kan-na chi-oān tiān-náu, sú-iōng chìn-chêng, chhiáⁿ seng chhiat khì Eng-gí su-ji̍p-hoat tō ē-tàng khai-sí phah Tâi-bûn, m̄-bián an-chong jīm-hô Tâi-gí su-ji̍p-hoat.\n\nBûn-jī san-tiāu tō ē-tàng khai-sí sú-iōng, piau-tê mā ē-tàng kái. Tò-chhiú-pêng piⁿ-á ū siat-tēng ia̍h-bīn, m̄-koán sī Tâi-lô, Pe̍h-ōe-jī lóng ē-tàng phah, mā ū sû-tián khui-koan, khoài-sok khí, soán-jī-thang gōa-koan, sek-chúi ê kong-lêng ē-tàng tiâu-chéng.\n\nÎ-chhî Tâi-gí Khí-pôaⁿ ūn-chok su-iàu chiâⁿ chē só͘-hùi, nā Tâi-gí Khí-pôaⁿ tùi lí ū pang-chō͘, hoan-gêng chàn-chō͘ kià-hù, lí ê chi-chhî hō͘ góa le̍k-liōng kè-sio̍k ūi-tio̍h Tâi-gí phah-piàⁿ.\n\nBîn-hiân",
     "web.otherResources": "Kî-thaⁿ chu-goân",
     "web.converter": "Tâi-gí Lô-má-jī choán-ōaⁿ-khì",
     "web.desktopApp": "Tâi-gí Khí-pôaⁿ tiān-náu-pán",
@@ -501,9 +502,8 @@ export const STRINGS = {
     "web.loading": "Tng-teh chài-ji̍p",
     "web.ready": "Ē-sái phah-jī",
     "web.loadFailed": "Chài-ji̍p sit-pāi",
-    "web.copied": "Í-keng khó-pòe",
-    "web.copyFailed": "Khó-pòe sit-pāi",
     "web.writeFailed": "Siá-ji̍p sit-pāi: {text}",
-    "web.otherInputMethod": "Lēng-gōa chi̍t ê su-ji̍p-hoat tng-teh iōng, koaiⁿ--tiāu chiah ē-tàng tī chia phah-jī."
+    "web.otherInputMethod": "Lēng-gōa chi̍t ê su-ji̍p-hoat tng-teh iōng, koaiⁿ--tiāu chiah ē-tàng tī chia phah-jī.",
+    "web.plainText": "Sûn bûn-jī"
   }
 };

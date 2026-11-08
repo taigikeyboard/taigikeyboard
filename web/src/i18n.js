@@ -1,12 +1,11 @@
 // The page's strings, from the generated `i18n/*.json` maps. A translated element
 // names its key: `data-i18n` for its text, `data-i18n-<attribute>` for an
-// attribute, `data-i18n-keycap` for text with a `{key}` drawn as a keycap. The
-// markup's English text only holds the layout; style.css keeps it out of sight
-// until `setDisplayLanguage` has run.
+// attribute. The markup's English text only holds the layout; style.css keeps it
+// out of sight until `setDisplayLanguage` has run.
 
 import { STRINGS } from "./generated/strings.js";
 
-const ATTRIBUTES = ["aria-label", "title", "placeholder"];
+const ATTRIBUTES = ["aria-label", "title"];
 
 /// BCP-47 per language: the browser picks CJK glyphs and hyphenation by it.
 const LANGUAGE_TAGS = {
@@ -51,13 +50,6 @@ export function setDisplayLanguage(tag) {
     for (const element of document.querySelectorAll(`[${source}]`)) {
       element.setAttribute(attribute, translate(element.getAttribute(source)));
     }
-  }
-  for (const element of document.querySelectorAll("[data-i18n-keycap]")) {
-    const [before, after] =
-      STRINGS[language][element.dataset.i18nKeycap].split("{key}");
-    const keycap = document.createElement("kbd");
-    keycap.textContent = "/";
-    element.replaceChildren(before, keycap, after);
   }
   root.dataset.translated = "";
 }

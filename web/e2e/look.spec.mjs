@@ -142,18 +142,18 @@ test("a form change keeps what a chord wrote", async ({ page }) => {
 test("Appearance pins the theme before first paint", async ({ page }) => {
   await open(page);
   await page.getByLabel("Appearance").selectOption("dark");
-  await expect.poll(() => pageColour(page)).toBe("rgb(0, 0, 0)");
+  await expect.poll(() => pageColour(page)).toBe("rgb(17, 17, 17)");
   await page.getByLabel("Appearance").selectOption("light");
-  await expect.poll(() => pageColour(page)).toBe("rgb(245, 245, 247)");
+  await expect.poll(() => pageColour(page)).toBe("rgb(253, 253, 253)");
   await page.getByLabel("Appearance").selectOption("dark");
   // The script runs at parse time, ahead of the module that fills the form.
   await page.route("**/ime.js", (route) => route.abort());
   await page.reload();
   expect(await theme(page)).toBe("dark");
-  await expect.poll(() => pageColour(page)).toBe("rgb(0, 0, 0)");
+  await expect.poll(() => pageColour(page)).toBe("rgb(17, 17, 17)");
   // WebKit once lost the `body` rules from the first reload on.
   await page.reload();
-  await expect.poll(() => pageColour(page)).toBe("rgb(0, 0, 0)");
+  await expect.poll(() => pageColour(page)).toBe("rgb(17, 17, 17)");
 });
 
 test("a stored value no control offers shows the default", async ({ page }) => {
@@ -161,7 +161,7 @@ test("a stored value no control offers shows the default", async ({ page }) => {
   await expect(inputMode(page)).toHaveValue("tl");
 });
 
-test("the panel stays clear of Copy and Clear", async ({ page }) => {
+test("the panel stays inside the editor at its foot", async ({ page }) => {
   const editor = await open(page);
   await editor.fill("\n".repeat(60));
   await editor.evaluate((element) => {
@@ -171,10 +171,8 @@ test("the panel stays clear of Copy and Clear", async ({ page }) => {
   await editor.pressSequentially("taiuan");
   await expect(candidates(page).first()).toBeVisible();
   const box = await panel(page).boundingBox();
-  const copy = await page.getByRole("button", { name: "Copy" }).boundingBox();
   const area = await editor.boundingBox();
   expect(box.y + box.height).toBeLessThanOrEqual(area.y + area.height);
-  expect(box.y + box.height).toBeLessThanOrEqual(copy.y);
 });
 
 test("a short window keeps the panel inside the editor", async ({ page }) => {
@@ -257,7 +255,7 @@ test("/ moves into the textarea from anywhere but a text field", async ({
   page,
 }) => {
   const editor = await open(page);
-  await page.getByRole("button", { name: "Copy" }).focus();
+  await toggle(page).focus();
   await page.keyboard.press("/");
   await expect(editor).toBeFocused();
   await expect(editor).toHaveValue("");
@@ -269,24 +267,8 @@ test("/ moves into the textarea from anywhere but a text field", async ({
   await expect(inputMode(page)).toBeFocused();
 });
 
-test("the / hint shows only over an empty, unfocused textarea", async ({
-  page,
-}) => {
-  const editor = await open(page);
-  const hint = page.locator("#text-hint");
-  await expect(hint.locator("kbd")).toHaveText("/");
-  await expect(hint).toBeHidden();
-  await editor.blur();
-  await expect(hint).toBeVisible();
-  await page.keyboard.press("/");
-  await expect(editor).toBeFocused();
-  await expect(hint).toBeHidden();
-  await editor.fill("台灣");
-  await editor.blur();
-  await expect(hint).toBeHidden();
-});
-
-test("around the textarea, only Copy and Clear", async ({ page }) => {
+// ZenPen's page: the title and the text, nothing drawn around them once loaded.
+test("around the textarea, nothing", async ({ page }) => {
   await open(page);
   const seen = await page.evaluate(() =>
     Array.from(
@@ -297,11 +279,11 @@ test("around the textarea, only Copy and Clear", async ({ page }) => {
           width > 1 &&
           height > 1 &&
           getComputedStyle(element).visibility === "visible";
-        return isDrawn ? element.getAttribute("aria-label") : null;
+        return isDrawn ? element.id : null;
       },
-    ).filter((text) => text !== null),
+    ).filter((id) => id !== null),
   );
-  expect(seen).toEqual(["Copy", "Clear"]);
+  expect(seen).toEqual([]);
 });
 
 test("a window that fits the page does not scroll", async ({ page }) => {
@@ -314,11 +296,15 @@ test("a window that fits the page does not scroll", async ({ page }) => {
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
 });
 
-test("the textarea starts short however tall the window", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 1200 });
+test("the textarea takes the window's room left over", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   const editor = await open(page);
-  // trace: `#text` height 22rem at the 16px root.
-  expect((await editor.boundingBox()).height).toBeCloseTo(352, 0);
+  const short = (await editor.boundingBox()).height;
+  await page.setViewportSize({ width: 1280, height: 1200 });
+  // Every pixel the window gains goes to the textarea.
+  await expect
+    .poll(async () => (await editor.boundingBox()).height)
+    .toBeCloseTo(short + 400, 0);
 });
 
 test("the footer matches the converter's", async ({ page }) => {
@@ -331,24 +317,32 @@ test("the footer matches the converter's", async ({ page }) => {
   );
 });
 
-test("the footer rests at the window's foot, then below the page", async ({
+test("the footer rests at the sidebar's foot, then below its sections", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 1200 });
-  await open(page);
+  await open(page, { folded: true });
   const footer = page.locator("footer");
-  // trace: `body` padding-bottom 2rem at the 16px root.
-  const bottom = async () => {
-    const box = await footer.boundingBox();
-    return box.y + box.height;
-  };
-  expect(await bottom()).toBeCloseTo(1200 - 32, 0);
-
-  await page.setViewportSize({ width: 1280, height: 400 });
-  const editor = await page.locator("#editor").boundingBox();
-  expect((await footer.boundingBox()).y).toBeGreaterThan(
-    editor.y + editor.height,
+  // trace: `#sidebar` padding-bottom 1.5rem at the 16px root.
+  const box = await footer.boundingBox();
+  expect(box.y + box.height).toBeCloseTo(1200 - 24, 0);
+  // Every section open: the footer follows the last one, out of view.
+  for (const section of await page.locator(".sidebar-section").all()) {
+    await section.evaluate((element) => {
+      element.open = true;
+    });
+  }
+  const last = await page.locator(".sidebar-section").last().boundingBox();
+  expect((await footer.boundingBox()).y).toBeGreaterThanOrEqual(
+    last.y + last.height,
   );
+});
+
+test("the footer closes with the sidebar", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("footer")).toBeVisible();
+  await toggle(page).click();
+  await expect(page.locator("footer")).toBeHidden();
 });
 
 test("the footer's icons name their places", async ({ page }) => {
@@ -542,11 +536,11 @@ test("the composition sits on the caret's line, clear of the list", async ({
     const composition = await preedit(page).evaluate(rect);
     const list = await panel(page).evaluate(rect);
     const box = await editor.evaluate(rect);
-    const lineHeight = 1.65 * 18;
+    const lineHeight = 30;
     // Past that the textarea scrolls, which WebKit animates.
-    if (line < 10) {
-      // trace: `#text` padding 1.5rem, line-height 1.65 at 1.125rem.
-      const expected = box.y + 24 + line * lineHeight;
+    if (line < 8) {
+      // trace: `#text` padding-top 22px, line-height 30px.
+      const expected = box.y + 22 + line * lineHeight;
       expect(Math.abs(composition.y - expected)).toBeLessThanOrEqual(2);
     }
     // `offsetHeight` rounds, so up to a pixel either way.
