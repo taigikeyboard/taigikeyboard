@@ -107,8 +107,27 @@ pub(crate) struct WireLayout {
     /// The half row a scrolling grid shows under its last full one.
     peek: f32,
     scroll_y: f32,
-    selected_row: Option<usize>,
+    /// The grid's column count: six under a row, a page beside a column.
+    columns: usize,
+    /// Where an unfolded column's annotations start; `None` for a row.
+    primary_column: Option<f32>,
+    /// The cells the slot keys number, in key order.
+    keyed: Vec<usize>,
+    /// The frame tinted behind them, in content coordinates.
+    keyed_band: Option<WireRect>,
+    /// An unfolded column that pages keeps its chevron column on every page;
+    /// the chevron shows while another page follows.
+    is_paged: bool,
+    has_next_page: bool,
     animation_milliseconds: f32,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct WireRect {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
 }
 
 pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
@@ -156,7 +175,19 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
         grid_height,
         peek: geometry.container_height - grid_height,
         scroll_y: model.scroll_y(),
-        selected_row: model.selected_row(),
+        columns: model.grid().column_count,
+        primary_column: model.expanded_primary_column_width(),
+        keyed: (0..)
+            .map_while(|slot| model.candidate_index_for_slot(slot))
+            .collect(),
+        keyed_band: model.keyed_band_rect().map(|rect| WireRect {
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+            height: rect.height,
+        }),
+        is_paged: model.is_paged(),
+        has_next_page: model.has_next_page(),
         animation_milliseconds: ExpandableListModel::ANIMATION_DURATION_SECONDS * 1000.0,
     })
 }

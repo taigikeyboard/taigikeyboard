@@ -137,8 +137,16 @@ pub struct ExpandableListModel {
     /// The column's candidate column width, which every row's annotation
     /// starts after; `None` for a row.
     collapsed_primary_column_width: Option<f32>,
+    /// Row: the whole list, row-major. Column: the selected page only —
+    /// `ROWS_PER_COLUMN`-tall columns, `column_count` of them a page,
+    /// Microsoft Bopomofo's shape — transposed into visual rows
+    /// (`ExpandedGridLayout::column_major_page`), so renderers draw both from
+    /// the same rows.
     grid: ExpandedGridLayout,
     column_width: f32,
+    /// The unfolded column's candidate column width, shared by every column
+    /// so their annotations start at one x; `None` for a row.
+    expanded_primary_column_width: Option<f32>,
     mode: ExpandableDisplayMode,
     selected_index: usize,
     /// The expanded viewport's scroll offset in points.
@@ -151,6 +159,11 @@ impl ExpandableListModel {
     /// Two thirds of a page: `PAGE_SIZE - PAGE_SIZE / 3`.
     pub const EXPANDED_COLUMN_COUNT: usize =
         HorizontalPageLayout::PAGE_SIZE - HorizontalPageLayout::PAGE_SIZE / 3;
+    /// An unfolded column's height in candidates: one page of the list.
+    pub const ROWS_PER_COLUMN: usize = HorizontalPageLayout::PAGE_SIZE;
+    /// How many columns an unfolded column shows at once at most — a third of
+    /// a page, Microsoft Bopomofo's three.
+    pub const COLUMNS_PER_PAGE: usize = HorizontalPageLayout::PAGE_SIZE / 3;
     /// The unfold's duration, for the renderer.
     pub const ANIMATION_DURATION_SECONDS: f32 = 0.183;
 
@@ -158,32 +171,61 @@ impl ExpandableListModel {
     /// [`MAX_DISPLAY_CANDIDATES`] here) under `geometry`.
     pub fn new(measured_widths: &[f32], geometry: ExpandableGeometryInput<'_>) -> Self {
         let measured_widths = &measured_widths[..measured_widths.len().min(MAX_DISPLAY_CANDIDATES)];
-        let (axis, collapsed) = match geometry.collapsed {
-            CollapsedLayout::Row => (
-                ExpandableAxis::Row,
-                Self::collapsed_row(measured_widths, &geometry),
-            ),
+        let count = measured_widths.len();
+        let (axis, collapsed, column_width, grid, expanded_primary_column_width) = match geometry
+            .collapsed
+        {
+            CollapsedLayout::Row => {
+                let column_width = Self::resolved_column_width(measured_widths, &geometry);
+                (
+                    ExpandableAxis::Row,
+                    Self::collapsed_row(measured_widths, &geometry),
+                    column_width,
+                    ExpandedGridLayout::compute(
+                        measured_widths,
+                        column_width,
+                        Self::EXPANDED_COLUMN_COUNT,
+                    ),
+                    None,
+                )
+            }
             CollapsedLayout::Column {
                 metrics,
                 primary_widths,
                 annotation_widths,
-            } => (
-                ExpandableAxis::Column,
-                Self::collapsed_column(
-                    measured_widths.len(),
+            } => {
+                let collapsed = Self::collapsed_column(
+                    count,
                     metrics,
                     primary_widths,
                     annotation_widths,
                     &geometry,
-                ),
-            ),
+                );
+                let (column_width, columns_per_page, primary_column_width) = Self::expanded_columns(
+                    count,
+                    metrics,
+                    primary_widths,
+                    annotation_widths,
+                    collapsed.content_width,
+                    &geometry,
+                );
+                (
+                    ExpandableAxis::Column,
+                    collapsed,
+                    column_width,
+                    ExpandedGridLayout::column_major_page(
+                        count,
+                        Self::ROWS_PER_COLUMN,
+                        0,
+                        columns_per_page,
+                    ),
+                    Some(primary_column_width),
+                )
+            }
         };
-        let column_width = Self::resolved_column_width(measured_widths, &geometry);
-        let grid =
-            ExpandedGridLayout::compute(measured_widths, column_width, Self::EXPANDED_COLUMN_COUNT);
         Self {
             axis,
-            count: measured_widths.len(),
+            count,
             item_height: geometry.item_height,
             chrome_width: geometry.chrome_width,
             scroller_width: geometry.scroller_width,
@@ -193,6 +235,7 @@ impl ExpandableListModel {
             collapsed_primary_column_width: collapsed.primary_column_width,
             grid,
             column_width,
+            expanded_primary_column_width,
             mode: ExpandableDisplayMode::Collapsed,
             selected_index: 0,
             scroll_y: 0.0,
@@ -245,24 +288,21 @@ impl ExpandableListModel {
         geometry: &ExpandableGeometryInput<'_>,
     ) -> CollapsedFrames {
         let rows = count
-            .min(HorizontalPageLayout::PAGE_SIZE)
+            .min(Self::ROWS_PER_COLUMN)
             .min(primary_widths.len())
             .min(annotation_widths.len());
-        let (widest_primary, widest_annotation) =
-            widest_columns(&primary_widths[..rows], &annotation_widths[..rows]);
         let chrome = if count > rows {
             geometry.chrome_width
         } else {
             0.0
         };
-        let width = metrics
-            .cell_width(widest_primary, widest_annotation)
-            .max(geometry.base_width)
-            .min(
-                geometry
-                    .base_width
-                    .max(geometry.maximum_window_width - chrome),
-            );
+        let (width, primary_column_width) = Self::aligned_column(
+            metrics,
+            &primary_widths[..rows],
+            &annotation_widths[..rows],
+            chrome,
+            geometry,
+        );
         let pitch = geometry.item_height + Self::SEPARATOR_HEIGHT;
         let cells = (0..rows)
             .map(|candidate_index| CollapsedCell {
@@ -279,11 +319,72 @@ impl ExpandableListModel {
             cells,
             content_width: width,
             content_height: Self::rows_height(rows, geometry.item_height),
-            primary_column_width: Some(
-                widest_primary
-                    .min(metrics.maximum_primary_column_width(width, metrics.horizontal_padding())),
-            ),
+            primary_column_width: Some(primary_column_width),
         }
+    }
+
+    /// One column sized as the vertical list sizes itself: the widest
+    /// candidate column plus the widest annotation, floored at one slot and
+    /// capped by the screen less `chrome`. Answers the cell width and the
+    /// candidate column width every annotation starts after.
+    fn aligned_column(
+        metrics: &CandidateMetrics,
+        primary_widths: &[f32],
+        annotation_widths: &[Option<f32>],
+        chrome: f32,
+        geometry: &ExpandableGeometryInput<'_>,
+    ) -> (f32, f32) {
+        let (widest_primary, widest_annotation) = widest_columns(primary_widths, annotation_widths);
+        let width = metrics
+            .cell_width(widest_primary, widest_annotation)
+            .max(geometry.base_width)
+            .min(
+                geometry
+                    .base_width
+                    .max(geometry.maximum_window_width - chrome),
+            );
+        let primary_column_width = widest_primary
+            .min(metrics.maximum_primary_column_width(width, metrics.horizontal_padding()));
+        (width, primary_column_width)
+    }
+
+    /// The unfolded column's shared width — measured over the whole list so
+    /// it holds still while paging, never narrower than the collapsed column
+    /// so column 0 does not shrink as it unfolds — and how many columns a
+    /// page shows: up to `COLUMNS_PER_PAGE`, as many as the screen fits
+    /// beside the chevron, never more than the list fills.
+    fn expanded_columns(
+        count: usize,
+        metrics: &CandidateMetrics,
+        primary_widths: &[f32],
+        annotation_widths: &[Option<f32>],
+        collapsed_width: f32,
+        geometry: &ExpandableGeometryInput<'_>,
+    ) -> (f32, usize, f32) {
+        let rows = count.min(primary_widths.len()).min(annotation_widths.len());
+        let (width, primary_column_width) = Self::aligned_column(
+            metrics,
+            &primary_widths[..rows],
+            &annotation_widths[..rows],
+            geometry.chrome_width,
+            geometry,
+        );
+        let width = width.max(collapsed_width);
+        let columns = count.div_ceil(Self::ROWS_PER_COLUMN);
+        let fit = |chrome: f32| {
+            let fit = ((geometry.maximum_window_width - chrome) / width)
+                .floor()
+                .max(1.0) as usize;
+            Self::COLUMNS_PER_PAGE.min(fit).min(columns).max(1)
+        };
+        // A list that fits one page needs no chevron column to make room for.
+        let unpaged = fit(0.0);
+        let columns_per_page = if unpaged >= columns {
+            unpaged
+        } else {
+            fit(geometry.chrome_width)
+        };
+        (width, columns_per_page, primary_column_width)
     }
 
     /// `rows` items with a separator between each two.
@@ -349,8 +450,49 @@ impl ExpandableListModel {
         self.count > self.collapsed_cells.len()
     }
 
+    /// The grid's columns: six under a row, a page of columns beside a
+    /// column — the same on every page, so paging never resizes the window.
     pub fn grid_width(&self) -> f32 {
-        self.column_width * Self::EXPANDED_COLUMN_COUNT as f32
+        self.column_width * self.grid.column_count as f32
+    }
+
+    /// The candidate column width every unfolded column's annotations start
+    /// after (`None` for a row, whose grid cells keep their scripts inline).
+    pub fn expanded_primary_column_width(&self) -> Option<f32> {
+        self.expanded_primary_column_width
+    }
+
+    /// Whether an unfolded column has a page after the selection's.
+    pub fn has_next_page(&self) -> bool {
+        self.page_span()
+            .is_some_and(|span| (self.selected_index / span + 1) * span < self.count)
+    }
+
+    /// The candidates one page of an unfolded column holds; `None` for a row.
+    fn page_span(&self) -> Option<usize> {
+        (self.axis == ExpandableAxis::Column)
+            .then(|| self.grid.column_count * Self::ROWS_PER_COLUMN)
+    }
+
+    /// Whether an unfolded column pages at all — what reserves its chevron
+    /// column, on every page alike.
+    pub fn is_paged(&self) -> bool {
+        self.page_span().is_some_and(|span| self.count > span)
+    }
+
+    /// The unfolded column's chevron frame, right of the grid at the window's
+    /// full height, on every page of a list that pages (`None` otherwise).
+    /// The renderer draws `›` in it while `has_next_page`.
+    pub fn expanded_chevron_rect(&self) -> Option<Rect> {
+        self.is_paged().then(|| {
+            Rect::new(
+                self.grid_width(),
+                0.0,
+                self.chrome_width,
+                // A column keeps the collapsed height as it unfolds.
+                self.collapsed_window_height(),
+            )
+        })
     }
 
     pub fn item_height(&self) -> f32 {
@@ -416,7 +558,8 @@ impl ExpandableListModel {
 
     /// Under a row the window grows with the grid up to `visible_rows` plus a
     /// half-row peek; beside a column it stays exactly the collapsed height,
-    /// scrolling past it and padding below a shorter grid.
+    /// padding below a shorter page, and pages instead of scrolling — its
+    /// chevron column added on every page of a list that pages.
     pub fn expanded_geometry(&self) -> ExpandedGeometry {
         let content_height = Self::rows_height(self.grid.rows.len(), self.item_height);
         let peek = self.peek();
@@ -426,6 +569,11 @@ impl ExpandableListModel {
             window_width: self.grid_width()
                 + if needs_scrolling {
                     self.scroller_width
+                } else {
+                    0.0
+                }
+                + if self.is_paged() {
+                    self.chrome_width
                 } else {
                     0.0
                 },
@@ -460,16 +608,33 @@ impl ExpandableListModel {
         ))
     }
 
-    /// The selected grid row's full-width frame (content coordinates) — what
-    /// the row highlight paints behind the numbered cells.
-    pub fn selected_row_rect(&self) -> Option<Rect> {
-        let row = self.selected_row()?;
-        Some(Rect::new(
-            0.0,
-            row as f32 * self.row_height(),
-            self.grid_width(),
-            self.item_height,
-        ))
+    /// The frame (content coordinates) of the cells the slot keys number —
+    /// the selected grid row at full width, or beside a column the selected
+    /// column down its filled cells. The highlight paints it behind them.
+    pub fn keyed_band_rect(&self) -> Option<Rect> {
+        let (row, cell) = self.grid.position_of(self.selected_index)?;
+        Some(match self.axis {
+            ExpandableAxis::Row => Rect::new(
+                0.0,
+                row as f32 * self.row_height(),
+                self.grid_width(),
+                self.item_height,
+            ),
+            ExpandableAxis::Column => {
+                let filled = self
+                    .grid
+                    .rows
+                    .iter()
+                    .take_while(|row| row.iter().any(|c| c.column_start == cell.column_start))
+                    .count();
+                Rect::new(
+                    cell.column_start as f32 * self.column_width,
+                    0.0,
+                    self.column_width,
+                    Self::rows_height(filled, self.item_height),
+                )
+            }
+        })
     }
 
     /// The unfold's geometry from the current collapsed row.
@@ -485,7 +650,16 @@ impl ExpandableListModel {
                 })
             })
             .collect();
-        let appearing = (self.collapsed_cells.len()..self.count).collect();
+        // The grid in display order: the whole list under a row, the shown
+        // page beside a column.
+        let appearing = self
+            .grid
+            .rows
+            .iter()
+            .flatten()
+            .map(|cell| cell.candidate_index)
+            .filter(|&index| index >= self.collapsed_cells.len())
+            .collect();
         UnfoldPlan { moves, appearing }
     }
 
@@ -522,12 +696,24 @@ impl ExpandableListModel {
 
     /// The slot keys address the collapsed row, or the selected grid row —
     /// one row at a time, so a chord always names exactly one candidate.
+    /// Beside a column they address the selected column, never past its
+    /// ninth cell into the next one.
     pub fn candidate_index_for_slot(&self, slot: usize) -> Option<usize> {
         match self.mode {
             ExpandableDisplayMode::Collapsed => self
                 .collapsed_cells
                 .get(slot)
                 .map(|cell| cell.candidate_index),
+            // The grid holds one page, so its rows end at the column's foot.
+            ExpandableDisplayMode::Expanded if self.axis == ExpandableAxis::Column => {
+                let (_, keyed) = self.grid.position_of(self.selected_index)?;
+                self.grid
+                    .rows
+                    .get(slot)?
+                    .iter()
+                    .find(|cell| cell.column_start == keyed.column_start)
+                    .map(|cell| cell.candidate_index)
+            }
             ExpandableDisplayMode::Expanded => {
                 let (row_index, _) = self.grid.position_of(self.selected_index)?;
                 self.grid.rows[row_index]
@@ -578,6 +764,16 @@ impl ExpandableListModel {
             PageUp => None,
             _ if direction == forward => self.select_next_collapsed(),
             _ if direction == backward => self.select(self.selected_index.saturating_sub(1)),
+            // `→` beside a column steps into the next column as it unfolds
+            // it, the way walking off the foot lands past it.
+            _ if direction == across && self.axis == ExpandableAxis::Column => {
+                if !self.has_overflow() {
+                    return None;
+                }
+                self.selected_index =
+                    (self.selected_index + Self::ROWS_PER_COLUMN).min(self.count - 1);
+                self.expand()
+            }
             _ if direction == across => self.expand_if_overflowing(),
             _ => None,
         }
@@ -602,11 +798,44 @@ impl ExpandableListModel {
         }
     }
 
+    /// An unfolded column's keys, by index arithmetic: `↑` / `↓` walk the
+    /// list down each column and on into the next, `←` / `→` step a column
+    /// keeping the row, PageUp / PageDown a page keeping the cell's place.
+    /// `←` in the first column, `↑` on the first candidate and PageUp on
+    /// the first page fold the window.
+    fn navigate_expanded_columns(
+        &mut self,
+        direction: CandidateNavigation,
+        page_span: usize,
+    ) -> Option<ExpandableModeChange> {
+        use CandidateNavigation::*;
+        let index = self.selected_index;
+        let last = self.count - 1;
+        let rows = Self::ROWS_PER_COLUMN;
+        match direction {
+            Down | NextCandidate if index < last => self.select(index + 1),
+            Up | PreviousCandidate if index > 0 => self.select(index - 1),
+            Up => self.collapse(),
+            Right if (index / rows + 1) * rows <= last => self.select((index + rows).min(last)),
+            Left if index >= rows => self.select(index - rows),
+            Left => self.collapse(),
+            PageDown if (index / page_span + 1) * page_span <= last => {
+                self.select((index + page_span).min(last))
+            }
+            PageUp if index >= page_span => self.select(index - page_span),
+            PageUp => self.collapse(),
+            _ => None,
+        }
+    }
+
     fn navigate_expanded(
         &mut self,
         direction: CandidateNavigation,
     ) -> Option<ExpandableModeChange> {
         use CandidateNavigation::*;
+        if let Some(span) = self.page_span() {
+            return self.navigate_expanded_columns(direction, span);
+        }
         match direction {
             Right | NextCandidate => {
                 if self.selected_index + 1 < self.count {
@@ -615,11 +844,9 @@ impl ExpandableListModel {
                     None
                 }
             }
-            // A column unfolded rightward with `→`, so `←` folds it from
-            // anywhere in the grid (USER 2026-10-31). A row keeps `←` for
-            // walking and folds only at the first cell.
+            // `←` walks the row and folds only at the first cell.
             Left => {
-                if self.axis == ExpandableAxis::Row && self.selected_index > 0 {
+                if self.selected_index > 0 {
                     self.select(self.selected_index - 1)
                 } else {
                     self.collapse()
@@ -688,7 +915,7 @@ impl ExpandableListModel {
             return self.expand();
         }
         if self.mode == ExpandableDisplayMode::Expanded {
-            self.ensure_selected_row_visible();
+            self.follow_selection();
         }
         None
     }
@@ -699,7 +926,7 @@ impl ExpandableListModel {
         }
         self.mode = ExpandableDisplayMode::Expanded;
         self.scroll_y = 0.0;
-        self.ensure_selected_row_visible();
+        self.follow_selection();
         Some(ExpandableModeChange::Expand)
     }
 
@@ -709,10 +936,16 @@ impl ExpandableListModel {
         }
         self.mode = ExpandableDisplayMode::Collapsed;
         self.scroll_y = 0.0;
-        // A selection beyond the collapsed row clamps to its last cell.
+        // A selection beyond the collapsed cells clamps to the last of them;
+        // beside a column it keeps its row first, as `←` and PageUp fold from
+        // any column.
+        if self.axis == ExpandableAxis::Column {
+            self.selected_index %= Self::ROWS_PER_COLUMN;
+        }
         if self.selected_index >= self.collapsed_cells.len() {
             self.selected_index = self.collapsed_cells.len().saturating_sub(1);
         }
+        self.follow_selection();
         Some(ExpandableModeChange::Collapse)
     }
 
@@ -730,6 +963,24 @@ impl ExpandableListModel {
 
     fn scroll_row_to_top(&mut self, row: usize) {
         self.scroll_y = (row as f32 * self.row_height()).min(self.max_scroll_y());
+    }
+
+    /// Keeps the grid on the selection: beside a column, rebuilds the grid
+    /// as the selection's page — the page is read off the selection, so every
+    /// path that moves the selection must end here; under an unfolded row,
+    /// scrolls its row into view.
+    fn follow_selection(&mut self) {
+        if let Some(span) = self.page_span() {
+            let columns = self.grid.column_count;
+            self.grid = ExpandedGridLayout::column_major_page(
+                self.count,
+                Self::ROWS_PER_COLUMN,
+                self.selected_index / span * columns,
+                columns,
+            );
+        } else if self.mode == ExpandableDisplayMode::Expanded {
+            self.ensure_selected_row_visible();
+        }
     }
 
     fn ensure_selected_row_visible(&mut self) {
@@ -752,7 +1003,7 @@ impl ExpandableListModel {
 mod tests {
     use super::*;
     use crate::candidates::metrics::test_support;
-    use crate::candidates::CandidateCellArrangement;
+    use crate::candidates::{CandidateCellArrangement, CandidateIndexLabel};
     use crate::settings::CandidateSizeChoice;
     use CandidateNavigation::*;
 
@@ -984,10 +1235,7 @@ mod tests {
         let mut m = m;
         m.select(7);
         m.expand();
-        assert_eq!(
-            m.selected_row_rect(),
-            Some(Rect::new(0.0, 31.0, 90.0, 30.0))
-        );
+        assert_eq!(m.keyed_band_rect(), Some(Rect::new(0.0, 31.0, 90.0, 30.0)));
     }
 
     #[test]
@@ -1045,6 +1293,7 @@ mod tests {
     #[test]
     fn collapsed_column_walks_down_and_unfolds_to_the_right() {
         let metrics = inline_metrics();
+        // trace: 20 candidates → columns 0-8 / 9-17 / 18-19, one page of 3.
         let mut m = column_model(&metrics, 5.0, 20);
         assert_eq!(m.axis().unfold_direction(), Right);
         assert_eq!(m.navigate(Left), None, "nothing left of a column");
@@ -1052,29 +1301,51 @@ mod tests {
         assert_eq!(m.selected_index(), 1);
         assert_eq!(m.navigate(Up), None);
         assert_eq!(m.selected_index(), 0);
+
+        // `→` unfolds AND steps into the next column, same row.
         assert_eq!(m.navigate(Right), Some(ExpandableModeChange::Expand));
-        assert_eq!(
-            m.navigate(Up),
-            Some(ExpandableModeChange::Collapse),
-            "expanded keys are the row's: up on grid row 0 folds"
-        );
+        assert_eq!(m.selected_index(), 9);
+        // `←` walks back a column; only the first column folds.
+        assert_eq!(m.navigate(Left), None);
+        assert_eq!(m.selected_index(), 0);
+        assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
+        assert_eq!(m.selected_index(), 0);
 
         // Walking off the column's foot expands AND advances.
         m.select(8);
         assert_eq!(m.navigate(Down), Some(ExpandableModeChange::Expand));
         assert_eq!(m.selected_index(), 9);
         assert_eq!(m.collapse(), Some(ExpandableModeChange::Collapse));
-        assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
+        assert_eq!(m.selected_index(), 0, "folds onto its own row: 9 % 9");
         assert_eq!(m.navigate(PageDown), Some(ExpandableModeChange::Expand));
+        assert_eq!(m.selected_index(), 0, "PageDown unfolds in place");
 
-        // `←` folds a column from anywhere in the grid, not just index 0.
+        // trace: 13 = column 1 row 4 → ← to 4, ← folds keeping row 4.
         m.select(13);
+        assert_eq!(m.navigate(Left), None);
+        assert_eq!(m.selected_index(), 4);
         assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
-        assert_eq!(m.selected_index(), 8, "clamped to the column's foot");
-        m.expand();
-        m.select(3);
-        assert_eq!(m.navigate(Left), Some(ExpandableModeChange::Collapse));
-        assert_eq!(m.selected_index(), 3, "a selection the column shows stays");
+        assert_eq!(m.selected_index(), 4);
+
+        // trace: 4 → 13; 13 → min(22, 19) = 19 on the short last column;
+        // no column after 18-19.
+        assert_eq!(m.navigate(Right), Some(ExpandableModeChange::Expand));
+        assert_eq!(m.selected_index(), 13);
+        assert_eq!(m.navigate(Right), None);
+        assert_eq!(m.selected_index(), 19, "clamped to the short column");
+        assert_eq!(m.navigate(Right), None);
+        assert_eq!(m.selected_index(), 19);
+        assert_eq!(m.navigate(Down), None, "the list's last candidate");
+        assert_eq!(m.navigate(NextCandidate), None);
+
+        // `↑` walks up and on into the previous column; on 0 it folds.
+        m.select(9);
+        assert_eq!(m.navigate(Up), None);
+        assert_eq!(m.selected_index(), 8);
+        m.select(0);
+        assert_eq!(m.navigate(PreviousCandidate), None);
+        assert_eq!(m.navigate(Up), Some(ExpandableModeChange::Collapse));
+
         let mut row = model(&[5.0; 40]);
         row.expand();
         row.select(13);
@@ -1083,39 +1354,182 @@ mod tests {
 
         let mut no_overflow = column_model(&metrics, 5.0, 3);
         assert_eq!(no_overflow.navigate(Right), None);
+        assert_eq!(no_overflow.selected_index(), 0);
         assert_eq!(no_overflow.navigate(PageDown), None);
         assert_eq!(model(&[5.0; 3]).axis().unfold_direction(), Down);
     }
 
     #[test]
-    fn expanded_column_keeps_the_collapsed_height() {
+    fn expanded_column_pages_columns_at_the_collapsed_height() {
         let metrics = inline_metrics();
         // trace: 9 rows × 30 + 8 hairlines = 278.
         let short = column_model(&metrics, 5.0, 20);
+        let w = short.column_width();
+        assert_eq!(
+            w,
+            short.collapsed_content_width(),
+            "column 0 keeps its width"
+        );
         assert_eq!(short.visible_rows(), 9);
         let geometry = short.expanded_geometry();
-        assert!(!geometry.needs_scrolling, "4 grid rows fit 9");
-        assert_eq!(geometry.window_height, 278.0, "padded, not shrunk");
-        assert_eq!(geometry.container_height, 4.0 * 30.0 + 3.0);
-
-        // trace: 200 one-column cells → 34 rows × 30 + 33 = 1053, no peek.
-        let mut long = column_model(&metrics, 5.0, 200);
-        let geometry = long.expanded_geometry();
-        assert!(geometry.needs_scrolling);
+        assert!(!geometry.needs_scrolling);
         assert_eq!(geometry.window_height, 278.0);
-        assert_eq!(geometry.container_height, 1053.0);
+        assert_eq!(geometry.container_height, 278.0);
+        assert_eq!(geometry.window_width, 3.0 * w, "one page: no chevron");
+        assert_eq!(short.expanded_chevron_rect(), None);
+        assert!(!short.has_next_page());
+        assert_eq!(
+            short.grid().rows[0]
+                .iter()
+                .map(|c| c.candidate_index)
+                .collect::<Vec<_>>(),
+            [0, 9, 18]
+        );
+        assert_eq!(short.grid().rows.len(), 9);
+        assert_eq!(short.grid().rows[2].len(), 2, "18-19 end at row 1");
+
+        // trace: 12 → 2 columns; the page is no wider than the list.
+        let two = column_model(&metrics, 5.0, 12);
+        assert_eq!(two.expanded_geometry().window_width, 2.0 * w);
+
+        // trace: 60 → 7 columns, 3 a page → pages of 27 at 0 / 27 / 54.
+        let mut long = column_model(&metrics, 5.0, 60);
+        assert_eq!(long.expanded_geometry().window_width, 3.0 * w + 20.0);
+        assert_eq!(
+            long.expanded_chevron_rect(),
+            Some(Rect::new(3.0 * w, 0.0, 20.0, 278.0))
+        );
         long.expand();
+        assert!(long.has_next_page());
         assert_eq!(long.navigate(PageDown), None);
-        assert_eq!(long.selected_row(), Some(9), "pages a whole column height");
+        assert_eq!(long.selected_index(), 27);
+        assert_eq!(
+            long.grid().rows[0]
+                .iter()
+                .map(|c| c.candidate_index)
+                .collect::<Vec<_>>(),
+            [27, 36, 45]
+        );
+        assert_eq!(long.navigate(PageDown), None);
+        assert_eq!(long.selected_index(), 54);
+        assert!(!long.has_next_page());
+        assert!(
+            long.expanded_chevron_rect().is_some(),
+            "kept on the last page"
+        );
+        assert_eq!(long.expanded_geometry().window_width, 3.0 * w + 20.0);
+        assert_eq!(long.grid().rows.len(), 6, "54-59: one short column");
+        assert_eq!(long.navigate(PageDown), None);
+        assert_eq!(long.selected_index(), 54);
+        // trace: 26 = page 0 column 2 → `→` 35 opens page 1.
+        long.select(26);
+        assert_eq!(long.grid().rows[0][0].candidate_index, 0);
+        assert_eq!(long.navigate(Right), None);
+        assert_eq!(long.selected_index(), 35);
+        assert_eq!(long.grid().rows[0][0].candidate_index, 27);
+        assert_eq!(long.navigate(PageUp), None);
+        assert_eq!(long.selected_index(), 8);
+        assert_eq!(long.navigate(PageUp), Some(ExpandableModeChange::Collapse));
+        assert_eq!(long.selected_index(), 8);
+
+        // trace: 200 → 188 + 27 = 215 clamps to 199.
+        let mut most = column_model(&metrics, 5.0, 200);
+        most.expand();
+        most.select(188);
+        assert_eq!(most.navigate(PageDown), None);
+        assert_eq!(most.selected_index(), 199);
+        // The wheel has nothing to scroll.
+        most.on_viewport_scrolled(500.0);
+        assert_eq!(most.scroll_y(), 0.0);
 
         let row = model(&[5.0; 200]);
         assert_eq!(row.visible_rows(), ExpandableListModel::MAX_VISIBLE_ROWS);
     }
 
     #[test]
+    fn a_narrow_screen_pages_one_column_at_a_time() {
+        let metrics = inline_metrics();
+        let w = column_model(&metrics, 5.0, 20).column_width();
+        let count = 20;
+        let primary = vec![5.0; count];
+        let annotation = vec![None; count];
+        let widths: Vec<f32> = primary
+            .iter()
+            .map(|&p| metrics.cell_width(p, None))
+            .collect();
+        let narrow = |maximum_window_width: f32| {
+            ExpandableListModel::new(
+                &widths,
+                ExpandableGeometryInput {
+                    collapsed: CollapsedLayout::Column {
+                        metrics: &metrics,
+                        primary_widths: &primary,
+                        annotation_widths: &annotation,
+                    },
+                    base_width: metrics.base_width(),
+                    maximum_window_width,
+                    ..geometry()
+                },
+            )
+        };
+        // trace: 3 columns fit 3w + 10 once no chevron is needed — one page.
+        let snug = narrow(3.0 * w + 10.0);
+        assert!(!snug.is_paged());
+        assert_eq!(snug.expanded_geometry().window_width, 3.0 * w);
+        // trace: (1.5w + 20 − 20) / w floors to 1 column a page.
+        let mut m = narrow(1.5 * w + 20.0);
+        assert_eq!(m.expanded_geometry().window_width, w + 20.0);
+        // Walking off the foot lands on page 1: column 0 is no longer shown.
+        m.select(8);
+        assert_eq!(m.navigate(Down), Some(ExpandableModeChange::Expand));
+        assert_eq!(m.selected_index(), 9);
+        assert_eq!(m.grid_cell_rect(0), None);
+        let plan = m.unfold_plan();
+        assert!(plan.moves.is_empty());
+        assert_eq!(plan.appearing, (9..18).collect::<Vec<_>>());
+        assert_eq!(m.navigate(Left), None);
+        assert_eq!(m.selected_index(), 0);
+        assert_eq!(m.grid().rows[0][0].candidate_index, 0);
+    }
+
+    #[test]
+    fn expanded_column_slots_address_the_keyed_column() {
+        let metrics = inline_metrics();
+        let mut m = column_model(&metrics, 5.0, 20);
+        let w = m.column_width();
+        m.expand();
+        m.select(13);
+        assert_eq!(
+            (0..9)
+                .map(|slot| m.candidate_index_for_slot(slot))
+                .collect::<Vec<_>>(),
+            (9..18).map(Some).collect::<Vec<_>>()
+        );
+        assert_eq!(m.candidate_index_for_slot(9), None, "never into column 2");
+        assert_eq!(m.keyed_band_rect(), Some(Rect::new(w, 0.0, w, 278.0)));
+        // trace: 19 sits in the short column 18-19: two rows, 30 + 1 + 30.
+        m.select(19);
+        assert_eq!(m.candidate_index_for_slot(0), Some(18));
+        assert_eq!(m.candidate_index_for_slot(1), Some(19));
+        assert_eq!(m.candidate_index_for_slot(2), None);
+        assert_eq!(m.keyed_band_rect(), Some(Rect::new(2.0 * w, 0.0, w, 61.0)));
+        // A leading literal shifts the keys by one: key 9 asks slot 9, which
+        // must not reach candidate 9 in the next column.
+        m.select(4);
+        let key = |slot| {
+            CandidateIndexLabel::candidate_index_for_key_slot(slot, true, |position| {
+                m.candidate_index_for_slot(position)
+            })
+        };
+        assert_eq!(key(0), Some(1));
+        assert_eq!(key(7), Some(8));
+        assert_eq!(key(8), None);
+    }
+
+    #[test]
     fn collapsed_column_hit_test_and_unfold_plan() {
         let metrics = inline_metrics();
-        let m = column_model(&metrics, 5.0, 20);
+        let mut m = column_model(&metrics, 5.0, 20);
         let width = m.collapsed_content_width();
         assert_eq!(m.hit_test(Point { x: 5.0, y: 65.0 }), Some(2));
         assert_eq!(m.hit_test(Point { x: 5.0, y: 61.5 }), None, "a separator");
@@ -1132,7 +1546,28 @@ mod tests {
         let plan = m.unfold_plan();
         assert_eq!(plan.moves.len(), 9);
         assert_eq!(plan.moves[1].collapsed, Rect::new(0.0, 31.0, width, 30.0));
-        assert_eq!(Some(plan.moves[1].expanded), m.grid_cell_rect(1));
-        assert_eq!(plan.appearing, (9..20).collect::<Vec<_>>());
+        assert_eq!(
+            plan.moves[1].expanded, plan.moves[1].collapsed,
+            "column 0 holds still"
+        );
+        // trace: page rows [0, 9, 18] / [1, 10, 19] / [2, 11] … in display order.
+        assert_eq!(plan.appearing, [9, 18, 10, 19, 11, 12, 13, 14, 15, 16, 17]);
+
+        m.expand();
+        // trace: column 1 row 1 → 10; column 2 row 2 → 20, past the list.
+        assert_eq!(
+            m.hit_test(Point {
+                x: width + 1.0,
+                y: 36.0
+            }),
+            Some(10)
+        );
+        assert_eq!(
+            m.hit_test(Point {
+                x: 2.0 * width + 1.0,
+                y: 67.0
+            }),
+            None
+        );
     }
 }

@@ -73,7 +73,7 @@ test("walking off a row's end unfolds onto the next cell", async ({ page }) => {
   expect(await position(current(page))).toBe(String(shown));
 });
 
-test("a column unfolds with Right at its own height and folds with Left", async ({
+test("a column unfolds into columns with Right and walks back with Left", async ({
   page,
 }) => {
   const editor = await open(page, { settings: COLUMN });
@@ -82,15 +82,65 @@ test("a column unfolds with Right at its own height and folds with Left", async 
   await expect(candidates(page)).toHaveCount(9);
   await settled(page);
   const { height } = await list(page).boundingBox();
+  // `→` unfolds and steps into the next column, same row.
   await editor.press("ArrowRight");
   await expectExpanded(page);
   await expect(list(page)).toHaveAttribute("data-inline");
+  expect(await position(current(page))).toBe("9");
   await settled(page);
   expect((await list(page).boundingBox()).height).toBeCloseTo(height, 0);
   await editor.press("ArrowDown");
+  expect(await position(current(page))).toBe("10");
+  // `←` walks back a column; only the first column folds.
+  await editor.press("ArrowLeft");
+  await expectExpanded(page);
+  expect(await position(current(page))).toBe("1");
   await editor.press("ArrowLeft");
   await expectCollapsed(page);
   await expect(list(page)).toHaveAttribute("data-vertical");
+  expect(await position(current(page))).toBe("1");
+});
+
+test("the keys number the column the highlight is in", async ({ page }) => {
+  const editor = await open(page, { settings: COLUMN });
+  await editor.pressSequentially(LONG_LIST);
+  await editor.press("ArrowRight");
+  await expectExpanded(page);
+  const column = await current(page).evaluate((cell) => {
+    const left = cell.getBoundingClientRect().left;
+    return [...cell.parentElement.children]
+      .filter((other) => other.getBoundingClientRect().left === left)
+      .map((other) => other.querySelector(".index").textContent);
+  });
+  expect(column).toHaveLength(9);
+  expect(column.every(Boolean)).toBe(true);
+  const labelled = page.locator("#candidates li:has(.index:not(:empty))");
+  await expect(labelled).toHaveCount(9);
+  const picked = await labelled.nth(8).locator(".text").textContent();
+  await editor.press(column[8]);
+  await expect(editor).toHaveValue(picked);
+});
+
+test("an unfolded column pages with Page Down and the chevron", async ({
+  page,
+}) => {
+  const editor = await open(page, { settings: COLUMN });
+  await editor.pressSequentially(LONG_LIST);
+  await editor.press("ArrowRight");
+  await expectExpanded(page);
+  // trace: 9 a column, 3 a page → page 2 starts at 27; `→` landed on 9.
+  await expect(unfold(page)).toBeVisible();
+  await editor.press("PageDown");
+  expect(await position(current(page))).toBe("36");
+  await unfold(page).click();
+  await expect(editor).toBeFocused();
+  expect(await position(current(page))).toBe("63");
+  await editor.press("PageUp");
+  await editor.press("PageUp");
+  expect(await position(current(page))).toBe("9");
+  await editor.press("PageUp");
+  await expectCollapsed(page);
+  expect(await position(current(page))).toBe("0");
 });
 
 test("the keys number the row the highlight is on", async ({ page }) => {
