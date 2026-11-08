@@ -505,7 +505,7 @@ summary:focus-visible {
 }
 
 /* One-line cells draw a capsule, two-line cells a fixed radius. */
-#panel:has(#candidates[data-inline]) {
+#panel:has(.candidates[data-inline]) {
   --candidate-radius: calc(var(--candidate-row) / 2);
   --candidate-highlight-inset: 2px;
 }
@@ -549,11 +549,11 @@ summary:focus-visible {
   color: var(--accent);
 }
 
-#list {
+.list {
   display: flex;
 }
 
-#candidates {
+.candidates {
   display: flex;
   flex: 1;
   flex-wrap: wrap;
@@ -563,11 +563,11 @@ summary:focus-visible {
   list-style: none;
 }
 
-#candidates:empty {
+.candidates:empty {
   display: none;
 }
 
-#candidates li {
+.candidates li {
   position: relative;
   z-index: 0;
   display: grid;
@@ -581,7 +581,7 @@ summary:focus-visible {
   cursor: default;
 }
 
-#candidates .index {
+.candidates .index {
   grid-area: index;
   min-width: calc(var(--candidate-index) + 2px);
   color: var(--secondary);
@@ -589,12 +589,12 @@ summary:focus-visible {
   text-align: center;
 }
 
-#candidates .text {
+.candidates .text {
   grid-area: text;
   justify-self: center;
 }
 
-#candidates .annotation {
+.candidates .annotation {
   grid-area: annotation;
   justify-self: center;
   color: var(--secondary);
@@ -602,26 +602,26 @@ summary:focus-visible {
 }
 
 /* A cell with one script keeps its line in the middle of a two-line row. */
-#candidates li:not(:has(.annotation)) .text {
+.candidates li:not(:has(.annotation)) .text {
   grid-row: 1 / -1;
 }
 
-#candidates li[data-literal] .index {
+.candidates li[data-literal] .index {
   display: none;
 }
 
-#candidates li[data-literal] .text,
-#candidates li[data-literal] .annotation {
+.candidates li[data-literal] .text,
+.candidates li[data-literal] .annotation {
   grid-column: 1 / -1;
 }
 
-#candidates[data-vertical] {
+.candidates[data-vertical] {
   display: grid;
   grid-template-columns: auto auto auto;
 }
 
 /* Rows share their columns, so every annotation starts at one x. */
-#candidates[data-vertical] li {
+.candidates[data-vertical] li {
   grid-column: 1 / -1;
   grid-template: auto / subgrid;
   height: var(--candidate-row);
@@ -630,11 +630,11 @@ summary:focus-visible {
 
 /* The packed row: `ExpandableListModel`'s widths and height, which is what the
    keys go by. */
-#candidates[data-row] {
+.candidates[data-row] {
   flex-wrap: nowrap;
 }
 
-#candidates:is([data-row], [data-grid]) li {
+.candidates:is([data-row], [data-grid]) li {
   box-sizing: border-box;
   height: var(--candidate-item);
   min-width: 0;
@@ -645,7 +645,7 @@ summary:focus-visible {
 /* The unfolded grid. No scrollbar: a classic one takes a width the model has
    no number for, and the half row under the last full one says there is more.
    The hairlines scroll with the rows. */
-#candidates[data-grid] {
+.candidates[data-grid] {
   position: relative;
   display: grid;
   flex: none;
@@ -670,12 +670,12 @@ summary:focus-visible {
     0 0 / 100% var(--candidate-grid) no-repeat local;
 }
 
-#candidates[data-grid]::-webkit-scrollbar {
+.candidates[data-grid]::-webkit-scrollbar {
   display: none;
 }
 
 /* The row (or column) the keys number: `keyed_band_rect`. */
-#candidates[data-grid]::before {
+.candidates[data-grid]::before {
   content: "";
   position: absolute;
   top: var(--candidate-band-y);
@@ -685,17 +685,17 @@ summary:focus-visible {
   background: var(--hairline);
 }
 
-#candidates[data-vertical] li + li {
+.candidates[data-vertical] li + li {
   margin-top: 1px;
 }
 
 /* An unfolded column: every annotation at one x, as in the collapsed column. */
-#candidates[data-grid][data-inline] li {
+.candidates[data-grid][data-inline] li {
   grid-template: auto / auto minmax(var(--candidate-primary), auto) auto;
   justify-content: start;
 }
 
-#candidates[data-vertical] li + li::after {
+.candidates[data-vertical] li + li::after {
   content: "";
   position: absolute;
   top: -1px;
@@ -705,27 +705,27 @@ summary:focus-visible {
   background: var(--hairline);
 }
 
-#candidates[data-inline] li .index {
+.candidates[data-inline] li .index {
   grid-area: auto / 1;
 }
 
-#candidates[data-inline] li .text {
+.candidates[data-inline] li .text {
   grid-area: auto / 2;
   justify-self: start;
 }
 
-#candidates[data-inline] li .annotation {
+.candidates[data-inline] li .annotation {
   grid-area: auto / 3;
   justify-self: start;
   margin-left: var(--candidate-annotation-gap);
 }
 
-#candidates[data-inline] li[data-literal] .text {
+.candidates[data-inline] li[data-literal] .text {
   grid-column: 1 / -1;
   justify-self: center;
 }
 
-#candidates li[aria-current="true"]::before {
+.candidates li[aria-current="true"]::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -737,12 +737,12 @@ summary:focus-visible {
   background: var(--accent);
 }
 
-#candidates li[aria-current="true"] > span {
+.candidates li[aria-current="true"] > span {
   color: #ffffff;
 }
 
 /* `CandidatePageArrowView.swift`: a chevron tint marks a page to turn to. */
-#page-arrows {
+.page-arrows {
   position: relative;
   display: flex;
   flex: none;
@@ -751,11 +751,11 @@ summary:focus-visible {
   width: calc(var(--candidate-size) * 1.5);
 }
 
-#page-arrows[hidden] {
+.page-arrows[hidden] {
   display: none;
 }
 
-#page-arrows::before {
+.page-arrows::before {
   content: "";
   position: absolute;
   top: calc(var(--candidate-separator-inset) / 2);
@@ -765,7 +765,7 @@ summary:focus-visible {
   background: var(--hairline);
 }
 
-#page-arrows button {
+.page-arrows button {
   display: grid;
   flex: 1;
   place-items: center;
@@ -775,20 +775,20 @@ summary:focus-visible {
   cursor: default;
 }
 
-#page-arrows button:disabled {
+.page-arrows button:disabled {
   opacity: 0.4;
 }
 
-#page-arrows button[hidden] {
+.page-arrows button[hidden] {
   display: none;
 }
 
-#page-arrows svg {
+.page-arrows svg {
   width: calc(var(--candidate-size) * 0.625);
   height: calc(var(--candidate-size) * 0.625);
 }
 
-#unfold[data-column] svg {
+.unfold[data-column] svg {
   rotate: -90deg;
 }
 

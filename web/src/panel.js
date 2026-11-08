@@ -33,6 +33,7 @@ export class Panel {
   #root;
   #editor;
   #preedit;
+  #list;
   #candidates;
   #arrows;
   #pageUp;
@@ -44,9 +45,12 @@ export class Panel {
   #shownLayout = null;
   /// The cells on screen, to tell a fold from a new list.
   #shownCells = null;
-  /// Frames to move from, for the next `place` (`#startUnfold`).
+  /// The mode being left, for the next `place` (`#startUnfold`): the window's
+  /// size and a copy of the list as drawn.
   #unfoldFrom = null;
   #unfolding = [];
+  /// That copy while the change plays: the drawings the new mode does not have.
+  #ghost = null;
 
   /// `onPick(position)`: a click on a cell, `data-position` as drawn.
   /// `onTurnPage(isForward)`: a click on a page arrow.
@@ -59,6 +63,7 @@ export class Panel {
     this.#spoken = spoken;
     this.#editor = root.parentElement;
     this.#preedit = this.#editor.querySelector("#preedit");
+    this.#list = root.querySelector("#list");
     this.#candidates = root.querySelector("#candidates");
     this.#arrows = root.querySelector("#page-arrows");
     this.#pageUp = root.querySelector("#page-up");
@@ -124,10 +129,7 @@ export class Panel {
   }
 
   showTable(table) {
-    for (const animation of this.#unfolding) {
-      animation.cancel();
-    }
-    this.#unfolding = [];
+    this.#endUnfold();
     if (table.layout) {
       this.#showLaidOut(table);
     } else {
@@ -143,10 +145,11 @@ export class Panel {
     // A new list arrives collapsed too; only the same cells fold.
     const cellsJson = JSON.stringify(cells);
     this.#unfoldFrom =
+      layout.transition &&
       this.#shownLayout &&
       this.#shownLayout.isExpanded !== isExpanded &&
       this.#shownCells === cellsJson
-        ? this.#frames()
+        ? this.#snapshot()
         : null;
     this.#shownLayout = layout;
     this.#shownCells = cellsJson;
@@ -261,34 +264,64 @@ export class Panel {
       .join(" ");
   }
 
-  /// The window and each cell, relative to the window.
-  #frames() {
+  /// The window's size and a still copy of the list where it is drawn, ids
+  /// dropped, taken before the new mode replaces it. Classes, not ids, style
+  /// the list, so the copy draws as the original did.
+  #snapshot() {
     const window = this.#root.getBoundingClientRect();
-    const cells = new Map();
-    for (const cell of this.#candidates.children) {
-      const { left, top } = cell.getBoundingClientRect();
-      cells.set(cell.dataset.position, {
-        left: left - window.left,
-        top: top - window.top,
-      });
+    const list = this.#list.getBoundingClientRect();
+    const ghost = this.#list.cloneNode(true);
+    for (const element of [ghost, ...ghost.querySelectorAll("[id]")]) {
+      element.removeAttribute("id");
     }
-    return { width: window.width, height: window.height, cells };
+    ghost.setAttribute("aria-hidden", "true");
+    ghost.dataset.ghost = "";
+    Object.assign(ghost.style, {
+      position: "absolute",
+      left: `${list.left - window.left}px`,
+      top: `${list.top - window.top}px`,
+      width: `${list.width}px`,
+      height: `${list.height}px`,
+      pointerEvents: "none",
+      // Under the list, over the window's glass: the band it carries lies
+      // under the cells, as the keyed band always does.
+      zIndex: "-1",
+    });
+    return { width: window.width, height: window.height, ghost };
   }
 
-  /// The window grows and the cells both modes show move. The rest appear in
-  /// place, as `ExpandableListModel::unfold_plan` says. After `place`: an
-  /// animation changes what `offsetHeight` reads.
+  /// Plays the model's `ModeTransition` as macOS does: the window eases to
+  /// its new size while every drawing moves and fades from its old frame to
+  /// its new one — the new mode's cells on the list, the old mode's on the
+  /// still copy laid over it — the chevron with them, and the keyed band
+  /// fading in on the grid or out with it. Tracks carry frames; only their
+  /// differences are used, so every drawing moves relative to where the
+  /// page drew it. After `place`: an animation changes what `offsetHeight`
+  /// reads.
   #startUnfold() {
     const from = this.#unfoldFrom;
     this.#unfoldFrom = null;
     if (!from || matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
-    const to = this.#frames();
+    // Set whenever `from` is: `#showLaidOut` copies only for a transition.
+    const { transition } = this.#shownLayout;
     const timing = {
       duration: this.#shownLayout.animationMilliseconds,
       easing: "ease-in-out",
     };
+    const to = this.#root.getBoundingClientRect();
+    // The list holds its final size while the window eases around it, as
+    // the Mac's cells lie still under the moving frame: every track's
+    // difference is then measured from where the cell will stay.
+    const list = this.#list.getBoundingClientRect();
+    Object.assign(this.#list.style, {
+      width: `${list.width}px`,
+      height: `${list.height}px`,
+    });
+    const { ghost } = from;
+    this.#root.append(ghost);
+    this.#ghost = ghost;
     const window = this.#root.animate(
       {
         width: [`${from.width}px`, `${to.width}px`],
@@ -296,20 +329,107 @@ export class Panel {
       },
       timing,
     );
+    window.onfinish = () => {
+      if (this.#unfolding[0] === window) {
+        this.#endUnfold();
+      }
+    };
     this.#unfolding = [window];
-    for (const cell of this.#candidates.children) {
-      const start = from.cells.get(cell.dataset.position);
-      const end = to.cells.get(cell.dataset.position);
-      if (start) {
-        const shift = `${start.left - end.left}px ${start.top - end.top}px`;
-        this.#unfolding.push(
-          cell.animate({ translate: [shift, "0 0"] }, timing),
-        );
+    const play = (element, keyframes, pseudoElement) => {
+      this.#unfolding.push(
+        element.animate(keyframes, { ...timing, pseudoElement }),
+      );
+    };
+    const offset = (a, b) => `${a.x - b.x}px ${a.y - b.y}px`;
+    const still = "0px 0px";
+    const byPosition = (list) =>
+      new Map([...list.children].map((cell) => [cell.dataset.position, cell]));
+    const ghostList = ghost.querySelector(".candidates");
+    const drawn = byPosition(this.#candidates);
+    const left = byPosition(ghostList);
+    const incoming = transition.isExpanding ? "expanded" : "collapsed";
+    // A new-mode drawing eases into where the page drew it; an old-mode one,
+    // on the copy, eases out of it. Widths are read before anything moves.
+    const moves = transition.cells.flatMap((track) => {
+      const isIncoming = track.layer === incoming || track.layer === "shared";
+      const cell = (isIncoming ? drawn : left).get(String(track.index));
+      return cell
+        ? [
+            {
+              cell,
+              isIncoming,
+              track,
+              width: cell.getBoundingClientRect().width,
+            },
+          ]
+        : [];
+    });
+    const moved = new Set();
+    for (const { cell, isIncoming, track, width } of moves) {
+      const { from: start, to: end } = track;
+      const keyframes = {
+        translate: isIncoming
+          ? [offset(start, end), still]
+          : [still, offset(end, start)],
+        opacity: [track.fromAlpha, track.toAlpha],
+      };
+      // A cell that changes width eases it too, by the model's difference
+      // from the width the page drew — a collapsed column's cells are
+      // narrower than the model's frame.
+      const grow = end.width - start.width;
+      if (grow !== 0) {
+        keyframes.width = isIncoming
+          ? [`${width - grow}px`, `${width}px`]
+          : [`${width}px`, `${width + grow}px`];
+      }
+      if (!isIncoming) {
+        moved.add(cell);
+      }
+      play(cell, keyframes);
+    }
+    // The copy keeps only the drawings the new mode has no twin for.
+    for (const cell of left.values()) {
+      if (!moved.has(cell)) {
+        cell.style.visibility = "hidden";
       }
     }
+    const { chevron } = transition;
+    const chevronOpacity = [chevron.fromAlpha, chevron.toAlpha];
+    const ghostArrows = ghost.querySelector(".page-arrows");
+    if (this.#arrows.hidden) {
+      play(ghostArrows, {
+        translate: [still, offset(chevron.to, chevron.from)],
+        opacity: chevronOpacity,
+      });
+    } else {
+      ghostArrows.hidden = true;
+      play(this.#arrows, {
+        translate: [offset(chevron.from, chevron.to), still],
+        opacity: chevronOpacity,
+      });
+    }
+    play(
+      transition.isExpanding ? this.#candidates : ghostList,
+      { opacity: transition.isExpanding ? [0, 1] : [1, 0] },
+      "::before",
+    );
+  }
+
+  /// Stops a mode change mid-way or once played: every drawing back to where
+  /// the page put it, the copy gone.
+  #endUnfold() {
+    for (const animation of this.#unfolding) {
+      animation.cancel();
+    }
+    this.#unfolding = [];
+    this.#ghost?.remove();
+    this.#ghost = null;
+    this.#list.style.removeProperty("width");
+    this.#list.style.removeProperty("height");
   }
 
   hideTable() {
+    this.#endUnfold();
     this.#forgetLayout();
     this.#setShape({});
     this.#candidates.replaceChildren();

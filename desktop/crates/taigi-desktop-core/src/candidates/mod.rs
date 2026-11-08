@@ -23,9 +23,9 @@ mod positioning;
 mod vertical;
 
 pub use expandable::{
-    CellMove, CollapsedCell, CollapsedLayout, ExpandableAxis, ExpandableDisplayMode,
-    ExpandableGeometryInput, ExpandableListModel, ExpandableModeChange, ExpandedGeometry,
-    UnfoldPlan,
+    ease_in_out, CellLayer, CellTrack, CollapsedCell, CollapsedLayout, ExpandableAxis,
+    ExpandableDisplayMode, ExpandableGeometryInput, ExpandableListModel, ExpandableModeChange,
+    ExpandedGeometry, ModeTransition, Track,
 };
 pub use grid::{ExpandedGridLayout, GridCell};
 pub use horizontal::{HorizontalListModel, HorizontalPageLayout, PageSlot};
