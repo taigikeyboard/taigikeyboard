@@ -175,6 +175,27 @@ When the incoming character is **ㆮ** (ainn) and the last character of rawInput
 
 ---
 
+## Rule 4: Tone-8 Dot Over a Stop Coda (第八調點)
+
+### Basis
+
+The canonical TPS tone-8 form puts the combining dot above (U+0307) on the stop coda: `p8` ㆴ̇, `t8` ㆵ̇, `k8` ㆻ̇, `h8` ㆷ̇ (`engine/phonetics/src/tps.rs` `ZHUYIN_TONES`; `taigi-converter/src/tables.js` the same). The keyboards type the spacing dot ˙ (U+02D9), which renders beside the coda.
+
+### Rule
+
+| rawInput last char | Incoming | Adjusted to |
+|---|---|---|
+| ㆴ ㆵ ㆻ ㆷ | ˙ (U+02D9) | ◌̇ (U+0307) |
+| anything else | ˙ | ˙ (no change — no coda for a combining mark to sit on) |
+
+Lookups fold both dots to U+0307 (`tps::normalize_tps_lookup_scalar`), so the stored form changes no key — only what the preedit and a glyph commit show (v3.9.0 row 10b, reporter request 2026-10-26).
+
+### Implementation
+
+`engine/phonetics/src/tps_adjust.rs::adjust_tone_eight_dot`.
+
+---
+
 ## Input Pipeline Execution Order
 
 All auto-correct rules run in one engine call, `engine/phonetics/src/tps_adjust.rs::adjust` (mobile: `Method::TpsInputAdjust`; desktop: inside `Method::TpsKey`), BEFORE the character is appended to the raw input. The caller gates the call by TPS input and applies both results:
@@ -186,6 +207,7 @@ User taps key
   │
   └─ 2. tps_adjust::adjust(incoming, raw_input) → (adjusted, replace_last?)
         ├─ adjust_tone_nine_digit()      ← tone 9 digit
+        ├─ adjust_tone_eight_dot()       ← Rule 4: tone-8 dot over a stop coda
         ├─ adjust_initial_key()          ← Rule 2: initial vs coda position
         ├─ adjust_nasalized_vowel_key()  ← Rule 3: ㆮ/ㆯ
         │     (these modify the incoming character)
@@ -194,7 +216,7 @@ User taps key
               (these return a replacement for the LAST raw character)
 ```
 
-**Key difference**: Rules 2 and 3 modify the **incoming** character before it enters the raw input. Rules 1 and 2b replace the **previous** character already in the raw input (look-back correction, `replace_last`).
+**Key difference**: Rules 2, 3 and 4 modify the **incoming** character before it enters the raw input. Rules 1 and 2b replace the **previous** character already in the raw input (look-back correction, `replace_last`).
 
 ---
 

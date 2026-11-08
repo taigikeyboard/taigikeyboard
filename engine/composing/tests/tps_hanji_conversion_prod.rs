@@ -38,14 +38,18 @@ fn a_production_sentence_converts_and_resegments_as_readings_close() {
     );
 
     let preedit = type_keys(&mut engine, "ㆢㄧㆵ˙", &config);
-    assert_eq!(preedit.raw_input, "ㄍㄧㄣ ㄚˋㆢㄧㆵ˙");
+    // trace: U+02D9 after ㆵ is stored as U+0307 (`adjust_tone_eight_dot`).
+    assert_eq!(preedit.raw_input, "ㄍㄧㄣ ㄚˋㆢㄧㆵ\u{0307}");
     assert_eq!(
         converted_words(&engine),
         vec![((0, 26), "今仔日".to_string())]
     );
 
     let preedit = type_keys(&mut engine, "ㄊㆪ ㄎㄧ˪ㄐㄧㄣ ㄏㄛ", &config);
-    assert_eq!(preedit.raw_input, "ㄍㄧㄣ ㄚˋㆢㄧㆵ˙ㄊㆪ ㄎㄧ˪ㄐㄧㄣ ㄏㄛ");
+    assert_eq!(
+        preedit.raw_input,
+        "ㄍㄧㄣ ㄚˋㆢㄧㆵ\u{0307}ㄊㆪ ㄎㄧ˪ㄐㄧㄣ ㄏㄛ"
+    );
     assert_eq!(preedit.display_text, "今仔日天氣真ㄏㄛ");
 
     let preedit = type_keys(&mut engine, "ˋ", &config);

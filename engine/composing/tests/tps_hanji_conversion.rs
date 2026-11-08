@@ -347,7 +347,10 @@ fn closing_a_later_reading_resegments_the_words_before_it() {
         tps_key(&mut engine, key, &config);
     }
     let response = tps_key(&mut engine, "˙", &config);
-    assert_eq!(raw_input(&response), "ㄍㄧㄣ ㄚˋㆢㄧㆵ˙");
+    // trace: the typed U+02D9 after the stop coda ㆵ is stored as the
+    // combining U+0307 (`tps_adjust::adjust_tone_eight_dot`); both are 2
+    // UTF-8 bytes, so the spans below are unchanged.
+    assert_eq!(raw_input(&response), "ㄍㄧㄣ ㄚˋㆢㄧㆵ\u{0307}");
     assert_eq!(display(&response), "今仔日");
     assert_eq!(
         converted_words(&engine),

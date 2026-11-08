@@ -70,6 +70,9 @@ pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
 // Syllable-boundary set (used by adjustInitialKey)
 // =========================================================================
 
+/// The entering-tone stop codas: TL `p` `t` `k` `h` finals.
+const STOP_CODAS: [char; 4] = ['ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'];
+
 // Syllable-boundary chars: end the current syllable so a new dual-form
 // initial after one of these stays as the initial form. Includes tone
 // marks, entering-tone finals, syllabic nasals, precomposed nasal-coda
@@ -90,8 +93,10 @@ pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
 // them via dictionary lookup rather than auto-correct.
 static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     let mut set: HashSet<char> = TONE_MARK_CHARS.iter().copied().collect();
-    // Checked-tone finals (entering-tone consonants — end syllable).
-    for c in ['ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'] {
+    // Checked-tone finals (entering-tone consonants — end syllable), and the
+    // combining tone-8 dot stored over one (`adjust_tone_eight_dot`), which
+    // `TONE_MARK_CHARS` leaves out with every combining mark.
+    for c in STOP_CODAS.into_iter().chain(['\u{0307}']) {
         set.insert(c);
     }
     // Syllabic nasals (ㆬ ㄣ ㆭ = m/n/ng in ZHUYIN_VOWELS) + contextual
@@ -273,8 +278,27 @@ fn adjust_tone_nine_digit(char_str: &str, raw_input: &str) -> String {
     // Entering-tone stop codas are part of a tone-4/8 syllable body and cannot
     // take tone-9. Every other Bopomofo body char (nucleus / nasal coda /
     // nasalized-vowel final) is a valid tone-9 attachment point.
-    if crate::tps::is_tps_char(last) && !matches!(last, 'ㆴ' | 'ㆵ' | 'ㆻ' | 'ㆷ') {
+    if crate::tps::is_tps_char(last) && !STOP_CODAS.contains(&last) {
         return "\u{02c6}".to_string();
+    }
+    char_str.to_string()
+}
+
+/// Store the tone-8 dot typed right after a stop coda `ㆴㆵㆻㆷ` as the
+/// combining dot above (U+0307), so it sits over the coda as the canonical
+/// form writes it (`ZHUYIN_TONES` `p8` / `t8` / `k8` / `h8`; taigi-converter
+/// `tables.js`). Keyboards type the spacing dot U+02D9 (˙), which renders
+/// beside the coda. Anywhere else the dot stays as typed — there is no coda
+/// for a combining mark to sit on. Lookups fold both dots to U+0307
+/// (`tps::normalize_tps_lookup_scalar`), so the stored form changes no key.
+fn adjust_tone_eight_dot(char_str: &str, raw_input: &str) -> String {
+    if char_str == "\u{02d9}"
+        && raw_input
+            .chars()
+            .last()
+            .is_some_and(|last| STOP_CODAS.contains(&last))
+    {
+        return "\u{0307}".to_string();
     }
     char_str.to_string()
 }
@@ -317,6 +341,7 @@ fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 /// Returns `(adjusted, replace_last?)`. Caller MUST gate by TPS layout.
 pub fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
     let mut adjusted = adjust_tone_nine_digit(incoming, raw_input);
+    adjusted = adjust_tone_eight_dot(&adjusted, raw_input);
     adjusted = adjust_initial_key(&adjusted, raw_input);
     adjusted = adjust_nasalized_vowel_key(&adjusted, raw_input);
 
@@ -506,6 +531,50 @@ mod tests {
         assert_eq!(replace_last, None);
         // Standalone digit stays literal.
         assert_eq!(super::adjust("9", ""), ("9".to_string(), None));
+    }
+
+    #[test]
+    fn tone_eight_dot_after_a_stop_coda_is_the_combining_dot() {
+        // trace: ZHUYIN_TONES p8/t8/k8/h8 = coda + U+0307 (tps.rs); the
+        // keyboards type U+02D9. ㄉㄧㄛㆷ˙ / ㄏㄚㆴ˙ / ㄅㄚㆵ˙ / ㄌㄚㆻ˙ (reporter's
+        // examples, Discord 2026-10-26).
+        for raw in ["ㄉㄧㄛㆷ", "ㄏㄚㆴ", "ㄅㄚㆵ", "ㄌㄚㆻ"] {
+            assert_eq!(
+                super::adjust("\u{02d9}", raw),
+                ("\u{0307}".to_string(), None),
+                "{raw:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn tone_eight_dot_elsewhere_stays_the_spacing_dot() {
+        // No coda under it: empty buffer, an open syllable, after a space,
+        // an already combining dot typed directly passes through untouched.
+        for raw in ["", "ㄍㄚ", "ㄍㄚㆵ ", "ㄒㄧㄣ"] {
+            assert_eq!(
+                super::adjust("\u{02d9}", raw),
+                ("\u{02d9}".to_string(), None),
+                "{raw:?}"
+            );
+        }
+        assert_eq!(
+            super::adjust("\u{0307}", "ㄍㄚ"),
+            ("\u{0307}".to_string(), None)
+        );
+    }
+
+    #[test]
+    fn a_stored_tone_eight_dot_closes_its_syllable() {
+        // trace: U+0307 is in SYLLABLE_BOUNDARY_CHARS, so a dual-form stop
+        // after ㆵ̇ starts the next syllable (as after the spacing ˙) instead
+        // of becoming a coda; tone 9 stays the literal digit
+        // (`is_tps_char(U+0307)` is false).
+        for dot in ["\u{0307}", "\u{02d9}"] {
+            let raw = format!("ㄍㄚㆵ{dot}");
+            assert_eq!(adjust_initial_key("ㄅ", &raw), "ㄅ", "{raw:?}");
+            assert_eq!(adjust_tone_nine_digit("9", &raw), "9", "{raw:?}");
+        }
     }
 
     #[test]
