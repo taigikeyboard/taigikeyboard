@@ -61,4 +61,21 @@ final class ExpandedGridLayoutTests: XCTestCase {
 
         XCTAssertEqual(layout.verticalTarget(from: 5, rowStep: -1), 1)
     }
+
+    func testColumnMajorPage_transposesTheShownColumns() {
+        // trace: 3 a column, 10 candidates → columns 0-2 / 3-5 / 6-8 / 9;
+        // the page from column 2, 2 wide, shows 6-8 and 9.
+        let page = ExpandedGridLayout.columnMajorPage(count: 10, rowsPerColumn: 3, firstColumn: 2, columns: 2)
+        typealias Cell = ExpandedGridLayout.Cell
+        XCTAssertEqual(page.columnCount, 2)
+        XCTAssertEqual(page.rows, [
+            [Cell(candidateIndex: 6, columnStart: 0, columnSpan: 1), Cell(candidateIndex: 9, columnStart: 1, columnSpan: 1)],
+            [Cell(candidateIndex: 7, columnStart: 0, columnSpan: 1)],
+            [Cell(candidateIndex: 8, columnStart: 0, columnSpan: 1)],
+        ])
+        // Past the list: no rows, the width still a page's.
+        let empty = ExpandedGridLayout.columnMajorPage(count: 4, rowsPerColumn: 3, firstColumn: 2, columns: 2)
+        XCTAssertTrue(empty.rows.isEmpty)
+        XCTAssertEqual(empty.columnCount, 2)
+    }
 }

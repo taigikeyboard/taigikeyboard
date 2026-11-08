@@ -1,4 +1,4 @@
-// The expanded grid's geometry: column-spanned rows, pure arithmetic.
+// The expanded grid's geometry: column-spanned rows or a column-major page, pure arithmetic.
 
 import CoreGraphics
 
@@ -46,6 +46,30 @@ struct ExpandedGridLayout: Equatable {
             rows.append(row)
         }
         return ExpandedGridLayout(rows: rows, columnCount: columnCount)
+    }
+
+    /// One page of a column-major list, transposed into visual rows: column
+    /// `c` holds candidates `c * rowsPerColumn ..`, the page shows `columns`
+    /// of them from `firstColumn`, and visual row `r` holds each shown
+    /// column's `r`-th candidate at `columnStart` = its column within the
+    /// page. Every cell spans one column; a short last column leaves its
+    /// lower rows without that cell. Twin of `taigi-desktop-core`
+    /// `ExpandedGridLayout::column_major_page`.
+    static func columnMajorPage(count: Int, rowsPerColumn: Int, firstColumn: Int, columns: Int) -> ExpandedGridLayout {
+        let rowsPerColumn = max(rowsPerColumn, 1)
+        let columns = max(columns, 1)
+        var rows: [[Cell]] = []
+        for row in 0 ..< rowsPerColumn {
+            let cells = (0 ..< columns).compactMap { column -> Cell? in
+                let candidateIndex = (firstColumn + column) * rowsPerColumn + row
+                return candidateIndex < count
+                    ? Cell(candidateIndex: candidateIndex, columnStart: column, columnSpan: 1)
+                    : nil
+            }
+            guard !cells.isEmpty else { break }
+            rows.append(cells)
+        }
+        return ExpandedGridLayout(rows: rows, columnCount: columns)
     }
 
     func position(of candidateIndex: Int) -> (rowIndex: Int, cell: Cell)? {
