@@ -117,6 +117,9 @@ struct SizeTransition {
     /// The model's choreography for the change (`None` only if the model
     /// reported a change without one).
     plan: Option<ModeTransition>,
+    /// The eased progress the last tick set — one clock for the size and
+    /// what is drawn inside it, as the Mac's display link drives both.
+    eased: f32,
 }
 
 /// What the presenter reads back after a change.
@@ -640,6 +643,10 @@ impl CandidateWindow {
     /// Moves the selection; answers the frame when the window's size changed
     /// (a page turn, an unfold) so the presenter re-places it.
     pub fn navigate(&mut self, direction: CandidateNavigation) -> Option<WindowFrame> {
+        // Keys wait out a mode change, as the Mac's `isAnimating` guard has them.
+        if self.is_transitioning() {
+            return None;
+        }
         let before = self.size;
         let mut change = None;
         match self.layout.as_mut()? {
@@ -654,6 +661,9 @@ impl CandidateWindow {
 
     /// A click on `index` selects it (never commits).
     pub fn select(&mut self, index: usize) -> Option<WindowFrame> {
+        if self.is_transitioning() {
+            return None;
+        }
         let before = self.size;
         let mut change = None;
         match self.layout.as_mut()? {
@@ -681,10 +691,11 @@ impl CandidateWindow {
                 from: before,
                 to: target,
                 plan,
+                eased: 0.0,
             });
             return Some(self.frame());
         }
-        // A key mid-change moves the cells under the plan: land at once.
+        // A scroll mid-change moves the cells under the plan: land at once.
         if self.transition.take().is_some() || target != before {
             self.size = target;
             return Some(self.frame());
@@ -694,18 +705,16 @@ impl CandidateWindow {
 
     /// Advances the transition; `Some(frame)` while it runs, `None` when done.
     fn transition_step(&mut self) -> Option<WindowFrame> {
-        let transition = self.transition.as_ref()?;
+        let transition = self.transition.as_mut()?;
         let elapsed = transition.started.elapsed().as_secs_f32();
-        let duration = ExpandableListModel::ANIMATION_DURATION_SECONDS;
-        let progress = (elapsed / duration).min(1.0);
-        let eased = ease_in_out(progress);
+        let progress = (elapsed / ExpandableListModel::ANIMATION_DURATION_SECONDS).min(1.0);
+        transition.eased = ease_in_out(progress);
+        let (from, to, eased) = (transition.from, transition.to, transition.eased);
         self.size = Size {
-            width: transition.from.width + (transition.to.width - transition.from.width) * eased,
-            height: transition.from.height
-                + (transition.to.height - transition.from.height) * eased,
+            width: from.width + (to.width - from.width) * eased,
+            height: from.height + (to.height - from.height) * eased,
         };
         if progress >= 1.0 {
-            self.size = transition.to;
             self.transition = None;
         }
         Some(self.frame())
@@ -715,12 +724,10 @@ impl CandidateWindow {
         self.transition.is_some()
     }
 
-    /// The running mode change's plan and its eased progress now.
+    /// The running mode change's plan and the eased progress of its last tick.
     fn playing_transition(&self) -> Option<(&ModeTransition, f32)> {
         let transition = self.transition.as_ref()?;
-        let progress = transition.started.elapsed().as_secs_f32()
-            / ExpandableListModel::ANIMATION_DURATION_SECONDS;
-        Some((transition.plan.as_ref()?, ease_in_out(progress)))
+        Some((transition.plan.as_ref()?, transition.eased))
     }
 
     // Drawing
@@ -797,7 +804,11 @@ impl CandidateWindow {
             }
         };
         let layout = built.ok()?;
-        self.layouts.borrow_mut().insert(key, layout.clone());
+        // A mode change sizes a moving cell anew every frame: those layouts
+        // are drawn once, not kept until the next list.
+        if !self.is_transitioning() {
+            self.layouts.borrow_mut().insert(key, layout.clone());
+        }
         Some(layout)
     }
 
@@ -1527,6 +1538,9 @@ impl CandidateWindow {
 
     /// The candidate under `point` (DIPs), or a chrome hit.
     fn hit(&mut self, point: (f32, f32)) -> Option<WindowFrame> {
+        if self.is_transitioning() {
+            return None;
+        }
         let p = Point {
             x: point.0,
             y: point.1,
