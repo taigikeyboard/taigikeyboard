@@ -227,7 +227,7 @@ Type: filesandordirs; Name: "{app}\Dictionaries"
 Type: filesandordirs; Name: "{app}\Fonts"
 ; Stale copies are NOT listed here: they can sit in any subdirectory the
 ; payload has, and an [UninstallDelete] pattern does not recurse. They are
-; collected in [Code], at usPostUninstall — see DiscardStaleTree.
+; collected in [Code], at usPostUninstall — see DiscardLeftoverTree.
 ; %APPDATA%\TaigiKeyboard (settings, learning data, custom dictionary) is the
 ; user's and is deliberately NOT listed here.
 
@@ -453,30 +453,64 @@ begin
     DiscardStale(Leftover);
 end;
 
-// Every stale copy under Directory, recursively, deleted outright. Used on
-// uninstall, where nothing is coming back and a leftover would keep {app} from
-// being removed. Inno's uninstall log does not know these names — they are
-// created after it is written — and an [UninstallDelete] pattern cannot reach
-// into the payload's subdirectories, so this is where they go.
-procedure DiscardStaleTree(const Directory: String);
+// Everything the uninstaller left under Directory, recursively, then Directory
+// itself: deleted now where it can be, otherwise queued for the next restart.
+// Used on uninstall, where nothing is coming back.
+//
+// Two kinds of file survive Inno's own pass. Stale copies: Inno's uninstall log
+// does not know these names — they are created after it is written — and an
+// [UninstallDelete] pattern cannot reach into the payload's subdirectories.
+// And payload files a running host still has mapped (the service DLLs, in any
+// app the input method was active in): Inno logs "it may be in use" and moves
+// on. Those are renamed to a fresh unique stale name before being queued, never
+// queued under their own name: a reinstall before the restart writes the new
+// payload at that very path, and a delete queued against the path would take
+// the new file at boot. The unique name is also one RecoverStaleFiles can only
+// discard — it records no original, so a reinstall never resurrects an
+// uninstalled DLL. `uninsrestartdelete` in [Files] would queue the path itself,
+// which is why it is not used.
+//
+// Pending operations run in order at boot, so each directory is queued after
+// what it held, children before parents. Every other file left is treated as
+// payload, a user's own included: {app} sits under Program Files, which only an
+// administrator writes. Setup's own uninstaller files are already gone by
+// usPostUninstall; the `unins` skip covers only Inno failing to delete them,
+// which Inno handles itself.
+procedure DiscardLeftoverTree(const Directory: String);
 var
   Found: TFindRec;
-  Full: String;
+  Full, Aside: String;
 begin
   if not DirExists(Directory) then Exit;
-  if not FindFirst(AddBackslash(Directory) + '*', Found) then Exit;
+  if FindFirst(AddBackslash(Directory) + '*', Found) then
+    try
+      repeat
+        if (Found.Name = '.') or (Found.Name = '..') then
+          Continue;
+        Full := AddBackslash(Directory) + Found.Name;
+        if Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
+          DiscardLeftoverTree(Full)
+        else if SameText(ExtractFileExt(Found.Name), StaleExtension) then
+          DiscardStale(Full)
+        else if not SameText(Copy(Found.Name, 1, 5), 'unins') and
+                not DeleteFile(Full) then begin
+          Aside := GenerateUniqueName(Directory, StaleExtension);
+          if RenameFile(Full, Aside) then begin
+            Log('uninstall: ' + Full + ' is still held — moved aside as ' + Aside);
+            DiscardStale(Aside);
+          end else
+            Log('uninstall: could not move ' + Full + ' aside; left in place');
+        end;
+      until not FindNext(Found);
+    finally
+      FindClose(Found);
+    end;
+  if RemoveDir(Directory) then Exit;
   try
-    repeat
-      if (Found.Name = '.') or (Found.Name = '..') then
-        Continue;
-      Full := AddBackslash(Directory) + Found.Name;
-      if Found.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
-        DiscardStaleTree(Full)
-      else if SameText(ExtractFileExt(Found.Name), StaleExtension) then
-        DiscardStale(Full);
-    until not FindNext(Found);
-  finally
-    FindClose(Found);
+    RestartReplace(Directory, '');
+    Log('uninstall: ' + Directory + ' is not empty yet — removing it at next restart');
+  except
+    Log('uninstall: could not schedule ' + Directory + ' for removal');
   end;
 end;
 
@@ -778,15 +812,8 @@ begin
   end;
 end;
 
-// After the uninstaller has removed everything it logged: collect the stale
-// copies it never knew about, so {app} can go too.
-//
-// A copy a host still holds cannot be deleted now, only scheduled — which
-// leaves the directory non-empty, and an uninstall that leaves a folder behind
-// is one the user sees. So the directory is scheduled the same way when it will
-// not go now: pending operations run in order at boot, the files first and the
-// directory that held them after. Both calls are no-ops if a user put something
-// of their own in there, which is the right outcome.
+// After the uninstaller has removed everything it logged: collect what it
+// could not (DiscardLeftoverTree), so {app} can go too.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   AppDir: String;
@@ -799,14 +826,7 @@ begin
       Log('shortcut: could not remove the localized name for ' + ShortcutPath);
   if CurUninstallStep <> usPostUninstall then Exit;
   AppDir := ExpandConstant('{app}');
-  DiscardStaleTree(AppDir);
-  if DirExists(AppDir) and not RemoveDir(AppDir) then
-    try
-      RestartReplace(AppDir, '');
-      Log('uninstall: ' + AppDir + ' still holds a mapped copy — removing it at next restart');
-    except
-      Log('uninstall: could not schedule ' + AppDir + ' for removal');
-    end;
+  DiscardLeftoverTree(AppDir);
 end;
 
 procedure CurPageChanged(CurPageID: Integer);

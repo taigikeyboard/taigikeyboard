@@ -363,7 +363,15 @@ every process of every user and `regsvr32` writes HKLM. In order:
 - **Uninstall** — the reverse, item by item; `%APPDATA%\TaigiKeyboard` (the
   settings, the learning data, the custom dictionary) stays. The scheduled
   task is deleted by the elevated uninstaller, which reaches the root folder
-  whoever registered it.
+  whoever registered it. A payload file a running host still has mapped (the
+  service DLLs in any app the input method was active in) cannot be deleted;
+  the uninstaller renames it to a unique `.stale` name and queues that name for
+  the next restart, then each directory after its contents, so `{app}` is gone
+  after a reboot. The queued name is never the install name: a reinstall
+  before the reboot writes the new DLL there, and a delete queued against the
+  path would take it at boot (which is why `uninsrestartdelete` is not used).
+  The CI smoke uninstalls while holding the 64-bit service mapped and checks
+  exactly that.
 
 The installer never launches the settings window itself: the window removes
 stale staged update packages at launch, and the installer may still be
