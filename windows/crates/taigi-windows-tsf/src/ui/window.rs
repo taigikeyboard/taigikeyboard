@@ -80,7 +80,7 @@ pub trait WindowHandler {
     /// `WM_THEMECHANGED`, `WM_DWMCOLORIZATIONCOLORCHANGED`).
     fn system_theme_changed(&mut self);
     /// A sync posted by a focus callback: show or hide as the content's
-    /// own source now says. Only the TPS key panel posts one.
+    /// own source now says. The TPS key panel and the Telex guide post one.
     fn sync_requested(&mut self, _window: &WindowRef) {}
 }
 
