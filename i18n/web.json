@@ -94,6 +94,24 @@
         "ja": "台湾語ローマ字変換ツール"
       }
     },
+    "desktopApp": {
+      "comment": "Sidebar Other Resources link to taigikeyboard.tw, where the desktop versions are downloaded.",
+      "scope": {
+        "platforms": [
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤電腦版",
+        "tailo": "Tâi-gí Khí-puânn tiān-náu-pán",
+        "poj": "Tâi-gí Khí-pôaⁿ tiān-náu-pán",
+        "en": "TaigiKeyboard for Desktop",
+        "ja": "台湾語キーボード パソコン版"
+      }
+    },
     "iosApp": {
       "comment": "Sidebar Other Resources link to TaigiKeyboard on the App Store.",
       "scope": {
