@@ -5,6 +5,7 @@
 
 pub use crate::conversion::{Conversion, ConversionFrequency, ConvertedSegment};
 use crate::handle::{ListContext, PendingSnapshot};
+use crate::WordListStart;
 use lexicon::dictionary_reader::Filter;
 use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
@@ -771,10 +772,11 @@ impl Engine {
         crate::transition::snapshot(&self.state, config)
     }
 
-    /// What a `FetchAtPos` ranks against (`PendingSnapshot`): the part of the
-    /// pending tail it lists ([`Self::word_list_start`]) and the word that part
-    /// follows — the converted word ending where it starts, else, at the start
-    /// of the tail, the last nailed segment — when that is a word
+    /// What a `FetchAtPos` ranks against (`PendingSnapshot`): the text it
+    /// lists ([`crate::WordListStart::listed`] — part of the pending tail, or
+    /// the last nailed segment's raw text followed by the tail) and the word
+    /// that text follows — the converted word ending where it starts, else the
+    /// segment nailed before it — when that is a word
     /// ([`NailedSegment::context_word`]). With no segment before it, the list
     /// starts the composition and follows the committed context (§56);
     /// anything else before it — glyphs — cuts the context.
@@ -791,14 +793,23 @@ impl Engine {
                 context: ListContext::Committed,
             };
         };
-        let list_start = self.word_list_start(config).unwrap_or(0);
-        let segment_before = if list_start > 0 {
+        let start = self
+            .word_list_start(config)
+            .unwrap_or(WordListStart::InTail(0));
+        let (listed_raw, list_start) = start.listed(nailed, raw);
+        // The segments nailed before the listed text: the last nailed
+        // segment's list reads that segment itself.
+        let nailed_before = match start {
+            WordListStart::LastNailed => nailed.split_last().map_or(&[][..], |(_, rest)| rest),
+            WordListStart::InTail(_) => &nailed[..],
+        };
+        let segment_before = if list_start == 0 {
+            nailed_before.last().cloned()
+        } else {
             conversion
                 .as_ref()
                 .and_then(|conversion| conversion.word_ending_at(list_start))
                 .map(|word| word.nailed_as_shown(raw, &[]))
-        } else {
-            nailed.last().cloned()
         };
         let context = match segment_before {
             None if list_start == 0 => ListContext::Committed,
@@ -809,16 +820,17 @@ impl Engine {
                 }),
         };
         PendingSnapshot {
-            listed_raw: raw[list_start..].to_string(),
+            listed_raw,
             context,
         }
     }
 
-    /// Byte offset in the pending tail where the list of the word before the
-    /// caret starts, under a Hanji conversion the request asks for
-    /// (`crate::conversion::word_list_start`); `None` for the whole tail's
-    /// list. A pick resolves the same start (`transition::commit_continuous`).
-    pub fn word_list_start(&self, config: &AppConfig) -> Option<usize> {
+    /// Where the list of the word before the caret starts — in the pending
+    /// tail, or at the last nailed segment — under a Hanji conversion the
+    /// request asks for (`crate::conversion::word_list_start`); `None` for the
+    /// whole tail's list. A pick resolves the same start
+    /// (`transition::commit_continuous`).
+    pub fn word_list_start(&self, config: &AppConfig) -> Option<WordListStart> {
         match &self.state.phase {
             Phase::Continuous {
                 raw,

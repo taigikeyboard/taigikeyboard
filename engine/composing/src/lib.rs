@@ -28,6 +28,7 @@ pub use api::{
     Applied, CommitScript, ComposingError, ConversionFrequency, Engine, EngineState, Intent,
     NailedSegment, Phase, Usage, UserRows,
 };
+pub use conversion::WordListStart;
 pub use handle::{EngineHandle, ListContext, PendingSnapshot};
 
 // Compile-time guarantee: `Engine` must remain `Send` so the static

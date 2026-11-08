@@ -225,7 +225,9 @@ pub fn fetch_at_pos(
 /// What a candidate commit round-trips. Every field except `script` comes
 /// verbatim from the `ContinuousCandidate` the user picked — in particular
 /// `consumed_bytes` is the candidate's `consumed_span_end`, an absolute
-/// offset into the pending raw buffer (`composing.proto` `CommitContinuous`).
+/// offset into the text the engine listed — the pending raw buffer, or the
+/// last nailed segment's raw text followed by it (`composing.proto`
+/// `ContinuousCandidate`); the core never reads it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommitContinuousArgs<'a> {
     /// Which of the pick's scripts the document gets, relative to the output

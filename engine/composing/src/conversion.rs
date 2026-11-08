@@ -15,7 +15,9 @@
 //! on both sides until it closes; then the whole tail is walked again.
 //!
 //! The list of the word before the caret starts at [`word_list_start`];
-//! its pick nails what the preedit shows before that start (H4). A walk
+//! its pick nails what the preedit shows before that start (H4). At the
+//! tail's start that word is the last nailed segment, which the pick
+//! re-opens first. A walk
 //! ranks with the user's learned counts when the request supplies them
 //! ([`ConversionFrequency`], H5).
 
@@ -249,23 +251,61 @@ pub(crate) fn is_requested_for_composition(
     is_requested(&composition, config)
 }
 
-/// Where the list of the word before the caret starts in the pending `raw`
-/// (H4) — the one rule a fetch, its context and its pick read — or `None`
-/// when `config` asks for no conversion of the composition: the whole tail's
-/// list, a legacy pick. [`Conversion::anchor`] of the conversion the tail
-/// holds for `config`; `0` when it holds none (a reading open from the start,
-/// or a tail of tone marks).
+/// Where the list of the word before the caret starts (H4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WordListStart {
+    /// At this byte offset of the pending tail.
+    InTail(usize),
+    /// At the last nailed segment: the caret is at the tail's start with
+    /// segments nailed before it, so the word before the caret is the last
+    /// of them. Its list reads that segment's raw text followed by the tail;
+    /// a pick from it re-opens the segment and nails again from its start
+    /// (`transition::reopen_last_nailed_for_pick`), so merely opening the
+    /// list leaves the composition — and the pick it holds — as it was.
+    LastNailed,
+}
+
+impl WordListStart {
+    /// The text the list reads and the offset of its first byte in the
+    /// pending `raw`, by which the list's spans shift back into the tail —
+    /// `0` for the last nailed segment's list, whose pick puts that segment
+    /// back in front of the tail first.
+    pub(crate) fn listed(self, nailed: &[NailedSegment], raw: &str) -> (String, usize) {
+        match self {
+            Self::LastNailed => {
+                let last = nailed
+                    .last()
+                    .map_or("", |segment| segment.raw_text.as_str());
+                (format!("{last}{raw}"), 0)
+            }
+            Self::InTail(start) => (raw[start..].to_string(), start),
+        }
+    }
+}
+
+/// Where the list of the word before the caret starts (H4) — the one rule a
+/// fetch, its context and its pick read — or `None` when `config` asks for
+/// no conversion of the composition: the whole tail's list, a legacy pick.
+/// At the tail's start with segments nailed before it, the last of them;
+/// otherwise [`Conversion::anchor`] of the conversion the tail holds for
+/// `config`, `0` when it holds none (a reading open from the start, or a
+/// tail of tone marks).
 pub(crate) fn word_list_start(
     nailed: &[NailedSegment],
     raw: &str,
     caret: usize,
     conversion: Option<&Conversion>,
     config: &AppConfig,
-) -> Option<usize> {
+) -> Option<WordListStart> {
     is_requested_for_composition(nailed, raw, config).then(|| {
-        conversion
-            .filter(|conversion| conversion.is_for(config))
-            .map_or(0, |conversion| conversion.anchor(caret))
+        if caret == 0 && !nailed.is_empty() {
+            return WordListStart::LastNailed;
+        }
+        WordListStart::InTail(
+            conversion
+                .filter(|conversion| conversion.is_for(config))
+                .map_or(0, |conversion| conversion.anchor(caret)),
+        )
     })
 }
 
