@@ -23,7 +23,8 @@ protoc = "36.2"
 gitleaks = "8.30.1"
 # The version .github/workflows/checks.yml lints with.
 swiftformat = "0.63.0"
-# make linux-check's cross build of the engine (linux/Makefile).
+# make linux-check's cross build of the engine (linux/Makefile), and the web
+# build's wasm32 C compiler and archiver for SQLite (web/Makefile).
 zig = "0.16.0"
 "github:rust-cross/cargo-zigbuild" = "0.24.1"
 # make android-libs (engine/scripts/build-android-libs.sh). Compiles from source.
