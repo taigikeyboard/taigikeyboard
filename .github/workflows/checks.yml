@@ -2,7 +2,8 @@ name: Checks
 
 # The gates that need no compiler: generated i18n artifacts are current, the
 # i18n codegen's own tests pass, Swift formatting matches .swiftformat, and
-# the e2e analyzer's tests pass over the committed scenarios.
+# the e2e analyzer's tests pass over the committed scenarios, and every
+# PowerShell script is ASCII (`make lint-ps1`).
 # Everything here reads files; the whole job is well under a minute.
 #
 # Swift is linted here on Linux rather than on a macOS runner because
@@ -23,6 +24,7 @@ on:
       - 'engine/scripts/gen-platform-protos.sh'
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
       - 'android/app/build.gradle.kts'
+      - '**/*.ps1'
       - '.github/workflows/checks.yml'
   push:
     branches: [main]
@@ -39,6 +41,7 @@ on:
       - 'engine/scripts/gen-platform-protos.sh'
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
       - 'android/app/build.gradle.kts'
+      - '**/*.ps1'
       - '.github/workflows/checks.yml'
 
 permissions:
@@ -60,6 +63,24 @@ env:
   PROTOC_JAVA_SHA256: 121f6c7afe1d4d0e3ea6aab9432038599250134cbf4474cb1167d2c7decd4278
 
 jobs:
+  ps1-ascii:
+    name: PowerShell scripts ASCII
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The index stays complete under a sparse checkout, so `git ls-files`
+          # still lists every script; only these are written to disk.
+          sparse-checkout: |
+            Makefile
+            *.ps1
+          sparse-checkout-cone-mode: false
+
+      - name: make lint-ps1
+        run: make lint-ps1
+
   e2e-analyzer:
     name: e2e analyzer tests + scenarios
     runs-on: ubuntu-24.04

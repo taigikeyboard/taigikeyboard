@@ -19,7 +19,7 @@ SHELL := /usr/bin/env sh
 .DEFAULT_GOAL := help
 
 .PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
-        fmt lint hooks scan-secrets scan-secrets-full scan-private \
+        fmt lint lint-ps1 hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
@@ -284,6 +284,9 @@ version-mobile version-desktop:
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
 #           (spotlessCheck doubles as ktlint).
 #   JS      Biome — config: web/biome.json (version: mise.toml)
+#   PS      every tracked .ps1 is ASCII (lint-ps1): Windows PowerShell 5.1 reads a
+#           BOM-less script in the ANSI code page, where a UTF-8 em dash decodes
+#           to a curly quote that ends the string it sits in.
 # CI runs the same checks: engine.yml, desktop.yml, macos.yml, web.yml, checks.yml,
 # android.yml on pull requests; linux-build.yml nightly.
 RUST_WORKSPACES := engine desktop windows linux macos
@@ -294,7 +297,7 @@ fmt:
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
-lint:
+lint: lint-ps1
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
@@ -303,6 +306,9 @@ lint:
 	swiftformat --lint ios   # one directory per call: `--lint ios macos` reads macos as --lint's value
 	swiftformat --lint macos
 	cd android && ./gradlew spotlessCheck
+
+lint-ps1:
+	@git ls-files -z '*.ps1' | xargs -0 perl -ne 'if (/[^\t\r\n\x20-\x7e]/) { print "$$ARGV:$$.: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } close ARGV if eof; END { exit $$bad }'
 
 # Point git at the repo's tracked hooks. Per clone, not per checkout — core.hooksPath
 # lives in .git/config, so a fresh clone has no gate until this runs. That is why the
