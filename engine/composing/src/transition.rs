@@ -35,7 +35,7 @@ use crate::api::{
 use crate::commit_text::{
     commit_resolution, finalized_composition_resolution, resolve_commit_text,
 };
-use crate::conversion::{next_raw_span, PreviousTail};
+use crate::conversion::{next_raw_span, PreviousTail, WordListStart};
 use crate::derived::{
     buffer_input_mode, derived_display, display_caret_utf16, learning_text,
     strip_tps_separator_markers,
@@ -1095,9 +1095,47 @@ fn finalize_composition(
     response
 }
 
+/// Put the last nailed segment's raw text back in front of the pending tail
+/// for a pick from that segment's list ([`WordListStart::LastNailed`]): the
+/// pick nails again from the start at once, so the re-opened text is never
+/// walked or shown. `false`, the state untouched, when there is no segment
+/// or the pick does not fit the re-opened text. The usage the earlier pick
+/// recorded stays recorded, as an un-nail leaves it.
+fn reopen_last_nailed_for_pick(
+    state: &mut EngineState,
+    consumed_bytes: usize,
+    display_text: &str,
+) -> bool {
+    let Phase::Continuous {
+        raw,
+        caret,
+        nailed,
+        conversion,
+    } = &mut state.phase
+    else {
+        return false;
+    };
+    let Some(last) = nailed.last() else {
+        return false;
+    };
+    let reopened = format!("{}{raw}", last.raw_text);
+    if !is_pick_of(&reopened, 0, consumed_bytes, display_text) {
+        return false;
+    }
+    nailed.pop();
+    // At the start of the re-opened text, where the list began; the pick
+    // that follows sets its own.
+    *caret = 0;
+    *raw = reopened;
+    // The held words describe the old tail; the pick walks what follows it.
+    *conversion = None;
+    true
+}
+
 /// A pick under a Hanji conversion the request asks for (H4): the list it
 /// came from started at the word before the caret
-/// (`crate::conversion::word_list_start`, `start`), so what the preedit shows before that start
+/// (`crate::conversion::word_list_start`, `start` — `0` after
+/// [`reopen_last_nailed_for_pick`] put the last nailed segment back), so what the preedit shows before that start
 /// is nailed as shown and not picked — each word and the glyphs between them,
 /// byte for byte, so un-nailing restores what was typed — then the pick is
 /// nailed, and the rest of the tail is walked again with the caret at its
@@ -1261,7 +1299,7 @@ fn commit_continuous(
         Phase::Idle => None,
     };
     let (mut applied, outcome) = match word_list_start {
-        Some(start) => nail_pick_keeping_composition(
+        Some(WordListStart::InTail(start)) => nail_pick_keeping_composition(
             state,
             resolved.text.clone(),
             pick,
@@ -1269,6 +1307,20 @@ fn commit_continuous(
             config,
             frequency,
         ),
+        Some(WordListStart::LastNailed) => {
+            if reopen_last_nailed_for_pick(state, pick.consumed_bytes, &resolved.text) {
+                nail_pick_keeping_composition(
+                    state,
+                    resolved.text.clone(),
+                    pick,
+                    0,
+                    config,
+                    frequency,
+                )
+            } else {
+                (noop(state, config).into(), CommitOutcome::Ignored)
+            }
+        }
         None => nail_segment(state, resolved.text.clone(), pick, config, frequency),
     };
     if outcome != CommitOutcome::Ignored {

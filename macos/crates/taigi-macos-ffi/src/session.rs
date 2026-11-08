@@ -1479,8 +1479,8 @@ mod tests {
         assert_eq!(first.cells[0].text, "家");
         assert_eq!(first.anchor_end_utf16, 1);
         // Pick 家 (the caret goes to the end), ← to the start of the tail:
-        // the list is 罷's, the word after the caret, and the window stays at
-        // the caret — under the nailed 家 (roadmap H8, as built in H-P5).
+        // the list is the word before the caret, the nailed 家, under 家
+        // (roadmap H8; v3.9.0 row 10d replaced H-P5's list of the word after).
         let one = KeyEvent {
             key_code: Some(0x12),
             ..typed("1")
@@ -1491,7 +1491,7 @@ mod tests {
         );
         typist.key(left, no_list());
         let tail_start = shown_list(&typist.key(down, no_list()));
-        assert_eq!(tail_start.cells[0].text, "罷");
+        assert_eq!(tail_start.cells[0].text, "家");
         assert_eq!(tail_start.anchor_end_utf16, 1);
     }
 

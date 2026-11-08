@@ -28,6 +28,7 @@ use crate::api::{
 };
 use crate::continuous::{assemble_candidates, retain_first_by_key, ListShape};
 use crate::derived::buffer_input_mode;
+use crate::WordListStart;
 use lexicon::dictionary_reader::NO_ROWID;
 use lexicon::{
     classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
@@ -202,8 +203,10 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 /// phase/hanji guards and the wire encoding around it.
 ///
 /// Under a Hanji conversion the request asks for, the list is the word
-/// before the caret's (H4): the tail from [`Engine::word_list_start`] as
-/// [`ListShape::Word`], spans shifted back into the tail's coordinates.
+/// before the caret's (H4): the text from [`Engine::word_list_start`] as
+/// [`ListShape::Word`], spans shifted back into the tail's coordinates — or,
+/// for the last nailed segment's list, left in those of the tail its pick
+/// re-opens (that segment's raw text followed by the tail).
 fn handle_fetch_at_pos(
     engine: &Engine,
     now_ms: i64,
@@ -214,7 +217,10 @@ fn handle_fetch_at_pos(
 ) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
     let state = engine.snapshot_state();
-    let Phase::Continuous { raw: tail, .. } = &state.phase else {
+    let Phase::Continuous {
+        raw: tail, nailed, ..
+    } = &state.phase
+    else {
         return snapshot;
     };
     let word_list_start = engine.word_list_start(config);
@@ -222,8 +228,10 @@ fn handle_fetch_at_pos(
         Some(_) => ListShape::Word,
         None => ListShape::Sentence,
     };
-    let list_start = word_list_start.unwrap_or(0);
-    let raw = &tail[list_start..];
+    let (listed, list_start) = word_list_start
+        .unwrap_or(WordListStart::InTail(0))
+        .listed(nailed, tail);
+    let raw = listed.as_str();
     // v3.5.8 Phase 9 Item 11 — hanji guard (§15.3.E). The only input
     // modes are TL/POJ/TPS romanization; CJK never legitimately enters
     // the composing buffer. When it leaks in (paste, stale selection
@@ -248,8 +256,13 @@ fn handle_fetch_at_pos(
     // internally — pre-C-3b had a parallel `is_tps: bool` arg that
     // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
     // of truth). Dropping the bool eliminates split-brain risk. The whole
-    // tail decides, also for a list starting inside it.
-    let mode = buffer_input_mode(tail, config);
+    // tail decides, also for a list starting inside it; the last nailed
+    // segment's list reads that segment too (the tail after a pick may be
+    // empty or tone marks only).
+    let mode = match word_list_start {
+        Some(WordListStart::LastNailed) => buffer_input_mode(raw, config),
+        _ => buffer_input_mode(tail, config),
+    };
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
     let learned = first_learned_per_reading(&user_rows.learned);

@@ -11,7 +11,9 @@
 use std::cell::RefCell;
 
 use composing::api::{CaretDirection, CommitScript};
-use composing::{requests, ConversionFrequency, Engine, Intent, ListContext, Phase, UserRows};
+use composing::{
+    requests, ConversionFrequency, Engine, Intent, ListContext, Phase, UserRows, WordListStart,
+};
 use lexicon::{CustomEntry, LearnedEntry};
 use proptest::prelude::*;
 use proptest::test_runner::{Config as ProptestConfig, TestRunner};
@@ -76,21 +78,30 @@ fn the_list_is_the_word_before_the_caret() {
     install_fixture_with(EXTRA_ROWS);
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
-    assert_eq!(engine.word_list_start(&config), Some(8));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(8))
+    );
     assert_eq!(
         spans_and_hanji(&list(&mut engine, &config)),
         vec![(15, Some("詩".to_string())), (15, Some("絲".to_string()))]
     );
 
     step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(engine.word_list_start(&config), Some(0));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(0))
+    );
     assert_eq!(
         spans_and_hanji(&list(&mut engine, &config)),
         vec![(8, Some("死".to_string()))]
     );
     // At the start of the tail the list is the first word's.
     step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(engine.word_list_start(&config), Some(0));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(0))
+    );
 }
 
 // trace: "ㄒㄧˋㄒㄧ" — 死 (0, 8), then the open reading "ㄒㄧ" (8, 14) the caret
@@ -102,7 +113,10 @@ fn an_open_reading_before_the_caret_lists_its_own_words() {
     let config = config_converting("tps");
     let (mut engine, response) = composing_engine("ㄒㄧˋㄒㄧ", &config);
     assert_eq!(display(&response), "死ㄒㄧ");
-    assert_eq!(engine.word_list_start(&config), Some(8));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(8))
+    );
     let listed = list(&mut engine, &config);
     let hanji: Vec<_> = listed.iter().filter_map(|c| c.hanji.as_deref()).collect();
     for word in ["是", "死", "詩", "絲"] {
@@ -134,10 +148,16 @@ fn a_tail_of_tone_marks_after_a_pick_keeps_composing() {
     install_fixture_with(EXTRA_ROWS);
     let config = config_converting("tps");
     let (mut engine, _) = composing_engine("ㄒㄧˋˊ", &config);
-    assert_eq!(engine.word_list_start(&config), Some(0));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(0))
+    );
     engine.apply(pick("死", "sí", 8), &config);
     assert_eq!(raw_input(&engine.snapshot(&config)), "ˊ");
-    assert_eq!(engine.word_list_start(&config), Some(0));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(0))
+    );
     let row = list(&mut engine, &config)
         .into_iter()
         .next()
@@ -270,7 +290,10 @@ fn glyphs_before_the_list_start_are_nailed_as_typed() {
     let response = tps_key(&mut engine, "ㄒ", &config);
     assert_eq!(display(&response), "死ㄒ詩");
     step(&mut engine, CaretDirection::Right, &config);
-    assert_eq!(engine.word_list_start(&config), Some(11));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(11))
+    );
     let snapshot = engine.pending_snapshot(&config);
     assert_eq!(snapshot.listed_raw, "ㄒㄧ ");
     assert_eq!(snapshot.context, ListContext::Cut);
@@ -854,8 +877,8 @@ fn random_sessions_keep_the_conversion_invariants() {
 // Glyphs nailed as shown carry no word identity, so a list after them has no
 // context word, and not the committed one either. trace: the glyph session
 // of `glyphs_before_the_list_start_are_nailed_as_typed` ends 死 · ㄒ · 詩
-// nailed; Left from the empty tail re-opens 詩: nailed 死 · ㄒ, tail "ㄒㄧ "
-// with the caret at 0, so the list starts the tail and follows the glyph ㄒ.
+// nailed with an empty tail, the caret at 0, so the list is the last nailed
+// segment's (詩, read as "ㄒㄧ ") and follows the glyph ㄒ nailed before it.
 #[test]
 fn a_list_after_nailed_glyphs_has_no_context_word() {
     let _lock = engine_install_lock();
@@ -866,11 +889,49 @@ fn a_list_after_nailed_glyphs_has_no_context_word() {
     tps_key(&mut engine, "ㄒ", &config);
     step(&mut engine, CaretDirection::Right, &config);
     engine.apply(pick("詩", "si", 18), &config);
-    step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(nailed(&engine).len(), 2);
-    assert_eq!(engine.word_list_start(&config), Some(0));
+    assert_eq!(nailed(&engine).len(), 3);
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::LastNailed)
+    );
     let snapshot = engine.pending_snapshot(&config);
+    assert_eq!(snapshot.listed_raw, "ㄒㄧ ");
     assert_eq!(snapshot.context, ListContext::Cut);
+}
+
+// After a pick the caret sits at the start of an empty tail: ↓ lists the
+// word before it — the pick — and opening the list changes nothing (H4,
+// v3.9.0 row 10d). trace: "ㄒㄧˋㄒㄧ " → 死 (0, 8) + 詩 (8, 15); pick 詩 at
+// its own start nails 死 as shown and 詩, tail "". The list reads 詩's raw
+// "ㄒㄧ " from 0: 詩 / 絲 (15 - 8 = 7 bytes). Picking 絲 re-opens 詩 and nails
+// 絲 in its place; 死 stays.
+#[test]
+fn at_the_tail_start_the_list_is_the_last_nailed_word_and_a_pick_replaces_it() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋㄒㄧ ", &config);
+    engine.apply(pick("詩", "si", 15), &config);
+    assert_eq!(raw_input(&engine.snapshot(&config)), "");
+    assert_eq!(nailed(&engine).len(), 2);
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::LastNailed)
+    );
+    let before = engine.snapshot(&config);
+    assert_eq!(
+        spans_and_hanji(&list(&mut engine, &config)),
+        vec![(7, Some("詩".to_string())), (7, Some("絲".to_string()))]
+    );
+    assert_eq!(
+        engine.snapshot(&config),
+        before,
+        "opening the list changes nothing"
+    );
+    let response = engine.apply(pick("絲", "si", 7), &config);
+    assert_eq!(display(&response), "死絲");
+    assert_eq!(nailed(&engine).len(), 2);
+    assert_eq!(raw_input(&engine.snapshot(&config)), "");
 }
 
 // The word's list puts longer words first, whatever the counts (H4).
@@ -886,7 +947,10 @@ fn the_words_list_puts_longer_words_first() {
     let (mut engine, response) = composing_engine("ㄍㄧㄣ ㄚˋㆢㄧㆵ˙ㄒㄧˋ", &config);
     assert_eq!(display(&response), "今仔日死");
     step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(engine.word_list_start(&config), Some(0));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(0))
+    );
     let fetch = || Fetch {
         now_ms: NOW_MS,
         frequency: vec![selected("今", "kin", 20, 1_000)],

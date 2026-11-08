@@ -33,8 +33,9 @@ use std::sync::Mutex;
 /// The composing state a fetch is answered for (`Engine::pending_snapshot`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PendingSnapshot {
-    /// The part of the pending buffer the fetch lists: the user's rows are
-    /// read for it.
+    /// The text the fetch lists — part of the pending buffer, or the last
+    /// nailed segment's raw text followed by it (`WordListStart::LastNailed`):
+    /// the user's rows are read for it.
     pub listed_raw: String,
     /// The word the listed part follows.
     pub context: ListContext,

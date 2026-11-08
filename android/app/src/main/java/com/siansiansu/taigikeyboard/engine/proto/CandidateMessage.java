@@ -15,9 +15,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
  * bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
  * keys for lookup but emits the span back in the user-facing TPS byte
- * space). The platform sends it back as `CommitContinuous.consumed_bytes`;
- * where the listed word starts is the engine's own knowledge
- * (`composing::conversion::word_list_start`).
+ * space). Under a Hanji conversion at the tail's start the list reads the
+ * last nailed segment's raw text followed by `raw`, and the offset is in
+ * that text, which the pick re-opens as the tail. The platform sends it back
+ * as `CommitContinuous.consumed_bytes`; where the listed word starts is the
+ * engine's own knowledge (`composing::conversion::word_list_start`).
  *
  * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
  * sidechannels added so platform UI can build dual-line cells
@@ -488,9 +490,11 @@ public  final class CandidateMessage extends
    * TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
    * bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
    * keys for lookup but emits the span back in the user-facing TPS byte
-   * space). The platform sends it back as `CommitContinuous.consumed_bytes`;
-   * where the listed word starts is the engine's own knowledge
-   * (`composing::conversion::word_list_start`).
+   * space). Under a Hanji conversion at the tail's start the list reads the
+   * last nailed segment's raw text followed by `raw`, and the offset is in
+   * that text, which the pick re-opens as the tail. The platform sends it back
+   * as `CommitContinuous.consumed_bytes`; where the listed word starts is the
+   * engine's own knowledge (`composing::conversion::word_list_start`).
    *
    * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
    * sidechannels added so platform UI can build dual-line cells
