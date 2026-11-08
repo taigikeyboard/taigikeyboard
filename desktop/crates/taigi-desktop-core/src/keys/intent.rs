@@ -1936,13 +1936,14 @@ mod tests {
 
     #[test]
     fn under_tps_an_unassigned_key_is_document_text_and_the_shared_keys_are_unchanged() {
-        let question = KeyEventSnapshot::text("?", KeyModifiers::SHIFT);
+        // trace: Shift+; types `:`, which the layout leaves out (D2).
+        let colon = KeyEventSnapshot::text(":", KeyModifiers::SHIFT);
         assert_eq!(
-            classify_tps(&question, true, false),
-            ComposingKeyIntent::CommitThenInsert("?".into())
+            classify_tps(&colon, true, false),
+            ComposingKeyIntent::CommitThenInsert(":".into())
         );
         assert_eq!(
-            classify_tps(&question, false, false),
+            classify_tps(&colon, false, false),
             ComposingKeyIntent::PassThrough
         );
         let mut enter = text("\r");
