@@ -61,10 +61,9 @@ struct DictionarySearchPanel: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            // At most five one-line rows (the core's `VISIBLE_RESULT_LIMIT`):
-            // shorter than the other desktops' 200 px scroll cap, so no
-            // scroller. A new query's rows replace the last one's when they
-            // arrive, as on iOS, Windows and Linux.
+            // At most five one-line rows (the core's `VISIBLE_RESULT_LIMIT`),
+            // all at full height, so no scroller. A new query's rows replace
+            // the last one's when they arrive, as on iOS, Windows and Linux.
             VStack(spacing: 0) {
                 ForEach(model.hits, id: \.key) { hit in
                     row(hit)

@@ -14,7 +14,7 @@ use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArt
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
 use taigi_desktop_core::settings::dictionary_search::{
-    DEBOUNCE, RESULTS_MAX_HEIGHT, VISIBLE_RESULT_LIMIT,
+    DEBOUNCE, VISIBLE_RESULT_LIMIT,
 };
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
@@ -211,18 +211,16 @@ pub fn view(
             .into();
         ("none", none)
     } else {
-        let hits = ScrollViewer::new()
-            .vertical_scroll_bar_visibility(ScrollBarVisibility::Auto)
-            .max_height(f64::from(RESULTS_MAX_HEIGHT))
-            // One card of rows, as mobile lists its hits.
-            .content(cards::link_group([View::keyed_fragment(
-                model
-                    .results
-                    .iter()
-                    .take(VISIBLE_RESULT_LIMIT)
-                    .map(|result| result_row(result, strings, context))
-                    .collect::<Vec<_>>(),
-            )]));
+        // One card of rows, as mobile lists its hits; all five at full
+        // height, no scroller (`VISIBLE_RESULT_LIMIT`).
+        let hits = cards::link_group([View::keyed_fragment(
+            model
+                .results
+                .iter()
+                .take(VISIBLE_RESULT_LIMIT)
+                .map(|result| result_row(result, strings, context))
+                .collect::<Vec<_>>(),
+        )]);
         ("hits", hits)
     };
     StackPanel::new().spacing(ROW_GAP).children((

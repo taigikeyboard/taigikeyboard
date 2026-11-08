@@ -20,7 +20,7 @@ use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArt
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
 use taigi_desktop_core::settings::dictionary_search::{
-    DEBOUNCE, RESULTS_MAX_HEIGHT, VISIBLE_RESULT_LIMIT,
+    DEBOUNCE, VISIBLE_RESULT_LIMIT,
 };
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
@@ -80,11 +80,12 @@ pub fn build<'a>(mut context: PageContext<'a>, view: &adw::ToolbarView) -> PageC
         .visible(false)
         .build();
     results.set_placeholder(Some(&empty));
-    // Results ABOVE the field, as mobile pops them up over its bar.
+    // Results ABOVE the field, as mobile pops them up over its bar. The
+    // five rows at full height, with one opened (`VISIBLE_RESULT_LIMIT`);
+    // the scroller only takes over in a window too short for them.
     let scroller = gtk::ScrolledWindow::builder()
         .hscrollbar_policy(gtk::PolicyType::Never)
         .propagate_natural_height(true)
-        .max_content_height(i32::from(RESULTS_MAX_HEIGHT))
         .child(&results)
         .visible(false)
         .build();
