@@ -105,11 +105,11 @@
         ]
       },
       "values": {
-        "hanji": "台語齒盤 iOS 版",
-        "tailo": "Tâi-gí Khí-puânn iOS pán",
-        "poj": "Tâi-gí Khí-pôaⁿ iOS pán",
+        "hanji": "台語齒盤 iOS",
+        "tailo": "Tâi-gí Khí-puânn iOS",
+        "poj": "Tâi-gí Khí-pôaⁿ iOS",
         "en": "TaigiKeyboard for iOS",
-        "ja": "台湾語キーボード iOS 版"
+        "ja": "台湾語キーボード iOS"
       }
     },
     "androidApp": {
@@ -123,11 +123,11 @@
         ]
       },
       "values": {
-        "hanji": "台語齒盤 Android 版",
-        "tailo": "Tâi-gí Khí-puânn Android pán",
-        "poj": "Tâi-gí Khí-pôaⁿ Android pán",
+        "hanji": "台語齒盤 Android",
+        "tailo": "Tâi-gí Khí-puânn Android",
+        "poj": "Tâi-gí Khí-pôaⁿ Android",
         "en": "TaigiKeyboard for Android",
-        "ja": "台湾語キーボード Android 版"
+        "ja": "台湾語キーボード Android"
       }
     },
     "kautianMirror": {
