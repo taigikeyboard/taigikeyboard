@@ -113,7 +113,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// Finals spelled the same in TL and POJ, most frequent first (share of dictionary syllables
     /// whose final contains them). No built-in table has them; each is a plain key.
     private static let trayFinals = [
-        "an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir",
+        "an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir", "or",
     ]
 
     /// `ee` [ɛ], spelled the same in TL and POJ. No built-in table has it; it is a plain key.

@@ -185,8 +185,8 @@ class CustomLayoutEditTest {
         assertTrue(listOf("ph", "ts", "tsh", "oo", "th", "kh", "ng", "nn", "ch", "chh").all { it in letters })
         // The finals close the letters, most frequent first.
         assertEquals(
-            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir"),
-            letters.takeLast(16),
+            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir", "or"),
+            letters.takeLast(17),
         )
         assertEquals(letters.size, letters.toSet().size)
         assertEquals(symbols.size, symbols.toSet().size)
