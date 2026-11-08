@@ -45,11 +45,11 @@ One PR per part, in this order. The mobile layout (reporter's second image) is a
 
 | Part | Today (`file:line`) | Change | Status |
 |---|---|---|---|
-| 10a Window off = glyph mode | `desktop-core/src/engine/bridge.rs` asks for the Hanji conversion under TPS whatever Show Candidate Window says; with the window off ↓ commits Hanji (`keys/intent.rs` `tps_window_key`) | No conversion while the window is off, so Enter writes the glyphs — as TL / POJ write the romanization with the window off (S33) | Pending |
-| 10b Tone-8 dot | Keyboards type U+02D9 (`keys/tps_layout.rs` `7`, mobile too); the converter writes U+0307 over a stop coda (`engine/phonetics/src/tps.rs` `ZHUYIN_TONES`) | The engine stores U+0307 for a tone-8 dot typed right after ㆴ ㆵ ㆻ ㆷ (all platforms) | Pending |
-| 10c Desktop layout | `keys/tps_layout.rs` `KEYS` | Reporter's first image: `m` ㆨ, `.` / `>` ㆦ / ㆧ, `/` / `?` ㄥ / ㆭ, `-` / `_` ㆲ / ㆱ, Shift+`p` ㆬ, stop codas `t` ㆴ `g` ㆵ `b` ㆻ; the hyphen moves to `=`. Dachen-shared keys unchanged | Pending |
-| 10d ↓ lists the word before the caret | After a pick, a caret at the tail's start lists the next word (H-P5 accepted boundary, `engine/composing/src/conversion.rs` `anchor`) | ↓ at the tail's start lists the last nailed word; opening the list changes nothing, a pick re-opens that word and nails again (deferred re-open, pre-impl review 2026-11-08) — the list is always the word before the caret | Pending |
-| 10e Custom words in the walk | The TPS walk passes no custom rows (`conversion.rs` `convert`, `custom: &[]`), so 陳三 shows as 陳相 and lists only from 陳 | Custom-dictionary words become walk edges, as they rank in TL / POJ | Pending |
+| 10a Window off = glyph mode | `desktop-core/src/engine/bridge.rs` asks for the Hanji conversion under TPS whatever Show Candidate Window says; with the window off ↓ commits Hanji (`keys/intent.rs` `tps_window_key`) | No conversion while the window is off, so Enter writes the glyphs — as TL / POJ write the romanization with the window off (S33) | Merged #804 2026-11-09 |
+| 10b Tone-8 dot | Keyboards type U+02D9 (`keys/tps_layout.rs` `7`, mobile too); the converter writes U+0307 over a stop coda (`engine/phonetics/src/tps.rs` `ZHUYIN_TONES`) | The engine stores U+0307 for a tone-8 dot typed right after ㆴ ㆵ ㆻ ㆷ (all platforms) | Merged #805 2026-11-09 |
+| 10c Desktop layout | `keys/tps_layout.rs` `KEYS` | Reporter's first image: `m` ㆨ, `.` / `>` ㆦ / ㆧ, `/` / `?` ㄥ / ㆭ, `-` / `_` ㆲ / ㆱ, Shift+`p` ㆬ, stop codas `t` ㆴ `g` ㆵ `b` ㆻ; the hyphen moves to `=`. Dachen-shared keys unchanged | Merged #806 2026-11-09 |
+| 10d ↓ lists the word before the caret | After a pick, a caret at the tail's start lists the next word (H-P5 accepted boundary, `engine/composing/src/conversion.rs` `anchor`) | ↓ at the tail's start lists the last nailed word; opening the list changes nothing, a pick re-opens that word and nails again (deferred re-open, pre-impl review 2026-11-08) — the list is always the word before the caret | Merged #807 2026-11-09 |
+| 10e Custom words in the walk | The TPS walk passes no custom rows (`conversion.rs` `convert`, `custom: &[]`), so 陳三 shows as 陳相 and lists only from 陳 | Custom-dictionary words become walk edges, as they rank in TL / POJ | Merged #808 2026-11-09 |
 
 ---
 
