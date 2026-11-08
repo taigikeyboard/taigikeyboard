@@ -53,7 +53,7 @@ test("Display Language redraws the page and survives a reload", async ({
   await setting(page, "displayLanguage").selectOption("tailo");
   // trace: web.placeholder / web.ready / desktop.menuSettings tailo values.
   await expect(page.locator("#text-hint")).toHaveText(
-    "Tshi̍h / khai-sí phah-jī",
+    "Tshiánn sú-iōng Ing-gí su-ji̍p-huat, tshi̍h / khai-sí phah-jī",
   );
   await expect(page.locator("#message")).toHaveText("Ē-sái phah-jī");
   await expect(toggle(page)).toHaveAttribute(
@@ -63,7 +63,7 @@ test("Display Language redraws the page and survives a reload", async ({
   expect(await rootLang(page)).toBe("nan-Latn-tailo");
   await page.reload();
   await expect(page.locator("#text-hint")).toHaveText(
-    "Tshi̍h / khai-sí phah-jī",
+    "Tshiánn sú-iōng Ing-gí su-ji̍p-huat, tshi̍h / khai-sí phah-jī",
   );
   await expect(setting(page, "displayLanguage")).toHaveValue("tailo");
 });

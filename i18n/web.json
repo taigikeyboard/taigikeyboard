@@ -30,11 +30,11 @@
         ]
       },
       "values": {
-        "hanji": "揤 {key} 開始拍字",
-        "tailo": "Tshi̍h {key} khai-sí phah-jī",
-        "poj": "Chhi̍h {key} khai-sí phah-jī",
-        "en": "Press {key} to start typing",
-        "ja": "{key} を押して入力を開始"
+        "hanji": "請使用英語輸入法，揤 {key} 開始拍字",
+        "tailo": "Tshiánn sú-iōng Ing-gí su-ji̍p-huat, tshi̍h {key} khai-sí phah-jī",
+        "poj": "Chhiáⁿ sú-iōng Eng-gí su-ji̍p-hoat, chhi̍h {key} khai-sí phah-jī",
+        "en": "Use an English input method, then press {key} to start typing",
+        "ja": "英語入力に切り替えて、{key} を押して入力を開始"
       },
       "placeholders": {
         "key": "string"
