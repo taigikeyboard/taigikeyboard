@@ -124,6 +124,9 @@ struct DictionaryTogglesView: View {
             }
         }
         .formStyle(.grouped)
+        // Pinned under the scrolling toggles, as on iOS and the other
+        // desktops (#792).
+        .safeAreaInset(edge: .bottom, spacing: 0) { DictionarySearchPanel() }
     }
 
     /// Puts every source and accent toggle back to what a fresh install searches.

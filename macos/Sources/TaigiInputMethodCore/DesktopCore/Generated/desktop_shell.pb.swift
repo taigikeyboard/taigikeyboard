@@ -421,6 +421,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .tpsKeyboardPress(newValue)}
   }
 
+  public var dictionarySearch: Taigi_DesktopShell_DictionarySearchRequest {
+    get {
+      if case .dictionarySearch(let v)? = request {return v}
+      return Taigi_DesktopShell_DictionarySearchRequest()
+    }
+    set {request = .dictionarySearch(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -460,6 +468,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case switchInputMode(Taigi_DesktopShell_SwitchInputModeRequest)
     case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsRequest)
     case tpsKeyboardPress(Taigi_DesktopShell_TpsKeyboardPressRequest)
+    case dictionarySearch(Taigi_DesktopShell_DictionarySearchRequest)
 
   }
 
@@ -775,6 +784,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     set {reply = .tpsKeyboardRows(newValue)}
   }
 
+  public var dictionarySearch: Taigi_DesktopShell_DictionarySearchReply {
+    get {
+      if case .dictionarySearch(let v)? = reply {return v}
+      return Taigi_DesktopShell_DictionarySearchReply()
+    }
+    set {reply = .dictionarySearch(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Reply: Equatable, Sendable {
@@ -788,6 +805,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     case symbolPicker(Taigi_DesktopShell_SymbolPickerReply)
     case switchInputMode(Taigi_DesktopShell_SwitchInputModeReply)
     case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsReply)
+    case dictionarySearch(Taigi_DesktopShell_DictionarySearchReply)
 
   }
 
@@ -1899,6 +1917,90 @@ public nonisolated struct Taigi_DesktopShell_SymbolPickerReply: Sendable {
   public init() {}
 }
 
+/// The Manage Dictionaries search (#792): `query` looked up by desktop-core's
+/// one lookup (`engine::dictionary_search::search`, the Windows and Linux
+/// one) under the settings snapshot this request must carry — the input
+/// mode and the source toggles — read for this answer and never put in
+/// force. Answered outside the session lock, so it may be sent from a
+/// background thread while the key path runs; the engine's own locks order
+/// the two. Refused before Configure or without a snapshot.
+public nonisolated struct Taigi_DesktopShell_DictionarySearchRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var query: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_DictionarySearchReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The first `VISIBLE_RESULT_LIMIT` hits, in the core's order: custom
+  /// entries first, then the dictionaries.
+  public var hits: [Taigi_DesktopShell_DictionarySearchHit] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_DictionarySearchHit: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// A stable identity for the row (`DictionarySearchResult::key`).
+  public var key: String = String()
+
+  /// The romanization as the input mode spells it.
+  public var roman: String = String()
+
+  public var hanji: String {
+    get {_hanji ?? String()}
+    set {_hanji = newValue}
+  }
+  /// Returns true if `hanji` has been explicitly set.
+  public var hasHanji: Bool {self._hanji != nil}
+  /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
+  public mutating func clearHanji() {self._hanji = nil}
+
+  /// One i18n key per badge (`i18n_dictionary_kautianTag`), deduplicated.
+  public var badgeKeys: [String] = []
+
+  /// Unset when the reading makes no URL (`engine::external_lookup`).
+  public var moeURL: String {
+    get {_moeURL ?? String()}
+    set {_moeURL = newValue}
+  }
+  /// Returns true if `moeURL` has been explicitly set.
+  public var hasMoeURL: Bool {self._moeURL != nil}
+  /// Clears the value of `moeURL`. Subsequent reads from it will return its default value.
+  public mutating func clearMoeURL() {self._moeURL = nil}
+
+  public var chhoeURL: String {
+    get {_chhoeURL ?? String()}
+    set {_chhoeURL = newValue}
+  }
+  /// Returns true if `chhoeURL` has been explicitly set.
+  public var hasChhoeURL: Bool {self._chhoeURL != nil}
+  /// Clears the value of `chhoeURL`. Subsequent reads from it will return its default value.
+  public mutating func clearChhoeURL() {self._chhoeURL = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _hanji: String? = nil
+  fileprivate var _moeURL: String? = nil
+  fileprivate var _chhoeURL: String? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "taigi.desktop_shell"
@@ -1925,7 +2027,7 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerAction: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2168,6 +2270,19 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .tpsKeyboardPress(v)
         }
       }()
+      case 21: try {
+        var v: Taigi_DesktopShell_DictionarySearchRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .dictionarySearch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .dictionarySearch(v)
+        }
+      }()
       default: break
       }
     }
@@ -2256,6 +2371,10 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .tpsKeyboardPress?: try {
       guard case .tpsKeyboardPress(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+    }()
+    case .dictionarySearch?: try {
+      guard case .dictionarySearch(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     default: break
     }
@@ -2628,7 +2747,7 @@ nonisolated extension Taigi_DesktopShell_LexiconStats: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2767,6 +2886,19 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
           self.reply = .tpsKeyboardRows(v)
         }
       }()
+      case 13: try {
+        var v: Taigi_DesktopShell_DictionarySearchReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .dictionarySearch(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .dictionarySearch(v)
+        }
+      }()
       default: break
       }
     }
@@ -2820,6 +2952,10 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
     case .tpsKeyboardRows?: try {
       guard case .tpsKeyboardRows(let v)? = self.reply else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case .dictionarySearch?: try {
+      guard case .dictionarySearch(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
     case nil: break
     }
@@ -4598,6 +4734,125 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerReply: SwiftProtobuf.Messag
 
   public static func ==(lhs: Taigi_DesktopShell_SymbolPickerReply, rhs: Taigi_DesktopShell_SymbolPickerReply) -> Bool {
     if lhs.intent != rhs.intent {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_DictionarySearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DictionarySearchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}query\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.query) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.query.isEmpty {
+      try visitor.visitSingularStringField(value: self.query, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_DictionarySearchRequest, rhs: Taigi_DesktopShell_DictionarySearchRequest) -> Bool {
+    if lhs.query != rhs.query {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_DictionarySearchReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DictionarySearchReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hits\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.hits) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.hits.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.hits, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_DictionarySearchReply, rhs: Taigi_DesktopShell_DictionarySearchReply) -> Bool {
+    if lhs.hits != rhs.hits {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_DictionarySearchHit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DictionarySearchHit"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0\u{1}roman\0\u{1}hanji\0\u{3}badge_keys\0\u{3}moe_url\0\u{3}chhoe_url\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
+      case 4: try { try decoder.decodeRepeatedStringField(value: &self.badgeKeys) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self._moeURL) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self._chhoeURL) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.key.isEmpty {
+      try visitor.visitSingularStringField(value: self.key, fieldNumber: 1)
+    }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
+    }
+    try { if let v = self._hanji {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    } }()
+    if !self.badgeKeys.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.badgeKeys, fieldNumber: 4)
+    }
+    try { if let v = self._moeURL {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 5)
+    } }()
+    try { if let v = self._chhoeURL {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 6)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_DictionarySearchHit, rhs: Taigi_DesktopShell_DictionarySearchHit) -> Bool {
+    if lhs.key != rhs.key {return false}
+    if lhs.roman != rhs.roman {return false}
+    if lhs._hanji != rhs._hanji {return false}
+    if lhs.badgeKeys != rhs.badgeKeys {return false}
+    if lhs._moeURL != rhs._moeURL {return false}
+    if lhs._chhoeURL != rhs._chhoeURL {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

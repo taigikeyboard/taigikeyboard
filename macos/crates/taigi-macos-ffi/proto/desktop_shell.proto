@@ -36,6 +36,7 @@ message DesktopRequest {
     SwitchInputModeRequest switch_input_mode = 18;
     TpsKeyboardRowsRequest tps_keyboard_rows = 19;
     TpsKeyboardPressRequest tps_keyboard_press = 20;
+    DictionarySearchRequest dictionary_search = 21;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -138,6 +139,7 @@ message DesktopResponse {
     SymbolPickerReply symbol_picker = 10;
     SwitchInputModeReply switch_input_mode = 11;
     TpsKeyboardRowsReply tps_keyboard_rows = 12;
+    DictionarySearchReply dictionary_search = 13;
   }
 }
 
@@ -573,4 +575,34 @@ enum SymbolPickerAction {
   SYMBOL_PICKER_ACTION_CONFIRM = 2;
   // Take the picker down and let the key go on.
   SYMBOL_PICKER_ACTION_CLOSE_AND_PASS_THROUGH = 3;
+}
+
+// The Manage Dictionaries search (#792): `query` looked up by desktop-core's
+// one lookup (`engine::dictionary_search::search`, the Windows and Linux
+// one) under the settings snapshot this request must carry — the input
+// mode and the source toggles — read for this answer and never put in
+// force. Answered outside the session lock, so it may be sent from a
+// background thread while the key path runs; the engine's own locks order
+// the two. Refused before Configure or without a snapshot.
+message DictionarySearchRequest {
+  string query = 1;
+}
+
+message DictionarySearchReply {
+  // The first `VISIBLE_RESULT_LIMIT` hits, in the core's order: custom
+  // entries first, then the dictionaries.
+  repeated DictionarySearchHit hits = 1;
+}
+
+message DictionarySearchHit {
+  // A stable identity for the row (`DictionarySearchResult::key`).
+  string key = 1;
+  // The romanization as the input mode spells it.
+  string roman = 2;
+  optional string hanji = 3;
+  // One i18n key per badge (`i18n_dictionary_kautianTag`), deduplicated.
+  repeated string badge_keys = 4;
+  // Unset when the reading makes no URL (`engine::external_lookup`).
+  optional string moe_url = 5;
+  optional string chhoe_url = 6;
 }

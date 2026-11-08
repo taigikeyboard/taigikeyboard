@@ -7,8 +7,9 @@
 //! bytes out — protobuf envelopes, no handle crosses, no `unsafe` here
 //! (docs/contributing/rust-ffi-safety.md §1.1). The shell's requests reach
 //! the `taigi-desktop-core` runtime (`runtime.rs`), the composing session
-//! (`session.rs`, with `key_translation.rs`) and the key-path settings
-//! snapshot each request may carry (`settings.rs`).
+//! (`session.rs`, with `key_translation.rs`), the key rules (`key_rules.rs`),
+//! the Manage Dictionaries search (`dictionary_search.rs`) and the key-path
+//! settings snapshot each request may carry (`settings.rs`).
 
 // Links the engine seam into this archive. Nothing here calls into it; without
 // the `extern crate` rustc would not link an rlib this crate never names, and
@@ -17,6 +18,7 @@ extern crate rust_taigi;
 
 #[cfg(test)]
 mod chord_rules;
+mod dictionary_search;
 mod key_rules;
 mod key_translation;
 mod runtime;
@@ -557,5 +559,31 @@ mod tests {
                 "{store} has a write-ahead log"
             );
         }
+
+        // The Manage Dictionaries search over these stores, as iOS and
+        // Android answer it (`DictionarySearchService`): a custom entry
+        // leads, wears the supplements' one badge, and offers the web
+        // lookups for its own romanization.
+        taigi_desktop_core::engine::user_data::save_custom_entry("", "tsia̍h-pá", "食飽")
+            .expect("saved");
+        let search = desktop_request::Request::DictionarySearch(proto::DictionarySearchRequest {
+            query: "tsiahpa".to_owned(),
+        });
+        let tl = SettingsSnapshot {
+            entries: vec![test_support::text("inputMode", "tl")],
+        };
+        let Some(desktop_response::Reply::DictionarySearch(found)) =
+            send_with(&shell, search, Some(tl)).reply
+        else {
+            panic!("expected a search reply");
+        };
+        let first = found.hits.first().expect("hits");
+        assert!(first.key.starts_with("custom:"), "{found:?}");
+        assert_eq!(first.hanji.as_deref(), Some("食飽"));
+        assert_eq!(
+            first.badge_keys,
+            [taigi_desktop_core::strings::StringKey::DictionarySupplementSectionTitle.as_str()]
+        );
+        assert!(first.moe_url.is_some() && first.chhoe_url.is_some());
     }
 }

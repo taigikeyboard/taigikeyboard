@@ -76,7 +76,7 @@ enum KeyRules {
     /// The Shortcuts pane's composing rows as `userDefaults` holds them, and
     /// its fixed rows.
     static func composingShortcuts(in userDefaults: UserDefaults) -> ComposingShortcuts? {
-        guard let settings = snapshot(in: userDefaults, op: "composingShortcuts") else { return nil }
+        guard let settings = DesktopCoreRuntime.snapshot(in: userDefaults, op: "composingShortcuts") else { return nil }
         let reply = DesktopCoreBridge.roundtrip(
             .composingShortcuts(Taigi_DesktopShell_ComposingShortcutsRequest()),
             settings: settings,
@@ -94,7 +94,7 @@ enum KeyRules {
     /// What `key` means while the symbol picker is up, under the bindings
     /// `userDefaults` holds.
     static func symbolPickerIntent(for key: KeyEventSnapshot, in userDefaults: UserDefaults) -> SymbolPickerIntent? {
-        guard let settings = snapshot(in: userDefaults, op: "symbolPickerKey") else { return nil }
+        guard let settings = DesktopCoreRuntime.snapshot(in: userDefaults, op: "symbolPickerKey") else { return nil }
         var request = Taigi_DesktopShell_SymbolPickerKeyRequest()
         request.event = Taigi_DesktopShell_KeyEvent(key)
         let reply = DesktopCoreBridge.roundtrip(.symbolPickerKey(request), settings: settings, op: "symbolPickerKey") {
@@ -177,16 +177,6 @@ enum KeyRules {
             return nil
         }
         return value
-    }
-
-    /// The whitelisted settings as `userDefaults` holds them; nil — logged —
-    /// before the runtime exists.
-    private static func snapshot(in userDefaults: UserDefaults, op: String) -> Taigi_DesktopShell_SettingsSnapshot? {
-        guard let runtime = DesktopCoreRuntime.configured else {
-            logger.error("[\(op)] no desktop-core runtime — no settings to read under")
-            return nil
-        }
-        return runtime.settingsSnapshot(in: userDefaults)
     }
 }
 

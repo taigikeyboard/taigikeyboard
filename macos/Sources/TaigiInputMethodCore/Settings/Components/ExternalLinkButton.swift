@@ -28,15 +28,11 @@ struct ExternalLinkButton: View {
     let url: URL?
     var style: Style = .standard
 
-    @State private var didFail = false
+    @State private var failedLink: String?
 
     var body: some View {
         styledButton
-            .alert(language.string(.desktopOpenURLFailed), isPresented: $didFail) {
-                Button(language.string(.commonOk)) {}
-            } message: {
-                Text(url?.absoluteString ?? "")
-            }
+            .openURLFailureAlert($failedLink)
     }
 
     @ViewBuilder
@@ -75,7 +71,7 @@ struct ExternalLinkButton: View {
 
     private func open() {
         guard let url, NSWorkspace.shared.open(url) else {
-            didFail = true
+            failedLink = url?.absoluteString ?? ""
             return
         }
     }
@@ -86,5 +82,34 @@ struct ExternalLinkButton: View {
 
         /// A row's glyph, the size of a sidebar symbol — a mark, not fine print.
         static let rowGlyphSize: CGFloat = 16
+    }
+}
+
+extension View {
+    /// The alert a link that could not be opened raises, naming the link —
+    /// shown while `failedLink` is set, cleared when dismissed.
+    func openURLFailureAlert(_ failedLink: Binding<String?>) -> some View {
+        modifier(OpenURLFailureAlert(failedLink: failedLink))
+    }
+}
+
+private struct OpenURLFailureAlert: ViewModifier {
+    @Environment(DisplayLanguageStore.self) private var language
+
+    @Binding var failedLink: String?
+
+    func body(content: Content) -> some View {
+        content.alert(
+            language.string(.desktopOpenURLFailed),
+            isPresented: Binding(get: { failedLink != nil }, set: {
+                if !$0 {
+                    failedLink = nil
+                }
+            }),
+        ) {
+            Button(language.string(.commonOk)) {}
+        } message: {
+            Text(failedLink ?? "")
+        }
     }
 }

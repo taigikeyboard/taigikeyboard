@@ -215,16 +215,11 @@ impl DictionarySearchBar {
     /// subtitle (one per distinct word — the three supplements share one),
     /// and the two lookups as buttons.
     fn result_row(&self, result: &DictionarySearchResult) -> adw::ActionRow {
-        // One badge per distinct word (by key: the three supplements share
-        // one).
-        let mut keys: Vec<StringKey> = Vec::new();
-        for source in &result.sources {
-            let key = source.badge_key();
-            if !keys.contains(&key) {
-                keys.push(key);
-            }
-        }
-        let badges: Vec<&str> = keys.iter().map(|key| self.strings.resolve(*key)).collect();
+        let badges: Vec<&str> = result
+            .badge_keys()
+            .into_iter()
+            .map(|key| self.strings.resolve(key))
+            .collect();
         let title = match &result.hanji {
             Some(hanji) => format!("{}  {hanji}", result.roman),
             None => result.roman.clone(),

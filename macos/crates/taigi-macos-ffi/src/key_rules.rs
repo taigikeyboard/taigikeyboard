@@ -218,8 +218,10 @@ fn bindings(snapshot: Option<&SettingsSnapshot>) -> Result<ComposingKeyBindings,
     ))
 }
 
-/// The settings the snapshot carries, for the same reason it is required.
-fn document(snapshot: Option<&SettingsSnapshot>) -> Result<SettingsDocument, Refusal> {
+/// The settings the snapshot carries, required: a request that reads them
+/// for its one answer and never puts them in force (the key rules, the
+/// dictionary search) has no last snapshot to fall back on.
+pub(crate) fn document(snapshot: Option<&SettingsSnapshot>) -> Result<SettingsDocument, Refusal> {
     let snapshot = snapshot.ok_or(Refusal::Missing("settings"))?;
     settings::document_from(&snapshot.entries).map_err(Refusal::Settings)
 }

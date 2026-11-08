@@ -9,6 +9,7 @@ use super::{
     tl_to_poj, DictionarySource, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
 use crate::settings::{keys, InputMode, SettingsDocument};
+use crate::strings::StringKey;
 
 /// `DictionarySearchService.resultLimit`.
 const RESULT_LIMIT: u32 = 20;
@@ -24,9 +25,10 @@ pub struct DictionarySearchResult {
     pub id: ResultId,
     /// The romanization as the current mode spells it.
     pub roman: String,
-    /// The TL the web dictionaries are asked with; `None` for a custom
-    /// entry (no lookup menu).
-    pub lookup_tl: Option<String>,
+    /// What the web dictionaries are asked with: the row's TL, or a custom
+    /// entry's own romanization, as iOS and Android ask with it
+    /// (`DictionarySearchService` `tl = entry.roman`).
+    pub lookup_tl: String,
     pub hanji: Option<String>,
     pub sources: Vec<DictionarySource>,
 }
@@ -42,11 +44,24 @@ impl DictionarySearchResult {
     }
 
     pub fn moe_url(&self) -> Option<String> {
-        self.lookup_tl.as_deref().and_then(moe_url)
+        moe_url(&self.lookup_tl)
     }
 
     pub fn chhoe_url(&self) -> Option<String> {
-        self.lookup_tl.as_deref().and_then(chhoe_url)
+        chhoe_url(&self.lookup_tl)
+    }
+
+    /// The badges the row wears, one per distinct word in `sources` order:
+    /// the three supplements share one (`DictionarySource::badge_key`).
+    pub fn badge_keys(&self) -> Vec<StringKey> {
+        let mut keys = Vec::new();
+        for source in &self.sources {
+            let key = source.badge_key();
+            if !keys.contains(&key) {
+                keys.push(key);
+            }
+        }
+        keys
     }
 }
 
@@ -82,7 +97,7 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
             DictionarySearchResult {
                 id: ResultId::System(row.id),
                 roman: display_roman(&row.roman, mode),
-                lookup_tl: Some(row.roman),
+                lookup_tl: row.roman,
                 hanji: row.hanji,
                 sources,
             }
@@ -122,10 +137,41 @@ fn custom_results(
         .into_iter()
         .map(|entry| DictionarySearchResult {
             id: ResultId::Custom(entry.id),
+            lookup_tl: entry.roman.clone(),
             roman: entry.roman,
-            lookup_tl: None,
             hanji: (!entry.hanji.is_empty()).then_some(entry.hanji),
             sources: vec![DictionarySource::Custom],
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn badge_keys_dedup_by_word_in_source_order() {
+        // trace: Khpoo / Khiin / Dev / Custom all badge as
+        // DictionarySupplementSectionTitle (`DictionarySource::badge_key`, as
+        // mobile's `tagKey`), so they read once, where the first stood.
+        let result = DictionarySearchResult {
+            id: ResultId::System(1),
+            roman: "tsia̍h".to_owned(),
+            lookup_tl: "tsia̍h".to_owned(),
+            hanji: Some("食".to_owned()),
+            sources: vec![
+                DictionarySource::Khpoo,
+                DictionarySource::Kautian,
+                DictionarySource::Khiin,
+                DictionarySource::Custom,
+            ],
+        };
+        assert_eq!(
+            result.badge_keys(),
+            [
+                StringKey::DictionarySupplementSectionTitle,
+                StringKey::DictionaryKautianTag
+            ]
+        );
+    }
 }

@@ -111,6 +111,17 @@ final class DesktopCoreRuntime {
         Self.settingsSnapshot(settings, in: userDefaults)
     }
 
+    /// The configured runtime's snapshot of `userDefaults`, for a request
+    /// that must carry one (the key rules, the dictionary search); nil —
+    /// logged under `op` — before the runtime exists.
+    static func snapshot(in userDefaults: UserDefaults, op: String) -> Taigi_DesktopShell_SettingsSnapshot? {
+        guard let runtime = configured else {
+            DebugLogger(category: "DesktopCoreRuntime").error("[\(op)] no desktop-core runtime — no settings to read under")
+            return nil
+        }
+        return runtime.settingsSnapshot(in: userDefaults)
+    }
+
     /// The whitelisted settings `userDefaults` holds now; a setting it does
     /// not hold, or holds as something its reader would not accept, is left
     /// out and reads as the core's default.

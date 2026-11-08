@@ -246,17 +246,11 @@ fn result_row(
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
-    // One badge per distinct word: the three supplements share one.
-    let mut seen = Vec::new();
-    for source in &result.sources {
-        let key = source.badge_key();
-        if !seen.contains(&key) {
-            seen.push(key);
-        }
-    }
     let badges = View::keyed_fragment(
-        seen.iter()
-            .map(|key| (format!("{key:?}"), cards::badge(strings.resolve(*key))))
+        result
+            .badge_keys()
+            .into_iter()
+            .map(|key| (format!("{key:?}"), cards::badge(strings.resolve(key))))
             .collect::<Vec<_>>(),
     );
     // The URLs travel WITH the callback, not an index into a list a
@@ -303,9 +297,8 @@ fn result_row(
                     .vertical_alignment(VerticalAlignment::Center)
                     .grid_column(0)
                     .children((
-                        TextBlock::new()
-                            .text(result.roman.clone())
-                            .opacity(SECONDARY_OPACITY),
+                        // Full strength, as iOS and Android draw it.
+                        TextBlock::new().text(result.roman.clone()),
                         TextBlock::new().text_optional(result.hanji.clone()),
                     )),
                 StackPanel::new()
