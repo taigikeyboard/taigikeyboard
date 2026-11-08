@@ -459,7 +459,7 @@ class CustomLayoutTables(
          * final contains them). iOS `CustomLayout.trayFinals`.
          */
         val TRAY_FINALS =
-            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir")
+            listOf("an", "ia", "in", "au", "ong", "ian", "un", "ai", "iu", "ann", "ang", "ui", "inn", "iau", "er", "ir", "or")
 
         /**
          * Built-in long-press symbols that draw as colour emoji in the tray; left out of it, as on iOS.
