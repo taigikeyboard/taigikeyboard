@@ -132,7 +132,7 @@ Rows that do not change: Space inside an open reading is the separator (it now c
 
 The classifier still never asks the engine (the Windows Test phase): every row above is decided from the key, "composing" and "window up". Whether a reading is closed is the engine's answer to the Space, as under D0.
 
-With Show Candidate Window off the preedit is still converted — the conversion is not the window.
+With Show Candidate Window off there is no list to correct a conversion from, so the desktop asks for no conversion (`EngineSettings::is_hanji_conversion_enabled`; v3.9.0 row 10a, 2026-11-08 — as built in H-P4 the preedit was still converted): the preedit keeps the glyphs and every commit in the two window-off rows above, Enter included, writes them, as TL / POJ write the romanization with the window off (S33).
 
 ### H7 — Learning (B4)
 

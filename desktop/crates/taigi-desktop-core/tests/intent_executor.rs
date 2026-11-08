@@ -648,23 +648,14 @@ fn a_switch_re_presents_an_open_list_and_never_opens_one() {
 // MARK: - TPS (desktop-tps-roadmap.md § D3, O1; Hanji conversion arm B)
 
 fn new_tps_rig() -> Rig {
-    let engine = engine_lock();
-    let mut settings = SettingsDocument::default();
-    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
-    settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
-    let manager = ComposingManager::new(
-        Arc::new(StaticSettingsProvider::new(settings.clone())),
-        Box::new(EngineNextWord),
-        Arc::new(SystemClock),
-        fresh_generation(),
-    );
-    Rig {
-        _engine: engine,
-        settings,
-        manager,
-        list: CandidateSource::default(),
-        surface: Surface::default(),
-    }
+    configured_tps_rig(|_| {})
+}
+
+fn configured_tps_rig(configure: impl FnOnce(&mut SettingsDocument)) -> Rig {
+    configured_rig(true, |settings| {
+        settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        configure(settings);
+    })
 }
 
 impl Rig {
@@ -860,17 +851,32 @@ fn tps_ctrl_punctuation_writes_the_full_width_mark() {
 }
 
 #[test]
-fn tps_space_on_a_closed_syllable_with_the_window_off_commits_as_shown_unspaced() {
+fn tps_space_on_a_closed_syllable_with_the_window_off_commits_the_glyphs_unspaced() {
     // trace: with Show Candidate Window off `refresh_list` keeps the list
-    // empty, so no cell is highlighted and O1 commits; read by running:
-    // `ㄏㄛˋ` shows 好, which the commit writes (Hanji conversion B2).
-    let mut rig = new_tps_rig();
-    rig.settings
-        .set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+    // empty, so no cell is highlighted and O1 commits; the settings ask for
+    // no Hanji conversion (`is_hanji_conversion_enabled`), so the preedit
+    // and the commit are the glyphs typed.
+    let mut rig = configured_tps_rig(|settings| {
+        settings.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+    });
     rig.type_tps("ㄏㄛˋ");
+    assert_eq!(rig.manager.display_text(), "ㄏㄛˋ");
     assert!(rig.list.is_empty());
     assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
-    assert_eq!(rig.calls(), ["commit 好", "list closed"]);
+    assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
+}
+
+/// Window off: Enter writes the glyphs, as TL / POJ write the romanization
+/// with the window off (S33).
+#[test]
+fn tps_with_the_window_off_enter_commits_the_glyphs() {
+    let mut rig = configured_tps_rig(|settings| {
+        settings.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+    });
+    rig.type_tps("ㄍㄚ ㄅㄚ˫");
+    assert_eq!(rig.manager.display_text(), "ㄍㄚㄅㄚ˫");
+    assert!(rig.run(ComposingKeyIntent::Commit, &no_key()));
+    assert_eq!(rig.calls(), ["commit ㄍㄚㄅㄚ˫", "list closed"]);
 }
 
 /// Hanji conversion H1 + B2: a closed reading shows converted; Enter
