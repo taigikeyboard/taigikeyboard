@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `windows`, `arm64`, `arm64x`, `forwarder`, `tsf`, `inno setup`, `universal installer`, `mozc`
-> **Status**: Done 2026-11-08. Phases 0–4 merged (spike on a Windows 11 Arm VM; TSF + forwarder #760; release tooling + CI smoke #764; universal installer + installer smoke #768). Issue #721. Open: the aarch64 `check-box.sh` step (waits on the Windows box).
+> **Status**: Done 2026-11-08. Phases 0–4 merged (spike on a Windows 11 Arm VM; TSF + forwarder #760; release tooling + CI smoke #764; universal installer + installer smoke #768). Issue #721. The aarch64 `check-box.sh` step followed once the box had the MSVC ARM64/ARM64EC build tools.
 > **Siblings**: `windows-release.md` (§ Architectures, § What an Arm64 round would have to know), `windows-roadmap.md`.
 
 ---
@@ -83,7 +83,7 @@ One PR per phase; each phase starts after the previous one merges.
 | 0 | Roadmap | This document; the issue #721 update | Done 2026-11-07 |
 | 1 | Spike (no merge) | Build the Arm64 DLL and the forwarder by hand, register them by hand in the Windows 11 Arm VM, type in Notepad (Arm64), an x64-only app and a 32-bit app. Record the result here. **Hard gate**: if the forwarder does not activate the text service, stop | **Passed 2026-11-07** (§ Spike result) |
 | 2 | TSF + forwarder | `build.rs` aarch64 name; registration writes the forwarder path, with tests; `windows/forwarder/` `.def` / `.rc` + `scripts/build-forwarder.ps1`; `install-dev.ps1` Arm64 path; aarch64 in `Makefile check-msvc` | Done 2026-11-07 (#760) |
-| 3 | Release tooling + CI | `scripts/lib/identity.sh` Arm64 names; `release-app.sh` aarch64 DLL + settings build, forwarder link, read-back checks (`AA64` / Arm64X machine, forwarded exports, runtime machine), staging, signing list; `windows-build.yml` aarch64 target, `Hostx64\arm64\link.exe`, Arm64 `cl.exe`, and a `windows-11-arm` smoke job (regsvr32, then `CoCreateInstance` of the CLSID from an Arm64 and an x64 process); the aarch64 TSF check in `check-box.sh`, once the box has the MSVC ARM64/ARM64EC build tools (moved from Phase 2: the box was off, and an aarch64 step without them fails every `make windows-check`) | Done 2026-11-08 (#764); the `check-box.sh` step still waits on the box |
+| 3 | Release tooling + CI | `scripts/lib/identity.sh` Arm64 names; `release-app.sh` aarch64 DLL + settings build, forwarder link, read-back checks (`AA64` / Arm64X machine, forwarded exports, runtime machine), staging, signing list; `windows-build.yml` aarch64 target, `Hostx64\arm64\link.exe`, Arm64 `cl.exe`, and a `windows-11-arm` smoke job (regsvr32, then `CoCreateInstance` of the CLSID from an Arm64 and an x64 process); the aarch64 TSF check in `check-box.sh`, once the box has the MSVC ARM64/ARM64EC build tools (moved from Phase 2: the box was off, and an aarch64 step without them fails every `make windows-check`) | Done 2026-11-08 (#764); the `check-box.sh` step in a follow-up PR |
 | 4 | Universal installer + docs | `TaigiKeyboard.iss` as above; rewrite `windows-release.md` § Architectures / § Arm64 / machine setup / installer; `docs/CODE_SIGNING_POLICY.md` file list; `windows-roadmap.md`; installer smoke jobs in CI | Done 2026-11-08 (#768) |
 
 ### Verification
