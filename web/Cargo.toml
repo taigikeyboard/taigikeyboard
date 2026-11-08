@@ -22,7 +22,7 @@ mmap-host = { path = "../engine/mmap-host" }
 dispatch = { path = "../engine/dispatch", default-features = false }
 userdata = { path = "../engine/userdata" }
 # The memory VFS `rusqlite` runs on here; its version is the one `rusqlite` links.
-sqlite-wasm-rs = "0.5"
+sqlite-wasm-rs = "0.6"
 # Exact, and equal to `wasm-bindgen` in ../mise.toml: the CLI refuses a crate of
 # any other version. `make -C web check` compares the two.
 wasm-bindgen = "=0.2.130"
