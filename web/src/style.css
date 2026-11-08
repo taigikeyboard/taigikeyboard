@@ -22,6 +22,8 @@
     "Helvetica Neue", Helvetica, "PingFang TC", "Noto Sans TC", Arial,
     sans-serif;
   --font: var(--system-font);
+  /* ZenPen's `article`: the textarea and the subtitle. */
+  --editor-font: 22px / 30px var(--font);
   --measure: 760px;
   --sidebar-width: 21rem;
   --candidate-size: 17px;
@@ -128,22 +130,23 @@ main {
   opacity: 1;
 }
 
+/* ZenPen's `header`: 38px bold, on the column's left. Room on the right for
+   the Delete button. */
 h1 {
-  margin: 0 0 0.5rem;
-  padding-inline: 2.5rem;
-  font-size: 2rem;
+  margin: 0;
+  padding-right: 2.5rem;
+  font-size: 38px;
   font-weight: 700;
-  letter-spacing: -0.025em;
   line-height: 1.2;
-  text-align: center;
+  overflow-wrap: break-word;
 }
 
+/* Body text, as ZenPen's `article` (22px apart from the title) and the
+   textarea under it. */
 #subtitle {
-  margin: 0 0 1.5rem;
-  padding-inline: 2.5rem;
-  color: var(--secondary);
-  font-size: 0.9375rem;
-  text-align: center;
+  margin: 22px 0 0;
+  padding-right: 2.5rem;
+  font: var(--editor-font);
 }
 
 button {
@@ -447,7 +450,6 @@ summary:focus-visible {
 /* No box: the text sits on the page, as in ZenPen. It takes the window's room
    left over, so the key panel, Copy and Clear stay on screen. */
 #editor {
-  --editor-font: 1.25rem / 1.8 var(--font);
   position: relative;
   display: flex;
   flex: 1;

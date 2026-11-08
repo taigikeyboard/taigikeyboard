@@ -549,10 +549,10 @@ test("the composition sits on the caret's line, clear of the list", async ({
     const composition = await preedit(page).evaluate(rect);
     const list = await panel(page).evaluate(rect);
     const box = await editor.evaluate(rect);
-    const lineHeight = 1.8 * 20;
+    const lineHeight = 30;
     // Past that the textarea scrolls, which WebKit animates.
     if (line < 8) {
-      // trace: `#text` padding-top 1rem, line-height 1.8 at 1.25rem.
+      // trace: `#text` padding-top 1rem, line-height 30px.
       const expected = box.y + 16 + line * lineHeight;
       expect(Math.abs(composition.y - expected)).toBeLessThanOrEqual(2);
     }

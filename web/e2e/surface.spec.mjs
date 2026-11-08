@@ -171,11 +171,11 @@ test("the panel follows the caret and the scroll", async ({ page }) => {
       await new Promise(requestAnimationFrame);
     }, position);
   const panelTop = () => panel(page).evaluate((element) => element.offsetTop);
-  // trace: line 30 at 16 + 30 × 36 = 1096px; 1036 and 986 put it 60px and
+  // trace: line 30 at 16 + 30 × 30 = 916px; 856 and 806 put it 60px and
   // 110px down the box.
-  await scrollTo(1036);
+  await scrollTo(856);
   const before = await panelTop();
-  await scrollTo(986);
+  await scrollTo(806);
   expect(await panelTop()).toBe(before + 50);
 });
 
