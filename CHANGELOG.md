@@ -14,6 +14,7 @@ Two release trains, two version numbers (`docs/architecture/manual-release-notes
 
 ## Mobile — iOS + Android
 
+- [v3.9.0](changelog/mobile-v3.9.0.md)
 - [v3.8.0](changelog/mobile-v3.8.0.md)
 - [v3.7.0](changelog/mobile-v3.7.0.md)
 - [v3.6.13](changelog/mobile-v3.6.13.md)
