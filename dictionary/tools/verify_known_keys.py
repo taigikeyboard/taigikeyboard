@@ -76,15 +76,15 @@ def count_prefix_hits(builder_bin: Path, fst_path: Path, prefix: str) -> int:
     return sum(1 for line in output.splitlines() if line.strip())
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Verify FST contains expected key coverage.")
     p.add_argument("--fst", type=Path, default=DEFAULT_FST, help="Path to dictionary.fst")
     p.add_argument("--fixture", type=Path, default=FIXTURE_FILE, help="Path to fixture YAML")
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = parse_args(argv)
 
     if not args.fst.exists():
         sys.exit(f"fst not found: {args.fst} — run dictionary/build.sh first")

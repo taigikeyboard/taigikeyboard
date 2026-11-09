@@ -151,7 +151,7 @@ def compute_associations(
 
     accum: dict[tuple[str, str, str], dict] = {}
 
-    for _, row in df_multi.iterrows():
+    for row in df_multi.to_dict("records"):
         hanzi = row["hanzi"]
         if pd.isna(hanzi) or len(hanzi) < MIN_WORD_LEN:
             continue

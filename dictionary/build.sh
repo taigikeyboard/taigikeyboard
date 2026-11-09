@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Dictionary build entry point — every run is a full rebuild + deploy.
-# Pipeline:
+# Pipeline (steps 1-8 in one process, build/run.py):
 #   1. merge_csv              - merge source CSVs (drop stats -> .build_stats.json)
 #   2. create_dictionary_bin  - dictionary.bin (binary mmap)
 #   3. create_fst             - dictionary.fst prefix index (tl:/poj:/tps:/hanzi:)
@@ -42,33 +42,13 @@ step() {
     echo ""
 }
 
-step "Step 1/9: Merging dictionaries..."
-python3 -m build.merge_csv
-
-step "Step 2/9: Creating dictionary.bin..."
-python3 -m build.create_dictionary_bin --verify
-
-step "Step 3/9: Creating fst prefix index..."
-python3 -m build.create_fst
-
-step "Step 4/9: Creating syllables.fst (tl/poj/tps tagged-single-FST)..."
-python3 -m build.create_syllables_fst
-
-step "Step 5/9: Creating association.bin..."
-python3 -m build.create_association_bin --verify
-
-step "Step 6/9: Verifying POJ integrity (fatal gate)..."
-python3 -m build.verify_poj_integrity
-
-step "Step 7/9: Drop summary + vs-previous-release-tag diff..."
+# Steps 1-8 run in one Python process (build/run.py) so the CSV is parsed and
+# the Node converter started once; each step module still runs on its own.
 if [ -n "$RELEASE_VERSION" ]; then
-    python3 -m build.version_snapshot --version "$RELEASE_VERSION"
+    python3 -m build.run --version "$RELEASE_VERSION"
 else
-    python3 -m build.version_snapshot
+    python3 -m build.run
 fi
-
-step "Step 8/9: Verifying known fst keys..."
-python3 -m tools.verify_known_keys
 
 step "Step 9/9: Deploying to assets/dictionaries/..."
 bash "$BUILD_DIR/deploy.sh"

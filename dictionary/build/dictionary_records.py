@@ -103,11 +103,11 @@ def _normalise_optional(value) -> str | None:
 
 
 def _as_bool(value) -> bool:
-    """Coerce a CSV cell to bool, robust to pandas dtype inference.
+    """Coerce a CSV cell to bool; an empty cell (None / NaN) is False.
 
-    `read_dictionary_csv` infers dtype, so a clean flag column arrives as
-    `numpy.bool_`; a column with stray NaN arrives as object strings. Treat
-    only the literal "true" (case-insensitive) / truthy non-string as True.
+    `read_dictionary_csv_polars` reads the flag columns as bool, but tests
+    build rows by hand, so a string cell still counts: only the literal
+    "true" (case-insensitive) / truthy non-string is True.
     """
     if pd.isna(value):
         return False
@@ -127,15 +127,32 @@ def _kautian_subtag(row) -> int:
     )
 
 
+# `build.run` runs every step in one process and five of them read the same
+# dictionary.csv; key on the file's stat so a rewritten CSV is read again.
+_records_cache: dict[tuple[Path, int, int], list[DictionaryRecord]] = {}
+
+
 def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     """Read dictionary.csv → return filtered, deduped records with rowids.
 
     The returned list's order MUST match what create_app_db.sh produced via
     INSERT OR IGNORE — both for byte-for-byte parity of dictionary.bin and
     for fst rowid alignment.
+
+    Repeat calls on an unchanged file return the same list; callers must not
+    mutate it.
     """
-    from common import read_dictionary_csv
-    df = read_dictionary_csv(csv_path)
+    stat = Path(csv_path).stat()
+    key = (Path(csv_path).resolve(), stat.st_mtime_ns, stat.st_size)
+    records = _records_cache.get(key)
+    if records is None:
+        records = _records_cache[key] = _read_dictionary_records(csv_path)
+    return records
+
+
+def _read_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
+    from common import read_dictionary_csv_polars
+    df = read_dictionary_csv_polars(csv_path)
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise RuntimeError(f"dictionary.csv missing columns: {missing}")
@@ -155,7 +172,7 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     records: list[DictionaryRecord] = []
     seen_non_null: set[tuple[str, str]] = set()
 
-    for _, row in df.iterrows():
+    for row in df.iter_rows(named=True):
         tl_raw = row["tl"]
         if pd.isna(tl_raw):
             continue
