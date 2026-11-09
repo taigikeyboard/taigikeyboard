@@ -21,10 +21,10 @@ def run(ctx: PipelineContext) -> None:
     df = ctx.current_df()
     freq_map = _load(ctx)
     df = df.copy()
-    df["frequency"] = df.apply(
-        lambda row: get_frequency(str(row["hanzi"]), str(row["tl"]), freq_map),
-        axis=1,
-    )
+    df["frequency"] = [
+        get_frequency(str(hanzi), str(tl), freq_map)
+        for hanzi, tl in zip(df["hanzi"], df["tl"])
+    ]
     # Deterministic row order for downstream stages: freq desc, then hanzi/tl asc.
     df = df.sort_values(
         ["frequency", "hanzi", "tl"],

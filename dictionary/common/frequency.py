@@ -35,7 +35,7 @@ def load_frequency_map(filepath: str | Path) -> dict[tuple[str, str], int]:
 
     if filepath.exists():
         df = pd.read_csv(filepath, sep="\t")
-        for _, row in df.iterrows():
+        for row in df.to_dict("records"):
             name = str(row.get("Name", "")).strip()
             pronunciation = str(row.get("Pronunciation", "")).strip().lower()
             freq = int(row.get("New_Freq", 0))

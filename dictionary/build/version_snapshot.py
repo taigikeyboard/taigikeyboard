@@ -249,14 +249,14 @@ def print_version_diff(
     print(f"\n  full lists: {DIFF_FILE.relative_to(BASE_DIR)}")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
         "--version",
         default=None,
         help="release target vX.Y.Z; diff base = newest tag strictly older than it",
     )
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     if not INPUT_FILE.exists():
         print(f"[ERROR] {INPUT_FILE} not found — run merge_csv first")

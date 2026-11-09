@@ -132,7 +132,7 @@ def _extract_csv_stti(ctx: PipelineContext, df: pd.DataFrame, opts: dict) -> pd.
     skipped_mismatch = 0
     expanded_count = 0
 
-    for _, row in df.iterrows():
+    for row in df.to_dict("records"):
         hanzi_raw = str(row[hanzi_col]).strip()
         tl_raw = str(row[tl_col]).strip()
 

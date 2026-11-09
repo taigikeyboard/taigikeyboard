@@ -98,7 +98,7 @@ def build_accent_mask_map(
             f"encoder reserves only {ACCENT_COLUMN_COUNT} accent bits"
         )
     out: dict[ProvenanceKey, int] = {}
-    for _, row in dialect_df.iterrows():
+    for row in dialect_df.to_dict("records"):
         hanzi = row[hanzi_col]
         for bit, col in enumerate(dialect_columns):
             cell = row.get(col)
@@ -123,7 +123,7 @@ def build_membership_set(
         df = sheets.get(name)
         if df is None:
             continue
-        for _, row in df.iterrows():
+        for row in df.to_dict("records"):
             cell = row.get(reading_col)
             if pd.isna(cell):
                 continue

@@ -255,9 +255,9 @@ def _build_existing_key_index(existing_df: pd.DataFrame) -> dict[tuple[str, str]
     that spell them with hyphens ("m̄-bat").
     """
     index: dict[tuple[str, str], int] = {}
-    for idx, row in existing_df.iterrows():
-        tl_key = str(row["tl"]).lower().replace(" ", "-")
-        hanzi = "" if pd.isna(row["hanzi"]) else str(row["hanzi"])
+    for idx, tl, hanzi in zip(existing_df.index, existing_df["tl"], existing_df["hanzi"]):
+        tl_key = str(tl).lower().replace(" ", "-")
+        hanzi = "" if pd.isna(hanzi) else str(hanzi)
         index[(hanzi, tl_key)] = idx
     return index
 
