@@ -8,8 +8,8 @@ import pandas as pd
 
 from pipeline.context import PipelineContext
 from common.notone import apply_or_dialect_variant
-from common.romanization import to_numeric_tone
-from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict
+from common.romanization import prefetch_numeric_tone, to_numeric_tone
+from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict, prefetch_convert
 
 _logger = logging.getLogger(__name__)
 
@@ -54,6 +54,9 @@ def _derive_tps_num(tl: str, *, failure_state: dict) -> str:
 def run(ctx: PipelineContext) -> None:
     df = ctx.current_df()
     df = df.copy()
+    prefetch_numeric_tone(str(x) for x in df["tl"].unique())
+    prefetch_numeric_tone((str(x) for x in df["poj"].unique()), ascii_only=True)
+    prefetch_convert((str(x) for x in df["tl"].dropna().unique() if x), "tl", "zhuyin")
     df["tl_num"] = df["tl"].apply(lambda x: to_numeric_tone(str(x)))
     df["poj_num"] = df["poj"].apply(lambda x: to_numeric_tone(str(x), ascii_only=True))
 

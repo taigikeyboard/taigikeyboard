@@ -34,15 +34,18 @@ from common.cleanup import blank_roman_only_hanzi
 from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
 from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
-from common.romanization import to_numeric_tone
+from common.romanization import prefetch_numeric_tone, to_numeric_tone
 from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 from common.source_bits import MAIN_SOURCE_COLUMNS
 from common.taigi_bridge import (
     BridgeDeadError,
     TpsResidueError,
+    convert_poj_to_tl,
     convert_poj_to_tl_strict,
+    convert_tl_to_poj,
     convert_tl_to_poj_strict,
     convert_tl_to_tps_strict,
+    prefetch_convert,
 )
 from common import read_dictionary_csv, read_dictionary_csv_polars
 
@@ -262,6 +265,27 @@ def _build_existing_key_index(existing_df: pd.DataFrame) -> dict[tuple[str, str]
     return index
 
 
+def _tl_syllables(tl: str) -> list[str]:
+    return [s for s in tl.replace(" ", "-").split("-") if s]
+
+
+def _prefetch_supplement(tls: set[str]) -> None:
+    """Prefetch the converter calls a loader + `_assemble_supplement_row` make.
+
+    `tls` are the loader's normalised TL strings. Runs in dependency order:
+    POJ first, then the POJ tone numbers. Reads the graceful converters,
+    which return the input on a per-text error, so a failed text only adds a
+    wasted prefetch — the loader's strict call still sees the error.
+    """
+    tls = {tl for tl in tls if tl}
+    prefetch_convert(tls, "tl", "poj")
+    pojs = {convert_tl_to_poj(tl).lower().replace(" ", "-") for tl in tls}
+    prefetch_numeric_tone(tls)
+    prefetch_numeric_tone(pojs, ascii_only=True)
+    syllables = {s for tl in tls if len(parts := _tl_syllables(tl)) >= 2 for s in parts}
+    prefetch_convert(tls | syllables, "tl", "zhuyin")
+
+
 def _assemble_supplement_row(
     *,
     hanzi: str,
@@ -300,7 +324,7 @@ def _assemble_supplement_row(
     else:
         tps_num = ""
 
-    tl_syllables = [s for s in tl.replace(" ", "-").split("-") if s] if tl else []
+    tl_syllables = _tl_syllables(tl) if tl else []
     if len(tl_syllables) >= 2:
         try:
             tps_per_syllable = [convert_tl_to_tps_strict(s) for s in tl_syllables]
@@ -383,6 +407,10 @@ def _load_khiin_new_entries(
     # khiin dedup only needs membership, never the row position.
     existing_keys = set(_build_existing_key_index(existing_df).keys())
     freq_map = _load_char_freq_map(base_dir)
+
+    khiin_pojs = {inp.lower().replace(" ", "-") for inp in freq if all_hanzi.get(inp)}
+    prefetch_convert(khiin_pojs, "poj", "tl")
+    _prefetch_supplement({convert_poj_to_tl(p).lower().replace(" ", "-") for p in khiin_pojs})
 
     new_rows = []
     for inp, _f in freq.items():
@@ -469,6 +497,8 @@ def _load_dev_supplement(
     existing_key_index = _build_existing_key_index(existing_df)
     freq_map = _load_char_freq_map(base_dir)
 
+    _prefetch_supplement({str(tl).strip().lower().replace(" ", "-") for tl in dev_df["tl"]})
+
     marked_count = 0
     new_rows = []
     for _, row in dev_df.iterrows():
@@ -554,6 +584,8 @@ def _load_lkk_entries(
 
     existing_key_index = _build_existing_key_index(existing_df)
     freq_map = _load_char_freq_map(base_dir)
+
+    _prefetch_supplement({str(tl).strip().lower().replace(" ", "-") for tl in lkk_df["tl"]})
 
     marked_count = 0
     new_rows = []

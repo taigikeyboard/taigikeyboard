@@ -4,7 +4,14 @@
 Uses taigi-converter (Node.js subprocess) for TL<->POJ conversion and tone processing.
 """
 
-from .taigi_bridge import convert_tl_to_poj, to_tone_number, to_tone_number_ascii
+from collections.abc import Iterable
+
+from .taigi_bridge import (
+    convert_tl_to_poj,
+    prefetch_to_tone_number,
+    to_tone_number,
+    to_tone_number_ascii,
+)
 
 
 def normalize_roman_spacing(text: str, preserve_spaces: bool = False) -> str:
@@ -79,6 +86,18 @@ def to_numeric_tone(roman: str, ascii_only: bool = False) -> str:
         if word:
             parts.append(_to_numeric_tone_word(word, ascii_only))
     return "".join(parts)
+
+
+def prefetch_numeric_tone(romans: Iterable[str], ascii_only: bool = False) -> None:
+    """Prefetch the converter calls `to_numeric_tone` makes for `romans`."""
+    words: set[str] = set()
+    for roman in romans:
+        parts = roman.split(" ")
+        if len(parts) <= 1:
+            words.add(roman)
+        else:
+            words.update(word for word in parts if word)
+    prefetch_to_tone_number(words, ascii_only)
 
 
 def add_roman_columns(hanzi: str, tl: str, preserve_spaces: bool = False) -> dict:

@@ -39,8 +39,8 @@ sys.path.insert(0, str(BASE_DIR))
 from common import read_dictionary_csv  # noqa: E402
 from common.abbrev import extract_abbrev  # noqa: E402
 from common.notone import remove_tone  # noqa: E402
-from common.romanization import to_numeric_tone  # noqa: E402
-from common.taigi_bridge import convert_tl_to_poj_strict  # noqa: E402
+from common.romanization import prefetch_numeric_tone, to_numeric_tone  # noqa: E402
+from common.taigi_bridge import convert_tl_to_poj_strict, prefetch_convert  # noqa: E402
 
 INPUT_FILE = BASE_DIR / "output" / "dictionary.csv"
 
@@ -103,6 +103,7 @@ def main() -> int:
     # synchronous Node IPC round-trip, so deduping collapses the dominant cost
     # from len(df) to nunique(tl).
     tl_series = df["tl"].fillna("").astype(str)
+    prefetch_convert((t for t in tl_series.unique() if t), "tl", "poj")
     poj_by_tl = {t: (convert_tl_to_poj_strict(t) if t else "") for t in tl_series.unique()}
     expected_poj = tl_series.map(poj_by_tl)
     expected_poj_norm = expected_poj.map(_norm)
@@ -121,6 +122,7 @@ def main() -> int:
         )
 
     # ── derived columns the FST indexes (poj_num / poj_notone / poj_abbrev) ──
+    prefetch_numeric_tone((s for s in poj_by_tl.values() if s), ascii_only=True)
     expected_poj_num = expected_poj.map(
         lambda s: to_numeric_tone(s, ascii_only=True) if s else ""
     )

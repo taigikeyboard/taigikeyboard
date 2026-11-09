@@ -27,7 +27,7 @@ import subprocess
 import unicodedata
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import Any, TextIO
+from typing import Any, Iterable, TextIO
 
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _BATCH_SCRIPT = _SCRIPT_DIR / "taigi_batch.js"
@@ -87,6 +87,15 @@ _MOE_CHAR_MAP = {
 }
 
 
+# Texts per list request: bounds the request / reply line length.
+_PREFETCH_CHUNK = 20_000
+
+
+def _reply_key(op: str, kwargs: dict[str, Any]) -> tuple:
+    """Cache key for one request: the op plus its sorted arguments."""
+    return (op, *sorted(kwargs.items()))
+
+
 def _log_bridge_failure(op: str, reason: str, stderr: str | None = None) -> None:
     key = f"{op}:{reason}"
     if key in _logged_failures:
@@ -138,6 +147,48 @@ class TaigiConverter:
     def _call(self, op: str, **kwargs: Any) -> dict:
         """Send one JSON-line request to the Node subprocess, read one line.
 
+        Replies are cached under `_reply_key`; `prefetch` fills the same
+        cache, so a prefetched text never reaches the subprocess here.
+        """
+        key = _reply_key(op, kwargs)
+        cached = self._replies.get(key)
+        if cached is not None:
+            return cached
+        reply = self._roundtrip({"op": op, **kwargs})
+        self._replies[key] = reply
+        return reply
+
+    def prefetch(self, op: str, texts: Iterable[str], **kwargs: Any) -> None:
+        """Convert many texts in a few round trips and cache each reply.
+
+        Each reply is cached under the key `_call(op, text=t, **kwargs)`
+        reads and is the reply that call would get, error replies
+        included, so callers keep calling the per-text functions and
+        their graceful / strict handling is unchanged. A text missed here
+        only costs a single round trip later.
+        """
+        pending: dict[tuple, str] = {}
+        for text in texts:
+            key = _reply_key(op, {**kwargs, "text": text})
+            if key not in self._replies:
+                pending[key] = text
+        keys = list(pending)
+        for start in range(0, len(keys), _PREFETCH_CHUNK):
+            chunk = keys[start:start + _PREFETCH_CHUNK]
+            reply = self._roundtrip(
+                {"op": op, **kwargs, "texts": [pending[k] for k in chunk]}
+            )
+            results = reply.get("results")
+            if not isinstance(results, list) or len(results) != len(chunk):
+                raise BridgeDeadError(
+                    f"taigi-converter list reply does not match its {len(chunk)} "
+                    f"texts: {reply!r:.200}"
+                )
+            self._replies.update(zip(chunk, results))
+
+    def _roundtrip(self, request: dict) -> dict:
+        """Write one request line, read one reply line.
+
         Every IPC failure surfaces as `BridgeDeadError` so callers can
         catch a single class to detect "the bridge is dead, abort the
         build" — covers stdin pipe death (`OSError` / `BrokenPipeError`),
@@ -145,14 +196,9 @@ class TaigiConverter:
         PR #334 post-impl review #2 caught the original raise that
         only covered the EOF case.
         """
-        key = (op, *sorted(kwargs.items()))
-        cached = self._replies.get(key)
-        if cached is not None:
-            return cached
         self._ensure_started()
         assert self._process is not None and self._process.stdin is not None
         assert self._process.stdout is not None
-        request = {"op": op, **kwargs}
         try:
             self._process.stdin.write(json.dumps(request, ensure_ascii=False) + "\n")
             self._process.stdin.flush()
@@ -166,13 +212,11 @@ class TaigiConverter:
                 "taigi-converter subprocess closed unexpectedly"
             )
         try:
-            reply = json.loads(line)
+            return json.loads(line)
         except json.JSONDecodeError as exc:
             raise BridgeDeadError(
                 f"taigi-converter emitted malformed JSON: {exc} (raw: {line!r})"
             ) from exc
-        self._replies[key] = reply
-        return reply
 
     def convert(self, text: str, source: str, target: str) -> str:
         """Convert between romanization systems (tl, poj)."""
@@ -203,6 +247,24 @@ class TaigiConverter:
 
 # Module-level singleton — started on first call, reused across all calls.
 _converter = TaigiConverter()
+
+
+# Prefetch wrappers: one per conversion below, filling the reply cache that
+# conversion reads. A dead bridge raises `BridgeDeadError` from here in either
+# tier — prefetch runs before any row, so there is no row to degrade.
+def prefetch_convert(texts: Iterable[str], source: str, target: str) -> None:
+    """Prefetch `convert_*` (graceful and strict) for `source`→`target`."""
+    _converter.prefetch("convert", texts, source=source, target=target)
+
+
+def prefetch_to_tone_number(texts: Iterable[str], ascii_only: bool = False) -> None:
+    """Prefetch `to_tone_number` (or `to_tone_number_ascii` with `ascii_only`)."""
+    _converter.prefetch("toToneNumberAscii" if ascii_only else "toToneNumber", texts)
+
+
+def prefetch_is_valid_romanization(texts: Iterable[str]) -> None:
+    """Prefetch `is_valid_romanization`."""
+    _converter.prefetch("validate", texts)
 
 
 def convert_tl_to_poj(tl: str) -> str:
