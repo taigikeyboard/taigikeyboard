@@ -1038,12 +1038,14 @@ fn the_hanji_keeps_a_compatibility_ideograph() {
 }
 
 // A word written only in romanization has no Hanji (2026-11-07: an imported
-// `lán,lán` became a two-script word beside the shipped hanzi-less `lán`).
+// `lán,lán` became a two-script word beside the shipped hanzi-less `lán`), but
+// a Latin spelling other than the roman is the user's chosen form (2026-11-09:
+// the launch repair erased `khe-thi-bui,KTV` on upgrade from 3.8.0).
 
 #[test]
-fn every_write_path_stores_a_roman_only_spelling_as_no_hanji() {
-    // trace: `stored_hanji` — the pipeline's `blank_roman_only_hanzi` rule
-    // through `phonetics::api::is_roman_only_spelling`.
+fn every_write_path_stores_a_hanji_repeating_the_roman_as_no_hanji() {
+    // trace: `stored_hanji` — roman-only (`is_roman_only_spelling`) and equal
+    // to the row's stored roman once both are NFC with tone marks.
     let directory = scratch();
     let store = custom_store(
         &directory,
@@ -1058,6 +1060,12 @@ fn every_write_path_stores_a_roman_only_spelling_as_no_hanji() {
     store.add_unless_stored(&added).unwrap();
     assert_eq!(stored_row(&store, &added.id).hanji, "");
 
+    // trace: stored_roman("tsui2") = "tsuí" = stored_roman("tsuí").
+    let digits = CustomDictionaryRow::new("tsui2", "tsuí");
+    store.upsert(&digits).unwrap();
+    let stored = stored_row(&store, &digits.id);
+    assert_eq!((stored.roman.as_str(), stored.hanji.as_str()), ("tsuí", ""));
+
     // In one file, `ê,ê` and `ê,` are one word; a file row that matches a
     // stored word once its Hanji is blanked is skipped.
     let result = store
@@ -1068,7 +1076,40 @@ fn every_write_path_stores_a_roman_only_spelling_as_no_hanji() {
         ])
         .unwrap();
     assert_eq!((result.imported, result.skipped), (1, 2));
-    assert_eq!(store.count().unwrap(), 3);
+    assert_eq!(store.count().unwrap(), 4);
+}
+
+#[test]
+fn a_latin_hanji_other_than_the_roman_is_kept_as_written() {
+    // trace: `stored_hanji` — each Hanji is roman-only but differs from the
+    // stored roman (abbreviation, capitals, POJ display for a TL roman), or
+    // repeats a non-Latin roman (TPS), so none is blanked.
+    let directory = scratch();
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
+    for (roman, hanji) in [
+        ("khe-thi-bui", "KTV"),
+        ("gōo-W-tsi̍t-H", "5W1H"),
+        ("tâi-lâm", "Tâi-lâm"),
+        ("tsia̍h-pn̄g", "chia̍h-pn̄g"),
+        ("ㄌㄢˊ", "ㄌㄢˊ"),
+    ] {
+        let row = CustomDictionaryRow::new(roman, hanji);
+        store.upsert(&row).unwrap();
+        assert_eq!(stored_row(&store, &row.id).hanji, hanji, "{roman},{hanji}");
+    }
+
+    // One file: the chosen form and the roman-only word are two words.
+    let result = store
+        .batch_import(&[
+            CustomDictionaryRow::new("ok", "OK"),
+            CustomDictionaryRow::new("ok", "ok"),
+        ])
+        .unwrap();
+    assert_eq!((result.imported, result.skipped), (2, 0));
 }
 
 #[test]
@@ -1145,9 +1186,11 @@ fn a_launch_rewrites_stored_nfd_romans_and_keeps_everything_else() {
 }
 
 #[test]
-fn a_launch_clears_a_stored_roman_only_spelling() {
+fn a_launch_clears_a_stored_hanji_repeating_the_roman_and_keeps_a_chosen_form() {
     // trace: `CustomDictionaryStore::normalize_stored_rows_if_needed` — a
-    // row an older build stored as `lán,lán`, and one needing both repairs.
+    // row an older build stored as `lán,lán`, one needing both repairs, one
+    // whose roman only matches once rewritten (`lan2` → `lán`), and the
+    // chosen Latin forms the 3.9.0 upgrade simulation saw erased.
     let directory = scratch();
     drop(custom_store(
         &directory,
@@ -1157,6 +1200,9 @@ fn a_launch_clears_a_stored_roman_only_spelling() {
     insert_raw_row(&directory, "A", "lán", "lán");
     insert_raw_row(&directory, "B", "la\u{301}n", "la\u{301}n");
     insert_raw_row(&directory, "C", "pe̍h-phau-phau", "白phau-phau");
+    insert_raw_row(&directory, "D", "khe-thi-bui", "KTV");
+    insert_raw_row(&directory, "E", "lan2", "lán");
+    insert_raw_row(&directory, "F", "tâi-lâm", "Tâi-lâm");
     let store = custom_store(
         &directory,
         stub_deriver(""),
@@ -1173,7 +1219,11 @@ fn a_launch_clears_a_stored_roman_only_spelling() {
     let b = stored_row(&store, "B");
     assert_eq!((b.roman.as_str(), b.hanji.as_str()), ("lán", ""));
     assert_eq!(stored_row(&store, "C").hanji, "白phau-phau");
-    assert_eq!(store.count().unwrap(), 3, "no row is deleted");
+    assert_eq!(stored_row(&store, "D").hanji, "KTV");
+    let e = stored_row(&store, "E");
+    assert_eq!((e.roman.as_str(), e.hanji.as_str()), ("lán", ""));
+    assert_eq!(stored_row(&store, "F").hanji, "Tâi-lâm");
+    assert_eq!(store.count().unwrap(), 6, "no row is deleted");
 }
 
 #[test]
