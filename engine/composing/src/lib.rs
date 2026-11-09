@@ -14,6 +14,7 @@ pub mod handle;
 pub mod requests;
 pub mod syllabifier;
 
+mod affricate;
 mod commit_text;
 mod continuous;
 mod conversion;

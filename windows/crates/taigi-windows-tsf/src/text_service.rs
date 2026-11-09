@@ -1289,13 +1289,11 @@ fn telex_guide_source(focus: Rc<Cell<bool>>) -> TelexGuideSource {
             return None;
         }
         let strings = StringResolver::new(runtime.display_language());
-        // Spelled for the romanization in use: `c` is `ts` under TL and `ch`
-        // under POJ.
         let content = TelexGuideContent {
             title: strings
                 .resolve(StringKey::SettingsToneSchemeTelex)
                 .to_owned(),
-            rows: telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings),
+            rows: telex_guide_rows(&strings),
         };
         Some((content, settings.choice(&keys::APPEARANCE_MODE)))
     })

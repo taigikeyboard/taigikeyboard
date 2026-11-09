@@ -161,6 +161,12 @@ message AppConfig {
   // dictionary on. Was `FetchAtPos.custom_dictionary_disabled` (field 8)
   // until the conversion walk read custom rows too (2026-11-09).
   bool custom_dictionary_disabled = 16;
+  // The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+  // `Append` of `c` / `C` writes the unaspirated affricate initial the input
+  // mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+  // tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+  // Unset, `c` is an ordinary letter.
+  bool c_types_affricate = 17;
 }
 
 // Hanji conversion in the preedit

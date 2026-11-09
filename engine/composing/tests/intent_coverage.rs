@@ -207,21 +207,62 @@ fn intent_telex_second_tone_key_replaces_same_key_is_noop() {
 }
 
 #[test]
-fn intent_telex_c_from_idle_enters_composing_with_the_affricate() {
-    let mut engine = Engine::new();
-    let resp = telex(&mut engine, "c", &config_tl());
-    assert!(resp.is_composing);
-    assert_eq!(resp.preedit.unwrap().raw_input, "ts");
-    append(&mut engine, "hi", &config_tl());
-    let resp = engine.snapshot(&config_tl());
-    assert_eq!(resp.preedit.unwrap().raw_input, "tshi");
+fn intent_telex_c_and_h_are_not_telex_keys() {
+    // trace: `resolve` names neither; a `TelexKey` of either is a no-op,
+    // idle or composing. The desktop sends both as `Append`.
+    for key in ["c", "C", "h", "H"] {
+        let mut engine = Engine::new();
+        let idle = telex(&mut engine, key, &config_tl());
+        assert!(!idle.is_composing, "{key}");
+        assert!(idle.effect.is_empty(), "{key}");
+        append(&mut engine, "ts", &config_tl());
+        let composing = telex(&mut engine, key, &config_tl());
+        assert!(composing.effect.is_empty(), "{key}");
+        assert_eq!(composing.preedit.unwrap().raw_input, "ts", "{key}");
+    }
+}
+
+// INVARIANT_C_TYPES_AFFRICATE (behavioral-invariants.md §62)
+#[test]
+fn intent_append_c_types_the_affricate_when_the_setting_is_on() {
+    // trace: `affricate::expand` — `c` → ts (TL) / ch (POJ), from Idle and
+    // mid-tail; `h` writes itself, so `c` `h` spells the aspirated initial
+    // and a third `h` is typed as it is (no slip rule).
+    for (mode, initial, aspirated, spelled_out) in [
+        ("tl", "ts", "tshia", "tshhia"),
+        ("poj", "ch", "chhia", "chhhia"),
+    ] {
+        let config = protos::engine::AppConfig {
+            c_types_affricate: true,
+            ..common::config(mode)
+        };
+        let mut engine = Engine::new();
+        append(&mut engine, "c", &config);
+        let resp = engine.snapshot(&config);
+        assert!(resp.is_composing, "{mode}");
+        assert_eq!(resp.preedit.unwrap().raw_input, initial, "{mode}");
+
+        let mut engine = Engine::new();
+        append(&mut engine, "chia", &config);
+        let resp = engine.snapshot(&config);
+        assert_eq!(resp.preedit.unwrap().raw_input, aspirated, "{mode}");
+
+        let mut engine = Engine::new();
+        append(&mut engine, "chhia", &config);
+        let resp = engine.snapshot(&config);
+        assert_eq!(resp.preedit.unwrap().raw_input, spelled_out, "{mode}");
+    }
 }
 
 #[test]
-fn intent_telex_c_under_poj_spells_ch() {
-    let mut engine = Engine::new();
-    let resp = telex(&mut engine, "c", &common::config("poj"));
-    assert_eq!(resp.preedit.unwrap().raw_input, "ch");
+fn intent_append_c_is_a_plain_letter_when_the_setting_is_off() {
+    for mode in ["tl", "poj"] {
+        let config = common::config(mode);
+        let mut engine = Engine::new();
+        append(&mut engine, "chia", &config);
+        let resp = engine.snapshot(&config);
+        assert_eq!(resp.preedit.unwrap().raw_input, "chia", "{mode}");
+    }
 }
 
 #[test]
@@ -234,24 +275,6 @@ fn intent_telex_z_writes_tone_six_and_is_noop_while_idle() {
     let preedit = telex(&mut engine, "z", &config_tl()).preedit.unwrap();
     assert_eq!(preedit.raw_input, "te6");
     assert_eq!(preedit.display_text, "tě");
-}
-
-#[test]
-fn intent_telex_h_is_not_a_telex_key() {
-    // trace: `resolve` has no `h`; a `TelexKey` of it is a no-op, idle or
-    // composing. The desktop sends it as `Append`, so `c` `h` `h` types
-    // `tshh` as spelled.
-    for key in ["h", "H"] {
-        let mut engine = Engine::new();
-        let idle = telex(&mut engine, key, &config_tl());
-        assert!(!idle.is_composing, "{key}");
-        assert!(idle.effect.is_empty(), "{key}");
-    }
-    let mut engine = Engine::new();
-    telex(&mut engine, "c", &config_tl());
-    append(&mut engine, "hh", &config_tl());
-    let resp = engine.snapshot(&config_tl());
-    assert_eq!(resp.preedit.unwrap().raw_input, "tshh");
 }
 
 #[test]

@@ -12,7 +12,7 @@ final class TelexGuidePanelLayoutTests: XCTestCase {
         defer { userDefaults.removePersistentDomain(forName: suiteName) }
         let language = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
 
-        let panel = TelexGuidePanel.makePanel(inputMode: .tl, language: language)
+        let panel = TelexGuidePanel.makePanel(language: language)
         let card = try XCTUnwrap(panel.contentView)
         card.layoutSubtreeIfNeeded()
 

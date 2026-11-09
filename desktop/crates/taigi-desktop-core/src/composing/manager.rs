@@ -185,11 +185,10 @@ impl ComposingManager {
         self.apply(transition, &settings, executor);
     }
 
-    /// Applies one Telex key — a tone letter, `c` or `f` — to the pending
+    /// Applies one Telex key — a tone letter or `f` — to the pending
     /// syllable. Shaped like `append` because it is the same step with the
     /// engine deciding what the key writes (`engine/composing/src/telex.rs`):
-    /// an idle `c` starts a composition the way a letter does, and an
-    /// idle `f` types `-` the way the `-` key does.
+    /// an idle `f` types `-` the way the `-` key does.
     pub fn telex_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("telexKey");
         let settings = self.current_settings();

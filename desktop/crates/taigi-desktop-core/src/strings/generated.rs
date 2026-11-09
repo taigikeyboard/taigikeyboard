@@ -44,7 +44,6 @@ pub enum StringKey {
     DesktopShortcutSelectCandidateSlot,
     DesktopShortcutNavigateCandidates,
     DesktopTelexGuideTone,
-    DesktopTelexGuideInitial,
     DesktopTelexGuideHyphen,
     DesktopDictionarySourcesLink,
     DesktopOpenURLFailed,
@@ -253,7 +252,6 @@ impl StringKey {
             Self::DesktopShortcutSelectCandidateSlot => "i18n_desktop_shortcutSelectCandidateSlot",
             Self::DesktopShortcutNavigateCandidates => "i18n_desktop_shortcutNavigateCandidates",
             Self::DesktopTelexGuideTone => "i18n_desktop_telexGuideTone",
-            Self::DesktopTelexGuideInitial => "i18n_desktop_telexGuideInitial",
             Self::DesktopTelexGuideHyphen => "i18n_desktop_telexGuideHyphen",
             Self::DesktopDictionarySourcesLink => "i18n_desktop_dictionarySourcesLink",
             Self::DesktopOpenURLFailed => "i18n_desktop_openURLFailed",
@@ -474,7 +472,6 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopShortcutSelectCandidateSlot => "直接選字",
         StringKey::DesktopShortcutNavigateCandidates => "徙動選字游標",
         StringKey::DesktopTelexGuideTone => "第 {0} 調",
-        StringKey::DesktopTelexGuideInitial => "{0}",
         StringKey::DesktopTelexGuideHyphen => "連字符",
         StringKey::DesktopDictionarySourcesLink => "辭典管理",
         StringKey::DesktopOpenURLFailed => "網頁拍開失敗",
@@ -683,7 +680,6 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopShortcutSelectCandidateSlot => "Pick a Candidate Directly",
         StringKey::DesktopShortcutNavigateCandidates => "Move Through Candidates",
         StringKey::DesktopTelexGuideTone => "Tone {0}",
-        StringKey::DesktopTelexGuideInitial => "{0}",
         StringKey::DesktopTelexGuideHyphen => "Hyphen",
         StringKey::DesktopDictionarySourcesLink => "Manage Dictionaries",
         StringKey::DesktopOpenURLFailed => "Could Not Open the Page",
@@ -892,7 +888,6 @@ fn ja(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopShortcutSelectCandidateSlot => "候補を直接選ぶ",
         StringKey::DesktopShortcutNavigateCandidates => "候補を移動",
         StringKey::DesktopTelexGuideTone => "第{0}声",
-        StringKey::DesktopTelexGuideInitial => "{0}",
         StringKey::DesktopTelexGuideHyphen => "ハイフン",
         StringKey::DesktopDictionarySourcesLink => "辞書の管理",
         StringKey::DesktopOpenURLFailed => "ページを開けませんでした",
@@ -1101,7 +1096,6 @@ fn tailo(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopShortcutSelectCandidateSlot => "Ti̍t-tsiap suán-jī",
         StringKey::DesktopShortcutNavigateCandidates => "Suá-tāng suán-jī iû-pio",
         StringKey::DesktopTelexGuideTone => "Tē {0} tiāu",
-        StringKey::DesktopTelexGuideInitial => "{0}",
         StringKey::DesktopTelexGuideHyphen => "Liân-jī-hû",
         StringKey::DesktopDictionarySourcesLink => "Sû-tián kuán-lí",
         StringKey::DesktopOpenURLFailed => "Bāng-ia̍h phah-khui sit-pāi",
@@ -1310,7 +1304,6 @@ fn poj(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopShortcutSelectCandidateSlot => "Ti̍t-chiap soán-jī",
         StringKey::DesktopShortcutNavigateCandidates => "Sóa-tāng soán-jī iû-piau",
         StringKey::DesktopTelexGuideTone => "Tē {0} tiāu",
-        StringKey::DesktopTelexGuideInitial => "{0}",
         StringKey::DesktopTelexGuideHyphen => "Liân-jī-hû",
         StringKey::DesktopDictionarySourcesLink => "Sû-tián koán-lí",
         StringKey::DesktopOpenURLFailed => "Bāng-ia̍h phah-khui sit-pāi",
@@ -1482,10 +1475,6 @@ fn poj(key: StringKey) -> Option<&'static str> {
 impl StringResolver {
     pub fn desktop_telex_guide_tone(&self, tone: &str) -> String {
         self.format(StringKey::DesktopTelexGuideTone, &[&tone])
-    }
-
-    pub fn desktop_telex_guide_initial(&self, initial: &str) -> String {
-        self.format(StringKey::DesktopTelexGuideInitial, &[&initial])
     }
 
     pub fn desktop_update_current_version_label(&self, version: &str) -> String {

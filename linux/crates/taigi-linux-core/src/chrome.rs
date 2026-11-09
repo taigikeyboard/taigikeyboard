@@ -211,9 +211,9 @@ mod tests {
     }
 
     #[test]
-    fn the_guide_leaves_with_tps_and_returns_respelled_after_a_switch() {
-        // trace: TELEX_GUIDE_SHOWN survives both switches; `z` reads `ts`
-        // under TL and `ch` under POJ (`telex_guide_rows`).
+    fn the_guide_leaves_with_tps_and_returns_after_a_switch() {
+        // trace: TELEX_GUIDE_SHOWN survives both switches; the rows are the
+        // Telex keys only, the same under TL and POJ (`telex_guide_rows`).
         let (_directory, runtime) = runtime();
         let mut engine = EngineState::default();
         press(&runtime, &mut engine, SLASH, CTRL_ALT);
@@ -225,7 +225,8 @@ mod tests {
         assert!(!is_guide_wanted(&runtime));
 
         let emits = perform_global(&runtime, token, &mut engine, ShortcutAction::ToggleTps);
-        assert!(guide_rows(&emits).iter().any(|row| row.contains("ts")));
+        let tl = guide_rows(&emits);
+        assert!(tl.iter().any(|row| row.starts_with("z  ")), "{tl:?}");
 
         let emits = perform_global(
             &runtime,
@@ -233,9 +234,7 @@ mod tests {
             &mut engine,
             ShortcutAction::ToggleRomanization,
         );
-        let rows = guide_rows(&emits);
-        assert!(rows.iter().any(|row| row.contains("ch")), "{rows:?}");
-        assert!(!rows.iter().any(|row| row.contains("ts")), "{rows:?}");
+        assert_eq!(guide_rows(&emits), tl);
     }
 
     #[test]

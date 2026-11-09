@@ -286,29 +286,6 @@
         "ja": "第{tone}声"
       }
     },
-    "telexGuideInitial": {
-      "comment": "Telex guide row meaning for z: the unaspirated affricate initial it spells, written for the romanization in use — `ts` under TL, `ch` under POJ. {initial} is that spelling, so the row shows only the letters (USER 2026-09-11: no initial label).",
-      "scope": {
-        "platforms": [
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "placeholders": {
-        "initial": "string"
-      },
-      "values": {
-        "hanji": "{initial}",
-        "tailo": "{initial}",
-        "poj": "{initial}",
-        "en": "{initial}",
-        "ja": "{initial}"
-      }
-    },
     "telexGuideHyphen": {
       "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
       "scope": {

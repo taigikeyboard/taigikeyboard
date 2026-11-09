@@ -11,16 +11,13 @@
 //! ever having to choose. The free letters are `c d f q v w x y z`, and the
 //! pairing is what gives the two unmarked tones a key at all.
 //!
-//! `c` spells the affricate initial and `z` writes tone 6 (USER 2026-11-05),
-//! the same in TL and POJ. That costs POJ its spelled-out `ch`: `c` `h` is
-//! `chh`, so `cha` reaches `chha`. `h` is an ordinary letter, not a Telex key
-//! (2026-11-09): `c` `h` `h` types `chhh` as spelled.
-
-use phonetics::InputMode;
+//! `z` writes tone 6 (USER 2026-11-05). `c` and `h` are not Telex keys: the
+//! affricate initial on `c` is its own opt-in setting under either scheme
+//! (`crate::affricate`, 2026-11-09), and `h` is an ordinary letter.
 
 /// Every letter the Telex scheme claims, lower case. Platforms classify on
 /// this set (uppercase folded) before the engine resolves the edit.
-pub const TELEX_KEYS: &str = "vydwxqzfc";
+pub const TELEX_KEYS: &str = "vydwxqzf";
 
 /// What one Telex key means, independent of the buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,11 +27,6 @@ enum TelexKey {
     Tone {
         open: char,
         checked: char,
-    },
-    /// `c` → the unaspirated affricate initial (`ts` / `ch`); `ch` then
-    /// spells the aspirated one because `h` writes itself.
-    Affricate {
-        uppercase: bool,
     },
     Hyphen,
 }
@@ -53,8 +45,6 @@ fn resolve(key: &str) -> Option<TelexKey> {
         'w' | 'W' => tone('7', '7'),
         'z' | 'Z' => tone('6', '6'),
         'q' | 'Q' => tone('9', '9'),
-        'c' => TelexKey::Affricate { uppercase: false },
-        'C' => TelexKey::Affricate { uppercase: true },
         'f' | 'F' => TelexKey::Hyphen,
         _ => return None,
     })
@@ -91,7 +81,7 @@ fn ends_in_stop_coda(letters: &str) -> bool {
 /// the same digit is left alone so a held key cannot flip-flop (Backspace
 /// removes the digit). A paired key reads the coda of the letters under the
 /// digit, so `sit8` + `x` → `sit4`. Nailed segments are never part of `raw`.
-pub fn apply_telex_key(raw: &str, key: &str, mode: InputMode) -> Option<String> {
+pub fn apply_telex_key(raw: &str, key: &str) -> Option<String> {
     match resolve(key)? {
         TelexKey::Tone { open, checked } => {
             let last = raw.chars().last()?;
@@ -110,15 +100,6 @@ pub fn apply_telex_key(raw: &str, key: &str, mode: InputMode) -> Option<String> 
                 return None;
             }
             Some(format!("{letters}{digit}"))
-        }
-        TelexKey::Affricate { uppercase } => {
-            let initial = match (mode, uppercase) {
-                (InputMode::Poj, false) => "ch",
-                (InputMode::Poj, true) => "Ch",
-                (_, false) => "ts",
-                (_, true) => "Ts",
-            };
-            Some(format!("{raw}{initial}"))
         }
         TelexKey::Hyphen => {
             if raw.is_empty() {
@@ -147,7 +128,7 @@ mod tests {
             ("q", '9'),
         ] {
             assert_eq!(
-                apply_telex_key("te", key, InputMode::Tl),
+                apply_telex_key("te", key),
                 Some(format!("te{digit}")),
                 "key {key}"
             );
@@ -160,17 +141,17 @@ mod tests {
         // p t k h in either case; the single-tone keys ignore the coda.
         for tail in ["sit", "tsap", "bak", "ah", "annh", "SIT"] {
             assert_eq!(
-                apply_telex_key(tail, "x", InputMode::Tl),
+                apply_telex_key(tail, "x"),
                 Some(format!("{tail}4")),
                 "{tail}"
             );
             assert_eq!(
-                apply_telex_key(tail, "v", InputMode::Tl),
+                apply_telex_key(tail, "v"),
                 Some(format!("{tail}8")),
                 "{tail}"
             );
             assert_eq!(
-                apply_telex_key(tail, "y", InputMode::Tl),
+                apply_telex_key(tail, "y"),
                 Some(format!("{tail}3")),
                 "{tail}"
             );
@@ -178,12 +159,12 @@ mod tests {
         // Open codas — vowel, nasal `nn`, `ng`, `m` — take the open tone.
         for tail in ["tai", "tinn", "kang", "m", "oo"] {
             assert_eq!(
-                apply_telex_key(tail, "x", InputMode::Tl),
+                apply_telex_key(tail, "x"),
                 Some(format!("{tail}1")),
                 "{tail}"
             );
             assert_eq!(
-                apply_telex_key(tail, "v", InputMode::Tl),
+                apply_telex_key(tail, "v"),
                 Some(format!("{tail}2")),
                 "{tail}"
             );
@@ -194,110 +175,58 @@ mod tests {
     fn paired_key_reads_the_coda_under_an_existing_digit() {
         // trace: strip the digit, "sit" ends in t → checked: 8 → 4, 4 → 4
         // (same digit, no-op); "tai5" → open: 5 → 1.
-        assert_eq!(
-            apply_telex_key("sit8", "x", InputMode::Tl),
-            Some("sit4".into())
-        );
-        assert_eq!(apply_telex_key("sit4", "x", InputMode::Tl), None);
-        assert_eq!(
-            apply_telex_key("sit4", "v", InputMode::Tl),
-            Some("sit8".into())
-        );
-        assert_eq!(apply_telex_key("sit8", "v", InputMode::Tl), None);
-        assert_eq!(
-            apply_telex_key("tai5", "x", InputMode::Tl),
-            Some("tai1".into())
-        );
+        assert_eq!(apply_telex_key("sit8", "x"), Some("sit4".into()));
+        assert_eq!(apply_telex_key("sit4", "x"), None);
+        assert_eq!(apply_telex_key("sit4", "v"), Some("sit8".into()));
+        assert_eq!(apply_telex_key("sit8", "v"), None);
+        assert_eq!(apply_telex_key("tai5", "x"), Some("tai1".into()));
     }
 
     #[test]
     fn initial_only_tail_reads_as_checked() {
         // trace: "kh" ends in h → 4; no tone makes `kh` a syllable either way.
-        assert_eq!(
-            apply_telex_key("kh", "x", InputMode::Tl),
-            Some("kh4".into())
-        );
+        assert_eq!(apply_telex_key("kh", "x"), Some("kh4".into()));
     }
 
     #[test]
     fn uppercase_tone_letter_carries_the_same_tone() {
-        assert_eq!(
-            apply_telex_key("Te", "V", InputMode::Tl),
-            Some("Te2".into())
-        );
+        assert_eq!(apply_telex_key("Te", "V"), Some("Te2".into()));
     }
 
     #[test]
     fn different_tone_replaces_same_tone_is_noop() {
-        assert_eq!(
-            apply_telex_key("te2", "y", InputMode::Tl),
-            Some("te3".into())
-        );
-        assert_eq!(apply_telex_key("te2", "v", InputMode::Tl), None);
+        assert_eq!(apply_telex_key("te2", "y"), Some("te3".into()));
+        assert_eq!(apply_telex_key("te2", "v"), None);
     }
 
     #[test]
     fn tone_on_empty_or_hyphen_tail_is_noop() {
-        assert_eq!(apply_telex_key("", "v", InputMode::Tl), None);
-        assert_eq!(apply_telex_key("tai-", "v", InputMode::Tl), None);
+        assert_eq!(apply_telex_key("", "v"), None);
+        assert_eq!(apply_telex_key("tai-", "v"), None);
     }
 
     #[test]
     fn tone_applies_to_the_last_unhyphenated_chunk() {
-        assert_eq!(
-            apply_telex_key("taigi", "v", InputMode::Tl),
-            Some("taigi2".into())
-        );
-        assert_eq!(
-            apply_telex_key("tai5-gi", "v", InputMode::Tl),
-            Some("tai5-gi2".into())
-        );
+        assert_eq!(apply_telex_key("taigi", "v"), Some("taigi2".into()));
+        assert_eq!(apply_telex_key("tai5-gi", "v"), Some("tai5-gi2".into()));
     }
 
     #[test]
     fn z_is_a_single_tone_key_on_any_syllable() {
         // trace: `tone('6', '6')` ignores the coda, as `y d w q` do; a second
         // `z` is the same digit, another tone letter replaces it.
-        assert_eq!(
-            apply_telex_key("sit", "z", InputMode::Tl),
-            Some("sit6".into())
-        );
-        assert_eq!(
-            apply_telex_key("Te", "Z", InputMode::Poj),
-            Some("Te6".into())
-        );
-        assert_eq!(apply_telex_key("te6", "z", InputMode::Tl), None);
-        assert_eq!(
-            apply_telex_key("te2", "z", InputMode::Tl),
-            Some("te6".into())
-        );
-        assert_eq!(
-            apply_telex_key("te6", "y", InputMode::Tl),
-            Some("te3".into())
-        );
-        assert_eq!(apply_telex_key("", "z", InputMode::Tl), None);
-    }
-
-    #[test]
-    fn c_expands_by_mode_and_case() {
-        assert_eq!(apply_telex_key("", "c", InputMode::Tl), Some("ts".into()));
-        assert_eq!(apply_telex_key("", "C", InputMode::Tl), Some("Ts".into()));
-        assert_eq!(apply_telex_key("", "c", InputMode::Poj), Some("ch".into()));
-        assert_eq!(apply_telex_key("", "C", InputMode::Poj), Some("Ch".into()));
-        assert_eq!(apply_telex_key("a", "c", InputMode::Tl), Some("ats".into()));
-        assert_eq!(
-            apply_telex_key("a", "c", InputMode::Poj),
-            Some("ach".into())
-        );
+        assert_eq!(apply_telex_key("sit", "z"), Some("sit6".into()));
+        assert_eq!(apply_telex_key("Te", "Z"), Some("Te6".into()));
+        assert_eq!(apply_telex_key("te6", "z"), None);
+        assert_eq!(apply_telex_key("te2", "z"), Some("te6".into()));
+        assert_eq!(apply_telex_key("te6", "y"), Some("te3".into()));
+        assert_eq!(apply_telex_key("", "z"), None);
     }
 
     #[test]
     fn f_appends_hyphen_after_content_only() {
-        assert_eq!(
-            apply_telex_key("tai5", "f", InputMode::Tl),
-            Some("tai5-".into())
-        );
-        assert_eq!(apply_telex_key("", "f", InputMode::Tl), None);
+        assert_eq!(apply_telex_key("tai5", "f"), Some("tai5-".into()));
+        assert_eq!(apply_telex_key("", "f"), None);
     }
 
     #[test]
@@ -321,11 +250,7 @@ mod tests {
     #[test]
     fn unknown_or_multi_char_keys_are_ignored() {
         for key in ["a", "t", "1", "", "vv", "-"] {
-            assert_eq!(
-                apply_telex_key("te", key, InputMode::Tl),
-                None,
-                "key {key:?}"
-            );
+            assert_eq!(apply_telex_key("te", key), None, "key {key:?}");
         }
     }
 }
