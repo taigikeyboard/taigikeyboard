@@ -12,15 +12,15 @@ final class ShortcutActionsTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "ShortcutActionsTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private func labels(_ language: DisplayLanguage = .hanji) -> [String] {
@@ -126,7 +126,7 @@ final class ShortcutActionsTests: XCTestCase {
     /// defaults have to satisfy the same rule `ShortcutConflicts` enforces on
     /// what the user records.
     func testTheDefaults_areAllDifferent() {
-        let defaults = ShortcutAction.allCases.compactMap(\.name.defaultShortcut)
+        let defaults = ShortcutAction.allCases.compactMap(\.defaultShortcut)
 
         XCTAssertEqual(Set(defaults).count, ShortcutAction.allCases.count)
     }

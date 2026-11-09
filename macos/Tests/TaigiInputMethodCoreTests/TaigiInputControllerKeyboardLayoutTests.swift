@@ -10,19 +10,19 @@ final class TaigiInputControllerKeyboardLayoutTests: XCTestCase {
     private var userDefaults = UserDefaults.standard
     private var sessions: [(controller: TaigiInputController, client: RecordingTextInputClient)] = []
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "TaigiInputControllerKeyboardLayoutTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         for session in sessions {
             session.controller.deactivateServer(session.client)
         }
         sessions.removeAll()
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testActivation_appliesTheChosenLayoutForTlAndPoj_withoutDocumentCalls() throws {

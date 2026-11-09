@@ -48,8 +48,8 @@ final class ManualScreenshotTests: XCTestCase {
 
     private var outputDirectory = URL(fileURLWithPath: NSTemporaryDirectory())
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         guard let path = ProcessInfo.processInfo.environment[Self.outputEnvironmentKey], !path.isEmpty else {
             throw XCTSkip("set \(Self.outputEnvironmentKey) to an output directory to render the manual's screenshots")
         }

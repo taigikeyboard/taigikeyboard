@@ -353,16 +353,18 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertFalse(try menu().autoenablesItems)
     }
 
-    private static let checkForUpdates = Selector(("checkForUpdates:"))
-    private static let showAbout = Selector(("showAbout:"))
-    private static let toggleRomanization = Selector(("toggleRomanization:"))
-    private static let toggleTps = Selector(("toggleTps:"))
-    private static let cycleCandidateDisplayMode = Selector(("cycleCandidateDisplayMode:"))
-    private static let showTpsKeyboard = Selector(("showTpsKeyboard:"))
+    // The controller's own menu actions are private, so `#selector` cannot name
+    // them from here; the selector string is what IMK routes on anyway.
+    private static let checkForUpdates = NSSelectorFromString("checkForUpdates:")
+    private static let showAbout = NSSelectorFromString("showAbout:")
+    private static let toggleRomanization = NSSelectorFromString("toggleRomanization:")
+    private static let toggleTps = NSSelectorFromString("toggleTps:")
+    private static let cycleCandidateDisplayMode = NSSelectorFromString("cycleCandidateDisplayMode:")
+    private static let showTpsKeyboard = NSSelectorFromString("showTpsKeyboard:")
     /// The doorway's command: `showPreferences:` is the selector the system
     /// reserves for it (`IMKInputController.h:165-170`), so the row sends that
     /// rather than a second one of the controller's own.
-    private static let openSettings = Selector(("showPreferences:"))
+    private static let openSettings = #selector(TaigiInputController.showPreferences(_:))
 
     /// Goes through the routing IMK really uses: a menu command arrives as
     /// `doCommandBySelector:commandDictionary:`, whose default implementation

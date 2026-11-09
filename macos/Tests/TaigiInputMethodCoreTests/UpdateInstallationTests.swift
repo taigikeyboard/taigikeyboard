@@ -68,15 +68,15 @@ final class UpdateInstallationTests: XCTestCase {
         packageURL: nil,
     )
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         stagingRoot = try TestFixtures.scratchDirectory()
         seams = UpdateSeams()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         try? FileManager.default.removeItem(at: stagingRoot)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private enum SeamFailure: Error {

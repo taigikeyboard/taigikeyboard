@@ -16,16 +16,16 @@ final class ShortcutDefaultMigrationTests: XCTestCase {
     private static let oldDefault = KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command])
     private static let newDefault = KeyboardShortcuts.Shortcut(.backtick)
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "ShortcutDefaultMigrationTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         stored = [:]
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private func migrate() {

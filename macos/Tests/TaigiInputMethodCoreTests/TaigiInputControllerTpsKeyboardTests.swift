@@ -12,8 +12,8 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         InstalledLexicon.installOnce()
         suiteName = "TaigiInputControllerTpsKeyboardTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -22,11 +22,11 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         TpsKeyboardPanel.shared.hideNow()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         TpsKeyboardPanel.shared.flashSleep = { try await Task.sleep(for: $0) }
         TpsKeyboardPanel.shared.hideNow()
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - The chord
