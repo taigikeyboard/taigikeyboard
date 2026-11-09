@@ -10,12 +10,12 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Desktop Telex scheme: one key from `x v y d z w q` (tones 1/4 2/8 3 5 6 7 9 —
  * `x` and `v` write the checked tone after a stop coda `p t k h`, the open
  * tone otherwise), `c` (affricate initial `ts` / `ch` by
- * `AppConfig.input_mode`), `h` (itself, unless the tail ends in `tsh` / `chh`)
- * or `f` (hyphen), either case. The engine edits the pending tail — appending
- * or replacing the trailing tone digit — and keeps the buffer numeric-tone.
- * A key that changes nothing (same tone twice, tone on an empty tail, `h` after
- * `tsh` / `chh`) is a no-op. Idle + `c` or `h` enters composing with the text;
- * idle + `f` inserts a literal `-` and stays idle, as a leading `-` does.
+ * `AppConfig.input_mode`) or `f` (hyphen), either case. The engine edits the
+ * pending tail — appending or replacing the trailing tone digit — and keeps the
+ * buffer numeric-tone. A key that changes nothing (same tone twice, tone on an
+ * empty tail) is a no-op. Idle + `c` enters composing with the text; idle + `f`
+ * inserts a literal `-` and stays idle, as a leading `-` does. `h` is an
+ * ordinary `Append` letter.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.TelexKey}
@@ -164,12 +164,12 @@ public  final class TelexKey extends
    * Desktop Telex scheme: one key from `x v y d z w q` (tones 1/4 2/8 3 5 6 7 9 —
    * `x` and `v` write the checked tone after a stop coda `p t k h`, the open
    * tone otherwise), `c` (affricate initial `ts` / `ch` by
-   * `AppConfig.input_mode`), `h` (itself, unless the tail ends in `tsh` / `chh`)
-   * or `f` (hyphen), either case. The engine edits the pending tail — appending
-   * or replacing the trailing tone digit — and keeps the buffer numeric-tone.
-   * A key that changes nothing (same tone twice, tone on an empty tail, `h` after
-   * `tsh` / `chh`) is a no-op. Idle + `c` or `h` enters composing with the text;
-   * idle + `f` inserts a literal `-` and stays idle, as a leading `-` does.
+   * `AppConfig.input_mode`) or `f` (hyphen), either case. The engine edits the
+   * pending tail — appending or replacing the trailing tone digit — and keeps the
+   * buffer numeric-tone. A key that changes nothing (same tone twice, tone on an
+   * empty tail) is a no-op. Idle + `c` enters composing with the text; idle + `f`
+   * inserts a literal `-` and stays idle, as a leading `-` does. `h` is an
+   * ordinary `Append` letter.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.TelexKey}

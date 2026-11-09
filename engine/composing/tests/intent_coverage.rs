@@ -237,51 +237,21 @@ fn intent_telex_z_writes_tone_six_and_is_noop_while_idle() {
 }
 
 #[test]
-fn intent_telex_spelled_out_aspirated_affricate_keeps_its_vowel() {
-    // trace: `c` `h` writes tsh / chh; the next `h` is swallowed with no
-    // effects, and the vowel lands on the initial as spelled.
-    for (mode, spelled) in [("tl", "tshia"), ("poj", "chhia")] {
-        let config = common::config(mode);
+fn intent_telex_h_is_not_a_telex_key() {
+    // trace: `resolve` has no `h`; a `TelexKey` of it is a no-op, idle or
+    // composing. The desktop sends it as `Append`, so `c` `h` `h` types
+    // `tshh` as spelled.
+    for key in ["h", "H"] {
         let mut engine = Engine::new();
-        telex(&mut engine, "c", &config);
-        telex(&mut engine, "h", &config);
-        let swallowed = telex(&mut engine, "h", &config);
-        assert!(swallowed.effect.is_empty(), "{mode}");
-        append(&mut engine, "ia", &config);
-        let resp = engine.snapshot(&config);
-        assert_eq!(resp.preedit.unwrap().raw_input, spelled, "{mode}");
+        let idle = telex(&mut engine, key, &config_tl());
+        assert!(!idle.is_composing, "{key}");
+        assert!(idle.effect.is_empty(), "{key}");
     }
-}
-
-#[test]
-fn intent_telex_h_matches_appending_the_letter() {
-    // A Telex `h` is the main typing path under the scheme, so it must answer
-    // exactly as `Append` does: from Idle, at the end, and mid-tail with the
-    // caret moved.
-    let config = config_tl();
-    let mut typed = Engine::new();
-    let mut telexed = Engine::new();
-    append(&mut typed, "h", &config);
-    let idle = telex(&mut telexed, "h", &config);
-    assert_eq!(typed.snapshot(&config), telexed.snapshot(&config));
-    assert!(idle.is_composing);
-
-    for engine in [&mut typed, &mut telexed] {
-        append(engine, "ota", &config);
-        requests::handle(
-            &req(Method::MoveCaret(protos::engine::MoveCaret {
-                direction: protos::engine::CaretDirection::Left as i32,
-            })),
-            engine,
-            &config,
-        )
-        .unwrap();
-    }
-    append(&mut typed, "h", &config);
-    telex(&mut telexed, "h", &config);
-    let (typed, telexed) = (typed.snapshot(&config), telexed.snapshot(&config));
-    assert_eq!(typed.preedit.as_ref().unwrap().raw_input, "hotha");
-    assert_eq!(typed, telexed);
+    let mut engine = Engine::new();
+    telex(&mut engine, "c", &config_tl());
+    append(&mut engine, "hh", &config_tl());
+    let resp = engine.snapshot(&config_tl());
+    assert_eq!(resp.preedit.unwrap().raw_input, "tshh");
 }
 
 #[test]
@@ -327,7 +297,8 @@ fn intent_telex_idle_ff_then_syllable_is_the_khinsiann_marker() {
             assert_eq!(commit_text(&resp), Some("-".to_string()), "{mode}");
         }
         append(&mut engine, "a", &config);
-        let resp = telex(&mut engine, "h", &config);
+        append(&mut engine, "h", &config);
+        let resp = engine.snapshot(&config);
         assert!(resp.is_composing, "{mode}");
         assert_eq!(resp.preedit.unwrap().raw_input, "ah", "{mode}");
     }

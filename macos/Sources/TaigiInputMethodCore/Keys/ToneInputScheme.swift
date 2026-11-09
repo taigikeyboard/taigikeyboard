@@ -9,8 +9,8 @@
 /// `telex` those letters carry the tones, so the digits are free to pick.
 /// Neither half is chosen on its own: the slot key set is derived here
 /// (`slotKeySet`) rather than stored, so the two can never disagree about who
-/// owns `v` or `3`. Telex also claims `c` and `h`, which pick nothing under
-/// Standard and stay plain letters there.
+/// owns `v` or `3`. Telex also claims `c`, which picks nothing under Standard
+/// and stays a plain letter there; `h` is a plain letter under both.
 ///
 /// The letter table is the kahiok scheme (madmaxieee/taigi-telex) with `c` as
 /// the unaspirated affricate rather than its `c` → `tsh`, which leaves `z` to

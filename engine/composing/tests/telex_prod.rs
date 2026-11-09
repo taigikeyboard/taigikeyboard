@@ -11,7 +11,7 @@ fn telex_buffers_reach_the_dictionary() {
         return;
     }
     // trace: `z` on `huattoo` writes `huattoo6`, the 法度 huat4too6 row of
-    // dictionary.csv; `c` `h` `h` `i` `a` writes `tshia` / `chhia`, 車.
+    // dictionary.csv; `c` `h` `i` `a` writes `tshia` / `chhia`, 車.
     for (raw, mode, word) in [
         ("huattoo6", "tl", "法度"),
         ("hoattoo6", "poj", "法度"),

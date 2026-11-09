@@ -325,11 +325,11 @@ impl ComposingKeyIntent {
                 Self::CommitThenInsert(characters.to_owned()),
             );
         }
-        // Under Telex the tone letters, `c`, `h` and `f` are the
-        // engine's, not the composition's text. A tone letter typed outside a
-        // composition is document text (like an idle digit): there is no
-        // syllable for it to mark. `c` and `h` type an initial, so they start
-        // one; an idle `f` is the engine's `-` key (the khinsiann marker).
+        // Under Telex the tone letters, `c` and `f` are the engine's, not the
+        // composition's text. A tone letter typed outside a composition is
+        // document text (like an idle digit): there is no syllable for it to
+        // mark. `c` types an initial, so it starts one; an idle `f` is the
+        // engine's `-` key (the khinsiann marker).
         // One scalar only, for the same grapheme reason as the romanization
         // rule below; macOS asks the same since P11c (roadmap E2).
         if bindings.tone_scheme == ToneInputScheme::Telex {
@@ -571,7 +571,7 @@ impl ComposingKeyIntent {
     /// The characters a TL or POJ syllable is built from. ASCII-only on
     /// purpose. Every ASCII letter, not only the eighteen a syllable is
     /// spelled with: a custom-dictionary romanization is free text, so all of
-    /// them must reach the composition. Under Telex the ten the scheme
+    /// them must reach the composition. Under Telex the nine the scheme
     /// claims are taken before this is asked.
     pub fn is_romanization_character(character: char) -> bool {
         character.is_ascii_alphabetic() || character == '-'
@@ -1177,7 +1177,7 @@ mod tests {
     fn under_telex_the_tone_letters_are_the_engines_while_composing() {
         // trace: tier 7 under Telex (`is_telex_key`) — `v` composing →
         // `TelexKey`, capital too; idle `v` and `z` pass through; idle `c`
-        // and `h` start; idle `f` reaches the engine, which types `-`.
+        // starts; idle `f` reaches the engine, which types `-`; `h` is text.
         let telex = telex_bindings();
         assert_eq!(
             ComposingKeyIntent::intent(&text("v"), true, false, &telex, PLATFORM),
@@ -1208,7 +1208,7 @@ mod tests {
             ComposingKeyIntent::PassThrough,
             "`z` writes tone 6, which has nothing to mark when idle"
         );
-        for key in ["c", "C", "h", "H"] {
+        for key in ["c", "C"] {
             assert_eq!(
                 ComposingKeyIntent::intent(&text(key), false, false, &telex, PLATFORM),
                 ComposingKeyIntent::TelexKey(key.into()),
@@ -1219,6 +1219,16 @@ mod tests {
                 ComposingKeyIntent::TelexKey(key.into()),
                 "{key}"
             );
+        }
+        // `h` is no Telex key: text, idle or composing, as under Standard.
+        for key in ["h", "H"] {
+            for is_composing in [false, true] {
+                assert_eq!(
+                    ComposingKeyIntent::intent(&text(key), is_composing, false, &telex, PLATFORM),
+                    ComposingKeyIntent::Input(key.into()),
+                    "{key} composing={is_composing}"
+                );
+            }
         }
         // A letter neither scheme claims is still text.
         assert_eq!(

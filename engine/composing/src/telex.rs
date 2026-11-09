@@ -13,13 +13,14 @@
 //!
 //! `c` spells the affricate initial and `z` writes tone 6 (USER 2026-11-05),
 //! the same in TL and POJ. That costs POJ its spelled-out `ch`: `c` `h` is
-//! `chh`, so `cha` reaches `chha`.
+//! `chh`, so `cha` reaches `chha`. `h` is an ordinary letter, not a Telex key
+//! (2026-11-09): `c` `h` `h` types `chhh` as spelled.
 
 use phonetics::InputMode;
 
 /// Every letter the Telex scheme claims, lower case. Platforms classify on
 /// this set (uppercase folded) before the engine resolves the edit.
-pub const TELEX_KEYS: &str = "vydwxqzfch";
+pub const TELEX_KEYS: &str = "vydwxqzfc";
 
 /// What one Telex key means, independent of the buffer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -34,12 +35,6 @@ enum TelexKey {
     /// spells the aspirated one because `h` writes itself.
     Affricate {
         uppercase: bool,
-    },
-    /// `h`, an ordinary letter except after an aspirated affricate, where it
-    /// is a slip: POJ's spelled-out `c` `h` `h` has already written `chh` by
-    /// the first `h`. Only Telex sends `h` here, so Standard keeps its text.
-    Aspiration {
-        letter: char,
     },
     Hyphen,
 }
@@ -60,7 +55,6 @@ fn resolve(key: &str) -> Option<TelexKey> {
         'q' | 'Q' => tone('9', '9'),
         'c' => TelexKey::Affricate { uppercase: false },
         'C' => TelexKey::Affricate { uppercase: true },
-        'h' | 'H' => TelexKey::Aspiration { letter },
         'f' | 'F' => TelexKey::Hyphen,
         _ => return None,
     })
@@ -85,16 +79,9 @@ fn ends_in_stop_coda(letters: &str) -> bool {
     letters.chars().last().is_some_and(phonetics::is_stop_coda)
 }
 
-/// Whether `letters` already ends in `tsh` / `chh`, which no further `h` can
-/// extend: the initial must be followed by a vowel.
-fn ends_in_aspirated_affricate(letters: &str) -> bool {
-    let lowered = letters.to_ascii_lowercase();
-    lowered.ends_with("tsh") || lowered.ends_with("chh")
-}
-
 /// Apply one Telex key to the pending tail `raw`. `None` means the key
 /// changes nothing (unknown key, a tone on an empty or hyphen-ended tail, the
-/// same tone twice, a hyphen on an empty tail, an `h` after `tsh` / `chh`) —
+/// same tone twice, a hyphen on an empty tail) —
 /// the transition answers with a no-op, except for an idle `f`, which it
 /// types as the `-` key ([`is_hyphen_key`]). While composing the platform
 /// swallows such a key; only from Idle does a tone letter reach the host as
@@ -132,12 +119,6 @@ pub fn apply_telex_key(raw: &str, key: &str, mode: InputMode) -> Option<String> 
                 (_, true) => "Ts",
             };
             Some(format!("{raw}{initial}"))
-        }
-        TelexKey::Aspiration { letter } => {
-            if ends_in_aspirated_affricate(raw) {
-                return None;
-            }
-            Some(format!("{raw}{letter}"))
         }
         TelexKey::Hyphen => {
             if raw.is_empty() {
@@ -308,39 +289,6 @@ mod tests {
             apply_telex_key("a", "c", InputMode::Poj),
             Some("ach".into())
         );
-    }
-
-    #[test]
-    fn h_writes_itself_except_after_an_aspirated_affricate() {
-        // trace: `ends_in_aspirated_affricate` — `ts` / `ch` take the `h` that
-        // aspirates them; `tsh` / `chh` take no further one, in either mode or
-        // case. Every other tail keeps the letter as typed.
-        for (tail, next) in [
-            ("", "h"),
-            ("t", "th"),
-            ("ts", "tsh"),
-            ("ch", "chh"),
-            ("Ch", "Chh"),
-            ("a", "ah"),
-            ("tsh5", "tsh5h"),
-            ("tsha", "tshah"),
-        ] {
-            assert_eq!(
-                apply_telex_key(tail, "h", InputMode::Tl),
-                Some(next.into()),
-                "{tail}"
-            );
-        }
-        assert_eq!(
-            apply_telex_key("ts", "H", InputMode::Tl),
-            Some("tsH".into())
-        );
-        for tail in ["tsh", "chh", "Tsh", "Chh", "CHH", "atsh"] {
-            for mode in [InputMode::Tl, InputMode::Poj] {
-                assert_eq!(apply_telex_key(tail, "h", mode), None, "{tail}");
-                assert_eq!(apply_telex_key(tail, "H", mode), None, "{tail}");
-            }
-        }
     }
 
     #[test]
