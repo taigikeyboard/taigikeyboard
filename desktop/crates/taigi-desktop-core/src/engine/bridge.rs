@@ -123,6 +123,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
             .then_some(HanjiConversion {}),
         dictionary_sources: Some(dictionary_toggles(&settings.dictionary_sources)),
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,
+        c_types_affricate: settings.is_c_affricate_enabled,
         ..Default::default()
     }
 }
@@ -210,6 +211,19 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&settings).force_lowercase_nasal_marker);
+    }
+
+    #[test]
+    fn c_affricate_reaches_the_config() {
+        assert!(
+            !app_config(&EngineSettings::default()).c_types_affricate,
+            "ships OFF"
+        );
+        let settings = EngineSettings {
+            is_c_affricate_enabled: true,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&settings).c_types_affricate);
     }
 
     #[test]

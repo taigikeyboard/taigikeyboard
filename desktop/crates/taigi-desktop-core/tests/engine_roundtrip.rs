@@ -90,6 +90,31 @@ fn telex_key_writes_the_tone() {
     engine::reset(generation);
 }
 
+#[test]
+fn append_c_spells_the_mode_affricate_only_when_the_setting_is_on() {
+    // trace: `app_config` sends `is_c_affricate_enabled` as
+    // `AppConfig.c_types_affricate`; engine `affricate::expand` writes `ts`
+    // under TL and `ch` under POJ, and leaves `c` alone when off.
+    let _engine = engine();
+    for (mode, is_on, raw) in [
+        (InputMode::Tl, true, "ts"),
+        (InputMode::Poj, true, "ch"),
+        (InputMode::Tl, false, "c"),
+        (InputMode::Poj, false, "c"),
+    ] {
+        let settings = EngineSettings {
+            input_mode: mode,
+            is_c_affricate_enabled: is_on,
+            ..EngineSettings::default()
+        };
+        let generation = fresh_generation();
+        let started = engine::append("c", &settings, generation).expect("append round trip");
+        assert!(started.is_composing, "{mode:?} {is_on}");
+        assert_eq!(started.raw_input, raw, "{mode:?} {is_on}");
+        engine::reset(generation);
+    }
+}
+
 fn tps_settings() -> EngineSettings {
     EngineSettings {
         input_mode: InputMode::Tps,

@@ -95,6 +95,11 @@ final class SettingsStore: @unchecked Sendable {
             name: "nasalMarkerUppercaseEnabled",
             defaultValue: EngineSettings.defaults.isNasalMarkerUppercaseEnabled,
         )
+        /// Type ts / ch with c — desktop-core `keys::IS_C_AFFRICATE_ENABLED`.
+        static let isCAffricateEnabled = SettingsKey(
+            name: "cAffricateEnabled",
+            defaultValue: EngineSettings.defaults.isCAffricateEnabled,
+        )
         static let isCustomDictEnabled = SettingsKey(
             name: "customDictEnabled",
             defaultValue: EngineSettings.defaults.isCustomDictEnabled,
@@ -615,6 +620,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isTpsKeyboardShown.name,
             Keys.isTelexGuideShown.name,
             Keys.toneInputScheme.name,
+            Keys.isCAffricateEnabled.name,
             Keys.isHanjiFirst.name,
             Keys.isAutoSpaceEnabled.name,
             Keys.isCandidateWindowEnabled.name,

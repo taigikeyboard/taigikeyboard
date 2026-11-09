@@ -323,6 +323,12 @@ pub struct EngineSettings {
     /// no list to correct a conversion from, so the preedit keeps the glyphs
     /// and Enter writes them, as TL / POJ write the romanization (S33).
     pub is_hanji_conversion_enabled: bool,
+    /// Type ts / ch with c (opt-in, 2026-11-09): a typed `c` writes the
+    /// unaspirated affricate initial, `ts` under TL and `ch` under POJ, under
+    /// either tone scheme — `AppConfig.c_types_affricate`. Desktop-only: the
+    /// phone keyboards have no such setting. Off under TPS. macOS keeps a
+    /// Swift twin of the default: `EngineSettings.swift` `isCAffricateEnabled`.
+    pub is_c_affricate_enabled: bool,
 }
 
 impl EngineSettings {
@@ -350,6 +356,7 @@ impl EngineSettings {
             is_custom_dict_enabled: true,
             dictionary_sources: DictionarySourceToggles::DEFAULT,
             is_hanji_conversion_enabled: false,
+            is_c_affricate_enabled: false,
         }
     };
 }

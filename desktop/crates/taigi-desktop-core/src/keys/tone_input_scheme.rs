@@ -20,7 +20,7 @@ use crate::strings::StringKey;
 /// The letter table is the kahiok scheme (madmaxieee/taigi-telex) without its
 /// `c` → `tsh`, which leaves `z` to write tone 6 (USER 2026-11-05). `c` and
 /// `h` are plain letters under both schemes; `c` → `ts` / `ch` is its own
-/// opt-in setting (`AppConfig.c_types_affricate`). The semantics —
+/// opt-in setting (`EngineSettings::is_c_affricate_enabled`). The semantics —
 /// which tone each key writes, what a repeated key does — live in the engine
 /// (`engine/composing/src/telex.rs`); this side only decides which keys reach
 /// it.

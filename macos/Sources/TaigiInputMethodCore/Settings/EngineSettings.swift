@@ -174,6 +174,12 @@ struct EngineSettings: Sendable {
     /// source filter.
     let dictionarySources: DictionarySourceToggles
 
+    /// Type ts / ch with c: a typed `c` writes `ts` under TL and `ch` under
+    /// POJ, under either tone scheme (`AppConfig.c_types_affricate`).
+    /// Desktop-only and opt-in. Mirrors desktop-core
+    /// `EngineSettings::is_c_affricate_enabled`, OFF.
+    let isCAffricateEnabled: Bool
+
     /// What a fresh install types with. Every value matches the iOS and Android
     /// default for the same setting, so someone using two of the four platforms
     /// gets the same composition and the same candidate order out of the box.
@@ -189,5 +195,6 @@ struct EngineSettings: Sendable {
         isNasalMarkerUppercaseEnabled: true,
         isCustomDictEnabled: true,
         dictionarySources: .defaults,
+        isCAffricateEnabled: false,
     )
 }
