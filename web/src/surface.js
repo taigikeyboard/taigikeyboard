@@ -53,6 +53,19 @@ export class Surface {
     return this.#write("insertText", text);
   }
 
+  /// Replaces `[start, end)` with `text`, one undo step, then selects
+  /// `[selectStart, selectEnd)`. Focus first: WebKit may not keep a blurred
+  /// textarea's selection across `focus()`.
+  replaceRange(start, end, text, selectStart, selectEnd) {
+    const textarea = this.#textarea;
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+    const isDone = this.#write("insertText", text);
+    textarea.setSelectionRange(selectStart, selectEnd);
+    this.#remember();
+    return isDone;
+  }
+
   /// Deletes `count` Unicode scalars before the caret.
   deleteBefore(count) {
     const end = this.#textarea.selectionStart;
@@ -86,8 +99,9 @@ export class Surface {
     return !isSame;
   }
 
-  /// The caret's top left and its line height, in the editor's coordinates.
-  caretPoint() {
+  /// The caret's top left and its line height, in the editor's coordinates; or
+  /// those of the text offset `at`.
+  caretPoint(at = this.#textarea.selectionStart) {
     const textarea = this.#textarea;
     const style = getComputedStyle(textarea);
     const mirror = this.#mirror;
@@ -97,10 +111,10 @@ export class Surface {
     mirror.style.boxSizing = "border-box";
     mirror.style.width = `${textarea.clientWidth}px`;
     mirror.style.whiteSpace = "pre-wrap";
-    const { value, selectionStart } = textarea;
+    const { value } = textarea;
     // The rest of the word, which decides whether the line wraps before it.
-    const [wordRest] = value.slice(selectionStart).match(/^\S*/);
-    const before = value.slice(0, selectionStart);
+    const [wordRest] = value.slice(at).match(/^\S*/);
+    const before = value.slice(0, at);
     mirror.replaceChildren(before, this.#caretMark, wordRest);
     const mark = this.#caretMark;
     // The mark's box is the font's, inside the line's.

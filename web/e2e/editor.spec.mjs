@@ -2,7 +2,7 @@
 // the text that survives a reload, the editable title, and Save's three formats.
 
 import { expect, test } from "@playwright/test";
-import { open } from "./helpers.mjs";
+import { open, saveAs } from "./helpers.mjs";
 
 const TITLE = "台語齒盤網頁版：台語簿仔紙";
 
@@ -86,15 +86,8 @@ for (const [format, extension, expected] of [
   test(`Save as ${format}: the title, then the text`, async ({ page }) => {
     await open(page, { ready: false });
     await page.keyboard.insertText("台灣\n\n<b>");
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      page.locator(`#save-formats [data-format="${format}"]`).click(),
-    ]);
-    expect(download.suggestedFilename()).toBe(`${TITLE}.${extension}`);
-    const chunks = [];
-    for await (const chunk of await download.createReadStream()) {
-      chunks.push(chunk);
-    }
-    expect(Buffer.concat(chunks).toString("utf8")).toContain(expected);
+    const { name, text } = await saveAs(page, format);
+    expect(name).toBe(`${TITLE}.${extension}`);
+    expect(text).toContain(expected);
   });
 }

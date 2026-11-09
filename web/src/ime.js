@@ -3,6 +3,7 @@
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
 import { Draft } from "./draft.js";
+import { FormatBubble } from "./format_bubble.js";
 import { keepTitle } from "./header.js";
 import { translate } from "./i18n.js";
 import { Learning } from "./learning.js";
@@ -67,6 +68,14 @@ const settings = new Settings(
   changeSettings,
 );
 const draft = new Draft(textarea, surface, translate("web.intro"));
+const formatBubble = new FormatBubble(
+  document.getElementById("format-bubble"),
+  textarea,
+  surface,
+  () => panel.isShown,
+);
+/// Apple Notes' chords, on Command on a Mac and Control elsewhere.
+const FORMAT_KEYS = { b: "bold", i: "italic", k: "link" };
 
 /// `null` between instances.
 let session = null;
@@ -323,6 +332,18 @@ function keyJson(event) {
   });
 }
 
+/// `bold`, `italic` or `link` for Command+B / I / K on a Mac (Control+B / I / K
+/// elsewhere), with no other modifier; otherwise `undefined`.
+function formatKind(event) {
+  const isMac = platform() === "macos";
+  const command = isMac ? event.metaKey : event.ctrlKey;
+  const other = isMac ? event.ctrlKey : event.metaKey;
+  if (!command || other || event.shiftKey || event.altKey) {
+    return undefined;
+  }
+  return FORMAT_KEYS[event.key.toLowerCase()];
+}
+
 /// A key another input method holds is its own.
 function isForeignComposition(event) {
   return event.isComposing || event.keyCode === 229;
@@ -342,6 +363,16 @@ textarea.addEventListener("keydown", (event) => {
     event.preventDefault();
   }
   apply(reply);
+  // After the engine: a composition it commits replaces the selection, and the
+  // key then goes on to the browser.
+  const kind =
+    !reply.handled &&
+    textarea.selectionStart !== textarea.selectionEnd &&
+    formatKind(event);
+  if (kind) {
+    event.preventDefault();
+    formatBubble.format(kind);
+  }
 });
 
 textarea.addEventListener("keyup", (event) => {
@@ -388,14 +419,18 @@ for (const button of document.querySelectorAll("button")) {
 }
 
 // `/` jumps to the textarea, as kautian-mirror's search does, from anywhere but the
-// textarea and a select, which types ahead. A checkbox just clicked gives way. No
+// textarea and any field that takes text: a select types ahead, and `/` is part
+// of an address in the format bubble's URL field. A checkbox just clicked gives way. No
 // select-all: the next key would replace the document.
 document.addEventListener("keydown", (event) => {
   const { key, metaKey, ctrlKey, altKey, isComposing, target } = event;
   if (key !== "/" || metaKey || ctrlKey || altKey || isComposing) {
     return;
   }
-  if (target.isContentEditable || target.closest("textarea, select")) {
+  if (
+    target.isContentEditable ||
+    target.closest("textarea, select, input:not([type=checkbox])")
+  ) {
     return;
   }
   event.preventDefault();

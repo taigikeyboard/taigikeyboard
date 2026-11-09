@@ -15,6 +15,33 @@ export function seedSettings(page, settings) {
   );
 }
 
+/// `text` as if a past visit had stored it, on the first load only: a stored text
+/// comes in through `replaceAll`, so the undo history starts empty.
+export function seedText(page, text) {
+  return page.addInitScript((text) => {
+    if (sessionStorage.getItem("test.seeded") === null) {
+      sessionStorage.setItem("test.seeded", "");
+      localStorage.setItem("taigi.text", text);
+    }
+  }, text);
+}
+
+/// Clicks Save's `format` button: the file's name and its text.
+export async function saveAs(page, format) {
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator(`#save-formats [data-format="${format}"]`).click(),
+  ]);
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) {
+    chunks.push(chunk);
+  }
+  return {
+    name: download.suggestedFilename(),
+    text: Buffer.concat(chunks).toString("utf8"),
+  };
+}
+
 /// The page with `settings` as if a past visit had stored them. `ready`: wait
 /// for the dictionaries. `folded`: leave the sidebar's sections as a visit finds
 /// them, rather than open for a test that works on their rows. `docked`: the
