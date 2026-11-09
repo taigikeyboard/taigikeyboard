@@ -707,7 +707,7 @@ internal fun consumesSingleShift(char: String): Boolean {
 /**
  * Pure-function classifier: returns `true` when [char] enters composing
  * mode (romanization letters, TPS bopomofo, TPS tone marks, hyphen
- * boundary, U+02D9 ˙). Used by [TextInputKeyHandler.handleTaigiInput];
+ * boundary, ˙). Used by [TextInputKeyHandler.handleTaigiInput];
  * exposed at file scope so pure-JVM tests can cover the table.
  */
 internal fun isComposingCharacter(char: String): Boolean {
@@ -716,11 +716,14 @@ internal fun isComposingCharacter(char: String): Boolean {
     // TPS tone marks ˋ ˊ ˇ ˆ (Lm).
     // Three TPS tone marks are Sk (Symbol, modifier), not caught by isLetter:
     //   ˪ (U+02EA, tone 3), ˫ (U+02EB, tone 7), ˙ (U+02D9, tone 8)
+    // and the tone-8 dot after ㆴㆵㆻㆷ is the combining U+0307 (Mn), which
+    // `CharacterInputPipeline.adjust` hands back in place of the typed ˙.
     return first.isLetter() ||
         first == '-' ||
         first == '˪' ||
         first == '˫' ||
-        first == '˙'
+        first == '˙' ||
+        first == '\u0307'
 }
 
 /**

@@ -50,9 +50,13 @@ public extension RustEngineBridge {
         )
     }
 
+    /// Whether `char` ends in a TPS tone mark. The op reads one scalar, so this
+    /// sends the last one: a stop coda carrying the combining tone-8 dot
+    /// (`ㆻ̇`) is a single grapheme whose last scalar is the mark U+0307.
     static func isTPSToneMark(_ char: Character) -> Bool {
+        guard let last = char.unicodeScalars.last else { return false }
         var payload = Taigi_Engine_IsTpsToneMark()
-        payload.char = String(char)
+        payload.char = String(last)
         return boolDispatch(method: .isTpsToneMark(payload), op: "isTpsToneMark")
     }
 

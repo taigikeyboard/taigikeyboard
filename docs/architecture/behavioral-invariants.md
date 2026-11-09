@@ -1336,7 +1336,6 @@ Known divergences left untouched because unifying them changes an observable pro
 
 | Divergence | Why it is not a refactor |
 |---|---|
-| `engine/phonetics/src/tps.rs` `is_tps_tone_mark` (8 fixed scalars incl. U+0307) vs `tps_adjust.rs` `TONE_MARK_CHARS` (table-derived, excludes U+0300–036F) | different sets; the `tps_adjust` version backs the public `Method::IsTpsToneMark` op — unification changes a public op |
 | `KeyFamily::Poj.toneless_face` (`phonetics/src/key_family.rs`) → `poj_num_syllable_ends_from_tl` | replace only with a parity proof over every dictionary row (byte-equality test) |
 | Byte-identical `*.pb.swift` macOS ↔ iOS | build-graph change in `.xcodeproj` / `Package.swift` — maintainer-only config (AGENTS.md Core Principle #1) |
 | Settings-key table ×2 (macOS `SettingsStore.swift` ↔ desktop-core `keys.rs`) | needs a generator = new tooling |

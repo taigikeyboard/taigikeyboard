@@ -54,6 +54,14 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
     }
 
+    /// The TPS Space key asks whether the raw buffer's last Character ends in a
+    /// tone mark; after `˙` on a stop coda that Character is `ㆻ` + U+0307.
+    func test_op_isTPSToneMark_codaWithCombiningToneEightDotIsToneMark() {
+        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{0307}"))
+        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{31BB}\u{0307}"))
+        XCTAssertFalse(RustEngineBridge.isTPSToneMark("\u{31BB}"))
+    }
+
     // MARK: - Platform text helpers
 
     /// The engine's attaching set (`phonetics::punctuation`, where the full
