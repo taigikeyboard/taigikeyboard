@@ -9,15 +9,15 @@
 /// `telex` those letters carry the tones, so the digits are free to pick.
 /// Neither half is chosen on its own: the slot key set is derived here
 /// (`slotKeySet`) rather than stored, so the two can never disagree about who
-/// owns `v` or `3`. Telex also claims `c` and `h`, which pick nothing under
-/// Standard and stay plain letters there.
+/// owns `v` or `3`.
 ///
-/// The letter table is the kahiok scheme (madmaxieee/taigi-telex) with `c` as
-/// the unaspirated affricate rather than its `c` → `tsh`, which leaves `z` to
-/// write tone 6 (USER 2026-11-05). The semantics — which tone each key writes,
-/// how `c` resolves by input mode, what a repeated key does — live in the
-/// engine (`engine/composing/src/telex.rs`); this side only decides which keys
-/// reach it.
+/// The letter table is the kahiok scheme (madmaxieee/taigi-telex) without its
+/// `c` → `tsh`, which leaves `z` to write tone 6 (USER 2026-11-05). `c` and
+/// `h` are plain letters under both schemes; `c` → `ts` / `ch` is its own
+/// opt-in setting (`SettingsStore.Keys.isCAffricateEnabled`). The semantics —
+/// which tone each key writes, what a repeated key does — live in the engine
+/// (`engine/composing/src/telex.rs`); this side only decides which keys reach
+/// it.
 enum ToneInputScheme: String, CaseIterable, Sendable {
     /// Digits type tones; `q w d f z x v y ;` pick candidates. The shipped
     /// default, and today's behaviour before the scheme existed.

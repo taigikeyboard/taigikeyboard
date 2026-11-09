@@ -78,22 +78,25 @@ pub(crate) fn apply(
                 begin_composition_or_insert_leading_hyphens(state, text, config, frequency)
             }
         },
-        Intent::Append { ch } => match &state.phase {
-            Phase::Idle => {
-                begin_composition_or_insert_leading_hyphens(state, ch, config, frequency)
+        Intent::Append { ch } => {
+            let ch = crate::affricate::expand(ch, config);
+            match &state.phase {
+                Phase::Idle => {
+                    begin_composition_or_insert_leading_hyphens(state, ch, config, frequency)
+                }
+                Phase::Continuous {
+                    raw, caret, nailed, ..
+                } => append_continuous(
+                    state,
+                    raw.clone(),
+                    *caret,
+                    nailed.clone(),
+                    &ch,
+                    config,
+                    frequency,
+                ),
             }
-            Phase::Continuous {
-                raw, caret, nailed, ..
-            } => append_continuous(
-                state,
-                raw.clone(),
-                *caret,
-                nailed.clone(),
-                &ch,
-                config,
-                frequency,
-            ),
-        },
+        }
         Intent::AppendHyphen => {
             return apply(
                 state,
@@ -173,26 +176,23 @@ pub(crate) fn apply(
 /// is whatever ends that chunk) and keep the rest of the pending tail; a
 /// `None` edit is a no-op. Under Continuous the nailed segments stay
 /// untouched and the preedit re-renders the whole composition; selection
-/// resets as a fresh typing step does.
+/// resets as a fresh typing step does. No Telex key starts a composition:
+/// a tone has nothing to mark when idle, and an idle `f` is the `-` key.
 fn telex_key(
     state: &mut EngineState,
     key: &str,
     config: &AppConfig,
     frequency: Frequency<'_>,
 ) -> ComposingResponse {
-    let mode = phonetics::api::composing_mode(config);
     match &state.phase {
-        Phase::Idle => match crate::telex::apply_telex_key("", key, mode) {
-            Some(text) => begin_composition(state, text, config, frequency),
-            // An idle `f` is the `-` key: the neutral-tone marker (§21).
-            None if crate::telex::is_hyphen_key(key) => {
-                begin_composition_or_insert_leading_hyphens(state, "-".into(), config, frequency)
-            }
-            None => noop(state, config),
-        },
+        // An idle `f` is the `-` key: the neutral-tone marker (§21).
+        Phase::Idle if crate::telex::is_hyphen_key(key) => {
+            begin_composition_or_insert_leading_hyphens(state, "-".into(), config, frequency)
+        }
+        Phase::Idle => noop(state, config),
         Phase::Continuous {
             raw, caret, nailed, ..
-        } => match telex_before_caret(raw, *caret, key, mode) {
+        } => match telex_before_caret(raw, *caret, key) {
             Some((next, caret)) => {
                 step_continuous(state, next, caret, nailed.clone(), config, frequency)
             }
@@ -326,13 +326,8 @@ fn replace_before_caret(raw: &str, caret: usize, replacement: &str) -> Option<(S
 }
 
 /// Telex key on the chunk before the caret; the tail after it rides along.
-fn telex_before_caret(
-    raw: &str,
-    caret: usize,
-    key: &str,
-    mode: phonetics::api::InputMode,
-) -> Option<(String, usize)> {
-    let prefix = crate::telex::apply_telex_key(&raw[..caret], key, mode)?;
+fn telex_before_caret(raw: &str, caret: usize, key: &str) -> Option<(String, usize)> {
+    let prefix = crate::telex::apply_telex_key(&raw[..caret], key)?;
     let next_caret = prefix.len();
     let mut next = prefix;
     next.push_str(&raw[caret..]);

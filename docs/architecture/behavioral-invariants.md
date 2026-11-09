@@ -1308,19 +1308,26 @@ IMK can activate a second controller (a system client) while it keeps delivering
 
 ---
 
-## §62 — Telex writes tone 6 on `z` and the affricate on `c`, the same in TL and POJ
+## §62 — Telex writes tone 6 on `z`; `c` → `ts` / `ch` is its own opt-in setting
 
 ### `INVARIANT_TELEX_KEY_TABLE`
 
-The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6 and kept `c` a plain letter. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on `ToneInputScheme::TELEX_KEYS`:
+The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on `ToneInputScheme::TELEX_KEYS` (`x v y d z w q f`):
 
 - **`z` / `Z` is a single-tone key**, like `y d w q`: it writes tone 6 on any syllable, a stop coda included (`sit` + `z` → `sit6`), and passes to the host when idle.
-- **`c` / `C` writes the affricate initial**: `ts` under TL, `ch` under POJ, `Ts` / `Ch` capitalized. `h` then aspirates it. It starts a composition when idle.
-- **`h` after `tsh` / `chh` does nothing**, in any letter case, so a spelled-out POJ `c` `h` `h` `i` `a` is still `chhia`. No syllable has `tshh` / `chhh`. Under Telex every `h` goes to the engine for this, and otherwise lands exactly where `Append` would. It is dropped when typed rather than folded at lookup, so the composition, a commit as typed and every lookup read the same text.
-- **Spelled-out POJ `cha` reaches `chha`.** `c` `h` could mean either initial, and both are real, so nothing short of remembering how the buffer was typed tells them apart. Accepted: TL and POJ keep one rule.
-- **An idle `f` / `F` is the `-` key** (#727): it inserts a literal `-` and the engine stays idle, as a leading `-` does (`INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL`, §21), so `f` `f` `a` `h` types `--` and composes `ah`. Repeats are uncapped (`fff` → `---`). The engine decides this in the `Phase::Idle` arm of `telex_key` (`engine/composing/src/transition.rs`); `apply_telex_key` still sees only the tail and answers `None` on an empty one, so `f` on an empty tail while composing is still a no-op. The desktop lets `f` through when idle via `ToneInputScheme::reaches_engine_when_idle`. Accepted cost: an idle `f` can no longer type the letter `f` under Telex; English goes through an English input method.
-- **A custom word spelled with a bare `c` cannot be typed under Telex**, as with the other Telex letters.
-- **Standard does not change.** It shares eight letters with Telex, swapped with the digits; `c` and `h` stay plain letters there.
+- **`c` and `h` are not Telex keys** (2026-11-09). Both are ordinary letters under either scheme and reach the engine as `Append`. The 2026-11-05 table had `c` write the affricate and dropped an `h` after `tsh` / `chh`; the `h` rule is gone, and the affricate moved to its own setting (`INVARIANT_C_TYPES_AFFRICATE` below).
+- **An idle `f` / `F` is the `-` key** (#727): it inserts a literal `-` and the engine stays idle, as a leading `-` does (`INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL`, §21), so `f` `f` `a` `h` types `--` and composes `ah`. Repeats are uncapped (`fff` → `---`). The engine decides this in the `Phase::Idle` arm of `telex_key` (`engine/composing/src/transition.rs`); `apply_telex_key` still sees only the tail and answers `None` on an empty one, so `f` on an empty tail while composing is still a no-op. No other Telex key starts a composition. The desktop lets `f` through when idle via `ToneInputScheme::reaches_engine_when_idle`. Accepted cost: an idle `f` can no longer type the letter `f` under Telex; English goes through an English input method.
+- **A custom word spelled with a Telex letter cannot be typed under Telex.**
+- **Standard does not change.** It shares eight letters with Telex, swapped with the digits.
+
+### `INVARIANT_C_TYPES_AFFRICATE`
+
+**Type ts / ch with c** (settings key `cAffricateEnabled`, desktop only, OFF by default, 2026-11-09) makes a typed `c` write the unaspirated affricate initial: `ts` / `Ts` under TL, `ch` / `Ch` under POJ. It is independent of the tone scheme.
+
+- **Engine-side, on `Append`.** Desktop-core sends the setting as `AppConfig.c_types_affricate`; `engine/composing/src/affricate.rs` rewrites an `Append` of exactly `c` / `C`, idle or composing, at the caret. Every other key, TPS and English are untouched. Desktop-core sends it off under TPS as well (`SettingsDocument::engine_settings`).
+- **`h` writes itself**, so `c` `h` spells the aspirated initial (`tsh` / `chh`). There is no slip rule: a spelled-out POJ `c` `h` `h` `i` `a` composes `chhhia`.
+- **Spelled-out POJ `cha` reaches `chha`** with the setting on. `c` `h` could mean either initial, and both are real; turn the setting off to type POJ letter by letter.
+- **A custom word spelled with a bare `c` cannot be typed** with the setting on.
 
 ---
 

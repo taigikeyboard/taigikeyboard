@@ -298,6 +298,13 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   /// until the conversion walk read custom rows too (2026-11-09).
   public var customDictionaryDisabled: Bool = false
 
+  /// The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+  /// `Append` of `c` / `C` writes the unaspirated affricate initial the input
+  /// mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+  /// tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+  /// Unset, `c` is an ordinary letter.
+  public var cTypesAffricate: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -516,7 +523,7 @@ nonisolated extension Taigi_Engine_SyllableSeparator: SwiftProtobuf._ProtoNamePr
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{3}dictionary_sources\0\u{3}custom_dictionary_disabled\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{3}dictionary_sources\0\u{3}custom_dictionary_disabled\0\u{3}c_types_affricate\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -536,6 +543,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 14: try { try decoder.decodeSingularEnumField(value: &self.syllableSeparator) }()
       case 15: try { try decoder.decodeSingularMessageField(value: &self._dictionarySources) }()
       case 16: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryDisabled) }()
+      case 17: try { try decoder.decodeSingularBoolField(value: &self.cTypesAffricate) }()
       default: break
       }
     }
@@ -582,6 +590,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.customDictionaryDisabled != false {
       try visitor.visitSingularBoolField(value: self.customDictionaryDisabled, fieldNumber: 16)
     }
+    if self.cTypesAffricate != false {
+      try visitor.visitSingularBoolField(value: self.cTypesAffricate, fieldNumber: 17)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -598,6 +609,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.syllableSeparator != rhs.syllableSeparator {return false}
     if lhs._dictionarySources != rhs._dictionarySources {return false}
     if lhs.customDictionaryDisabled != rhs.customDictionaryDisabled {return false}
+    if lhs.cTypesAffricate != rhs.cTypesAffricate {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

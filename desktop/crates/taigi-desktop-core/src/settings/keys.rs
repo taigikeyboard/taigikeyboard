@@ -76,6 +76,11 @@ pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::ne
     "nasalMarkerUppercaseEnabled",
     ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
 );
+/// Type ts / ch with c (`EngineSettings::is_c_affricate_enabled`). Desktop-only
+/// like `toneInputScheme`, and independent of it. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `isCAffricateEnabled`.
+pub const IS_C_AFFRICATE_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("cAffricateEnabled", ENGINE_DEFAULTS.is_c_affricate_enabled);
 // RETIRED 2026-09-30: `frequencyRecordingEnabled`. No platform has a UI for it
 // and the engine counts every pick now (`RecordUsage` tag 4 reserved). A
 // hand-edited `false` in an existing `settings.json` is inert; spelling reserved.
@@ -293,13 +298,14 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub const GENERAL_KEYS: [&str; 12] = [
+pub const GENERAL_KEYS: [&str; 13] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
     TPS_KEYBOARD_SHOWN.name,
     TELEX_GUIDE_SHOWN.name,
     TONE_INPUT_SCHEME.name,
+    IS_C_AFFRICATE_ENABLED.name,
     IS_HANJI_FIRST.name,
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,

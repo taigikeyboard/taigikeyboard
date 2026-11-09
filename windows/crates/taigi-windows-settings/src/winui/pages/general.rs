@@ -72,6 +72,14 @@ pub fn view(
             |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
             context,
         ),
+        // Under Tone Keys, independent of it: both say what a letter types.
+        // TPS has no `c` initial, so the row greys there, as the layout does.
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsCAffricate),
+            document.bool(&keys::IS_C_AFFRICATE_ENABLED),
+            !document.is_typing_tps(),
+            context.callback(|is_on| Message::SetSwitch(keys::IS_C_AFFRICATE_ENABLED, is_on)),
+        ),
         // S33 (USER 2026-09-08): off means no window at all — the user types
         // romanization and Space / Enter write it as typed. Directly above
         // Show Typed Text First, which describes the window's content and so reads

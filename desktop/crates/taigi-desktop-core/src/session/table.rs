@@ -32,7 +32,7 @@ pub(crate) fn present_table(
     let slot_key_set = bindings.slot_key_set();
     if state.candidates.is_empty() {
         if settings.is_telex_guide_wanted() {
-            emits.push(Emit::LookupTable(telex_guide_table(runtime, settings)));
+            emits.push(Emit::LookupTable(telex_guide_table(runtime)));
             state.is_table_shown = true;
         } else if state.is_table_shown {
             emits.push(Emit::HideLookupTable);
@@ -123,13 +123,13 @@ fn symbol_picker_table(
 /// The Telex key table as a lookup table: the title row, then `key  meaning`
 /// per row, no labels, no highlight, one vertical page (Linux roadmap L4 —
 /// platform-adapted presentation of `keys::telex_guide_rows`).
-fn telex_guide_table(runtime: &DesktopRuntime, settings: &SettingsDocument) -> LookupTableContent {
+fn telex_guide_table(runtime: &DesktopRuntime) -> LookupTableContent {
     let strings = runtime.strings();
     let mut rows = vec![strings
         .resolve(StringKey::SettingsToneSchemeTelex)
         .to_owned()];
     rows.extend(
-        telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings)
+        telex_guide_rows(&strings)
             .into_iter()
             .map(|row| format!("{}  {}", row.key, row.meaning)),
     );

@@ -11,6 +11,7 @@ use protos::engine::{
     next_word_request, next_word_response, request, response, DecisionInput,
     DictionarySourceToggles, EnginePrediction, NextWordRequest, PredictNext, WordSelected,
 };
+use std::time::{Duration, Instant};
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
 
 fn nextword(method: next_word_request::Method) -> next_word_response::Result {
@@ -65,6 +66,25 @@ fn predict(word: &str, roman: &str, generation: u64) -> Vec<EnginePrediction> {
     filtered.predictions
 }
 
+/// Every learned association row as `previous/tl→next/tl ×count`, sorted.
+fn association_rows(reader: &UserDataStores) -> Vec<String> {
+    let mut rows: Vec<String> = reader
+        .association
+        .all_rows()
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            let pair = row.pair;
+            format!(
+                "{}/{}→{}/{} ×{}",
+                pair.previous, pair.previous_tl, pair.next, pair.next_tl, row.count
+            )
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
 // trace: dictionary.csv rows 總統/tsóng-thóng, 蔣經國/tsiúnn-keng-kok,
 // 德國簫/tek-kok-siau, 台灣/tâi-uân, 人/lâng. Commits 1 s apart share the
 // 10 s association window; the 台灣 pair starts a new one.
@@ -89,29 +109,21 @@ fn tl_special_finals_are_learned_and_predicted_as_committed() {
         JournalMode::Delete,
     );
     reader.open_blocking();
-    let mut rows: Vec<String> = reader
-        .association
-        .all_rows()
-        .unwrap()
-        .into_iter()
-        .map(|row| {
-            let pair = row.pair;
-            format!(
-                "{}/{}→{}/{} ×{}",
-                pair.previous, pair.previous_tl, pair.next, pair.next_tl, row.count
-            )
-        })
-        .collect();
-    rows.sort();
     // The repeated 總統 → 蔣經國 commit counts the same row; no `king` row.
-    assert_eq!(
-        rows,
-        vec![
-            "台灣/tâi-uân→人/lâng ×1",
-            "總統/tsóng-thóng→蔣經國/tsiúnn-keng-kok ×2",
-            "蔣經國/tsiúnn-keng-kok→德國簫/tek-kok-siau ×1",
-        ]
-    );
+    let expected = vec![
+        "台灣/tâi-uân→人/lâng ×1",
+        "總統/tsóng-thóng→蔣經國/tsiúnn-keng-kok ×2",
+        "蔣經國/tsiúnn-keng-kok→德國簫/tek-kok-siau ×1",
+    ];
+    // The engine's writes queue on its own store's worker, which this
+    // reader's `all_rows` barrier does not wait for: poll until they land.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let mut rows = association_rows(&reader);
+    while rows != expected && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(20));
+        rows = association_rows(&reader);
+    }
+    assert_eq!(rows, expected);
 
     let after_president = predict("總統", "tsóng-thóng", generation);
     let first = &after_president[0];

@@ -156,6 +156,11 @@
       "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "Telex", "tailo": "Telex", "poj": "Telex", "en": "Telex", "ja": "Telex" }
     },
+    "cAffricate": {
+      "comment": "Toggle label: a typed c writes the unaspirated affricate initial — ts under TL, ch under POJ — under either Tone Keys choice. Off by default (2026-11-09).",
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
+      "values": { "hanji": "用 c 拍 ts／ch", "tailo": "Iōng c phah ts / ch", "poj": "Iōng c phah ts / ch", "en": "Type ts / ch with c", "ja": "c で ts／ch を入力" }
+    },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },

@@ -46,7 +46,7 @@ const SECTION_GAP: f32 = 8.0;
 const ROW_GAP: f32 = 3.0;
 const COLUMN_GAP: f32 = 16.0;
 
-/// What the card says: the title and the rows for the romanization in use,
+/// What the card says: the title and the rows,
 /// resolved by the caller, who has the display language; this module only
 /// draws. No dismiss hint — the card carries the keys and nothing else
 /// (USER 2026-09-09).

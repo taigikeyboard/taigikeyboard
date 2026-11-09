@@ -88,24 +88,25 @@ fn every_built_pane_is_in_the_stack(window: &Rc<SettingsWindow>) {
     eprintln!("panes: {} panes in the stack", SettingsPane::ALL.len());
 }
 
-/// trace: General's first switch row is Show Candidate Window (`IS_CANDIDATE_WINDOW_ENABLED`,
-/// default true). Flipping the switch writes `false`; flipping back `true`.
+/// trace: General's first switch row is Type ts / ch with c (`IS_C_AFFRICATE_ENABLED`,
+/// default false), right under Tone Keys. Flipping the switch writes `true`;
+/// flipping back `false`.
 fn a_switch_row_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window.page_widget(SettingsPane::General).expect("general");
     let row = find_first::<adw::SwitchRow>(&page).expect("a switch row");
-    assert!(row.is_active());
-    row.set_active(false);
-    assert!(!window
-        .writer()
-        .borrow()
-        .document()
-        .bool(&keys::IS_CANDIDATE_WINDOW_ENABLED));
+    assert!(!row.is_active());
     row.set_active(true);
     assert!(window
         .writer()
         .borrow()
         .document()
-        .bool(&keys::IS_CANDIDATE_WINDOW_ENABLED));
+        .bool(&keys::IS_C_AFFRICATE_ENABLED));
+    row.set_active(false);
+    assert!(!window
+        .writer()
+        .borrow()
+        .document()
+        .bool(&keys::IS_C_AFFRICATE_ENABLED));
     eprintln!("panes: switch row round-trips");
 }
 
