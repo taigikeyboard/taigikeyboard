@@ -78,8 +78,10 @@ pub struct CustomDictionaryIdentity {
 /// keyboard `lí` are one stored form, with each syllable's tone digit written
 /// as its mark (`tsui2-ong5-tshut` is stored `tsuí-ông-tshut`; `stored_roman`),
 /// and the Hanji it stands for, which may be empty: a word written only in
-/// romanization has none, so a Hanji column spelling one (`lán,lán`) is stored empty,
-/// as the dictionary pipeline stores its rows (`stored_hanji`). Timestamps
+/// romanization has none, so a Hanji column repeating the roman (`lán,lán`) is
+/// stored empty, as the dictionary pipeline stores its rows; a Latin spelling
+/// that differs from the roman (`khe-thi-bui,KTV`, `tâi-lâm,Tâi-lâm`) is the
+/// form the user chose and is kept (`stored_hanji`). Timestamps
 /// are the stored `yyyy-MM-dd HH:mm:ss` UTC text. CROSS-PLATFORM INVARIANT — the stored
 /// shape is the engine's; iOS `CustomDictionaryEntry` / macOS
 /// `CustomDictionaryRow` are page views of it.
@@ -500,8 +502,8 @@ impl CustomDictionaryStore {
     /// Rewrites every stored row that is not in the stored form
     /// (`stored_row`) into it — the rows written before the write boundary
     /// normalised: a decomposed CSV import (NFD), a roman saved with tone
-    /// digits (`tsui2-ong5-tshut`), a roman-only word saved with its
-    /// romanization in the Hanji column (`lán,lán`). No marker: the stamps cannot
+    /// digits (`tsui2-ong5-tshut`), a roman-only word saved with its roman
+    /// repeated in the Hanji column (`lán,lán`). No marker: the stamps cannot
     /// carry one (Android files keep 10 and iOS files 6 whatever this build
     /// writes, and `application_id` is the takeover), so the scan is the
     /// gate — a file an older build writes into again heals on the next
@@ -528,7 +530,7 @@ impl CustomDictionaryStore {
                 let mut stale = Vec::new();
                 for row in rows {
                     let (id, roman, hanji) = row?;
-                    let normalized = (stored_roman(&roman), stored_hanji(&hanji).to_owned());
+                    let normalized = stored_columns(&roman, &hanji);
                     if normalized != (roman.clone(), hanji.clone()) {
                         stale.push((id, (roman, hanji), normalized));
                     }
@@ -670,27 +672,38 @@ fn stored_roman(roman: &str) -> String {
     phonetics::api::tone_digits_to_marks(roman)
 }
 
-/// The one stored form of a Hanji column: empty when its spelling is written
-/// only in romanization (`lán`) — that word has no Hanji, the shape every shipped
-/// dictionary row takes (`dictionary/common/cleanup.py`
-/// `blank_roman_only_hanzi`) — otherwise as typed. Never normalised: NFC
-/// would fold a CJK compatibility ideograph onto its unified twin, changing
-/// the character the user chose.
-fn stored_hanji(hanji: &str) -> &str {
-    if phonetics::api::is_roman_only_spelling(hanji) {
+/// The one stored form of a Hanji column, given the row's stored roman: empty
+/// when it is roman-only and, normalised like the roman, equal to it — the
+/// shipped dictionary's hanzi-less shape (`dictionary/common/cleanup.py`
+/// `blank_roman_only_hanzi`); otherwise as typed (examples on
+/// [`CustomDictionaryRow`]). The roman-only guard keeps a TPS repeat
+/// (`ㄌㄢˊ`). Never NFC-normalised when kept: NFC would fold a CJK
+/// compatibility ideograph onto its unified twin.
+fn stored_hanji<'a>(hanji: &'a str, stored_roman_form: &str) -> &'a str {
+    let repeats_roman =
+        phonetics::api::is_roman_only_spelling(hanji) && stored_roman(hanji) == stored_roman_form;
+    if repeats_roman {
         ""
     } else {
         hanji
     }
 }
 
-/// `row` in the stored form — its roman by [`stored_roman`], its Hanji by
-/// [`stored_hanji`]. The one write boundary: an add, an edit, an import and
-/// a restore all store through it.
+/// A row's `(roman, hanji)` columns in the stored form — the roman by
+/// [`stored_roman`], then the Hanji by [`stored_hanji`] against that roman.
+fn stored_columns(roman: &str, hanji: &str) -> (String, String) {
+    let roman = stored_roman(roman);
+    let hanji = stored_hanji(hanji, &roman).to_owned();
+    (roman, hanji)
+}
+
+/// `row` in the stored form ([`stored_columns`]). The one write boundary: an
+/// add, an edit, an import and a restore all store through it.
 fn stored_row(row: &CustomDictionaryRow) -> CustomDictionaryRow {
+    let (roman, hanji) = stored_columns(&row.roman, &row.hanji);
     CustomDictionaryRow {
-        roman: stored_roman(&row.roman),
-        hanji: stored_hanji(&row.hanji).to_owned(),
+        roman,
+        hanji,
         ..row.clone()
     }
 }
