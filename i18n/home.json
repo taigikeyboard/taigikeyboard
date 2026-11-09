@@ -434,6 +434,25 @@
         "ja": "Discord"
       }
     },
+    "discordCommunity": {
+      "comment": "Home: last row of the Other (FAQ) section, beside the Discord logo: opens the Discord server for a question the FAQ does not answer. Matches the issue chooser's Discord entry (問題討論).",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "問題討論",
+        "tailo": "Būn-tê thó-lūn",
+        "poj": "Būn-tê thó-lūn",
+        "en": "Questions & Discussion",
+        "ja": "質問・ディスカッション"
+      }
+    },
     "facebookLink": {
       "comment": "About page: title + accessibility name of the Facebook link row. A product name — same in every language.",
       "scope": {
