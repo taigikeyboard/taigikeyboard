@@ -9,7 +9,11 @@ import pandas as pd
 from pipeline.context import PipelineContext
 from common.abbrev import extract_abbrev, extract_tps_abbrev
 from common.notone import apply_or_dialect_variant
-from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict
+from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict, prefetch_convert
+
+
+def _syllables(tl: str) -> list[str]:
+    return [s for s in re.split(r"[-\s]+", str(tl)) if s]
 
 
 def _derive_tps_abbrev(tl: str) -> str:
@@ -22,7 +26,7 @@ def _derive_tps_abbrev(tl: str) -> str:
     """
     if not tl or pd.isna(tl):
         return ""
-    syllables = [s for s in re.split(r"[-\s]+", str(tl)) if s]
+    syllables = _syllables(tl)
     if len(syllables) < 2:
         return ""
     tps_per_syllable: list[str] = []
@@ -44,6 +48,13 @@ def run(ctx: PipelineContext) -> None:
     df = df.copy()
     df["tl_abbrev"] = df["tl"].apply(extract_abbrev)
     df["poj_abbrev"] = df["poj"].apply(extract_abbrev)
+    syllables = {
+        syllable
+        for tl in df["tl"].dropna().unique()
+        if tl and len(parts := _syllables(tl)) >= 2
+        for syllable in parts
+    }
+    prefetch_convert(syllables, "tl", "zhuyin")
     df["tps_abbrev"] = df["tl"].apply(_derive_tps_abbrev)
     # C-3a er↔or dialect dual-emit: ㄜ→ㄛ variant of `tps_abbrev`. Only
     # populated when the abbrev has ㄜ (vowel-initial er/or syllables,
