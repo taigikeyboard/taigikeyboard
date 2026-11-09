@@ -25,6 +25,7 @@ from collections import Counter
 from pathlib import Path
 
 import pandas as pd
+import polars as pl
 
 from build.common import BASE_DIR, LOG_DIR
 from common.abbrev import extract_abbrev, extract_tps_abbrev
@@ -42,7 +43,7 @@ from common.taigi_bridge import (
     convert_tl_to_poj_strict,
     convert_tl_to_tps_strict,
 )
-from common import read_dictionary_csv
+from common import read_dictionary_csv, read_dictionary_csv_polars
 
 INPUT_FILES = [
     ("sources/official/kautian/data/kautian.csv", "kautian"),
@@ -62,19 +63,54 @@ SCRIPT_NAME = "merge_csv"
 SOURCE_COLUMNS = MAIN_SOURCE_COLUMNS
 
 # kautian subcollection provenance columns — present only on kautian rows, so
-# cross-source dedup must UNION them (NaN for other sources). The bool
-# flags use the same "any" reducer as SOURCE_COLUMNS; the accent mask needs a
-# custom bitwise-OR. See common/kautian_provenance.py.
+# cross-source dedup must UNION them (null for other sources). The bool
+# flags use the same "any" reducer as SOURCE_COLUMNS; the accent mask is
+# bitwise-OR-ed. See common/kautian_provenance.py.
 KAUTIAN_PROVENANCE_FLAGS = (COL_MAIN, COL_ALT_READING, COL_NAME)
 
 
-def _or_mask_agg(series) -> int:
-    """Bitwise-OR a group's accent masks, treating NaN (non-kautian) as 0."""
-    acc = 0
-    for value in series:
-        if pd.notna(value):
-            acc |= int(value)
-    return acc
+OFFICIAL_SOURCES = ["kautian", "taigitv", "kungge"]
+
+
+def _dedup_sources(merged: pl.DataFrame) -> pd.DataFrame:
+    """Merge rows sharing `(hanzi, tl key)` across sources, sorted for output.
+
+    The tl key maps spaces to hyphens: official dictionaries may spell a tl
+    with spaces ("m̄ bat"), the others with hyphens ("m̄-bat"); both are one
+    entry and the official (spaced) tl is kept. Source flags are OR-ed,
+    frequency takes the max, the accent mask is bitwise-OR-ed, and every
+    other column takes the group's first non-empty value with official rows
+    ordered first. Returns pandas for the supplement loaders that follow.
+    """
+    merged = merged.with_columns(
+        pl.col("tl").str.replace_all(" ", "-", literal=True).alias("_tl_key"),
+        pl.any_horizontal(c for c in OFFICIAL_SOURCES if c in merged.columns)
+        .fill_null(False)
+        .alias("_is_official"),
+    )
+    # Keep source/row order within each priority so unrelated additions cannot
+    # change the display spelling selected by "first".
+    merged = merged.sort("_is_official", descending=True, maintain_order=True)
+
+    aggs = []
+    for col in merged.columns:
+        if col in ("hanzi", "_tl_key", "_is_official"):
+            continue
+        elif col in SOURCE_COLUMNS or col in KAUTIAN_PROVENANCE_FLAGS:
+            aggs.append(pl.col(col).any())
+        elif col == "frequency":
+            aggs.append(pl.col(col).max())
+        elif col == COL_ACCENT_MASK:
+            aggs.append(pl.col(col).fill_null(0).bitwise_or())
+        else:
+            aggs.append(pl.col(col).drop_nulls().first())
+    result = (
+        merged.group_by(["hanzi", "_tl_key"], maintain_order=True)
+        .agg(aggs)
+        .drop("_tl_key")
+        .sort(["frequency", "hanzi", "tl"], descending=[True, False, False], nulls_last=True)
+    )
+    return pd.DataFrame({col: result[col].to_list() for col in result.columns})
 
 
 def main():
@@ -93,7 +129,7 @@ def main():
             logger.warning(f"  [skip] {filepath} not found")
             continue
 
-        df = read_dictionary_csv(full_path)
+        df = read_dictionary_csv_polars(full_path)
         logger.info(f"  [load] {filepath}: {len(df)} records")
         all_dfs.append(df)
 
@@ -106,51 +142,11 @@ def main():
     # filters (e.g. khiin >4-syllable cap / romanization failures).
     drop_stats: dict = {"filter_drops": Counter()}
 
-    # Merge
-    merged_df = pd.concat(all_dfs, ignore_index=True)
-    drop_stats["raw_rows"] = len(merged_df)
-    logger.info(f"\n  Total before merge: {len(merged_df)} records")
+    merged = pl.concat(all_dfs, how="diagonal")
+    drop_stats["raw_rows"] = len(merged)
+    logger.info(f"\n  Total before merge: {len(merged)} records")
 
-    # Build a normalized key (space → hyphen) for cross-dictionary dedup
-    # Official dictionaries' tl may hold spaces (e.g. "m̄ bat"), unofficial ones hyphens (e.g. "m̄-bat")
-    # Dedup treats them as one entry but keeps the official (spaced) tl
-    OFFICIAL_SOURCES = ["kautian", "taigitv", "kungge"]
-    merged_df["_tl_key"] = merged_df["tl"].str.replace(" ", "-", regex=False)
-    merged_df["_is_official"] = merged_df[OFFICIAL_SOURCES].any(axis=1)
-
-    # Keep source/row order within each priority so unrelated additions cannot
-    # change the display spelling selected by groupby's "first".
-    merged_df = merged_df.sort_values("_is_official", ascending=False, kind="stable", ignore_index=True)
-
-    # Dedup: rows with the same (hanzi, _tl_key) merge their source columns
-    # dropna=False: keeps groupby from silently dropping rows that hold NaN
-    agg_dict = {}
-    for col in merged_df.columns:
-        if col in ["hanzi", "_tl_key"]:
-            continue  # groupby key
-        elif col in ["_is_official"]:
-            continue  # temp column
-        elif col in SOURCE_COLUMNS:
-            agg_dict[col] = "any"
-        elif col == "frequency":
-            agg_dict[col] = "max"
-        elif col == COL_ACCENT_MASK:
-            agg_dict[col] = _or_mask_agg
-        elif col in KAUTIAN_PROVENANCE_FLAGS:
-            agg_dict[col] = "any"  # bool union, NaN-skipping — as SOURCE_COLUMNS
-        else:
-            agg_dict[col] = "first"
-    result_df = merged_df.groupby(["hanzi", "_tl_key"], as_index=False, dropna=False).agg(agg_dict)
-
-    # Drop the temporary column
-    result_df = result_df.drop(columns=["_tl_key"])
-
-    # Sort: by frequency, descending
-    result_df = result_df.sort_values(
-        ["frequency", "hanzi", "tl"],
-        ascending=[False, True, True],
-        ignore_index=True
-    )
+    result_df = _dedup_sources(merged)
 
     drop_stats["after_dedup"] = len(result_df)
     logger.info(f"  After dedup: {len(result_df)} records")

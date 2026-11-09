@@ -103,11 +103,11 @@ def _normalise_optional(value) -> str | None:
 
 
 def _as_bool(value) -> bool:
-    """Coerce a CSV cell to bool, robust to pandas dtype inference.
+    """Coerce a CSV cell to bool; an empty cell (None / NaN) is False.
 
-    `read_dictionary_csv` infers dtype, so a clean flag column arrives as
-    `numpy.bool_`; a column with stray NaN arrives as object strings. Treat
-    only the literal "true" (case-insensitive) / truthy non-string as True.
+    `read_dictionary_csv_polars` reads the flag columns as bool, but tests
+    build rows by hand, so a string cell still counts: only the literal
+    "true" (case-insensitive) / truthy non-string is True.
     """
     if pd.isna(value):
         return False
@@ -151,8 +151,8 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
 
 
 def _read_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
-    from common import read_dictionary_csv
-    df = read_dictionary_csv(csv_path)
+    from common import read_dictionary_csv_polars
+    df = read_dictionary_csv_polars(csv_path)
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise RuntimeError(f"dictionary.csv missing columns: {missing}")
@@ -172,7 +172,7 @@ def _read_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     records: list[DictionaryRecord] = []
     seen_non_null: set[tuple[str, str]] = set()
 
-    for row in df.to_dict("records"):
+    for row in df.iter_rows(named=True):
         tl_raw = row["tl"]
         if pd.isna(tl_raw):
             continue
