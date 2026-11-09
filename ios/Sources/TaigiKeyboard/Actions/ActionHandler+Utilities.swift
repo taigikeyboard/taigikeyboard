@@ -12,7 +12,10 @@ extension ActionHandler {
         // TPS tone marks ˋ ˊ ˇ ˆ (Lm).
         // Three TPS tone marks are Sk (Symbol, modifier), not caught by isLetter:
         //   ˪ (U+02EA, tone 3), ˫ (U+02EB, tone 7), ˙ (U+02D9, tone 8)
+        // and the tone-8 dot after ㆴㆵㆻㆷ is the combining U+0307 (Mn), which
+        // `CharacterInputPipeline.adjust` hands back in place of the typed ˙.
         return first.isLetter || first == "-"
             || first == "\u{02EA}" || first == "\u{02EB}" || first == "\u{02D9}"
+            || first == "\u{0307}"
     }
 }

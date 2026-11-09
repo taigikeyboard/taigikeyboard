@@ -52,6 +52,12 @@ class RustEngineBridgeTest {
         assertFalse(RustEngineBridge.isTpsToneMark('a'))
     }
 
+    // The TPS Space key reads the raw buffer's last char; after `˙` on a stop
+    // coda that is the combining tone-8 dot U+0307.
+    @Test fun op_isTpsToneMark_combiningToneEightDotIsToneMark() {
+        assertTrue(RustEngineBridge.isTpsToneMark('\u0307'))
+    }
+
     // The engine's attaching set (`phonetics::punctuation`, full roster pinned
     // there) through the bridge `TextInputKeyHandler.commitNonComposingCharacter` reads.
     @Test fun op_isAttachingPunctuation_closingAttaches_openingDoesNot() {

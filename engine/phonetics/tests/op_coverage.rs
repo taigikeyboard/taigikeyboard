@@ -406,6 +406,14 @@ fn is_tps_tone_mark_true_for_acute() {
 }
 
 #[test]
+fn is_tps_tone_mark_true_for_combining_tone_eight_dot() {
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
+        char: "\u{0307}".to_string(),
+    }));
+    assert!(bool_result(&resp));
+}
+
+#[test]
 fn is_tps_tone_mark_false_for_letter() {
     let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
         char: "a".to_string(),

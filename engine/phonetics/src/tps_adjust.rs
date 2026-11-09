@@ -13,57 +13,24 @@
 //! (`{ㄗ, ㄘ, ㄙ, ㆡ}`) are disjoint by `lastChar`, so the `?:` short-circuit
 //! is observationally equivalent to running both checks unconditionally.
 
-use crate::tps::{fold_tps_glyph_alias, ZHUYIN_TONES, ZHUYIN_TONES_ENCODE_SAFE};
+use crate::tps::fold_tps_glyph_alias;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 
 // =========================================================================
-// Tone-mark predicate (used by IsTpsToneMark op + syllabic-nasal trigger)
+// Tone-mark predicate (IsTpsToneMark op)
 // =========================================================================
 
-/// Set of TPS non-entering tone marks (`ˋ ˊ ˇ ˫ ˙ ˆ ˪ ˫`).
-///
-/// Excludes entering-tone finals (`ㆴ ㆵ ㆻ ㆷ`) which are CONSONANTS not
-/// tone marks. Excludes the literal " " mapped from tone "1" (no-op).
-static TONE_MARK_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
-    let mut set = HashSet::new();
-    let mut collect = |table: &[(&str, &str)]| {
-        for (key, tps) in table {
-            // Filter out entering-tone finals (key starts with consonant + digit).
-            if key.len() > 1 {
-                continue;
-            }
-            for ch in tps.chars() {
-                // Ignore the placeholder " " for tone 1 + combining marks like
-                // U+0307 / U+02D9 (those attach to entering-tone finals).
-                if ch.is_whitespace() {
-                    continue;
-                }
-                if matches!(ch as u32, 0x0300..=0x036F) {
-                    continue;
-                }
-                set.insert(ch);
-            }
-        }
-    };
-    collect(ZHUYIN_TONES);
-    collect(ZHUYIN_TONES_ENCODE_SAFE);
-    set
-});
-
-fn is_tps_tone_mark(c: char) -> bool {
-    TONE_MARK_CHARS.contains(&c)
-}
-
-/// String-overload for the `Method::IsTpsToneMark` op which takes a string
-/// (single grapheme expected). Returns false on empty / multi-grapheme.
+/// Single-scalar form of [`crate::tps::is_tps_tone_mark`] (which holds the
+/// combining tone-8 dot U+0307) for the `IsTpsToneMark` op; false on empty /
+/// multi-scalar input.
 pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
     let mut chars = s.chars();
     let Some(c) = chars.next() else { return false };
     if chars.next().is_some() {
         return false;
     }
-    is_tps_tone_mark(c)
+    crate::tps::is_tps_tone_mark(c)
 }
 
 // =========================================================================
@@ -92,13 +59,9 @@ const STOP_CODAS: [char; 4] = ['ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'];
 // and the dictionary stores them in precomposed `ㆷ` form, so users reach
 // them via dictionary lookup rather than auto-correct.
 static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
-    let mut set: HashSet<char> = TONE_MARK_CHARS.iter().copied().collect();
-    // Checked-tone finals (entering-tone consonants — end syllable), and the
-    // combining tone-8 dot stored over one (`adjust_tone_eight_dot`), which
-    // `TONE_MARK_CHARS` leaves out with every combining mark.
-    for c in STOP_CODAS.into_iter().chain(['\u{0307}']) {
-        set.insert(c);
-    }
+    // Checked-tone finals (entering-tone consonants — end syllable). Tone
+    // marks are read by [`is_syllable_boundary`] from the canonical set.
+    let mut set: HashSet<char> = STOP_CODAS.into_iter().collect();
     // Syllabic nasals (ㆬ ㄣ ㆭ = m/n/ng in ZHUYIN_VOWELS) + contextual
     // `ㄥ` (ㄫ after ㄧ — see adjust_initial_key).
     for c in ['ㆬ', 'ㄣ', 'ㆭ', 'ㄥ'] {
@@ -118,10 +81,12 @@ static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     set
 });
 
-/// Whether `c` closes a syllable ([`SYLLABLE_BOUNDARY_CHARS`]), reading the ㆳ
-/// glyph alias as ㆪ ([`fold_tps_glyph_alias`]).
+/// Whether `c` closes a syllable: a tone mark ([`crate::tps::is_tps_tone_mark`],
+/// incl. the combining tone-8 dot stored over a stop coda) or one of
+/// [`SYLLABLE_BOUNDARY_CHARS`], reading the ㆳ glyph alias as ㆪ
+/// ([`fold_tps_glyph_alias`]).
 fn is_syllable_boundary(c: char) -> bool {
-    SYLLABLE_BOUNDARY_CHARS.contains(&fold_tps_glyph_alias(c))
+    crate::tps::is_tps_tone_mark(c) || SYLLABLE_BOUNDARY_CHARS.contains(&fold_tps_glyph_alias(c))
 }
 
 // =========================================================================
@@ -307,7 +272,7 @@ fn adjust_tone_eight_dot(char_str: &str, raw_input: &str) -> String {
 fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
     let last = last_raw_char?;
     let first = incoming.chars().next()?;
-    if !is_tps_tone_mark(first) {
+    if !crate::tps::is_tps_tone_mark(first) {
         return None;
     }
     match last {
@@ -354,7 +319,18 @@ pub fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{adjust_initial_key, adjust_tone_nine_digit};
+    use super::{adjust_initial_key, adjust_tone_nine_digit, is_tps_tone_mark_str};
+
+    // `ㄒㄧㆻ` + `˙` stores U+0307; the mobile Space key must see it as a mark.
+    #[test]
+    fn op_counts_the_combining_tone_eight_dot_as_a_tone_mark() {
+        assert!(is_tps_tone_mark_str("\u{0307}"));
+        assert!(is_tps_tone_mark_str("\u{02d9}"));
+        assert!(is_tps_tone_mark_str("\u{02ea}"));
+        assert!(!is_tps_tone_mark_str("ㆻ"));
+        assert!(!is_tps_tone_mark_str("ㆻ\u{0307}"));
+        assert!(!is_tps_tone_mark_str(""));
+    }
 
     // INVARIANT_TPS_STOPCODA_PHONOTACTIC_GATE — a dual-form STOP (ㄅㄉㄍㄏ)
     // after a pure vowel converts to its entering-tone coda ONLY when the
