@@ -67,9 +67,9 @@ test("Display Language redraws the page and survives a reload", async ({
 
 test("the title stays put in every language", async ({ page }) => {
   await open(page, { settings: { displayLanguage: "ja" } });
-  await expect(page).toHaveTitle("台語齒盤網頁版 - 台語簿仔紙");
+  await expect(page).toHaveTitle("台語齒盤網頁版：台語簿仔紙");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "台語齒盤網頁版 - 台語簿仔紙",
+    "台語齒盤網頁版：台語簿仔紙",
   );
 });
 

@@ -4,7 +4,7 @@
 import { expect, test } from "@playwright/test";
 import { open } from "./helpers.mjs";
 
-const TITLE = "台語齒盤網頁版 - 台語簿仔紙";
+const TITLE = "台語齒盤網頁版：台語簿仔紙";
 
 test("an empty box opens on the intro, caret at its end", async ({ page }) => {
   const editor = await open(page, { intro: true });
