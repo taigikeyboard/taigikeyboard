@@ -97,6 +97,11 @@ updates:
     ignore:
       # Moves together with the CLI pin in mise.toml (web-guidelines.md).
       - dependency-name: wasm-bindgen
+      # 0.6 hands out the memory-VFS handle only through `unsafe fn
+      # MemVfsUtil::get()`; the web workspace forbids `unsafe_code`.
+      # rusqlite 0.41 accepts 0.5 (#813 closed).
+      - dependency-name: sqlite-wasm-rs
+        versions: [">=0.6"]
     groups:
       cargo-minor-and-patch:
         patterns:
