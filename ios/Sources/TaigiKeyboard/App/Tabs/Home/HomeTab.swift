@@ -107,6 +107,24 @@ struct HomeTab: View {
                             }
                         }
                     }
+
+                    // Last, for a question the FAQ does not answer; About
+                    // lists it too, among six other links.
+                    Link(destination: URL(string: "https://discord.gg/UFn9RdynPu")!) {
+                        HStack {
+                            Label {
+                                Text(lang.string(.homeDiscordCommunity))
+                            } icon: {
+                                Image("brand_discord")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 20, height: 20)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.up.forward.square")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 } header: {
                     Text(lang.string(.commonOther))
                         .font(AppStyle.sectionHeaderFont)

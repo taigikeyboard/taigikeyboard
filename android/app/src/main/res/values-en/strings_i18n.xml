@@ -145,6 +145,7 @@
     <string name="i18n_home_websiteLink">taigikeyboard.tw</string>
     <string name="i18n_home_githubLink">GitHub</string>
     <string name="i18n_home_discordLink">Discord</string>
+    <string name="i18n_home_discordCommunity">Questions &amp; Discussion</string>
     <string name="i18n_home_facebookLink">Facebook</string>
     <string name="i18n_home_instagramLink">Instagram</string>
     <string name="i18n_home_threadsLink">Threads</string>

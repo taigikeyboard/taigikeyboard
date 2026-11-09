@@ -36,6 +36,7 @@ import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ui.components.NavigationRow
+import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.resolveDrawableResId
@@ -209,7 +210,7 @@ fun HomeScreen(
             val language = LocalDisplayLanguage.current
 
             SettingsCard {
-                faqs.forEachIndexed { index, faq ->
+                faqs.forEach { faq ->
                     NavigationRow(
                         icon = painterResource(resolveDrawableResId(context, faq.icon.android, R.drawable.keyboard_24)),
                         label = faq.title.resolve(language),
@@ -218,10 +219,16 @@ fun HomeScreen(
                             onFaqClick(faq.id, arrayOf(faq.id))
                         },
                     )
-                    if (index < faqs.lastIndex) {
-                        SettingsDivider(Modifier.padding(horizontal = 16.dp))
-                    }
+                    SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 }
+                // Last, for a question the FAQ does not answer; About lists
+                // it too, among six other links.
+                NavigationRow(
+                    icon = painterResource(R.drawable.ic_discord),
+                    label = L10n.homeDiscordCommunity,
+                    trailingIcon = Icons.AutoMirrored.Outlined.OpenInNew,
+                    onClick = { onUrlClick("https://discord.gg/UFn9RdynPu") },
+                )
             }
         }
     }

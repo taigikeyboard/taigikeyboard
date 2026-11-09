@@ -2395,6 +2395,24 @@
         }
       }
     },
+    "i18n_home_discordCommunity": {
+      "comment": "Home: last row of the Other (FAQ) section, beside the Discord logo: opens the Discord server for a question the FAQ does not answer. Matches the issue chooser's Discord entry (問題討論).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questions & Discussion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "質問・ディスカッション"
+          }
+        }
+      }
+    },
     "i18n_home_discordLink": {
       "comment": "About page footer: tooltip + accessibility name of the Discord icon link. A product name — same in every language.",
       "extractionState": "manual",
