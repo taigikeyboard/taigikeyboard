@@ -11,8 +11,8 @@ import XCTest
 /// it down — not the ranking the dictionary happens to produce.
 @MainActor
 final class TaigiInputControllerCandidateTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         InstalledLexicon.installOnce()
         // Auto-space ships ON and would append " " after every commit here —
         // orthogonal noise to the candidate routing this suite pins, so it is
@@ -38,9 +38,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     private static let otherScriptOnSpace = "composingShortcut.commitAlternateScript"
 
-    override func tearDown() {
+    override func tearDown() async throws {
         UserDefaults.standard.removeObject(forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Which key picks

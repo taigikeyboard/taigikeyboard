@@ -9,15 +9,15 @@ final class DisplayLanguageStoreTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "DisplayLanguageStoreTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private func makeStore(deviceSubtag: String = "zh") -> DisplayLanguageStore {

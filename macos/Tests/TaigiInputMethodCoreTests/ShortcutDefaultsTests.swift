@@ -18,8 +18,8 @@ final class ShortcutDefaultsTests: XCTestCase {
     /// them (`TaigiInputControllerMenuTests` does the same).
     private var savedShortcuts: [ShortcutAction: KeyboardShortcuts.Shortcut?] = [:]
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         savedShortcuts = Dictionary(
             uniqueKeysWithValues: ShortcutAction.allCases.map {
                 ($0, KeyboardShortcuts.getShortcut(for: $0.name))
@@ -27,11 +27,11 @@ final class ShortcutDefaultsTests: XCTestCase {
         )
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         for (action, shortcut) in savedShortcuts {
             KeyboardShortcuts.setShortcut(shortcut, for: action.name)
         }
-        super.tearDown()
+        try await super.tearDown()
     }
 
     /// A global default, read as the composing tier would see the key.
