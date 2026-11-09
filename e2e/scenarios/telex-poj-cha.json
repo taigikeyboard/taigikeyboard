@@ -1,7 +1,7 @@
 {
   "id": "telex-poj-cha",
-  "source": "INVARIANT_TELEX_KEY_TABLE (USER 2026-11-05, docs/architecture/behavioral-invariants.md): spelled-out POJ `cha` reaches `chha` (accepted).",
-  "settings": { "romanization": "poj", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex" },
+  "source": "INVARIANT_C_TYPES_AFFRICATE (2026-11-09, docs/architecture/behavioral-invariants.md): with Type ts / ch with c on, spelled-out POJ `cha` reaches `chha` (accepted) under Telex too.",
+  "settings": { "romanization": "poj", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex", "c_affricate": true },
   "steps": [
     { "type": "text", "value": "cha" },
     { "type": "key", "value": "enter" }

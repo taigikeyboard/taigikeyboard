@@ -1,0 +1,10 @@
+{
+  "id": "telex-poj-c-off",
+  "source": "INVARIANT_C_TYPES_AFFRICATE (2026-11-09, docs/architecture/behavioral-invariants.md): `c` and `h` are not Telex keys; with Type ts / ch with c off (the default) POJ `cha` is typed as spelled.",
+  "settings": { "romanization": "poj", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex" },
+  "steps": [
+    { "type": "text", "value": "cha" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "cha" }
+}
