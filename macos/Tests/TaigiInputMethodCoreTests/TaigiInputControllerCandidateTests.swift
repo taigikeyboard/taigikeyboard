@@ -157,6 +157,78 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertEqual(marked, "tev")
     }
 
+    // MARK: - Type - with f
+
+    /// INVARIANT_F_TYPES_HYPHEN: with the setting on, an idle `f` is the `-`
+    /// key under either scheme — each one writes a literal `-` and no
+    /// composition starts, so `ff` types the khinsiann marker `--`; `ah`
+    /// then composes.
+    func testTypeHyphenWithF_anIdleF_typesTheKhinsiannMarker_underEitherScheme() throws {
+        try withSetting(SettingsStore.Keys.isFHyphenEnabled.name, to: true) {
+            for scheme in ToneInputScheme.allCases {
+                try withToneScheme(scheme) {
+                    let session = try makeSession()
+                    for character in ["f", "f"] {
+                        let handled = try session.controller.handle(
+                            TestFixtures.keyDownEvent(characters: character), client: session.client,
+                        )
+                        XCTAssertTrue(handled, "\(scheme)")
+                    }
+                    XCTAssertEqual(session.client.insertedTexts, ["-", "-"], "\(scheme)")
+                    XCTAssertNil(session.presenter.shownContent, "\(scheme): no composition")
+
+                    for character in ["a", "h"] {
+                        _ = try session.controller.handle(
+                            TestFixtures.keyDownEvent(characters: character), client: session.client,
+                        )
+                    }
+                    guard case let .setMarkedText(marked, _) = try XCTUnwrap(session.client.writes.last) else {
+                        return XCTFail("\(scheme): expected a composition — got \(session.client.writes)")
+                    }
+                    XCTAssertEqual(marked, "ah", "\(scheme)")
+                }
+            }
+        }
+    }
+
+    /// Under Standard with the setting on, `f` is no slot key: with the bar up
+    /// it reaches the composition as the hyphen instead of picking, and the
+    /// bar draws the row without it (`bareKeysWithoutF`).
+    func testTypeHyphenWithF_underStandard_fHyphenatesInsteadOfPicking() throws {
+        try withSetting(SettingsStore.Keys.isFHyphenEnabled.name, to: true) {
+            let session = try composedSession(under: .standard)
+            XCTAssertEqual(try XCTUnwrap(session.presenter.shownContent).slotKeySet, .bareKeysWithoutF)
+            session.client.clearWrites()
+
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "f"), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [], "`f` picks nothing")
+            guard case let .setMarkedText(marked, _) = try XCTUnwrap(session.client.writes.last) else {
+                return XCTFail("`f` should have re-rendered the composition — got \(session.client.writes)")
+            }
+            XCTAssertTrue(marked.hasSuffix("-"), marked)
+        }
+    }
+
+    /// With the setting off (the default), `f` is a plain letter under Telex
+    /// too — it is no Telex key — so an idle `f` starts a composition.
+    func testTelex_withTypeHyphenWithFOff_fIsALetter() throws {
+        try withToneScheme(.telex) {
+            let session = try makeSession()
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: "f"), client: session.client,
+            )
+
+            XCTAssertEqual(session.client.insertedTexts, [])
+            guard case let .setMarkedText(marked, _) = try XCTUnwrap(session.client.writes.last) else {
+                return XCTFail("expected a composition — got \(session.client.writes)")
+            }
+            XCTAssertEqual(marked, "f")
+        }
+    }
+
     // MARK: - The Hanji/romanization key
 
     /// Out of the box Space is a second Confirm Key (USER 2026-10-15): it
