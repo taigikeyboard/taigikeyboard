@@ -76,6 +76,8 @@ The cross-platform behavior contract every Rust slice and platform change must p
 59. [Under TPS the desktop preedit shows the Hanji conversion, and only a pick teaches](#59--under-tps-the-desktop-preedit-shows-the-hanji-conversion-and-only-a-pick-teaches)
 60. [The desktop input indicator shows the script and what a commit writes](#60--the-desktop-input-indicator-shows-the-script-and-what-a-commit-writes)
 61. [On macOS an activation makes a session eligible; a delivered key makes it the owner](#61--on-macos-an-activation-makes-a-session-eligible-a-delivered-key-makes-it-the-owner)
+62. [Telex writes tone 6 on `z`; `c` → `ts` / `ch` is its own opt-in setting](#62--telex-writes-tone-6-on-z-c--ts--ch-is-its-own-opt-in-setting)
+63. [A custom long-press list types the board's full-width forms under full-width punctuation](#63--a-custom-long-press-list-types-the-boards-full-width-forms-under-full-width-punctuation)
 - [Change protocol](#change-protocol) · [Cross-references](#cross-references)
 
 ---
@@ -1328,6 +1330,22 @@ The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-0
 - **`h` writes itself**, so `c` `h` spells the aspirated initial (`tsh` / `chh`). There is no slip rule: a spelled-out POJ `c` `h` `h` `i` `a` composes `chhhia`.
 - **Spelled-out POJ `cha` reaches `chha`** with the setting on. `c` `h` could mean either initial, and both are real; turn the setting off to type POJ letter by letter.
 - **A custom word spelled with a bare `c` cannot be typed** with the setting on.
+
+---
+
+## §63 — A custom long-press list types the board's full-width forms under full-width punctuation
+
+### `INVARIANT_CUSTOM_CALLOUT_FULL_WIDTH`
+
+A custom layout's own long-press list (mobile, TL / POJ letter page) follows the 文/A toggle one way (USER 2026-11-10, Discord "手機版自動佈局相關" item 3):
+
+- **Full-width punctuation gives each entry the form the board would type**: the board's key with that half-width label first (MOE1's own `(` has no full-width form, so it stays `(`), else the key catalog (symbol pages: `'` → `、`, `{` → `｛`). Entries with no full-width form (letters, tone letters, `-`) are unchanged; an entry that appears twice after the mapping shows once.
+- **Half-width punctuation types the list as stored.** A stored `，` stays `，`: built-in lists put full-width forms on half-width keys on purpose (`,` → `，、`), and Romanization Only, always half-width, must still reach them.
+- **The editor stores what the user picked**; the mapping happens only on the keyboard.
+
+iOS `CustomLayout.typedCallouts` (called from `TaigiCallouts.taigiCalloutActions`); Android `CustomLayoutTables.applyCallouts(…, isFullWidthPunctuation)`.
+
+**Tests**: iOS `CustomLayoutTests.testCallouts_fullWidthPunctuationTypesTheBoardsForm`; Android `CustomLayoutCalloutsTest` `full-width punctuation types each entry in the board's form`.
 
 ---
 

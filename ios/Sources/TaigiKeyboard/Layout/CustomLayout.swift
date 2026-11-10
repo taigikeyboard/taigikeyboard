@@ -459,6 +459,20 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         return entries.map { $0.uppercased() }
     }
 
+    /// A long-press list as the keyboard types it. Full-width punctuation gives each entry the form
+    /// the board would type (`,` → `，`): the board's key with that label first (MOE1 `(` stays
+    /// half-width), else the catalog key; each entry once. Half-width keeps the list as stored, so a
+    /// stored `，` stays full-width. Android `CustomLayoutTables.applyCallouts`.
+    func typedCallouts(_ entries: [String], typesFullWidth: Bool) -> [String] {
+        guard typesFullWidth else { return entries }
+        let boardKeys = Self.characterKeys(of: filledRows)
+        return Self.unique(entries.map { entry in
+            let key = boardKeys.first { $0.characterLabel == entry } ?? Self.catalog[entry]
+            guard case let .char(_, fullWidth?)? = key else { return entry }
+            return fullWidth
+        })
+    }
+
     // MARK: - Private
 
     private mutating func dropCallouts(at index: Int) {

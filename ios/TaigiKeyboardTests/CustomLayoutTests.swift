@@ -305,6 +305,18 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertNil(layout.calloutOverride(for: "e"))
     }
 
+    // INVARIANT_CUSTOM_CALLOUT_FULL_WIDTH (§63)
+    func testCallouts_fullWidthPunctuationTypesTheBoardsForm() {
+        let layout = CustomLayout(base: .phahTaigi, script: .tl)
+        let entries = [",", "，", "!", "'", "-", "a", "{"]
+        // trace: PhahTaigi "," → "，", "!" → "！" (board keys); "'" → "、", "{" → "｛" (catalog,
+        // symbol pages); "-" and "a" have no full-width form; "，" twice collapses.
+        XCTAssertEqual(layout.typedCallouts(entries, typesFullWidth: true), ["，", "！", "、", "-", "a", "｛"])
+        XCTAssertEqual(layout.typedCallouts(entries, typesFullWidth: false), entries, "half-width keeps the list as stored")
+        // trace: MOE1's own "(" is .char("(") with no full-width form, so it stays half-width.
+        XCTAssertEqual(CustomLayout(base: .moe1, script: .tl).typedCallouts(["("], typesFullWidth: true), ["("])
+    }
+
     func testCallouts_followKeyThroughSwapAndClearOnReset() throws {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
         layout.setCallouts(["{"], for: ",")

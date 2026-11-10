@@ -251,11 +251,15 @@ class CustomLayoutTables(
     /**
      * [arrangement] — the keyboard [substitute] made from [layout], extended popups added — with each
      * board key's long-press list replaced by [layout]'s own, where it has one. An empty list leaves the
-     * key without a long-press.
+     * key without a long-press. [isFullWidthPunctuation] gives each entry the form the board would type
+     * (`,` → `，`): the board's key with that label first (MOE1 `(` stays half-width), else the catalog
+     * key; each entry once. Half-width keeps the list as stored, so a stored `，` stays full-width. iOS
+     * `CustomLayout.typedCallouts`.
      */
     fun applyCallouts(
         arrangement: ComputedLayoutDataArrangement,
         layout: CustomLayout,
+        isFullWidthPunctuation: Boolean,
     ) {
         if (layout.callouts.isEmpty()) return
         val placed = layout.keys.filterNotNullTo(LinkedHashSet())
@@ -263,10 +267,23 @@ class CustomLayoutTables(
         // first in reading order winning (iOS `halfWidthLabel`): `‧` and `•` share the full-width form `·`.
         val halfWidthLabels = HashMap<String, String>()
         placed.forEach { label -> catalog[label]?.let { (_, full) -> halfWidthLabels.putIfAbsent(full.label, label) } }
-        for (piece in arrangement.drop(1).flatMap(::pieces)) {
-            val key = (piece as? Piece.Character)?.key ?: continue
-            val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label] ?: continue
-            layout.callouts[label]?.let { entries -> key.popup = entries.mapTo(mutableListOf(), KeyData::ofEntry) }
+        val boardKeys =
+            arrangement.drop(1).flatMap(::pieces).mapNotNull { piece ->
+                val key = (piece as? Piece.Character)?.key ?: return@mapNotNull null
+                val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label] ?: return@mapNotNull null
+                label to key
+            }
+        // What the board types for each half-width label right now: the key's own form at full width.
+        val boardForms = if (isFullWidthPunctuation) boardKeys.associate { (label, key) -> label to key.label } else emptyMap()
+
+        fun typed(entries: List<String>): List<String> =
+            if (!isFullWidthPunctuation) {
+                entries
+            } else {
+                entries.map { text -> boardForms[text] ?: catalog[text]?.second?.let(::entry) ?: text }.distinct()
+            }
+        for ((label, key) in boardKeys) {
+            layout.callouts[label]?.let { entries -> key.popup = typed(entries).mapTo(mutableListOf(), KeyData::ofEntry) }
         }
     }
 
