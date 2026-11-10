@@ -267,7 +267,7 @@ repository: the three installers are download links there, and **Publish release
 button on the same page. This is the decision the draft exists to protect, so the
 skill never presses it.
 
-Install each (the `.deb` on the Linux VM, S74), run the dogfood checklist items
+Install each (the `.deb` on the Linux VM, S74), run the manual checks
 this release touches, then publish.
 (The same two steps from a terminal, if that is closer to hand:
 `gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`
