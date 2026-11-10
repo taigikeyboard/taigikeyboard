@@ -115,6 +115,25 @@ fn append_c_spells_the_mode_affricate_only_when_the_setting_is_on() {
     }
 }
 
+#[test]
+fn append_f_types_the_hyphen_only_when_the_setting_is_on() {
+    // trace: `app_config` sends `is_f_hyphen_enabled` as
+    // `AppConfig.f_types_hyphen`; engine `f_hyphen::expand` writes `-` after
+    // `tai5` and leaves `f` alone when off.
+    let _engine = engine();
+    for (is_on, raw) in [(true, "tai5-"), (false, "tai5f")] {
+        let settings = EngineSettings {
+            is_f_hyphen_enabled: is_on,
+            ..EngineSettings::default()
+        };
+        let generation = fresh_generation();
+        engine::append("tai5", &settings, generation).expect("append round trip");
+        let after = engine::append("f", &settings, generation).expect("append round trip");
+        assert_eq!(after.raw_input, raw, "{is_on}");
+        engine::reset(generation);
+    }
+}
+
 fn tps_settings() -> EngineSettings {
     EngineSettings {
         input_mode: InputMode::Tps,

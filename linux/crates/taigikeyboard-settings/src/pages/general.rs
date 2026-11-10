@@ -51,6 +51,11 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     context.switch_row(
         &group,
+        StringKey::SettingsFHyphen,
+        keys::IS_F_HYPHEN_ENABLED,
+    );
+    context.switch_row(
+        &group,
         StringKey::SettingsCandidateWindow,
         keys::IS_CANDIDATE_WINDOW_ENABLED,
     );

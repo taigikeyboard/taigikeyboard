@@ -12,9 +12,10 @@
 /// owns `v` or `3`.
 ///
 /// The letter table is the kahiok scheme (madmaxieee/taigi-telex) without its
-/// `c` → `tsh`, which leaves `z` to write tone 6 (USER 2026-11-05). `c` and
-/// `h` are plain letters under both schemes; `c` → `ts` / `ch` is its own
-/// opt-in setting (`SettingsStore.Keys.isCAffricateEnabled`). The semantics —
+/// `c` → `tsh`, which leaves `z` to write tone 6 (USER 2026-11-05). `c`, `f`
+/// and `h` are plain letters under both schemes; `c` → `ts` / `ch` and
+/// `f` → `-` are their own opt-in settings
+/// (`SettingsStore.Keys.isCAffricateEnabled`, `isFHyphenEnabled`). The semantics —
 /// which tone each key writes, what a repeated key does — live in the engine
 /// (`engine/composing/src/telex.rs`); this side only decides which keys reach
 /// it.
@@ -45,6 +46,9 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
     /// no TL or POJ syllable spells, and `;`. The set under `standard`
     /// (USER 2026-08-28).
     case bareKeys
+    /// `bareKeys` without `f` — `q w d z x v y ;` on slots 0…7, the ninth
+    /// unkeyed — under `standard` while Type - with f is on (USER 2026-11-10).
+    case bareKeysWithoutF
     /// Bare `1`…`9`, the set under `telex`, where the letters above type the
     /// tones.
     case digits
@@ -58,11 +62,16 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
     /// bare key types its lowercase form.
     static let bareKeyRow = ["q", "w", "d", "f", "z", "x", "v", "y", ";"]
 
+    /// The keys `bareKeysWithoutF` puts on slots 0…7, in slot order.
+    static let bareKeyRowWithoutF = ["q", "w", "d", "z", "x", "v", "y", ";"]
+
     /// The key this set gives the candidate in `slot`, for the nine slots a
-    /// page holds (`CandidateIndexLabel`, which owns which key is drawn).
+    /// page holds (`CandidateIndexLabel`, which owns which key is drawn);
+    /// `""` for a slot the set leaves unkeyed.
     func label(forSlot slot: Int) -> String {
         switch self {
         case .bareKeys: Self.bareKeyRow[slot]
+        case .bareKeysWithoutF: slot < Self.bareKeyRowWithoutF.count ? Self.bareKeyRowWithoutF[slot] : ""
         case .digits, .tpsDigits: String(slot + 1)
         }
     }

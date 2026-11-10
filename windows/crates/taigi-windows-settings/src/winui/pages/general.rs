@@ -80,6 +80,14 @@ pub fn view(
             !document.is_typing_tps(),
             context.callback(|is_on| Message::SetSwitch(keys::IS_C_AFFRICATE_ENABLED, is_on)),
         ),
+        // Beside it for the same reason; TPS has no romanization hyphen on
+        // `f`, so the row greys there too.
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsFHyphen),
+            document.bool(&keys::IS_F_HYPHEN_ENABLED),
+            !document.is_typing_tps(),
+            context.callback(|is_on| Message::SetSwitch(keys::IS_F_HYPHEN_ENABLED, is_on)),
+        ),
         // S33 (USER 2026-09-08): off means no window at all — the user types
         // romanization and Space / Enter write it as typed. Directly above
         // Show Typed Text First, which describes the window's content and so reads

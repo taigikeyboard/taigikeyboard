@@ -369,6 +369,9 @@ impl SettingsDocument {
             // A romanization initial: off under TPS, whose `c` key is a glyph.
             is_c_affricate_enabled: input_mode != InputMode::Tps
                 && self.bool(&keys::IS_C_AFFRICATE_ENABLED),
+            // The romanization hyphen: off under TPS, whose `f` key is a glyph.
+            is_f_hyphen_enabled: input_mode != InputMode::Tps
+                && self.bool(&keys::IS_F_HYPHEN_ENABLED),
         }
     }
 
@@ -856,6 +859,20 @@ mod tests {
     }
 
     #[test]
+    fn f_hyphen_reads_the_stored_switch_off_under_tps() {
+        // trace: `engine_settings` — the stored switch AND input mode != TPS;
+        // ships OFF; the General reset removes it.
+        let mut doc = SettingsDocument::default();
+        assert!(!doc.engine_settings().is_f_hyphen_enabled, "ships OFF");
+        doc.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
+        assert!(doc.engine_settings().is_f_hyphen_enabled);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.engine_settings().is_f_hyphen_enabled);
+        doc.reset_general();
+        assert!(!doc.contains(keys::IS_F_HYPHEN_ENABLED.name));
+    }
+
+    #[test]
     fn dictionary_sources_read_every_toggle() {
         let mut doc = SettingsDocument::default();
         doc.set_bool(&keys::IS_KAUTIAN_ACCENT_GILAN_ENABLED, false);
@@ -884,6 +901,7 @@ mod tests {
         doc.set_bool(&keys::IS_KHIIN_ENABLED, true);
         doc.set_bool(&keys::IS_KAUTIAN_ACCENT_GILAN_ENABLED, false);
         doc.set_bool(&keys::IS_C_AFFRICATE_ENABLED, true);
+        doc.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
 
         // trace: stored swap=false under the default SideBySide →
         // effective_hanji_first(false)=false, effective_full_width_punctuation(false)=false;
@@ -908,6 +926,7 @@ mod tests {
             },
             is_hanji_conversion_enabled: false,
             is_c_affricate_enabled: true,
+            is_f_hyphen_enabled: true,
         };
         assert_eq!(doc.engine_settings(), expected);
     }

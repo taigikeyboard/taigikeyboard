@@ -33,6 +33,10 @@ pub struct ComposingKeyBindings {
     /// would confirm or page a candidate end the composition as typed
     /// instead, and the classifier decides that off one value.
     pub is_candidate_window_enabled: bool,
+    /// Type - with f (`keys::IS_F_HYPHEN_ENABLED`). Carried for the same
+    /// reason as `tone_scheme`: under Standard it takes `f` off the slot row,
+    /// so the slot keys follow from both.
+    pub is_f_hyphen_enabled: bool,
 }
 
 impl Default for ComposingKeyBindings {
@@ -75,6 +79,7 @@ impl ComposingKeyBindings {
             // and a caller with an opinion sets them (`from_document`).
             input_mode: InputMode::DEFAULT,
             is_candidate_window_enabled: true,
+            is_f_hyphen_enabled: false,
         }
     }
 
@@ -93,17 +98,24 @@ impl ComposingKeyBindings {
         Self {
             input_mode: document.choice(&keys::INPUT_MODE),
             is_candidate_window_enabled: document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
+            is_f_hyphen_enabled: document.bool(&keys::IS_F_HYPHEN_ENABLED),
             ..Self::resolve(&stored, document.choice(&keys::TONE_INPUT_SCHEME))
         }
     }
 
     /// The keys that pick a candidate — derived, never stored: the keypad
     /// under TPS, whose main block types glyphs; otherwise the tone scheme's
-    /// (`ToneInputScheme::slot_key_set`).
+    /// (`ToneInputScheme::slot_key_set`), less `f` while Type - with f gives
+    /// it the hyphen (USER 2026-11-10).
     pub fn slot_key_set(&self) -> CandidateSlotKeySet {
         match self.input_mode {
             InputMode::Tps => CandidateSlotKeySet::TpsDigits,
-            InputMode::Tl | InputMode::Poj => self.tone_scheme.slot_key_set(),
+            InputMode::Tl | InputMode::Poj => match self.tone_scheme.slot_key_set() {
+                CandidateSlotKeySet::BareKeys if self.is_f_hyphen_enabled => {
+                    CandidateSlotKeySet::BareKeysWithoutF
+                }
+                set => set,
+            },
         }
     }
 
@@ -778,6 +790,26 @@ mod tests {
             Some(&chord("]", KeyModifiers::NONE)),
             "an empty second field leaves the first on its default"
         );
+    }
+
+    #[test]
+    fn type_hyphen_with_f_takes_f_off_the_standard_slot_row_only() {
+        // trace: `slot_key_set` — Standard + the switch → `BareKeysWithoutF`;
+        // Telex keeps the digits, TPS the keypad, whatever the switch says.
+        let mut document = SettingsDocument::default();
+        document.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert!(bindings.is_f_hyphen_enabled);
+        assert_eq!(
+            bindings.slot_key_set(),
+            CandidateSlotKeySet::BareKeysWithoutF
+        );
+        document.set_choice(&keys::TONE_INPUT_SCHEME, ToneInputScheme::Telex);
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::Digits);
+        document.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
+        assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::TpsDigits);
     }
 
     #[test]

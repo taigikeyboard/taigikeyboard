@@ -1173,6 +1173,30 @@ mod tests {
     }
 
     #[test]
+    fn with_type_hyphen_with_f_an_f_is_text_under_standard_with_the_window_up() {
+        // trace: tier 3 reads `BareKeysWithoutF`, which has no `f`, so the
+        // key falls to tier 7 as romanization — the engine's
+        // `f_types_hyphen` writes `-`. `z` picks slot 3, one left of where
+        // it sits with the switch off.
+        let mut bindings = ComposingKeyBindings::default();
+        bindings.is_f_hyphen_enabled = true;
+        for key in ["f", "F"] {
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(key), true, true, &bindings, PLATFORM),
+                ComposingKeyIntent::Input(key.into()),
+                "{key}"
+            );
+        }
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("z"), true, true, &bindings, PLATFORM),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 3,
+                flip: false
+            }
+        );
+    }
+
+    #[test]
     fn under_telex_the_tone_letters_are_the_engines_while_composing() {
         // trace: tier 7 under Telex (`is_telex_key`) — `v` composing →
         // `TelexKey`, capital too; idle `v` and `z` pass through; `c`, `f`

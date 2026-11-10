@@ -124,6 +124,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         dictionary_sources: Some(dictionary_toggles(&settings.dictionary_sources)),
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,
         c_types_affricate: settings.is_c_affricate_enabled,
+        f_types_hyphen: settings.is_f_hyphen_enabled,
         ..Default::default()
     }
 }
@@ -224,6 +225,19 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&settings).c_types_affricate);
+    }
+
+    #[test]
+    fn f_hyphen_reaches_the_config() {
+        assert!(
+            !app_config(&EngineSettings::default()).f_types_hyphen,
+            "ships OFF"
+        );
+        let settings = EngineSettings {
+            is_f_hyphen_enabled: true,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&settings).f_types_hyphen);
     }
 
     #[test]
