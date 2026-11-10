@@ -79,6 +79,27 @@ final class ActionHandlerCommitRulesTests: XCTestCase {
         XCTAssertFalse(ActionHandler.joinerReplacesAutoSpace(isEnglishMode: false, syllableSeparator: .space))
     }
 
+    func testEnglishCandidateReplacementLength_replacesOnlyTheCurrentWord() {
+        XCTAssertEqual(
+            ActionHandler.englishCandidateReplacementLength(textBeforeCaret: "Win", selectedText: nil),
+            3,
+        )
+        XCTAssertEqual(
+            ActionHandler.englishCandidateReplacementLength(textBeforeCaret: "Hello, Win", selectedText: nil),
+            3,
+        )
+        XCTAssertEqual(
+            ActionHandler.englishCandidateReplacementLength(textBeforeCaret: "Hello, ", selectedText: nil),
+            0,
+            "a stale candidate after a space must not remove the previous word",
+        )
+        XCTAssertEqual(
+            ActionHandler.englishCandidateReplacementLength(textBeforeCaret: "Hello, Win", selectedText: "lo"),
+            0,
+            "insertText replaces the selected range",
+        )
+    }
+
     // MARK: - Helpers
 
     private func markedCell(_ marker: String, text: String) -> AutocompleteSuggestion {

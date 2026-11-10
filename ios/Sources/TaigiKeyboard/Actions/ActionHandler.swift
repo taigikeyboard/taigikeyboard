@@ -241,7 +241,8 @@ public class ActionHandler: StandardKeyboardActionHandler {
     override public func handle(_ suggestion: AutocompleteSuggestion) {
         // A tap is an event like any key: consume the arm first, so a commit
         // that writes no auto space leaves none for the next punctuation key.
-        // English mode: KeyboardKit replaces the current word; the trailing space is
+        // English mode: explicitly replace the current word instead of relying on
+        // KeyboardKit's host-dependent prefix replacement. The trailing space is
         // ours, so it obeys Auto-Space and arms the punctuation swap. KK's own
         // auto-learn has nothing to do here (`EnglishAutocompleteService` exposes an
         // empty engine collection); the strip refreshes as after a key release.
@@ -249,7 +250,19 @@ public class ActionHandler: StandardKeyboardActionHandler {
         // CandidateClickHandler.handleEnglishCandidateClick.
         if settings.inputMode == .english {
             performInputEvent {
-                controllerContext.textDocumentProxy.insertAutocompleteSuggestion(suggestion, tryInsertSpace: false)
+                if hostText.hasMarkedText {
+                    hostText.commit(suggestion.text)
+                } else {
+                    let proxy = controllerContext.textDocumentProxy
+                    let replacementLength = Self.englishCandidateReplacementLength(
+                        textBeforeCaret: proxy.documentContextBeforeInput,
+                        selectedText: proxy.selectedText,
+                    )
+                    for _ in 0 ..< replacementLength {
+                        hostText.deleteBackward()
+                    }
+                    hostText.insert(suggestion.text)
+                }
                 appendAutoSpaceIfEarned(documentText: suggestion.text, wroteRomanization: true)
             }
             keyboardController?.performAutocomplete()

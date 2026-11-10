@@ -31,7 +31,7 @@ class EnglishAutocompleteService: EngineFreeAutocompleteService {
 
     // Completions first; spelling guesses only when there are none. Three suggestions max either way.
     private func getSuggestions(for text: String) -> [AutocompleteSuggestion] {
-        let currentWord = extractCurrentWord(from: text)
+        let currentWord = Self.currentWord(in: text)
         guard !currentWord.isEmpty else { return [] }
 
         var suggestions: [AutocompleteSuggestion] = []
@@ -73,7 +73,7 @@ class EnglishAutocompleteService: EngineFreeAutocompleteService {
     }
 
     /// Returns the word after the last space — the one currently being typed.
-    private func extractCurrentWord(from text: String) -> String {
+    static func currentWord(in text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return "" }
 

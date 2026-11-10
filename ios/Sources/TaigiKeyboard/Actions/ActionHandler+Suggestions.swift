@@ -145,6 +145,23 @@ extension ActionHandler {
         !isEnglishMode && syllableSeparator != .space
     }
 
+    /// Number of characters in the English word a candidate replaces. A
+    /// selected range is replaced by `insertText`, and a trailing space means
+    /// there is no current word to remove.
+    static func englishCandidateReplacementLength(
+        textBeforeCaret: String?,
+        selectedText: String?,
+    ) -> Int {
+        guard (selectedText ?? "").isEmpty,
+              let textBeforeCaret,
+              let lastCharacter = textBeforeCaret.last,
+              !lastCharacter.isWhitespace
+        else {
+            return 0
+        }
+        return EnglishAutocompleteService.currentWord(in: textBeforeCaret).count
+    }
+
     /// Inserts the trailing auto space when this commit earned it, and arms
     /// the punctuation swap on it — the ONE insertion site, so the space and
     /// the knowledge that it is ours can never come apart.
