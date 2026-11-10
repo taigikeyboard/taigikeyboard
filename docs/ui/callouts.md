@@ -49,7 +49,7 @@
 
 `tone_variations::build()` returns a single `ToneVariationsResult { poj_variations, tl_variations }` — **both maps in one call** (init-bulk-pull). Each map is `base char → [toned variants]`.
 
-- **Bases**: vowels `a e i o u` (+ uppercase), syllabic `n m`, `ng`, plus a mode-specific `o` variant (TL `oo`, POJ `o͘` = `o`+U+0358). The `n` entry also appends nasal `ⁿ` (U+207F).
+- **Bases**: vowels `a e i o u` (+ uppercase), syllabic `n m`, `ng`, the dialectal vowels `er ir or` (mark on the vowel, same spelling in TL and engine POJ; the custom-layout tray offers them as keys), plus a mode-specific `o` variant (TL `oo`, POJ `o͘` = `o`+U+0358). The `n` entry also appends nasal `ⁿ` (U+207F). Two-letter bases have Shift (`Er`) and Caps Lock (`ER`) keys.
 - **Tones**: `2 3 5 6 7 8 9`. Tone 9 differs by mode — TL double-acute (U+030B), POJ breve (via `TONE_NUM_TO_COMBINING`). Output is NFC-recomposed.
 - **No engine-side caching** — the engine is stateless. Each platform fetches once at first access and caches platform-side (proto comment: "Caller caches once at engine init").
 - **Proto**: request `GetToneVariations {}` (empty); response `map<string, ToneVariationList>` for `poj_variations` + `tl_variations`.
