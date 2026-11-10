@@ -3,7 +3,16 @@
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, open, panel, preedit, TIER } from "./helpers.mjs";
+import {
+  candidates,
+  expectNotText,
+  expectText,
+  open,
+  panel,
+  preedit,
+  TIER,
+  textOf,
+} from "./helpers.mjs";
 
 const keyPanel = (page) => page.locator("#tps-keyboard");
 const cap = (page, glyph) =>
@@ -34,7 +43,7 @@ test("the panel's chord leaves a composition standing", async ({ page }) => {
   await editor.press("8");
   await editor.press(`${TIER}+j`);
   await expect(preedit(page)).toContainText("ㄚ");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("the panel follows the mode, and the choice waits for the way back", async ({
@@ -69,7 +78,7 @@ test("a click types the bare glyph, and the focus stays", async ({ page }) => {
   await cap(page, "ㄚ").click(bareLayer);
   await expect(preedit(page)).toContainText("ㄚ");
   await expect(editor).toBeFocused();
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("the top half or a held Shift types the Shift glyph", async ({ page }) => {
@@ -86,7 +95,7 @@ test("a click on a cap keeps the running composition", async ({ page }) => {
   await editor.press("1");
   await cap(page, "ㄚ").click(bareLayer);
   await expect(preedit(page)).toContainText("ㄅㄚ");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("a key lights its cap for a moment", async ({ page }) => {
@@ -115,10 +124,10 @@ test("a slot key writes a symbol, and it leads the next picker", async ({
   const second = await candidates(page).nth(1).textContent();
   await editor.press("Enter");
   await expect(panel(page)).toBeHidden();
-  const symbol = await editor.inputValue();
+  const symbol = await textOf(editor);
   expect(second).toContain(symbol);
   await page.reload();
-  await expect(editor).toBeEnabled();
+  await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.press(`${TIER}+,`);
   await expect(candidates(page).first()).toContainText(symbol);
 });
@@ -129,10 +138,10 @@ test("a click on a symbol selects it and Enter writes it", async ({ page }) => {
   const cell = candidates(page).nth(2);
   await cell.click();
   await expect(cell).toHaveAttribute("aria-current", "true");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await editor.press("Enter");
   await expect(panel(page)).toBeHidden();
-  await expect(editor).not.toHaveValue("");
+  await expectNotText(editor, "");
 });
 
 /// What a cell says aloud: its drawn parts, apart.

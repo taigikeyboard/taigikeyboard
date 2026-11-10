@@ -1,356 +1,328 @@
-// The Markdown markers the format bubble writes into the textarea. Each toggle
-// answers which range to replace, with what, and what to select afterwards, or
-// `null` when there is nothing to do. No DOM, so Node tests it.
+// The stored text's Markdown and the editor's blocks, both ways. The editor
+// shows formatting and never its markers; the text is kept, saved and exported
+// as this Markdown subset: headings, quotes, lists, bold, italic, underline
+// (`<u>`) and links. No DOM, so Node tests it.
+//
+// A block is `{ type, runs }`: `paragraph`, `heading` (with `level` 1–3),
+// `quote`, or `list` (with `ordered`, `start` and `items`, each a run list). A
+// run is `{ text, bold, italic, underline, url }`; `\n` in a run's text is a
+// line break inside its block.
 
-/// `[text](url)`, one level of balanced parentheses in the URL; neither part
-/// crosses a line. No `g` flag: a shared global regex keeps `lastIndex`; callers
-/// make their own with `links`.
+/// An empty line, as the textarea's text always had: paragraphs apart.
+const PARAGRAPH_BREAK = /\n{2,}/;
+
+const QUOTE = /^> ?/;
+const HEADING = /^(#{1,3}) /;
+const BULLET = /^- /;
+const NUMBERED = /^(\d+)\. /;
+
+/// `[text](url)`, one level of balanced parentheses in the URL, not across a
+/// line.
 const LINK = /\[([^[\]\n]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/;
 
-/// Every link in `text`. Also read by Save's HTML (`save.js`).
-export function links(text) {
-  return text.matchAll(new RegExp(LINK, "g"));
-}
+/// Inline spans, the first that matches earliest wins: a star touching no space
+/// on its inner side, as CommonMark's flanking rule asks.
+const SPANS = [
+  { pattern: LINK, apply: (match) => ({ url: match[2] }), inner: 1 },
+  {
+    pattern: /\*\*\*(?=[^\s*])(.+?)(?<=[^\s*])\*\*\*/,
+    apply: () => ({ bold: true, italic: true }),
+    inner: 1,
+  },
+  {
+    pattern: /\*\*(?=\S)(.+?)(?<=\S)\*\*/,
+    apply: () => ({ bold: true }),
+    inner: 1,
+  },
+  {
+    pattern: /\*(?=[^\s*])(.+?)(?<=[^\s*])\*/,
+    apply: () => ({ italic: true }),
+    inner: 1,
+  },
+  { pattern: /<u>(.+?)<\/u>/, apply: () => ({ underline: true }), inner: 1 },
+];
 
-/// Whitespace, punctuation and symbols: a marker next to one inside the range
-/// would not be flanking (CommonMark), so `「台灣」` is bolded as `「**台灣**」`.
-const EDGE = /[\s\p{P}\p{S}]/u;
+const PLAIN = { bold: false, italic: false, underline: false, url: null };
 
-/// Line prefixes the block toggles write. Also read by Save's HTML.
-export const QUOTE = /^> ?/;
-export const HEADING = /^(#{1,3}) /;
-export const BULLET = /^- /;
-export const NUMBERED = /^(\d+)\. /;
+/// A backslash keeps a marker character as text; while spans are read it stands
+/// in as a private-use character, which no span pattern matches.
+const ESCAPES = [
+  ["\\\\", "\u{E004}", "\\"],
+  ["\\*", "\u{E000}", "*"],
+  ["\\<", "\u{E001}", "<"],
+  ["\\]", "\u{E002}", "]"],
+  ["\\[", "\u{E003}", "["],
+];
 
-/// The paragraph break Save's HTML splits on (`/\n{2,}/`): an empty line.
-const isBlank = (line) => line === "";
-
-/// `[start, end)` without whitespace and punctuation at either end. A walk, not
-/// a regex: an unanchored trailing pattern backtracks over long selections.
-function trimmed(value, start, end) {
-  let from = start;
-  while (from < end) {
-    const character = String.fromCodePoint(value.codePointAt(from));
-    if (!EDGE.test(character)) {
-      break;
-    }
-    from += character.length;
-  }
-  let to = end;
-  while (to > from) {
-    const last = value.charCodeAt(to - 1);
-    const size = last >= 0xdc00 && last <= 0xdfff && to - 2 >= from ? 2 : 1;
-    if (!EDGE.test(value.slice(to - size, to))) {
-      break;
-    }
-    to -= size;
-  }
-  return [from, to];
-}
-
-/// The selection without whitespace at either end.
-function stripped(value, start, end) {
-  const text = value.slice(start, end);
-  const lead = text.length - text.trimStart().length;
-  const trail = text.length - text.trimEnd().length;
-  return [start + lead, Math.max(start + lead, end - trail)];
-}
-
-/// A toggle's answer: `[start, end)` becomes `text`, then `selectLength` units
-/// from `selectStart` are selected (all of `text` by default).
-const change = (start, end, text, selectStart, selectLength = text.length) => ({
-  start,
-  end,
-  text,
-  selectStart,
-  selectEnd: selectStart + selectLength,
-});
-
-/// `open` and `close` just outside `[start, end)` come off.
-const unwrapAround = (value, start, end, open, close) =>
-  change(
-    start - open.length,
-    end + close.length,
-    value.slice(start, end),
-    start - open.length,
+function hideEscapes(text) {
+  return ESCAPES.reduce(
+    (out, [escaped, stand]) => out.replaceAll(escaped, stand),
+    text,
   );
+}
 
-/// `open` and `close` go around `[start, end)`, which stays selected.
-const wrapIn = (value, start, end, open, close) =>
-  change(
-    start,
-    end,
-    `${open}${value.slice(start, end)}${close}`,
-    start + open.length,
-    end - start,
+function restoreEscapes(text) {
+  return ESCAPES.reduce(
+    (out, [, stand, plain]) => out.replaceAll(stand, plain),
+    text,
   );
+}
 
-function runOf(text, character, isBackward) {
-  let count = 0;
-  let index = isBackward ? text.length - 1 : 0;
-  while (text[index] === character) {
-    count += 1;
-    index += isBackward ? -1 : 1;
+/// Plain text as Markdown that reads back as the same text, for text that would
+/// otherwise read as a span: stars, a `<u>` tag and link brackets get a backslash.
+function escapeInline(text) {
+  return text.replace(/[\\*[\]]/g, "\\$&").replace(/<(?=\/?u>)/g, "\\<");
+}
+
+/// A line of a paragraph that would read as a heading, an item or a quote.
+const BLOCK_PREFIX = /^(?:#{1,3} |- |> ?)/;
+const NUMBER_PREFIX = /^(\d+)\. /;
+
+function escapeLine(line) {
+  // A backslash of the text's own before a prefix, which reading would take
+  // for an escape.
+  if (BLOCK_PREFIX.test(line) || /^\\(?=#{1,3} |- |>)/.test(line)) {
+    return `\\${line}`;
   }
-  return count;
+  // `1\. ` of the text's own would read as an escaped `1. `.
+  if (/^\d+\\\. /.test(line)) {
+    return line.replace(/^(\d+)\\/, "$1\\\\");
+  }
+  return line.replace(NUMBER_PREFIX, "$1\\. ");
 }
 
-/// Whether a run of `count` stars reads as this marker: `**` is in a run of 2 or
-/// 3, `*` in a run of 1 or 3 (`***x***` is both).
-function isMarkerRun(count, marker) {
-  return marker.length === 2 ? count >= 2 : count === 1 || count === 3;
+function unescapeLine(line) {
+  return line.replace(/^\\(?=#{1,3} |- |>)/, "").replace(/^(\d+)\\\. /, "$1. ");
 }
 
-/// Whether the star run ending at `at` opens a span rather than closing one: an
-/// even count of such runs before it in its paragraph.
-function opensSpan(value, at, marker) {
-  const paragraphStart = value.lastIndexOf("\n\n", at) + 1;
-  const isSpace = (character) =>
-    character === undefined || /\s/.test(character);
-  let count = 0;
-  for (const run of value.slice(paragraphStart, at).matchAll(/\*+/g)) {
-    const runStart = paragraphStart + run.index;
-    const runEnd = runStart + run[0].length;
-    // The run in front of the range is the one being asked about.
-    if (runEnd === at) {
+function parseInline(text, format = PLAIN) {
+  const runs = [];
+  let rest = text;
+  while (rest !== "") {
+    let first = null;
+    for (const span of SPANS) {
+      const match = rest.match(span.pattern);
+      if (
+        match !== null &&
+        (first === null || match.index < first.match.index)
+      ) {
+        first = { span, match };
+      }
+    }
+    if (first === null) {
+      runs.push({ ...format, text: rest });
       break;
     }
-    // A star with space on both sides, as in `5 * 3`, is text.
-    const isMarker = !isSpace(value[runStart - 1]) || !isSpace(value[runEnd]);
-    if (isMarker && isMarkerRun(run[0].length, marker)) {
-      count += 1;
+    const { span, match } = first;
+    if (match.index > 0) {
+      runs.push({ ...format, text: rest.slice(0, match.index) });
     }
-  }
-  return count % 2 === 0;
-}
-
-function toggleStars(marker, value, start, end) {
-  const size = marker.length;
-  // The markers inside the selection: `**台北**` selected.
-  const [outerStart, outerEnd] = stripped(value, start, end);
-  const outer = value.slice(outerStart, outerEnd);
-  const lead = runOf(outer, "*", false);
-  const trail = runOf(outer, "*", true);
-  const core = outer.slice(lead, outer.length - trail);
-  if (
-    lead + trail < outer.length &&
-    lead === trail &&
-    isMarkerRun(lead, marker) &&
-    !core.includes("*")
-  ) {
-    return change(outerStart, outerEnd, outer.slice(size, -size), outerStart);
-  }
-  // The markers just outside: `台北` selected in `**台北**`.
-  const [innerStart, innerEnd] = trimmed(value, start, end);
-  // Part of a span, or several: nothing a toggle can undo cleanly.
-  if (
-    innerStart >= innerEnd ||
-    value.slice(innerStart, innerEnd).includes("*")
-  ) {
-    return null;
-  }
-  const before = runOf(value.slice(0, innerStart), "*", true);
-  const after = runOf(value.slice(innerEnd), "*", false);
-  if (before === after && isMarkerRun(before, marker)) {
-    // Stars that close one span and open the next (`*a*b*c*` around `b`).
-    if (!opensSpan(value, innerStart, marker)) {
-      return null;
-    }
-    return unwrapAround(value, innerStart, innerEnd, marker, marker);
-  }
-  return wrapIn(value, innerStart, innerEnd, marker, marker);
-}
-
-export function toggleBold(value, start, end) {
-  return toggleStars("**", value, start, end);
-}
-
-export function toggleItalic(value, start, end) {
-  return toggleStars("*", value, start, end);
-}
-
-/// `<u>x</u>`: Markdown has no underline, and CommonMark passes inline HTML on.
-export function toggleUnderline(value, start, end) {
-  const open = "<u>";
-  const close = "</u>";
-  const [outerStart, outerEnd] = stripped(value, start, end);
-  const outer = value.slice(outerStart, outerEnd);
-  if (
-    outer.length > open.length + close.length &&
-    outer.startsWith(open) &&
-    outer.endsWith(close) &&
-    !outer.slice(open.length, -close.length).includes(open)
-  ) {
-    return change(
-      outerStart,
-      outerEnd,
-      outer.slice(open.length, -close.length),
-      outerStart,
+    runs.push(
+      ...parseInline(match[span.inner], { ...format, ...span.apply(match) }),
     );
+    rest = rest.slice(match.index + match[0].length);
   }
-  // Part of a span, or several: nothing a toggle can undo cleanly.
-  if (outer.includes(open) || outer.includes(close)) {
-    return null;
-  }
-  const [innerStart, innerEnd] = trimmed(value, start, end);
-  if (innerStart >= innerEnd) {
-    return null;
-  }
-  if (
-    value.slice(innerStart - open.length, innerStart) === open &&
-    value.slice(innerEnd, innerEnd + close.length) === close
-  ) {
-    return unwrapAround(value, innerStart, innerEnd, open, close);
-  }
-  return wrapIn(value, innerStart, innerEnd, open, close);
+  return runs;
 }
 
-/// The lines the range touches, as `{ lines, first, last, offsets }`, widened by
-/// `reach`: `lines` not at all, `paragraph` to whole paragraphs, `list` to the
-/// paragraph's end and back over list items.
-function touchedLines(value, start, end, reach) {
-  const lines = value.split("\n");
-  const offsets = [];
-  let offset = 0;
+/// A line's spans, its escaped characters back as text.
+function inline(text) {
+  return parseInline(hideEscapes(text)).map((run) => ({
+    ...run,
+    text: restoreEscapes(run.text),
+    url: run.url === null ? null : restoreEscapes(run.url),
+  }));
+}
+
+function lineKind(line) {
+  if (HEADING.test(line)) {
+    return "heading";
+  }
+  if (BULLET.test(line)) {
+    return "bullet";
+  }
+  return NUMBERED.test(line) ? "numbered" : "paragraph";
+}
+
+/// One paragraph's lines in runs of one kind; a heading is always its own.
+function parseLines(lines) {
+  const groups = [];
   for (const line of lines) {
-    offsets.push(offset);
-    offset += line.length + 1;
-  }
-  const lineAt = (position) =>
-    offsets.findLastIndex((lineStart) => lineStart <= position);
-  let first = lineAt(start);
-  let last = lineAt(Math.max(start, end - 1));
-  // A list may interrupt a paragraph, so it reaches back only over items.
-  const reachesBack = {
-    lines: () => false,
-    paragraph: (line) => !isBlank(line),
-    list: (line) => BULLET.test(line) || NUMBERED.test(line),
-  }[reach];
-  while (first > 0 && reachesBack(lines[first - 1])) {
-    first -= 1;
-  }
-  if (reach !== "lines") {
-    while (last < lines.length - 1 && !isBlank(lines[last + 1])) {
-      last += 1;
+    const kind = lineKind(line);
+    // A line of spaces between a list and a paragraph is no paragraph.
+    if (
+      kind === "paragraph" &&
+      line.trim() === "" &&
+      groups.length > 0 &&
+      groups.at(-1).kind !== "paragraph"
+    ) {
+      continue;
+    }
+    const last = groups.at(-1);
+    if (last?.kind === kind && kind !== "heading") {
+      last.lines.push(line);
+    } else {
+      groups.push({ kind, lines: [line] });
     }
   }
-  return { lines, first, last, offsets };
-}
-
-/// Rewrites each written line the range touches: `isOn` says whether every
-/// written line already has the prefix; `mark(line, index)` adds it, `unmark`
-/// takes it off. `reach` is `lines`, `paragraph` or `list` (`touchedLines`).
-/// Empty lines stay, and so do lines of spaces unless `marksSpaces`.
-function toggleLines(
-  value,
-  start,
-  end,
-  reach,
-  { isOn, mark, unmark, marksSpaces = false },
-) {
-  const { lines, first, last, offsets } = touchedLines(
-    value,
-    start,
-    end,
-    reach,
-  );
-  const touched = lines.slice(first, last + 1);
-  const isLeft = (line) =>
-    isBlank(line) || (!marksSpaces && line.trim() === "");
-  const written = touched.filter((line) => !isLeft(line));
-  if (written.length === 0) {
-    return null;
-  }
-  const isRemoving = written.every(isOn);
-  let index = 0;
-  const text = touched
-    .map((line) => {
-      if (isBlank(line)) {
-        index = 0;
-      }
-      if (isLeft(line)) {
-        return line;
-      }
-      index += 1;
-      return isRemoving ? unmark(line) : mark(line, index);
-    })
-    .join("\n");
-  const from = offsets[first];
-  return change(from, from + touched.join("\n").length, text, from);
-}
-
-/// The line's text without a list or heading prefix.
-const bare = (line) =>
-  line.replace(HEADING, "").replace(BULLET, "").replace(NUMBERED, "");
-
-/// `> ` on every line of the paragraphs the range touches. Whole paragraphs:
-/// CommonMark carries a quote on to the unmarked lines that follow it.
-export function toggleQuote(value, start, end) {
-  return toggleLines(value, start, end, "paragraph", {
-    marksSpaces: true,
-    isOn: (line) => QUOTE.test(line),
-    mark: (line) => `> ${line}`,
-    unmark: (line) => line.replace(QUOTE, ""),
-  });
-}
-
-/// `# ` to `### ` on each line the range touches. A heading is one line, so
-/// it takes no more than those; another level or a list prefix is replaced.
-export function toggleHeading(level, value, start, end) {
-  const prefix = `${"#".repeat(level)} `;
-  return toggleLines(value, start, end, "lines", {
-    isOn: (line) => line.match(HEADING)?.[1].length === level,
-    mark: (line) => `${prefix}${bare(line)}`,
-    unmark: (line) => line.replace(HEADING, ""),
-  });
-}
-
-/// `- ` on every line from the first the range touches to its paragraph's end:
-/// an unmarked line after an item would continue it. Back only over items.
-export function toggleBulletList(value, start, end) {
-  return toggleLines(value, start, end, "list", {
-    isOn: (line) => BULLET.test(line),
-    mark: (line) => `- ${bare(line)}`,
-    unmark: (line) => line.replace(BULLET, ""),
-  });
-}
-
-/// `1. `, `2. `… over the same lines as `toggleBulletList`, counted from 1.
-export function toggleNumberedList(value, start, end) {
-  return toggleLines(value, start, end, "list", {
-    isOn: (line) => NUMBERED.test(line),
-    mark: (line, index) => `${index}. ${bare(line)}`,
-    unmark: (line) => line.replace(NUMBERED, ""),
-  });
-}
-
-/// The link the range sits in, `{ start, end, text, url }`, or `null`.
-export function linkAt(value, start, end) {
-  for (const match of links(value)) {
-    const linkEnd = match.index + match[0].length;
-    if (match.index <= start && end <= linkEnd) {
+  return groups.map(({ kind, lines: group }) => {
+    if (kind === "heading") {
+      const [prefix, hashes] = group[0].match(HEADING);
       return {
-        start: match.index,
-        end: linkEnd,
-        text: match[1],
-        url: match[2],
+        type: "heading",
+        level: hashes.length,
+        runs: inline(group[0].slice(prefix.length)),
       };
     }
-  }
-  return null;
+    if (kind === "paragraph") {
+      return {
+        type: "paragraph",
+        runs: inline(group.map(unescapeLine).join("\n")),
+      };
+    }
+    const marker = kind === "bullet" ? BULLET : NUMBERED;
+    return {
+      type: "list",
+      ordered: kind === "numbered",
+      start: kind === "numbered" ? Number(group[0].match(NUMBERED)[1]) : 1,
+      items: group.map((line) => inline(line.replace(marker, ""))),
+    };
+  });
 }
 
-/// What the URL field holds, ready for `[text](url)`: `https://` when no scheme
-/// is named (`localhost:3000` names none), and the characters that would end
-/// the link percent-encoded. `null` when empty.
+/// The stored text as blocks. Text with no markers is one paragraph per
+/// blank-line block, its single line breaks kept.
+export function parse(markdown) {
+  return markdown
+    .split(PARAGRAPH_BREAK)
+    .filter((block) => block.trim() !== "")
+    .flatMap((block) => {
+      const lines = block.split("\n");
+      if (lines.every((line) => QUOTE.test(line))) {
+        const inner = lines.map((line) => line.replace(QUOTE, ""));
+        return [{ type: "quote", runs: inline(inner.join("\n")) }];
+      }
+      return parseLines(lines);
+    });
+}
+
+const sameFormat = (a, b) =>
+  a.bold === b.bold &&
+  a.italic === b.italic &&
+  a.underline === b.underline &&
+  a.url === b.url;
+
+/// Neighbouring runs with the same format are one.
+function merged(runs) {
+  const out = [];
+  for (const run of runs) {
+    const last = out.at(-1);
+    if (last !== undefined && sameFormat(last, run)) {
+      last.text += run.text;
+    } else if (run.text !== "") {
+      out.push({ ...PLAIN, ...run });
+    }
+  }
+  return out;
+}
+
+/// One run's markers around its text, spaces at either end kept outside so the
+/// markers stay flanking.
+/// Whether `text` reads back as itself, so it needs no backslash.
+function readsAsText(text) {
+  const [only, ...more] = inline(text);
+  return more.length === 0 && only.text === text && sameFormat(only, PLAIN);
+}
+
+function markRun(run, isStrict) {
+  const [, lead, core, trail] = run.text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+  if (core === "") {
+    return run.text;
+  }
+  let text = isStrict || !readsAsText(core) ? escapeInline(core) : core;
+  if (run.underline) {
+    text = `<u>${text}</u>`;
+  }
+  const stars = (run.bold ? "**" : "") + (run.italic ? "*" : "");
+  text = `${stars}${text}${stars}`;
+  return `${lead}${text}${trail}`;
+}
+
+function serializeRuns(list, isStrict) {
+  let out = "";
+  for (let index = 0; index < list.length; ) {
+    const { url } = list[index];
+    if (url === null) {
+      out += markRun(list[index], isStrict);
+      index += 1;
+      continue;
+    }
+    let label = "";
+    while (index < list.length && list[index].url === url) {
+      label += markRun({ ...list[index], url: null }, isStrict);
+      index += 1;
+    }
+    out += `[${label}](${url})`;
+  }
+  return out;
+}
+
+/// Runs as Markdown, a backslash only where text would read as a span. Runs
+/// that read as text alone may still meet across a boundary (`\<u>` then
+/// `</u>`): when the whole does not read back, every marker character gets one.
+function writeRuns(runs) {
+  const list = merged(runs);
+  const out = serializeRuns(list, false);
+  const isFaithful =
+    JSON.stringify(merged(inline(out))) === JSON.stringify(list);
+  return isFaithful ? out : serializeRuns(list, true);
+}
+
+/// A heading's or an item's runs on one line: neither has a line break.
+const oneLine = (runs) =>
+  runs.map((run) => ({ ...run, text: run.text.replaceAll("\n", " ") }));
+
+/// The blocks as the stored text, one empty line between blocks.
+export function serialize(blocks) {
+  return blocks
+    .map((block) => {
+      switch (block.type) {
+        case "heading":
+          return `${"#".repeat(block.level)} ${writeRuns(oneLine(block.runs))}`;
+        case "quote":
+          return writeRuns(block.runs)
+            .split("\n")
+            .map((line) => `> ${line}`)
+            .join("\n");
+        case "list":
+          return block.items
+            .map((runs, index) => {
+              const marker = block.ordered ? `${block.start + index}. ` : "- ";
+              return `${marker}${writeRuns(oneLine(runs))}`;
+            })
+            .join("\n");
+        default:
+          return writeRuns(block.runs).split("\n").map(escapeLine).join("\n");
+      }
+    })
+    .join("\n\n");
+}
+
+/// What the URL field holds, ready for a link: `https://` when no scheme is
+/// named (`localhost:3000` names none), and the characters that would end a
+/// Markdown link percent-encoded. `null` when empty.
 export function normalizeUrl(input) {
   const url = input.trim();
   if (url === "") {
     return null;
   }
   const hasScheme = /^([a-z][a-z0-9+.-]*:\/\/|mailto:|tel:)/i.test(url);
-  const full = hasScheme ? url : `https://${url}`;
-  return full.replace(/[()<>\s]/gu, (character) => {
+  return encodeUrl(hasScheme ? url : `https://${url}`);
+}
+
+/// `url` with the characters that would end a Markdown link percent-encoded.
+export function encodeUrl(url) {
+  return url.replace(/[()<>\s]/gu, (character) => {
     if (character === "(") {
       return "%28";
     }
@@ -358,18 +330,35 @@ export function normalizeUrl(input) {
   });
 }
 
-/// `[x](url)` around the range; on a link already there, a new `url` replaces
-/// its URL and `null` takes the link off, leaving its text.
-export function toggleLink(value, start, end, url) {
-  const link = linkAt(value, start, end);
-  if (link !== null) {
-    const text = url === null ? link.text : `[${link.text}](${url})`;
-    const textStart = url === null ? link.start : link.start + 1;
-    return change(link.start, link.end, text, textStart, link.text.length);
-  }
-  const [innerStart, innerEnd] = trimmed(value, start, end);
-  if (url === null || innerStart >= innerEnd) {
-    return null;
-  }
-  return wrapIn(value, innerStart, innerEnd, "[", `](${url})`);
+/// The blocks as plain text, for `.txt`: no markers, a list item keeps its
+/// bullet or number so the list still reads as one.
+export function plainText(blocks) {
+  const text = (runs) => runs.map((run) => run.text).join("");
+  return blocks
+    .map((block) => {
+      if (block.type !== "list") {
+        return text(block.runs);
+      }
+      return block.items
+        .map((runs, index) => {
+          const marker = block.ordered ? `${block.start + index}. ` : "- ";
+          return `${marker}${text(runs)}`;
+        })
+        .join("\n");
+    })
+    .join("\n\n");
+}
+
+/// A text from before the editor, kept as plain text: its paragraphs as they
+/// were, nothing read as Markdown.
+export function fromPlainText(text) {
+  return serialize(
+    text
+      .split(PARAGRAPH_BREAK)
+      .filter((block) => block.trim() !== "")
+      .map((block) => ({
+        type: "paragraph",
+        runs: [{ ...PLAIN, text: block }],
+      })),
+  );
 }

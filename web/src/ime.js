@@ -3,6 +3,7 @@
 // (docs/architecture/web-roadmap.md § Why the main thread).
 
 import { Draft } from "./draft.js";
+import { Editor } from "./editor.js";
 import { FormatBubble } from "./format_bubble.js";
 import { keepTitle } from "./header.js";
 import { translate } from "./i18n.js";
@@ -19,7 +20,9 @@ import { TpsKeyboard } from "./tps_keyboard.js";
 /// A call with no instance to answer it: the key is spent.
 const NOTHING = { handled: true, emits: [] };
 
-const textarea = document.getElementById("text");
+const editorBox = document.getElementById("editor");
+const editor = new Editor(document.getElementById("text"));
+const text = editor.root;
 const notice = document.getElementById("notice");
 const messageSlot = document.getElementById("message");
 const modeFlash = document.getElementById("mode-flash");
@@ -27,14 +30,14 @@ const progress = document.getElementById("progress");
 const retryButton = document.getElementById("retry");
 const loadSlot = document.getElementById("load-slot");
 
-const surface = new Surface(textarea);
+const surface = new Surface(editor, editorBox);
 wireSave(
   document.getElementById("save-formats"),
-  textarea,
+  () => editor.markdown(),
   document.getElementById("title"),
 );
 // Before `Settings`, which translates the page.
-keepTitle(document.getElementById("title"), textarea);
+keepTitle(document.getElementById("title"), () => editor.focus());
 const panel = new Panel(
   document.getElementById("panel"),
   document.getElementById("ruler"),
@@ -55,7 +58,7 @@ const tpsKeyboard = new TpsKeyboard(
   document.getElementById("tps-keyboard"),
   (glyph) => {
     // The next physical key belongs here too, not to a sidebar control.
-    textarea.focus();
+    editor.focus();
     apply(call((session) => session.tpsKeyPress(glyph)));
   },
 );
@@ -67,15 +70,16 @@ const settings = new Settings(
   document.getElementById("settings"),
   changeSettings,
 );
-const draft = new Draft(textarea, surface, translate("web.intro"));
+const draft = new Draft(editor, translate("web.intro"));
 const formatBubble = new FormatBubble(
   document.getElementById("format-bubble"),
-  textarea,
+  editor,
   surface,
   () => panel.isShown,
 );
-/// Apple Notes' chords, on Command on a Mac and Control elsewhere.
-const FORMAT_KEYS = { b: "bold", i: "italic", k: "link" };
+/// Apple Notes' link chord, on Command on a Mac and Control elsewhere. Lexical
+/// takes B, I and U itself.
+const FORMAT_KEYS = { k: "link" };
 
 /// `null` between instances.
 let session = null;
@@ -164,7 +168,7 @@ function failLoading(error, starting) {
   say("web.loadFailed", "failed");
   loadSlot.dataset.show = "retry";
   // With no instance a key would go nowhere; the text stays readable.
-  textarea.disabled = session === null;
+  editor.setEditable(session !== null);
 }
 
 /// A trap may replace the instance during any of these awaits.
@@ -207,8 +211,8 @@ async function start() {
     learning.attach(starting);
     redrawShortcuts();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
-    textarea.disabled = false;
-    textarea.focus();
+    editor.setEditable(true);
+    editor.focus();
   } catch (error) {
     failLoading(error, starting);
     return;
@@ -217,7 +221,7 @@ async function start() {
 }
 
 /// One engine call, its answer as given; `undefined` with no instance. A trap
-/// ends the instance: the composition goes with it, the text in the textarea
+/// ends the instance: the composition goes with it, the text in the editor
 /// stays, and the key that hit it is spent.
 function run(action) {
   if (session === null) {
@@ -315,7 +319,7 @@ function apply(reply) {
     redrawShortcuts();
   }
   if (reply.emits.length > 0) {
-    reply.emits.forEach(applyEmit);
+    surface.batch(() => reply.emits.forEach(applyEmit));
     placePanel();
   }
 }
@@ -332,8 +336,8 @@ function keyJson(event) {
   });
 }
 
-/// `bold`, `italic` or `link` for Command+B / I / K on a Mac (Control+B / I / K
-/// elsewhere), with no other modifier; otherwise `undefined`.
+/// `link` for Command+K on a Mac (Control+K elsewhere), with no other
+/// modifier; otherwise `undefined`.
 function formatKind(event) {
   const isMac = platform() === "macos";
   const command = isMac ? event.metaKey : event.ctrlKey;
@@ -349,10 +353,21 @@ function isForeignComposition(event) {
   return event.isComposing || event.keyCode === 229;
 }
 
-textarea.addEventListener("keydown", (event) => {
-  if (isForeignComposition(event)) {
-    return;
-  }
+// Capture on `#editor`: the engine has the key before Lexical, whose handlers on
+// the root skip a key the engine took (`Editor`, KEY_DOWN_COMMAND). The URL field in the
+// format bubble is inside `#editor` too, and its keys are its own.
+editorBox.addEventListener(
+  "keydown",
+  (event) => {
+    if (!text.contains(event.target) || isForeignComposition(event)) {
+      return;
+    }
+    onKeyDown(event);
+  },
+  { capture: true },
+);
+
+function onKeyDown(event) {
   // The auto-space swap deletes the character before the caret unseen, so its
   // arm cannot outlive the caret it was set at.
   if (surface.takeForeignChange()) {
@@ -365,34 +380,31 @@ textarea.addEventListener("keydown", (event) => {
   apply(reply);
   // After the engine: a composition it commits replaces the selection, and the
   // key then goes on to the browser.
-  const kind =
-    !reply.handled &&
-    textarea.selectionStart !== textarea.selectionEnd &&
-    formatKind(event);
+  const kind = !reply.handled && editor.hasSelection() && formatKind(event);
   if (kind) {
     event.preventDefault();
     formatBubble.format(kind);
   }
-});
+}
 
-textarea.addEventListener("keyup", (event) => {
+text.addEventListener("keyup", (event) => {
   if (!isForeignComposition(event)) {
     apply(call((current) => current.keyUp(keyJson(event))));
   }
 });
 
-textarea.addEventListener("compositionstart", () => {
+text.addEventListener("compositionstart", () => {
   notice.toggleAttribute("data-active", true);
 });
 
-textarea.addEventListener("compositionend", () => {
+text.addEventListener("compositionend", () => {
   notice.toggleAttribute("data-active", false);
 });
 
-textarea.addEventListener("scroll", placePanel);
-// The docked sidebar and the textarea's own grip resize it; the window can
+text.addEventListener("scroll", placePanel);
+// The docked sidebar resizes the editor; the window can
 // change the room below it and leave it as it is.
-new ResizeObserver(placePanel).observe(textarea);
+new ResizeObserver(placePanel).observe(text);
 window.addEventListener("resize", placePanel);
 
 // Capture: this runs before the click moves the caret or `blur` takes the
@@ -418,8 +430,8 @@ for (const button of document.querySelectorAll("button")) {
   button.addEventListener("mousedown", (event) => event.preventDefault());
 }
 
-// `/` jumps to the textarea, as kautian-mirror's search does, from anywhere but the
-// textarea and any field that takes text: a select types ahead, and `/` is part
+// `/` jumps to the editor, as kautian-mirror's search does, from anywhere but the
+// editor and any field that takes text: a select types ahead, and `/` is part
 // of an address in the format bubble's URL field. A checkbox just clicked gives way. No
 // select-all: the next key would replace the document.
 document.addEventListener("keydown", (event) => {
@@ -434,7 +446,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
   event.preventDefault();
-  textarea.focus();
+  editor.focus();
 });
 
 retryButton.addEventListener("click", () => {

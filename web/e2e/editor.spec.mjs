@@ -2,42 +2,37 @@
 // the text that survives a reload, the editable title, and Save's three formats.
 
 import { expect, test } from "@playwright/test";
-import { open, saveAs } from "./helpers.mjs";
+import { expectText, open, saveAs, textAfterCaret } from "./helpers.mjs";
 
 const TITLE = "台語齒盤網頁版：台語簿仔紙";
 
 test("an empty box opens on the intro, caret at its end", async ({ page }) => {
   const editor = await open(page, { intro: true });
   // trace: web.intro en, the browser's locale.
-  await expect(editor).toHaveValue(/^TaigiKeyboard is a free/);
-  const { length, caret } = await editor.evaluate((element) => ({
-    length: element.value.length,
-    caret: element.selectionStart,
-  }));
-  expect(caret).toBe(length);
+  await expectText(editor, /^TaigiKeyboard is a free/);
+  expect(await textAfterCaret(editor)).toBe("");
   await editor.press("Backspace");
   await editor.press("Backspace");
   // trace: web.intro en ends on the signature "Bîn-hiân".
-  await expect(editor).toHaveValue(/Bîn-hi$/);
+  await expectText(editor, /Bîn-hi$/);
 });
 
 test("an emptied box opens on the intro again", async ({ page }) => {
   const editor = await open(page, { intro: true });
   await editor.press("ControlOrMeta+a");
   await editor.press("Backspace");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await page.reload();
-  await expect(editor).toHaveValue(/^TaigiKeyboard is a free/);
+  await expectText(editor, /^TaigiKeyboard is a free/);
 });
 
 test("the text survives a reload", async ({ page }) => {
   const editor = await open(page, { ready: false });
   await page.keyboard.insertText("台灣\n\nhó");
   await page.reload();
-  await expect(editor).toHaveValue("台灣\n\nhó");
+  await expectText(editor, "台灣\n\nhó");
   // Writing goes on where it stopped.
-  const caret = await editor.evaluate((element) => element.selectionStart);
-  expect(caret).toBe("台灣\n\nhó".length);
+  await expect.poll(() => textAfterCaret(editor)).toBe("");
 });
 
 test("a tab opened earlier takes the text another tab saved", async ({
@@ -47,9 +42,12 @@ test("a tab opened earlier takes the text another tab saved", async ({
   await open(page, { ready: false });
   const other = await context.newPage();
   await other.goto("/index.html");
-  await expect(other.locator("#text")).toBeEnabled();
+  await expect(other.locator("#text")).toHaveAttribute(
+    "contenteditable",
+    "true",
+  );
   await other.locator("#text").fill("台灣");
-  await expect(page.locator("#text")).toHaveValue("台灣");
+  await expectText(page.locator("#text"), "台灣");
 });
 
 test("the title is edited in place and kept", async ({ page }) => {
@@ -91,3 +89,21 @@ for (const [format, extension, expected] of [
     expect(text).toContain(expected);
   });
 }
+
+test("a text the textarea stored reads as plain text, markers and all", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem("test.seeded") === null) {
+      sessionStorage.setItem("test.seeded", "");
+      localStorage.setItem("taigi.text", "1. 一\n*二* # 三\n\n- 四");
+    }
+  });
+  const editor = await open(page, { intro: true });
+  await expect(editor).toHaveText(/1\. 一\s*\*二\* # 三\s*- 四/);
+  await expect(editor.locator("ol, ul, em, strong")).toHaveCount(0);
+  // The old key is left as it was.
+  expect(await page.evaluate(() => localStorage.getItem("taigi.text"))).toBe(
+    "1. 一\n*二* # 三\n\n- 四",
+  );
+});

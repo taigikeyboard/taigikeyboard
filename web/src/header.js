@@ -1,10 +1,10 @@
 // The title is the user's to edit or delete, as ZenPen's header is. An edited
 // title is kept in `localStorage`; it names a saved file (`save.js`). Its keys go
-// straight to it: the engine composes only in the textarea.
+// straight to it: the engine composes only in the editor.
 
 const STORAGE_KEY = "taigi.title";
 
-export function keepTitle(title, textarea) {
+export function keepTitle(title, focusText) {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     // ZenPen's `loadState`: an empty title opens on the default one.
@@ -25,7 +25,7 @@ export function keepTitle(title, textarea) {
   title.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.isComposing) {
       event.preventDefault();
-      textarea.focus();
+      focusText();
     }
   });
 }

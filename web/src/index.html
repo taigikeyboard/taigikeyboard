@@ -256,7 +256,9 @@
     <main>
       <h1 id="title" contenteditable="plaintext-only" spellcheck="false">台語齒盤網頁版：台語簿仔紙</h1>
       <div id="editor">
-        <textarea id="text" data-i18n-aria-label="web.textLabel" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
+        <!-- biome-ignore lint/a11y/useFocusableInteractive: contenteditable makes it focusable; Lexical core sets no role, only its React wrapper does -->
+        <!-- biome-ignore lint/a11y/useSemanticElements: a textarea holds no formatting -->
+        <div id="text" contenteditable="false" role="textbox" aria-multiline="true" data-i18n-aria-label="web.textLabel" spellcheck="false" autocapitalize="off" autocorrect="off"></div>
         <!-- Icons from Font Awesome Free 7.3.1 (https://fontawesome.com), CC BY 4.0. Copyright Fonticons, Inc. -->
         <div id="format-bubble" hidden>
           <button type="button" tabindex="-1" data-markup="h1">H1</button>

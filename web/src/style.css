@@ -23,7 +23,7 @@
     "Helvetica Neue", Helvetica, "PingFang TC", "Noto Sans TC", Arial,
     sans-serif;
   --font: var(--system-font);
-  /* ZenPen's `article`: the textarea. */
+  /* ZenPen's `article`: the editor. */
   --editor-font: 22px / 30px var(--font);
   /* ZenPen's `section`. */
   --measure: 600px;
@@ -428,28 +428,76 @@ summary:focus-visible {
 #editor {
   position: relative;
   display: flex;
-  flex: 1;
+  /* A zero basis, not `1`'s 0%: against the body's indefinite height a percentage
+     reads as the content, and the editor's text would stretch the page. */
+  flex: 1 1 0;
   flex-direction: column;
   min-height: 14rem;
 }
 
+/* The editor (Lexical's root): not a flex container, which Lexical's blocks
+   would break; `#editor` is. Lexical sets `white-space` itself. */
 #text {
-  display: block;
-  flex: 1;
+  flex: 1 1 0;
   width: 100%;
   min-height: 0;
+  overflow-y: auto;
   /* ZenPen's `article` sits 22px under the title. */
   padding: 22px 0 0;
-  border: 0;
   outline: none;
-  background: none;
-  color: inherit;
   font: var(--editor-font);
-  resize: none;
+  overflow-wrap: break-word;
 }
 
-#text:disabled {
+#text[contenteditable="false"] {
   color: var(--secondary);
+}
+
+/* A blank line between blocks, as the textarea's text had between paragraphs.
+   Line heights in px: the panel reads them, and `normal` reads as nothing. */
+#text :is(p, h1, h2, h3, blockquote, ul, ol) {
+  margin: 0 0 30px;
+}
+
+#text h1 {
+  font-size: 34px;
+  line-height: 42px;
+}
+
+#text h2 {
+  font-size: 28px;
+  line-height: 36px;
+}
+
+#text h3 {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+#text blockquote {
+  padding-left: 16px;
+  border-left: 3px solid var(--border);
+  color: var(--secondary);
+}
+
+#text :is(ul, ol) {
+  padding-left: 1.5em;
+}
+
+#text .is-bold {
+  font-weight: bold;
+}
+
+#text .is-italic {
+  font-style: italic;
+}
+
+#text .is-underline {
+  text-decoration: underline;
+}
+
+#text .is-link {
+  color: var(--accent);
 }
 
 /* macOS Tahoe's candidate window (`CandidateMetrics.swift`, base values at 16 pt,
@@ -505,7 +553,7 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
-/* Reads as the line it sits on: the textarea's font, its background over what
+/* Reads as the line it sits on: the editor's font, its background over what
    the composition covers. */
 #preedit {
   position: absolute;
@@ -814,7 +862,7 @@ summary:focus-visible {
   height: 1.0625rem;
 }
 
-/* Asked for, so it may move what is below the textarea. `height` is set before
+/* Asked for, so it may move what is below the editor. `height` is set before
    the wasm arrives: the caps fill the room `prepaint.js` kept. */
 #tps-keyboard {
   display: none;
