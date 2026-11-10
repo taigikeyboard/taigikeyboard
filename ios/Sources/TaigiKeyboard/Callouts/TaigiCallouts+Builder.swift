@@ -14,13 +14,13 @@ public extension TaigiCallouts {
             return KeyboardCalloutActions.english.actions(for: params.action)
         }
         let settings = SharedSettings.shared
-        if let entries = customCalloutChars(
+        if let layout = settings.activeCustomLayout, let entries = customCalloutChars(
             for: char,
             inputMode: settings.inputMode,
             keyboardType: params.context.keyboardType,
-            customLayout: settings.activeCustomLayout,
+            customLayout: layout,
         ) {
-            return entries.map { .character($0) }
+            return layout.typedCallouts(entries, typesFullWidth: settings.isFullWidthPunctuation).map { .character($0) }
         }
         return calloutChars(
             for: char,

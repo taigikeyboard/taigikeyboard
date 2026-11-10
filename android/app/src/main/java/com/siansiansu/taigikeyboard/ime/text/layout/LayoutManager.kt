@@ -85,7 +85,7 @@ class LayoutManager(
                 toneMarks[keyData.label]?.let { entries -> keyData.popup.addAll(entries.map(KeyData::ofEntry)) }
             }
             // After the extended popups: a user's list replaces the key's whole built-in list.
-            if (custom != null) compositionRoot.customLayoutTables.applyCallouts(computedArrangement, custom)
+            if (custom != null) compositionRoot.customLayoutTables.applyCallouts(computedArrangement, custom, isFullWidthPunctuation)
         }
 
         return ComputedLayoutData(
