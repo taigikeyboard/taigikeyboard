@@ -12,7 +12,7 @@ The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigik
 
 The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next nightly deploy replaces the site.
 
-To deploy by hand, or to go back to a commit: `taigikeyboard/web` → Actions → Deploy → Run workflow, with the full commit.
+To deploy by hand: `taigikeyboard/web` → Actions → Deploy → Run workflow, the commit left blank, deploys `main`'s head (maintainer 2026-11-10). To go back to a commit, give its full hash.
 
 Secret:
 
@@ -38,8 +38,9 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: Full commit of taigikeyboard/taigikeyboard
-        required: true
+        description: Full commit of taigikeyboard/taigikeyboard; blank deploys main's head
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -54,11 +55,24 @@ jobs:
     timeout-minutes: 30
     outputs:
       build: ${{ steps.name.outputs.build }}
+      commit: ${{ steps.commit.outputs.commit }}
     steps:
+      # The nightly run names the commit its gates passed; a run by hand may leave
+      # it blank for main's head, read once so every job builds the same commit.
+      - name: Resolve the commit
+        id: commit
+        run: |
+          commit="${INPUT:-$(gh api repos/taigikeyboard/taigikeyboard/commits/main --jq .sha)}"
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "commit $commit" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT: ${{ inputs.commit }}
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: taigikeyboard/taigikeyboard
-          ref: ${{ inputs.commit }}
+          ref: ${{ steps.commit.outputs.commit }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -68,7 +82,7 @@ jobs:
       - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
         with:
           version: 2026.11.2
-          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen uv pipx:fonttools
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen uv pipx:fonttools zig
 
       - name: Install the toolchain (web/rust-toolchain.toml)
         working-directory: web
@@ -81,7 +95,7 @@ jobs:
           test "$status" = identical || test "$status" = behind
         env:
           GH_TOKEN: ${{ github.token }}
-          COMMIT: ${{ inputs.commit }}
+          COMMIT: ${{ steps.commit.outputs.commit }}
 
       - name: Stage the site
         run: make -C web site
@@ -109,6 +123,9 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        # A healthy deploy takes ~10 s; a stuck one never leaves an empty status.
+        with:
+          timeout: 120000
 
   check:
     needs: [build, deploy]
@@ -118,7 +135,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: taigikeyboard/taigikeyboard
-          ref: ${{ inputs.commit }}
+          ref: ${{ needs.build.outputs.commit }}
           persist-credentials: false
           sparse-checkout: web/scripts
 
