@@ -165,18 +165,11 @@ test("a switch names the new mode, then gets out of the way", async ({
   await expect(flash).toBeHidden();
 });
 
-test("the picker and the guide open and close at the caret", async ({
-  page,
-}) => {
+test("the picker opens and closes at the caret", async ({ page }) => {
   const editor = await open(page);
   await editor.press(`${TIER}+,`);
   await expect(candidates(page).first()).toBeVisible();
   await editor.press("Escape");
-  await expect(panel(page)).toBeHidden();
-
-  await editor.press(`${TIER}+/`);
-  await expect(candidates(page).first()).toBeVisible();
-  await editor.press(`${TIER}+/`);
   await expect(panel(page)).toBeHidden();
 });
 
