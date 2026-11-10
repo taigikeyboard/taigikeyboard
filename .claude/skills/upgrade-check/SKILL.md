@@ -2,6 +2,8 @@
 name: upgrade-check
 description: Audit whether users can upgrade cleanly between two app versions. Diffs the persistence + upgrade-mechanics surface (DB schema versions, .taigi backup format, settings keys, AndroidManifest permissions, removed assets, version monotonicity) and classifies every finding BLOCKING / BEHAVIOR-CHANGE / SAFE. Read-only — never builds, edits, or commits. Args: <base-ref> [<target-ref>] (target defaults to HEAD).
 disable-model-invocation: false
+context: fork
+model: sonnet
 ---
 
 # Upgrade Compatibility Check

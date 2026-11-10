@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Read-only second-opinion review on Fable, standing in for Codex when Codex is unavailable or skipped — the pre-impl plan review, the post-impl diff review and the root-cause co-review of the round workflow. Give it the plan or the diff, the intent, and what to check; returns ranked findings with file:line evidence and a verdict. Never edits files. Not for refactor behaviour-freeze (refactor-reviewer) or phonetics (phonetics-specialist).
+description: Read-only second-opinion review standing in for Codex when Codex is unavailable or skipped — the pre-impl plan review and the root-cause co-review on Fable, the post-impl diff review on Opus (pass `model: "opus"` when spawning it). Give it the plan or the diff, the intent, and what to check; returns ranked findings with file:line evidence and a verdict. Never edits files. Not for refactor behaviour-freeze (refactor-reviewer) or phonetics (phonetics-specialist).
 model: fable
 tools: Read, Grep, Glob, Bash
 ---
