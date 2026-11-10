@@ -184,4 +184,18 @@ public interface AppConfigOrBuilder extends
    * @return The cTypesAffricate.
    */
   boolean getCTypesAffricate();
+
+  /**
+   * <pre>
+   * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+   * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+   * neutral-tone (khinsiann) marker, a document literal — under either tone
+   * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+   * `f` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool f_types_hyphen = 18;</code>
+   * @return The fTypesHyphen.
+   */
+  boolean getFTypesHyphen();
 }

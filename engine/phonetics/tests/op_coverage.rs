@@ -89,6 +89,7 @@ fn tl_config() -> AppConfig {
         dictionary_sources: None,
         custom_dictionary_disabled: false,
         c_types_affricate: false,
+        f_types_hyphen: false,
     }
 }
 
@@ -107,6 +108,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         dictionary_sources: None,
         custom_dictionary_disabled: false,
         c_types_affricate: false,
+        f_types_hyphen: false,
     }
 }
 

@@ -207,10 +207,10 @@ fn intent_telex_second_tone_key_replaces_same_key_is_noop() {
 }
 
 #[test]
-fn intent_telex_c_and_h_are_not_telex_keys() {
-    // trace: `resolve` names neither; a `TelexKey` of either is a no-op,
-    // idle or composing. The desktop sends both as `Append`.
-    for key in ["c", "C", "h", "H"] {
+fn intent_telex_c_f_and_h_are_not_telex_keys() {
+    // trace: `resolve` names none of them; a `TelexKey` of any is a no-op,
+    // idle or composing. The desktop sends all three as `Append`.
+    for key in ["c", "C", "f", "F", "h", "H"] {
         let mut engine = Engine::new();
         let idle = telex(&mut engine, key, &config_tl());
         assert!(!idle.is_composing, "{key}");
@@ -285,22 +285,52 @@ fn intent_telex_tone_key_while_idle_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-#[test]
-fn intent_telex_f_appends_a_hyphen() {
-    let mut engine = Engine::new();
-    append(&mut engine, "tai", &config_tl());
-    telex(&mut engine, "d", &config_tl());
-    let resp = telex(&mut engine, "f", &config_tl());
-    assert_eq!(resp.preedit.unwrap().raw_input, "tai5-");
+fn config_f_hyphen(mode: &str) -> protos::engine::AppConfig {
+    protos::engine::AppConfig {
+        f_types_hyphen: true,
+        ..common::config(mode)
+    }
 }
 
-// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — an idle `f` is the `-` key:
-// it types the neutral-tone marker as a document literal and stays Idle.
+// INVARIANT_F_TYPES_HYPHEN (behavioral-invariants.md §62)
 #[test]
-fn intent_telex_idle_f_inserts_a_literal_hyphen_and_stays_idle() {
+fn intent_append_f_types_a_hyphen_when_the_setting_is_on() {
+    // trace: `f_hyphen::expand` — `f` → `-` mid-tail, either case.
     for key in ["f", "F"] {
+        let config = config_f_hyphen("tl");
         let mut engine = Engine::new();
-        let resp = telex(&mut engine, key, &config_tl());
+        append(&mut engine, "tai5", &config);
+        append(&mut engine, key, &config);
+        let resp = engine.snapshot(&config);
+        assert_eq!(resp.preedit.unwrap().raw_input, "tai5-", "{key}");
+    }
+}
+
+#[test]
+fn intent_append_f_is_a_plain_letter_when_the_setting_is_off() {
+    for mode in ["tl", "poj"] {
+        let config = common::config(mode);
+        let mut engine = Engine::new();
+        append(&mut engine, "taif", &config);
+        let resp = engine.snapshot(&config);
+        assert_eq!(resp.preedit.unwrap().raw_input, "taif", "{mode}");
+    }
+}
+
+// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — with the setting on, an
+// idle `f` is the `-` key: it types the neutral-tone marker as a document
+// literal and stays Idle.
+#[test]
+fn intent_append_idle_f_inserts_a_literal_hyphen_and_stays_idle() {
+    for key in ["f", "F"] {
+        let config = config_f_hyphen("tl");
+        let mut engine = Engine::new();
+        let resp = requests::handle(
+            &req(Method::Append(Append { char: key.into() })),
+            &mut engine,
+            &config,
+        )
+        .unwrap();
         assert!(!resp.is_composing, "{key}");
         assert_eq!(commit_text(&resp), Some("-".to_string()), "{key}");
         assert_eq!(resp.preedit.unwrap_or_default().display_text, "", "{key}");
@@ -308,14 +338,19 @@ fn intent_telex_idle_f_inserts_a_literal_hyphen_and_stays_idle() {
 }
 
 #[test]
-fn intent_telex_idle_ff_then_syllable_is_the_khinsiann_marker() {
+fn intent_append_idle_ff_then_syllable_is_the_khinsiann_marker() {
     // trace: each idle `f` commits one `-` and stays Idle, so `f f` commits
     // `--`; `a` then starts a composition and `h` appends to it.
     for mode in ["tl", "poj"] {
-        let config = common::config(mode);
+        let config = config_f_hyphen(mode);
         let mut engine = Engine::new();
         for _ in 0..2 {
-            let resp = telex(&mut engine, "f", &config);
+            let resp = requests::handle(
+                &req(Method::Append(Append { char: "f".into() })),
+                &mut engine,
+                &config,
+            )
+            .unwrap();
             assert!(!resp.is_composing, "{mode}");
             assert_eq!(commit_text(&resp), Some("-".to_string()), "{mode}");
         }
@@ -325,26 +360,6 @@ fn intent_telex_idle_ff_then_syllable_is_the_khinsiann_marker() {
         assert!(resp.is_composing, "{mode}");
         assert_eq!(resp.preedit.unwrap().raw_input, "ah", "{mode}");
     }
-}
-
-#[test]
-fn intent_telex_f_on_an_empty_tail_while_composing_is_noop() {
-    // trace: the caret at the tail's start leaves nothing before it, so
-    // `apply_telex_key("", "f")` is `None` — composing, not idle, so no `-`.
-    let mut engine = Engine::new();
-    append(&mut engine, "tai", &config_tl());
-    requests::handle(
-        &req(Method::MoveCaret(protos::engine::MoveCaret {
-            direction: protos::engine::CaretDirection::Start as i32,
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = telex(&mut engine, "f", &config_tl());
-    assert!(resp.is_composing);
-    assert!(resp.effect.is_empty());
-    assert_eq!(resp.preedit.unwrap().raw_input, "tai");
 }
 
 #[test]
@@ -414,12 +429,12 @@ fn intent_telex_tone_after_trailing_hyphen_is_noop() {
 }
 
 #[test]
-fn intent_telex_uppercase_f_and_poj_tone_render() {
-    let poj = common::config("poj");
+fn intent_telex_poj_tone_then_uppercase_f_hyphen() {
+    let poj = config_f_hyphen("poj");
     let mut engine = Engine::new();
     append(&mut engine, "Pa", &poj);
     let resp = telex(&mut engine, "Y", &poj);
     assert_eq!(resp.preedit.as_ref().unwrap().display_text, "Pà");
-    let resp = telex(&mut engine, "F", &poj);
-    assert_eq!(resp.preedit.unwrap().raw_input, "Pa3-");
+    append(&mut engine, "F", &poj);
+    assert_eq!(engine.snapshot(&poj).preedit.unwrap().raw_input, "Pa3-");
 }

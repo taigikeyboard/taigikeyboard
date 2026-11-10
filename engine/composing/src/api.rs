@@ -700,7 +700,7 @@ pub enum Intent {
         /// The canonical TL the usage is counted under.
         canonical_tl: String,
     },
-    /// Desktop Telex scheme — one tone / hyphen letter applied
+    /// Desktop Telex scheme — one tone letter applied
     /// to the pending tail (`telex::apply_telex_key`). Unknown keys and
     /// edits that change nothing answer with a no-op.
     TelexKey {
@@ -952,6 +952,7 @@ mod tests {
             dictionary_sources: None,
             custom_dictionary_disabled: false,
             c_types_affricate: false,
+            f_types_hyphen: false,
         }
     }
 

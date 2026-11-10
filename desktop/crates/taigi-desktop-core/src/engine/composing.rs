@@ -49,8 +49,8 @@ pub fn append(
     )
 }
 
-/// Applies one Telex key to the pending syllable's tone, or `f` as the
-/// hyphen (`composing.proto` `TelexKey`, `engine/composing/src/telex.rs`).
+/// Applies one Telex key to the pending syllable's tone (`composing.proto`
+/// `TelexKey`, `engine/composing/src/telex.rs`).
 /// Carries the same config as `append` (the prefix renders by the spacing
 /// flags).
 pub fn telex_key(

@@ -732,12 +732,12 @@ public nonisolated struct Taigi_Engine_CommitResolution: Sendable {
 
 /// Desktop Telex scheme: one key from `x v y d z w q` (tones 1/4 2/8 3 5 6 7 9 —
 /// `x` and `v` write the checked tone after a stop coda `p t k h`, the open
-/// tone otherwise) or `f` (hyphen), either case. The engine edits the pending
-/// tail — appending or replacing the trailing tone digit — and keeps the buffer
-/// numeric-tone. A key that changes nothing (same tone twice, tone on an empty
-/// tail) is a no-op; no Telex key starts a composition. Idle + `f` inserts a
-/// literal `-` and stays idle, as a leading `-` does. `c` and `h` are ordinary
-/// `Append` letters (`AppConfig.c_types_affricate` for the `c` initial).
+/// tone otherwise), either case. The engine edits the pending tail — appending
+/// or replacing the trailing tone digit — and keeps the buffer numeric-tone. A
+/// key that changes nothing (same tone twice, tone on an empty tail) is a
+/// no-op; no Telex key starts a composition or acts while idle. `c`, `f` and
+/// `h` are ordinary `Append` letters (`AppConfig.c_types_affricate` for the `c`
+/// initial, `AppConfig.f_types_hyphen` for the `f` hyphen).
 public nonisolated struct Taigi_Engine_TelexKey: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
