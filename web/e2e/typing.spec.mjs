@@ -110,6 +110,27 @@ test("a Shift tap hands the keys to the page and back", async ({ page }) => {
   await expectText(editor, "ab");
 });
 
+test("the mode line follows the script and the Shift tap", async ({ page }) => {
+  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ (`settings.pojMode`);
+  // English names the way back behind a Shift cap (`mode_line_json`).
+  const line = page.locator("#mode-line");
+  const name = page.locator("#mode-name");
+  const detail = page.locator("#mode-detail");
+  const editor = await open(page);
+  await expect(name).toHaveText("Taigi");
+  await expect(detail).toHaveText("Tâi-lô");
+  await expect(line).not.toHaveAttribute("data-english");
+  await editor.press(`${TIER}+c`);
+  await expect(detail).toContainText("Pe̍h-ōe-jī");
+  await editor.press("Shift");
+  await expect(line).toHaveAttribute("data-english");
+  await expect(name).toHaveText("English");
+  await expect(detail).toHaveText("⇧Taigi");
+  await editor.press("Shift");
+  await expect(line).not.toHaveAttribute("data-english");
+  await expect(detail).toContainText("Pe̍h-ōe-jī");
+});
+
 test("every default chord reaches the page", async ({ page }) => {
   // trace: shortcut_actions.rs `default_chord`.
   const editor = await open(page);
@@ -248,6 +269,11 @@ test("another input method's keys stay its own", async ({ page }) => {
   await expect(notice).toBeHidden();
   await editor.dispatchEvent("compositionstart");
   await expect(notice).toBeVisible();
+  // Drawn in the mode chip, in the mode's place.
+  await expect(page.locator("#mode-line > #notice")).toHaveText(
+    "Another input method is active. Turn it off to type here.",
+  );
+  await expect(page.locator("#mode-name")).toBeHidden();
   await page.evaluate(() => {
     const event = new KeyboardEvent("keydown", {
       key: "a",
@@ -260,4 +286,5 @@ test("another input method's keys stay its own", async ({ page }) => {
   await expect(panel(page)).toBeHidden();
   await editor.dispatchEvent("compositionend");
   await expect(notice).toBeHidden();
+  await expect(page.locator("#mode-name")).toBeVisible();
 });

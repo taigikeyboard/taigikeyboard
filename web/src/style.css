@@ -88,6 +88,8 @@ body {
   font: 1.0625rem / 1.65 var(--font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* `#mode-line` measures the window's column against `main`. */
+  container-type: inline-size;
 }
 
 a {
@@ -840,12 +842,66 @@ summary:focus-visible {
   backdrop-filter: blur(24px) saturate(180%);
 }
 
-#notice {
+/* In the mode chip, in the mode's place: drawn, because a composition the
+   browser keeps open looks like a page that ignores its keys. */
+#notice:not([data-active]),
+#mode-line:has(#notice[data-active]) > :not(#notice) {
+  display: none;
+}
+
+/* A chip in the row under the editor, which keeps its room, so it moves
+   nothing: the mode and the input script. Black, white and grey only. English
+   mode turns it solid and names the Shift tap back: there the page looks as if
+   it ignores the engine, as it does while `#notice` is up. Unseen until the
+   session spells it: a marker, as `#telex-guide` has. On the window's right
+   gutter, not the column's edge: the margin spends the half of the body's
+   width that centering left beside `main`. */
+#mode-line {
+  display: flex;
+  margin-right: calc((100% - 100cqw) / 2);
+  align-items: center;
+  gap: 0.4em;
+  min-width: 0;
+  height: 1.5rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.75rem;
+  color: var(--secondary);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+#mode-line:not([data-drawn]) {
   visibility: hidden;
 }
 
-#notice[data-active] {
-  visibility: visible;
+#mode-line::before {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+#mode-line:is([data-english], :has(#notice[data-active])) {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+#mode-line .separator {
+  opacity: 0.5;
+}
+
+#mode-line kbd {
+  margin-right: 0.25em;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 400;
 }
 
 .action {

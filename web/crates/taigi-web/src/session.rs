@@ -21,7 +21,7 @@ use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
 use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
-use crate::reply::{telex_guide_json, wire_emit, wire_layout, ModeText, Reply};
+use crate::reply::{mode_line_json, telex_guide_json, wire_emit, wire_layout, ModeText, Reply};
 use crate::shortcuts::shortcuts;
 
 const CONTEXT: ContextToken = ContextToken(1);
@@ -237,6 +237,16 @@ impl WebSession {
     /// The Telex guide's card in the display language.
     pub(crate) fn telex_guide(&self) -> String {
         telex_guide_json(&self.runtime.strings())
+    }
+
+    /// The mode chip under the editor, in the display language.
+    pub(crate) fn mode_line(&self) -> String {
+        let settings = self.runtime.settings.current();
+        mode_line_json(
+            &self.runtime.strings(),
+            self.state.language_mode,
+            settings.engine_settings().input_mode,
+        )
     }
 
     /// The sidebar's Shortcuts section under the current document.
@@ -506,6 +516,22 @@ mod tests {
         assert_eq!(session.mode_symbol(), "方");
         shift_tap(&mut session);
         assert_eq!(session.mode_symbol(), "英");
+    }
+
+    #[test]
+    fn the_mode_line_names_the_script_and_the_way_back() {
+        // trace: en values — taigiMode "Taigi", tpsMode "Phonetic Symbols",
+        // englishMode "English" (`i18n/settings.json`).
+        let mut session = typing_tps();
+        assert_eq!(
+            parsed(session.mode_line()),
+            json!({ "isEnglish": false, "mode": "Taigi", "script": "Phonetic Symbols", "other": "English" })
+        );
+        shift_tap(&mut session);
+        assert_eq!(
+            parsed(session.mode_line()),
+            json!({ "isEnglish": true, "mode": "English", "script": "Phonetic Symbols", "other": "Taigi" })
+        );
     }
 
     #[test]

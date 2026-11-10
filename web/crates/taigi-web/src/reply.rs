@@ -7,8 +7,9 @@ use taigi_desktop_core::candidates::{
     CellLayer, ExpandableAxis, ExpandableDisplayMode, ExpandableListModel, ExpandableModeChange,
     ModeTransition, Rect, Track,
 };
-use taigi_desktop_core::keys::{telex_guide_rows, tps_keyboard_rows};
+use taigi_desktop_core::keys::{telex_guide_rows, tps_keyboard_rows, LanguageMode};
 use taigi_desktop_core::session::{Emit, ListSelection, LookupTableContent};
+use taigi_desktop_core::settings::InputMode;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
 /// One candidate: the two scripts apart, because the panel sets them apart.
@@ -340,6 +341,35 @@ pub(crate) fn telex_guide_json(strings: &StringResolver) -> String {
     };
     // Strings only: this cannot fail.
     serde_json::to_string(&guide).unwrap_or_else(|_| String::from("{}"))
+}
+
+/// The mode chip under the editor (`ime.js` `redrawModeLine`).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WireModeLine {
+    is_english: bool,
+    mode: &'static str,
+    /// The input script Taigi mode types.
+    script: &'static str,
+    /// The mode a Shift tap goes to.
+    other: &'static str,
+}
+
+/// The mode line in the display language. English mode looks like a page
+/// that ignores the engine, so the line says which mode the keys are in.
+pub(crate) fn mode_line_json(
+    strings: &StringResolver,
+    language: LanguageMode,
+    input_mode: InputMode,
+) -> String {
+    let line = WireModeLine {
+        is_english: language.is_english(),
+        mode: strings.resolve(language.flash_label_key()),
+        script: strings.resolve(input_mode.label_key()),
+        other: strings.resolve(language.toggled().flash_label_key()),
+    };
+    // Strings and a bool: this cannot fail.
+    serde_json::to_string(&line).unwrap_or_else(|_| String::from("{}"))
 }
 
 /// What the two mode emits carry.

@@ -27,6 +27,9 @@ const text = editor.root;
 const notice = document.getElementById("notice");
 const messageSlot = document.getElementById("message");
 const modeFlash = document.getElementById("mode-flash");
+const modeLine = document.getElementById("mode-line");
+const modeName = document.getElementById("mode-name");
+const modeDetail = document.getElementById("mode-detail");
 const progress = document.getElementById("progress");
 const retryButton = document.getElementById("retry");
 const loadSlot = document.getElementById("load-slot");
@@ -214,6 +217,7 @@ async function start() {
     redrawShortcuts();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
     redrawTelexGuide();
+    redrawModeLine();
     editor.setEditable(true);
     editor.focus();
   } catch (error) {
@@ -276,6 +280,9 @@ function applyEmit(emit) {
     case "hideLookupTable":
       panel.hideTable();
       break;
+    case "modeChanged":
+      redrawModeLine();
+      break;
     case "announceMode":
       announce(emit.label);
       break;
@@ -300,6 +307,7 @@ function changeSettings(json) {
   redrawMessage();
   redrawShortcuts();
   redrawTelexGuide();
+  redrawModeLine();
   draft.translateIntro(translate("web.intro"));
 }
 
@@ -317,6 +325,26 @@ function redrawTelexGuide() {
   if (guide !== undefined) {
     telexGuide.draw(JSON.parse(guide));
   }
+}
+
+/// Taigi: the mode and the input script. English: the mode and the Shift tap
+/// back to Taigi.
+function redrawModeLine() {
+  const line = run((current) => current.modeLine());
+  if (line === undefined) {
+    return;
+  }
+  const { isEnglish, mode, script, other } = JSON.parse(line);
+  modeName.textContent = mode;
+  if (isEnglish) {
+    const shift = document.createElement("kbd");
+    shift.textContent = "⇧";
+    modeDetail.replaceChildren(shift, other);
+  } else {
+    modeDetail.textContent = script;
+  }
+  modeLine.toggleAttribute("data-english", isEnglish);
+  modeLine.toggleAttribute("data-drawn", true);
 }
 
 function placePanel() {
