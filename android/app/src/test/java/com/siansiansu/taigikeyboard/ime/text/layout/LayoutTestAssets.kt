@@ -3,6 +3,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
@@ -10,9 +11,42 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.keyVisible
 import java.io.File
 
 internal object LayoutTestAssets {
+    /**
+     * A stand-in for the engine's tone table (the JVM has no native engine): the full `a` lists, one
+     * entry for every other base the editor tray leads with. The engine pins the real lists
+     * (`engine/phonetics/src/tone_variations.rs` tests); `RustEngineBridgeTest` checks the decode.
+     */
+    val toneVariations =
+        RustEngineBridge.ToneVariations(
+            // trace: TL tones 2 3 5 6 7 8 9 on a = á à â ǎ ā a̍ a̋ (tone 9 = U+030B).
+            tl = mapOf(
+                "a" to listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"),
+                "e" to listOf("é"),
+                "i" to listOf("í"),
+                "o" to listOf("ó"),
+                "oo" to listOf("óo"),
+                "u" to listOf("ú"),
+                "m" to listOf("ḿ"),
+                "n" to listOf("ń", "ⁿ"),
+                "ng" to listOf("ńg"),
+            ),
+            // trace: POJ tone 9 = breve U+0306, so a̋ → ă.
+            poj = mapOf(
+                "a" to listOf("á", "à", "â", "ǎ", "ā", "a̍", "ă"),
+                "e" to listOf("é"),
+                "i" to listOf("í"),
+                "o" to listOf("ó"),
+                "o͘" to listOf("ó͘"),
+                "u" to listOf("ú"),
+                "m" to listOf("ḿ"),
+                "n" to listOf("ń", "ⁿ"),
+                "ng" to listOf("ńg"),
+            ),
+        )
+
     val assets = LayoutAssets { path -> File("src/main/assets/$path").takeIf { it.exists() }?.readText() }
 
-    val tables by lazy { CustomLayoutTables(assets) }
+    val tables by lazy { CustomLayoutTables(assets) { toneVariations } }
 
     /** The merged built-in letter keyboard, digit row first, as LayoutManager merges it (before popups). */
     fun merged(

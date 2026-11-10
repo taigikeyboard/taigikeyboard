@@ -1,9 +1,11 @@
 //! `Method::GetToneVariations` — init-bulk-pull builder for callout tone
 //! variation tables.
 //!
-//! Owns the callout tone maps formerly built by iOS `buildToneMap(mode:)`
-//! (iOS `Callouts/TaigiCallouts+Maps.swift` now reads them). Returns POJ + TL maps in one
-//! response so platform caches once at engine init (lazy + idempotent).
+//! Owns the callout tone maps formerly built by iOS `buildToneMap(mode:)`; the
+//! only source on both mobile platforms (iOS `Callouts/TaigiCallouts+Maps.swift`,
+//! Android `PhoneticsBridge.kt` `RustEngineBridge.toneVariations`). Returns POJ +
+//! TL maps in one response so platform caches once at engine init (lazy +
+//! idempotent).
 //!
 //! Pattern matches khiin-rs `loadSettings → AppConfig` cached snapshot.
 
@@ -139,6 +141,110 @@ mod tests {
             .unwrap_or_else(|| panic!("no callout entry for {key:?}"))
             .variations
             .clone()
+    }
+
+    /// Pins every lowercase key's full list in order: Android lost its JSON
+    /// mirror of this table, so these lists are what both keyboards show.
+    #[test]
+    fn full_lists_per_base_both_modes() {
+        // trace: TONE_NUMBERS 2 3 5 6 7 8 9 → U+0301 U+0300 U+0302 U+030C U+0304
+        // U+030D, then tone 9 = U+030B (TL) / U+0306 (POJ); NFC recomposes where a
+        // precomposed letter exists; `n` ends with ⁿ.
+        let tl = build_mode_map(true);
+        let poj = build_mode_map(false);
+        let expected_tl: [(&str, &[&str]); 9] = [
+            ("a", &["á", "à", "â", "ǎ", "ā", "a\u{30D}", "a\u{30B}"]),
+            ("e", &["é", "è", "ê", "ě", "ē", "e\u{30D}", "e\u{30B}"]),
+            ("i", &["í", "ì", "î", "ǐ", "ī", "i\u{30D}", "i\u{30B}"]),
+            ("o", &["ó", "ò", "ô", "ǒ", "ō", "o\u{30D}", "ő"]),
+            ("u", &["ú", "ù", "û", "ǔ", "ū", "u\u{30D}", "ű"]),
+            ("oo", &["óo", "òo", "ôo", "ǒo", "ōo", "o\u{30D}o", "őo"]),
+            (
+                "m",
+                &[
+                    "ḿ", "m\u{300}", "m\u{302}", "m\u{30C}", "m\u{304}", "m\u{30D}", "m\u{30B}",
+                ],
+            ),
+            (
+                "n",
+                &[
+                    "ń", "ǹ", "n\u{302}", "ň", "n\u{304}", "n\u{30D}", "n\u{30B}", "ⁿ",
+                ],
+            ),
+            (
+                "ng",
+                &[
+                    "ńg",
+                    "ǹg",
+                    "n\u{302}g",
+                    "ňg",
+                    "n\u{304}g",
+                    "n\u{30D}g",
+                    "n\u{30B}g",
+                ],
+            ),
+        ];
+        let expected_poj: [(&str, &[&str]); 9] = [
+            ("a", &["á", "à", "â", "ǎ", "ā", "a\u{30D}", "ă"]),
+            ("e", &["é", "è", "ê", "ě", "ē", "e\u{30D}", "ĕ"]),
+            ("i", &["í", "ì", "î", "ǐ", "ī", "i\u{30D}", "ĭ"]),
+            ("o", &["ó", "ò", "ô", "ǒ", "ō", "o\u{30D}", "ŏ"]),
+            ("u", &["ú", "ù", "û", "ǔ", "ū", "u\u{30D}", "ŭ"]),
+            (
+                "o\u{358}",
+                &[
+                    "ó\u{358}",
+                    "ò\u{358}",
+                    "ô\u{358}",
+                    "ǒ\u{358}",
+                    "ō\u{358}",
+                    "o\u{30D}\u{358}",
+                    "ŏ\u{358}",
+                ],
+            ),
+            (
+                "m",
+                &[
+                    "ḿ", "m\u{300}", "m\u{302}", "m\u{30C}", "m\u{304}", "m\u{30D}", "m\u{306}",
+                ],
+            ),
+            (
+                "n",
+                &[
+                    "ń", "ǹ", "n\u{302}", "ň", "n\u{304}", "n\u{30D}", "n\u{306}", "ⁿ",
+                ],
+            ),
+            (
+                "ng",
+                &[
+                    "ńg",
+                    "ǹg",
+                    "n\u{302}g",
+                    "ňg",
+                    "n\u{304}g",
+                    "n\u{30D}g",
+                    "n\u{306}g",
+                ],
+            ),
+        ];
+        for (map, expected) in [(&tl, &expected_tl), (&poj, &expected_poj)] {
+            for (key, list) in expected.iter() {
+                assert_eq!(variations(map, key), *list, "key {key:?}");
+                // Shift capitalises the first letter, Caps Lock every letter (one key for a
+                // single letter); ⁿ rides the lowercase `n` list only.
+                let tones = list.iter().filter(|s| **s != "\u{207f}");
+                let shift: Vec<String> = tones.clone().map(|s| uppercase_first_only(s)).collect();
+                let caps: Vec<String> = tones.map(|s| s.to_uppercase()).collect();
+                assert_eq!(
+                    variations(map, &uppercase_first_only(key)),
+                    shift,
+                    "Shift {key:?}"
+                );
+                assert_eq!(variations(map, &key.to_uppercase()), caps, "Caps {key:?}");
+            }
+            let lowercase_keys = map.keys().filter(|k| k.to_lowercase() == **k).count();
+            assert_eq!(lowercase_keys, expected.len());
+        }
     }
 
     #[test]
