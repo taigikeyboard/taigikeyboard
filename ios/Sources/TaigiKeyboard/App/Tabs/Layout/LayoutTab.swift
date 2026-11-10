@@ -3,7 +3,8 @@ import SwiftUI
 /// Layout tab.
 ///
 /// A gallery of horizontal shelves (`GalleryShelf`, shared with the Theme tab): Custom Layouts
-/// (the user's layouts after a create card that opens `LayoutEditorView`), Universal (layouts
+/// (the user's layouts after a create card that names the layout and picks where it shows, then
+/// opens `LayoutEditorView`), Universal (layouts
 /// with one key table for both scripts), Tâi-lô and Pe̍h-ōe-jī (the layouts whose POJ keys
 /// differ, once per script), and Phonetic Symbols. A Tâi-lô / Pe̍h-ōe-jī card applies its layout
 /// and switches the input mode to that script.
@@ -23,6 +24,9 @@ struct LayoutTab: View {
 
     @State private var customLayouts: [CustomLayout] = []
     @State private var editorRoute: LayoutEditorRoute?
+    @State private var showsCreateSheet = false
+    @State private var newName = ""
+    @State private var newUse = LayoutUse.universal
 
     var body: some View {
         let activeCustomLayoutId = CustomLayout.active(
@@ -33,7 +37,11 @@ struct LayoutTab: View {
                 LazyVStack(alignment: .leading, spacing: GalleryCardMetrics.shelfSpacing) {
                     GalleryShelf(title: lang.string(.layoutCustomLayoutsSection)) {
                         if customLayouts.count < UserLayoutStore.maxLayouts {
-                            GalleryCreateCard(title: lang.string(.layoutCreateNewLayout)) { editorRoute = .create }
+                            GalleryCreateCard(title: lang.string(.layoutCreateNewLayout)) {
+                                newName = ""
+                                newUse = LayoutEditorView.newDraft().use
+                                showsCreateSheet = true
+                            }
                         }
                         ForEach(customLayouts) { layout in
                             customLayoutCard(layout, isSelected: activeCustomLayoutId == layout.id)
@@ -64,9 +72,17 @@ struct LayoutTab: View {
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(item: $editorRoute) { route in
                 switch route {
-                case .create: LayoutEditorView()
+                case let .create(name, use): LayoutEditorView(newNamed: name, use: use)
                 case let .edit(layout): LayoutEditorView(editing: layout)
                 }
+            }
+            .sheet(isPresented: $showsCreateSheet) {
+                LayoutDetailsSheet(name: $newName, use: $newUse, confirmTitle: lang.string(.commonOk)) {
+                    let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    showsCreateSheet = false
+                    editorRoute = .create(name: trimmed.isEmpty ? lang.string(.layoutEditorTitleNew) : trimmed, use: newUse)
+                }
+                .environment(lang)
             }
             // Every store write bumps layoutRevision; onAppear covers popping back from the editor.
             .onAppear(perform: reloadCustomLayouts)
@@ -113,9 +129,10 @@ struct LayoutTab: View {
 
 // MARK: - Editor route
 
-/// Navigation route for the layout editor: a new layout, or an edit of a saved one.
+/// Navigation route for the layout editor: a new layout with the name and use the create sheet
+/// chose, or an edit of a saved one.
 enum LayoutEditorRoute: Hashable {
-    case create
+    case create(name: String, use: LayoutUse)
     case edit(CustomLayout)
 }
 

@@ -28,6 +28,11 @@ public extension TaigiCallouts {
         static var tl: [String: [String]] {
             RustEngineBridge.toneVariations.tl
         }
+
+        /// TL and POJ lists interleaved, both tone-9 marks: a universal custom layout's.
+        static var universal: [String: [String]] {
+            RustEngineBridge.toneVariations.universal
+        }
     }
 
     /// TPS layout callouts (Phonetic Symbols long-press variants)

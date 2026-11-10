@@ -23,8 +23,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 
-// The name dialog a user-made item (theme, layout) asks for on Save: one text field, then any [options]
-// the item adds (a layout's use), Save / Cancel. The caller handles a blank name.
+// The name dialog a user-made item (theme, layout) asks for on Save, or on create (a layout): one text
+// field, then any [options] the item adds (a layout's use), [confirmLabel] / Cancel. The caller handles
+// a blank name.
 @Composable
 fun NameDialog(
     title: String,
@@ -32,6 +33,7 @@ fun NameDialog(
     initialName: String,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit,
+    confirmLabel: String = L10n.commonSave,
     options: @Composable () -> Unit = {},
 ) {
     var name by rememberSaveable(initialName, stateSaver = TextFieldValue.Saver) {
@@ -58,7 +60,7 @@ fun NameDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name.text) }) { Text(L10n.commonSave) }
+            TextButton(onClick = { onConfirm(name.text) }) { Text(confirmLabel) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(L10n.commonCancel) }

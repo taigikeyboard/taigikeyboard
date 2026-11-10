@@ -331,6 +331,9 @@ public nonisolated struct Taigi_Engine_BoolResult: Sendable {
 
 /// `ToneVariationsResult` is the callout init-pull payload. Maps the base
 /// char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
+/// `universal_variations` is every key of both maps with the TL and POJ lists
+/// interleaved, each entry once (both tone-9 marks) — for a custom layout shown
+/// in TL and POJ alike.
 public nonisolated struct Taigi_Engine_ToneVariationsResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -339,6 +342,8 @@ public nonisolated struct Taigi_Engine_ToneVariationsResult: Sendable {
   public var pojVariations: Dictionary<String,Taigi_Engine_ToneVariationList> = [:]
 
   public var tlVariations: Dictionary<String,Taigi_Engine_ToneVariationList> = [:]
+
+  public var universalVariations: Dictionary<String,Taigi_Engine_ToneVariationList> = [:]
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -993,7 +998,7 @@ nonisolated extension Taigi_Engine_BoolResult: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ToneVariationsResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}poj_variations\0\u{3}tl_variations\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}poj_variations\0\u{3}tl_variations\0\u{3}universal_variations\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1003,6 +1008,7 @@ nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: &self.pojVariations) }()
       case 2: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: &self.tlVariations) }()
+      case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: &self.universalVariations) }()
       default: break
       }
     }
@@ -1015,12 +1021,16 @@ nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, 
     if !self.tlVariations.isEmpty {
       try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: self.tlVariations, fieldNumber: 2)
     }
+    if !self.universalVariations.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: self.universalVariations, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_ToneVariationsResult, rhs: Taigi_Engine_ToneVariationsResult) -> Bool {
     if lhs.pojVariations != rhs.pojVariations {return false}
     if lhs.tlVariations != rhs.tlVariations {return false}
+    if lhs.universalVariations != rhs.universalVariations {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

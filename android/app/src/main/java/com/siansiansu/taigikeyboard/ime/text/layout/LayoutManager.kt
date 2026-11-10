@@ -79,8 +79,11 @@ class LayoutManager(
             if (custom == null) merged else compositionRoot.customLayoutTables.substitute(merged, custom, isFullWidthPunctuation)
 
         if (keyboardMode == KeyboardMode.CHARACTERS) {
-            // The engine's tone marks by key label (TL / POJ only); each key gets fresh entries.
-            val toneMarks = LayoutScript.fromStorage(prefs.inputMode)?.toneMarks(compositionRoot.toneVariations()).orEmpty()
+            // The engine's tone marks by key label (TL / POJ only; `custom` is null in other modes): a
+            // universal custom layout's are both scripts'. Each key gets fresh entries.
+            val tones = compositionRoot.toneVariations()
+            val toneMarks =
+                if (custom?.isUniversal == true) tones.universal else LayoutScript.fromStorage(prefs.inputMode)?.toneMarks(tones).orEmpty()
             for (keyData in computedArrangement.flatten()) {
                 toneMarks[keyData.label]?.let { entries -> keyData.popup.addAll(entries.map(KeyData::ofEntry)) }
             }

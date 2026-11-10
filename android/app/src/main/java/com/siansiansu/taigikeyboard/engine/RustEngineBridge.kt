@@ -573,15 +573,16 @@ object RustEngineBridge {
     // region Phonetics DTO — ops are extensions in PhoneticsBridge.kt
 
     /**
-     * The engine's long-press tone variations by key label (`a`, `oo`, `Ng` …), per script.
-     * iOS `ToneVariationsCache`.
+     * The engine's long-press tone variations by key label (`a`, `oo`, `Ng` …), per script, plus
+     * [universal]: both scripts' lists interleaved, both tone-9 marks. iOS `ToneVariationsCache`.
      */
     data class ToneVariations(
         val tl: Map<String, List<String>>,
         val poj: Map<String, List<String>>,
+        val universal: Map<String, List<String>>,
     ) {
         companion object {
-            val EMPTY = ToneVariations(tl = emptyMap(), poj = emptyMap())
+            val EMPTY = ToneVariations(tl = emptyMap(), poj = emptyMap(), universal = emptyMap())
         }
     }
 

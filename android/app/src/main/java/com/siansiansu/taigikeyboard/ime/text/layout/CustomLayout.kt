@@ -35,13 +35,26 @@ enum class LayoutScript(
     }
 }
 
-/** Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen on save. Mirrors iOS `LayoutUse`. */
+/**
+ * Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen when the layout
+ * is created; editing an existing one can change it on save. Mirrors iOS `LayoutUse`.
+ */
 enum class LayoutUse(
     val labelKey: StringKey,
 ) {
     UNIVERSAL(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION),
     TL(StringKey.SETTINGS_TL_MODE),
     POJ(StringKey.SETTINGS_POJ_MODE),
+    ;
+
+    /** The script this use lays the keys out in; null for universal, which keeps the layout's. */
+    val script: LayoutScript?
+        get() =
+            when (this) {
+                UNIVERSAL -> null
+                TL -> LayoutScript.TL
+                POJ -> LayoutScript.POJ
+            }
 }
 
 /** A function key as stored in a record (iOS `CustomLayout.FunctionKey` raw values), and the key code it stands for. */
@@ -115,6 +128,9 @@ data class CustomLayout(
                     LayoutScript.POJ -> LayoutUse.POJ
                 }
             }
+
+    /** The engine's tone marks this layout's keys offer: both scripts' (both tone-9 marks) when universal, else [script]'s. */
+    fun toneMarks(tones: RustEngineBridge.ToneVariations): Map<String, List<String>> = if (isUniversal) tones.universal else script.toneMarks(tones)
 
     /** This layout under a new id and [name] — what the Duplicate card action saves. Mirrors iOS `CustomLayout.duplicated(named:)`. */
     fun duplicated(name: String): CustomLayout = copy(id = UUID.randomUUID().toString(), name = name)
@@ -236,8 +252,8 @@ data class CustomLayout(
         /** The most custom layouts a user can keep, as for user themes. */
         const val MAX_CUSTOM_LAYOUTS = 5
 
-        /** The most entries one key's long-press list holds. iOS `CustomLayout.maxCallouts`. */
-        const val MAX_CALLOUTS = 8
+        /** The most entries one key's long-press list holds: a universal `n` holds seven tones, both tone-9 marks and ⁿ. iOS `CustomLayout.maxCallouts`. */
+        const val MAX_CALLOUTS = 9
 
         /**
          * Decodes the stored list, dropping each record that fails to decode or that [tables] cannot

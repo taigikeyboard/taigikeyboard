@@ -36,7 +36,33 @@ class CustomLayoutCalloutsTest {
     @Test
     fun `entries are trimmed, deduplicated and capped`() {
         val edited = qwerty.withList(",", listOf(" { ", "", "}", "{") + (1..10).map(Int::toString))
-        assertEquals(listOf("{", "}", "1", "2", "3", "4", "5", "6"), edited.callouts[","])
+        assertEquals(listOf("{", "}", "1", "2", "3", "4", "5", "6", "7"), edited.callouts[","])
+    }
+
+    @Test
+    fun `a universal layout's built-in tone list holds both tone-9 marks`() {
+        // trace: LayoutTestAssets.toneVariations universal `a` = TL list + POJ ă; qwerty_tl `a` has no popup of its own.
+        val universal = tables.withUse(qwerty, LayoutUse.UNIVERSAL)
+        val builtIn = tables.defaultCallouts(universal, "a")
+        assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋", "ă"), builtIn)
+        assertTrue(universal.withList("a", builtIn).callouts.isEmpty())
+        // A TL layout keeps the TL list.
+        assertEquals("a̋", tables.defaultCallouts(qwerty, "a").last())
+    }
+
+    @Test
+    fun `a nine-entry list survives the cap`() {
+        val nine = listOf("ń", "ǹ", "n̂", "ň", "n̄", "n̍", "n̋", "n̆", "ⁿ")
+        assertEquals(nine, qwerty.withList("n", nine).callouts["n"])
+    }
+
+    @Test
+    fun `changing the use keeps stored lists`() {
+        // A stored list is never rewritten; keys without one follow the new use's built-in list.
+        val edited = qwerty.withList("a", listOf("á", "à"))
+        assertEquals(listOf("á", "à"), tables.withUse(edited, LayoutUse.UNIVERSAL).callouts["a"])
+        val universal = tables.withUse(qwerty, LayoutUse.UNIVERSAL).withList("a", listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"))
+        assertEquals("a̋", tables.withUse(universal, LayoutUse.TL).callouts["a"]?.last())
     }
 
     @Test

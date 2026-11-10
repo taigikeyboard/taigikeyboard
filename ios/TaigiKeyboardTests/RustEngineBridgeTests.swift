@@ -34,7 +34,7 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
     }
 
-    func test_op_toneVariations_lazyCache_returnsBothModes() {
+    func test_op_toneVariations_lazyCache_returnsAllThreeMaps() {
         let cache = RustEngineBridge.toneVariations
         XCTAssertFalse(cache.poj.isEmpty, "POJ map should populate")
         XCTAssertFalse(cache.tl.isEmpty, "TL map should populate")
@@ -42,6 +42,8 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["a"])
         XCTAssertNotNil(cache.tl["oo"])
         XCTAssertNotNil(cache.poj["o\u{0358}"])
+        // Universal: TL and POJ interleaved, both tone-9 marks.
+        XCTAssertEqual(cache.universal["a"]?.suffix(2), ["a\u{30B}", "ă"])
     }
 
     // MARK: - TPS

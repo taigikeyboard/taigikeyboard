@@ -41,13 +41,15 @@ class RustEngineBridgeTest {
         assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
     }
 
-    @Test fun op_toneVariations_decodesBothScripts() {
+    @Test fun op_toneVariations_decodesAllThreeMaps() {
         // trace: tones 2 3 5 6 7 8 9; tone 9 = U+030B (TL) / U+0306 (POJ); `n` ends with ⁿ.
         val tones = RustEngineBridge.toneVariations
         assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"), tones.tl["a"])
         assertEquals("ă", tones.poj["a"]?.last())
         assertTrue(tones.poj.containsKey("o͘"))
         assertEquals("ⁿ", tones.tl["n"]?.last())
+        // Universal: TL and POJ interleaved, both tone-9 marks.
+        assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋", "ă"), tones.universal["a"])
     }
 
     // endregion

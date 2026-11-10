@@ -10,6 +10,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutUse
 import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.layout.LayoutEditorScreen
 import java.util.UUID
@@ -21,21 +22,31 @@ import java.util.UUID
 class LayoutEditorActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_LAYOUT_ID = "layout_id"
+        private const val EXTRA_NAME = "name"
+        private const val EXTRA_USE = "use"
 
-        /** [layoutId] null = a new layout; an id = edit that layout. */
+        /** Edits the layout [layoutId]. */
+        fun editIntent(
+            context: Context,
+            layoutId: String,
+        ): Intent = Intent(context, LayoutEditorActivity::class.java).putExtra(EXTRA_LAYOUT_ID, layoutId)
+
+        /** A new layout named [name], shown where [use] says — both chosen in the Layout tab's create dialog. */
         fun createIntent(
             context: Context,
-            layoutId: String?,
+            name: String,
+            use: LayoutUse,
         ): Intent =
-            Intent(context, LayoutEditorActivity::class.java).apply {
-                layoutId?.let { putExtra(EXTRA_LAYOUT_ID, it) }
-            }
+            Intent(context, LayoutEditorActivity::class.java)
+                .putExtra(EXTRA_NAME, name)
+                .putExtra(EXTRA_USE, use.name)
 
         /**
          * A new layout starts from the layout in use — its base table in the current script — or from
-         * PhahTaigi while the TPS layout is on. Mirrors iOS `LayoutEditorView.newDraft`.
+         * PhahTaigi while the TPS layout is on. Its use is the create dialog's default. Mirrors iOS
+         * `LayoutEditorView.newDraft`.
          */
-        private fun newDraft(
+        fun newDraft(
             prefs: PrefHelper,
             tables: CustomLayoutTables,
         ): CustomLayout {
@@ -44,6 +55,23 @@ class LayoutEditorActivity : ComponentActivity() {
             val base = active?.base ?: stored.takeIf { layout -> KeyboardLayoutOptions.romanization.any { it.key == layout } } ?: "phahTaigi"
             val script = active?.script ?: LayoutScript.fromStorage(prefs.romanizationInputMode) ?: LayoutScript.TL
             return checkNotNull(tables.fresh(UUID.randomUUID().toString(), "", base, script)) { "no $base table" }
+        }
+
+        /**
+         * A new layout named [name]: [newDraft] in the script [use] names (a universal one keeps the
+         * current script's table), shown where [use] says. Mirrors iOS `LayoutEditorView.newDraft(named:use:)`.
+         */
+        private fun newDraft(
+            prefs: PrefHelper,
+            tables: CustomLayoutTables,
+            name: String,
+            use: LayoutUse,
+        ): CustomLayout {
+            val start = newDraft(prefs, tables)
+            val script = use.script ?: start.script
+            val fresh = checkNotNull(tables.fresh(start.id, name, start.base, script)) { "no ${start.base} table" }
+            // The script already matches, so this only sets the universal flag.
+            return tables.withUse(fresh, use)
         }
     }
 
@@ -63,7 +91,13 @@ class LayoutEditorActivity : ComponentActivity() {
             return
         }
 
-        val initial = editing ?: newDraft(prefs, tables)
+        val initial =
+            editing ?: newDraft(
+                prefs,
+                tables,
+                name = intent.getStringExtra(EXTRA_NAME).orEmpty(),
+                use = LayoutUse.valueOf(checkNotNull(intent.getStringExtra(EXTRA_USE)) { "a new layout needs its use" }),
+            )
         setTaigiContent(prefs) {
             LayoutEditorScreen(
                 tables = tables,

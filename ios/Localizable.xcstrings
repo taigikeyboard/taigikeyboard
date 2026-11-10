@@ -3242,7 +3242,7 @@
       }
     },
     "i18n_layout_editorTitleNew": {
-      "comment": "Layout editor top-bar title in create mode; also the name-field placeholder and the name a layout saved with a blank name gets. Edit mode shows the layout's own name.",
+      "comment": "Name-field placeholder of the layout name dialog (create and Save), and the name a layout created with a blank name gets. The editor's top bar shows the layout's own name.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3296,7 +3296,7 @@
       }
     },
     "i18n_layout_nameHeader": {
-      "comment": "Layout name alert header, shown on Save in the layout editor.",
+      "comment": "Layout name dialog header, shown when creating a layout (Layout tab) and on Save when editing one.",
       "extractionState": "manual",
       "localizations": {
         "en": {
