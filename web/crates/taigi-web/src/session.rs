@@ -21,7 +21,7 @@ use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
 use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
-use crate::reply::{wire_emit, wire_layout, ModeText, Reply};
+use crate::reply::{telex_guide_json, wire_emit, wire_layout, ModeText, Reply};
 use crate::shortcuts::shortcuts;
 
 const CONTEXT: ContextToken = ContextToken(1);
@@ -68,6 +68,8 @@ impl WebSession {
                 // The page can reach the character before the caret.
                 can_delete_surrounding: true,
                 list_layout: Some(Arc::new(PageListLayout::new(ruler))),
+                // The page's card, apart from the list (`telex_guide.js`).
+                draws_telex_guide: true,
                 ..EngineState::default()
             },
             shift_tap: ShiftTapTracker::default(),
@@ -230,6 +232,11 @@ impl WebSession {
         self.state.latched_chord = None;
         self.shift_tap.clear();
         self.shifts_down = [false; 2];
+    }
+
+    /// The Telex guide's card in the display language.
+    pub(crate) fn telex_guide(&self) -> String {
+        telex_guide_json(&self.runtime.strings())
     }
 
     /// The sidebar's Shortcuts section under the current document.
@@ -644,27 +651,33 @@ mod tests {
 
     #[test]
     fn a_held_toggle_fires_once_and_a_new_press_fires_again() {
-        // trace: Ctrl+Alt+/ = ShowTelexGuide, `fires_once_per_press`.
+        // trace: Ctrl+Alt+/ = ShowTelexGuide, `fires_once_per_press`. The
+        // guide is the page's card, not a table: each firing is the settings
+        // write that flips `telexGuideShown`, and nothing to draw.
         let mut session = session();
         let guide = chord("/", "Slash");
-        assert_eq!(
-            emit_types(&parsed(session.key_down(&guide))),
-            ["lookupTable"]
-        );
+        let shown = |session: &WebSession| {
+            session
+                .runtime
+                .settings
+                .current()
+                .bool(&keys::TELEX_GUIDE_SHOWN)
+        };
+        let reply = parsed(session.key_down(&guide));
+        assert!(reply["settings"].is_string());
+        assert_eq!(emit_types(&reply), Vec::<&str>::new());
+        assert!(shown(&session));
         let repeat = BrowserKey {
             repeat: true,
             ..guide.clone()
         };
-        assert_eq!(parsed(session.key_down(&repeat))["handled"], true);
-        assert_eq!(
-            emit_types(&parsed(session.key_down(&repeat))),
-            Vec::<&str>::new()
-        );
+        let reply = parsed(session.key_down(&repeat));
+        assert_eq!(reply["handled"], true);
+        assert!(reply["settings"].is_null());
+        assert!(shown(&session));
         // Its release went to another window: this press is still a new one.
-        assert_ne!(
-            emit_types(&parsed(session.key_down(&guide))),
-            Vec::<&str>::new()
-        );
+        assert!(parsed(session.key_down(&guide))["settings"].is_string());
+        assert!(!shown(&session));
     }
 
     #[test]

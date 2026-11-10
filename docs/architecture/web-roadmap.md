@@ -300,6 +300,7 @@ session.clickCandidate(position) -> reply    // click_from_panel
 session.commitComposition() -> reply         // § Text surface
 session.tpsKeyboardRows()                    // JSON, from `keys/tps_keyboard_rows.rs`
 session.tpsKeyPress(glyph) -> reply          // a click on a cap
+session.telexGuide()                         // JSON { title, rows }, from `keys/telex_guide_rows.rs`
 session.caretMoved()                         // disarms the auto-space swap, spends a Shift press
 session.focusLost()
 session.setSettings(settingsJson)
