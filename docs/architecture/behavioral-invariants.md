@@ -1308,17 +1308,17 @@ IMK can activate a second controller (a system client) while it keeps delivering
 
 ---
 
-## §62 — Telex writes tone 6 on `z`; `c` → `ts` / `ch` is its own opt-in setting
+## §62 — Telex writes tone 6 on `z`; `c` → `ts` / `ch` and `f` → `-` are their own opt-in settings
 
 ### `INVARIANT_TELEX_KEY_TABLE`
 
-The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on `ToneInputScheme::TELEX_KEYS` (`x v y d z w q f`):
+The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on `ToneInputScheme::TELEX_KEYS` (`x v y d z w q`):
 
 - **`z` / `Z` is a single-tone key**, like `y d w q`: it writes tone 6 on any syllable, a stop coda included (`sit` + `z` → `sit6`), and passes to the host when idle.
 - **`c` and `h` are not Telex keys** (2026-11-09). Both are ordinary letters under either scheme and reach the engine as `Append`. The 2026-11-05 table had `c` write the affricate and dropped an `h` after `tsh` / `chh`; the `h` rule is gone, and the affricate moved to its own setting (`INVARIANT_C_TYPES_AFFRICATE` below).
-- **An idle `f` / `F` is the `-` key** (#727): it inserts a literal `-` and the engine stays idle, as a leading `-` does (`INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL`, §21), so `f` `f` `a` `h` types `--` and composes `ah`. Repeats are uncapped (`fff` → `---`). The engine decides this in the `Phase::Idle` arm of `telex_key` (`engine/composing/src/transition.rs`); `apply_telex_key` still sees only the tail and answers `None` on an empty one, so `f` on an empty tail while composing is still a no-op. No other Telex key starts a composition. The desktop lets `f` through when idle via `ToneInputScheme::reaches_engine_when_idle`. Accepted cost: an idle `f` can no longer type the letter `f` under Telex; English goes through an English input method.
+- **`f` is not a Telex key** (2026-11-10). It is an ordinary letter under either scheme and reaches the engine as `Append`. The 2026-11-05 table had `f` write the hyphen, and an idle `f` type the `-` key (#727); both moved to their own setting (`INVARIANT_F_TYPES_HYPHEN` below). No Telex key acts while idle: an idle tone letter passes to the host.
 - **A custom word spelled with a Telex letter cannot be typed under Telex.**
-- **Standard does not change.** It shares eight letters with Telex, swapped with the digits.
+- **Standard does not change.** Its slot row holds the seven Telex letters, swapped with the digits, plus `f` and `;`.
 
 ### `INVARIANT_C_TYPES_AFFRICATE`
 
@@ -1328,6 +1328,15 @@ The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-0
 - **`h` writes itself**, so `c` `h` spells the aspirated initial (`tsh` / `chh`). There is no slip rule: a spelled-out POJ `c` `h` `h` `i` `a` composes `chhhia`.
 - **Spelled-out POJ `cha` reaches `chha`** with the setting on. `c` `h` could mean either initial, and both are real; turn the setting off to type POJ letter by letter.
 - **A custom word spelled with a bare `c` cannot be typed** with the setting on.
+
+### `INVARIANT_F_TYPES_HYPHEN`
+
+**Type - with f** (settings key `fHyphenEnabled`, desktop only, OFF by default, 2026-11-10) makes a typed `f` write the syllable hyphen `-`, as the `-` key does. It is independent of the tone scheme.
+
+- **Engine-side, on `Append`.** Desktop-core sends the setting as `AppConfig.f_types_hyphen`; `engine/composing/src/f_hyphen.rs` rewrites an `Append` of exactly `f` / `F`, idle or composing, at the caret. Every other key, TPS and English are untouched. Desktop-core sends it off under TPS as well (`SettingsDocument::engine_settings`).
+- **An idle `f` is the `-` key**: it inserts a literal `-` and the engine stays idle, as a leading `-` does (`INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL`, §21), so `f` `f` `a` `h` types `--` and composes `ah`. Repeats are uncapped (`fff` → `---`).
+- **Under Standard, `f` leaves the slot row** (USER 2026-11-10). `ComposingKeyBindings::slot_key_set` answers `CandidateSlotKeySet::BareKeysWithoutF`: `q w d z x v y ;` on slots 1–8, every key after `f` one slot left, the ninth slot unkeyed and unlabelled (picked with the arrows). macOS mirrors the set for its window labels (`SettingsStore.candidateSlotKeySet`). Under Telex the digits pick, so nothing moves.
+- **Accepted cost:** with the setting on, `f` cannot type the letter `f`; English goes through an English input method, and a custom word spelled with `f` cannot be typed.
 
 ---
 
