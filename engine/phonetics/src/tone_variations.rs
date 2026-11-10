@@ -3,9 +3,9 @@
 //!
 //! Owns the callout tone maps formerly built by iOS `buildToneMap(mode:)`; the
 //! only source on both mobile platforms (iOS `Callouts/TaigiCallouts+Maps.swift`,
-//! Android `PhoneticsBridge.kt` `RustEngineBridge.toneVariations`). Returns POJ +
-//! TL maps in one response so platform caches once at engine init (lazy +
-//! idempotent).
+//! Android `PhoneticsBridge.kt` `RustEngineBridge.toneVariations`). Returns the POJ,
+//! TL and universal (both scripts, for a custom layout shown in TL and POJ alike)
+//! maps in one response so platform caches once at engine init (lazy + idempotent).
 //!
 //! Pattern matches khiin-rs `loadSettings → AppConfig` cached snapshot.
 
@@ -123,18 +123,48 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
         .collect()
 }
 
-/// Returns POJ + TL tone-variation maps in one response.
+/// Every key of `tl` and `poj`, its two lists interleaved entry by entry, each entry once.
+/// The lists are index-aligned (same tones in the same order, only tone 9's mark differs),
+/// so each tone-9 pair sits together: `a` → … a̍ a̋ ă; `n` → … n̋ n̆ ⁿ. A key in one map
+/// only (`oo` TL, `o͘` POJ) keeps its own list.
+fn build_universal_map(
+    tl: &HashMap<String, ToneVariationList>,
+    poj: &HashMap<String, ToneVariationList>,
+) -> HashMap<String, ToneVariationList> {
+    let empty = Vec::new();
+    tl.keys()
+        .chain(poj.keys().filter(|key| !tl.contains_key(*key)))
+        .map(|key| {
+            let tl_list = tl.get(key).map_or(&empty, |l| &l.variations);
+            let poj_list = poj.get(key).map_or(&empty, |l| &l.variations);
+            let mut merged: Vec<String> = Vec::new();
+            for i in 0..tl_list.len().max(poj_list.len()) {
+                for entry in [tl_list.get(i), poj_list.get(i)].into_iter().flatten() {
+                    if !merged.contains(entry) {
+                        merged.push(entry.clone());
+                    }
+                }
+            }
+            (key.clone(), ToneVariationList { variations: merged })
+        })
+        .collect()
+}
+
+/// Returns the POJ, TL and universal tone-variation maps in one response.
 pub(crate) fn build() -> ToneVariationsResult {
     let poj_variations = build_mode_map(false);
     let tl_variations = build_mode_map(true);
+    let universal_variations = build_universal_map(&tl_variations, &poj_variations);
     log::info!(
-        "tone_variations init bulk-pull (poj={} bases, tl={} bases)",
+        "tone_variations init bulk-pull (poj={} bases, tl={} bases, universal={} bases)",
         poj_variations.len(),
-        tl_variations.len()
+        tl_variations.len(),
+        universal_variations.len()
     );
     ToneVariationsResult {
         poj_variations,
         tl_variations,
+        universal_variations,
     }
 }
 
@@ -284,5 +314,81 @@ mod tests {
             assert_eq!(variations(&map, "Ng")[0], "Ńg");
             assert_eq!(variations(&map, "NG")[0], "ŃG");
         }
+    }
+
+    /// TL and POJ lists hold the same tones in the same order; only tone 9 (the 7th entry)
+    /// differs. The universal interleave relies on it.
+    #[test]
+    fn tl_and_poj_lists_differ_only_at_tone_nine() {
+        let tl = build_mode_map(true);
+        let poj = build_mode_map(false);
+        for (key, tl_list) in &tl {
+            let Some(poj_list) = poj.get(key) else {
+                continue;
+            };
+            let (tl_list, poj_list) = (&tl_list.variations, &poj_list.variations);
+            assert_eq!(tl_list.len(), poj_list.len(), "key {key:?}");
+            for (i, (t, p)) in tl_list.iter().zip(poj_list).enumerate() {
+                assert_eq!(t == p, i != 6, "key {key:?} entry {i}");
+            }
+        }
+    }
+
+    #[test]
+    fn universal_lists_hold_both_tone_nine_marks() {
+        let tl = build_mode_map(true);
+        let poj = build_mode_map(false);
+        let universal = build_universal_map(&tl, &poj);
+        // trace: TL tone list (2 3 5 6 7 8 9=U+030B) interleaved with POJ's (9=U+0306);
+        // tones 2–8 are equal and kept once, then TL 9, POJ 9, then `n`'s ⁿ.
+        let expected: [(&str, &[&str]); 8] = [
+            ("a", &["á", "à", "â", "ǎ", "ā", "a\u{30D}", "a\u{30B}", "ă"]),
+            ("A", &["Á", "À", "Â", "Ǎ", "Ā", "A\u{30D}", "A\u{30B}", "Ă"]),
+            ("o", &["ó", "ò", "ô", "ǒ", "ō", "o\u{30D}", "ő", "ŏ"]),
+            (
+                "n",
+                &[
+                    "ń", "ǹ", "n\u{302}", "ň", "n\u{304}", "n\u{30D}", "n\u{30B}", "n\u{306}", "ⁿ",
+                ],
+            ),
+            (
+                "Ng",
+                &[
+                    "Ńg",
+                    "Ǹg",
+                    "N\u{302}g",
+                    "Ňg",
+                    "N\u{304}g",
+                    "N\u{30D}g",
+                    "N\u{30B}g",
+                    "N\u{306}g",
+                ],
+            ),
+            (
+                "er",
+                &["ér", "èr", "êr", "ěr", "ēr", "e\u{30D}r", "e\u{30B}r", "ĕr"],
+            ),
+            // One script only: its own list.
+            ("oo", &["óo", "òo", "ôo", "ǒo", "ōo", "o\u{30D}o", "őo"]),
+            (
+                "o\u{358}",
+                &[
+                    "ó\u{358}",
+                    "ò\u{358}",
+                    "ô\u{358}",
+                    "ǒ\u{358}",
+                    "ō\u{358}",
+                    "o\u{30D}\u{358}",
+                    "ŏ\u{358}",
+                ],
+            ),
+        ];
+        for (key, list) in expected {
+            assert_eq!(variations(&universal, key), list, "key {key:?}");
+        }
+        let keys = |m: &HashMap<String, ToneVariationList>| {
+            m.keys().cloned().collect::<std::collections::HashSet<_>>()
+        };
+        assert_eq!(keys(&universal), &keys(&tl) | &keys(&poj));
     }
 }

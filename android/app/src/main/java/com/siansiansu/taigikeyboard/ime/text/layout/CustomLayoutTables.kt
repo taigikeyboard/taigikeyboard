@@ -92,19 +92,16 @@ class CustomLayoutTables(
 
     /**
      * Tone-marked letters for long-press lists, one row per lowercase base (Shift uppercases them on
-     * the keyboard): a e i o oo o͘ u m n ng first, then any other base; each row TL's marks, then the
-     * marks only POJ has. iOS `CustomLayout.toneRows`.
+     * the keyboard): a e i o oo o͘ u m n ng first, then any other base; each row the engine's universal
+     * list (both scripts' marks, both tone-9 marks). iOS `CustomLayout.toneRows`.
      */
     val toneRows: List<List<String>> by lazy {
-        val toneMarks = LayoutScript.entries.map { it.toneMarks(toneVariations()) }
-        val toneBases = toneMarks
-            .flatMap { it.keys }
-            .filter { it == it.lowercase() }
-            .toSet()
+        val universal = toneVariations().universal
+        val toneBases = universal.keys.filter { it == it.lowercase() }.toSet()
         val leadingBases = listOf("a", "e", "i", "o", "oo", "o\u0358", "u", "m", "n", "ng").filter { it in toneBases }
         (leadingBases + (toneBases - leadingBases.toSet()).sorted()).map { base ->
             // ⁿ rides the `n` list but is no tone mark: it sits with the letters.
-            composedUnique(toneMarks.flatMap { it[base].orEmpty() }).filterNot { it == TRAY_NASAL_MARKER }
+            universal[base].orEmpty().filterNot { it == TRAY_NASAL_MARKER }
         }
     }
 
@@ -222,14 +219,15 @@ class CustomLayoutTables(
 
     /**
      * The built-in long-press list of the key labelled [label] on [layout]'s base and script: the base's
-     * own key for that label (else the catalog's half-width key), then its tone marks.
+     * own key for that label (else the catalog's half-width key), then its tone marks
+     * ([CustomLayout.toneMarks]: a universal layout's are both scripts').
      */
     fun defaultCallouts(
         layout: CustomLayout,
         label: String,
     ): List<String> {
         val ownPopups = baseTable(layout.base, layout.script)?.keyPopups?.get(label) ?: catalog[label]?.first?.let(::popupEntries).orEmpty()
-        return ownPopups + layout.script.toneMarks(toneVariations())[label].orEmpty()
+        return ownPopups + layout.toneMarks(toneVariations())[label].orEmpty()
     }
 
     /** The long-press list the key labelled [label] shows: [layout]'s own, else the built-in one. */
@@ -308,12 +306,7 @@ class CustomLayoutTables(
         layout: CustomLayout,
         use: LayoutUse,
     ): CustomLayout {
-        val script =
-            when (use) {
-                LayoutUse.UNIVERSAL -> return layout.copy(isUniversal = true)
-                LayoutUse.TL -> LayoutScript.TL
-                LayoutUse.POJ -> LayoutScript.POJ
-            }
+        val script = use.script ?: return layout.copy(isUniversal = true)
         val oldCounts = characterCountsPerRow(baseTable(layout.base, layout.script) ?: return layout)
         val newCounts = characterCountsPerRow(baseTable(layout.base, script) ?: return layout)
         var start = 0

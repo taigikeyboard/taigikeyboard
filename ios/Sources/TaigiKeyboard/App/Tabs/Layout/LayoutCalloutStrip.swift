@@ -15,7 +15,7 @@ struct LayoutCalloutStrip: View {
     let tailX: CGFloat?
     let onTapSlot: (Int) -> Void
 
-    // Eight equal slots fill the bubble, so it reads centred under the board.
+    // `CustomLayout.maxCallouts` equal slots fill the bubble, so it reads centred under the board.
     private static let cellHeight: CGFloat = 44
     private static let tailSize = CGSize(width: 16, height: 8)
 

@@ -5,9 +5,9 @@ import SwiftUI
 /// mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
 /// long-press list sits in `LayoutCalloutStrip` below the board: tap two slots and the swap button to
 /// swap or move, a slot, a tray character and the swap button to fill it, a slot then the trash to empty it. The undo
-/// button steps back one edit at a time. Nothing is stored until Save,
-/// whose sheet names the layout and picks where it shows (`LayoutUse`), then applies it; Back discards
-/// the draft.
+/// button steps back one edit at a time. Nothing is stored until Save; Back discards the draft. A new
+/// layout arrives named, its use (`LayoutUse`) chosen on the Layout tab, and Save stores and applies
+/// it; an edit's Save opens `LayoutDetailsSheet` to rename it or change its use first.
 struct LayoutEditorView: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
@@ -34,9 +34,14 @@ struct LayoutEditorView: View {
     @State private var didSave = false
     private let isEditing: Bool
 
-    init(editing layout: CustomLayout? = nil) {
-        _draft = State(initialValue: layout ?? Self.newDraft())
-        isEditing = layout != nil
+    init(editing layout: CustomLayout) {
+        _draft = State(initialValue: layout)
+        isEditing = true
+    }
+
+    init(newNamed name: String, use: LayoutUse) {
+        _draft = State(initialValue: Self.newDraft(named: name, use: use))
+        isEditing = false
     }
 
     /// Below this content height (a phone in landscape) the board and long-press strip leave the
@@ -74,14 +79,19 @@ struct LayoutEditorView: View {
         .padding(.top, 8)
         .onPreferenceChange(LayoutKeyGrid.KeyFrames.self) { keyFrames = $0 }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle(isEditing ? draft.name : lang.string(.layoutEditorTitleNew))
+        .navigationTitle(draft.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button(lang.string(.commonSave)) {
-                    pendingName = draft.name
-                    pendingUse = draft.use
-                    showsSaveSheet = true
+                    if isEditing {
+                        pendingName = draft.name
+                        pendingUse = draft.use
+                        showsSaveSheet = true
+                    } else if SharedSettings.shared.saveCustomLayout(draft) {
+                        // A failed write (past the cap) keeps the editor open with the draft.
+                        dismiss()
+                    }
                 }
             }
         }
@@ -103,7 +113,7 @@ struct LayoutEditorView: View {
             isUndoing = false
         }
         .sheet(isPresented: $showsSaveSheet, onDismiss: closeAfterSave) {
-            LayoutSaveSheet(name: $pendingName, use: $pendingUse, onSave: commit)
+            LayoutDetailsSheet(name: $pendingName, use: $pendingUse, confirmTitle: lang.string(.commonSave), onConfirm: commit)
                 .environment(lang)
         }
     }
@@ -486,9 +496,19 @@ struct LayoutEditorView: View {
         }
     }
 
+    /// A new layout named `name`: `newDraft()` in the script `use` names (a universal one keeps
+    /// the current script's table), shown where `use` says.
+    private static func newDraft(named name: String, use: LayoutUse) -> CustomLayout {
+        let start = newDraft()
+        var layout = CustomLayout(name: name, base: start.base, script: use.script ?? start.script)
+        // The script already matches, so this only sets the universal flag.
+        layout.use = use
+        return layout
+    }
+
     /// A new layout starts from the layout in use — its base table in the current script — or
-    /// from PhahTaigi while the TPS layout is on.
-    private static func newDraft() -> CustomLayout {
+    /// from PhahTaigi while the TPS layout is on. Its use is the create sheet's default.
+    static func newDraft() -> CustomLayout {
         let settings = SharedSettings.shared
         if let active = settings.activeCustomLayout {
             return CustomLayout(base: active.base, script: active.script)
@@ -501,15 +521,17 @@ struct LayoutEditorView: View {
     }
 }
 
-// MARK: - Save sheet
+// MARK: - Details sheet
 
-/// The name field and where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī), with Cancel and Save.
-private struct LayoutSaveSheet: View {
+/// The name field and where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī), with Cancel and
+/// `confirmTitle`: OK when creating a layout (Layout tab), Save when saving an edit.
+struct LayoutDetailsSheet: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
     @Binding var name: String
     @Binding var use: LayoutUse
-    let onSave: () -> Void
+    let confirmTitle: String
+    let onConfirm: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -529,7 +551,7 @@ private struct LayoutSaveSheet: View {
                     Button(lang.string(.commonCancel)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(lang.string(.commonSave), action: onSave)
+                    Button(confirmTitle, action: onConfirm)
                 }
             }
         }

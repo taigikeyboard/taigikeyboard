@@ -163,9 +163,13 @@ message BoolResult { bool value = 1; }
 
 // `ToneVariationsResult` is the callout init-pull payload. Maps the base
 // char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
+// `universal_variations` is every key of both maps with the TL and POJ lists
+// interleaved, each entry once (both tone-9 marks) — for a custom layout shown
+// in TL and POJ alike.
 message ToneVariationsResult {
   map<string, ToneVariationList> poj_variations = 1;
   map<string, ToneVariationList> tl_variations = 2;
+  map<string, ToneVariationList> universal_variations = 3;
 }
 
 message ToneVariationList { repeated string variations = 1; }

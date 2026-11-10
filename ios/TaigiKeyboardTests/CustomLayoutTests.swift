@@ -261,11 +261,14 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .phahTaigi, script: .tl))
     }
 
-    func testCustomLayout_resetKeepsScriptAndTakesNewBase() {
+    func testCustomLayout_resetKeepsScriptAndUseAndTakesNewBase() {
         var layout = CustomLayout(base: .phahTaigi, script: .poj)
         layout.swap(.key(0), .key(1))
         layout.reset(to: .qwerty)
-        XCTAssertEqual(layout, CustomLayout(id: layout.id, base: .qwerty, script: .poj))
+        // trace: PhahTaigi starts universal (sharesTableAcrossScripts); the use chosen at creation stays.
+        var expected = CustomLayout(id: layout.id, base: .qwerty, script: .poj)
+        expected.use = .universal
+        XCTAssertEqual(layout, expected)
         XCTAssertEqual(layout.rows(withGlobe: false), TaigiLayouts.Alphabetic.qwerty_POJ_iPhone)
     }
 
@@ -275,15 +278,47 @@ final class CustomLayoutTests: XCTestCase {
         let layout = CustomLayout(base: .phahTaigi, script: .tl)
         // trace: PhahTaigi has no layout-specific map → SymbolCallouts[","] = ，、
         XCTAssertEqual(layout.callouts(for: ","), ["，", "、"])
-        XCTAssertEqual(layout.callouts(for: "a"), TaigiCallouts.calloutChars(for: "a", inputMode: .tl, layoutType: .phahTaigi))
+        // PhahTaigi starts universal: both scripts' tone marks.
+        XCTAssertEqual(
+            layout.callouts(for: "a"),
+            TaigiCallouts.calloutChars(for: "a", inputMode: .tl, layoutType: .phahTaigi, universalTones: true),
+        )
         XCTAssertNil(layout.calloutOverride(for: ","))
+    }
+
+    func testCallouts_universalDefaultHoldsBothToneNineMarks() {
+        // trace: engine universal `a` = TL tones 2 3 5 6 7 8 9 (a̋ U+030B) then POJ tone 9 (ă U+0306).
+        let universal = CustomLayout(base: .phahTaigi, script: .tl)
+        XCTAssertEqual(universal.defaultCallouts(for: "a"), ["á", "à", "â", "ǎ", "ā", "a\u{30D}", "a\u{30B}", "ă"])
+        var tl = universal
+        tl.use = .tl
+        XCTAssertEqual(tl.defaultCallouts(for: "a"), ["á", "à", "â", "ǎ", "ā", "a\u{30D}", "a\u{30B}"])
+        // Universal `n`: seven tones, both tone-9 marks, ⁿ — nine entries, all kept by the cap.
+        let n = universal.defaultCallouts(for: "n")
+        XCTAssertEqual(n.count, 9)
+        var edited = universal
+        edited.setCallouts(Array(n.reversed()), for: "n")
+        XCTAssertEqual(edited.callouts["n"], Array(n.reversed()))
+    }
+
+    func testCallouts_changingUseKeepsStoredLists() {
+        var layout = CustomLayout(base: .phahTaigi, script: .tl)
+        layout.use = .tl
+        layout.setCallouts(["á", "à"], for: "a")
+        layout.use = .universal
+        XCTAssertEqual(layout.callouts["a"], ["á", "à"], "a stored list is never rewritten")
+        // Universal → TL: a stored list equal to the TL built-in stays stored.
+        var universal = CustomLayout(base: .phahTaigi, script: .tl)
+        universal.setCallouts(["á", "à", "â", "ǎ", "ā", "a\u{30D}", "a\u{30B}"], for: "a")
+        universal.use = .tl
+        XCTAssertEqual(universal.callouts["a"]?.last, "a\u{30B}")
     }
 
     func testCallouts_setNormalisesAndReplacesBuiltInList() {
         var layout = CustomLayout(base: .phahTaigi, script: .tl)
-        layout.setCallouts([" ; ", "", ":", ";", "1", "2", "3", "4", "5", "6", "7"], for: ",")
-        // trace: trimmed, blank and repeated ";" dropped, capped at 8.
-        XCTAssertEqual(layout.callouts(for: ","), [";", ":", "1", "2", "3", "4", "5", "6"])
+        layout.setCallouts([" ; ", "", ":", ";", "1", "2", "3", "4", "5", "6", "7", "8"], for: ",")
+        // trace: trimmed, blank and repeated ";" dropped, capped at 9.
+        XCTAssertEqual(layout.callouts(for: ","), [";", ":", "1", "2", "3", "4", "5", "6", "7"])
         layout.setCallouts([], for: ".")
         XCTAssertEqual(layout.calloutOverride(for: "."), [], "an empty list leaves the key without a long-press")
     }

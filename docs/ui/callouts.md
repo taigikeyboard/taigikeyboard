@@ -8,7 +8,7 @@
 
 ## Summary
 
-- Long-pressing a key surfaces a callout menu of variants: layout-specific punctuation (TPS / MOE), symbol-page callouts, and **POJ/TL tone variations** (`a → á à â ǎ ā a̍ a̋`, `n → … ⁿ`, `ng → ńg …`).
+- Long-pressing a key surfaces a callout menu of variants: layout-specific punctuation (TPS / MOE), symbol-page callouts, and **POJ/TL tone variations** (`a → á à â ǎ ā a̍ a̋`, `n → … ⁿ`, `ng → ńg …`). A universal custom layout (shown in TL and POJ alike) offers both scripts' marks, both tone-9 marks (`a → … a̍ a̋ ă`).
 - The tone-variation map is built once in the Rust engine (`phonetics::tone_variations`) and pulled in a single init-time call (`GetToneVariations`).
 - Both platforms read that one engine map. **Architectural divergence** in how it reaches a key: iOS indexes it live at long-press through a runtime lookup chain; Android bakes it into each key's popup at layout-load time. See [Divergence](#cross-platform-divergence).
 
@@ -20,7 +20,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `engine/phonetics/src/tone_variations.rs` | `build()` returns POJ + TL tone-variation maps in one `ToneVariationsResult` (init-bulk-pull builder) |
+| `engine/phonetics/src/tone_variations.rs` | `build()` returns the POJ, TL and universal tone-variation maps in one `ToneVariationsResult` (init-bulk-pull builder) |
 | `engine/phonetics/src/requests.rs` | Routes `Method::GetToneVariations` → `tone_variations::build()` |
 | `engine/protos/proto/phonetics.proto` | `GetToneVariations` request + `ToneVariationsResult` / `ToneVariationList` response |
 
@@ -31,15 +31,15 @@
 | `Callouts/TaigiCallouts+Builder.swift` | `taigiCalloutActions` — long-press entry point; decides the lookup chain |
 | `Callouts/TaigiCallouts+Maps.swift` | `TaigiToneMaps` (proxies the engine cache), `TPSCallouts`, `MOE1Callouts`, `MOE2Callouts`, `SymbolCallouts` |
 | `Callouts/KeyboardCalloutStyle+Taigi.swift` | `KeyboardCalloutStyle.taigi(for:)` font sizing |
-| `Engine/RustEngineBridge+Phonetics.swift` | `static let toneVariations` lazy cache `{ poj, tl: [String:[String]] }` |
+| `Engine/RustEngineBridge+Phonetics.swift` | `static let toneVariations` lazy cache `{ poj, tl, universal: [String:[String]] }` |
 
 ### Android (engine-driven, pre-baked)
 
 | File | Responsibility |
 |------|----------------|
-| `engine/PhoneticsBridge.kt` | `RustEngineBridge.toneVariations` lazy cache (`ToneVariations { tl, poj }`, DTO in `RustEngineBridge.kt`); `CompositionRoot.toneVariations` hands it to the two readers below (JVM tests pass a stand-in) |
-| `ime/text/layout/LayoutManager.kt` | Adds the input mode's tone marks (`LayoutScript.toneMarks`) to each matching key's `keyData.popup` as fresh `KeyData.ofEntry` keys; then `CustomLayoutTables.applyCallouts` puts a custom layout's own lists in |
-| `ime/text/layout/CustomLayoutTables.kt` | The custom-layout editor's view of the same table: `defaultCallouts`, tray `toneRows` |
+| `engine/PhoneticsBridge.kt` | `RustEngineBridge.toneVariations` lazy cache (`ToneVariations { tl, poj, universal }`, DTO in `RustEngineBridge.kt`); `CompositionRoot.toneVariations` hands it to the two readers below (JVM tests pass a stand-in) |
+| `ime/text/layout/LayoutManager.kt` | Adds the input mode's tone marks (`LayoutScript.toneMarks`; the universal map for a universal custom layout) to each matching key's `keyData.popup` as fresh `KeyData.ofEntry` keys; then `CustomLayoutTables.applyCallouts` puts a custom layout's own lists in |
+| `ime/text/layout/CustomLayoutTables.kt` | The custom-layout editor's view of the same table: `defaultCallouts` (`CustomLayout.toneMarks`), tray `toneRows` (the universal map's lowercase rows, ⁿ dropped) |
 | `ime/popup/KeyPopupManager.kt` | `PopupHost` impl: preview + extended `PopupWindow`, motion hit-test, `activeKeyData()` |
 | `ime/popup/PopupCells.kt` | `buildPopupCells` maps `KeyData.popup` → visual cells |
 
@@ -47,12 +47,12 @@
 
 ## Engine: the tone-variation map
 
-`tone_variations::build()` returns a single `ToneVariationsResult { poj_variations, tl_variations }` — **both maps in one call** (init-bulk-pull). Each map is `base char → [toned variants]`.
+`tone_variations::build()` returns a single `ToneVariationsResult { poj_variations, tl_variations, universal_variations }` — **all maps in one call** (init-bulk-pull). `universal_variations` holds every key of both maps with the TL and POJ lists interleaved entry by entry, each entry once: the lists are index-aligned, so `a → á à â ǎ ā a̍ a̋ ă` and `n → … n̋ n̆ ⁿ` (9 entries, the custom-layout per-key cap); one-script keys (`oo`, `o͘`) keep their own list. Each map is `base char → [toned variants]`.
 
 - **Bases**: vowels `a e i o u` (+ uppercase), syllabic `n m`, `ng`, the dialectal vowels `er ir or` (mark on the vowel, same spelling in TL and engine POJ; the custom-layout tray offers them as keys), plus a mode-specific `o` variant (TL `oo`, POJ `o͘` = `o`+U+0358). The `n` entry also appends nasal `ⁿ` (U+207F). Two-letter bases have Shift (`Er`) and Caps Lock (`ER`) keys.
 - **Tones**: `2 3 5 6 7 8 9`. Tone 9 differs by mode — TL double-acute (U+030B), POJ breve (via `TONE_NUM_TO_COMBINING`). Output is NFC-recomposed.
 - **No engine-side caching** — the engine is stateless. Each platform fetches once at first access and caches platform-side (proto comment: "Caller caches once at engine init").
-- **Proto**: request `GetToneVariations {}` (empty); response `map<string, ToneVariationList>` for `poj_variations` + `tl_variations`.
+- **Proto**: request `GetToneVariations {}` (empty); response `map<string, ToneVariationList>` for `poj_variations` + `tl_variations` + `universal_variations`.
 
 Neither platform builds a tone map: iOS `TaigiToneMaps.poj` / `.tl` proxy `RustEngineBridge.toneVariations` (a thread-safe `static let` loaded once via FFI); Android `RustEngineBridge.toneVariations` is a synchronized `lazy` (layouts compute on the main thread and `Dispatchers.IO`). On failure both keep empty maps. The engine tests pin every base's full list.
 
@@ -65,11 +65,11 @@ Neither platform builds a tone map: iOS `TaigiToneMaps.poj` / `.tl` proxy `RustE
 1. Non-character action → KeyboardKit default English callouts.
 2. **Layout-specific** by `keyboardLayoutType`: `.tps` → `TPSCallouts`, `.moe1` → `MOE1Callouts`, `.moe2` → `MOE2Callouts`.
 3. **Symbol callouts** → `SymbolCallouts[char]`.
-4. **Tone variations** → `inputMode == .poj ? TaigiToneMaps.poj : TaigiToneMaps.tl`, indexed by char.
+4. **Tone variations** → `TaigiToneMaps.universal` for a universal custom layout, else `inputMode == .poj ? TaigiToneMaps.poj : TaigiToneMaps.tl`, indexed by char.
 
 So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; symbol-only chars always get callouts regardless of layout.
 
-**Android** — no runtime chain. Popups are pre-resolved into `KeyData.popup` at layout-build time: `mergeLayouts` picks the engine map by input mode (`poj`/`tl` → the tone tables; `english`/`tps` → empty) and adds a key's list by label match. An entry of one code point carries it as `code`; longer text has code 0 and types its label (`TextInputKeyHandler` commits the label whenever it differs from the code's character). At long-press, `KeyPopupManager` renders `anchor.popupCells` and `activeKeyData()` returns the selected variant or falls back to `anchor.data`. No engine call at press time, no symbol/MOE branching in the popup layer — whatever the layout build baked in is what shows, except that an active custom layout's own list (TL / POJ letter page) replaces a key's whole list (`CustomLayoutTables.applyCallouts`, after the extended popups).
+**Android** — no runtime chain. Popups are pre-resolved into `KeyData.popup` at layout-build time: `mergeLayouts` picks the engine map by input mode (`poj`/`tl` → the tone tables, the universal one under a universal custom layout; `english`/`tps` → empty) and adds a key's list by label match. An entry of one code point carries it as `code`; longer text has code 0 and types its label (`TextInputKeyHandler` commits the label whenever it differs from the code's character). At long-press, `KeyPopupManager` renders `anchor.popupCells` and `activeKeyData()` returns the selected variant or falls back to `anchor.data`. No engine call at press time, no symbol/MOE branching in the popup layer — whatever the layout build baked in is what shows, except that an active custom layout's own list (TL / POJ letter page) replaces a key's whole list (`CustomLayoutTables.applyCallouts`, after the extended popups).
 
 ---
 

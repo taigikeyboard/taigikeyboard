@@ -42,6 +42,20 @@ internal object LayoutTestAssets {
                 "n" to listOf("ń", "ⁿ"),
                 "ng" to listOf("ńg"),
             ),
+            // trace: the engine interleaves the TL and POJ lists entry by entry, each entry once: `a`
+            // keeps a̋ then ă; one-script keys (`oo`, `o͘`) keep their own list.
+            universal = mapOf(
+                "a" to listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋", "ă"),
+                "e" to listOf("é"),
+                "i" to listOf("í"),
+                "o" to listOf("ó"),
+                "oo" to listOf("óo"),
+                "o͘" to listOf("ó͘"),
+                "u" to listOf("ú"),
+                "m" to listOf("ḿ"),
+                "n" to listOf("ń", "ⁿ"),
+                "ng" to listOf("ńg"),
+            ),
         )
 
     val assets = LayoutAssets { path -> File("src/main/assets/$path").takeIf { it.exists() }?.readText() }

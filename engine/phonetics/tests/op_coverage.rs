@@ -254,7 +254,7 @@ fn tl_to_poj_display_round_trip() {
 }
 
 #[test]
-fn get_tone_variations_returns_both_modes() {
+fn get_tone_variations_returns_all_three_maps() {
     let resp = run(Method::GetToneVariations(GetToneVariations {}));
     let result = tone_variations_result(&resp);
     assert!(!result.poj_variations.is_empty(), "POJ map non-empty");
@@ -264,6 +264,11 @@ fn get_tone_variations_returns_both_modes() {
     // TL 'oo' entry exists; POJ 'o͘' entry exists.
     assert!(result.tl_variations.contains_key("oo"));
     assert!(result.poj_variations.contains_key("o\u{0358}"));
+    // Universal: both tone-9 marks on `a`, and both scripts' o-keys.
+    let a = &result.universal_variations["a"].variations;
+    assert!(a.contains(&"a\u{30B}".to_string()) && a.contains(&"ă".to_string()));
+    assert!(result.universal_variations.contains_key("oo"));
+    assert!(result.universal_variations.contains_key("o\u{0358}"));
 }
 
 #[test]

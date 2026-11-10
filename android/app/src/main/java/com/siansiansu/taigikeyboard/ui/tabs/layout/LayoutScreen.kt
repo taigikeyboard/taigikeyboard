@@ -16,7 +16,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +38,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutScript
+import com.siansiansu.taigikeyboard.ime.text.layout.LayoutUse
 import com.siansiansu.taigikeyboard.settings.LayoutEditorActivity
 import com.siansiansu.taigikeyboard.ui.components.GalleryCard
 import com.siansiansu.taigikeyboard.ui.components.GalleryCardAction
@@ -42,10 +46,12 @@ import com.siansiansu.taigikeyboard.ui.components.GalleryCardMenu
 import com.siansiansu.taigikeyboard.ui.components.GalleryCreateCard
 import com.siansiansu.taigikeyboard.ui.components.GalleryScreenshot
 import com.siansiansu.taigikeyboard.ui.components.GalleryShelf
+import com.siansiansu.taigikeyboard.ui.components.NameDialog
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 // Layout tab main screen: shelves of layout cards (shared gallery chrome with the Theme tab) —
-// Custom Layouts (a create card that opens LayoutEditorActivity, then the user's layouts with an
+// Custom Layouts (a create card whose dialog names the layout and picks where it shows, then opens
+// LayoutEditorActivity; then the user's layouts with an
 // apply / edit / duplicate / delete menu), Universal (one key table for both scripts),
 // Tâi-lô and Pe̍h-ōe-jī (the layouts whose POJ keys differ, once per script), Phonetic Symbols.
 // A Tâi-lô / Pe̍h-ōe-jī card applies its layout and switches the input mode to that script.
@@ -101,6 +107,9 @@ fun LayoutScreen(prefs: PrefHelper) {
     val stringResolver = LocalStringResolver.current
     val tables = remember(context) { CompositionRoot.shared(context).customLayoutTables }
     val isDark = isSystemInDarkTheme()
+    var showCreateDialog by rememberSaveable { mutableStateOf(false) }
+    // Where the new layout shows, picked in the create dialog; starts from the new draft's each time it opens.
+    var createUse by rememberSaveable { mutableStateOf(LayoutUse.UNIVERSAL) }
     // A built-in card is selected only while no custom layout is (iOS LayoutTab), so tapping the
     // base of the active custom layout selects the built-in one.
     val isChoiceSelected: (LayoutChoice) -> Boolean = { choice ->
@@ -156,7 +165,10 @@ fun LayoutScreen(prefs: PrefHelper) {
                 if (canCreateLayout) {
                     GalleryCreateCard(
                         title = L10n.layoutCreateNewLayout,
-                        onClick = { context.startActivity(LayoutEditorActivity.createIntent(context, null)) },
+                        onClick = {
+                            createUse = LayoutEditorActivity.newDraft(prefs, tables).use
+                            showCreateDialog = true
+                        },
                     )
                 }
                 customLayouts.forEach { layout ->
@@ -180,7 +192,7 @@ fun LayoutScreen(prefs: PrefHelper) {
                                         add(GalleryCardAction(L10n.themeCardMenuApply) { prefs.applyCustomLayout(layout) })
                                         add(
                                             GalleryCardAction(L10n.commonEdit) {
-                                                context.startActivity(LayoutEditorActivity.createIntent(context, layout.id))
+                                                context.startActivity(LayoutEditorActivity.editIntent(context, layout.id))
                                             },
                                         )
                                         // A new layout, so hidden at the cap like the create card (mirrors iOS).
@@ -208,6 +220,23 @@ fun LayoutScreen(prefs: PrefHelper) {
                     }
                 }
             }
+        }
+    }
+
+    if (showCreateDialog) {
+        NameDialog(
+            title = L10n.layoutNameHeader,
+            placeholder = L10n.layoutEditorTitleNew,
+            initialName = "",
+            confirmLabel = L10n.commonOk,
+            onConfirm = { entered ->
+                showCreateDialog = false
+                val name = entered.trim().ifEmpty { stringResolver.resolve(StringKey.LAYOUT_EDITOR_TITLE_NEW) }
+                context.startActivity(LayoutEditorActivity.createIntent(context, name, createUse))
+            },
+            onDismiss = { showCreateDialog = false },
+        ) {
+            UseMenu(selected = createUse, onSelect = { createUse = it })
         }
     }
 }

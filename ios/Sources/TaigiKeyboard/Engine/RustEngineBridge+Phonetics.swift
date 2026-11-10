@@ -29,11 +29,12 @@ public extension RustEngineBridge {
                             op: "getToneVariations")
         guard case let .toneVariationsResult(r)? = resp?.result else {
             recordFailure(op: "getToneVariations", message: "missing result")
-            return ToneVariationsCache(poj: [:], tl: [:])
+            return ToneVariationsCache(poj: [:], tl: [:], universal: [:])
         }
         return ToneVariationsCache(
             poj: r.pojVariations.mapValues { $0.variations },
             tl: r.tlVariations.mapValues { $0.variations },
+            universal: r.universalVariations.mapValues { $0.variations },
         )
     }()
 
@@ -167,9 +168,11 @@ public extension RustEngineBridge {
 // MARK: - ToneVariationsCache
 
 /// Init-bulk-pull cache for the callout tone variation tables. Loaded once
-/// at first access via `RustEngineBridge.toneVariations`; both POJ + TL
-/// maps live in a single payload to amortize FFI cost.
+/// at first access via `RustEngineBridge.toneVariations`; the POJ, TL and
+/// universal (both scripts' lists interleaved, both tone-9 marks) maps live in
+/// a single payload to amortize FFI cost.
 public struct ToneVariationsCache {
     public let poj: [String: [String]]
     public let tl: [String: [String]]
+    public let universal: [String: [String]]
 }

@@ -9,6 +9,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * `ToneVariationsResult` is the callout init-pull payload. Maps the base
  * char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
+ * `universal_variations` is every key of both maps with the TL and POJ lists
+ * interleaved, each entry once (both tone-9 marks) — for a custom layout shown
+ * in TL and POJ alike.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ToneVariationsResult}
@@ -215,6 +218,103 @@ com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
     return internalGetMutableTlVariations();
   }
 
+  public static final int UNIVERSAL_VARIATIONS_FIELD_NUMBER = 3;
+  private static final class UniversalVariationsDefaultEntryHolder {
+    static final com.google.protobuf.MapEntryLite<
+        java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> defaultEntry =
+            com.google.protobuf.MapEntryLite
+            .<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList>newDefaultInstance(
+                com.google.protobuf.WireFormat.FieldType.STRING,
+                "",
+                com.google.protobuf.WireFormat.FieldType.MESSAGE,
+                com.siansiansu.taigikeyboard.engine.proto.ToneVariationList.getDefaultInstance());
+  }
+  private com.google.protobuf.MapFieldLite<
+      java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> universalVariations_ =
+          com.google.protobuf.MapFieldLite.emptyMapField();
+  private com.google.protobuf.MapFieldLite<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList>
+  internalGetUniversalVariations() {
+    return universalVariations_;
+  }
+  private com.google.protobuf.MapFieldLite<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList>
+  internalGetMutableUniversalVariations() {
+    if (!universalVariations_.isMutable()) {
+      universalVariations_ = universalVariations_.mutableCopy();
+    }
+    return universalVariations_;
+  }
+  @java.lang.Override
+
+  public int getUniversalVariationsCount() {
+    return internalGetUniversalVariations().size();
+  }
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  @java.lang.Override
+
+  public boolean containsUniversalVariations(
+      java.lang.String key) {
+    java.util.Objects.requireNonNull(key);
+    return internalGetUniversalVariations().containsKey(key);
+  }
+  /**
+   * Use {@link #getUniversalVariationsMap()} instead.
+   */
+  @java.lang.Override
+  @java.lang.Deprecated
+  public java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> getUniversalVariations() {
+    return getUniversalVariationsMap();
+  }
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  @java.lang.Override
+
+  public java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> getUniversalVariationsMap() {
+    return java.util.Collections.unmodifiableMap(
+        internalGetUniversalVariations());
+  }
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  @java.lang.Override
+
+  public /* nullable */
+com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getUniversalVariationsOrDefault(
+      java.lang.String key,
+      /* nullable */
+com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
+    java.util.Objects.requireNonNull(key);
+    java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> map =
+        internalGetUniversalVariations();
+    com.siansiansu.taigikeyboard.engine.proto.ToneVariationList v = map.get(key);
+    return v != null ? v : defaultValue;
+  }
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  @java.lang.Override
+
+  public com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getUniversalVariationsOrThrow(
+      java.lang.String key) {
+    java.util.Objects.requireNonNull(key);
+    java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> map =
+        internalGetUniversalVariations();
+    com.siansiansu.taigikeyboard.engine.proto.ToneVariationList v = map.get(key);
+    if (v == null) {
+      throw new java.lang.IllegalArgumentException();
+    }
+    return v;
+  }
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  private java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList>
+  getMutableUniversalVariationsMap() {
+    return internalGetMutableUniversalVariations();
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -302,6 +402,9 @@ com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
    * <pre>
    * `ToneVariationsResult` is the callout init-pull payload. Maps the base
    * char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
+   * `universal_variations` is every key of both maps with the TL and POJ lists
+   * interleaved, each entry once (both tone-9 marks) — for a custom layout shown
+   * in TL and POJ alike.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ToneVariationsResult}
@@ -517,6 +620,106 @@ com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
       return this;
     }
 
+    @java.lang.Override
+
+    public int getUniversalVariationsCount() {
+      return instance.getUniversalVariationsMap().size();
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+    @java.lang.Override
+
+    public boolean containsUniversalVariations(
+        java.lang.String key) {
+      java.util.Objects.requireNonNull(key);
+      return instance.getUniversalVariationsMap().containsKey(key);
+    }
+
+    public Builder clearUniversalVariations() {
+      copyOnWrite();
+      instance.getMutableUniversalVariationsMap().clear();
+      return this;
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+
+    public Builder removeUniversalVariations(
+        java.lang.String key) {
+      java.util.Objects.requireNonNull(key);
+      copyOnWrite();
+      instance.getMutableUniversalVariationsMap().remove(key);
+      return this;
+    }
+    /**
+     * Use {@link #getUniversalVariationsMap()} instead.
+     */
+    @java.lang.Override
+    @java.lang.Deprecated
+    public java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> getUniversalVariations() {
+      return getUniversalVariationsMap();
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+    @java.lang.Override
+    public java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> getUniversalVariationsMap() {
+      return java.util.Collections.unmodifiableMap(
+          instance.getUniversalVariationsMap());
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+    @java.lang.Override
+
+    public /* nullable */
+com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getUniversalVariationsOrDefault(
+        java.lang.String key,
+        /* nullable */
+com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
+      java.util.Objects.requireNonNull(key);
+      java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> map =
+          instance.getUniversalVariationsMap();
+      return map.containsKey(key) ? map.get(key) : defaultValue;
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+    @java.lang.Override
+
+    public com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getUniversalVariationsOrThrow(
+        java.lang.String key) {
+      java.util.Objects.requireNonNull(key);
+      java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> map =
+          instance.getUniversalVariationsMap();
+      if (!map.containsKey(key)) {
+        throw new java.lang.IllegalArgumentException();
+      }
+      return map.get(key);
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+    public Builder putUniversalVariations(
+        java.lang.String key,
+        com.siansiansu.taigikeyboard.engine.proto.ToneVariationList value) {
+      java.util.Objects.requireNonNull(key);
+      java.util.Objects.requireNonNull(value);
+      copyOnWrite();
+      instance.getMutableUniversalVariationsMap().put(key, value);
+      return this;
+    }
+    /**
+     * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+     */
+    public Builder putAllUniversalVariations(
+        java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList> values) {
+      copyOnWrite();
+      instance.getMutableUniversalVariationsMap().putAll(values);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ToneVariationsResult)
   }
   @java.lang.Override
@@ -537,9 +740,12 @@ com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
             PojVariationsDefaultEntryHolder.defaultEntry,
             "tlVariations_",
             TlVariationsDefaultEntryHolder.defaultEntry,
+            "universalVariations_",
+            UniversalVariationsDefaultEntryHolder.defaultEntry,
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0002\u0000\u0000\u00012\u00022";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0003\u0000\u0000\u00012\u00022\u0003" +
+              "2";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

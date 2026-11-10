@@ -42,6 +42,7 @@ val RustEngineBridge.toneVariations: RustEngineBridge.ToneVariations by lazy {
     RustEngineBridge.ToneVariations(
         tl = result.tlVariationsMap.mapValues { it.value.variationsList.toList() },
         poj = result.pojVariationsMap.mapValues { it.value.variationsList.toList() },
+        universal = result.universalVariationsMap.mapValues { it.value.variationsList.toList() },
     )
 }
 
