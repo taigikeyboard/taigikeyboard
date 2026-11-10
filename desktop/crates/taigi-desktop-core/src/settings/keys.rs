@@ -81,6 +81,11 @@ pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::ne
 /// `SettingsStore.swift` `isCAffricateEnabled`.
 pub const IS_C_AFFRICATE_ENABLED: SettingsKey<bool> =
     SettingsKey::new("cAffricateEnabled", ENGINE_DEFAULTS.is_c_affricate_enabled);
+/// Type - with f (`EngineSettings::is_f_hyphen_enabled`). Desktop-only like
+/// `toneInputScheme`, and independent of it. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `isFHyphenEnabled`.
+pub const IS_F_HYPHEN_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("fHyphenEnabled", ENGINE_DEFAULTS.is_f_hyphen_enabled);
 // RETIRED 2026-09-30: `frequencyRecordingEnabled`. No platform has a UI for it
 // and the engine counts every pick now (`RecordUsage` tag 4 reserved). A
 // hand-edited `false` in an existing `settings.json` is inert; spelling reserved.
@@ -298,7 +303,7 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub const GENERAL_KEYS: [&str; 13] = [
+pub const GENERAL_KEYS: [&str; 14] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
@@ -306,6 +311,7 @@ pub const GENERAL_KEYS: [&str; 13] = [
     TELEX_GUIDE_SHOWN.name,
     TONE_INPUT_SCHEME.name,
     IS_C_AFFRICATE_ENABLED.name,
+    IS_F_HYPHEN_ENABLED.name,
     IS_HANJI_FIRST.name,
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,

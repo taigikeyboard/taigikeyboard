@@ -614,7 +614,7 @@
       }
     },
     "i18n_desktop_telexGuideHyphen": {
-      "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
+      "comment": "The syllable hyphen: the Syllable Separator picker's Hyphen value (settings.syllableSeparator). Named for the Telex guide's f row, which went when f left the Telex keys (2026-11-10).",
       "extractionState": "manual",
       "localizations": {
         "en": {

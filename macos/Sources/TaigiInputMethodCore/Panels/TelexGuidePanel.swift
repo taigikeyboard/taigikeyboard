@@ -6,25 +6,18 @@ import AppKit
 ///
 /// Two columns, no examples and no dismiss hint (USER 2026-09-09: "no extra
 /// explanatory text… no examples, no explaining how to exit"). The same under
-/// TL and POJ: no Telex key spells a letter (`c` → `ts` / `ch` is its own
-/// setting, not a Telex key).
+/// TL and POJ, and only the tones: `c` → `ts` / `ch` and `f` → `-` are their
+/// own settings, not Telex keys.
 private struct TelexGuideRow {
     let key: String
-    let meaning: Meaning
-
-    enum Meaning {
-        case tone(String)
-        case hyphen
-    }
+    /// The tone the key writes, as the meaning column names it.
+    let tone: String
 
     /// Never raised under TPS (`ShortcutAction.isInert(under:)`); a TPS mode
     /// would read as TL here.
     @MainActor
     func meaningText(_ language: DisplayLanguageStore) -> String {
-        switch meaning {
-        case let .tone(tone): language.resolver.desktopTelexGuideTone(tone: tone)
-        case .hyphen: language.string(.desktopTelexGuideHyphen)
-        }
+        language.resolver.desktopTelexGuideTone(tone: tone)
     }
 }
 
@@ -82,18 +75,17 @@ final class TelexGuidePanel {
     /// The gap under the card, the TPS key panel's.
     private static let bottomMargin: CGFloat = 24
 
-    /// Row order is reading order: the tones by number, then the hyphen. `x` and `v` each carry a pair split
+    /// Row order is reading order: the tones by number. `x` and `v` each carry a pair split
     /// by the coda (`engine/composing/src/telex.rs`): 1 / 4 and 2 / 8, the
     /// open tone on any other syllable, the checked one after `p t k h`.
     private static let rows: [TelexGuideRow] = [
-        TelexGuideRow(key: "x", meaning: .tone("1 / 4")),
-        TelexGuideRow(key: "v", meaning: .tone("2 / 8")),
-        TelexGuideRow(key: "y", meaning: .tone("3")),
-        TelexGuideRow(key: "d", meaning: .tone("5")),
-        TelexGuideRow(key: "z", meaning: .tone("6")),
-        TelexGuideRow(key: "w", meaning: .tone("7")),
-        TelexGuideRow(key: "q", meaning: .tone("9")),
-        TelexGuideRow(key: "f", meaning: .hyphen),
+        TelexGuideRow(key: "x", tone: "1 / 4"),
+        TelexGuideRow(key: "v", tone: "2 / 8"),
+        TelexGuideRow(key: "y", tone: "3"),
+        TelexGuideRow(key: "d", tone: "5"),
+        TelexGuideRow(key: "z", tone: "6"),
+        TelexGuideRow(key: "w", tone: "7"),
+        TelexGuideRow(key: "q", tone: "9"),
     ]
 
     /// The keys and meanings the guide shows, in row order — what a test

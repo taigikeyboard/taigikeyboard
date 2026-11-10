@@ -465,7 +465,7 @@ mod tests {
     #[test]
     fn the_telex_guide_is_the_cores_table_under_its_title() {
         // trace: English `settings.toneSchemeTelex` = "Telex", ROWS[0] = x,
-        // ROWS[7] = f.
+        // ROWS[6] = q.
         let strings = StringResolver::new(DisplayLanguage::English);
         let guide: serde_json::Value = serde_json::from_str(&telex_guide_json(&strings)).unwrap();
         assert_eq!(guide["title"], "Telex");
@@ -473,7 +473,7 @@ mod tests {
         assert_eq!(guide["rows"].as_array().unwrap().len(), shared.len());
         assert_eq!(guide["rows"][0]["key"], "x");
         assert_eq!(guide["rows"][0]["meaning"], shared[0].meaning);
-        assert_eq!(guide["rows"][7]["key"], "f");
+        assert_eq!(guide["rows"][6]["key"], "q");
     }
 
     #[test]

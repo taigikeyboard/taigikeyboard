@@ -12,12 +12,18 @@ use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 /// the tones leaves the others free to pick. A bare digit is the TL/POJ tone
 /// marker (`tai5`) only under `Standard` — which is why the digits can sit on
 /// the slots under Telex and not there. The Shift / Ctrl / Alt digit sets went
-/// with the picker that chose them (USER 2026-09-08).
+/// with the picker that chose them (USER 2026-09-08). Type - with f takes `f`
+/// off the Standard row (`BareKeysWithoutF`, USER 2026-11-10).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateSlotKeySet {
     /// Nine bare keys, one per slot — `q w d f z x v y ;`: the eight letters
     /// no TL or POJ syllable spells, plus `;`. The set under `Standard`.
     BareKeys,
+    /// `BareKeys` without `f` — `q w d z x v y ;` on slots 0…7, the keys after
+    /// `f` moved one slot left and the ninth slot unkeyed (USER 2026-11-10).
+    /// The set under `Standard` while Type - with f is on, where `f` types
+    /// the hyphen and must not pick.
+    BareKeysWithoutF,
     /// Bare `1`…`9`, the set under `Telex`, where the letters above type the
     /// tones and a digit no longer can — so the digit is free to pick the way
     /// the system Zhuyin input method's is.
@@ -35,17 +41,35 @@ impl CandidateSlotKeySet {
     /// Every set, for anything measured against every form a slot can be
     /// drawn in (`CandidateIndexLabel::widest_label_forms`). Not a
     /// `SettingChoice`: nothing stores a set any more.
-    pub const ALL: [Self; 3] = [Self::BareKeys, Self::Digits, Self::TpsDigits];
+    pub const ALL: [Self; 4] = [
+        Self::BareKeys,
+        Self::BareKeysWithoutF,
+        Self::Digits,
+        Self::TpsDigits,
+    ];
 
     /// The keys `BareKeys` puts on slots 0…8, in slot order. Lowercase, as
     /// they are matched and drawn.
     pub const BARE_KEY_ROW: [&'static str; 9] = ["q", "w", "d", "f", "z", "x", "v", "y", ";"];
 
+    /// The keys `BareKeysWithoutF` puts on slots 0…7, in slot order.
+    pub const BARE_KEY_ROW_WITHOUT_F: [&'static str; 8] = ["q", "w", "d", "z", "x", "v", "y", ";"];
+
+    /// The bare-key row a bare-key set picks with, or `None` for the digit
+    /// sets.
+    fn bare_key_row(self) -> Option<&'static [&'static str]> {
+        match self {
+            Self::BareKeys => Some(&Self::BARE_KEY_ROW),
+            Self::BareKeysWithoutF => Some(&Self::BARE_KEY_ROW_WITHOUT_F),
+            Self::Digits | Self::TpsDigits => None,
+        }
+    }
+
     /// The slot `event` picks under this set, or `None` — the classifier's
     /// question.
     pub fn slot_for_event(self, event: &KeyEventSnapshot) -> Option<usize> {
         match self {
-            Self::BareKeys | Self::Digits => {
+            Self::BareKeys | Self::BareKeysWithoutF | Self::Digits => {
                 self.slot_for_key(event.unmodified_characters(), event.modifiers)
             }
             Self::TpsDigits => Self::number_row_slot(event).or_else(|| Self::keypad_slot(event)),
@@ -89,9 +113,9 @@ impl CandidateSlotKeySet {
             return None;
         }
         match self {
-            Self::BareKeys => {
+            Self::BareKeys | Self::BareKeysWithoutF => {
                 let key = key?.to_ascii_lowercase();
-                Self::BARE_KEY_ROW.iter().position(|bare| *bare == key)
+                self.bare_key_row()?.iter().position(|bare| *bare == key)
             }
             Self::Digits => ComposingKeyIntent::direct_selection_slot(key),
             Self::TpsDigits => None,
@@ -114,9 +138,9 @@ impl CandidateSlotKeySet {
             return None;
         }
         match self {
-            Self::BareKeys => {
+            Self::BareKeys | Self::BareKeysWithoutF => {
                 if event.key_code == Some(SEMICOLON_KEY_CODE) {
-                    return Some(Self::BARE_KEY_ROW.len() - 1);
+                    return self.bare_key_row().map(|row| row.len() - 1);
                 }
                 self.slot_for_key(event.unmodified_characters(), KeyModifiers::NONE)
             }
@@ -133,11 +157,12 @@ impl CandidateSlotKeySet {
     }
 
     /// The key this set gives the candidate in `slot`, for the nine slots a
-    /// page holds — what the candidate window draws beside a cell.
+    /// page holds — what the candidate window draws beside a cell; `""` for
+    /// a slot the set leaves unkeyed.
     pub fn label_for_slot(self, slot: usize) -> String {
-        match self {
-            Self::BareKeys => Self::BARE_KEY_ROW[slot].to_owned(),
-            Self::Digits | Self::TpsDigits => (slot + 1).to_string(),
+        match self.bare_key_row() {
+            Some(row) => row.get(slot).copied().unwrap_or_default().to_owned(),
+            None => (slot + 1).to_string(),
         }
     }
 }
@@ -163,6 +188,32 @@ mod tests {
         for (slot, key) in CandidateSlotKeySet::BARE_KEY_ROW.iter().enumerate() {
             assert_eq!(set.slot_for_key(Some(key), KeyModifiers::NONE), Some(slot));
         }
+    }
+
+    #[test]
+    fn without_f_the_row_shifts_left_and_f_picks_nothing() {
+        // trace: `BARE_KEY_ROW_WITHOUT_F` — `d` stays slot 2, `z` moves from
+        // slot 4 to 3, `;` from 8 to 7; slot 8 has no key and no label.
+        let set = CandidateSlotKeySet::BareKeysWithoutF;
+        assert_eq!(set.slot_for_key(Some("d"), KeyModifiers::NONE), Some(2));
+        assert_eq!(set.slot_for_key(Some("z"), KeyModifiers::NONE), Some(3));
+        assert_eq!(set.slot_for_key(Some(";"), KeyModifiers::NONE), Some(7));
+        for key in ["f", "F"] {
+            assert_eq!(
+                set.slot_for_key(Some(key), KeyModifiers::NONE),
+                None,
+                "{key}"
+            );
+        }
+        let labels: Vec<String> = (0..9).map(|slot| set.label_for_slot(slot)).collect();
+        assert_eq!(labels, ["q", "w", "d", "z", "x", "v", "y", ";", ""]);
+        let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
+            .with_key_code(SEMICOLON_KEY_CODE);
+        assert_eq!(set.shifted_slot_for_event(&shift_semicolon), Some(7));
+        let shift_f = KeyEventSnapshot::chord(Some("F"), "F", KeyModifiers::SHIFT);
+        assert_eq!(set.shifted_slot_for_event(&shift_f), None);
+        let shift_z = KeyEventSnapshot::chord(Some("Z"), "Z", KeyModifiers::SHIFT);
+        assert_eq!(set.shifted_slot_for_event(&shift_z), Some(3));
     }
 
     #[test]

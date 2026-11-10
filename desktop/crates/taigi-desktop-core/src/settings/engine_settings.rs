@@ -329,6 +329,13 @@ pub struct EngineSettings {
     /// phone keyboards have no such setting. Off under TPS. macOS keeps a
     /// Swift twin of the default: `EngineSettings.swift` `isCAffricateEnabled`.
     pub is_c_affricate_enabled: bool,
+    /// Type - with f (opt-in, 2026-11-10): a typed `f` writes the syllable
+    /// hyphen, as the `-` key does, under either tone scheme —
+    /// `AppConfig.f_types_hyphen`. Under Standard it also takes `f` off the
+    /// slot row (`ComposingKeyBindings::slot_key_set`). Desktop-only, off
+    /// under TPS. macOS keeps a Swift twin of the default:
+    /// `EngineSettings.swift` `isFHyphenEnabled`.
+    pub is_f_hyphen_enabled: bool,
 }
 
 impl EngineSettings {
@@ -357,6 +364,7 @@ impl EngineSettings {
             dictionary_sources: DictionarySourceToggles::DEFAULT,
             is_hanji_conversion_enabled: false,
             is_c_affricate_enabled: false,
+            is_f_hyphen_enabled: false,
         }
     };
 }

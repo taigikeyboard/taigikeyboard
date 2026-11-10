@@ -161,6 +161,11 @@
       "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "用 c 拍 ts／ch", "tailo": "Iōng c phah ts / ch", "poj": "Iōng c phah ts / ch", "en": "Type ts / ch with c", "ja": "c で ts／ch を入力" }
     },
+    "fHyphen": {
+      "comment": "Toggle label: a typed f writes the syllable hyphen -, as the - key does, under either Tone Keys choice; under Standard, f then no longer picks a candidate. Off by default (2026-11-10).",
+      "scope": { "platforms": ["macos", "windows", "linux", "web"], "surfaces": ["host"] },
+      "values": { "hanji": "用 f 拍 -", "tailo": "Iōng f phah -", "poj": "Iōng f phah -", "en": "Type - with f", "ja": "f で - を入力" }
+    },
     "autoSpace": {
       "comment": "Toggle label: auto-insert a space after committing a word.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },

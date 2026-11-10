@@ -20,6 +20,7 @@ mod continuous;
 mod conversion;
 mod derived;
 mod external_insert;
+mod f_hyphen;
 mod lattice;
 mod shadow;
 pub mod telex;

@@ -52,8 +52,8 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertFalse(session.controller.settings.isTelexGuideShown)
     }
 
-    /// The card is the Telex keys only — the tones, then the hyphen; `c` is
-    /// its own setting, not a Telex key — row for row with desktop-core's
+    /// The card is the Telex keys only — the tones; `c` and `f` are their
+    /// own settings, not Telex keys — row for row with desktop-core's
     /// `telex_guide_rows`. A romanization switch keeps it up.
     func testTheGuide_listsTheTelexKeys_andSurvivesARomanizationSwitch() throws {
         let session = try makeSession()
@@ -62,7 +62,7 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         session.controller.performShortcutAction(.showTelexGuide)
         XCTAssertEqual(
             TelexGuidePanel.table(language: language).map(\.key),
-            ["x", "v", "y", "d", "z", "w", "q", "f"],
+            ["x", "v", "y", "d", "z", "w", "q"],
         )
 
         session.controller.performShortcutAction(.toggleRomanization)

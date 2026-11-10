@@ -11,24 +11,22 @@
 //! ever having to choose. The free letters are `c d f q v w x y z`, and the
 //! pairing is what gives the two unmarked tones a key at all.
 //!
-//! `z` writes tone 6 (USER 2026-11-05). `c` and `h` are not Telex keys: the
-//! affricate initial on `c` is its own opt-in setting under either scheme
-//! (`crate::affricate`, 2026-11-09), and `h` is an ordinary letter.
+//! `z` writes tone 6 (USER 2026-11-05). `c`, `f` and `h` are not Telex keys:
+//! the affricate initial on `c` (`crate::affricate`, 2026-11-09) and the
+//! hyphen on `f` (`crate::f_hyphen`, 2026-11-10) are their own opt-in
+//! settings under either scheme, and `h` is an ordinary letter.
 
 /// Every letter the Telex scheme claims, lower case. Platforms classify on
 /// this set (uppercase folded) before the engine resolves the edit.
-pub const TELEX_KEYS: &str = "vydwxqzf";
+pub const TELEX_KEYS: &str = "vydwxqz";
 
-/// What one Telex key means, independent of the buffer.
+/// What one Telex key means, independent of the buffer: the digit written
+/// on an open tail and the one written on a tail that ends in a stop coda
+/// `p t k h`. Equal for the keys that carry one tone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TelexKey {
-    /// The digit written on an open tail and the one written on a tail that
-    /// ends in a stop coda `p t k h`. Equal for the keys that carry one tone.
-    Tone {
-        open: char,
-        checked: char,
-    },
-    Hyphen,
+struct TelexKey {
+    open: char,
+    checked: char,
 }
 
 fn resolve(key: &str) -> Option<TelexKey> {
@@ -45,20 +43,12 @@ fn resolve(key: &str) -> Option<TelexKey> {
         'w' | 'W' => tone('7', '7'),
         'z' | 'Z' => tone('6', '6'),
         'q' | 'Q' => tone('9', '9'),
-        'f' | 'F' => TelexKey::Hyphen,
         _ => return None,
     })
 }
 
-/// Whether `key` is the hyphen key `f` / `F`. With no tail to append to, the
-/// transition types it from Idle as the `-` key: the neutral-tone marker, a
-/// document literal (§21).
-pub fn is_hyphen_key(key: &str) -> bool {
-    resolve(key) == Some(TelexKey::Hyphen)
-}
-
 const fn tone(open: char, checked: char) -> TelexKey {
-    TelexKey::Tone { open, checked }
+    TelexKey { open, checked }
 }
 
 /// Whether the syllable `letters` ends (no tone digit) closes on a stop coda
@@ -71,43 +61,32 @@ fn ends_in_stop_coda(letters: &str) -> bool {
 
 /// Apply one Telex key to the pending tail `raw`. `None` means the key
 /// changes nothing (unknown key, a tone on an empty or hyphen-ended tail, the
-/// same tone twice, a hyphen on an empty tail) —
-/// the transition answers with a no-op, except for an idle `f`, which it
-/// types as the `-` key ([`is_hyphen_key`]). While composing the platform
-/// swallows such a key; only from Idle does a tone letter reach the host as
-/// text.
+/// same tone twice) — the transition answers with a no-op. While composing
+/// the platform swallows such a key; only from Idle does a tone letter reach
+/// the host as text.
 ///
 /// A tone on a tail that already ends in a different digit replaces it;
 /// the same digit is left alone so a held key cannot flip-flop (Backspace
 /// removes the digit). A paired key reads the coda of the letters under the
 /// digit, so `sit8` + `x` → `sit4`. Nailed segments are never part of `raw`.
 pub fn apply_telex_key(raw: &str, key: &str) -> Option<String> {
-    match resolve(key)? {
-        TelexKey::Tone { open, checked } => {
-            let last = raw.chars().last()?;
-            if last == '-' {
-                return None;
-            }
-            let letters = raw
-                .strip_suffix(|c: char| c.is_ascii_digit())
-                .unwrap_or(raw);
-            let digit = if ends_in_stop_coda(letters) {
-                checked
-            } else {
-                open
-            };
-            if last == digit {
-                return None;
-            }
-            Some(format!("{letters}{digit}"))
-        }
-        TelexKey::Hyphen => {
-            if raw.is_empty() {
-                return None;
-            }
-            Some(format!("{raw}-"))
-        }
+    let TelexKey { open, checked } = resolve(key)?;
+    let last = raw.chars().last()?;
+    if last == '-' {
+        return None;
     }
+    let letters = raw
+        .strip_suffix(|c: char| c.is_ascii_digit())
+        .unwrap_or(raw);
+    let digit = if ends_in_stop_coda(letters) {
+        checked
+    } else {
+        open
+    };
+    if last == digit {
+        return None;
+    }
+    Some(format!("{letters}{digit}"))
 }
 
 #[cfg(test)]
@@ -224,9 +203,11 @@ mod tests {
     }
 
     #[test]
-    fn f_appends_hyphen_after_content_only() {
-        assert_eq!(apply_telex_key("tai5", "f"), Some("tai5-".into()));
-        assert_eq!(apply_telex_key("", "f"), None);
+    fn f_is_not_a_telex_key() {
+        // trace: `resolve` has no `f`; the hyphen on `f` is
+        // `crate::f_hyphen`, reached through `Append`.
+        assert_eq!(apply_telex_key("tai5", "f"), None);
+        assert_eq!(apply_telex_key("tai5", "F"), None);
     }
 
     #[test]

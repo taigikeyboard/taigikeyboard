@@ -80,6 +80,7 @@ pub(crate) fn apply(
         },
         Intent::Append { ch } => {
             let ch = crate::affricate::expand(ch, config);
+            let ch = crate::f_hyphen::expand(ch, config);
             match &state.phase {
                 Phase::Idle => {
                     begin_composition_or_insert_leading_hyphens(state, ch, config, frequency)
@@ -176,8 +177,8 @@ pub(crate) fn apply(
 /// is whatever ends that chunk) and keep the rest of the pending tail; a
 /// `None` edit is a no-op. Under Continuous the nailed segments stay
 /// untouched and the preedit re-renders the whole composition; selection
-/// resets as a fresh typing step does. No Telex key starts a composition:
-/// a tone has nothing to mark when idle, and an idle `f` is the `-` key.
+/// resets as a fresh typing step does. No Telex key acts while idle: a tone
+/// has nothing to mark.
 fn telex_key(
     state: &mut EngineState,
     key: &str,
@@ -185,10 +186,6 @@ fn telex_key(
     frequency: Frequency<'_>,
 ) -> ComposingResponse {
     match &state.phase {
-        // An idle `f` is the `-` key: the neutral-tone marker (§21).
-        Phase::Idle if crate::telex::is_hyphen_key(key) => {
-            begin_composition_or_insert_leading_hyphens(state, "-".into(), config, frequency)
-        }
         Phase::Idle => noop(state, config),
         Phase::Continuous {
             raw, caret, nailed, ..
