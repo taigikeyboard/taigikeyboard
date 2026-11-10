@@ -52,7 +52,7 @@ fn uppercase_first_only(s: &str) -> String {
     }
 }
 
-/// Insert a two-letter base (`oo`, `ng`) under three keys: lowercase (`oo`),
+/// Insert a two-letter base (`oo`, `ng`, `er` …) under three keys: lowercase (`oo`),
 /// Shift (`Oo`, first letter upper) and Caps Lock (`OO`, all upper).
 fn insert_digraph(
     mapping: &mut HashMap<String, Vec<String>>,
@@ -107,6 +107,12 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
     // ng — tone mark on n, g is suffix.
     insert_digraph(&mut mapping, "n", "g", is_tl);
 
+    // Dialectal vowels er / ir / or (`tables::TL_FINALS`; engine POJ spells them the
+    // same) — tone mark on the vowel, r is suffix (`tl::place_tl_tone_mark`).
+    for vowel in ["e", "i", "o"] {
+        insert_digraph(&mut mapping, vowel, "r", is_tl);
+    }
+
     // POJ + TL: append "ⁿ" (U+207F) to existing "n" entry.
     let n_entry = mapping.entry("n".to_string()).or_default();
     n_entry.push("\u{207f}".to_string());
@@ -149,10 +155,10 @@ mod tests {
     fn full_lists_per_base_both_modes() {
         // trace: TONE_NUMBERS 2 3 5 6 7 8 9 → U+0301 U+0300 U+0302 U+030C U+0304
         // U+030D, then tone 9 = U+030B (TL) / U+0306 (POJ); NFC recomposes where a
-        // precomposed letter exists; `n` ends with ⁿ.
+        // precomposed letter exists; `n` ends with ⁿ; er / ir / or carry it on the vowel.
         let tl = build_mode_map(true);
         let poj = build_mode_map(false);
-        let expected_tl: [(&str, &[&str]); 9] = [
+        let expected_tl: [(&str, &[&str]); 12] = [
             ("a", &["á", "à", "â", "ǎ", "ā", "a\u{30D}", "a\u{30B}"]),
             ("e", &["é", "è", "ê", "ě", "ē", "e\u{30D}", "e\u{30B}"]),
             ("i", &["í", "ì", "î", "ǐ", "ī", "i\u{30D}", "i\u{30B}"]),
@@ -183,8 +189,17 @@ mod tests {
                     "n\u{30B}g",
                 ],
             ),
+            (
+                "er",
+                &["ér", "èr", "êr", "ěr", "ēr", "e\u{30D}r", "e\u{30B}r"],
+            ),
+            (
+                "ir",
+                &["ír", "ìr", "îr", "ǐr", "īr", "i\u{30D}r", "i\u{30B}r"],
+            ),
+            ("or", &["ór", "òr", "ôr", "ǒr", "ōr", "o\u{30D}r", "őr"]),
         ];
-        let expected_poj: [(&str, &[&str]); 9] = [
+        let expected_poj: [(&str, &[&str]); 12] = [
             ("a", &["á", "à", "â", "ǎ", "ā", "a\u{30D}", "ă"]),
             ("e", &["é", "è", "ê", "ě", "ē", "e\u{30D}", "ĕ"]),
             ("i", &["í", "ì", "î", "ǐ", "ī", "i\u{30D}", "ĭ"]),
@@ -226,6 +241,9 @@ mod tests {
                     "n\u{306}g",
                 ],
             ),
+            ("er", &["ér", "èr", "êr", "ěr", "ēr", "e\u{30D}r", "ĕr"]),
+            ("ir", &["ír", "ìr", "îr", "ǐr", "īr", "i\u{30D}r", "ĭr"]),
+            ("or", &["ór", "òr", "ôr", "ǒr", "ōr", "o\u{30D}r", "ŏr"]),
         ];
         for (map, expected) in [(&tl, &expected_tl), (&poj, &expected_poj)] {
             for (key, list) in expected.iter() {
