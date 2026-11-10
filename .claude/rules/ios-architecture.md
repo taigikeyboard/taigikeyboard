@@ -4,4 +4,4 @@ paths: ["ios/**/*.swift"]
 
 # iOS Architecture Rules
 
-Read `docs/contributing/ios-architecture.md` before editing files this rule covers — it is the single copy of these rules.
+The rules live in `docs/contributing/ios-architecture.md` — the single copy. Read it once per session, before the first edit to the files this rule covers; re-read only the section a later change touches.
