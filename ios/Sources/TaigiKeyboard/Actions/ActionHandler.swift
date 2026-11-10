@@ -1,5 +1,6 @@
 import Foundation
 import KeyboardKit
+import UIKit
 
 /// TaigiKeyboard action handler — dispatches keyboard gestures to per-action handlers.
 ///
@@ -237,19 +238,19 @@ public class ActionHandler: StandardKeyboardActionHandler {
         return false
     }
 
-    // KeyboardKit entry for a candidate tap: English mode lets KK replace the word, Taigi mode takes our path.
+    // KeyboardKit entry for a candidate tap: English mode replaces the word before the caret, Taigi mode takes our path.
     override public func handle(_ suggestion: AutocompleteSuggestion) {
         // A tap is an event like any key: consume the arm first, so a commit
         // that writes no auto space leaves none for the next punctuation key.
-        // English mode: KeyboardKit replaces the current word; the trailing space is
-        // ours, so it obeys Auto-Space and arms the punctuation swap. KK's own
-        // auto-learn has nothing to do here (`EnglishAutocompleteService` exposes an
-        // empty engine collection); the strip refreshes as after a key release.
+        // English mode: `writeEnglishPick`; the trailing space is ours, so it
+        // obeys Auto-Space and arms the punctuation swap. KK's own auto-learn has
+        // nothing to do here (`EnglishAutocompleteService` exposes an empty
+        // engine collection); the strip refreshes as after a key release.
         // CROSS-PLATFORM INVARIANT — mirrors Android
         // CandidateClickHandler.handleEnglishCandidateClick.
         if settings.inputMode == .english {
             performInputEvent {
-                controllerContext.textDocumentProxy.insertAutocompleteSuggestion(suggestion, tryInsertSpace: false)
+                Self.writeEnglishPick(suggestion.text, to: controllerContext.textDocumentProxy)
                 appendAutoSpaceIfEarned(documentText: suggestion.text, wroteRomanization: true)
             }
             keyboardController?.performAutocomplete()
@@ -259,6 +260,16 @@ public class ActionHandler: StandardKeyboardActionHandler {
         TraceContext.with(TraceId.next()) {
             performInputEvent { handleSuggestionSelection(suggestion) }
         }
+    }
+
+    /// Writes an English pick over the word fragment before the caret, read
+    /// at tap time (issue #826). Not `insertAutocompleteSuggestion`: since
+    /// KeyboardKit 11 it deletes only the suggestion's `deleteBackwardsCount`,
+    /// and a count fixed when the strip was built goes stale once Space
+    /// leaves that strip on screen. After a space the fragment is empty, so
+    /// the pick is inserted and nothing is deleted.
+    static func writeEnglishPick(_ text: String, to proxy: UITextDocumentProxy) {
+        proxy.replaceCurrentWordPreCursorPart(with: text)
     }
 
     override public func handle(_ action: KeyboardAction) {

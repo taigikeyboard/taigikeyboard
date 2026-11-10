@@ -221,7 +221,7 @@ final class HostTextWriterTests: XCTestCase {
     }
 }
 
-private final class RecordingTextDocumentProxy: NSObject, UITextDocumentProxy {
+final class RecordingTextDocumentProxy: NSObject, UITextDocumentProxy {
     enum Call: Equatable {
         case setMarked(String, NSRange)
         case unmark
