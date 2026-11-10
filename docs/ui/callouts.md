@@ -10,7 +10,7 @@
 
 - Long-pressing a key surfaces a callout menu of variants: layout-specific punctuation (TPS / MOE), symbol-page callouts, and **POJ/TL tone variations** (`a → á à â ǎ ā a̍ a̋`, `n → … ⁿ`, `ng → ńg …`).
 - The tone-variation map is built once in the Rust engine (`phonetics::tone_variations`) and pulled in a single init-time call (`GetToneVariations`).
-- **Architectural divergence**: iOS consumes the engine map live at long-press through a runtime lookup chain; Android pre-bakes static JSON popup tables into each key at layout-load time. See [Divergence](#cross-platform-divergence) — the two are NOT wired the same way.
+- Both platforms read that one engine map. **Architectural divergence** in how it reaches a key: iOS indexes it live at long-press through a runtime lookup chain; Android bakes it into each key's popup at layout-load time. See [Divergence](#cross-platform-divergence).
 
 ---
 
@@ -33,12 +33,13 @@
 | `Callouts/KeyboardCalloutStyle+Taigi.swift` | `KeyboardCalloutStyle.taigi(for:)` font sizing |
 | `Engine/RustEngineBridge+Phonetics.swift` | `static let toneVariations` lazy cache `{ poj, tl: [String:[String]] }` |
 
-### Android (JSON-driven, pre-baked)
+### Android (engine-driven, pre-baked)
 
 | File | Responsibility |
 |------|----------------|
-| `ime/text/layout/LayoutManager.kt` | `LayoutAssets.extendedPopups` loads `taigi_{poj,tl}.json` by input mode; merges into `keyData.popup`; then `CustomLayoutTables.applyCallouts` puts a custom layout's own lists in |
-| `assets/ime/text/characters/extended_popups/taigi_{poj,tl}.json` | Static tone-variation popup tables (18 keys each) |
+| `engine/PhoneticsBridge.kt` | `RustEngineBridge.toneVariations` lazy cache (`ToneVariations { tl, poj }`, DTO in `RustEngineBridge.kt`); `CompositionRoot.toneVariations` hands it to the two readers below (JVM tests pass a stand-in) |
+| `ime/text/layout/LayoutManager.kt` | Adds the input mode's tone marks (`LayoutScript.toneMarks`) to each matching key's `keyData.popup` as fresh `KeyData.ofEntry` keys; then `CustomLayoutTables.applyCallouts` puts a custom layout's own lists in |
+| `ime/text/layout/CustomLayoutTables.kt` | The custom-layout editor's view of the same table: `defaultCallouts`, tray `toneRows` |
 | `ime/popup/KeyPopupManager.kt` | `PopupHost` impl: preview + extended `PopupWindow`, motion hit-test, `activeKeyData()` |
 | `ime/popup/PopupCells.kt` | `buildPopupCells` maps `KeyData.popup` → visual cells |
 
@@ -53,7 +54,7 @@
 - **No engine-side caching** — the engine is stateless. Each platform fetches once at first access and caches platform-side (proto comment: "Caller caches once at engine init").
 - **Proto**: request `GetToneVariations {}` (empty); response `map<string, ToneVariationList>` for `poj_variations` + `tl_variations`.
 
-On iOS there is no platform-side tone-map builder: `TaigiToneMaps.poj` / `.tl` proxy `RustEngineBridge.toneVariations` (a thread-safe `static let` loaded once via FFI).
+Neither platform builds a tone map: iOS `TaigiToneMaps.poj` / `.tl` proxy `RustEngineBridge.toneVariations` (a thread-safe `static let` loaded once via FFI); Android `RustEngineBridge.toneVariations` is a synchronized `lazy` (layouts compute on the main thread and `Dispatchers.IO`). On failure both keep empty maps. The engine tests pin every base's full list.
 
 ---
 
@@ -68,7 +69,7 @@ On iOS there is no platform-side tone-map builder: `TaigiToneMaps.poj` / `.tl` p
 
 So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; symbol-only chars always get callouts regardless of layout.
 
-**Android** — no runtime chain. Popups are pre-resolved into `KeyData.popup` at layout-build time: `LayoutAssets.extendedPopups` selects JSON by input mode (`poj`/`tl` → the tone tables; `english`/`tps` → empty), merged by label match during `mergeLayouts`. At long-press, `KeyPopupManager` renders `anchor.popupCells` and `activeKeyData()` returns the selected variant or falls back to `anchor.data`. No engine call, no symbol/MOE branching in the popup layer — whatever the layout JSON baked in is what shows, except that an active custom layout's own list (TL / POJ letter page) replaces a key's whole list (`CustomLayoutTables.applyCallouts`, after the extended popups).
+**Android** — no runtime chain. Popups are pre-resolved into `KeyData.popup` at layout-build time: `mergeLayouts` picks the engine map by input mode (`poj`/`tl` → the tone tables; `english`/`tps` → empty) and adds a key's list by label match. An entry of one code point carries it as `code`; longer text has code 0 and types its label (`TextInputKeyHandler` commits the label whenever it differs from the code's character). At long-press, `KeyPopupManager` renders `anchor.popupCells` and `activeKeyData()` returns the selected variant or falls back to `anchor.data`. No engine call at press time, no symbol/MOE branching in the popup layer — whatever the layout build baked in is what shows, except that an active custom layout's own list (TL / POJ letter page) replaces a key's whole list (`CustomLayoutTables.applyCallouts`, after the extended popups).
 
 ---
 
@@ -76,12 +77,10 @@ So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; s
 
 | Aspect | iOS | Android |
 |---|---|---|
-| Tone-variation source | **Engine** `GetToneVariations`, indexed live at long-press | **Static JSON** `taigi_{poj,tl}.json`, baked into `KeyData.popup` at layout load |
-| Engine cache used by UI? | Yes (`TaigiToneMaps` proxies it) | **No** — the JSON is the only source |
+| Tone-variation source | **Engine** `GetToneVariations`, indexed live at long-press | **Engine** `GetToneVariations`, baked into `KeyData.popup` at layout load |
+| Engine cache used by UI? | Yes (`TaigiToneMaps` proxies it) | Yes (`CompositionRoot.toneVariations` → `LayoutManager`, `CustomLayoutTables`) |
 | Lookup chain | Runtime `layout → symbol → tone` | None at press time; pre-resolved into `KeyData.popup` |
 | Selection on commit | KeyboardKit `ActionsBuilder` | `KeyPopupManager.activeKeyData()` (motion hit-test) → `KeyTouchCoordinator` |
-
-> ⚠ **Known duplication risk.** The Android `taigi_tl.json` content is a manual static duplicate of the engine's `build_mode_map` output (verified identical: `a → á à â ǎ ā a̍ a̋`, `n` ends in `ⁿ`, `ng → ńg …`, 18 keys). Changing the engine tone tables updates iOS automatically but leaves Android's JSON stale, with no `// CROSS-PLATFORM INVARIANT` comment linking the two. Treat the JSON as a hand-synced mirror of `build_mode_map`; see `docs/contributing/cross-platform-alignment.md` §3a.
 
 ---
 
@@ -89,7 +88,7 @@ So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; s
 
 - `TONE_NUMBERS = ["2","3","5","6","7","8","9"]`; tone-9 mark TL U+030B / POJ breve; POJ `o͘` = U+0358; nasal `ⁿ` = U+207F.
 - iOS callout font: action 20 pt / input 32 pt (custom fonts only).
-- Android tone-popup JSON: 18 keys each, loaded only for Taigi layouts in POJ/TL mode (TPS/English get no tone popups).
+- Android tone popups: loaded only for Taigi layouts in POJ/TL mode (TPS/English get none). Android matches lowercase labels only (letter-page labels are lowercase; `transformInputCase` handles case), so the map's capitalised keys (`A`, `Oo`, `Ng`, `OO`, `NG` …) serve iOS.
 - Android `KeyPopupManager.ANCHOR_EXCEPTIONS = {ENTER, LANGUAGE_SWITCH, SWITCH_TO_TEXT_CONTEXT, SWITCH_TO_MEDIA_CONTEXT}`.
 
 ---

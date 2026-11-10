@@ -7,6 +7,8 @@
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.toneVariations
 import com.siansiansu.taigikeyboard.ime.core.logging.AndroidLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.dictionary.EngineUserDataClient
@@ -53,8 +55,11 @@ class CompositionRoot private constructor(
     /** The bundled keyboard layout JSON; a file that fails to read is logged. */
     val layoutAssets: LayoutAssets = LayoutAssets.forContext(appContext) { path, e -> logger.e("LayoutAssets", "[LAYOUT] Failed to load layout $path", e) }
 
+    /** The engine's tone-mark long-press table, pulled on first use. */
+    val toneVariations: () -> RustEngineBridge.ToneVariations = { RustEngineBridge.toneVariations }
+
     /** The built-in tables custom layouts are made from; parsed from the layout assets on first use. */
-    val customLayoutTables: CustomLayoutTables by lazy { CustomLayoutTables(layoutAssets) }
+    val customLayoutTables: CustomLayoutTables by lazy { CustomLayoutTables(layoutAssets, toneVariations) }
 
     /**
      * Lexicon engine readiness gate. Completed by

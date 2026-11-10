@@ -41,7 +41,7 @@ class CustomLayoutCalloutsTest {
 
     @Test
     fun `the built-in list is not stored and an empty list is`() {
-        // trace: taigi_tl.json `a` = á à â ǎ ā a̍ a̋; qwerty_tl `a` has no popup of its own.
+        // trace: LayoutTestAssets.toneVariations TL `a` = á à â ǎ ā a̍ a̋; qwerty_tl `a` has no popup of its own.
         val builtIn = tables.defaultCallouts(qwerty, "a")
         assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"), builtIn)
         assertTrue(qwerty.withList("a", builtIn).callouts.isEmpty())

@@ -570,6 +570,22 @@ object RustEngineBridge {
     )
 
     // endregion
+    // region Phonetics DTO — ops are extensions in PhoneticsBridge.kt
+
+    /**
+     * The engine's long-press tone variations by key label (`a`, `oo`, `Ng` …), per script.
+     * iOS `ToneVariationsCache`.
+     */
+    data class ToneVariations(
+        val tl: Map<String, List<String>>,
+        val poj: Map<String, List<String>>,
+    ) {
+        companion object {
+            val EMPTY = ToneVariations(tl = emptyMap(), poj = emptyMap())
+        }
+    }
+
+    // endregion
     // region Test seam
 
     /** Sends arbitrary bytes for T4 / T5 / T7' tests. Returns null on parse failure. */

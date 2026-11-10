@@ -50,7 +50,7 @@ Same concept, different names — check both columns before porting. Paths: iOS 
 | Service graph | `ServiceGraph/CompositionRoot` | `ime/core/CompositionRoot` |
 | Keyboard theme | `Theme/` (model) + `Styling/` (render) | `ime/theme/` + `ime/text/keyboard/KeyContent` |
 | Keyboard layouts | `Layout/TaigiLayouts.swift` (code tables) | `assets/ime/text/` JSON + `ime/text/layout/LayoutManager` |
-| Long-press callouts | `Callouts/` | `ime/popup/` + `extended_popups/*.json` |
+| Long-press callouts | `Callouts/` | `ime/popup/` + `LayoutManager` tone marks (engine `GetToneVariations`) |
 | Overlays | `Overlays/` | `ime/text/overlays/` |
 | App tabs | `App/Tabs/<Tab>/` (`*Tab`, `*View`) | `ui/tabs/<tab>/` (`*Screen`) + `settings/*Activity` |
 | i18n runtime | `Strings/` | `i18n/` |

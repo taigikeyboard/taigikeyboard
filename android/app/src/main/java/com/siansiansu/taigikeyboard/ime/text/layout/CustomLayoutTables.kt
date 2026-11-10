@@ -7,6 +7,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
@@ -34,8 +35,10 @@ data class GridKey(
     }
 }
 
+/** Over the layout [assets] and the engine's tone-mark table [toneVariations] (JVM tests pass their own). */
 class CustomLayoutTables(
     private val assets: LayoutAssets,
+    private val toneVariations: () -> RustEngineBridge.ToneVariations,
 ) {
     /** A base table's places below the digit row, in reading order. */
     class BaseTable(
@@ -93,14 +96,15 @@ class CustomLayoutTables(
      * marks only POJ has. iOS `CustomLayout.toneRows`.
      */
     val toneRows: List<List<String>> by lazy {
-        val toneBases = toneMarks.values
+        val toneMarks = LayoutScript.entries.map { it.toneMarks(toneVariations()) }
+        val toneBases = toneMarks
             .flatMap { it.keys }
             .filter { it == it.lowercase() }
             .toSet()
         val leadingBases = listOf("a", "e", "i", "o", "oo", "o\u0358", "u", "m", "n", "ng").filter { it in toneBases }
         (leadingBases + (toneBases - leadingBases.toSet()).sorted()).map { base ->
             // ⁿ rides the `n` list but is no tone mark: it sits with the letters.
-            composedUnique(toneMarks.values.flatMap { it[base].orEmpty() }).filterNot { it == TRAY_NASAL_MARKER }
+            composedUnique(toneMarks.flatMap { it[base].orEmpty() }).filterNot { it == TRAY_NASAL_MARKER }
         }
     }
 
@@ -124,13 +128,6 @@ class CustomLayoutTables(
     }
 
     // The long-press tables above and below serve the editor only, so the keyboard never parses them.
-
-    /** Tone-mark long-press entries by script, then by key label. */
-    private val toneMarks: Map<LayoutScript, Map<String, List<String>>> by lazy {
-        LayoutScript.entries.associateWith { script ->
-            assets.extendedPopups(script.inputMode).mapValues { (_, keys) -> keys.mapNotNull(::entry) }
-        }
-    }
 
     init {
         // Bases share files (PhahTaigi has one table for both scripts, modifiers ignore the script,
@@ -232,7 +229,7 @@ class CustomLayoutTables(
         label: String,
     ): List<String> {
         val ownPopups = baseTable(layout.base, layout.script)?.keyPopups?.get(label) ?: catalog[label]?.first?.let(::popupEntries).orEmpty()
-        return ownPopups + toneMarks[layout.script]?.get(label).orEmpty()
+        return ownPopups + layout.script.toneMarks(toneVariations())[label].orEmpty()
     }
 
     /** The long-press list the key labelled [label] shows: [layout]'s own, else the built-in one. */
@@ -269,7 +266,7 @@ class CustomLayoutTables(
         for (piece in arrangement.drop(1).flatMap(::pieces)) {
             val key = (piece as? Piece.Character)?.key ?: continue
             val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label] ?: continue
-            layout.callouts[label]?.let { entries -> key.popup = entries.mapTo(mutableListOf(), ::calloutKey) }
+            layout.callouts[label]?.let { entries -> key.popup = entries.mapTo(mutableListOf(), KeyData::ofEntry) }
         }
     }
 
@@ -494,9 +491,6 @@ class CustomLayoutTables(
         }
 
         fun popupEntries(key: KeyData): List<String> = key.popup.mapNotNull(::entry)
-
-        /** A long-press entry as a key: one code point types itself; longer text has code 0, as the tray's finals do. */
-        fun calloutKey(entry: String): KeyData = KeyData(if (entry.codePointCount(0, entry.length) == 1) entry.codePointAt(0) else 0, entry)
 
         /** [chars] in NFC, each once (TL and POJ spell some marks in different forms). */
         fun composedUnique(chars: List<String>): List<String> = chars.map { Normalizer.normalize(it, Normalizer.Form.NFC) }.distinct()

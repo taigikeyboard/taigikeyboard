@@ -4,6 +4,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.json.JSONArray
@@ -21,6 +22,13 @@ enum class LayoutScript(
     TL("tl"),
     POJ("poj"),
     ;
+
+    /** This script's half of the engine's tone-mark long-press entries, by key label. */
+    fun toneMarks(tones: RustEngineBridge.ToneVariations): Map<String, List<String>> =
+        when (this) {
+            TL -> tones.tl
+            POJ -> tones.poj
+        }
 
     companion object {
         fun fromStorage(value: String): LayoutScript? = entries.firstOrNull { it.inputMode == value }
