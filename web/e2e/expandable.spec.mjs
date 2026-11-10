@@ -4,7 +4,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, open, panel, TIER } from "./helpers.mjs";
+import { candidates, expectText, open, panel, TIER } from "./helpers.mjs";
 
 const ROW = { candidateLayout: "expandable" };
 const COLUMN = { candidateLayout: "verticalExpandable" };
@@ -118,7 +118,7 @@ test("the keys number the column the highlight is in", async ({ page }) => {
   await expect(labelled).toHaveCount(9);
   const picked = await labelled.nth(8).locator(".text").textContent();
   await editor.press(column[8]);
-  await expect(editor).toHaveValue(picked);
+  await expectText(editor, picked);
 });
 
 test("an unfolded column pages with Page Down and the chevron", async ({
@@ -160,7 +160,7 @@ test("the keys number the row the highlight is on", async ({ page }) => {
   await expect(labelled).toHaveCount(row.length);
   const picked = await labelled.nth(1).locator(".text").textContent();
   await editor.press(row[1]);
-  await expect(editor).toHaveValue(picked);
+  await expectText(editor, picked);
 });
 
 test("the chevron and a click reach the same model", async ({ page }) => {
@@ -174,7 +174,7 @@ test("the chevron and a click reach the same model", async ({ page }) => {
   await target.click();
   await expect(editor).toBeFocused();
   expect(await position(current(page))).toBe(index);
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("Page Down after the wheel starts from what the wheel left", async ({

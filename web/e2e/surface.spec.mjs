@@ -2,7 +2,18 @@
 
 import { expect, test } from "@playwright/test";
 
-import { commitWord, open, panel, preedit } from "./helpers.mjs";
+import {
+  caretTo,
+  commitWord,
+  expectNotText,
+  expectText,
+  open,
+  panel,
+  preedit,
+  select,
+  textAfterCaret,
+  textOf,
+} from "./helpers.mjs";
 
 const AUTO_SPACE = { autoSpaceEnabled: true };
 
@@ -12,13 +23,7 @@ async function commitRomanization(editor) {
   await commitWord(editor);
 }
 
-function caretTo(editor, position) {
-  return editor.evaluate((element, caret) => {
-    element.setSelectionRange(caret, caret);
-  }, position);
-}
-
-test("a click in the textarea commits, then moves the caret", async ({
+test("a click in the editor commits, then moves the caret", async ({
   page,
 }) => {
   const editor = await open(page);
@@ -27,16 +32,16 @@ test("a click in the textarea commits, then moves the caret", async ({
   await editor.click({ position: { x: 4, y: 4 } });
   await expect(panel(page)).toBeHidden();
   // Committed after the click, it would land at the start.
-  await expect(editor).toHaveValue("台灣tai");
-  const caret = await editor.evaluate((element) => element.selectionStart);
-  expect(caret).toBeLessThan(5);
+  await expectText(editor, "台灣tai");
+  // The caret left the end: text follows it.
+  expect(await textAfterCaret(editor)).not.toBe("");
 });
 
 test("a click elsewhere commits before focus leaves", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("tai");
   await page.getByRole("heading", { level: 1 }).click();
-  await expect(editor).toHaveValue("tai");
+  await expectText(editor, "tai");
   await expect(panel(page)).toBeHidden();
 });
 
@@ -45,14 +50,14 @@ test("the auto-space swap survives the page's own write", async ({ page }) => {
   // `swap_preceding_space`. A write of the page's own must not disarm it.
   const editor = await open(page, { settings: AUTO_SPACE });
   await commitRomanization(editor);
-  await expect(editor).toHaveValue("tâi-uân ");
+  await expectText(editor, "tâi-uân ");
   await editor.press(".");
-  await expect(editor).toHaveValue("tâi-uân. ");
+  await expectText(editor, "tâi-uân. ");
 });
 
 // The swap would delete the character before the caret, unseen.
 async function expectNothingLost(editor) {
-  const typed = await editor.inputValue();
+  const typed = await textOf(editor);
   expect(typed.replace(/[.。]/, "")).toBe("tâi-uân ");
   expect(typed).toMatch(/[.。]/);
 }
@@ -74,9 +79,12 @@ test("a click that leaves the caret, then punctuation: no swap", async ({
   const editor = await open(page, { settings: AUTO_SPACE });
   await commitRomanization(editor);
   await page.getByRole("heading", { level: 1 }).click();
-  await editor.focus();
+  // Enter in the title hands the focus back, the caret where it was.
+  await page.keyboard.press("End");
+  await page.keyboard.press("Enter");
+  await expect(editor).toBeFocused();
   await editor.press(".");
-  await expect(editor).toHaveValue(/^tâi-uân [.。]/);
+  await expectText(editor, /^tâi-uân [.。]/);
 });
 
 test("a text change under a still caret, then punctuation: no swap", async ({
@@ -84,12 +92,13 @@ test("a text change under a still caret, then punctuation: no swap", async ({
 }) => {
   const editor = await open(page, { settings: AUTO_SPACE });
   await commitRomanization(editor);
+  // A write the engine did not make: the editor's own, past `Surface`.
   await editor.evaluate((element) => {
-    const end = element.value.length;
-    element.setRangeText("x", end - 1, end, "end");
+    element.taigiEditor.deleteBefore(1);
+    element.taigiEditor.insertText("x");
   });
   await editor.press(".");
-  await expect(editor).toHaveValue(/^tâi-uânx[.。]/);
+  await expectText(editor, /^tâi-uânx[.。]/);
 });
 
 test("an arrow key, then punctuation: no text is lost", async ({ page }) => {
@@ -116,23 +125,23 @@ test("a commit replaces the selection", async ({ page }) => {
   const editor = await open(page);
   await commitWord(editor);
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣台灣");
-  await editor.evaluate((element) => element.setSelectionRange(0, 2));
+  await expectText(editor, "台灣台灣");
+  await select(editor, "台灣");
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣台灣");
-  await editor.evaluate((element) => element.select());
+  await expectText(editor, "台灣台灣");
+  await editor.press("ControlOrMeta+a");
   await editor.pressSequentially("tai");
   await editor.press("q");
-  await expect(editor).not.toHaveValue(/台灣/);
+  await expectNotText(editor, /台灣/);
 });
 
 test("the panel follows the caret and the scroll", async ({ page }) => {
-  // The textarea takes the window's room left over: a tall window gives the
+  // The editor takes the window's room left over: a tall window gives the
   // list room below the caret at both scroll positions.
   await page.setViewportSize({ width: 1280, height: 1000 });
   const editor = await open(page);
   await editor.fill("\n".repeat(60));
-  await editor.evaluate((element) => element.setSelectionRange(30, 30));
+  await caretTo(editor, 30);
   await editor.pressSequentially("tai");
   const scrollTo = (position) =>
     editor.evaluate(async (element, top) => {
@@ -141,11 +150,19 @@ test("the panel follows the caret and the scroll", async ({ page }) => {
       await new Promise(requestAnimationFrame);
     }, position);
   const panelTop = () => panel(page).evaluate((element) => element.offsetTop);
-  // trace: line 30 at 16 + 30 × 30 = 916px; 856 and 806 put it 60px and
-  // 110px down the box.
-  await scrollTo(856);
+  // The caret's line 60px, then 110px, down the box.
+  const line = await editor.evaluate((element) => {
+    // The character before the caret: a collapsed range there has no box.
+    const { anchorNode, anchorOffset } = getSelection();
+    const probe = document.createRange();
+    probe.setStart(anchorNode, anchorOffset - 1);
+    probe.setEnd(anchorNode, anchorOffset);
+    const { top } = probe.getClientRects()[0];
+    return top - element.getBoundingClientRect().top + element.scrollTop;
+  });
+  await scrollTo(line - 60);
   const before = await panelTop();
-  await scrollTo(806);
+  await scrollTo(line - 110);
   expect(await panelTop()).toBe(before + 50);
 });
 
@@ -163,8 +180,8 @@ test("the panel moves along the line as text is committed", async ({
 
 test("a refused write says what it could not write", async ({ page }) => {
   const editor = await open(page);
-  await page.evaluate(() => {
-    document.execCommand = () => false;
+  await editor.evaluate((element) => {
+    element.taigiEditor.insertText = () => false;
   });
   await commitWord(editor);
   await expect(page.locator("#message")).toContainText("台灣");
@@ -197,7 +214,7 @@ test("the window losing focus writes nothing", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("tai");
   await page.evaluate(() => window.dispatchEvent(new Event("blur")));
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await expect(preedit(page)).toContainText("tai");
   await editor.pressSequentially("uan");
   await expect(preedit(page)).toContainText("taiuan");

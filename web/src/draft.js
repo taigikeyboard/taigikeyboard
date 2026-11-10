@@ -1,40 +1,50 @@
-// The text outlives the tab: it is kept in `localStorage` as it changes, put
-// back at load, and shared by every open tab. Every page write goes through
-// `execCommand`, which fires `input`, so one listener sees typing, commits,
-// paste and undo. An empty text opens on the intro (`web.intro`), as ZenPen
-// opens on its own: the user deletes it and writes.
+// The text outlives the tab: its Markdown is kept in `localStorage` as it
+// changes, put back at load, and shared by every open tab. An empty text opens
+// on the intro (`web.intro`), as ZenPen opens on its own: the user deletes it
+// and writes. Its last line, the maintainer's signature, sits against the right
+// edge.
 
-const STORAGE_KEY = "taigi.text";
+import { LOAD_TAG } from "./editor.js";
+import { fromPlainText } from "./markdown.js";
+
+/// The Markdown. `taigi.text`, the textarea's plain text before it, is read once
+/// when this is missing and left as it was.
+const STORAGE_KEY = "taigi.document";
+const PLAIN_TEXT_KEY = "taigi.text";
 // A burst of keys is one write.
 const SAVE_DELAY = 300;
 
 export class Draft {
-  #textarea;
-  #surface;
+  #editor;
   /// The pending save; `null` when storage holds this tab's text.
   #timer = null;
-  /// The intro on show, until the first edit; then `null`.
+  /// The intro's Markdown while it is untouched; then `null`.
   #intro = null;
-  /// What the textarea holds for `#intro`: its signature padded right.
-  #introShown = null;
 
   /// Runs after `Settings` has set the display language `intro` is in.
-  constructor(textarea, surface, intro) {
-    this.#textarea = textarea;
-    this.#surface = surface;
+  constructor(editor, intro) {
+    this.#editor = editor;
     let stored = null;
     try {
       stored = localStorage.getItem(STORAGE_KEY);
+      // Not the empty string: a text the user emptied stays empty.
+      if (stored === null) {
+        const plain = localStorage.getItem(PLAIN_TEXT_KEY);
+        stored = plain === null ? null : fromPlainText(plain);
+      }
     } catch {
       // Blocked storage: the intro shows.
     }
     // ZenPen's `loadState`: an empty text, stored or not, opens on the intro.
     if (stored) {
-      surface.replaceAll(stored);
+      editor.setMarkdown(stored);
     } else {
       this.#showIntro(intro);
     }
-    textarea.addEventListener("input", () => {
+    editor.onTextChange((tags) => {
+      if (tags.has(LOAD_TAG)) {
+        return;
+      }
       this.#intro = null;
       clearTimeout(this.#timer);
       this.#timer = setTimeout(() => this.#flush(), SAVE_DELAY);
@@ -53,64 +63,25 @@ export class Draft {
       if (event.key !== STORAGE_KEY || event.newValue === null) {
         return;
       }
-      if (event.newValue !== textarea.value) {
+      if (event.newValue !== editor.markdown()) {
         clearTimeout(this.#timer);
         this.#timer = null;
         this.#intro = null;
-        surface.replaceAll(event.newValue);
+        editor.setMarkdown(event.newValue);
       }
     });
-    // A new width moves the right edge the signature sits on.
-    new ResizeObserver(() => this.translateIntro(this.#intro)).observe(
-      textarea,
-    );
   }
 
-  /// Display Language changed, or the width: an untouched intro follows it.
+  /// Display Language changed: an untouched intro follows it.
   translateIntro(intro) {
-    if (this.#intro !== null && this.#textarea.value === this.#introShown) {
+    if (this.#intro !== null && this.#editor.markdown() === this.#intro) {
       this.#showIntro(intro);
     }
   }
 
   #showIntro(intro) {
-    this.#intro = intro;
-    this.#introShown = this.#signedRight(intro);
-    this.#surface.replaceAll(this.#introShown);
-  }
-
-  /// The intro's last line, the maintainer's signature, pushed to the right
-  /// edge with spaces: a textarea aligns no single line. The spaces are what
-  /// fits the current width, one short so the line never wraps.
-  #signedRight(intro) {
-    const textarea = this.#textarea;
-    const style = getComputedStyle(textarea);
-    const room =
-      textarea.clientWidth -
-      Number.parseFloat(style.paddingLeft) -
-      Number.parseFloat(style.paddingRight);
-    const breakAt = intro.lastIndexOf("\n") + 1;
-    const signature = intro.slice(breakAt);
-    const spaceWidth = this.#width(" ".repeat(100), style) / 100;
-    const free = room - this.#width(signature, style);
-    const count = Math.max(0, Math.floor(free / spaceWidth) - 1);
-    return intro.slice(0, breakAt) + " ".repeat(count) + signature;
-  }
-
-  /// `text` laid out in the textarea's font. A canvas resolves `-apple-system`
-  /// to another face in WebKit, so the page measures itself.
-  #width(text, style) {
-    const probe = document.createElement("span");
-    probe.style.cssText =
-      "position:absolute;visibility:hidden;white-space:pre;top:0;left:0";
-    for (const name of ["fontFamily", "fontSize", "fontStyle", "fontWeight"]) {
-      probe.style[name] = style[name];
-    }
-    probe.textContent = text;
-    document.body.append(probe);
-    const { width } = probe.getBoundingClientRect();
-    probe.remove();
-    return width;
+    this.#editor.setMarkdown(intro, { alignLastRight: true });
+    this.#intro = this.#editor.markdown();
   }
 
   #flush() {
@@ -120,7 +91,7 @@ export class Draft {
     clearTimeout(this.#timer);
     this.#timer = null;
     try {
-      localStorage.setItem(STORAGE_KEY, this.#textarea.value);
+      localStorage.setItem(STORAGE_KEY, this.#editor.markdown());
     } catch {
       // Private windows and a full quota refuse. The text stays in this tab.
     }

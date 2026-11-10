@@ -6,7 +6,9 @@ import { expect, test } from "@playwright/test";
 import {
   candidates,
   commitWord,
+  emptyBox,
   expectState,
+  expectText,
   firstSection,
   inputMode,
   open,
@@ -34,7 +36,7 @@ test("the sidebar starts open beside the page and keeps the keyboard", async ({
   await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
   await expect(editor).toBeFocused();
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
 });
 
 test("the sidebar remembers being closed", async ({ page }) => {
@@ -119,7 +121,7 @@ test("Candidate Display reaches the session", async ({ page }) => {
   await page.getByLabel("Candidate Display").selectOption("romanOnly");
   await editor.focus();
   await commitWord(editor);
-  await expect(editor).toHaveValue("tâi-uân");
+  await expectText(editor, "tâi-uân");
 });
 
 test("a chord's write shows in the form", async ({ page }) => {
@@ -164,8 +166,8 @@ test("a stored value no control offers shows the default", async ({ page }) => {
 test("the panel stays inside the editor at its foot", async ({ page }) => {
   const editor = await open(page);
   await editor.fill("\n".repeat(60));
+  await editor.press("ControlOrMeta+End");
   await editor.evaluate((element) => {
-    element.setSelectionRange(60, 60);
     element.scrollTop = element.scrollHeight;
   });
   await editor.pressSequentially("taiuan");
@@ -208,7 +210,7 @@ test("a document with no revision takes a form change", async ({ page }) => {
     );
   });
   await page.reload();
-  await expect(editor).toBeEnabled();
+  await expect(editor).toHaveAttribute("contenteditable", "true");
   await inputMode(page).selectOption("tps");
   await page.reload();
   await expect(inputMode(page)).toHaveValue("tps");
@@ -251,14 +253,14 @@ test("a state that appears shifts nothing", async ({ page }) => {
   expect(await editor.boundingBox()).toEqual(before);
 });
 
-test("/ moves into the textarea from anywhere but a text field", async ({
+test("/ moves into the editor from anywhere but a text field", async ({
   page,
 }) => {
   const editor = await open(page);
   await toggle(page).focus();
   await page.keyboard.press("/");
   await expect(editor).toBeFocused();
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await page.getByLabel("Auto-Space").focus();
   await page.keyboard.press("/");
   await expect(editor).toBeFocused();
@@ -268,11 +270,11 @@ test("/ moves into the textarea from anywhere but a text field", async ({
 });
 
 // ZenPen's page: the title and the text, nothing drawn around them once loaded.
-test("around the textarea, nothing", async ({ page }) => {
+test("around the editor, nothing", async ({ page }) => {
   await open(page);
   const seen = await page.evaluate(() =>
     Array.from(
-      document.querySelectorAll("main :is(p, button, progress)"),
+      document.querySelectorAll("main :is(p, button, progress):not(#text *)"),
       (element) => {
         const { width, height } = element.getBoundingClientRect();
         const isDrawn =
@@ -296,12 +298,12 @@ test("a window that fits the page does not scroll", async ({ page }) => {
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
 });
 
-test("the textarea takes the window's room left over", async ({ page }) => {
+test("the editor takes the window's room left over", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const editor = await open(page);
   const short = (await editor.boundingBox()).height;
   await page.setViewportSize({ width: 1280, height: 1200 });
-  // Every pixel the window gains goes to the textarea.
+  // Every pixel the window gains goes to the editor.
   await expect
     .poll(async () => (await editor.boundingBox()).height)
     .toBeCloseTo(short + 400, 0);
@@ -385,7 +387,7 @@ test("General rows reach the session", async ({ page }) => {
   await page.getByLabel("Syllable Separator").selectOption("space");
   await editor.focus();
   await commitWord(editor);
-  await expect(editor).toHaveValue("tâi uân");
+  await expectText(editor, "tâi uân");
 });
 
 test("Output Script stores a boolean and writes romanization", async ({
@@ -405,7 +407,7 @@ test("Output Script stores a boolean and writes romanization", async ({
     .toBe(false);
   await editor.focus();
   await commitWord(editor);
-  await expect(editor).toHaveValue("tâi-uân");
+  await expectText(editor, "tâi-uân");
 });
 
 test("Output Script greys under Romanization Only", async ({ page }) => {
@@ -529,15 +531,18 @@ test("the composition sits on the caret's line, clear of the list", async ({
   };
   // From the first line to past the last: below, beside, above, then scrolled.
   for (let line = 0; line < 14; line += 1) {
-    await editor.fill("\n".repeat(line));
-    await editor.press("End");
+    // Line breaks in one paragraph: every line 30px, no block margin between.
+    await emptyBox(editor);
+    for (let index = 0; index < line; index += 1) {
+      await editor.press("Shift+Enter");
+    }
     await editor.pressSequentially("tai");
     await expect(candidates(page).first()).toBeVisible();
     const composition = await preedit(page).evaluate(rect);
     const list = await panel(page).evaluate(rect);
     const box = await editor.evaluate(rect);
     const lineHeight = 30;
-    // Past that the textarea scrolls, which WebKit animates.
+    // Past that the editor scrolls, which WebKit animates.
     if (line < 8) {
       // trace: `#text` padding-top 22px, line-height 30px.
       const expected = box.y + 22 + line * lineHeight;
