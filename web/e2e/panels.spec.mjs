@@ -1,4 +1,4 @@
-// The TPS key panel, the symbol picker through the candidate panel, and the
+// The TPS key panel, the Telex guide, the symbol picker through the candidate panel, and the
 // a11y rows of docs/architecture/web-roadmap.md § Phase 5.
 
 import { expect, test } from "@playwright/test";
@@ -71,6 +71,66 @@ test("the panel leaves the text on screen", async ({ page }) => {
   const editor = await open(page, { settings: typingTps });
   await expect(editor).toBeInViewport();
   await expect(cap(page, "ㄅ")).toBeInViewport();
+});
+
+const guide = (page) => page.locator("#telex-guide");
+
+test("the guide's chord shows and hides its card, and a reload keeps it", async ({
+  page,
+}) => {
+  // No `settings`: a seed would run again on the reload. Ctrl+Alt+/ =
+  // ShowTelexGuide; English `settings.toneSchemeTelex` = "Telex",
+  // `desktop.telexGuideTone` = "Tone {tone}", ROWS[0] = x → "1 / 4".
+  const editor = await open(page);
+  await expect(guide(page)).toBeHidden();
+  await editor.press(`${TIER}+/`);
+  await expect(guide(page)).toBeVisible();
+  await expect(guide(page).locator("h2")).toHaveText("Telex");
+  await expect(guide(page).locator("dt").first()).toHaveText("x");
+  await expect(guide(page).locator("dd").first()).toHaveText("Tone 1 / 4");
+  await expect(panel(page)).toBeHidden();
+  await page.reload();
+  // The rows are the session's: wait for them, not for the page.
+  await expect(guide(page)).toBeVisible();
+  await expect(guide(page).locator("h2")).toHaveText("Telex");
+  await editor.press(`${TIER}+/`);
+  await expect(guide(page)).toBeHidden();
+});
+
+test("the guide floats over the editor and moves nothing", async ({ page }) => {
+  const editor = await open(page);
+  const before = await editor.boundingBox();
+  await editor.press(`${TIER}+/`);
+  await expect(guide(page).locator("h2")).toHaveText("Telex");
+  expect(await editor.boundingBox()).toEqual(before);
+  const card = await guide(page).boundingBox();
+  expect(card.y + card.height).toBeLessThanOrEqual(before.y + before.height);
+});
+
+test("the guide stays up beside the candidate list", async ({ page }) => {
+  const editor = await open(page, { settings: { telexGuideShown: true } });
+  await editor.pressSequentially("tai");
+  await expect(candidates(page).first()).toBeVisible();
+  await expect(guide(page)).toBeVisible();
+  await expect(candidates(page).first()).not.toHaveText(/Telex/);
+  await editor.press("Escape");
+  await expect(guide(page)).toBeVisible();
+});
+
+test("the guide goes under TPS and comes back after", async ({ page }) => {
+  // trace: Ctrl+Alt+P = ToggleTps; `is_telex_guide_wanted`.
+  const editor = await open(page, { settings: { telexGuideShown: true } });
+  await editor.press(`${TIER}+p`);
+  await expect(guide(page)).toBeHidden();
+  await editor.press(`${TIER}+p`);
+  await expect(guide(page)).toBeVisible();
+});
+
+test("the guide is spelled in the display language", async ({ page }) => {
+  // trace: Hanji `desktop.telexGuideTone` = "第 {tone} 調"; English "Tone {tone}".
+  await open(page, { settings: { telexGuideShown: true } });
+  await page.locator('select[name="displayLanguage"]').selectOption("hanji");
+  await expect(guide(page).locator("dd").first()).toHaveText("第 1 / 4 調");
 });
 
 test("a click types the bare glyph, and the focus stays", async ({ page }) => {

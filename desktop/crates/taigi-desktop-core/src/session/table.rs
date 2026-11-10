@@ -12,7 +12,8 @@ use crate::strings::StringKey;
 /// The lookup table as things now stand — the symbol picker while it is
 /// up, else the candidate list, else the Telex guide if it is wanted: shown,
 /// updated in place, or taken down. The guide gives way to the list because
-/// the framework has one table to draw (#684). Appended after the composing
+/// the framework has one table to draw (#684); a shell with a card of its own
+/// for the guide (`EngineState::draws_telex_guide`) never gets it here. Appended after the composing
 /// signals so the preedit the list describes is already on screen.
 pub(crate) fn present_table(
     runtime: &DesktopRuntime,
@@ -31,7 +32,7 @@ pub(crate) fn present_table(
     }
     let slot_key_set = bindings.slot_key_set();
     if state.candidates.is_empty() {
-        if settings.is_telex_guide_wanted() {
+        if settings.is_telex_guide_wanted() && !state.draws_telex_guide {
             emits.push(Emit::LookupTable(telex_guide_table(runtime)));
             state.is_table_shown = true;
         } else if state.is_table_shown {
@@ -300,6 +301,22 @@ mod tests {
         });
         let emits = present_under(&mut state, guide_wanted());
         assert!(matches!(emits.as_slice(), [Emit::LookupTable(table)] if table.cursor_visible));
+    }
+
+    #[test]
+    fn a_shell_that_draws_its_own_guide_gets_no_guide_table() {
+        // trace: telexGuideShown, but draws_telex_guide → the guide is not a
+        // table; one left on screen goes down.
+        let mut state = EngineState {
+            draws_telex_guide: true,
+            is_table_shown: true,
+            ..EngineState::default()
+        };
+        assert_eq!(
+            present_under(&mut state, guide_wanted()),
+            vec![Emit::HideLookupTable]
+        );
+        assert!(present_under(&mut state, guide_wanted()).is_empty());
     }
 
     #[test]

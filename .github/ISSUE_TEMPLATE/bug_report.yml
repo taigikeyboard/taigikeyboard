@@ -49,6 +49,7 @@ body:
         - TL（臺羅）
         - POJ（白話字）
         - TPS（臺灣方音符號）
+        - EN
         - Not about typing（與打字無關）
     validations:
       required: true

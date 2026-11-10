@@ -7,8 +7,9 @@ use taigi_desktop_core::candidates::{
     CellLayer, ExpandableAxis, ExpandableDisplayMode, ExpandableListModel, ExpandableModeChange,
     ModeTransition, Rect, Track,
 };
-use taigi_desktop_core::keys::tps_keyboard_rows;
+use taigi_desktop_core::keys::{telex_guide_rows, tps_keyboard_rows};
 use taigi_desktop_core::session::{Emit, ListSelection, LookupTableContent};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 
 /// One candidate: the two scripts apart, because the panel sets them apart.
 #[derive(Debug, Serialize)]
@@ -309,6 +310,38 @@ pub(crate) fn tps_rows_json() -> String {
     serde_json::to_string(&rows).unwrap_or_else(|_| String::from("[]"))
 }
 
+/// The Telex guide's card: the scheme's name over the key table, as the
+/// macOS card draws it (`TelexGuidePanel.makePanel`).
+#[derive(Debug, Serialize)]
+pub(crate) struct WireTelexGuide {
+    title: String,
+    rows: Vec<WireTelexRow>,
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct WireTelexRow {
+    key: &'static str,
+    meaning: String,
+}
+
+/// The card, as JSON, spelled by `strings`.
+pub(crate) fn telex_guide_json(strings: &StringResolver) -> String {
+    let guide = WireTelexGuide {
+        title: strings
+            .resolve(StringKey::SettingsToneSchemeTelex)
+            .to_owned(),
+        rows: telex_guide_rows(strings)
+            .into_iter()
+            .map(|row| WireTelexRow {
+                key: row.key,
+                meaning: row.meaning,
+            })
+            .collect(),
+    };
+    // Strings only: this cannot fail.
+    serde_json::to_string(&guide).unwrap_or_else(|_| String::from("{}"))
+}
+
 /// What the two mode emits carry.
 pub(crate) struct ModeText {
     pub symbol: &'static str,
@@ -373,6 +406,7 @@ mod tests {
     use super::*;
     use taigi_desktop_core::composing::CandidateCellContent;
     use taigi_desktop_core::keys::TpsKeyCapIndex;
+    use taigi_desktop_core::strings::DisplayLanguage;
 
     fn json(emit: Emit) -> String {
         let mode = ModeText {
@@ -426,6 +460,20 @@ mod tests {
             json(Emit::TpsKeyboardCapTyped(TpsKeyCapIndex { row: 1, cap: 2 })),
             r#"{"type":"tpsKeyboardCapTyped","row":1,"cap":2}"#
         );
+    }
+
+    #[test]
+    fn the_telex_guide_is_the_cores_table_under_its_title() {
+        // trace: English `settings.toneSchemeTelex` = "Telex", ROWS[0] = x,
+        // ROWS[7] = f.
+        let strings = StringResolver::new(DisplayLanguage::English);
+        let guide: serde_json::Value = serde_json::from_str(&telex_guide_json(&strings)).unwrap();
+        assert_eq!(guide["title"], "Telex");
+        let shared = telex_guide_rows(&strings);
+        assert_eq!(guide["rows"].as_array().unwrap().len(), shared.len());
+        assert_eq!(guide["rows"][0]["key"], "x");
+        assert_eq!(guide["rows"][0]["meaning"], shared[0].meaning);
+        assert_eq!(guide["rows"][7]["key"], "f");
     }
 
     #[test]

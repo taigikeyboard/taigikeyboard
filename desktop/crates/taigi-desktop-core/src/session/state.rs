@@ -25,6 +25,10 @@ pub struct EngineState {
     /// What lays a list out, for a shell that draws its own window. `None`:
     /// the shell's framework pages it.
     pub list_layout: Option<Arc<dyn ListLayout>>,
+    /// The shell draws the Telex guide in a card of its own, apart from the
+    /// list, as macOS does (`TelexGuidePanel.swift`): the table never carries
+    /// it. `false`: the framework has one table, and the guide is that table.
+    pub draws_telex_guide: bool,
     /// The auto-space swap promised to the next key.
     pub armed_auto_space: bool,
     /// The client can take an [`Emit::DeleteSurrounding`].
@@ -54,6 +58,7 @@ impl Default for EngineState {
             candidates: CandidateSource::default(),
             selection: ListSelection::new(0),
             list_layout: None,
+            draws_telex_guide: false,
             armed_auto_space: false,
             can_delete_surrounding: false,
             is_password_field: false,

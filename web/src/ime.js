@@ -15,6 +15,7 @@ import { Settings } from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
 import { Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
+import { TelexGuide } from "./telex_guide.js";
 import { TpsKeyboard } from "./tps_keyboard.js";
 
 /// A call with no instance to answer it: the key is spent.
@@ -62,6 +63,7 @@ const tpsKeyboard = new TpsKeyboard(
     apply(call((session) => session.tpsKeyPress(glyph)));
   },
 );
+const telexGuide = new TelexGuide(document.getElementById("telex-guide"));
 const sidebar = new Sidebar(
   document.getElementById("sidebar-toggle"),
   document.getElementById("sidebar"),
@@ -211,6 +213,7 @@ async function start() {
     learning.attach(starting);
     redrawShortcuts();
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
+    redrawTelexGuide();
     editor.setEditable(true);
     editor.focus();
   } catch (error) {
@@ -296,6 +299,7 @@ function changeSettings(json) {
   call((current) => current.setSettings(json));
   redrawMessage();
   redrawShortcuts();
+  redrawTelexGuide();
   draft.translateIntro(translate("web.intro"));
 }
 
@@ -304,6 +308,14 @@ function redrawShortcuts() {
   const { groups } = call((current) => current.shortcuts());
   if (groups) {
     drawShortcuts(document.getElementById("shortcuts"), groups);
+  }
+}
+
+/// The guide is spelled in the display language.
+function redrawTelexGuide() {
+  const guide = run((current) => current.telexGuide());
+  if (guide !== undefined) {
+    telexGuide.draw(JSON.parse(guide));
   }
 }
 
