@@ -269,6 +269,11 @@ test("another input method's keys stay its own", async ({ page }) => {
   await expect(notice).toBeHidden();
   await editor.dispatchEvent("compositionstart");
   await expect(notice).toBeVisible();
+  // Drawn in the mode chip, in the mode's place.
+  await expect(page.locator("#mode-line > #notice")).toHaveText(
+    "Another input method is active. Turn it off to type here.",
+  );
+  await expect(page.locator("#mode-name")).toBeHidden();
   await page.evaluate(() => {
     const event = new KeyboardEvent("keydown", {
       key: "a",
@@ -281,4 +286,5 @@ test("another input method's keys stay its own", async ({ page }) => {
   await expect(panel(page)).toBeHidden();
   await editor.dispatchEvent("compositionend");
   await expect(notice).toBeHidden();
+  await expect(page.locator("#mode-name")).toBeVisible();
 });

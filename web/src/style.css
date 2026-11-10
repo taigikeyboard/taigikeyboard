@@ -842,21 +842,20 @@ summary:focus-visible {
   backdrop-filter: blur(24px) saturate(180%);
 }
 
-#notice {
-  visibility: hidden;
-}
-
-#notice[data-active] {
-  visibility: visible;
+/* In the mode chip, in the mode's place: drawn, because a composition the
+   browser keeps open looks like a page that ignores its keys. */
+#notice:not([data-active]),
+#mode-line:has(#notice[data-active]) > :not(#notice) {
+  display: none;
 }
 
 /* A chip in the row under the editor, which keeps its room, so it moves
    nothing: the mode and the input script. Black, white and grey only. English
    mode turns it solid and names the Shift tap back: there the page looks as if
-   it ignores the engine. Unseen until the session spells it: a marker, as
-   `#telex-guide` has. On the window's right gutter, not the column's edge: the
-   margin spends the half of the body's width that centering left beside
-   `main`. */
+   it ignores the engine, as it does while `#notice` is up. Unseen until the
+   session spells it: a marker, as `#telex-guide` has. On the window's right
+   gutter, not the column's edge: the margin spends the half of the body's
+   width that centering left beside `main`. */
 #mode-line {
   display: flex;
   margin-right: calc((100% - 100cqw) / 2);
@@ -885,7 +884,7 @@ summary:focus-visible {
   content: "";
 }
 
-#mode-line[data-english] {
+#mode-line:is([data-english], :has(#notice[data-active])) {
   border-color: transparent;
   background: var(--text);
   color: var(--bg);
