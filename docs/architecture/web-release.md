@@ -8,11 +8,11 @@ The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigik
 
 ## Deploy
 
-`.github/workflows/web.yml` deploys nightly at 00:00 Taiwan time (16:00 UTC; GitHub may start a scheduled run late): it runs its gates on `main`'s head and, when they pass, starts a deploy of that commit. A night whose head is the one the last successful nightly run had deploys nothing. A push to `main` runs the gates only. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
+`.github/workflows/web.yml` deploys nightly at 00:00 Taiwan time (16:00 UTC; GitHub may start a scheduled run late): it runs its gates on `main`'s head and, when they pass, starts a deploy, which builds `main`'s head again (a commit pushed between the two goes out ungated). A night whose head is the one the last successful nightly run had deploys nothing. A push to `main` runs the gates only. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
 
 The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next nightly deploy replaces the site.
 
-To deploy by hand: `taigikeyboard/web` → Actions → Deploy → Run workflow, the commit left blank, deploys `main`'s head (maintainer 2026-11-10). To go back to a commit, give its full hash.
+To deploy by hand: `taigikeyboard/web` → Actions → Deploy → Run workflow. The deploy takes no input and always builds `main`'s head (maintainer 2026-11-10); there is no rollback to an older commit — fix forward on `main`.
 
 Secret:
 
@@ -36,11 +36,6 @@ name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      commit:
-        description: Full commit of taigikeyboard/taigikeyboard; blank deploys main's head
-        required: false
-        default: ''
 
 permissions:
   contents: read
@@ -57,23 +52,19 @@ jobs:
       build: ${{ steps.name.outputs.build }}
       commit: ${{ steps.commit.outputs.commit }}
     steps:
-      # The nightly run names the commit its gates passed; a run by hand may leave
-      # it blank for main's head, read once so every job builds the same commit.
-      - name: Resolve the commit
-        id: commit
-        run: |
-          commit="${INPUT:-$(gh api repos/taigikeyboard/taigikeyboard/commits/main --jq .sha)}"
-          echo "commit=$commit" >> "$GITHUB_OUTPUT"
-          echo "commit $commit" >> "$GITHUB_STEP_SUMMARY"
-        env:
-          GH_TOKEN: ${{ github.token }}
-          INPUT: ${{ inputs.commit }}
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: taigikeyboard/taigikeyboard
-          ref: ${{ steps.commit.outputs.commit }}
+          ref: main
           persist-credentials: false
+
+      # Read once so the check job reads the same commit, not a newer main.
+      - name: Name the commit
+        id: commit
+        run: |
+          commit=$(git rev-parse HEAD)
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+          echo "commit $commit" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -87,15 +78,6 @@ jobs:
       - name: Install the toolchain (web/rust-toolchain.toml)
         working-directory: web
         run: rustup toolchain install --no-self-update
-
-      # `ref` takes any commit the repository can reach, a fork's included.
-      - name: Refuse a commit that is not on main
-        run: |
-          status=$(gh api "repos/taigikeyboard/taigikeyboard/compare/main...$COMMIT" --jq .status)
-          test "$status" = identical || test "$status" = behind
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMIT: ${{ steps.commit.outputs.commit }}
 
       - name: Stage the site
         run: make -C web site

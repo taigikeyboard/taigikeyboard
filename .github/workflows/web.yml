@@ -129,6 +129,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Start the deploy in taigikeyboard/web
-        run: gh workflow run deploy.yml --repo taigikeyboard/web --field "commit=$GITHUB_SHA"
+        run: gh workflow run deploy.yml --repo taigikeyboard/web
         env:
           GH_TOKEN: ${{ secrets.WEB_DEPLOY_TOKEN }}
