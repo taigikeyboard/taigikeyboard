@@ -217,11 +217,11 @@ pub const CANDIDATE_SIZE: SettingsKey<CandidateSizeChoice> =
 /// the primary size. The other desktops size both scripts from
 /// `candidateTextSize`. Clamped to `CANDIDATE_FONT_PX_RANGE`. macOS removes
 /// it in `resetAppearanceSettings`.
-pub const HANJI_FONT_SIZE: SettingsKey<i64> = SettingsKey::new("hanjiFontSize", 15);
+pub const HANJI_FONT_SIZE: SettingsKey<i64> = SettingsKey::new("hanjiFontSize", 16);
 /// The Linux candidate window's secondary size, in px: the other line of a
 /// paired cell, and a one-script cell in the mode's other script. The stored
 /// name stays `romanFontSize`. Same range and reset as the primary size.
-pub const ROMAN_FONT_SIZE: SettingsKey<i64> = SettingsKey::new("romanFontSize", 14);
+pub const ROMAN_FONT_SIZE: SettingsKey<i64> = SettingsKey::new("romanFontSize", 16);
 /// What a Hanji or romanization size is allowed to be. The settings row
 /// stops at the ends; a hand-edited value is clamped to the same range.
 pub const CANDIDATE_FONT_PX_RANGE: std::ops::RangeInclusive<i64> = 12..=48;
@@ -233,7 +233,7 @@ pub const HANJI_FONT_FAMILY: SettingsKey<&'static str> = SettingsKey::new("hanji
 /// the same default as the Hanji row.
 pub const ROMAN_FONT_FAMILY: SettingsKey<&'static str> = SettingsKey::new("romanFontFamily", "");
 /// Corner radius of the Linux candidate window, in px. `0` is square.
-pub const CANDIDATE_CORNER_RADIUS: SettingsKey<i64> = SettingsKey::new("candidateCornerRadius", 4);
+pub const CANDIDATE_CORNER_RADIUS: SettingsKey<i64> = SettingsKey::new("candidateCornerRadius", 8);
 /// The air around the Linux candidate window's text, in px. It is the window
 /// pad; the cell pad, the gap, the line gap and the stacked-script gap stay
 /// in the same ratio (`taigikeyboard-popup` `pads`). A new spelling:
@@ -244,7 +244,7 @@ pub const CANDIDATE_WINDOW_PADDING: SettingsKey<i64> =
 /// cell. `100` meets the window's outer edge, so no pad shows around the
 /// highlighted candidate. A new spelling: `candidateWindowSize` stays retired.
 pub const CANDIDATE_HIGHLIGHT_FILL: SettingsKey<i64> =
-    SettingsKey::new("candidateHighlightFill", 50);
+    SettingsKey::new("candidateHighlightFill", 25);
 /// What `candidateHighlightFill` is allowed to be.
 pub const CANDIDATE_HIGHLIGHT_FILL_RANGE: std::ops::RangeInclusive<i64> = 0..=100;
 /// Which color set the Linux candidate window uses. `Custom` reads the four
@@ -516,19 +516,19 @@ mod tests {
         assert_eq!(IS_HANJI_FIRST.name, "isTranslateSwapped");
         assert_eq!(CANDIDATE_DISPLAY_MODE.name, "candidateDisplayMode");
         assert_eq!(HANJI_FONT_SIZE.name, "hanjiFontSize");
-        assert_eq!(HANJI_FONT_SIZE.default, 15);
+        assert_eq!(HANJI_FONT_SIZE.default, 16);
         assert_eq!(ROMAN_FONT_SIZE.name, "romanFontSize");
-        assert_eq!(ROMAN_FONT_SIZE.default, 14);
+        assert_eq!(ROMAN_FONT_SIZE.default, 16);
         assert_eq!(CANDIDATE_FONT_PX_RANGE, 12..=48);
         assert_eq!(HANJI_FONT_FAMILY.name, "hanjiFontFamily");
         assert_eq!(HANJI_FONT_FAMILY.default, "");
         assert_eq!(ROMAN_FONT_FAMILY.default, "");
         assert_eq!(CANDIDATE_CORNER_RADIUS.name, "candidateCornerRadius");
-        assert_eq!(CANDIDATE_CORNER_RADIUS.default, 4);
+        assert_eq!(CANDIDATE_CORNER_RADIUS.default, 8);
         assert_eq!(CANDIDATE_WINDOW_PADDING.name, "candidateWindowPadding");
         assert_eq!(CANDIDATE_WINDOW_PADDING.default, 4);
         assert_eq!(CANDIDATE_HIGHLIGHT_FILL.name, "candidateHighlightFill");
-        assert_eq!(CANDIDATE_HIGHLIGHT_FILL.default, 50);
+        assert_eq!(CANDIDATE_HIGHLIGHT_FILL.default, 25);
         assert_eq!(CANDIDATE_HIGHLIGHT_FILL_RANGE, 0..=100);
         assert_eq!(CANDIDATE_CHROME_PX_RANGE, 0..=32);
         assert_eq!(CANDIDATE_COLOR_THEME.name, "candidateColorTheme");

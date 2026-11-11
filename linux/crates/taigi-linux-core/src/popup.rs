@@ -36,8 +36,8 @@ impl PopupStyle {
     /// The shipped look, used when no settings document is open yet.
     pub fn standard() -> Self {
         Self {
-            hanji_px: 15,
-            roman_px: 14,
+            hanji_px: 16,
+            roman_px: 16,
             hanji_leads: true,
             chrome: Chrome {
                 follow_system: true,

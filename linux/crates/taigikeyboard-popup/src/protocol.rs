@@ -79,14 +79,14 @@ impl Default for Chrome {
     fn default() -> Self {
         Self {
             padding: default_padding(),
-            radius: 4,
+            radius: 8,
             hanji_family: String::new(),
             roman_family: String::new(),
             text_color: default_text(),
             selected_text_color: default_selected_text(),
             background_color: default_background(),
             selected_background_color: default_selected_background(),
-            highlight_fill: 50,
+            highlight_fill: 25,
             follow_system: false,
         }
     }
