@@ -6,7 +6,6 @@
 //! (USER 2026-10-07). TPS is full width only; there Ctrl on a key of this map
 //! types its mark (`ComposingKeyIntent::tps_punctuation_chord`), except the
 //! keys in [`HOST_CHORD_KEYS`], and the swap attaches the full-width glyph.
-//! macOS keeps a Swift twin: `macos/.../Policies/FullWidthPunctuation.swift`.
 
 /// The MOE manual's symbol shortcut table, minus what this input method must keep
 /// half-width: digits (tone markers), the hyphen (syllable separator),

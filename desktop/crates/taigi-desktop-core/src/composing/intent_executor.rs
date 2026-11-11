@@ -183,15 +183,8 @@ pub fn perform_intent(
             else {
                 return false;
             };
-            // The swap is read before the width (the word in front of the
-            // caret is romanization, which keeps Latin marks); TPS has only
-            // the full width, so there the swap attaches the glyph written.
             let punctuation = document_punctuation(settings, &typed);
-            let swapping = if is_tps(settings) {
-                punctuation.as_deref().unwrap_or(&typed)
-            } else {
-                &typed
-            };
+            let swapping = swap_text(settings, &typed, punctuation.as_deref());
             if swap_auto_space(swapping, settings, manager, surface) {
                 return true;
             }
@@ -319,6 +312,22 @@ pub fn pass_through_may_consume(
         && engine::is_attaching_punctuation(&typed)
 }
 
+/// Whether a key the classifier passes through outside a composition would
+/// take an armed auto space's place: Auto-Space on and the text the swap
+/// writes for it attaching punctuation (`swap_auto_space`). For a shell
+/// that must make the swap's client checks before the key runs (macOS),
+/// and only asks them when this holds.
+pub fn pass_through_may_swap(snapshot: &KeyEventSnapshot, settings: &SettingsDocument) -> bool {
+    let Some(typed) =
+        ComposingKeyIntent::document_text(snapshot, settings.choice(&keys::INPUT_MODE))
+    else {
+        return false;
+    };
+    let punctuation = document_punctuation(settings, &typed);
+    settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        && engine::is_attaching_punctuation(swap_text(settings, &typed, punctuation.as_deref()))
+}
+
 /// Re-reads the candidates for the composition as it now stands. With the
 /// Show Candidate Window setting off nothing is fetched, not merely not
 /// shown: a list kept behind no window would hand Space and the slot keys to
@@ -391,6 +400,23 @@ fn close_open_list(list: &mut CandidateSource, surface: &mut impl IntentSurface)
 
 fn is_tps(settings: &SettingsDocument) -> bool {
     settings.choice(&keys::INPUT_MODE) == InputMode::Tps
+}
+
+/// What the swap attaches for a pass-through key that typed `typed` and
+/// writes `punctuation` (`document_punctuation`). The swap is read before
+/// the width (the word in front of the caret is romanization, which keeps
+/// Latin marks); TPS has only the full width, so there the swap attaches the
+/// glyph written.
+fn swap_text<'a>(
+    settings: &SettingsDocument,
+    typed: &'a str,
+    punctuation: Option<&'a str>,
+) -> &'a str {
+    if is_tps(settings) {
+        punctuation.unwrap_or(typed)
+    } else {
+        typed
+    }
 }
 
 /// Commits the candidate behind cell `cell`, in the cell's own script or

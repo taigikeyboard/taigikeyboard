@@ -8,8 +8,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
-    insert_symbol, pass_through_may_consume, perform_intent, represent_list, CandidateSource,
-    ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface, SystemClock,
+    insert_symbol, pass_through_may_consume, pass_through_may_swap, perform_intent, represent_list,
+    CandidateSource, ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface,
+    SystemClock,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
@@ -377,6 +378,36 @@ fn a_pass_through_key_is_consumed_for_punctuation_or_an_armed_swap() {
     let letter = KeyEventSnapshot::text("a", KeyModifiers::NONE);
     assert!(!pass_through_may_consume(&letter, &settings, true));
     assert!(!pass_through_may_consume(&no_key(), &settings, true));
+}
+
+#[test]
+fn a_pass_through_key_may_swap_when_what_the_swap_writes_attaches() {
+    let mut settings = SettingsDocument::default();
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
+    let apostrophe = KeyEventSnapshot::text("'", KeyModifiers::NONE);
+    for is_hanji_first in [true, false] {
+        settings.set_bool(&keys::IS_HANJI_FIRST, is_hanji_first);
+        assert!(pass_through_may_swap(&comma(), &settings));
+        // trace: outside TPS the swap writes the key as typed, and the
+        // straight quote is not attaching (`punctuation.rs` ATTACHING) even
+        // where the map makes it `、`.
+        assert!(!pass_through_may_swap(&apostrophe, &settings));
+    }
+    // An opening bracket, a letter, a host chord, no key: nothing attaches.
+    for key in [
+        KeyEventSnapshot::text("(", KeyModifiers::NONE),
+        KeyEventSnapshot::text("a", KeyModifiers::NONE),
+        KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL),
+        no_key(),
+    ] {
+        assert!(!pass_through_may_swap(&key, &settings), "{key:?}");
+    }
+    // TPS swaps the glyph written: the chord's `'` writes `、`, which attaches.
+    settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+    let ctrl_apostrophe = KeyEventSnapshot::chord(None, "'", KeyModifiers::CONTROL);
+    assert!(pass_through_may_swap(&ctrl_apostrophe, &settings));
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false);
+    assert!(!pass_through_may_swap(&ctrl_apostrophe, &settings));
 }
 
 /// A key read in the user's Dvorak / Colemak layout (`is_remapped`): the

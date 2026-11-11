@@ -44,25 +44,6 @@ final class SymbolTableTests: XCTestCase {
         XCTAssertEqual(punctuation[baseline + 1], "⋯")
     }
 
-    /// The full-width marks the composition maps a typed key onto are all
-    /// reachable from the picker too, so a user in romanization mode — where
-    /// the map is off — has a way to write them.
-    func testThePunctuationCategory_carriesEveryFullWidthMappedMark() throws {
-        let table = try TestFixtures.shippedSymbolTable()
-        let punctuation = try XCTUnwrap(table.category(.punctuation)).symbols
-        let brackets = try XCTUnwrap(table.category(.brackets)).symbols.joined()
-
-        // The keys `FullWidthPunctuation` maps; a key the policy does not map
-        // answers nil and is skipped, so this reads the policy rather than
-        // restating it.
-        for mapped in ",.?!;:()[]{}<>'\\~@#$%^&*_+".compactMap({ FullWidthPunctuation.mapped(String($0)) }) {
-            XCTAssertTrue(
-                punctuation.contains(mapped) || brackets.contains(mapped),
-                "\(mapped) is typed by the full-width map but not offered by the picker",
-            )
-        }
-    }
-
     func testAnEmptyCategoryList_isRefused() {
         XCTAssertThrowsError(try SymbolTable(categories: [])) { error in
             XCTAssertEqual(error as? SymbolTable.ValidationError, .noCategories)

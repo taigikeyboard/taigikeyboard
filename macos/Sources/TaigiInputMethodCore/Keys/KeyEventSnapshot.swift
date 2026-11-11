@@ -1,4 +1,4 @@
-// A key event as the Swift side reads it, and the key predicates it still shares.
+// A key event as the Swift side reads it, and the modifier sets it still shares.
 
 import AppKit
 
@@ -73,70 +73,18 @@ struct KeyEventSnapshot: Sendable {
     }
 }
 
-/// What the Swift side still reads off a key event: the modifier sets and the
-/// text predicates the controller, the core back end and the shortcut recorder
-/// share. What a key means to a composition, to the symbol picker and to the
-/// Shortcuts pane is desktop-core's (`desktop/crates/taigi-desktop-core/src/keys`).
+/// What the Swift side still reads off a key event: the modifier sets the
+/// controller and the shortcut recorder share. What a key means to a
+/// composition, to the symbol picker and to the Shortcuts pane is
+/// desktop-core's (`desktop/crates/taigi-desktop-core/src/keys`).
 extension KeyEventSnapshot {
-    /// AppKit encodes function and arrow keys as private-use scalars rather
-    /// than control characters, so a scalar check alone would let F5 through as
-    /// composition input.
-    private static let appKitFunctionKeyRange: ClosedRange<UInt32> = 0xF700 ... 0xF8FF
-
-    /// The chords the host owns. Named once because several rules are written
-    /// against it — `documentText(inputMode:)` among them — and a list spelled
-    /// out at each of them is a list that can drift apart.
+    /// The chords the host owns. Named once because the shortcut recorder and
+    /// `chordingModifiers` are written against it, and a list spelled out at
+    /// each of them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
 
     /// The four chording modifiers — what a recorded chord is made of. Caps
     /// Lock, the number pad and the function flag say how a key was reached,
     /// not which key it is.
     static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
-
-    /// The text this key puts into the document, or nil when it is a key the
-    /// host acts on. Read off the whole event rather than its characters: `⌘.`
-    /// and a typed `.` carry the same character, and one of them is a host
-    /// command that inserts nothing — the chording modifiers tell them apart.
-    /// The TPS punctuation chord is document text too, and what it types is the
-    /// key under the modifier: `⌃,` arrives with `characters` `,` but `⌃[`
-    /// arrives as Escape, and the bracket is what the user asked for. The
-    /// desktop core's `ComposingKeyIntent::document_text`.
-    func documentText(inputMode: InputMode) -> String? {
-        if let punctuation = tpsPunctuationChord(inputMode: inputMode) {
-            return String(punctuation)
-        }
-        guard modifiers
-            .intersection(.deviceIndependentFlagsMask)
-            .isDisjoint(with: Self.hostChords)
-        else { return nil }
-        guard !isNamedSpecialKey else { return nil }
-        guard let characters, !characters.isEmpty else { return nil }
-        return characters.unicodeScalars.allSatisfy(Self.isTextScalar) ? characters : nil
-    }
-
-    /// The punctuation key under the TPS punctuation chord, or nil when this
-    /// key is not one: TPS only (its bare `,` `.` `;` type glyphs, so ⌃ types
-    /// their full-width marks), exactly ⌃ among the four chording modifiers, ⇧
-    /// allowed since it picks the key (`⌃⇧,` is `⌃<`), and the key one
-    /// `FullWidthPunctuation` maps (`isPunctuationChordKey`). Read off
-    /// `charactersIgnoringModifiers` because Control rewrites what some keys
-    /// type (`⌃[` arrives as Escape). The desktop core's
-    /// `ComposingKeyIntent::tps_punctuation_chord`.
-    func tpsPunctuationChord(inputMode: InputMode) -> Character? {
-        guard inputMode == .tps else { return nil }
-        let chording = modifiers.intersection(Self.chordingModifiers)
-        guard chording.subtracting(.shift) == .control else { return nil }
-        guard !isNamedSpecialKey,
-              let unmodified = charactersIgnoringModifiers,
-              FullWidthPunctuation.isPunctuationChordKey(unmodified)
-        else { return nil }
-        return unmodified.first
-    }
-
-    /// Not a control character (Cc) and not one of AppKit's function-key
-    /// scalars. A format character (Cf) is typed text, so not
-    /// `CharacterSet.controlCharacters` (Cc + Cf) — the core's rule (`keys/intent.rs`).
-    private static func isTextScalar(_ scalar: Unicode.Scalar) -> Bool {
-        scalar.properties.generalCategory != .control && !appKitFunctionKeyRange.contains(scalar.value)
-    }
 }

@@ -429,6 +429,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .dictionarySearch(newValue)}
   }
 
+  public var passThroughSwap: Taigi_DesktopShell_PassThroughSwapRequest {
+    get {
+      if case .passThroughSwap(let v)? = request {return v}
+      return Taigi_DesktopShell_PassThroughSwapRequest()
+    }
+    set {request = .passThroughSwap(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -469,6 +477,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsRequest)
     case tpsKeyboardPress(Taigi_DesktopShell_TpsKeyboardPressRequest)
     case dictionarySearch(Taigi_DesktopShell_DictionarySearchRequest)
+    case passThroughSwap(Taigi_DesktopShell_PassThroughSwapRequest)
 
   }
 
@@ -792,6 +801,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     set {reply = .dictionarySearch(newValue)}
   }
 
+  public var passThroughSwap: Taigi_DesktopShell_PassThroughSwapReply {
+    get {
+      if case .passThroughSwap(let v)? = reply {return v}
+      return Taigi_DesktopShell_PassThroughSwapReply()
+    }
+    set {reply = .passThroughSwap(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Reply: Equatable, Sendable {
@@ -806,6 +823,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     case switchInputMode(Taigi_DesktopShell_SwitchInputModeReply)
     case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsReply)
     case dictionarySearch(Taigi_DesktopShell_DictionarySearchReply)
+    case passThroughSwap(Taigi_DesktopShell_PassThroughSwapReply)
 
   }
 
@@ -1917,6 +1935,44 @@ public nonisolated struct Taigi_DesktopShell_SymbolPickerReply: Sendable {
   public init() {}
 }
 
+/// Whether a key passed through outside a composition would take the place
+/// of an armed auto space, read under the settings snapshot this request must
+/// carry (`pass_through_may_swap`): what Swift asks before it makes the
+/// swap's client checks for a Key request's `PanelState.swap_available`.
+/// Refused without an event or a snapshot.
+public nonisolated struct Taigi_DesktopShell_PassThroughSwapRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var event: Taigi_DesktopShell_KeyEvent {
+    get {_event ?? Taigi_DesktopShell_KeyEvent()}
+    set {_event = newValue}
+  }
+  /// Returns true if `event` has been explicitly set.
+  public var hasEvent: Bool {self._event != nil}
+  /// Clears the value of `event`. Subsequent reads from it will return its default value.
+  public mutating func clearEvent() {self._event = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _event: Taigi_DesktopShell_KeyEvent? = nil
+}
+
+public nonisolated struct Taigi_DesktopShell_PassThroughSwapReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var maySwap: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// The Manage Dictionaries search (#792): `query` looked up by desktop-core's
 /// one lookup (`engine::dictionary_search::search`, the Windows and Linux
 /// one) under the settings snapshot this request must carry — the input
@@ -2027,7 +2083,7 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerAction: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2283,6 +2339,19 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .dictionarySearch(v)
         }
       }()
+      case 22: try {
+        var v: Taigi_DesktopShell_PassThroughSwapRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .passThroughSwap(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .passThroughSwap(v)
+        }
+      }()
       default: break
       }
     }
@@ -2375,6 +2444,10 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .dictionarySearch?: try {
       guard case .dictionarySearch(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
+    }()
+    case .passThroughSwap?: try {
+      guard case .passThroughSwap(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
     }()
     default: break
     }
@@ -2747,7 +2820,7 @@ nonisolated extension Taigi_DesktopShell_LexiconStats: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2899,6 +2972,19 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
           self.reply = .dictionarySearch(v)
         }
       }()
+      case 14: try {
+        var v: Taigi_DesktopShell_PassThroughSwapReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .passThroughSwap(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .passThroughSwap(v)
+        }
+      }()
       default: break
       }
     }
@@ -2956,6 +3042,10 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
     case .dictionarySearch?: try {
       guard case .dictionarySearch(let v)? = self.reply else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    case .passThroughSwap?: try {
+      guard case .passThroughSwap(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
     case nil: break
     }
@@ -4734,6 +4824,70 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerReply: SwiftProtobuf.Messag
 
   public static func ==(lhs: Taigi_DesktopShell_SymbolPickerReply, rhs: Taigi_DesktopShell_SymbolPickerReply) -> Bool {
     if lhs.intent != rhs.intent {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_PassThroughSwapRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PassThroughSwapRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}event\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._event) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._event {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_PassThroughSwapRequest, rhs: Taigi_DesktopShell_PassThroughSwapRequest) -> Bool {
+    if lhs._event != rhs._event {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_PassThroughSwapReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PassThroughSwapReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}may_swap\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.maySwap) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.maySwap != false {
+      try visitor.visitSingularBoolField(value: self.maySwap, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_PassThroughSwapReply, rhs: Taigi_DesktopShell_PassThroughSwapReply) -> Bool {
+    if lhs.maySwap != rhs.maySwap {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

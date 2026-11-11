@@ -216,15 +216,21 @@ final class ComposingBackendTests: XCTestCase {
 
     /// A back end whose transport records every request and answers with
     /// `answer`, activated for `session` with a composition running or not.
+    /// The swap gate is the core's verdict, so that request goes to the real
+    /// core, under the settings of the request's store.
     private func activatedBackend(composing: Bool) throws -> ComposingBackend {
+        let runtime = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
         let backend = ComposingBackend(
             coordinator: TestFixtures.makeCoordinator(),
-            runtime: { nil },
+            runtime: { runtime },
             transport: { [unowned self] bytes in
                 guard let request = try? Taigi_DesktopShell_DesktopRequest(serializedBytes: Data(bytes)) else {
                     return []
                 }
                 sent.append(request)
+                if case .passThroughSwap = request.request {
+                    return DesktopCoreBridge.send(bytes)
+                }
                 return answer(request)
             },
         )
