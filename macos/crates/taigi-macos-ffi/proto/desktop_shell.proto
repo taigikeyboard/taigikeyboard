@@ -37,6 +37,7 @@ message DesktopRequest {
     TpsKeyboardRowsRequest tps_keyboard_rows = 19;
     TpsKeyboardPressRequest tps_keyboard_press = 20;
     DictionarySearchRequest dictionary_search = 21;
+    PassThroughSwapRequest pass_through_swap = 22;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -140,6 +141,7 @@ message DesktopResponse {
     SwitchInputModeReply switch_input_mode = 11;
     TpsKeyboardRowsReply tps_keyboard_rows = 12;
     DictionarySearchReply dictionary_search = 13;
+    PassThroughSwapReply pass_through_swap = 14;
   }
 }
 
@@ -575,6 +577,19 @@ enum SymbolPickerAction {
   SYMBOL_PICKER_ACTION_CONFIRM = 2;
   // Take the picker down and let the key go on.
   SYMBOL_PICKER_ACTION_CLOSE_AND_PASS_THROUGH = 3;
+}
+
+// Whether a key passed through outside a composition would take the place
+// of an armed auto space, read under the settings snapshot this request must
+// carry (`pass_through_may_swap`): what Swift asks before it makes the
+// swap's client checks for a Key request's `PanelState.swap_available`.
+// Refused without an event or a snapshot.
+message PassThroughSwapRequest {
+  KeyEvent event = 1;
+}
+
+message PassThroughSwapReply {
+  bool may_swap = 1;
 }
 
 // The Manage Dictionaries search (#792): `query` looked up by desktop-core's

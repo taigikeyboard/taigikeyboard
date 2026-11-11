@@ -121,7 +121,7 @@ final class ComposingBackend {
         let isIdle = !isComposing(request.session)
         message.panel = Self.panel(
             request,
-            swapping: isIdle ? Self.swapCandidate(for: key, settings: request.settings) : nil,
+            attaches: isIdle && passThroughMaySwap(key, settings: request.settings),
         )
         return session(.key(message), in: request, op: "key")
     }
@@ -134,7 +134,7 @@ final class ComposingBackend {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitCompositionRequest()
         message.token = request.session.value
-        message.panel = Self.panel(request, swapping: nil)
+        message.panel = Self.panel(request, attaches: false)
         return session(.commitComposition(message), in: request, op: "commitComposition")?.effects
     }
 
@@ -145,7 +145,7 @@ final class ComposingBackend {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitForSymbolPickerRequest()
         message.token = request.session.value
-        message.panel = Self.panel(request, swapping: nil)
+        message.panel = Self.panel(request, attaches: false)
         return session(.commitForSymbolPicker(message), in: request, op: "commitForSymbolPicker")?.effects
     }
 
@@ -156,7 +156,7 @@ final class ComposingBackend {
         var message = Taigi_DesktopShell_InsertSymbolRequest()
         message.token = request.session.value
         message.symbol = symbol
-        message.panel = Self.panel(request, swapping: symbol)
+        message.panel = Self.panel(request, attaches: RustEngineBridge.isAttachingPunctuation(symbol))
         return session(.insertSymbol(message), in: request, op: "insertSymbol")?.effects
     }
 
@@ -169,7 +169,7 @@ final class ComposingBackend {
         var message = Taigi_DesktopShell_TpsKeyboardPressRequest()
         message.token = request.session.value
         message.glyph = glyph
-        message.panel = Self.panel(request, swapping: nil)
+        message.panel = Self.panel(request, attaches: false)
         return session(.tpsKeyboardPress(message), in: request, op: "tpsKeyboardPress")?.effects
     }
 
@@ -186,7 +186,7 @@ final class ComposingBackend {
         var message = Taigi_DesktopShell_RepresentRequest()
         message.token = request.session.value
         message.refetch = refetch
-        message.panel = Self.panel(request, swapping: nil)
+        message.panel = Self.panel(request, attaches: false)
         switch exchange(.represent(message), settings: snapshot(in: request.settings.userDefaults), op: "represent") {
         case let .reply(_, effects, isComposing):
             isOwnerComposing = isComposing
@@ -312,12 +312,12 @@ final class ComposingBackend {
     /// The window's state, every question asked now, before the request
     /// crosses. The highlight is asked whether or not a list is up — the core's
     /// picker commit reads it; the slots only while one is. The swap's
-    /// client check — two client queries — is asked only for `attaching`,
-    /// the text a swap would write, and only when a swap can happen: an arm,
-    /// an attaching character, Auto-Space on.
+    /// client check — two client queries — is asked only when a swap can
+    /// happen: an arm, Auto-Space on, and what the request writes attaches
+    /// (`attaches`, read last).
     private static func panel(
         _ request: ComposingRequest,
-        swapping attaching: @autoclosure () -> String?,
+        attaches: @autoclosure () -> Bool,
     ) -> Taigi_DesktopShell_PanelState {
         let state = request.panel
         var panel = Taigi_DesktopShell_PanelState()
@@ -334,22 +334,32 @@ final class ComposingBackend {
         }
         if let canSwapPrecedingSpace = state.canSwapPrecedingSpace,
            request.settings.isAutoSpaceEnabled,
-           let attaching = attaching(),
-           RustEngineBridge.isAttachingPunctuation(attaching)
+           attaches()
         {
             panel.swapAvailable = canSwapPrecedingSpace()
         }
         return panel
     }
 
-    /// What a pass-through `key` would attach to the armed space: the
-    /// character it types — or, under TPS, which writes only full width, the
-    /// punctuation it maps to, which is what the swap writes then.
-    private static func swapCandidate(for key: KeyEventSnapshot, settings: SettingsStore) -> String? {
-        let inputMode = settings.inputMode
-        guard let typed = key.documentText(inputMode: inputMode) else { return nil }
-        guard inputMode == .tps else { return typed }
-        return FullWidthPunctuation.mapped(typed) ?? typed
+    /// Whether a pass-through `key` would take the armed space's place: the
+    /// core's verdict (`pass_through_may_swap`) under `settings` — what the
+    /// key types, or under TPS the full-width mark it writes. False when the
+    /// seam gives no answer (logged): no swap is offered.
+    private func passThroughMaySwap(_ key: KeyEventSnapshot, settings: SettingsStore) -> Bool {
+        var message = Taigi_DesktopShell_PassThroughSwapRequest()
+        message.event = Taigi_DesktopShell_KeyEvent(key)
+        let op = "passThroughSwap"
+        guard case let .success(response) = DesktopCoreBridge.response(
+            to: .passThroughSwap(message),
+            settings: snapshot(in: settings.userDefaults),
+            op: op,
+            transport: transport,
+        ) else { return false }
+        guard response.error == .ok, case let .passThroughSwap(reply) = response.reply else {
+            Self.logger.error("[\(op)] no verdict: \(response.error)")
+            return false
+        }
+        return reply.maySwap
     }
 
     // MARK: - Effects

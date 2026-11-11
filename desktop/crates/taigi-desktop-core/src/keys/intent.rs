@@ -481,8 +481,7 @@ impl ComposingKeyIntent {
     /// punctuation chord is document text too, and what it types is the key
     /// under the modifier: under Ctrl the layout types
     /// nothing for `,` (`characters` is `None`) and Escape for `[`, and the
-    /// key itself is what the user asked for. macOS keeps a Swift twin:
-    /// `KeyEventSnapshot.swift` `documentText(inputMode:)`.
+    /// key itself is what the user asked for.
     pub fn document_text(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<String> {
         if let Some(punctuation) = Self::tps_punctuation_chord(key, input_mode) {
             return Some(punctuation.to_string());
@@ -505,8 +504,6 @@ impl ComposingKeyIntent {
     /// it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
     /// full-width policy maps (`policies::is_punctuation_chord_key`). Read off
     /// the unmodified characters because Ctrl rewrites what a key types.
-    /// macOS keeps a Swift twin: `KeyEventSnapshot.swift`
-    /// `tpsPunctuationChord(inputMode:)`.
     pub fn tps_punctuation_chord(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<char> {
         let chording = KeyModifiers {
             shift: false,

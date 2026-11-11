@@ -2,12 +2,14 @@
 //! (docs/architecture/macos-desktop-core-roadmap.md P14): desktop-core's
 //! chord gate, recorder decision, resolved bindings, fixed-row labels and
 //! picker reading, under the Mac's grammar — and the input-mode writer the
-//! Swift settings ask (desktop TPS roadmap D5), and the TPS key panel's rows
-//! (D6). Pure — no token, no session, no
+//! Swift settings ask (desktop TPS roadmap D5), the TPS key panel's rows
+//! (D6), and the auto-space swap gate the key path asks before its client
+//! checks. Pure — no token, no session, no
 //! runtime: a settings snapshot one of them carries is read for its one
 //! answer and never installed, so the key path keeps what the last session
 //! request carried, a panic here included.
 
+use taigi_desktop_core::composing::pass_through_may_swap;
 use taigi_desktop_core::keys::{
     evaluate_press, shortcut_labels, tps_keyboard_rows, ChordRejection, ComposingAction,
     ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
@@ -20,9 +22,9 @@ use crate::key_translation::{self, ESCAPE_KEY_CODE};
 use crate::proto::{
     chord_reply, desktop_request, desktop_response, press_reply, symbol_picker_reply, Chord,
     ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutField, ComposingShortcutsReply,
-    PressReply, PressRequest, RecorderAction, SettingsSnapshot, SwitchInputModeReply,
-    SwitchInputModeRequest, SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply,
-    TpsKeyCap, TpsKeyboardRow, TpsKeyboardRowsReply,
+    PassThroughSwapReply, PassThroughSwapRequest, PressReply, PressRequest, RecorderAction,
+    SettingsSnapshot, SwitchInputModeReply, SwitchInputModeRequest, SymbolPickerAction,
+    SymbolPickerKeyRequest, SymbolPickerReply, TpsKeyCap, TpsKeyboardRow, TpsKeyboardRowsReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
@@ -46,6 +48,9 @@ pub(crate) fn answer(
         Request::SymbolPickerKey(key) => symbol_picker_key(key, snapshot).map(Reply::SymbolPicker),
         Request::SwitchInputMode(switch) => switch_input_mode(switch).map(Reply::SwitchInputMode),
         Request::TpsKeyboardRows(_) => Ok(Reply::TpsKeyboardRows(tps_keyboard_rows_reply())),
+        Request::PassThroughSwap(swap) => {
+            pass_through_swap(swap, snapshot).map(Reply::PassThroughSwap)
+        }
         _ => return None,
     })
 }
@@ -161,6 +166,20 @@ fn symbol_picker_key(
     })
 }
 
+/// Whether a pass-through key would take an armed auto space's place under
+/// `snapshot` (`pass_through_may_swap`) — asked before Swift makes the
+/// swap's client checks.
+fn pass_through_swap(
+    request: &PassThroughSwapRequest,
+    snapshot: Option<&SettingsSnapshot>,
+) -> Result<PassThroughSwapReply, Refusal> {
+    let event = request.event.as_ref().ok_or(Refusal::Missing("event"))?;
+    let document = document(snapshot)?;
+    Ok(PassThroughSwapReply {
+        may_swap: pass_through_may_swap(&key_translation::snapshot(event), &document),
+    })
+}
+
 /// Where `request` moves the stored mode, through the core's one writer
 /// (`SettingsDocument::switch_input_mode`), on a document holding only the
 /// two stored values the request carries.
@@ -258,7 +277,7 @@ mod tests {
     use super::*;
     use crate::key_translation::{COMMAND, CONTROL, OPTION, SHIFT};
     use crate::proto::{CandidateNavigation as WireNavigation, ChordRejection as Wire, KeyEvent};
-    use crate::test_support::{key_event, text};
+    use crate::test_support::{boolean, key_event, text};
 
     use crate::test_support::{CAPS_LOCK, FUNCTION};
 
@@ -536,6 +555,48 @@ mod tests {
             })),
             Err(Refusal::Settings(_))
         ));
+    }
+
+    fn may_swap(event: KeyEvent, entries: Vec<crate::proto::SettingEntry>) -> bool {
+        pass_through_swap(
+            &PassThroughSwapRequest { event: Some(event) },
+            Some(&SettingsSnapshot { entries }),
+        )
+        .expect("answered")
+        .may_swap
+    }
+
+    /// The swap gate through the Mac's translation: an attaching mark with
+    /// Auto-Space on; under TPS the ⌃ chord's mark, which the swap writes
+    /// (`'` → `、`). Refused without an event or a snapshot.
+    #[test]
+    fn the_swap_gate_reads_a_key_under_the_snapshot_it_carries() {
+        let auto_space = || boolean(keys::IS_AUTO_SPACE_ENABLED.name, true);
+        assert!(may_swap(key_event(",", 0, None), vec![auto_space()]));
+        assert!(!may_swap(key_event("a", 0, None), vec![auto_space()]));
+        assert!(!may_swap(
+            key_event(",", 0, None),
+            vec![boolean(keys::IS_AUTO_SPACE_ENABLED.name, false)]
+        ));
+        let tps = || text(keys::INPUT_MODE.name, "tps");
+        assert!(!may_swap(key_event("'", 0, None), vec![auto_space()]));
+        assert!(may_swap(
+            key_event("'", CONTROL, None),
+            vec![auto_space(), tps()]
+        ));
+        assert_eq!(
+            pass_through_swap(&PassThroughSwapRequest { event: None }, None),
+            Err(Refusal::Missing("event"))
+        );
+        assert_eq!(
+            pass_through_swap(
+                &PassThroughSwapRequest {
+                    event: Some(key_event(",", 0, None))
+                },
+                None
+            ),
+            Err(Refusal::Missing("settings"))
+        );
     }
 
     fn picker(
