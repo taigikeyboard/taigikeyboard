@@ -4520,7 +4520,7 @@
       }
     },
     "i18n_theme_cardMenuCustomize": {
-      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
+      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. Linux Appearance uses the same word for the custom color theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
       "extractionState": "manual",
       "localizations": {
         "en": {

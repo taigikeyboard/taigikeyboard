@@ -247,26 +247,63 @@ introspection XML and the `serialize` functions were read, not remembered).
   `composition_terminated`). `CandidateClicked` selects the slot, never commits
   (`CandidateItemView.swift:47-48` — identical semantics); `PageUp` / `PageDown` /
   `CursorUp` / `CursorDown` from the panel run the same `CandidateNavigation` intents the
-  keys do. Appearance rows that the panel owns are **not shown** on Linux: Candidate Text
-  Size, Candidate Window Size, Font, and the window's Appearance mode (§ L3). The Manage
+  keys do. The candidate list is **not** the framework panel's. Both shells spawn
+  `taigikeyboard-popup` and clear the framework list, so classic UI and GNOME's popup
+  do not draw a second one; the preedit stays on the panel, and every other input
+  method keeps the user's current UI. A horizontal cell stacks the two scripts,
+  centered on each other. The leading line of the current mode takes the primary
+  size and the other line the secondary size (`hanjiFontSize` / `romanFontSize`,
+  12–48 px; the stored names stay, the rows read Primary Text Size / Secondary
+  Text Size). A one-script cell takes the primary size. Switching the output
+  script moves which script is on the leading line; it does not give each
+  script its own size. Each script keeps its own typeface, and a family lists
+  every face (weights fontconfig splits into their own family are grouped
+  back); the menu has no size. After System Font, the four bundled faces lead
+  in the shared roster order (Open Huninn, Iansui, GenYoMin, GenYoGothic);
+  the other families follow by name.
+  (`hanjiFontFamily` / `romanFontFamily`, empty =
+  fontconfig sans, the same default as the system face on macOS and Windows;
+  the window resolves the family to a face cosmic-text will
+  actually shape). The Appearance pane also sets the corner radius
+  (`candidateCornerRadius`, 0–32 px), the air around the text
+  (`candidateWindowPadding`, the window pad; cell pad, gap, line gap and the
+  stacked-script gap stay at 0.75 / 1 / 0.25 / 1 of it; a horizontal cell
+  separates its two scripts by that script gap, and a vertical page separates
+  rows by twice the line gap), how full the highlight is (`candidateHighlightFill`,
+  stored 0–100; the row offers steps 1–5 for 0 / 25 / 50 / 75 / 100, and 100
+  meets the window's outer edge; the highlight corner is the window corner
+  minus the gap between them, so the two share a center, and the window caps
+  the painted radius at half the highlight's shorter side; the row offers the
+  full 0–32) and a color theme (`candidateColorTheme`). Default follows the
+  desktop: the popup reads `org.freedesktop.portal.Settings`
+  (`org.freedesktop.appearance` `color-scheme` and `accent-color`) and paints
+  an Adwaita popover — light `#ffffff` / `#333333`, dark `#383838` / `#ffffff`,
+  the highlight the accent or Adwaita `@blue_3` `#3584e4`, highlighted text
+  white or black-at-85% when that accent is pale. A portal that cannot be
+  read keeps the shipped four colors, and switching from Default to Custom
+  starts from those four, not from the live accent. Sakura, Gold, Sea Breeze,
+  Jade, Wisteria and Catppuccin are fixed sets of those four colors, named
+  with the mobile theme strings.
+  Custom reveals the four color rows (text, highlighted text, background,
+  highlighted background). A text field at the top of the
+  pane is for trying the running input method, so the real candidate window
+  is the sample. The engine rereads settings on the next composition's first
+  key. A vertical cell keeps them on one line. The
+  window is override-redirect X11, placed under the caret (`InputContext::cursorRect`,
+  IBus `SetCursorLocation`). A Wayland session cannot place it the same way, so it
+  may not sit on the caret there. Appearance rows the window does not honour stay
+  **not shown**: the light / dark mode and the single Candidate Text Size (§ L3). The Manage
   Typefaces pane is **not shown** either
-  (picking a typeface there left the panel unchanged): the panel's font is the framework's — Fcitx5
-  › Addons › Classic User Interface › Font (`classicui.conf` `Font=`), IBus › Preferences ›
-  Use custom font under `ibus-ui-gtk3`, and nothing per input method under GNOME Shell, whose IBus popup
-  reads no font setting (GNOME 46 `ibusCandidatePopup.js`; `custom-font` verified to have
-  no effect on the Ubuntu 24.04 VM). The bundled typefaces install as system fonts (L7),
-  so they are in those pickers, and a user adds a typeface the system way
-  (`~/.local/share/fonts`). A stored / launched `fontManagement` pane lands on General.
+  (a family is chosen from the fonts fontconfig already sees, not from a library
+  named per input method). The bundled typefaces install as system fonts (L7), so they are available to it,
+  and a user adds a typeface the system way (`~/.local/share/fonts`). A stored / launched
+  `fontManagement` pane lands on General.
   `Candidate Window Layout` offers only
   Horizontal / Vertical (a stored expandable reads as Vertical, the key is never rewritten) and
   `Candidate Display Mode` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
-  The §34 literal cell is keyless as on macOS / Windows (both panels page through the
-  core, which sends the labels with every table; IBus gets a space for the blank label so
-  GNOME does not number it). One more
-  named divergence the panel forces: under the combined
-  (mixed) display option a cell's other script (`CandidateCellContent::annotation`) is drawn after the text in the same cell,
-  not as a second line. The auto-space swap (§23) needs the client's surrounding text
+  The §34 literal cell is keyless as on macOS / Windows (the window draws the label the
+  core sends, and an empty label takes no column). The auto-space swap (§23) needs the client's surrounding text
   (`IBUS_CAP_SURROUNDING_TEXT` → `DeleteSurroundingText`); a client without it gets
   the mark after the space, as typed (logged, named). The Telex guide (Windows draws a card, macOS a panel) is shown
   as a lookup table of guide rows with no labels and a non-visible cursor, while `telexGuideShown` is on
@@ -424,9 +461,9 @@ introspection XML and the `serialize` functions were read, not remembered).
 
 | Behaviour | macOS | Windows | Linux | Class |
 |---|---|---|---|---|
-| Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | daemon lookup table, orientation from layout | platform-adapted presentation |
-| Appearance rows Candidate Text Size / Candidate Window Size / Font | yes | yes | hidden (panel-owned) | unsupported host capability |
-| Manage Fonts pane | selects the candidate typeface | selects the candidate typeface | hidden (panel-owned; font set in Fcitx5 / IBus) | unsupported host capability |
+| Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | own X11 popup; horizontal stacks the two scripts | platform-adapted presentation |
+| Appearance rows Candidate Text Size / Candidate Window Size / Font | yes | yes | primary and secondary sizes, two families, padding, radius, highlight fill, color theme (custom reveals four colors); not the shared text-size or light/dark | platform-adapted presentation |
+| Manage Fonts pane | selects the candidate typeface | selects the candidate typeface | hidden; families come from fontconfig | unsupported host capability |
 | Focus loss mid-composition | client commits | text stays as host left it | daemon commits (`PREEDIT_COMMIT`) | platform-adapted |
 | Chinese/English Shift tap | none (OS switches sources) | yes | none (IBus switches engines) | identical to macOS |
 | Global chords | Carbon hotkeys, session-scoped | preserved keys + fallback | matched in `ProcessKeyEvent` while active | identical semantics |

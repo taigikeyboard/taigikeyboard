@@ -61,6 +61,7 @@ async fn serve(address: &str) -> zbus::Result<()> {
             .unique_name()
             .map(|name| name.as_str().to_owned())
     );
+    engine::watch_popup(connection.clone());
     // Until the daemon drops the connection.
     connection.closed().await;
     log::info!("bus.closed");

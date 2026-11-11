@@ -69,13 +69,21 @@ pub struct LookupTableContent {
 }
 
 impl LookupTableContent {
-    /// Each cell as one string, for a panel with one text column: the leading
-    /// script, then the other (Pairing, Combined) after a space.
+    /// Each cell as one string, for a panel with one text column.
+    ///
+    /// Linux draws the cells itself (`taigikeyboard-popup`) and does not use
+    /// this. A horizontal list stacks the two scripts: the leading script,
+    /// then the other on the next line. Classic UI splits that newline
+    /// (`Text::splitByLine`, since 5.0.6) and an IBus label draws it, so the
+    /// row is as wide as the wider script. A vertical list keeps them on one
+    /// line — the other script after a space — because a column has the width
+    /// and the panel cannot align a second column.
     pub fn joined_candidates(&self) -> Vec<String> {
+        let separator = if self.vertical { " " } else { "\n" };
         self.cells
             .iter()
             .map(|cell| match &cell.annotation {
-                Some(annotation) => format!("{} {annotation}", cell.text),
+                Some(annotation) => format!("{}{separator}{annotation}", cell.text),
                 None => cell.text.clone(),
             })
             .collect()
@@ -236,6 +244,34 @@ fn char_index_at_utf16(text: &str, caret_utf16: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::composing::CandidateCellContent;
+
+    fn paired(vertical: bool) -> LookupTableContent {
+        LookupTableContent {
+            cells: vec![
+                CandidateCellContent::new("ho", None),
+                CandidateCellContent::new("好", Some("hó".into())),
+            ],
+            labels: vec!["1".into()],
+            cursor: 0,
+            cursor_visible: true,
+            page_size: 9,
+            vertical,
+        }
+    }
+
+    #[test]
+    fn a_horizontal_panel_stacks_the_two_scripts() {
+        // trace: one text column. "好 hó" beside its neighbours is as wide as
+        // both scripts; a newline is the break classic UI and the IBus label
+        // draw. A one-script cell (the literal) stays one line.
+        assert_eq!(paired(false).joined_candidates(), ["ho", "好\nhó"]);
+    }
+
+    #[test]
+    fn a_vertical_panel_keeps_the_two_scripts_on_one_line() {
+        assert_eq!(paired(true).joined_candidates(), ["ho", "好 hó"]);
+    }
 
     #[test]
     fn the_caret_is_converted_from_utf16_units_to_characters() {

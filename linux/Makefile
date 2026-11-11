@@ -188,6 +188,7 @@ install: install-common install-ibus install-fcitx5
 install-common: build
 	# Settings app:
 	install -Dm755 target/release/taigikeyboard-settings $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
+	install -Dm755 target/release/taigikeyboard-popup $(DESTDIR)$(PREFIX)/bin/taigikeyboard-popup
 	install -Dm644 data/tw.taigikeyboard.Settings.desktop $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
 	# Dictionaries data:
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
@@ -240,6 +241,7 @@ install-fcitx5: build-fcitx5
 uninstall:
 	rm -f $(DESTDIR)$(LIBEXECDIR)/ibus-engine-taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
+	rm -f $(DESTDIR)$(PREFIX)/bin/taigikeyboard-popup
 	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/libtaigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/libtaigikeyboard.so
 	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
@@ -273,7 +275,7 @@ deb:
 	# one, so a minimal source control lives in packaging/.
 	cp packaging/shlibdeps-control target/deb/debian/control
 	set -o pipefail; cd target/deb && dpkg-shlibdeps -O \
-	  root/usr/bin/taigikeyboard-settings root/usr/libexec/ibus-engine-taigikeyboard root/usr/lib/*/fcitx5/libtaigikeyboard.so \
+	  root/usr/bin/taigikeyboard-settings root/usr/bin/taigikeyboard-popup root/usr/libexec/ibus-engine-taigikeyboard root/usr/lib/*/fcitx5/libtaigikeyboard.so \
 	  | sed -e 's/^shlibs:Depends=//' > shlibs.txt
 	test -s target/deb/shlibs.txt
 	sed -e 's#@VERSION@#$(VERSION)#g' -e "s#@SHLIBS@#$$(cat target/deb/shlibs.txt)#" packaging/control.in > $(DEB_ROOT)/DEBIAN/control

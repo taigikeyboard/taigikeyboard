@@ -125,11 +125,19 @@ impl InstallLayout {
     pub fn settings_binary(&self) -> PathBuf {
         self.prefix.join("bin").join(SETTINGS_BINARY_NAME)
     }
+
+    /// `<prefix>/bin/taigikeyboard-popup` — the candidate window both shells spawn.
+    pub fn popup_binary(&self) -> PathBuf {
+        self.prefix.join("bin").join(POPUP_BINARY_NAME)
+    }
 }
 
 /// The settings window's binary name (the Linux spelling of
 /// `taigi_desktop_core::settings::launch::SETTINGS_EXE_NAME`).
 pub const SETTINGS_BINARY_NAME: &str = "taigikeyboard-settings";
+
+/// The candidate window. Installed beside the settings binary.
+pub const POPUP_BINARY_NAME: &str = "taigikeyboard-popup";
 
 /// The dictionaries: `$TAIGIKEYBOARD_DATA_DIR/dictionaries` when the
 /// override is set (a development tree), else the shipped prefix.

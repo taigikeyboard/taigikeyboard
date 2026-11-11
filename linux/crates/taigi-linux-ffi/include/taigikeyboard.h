@@ -141,6 +141,26 @@ uint32_t taigi_reply_table_cursor(const TaigiReply *reply, size_t index);
 bool taigi_reply_table_cursor_visible(const TaigiReply *reply, size_t index);
 uint32_t taigi_reply_table_page_size(const TaigiReply *reply, size_t index);
 bool taigi_reply_table_vertical(const TaigiReply *reply, size_t index);
+
+/* What `taigi_popup_poll` reports. A click selects and never commits; a
+ * page turn is the previous (position 0) or next (position 1) page. */
+enum {
+    TAIGI_POPUP_CLICK = 1,
+    TAIGI_POPUP_PAGE = 2
+};
+
+/* Shows the candidate window for this lookup-table entry. `(x, y, w, h)` is
+ * the caret in screen pixels; the window sits under it. A null reply and an
+ * entry that is not a lookup table do nothing. */
+void taigi_popup_show(const TaigiReply *reply, size_t index, int32_t x, int32_t y, int32_t w, int32_t h);
+void taigi_popup_hide(void);
+/* The fd that becomes readable when the window reports a click or a page
+ * turn. Valid for the process lifetime; do not close it. -1 if the pipe
+ * could not be created. */
+int taigi_popup_fd(void);
+/* One queued event, written to `kind` and `position`. False when the queue
+ * is empty. Both pointers are required. */
+bool taigi_popup_poll(uint32_t *kind, uint32_t *position);
 void taigi_reply_free(TaigiReply *reply);
 
 #ifdef __cplusplus

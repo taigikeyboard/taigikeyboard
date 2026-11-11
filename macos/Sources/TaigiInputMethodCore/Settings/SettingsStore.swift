@@ -612,6 +612,21 @@ final class SettingsStore: @unchecked Sendable {
             Keys.candidateLayout.name,
             Keys.candidateDisplayMode.name,
             Keys.candidateSize.name,
+            // The Linux candidate window's own chrome. This pane does not
+            // show them; a shared settings file still clears them here, the
+            // same list as `APPEARANCE_KEYS`.
+            "hanjiFontSize",
+            "romanFontSize",
+            "hanjiFontFamily",
+            "romanFontFamily",
+            "candidateCornerRadius",
+            "candidateWindowPadding",
+            "candidateHighlightFill",
+            "candidateColorTheme",
+            "candidateTextColor",
+            "candidateSelectedTextColor",
+            "candidateBackgroundColor",
+            "candidateSelectedBackgroundColor",
         )
     }
 

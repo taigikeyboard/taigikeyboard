@@ -18,6 +18,7 @@
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
 #include <fcitx/addonmanager.h>
+#include <fcitx-utils/event.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputcontextproperty.h>
 #include <fcitx/inputmethodengine.h>
@@ -103,8 +104,12 @@ private:
      * focus (fcitx5-rime `refreshStatusArea`). */
     void buildMenu();
     void refreshMenu(InputContext &ic);
+    /* Clicks and page turns from the candidate window, which is not the
+     * framework's list. The watch lives as long as the engine. */
+    void watchPopup();
 
     Instance *instance_;
+    std::unique_ptr<EventSourceIO> popup_watch_;
     ::TaigiRuntime *runtime_ = nullptr;
     FactoryFor<State> factory_;
     struct MenuRow {
