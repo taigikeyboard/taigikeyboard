@@ -1,0 +1,80 @@
+name: Emoji watch
+
+# Checks whether Unicode has published an Emoji version newer than the pin in
+# emoji/Makefile (UNICODE_EMOJI_VERSION) and opens one issue per new version.
+# Unicode ships one Emoji version a year, in September: weekly checks
+# August–October, monthly otherwise. Bump steps: emoji/data/SOURCES.md § Version pin.
+on:
+  schedule:
+    # 08:00 Taiwan time.
+    - cron: '0 0 * 8-10 1'
+    - cron: '0 0 1 1-7,11-12 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emoji-watch
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_URL: https://unicode.org/Public/emoji/latest/emoji-test.txt
+
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: emoji/Makefile
+          sparse-checkout-cone-mode: false
+
+      - name: Compare pinned and upstream versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pinned=$(sed -n 's/^UNICODE_EMOJI_VERSION := *//p' emoji/Makefile)
+          curl --fail --silent --show-error --max-time 120 --retry 3 \
+            --output "$RUNNER_TEMP/emoji-test.txt" "$UPSTREAM_URL"
+          upstream=$(sed -n 's/^# Version: *//p' "$RUNNER_TEMP/emoji-test.txt" | head -n 1)
+          upstream_date=$(sed -n 's/^# Date: *//p' "$RUNNER_TEMP/emoji-test.txt" | head -n 1)
+          if [ -z "$pinned" ] || [ -z "$upstream" ]; then
+            echo "::error::Could not parse versions (pinned='$pinned', upstream='$upstream')"
+            exit 1
+          fi
+          echo "Pinned Emoji $pinned; upstream Emoji $upstream ($upstream_date)"
+          newest=$(printf '%s\n%s\n' "$pinned" "$upstream" | sort -V | tail -n 1)
+          if [ "$newest" = "$pinned" ]; then
+            echo "Up to date."
+            exit 0
+          fi
+
+          export TITLE="chore(emoji): Unicode Emoji $upstream available"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --limit 100 \
+            --search "in:title \"Unicode Emoji $upstream available\"" \
+            --json number,title --jq '.[] | select(.title == env.TITLE) | .number')
+          if [ -n "$existing" ]; then
+            echo "::notice::Issue #$existing (open or closed) already tracks Emoji $upstream"
+            exit 0
+          fi
+
+          cldr=$(gh api repos/unicode-org/cldr/releases/latest --jq .tag_name || echo unknown)
+          {
+            echo "Unicode published **Emoji $upstream** (\`emoji-test.txt\` Date: $upstream_date)."
+            echo "The repository pins Emoji $pinned (\`UNICODE_EMOJI_VERSION\` in \`emoji/Makefile\`)."
+            echo
+            echo "Latest CLDR release: \`$cldr\` — keywords come from CLDR; bump \`CLDR_TAG\` together."
+            echo
+            echo "Bump steps: \`emoji/data/SOURCES.md\` § Version pin (\`fetch-emoji\` skill):  \`make fetch\` + \`make build\` in \`emoji/\` and review the diff."
+            echo
+            echo "Source: $UPSTREAM_URL"
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > "$RUNNER_TEMP/issue.md"
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$RUNNER_TEMP/issue.md"
