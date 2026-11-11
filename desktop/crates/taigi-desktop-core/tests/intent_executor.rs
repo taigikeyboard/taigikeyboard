@@ -241,6 +241,31 @@ fn a_slot_key_commits_its_hanji_cell_without_a_space() {
 }
 
 #[test]
+fn a_mixed_han_lo_candidate_appends_a_space_only_with_auto_space_on() {
+    for enabled in [false, true] {
+        let mut rig = configured_rig(enabled, |settings| {
+            settings.set_bool(&keys::IS_HANJI_FIRST, true);
+            settings.set_bool(&keys::IS_LKK_ENABLED, true);
+        });
+        rig.type_word("siannmih");
+        rig.surface.selected = Some(
+            rig.list
+                .cells()
+                .iter()
+                .position(|cell| cell.text == "啥mih")
+                .expect("production dictionary offers 啥mih / siánn-mih"),
+        );
+        assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+        let expected = if enabled {
+            vec!["commit 啥mih", "list closed", "insert \" \"", "arm"]
+        } else {
+            vec!["commit 啥mih", "list closed"]
+        };
+        assert_eq!(rig.calls(), expected);
+    }
+}
+
+#[test]
 fn a_slot_past_the_list_or_no_highlight_is_consumed_and_commits_nothing() {
     let mut rig = new_rig(true);
     rig.type_word("ho");

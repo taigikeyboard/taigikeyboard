@@ -15,6 +15,7 @@
 
 use phonetics::api::tl_display_to_tps;
 use protos::engine::{AppConfig, CandidateDisplayMode, CommitOutcome, CommitResolution};
+use unicode_normalization::{char::is_combining_mark, UnicodeNormalization};
 
 use crate::api::CommitScript;
 
@@ -35,9 +36,11 @@ impl ResolvedCommit {
     }
 
     fn hanji(text: impl Into<String>) -> Self {
+        let text = text.into();
+        let wrote_romanization = ends_in_romanization(&text);
         Self {
-            text: text.into(),
-            wrote_romanization: false,
+            text,
+            wrote_romanization,
         }
     }
 
@@ -48,6 +51,18 @@ impl ResolvedCommit {
             wrote_romanization: false,
         }
     }
+}
+
+/// Whether a Hanji-field spelling ends in romanization. The field also holds
+/// Han-Lo spellings: `啥mih` ends in a Latin syllable and is spaced like
+/// one; `m̄好` ends in Hanji and is not. NFKD finds the Latin base of an
+/// accented letter and of the nasal `ⁿ`; combining marks (`o͘`, a decomposed
+/// tone) and a continuation hyphen belong to the syllable before them.
+fn ends_in_romanization(text: &str) -> bool {
+    text.nfkd()
+        .filter(|&c| !is_combining_mark(c) && c != '-')
+        .last()
+        .is_some_and(|c| c.is_ascii_alphabetic())
 }
 
 /// The TPS layout's rendering of a pick's romanization: the Bopomofo its cell

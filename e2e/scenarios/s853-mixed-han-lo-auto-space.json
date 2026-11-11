@@ -1,0 +1,10 @@
+{
+  "id": "s853-mixed-han-lo-auto-space",
+  "source": "Issue #853: in Hanji-led output a Han-Lo spelling such as 啥mih carries romanization, so the final pick earns the Auto-Space trailing space exactly when Auto-Space is on.",
+  "settings": { "romanization": "tl", "output": "hanji", "auto_space": true },
+  "steps": [
+    { "type": "text", "value": "siannmih" },
+    { "type": "pick", "hanji": "啥mih", "tl": "siánn-mih" }
+  ],
+  "expect": { "committed": "啥mih " }
+}

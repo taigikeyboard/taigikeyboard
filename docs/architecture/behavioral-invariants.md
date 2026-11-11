@@ -524,8 +524,9 @@ Truth table:
 | candidate with no Hanji | the romanization | **true** |
 | candidate with no Hanji, TPS layout (mobile) | its Bopomofo, what the cell shows (`tl_display_to_tps(roman)`) | false |
 | Hanji candidate, Annotate in Brackets ON (mobile only) | `Hanji (romanization)` / `romanization (Hanji)` — on the TPS layout `Hanji (Bopomofo)` | true |
-| Hanji candidate, Hanji-led, brackets OFF | the Hanji | **false** |
+| pure-Hanji candidate, Hanji-led, brackets OFF | the Hanji | **false** |
 | Hanji candidate, roman-led, brackets OFF | the romanization | true |
+| mixed Han-Lo spelling in the Hanji field | the spelling, e.g. `啥mih` / `m̄好` | true when it ends in a Latin letter (`啥mih`, accented and `ⁿ` forms too); false when it ends in Hanji (`m̄好`) |
 | the other script (Output the Other Script / ⇧ + slot key / swap key / §42 roman cell) | that script alone | that script |
 | the preedit AS TYPED (⇧Return, Enter at slot 0, punctuation with no desktop highlight) | the composition verbatim | the LAYOUT: TL/POJ true, TPS false |
 
