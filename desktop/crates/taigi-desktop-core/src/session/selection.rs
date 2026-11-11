@@ -33,6 +33,12 @@ impl LookupSelection {
         }
     }
 
+    /// Pages of `page_size` from now on, the highlight kept — the slot key
+    /// set the list is presented under (`CandidateSlotKeySet::page_size`).
+    pub fn set_page_size(&mut self, page_size: usize) {
+        self.page_size = page_size.max(1);
+    }
+
     /// Whether the list's first cell is the §34 literal, which takes no key —
     /// set whenever the list is built or presented again
     /// (`CandidateSource::leads_with_literal_roman`).

@@ -14,12 +14,13 @@ use crate::settings::SettingsDocument;
 /// A shell that measures its own candidate window. Runs from `present_table`,
 /// outside the coordinator lock, once per list.
 pub trait ListLayout: Debug + Send + Sync {
-    /// The model for `cells`, or `None` when this list pages through
-    /// [`LookupSelection`].
+    /// The model for `cells`, `page_size` to a page (one per slot key), or
+    /// `None` when this list pages through [`LookupSelection`].
     fn layout(
         &self,
         cells: &[CandidateCellContent],
         settings: &SettingsDocument,
+        page_size: usize,
     ) -> Option<ExpandableListModel>;
 }
 
@@ -34,6 +35,9 @@ pub struct ListSelection {
     highlight: Highlight,
     /// The list's first cell is the §34 literal, which takes no key.
     lead_cell_is_unkeyed: bool,
+    /// One per slot key of the set the list is presented under
+    /// (`set_page_size`); [`PAGE_SIZE`] until then.
+    page_size: usize,
     /// A new list, or cells changed in place: a shell with a [`ListLayout`] has
     /// not seen these.
     needs_layout: bool,
@@ -44,6 +48,7 @@ impl ListSelection {
         Self {
             highlight: Highlight::Paged(LookupSelection::new(count, PAGE_SIZE)),
             lead_cell_is_unkeyed: false,
+            page_size: PAGE_SIZE,
             needs_layout: true,
         }
     }
@@ -71,6 +76,19 @@ impl ListSelection {
         self.lead_cell_is_unkeyed = lead_cell_is_unkeyed;
         if let Highlight::Paged(selection) = &mut self.highlight {
             selection.set_unkeyed_lead(lead_cell_is_unkeyed);
+        }
+    }
+
+    /// Pages the list `page_size` at a time — one cell per slot key of the
+    /// set it is presented under. A change re-lays out a measured list.
+    pub fn set_page_size(&mut self, page_size: usize) {
+        if self.page_size == page_size {
+            return;
+        }
+        self.page_size = page_size;
+        self.needs_layout = true;
+        if let Highlight::Paged(selection) = &mut self.highlight {
+            selection.set_page_size(page_size);
         }
     }
 
@@ -166,7 +184,7 @@ impl ListSelection {
                 self.highlight = Highlight::Expandable(model);
             }
             None if self.expandable().is_some() => {
-                let mut selection = LookupSelection::new(count, PAGE_SIZE);
+                let mut selection = LookupSelection::new(count, self.page_size);
                 selection.select(kept);
                 selection.set_unkeyed_lead(self.lead_cell_is_unkeyed);
                 self.highlight = Highlight::Paged(selection);

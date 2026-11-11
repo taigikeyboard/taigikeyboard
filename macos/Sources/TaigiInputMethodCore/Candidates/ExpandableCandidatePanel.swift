@@ -26,8 +26,6 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private static let maxVisibleRows = 5
     /// How many columns an unfolded row's grid divides into: two thirds of a page.
     private static let rowGridColumnCount = HorizontalPageLayout.pageSize - HorizontalPageLayout.pageSize / 3
-    /// An unfolded column's height in candidates: one page of the list.
-    private static let rowsPerColumn = HorizontalPageLayout.pageSize
     /// How many columns an unfolded column shows at once at most — a third of
     /// a page, Microsoft Bopomofo's three.
     private static let columnsPerPage = HorizontalPageLayout.pageSize / 3
@@ -234,7 +232,13 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     }
 
     private var columnPageSpan: Int {
-        expandedColumnCount * Self.rowsPerColumn
+        expandedColumnCount * rowsPerColumn
+    }
+
+    /// An unfolded column's height in candidates: one page of the list, one
+    /// per slot key.
+    private var rowsPerColumn: Int {
+        slotKeySet.pageSize
     }
 
     /// Whether an unfolded column pages at all — what reserves its chevron
@@ -261,7 +265,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         chevronView.intrinsicContentSize.width
     }
 
-    /// The grid's column width: the nine-slot row the collapsed mode packs to,
+    /// The grid's column width: the full-page row the collapsed mode packs to,
     /// widened until the longest candidate fits a full row of columns, and
     /// capped by what the screen leaves once the scroller has its share.
     ///
@@ -272,7 +276,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// scrolling, since the row count follows from the column width and a
     /// budget that changed with it would not settle.
     private func resolvedExpandedColumnWidth() -> CGFloat {
-        let baseline = HorizontalPageLayout.rowBudget(slotWidth: metrics.baseWidth)
+        let baseline = HorizontalPageLayout.rowBudget(slotWidth: metrics.baseWidth, pageSize: slotKeySet.pageSize)
         let budget = maximumWindowWidth - currentScrollerWidth
         let widest = measuredWidths.max() ?? 0
         let narrowest = metrics.baseWidth * CGFloat(Self.rowGridColumnCount)
@@ -290,7 +294,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func resolvedExpandedColumns() -> (columnWidth: CGFloat, columnCount: Int, primaryColumnWidth: CGFloat) {
         let (alignedWidth, primaryColumnWidth) = alignedColumn(over: cells[...], chrome: chevronWidth)
         let width = max(alignedWidth, collapsedSlots.first?.width ?? 0)
-        let columns = (cells.count + Self.rowsPerColumn - 1) / Self.rowsPerColumn
+        let columns = (cells.count + rowsPerColumn - 1) / rowsPerColumn
         func fit(chrome: CGFloat) -> Int {
             let fit = max(Int(((maximumWindowWidth - chrome) / width).rounded(.down)), 1)
             return max(min(Self.columnsPerPage, fit, columns), 1)
@@ -403,6 +407,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             slotWidth: metrics.baseWidth,
             windowBudget: maximumWindowWidth,
             chromeWidth: chevronWidth,
+            pageSize: slotKeySet.pageSize,
         ).pages.first ?? []
     }
 
@@ -411,7 +416,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// less the chevron column when there is one, with the candidate column
     /// its rows align on. Twin of `ExpandableListModel::collapsed_column`.
     private func stackedCollapsedColumn() -> (slots: [HorizontalPageLayout.Slot], primaryColumnWidth: CGFloat) {
-        let page = cells.prefix(HorizontalPageLayout.pageSize)
+        let page = cells.prefix(rowsPerColumn)
         let chrome = cells.count > page.count ? chevronWidth : 0
         let (width, primaryColumnWidth) = alignedColumn(over: page, chrome: chrome)
         let slots = page.indices.map { HorizontalPageLayout.Slot(candidateIndex: $0, width: width) }
@@ -510,7 +515,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
             // `→` beside a column steps into the next column as it unfolds
             // it, the way walking off the foot lands past it.
             if axis == .column {
-                selectedIndex = min(selectedIndex + Self.rowsPerColumn, cells.count - 1)
+                selectedIndex = min(selectedIndex + rowsPerColumn, cells.count - 1)
             }
             expand(animated: true)
         default:
@@ -527,7 +532,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func navigateExpandedColumns(_ direction: CandidateNavigation, pageSpan: Int) {
         let index = selectedIndex
         let last = cells.count - 1
-        let rows = Self.rowsPerColumn
+        let rows = rowsPerColumn
         switch direction {
         case .down, .nextCandidate:
             if index < last {
@@ -710,7 +715,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     private func selectedPageGrid() -> ExpandedGridLayout {
         ExpandedGridLayout.columnMajorPage(
             count: cells.count,
-            rowsPerColumn: Self.rowsPerColumn,
+            rowsPerColumn: rowsPerColumn,
             firstColumn: selectedIndex / columnPageSpan * expandedColumnCount,
             columns: expandedColumnCount,
         )
@@ -1060,7 +1065,7 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         // beside a column it keeps its row first, as `←` and PageUp fold from
         // any column.
         if axis == .column {
-            selectedIndex %= Self.rowsPerColumn
+            selectedIndex %= rowsPerColumn
         }
         if selectedIndex >= collapsedSlots.count {
             selectedIndex = max(collapsedSlots.count - 1, 0)

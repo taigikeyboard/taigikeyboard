@@ -3,6 +3,7 @@
 use super::chord::{KEYPAD_DIGIT_KEY_CODES, NUMBER_ROW_KEY_CODES, SEMICOLON_KEY_CODE};
 use super::intent::ComposingKeyIntent;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
+use crate::candidates::HorizontalPageLayout;
 
 /// Every case is a whole key SET: nine slots need nine names. One set is live
 /// at a time and it is the ONLY way to pick (USER 2026-08-28). The set is
@@ -20,9 +21,9 @@ pub enum CandidateSlotKeySet {
     /// no TL or POJ syllable spells, plus `;`. The set under `Standard`.
     BareKeys,
     /// `BareKeys` without `f` — `q w d z x v y ;` on slots 0…7, the keys after
-    /// `f` moved one slot left and the ninth slot unkeyed (USER 2026-11-10).
-    /// The set under `Standard` while Type - with f is on, where `f` types
-    /// the hyphen and must not pick.
+    /// `f` moved one slot left (USER 2026-11-10), and a page of eight
+    /// (`page_size`, USER 2026-11-12). The set under `Standard` while Type -
+    /// with f is on, where `f` types the hyphen and must not pick.
     BareKeysWithoutF,
     /// Bare `1`…`9`, the set under `Telex`, where the letters above type the
     /// tones and a digit no longer can — so the digit is free to pick the way
@@ -63,6 +64,14 @@ impl CandidateSlotKeySet {
             Self::BareKeysWithoutF => Some(&Self::BARE_KEY_ROW_WITHOUT_F),
             Self::Digits | Self::TpsDigits => None,
         }
+    }
+
+    /// How many candidates a page shows under this set: one per key, so no
+    /// cell is drawn that no key picks (USER 2026-11-12) — eight under
+    /// `BareKeysWithoutF`, nine under every other set.
+    pub fn page_size(self) -> usize {
+        self.bare_key_row()
+            .map_or(HorizontalPageLayout::PAGE_SIZE, <[&str]>::len)
     }
 
     /// The slot `event` picks under this set, or `None` — the classifier's
@@ -207,6 +216,7 @@ mod tests {
         }
         let labels: Vec<String> = (0..9).map(|slot| set.label_for_slot(slot)).collect();
         assert_eq!(labels, ["q", "w", "d", "z", "x", "v", "y", ";", ""]);
+        assert_eq!(set.page_size(), 8, "the unkeyed ninth slot is not shown");
         let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
             .with_key_code(SEMICOLON_KEY_CODE);
         assert_eq!(set.shifted_slot_for_event(&shift_semicolon), Some(7));
@@ -300,6 +310,18 @@ mod tests {
         assert_eq!(CandidateSlotKeySet::BareKeys.label_for_slot(8), ";");
         assert_eq!(CandidateSlotKeySet::Digits.label_for_slot(0), "1");
         assert_eq!(CandidateSlotKeySet::Digits.label_for_slot(8), "9");
+    }
+
+    #[test]
+    fn every_set_but_bare_keys_without_f_pages_nine() {
+        for set in CandidateSlotKeySet::ALL {
+            let expected = if set == CandidateSlotKeySet::BareKeysWithoutF {
+                8
+            } else {
+                9
+            };
+            assert_eq!(set.page_size(), expected, "{set:?}");
+        }
     }
 
     #[test]

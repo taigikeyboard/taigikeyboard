@@ -74,6 +74,9 @@ pub struct VerticalLayoutInput<'a> {
     pub annotation_widths: &'a [Option<f32>],
     pub maximum_window_width: f32,
     pub scroller: ScrollerStyle,
+    /// How many rows the viewport shows — one per slot key
+    /// (`CandidateSlotKeySet::page_size`).
+    pub page_size: usize,
 }
 
 /// The vertical window's resolved geometry (`rebuildRows` `:205-232`).
@@ -126,6 +129,9 @@ pub struct VerticalListModel {
     anchor_row: usize,
     /// Scroll offset in points; `0` = row 0 at the top.
     scroll_y: f32,
+    /// Full rows the viewport shows and the slot keys number
+    /// (`VerticalLayoutInput::page_size`).
+    visible_rows: usize,
     /// The container's current height: grows past the natural height when
     /// a page jump needs the anchor row to reach the top, and shrinks back
     /// as the user scrolls away.
@@ -133,7 +139,6 @@ pub struct VerticalListModel {
 }
 
 impl VerticalListModel {
-    pub const VISIBLE_ROWS: usize = 9;
     pub const SEPARATOR_HEIGHT: f32 = 1.0;
 
     /// Lays the list out (capped at [`MAX_DISPLAY_CANDIDATES`]) with the
@@ -147,8 +152,9 @@ impl VerticalListModel {
         );
         let count = input.primary_widths.len().min(MAX_DISPLAY_CANDIDATES);
         let item_height = metrics.item_height();
-        let has_overflow = count > Self::VISIBLE_ROWS;
-        let visible = count.min(Self::VISIBLE_ROWS);
+        let visible_rows = input.page_size.max(1);
+        let has_overflow = count > visible_rows;
+        let visible = count.min(visible_rows);
         let bottom_peek = if has_overflow { item_height / 2.0 } else { 0.0 };
         let window_height = Self::rows_height(visible, item_height) + bottom_peek;
         let natural_content_height = Self::rows_height(count, item_height) + bottom_peek;
@@ -172,6 +178,7 @@ impl VerticalListModel {
             selected_index: 0,
             anchor_row: 0,
             scroll_y: 0.0,
+            visible_rows,
             container_height: natural_content_height,
         };
         model.revealed_rows = model.viewport_row_count();
@@ -262,7 +269,7 @@ impl VerticalListModel {
     }
 
     pub fn has_overflow(&self) -> bool {
-        self.count > Self::VISIBLE_ROWS
+        self.count > self.visible_rows
     }
 
     pub fn row_height(&self) -> f32 {
@@ -278,7 +285,7 @@ impl VerticalListModel {
         }
     }
 
-    /// Rows on screen: `min(count, 9)` full rows plus the peek.
+    /// Rows on screen: `min(count, visible_rows)` full rows plus the peek.
     pub fn viewport_height(&self) -> f32 {
         self.geometry.window_height
     }
@@ -316,20 +323,21 @@ impl VerticalListModel {
         (row < self.count && content_y - self.y_for_row(row) < self.item_height).then_some(row)
     }
 
-    /// The slot keys address the nine rows starting at the viewport's anchor.
+    /// The slot keys address the `visible_rows` rows starting at the
+    /// viewport's anchor.
     pub fn candidate_index_for_slot(&self, slot: usize) -> Option<usize> {
-        if slot >= Self::VISIBLE_ROWS {
+        if slot >= self.visible_rows {
             return None;
         }
         let index = self.anchor_row + slot;
         (index < self.count).then_some(index)
     }
 
-    /// The slot `row` shows, if it is one of the nine the anchor reaches.
+    /// The slot `row` shows, if it is one of the rows the anchor reaches.
     #[cfg(test)]
     pub(crate) fn slot_for_row(&self, row: usize) -> Option<usize> {
         let slot = row.checked_sub(self.anchor_row)?;
-        (slot < Self::VISIBLE_ROWS).then_some(slot)
+        (slot < self.visible_rows).then_some(slot)
     }
 
     /// Up/down walk; a column has no candidate to the left or right, so the
@@ -355,7 +363,7 @@ impl VerticalListModel {
     /// into the ends.
     fn jump_page(&mut self, pages: i32) {
         let visual_offset = self.selected_index.saturating_sub(self.anchor_row);
-        let target_anchor = self.anchor_row as i32 + pages * Self::VISIBLE_ROWS as i32;
+        let target_anchor = self.anchor_row as i32 + pages * self.visible_rows as i32;
         if target_anchor >= 0 && (target_anchor as usize) < self.count {
             let target_anchor = target_anchor as usize;
             let target = (target_anchor + visual_offset).min(self.count - 1);
@@ -441,7 +449,7 @@ impl VerticalListModel {
 mod tests {
     use super::*;
     use crate::candidates::metrics::test_support::EmMeasurer;
-    use crate::candidates::CandidateCellArrangement;
+    use crate::candidates::{CandidateCellArrangement, HorizontalPageLayout};
     use crate::settings::{CandidateFontSelection, CandidateSizeChoice};
     use CandidateNavigation::*;
 
@@ -473,7 +481,33 @@ mod tests {
             annotation_widths: &annotations,
             maximum_window_width: 640.0,
             scroller,
+            page_size: HorizontalPageLayout::PAGE_SIZE,
         })
+    }
+
+    #[test]
+    fn a_page_of_eight_shows_and_keys_eight_rows() {
+        // trace: Type - with f leaves eight slot keys; 20 rows overflow
+        // eight, so the viewport is eight rows plus the peek, the slots stop
+        // at 7, and a page jump moves the anchor by eight.
+        let metrics = metrics();
+        let widths = [metrics.base_width(); 20];
+        let primary: Vec<f32> = widths.iter().map(|w| w - chrome(&metrics)).collect();
+        let annotations = vec![None; widths.len()];
+        let mut model = VerticalListModel::new(VerticalLayoutInput {
+            metrics: &metrics,
+            primary_widths: &primary,
+            annotation_widths: &annotations,
+            maximum_window_width: 640.0,
+            scroller: ScrollerStyle::Legacy { width: 15.0 },
+            page_size: 8,
+        });
+        let item = metrics.item_height();
+        assert_eq!(model.viewport_height(), 8.0 * item + 7.0 + item / 2.0);
+        assert_eq!(model.candidate_index_for_slot(7), Some(7));
+        assert_eq!(model.candidate_index_for_slot(8), None);
+        model.navigate(PageDown);
+        assert_eq!(model.selected_index(), 8);
     }
 
     fn model(count: usize) -> VerticalListModel {
@@ -595,6 +629,7 @@ mod tests {
             annotation_widths: &annotations,
             maximum_window_width: 640.0,
             scroller: ScrollerStyle::Legacy { width: 15.0 },
+            page_size: HorizontalPageLayout::PAGE_SIZE,
         });
         assert_eq!(
             model.geometry().item_width,

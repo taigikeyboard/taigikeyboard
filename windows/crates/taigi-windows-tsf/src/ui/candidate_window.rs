@@ -489,6 +489,8 @@ impl CandidateWindow {
                 .collect()
         };
         let maximum = self.maximum_window_width(metrics);
+        // One cell per slot key: Type - with f leaves eight.
+        let page_size = self.slot_key_set.page_size();
         match layout {
             CandidateLayout::Horizontal => {
                 let arrow = Self::arrow_width(metrics);
@@ -497,6 +499,7 @@ impl CandidateWindow {
                     metrics.base_width(),
                     maximum,
                     arrow,
+                    page_size,
                 );
                 LayoutModel::Horizontal(HorizontalListModel::new(
                     pages,
@@ -513,6 +516,7 @@ impl CandidateWindow {
                     scroller: ScrollerStyle::Overlay {
                         width: SCROLLER_WIDTH,
                     },
+                    page_size,
                 }))
             }
             CandidateLayout::Expandable | CandidateLayout::VerticalExpandable => {
@@ -533,6 +537,7 @@ impl CandidateWindow {
                         chrome_width: Self::chevron_width(metrics),
                         scroller_width: SCROLLER_WIDTH,
                         item_height: metrics.item_height(),
+                        page_size,
                     },
                 ))
             }
@@ -777,7 +782,7 @@ impl CandidateWindow {
         let shift = CandidateIndexLabel::key_slot_shift(self.lead_cell_is_unkeyed, |slot| {
             self.candidate_index_for_slot(slot)
         });
-        (0..HorizontalPageLayout::PAGE_SIZE)
+        (0..self.slot_key_set.page_size())
             .find(|slot| self.candidate_index_for_slot(slot + shift) == Some(candidate_index))
     }
 
