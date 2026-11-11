@@ -177,12 +177,11 @@ announce() {
     [[ ${#DESKTOP_ASSET_LABELS[@]} -eq ${#DESKTOP_ASSETS[@]} ]] ||
         fail "DESKTOP_ASSET_LABELS no longer lines up with DESKTOP_ASSETS (lib/desktop-release.sh)"
     local prefix_url="$DOWNLOAD_HOST_URL/beta/$(beta_run_name "$source_sha" "$run_id")"
-    # One "<label>: <url>" line per installer this run mirrored. The <> keeps
-    # Discord from drawing a preview card for each download.
+    # One "<label>: <url>" line per installer this run mirrored.
     local downloads=""
     for i in "${!DESKTOP_ASSETS[@]}"; do
         [[ -f "$assets_dir/${DESKTOP_ASSETS[$i]}" ]] || continue
-        downloads+="${DESKTOP_ASSET_LABELS[$i]}: <$prefix_url/${DESKTOP_ASSETS[$i]}>"$'\n'
+        downloads+="${DESKTOP_ASSET_LABELS[$i]}: $prefix_url/${DESKTOP_ASSETS[$i]}"$'\n'
     done
     [[ -n "$downloads" ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
     # The page lists this run's mirror URLs once Pages has deployed it; a post
@@ -207,6 +206,8 @@ print(json.dumps({
         f"{downloads}"
     ).rstrip(),
     "allowed_mentions": {"parse": []},
+    # SUPPRESS_EMBEDS: no link preview cards (maintainer preference).
+    "flags": 4,
 }))
 ' "$SHORT_VERSION" "${source_sha:0:7}" "$BETA_PAGE_URL" "$downloads")"
     curl -q --silent --show-error --fail -H "Content-Type: application/json" \
