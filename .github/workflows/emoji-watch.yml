@@ -72,7 +72,7 @@ jobs:
             echo
             echo "Latest CLDR release: \`$cldr\` — keywords come from CLDR; bump \`CLDR_TAG\` together."
             echo
-            echo "Bump steps: \`emoji/data/SOURCES.md\` § Version pin (\`fetch-emoji\` skill):  \`make fetch\` + \`make build\` in \`emoji/\` and review the diff."
+            echo "Bump steps: \`emoji/data/SOURCES.md\` § Version pin (\`fetch-emoji\` skill): \`make fetch\` + \`make build\` in \`emoji/\` and review the diff."
             echo
             echo "Source: $UPSTREAM_URL"
             echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
