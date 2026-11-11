@@ -69,4 +69,4 @@ jobs:
           DISCORD_BETA_WEBHOOK: ${{ secrets.DISCORD_BETA_WEBHOOK }}
           SHORT_VERSION: ${{ inputs.version }}
           SOURCE_SHA: ${{ inputs.source_sha }}
-        run: bash tools/release/beta-release.sh announce "$SOURCE_SHA" "$GITHUB_RUN_ID"
+        run: bash tools/release/beta-release.sh announce "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"
