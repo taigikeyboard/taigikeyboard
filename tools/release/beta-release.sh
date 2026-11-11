@@ -195,14 +195,20 @@ announce() {
     done
 
     message="$(python3 -c '
-import json, sys
+import datetime, json, sys, zoneinfo
 version, sha7, url, downloads = sys.argv[1:5]
+# The train releases on the 5th: this month'"'"'s if it is still ahead (Taiwan
+# time), otherwise next month'"'"'s.
+today = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Taipei")).date()
+release = today.replace(day=5)
+if today.day >= 5:
+    release = (today.replace(day=1) + datetime.timedelta(days=32)).replace(day=5)
 print(json.dumps({
     "content": (
         f"Desktop beta {version} ({sha7}) is ready for testing\n"
         f"Beta page (share this link with other testers): {url}\n"
         "If no major issues turn up (crashes, unable to type), "
-        "this build is released to all users on the 5th.\n\n"
+        f"this build is released to all users on {release:%B} {release.day}.\n\n"
         f"{downloads}"
     ).rstrip(),
     "allowed_mentions": {"parse": []},
