@@ -4,7 +4,7 @@
 #
 # Usage: beta-release.sh fetch <dir> <release id> <source sha>
 #        beta-release.sh publish <dir> <source sha> <run id>
-#        beta-release.sh announce <source sha> <run id>
+#        beta-release.sh announce <dir> <source sha> <run id>
 #
 # Run by `.github/workflows/desktop-beta.yml`, which `stage-desktop.sh`
 # dispatches once a draft is fully staged; the release environment's approval
@@ -22,8 +22,9 @@
 #            `_data/beta_release.json` to the website, then deletes every older
 #            `beta/` prefix. The page hides a beta once its version is published.
 #   announce DISCORD_BETA_WEBHOOK only. Waits until the live /beta page lists
-#            this run's build, then posts the page link to the Discord channel
-#            the webhook belongs to (#announcements).
+#            this run's build, then posts the page link and each installer's
+#            R2 link to the Discord channel the webhook belongs to
+#            (#announcements).
 #
 # Nothing here touches the published releases: not `desktop/` in the bucket,
 # not the `_data/*_release.json` files, not the appcasts.
@@ -40,13 +41,13 @@ REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 usage() {
     echo "usage: beta-release.sh fetch <dir> <release id> <source sha>" >&2
     echo "       beta-release.sh publish <dir> <source sha> <run id>" >&2
-    echo "       beta-release.sh announce <source sha> <run id>" >&2
+    echo "       beta-release.sh announce <dir> <source sha> <run id>" >&2
     exit 2
 }
 
 mode="${1:-}"
 case "$mode:$#" in
-    fetch:4 | publish:4 | announce:3) ;;
+    fetch:4 | publish:4 | announce:4) ;;
     *) usage ;;
 esac
 
@@ -59,6 +60,9 @@ esac
 source "$REPOSITORY_DIR/tools/release/lib/release-site.sh"
 # shellcheck source=lib/desktop-release.sh
 source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
+
+# This run's folder under beta/: publish writes it, announce links into it.
+beta_run_name() { echo "$SHORT_VERSION-${1:0:7}-$2"; }
 
 # The only names publish writes and prune deletes under beta/.
 BETA_NAME_RE='^[0-9.]+-[0-9a-f]{7}-[0-9]+$'
@@ -106,7 +110,7 @@ fetch() {
 publish() {
     local source_sha="$1" run_id="$2"
     [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || fail "source sha '$source_sha' is not 40 hex characters"
-    local run_name="$SHORT_VERSION-${source_sha:0:7}-$run_id"
+    local run_name; run_name="$(beta_run_name "$source_sha" "$run_id")"
     [[ "$run_name" =~ $BETA_NAME_RE ]] || fail "'$run_name' is not a beta name"
     require_r2
     RELEASE_TEMP_DIR="$(mktemp -d)"
@@ -163,9 +167,23 @@ prune_older_betas() {
 
 BETA_PAGE_URL="https://taigikeyboard.tw/beta"
 
+# What each installer is called in the Discord post, in DESKTOP_ASSETS order.
+DESKTOP_ASSET_LABELS=("macOS" "Windows" "Linux (.deb)" "Fedora (.rpm)" "Arch")
+
 announce() {
-    local source_sha="$1" run_id="$2" message attempt page
+    local source_sha="$1" run_id="$2" message attempt page i
     [[ -n "${DISCORD_BETA_WEBHOOK:-}" ]] || fail "DISCORD_BETA_WEBHOOK is not set"
+    [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || fail "source sha '$source_sha' is not 40 hex characters"
+    [[ ${#DESKTOP_ASSET_LABELS[@]} -eq ${#DESKTOP_ASSETS[@]} ]] ||
+        fail "DESKTOP_ASSET_LABELS no longer lines up with DESKTOP_ASSETS (lib/desktop-release.sh)"
+    local prefix_url="$DOWNLOAD_HOST_URL/beta/$(beta_run_name "$source_sha" "$run_id")"
+    # One "- <label>: <url>" bullet per installer this run mirrored.
+    local downloads=""
+    for i in "${!DESKTOP_ASSETS[@]}"; do
+        [[ -f "$assets_dir/${DESKTOP_ASSETS[$i]}" ]] || continue
+        downloads+="- ${DESKTOP_ASSET_LABELS[$i]}: $prefix_url/${DESKTOP_ASSETS[$i]}"$'\n'
+    done
+    [[ -n "$downloads" ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
     # The page lists this run's mirror URLs once Pages has deployed it; a post
     # before that would link testers to the previous build. The query string
     # skips the Pages CDN's 10-minute cache.
@@ -177,13 +195,27 @@ announce() {
     done
 
     message="$(python3 -c '
-import json, sys
-version, sha7, url = sys.argv[1:4]
+import datetime, json, sys, zoneinfo
+version, sha7, url, downloads = sys.argv[1:5]
+# The train releases on the 5th: this month'"'"'s if it is still ahead (Taiwan
+# time), otherwise next month'"'"'s.
+today = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Taipei")).date()
+release = today.replace(day=5)
+if today.day >= 5:
+    release = (today.replace(day=1) + datetime.timedelta(days=32)).replace(day=5)
 print(json.dumps({
-    "content": f"Desktop beta {version} ({sha7}) is ready for testing\n{url}",
+    "content": (
+        f"**Desktop beta {version} ({sha7}) is ready for testing**\n"
+        f"Beta page (share this link with other testers): {url}\n"
+        "If no major issues turn up (crashes, unable to type), "
+        f"this build is released to all users on {release:%B} {release.day}.\n\n"
+        f"{downloads}"
+    ).rstrip(),
     "allowed_mentions": {"parse": []},
+    # SUPPRESS_EMBEDS: no link preview cards (maintainer preference).
+    "flags": 4,
 }))
-' "$SHORT_VERSION" "${source_sha:0:7}" "$BETA_PAGE_URL")"
+' "$SHORT_VERSION" "${source_sha:0:7}" "$BETA_PAGE_URL" "$downloads")"
     curl -q --silent --show-error --fail -H "Content-Type: application/json" \
         --data "$message" "$DISCORD_BETA_WEBHOOK" > /dev/null ||
         fail "the Discord webhook refused the post"
@@ -193,5 +225,5 @@ print(json.dumps({
 case "$mode" in
     fetch) assets_dir="$2" && fetch "$3" "$4" ;;
     publish) assets_dir="$2" && publish "$3" "$4" ;;
-    announce) announce "$2" "$3" ;;
+    announce) assets_dir="$2" && announce "$3" "$4" ;;
 esac
