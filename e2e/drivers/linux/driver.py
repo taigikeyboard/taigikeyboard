@@ -83,6 +83,9 @@ def settings_document(settings: dict) -> dict:
     f_hyphen = settings.get("f_hyphen")
     if f_hyphen is not None:
         values["fHyphenEnabled"] = f_hyphen
+    auto_space = settings.get("auto_space")
+    if auto_space is not None:
+        values["autoSpaceEnabled"] = auto_space
     return {"revision": 1, "values": values}
 
 
