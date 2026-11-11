@@ -125,7 +125,9 @@ fn partial_pick_finishes_the_tail_without_teaching_an_unpicked_final_word() {
     let mut engine = Engine::new();
     start(&mut engine, "taigi", &config);
     let applied = insert(&mut engine, Some(pick(3)), "？", true, &config);
-    assert_one_write(&applied.response, "台gi？ ");
+    // trace: the tail `gi` is romanization, so the gate is on, but `？` is
+    // full width — it takes the auto space's place (`is_spaced_punctuation`).
+    assert_one_write(&applied.response, "台gi？");
     assert_eq!(applied.usage.unwrap().display_text, "台");
     assert!(applied.learned.is_none());
     assert!(!applied

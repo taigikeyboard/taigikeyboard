@@ -49,6 +49,7 @@ message PhoneticsRequest {
     IsAttachingPunctuation is_attaching_punctuation = 40;
     ExternalLookupDigitForm external_lookup_digit_form = 41;
     IsJoinerPunctuation is_joiner_punctuation = 42;
+    IsSpacedPunctuation is_spaced_punctuation = 43;
   }
 }
 
@@ -114,6 +115,13 @@ message IsAttachingPunctuation { string text = 1; }
 // (`hōo ` + `·` → `hōo·`; behavioral-invariants §23). Answers `BoolResult`;
 // false for empty or multi-character text.
 message IsJoinerPunctuation { string text = 1; }
+
+// `IsSpacedPunctuation` — whether attaching `text` keeps the auto space after
+// itself: the half-width (Latin) marks (`guá ` + `?` → `guá? `). A
+// full-width mark takes the space's place and leaves none (`taigi ` + `，` →
+// `taigi，`), and arms nothing; behavioral-invariants §23. Answers
+// `BoolResult`; false for empty or multi-character text.
+message IsSpacedPunctuation { string text = 1; }
 
 // `ExternalLookupDigitForm` — the digit-tone spelling of a TL reading that
 // the MOE dictionary and ChhoeTaigi search by: lowercased, split on `-`

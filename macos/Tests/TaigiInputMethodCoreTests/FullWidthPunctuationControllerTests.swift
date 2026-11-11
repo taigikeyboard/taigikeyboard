@@ -118,10 +118,10 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         // wins: the space that commit wrote is still ours, and a display mode
         // changed afterwards does not make it stale. The mark is the width the
         // output is in now — punctuation follows the output, not the word in
-        // front of the caret — so the document reads `taigi， `. Auto-space
-        // (OFF by default) is turned on because
-        // an armed space is what this case is about: the arm exists only where
-        // the commit earned one.
+        // front of the caret — and a full-width mark takes the space's place,
+        // so the document reads `taigi，`. Auto-space (OFF by default) is
+        // turned on because an armed space is what this case is about: the
+        // arm exists only where the commit earned one.
         let session = try composedSession(configure: { $0.isAutoSpaceEnabled = true })
         session.client.documentTextForReads = ""
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
@@ -134,7 +134,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         )
 
         XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts, ["， "], "the armed space is still ours")
+        XCTAssertEqual(session.client.insertedTexts, ["，"], "the armed space is still ours")
     }
 
     // MARK: - Mid-composition (one mutation with the commit)
@@ -168,20 +168,17 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         XCTAssertFalse(presenter.isShowing)
     }
 
-    /// ⚠ Both rewrites fire here, and they answer to different questions: the
-    /// auto space follows what this commit WROTE — the preedit as typed, which
-    /// is romanization under TL and POJ — while the
-    /// full-width map still follows the output MODE. So Hanji-first gets
-    /// `taigi？ `. The map reading the mode rather than the committed string is
-    /// the same approximation this round removed from the auto-space gate,
-    /// left standing because which marks Hanji mode types is a Full-width Punctuation policy
-    /// question, not an auto-space one.
+    /// Both rewrites are asked here: the auto space follows what this commit
+    /// WROTE — the preedit as typed, which is romanization under TL and POJ —
+    /// and the full-width map follows the output MODE. A full-width mark
+    /// takes the auto space's place (`IsSpacedPunctuation`), so Hanji-first
+    /// gets `taigi？`, one mutation, nothing after the mark.
     func testPunctuationMidComposition_commitsWithTheFullWidthForm_inOneMutation() throws {
         // BOTH domains: `withHanjiFirst` moves `.standard` (the lifecycle
         // snapshot), `configure` the controller's own store (what each key
         // request carries). A case about "the user is in Hanji mode" needs them to agree.
-        // Auto-space is OFF by default and is what puts the trailing space in
-        // `taigi？ `, so this case turns it on to reach that site.
+        // Auto-space is OFF by default; this case turns it on to show the
+        // full-width mark takes its place.
         try withHanjiFirst(true) {
             for (typed, mark) in [("?", "？"), ("'", "、"), ("\\", "、")] {
                 let session = try composedSession(configure: {
@@ -192,7 +189,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
                 _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: typed), client: session.client)
 
                 XCTAssertEqual(session.client.insertedTexts.count, 1, "commit and punctuation stay one mutation")
-                XCTAssertEqual(session.client.insertedTexts.last, "taigi\(mark) ")
+                XCTAssertEqual(session.client.insertedTexts.last, "taigi\(mark)")
             }
         }
     }

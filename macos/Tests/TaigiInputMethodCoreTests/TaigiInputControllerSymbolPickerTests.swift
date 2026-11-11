@@ -388,7 +388,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.press(.leftArrow)
         try session.type("w")
 
-        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
+        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)，")
     }
 
     /// The chord after an ordinary commit does not spend the arm either: the
@@ -406,7 +406,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.pressPickerChord(isARepeat: true)
         try session.type("w")
 
-        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
+        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)，")
     }
 
     // MARK: - Who takes it down

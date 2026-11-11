@@ -384,11 +384,12 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     /// The punctuation swap has to follow it. The space the Hanji/romanization key wrote is
-    /// this controller's, so `?` must swap with it (`我ê？ `) — re-reading the
+    /// this controller's, so `?` must swap with it (`我ê？`) — re-reading the
     /// gate under the OUTPUT MODE instead would refuse, because Hanji mode says
     /// no commit earns a space, and the one that just did would be denied its
     /// own. What the armed script is stored for. The mark is Hanji mode's
-    /// full width: punctuation follows the output, not the word before it.
+    /// full width — punctuation follows the output, not the word before it —
+    /// so it takes the space's place and leaves none.
     func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
         try withHanjiFirst(true) {
             let session = try composedSession { $0.isAutoSpaceEnabled = true }
@@ -405,7 +406,7 @@ final class AutoSpaceControllerTests: XCTestCase {
             )
 
             XCTAssertTrue(handled)
-            XCTAssertEqual(session.client.insertedTexts, ["？ "])
+            XCTAssertEqual(session.client.insertedTexts, ["？"])
         }
     }
 

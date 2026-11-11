@@ -9,8 +9,8 @@ use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, ExternalLookupDigitForm, GetToneVariations, IsAttachingPunctuation,
-    IsJoinerPunctuation, IsTpsToneMark, PhoneticsRequest, PhoneticsResponse, StringResult,
-    TlDisplayToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
+    IsJoinerPunctuation, IsSpacedPunctuation, IsTpsToneMark, PhoneticsRequest, PhoneticsResponse,
+    StringResult, TlDisplayToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
@@ -462,6 +462,25 @@ fn is_joiner_punctuation_answers_through_the_dispatcher() {
     // `tps::KHINSIANN_DOT` (U+00B7); `?` attaches, it does not join.
     for (text, expected) in [("\u{00b7}", true), ("?", false), ("-", false), ("", false)] {
         let resp = run(Method::IsJoinerPunctuation(IsJoinerPunctuation {
+            text: text.to_string(),
+        }));
+        assert_eq!(bool_result(&resp), expected, "{text:?}");
+    }
+}
+
+#[test]
+fn is_spaced_punctuation_answers_through_the_dispatcher() {
+    // trace: `punctuation::is_spaced_punctuation` = attaching AND ASCII —
+    // `?` and `)` yes; their full-width `？` `）` and the opener `(` no.
+    for (text, expected) in [
+        ("?", true),
+        (")", true),
+        ("？", false),
+        ("）", false),
+        ("(", false),
+        ("", false),
+    ] {
+        let resp = run(Method::IsSpacedPunctuation(IsSpacedPunctuation {
             text: text.to_string(),
         }));
         assert_eq!(bool_result(&resp), expected, "{text:?}");

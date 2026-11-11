@@ -122,5 +122,16 @@ public interface PhoneticsRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation getIsJoinerPunctuation();
 
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   * @return Whether the isSpacedPunctuation field is set.
+   */
+  boolean hasIsSpacedPunctuation();
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   * @return The isSpacedPunctuation.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation getIsSpacedPunctuation();
+
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.MethodCase getMethodCase();
 }

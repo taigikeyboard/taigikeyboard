@@ -140,8 +140,9 @@ extension ActionHandler {
     /// auto-space "smart punctuation" swap: when auto-space is active and the
     /// character just before the cursor is the auto-inserted trailing space,
     /// attaching punctuation deletes that space and re-inserts it AFTER the
-    /// punctuation (`guá ` + `?` → `guá? `, never `guá ?`); a joiner takes the
-    /// space's place (`hōo ` + `·` → `hōo·`).
+    /// punctuation (`guá ` + `?` → `guá? `, never `guá ?`). A full-width
+    /// attaching mark and a joiner take the space's place instead
+    /// (`taigi ` + `，` → `taigi，`; `hōo ` + `·` → `hōo·`).
     // CROSS-PLATFORM INVARIANT — mirrors Android
     // TextInputKeyHandler.commitNonComposingCharacter. Drift causes silent divergence.
     private func insertNonComposingCharacter(_ char: String) {
@@ -161,11 +162,13 @@ extension ActionHandler {
            (proxy.selectedText ?? "").isEmpty,
            proxy.documentContextBeforeInput?.last == " "
         {
+            let isSpaced = attaches && RustEngineBridge.isSpacedPunctuation(char)
             hostText.deleteBackward()
-            hostText.insert(attaches ? char + " " : char)
+            hostText.insert(isSpaced ? char + " " : char)
             // Re-armed on the space the swap just wrote, so `?!` chains keep
-            // swapping (`guá? ` + `!` → `guá?! `). A joiner wrote no space.
-            if attaches {
+            // swapping (`guá? ` + `!` → `guá?! `). A full-width mark or a
+            // joiner wrote no space.
+            if isSpaced {
                 armAutoSpaceSwap()
             }
             return

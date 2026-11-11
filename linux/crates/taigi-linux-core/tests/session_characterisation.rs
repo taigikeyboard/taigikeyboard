@@ -299,13 +299,11 @@ fn punctuation_inside_a_composition_commits_the_literal_with_the_full_width_mark
     session.type_word("tsiah");
     assert_eq!(
         session.press(COMMA),
-        [
-            Emit::ClearPreedit,
-            commit("tsiah， "),
-            Emit::HideLookupTable
-        ]
+        [Emit::ClearPreedit, commit("tsiah，"), Emit::HideLookupTable]
     );
-    assert!(session.state.armed_auto_space);
+    // trace: auto-space on, but a full-width mark takes the space's place
+    // (`is_spaced_punctuation`), so there is no space to arm.
+    assert!(!session.state.armed_auto_space);
 }
 
 #[test]
@@ -329,7 +327,7 @@ fn the_auto_space_swap_needs_the_surrounding_text_capability() {
     assert!(!session.state.armed_auto_space);
 
     // With it the space goes and the mark takes its place in the width the
-    // output writes (full under Hanji-first), plus the space.
+    // output writes. Full width (Hanji-first) adds no space after itself.
     let mut session = Session::new(true, true);
     session.type_word("ho");
     session.press(RETURN);
@@ -340,12 +338,11 @@ fn the_auto_space_swap_needs_the_surrounding_text_capability() {
                 offset: -1,
                 count: 1
             },
-            commit("， ")
+            commit("，")
         ]
     );
-    // trace (read by running HEAD): the swapped mark ends in a space of its
-    // own, so the next mark may swap again.
-    assert!(session.state.armed_auto_space);
+    // trace: with no space after the mark there is nothing left to swap.
+    assert!(!session.state.armed_auto_space);
 }
 
 #[test]

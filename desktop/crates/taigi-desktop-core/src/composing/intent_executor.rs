@@ -440,22 +440,32 @@ fn commit_candidate(
 /// The swap for `text` about to be written outside a composition. The arm's
 /// EXISTENCE is the verdict — it is only ever set after a commit that wrote
 /// romanization earned its space — so only Auto-Space itself is re-read
-/// live here. On success the swap is re-armed (`?!` chains) and the engine
-/// hears about the character as the end of a context.
+/// live here. A half-width mark moves the space after itself and re-arms
+/// the swap (`?!` chains); a full-width mark takes the space's place and
+/// arms nothing. Either way the engine hears about the character as the end
+/// of a context.
 fn swap_auto_space(
     text: &str,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     surface: &mut impl IntentSurface,
 ) -> bool {
-    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        || !engine::is_attaching_punctuation(text)
-        || !surface.swap_preceding_space(&format!("{text} "))
-    {
+    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED) || !engine::is_attaching_punctuation(text) {
+        return false;
+    }
+    let is_spaced = engine::is_spaced_punctuation(text);
+    let replacement = if is_spaced {
+        format!("{text} ")
+    } else {
+        text.to_owned()
+    };
+    if !surface.swap_preceding_space(&replacement) {
         return false;
     }
     manager.note_character_typed_outside_composition(text);
-    surface.arm_swap();
+    if is_spaced {
+        surface.arm_swap();
+    }
     true
 }
 

@@ -84,6 +84,12 @@ class RustEngineBridgeTest {
         assertFalse(RustEngineBridge.isJoinerPunctuation("-"))
     }
 
+    @Test fun op_isSpacedPunctuation_onlyTheHalfWidthMarks() {
+        assertTrue(RustEngineBridge.isSpacedPunctuation("?"))
+        assertFalse(RustEngineBridge.isSpacedPunctuation("？"))
+        assertFalse(RustEngineBridge.isSpacedPunctuation("("))
+    }
+
     // The engine's digit-tone fold (`phonetics::external_lookup`, full table
     // pinned there) through the bridge `ExternalLookupURLBuilder` reads; the
     // `o͘` row is the parity-correction (the Kotlin copy left `ho͘2`).
