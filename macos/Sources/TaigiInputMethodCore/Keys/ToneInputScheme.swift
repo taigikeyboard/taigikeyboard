@@ -46,8 +46,9 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
     /// no TL or POJ syllable spells, and `;`. The set under `standard`
     /// (USER 2026-08-28).
     case bareKeys
-    /// `bareKeys` without `f` — `q w d z x v y ;` on slots 0…7, the ninth
-    /// unkeyed — under `standard` while Type - with f is on (USER 2026-11-10).
+    /// `bareKeys` without `f` — `q w d z x v y ;` on slots 0…7, a page of
+    /// eight — under `standard` while Type - with f is on (USER 2026-11-10,
+    /// 2026-11-12).
     case bareKeysWithoutF
     /// Bare `1`…`9`, the set under `telex`, where the letters above type the
     /// tones.
@@ -64,6 +65,13 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
 
     /// The keys `bareKeysWithoutF` puts on slots 0…7, in slot order.
     static let bareKeyRowWithoutF = ["q", "w", "d", "z", "x", "v", "y", ";"]
+
+    /// How many candidates a page shows under this set: one per key, so no
+    /// cell is drawn that no key picks (USER 2026-11-12). Twin of
+    /// desktop-core `CandidateSlotKeySet::page_size`.
+    var pageSize: Int {
+        self == .bareKeysWithoutF ? Self.bareKeyRowWithoutF.count : HorizontalPageLayout.pageSize
+    }
 
     /// The key this set gives the candidate in `slot`, for the nine slots a
     /// page holds (`CandidateIndexLabel`, which owns which key is drawn);

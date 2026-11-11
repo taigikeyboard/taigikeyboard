@@ -113,6 +113,7 @@ final class HorizontalCandidatePanel: CandidateBasePanel {
             slotWidth: metrics.baseWidth,
             windowBudget: maximumWindowWidth,
             chromeWidth: pageArrowView.intrinsicContentSize.width,
+            pageSize: slotKeySet.pageSize,
         )
     }
 

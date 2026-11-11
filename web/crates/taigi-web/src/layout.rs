@@ -100,6 +100,7 @@ impl ListLayout for PageListLayout {
         &self,
         cells: &[CandidateCellContent],
         settings: &SettingsDocument,
+        page_size: usize,
     ) -> Option<ExpandableListModel> {
         let layout: CandidateLayout = settings.choice(&keys::CANDIDATE_LAYOUT);
         if !matches!(
@@ -177,6 +178,7 @@ impl ListLayout for PageListLayout {
                 // would match.
                 scroller_width: 0.0,
                 item_height: metrics.item_height(),
+                page_size,
             },
         ))
     }
@@ -187,6 +189,7 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
     use taigi_desktop_core::candidates::ExpandableAxis;
+    use taigi_desktop_core::session::PAGE_SIZE;
 
     /// Every character `size / 2` wide, and it keeps what it was asked.
     #[derive(Debug)]
@@ -243,7 +246,11 @@ mod tests {
         layout: CandidateLayout,
         cells: &[CandidateCellContent],
     ) -> Option<ExpandableListModel> {
-        PageListLayout::new(Arc::new(FixedRuler::new())).layout(cells, &settings_with(layout))
+        PageListLayout::new(Arc::new(FixedRuler::new())).layout(
+            cells,
+            &settings_with(layout),
+            PAGE_SIZE,
+        )
     }
 
     #[test]
@@ -252,7 +259,7 @@ mod tests {
         let layout = PageListLayout::new(ruler.clone());
         for choice in [CandidateLayout::Horizontal, CandidateLayout::Vertical] {
             assert!(layout
-                .layout(&annotated(3), &settings_with(choice))
+                .layout(&annotated(3), &settings_with(choice), PAGE_SIZE)
                 .is_none());
         }
         assert!(ruler.asked.lock().unwrap().is_empty());
@@ -273,7 +280,11 @@ mod tests {
     fn scripts_are_measured_at_their_own_sizes() {
         let ruler = Arc::new(FixedRuler::new());
         PageListLayout::new(ruler.clone())
-            .layout(&annotated(1), &settings_with(CandidateLayout::Expandable))
+            .layout(
+                &annotated(1),
+                &settings_with(CandidateLayout::Expandable),
+                PAGE_SIZE,
+            )
             .expect("a model");
         let asked = ruler.asked.lock().unwrap();
         // trace: Standard is 17 pt; annotation 14 × 17 / 16 = 14.875, rounds to 15.
@@ -295,7 +306,11 @@ mod tests {
     fn a_ruler_that_cannot_answer_leaves_the_list_paged() {
         let layout = PageListLayout::new(Arc::new(RefusingRuler));
         assert!(layout
-            .layout(&annotated(3), &settings_with(CandidateLayout::Expandable))
+            .layout(
+                &annotated(3),
+                &settings_with(CandidateLayout::Expandable),
+                PAGE_SIZE
+            )
             .is_none());
     }
 }

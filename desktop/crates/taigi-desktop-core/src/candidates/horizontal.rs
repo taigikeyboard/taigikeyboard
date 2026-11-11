@@ -27,14 +27,16 @@ pub struct HorizontalPageLayout {
 }
 
 impl HorizontalPageLayout {
-    /// How many candidates one page holds — what the nine slot keys address.
+    /// The most candidates one page holds — the nine slot keys of the
+    /// fullest set. A page holds as many as the live set has keys
+    /// (`CandidateSlotKeySet::page_size`), which callers pass as `page_size`.
     pub const PAGE_SIZE: usize = 9;
     /// A page never packs fewer potential columns than this.
     pub const MINIMUM_PAGE_COLUMNS: usize = 4;
 
-    /// The nominal width of a full row of slots.
-    pub fn row_budget(slot_width: f32) -> f32 {
-        slot_width * Self::PAGE_SIZE.max(Self::MINIMUM_PAGE_COLUMNS) as f32
+    /// The nominal width of a full row of `page_size` slots.
+    pub fn row_budget(slot_width: f32, page_size: usize) -> f32 {
+        slot_width * page_size.max(Self::MINIMUM_PAGE_COLUMNS) as f32
     }
 
     /// Packs for a window `window_budget` wide whose page-turn chrome costs
@@ -48,37 +50,37 @@ impl HorizontalPageLayout {
         slot_width: f32,
         window_budget: f32,
         chrome_width: f32,
+        page_size: usize,
     ) -> Self {
-        let chromeless = Self::pack(widths, slot_width, window_budget);
+        let chromeless = Self::pack(widths, slot_width, window_budget, page_size);
         if chromeless.pages.len() <= 1 {
             return chromeless;
         }
-        Self::pack(widths, slot_width, window_budget - chrome_width)
+        Self::pack(widths, slot_width, window_budget - chrome_width, page_size)
     }
 
     /// Packs `widths` into pages. A cell renders at its measured width,
     /// floored at `slot_width` and capped at `max_cell_width`. A page breaks
     /// before its total passes the budget — unless the page is still empty,
     /// so a single candidate wider than the budget gets a page of its own AT
-    /// ITS MEASURED WIDTH — and no page holds more than `PAGE_SIZE`. At most
+    /// ITS MEASURED WIDTH — and no page holds more than `page_size`. At most
     /// [`MAX_DISPLAY_CANDIDATES`] are packed.
     ///
     /// NAMED NUMERIC DIVERGENCE: `f32` (Direct2D's own unit) where the Mac
     /// computes in 64-bit `CGFloat`; a cell whose running total lands within
     /// float rounding of the budget may break a page differently. The
     /// epsilon test below pins the strict `>` at the boundary.
-    pub fn pack(widths: &[f32], slot_width: f32, max_cell_width: f32) -> Self {
+    pub fn pack(widths: &[f32], slot_width: f32, max_cell_width: f32, page_size: usize) -> Self {
         let widths = &widths[..widths.len().min(MAX_DISPLAY_CANDIDATES)];
+        let page_size = page_size.max(1);
         let cell_limit = slot_width.max(max_cell_width);
-        let page_budget = Self::row_budget(slot_width).min(cell_limit);
+        let page_budget = Self::row_budget(slot_width, page_size).min(cell_limit);
         let mut pages: Vec<Vec<PageSlot>> = Vec::new();
         let mut page: Vec<PageSlot> = Vec::new();
         let mut used_width = 0.0;
         for (index, raw_width) in widths.iter().enumerate() {
             let width = slot_width.max(raw_width.min(cell_limit));
-            if page.len() == Self::PAGE_SIZE
-                || (used_width + width > page_budget && !page.is_empty())
-            {
+            if page.len() == page_size || (used_width + width > page_budget && !page.is_empty()) {
                 pages.push(std::mem::take(&mut page));
                 used_width = 0.0;
             }
@@ -326,9 +328,10 @@ mod tests {
 
     const SLOT: f32 = 10.0;
     const ROOMY: f32 = 1_000.0;
+    const NINE: usize = HorizontalPageLayout::PAGE_SIZE;
 
     fn pack(widths: &[f32]) -> HorizontalPageLayout {
-        HorizontalPageLayout::pack(widths, SLOT, ROOMY)
+        HorizontalPageLayout::pack(widths, SLOT, ROOMY, NINE)
     }
 
     fn counts(layout: &HorizontalPageLayout) -> Vec<usize> {
@@ -353,13 +356,23 @@ mod tests {
     }
 
     #[test]
+    fn a_page_of_eight_fills_eight_per_page() {
+        // trace: Type - with f leaves eight slot keys
+        // (`CandidateSlotKeySet::BareKeysWithoutF`); budget 8 × 10 = 80 → 8, 8, 4.
+        let layout = HorizontalPageLayout::pack(&[5.0; 20], SLOT, ROOMY, 8);
+        assert_eq!(counts(&layout), [8, 8, 4]);
+        assert_eq!(layout.page_budget, 80.0);
+        assert_eq!(layout.pages[1][0].candidate_index, 8);
+    }
+
+    #[test]
     fn wide_item_breaks_the_page_and_keeps_its_measured_width_up_to_the_screen() {
         let layout = pack(&[10.0, 200.0, 10.0]);
         assert_eq!(indices(&layout), [[0], [1], [2]]);
         assert_eq!(layout.pages[1][0].width, 200.0);
-        let clamped = HorizontalPageLayout::pack(&[10.0, 200.0, 10.0], SLOT, 120.0);
+        let clamped = HorizontalPageLayout::pack(&[10.0, 200.0, 10.0], SLOT, 120.0, NINE);
         assert_eq!(clamped.pages[1][0].width, 120.0);
-        let narrow = HorizontalPageLayout::pack(&[5.0; 20], SLOT, 45.0);
+        let narrow = HorizontalPageLayout::pack(&[5.0; 20], SLOT, 45.0, NINE);
         assert_eq!(narrow.page_budget, 45.0);
         assert_eq!(counts(&narrow), [4, 4, 4, 4, 4]);
     }
@@ -368,10 +381,10 @@ mod tests {
     fn chrome_is_reserved_only_once_the_list_pages() {
         // trace: one 90 cell fits the 90 budget, no chrome; two spill, so both
         // repack against 90 − 20 = 70 and each cell caps at 70.
-        let single = HorizontalPageLayout::pack_with_chrome(&[90.0], SLOT, 90.0, 20.0);
+        let single = HorizontalPageLayout::pack_with_chrome(&[90.0], SLOT, 90.0, 20.0, NINE);
         assert_eq!(single.pages.len(), 1);
         assert_eq!(single.pages[0][0].width, 90.0);
-        let paged = HorizontalPageLayout::pack_with_chrome(&[90.0, 90.0], SLOT, 90.0, 20.0);
+        let paged = HorizontalPageLayout::pack_with_chrome(&[90.0, 90.0], SLOT, 90.0, 20.0, NINE);
         assert_eq!(indices(&paged), [[0], [1]]);
         assert_eq!(paged.pages[0][0].width, 70.0);
         assert_eq!(paged.page_budget, 70.0);
@@ -464,12 +477,12 @@ mod tests {
     #[test]
     fn a_page_breaks_only_when_the_total_passes_the_budget() {
         // f32 boundary: exactly the budget stays; one ulp-scale step past it breaks.
-        let exact = HorizontalPageLayout::pack(&[45.0, 45.0], SLOT, 90.0);
+        let exact = HorizontalPageLayout::pack(&[45.0, 45.0], SLOT, 90.0, NINE);
         assert_eq!(counts(&exact), [2]);
-        let over = HorizontalPageLayout::pack(&[45.0, 45.0 + 0.001], SLOT, 90.0);
+        let over = HorizontalPageLayout::pack(&[45.0, 45.0 + 0.001], SLOT, 90.0, NINE);
         assert_eq!(counts(&over), [1, 1]);
         assert_eq!(
-            HorizontalPageLayout::pack(&[5.0; 300], SLOT, ROOMY).candidate_count(),
+            HorizontalPageLayout::pack(&[5.0; 300], SLOT, ROOMY, NINE).candidate_count(),
             MAX_DISPLAY_CANDIDATES
         );
         assert_eq!(HorizontalPageLayout::default().candidate_count(), 0);

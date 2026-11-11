@@ -103,7 +103,8 @@ final class CandidateSlotKeyTests: XCTestCase {
     }
 
     /// With Type - with f on under Standard, the window draws the core's
-    /// shifted row: `f` gone, `z` on the fourth slot, the ninth blank.
+    /// shifted row: `f` gone, `z` on the fourth slot, the ninth blank — and
+    /// pages eight, so that blank slot is never shown.
     func testTypeHyphenWithF_drawsTheCoresRowWithoutF() throws {
         let store = try makeScratchSettingsStore()
         store.userDefaults.set(true, forKey: SettingsStore.Keys.isFHyphenEnabled.name)
@@ -111,6 +112,7 @@ final class CandidateSlotKeyTests: XCTestCase {
         let labels = (0 ..< HorizontalPageLayout.pageSize).map { store.candidateSlotKeySet.label(forSlot: $0) }
         XCTAssertEqual(labels, ["q", "w", "d", "z", "x", "v", "y", ";", ""])
         XCTAssertEqual(labels.joined(), try TestFixtures.composingShortcuts(in: store).slotKeys)
+        XCTAssertEqual(store.candidateSlotKeySet.pageSize, 8)
     }
 
     // MARK: - The labels
