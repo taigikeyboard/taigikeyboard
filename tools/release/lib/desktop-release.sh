@@ -50,6 +50,8 @@ WINDOWS_ASSET="TaigiKeyboard-$SHORT_VERSION.exe"
 LINUX_ASSET="taigikeyboard_${SHORT_VERSION}_amd64.deb"
 LINUX_RPM_ASSET="taigikeyboard-${SHORT_VERSION}-1.x86_64.rpm"
 LINUX_ARCH_ASSET="taigikeyboard-${SHORT_VERSION}-1-x86_64.pkg.tar.zst"
+# Every installer a full release carries; a patch carries a subset.
+DESKTOP_ASSETS=("$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET")
 
 # A file's SHA-256 as lowercase hex, on either host: macOS ships `shasum`, Git
 # Bash on the Windows box ships `sha256sum`. It is what the Windows manifest

@@ -1,0 +1,63 @@
+name: Desktop beta
+
+# Puts a staged desktop draft on the unlisted https://taigikeyboard.tw/beta page
+# for internal testers. Dispatched by tools/release/stage-desktop.sh; waits for
+# the release Approver. What and why: tools/release/beta-release.sh.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Desktop version of the draft (x.y.z)
+        required: true
+      release_id:
+        description: The draft's release id (stage-desktop.sh passes it)
+        required: true
+      source_sha:
+        description: The commit the draft was staged from
+        required: true
+
+permissions:
+  contents: read
+
+# A newer staging run supersedes an older beta. Its own group, never announce's:
+# cancelling there would drop an announcement.
+concurrency:
+  group: desktop-beta
+  cancel-in-progress: true
+
+jobs:
+  beta:
+    name: mirror draft to /beta
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: release
+    # Reading a draft needs push access; only the fetch step holds this token.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fetch the draft's installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Through env, never expanded into the script: dispatch inputs are free text.
+          SHORT_VERSION: ${{ inputs.version }}
+          RELEASE_ID: ${{ inputs.release_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: bash tools/release/beta-release.sh fetch "$RUNNER_TEMP/beta" "$RELEASE_ID" "$SOURCE_SHA"
+
+      - name: Mirror to R2 and write the beta page
+        env:
+          # Contents: read here, write on the website repository; cannot see drafts.
+          GH_TOKEN: ${{ secrets.SITE_CONTENTS_TOKEN }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          SHORT_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: bash tools/release/beta-release.sh publish "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"

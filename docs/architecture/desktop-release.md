@@ -10,12 +10,15 @@ description of the flow — the platform documents link here rather than repeat 
 ## The flow
 
 A desktop release happens in two halves with a manual test between them, and
-**nothing reaches a user until a person publishes it**:
+**nothing reaches a user until a person publishes it** — apart from the
+unlisted beta page, which shows a draft only after the release Approver
+approves its run:
 
 | | Runs | Does |
 |---|---|---|
 | Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the Linux `.deb` / `.rpm` / Arch packages from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the Linux half: `linux-release.md`) |
 | Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
+| Beta | **automatic** dispatch at the end of a successful stage; runs after the release Approver approves `desktop-beta.yml` | Copies the draft's installers to R2 `beta/<version>-<sha7>-<run id>/` and lists them on the unlisted `https://taigikeyboard.tw/beta` (`noindex`, not in the sitemap, linked from nowhere) for internal testers, who cannot open a draft. Only the newest beta is kept; the page hides a beta once its version is published (`tools/release/beta-release.sh`). Unapproved, the run expires and the page keeps what it had. A beta and an announcement committing to the website at once: the loser fails loudly, and re-running it is the fix |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux has none). `make desktop-announce` is the same script, for a re-run |
@@ -35,7 +38,9 @@ patched platform's section. Setting the number, and why minor and patch each sto
 at 99: [`manual-release-notes.md` § Set the version](manual-release-notes.md#set-the-version).
 
 Staging creates no tag — publishing does — and a draft has no public asset URL,
-so no user, no search engine and no installed copy can reach what is staged.
+so no user, no search engine and no installed copy can reach the draft itself.
+The beta page's copy is public to anyone holding its URL, never named by an
+appcast, a download button or the cask.
 `make desktop-release` / `make desktop-patch` delete an existing draft for the
 version first and rebuild everything on it from one commit
 (`tools/release/stage-desktop.sh`); a version that has already been
@@ -53,6 +58,7 @@ The release goes in **this** repository; only the website's own data goes to
 |---|---|---|
 | Each installer and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, every desktop platform on one release | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes are that commit's changelog. Release assets live outside git, so they cost the repository no size or bandwidth allowance. |
 | The download mirror: each installer and its `.sha256` | the Cloudflare R2 bucket `taigikeyboard-downloads`, served at `https://dl.taigikeyboard.tw/desktop/<asset>` — copied there by the announcement | GitHub's release-asset host crawls on some Taiwanese ISPs (HiNet measured ~40 KB/s on 2026-10-09, against ~16 MB/s from R2), so the website buttons and both appcasts name the mirror; the GitHub release stays the original it is checked against. See *One-time: the R2 mirror* and *Pruning the mirror*. |
+| The beta copy of a draft and `_data/beta_release.json` | R2 `beta/<version>-<sha7>-<run id>/` (newest only) and the website repository, written by `desktop-beta.yml` | Internal testers have no write access to see a draft. A fresh prefix per run because the download host caches for 30 days and a re-stage at one commit builds different bytes. |
 | `_data/{macos,windows,linux,linux_rpm,linux_arch}_release.json` | committed site data in the website repository — written only by the announcement, all in one commit (`tools/release/lib/release-site.sh`) | The landing page's download buttons read them; the macOS one and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
 | `appcast/{macos,windows}.json` | **rendered** from that data by the site's own build, served from `https://taigikeyboard.tw/appcast/` | Every installed copy has its URL baked in (`UpdateChecker.publishedURL`, `manifest::PUBLISHED_URL`) and expects a fixed shape, so the manifest stays a static file on the project's own domain rather than anything GitHub serves. Rendered rather than written, so each release is one committed file per platform: [`macos/updates/README.md` § One published fact, one committed file](../../macos/updates/README.md#one-published-fact-one-committed-file). |
 | `Casks/taigikeyboard.rb` | the `taigikeyboard/homebrew-tap` repository (`brew install --cask taigikeyboard/tap/taigikeyboard`) | Homebrew finds a tap only in a repository named `homebrew-*`. The cask names the last **published** macOS `.pkg` — never a draft or the in-tree version — and its `livecheck` counts only published releases carrying a `TaigiKeyboard-<version>.pkg` asset, so a Linux-only patch release or a `mobile-*` tag never looks like a new macOS version. Its `url` is the R2 mirror (`https://dl.taigikeyboard.tw/desktop/`), so a bump must follow the announcement that mirrors the package; `livecheck` names the GitHub repository explicitly. The app's own update check still applies (`auto_updates true`). |
@@ -164,7 +170,8 @@ install awscli` for a local run):
 
 ### Pruning the mirror
 
-The announcement only adds to the bucket. Removing a superseded version is a
+The announcement only adds to `desktop/`. (The beta run deletes older `beta/`
+prefixes itself; it never touches `desktop/`.) Removing a superseded version is a
 manual step, after its successor is announced on every platform: a manifest an
 installed copy has already fetched, or a cached download page, can still name
 the old object, so deleting it at announce time would turn those into failed
