@@ -14,6 +14,7 @@ members = [
     "crates/taigi-linux-core",
     "crates/taigi-linux-ffi",
     "crates/taigikeyboard-ibus",
+    "crates/taigikeyboard-popup",
     "crates/taigikeyboard-settings",
 ]
 
@@ -39,6 +40,7 @@ taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
 taigi-linux-platform = { path = "crates/taigi-linux-platform" }
 taigi-linux-core = { path = "crates/taigi-linux-core" }
+taigikeyboard-popup = { path = "crates/taigikeyboard-popup", default-features = false }
 log = "0.4"
 env_logger = "0.11"
 thiserror = "2"

@@ -32,9 +32,9 @@ pub mod presentation;
 pub mod update_schedule;
 
 pub use choices::{
-    AppearanceMode, CandidateFontChoice, CandidateFontSelection, CandidateLayout,
-    CandidateSizeChoice, CustomFontId, InstalledFontId, KeyboardLayout, SettingChoice,
-    SettingsPane,
+    AppearanceMode, CandidateColorTheme, CandidateColors, CandidateFontChoice,
+    CandidateFontSelection, CandidateLayout, CandidateSizeChoice, CandidateSwatch, CustomFontId,
+    InstalledFontId, KeyboardLayout, SettingChoice, SettingsPane,
 };
 pub use document::{SettingsDocument, SettingsKey};
 pub use engine_settings::{

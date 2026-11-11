@@ -10,7 +10,6 @@
 #include <fcitx-utils/keysym.h>
 #include <fcitx-utils/log.h>
 #include <fcitx-utils/utf8.h>
-#include <fcitx/candidatelist.h>
 #include <fcitx/event.h>
 #include <fcitx/inputpanel.h>
 #include <fcitx/statusarea.h>
@@ -63,38 +62,6 @@ std::string takeString(char *text) {
 
 /* The sub-config the configure row names. */
 constexpr char kSettingsSubConfig[] = "settings";
-
-/* A candidate the panel shows: selecting it (a click) only highlights, as
- * on macOS and Windows; the commit stays a key's. */
-class CandidateWordImpl final : public CandidateWord {
-public:
-    CandidateWordImpl(State *state, uint32_t position, Text text)
-        : CandidateWord(std::move(text)), state_(state), position_(position) {}
-
-    void select(InputContext * /*ic*/) const override { state_->click(position_); }
-
-private:
-    State *state_;
-    uint32_t position_;
-};
-
-/* The list with its paging and cursor moves routed through the core: the
- * panel's page arrows and scroll call `prev` / `next` / `prevCandidate` /
- * `nextCandidate` on the list itself, and a page turned only here would
- * leave the core's page — the one the slot keys and clicks index — behind.
- * Each call answers a fresh reply that rebuilds the list on the right page. */
-class CandidateListImpl final : public CommonCandidateList {
-public:
-    explicit CandidateListImpl(State *state) : state_(state) {}
-
-    void prev() override { state_->navigate(TAIGI_NAVIGATE_PAGE_UP); }
-    void next() override { state_->navigate(TAIGI_NAVIGATE_PAGE_DOWN); }
-    void prevCandidate() override { state_->navigate(TAIGI_NAVIGATE_PREVIOUS); }
-    void nextCandidate() override { state_->navigate(TAIGI_NAVIGATE_NEXT); }
-
-private:
-    State *state_;
-};
 
 } // namespace
 
@@ -221,6 +188,7 @@ void State::replay(TaigiReply *reply) {
             break;
         case TAIGI_EMIT_HIDE_LOOKUP_TABLE:
             panel.setCandidateList(nullptr);
+            taigi_popup_hide();
             panelChanged = true;
             break;
         case TAIGI_EMIT_MODE_CHANGED:
@@ -247,49 +215,14 @@ void State::replay(TaigiReply *reply) {
     }
 }
 
-/* The list as the panel draws it: page size = the slot keys, labels = the
- * slot keys, the highlight at the absolute index the core keeps. Paging and
- * cursor moves from the panel go back through the core (`navigate`), so
- * the list is rebuilt from the next reply rather than paged locally. */
+/* The candidate window, not the framework's list: classic UI stays the
+ * current UI (preedit, tray, every other input method) and would otherwise
+ * draw a second list from the same reply. Clicks come back through
+ * `Engine::watchPopup`. */
 void State::showCandidates(const TaigiReply *reply, size_t index) {
-    auto list = std::make_unique<CandidateListImpl>(this);
-    const size_t rows = taigi_reply_table_count(reply, index);
-    const size_t labels = taigi_reply_table_label_count(reply, index);
-    const uint32_t pageSize = taigi_reply_table_page_size(reply, index);
-    /* A table with no labels (the Telex guide) still needs one label per
-     * page position: the panel indexes the vector by row. */
-    std::vector<std::string> labelTexts;
-    labelTexts.reserve(labels > 0 ? labels : pageSize);
-    for (size_t position = 0; position < labels; ++position) {
-        labelTexts.emplace_back(std::string(taigi_reply_table_label(reply, index, position)) + " ");
-    }
-    for (size_t position = labels; position < pageSize; ++position) {
-        labelTexts.emplace_back("");
-    }
-    list->setLabels(labelTexts);
-    list->setPageSize(static_cast<int>(pageSize));
-    list->setLayoutHint(taigi_reply_table_vertical(reply, index) ? CandidateLayoutHint::Vertical
-                                                                  : CandidateLayoutHint::Horizontal);
-    /* No setSelectionKey: in fcitx5 it only rewrites the labels (both calls
-     * fill the same vector), so an empty KeyList would blank the slot keys
-     * set above. Slot keys reach the core through keyEvent regardless. */
-    for (size_t row = 0; row < rows; ++row) {
-        list->append(std::make_unique<CandidateWordImpl>(
-            this, static_cast<uint32_t>(row % (pageSize == 0 ? 1 : pageSize)),
-            Text(taigi_reply_table_candidate(reply, index, row))));
-    }
-    /* The page is the highlight's: setGlobalCursorIndex alone leaves the
-     * list on page 0. */
-    if (taigi_reply_table_cursor_visible(reply, index)) {
-        const uint32_t cursor = taigi_reply_table_cursor(reply, index);
-        if (pageSize > 0 && rows > 0) {
-            list->setPage(static_cast<int>(cursor / pageSize));
-        }
-        list->setGlobalCursorIndex(static_cast<int>(cursor));
-    } else {
-        list->setGlobalCursorIndex(-1);
-    }
-    ic_.inputPanel().setCandidateList(std::move(list));
+    ic_.inputPanel().setCandidateList(nullptr);
+    const auto &rect = ic_.cursorRect();
+    taigi_popup_show(reply, index, rect.left(), rect.top(), rect.width(), rect.height());
 }
 
 // ---------------------------------------------------------------------------
@@ -310,9 +243,44 @@ Engine::Engine(Instance *instance)
     TAIGI_DEBUG() << "taigikeyboard " << taigi_version() << " loaded";
     instance_->inputContextManager().registerProperty("taigikeyboardState", &factory_);
     buildMenu();
+    watchPopup();
+}
+
+/* The window's fd, for the life of the engine. A click selects; a page
+ * turn is the same page up / page down the old list sent. The callback
+ * returns true so the watch stays. */
+void Engine::watchPopup() {
+    const int fd = taigi_popup_fd();
+    if (fd < 0) {
+        TAIGI_ERROR() << "candidate window notify pipe is unavailable";
+        return;
+    }
+    popup_watch_ = instance_->eventLoop().addIOEvent(
+        fd, IOEventFlags{IOEventFlag::In}, [this](EventSourceIO *, int, IOEventFlags) {
+            uint32_t kind = 0;
+            uint32_t position = 0;
+            while (taigi_popup_poll(&kind, &position)) {
+                auto *ic = instance_->mostRecentInputContext();
+                if (!ic) {
+                    continue;
+                }
+                auto *current = state(ic);
+                if (!current) {
+                    continue;
+                }
+                if (kind == TAIGI_POPUP_CLICK) {
+                    current->click(position);
+                } else if (kind == TAIGI_POPUP_PAGE) {
+                    current->navigate(position == 0 ? TAIGI_NAVIGATE_PAGE_UP : TAIGI_NAVIGATE_PAGE_DOWN);
+                }
+            }
+            return true;
+        });
 }
 
 Engine::~Engine() {
+    /* Drop the watch before the states it calls into. */
+    popup_watch_.reset();
     /* Every state (and its engine handle) goes with the property registration;
      * the runtime is freed last, as the header requires. */
     for (auto &row : menu_) {

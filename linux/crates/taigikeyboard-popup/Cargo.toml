@@ -1,0 +1,44 @@
+# The candidate window both Linux shells draw. The library is the protocol
+# and the layout (no windowing crate), so `taigi-linux-core` can build the
+# commands without X11. The binary is the X11 window; `default-features = false`
+# (what the engine crates ask for) leaves `winit` out of the cross build.
+# Design record: docs/architecture/linux-roadmap.md (L4).
+
+[package]
+name = "taigikeyboard-popup"
+description = "The Linux candidate window: protocol, layout, and the X11 window both shells spawn"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[features]
+default = ["window"]
+# The rasterizer the window and the settings sample share. No windowing
+# crate, so the settings process can draw the same pixels.
+text = ["dep:cosmic-text", "dep:fontdb"]
+window = ["text", "dep:winit", "dep:softbuffer", "dep:zbus"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json.workspace = true
+winit = { version = "0.30", optional = true }
+softbuffer = { version = "0.4", optional = true }
+cosmic-text = { version = "0.14", optional = true }
+fontdb = { version = "0.16", optional = true }
+# Desktop portal, so the Default theme can follow color-scheme and the accent.
+# The engine links this crate without `window`, and does not pull zbus in.
+zbus = { workspace = true, optional = true, features = ["blocking-api"] }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "taigikeyboard-popup"
+path = "src/main.rs"
+required-features = ["window"]
+
+[lints]
+workspace = true

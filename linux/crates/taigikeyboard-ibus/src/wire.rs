@@ -18,9 +18,12 @@ const ATTR_TYPE_UNDERLINE: u32 = 1;
 const ATTR_UNDERLINE_SINGLE: u32 = 1;
 
 /// `IBUS_ORIENTATION_HORIZONTAL` / `VERTICAL` (ibus `src/ibustypes.h:151`).
+/// `Vertical` stays: it is a wire value. The candidate window draws the list,
+/// so this process no longer asks the panel for a column.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Orientation {
     Horizontal = 0,
+    #[allow(dead_code)]
     Vertical = 1,
 }
 

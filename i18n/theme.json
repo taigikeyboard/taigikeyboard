@@ -33,37 +33,37 @@
     },
     "paletteDefault": {
       "comment": "Built-in theme color name: the adaptive default palette (value = 'Default'). DRAFT TL/POJ (ī-siat, full dict main reading) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "預設", "tailo": "Ī-siat", "poj": "Ī-siat", "en": "Default", "ja": "デフォルト" }
     },
     "palettePink": {
       "comment": "Built-in theme color name: soft pink gradient (value = 'Sakura' / cherry blossom). DRAFT TL/POJ (ing-hue, full dict entry) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "櫻花", "tailo": "Ing-hue", "poj": "Eng-hoe", "en": "Sakura", "ja": "桜" }
     },
     "paletteGold": {
       "comment": "Built-in theme color name: golden gradient (value = 'Gold'). DRAFT TL/POJ (金 kim + 煌 hông, component-grounded) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "金煌", "tailo": "Kim-hông", "poj": "Kim-hông", "en": "Gold", "ja": "ゴールド" }
     },
     "paletteBlue": {
       "comment": "Built-in theme color name: blue gradient (value = 'Sea Breeze'). DRAFT TL/POJ (hái-hong, full dict entry) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "海風", "tailo": "Hái-hong", "poj": "Hái-hong", "en": "Sea Breeze", "ja": "潮風" }
     },
     "paletteGreen": {
       "comment": "Built-in theme color name: green gradient (value = 'Jade' / jade green). DRAFT TL/POJ (翠 tshuì + 青 tshing, component-grounded) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "翠青", "tailo": "Tshuì-tshing", "poj": "Chhùi-chheng", "en": "Jade", "ja": "翡翠" }
     },
     "palettePurple": {
       "comment": "Built-in theme color name: purple gradient (value = 'Wisteria'). DRAFT TL/POJ (藤 tîn + 紫 tsí, component-grounded) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "藤紫", "tailo": "Tîn-tsí", "poj": "Tîn-chí", "en": "Wisteria", "ja": "藤紫" }
     },
     "paletteCatppuccin": {
       "comment": "Built-in theme color name: the dark-only Catppuccin Mocha palette. Hanji 暗眠山貓 is a pun (山貓=mountain cat≈cat, 暗眠=dark sleep≈dark mode). DRAFT TL/POJ (暗 àm + 眠 bîn + 山貓 suann-niau, component-grounded) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "暗眠山貓", "tailo": "Àm-bîn-suann-niau", "poj": "Àm-bîn-soaⁿ-niau", "en": "Catppuccin", "ja": "キャットプチン" }
     },
     "backgroundSection": {
@@ -237,8 +237,8 @@
       "values": { "hanji": "套用", "tailo": "Thò-iōng", "poj": "Thò-iōng", "en": "Apply", "ja": "適用" }
     },
     "cardMenuCustomize": {
-      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. Linux Appearance uses the same word for the custom color theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
+      "scope": { "platforms": ["android", "ios", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "自訂", "tailo": "Tsū-tīng", "poj": "Chū-tēng", "en": "Customize", "ja": "カスタマイズ" }
     },
     "capReachedTitle": {

@@ -666,6 +666,230 @@
         "ja": "候補ウィンドウの配置"
       }
     },
+    "hanjiFontSize": {
+      "comment": "Linux Appearance row: the primary text size in the candidate window, in px. The leading line of the current input mode (Hanji or romanization). The stored key stays hanjiFontSize.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux",
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "主文字寸尺",
+        "tailo": "Tsú-bûn-jī tshùn-tshioh",
+        "poj": "Chú-bûn-jī chhùn-chhioh",
+        "en": "Primary Text Size",
+        "ja": "主文字の大きさ"
+      }
+    },
+    "romanFontSize": {
+      "comment": "Linux Appearance row: the secondary text size in the candidate window, in px. The other line of the current input mode. The stored key stays romanFontSize.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux",
+          "web"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "副文字寸尺",
+        "tailo": "Hù-bûn-jī tshùn-tshioh",
+        "poj": "Hù-bûn-jī chhùn-chhioh",
+        "en": "Secondary Text Size",
+        "ja": "副文字の大きさ"
+      }
+    },
+    "hanjiFont": {
+      "comment": "Linux Appearance row: the Hanji typeface in the candidate window. Empty means the system sans.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "漢字字型",
+        "tailo": "Hàn-jī jī-hîng",
+        "poj": "Hàn-jī jī-hêng",
+        "en": "Hanji Font",
+        "ja": "漢字のフォント"
+      }
+    },
+    "romanFont": {
+      "comment": "Linux Appearance row: the romanization typeface in the candidate window.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "羅馬字字型",
+        "tailo": "Lô-má-jī jī-hîng",
+        "poj": "Lô-má-jī jī-hêng",
+        "en": "Romanization Font",
+        "ja": "ローマ字のフォント"
+      }
+    },
+    "candidateCornerRadius": {
+      "comment": "Linux Appearance row: the candidate window's corner radius, in px. Zero is square.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "圓角",
+        "tailo": "Înn-kak",
+        "poj": "Îⁿ-kak",
+        "en": "Corner Radius",
+        "ja": "角の丸み"
+      }
+    },
+    "candidateWindowPadding": {
+      "comment": "Linux Appearance row: the air around the candidate window's text, in px. It scales the window pad, the cell pad and the gaps together.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "選字窗寸尺",
+        "tailo": "Suán-jī-thang tshùn-tshioh",
+        "poj": "Soán-jī-thang chhùn-chhioh",
+        "en": "Candidate Window Size",
+        "ja": "候補ウィンドウの大きさ"
+      }
+    },
+    "candidateHighlightFill": {
+      "comment": "Linux Appearance row: how full the highlighted candidate's background is. The row is five steps, 1–5, stored as 0, 25, 50, 75 and 100. 5 meets the window's outer edge.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "候選底色寸尺",
+        "tailo": "Hāu-soán té-sek chhùn-chhioh",
+        "poj": "Hāu-soán té-sek chhùn-chhioh",
+        "en": "Highlight Fill",
+        "ja": "選択中の背景の大きさ"
+      }
+    },
+    "candidateColorTheme": {
+      "comment": "Linux Appearance row: which color set the candidate window uses. Default keeps the shipped colors. The six built-in names reuse theme.palette*. Custom (theme.cardMenuCustomize) reveals the four color rows.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "色彩主題",
+        "tailo": "Sik-tshái tsú-tê",
+        "poj": "Sek-chhái chú-tê",
+        "en": "Color Theme",
+        "ja": "カラーテーマ"
+      }
+    },
+    "candidateTextColor": {
+      "comment": "Linux Appearance row: the candidate window's text color. Shown when the color theme is custom.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "文字色水",
+        "tailo": "Bûn-jī sik-tsuí",
+        "poj": "Bûn-jī sek-chúi",
+        "en": "Text Color",
+        "ja": "文字の色"
+      }
+    },
+    "candidateSelectedTextColor": {
+      "comment": "Linux Appearance row: the highlighted candidate's text color. Shown when the color theme is custom.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "候選文字色水",
+        "tailo": "Hāu-suán bûn-jī sik-tsuí",
+        "poj": "Hāu-soán bûn-jī sek-chúi",
+        "en": "Highlighted Text Color",
+        "ja": "選択中の文字の色"
+      }
+    },
+    "candidateBackgroundColor": {
+      "comment": "Linux Appearance row: the candidate window's background color. Shown when the color theme is custom.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "底色色水",
+        "tailo": "Té-sik sik-tsuí",
+        "poj": "Té-sek sek-chúi",
+        "en": "Background Color",
+        "ja": "背景の色"
+      }
+    },
+    "candidateSelectedBackgroundColor": {
+      "comment": "Linux Appearance row: the highlighted candidate's background color. Shown when the color theme is custom.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "候選底色色水",
+        "tailo": "Hāu-suán té-sik sik-tsuí",
+        "poj": "Hāu-soán té-sek sek-chúi",
+        "en": "Highlighted Background Color",
+        "ja": "選択中の背景の色"
+      }
+    },
+    "appearanceTryPlaceholder": {
+      "comment": "Linux Appearance field: type here with the running input method, so the real candidate window is the sample. The same Taigi sentence in every display language; it is the text in the field.",
+      "scope": {
+        "platforms": ["linux"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "佇遮拍字測試",
+        "tailo": "Tī tsia phah-jī tshik-tshì",
+        "poj": "Tī chia phah-jī chhek-chhì",
+        "en": "Type here to test the candidate window",
+        "ja": "ここに入力して候補ウィンドウをテストします"
+      }
+    },
+    "candidatePreview": {
+      "comment": "Linux Appearance group: a live sample of the candidate window.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "預覽",
+        "tailo": "Ī-lám",
+        "poj": "Ū-lám",
+        "en": "Preview",
+        "ja": "プレビュー"
+      }
+    },
+    "systemFont": {
+      "comment": "Linux Appearance row: use the system sans for a candidate-window script, and the label shown while that choice is on.",
+      "scope": {
+        "platforms": ["macos", "windows", "linux", "web"],
+        "surfaces": ["host"]
+      },
+      "values": {
+        "hanji": "系統字體",
+        "tailo": "Hē-thóng jī-thé",
+        "poj": "Hē-thóng jī-thé",
+        "en": "System Font",
+        "ja": "システムのフォント"
+      }
+    },
     "candidateLayoutHorizontal": {
       "comment": "Picker value: the horizontal single-row candidate window, paged left to right.",
       "scope": {

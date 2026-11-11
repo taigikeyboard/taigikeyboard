@@ -33,6 +33,7 @@ cp -a @STAGEROOT@/. %{buildroot}/
 
 %files
 %{_bindir}/taigikeyboard-settings
+%{_bindir}/taigikeyboard-popup
 %{_libexecdir}/ibus-engine-taigikeyboard
 %{_libdir}/fcitx5/libtaigikeyboard.so
 %{_datadir}/fcitx5/addon/taigikeyboard.conf
