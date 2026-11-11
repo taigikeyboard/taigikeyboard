@@ -32,7 +32,7 @@ jobs:
       github.repository == 'taigikeyboard/taigikeyboard' &&
       github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     environment: release
     # Reading a draft needs push access; only the fetch step holds this token.
     permissions:
@@ -61,3 +61,12 @@ jobs:
           SHORT_VERSION: ${{ inputs.version }}
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: bash tools/release/beta-release.sh publish "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"
+
+      # The beta is already live; a failed post only warns.
+      - name: Post the beta to Discord
+        continue-on-error: true
+        env:
+          DISCORD_BETA_WEBHOOK: ${{ secrets.DISCORD_BETA_WEBHOOK }}
+          SHORT_VERSION: ${{ inputs.version }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: bash tools/release/beta-release.sh announce "$SOURCE_SHA" "$GITHUB_RUN_ID"
