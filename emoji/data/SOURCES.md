@@ -21,7 +21,8 @@ glyph filter — not by shipping per-version files. Bump the pin (`MAX_EMOJI_VER
 
 **Update watch**: `.github/workflows/emoji-watch.yml` compares `UNICODE_EMOJI_VERSION` with
 `/Public/emoji/latest/emoji-test.txt` (weekly August–October around the September release,
-monthly otherwise) and opens one issue per newer Emoji version (closed issues count — reopen to re-raise).
+monthly otherwise) and opens one issue per newer Emoji version with the `emoji-test.txt` diff
+(open issue refreshed each run; closed issue left alone — reopen to re-raise).
 
 **E17 source note**: Unicode has not yet populated `/Public/emoji/17.0/`; the canonical
 machine-readable `emoji-test.txt` for Emoji 17.0 (Version: 17.0, Date: 2025-08-04) is served
