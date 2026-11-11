@@ -1,9 +1,10 @@
 name: Web
 
 # The web version's gates: `make web-check` (the wasm build, the Node smoke test
-# over the real dictionaries, clippy, biome, fmt) and `make web-e2e` (Playwright
-# in Chromium over the same dictionaries). An engine, desktop-shared or
-# dictionary change triggers it too, because `taigi-web` links those crates and
+# over the real dictionaries, clippy, biome, fmt) and Playwright in Chromium
+# over the staged site, using the official image's browsers and system libraries.
+# An engine, desktop-shared or dictionary change triggers it too, because
+# `taigi-web` links those crates and
 # asserts top candidates against that data; a font or string change, because the
 # page ships them; the iOS app icon too. A push to main runs the gates only; the
 # site deploys nightly at 00:00 Taiwan time (16:00 UTC), from main's head, when
@@ -100,8 +101,8 @@ jobs:
           workspaces: web
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make web-e2e`'s
-      # `site` step and change only with their inputs (web/Makefile's
+      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make -C web site`
+      # and change only with their inputs (web/Makefile's
       # `$(FONTS)/.stamp` rule; fonttools' pin is in mise.toml). After
       # rust-cache, which owns the rest of web/target.
       - id: fonts
@@ -118,8 +119,21 @@ jobs:
       - name: make web-check
         run: make web-check
 
-      - name: make web-e2e
-        run: make web-e2e
+      - name: Stage the site
+        run: make -C web site
+
+      # The image includes system libraries, avoiding apt and Ubuntu mirror DNS
+      # outages at test time. Match the installed
+      # package exactly, since each Playwright version needs its own browsers.
+      # Rust and mise stay on the host; only the browser tests use the image.
+      - name: Playwright (Chromium)
+        run: |
+          version=$(node --print 'require("./web/node_modules/@playwright/test/package.json").version')
+          docker run --rm --init --ipc=host \
+            --env CI=true \
+            --volume "$PWD/web:/work" --workdir /work \
+            "mcr.microsoft.com/playwright:v${version}-noble" \
+            npx --no-install playwright test --project=chromium
 
   deploy:
     name: Deploy
