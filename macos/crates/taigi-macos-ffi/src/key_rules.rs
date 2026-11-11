@@ -567,8 +567,9 @@ mod tests {
     }
 
     /// The swap gate through the Mac's translation: an attaching mark with
-    /// Auto-Space on; under TPS the ⌃ chord's mark, which the swap writes
-    /// (`'` → `、`). Refused without an event or a snapshot.
+    /// Auto-Space on, read as the key writes it — Hanji-first (the default)
+    /// maps `'` to the attaching `、`, Roman-first leaves it; under TPS the
+    /// ⌃ chord's mark (`'` → `、`). Refused without an event or a snapshot.
     #[test]
     fn the_swap_gate_reads_a_key_under_the_snapshot_it_carries() {
         let auto_space = || boolean(keys::IS_AUTO_SPACE_ENABLED.name, true);
@@ -579,7 +580,11 @@ mod tests {
             vec![boolean(keys::IS_AUTO_SPACE_ENABLED.name, false)]
         ));
         let tps = || text(keys::INPUT_MODE.name, "tps");
-        assert!(!may_swap(key_event("'", 0, None), vec![auto_space()]));
+        assert!(may_swap(key_event("'", 0, None), vec![auto_space()]));
+        assert!(!may_swap(
+            key_event("'", 0, None),
+            vec![auto_space(), boolean(keys::IS_HANJI_FIRST.name, false)]
+        ));
         assert!(may_swap(
             key_event("'", CONTROL, None),
             vec![auto_space(), tps()]

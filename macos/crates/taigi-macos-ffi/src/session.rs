@@ -1041,9 +1041,9 @@ mod tests {
         assert_eq!(effects(&reply), vec![insert("h"), closed()]);
     }
 
-    /// Outside a composition: an attaching mark swaps with the armed space
-    /// when Swift says it can; otherwise it is written full width; a digit
-    /// goes to the host untouched.
+    /// Outside a composition: an attaching mark swaps with the armed space,
+    /// in the width it is written, when Swift says it can; otherwise it is
+    /// written full width; a digit goes to the host untouched.
     #[test]
     fn pass_through_swaps_maps_or_hands_the_key_back() {
         let (_engine, shell) = engine_shell();
@@ -1058,7 +1058,7 @@ mod tests {
             effects(&swapped),
             vec![
                 effect::Effect::SwapPrecedingSpace(proto::SwapPrecedingSpace {
-                    replacement: "? ".to_owned()
+                    replacement: "？ ".to_owned()
                 }),
                 arm()
             ]

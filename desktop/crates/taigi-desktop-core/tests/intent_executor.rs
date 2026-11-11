@@ -295,13 +295,15 @@ fn a_typed_comma_swaps_an_armed_space_or_is_written_full_width() {
     let mut rig = new_rig(true);
     rig.surface.can_swap = true;
     assert!(rig.run(ComposingKeyIntent::PassThrough, &comma()));
-    assert_eq!(rig.calls(), ["swap \", \"", "arm"]);
+    // trace: Hanji-first maps `,` to `，`, and the swap attaches that mark
+    // even after a romanized commit, as the symbol picker does.
+    assert_eq!(rig.calls(), ["swap \"， \"", "arm"]);
 
     drop(rig);
     let mut rig = new_rig(true);
     rig.surface.can_swap = false;
     assert!(rig.run(ComposingKeyIntent::PassThrough, &comma()));
-    assert_eq!(rig.calls(), ["swap \", \"", "insert \"，\""]);
+    assert_eq!(rig.calls(), ["swap \"， \"", "insert \"，\""]);
 }
 
 /// #852: in the full width `^` and `_` write the two-cell ellipsis and dash,
@@ -434,10 +436,13 @@ fn a_pass_through_key_may_swap_when_what_the_swap_writes_attaches() {
     for is_hanji_first in [true, false] {
         settings.set_bool(&keys::IS_HANJI_FIRST, is_hanji_first);
         assert!(pass_through_may_swap(&comma(), &settings));
-        // trace: outside TPS the swap writes the key as typed, and the
-        // straight quote is not attaching (`punctuation.rs` ATTACHING) even
-        // where the map makes it `、`.
-        assert!(!pass_through_may_swap(&apostrophe, &settings));
+        // trace: the swap writes what the key writes — Hanji-first maps the
+        // straight quote to `、`, which attaches (`punctuation.rs`
+        // ATTACHING); Roman-first leaves `'`, which does not.
+        assert_eq!(
+            pass_through_may_swap(&apostrophe, &settings),
+            is_hanji_first
+        );
     }
     // An opening bracket, a letter, a host chord, no key: nothing attaches.
     for key in [

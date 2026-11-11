@@ -115,11 +115,11 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     func testSwappingModesAfterAnArmedAutoSpace_stillSwaps() throws {
         // A commit in roman-first mode arms the auto-space swap, then the user
         // flips to hanji-first before typing the punctuation. The swap still
-        // wins: the word in front of the caret is the romanization that commit
-        // wrote, and a display mode changed afterwards does not rewrite it.
-        // The full-width map serves the NEXT Hanji word, not this one — so the
-        // document reads `taigi, `, half-width, exactly as it would have
-        // without the flip. Auto-space (OFF by default) is turned on because
+        // wins: the space that commit wrote is still ours, and a display mode
+        // changed afterwards does not make it stale. The mark is the width the
+        // output is in now — punctuation follows the output, not the word in
+        // front of the caret — so the document reads `taigi， `. Auto-space
+        // (OFF by default) is turned on because
         // an armed space is what this case is about: the arm exists only where
         // the commit earned one.
         let session = try composedSession(configure: { $0.isAutoSpaceEnabled = true })
@@ -134,7 +134,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         )
 
         XCTAssertTrue(handled)
-        XCTAssertEqual(session.client.insertedTexts, [", "], "the armed space is still ours")
+        XCTAssertEqual(session.client.insertedTexts, ["， "], "the armed space is still ours")
     }
 
     // MARK: - Mid-composition (one mutation with the commit)

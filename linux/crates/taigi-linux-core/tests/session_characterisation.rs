@@ -328,8 +328,8 @@ fn the_auto_space_swap_needs_the_surrounding_text_capability() {
     assert_eq!(session.press(COMMA), [commit("，")]);
     assert!(!session.state.armed_auto_space);
 
-    // With it the space goes and the mark takes its half-width romanized form
-    // plus the space.
+    // With it the space goes and the mark takes its place in the width the
+    // output writes (full under Hanji-first), plus the space.
     let mut session = Session::new(true, true);
     session.type_word("ho");
     session.press(RETURN);
@@ -340,7 +340,7 @@ fn the_auto_space_swap_needs_the_surrounding_text_capability() {
                 offset: -1,
                 count: 1
             },
-            commit(", ")
+            commit("， ")
         ]
     );
     // trace (read by running HEAD): the swapped mark ends in a space of its
