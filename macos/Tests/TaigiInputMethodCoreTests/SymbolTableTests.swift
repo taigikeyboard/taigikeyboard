@@ -24,14 +24,18 @@ final class SymbolTableTests: XCTestCase {
 
     /// Punctuation and special symbols are single characters, so the
     /// auto-space swap can classify a pick the way it classifies a keystroke
-    /// (`RustEngineBridge.isAttachingPunctuation` reads one character).
-    func testEveryPunctuationMark_isOneCharacter() throws {
+    /// (`RustEngineBridge.isAttachingPunctuation` reads one character) — but
+    /// for the two-cell MOE marks (`……`, `——`, #852): one character written
+    /// twice, inserted whole like a bracket pair, and attaching to nothing.
+    func testEveryPunctuationMark_isOneCharacterOrATwoCellMark() throws {
         let table = try TestFixtures.shippedSymbolTable()
 
-        for id in [SymbolCategoryID.punctuation, .specialSymbols] {
-            for symbol in try XCTUnwrap(table.category(id)).symbols {
-                XCTAssertEqual(symbol.count, 1, "\(symbol) in \(id) is more than one character")
-            }
+        for symbol in try XCTUnwrap(table.category(.punctuation)).symbols {
+            let isTwoCell = symbol.count == 2 && symbol.first == symbol.last
+            XCTAssertTrue(symbol.count == 1 || isTwoCell, "\(symbol) in punctuation")
+        }
+        for symbol in try XCTUnwrap(table.category(.specialSymbols)).symbols {
+            XCTAssertEqual(symbol.count, 1, "\(symbol) in specialSymbols is more than one character")
         }
     }
 

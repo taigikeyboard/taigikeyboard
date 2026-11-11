@@ -279,6 +279,27 @@ fn a_typed_comma_swaps_an_armed_space_or_is_written_full_width() {
     assert_eq!(rig.calls(), ["swap \", \"", "insert \"，\""]);
 }
 
+/// #852: in the full width `^` and `_` write the two-cell ellipsis and dash,
+/// whole, and neither takes an armed space's place (neither attaches).
+#[test]
+fn caret_and_underscore_write_the_two_cell_ellipsis_and_dash() {
+    for (typed, mark) in [("^", "……"), ("_", "——")] {
+        let mut rig = new_rig(true);
+        rig.surface.can_swap = true;
+        let key = KeyEventSnapshot::text(typed, KeyModifiers::SHIFT);
+        assert!(!pass_through_may_swap(&key, &rig.settings), "{typed}");
+        assert!(rig.run(ComposingKeyIntent::PassThrough, &key));
+        assert_eq!(rig.calls(), [format!("insert \"{mark}\"")]);
+
+        // Roman-first: half width, the client's key.
+        drop(rig);
+        let mut rig = new_rig(true);
+        rig.settings.set_bool(&keys::IS_HANJI_FIRST, false);
+        assert!(!rig.run(ComposingKeyIntent::PassThrough, &key));
+        assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+    }
+}
+
 #[test]
 fn half_width_punctuation_outside_a_composition_is_the_clients() {
     let mut rig = new_rig(true);

@@ -13,33 +13,40 @@
 /// `~` (⇧ on the backtick key): the rest of the shifted number row is here, so
 /// its first key is too (user report 2026-09-28), and backslash as an additional
 /// key for the ideographic comma; apostrophe keeps the MOE shortcut.
-const MAP: [(char, char); 26] = [
-    (',', '，'),
-    ('.', '。'),
-    ('?', '？'),
-    ('!', '！'),
-    (';', '；'),
-    (':', '：'),
-    ('(', '（'),
-    (')', '）'),
-    ('[', '「'),
-    (']', '」'),
-    ('{', '『'),
-    ('}', '』'),
-    ('<', '《'),
-    ('>', '》'),
-    ('\'', '、'),
-    ('\\', '、'),
-    ('~', '～'),
-    ('@', '＠'),
-    ('#', '＃'),
-    ('$', '＄'),
-    ('%', '％'),
-    ('^', '＾'),
-    ('&', '＆'),
-    ('*', '＊'),
-    ('_', '＿'),
-    ('+', '＋'),
+///
+/// Two keys depart from that table (#852): `^` types the ellipsis 刪節號 and
+/// `_` the dash 破折號, where the table has `＾` and `＿`. The MOE punctuation
+/// handbook (重訂標點符號手冊) sets both two cells wide, so each writes its
+/// mark twice: `……` (U+2026, which the handbook's PDF and Taiwanese prose
+/// use) and `——` (U+2014, the dash character; the PDF's U+2500 is box
+/// drawing, which screen readers and search do not read as a dash).
+const MAP: [(char, &str); 26] = [
+    (',', "，"),
+    ('.', "。"),
+    ('?', "？"),
+    ('!', "！"),
+    (';', "；"),
+    (':', "："),
+    ('(', "（"),
+    (')', "）"),
+    ('[', "「"),
+    (']', "」"),
+    ('{', "『"),
+    ('}', "』"),
+    ('<', "《"),
+    ('>', "》"),
+    ('\'', "、"),
+    ('\\', "、"),
+    ('~', "～"),
+    ('@', "＠"),
+    ('#', "＃"),
+    ('$', "＄"),
+    ('%', "％"),
+    ('^', "\u{2026}\u{2026}"),
+    ('&', "＆"),
+    ('*', "＊"),
+    ('_', "\u{2014}\u{2014}"),
+    ('+', "＋"),
 ];
 
 /// Mapped keys whose Ctrl chord stays the host's even under TPS:
@@ -62,7 +69,7 @@ pub fn full_width_mapped(text: &str) -> Option<String> {
     };
     MAP.iter()
         .find(|(half, _)| *half == c)
-        .map(|(_, full)| full.to_string())
+        .map(|(_, full)| (*full).to_owned())
 }
 
 #[cfg(test)]
@@ -73,16 +80,24 @@ mod tests {
     fn every_mapped_pair_maps_to_its_full_width_mark() {
         // trace: the 26 rows of `MAP`, the MOE table plus `~` and backslash.
         for (half, full) in MAP {
-            assert_eq!(
-                full_width_mapped(&half.to_string()).as_deref(),
-                Some(full.to_string().as_str())
-            );
+            assert_eq!(full_width_mapped(&half.to_string()).as_deref(), Some(full));
         }
         assert_eq!(full_width_mapped(","), Some("，".into()));
         assert_eq!(full_width_mapped("'"), Some("、".into()));
         assert_eq!(full_width_mapped("\\"), Some("、".into()));
         assert_eq!(full_width_mapped("~"), Some("～".into()));
         assert_eq!(MAP.len(), 26);
+    }
+
+    #[test]
+    fn caret_and_underscore_type_the_two_cell_ellipsis_and_dash() {
+        // trace: #852 — U+2026 ×2 and U+2014 ×2, not the MOE table's `＾` `＿`.
+        assert_eq!(full_width_mapped("^").as_deref(), Some("……"));
+        assert_eq!(full_width_mapped("_").as_deref(), Some("——"));
+        assert_eq!(full_width_mapped("^").unwrap().chars().count(), 2);
+        // Still mapped keys, so their Ctrl chord types the mark under TPS.
+        assert!(is_punctuation_chord_key("^"));
+        assert!(is_punctuation_chord_key("_"));
     }
 
     #[test]
