@@ -147,9 +147,9 @@ impl CandidateColorTheme {
             },
             Self::Jade => CandidateSwatch {
                 text: "#3D3846",
-                selected_text: "#5C8273",
+                selected_text: "#FFFFFF",
                 background: "#F6F5F4",
-                selected_background: "#F6F5F4",
+                selected_background: "#5C8273",
             },
             Self::Wisteria => CandidateSwatch {
                 text: "#FFFFFF",
