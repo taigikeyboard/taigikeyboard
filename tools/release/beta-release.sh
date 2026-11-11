@@ -4,6 +4,7 @@
 #
 # Usage: beta-release.sh fetch <dir> <release id> <source sha>
 #        beta-release.sh publish <dir> <source sha> <run id>
+#        beta-release.sh announce <source sha> <run id>
 #
 # Run by `.github/workflows/desktop-beta.yml`, which `stage-desktop.sh`
 # dispatches once a draft is fully staged; the release environment's approval
@@ -20,6 +21,9 @@
 #            re-stage at the same commit builds different bytes), writes
 #            `_data/beta_release.json` to the website, then deletes every older
 #            `beta/` prefix. The page hides a beta once its version is published.
+#   announce DISCORD_BETA_WEBHOOK only. Waits until the live /beta page lists
+#            this run's build, then posts the page link to the Discord channel
+#            the webhook belongs to (#announcements).
 #
 # Nothing here touches the published releases: not `desktop/` in the bucket,
 # not the `_data/*_release.json` files, not the appcasts.
@@ -36,12 +40,15 @@ REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 usage() {
     echo "usage: beta-release.sh fetch <dir> <release id> <source sha>" >&2
     echo "       beta-release.sh publish <dir> <source sha> <run id>" >&2
+    echo "       beta-release.sh announce <source sha> <run id>" >&2
     exit 2
 }
 
-[[ $# -eq 4 ]] || usage
-mode="$1"
-assets_dir="$2"
+mode="${1:-}"
+case "$mode:$#" in
+    fetch:4 | publish:4 | announce:3) ;;
+    *) usage ;;
+esac
 
 # SHORT_VERSION comes from the environment (the workflow input), never from the
 # checkout: the run checks out main's tip, which may already carry a later bump.
@@ -154,8 +161,37 @@ prune_older_betas() {
     done < <(awk '$1 == "PRE" { sub("/$", "", $2); print $2 }' <<< "$listing")
 }
 
+BETA_PAGE_URL="https://taigikeyboard.tw/beta"
+
+announce() {
+    local source_sha="$1" run_id="$2" message attempt page
+    [[ -n "${DISCORD_BETA_WEBHOOK:-}" ]] || fail "DISCORD_BETA_WEBHOOK is not set"
+    # The page lists this run's mirror URLs once Pages has deployed it; a post
+    # before that would link testers to the previous build. The query string
+    # skips the Pages CDN's 10-minute cache.
+    for attempt in $(seq 1 80); do
+        page="$(anonymous_curl --fail "$BETA_PAGE_URL?run=$run_id" 2> /dev/null)" || page=""
+        [[ "$page" == *"-$run_id/"* ]] && break
+        [[ $attempt -eq 80 ]] && fail "$BETA_PAGE_URL still does not list run $run_id after 20 minutes — not posting"
+        sleep 15
+    done
+
+    message="$(python3 -c '
+import json, sys
+version, sha7, url = sys.argv[1:4]
+print(json.dumps({
+    "content": f"Desktop beta {version} ({sha7}) is ready for testing\n{url}",
+    "allowed_mentions": {"parse": []},
+}))
+' "$SHORT_VERSION" "${source_sha:0:7}" "$BETA_PAGE_URL")"
+    curl -q --silent --show-error --fail -H "Content-Type: application/json" \
+        --data "$message" "$DISCORD_BETA_WEBHOOK" > /dev/null ||
+        fail "the Discord webhook refused the post"
+    echo "✓ posted beta ${source_sha:0:7} to Discord"
+}
+
 case "$mode" in
-    fetch) fetch "$3" "$4" ;;
-    publish) publish "$3" "$4" ;;
-    *) usage ;;
+    fetch) assets_dir="$2" && fetch "$3" "$4" ;;
+    publish) assets_dir="$2" && publish "$3" "$4" ;;
+    announce) announce "$2" "$3" ;;
 esac
