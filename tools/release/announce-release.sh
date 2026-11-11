@@ -129,18 +129,14 @@ fetch_platform_asset() {
     [[ "$ASSET_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "cannot hash the download from $asset_url"
     echo "  sha256 $ASSET_SHA256"
 
-    # The receipt staging wrote must name the bytes GitHub serves; it is
-    # mirrored as-is, never regenerated, so the mirror carries the staged digest.
+    # The staged receipt, checked against the installer by mirror_asset.
     # Every `|| fail` below is load-bearing: this function runs as an `if`
     # condition, where `set -e` does not stop it.
-    local receipt="$downloaded.sha256" receipt_sha256
+    local receipt="$downloaded.sha256"
     anonymous_download "$asset_url.sha256" "$receipt" ||
         fail "$asset_url.sha256 is not anonymously reachable — staging attaches one beside every installer"
-    receipt_sha256="$(cut -d' ' -f1 "$receipt")"
-    [[ "$receipt_sha256" == "$ASSET_SHA256" ]] ||
-        fail "$asset_name.sha256 on $DESKTOP_TAG says $receipt_sha256, but the installer hashes to $ASSET_SHA256"
 
-    mirror_asset "$downloaded" "$receipt" "$asset_name" "$ASSET_SHA256"
+    mirror_asset "$downloaded" "$receipt" "$asset_name" "$ASSET_SHA256" "$R2_PREFIX"
 
     ASSET_URL="$DOWNLOAD_BASE_URL/$asset_name"
     announced_platforms+=("$platform")
