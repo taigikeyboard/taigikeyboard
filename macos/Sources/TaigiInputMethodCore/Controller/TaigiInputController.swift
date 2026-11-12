@@ -1033,6 +1033,11 @@ public final class TaigiInputController: IMKInputController {
         // the next swap re-verifies the position against the client anyway,
         // so a client that moved the caret degrades to no swap.
         var caretAfterSwap: Int?
+        // Where this reply's writes begin, asked before the first of them,
+        // and how far they have carried the caret: an arm after a commit is
+        // arithmetic too (`writeStart(in:)`).
+        let writeStart = effects.contains(.armSwap) ? Self.writeStart(in: client) : nil
+        var writtenUTF16 = 0
         let writer = ClientWriter(client: client)
         let replayTenure = tenure
         for effect in effects {
@@ -1055,6 +1060,7 @@ public final class TaigiInputController: IMKInputController {
                 // One `insertText` at the insertion point — a commit, the
                 // auto space, a mapped punctuation or a symbol alike.
                 writer.insertText(text)
+                writtenUTF16 += (text as NSString).length
             case let .swapPrecedingSpace(replacement):
                 // Only ever answered after `canSwapPrecedingSpace` found the
                 // arm and the space still in front of the caret.
@@ -1064,8 +1070,8 @@ public final class TaigiInputController: IMKInputController {
             case .armSwap:
                 if let caretAfterSwap {
                     armedAutoSpaceCaret = caretAfterSwap
-                } else {
-                    armAutoSpaceSwap(client)
+                } else if let writeStart, writeStart + writtenUTF16 > 0 {
+                    armedAutoSpaceCaret = writeStart + writtenUTF16
                 }
             case let .candidatesChanged(list):
                 presentCandidates(list, client: client)
@@ -1365,19 +1371,29 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Auto-space
 
-    /// Remembers where the caret sits now that the auto space is in front of
-    /// it — the position the swap re-checks before it rewrites anything.
+    /// Where the writes of a reply that arms the swap land: the start of the
+    /// marked region they commit over, or with nothing marked the selection
+    /// they replace. Asked BEFORE the reply writes anything, so the arm is
+    /// this plus what the reply inserted — never a `selectedRange()` read
+    /// after the writes. Chromium hosts answer that read from a copy the
+    /// renderer has not updated yet (the caret before the commit), which
+    /// left every swap there declined.
     ///
-    /// A client that cannot answer, answers mid-selection, or answers with the
-    /// caret at the document start simply never arms: the swap degrades to
-    /// pass-through (`guá ?`) rather than risk replacing a character that was
-    /// not our space. Asking here is safe — this runs inside a key event, like
-    /// every client query (see `caretRect`'s activation-only deadlock rule).
+    /// A client that cannot answer, or answers mid-selection, never arms:
+    /// the swap degrades to pass-through (`guá ?`). A wrong start cannot
+    /// rewrite the wrong text either — the swap still needs the client's
+    /// caret to equal the arm and a space before it (`canSwapAutoSpace`).
+    /// Asking here is safe: this runs inside a key event, like every client
+    /// query (see `caretRect`'s activation-only deadlock rule).
     @MainActor
-    private func armAutoSpaceSwap(_ client: IMKTextInput) {
-        let caret = client.selectedRange()
-        guard caret.location != NSNotFound, caret.length == 0, caret.location > 0 else { return }
-        armedAutoSpaceCaret = caret.location
+    private static func writeStart(in client: IMKTextInput) -> Int? {
+        let marked = client.markedRange()
+        if marked.location != NSNotFound {
+            return marked.location
+        }
+        let selection = client.selectedRange()
+        guard selection.location != NSNotFound, selection.length == 0 else { return nil }
+        return selection.location
     }
 
     /// The client half of the smart-punctuation swap (`guá ` + `?` → `guá? `):
