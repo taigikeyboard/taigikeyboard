@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `腔口差`, `accent variations`, `contribution`, `issue form`, `GitHub App`, `khpoo`, `齒盤補充辭典`
-> **Status**: Draft 2026-11-12 — Phase 0 done; D7 (licence) awaits the maintainer
+> **Status**: Draft 2026-11-12 — Phase 1 in review; all decisions settled
 
 ## Goal
 
@@ -17,10 +17,7 @@ Decisions (maintainer, 2026-11-12):
 - **D5 Data destination** — append to `dictionary/sources/supplementary/khpoo/data/raw/khpoo.csv`. Entries ship as 齒盤補充辭典 (source bit 8) through the existing khpoo pipeline; no new data file, no new source bit, no engine or platform change. The accent and the reason are not in the data (the file has two columns); they are recorded as commit trailers and in the PR body.
 
 - **D6 TL, reviewed by hand** — the romanization field asks for Tâi-lô only (label and placeholder say so). Whether the TL is correct is decided by the maintainer's review of the PR: only entries that pass review are merged. No automated TL validator in the site or in CI — the reviewer is the gate, and a machine check would add a second, possibly disagreeing, definition of TL.
-
-Open (maintainer):
-
-- **D7 Licence of contributed rows** — khpoo is **Unverified** (`dictionary/LICENSE:31`, `dictionary/docs/SOURCES.md:130`). New rows need the contributor's consent to a stated licence, given on the form. Recommended: Apache-2.0, like `dev` (`dictionary/LICENSE:34`); alternatives CC BY (like `lkk`) or CC0. The form cannot go live before this is settled.
+- **D7 Licence of contributed rows** — Apache-2.0, like `dev` (`dictionary/LICENSE:34`). khpoo's original rows stay **Unverified**; contributed rows are identified by their `Accent:` commit trailer. The form carries a required consent checkbox. Recorded in `dictionary/LICENSE` and `dictionary/docs/SOURCES.md`.
 
 ## Today (grounded in code)
 
@@ -58,18 +55,13 @@ Closes #<issue>
 | Phase | PR | Scope | Status |
 |---|---|---|---|
 | 0 | admin | This roadmap + project memory | Done (533e2d093, 59bc9b98f) |
-| 1 | this repo | `dictionary/tools/verify_khpoo_append.py` + CI job | Pending |
-| 2 | this repo | Issue form + intake workflow + GitHub App wiring | Pending (form live needs D7) |
+| 1 | this repo | `dictionary/tools/verify_khpoo_append.py` + CI job + licence record | In review |
+| 2 | this repo | Issue form + intake workflow + GitHub App wiring | Pending |
 | 3 | new repo | Static site: search + form + Pages deploy | Pending |
 
 ### Phase 1 — checks
 
-`verify_khpoo_append.py` (pipeline helpers, no new dependency), run by `python.yml` on PRs that change the khpoo raw file. It checks only the lines the PR adds (diff against the base), so the 4.2k existing rows are not re-judged:
-
-1. Format: two fields, CRLF, NFC, already `normalize_roman`-normalised, file still ends with a newline.
-2. No TL correctness check (D6): khpoo's `cleanup.minimal` does not validate either, so the reviewer's merge is the only gate on TL.
-3. Dedup: the normalised `(hanzi, tl)` must not already be in the khpoo raw file, in `dictionary/output/dictionary.csv` (any source), or twice in the PR.
-4. Tests in `dictionary/tests/`.
+`dictionary/tools/verify_khpoo_append.py` (its docstring is the check list), run by `python.yml` on PRs that change the khpoo raw file against the merge base (`HEAD^1`): append-only, format, and `(hanzi, tl)` dedup against khpoo and `dictionary/output/dictionary.csv` keyed like the build merge (space = hyphen). No TL correctness check (D6): the reviewer's merge is the only gate on TL. Tests: `dictionary/tests/test_verify_khpoo_append.py`.
 
 The intake workflow runs the same script before it commits, so a duplicate or malformed submission is answered on the issue and never becomes a PR. Everything else becomes a PR and waits for review.
 
