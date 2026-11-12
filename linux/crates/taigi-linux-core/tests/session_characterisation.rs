@@ -24,6 +24,8 @@ const PERIOD: u32 = 0x2e;
 const RETURN: u32 = 0xff0d;
 const ESCAPE: u32 = 0xff1b;
 const BACKSPACE: u32 = 0xff08;
+const HOME: u32 = 0xff50;
+const LEFT: u32 = 0xff51;
 
 /// A session over the real dictionaries with auto-space on or off, and a
 /// client that can (or cannot) delete surrounding text.
@@ -356,6 +358,23 @@ fn the_armed_swap_lasts_exactly_one_key() {
     assert!(!session.state.armed_auto_space, "any key spends the arm");
     session.press(ESCAPE);
     assert_eq!(session.press(COMMA), [commit("，")], "no swap two keys on");
+}
+
+#[test]
+fn a_key_the_client_takes_spends_the_arm() {
+    let _serial = serial();
+    // #866: each of these reaches the document unseen — a newline, a typed
+    // digit, a deleted space, a caret move — so the swap after it would
+    // delete whatever now precedes the caret.
+    for keyval in [RETURN, '2' as u32, BACKSPACE, LEFT, HOME] {
+        let mut session = Session::new(true, true);
+        session.type_word("ho");
+        session.press(RETURN);
+        assert!(session.state.armed_auto_space);
+        assert_eq!(session.press_with(keyval, 0), (false, Vec::new()));
+        assert!(!session.state.armed_auto_space, "key {keyval:#x}");
+        assert_eq!(session.press(COMMA), [commit("，")], "key {keyval:#x}");
+    }
 }
 
 #[test]

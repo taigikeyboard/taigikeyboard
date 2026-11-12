@@ -182,8 +182,11 @@ pub fn process_key(
         _ => true,
     };
     if !would_consume && !matches!(intent, ComposingKeyIntent::CommitThenPassThrough) {
-        // Not ours, and nothing to finish — but a character reaching the
-        // document outside a composition still ends the next-word context.
+        // Not ours, and nothing to finish. The client acts on the key where
+        // the swap cannot see — a typed `2`, a newline, a caret move — so the
+        // arm is spent with it (#866). A character reaching the document
+        // outside a composition also ends the next-word context.
+        state.armed_auto_space = false;
         if let Some(typed) = ComposingKeyIntent::document_text(snapshot, bindings.input_mode) {
             if let Some(coordinator) = runtime.coordinator_if_built() {
                 if let Ok(mut coordinator) = coordinator.try_lock() {
