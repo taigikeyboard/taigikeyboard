@@ -52,10 +52,18 @@ bindgen-version:
 i18n-check:
 	python3 ../tools/i18n/check.py
 
+# cargo decides whether the wasm is stale; the bindings and wasm-opt (~13 s)
+# rerun only when cargo rewrote it or the CLI pins moved, so `check`, `site`
+# and `chromeos` in one session pay for them once. A sub-make, because make
+# reads $(WASM)'s mtime before this recipe's cargo runs.
 build: bindgen-version
 	cargo build --release --locked --target $(TARGET) -p taigi-web
+	@$(MAKE) --no-print-directory target/.pkg-stamp
+
+target/.pkg-stamp: $(WASM) ../mise.toml
 	wasm-bindgen --target web --out-dir $(PKG) $(WASM)
 	wasm-opt -O3 --strip-debug --strip-producers $(PKG)/taigi_web_bg.wasm -o $(PKG)/taigi_web_bg.wasm
+	touch $@
 
 # The pinned packages, once per lock change: the bundle and Playwright share them.
 node_modules/.package-lock.json: package-lock.json

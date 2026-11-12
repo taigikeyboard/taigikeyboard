@@ -55,17 +55,10 @@ class RustEngineBridgeTest {
     // endregion
     // region TPS
 
-    @Test fun op_isTpsToneMark_acuteIsToneMark() {
-        assertTrue(RustEngineBridge.isTpsToneMark('ˊ'))
-    }
-
-    @Test fun op_isTpsToneMark_letterIsNotToneMark() {
+    // Both decode branches in one pin. The TPS Space key reads the raw buffer's
+    // last char; after `˙` on a stop coda that is the combining tone-8 dot U+0307.
+    @Test fun op_isTpsToneMark_combiningToneEightDotIsToneMark_letterIsNot() {
         assertFalse(RustEngineBridge.isTpsToneMark('a'))
-    }
-
-    // The TPS Space key reads the raw buffer's last char; after `˙` on a stop
-    // coda that is the combining tone-8 dot U+0307.
-    @Test fun op_isTpsToneMark_combiningToneEightDotIsToneMark() {
         assertTrue(RustEngineBridge.isTpsToneMark('\u0307'))
     }
 
