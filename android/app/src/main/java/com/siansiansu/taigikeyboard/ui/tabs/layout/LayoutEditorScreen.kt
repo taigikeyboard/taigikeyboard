@@ -89,9 +89,9 @@ import java.util.Collections
 // mark both, then the swap button below the board to swap them (function keys within their row). The selected character key's
 // long-press list sits in LayoutCalloutStrip below the board: tap two slots and the swap button to
 // swap or move, a slot, a tray character and the swap button to fill it, a slot then the trash to empty it. The undo
-// button steps back one edit at a time. Nothing is stored until Save,
-// whose dialog names the layout and picks where it shows (LayoutUse), then applies it; Back discards
-// the draft. Mirrors iOS LayoutEditorView.
+// button steps back one edit at a time. Nothing is stored until Save; Back discards the draft. A new
+// layout arrives named, its use (LayoutUse) chosen on the Layout tab, and Save stores and applies it;
+// an edit's Save opens the name dialog to rename it or change its use first. Mirrors iOS LayoutEditorView.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -290,7 +290,8 @@ fun LayoutEditorScreen(
     }
 
     fun restart(base: String) {
-        tables.fresh(draft.id, draft.name, base, draft.script)?.let { changeDraft(it) }
+        // Keeps the use chosen when the layout was created (iOS `CustomLayout.reset(to:)`).
+        tables.fresh(draft.id, draft.name, base, draft.script)?.let { changeDraft(it.copy(isUniversal = draft.isUniversal)) }
         select(null)
     }
 
@@ -298,7 +299,7 @@ fun LayoutEditorScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) draft.name else L10n.layoutEditorTitleNew) },
+                title = { Text(draft.name) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = L10n.commonBack)
@@ -306,8 +307,12 @@ fun LayoutEditorScreen(
                 },
                 actions = {
                     TextButton(onClick = {
-                        pendingUse = draft.use
-                        showNameDialog = true
+                        if (isEditing) {
+                            pendingUse = draft.use
+                            showNameDialog = true
+                        } else {
+                            onSave(draft)
+                        }
                     }) { Text(L10n.commonSave) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -518,10 +523,10 @@ private fun BaseChips(
     }
 }
 
-/** Where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī): a dropdown under the name field. Mirrors the iOS save sheet's menu picker. */
+/** Where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī): a dropdown under the name field. Mirrors the iOS details sheet's menu picker. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun UseMenu(
+internal fun UseMenu(
     selected: LayoutUse,
     onSelect: (LayoutUse) -> Unit,
 ) {

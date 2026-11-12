@@ -641,6 +641,106 @@ public  final class AppConfig extends
     customDictionaryDisabled_ = false;
   }
 
+  public static final int C_TYPES_AFFRICATE_FIELD_NUMBER = 17;
+  private boolean cTypesAffricate_;
+  /**
+   * <pre>
+   * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+   * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+   * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+   * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+   * Unset, `c` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool c_types_affricate = 17;</code>
+   * @return The cTypesAffricate.
+   */
+  @java.lang.Override
+  public boolean getCTypesAffricate() {
+    return cTypesAffricate_;
+  }
+  /**
+   * <pre>
+   * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+   * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+   * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+   * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+   * Unset, `c` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool c_types_affricate = 17;</code>
+   * @param value The cTypesAffricate to set.
+   */
+  private void setCTypesAffricate(boolean value) {
+
+    cTypesAffricate_ = value;
+  }
+  /**
+   * <pre>
+   * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+   * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+   * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+   * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+   * Unset, `c` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool c_types_affricate = 17;</code>
+   */
+  private void clearCTypesAffricate() {
+
+    cTypesAffricate_ = false;
+  }
+
+  public static final int F_TYPES_HYPHEN_FIELD_NUMBER = 18;
+  private boolean fTypesHyphen_;
+  /**
+   * <pre>
+   * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+   * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+   * neutral-tone (khinsiann) marker, a document literal — under either tone
+   * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+   * `f` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool f_types_hyphen = 18;</code>
+   * @return The fTypesHyphen.
+   */
+  @java.lang.Override
+  public boolean getFTypesHyphen() {
+    return fTypesHyphen_;
+  }
+  /**
+   * <pre>
+   * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+   * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+   * neutral-tone (khinsiann) marker, a document literal — under either tone
+   * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+   * `f` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool f_types_hyphen = 18;</code>
+   * @param value The fTypesHyphen to set.
+   */
+  private void setFTypesHyphen(boolean value) {
+
+    fTypesHyphen_ = value;
+  }
+  /**
+   * <pre>
+   * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+   * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+   * neutral-tone (khinsiann) marker, a document literal — under either tone
+   * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+   * `f` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool f_types_hyphen = 18;</code>
+   */
+  private void clearFTypesHyphen() {
+
+    fTypesHyphen_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1400,6 +1500,110 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+     * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+     * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+     * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+     * Unset, `c` is an ordinary letter.
+     * </pre>
+     *
+     * <code>bool c_types_affricate = 17;</code>
+     * @return The cTypesAffricate.
+     */
+    @java.lang.Override
+    public boolean getCTypesAffricate() {
+      return instance.getCTypesAffricate();
+    }
+    /**
+     * <pre>
+     * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+     * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+     * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+     * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+     * Unset, `c` is an ordinary letter.
+     * </pre>
+     *
+     * <code>bool c_types_affricate = 17;</code>
+     * @param value The cTypesAffricate to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCTypesAffricate(boolean value) {
+      copyOnWrite();
+      instance.setCTypesAffricate(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+     * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+     * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+     * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+     * Unset, `c` is an ordinary letter.
+     * </pre>
+     *
+     * <code>bool c_types_affricate = 17;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCTypesAffricate() {
+      copyOnWrite();
+      instance.clearCTypesAffricate();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+     * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+     * neutral-tone (khinsiann) marker, a document literal — under either tone
+     * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+     * `f` is an ordinary letter.
+     * </pre>
+     *
+     * <code>bool f_types_hyphen = 18;</code>
+     * @return The fTypesHyphen.
+     */
+    @java.lang.Override
+    public boolean getFTypesHyphen() {
+      return instance.getFTypesHyphen();
+    }
+    /**
+     * <pre>
+     * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+     * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+     * neutral-tone (khinsiann) marker, a document literal — under either tone
+     * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+     * `f` is an ordinary letter.
+     * </pre>
+     *
+     * <code>bool f_types_hyphen = 18;</code>
+     * @param value The fTypesHyphen to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFTypesHyphen(boolean value) {
+      copyOnWrite();
+      instance.setFTypesHyphen(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+     * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+     * neutral-tone (khinsiann) marker, a document literal — under either tone
+     * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+     * `f` is an ordinary letter.
+     * </pre>
+     *
+     * <code>bool f_types_hyphen = 18;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFTypesHyphen() {
+      copyOnWrite();
+      instance.clearFTypesHyphen();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -1429,11 +1633,13 @@ public  final class AppConfig extends
             "syllableSeparator_",
             "dictionarySources_",
             "customDictionaryDisabled_",
+            "cTypesAffricate_",
+            "fTypesHyphen_",
           };
           java.lang.String info =
-              "\u0000\f\u0000\u0001\u0002\u0010\f\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004" +
-              "\u0007\u0005\u0007\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e\f\u000f\u1009" +
-              "\u0001\u0010\u0007";
+              "\u0000\u000e\u0000\u0001\u0002\u0012\u000e\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
+              "\u0004\u0007\u0005\u0007\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e\f\u000f" +
+              "\u1009\u0001\u0010\u0007\u0011\u0007\u0012\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -728,11 +728,11 @@ mod item12_custom_dedupe_tests {
         assert!(out[0].is_custom, "custom (rank 0) must win the collision");
     }
 
-    fn custom_cand(roman: &str, hanji: &str) -> RawCandidate {
+    fn custom_cand(roman: &str, hanji: Option<&str>) -> RawCandidate {
         custom_entry_to_candidate(
             &CustomEntry {
                 roman: roman.to_owned(),
-                hanji: Some(hanji.to_owned()),
+                hanji: hanji.map(str::to_owned),
             },
             (0, 6),
             &FrequencyMap::new(),
@@ -749,7 +749,7 @@ mod item12_custom_dedupe_tests {
         // the dictionary's NFC `lí`; only `canonical_tl` sees it.
         let mut out = vec![
             dict_cand("l\u{ed}", Some("李"), 1 << 0),
-            custom_cand("li\u{301}", "李"),
+            custom_cand("li\u{301}", Some("李")),
         ];
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1);
@@ -762,12 +762,36 @@ mod item12_custom_dedupe_tests {
         // (`hùi` → `huì`) while a dict row keeps its TL verbatim as
         // `canonical_tl`, so a custom row copied byte for byte from the
         // dictionary meets it only on the raw roman.
-        let custom = custom_cand("hùi", "卉");
+        let custom = custom_cand("hùi", Some("卉"));
         assert_ne!(custom.canonical_tl, "hùi", "fixture precondition");
         let mut out = vec![dict_cand("hùi", Some("卉"), 1 << 0), custom];
         dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1);
         assert!(out[0].is_custom);
+    }
+
+    #[test]
+    fn dedupe_collapses_a_hanji_less_custom_word_with_the_shipped_one() {
+        // 2026-11-07: the custom store empties a Hanji column repeating the
+        // roman (`lán,lán` → `lán,`), so the custom word meets the shipped
+        // hanzi-less `lán` on `(canonical_tl, None)`.
+        let mut out = vec![dict_cand("lán", None, 1 << 0), custom_cand("lán", None)];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 1);
+        assert!(out[0].is_custom);
+    }
+
+    #[test]
+    fn dedupe_keeps_a_custom_latin_form_beside_the_shipped_hanji_less_word() {
+        // 2026-11-09: a Latin Hanji other than the roman (`lán,Lán`) is the
+        // user's chosen written form and is stored, so it stays a second
+        // candidate — the accepted cost of keeping `KTV` / `Tâi-lâm`.
+        let mut out = vec![
+            dict_cand("lán", None, 1 << 0),
+            custom_cand("lán", Some("Lán")),
+        ];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 2);
     }
 
     #[test]

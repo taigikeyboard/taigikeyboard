@@ -410,13 +410,13 @@ def verify(logger):
         sys.exit(1)
 
 
-def main():
+def main(argv: list[str] | None = None):
     logger = setup_logging(SCRIPT_NAME, log_dir=LOG_DIR)
     log_header(logger, SCRIPT_NAME, CSV_FILE, OUTPUT_FILE)
 
     build(logger)
 
-    if "--verify" in sys.argv:
+    if "--verify" in (sys.argv[1:] if argv is None else argv):
         verify(logger)
 
     logger.info("\nDone!")

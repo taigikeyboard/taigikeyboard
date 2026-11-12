@@ -29,11 +29,12 @@ public extension RustEngineBridge {
                             op: "getToneVariations")
         guard case let .toneVariationsResult(r)? = resp?.result else {
             recordFailure(op: "getToneVariations", message: "missing result")
-            return ToneVariationsCache(poj: [:], tl: [:])
+            return ToneVariationsCache(poj: [:], tl: [:], universal: [:])
         }
         return ToneVariationsCache(
             poj: r.pojVariations.mapValues { $0.variations },
             tl: r.tlVariations.mapValues { $0.variations },
+            universal: r.universalVariations.mapValues { $0.variations },
         )
     }()
 
@@ -50,9 +51,13 @@ public extension RustEngineBridge {
         )
     }
 
+    /// Whether `char` ends in a TPS tone mark. The op reads one scalar, so this
+    /// sends the last one: a stop coda carrying the combining tone-8 dot
+    /// (`ㆻ̇`) is a single grapheme whose last scalar is the mark U+0307.
     static func isTPSToneMark(_ char: Character) -> Bool {
+        guard let last = char.unicodeScalars.last else { return false }
         var payload = Taigi_Engine_IsTpsToneMark()
-        payload.char = String(char)
+        payload.char = String(last)
         return boolDispatch(method: .isTpsToneMark(payload), op: "isTpsToneMark")
     }
 
@@ -91,6 +96,16 @@ public extension RustEngineBridge {
         var payload = Taigi_Engine_IsJoinerPunctuation()
         payload.text = text
         return boolDispatch(method: .isJoinerPunctuation(payload), op: "isJoinerPunctuation")
+    }
+
+    /// Whether attaching `text` keeps the auto space after itself — a
+    /// half-width mark (`guá? `); a full-width one takes the space's place
+    /// (`taigi，`) — the engine's answer. False when the engine fails: the
+    /// mark is written with no space after it.
+    static func isSpacedPunctuation(_ text: String) -> Bool {
+        var payload = Taigi_Engine_IsSpacedPunctuation()
+        payload.text = text
+        return boolDispatch(method: .isSpacedPunctuation(payload), op: "isSpacedPunctuation")
     }
 
     /// The digit-tone spelling of a TL reading that the web dictionaries
@@ -163,9 +178,11 @@ public extension RustEngineBridge {
 // MARK: - ToneVariationsCache
 
 /// Init-bulk-pull cache for the callout tone variation tables. Loaded once
-/// at first access via `RustEngineBridge.toneVariations`; both POJ + TL
-/// maps live in a single payload to amortize FFI cost.
+/// at first access via `RustEngineBridge.toneVariations`; the POJ, TL and
+/// universal (both scripts' lists interleaved, both tone-9 marks) maps live in
+/// a single payload to amortize FFI cost.
 public struct ToneVariationsCache {
     public let poj: [String: [String]]
     public let tl: [String: [String]]
+    public let universal: [String: [String]]
 }

@@ -77,6 +77,15 @@ def settings_document(settings: dict) -> dict:
         if tone_input not in ("standard", "telex"):
             raise UnsupportedScenario(f"tone input {tone_input!r} has no desktop scheme")
         values["toneInputScheme"] = tone_input
+    c_affricate = settings.get("c_affricate")
+    if c_affricate is not None:
+        values["cAffricateEnabled"] = c_affricate
+    f_hyphen = settings.get("f_hyphen")
+    if f_hyphen is not None:
+        values["fHyphenEnabled"] = f_hyphen
+    auto_space = settings.get("auto_space")
+    if auto_space is not None:
+        values["autoSpaceEnabled"] = auto_space
     return {"revision": 1, "values": values}
 
 

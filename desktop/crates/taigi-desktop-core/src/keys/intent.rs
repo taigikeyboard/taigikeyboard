@@ -108,7 +108,7 @@ pub enum ComposingKeyIntent {
     Input(String),
     /// One of the Telex keys (`ToneInputScheme::TELEX_KEYS`), handed to the
     /// engine's `TelexKey` intent rather than appended: the engine decides
-    /// which tone it writes, or which initial `c` spells in this input mode.
+    /// which tone it writes.
     TelexKey(String),
     /// One TPS key — a glyph off the layout (`tps_layout.rs`), or `" "` for
     /// Space mid-composition — handed to the engine's `TpsKey` intent, which
@@ -325,18 +325,17 @@ impl ComposingKeyIntent {
                 Self::CommitThenInsert(characters.to_owned()),
             );
         }
-        // Under Telex the tone letters, `c`, `h` and `f` are the
-        // engine's, not the composition's text. A tone letter typed outside a
-        // composition is document text (like an idle digit): there is no
-        // syllable for it to mark. `c` and `h` type an initial, so they start
-        // one; an idle `f` is the engine's `-` key (the khinsiann marker).
+        // Under Telex the tone letters are the engine's, not the
+        // composition's text. A tone letter typed outside a composition is
+        // document text (like an idle digit): there is no syllable for it to
+        // mark.
         // One scalar only, for the same grapheme reason as the romanization
         // rule below; macOS asks the same since P11c (roadmap E2).
         if bindings.tone_scheme == ToneInputScheme::Telex {
             let mut scalars = characters.chars();
             if let (Some(first), None) = (scalars.next(), scalars.next()) {
                 if ToneInputScheme::is_telex_key(first) {
-                    if is_composing || ToneInputScheme::reaches_engine_when_idle(first) {
+                    if is_composing {
                         return Self::TelexKey(characters.to_owned());
                     }
                     return Self::PassThrough;
@@ -482,8 +481,7 @@ impl ComposingKeyIntent {
     /// punctuation chord is document text too, and what it types is the key
     /// under the modifier: under Ctrl the layout types
     /// nothing for `,` (`characters` is `None`) and Escape for `[`, and the
-    /// key itself is what the user asked for. macOS keeps a Swift twin:
-    /// `KeyEventSnapshot.swift` `documentText(inputMode:)`.
+    /// key itself is what the user asked for.
     pub fn document_text(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<String> {
         if let Some(punctuation) = Self::tps_punctuation_chord(key, input_mode) {
             return Some(punctuation.to_string());
@@ -506,8 +504,6 @@ impl ComposingKeyIntent {
     /// it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
     /// full-width policy maps (`policies::is_punctuation_chord_key`). Read off
     /// the unmodified characters because Ctrl rewrites what a key types.
-    /// macOS keeps a Swift twin: `KeyEventSnapshot.swift`
-    /// `tpsPunctuationChord(inputMode:)`.
     pub fn tps_punctuation_chord(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<char> {
         let chording = KeyModifiers {
             shift: false,
@@ -571,7 +567,7 @@ impl ComposingKeyIntent {
     /// The characters a TL or POJ syllable is built from. ASCII-only on
     /// purpose. Every ASCII letter, not only the eighteen a syllable is
     /// spelled with: a custom-dictionary romanization is free text, so all of
-    /// them must reach the composition. Under Telex the ten the scheme
+    /// them must reach the composition. Under Telex the eight the scheme
     /// claims are taken before this is asked.
     pub fn is_romanization_character(character: char) -> bool {
         character.is_ascii_alphabetic() || character == '-'
@@ -1174,10 +1170,34 @@ mod tests {
     }
 
     #[test]
+    fn with_type_hyphen_with_f_an_f_is_text_under_standard_with_the_window_up() {
+        // trace: tier 3 reads `BareKeysWithoutF`, which has no `f`, so the
+        // key falls to tier 7 as romanization — the engine's
+        // `f_types_hyphen` writes `-`. `z` picks slot 3, one left of where
+        // it sits with the switch off.
+        let mut bindings = ComposingKeyBindings::default();
+        bindings.is_f_hyphen_enabled = true;
+        for key in ["f", "F"] {
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(key), true, true, &bindings, PLATFORM),
+                ComposingKeyIntent::Input(key.into()),
+                "{key}"
+            );
+        }
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("z"), true, true, &bindings, PLATFORM),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 3,
+                flip: false
+            }
+        );
+    }
+
+    #[test]
     fn under_telex_the_tone_letters_are_the_engines_while_composing() {
         // trace: tier 7 under Telex (`is_telex_key`) — `v` composing →
-        // `TelexKey`, capital too; idle `v` and `z` pass through; idle `c`
-        // and `h` start; idle `f` reaches the engine, which types `-`.
+        // `TelexKey`, capital too; idle `v` and `z` pass through; `c`, `f`
+        // and `h` are text.
         let telex = telex_bindings();
         assert_eq!(
             ComposingKeyIntent::intent(&text("v"), true, false, &telex, PLATFORM),
@@ -1188,37 +1208,26 @@ mod tests {
             ComposingKeyIntent::TelexKey("V".into())
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("f"), true, true, &telex, PLATFORM),
-            ComposingKeyIntent::TelexKey("f".into())
-        );
-        assert_eq!(
             ComposingKeyIntent::intent(&text("v"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::PassThrough,
             "a tone letter has nothing to mark when idle"
         );
-        for key in ["f", "F"] {
-            assert_eq!(
-                ComposingKeyIntent::intent(&text(key), false, false, &telex, PLATFORM),
-                ComposingKeyIntent::TelexKey(key.into()),
-                "an idle `{key}` is the engine's khinsiann hyphen"
-            );
-        }
         assert_eq!(
             ComposingKeyIntent::intent(&text("z"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::PassThrough,
             "`z` writes tone 6, which has nothing to mark when idle"
         );
-        for key in ["c", "C", "h", "H"] {
-            assert_eq!(
-                ComposingKeyIntent::intent(&text(key), false, false, &telex, PLATFORM),
-                ComposingKeyIntent::TelexKey(key.into()),
-                "`{key}` types an initial, so it starts a composition"
-            );
-            assert_eq!(
-                ComposingKeyIntent::intent(&text(key), true, false, &telex, PLATFORM),
-                ComposingKeyIntent::TelexKey(key.into()),
-                "{key}"
-            );
+        // `c`, `f` and `h` are no Telex keys: text, idle or composing, as
+        // under Standard. What `c` and `f` write is the engine's
+        // (`c_types_affricate`, `f_types_hyphen`).
+        for key in ["c", "C", "f", "F", "h", "H"] {
+            for is_composing in [false, true] {
+                assert_eq!(
+                    ComposingKeyIntent::intent(&text(key), is_composing, false, &telex, PLATFORM),
+                    ComposingKeyIntent::Input(key.into()),
+                    "{key} composing={is_composing}"
+                );
+            }
         }
         // A letter neither scheme claims is still text.
         assert_eq!(

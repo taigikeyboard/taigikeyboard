@@ -29,8 +29,8 @@ final class SettingsWindowTests: XCTestCase {
     /// back rather than trusting each window to have been released by then.
     private var windowsUnderTest: [NSWindow] = []
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "SettingsWindowTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         stashedFrameValue = UserDefaults.standard.string(forKey: Self.frameAutosaveDefaultsKey)
@@ -40,7 +40,7 @@ final class SettingsWindowTests: XCTestCase {
         )
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         if let stashedFrameValue {
             UserDefaults.standard.set(stashedFrameValue, forKey: Self.frameAutosaveDefaultsKey)
         } else {
@@ -56,7 +56,7 @@ final class SettingsWindowTests: XCTestCase {
         }
         windowsUnderTest.removeAll()
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     /// What `contentMinSize` / `setContentSize` speak, which is NOT

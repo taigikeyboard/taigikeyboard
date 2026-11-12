@@ -9,8 +9,8 @@ use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, ExternalLookupDigitForm, GetToneVariations, IsAttachingPunctuation,
-    IsJoinerPunctuation, IsTpsToneMark, PhoneticsRequest, PhoneticsResponse, StringResult,
-    TlDisplayToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
+    IsJoinerPunctuation, IsSpacedPunctuation, IsTpsToneMark, PhoneticsRequest, PhoneticsResponse,
+    StringResult, TlDisplayToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
@@ -88,6 +88,8 @@ fn tl_config() -> AppConfig {
         hanji_conversion: None,
         dictionary_sources: None,
         custom_dictionary_disabled: false,
+        c_types_affricate: false,
+        f_types_hyphen: false,
     }
 }
 
@@ -105,6 +107,8 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         hanji_conversion: None,
         dictionary_sources: None,
         custom_dictionary_disabled: false,
+        c_types_affricate: false,
+        f_types_hyphen: false,
     }
 }
 
@@ -252,7 +256,7 @@ fn tl_to_poj_display_round_trip() {
 }
 
 #[test]
-fn get_tone_variations_returns_both_modes() {
+fn get_tone_variations_returns_all_three_maps() {
     let resp = run(Method::GetToneVariations(GetToneVariations {}));
     let result = tone_variations_result(&resp);
     assert!(!result.poj_variations.is_empty(), "POJ map non-empty");
@@ -262,6 +266,11 @@ fn get_tone_variations_returns_both_modes() {
     // TL 'oo' entry exists; POJ 'o͘' entry exists.
     assert!(result.tl_variations.contains_key("oo"));
     assert!(result.poj_variations.contains_key("o\u{0358}"));
+    // Universal: both tone-9 marks on `a`, and both scripts' o-keys.
+    let a = &result.universal_variations["a"].variations;
+    assert!(a.contains(&"a\u{30B}".to_string()) && a.contains(&"ă".to_string()));
+    assert!(result.universal_variations.contains_key("oo"));
+    assert!(result.universal_variations.contains_key("o\u{0358}"));
 }
 
 #[test]
@@ -406,6 +415,14 @@ fn is_tps_tone_mark_true_for_acute() {
 }
 
 #[test]
+fn is_tps_tone_mark_true_for_combining_tone_eight_dot() {
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
+        char: "\u{0307}".to_string(),
+    }));
+    assert!(bool_result(&resp));
+}
+
+#[test]
 fn is_tps_tone_mark_false_for_letter() {
     let resp = run(Method::IsTpsToneMark(IsTpsToneMark {
         char: "a".to_string(),
@@ -445,6 +462,25 @@ fn is_joiner_punctuation_answers_through_the_dispatcher() {
     // `tps::KHINSIANN_DOT` (U+00B7); `?` attaches, it does not join.
     for (text, expected) in [("\u{00b7}", true), ("?", false), ("-", false), ("", false)] {
         let resp = run(Method::IsJoinerPunctuation(IsJoinerPunctuation {
+            text: text.to_string(),
+        }));
+        assert_eq!(bool_result(&resp), expected, "{text:?}");
+    }
+}
+
+#[test]
+fn is_spaced_punctuation_answers_through_the_dispatcher() {
+    // trace: `punctuation::is_spaced_punctuation` = attaching AND ASCII —
+    // `?` and `)` yes; their full-width `？` `）` and the opener `(` no.
+    for (text, expected) in [
+        ("?", true),
+        (")", true),
+        ("？", false),
+        ("）", false),
+        ("(", false),
+        ("", false),
+    ] {
+        let resp = run(Method::IsSpacedPunctuation(IsSpacedPunctuation {
             text: text.to_string(),
         }));
         assert_eq!(bool_result(&resp), expected, "{text:?}");

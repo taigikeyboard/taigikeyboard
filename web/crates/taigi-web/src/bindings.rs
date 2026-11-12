@@ -192,6 +192,20 @@ impl Session {
         tps_rows_json()
     }
 
+    /// The Telex guide's card, JSON: `title` and `rows` of `key` and
+    /// `meaning`, in the display language.
+    #[wasm_bindgen(js_name = telexGuide)]
+    pub fn telex_guide(&self) -> String {
+        self.inner.telex_guide()
+    }
+
+    /// The mode chip under the editor, JSON: `isEnglish`, `mode`, `script`
+    /// and `other`, in the display language. Again on `modeChanged` and a settings change.
+    #[wasm_bindgen(js_name = modeLine)]
+    pub fn mode_line(&self) -> String {
+        self.inner.mode_line()
+    }
+
     /// A click on a TPS key cap: `glyph` is what the cap types.
     #[wasm_bindgen(js_name = tpsKeyPress)]
     pub fn tps_key_press(&mut self, glyph: &str) -> String {

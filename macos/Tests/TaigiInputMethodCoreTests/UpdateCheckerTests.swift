@@ -23,8 +23,8 @@ final class UpdateCheckerTests: XCTestCase {
     /// the user never saw, which must not count as announced.
     private var deliverySucceeds = true
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "UpdateCheckerTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         presented = []
@@ -33,9 +33,9 @@ final class UpdateCheckerTests: XCTestCase {
         deliverySucceeds = true
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - DottedVersion

@@ -233,8 +233,11 @@ mod tests {
         assert_eq!(punctuation[baseline + 1], "⋯");
     }
 
+    /// A mark is one character, or a two-cell MOE mark — one character
+    /// written twice (`……`, `——`, #852), which a pick inserts whole the way it
+    /// inserts a bracket pair.
     #[test]
-    fn every_bracket_is_a_pair_and_every_mark_one_character() {
+    fn every_bracket_is_a_pair_and_every_mark_one_character_or_a_two_cell_mark() {
         for pair in &bundled()
             .category(SymbolCategoryId::Brackets)
             .unwrap()
@@ -242,13 +245,21 @@ mod tests {
         {
             assert_eq!(pair.chars().count(), 2, "{pair} is not a pair");
         }
-        for id in [
-            SymbolCategoryId::Punctuation,
-            SymbolCategoryId::SpecialSymbols,
-        ] {
-            for symbol in &bundled().category(id).unwrap().symbols {
-                assert_eq!(symbol.chars().count(), 1, "{symbol} in {id:?}");
-            }
+        for symbol in &bundled()
+            .category(SymbolCategoryId::Punctuation)
+            .unwrap()
+            .symbols
+        {
+            let chars: Vec<char> = symbol.chars().collect();
+            let is_two_cell = matches!(chars[..], [first, second] if first == second);
+            assert!(chars.len() == 1 || is_two_cell, "{symbol} in Punctuation");
+        }
+        for symbol in &bundled()
+            .category(SymbolCategoryId::SpecialSymbols)
+            .unwrap()
+            .symbols
+        {
+            assert_eq!(symbol.chars().count(), 1, "{symbol} in SpecialSymbols");
         }
     }
 

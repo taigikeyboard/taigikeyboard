@@ -81,4 +81,40 @@ com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue);
 
   com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getTlVariationsOrThrow(
       java.lang.String key);
+
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  int getUniversalVariationsCount();
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  boolean containsUniversalVariations(
+      java.lang.String key);
+  /**
+   * Use {@link #getUniversalVariationsMap()} instead.
+   */
+  @java.lang.Deprecated
+  java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList>
+  getUniversalVariations();
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+  java.util.Map<java.lang.String, com.siansiansu.taigikeyboard.engine.proto.ToneVariationList>
+  getUniversalVariationsMap();
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+
+  /* nullable */
+com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getUniversalVariationsOrDefault(
+      java.lang.String key,
+      /* nullable */
+com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue);
+  /**
+   * <code>map&lt;string, .taigi.engine.ToneVariationList&gt; universal_variations = 3;</code>
+   */
+
+  com.siansiansu.taigikeyboard.engine.proto.ToneVariationList getUniversalVariationsOrThrow(
+      java.lang.String key);
 }

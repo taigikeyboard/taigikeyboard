@@ -8,7 +8,7 @@
 //! the document: the preedit is the shell's, a commit is the one write, and
 //! a preedit character never lives in the document.
 
-use super::ListSelection;
+use super::{ListSelection, TextBeforeCaret};
 use crate::composing::{
     CandidateCellContent, CandidateSource, ComposingEffectExecutor, IntentSurface,
 };
@@ -69,13 +69,21 @@ pub struct LookupTableContent {
 }
 
 impl LookupTableContent {
-    /// Each cell as one string, for a panel with one text column: the leading
-    /// script, then the other (Pairing, Combined) after a space.
+    /// Each cell as one string, for a panel with one text column.
+    ///
+    /// Linux draws the cells itself (`taigikeyboard-popup`) and does not use
+    /// this. A horizontal list stacks the two scripts: the leading script,
+    /// then the other on the next line. Classic UI splits that newline
+    /// (`Text::splitByLine`, since 5.0.6) and an IBus label draws it, so the
+    /// row is as wide as the wider script. A vertical list keeps them on one
+    /// line — the other script after a space — because a column has the width
+    /// and the panel cannot align a second column.
     pub fn joined_candidates(&self) -> Vec<String> {
+        let separator = if self.vertical { " " } else { "\n" };
         self.cells
             .iter()
             .map(|cell| match &cell.annotation {
-                Some(annotation) => format!("{} {annotation}", cell.text),
+                Some(annotation) => format!("{}{separator}{annotation}", cell.text),
                 None => cell.text.clone(),
             })
             .collect()
@@ -93,14 +101,25 @@ pub struct Recorder {
     /// Whether the client can take a `DeleteSurroundingText` — the shell
     /// reads it from the client.
     pub can_delete_surrounding: bool,
+    /// What the client last said precedes the caret, which the swap checks.
+    pub text_before_caret: TextBeforeCaret,
 }
 
 impl Recorder {
-    pub fn new(can_delete_surrounding: bool) -> Self {
+    pub fn new(can_delete_surrounding: bool, text_before_caret: TextBeforeCaret) -> Self {
         Self {
             can_delete_surrounding,
+            text_before_caret,
             ..Self::default()
         }
+    }
+
+    /// Whether this key wrote to the document, which makes the client's
+    /// last report of it out of date.
+    pub fn has_written(&self) -> bool {
+        self.emits
+            .iter()
+            .any(|emit| matches!(emit, Emit::Commit(_) | Emit::DeleteSurrounding { .. }))
     }
 
     /// Text written outside any composition (the picker's symbol, a mapped
@@ -116,10 +135,19 @@ impl Recorder {
     /// The §23 swap: the space the last commit left, replaced by
     /// `replacement` (`text + " "`). Possible only where the client hands
     /// the shell its surrounding text; elsewhere the mark is written after
-    /// the space, as typed — NAMED DIVERGENCE, logged once per key.
+    /// the space, as typed — NAMED DIVERGENCE, logged once per key. Where
+    /// the client reports that text, the character before the caret must be
+    /// a space: the delete is blind, and anything else is the user's (#866).
     pub fn swap_preceding_space(&mut self, replacement: &str) -> bool {
         if !self.can_delete_surrounding {
             log::debug!("auto_space.swap_unavailable — client has no surrounding text");
+            return false;
+        }
+        if !self.text_before_caret.may_be_the_auto_space() {
+            log::debug!(
+                "auto_space.swap_refused before_caret={:?}",
+                self.text_before_caret
+            );
             return false;
         }
         self.emits.push(Emit::DeleteSurrounding {
@@ -236,6 +264,34 @@ fn char_index_at_utf16(text: &str, caret_utf16: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::composing::CandidateCellContent;
+
+    fn paired(vertical: bool) -> LookupTableContent {
+        LookupTableContent {
+            cells: vec![
+                CandidateCellContent::new("ho", None),
+                CandidateCellContent::new("好", Some("hó".into())),
+            ],
+            labels: vec!["1".into()],
+            cursor: 0,
+            cursor_visible: true,
+            page_size: 9,
+            vertical,
+        }
+    }
+
+    #[test]
+    fn a_horizontal_panel_stacks_the_two_scripts() {
+        // trace: one text column. "好 hó" beside its neighbours is as wide as
+        // both scripts; a newline is the break classic UI and the IBus label
+        // draw. A one-script cell (the literal) stays one line.
+        assert_eq!(paired(false).joined_candidates(), ["ho", "好\nhó"]);
+    }
+
+    #[test]
+    fn a_vertical_panel_keeps_the_two_scripts_on_one_line() {
+        assert_eq!(paired(true).joined_candidates(), ["ho", "好 hó"]);
+    }
 
     #[test]
     fn the_caret_is_converted_from_utf16_units_to_characters() {
@@ -250,7 +306,7 @@ mod tests {
 
     #[test]
     fn a_commit_replacing_the_preedit_clears_it_first() {
-        let mut recorder = Recorder::new(false);
+        let mut recorder = Recorder::new(false, TextBeforeCaret::Unreported);
         recorder.execute(&Effect::UpdatePreedit {
             text: "tai5".into(),
             caret_utf16: 4,
@@ -271,10 +327,10 @@ mod tests {
 
     #[test]
     fn the_swap_needs_surrounding_text_support() {
-        let mut without = Recorder::new(false);
+        let mut without = Recorder::new(false, TextBeforeCaret::Unreported);
         assert!(!without.swap_preceding_space("， "));
         assert!(without.emits.is_empty());
-        let mut with = Recorder::new(true);
+        let mut with = Recorder::new(true, TextBeforeCaret::Unreported);
         assert!(with.swap_preceding_space("， "));
         assert_eq!(
             with.emits,
@@ -286,5 +342,37 @@ mod tests {
                 Emit::Commit("， ".into())
             ]
         );
+    }
+
+    #[test]
+    fn a_reported_text_lets_the_swap_delete_only_a_space() {
+        for (before, is_swapped) in [
+            (Some(' '), true),
+            (Some('2'), false),
+            (Some('\n'), false),
+            (None, false),
+        ] {
+            let mut recorder = Recorder::new(true, TextBeforeCaret::Reported(before));
+            assert_eq!(
+                recorder.swap_preceding_space("， "),
+                is_swapped,
+                "before the caret: {before:?}"
+            );
+            assert_eq!(recorder.has_written(), is_swapped);
+        }
+    }
+
+    #[test]
+    fn the_character_before_the_caret_is_read_in_characters_and_only_without_a_selection() {
+        let reported =
+            |text, cursor, anchor| TextBeforeCaret::from_surrounding(text, cursor, anchor);
+        assert_eq!(reported("guá ", 4, 4), TextBeforeCaret::Reported(Some(' ')));
+        assert_eq!(
+            reported("guá 2", 5, 5),
+            TextBeforeCaret::Reported(Some('2'))
+        );
+        assert_eq!(reported("guá ", 3, 3), TextBeforeCaret::Reported(Some('á')));
+        assert_eq!(reported("guá ", 0, 0), TextBeforeCaret::Reported(None));
+        assert_eq!(reported("guá ", 4, 0), TextBeforeCaret::Reported(None));
     }
 }

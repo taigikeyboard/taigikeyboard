@@ -170,4 +170,32 @@ public interface AppConfigOrBuilder extends
    * @return The customDictionaryDisabled.
    */
   boolean getCustomDictionaryDisabled();
+
+  /**
+   * <pre>
+   * The desktop "Type ts / ch with c" setting (opt-in, 2026-11-09): an
+   * `Append` of `c` / `C` writes the unaspirated affricate initial the input
+   * mode spells — `ts` / `Ts` under TL, `ch` / `Ch` under POJ — under either
+   * tone scheme (`engine/composing/src/affricate.rs`). TPS never reads it.
+   * Unset, `c` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool c_types_affricate = 17;</code>
+   * @return The cTypesAffricate.
+   */
+  boolean getCTypesAffricate();
+
+  /**
+   * <pre>
+   * The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
+   * `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
+   * neutral-tone (khinsiann) marker, a document literal — under either tone
+   * scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
+   * `f` is an ordinary letter.
+   * </pre>
+   *
+   * <code>bool f_types_hyphen = 18;</code>
+   * @return The fTypesHyphen.
+   */
+  boolean getFTypesHyphen();
 }

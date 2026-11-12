@@ -15,11 +15,13 @@ pub mod handle;
 pub mod requests;
 pub mod syllabifier;
 
+mod affricate;
 mod commit_text;
 mod continuous;
 mod conversion;
 mod derived;
 mod external_insert;
+mod f_hyphen;
 mod lattice;
 mod shadow;
 pub mod telex;

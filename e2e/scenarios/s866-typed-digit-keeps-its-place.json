@@ -1,0 +1,12 @@
+{
+  "id": "s866-typed-digit-keeps-its-place",
+  "source": "Issue #866: a digit typed after a Roman pick's auto space reaches the document unseen; the next attaching mark must not swap, which deleted the digit (`hó , `).",
+  "settings": { "romanization": "tl", "output": "roman", "auto_space": true },
+  "steps": [
+    { "type": "text", "value": "ho" },
+    { "type": "pick", "tl": "hó" },
+    { "type": "text", "value": "2" },
+    { "type": "text", "value": "," }
+  ],
+  "expect": { "committed": "hó 2," }
+}

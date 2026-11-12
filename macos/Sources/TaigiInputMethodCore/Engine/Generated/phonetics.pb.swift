@@ -94,6 +94,14 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     set {method = .isJoinerPunctuation(newValue)}
   }
 
+  public var isSpacedPunctuation: Taigi_Engine_IsSpacedPunctuation {
+    get {
+      if case .isSpacedPunctuation(let v)? = method {return v}
+      return Taigi_Engine_IsSpacedPunctuation()
+    }
+    set {method = .isSpacedPunctuation(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
@@ -108,6 +116,7 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     case isAttachingPunctuation(Taigi_Engine_IsAttachingPunctuation)
     case externalLookupDigitForm(Taigi_Engine_ExternalLookupDigitForm)
     case isJoinerPunctuation(Taigi_Engine_IsJoinerPunctuation)
+    case isSpacedPunctuation(Taigi_Engine_IsSpacedPunctuation)
 
   }
 
@@ -208,6 +217,23 @@ public nonisolated struct Taigi_Engine_IsAttachingPunctuation: Sendable {
 /// (`hōo ` + `·` → `hōo·`; behavioral-invariants §23). Answers `BoolResult`;
 /// false for empty or multi-character text.
 public nonisolated struct Taigi_Engine_IsJoinerPunctuation: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var text: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `IsSpacedPunctuation` — whether attaching `text` keeps the auto space after
+/// itself: the half-width (Latin) marks (`guá ` + `?` → `guá? `). A
+/// full-width mark takes the space's place and leaves none (`taigi ` + `，` →
+/// `taigi，`), and arms nothing; behavioral-invariants §23. Answers
+/// `BoolResult`; false for empty or multi-character text.
+public nonisolated struct Taigi_Engine_IsSpacedPunctuation: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -331,6 +357,9 @@ public nonisolated struct Taigi_Engine_BoolResult: Sendable {
 
 /// `ToneVariationsResult` is the callout init-pull payload. Maps the base
 /// char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
+/// `universal_variations` is every key of both maps with the TL and POJ lists
+/// interleaved, each entry once (both tone-9 marks) — for a custom layout shown
+/// in TL and POJ alike.
 public nonisolated struct Taigi_Engine_ToneVariationsResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -339,6 +368,8 @@ public nonisolated struct Taigi_Engine_ToneVariationsResult: Sendable {
   public var pojVariations: Dictionary<String,Taigi_Engine_ToneVariationList> = [:]
 
   public var tlVariations: Dictionary<String,Taigi_Engine_ToneVariationList> = [:]
+
+  public var universalVariations: Dictionary<String,Taigi_Engine_ToneVariationList> = [:]
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -389,7 +420,7 @@ fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
 nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{d}tl_to_poj\0\u{4}\u{5}get_tone_variations\0\u{4}\u{f}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{4}\u{5}is_attaching_punctuation\0\u{3}external_lookup_digit_form\0\u{3}is_joiner_punctuation\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{b}poj_to_tl\0\u{b}normalize_input\0\u{b}derive_notone\0\u{b}derive_abbrev\0\u{b}derive_custom_search_keys\0\u{b}derive_custom_query_key\0\u{b}strip_tone\0\u{b}nfd_preprocess_for_lookup\0\u{b}tl_numeric_to_tps\0\u{c}\u{a}\u{1}\u{c}\u{c}\u{1}\u{c}\u{e}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{17}\u{1}\u{c}\u{1e}\u{1}\u{c}\u{b}\u{1}\u{c}\u{13}\u{1}\u{c} \u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{d}tl_to_poj\0\u{4}\u{5}get_tone_variations\0\u{4}\u{f}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{4}\u{5}is_attaching_punctuation\0\u{3}external_lookup_digit_form\0\u{3}is_joiner_punctuation\0\u{3}is_spaced_punctuation\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{b}poj_to_tl\0\u{b}normalize_input\0\u{b}derive_notone\0\u{b}derive_abbrev\0\u{b}derive_custom_search_keys\0\u{b}derive_custom_query_key\0\u{b}strip_tone\0\u{b}nfd_preprocess_for_lookup\0\u{b}tl_numeric_to_tps\0\u{c}\u{a}\u{1}\u{c}\u{c}\u{1}\u{c}\u{e}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{17}\u{1}\u{c}\u{1e}\u{1}\u{c}\u{b}\u{1}\u{c}\u{13}\u{1}\u{c} \u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -501,6 +532,19 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
           self.method = .isJoinerPunctuation(v)
         }
       }()
+      case 43: try {
+        var v: Taigi_Engine_IsSpacedPunctuation?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .isSpacedPunctuation(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .isSpacedPunctuation(v)
+        }
+      }()
       default: break
       }
     }
@@ -543,6 +587,10 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
     case .isJoinerPunctuation?: try {
       guard case .isJoinerPunctuation(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
+    }()
+    case .isSpacedPunctuation?: try {
+      guard case .isSpacedPunctuation(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 43)
     }()
     case nil: break
     }
@@ -759,6 +807,36 @@ nonisolated extension Taigi_Engine_IsJoinerPunctuation: SwiftProtobuf.Message, S
   }
 
   public static func ==(lhs: Taigi_Engine_IsJoinerPunctuation, rhs: Taigi_Engine_IsJoinerPunctuation) -> Bool {
+    if lhs.text != rhs.text {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_IsSpacedPunctuation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".IsSpacedPunctuation"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_IsSpacedPunctuation, rhs: Taigi_Engine_IsSpacedPunctuation) -> Bool {
     if lhs.text != rhs.text {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -993,7 +1071,7 @@ nonisolated extension Taigi_Engine_BoolResult: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ToneVariationsResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}poj_variations\0\u{3}tl_variations\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}poj_variations\0\u{3}tl_variations\0\u{3}universal_variations\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1003,6 +1081,7 @@ nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, 
       switch fieldNumber {
       case 1: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: &self.pojVariations) }()
       case 2: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: &self.tlVariations) }()
+      case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: &self.universalVariations) }()
       default: break
       }
     }
@@ -1015,12 +1094,16 @@ nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, 
     if !self.tlVariations.isEmpty {
       try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: self.tlVariations, fieldNumber: 2)
     }
+    if !self.universalVariations.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Taigi_Engine_ToneVariationList>.self, value: self.universalVariations, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_ToneVariationsResult, rhs: Taigi_Engine_ToneVariationsResult) -> Bool {
     if lhs.pojVariations != rhs.pojVariations {return false}
     if lhs.tlVariations != rhs.tlVariations {return false}
+    if lhs.universalVariations != rhs.universalVariations {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

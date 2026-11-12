@@ -16,6 +16,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.isAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.isJoinerPunctuation
+import com.siansiansu.taigikeyboard.engine.isSpacedPunctuation
 import com.siansiansu.taigikeyboard.engine.isTpsToneMark
 import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -597,8 +598,9 @@ internal class TextInputKeyHandler(
      * auto-space "smart punctuation" swap: when auto-space is active and the
      * char before the cursor is the auto-inserted trailing space, attaching
      * punctuation deletes that space and re-inserts it AFTER the punctuation
-     * (`guá ` + `?` → `guá? `, never `guá ?`); a joiner takes the space's
-     * place (`hōo ` + `·` → `hōo·`).
+     * (`guá ` + `?` → `guá? `, never `guá ?`). A full-width attaching mark
+     * and a joiner take the space's place instead (`taigi ` + `，` →
+     * `taigi，`; `hōo ` + `·` → `hōo·`).
      */
     private fun commitNonComposingCharacter(
         ic: InputConnection,
@@ -617,11 +619,13 @@ internal class TextInputKeyHandler(
             ic.getSelectedText(0).isNullOrEmpty() &&
             ic.getTextBeforeCursor(1, 0)?.toString() == " "
         ) {
+            val isSpaced = attaches && RustEngineBridge.isSpacedPunctuation(char)
             ic.deleteSurroundingText(1, 0)
-            ic.commitText(if (attaches) "$char " else char, 1)
+            ic.commitText(if (isSpaced) "$char " else char, 1)
             // Re-armed on the space the swap just wrote, so `?!` chains keep
-            // swapping (`guá? ` + `!` → `guá?! `). A joiner wrote no space.
-            if (attaches) taigikeyboard.armAutoSpaceSwap()
+            // swapping (`guá? ` + `!` → `guá?! `). A full-width mark or a
+            // joiner wrote no space.
+            if (isSpaced) taigikeyboard.armAutoSpaceSwap()
             return
         }
         ic.commitText(char, 1)
@@ -707,7 +711,7 @@ internal fun consumesSingleShift(char: String): Boolean {
 /**
  * Pure-function classifier: returns `true` when [char] enters composing
  * mode (romanization letters, TPS bopomofo, TPS tone marks, hyphen
- * boundary, U+02D9 ˙). Used by [TextInputKeyHandler.handleTaigiInput];
+ * boundary, ˙). Used by [TextInputKeyHandler.handleTaigiInput];
  * exposed at file scope so pure-JVM tests can cover the table.
  */
 internal fun isComposingCharacter(char: String): Boolean {
@@ -716,11 +720,14 @@ internal fun isComposingCharacter(char: String): Boolean {
     // TPS tone marks ˋ ˊ ˇ ˆ (Lm).
     // Three TPS tone marks are Sk (Symbol, modifier), not caught by isLetter:
     //   ˪ (U+02EA, tone 3), ˫ (U+02EB, tone 7), ˙ (U+02D9, tone 8)
+    // and the tone-8 dot after ㆴㆵㆻㆷ is the combining U+0307 (Mn), which
+    // `CharacterInputPipeline.adjust` hands back in place of the typed ˙.
     return first.isLetter() ||
         first == '-' ||
         first == '˪' ||
         first == '˫' ||
-        first == '˙'
+        first == '˙' ||
+        first == '\u0307'
 }
 
 /**

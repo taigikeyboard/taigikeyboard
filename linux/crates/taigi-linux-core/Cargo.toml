@@ -13,6 +13,14 @@ taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
 log.workspace = true
+serde_json.workspace = true
+# The candidate window's protocol and layout. No windowing crate: the
+# binary is a separate process (`default-features = false`).
+taigikeyboard-popup.workspace = true
+os_pipe = "1"
+# `F_SETFL` / `O_NONBLOCK` for the notify pipe. A safe wrapper; the crate
+# forbids `unsafe`.
+rustix = { version = "1", features = ["fs"] }
 # The engine owns the user data here (user-data-engine-roadmap U11 / P5).
 dispatch = { workspace = true, features = ["user-data"] }
 
@@ -22,7 +30,9 @@ e2e-trace = ["dispatch/e2e-trace"]
 
 [dev-dependencies]
 tempfile.workspace = true
-serde_json.workspace = true
+prost.workspace = true
+protos.workspace = true
+serde.workspace = true
 
 [lints]
 workspace = true

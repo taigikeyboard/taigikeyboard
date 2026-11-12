@@ -95,6 +95,16 @@ final class SettingsStore: @unchecked Sendable {
             name: "nasalMarkerUppercaseEnabled",
             defaultValue: EngineSettings.defaults.isNasalMarkerUppercaseEnabled,
         )
+        /// Type ts / ch with c — desktop-core `keys::IS_C_AFFRICATE_ENABLED`.
+        static let isCAffricateEnabled = SettingsKey(
+            name: "cAffricateEnabled",
+            defaultValue: EngineSettings.defaults.isCAffricateEnabled,
+        )
+        /// Type - with f — desktop-core `keys::IS_F_HYPHEN_ENABLED`.
+        static let isFHyphenEnabled = SettingsKey(
+            name: "fHyphenEnabled",
+            defaultValue: EngineSettings.defaults.isFHyphenEnabled,
+        )
         static let isCustomDictEnabled = SettingsKey(
             name: "customDictEnabled",
             defaultValue: EngineSettings.defaults.isCustomDictEnabled,
@@ -508,12 +518,17 @@ final class SettingsStore: @unchecked Sendable {
     }
 
     /// The keys that pick a candidate, as the window labels them: the digits
-    /// under TPS, whose window opens on demand; otherwise the tone scheme's.
+    /// under TPS, whose window opens on demand; otherwise the tone scheme's,
+    /// less `f` while Type - with f gives it the hyphen.
     /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
     /// `ComposingKeyBindings::slot_key_set`, which decides which key picks;
     /// drift draws a key beside a candidate that does not pick it.
     var candidateSlotKeySet: CandidateSlotKeySet {
-        inputMode == .tps ? .tpsDigits : toneInputScheme.slotKeySet
+        if inputMode == .tps {
+            return .tpsDigits
+        }
+        let set = toneInputScheme.slotKeySet
+        return set == .bareKeys && bool(Keys.isFHyphenEnabled) ? .bareKeysWithoutF : set
     }
 
     /// Whether the candidate window is shown at all. Read by the controller's
@@ -597,6 +612,21 @@ final class SettingsStore: @unchecked Sendable {
             Keys.candidateLayout.name,
             Keys.candidateDisplayMode.name,
             Keys.candidateSize.name,
+            // The Linux candidate window's own chrome. This pane does not
+            // show them; a shared settings file still clears them here, the
+            // same list as `APPEARANCE_KEYS`.
+            "hanjiFontSize",
+            "romanFontSize",
+            "hanjiFontFamily",
+            "romanFontFamily",
+            "candidateCornerRadius",
+            "candidateWindowPadding",
+            "candidateHighlightFill",
+            "candidateColorTheme",
+            "candidateTextColor",
+            "candidateSelectedTextColor",
+            "candidateBackgroundColor",
+            "candidateSelectedBackgroundColor",
         )
     }
 
@@ -615,6 +645,8 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isTpsKeyboardShown.name,
             Keys.isTelexGuideShown.name,
             Keys.toneInputScheme.name,
+            Keys.isCAffricateEnabled.name,
+            Keys.isFHyphenEnabled.name,
             Keys.isHanjiFirst.name,
             Keys.isAutoSpaceEnabled.name,
             Keys.isCandidateWindowEnabled.name,

@@ -59,6 +59,13 @@ class TextInputKeyHandlerTest {
     }
 
     @Test
+    fun `isComposingCharacter accepts the combining tone-8 dot after a stop coda`() {
+        // trace: raw "ㄒㄧㆻ" + "˙" → `tps_adjust::adjust_tone_eight_dot` → "\u0307" (Mn,
+        // not isLetter); it must keep composing, not commit "ㄒㄧㆻ̇" as text.
+        assertTrue("U+0307 must enter composing", isComposingCharacter("\u0307"))
+    }
+
+    @Test
     fun `isComposingCharacter accepts hyphen`() {
         assertTrue("hyphen syllable boundary must enter composing", isComposingCharacter("-"))
     }

@@ -2,6 +2,8 @@
 name: dogfood
 description: Give manual test cases for a just-fixed bug, built from random real sentences in corpus/taigi-typing. Use after a fix lands or before a dogfood pass, when you want something real to type on a device. Fast and read-only — greps the corpus, never builds, runs tests or edits files. Args: a description of the sentences wanted ("khinsiann after a verb", "reduplication", "放重利"), a TL form, or nothing (the fix at HEAD decides).
 disable-model-invocation: false
+context: fork
+model: haiku
 ---
 
 # Dogfood sentences

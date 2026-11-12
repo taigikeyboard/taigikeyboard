@@ -10,6 +10,7 @@
 //! COM.
 
 pub mod chrome;
+pub mod popup;
 pub mod runtime;
 pub mod session;
 #[cfg(feature = "e2e-trace")]

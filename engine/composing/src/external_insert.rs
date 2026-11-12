@@ -1,6 +1,6 @@
 //! Spacing for a literal appended by the commit-and-insert transition.
 
-use phonetics::api::is_attaching_punctuation;
+use phonetics::api::{is_attaching_punctuation, is_spaced_punctuation};
 
 use crate::commit_text::should_append_space;
 
@@ -14,8 +14,9 @@ pub(crate) struct AugmentedInsert {
 }
 
 /// Rewrites the external text a mid-composition punctuation key inserts:
-/// attaching punctuation lands before the space (`guá? `), everything else
-/// after it (`guá (`). A typed space is left alone (the engine already
+/// attaching punctuation lands before the space (`guá? `) — a full-width
+/// mark in place of it (`guá？`), arming nothing — everything else after it
+/// (`guá (`). A typed space is left alone (the engine already
 /// appends it) but still arms the swap. `composing_display_text` is the
 /// preedit about to be committed — its trailing hyphen is the committed
 /// text's trailing hyphen.
@@ -42,7 +43,12 @@ pub(crate) fn augment_insert(
             leaves_trailing_auto_space: false,
         };
     }
-    if is_attaching_punctuation(text) {
+    if is_attaching_punctuation(text) && !is_spaced_punctuation(text) {
+        AugmentedInsert {
+            text: text.to_owned(),
+            leaves_trailing_auto_space: false,
+        }
+    } else if is_attaching_punctuation(text) {
         AugmentedInsert {
             text: format!("{text} "),
             leaves_trailing_auto_space: true,
@@ -61,12 +67,16 @@ mod tests {
 
     #[test]
     fn augment_insert_places_the_space_around_the_character() {
-        // trace: `augment_insert` — attaching → "? " (arms the swap), other →
+        // trace: `augment_insert` — attaching → "? " (arms the swap), a
+        // full-width attaching mark → "？" (arms nothing), other →
         // " (", a typed space passes through but arms it, a trailing hyphen
         // or the gate off writes the text as is.
         let attaching = augment_insert("?", "guá", true);
         assert_eq!(attaching.text, "? ");
         assert!(attaching.leaves_trailing_auto_space);
+        let full_width = augment_insert("？", "guá", true);
+        assert_eq!(full_width.text, "？");
+        assert!(!full_width.leaves_trailing_auto_space);
         let opening = augment_insert("(", "guá", true);
         assert_eq!(opening.text, " (");
         assert!(!opening.leaves_trailing_auto_space);

@@ -37,7 +37,10 @@ pub use nextword::{
     update_last_selected_word as nextword_update_last_selected_word,
     word_selected as nextword_word_selected,
 };
-pub use phonetics::{is_attaching_punctuation, tl_display_to_tps, tl_to_poj, TPS_OR_MAPS_TO_ER};
+pub use phonetics::{
+    is_attaching_punctuation, is_spaced_punctuation, tl_display_to_tps, tl_to_poj,
+    TPS_OR_MAPS_TO_ER,
+};
 pub use transition::{
     CommitResult, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,
 };

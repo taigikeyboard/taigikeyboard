@@ -46,11 +46,11 @@ def _run_generate(ctx: PipelineContext, variants_path: Path) -> None:
     total = len(df)
     ctx.logger.info(f"Loaded dictionary: {total} records")
 
-    original_entries: set[tuple[str, str]] = set()
-    for _, row in df.iterrows():
-        hanzi = str(row["hanzi"]).strip()
-        tl = str(row["tl"]).strip().lower()
-        original_entries.add((hanzi, tl))
+    keys = [
+        (str(hanzi).strip(), str(tl).strip().lower())
+        for hanzi, tl in zip(df["hanzi"], df["tl"])
+    ]
+    original_entries = set(keys)
     ctx.logger.info(f"Original entries set: {len(original_entries)} unique (hanzi, tl) pairs")
 
     df["is_variant"] = False
@@ -58,17 +58,15 @@ def _run_generate(ctx: PipelineContext, variants_path: Path) -> None:
     new_rows: list[pd.Series] = []
     matched = 0
     skipped = 0
-    for _, row in df.iterrows():
-        hanzi = str(row["hanzi"]).strip()
-        tl = str(row["tl"]).strip().lower()
-        key = (hanzi, tl)
+    for position, key in enumerate(keys):
         if key in variants_map:
             matched += 1
+            tl = key[1]
             for variant in variants_map[key]:
                 if (variant, tl) in original_entries:
                     skipped += 1
                     continue
-                new_row = row.copy()
+                new_row = df.iloc[position].copy()
                 new_row["hanzi"] = variant
                 new_row["is_variant"] = True
                 new_rows.append(new_row)
@@ -96,9 +94,9 @@ def _run_mark(ctx: PipelineContext, variants_path: Path) -> None:
     # Probe each window of `hanzi` against the entry set instead of scanning
     # every entry per row: hanzi is a few characters, the entry list is
     # thousands long.
-    def check_is_variant(row) -> bool:
-        hanzi = str(row["hanzi"]).strip()
-        tl = str(row["tl"]).strip().lower()
+    def check_is_variant(hanzi, tl) -> bool:
+        hanzi = str(hanzi).strip()
+        tl = str(tl).strip().lower()
         syllables = tl.replace("--", "-").split("-")
         for variant_len in variant_lengths:
             for idx in range(min(len(hanzi), len(syllables)) - variant_len + 1):
@@ -107,7 +105,7 @@ def _run_mark(ctx: PipelineContext, variants_path: Path) -> None:
                     return True
         return False
 
-    df["is_variant"] = df.apply(check_is_variant, axis=1)
+    df["is_variant"] = [check_is_variant(hanzi, tl) for hanzi, tl in zip(df["hanzi"], df["tl"])]
     ctx.logger.info(f"Records marked as variant: {int(df['is_variant'].sum())}")
 
     ctx.set_df(df)

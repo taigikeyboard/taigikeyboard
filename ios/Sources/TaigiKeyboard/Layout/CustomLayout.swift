@@ -21,7 +21,8 @@ enum LayoutScript: String, Codable {
     }
 }
 
-/// Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen on save.
+/// Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen when the
+/// layout is created; editing an existing one can change it on save.
 enum LayoutUse: CaseIterable, Hashable {
     case universal, tl, poj
 
@@ -30,6 +31,15 @@ enum LayoutUse: CaseIterable, Hashable {
         case .universal: .layoutCommonLayoutsSection
         case .tl: .settingsTlMode
         case .poj: .settingsPojMode
+        }
+    }
+
+    /// The script this use lays the keys out in; nil for universal, which keeps the layout's.
+    var script: LayoutScript? {
+        switch self {
+        case .universal: nil
+        case .tl: .tl
+        case .poj: .poj
         }
     }
 }
@@ -95,8 +105,9 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     private(set) var callouts: [String: [String]]
     private(set) var isUniversal: Bool
 
-    /// The most entries one key's long-press list holds.
-    static let maxCallouts = 8
+    /// The most entries one key's long-press list holds: a universal `n` holds seven tones, both
+    /// tone-9 marks and ⁿ.
+    static let maxCallouts = 9
 
     /// A removed key's place in `editorRows`; never on the keyboard.
     static let removedSlot = KeyDef.char("")
@@ -205,10 +216,8 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
         set {
             isUniversal = newValue == .universal
-            switch newValue {
-            case .universal: break
-            case .tl: moveKeys(to: .tl)
-            case .poj: moveKeys(to: .poj)
+            if let script = newValue.script {
+                moveKeys(to: script)
             }
         }
     }
@@ -373,29 +382,27 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         hasEmojiKey = true
     }
 
-    /// Restarts from `base`, keeping the script; the use goes back to the base's default.
+    /// Restarts from `base`, keeping the script and the use chosen when the layout was created.
     mutating func reset(to base: KeyboardLayoutType) {
         self.base = base
         keys = baseLabels
         functionKeys = baseFunctionKeys
         hasEmojiKey = true
         callouts = [:]
-        isUniversal = base.sharesTableAcrossScripts
     }
 
     // MARK: - Long-press lists
 
     /// Tone-marked letters for the long-press tray, one row per lowercase base (Shift uppercases them
     /// on the keyboard): a e i o oo o͘ u m n ng first (TL `oo` = POJ `o͘`), then any other base; each
-    /// row TL's marks, then
-    /// the marks only POJ has.
+    /// row the engine's universal list (both scripts' marks, both tone-9 marks).
     static let toneRows: [[String]] = {
-        let toneMaps = [TaigiCallouts.TaigiToneMaps.tl, TaigiCallouts.TaigiToneMaps.poj]
-        let bases = Set(toneMaps.flatMap(\.keys)).filter { $0 == $0.lowercased() }
+        let universal = TaigiCallouts.TaigiToneMaps.universal
+        let bases = Set(universal.keys).filter { $0 == $0.lowercased() }
         let leading = ["a", "e", "i", "o", "oo", "o\u{0358}", "u", "m", "n", "ng"].filter(bases.contains)
         return (leading + bases.subtracting(leading).sorted()).map { base in
             // ⁿ rides the `n` list but is no tone mark: it sits with the letters.
-            composedUnique(toneMaps.flatMap { $0[base] ?? [] }).filter { $0 != trayNasalMarker }
+            (universal[base] ?? []).filter { $0 != trayNasalMarker }
         }
     }()
 
@@ -427,9 +434,10 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         callouts(for: label).contains { $0.precomposedStringWithCanonicalMapping == char }
     }
 
-    /// The built-in long-press list of the key labelled `label` on this base and script.
+    /// The built-in long-press list of the key labelled `label` on this base and script; a universal
+    /// layout's tone marks are both scripts', both tone-9 marks.
     func defaultCallouts(for label: String) -> [String] {
-        TaigiCallouts.calloutChars(for: label, inputMode: script.inputMode, layoutType: base) ?? []
+        TaigiCallouts.calloutChars(for: label, inputMode: script.inputMode, layoutType: base, universalTones: isUniversal) ?? []
     }
 
     /// The long-press list the key labelled `label` shows: the user's, else the built-in one.
@@ -457,6 +465,20 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         let lowered = char.lowercased()
         guard lowered != char, keys.contains(lowered), let entries = callouts[lowered] else { return nil }
         return entries.map { $0.uppercased() }
+    }
+
+    /// A long-press list as the keyboard types it. Full-width punctuation gives each entry the form
+    /// the board would type (`,` → `，`): the board's key with that label first (MOE1 `(` stays
+    /// half-width), else the catalog key; each entry once. Half-width keeps the list as stored, so a
+    /// stored `，` stays full-width. Android `CustomLayoutTables.applyCallouts`.
+    func typedCallouts(_ entries: [String], typesFullWidth: Bool) -> [String] {
+        guard typesFullWidth else { return entries }
+        let boardKeys = Self.characterKeys(of: filledRows)
+        return Self.unique(entries.map { entry in
+            let key = boardKeys.first { $0.characterLabel == entry } ?? Self.catalog[entry]
+            guard case let .char(_, fullWidth?)? = key else { return entry }
+            return fullWidth
+        })
     }
 
     // MARK: - Private

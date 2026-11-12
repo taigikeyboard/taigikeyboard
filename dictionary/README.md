@@ -98,7 +98,8 @@ Per-source stage order:
 `./build.sh` then runs 9 steps from `output/dictionary.csv`:
 `merge_csv` → `create_dictionary_bin` → `create_fst` → `create_syllables_fst`
 → `create_association_bin` → `verify_poj_integrity` → `version_snapshot` →
-`tools/verify_known_keys` → `deploy.sh`. Every binary writer reads
+`tools/verify_known_keys` → `deploy.sh`. Steps 1–8 run in one Python process
+(`build/run.py`), so the CSV is parsed once. Every binary writer reads
 `dictionary.csv` through `build/dictionary_records.py`;
 `create_dictionary_bin` also reads `shared/data/word_unigrams.tsv` (walker cost,
 `build/walker_lm.py`), and `create_association_bin` reads
@@ -143,6 +144,7 @@ original URLs.
 | `common/stages/*.py`             | Individual stage implementations (14 stages)                 |
 | `common/source_bits.py`          | Authoritative SOURCE_BITS / column orders                    |
 | `build/merge_csv.py`             | Merge 9 per-source CSVs + khiin/dev/lkk supplements          |
+| `build/run.py`                   | `build.sh` steps 1–8 in one process (each step also runs alone) |
 | `build/dictionary_records.py`    | Shared loader — CSV → filtered records with rowids 1..N      |
 | `build/associations.py`          | Shared bigram + char-to-phrase generator from dictionary.csv |
 | `build/create_fst.py`            | fst prefix index from CSV (shells to engine/build-helpers/fst-builder) |

@@ -12,9 +12,10 @@ lazily on first call); `apply_provenance` and the agg helpers are bridge-free.
 from __future__ import annotations
 
 import pandas as pd
+import polars as pl
 import pytest
 
-from build.merge_csv import _or_mask_agg
+from build.merge_csv import _dedup_sources
 from common.cleanup import normalize_roman
 from common.kautian_provenance import (
     COL_ACCENT_MASK,
@@ -179,26 +180,37 @@ def test_apply_provenance_alt_reading_dd6():
     assert out.loc[2, COL_MAIN]
 
 
-def test_or_mask_agg_unions_across_nan():
-    assert _or_mask_agg(pd.Series([455, None, 8, None])) == (455 | 8)
-    assert _or_mask_agg(pd.Series([None, None])) == 0
+def test_dedup_ors_accent_masks_across_null():
+    merged = pl.DataFrame(
+        {
+            "hanzi": ["八", "八", "八", "女", "女"],
+            "tl": ["pueh"] * 3 + ["lí"] * 2,
+            "frequency": [1] * 5,
+            "kautian": [True, None, True, None, None],
+            COL_ACCENT_MASK: [455, None, 8, None, None],
+        }
+    )
+    result = _dedup_sources(merged).set_index("hanzi")
+    assert result.loc["八", COL_ACCENT_MASK] == (455 | 8)
+    assert result.loc["女", COL_ACCENT_MASK] == 0
 
 
 def test_cross_source_dedup_preserves_kautian_mask():
-    # A kautian accent row + a same-(hanzi, tl) other-source row (NaN
+    # A kautian accent row + a same-(hanzi, tl) other-source row (null
     # provenance) must merge WITHOUT dropping the kautian mask/flags. Bool
-    # flags use the built-in "any" (NaN-skipping) — same as SOURCE_COLUMNS.
-    merged = pd.DataFrame(
+    # flags use the null-skipping "any" — same as SOURCE_COLUMNS.
+    merged = pl.DataFrame(
         {
             "hanzi": ["八", "八"],
-            "_tl_key": ["pueh", "pueh"],
+            "tl": ["pueh", "pueh"],
+            "frequency": [1, 1],
+            "kautian": [True, None],
             COL_ACCENT_MASK: [455, None],
             COL_MAIN: [True, None],
             COL_NAME: [False, None],
         }
     )
-    agg = {COL_ACCENT_MASK: _or_mask_agg, COL_MAIN: "any", COL_NAME: "any"}
-    result = merged.groupby(["hanzi", "_tl_key"], as_index=False, dropna=False).agg(agg)
+    result = _dedup_sources(merged)
     assert len(result) == 1
     assert result.loc[0, COL_ACCENT_MASK] == 455
     assert bool(result.loc[0, COL_MAIN]) is True

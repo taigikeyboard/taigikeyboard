@@ -20,7 +20,7 @@ export class TpsKeyboard {
   /// the press began on, as on both desktop panels.
   constructor(root, onPress) {
     this.#root = root;
-    // Focus stays in the textarea, which a commit needs.
+    // Focus stays in the editor, which a commit needs.
     root.addEventListener("mousedown", (event) => event.preventDefault());
     root.addEventListener("click", (event) => {
       const cap = event.target.closest("button");

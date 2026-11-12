@@ -3,7 +3,7 @@
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, open } from "./helpers.mjs";
+import { candidates, expectText, open } from "./helpers.mjs";
 
 const RAW = "kausiu";
 const PICKED = "狗岫";
@@ -33,7 +33,7 @@ async function pickThrice(page, editor) {
     await candidates(page).filter({ hasText: PICKED }).first().click();
     await editor.press("Enter");
   }
-  await expect(editor).toHaveValue(PICKED.repeat(3));
+  await expectText(editor, PICKED.repeat(3));
 }
 
 /// Waits for the page's copy in IndexedDB, written after the commits.

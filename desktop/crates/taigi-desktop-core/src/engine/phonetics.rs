@@ -5,7 +5,8 @@
 
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, ExternalLookupDigitForm,
-    IsAttachingPunctuation, PhoneticsRequest, PhoneticsResponse, TlDisplayToTps, TlToPoj,
+    IsAttachingPunctuation, IsSpacedPunctuation, PhoneticsRequest, PhoneticsResponse,
+    TlDisplayToTps, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -57,13 +58,28 @@ pub fn external_lookup_digit_form(reading: &str) -> Option<String> {
 /// set, the one every platform asks. False when the engine fails: no swap,
 /// the space stays where it is.
 pub fn is_attaching_punctuation(text: &str) -> bool {
-    let op = "isAttachingPunctuation";
-    let Some(response) = phonetics_response(
+    bool_result(
         phonetics_request::Method::IsAttachingPunctuation(IsAttachingPunctuation {
             text: text.to_owned(),
         }),
-        op,
-    ) else {
+        "isAttachingPunctuation",
+    )
+}
+
+/// Whether attaching `text` keeps the auto space after itself — a half-width
+/// mark (`guá? `); a full-width one takes the space's place (`taigi，`).
+/// False when the engine fails: the mark is written with no space after it.
+pub fn is_spaced_punctuation(text: &str) -> bool {
+    bool_result(
+        phonetics_request::Method::IsSpacedPunctuation(IsSpacedPunctuation {
+            text: text.to_owned(),
+        }),
+        "isSpacedPunctuation",
+    )
+}
+
+fn bool_result(method: phonetics_request::Method, op: &str) -> bool {
+    let Some(response) = phonetics_response(method, op) else {
         return false;
     };
     match response.result {

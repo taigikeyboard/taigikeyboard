@@ -6,8 +6,10 @@ package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
 import com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm
+import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation
+import com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
@@ -22,6 +24,27 @@ import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 fun RustEngineBridge.tlToPoj(input: String): String {
     val payload = TlToPoj.newBuilder().setInput(input).build()
     return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj")
+}
+
+/**
+ * The long-press tone variations, pulled from the engine on first use (`GetToneVariations`) and kept;
+ * empty when the engine fails, as on iOS (`RustEngineBridge.toneVariations`). A synchronized lazy:
+ * layouts compute on both the main thread and Dispatchers.IO.
+ */
+val RustEngineBridge.toneVariations: RustEngineBridge.ToneVariations by lazy {
+    val op = "getToneVariations"
+    val response = phoneticsDispatch({ it.getToneVariations = GetToneVariations.getDefaultInstance() }, op)
+        ?: return@lazy RustEngineBridge.ToneVariations.EMPTY
+    if (!response.hasToneVariationsResult()) {
+        RustEngineBridge.recordFailure(op, "expected ToneVariationsResult")
+        return@lazy RustEngineBridge.ToneVariations.EMPTY
+    }
+    val result = response.toneVariationsResult
+    RustEngineBridge.ToneVariations(
+        tl = result.tlVariationsMap.mapValues { it.value.variationsList.toList() },
+        poj = result.pojVariationsMap.mapValues { it.value.variationsList.toList() },
+        universal = result.universalVariationsMap.mapValues { it.value.variationsList.toList() },
+    )
 }
 
 // endregion
@@ -87,6 +110,17 @@ fun RustEngineBridge.isAttachingPunctuation(text: String): Boolean {
 fun RustEngineBridge.isJoinerPunctuation(text: String): Boolean {
     val payload = IsJoinerPunctuation.newBuilder().setText(text).build()
     return boolDispatch({ it.isJoinerPunctuation = payload }, "isJoinerPunctuation")
+}
+
+/**
+ * Whether attaching [text] keeps the auto space after itself — a half-width
+ * mark (`guá? `); a full-width one takes the space's place (`taigi，`) — the
+ * engine's answer. False when the engine fails: the mark is written with no
+ * space after it.
+ */
+fun RustEngineBridge.isSpacedPunctuation(text: String): Boolean {
+    val payload = IsSpacedPunctuation.newBuilder().setText(text).build()
+    return boolDispatch({ it.isSpacedPunctuation = payload }, "isSpacedPunctuation")
 }
 
 /**

@@ -35,7 +35,7 @@ def load_frequency_map(filepath: str | Path) -> dict[tuple[str, str], int]:
 
     if filepath.exists():
         df = pd.read_csv(filepath, sep="\t")
-        for _, row in df.iterrows():
+        for row in df.to_dict("records"):
             name = str(row.get("Name", "")).strip()
             pronunciation = str(row.get("Pronunciation", "")).strip().lower()
             freq = int(row.get("New_Freq", 0))
@@ -55,7 +55,7 @@ def load_frequency_map(filepath: str | Path) -> dict[tuple[str, str], int]:
 
 def _load_khiin_frequency(freq_path: Path, conv_path: Path) -> dict[tuple[str, str], int]:
     """Load Khiin word-freq pairs, convert POJ→TL, pair with hanzi outputs."""
-    from .taigi_bridge import convert_poj_to_tl
+    from .taigi_bridge import convert_poj_to_tl, prefetch_convert
 
     freq: dict[str, int] = {}
     with freq_path.open() as f:
@@ -72,6 +72,7 @@ def _load_khiin_frequency(freq_path: Path, conv_path: Path) -> dict[tuple[str, s
             if has_hanzi:
                 all_hanzi.setdefault(inp, set()).add(output)
 
+    prefetch_convert((inp for inp in freq if all_hanzi.get(inp)), "poj", "tl")
     # Each (hanzi, TL) may appear under multiple POJ variants; keep the max freq.
     result: dict[tuple[str, str], int] = {}
     for inp, f in freq.items():

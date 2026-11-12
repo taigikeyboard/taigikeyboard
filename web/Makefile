@@ -19,6 +19,8 @@ SITE := target/site
 CHROMEOS := target/chromeos
 FONT_SOURCES := ../assets/fonts/font
 FONTS := target/fonts
+# Lexical in one module (vendor/lexical.js), its licence beside it.
+VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
 .PHONY: help bindgen-version i18n-check build site chromeos serve test smoke e2e check-live lint fmt check clean
@@ -55,12 +57,24 @@ build: bindgen-version
 	wasm-bindgen --target web --out-dir $(PKG) $(WASM)
 	wasm-opt -O3 --strip-debug --strip-producers $(PKG)/taigi_web_bg.wasm -o $(PKG)/taigi_web_bg.wasm
 
+# The pinned packages, once per lock change: the bundle and Playwright share them.
+node_modules/.package-lock.json: package-lock.json
+	npm ci --no-audit --no-fund
+
+# The editor's Lexical, bundled because the page has no bundler and an import map
+# would be an inline script.
+$(VENDOR)/lexical.js: vendor/lexical.js node_modules/.package-lock.json
+	mkdir -p $(VENDOR)
+	npx esbuild vendor/lexical.js --bundle --format=esm --minify --legal-comments=none \
+		--define:process.env.NODE_ENV='"production"' --outfile=$@
+	cp node_modules/lexical/LICENSE $(VENDOR)/LICENSE-lexical.txt
+
 # Slow, so only when a font or the range in fonts.css changes.
 $(FONTS)/.stamp: scripts/subset-fonts.sh src/fonts.css $(wildcard $(FONT_SOURCES)/*)
 	scripts/subset-fonts.sh $(FONT_SOURCES) $(FONTS)
 	touch $@
 
-site: build $(FONTS)/.stamp
+site: build $(FONTS)/.stamp $(VENDOR)/lexical.js
 	rm -rf $(SITE)
 	mkdir -p $(SITE)
 	cp -R src/. $(SITE)/
@@ -69,6 +83,7 @@ site: build $(FONTS)/.stamp
 	mkdir -p $(SITE)/fonts $(SITE)/icons
 	cp $(FONTS)/*.woff2 ../assets/fonts/OFL-1.1.txt $(SITE)/fonts/
 	cp $(ICONS)/180.png $(ICONS)/196.png $(ICONS)/512.png $(SITE)/icons/
+	cp -R $(VENDOR) $(SITE)/vendor
 	node scripts/stage-assets.mjs $(SITE) ../assets/dictionaries
 
 # The ChromeOS input method (docs/architecture/chromeos-roadmap.md). The
@@ -98,8 +113,7 @@ smoke: build
 # browsers already in place; on CI it also brings their system libraries, and
 # stays on Chromium, because Firefox's and WebKit's are what apt spends its time on.
 E2E_BROWSERS := $(if $(CI),chromium,chromium firefox webkit)
-e2e: site
-	npm ci
+e2e: site node_modules/.package-lock.json
 	npx playwright install $(if $(CI),--with-deps) $(E2E_BROWSERS)
 	npx playwright test $(addprefix --project=,$(E2E_BROWSERS))
 

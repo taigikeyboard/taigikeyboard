@@ -149,6 +149,12 @@ export class Settings {
       "data-tps-keyboard",
       isTyping && tpsKeyboardShown.checked,
     );
+    // No form row: only its chord flips it, and TPS types no Telex keys
+    // (`is_telex_guide_wanted`).
+    root.toggleAttribute(
+      "data-telex-guide",
+      !isTyping && values.telexGuideShown === true,
+    );
     // The stored tag, not the control's: the session reads an unknown one too.
     setDisplayLanguage(values.displayLanguage ?? "system");
   }

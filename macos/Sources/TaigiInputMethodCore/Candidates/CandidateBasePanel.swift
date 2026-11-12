@@ -406,7 +406,7 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
             leadCellIsUnkeyed: leadCellIsUnkeyed,
             indexForSlot: { candidateIndex(forSlot: $0) },
         )
-        for slot in 0 ..< HorizontalPageLayout.pageSize {
+        for slot in 0 ..< slotKeySet.pageSize {
             guard let candidateIndex = candidateIndex(forSlot: slot + shift) else { continue }
             keyByCandidate[candidateIndex] = CandidateIndexLabel.text(forSlot: slot, keySet: slotKeySet)
         }

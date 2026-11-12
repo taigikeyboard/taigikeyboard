@@ -1,0 +1,10 @@
+{
+  "id": "standard-tl-ch-aspirated",
+  "source": "INVARIANT_C_TYPES_AFFRICATE (2026-11-09, docs/architecture/behavioral-invariants.md): Type ts / ch with c works under Standard too; `c` then `h` aspirates the affricate: `tsh` under TL.",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "standard", "c_affricate": true },
+  "steps": [
+    { "type": "text", "value": "cha" },
+    { "type": "key", "value": "enter" }
+  ],
+  "expect": { "committed": "tsha" }
+}

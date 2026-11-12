@@ -11,12 +11,13 @@ rather than the only line of defense.
 from __future__ import annotations
 
 from pipeline.context import PipelineContext
-from common.taigi_bridge import convert_tl_to_poj_strict
+from common.taigi_bridge import convert_tl_to_poj_strict, prefetch_convert
 
 
 def run(ctx: PipelineContext) -> None:
     df = ctx.current_df()
     df = df.copy()
+    prefetch_convert((s for s in df["tl"].fillna("").unique() if s), "tl", "poj")
     df["poj"] = df["tl"].fillna("").map(
         lambda s: convert_tl_to_poj_strict(s) if s else ""
     )

@@ -4,4 +4,4 @@ paths: ["ios/**/*.swift", "macos/**/*.swift", "android/**/*.kt"]
 
 # Documentation Lookup
 
-Read `docs/contributing/doc-lookup.md` before adding or changing a framework / OS API call in files this rule covers — it is the single copy of these rules.
+The rules live in `docs/contributing/doc-lookup.md` — the single copy. Read it once per session, before the first framework / OS API call you add or change in the files this rule covers; re-read only the section a later change touches.

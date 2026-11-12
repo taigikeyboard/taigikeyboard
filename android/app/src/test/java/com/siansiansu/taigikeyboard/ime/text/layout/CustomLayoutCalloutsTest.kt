@@ -36,12 +36,38 @@ class CustomLayoutCalloutsTest {
     @Test
     fun `entries are trimmed, deduplicated and capped`() {
         val edited = qwerty.withList(",", listOf(" { ", "", "}", "{") + (1..10).map(Int::toString))
-        assertEquals(listOf("{", "}", "1", "2", "3", "4", "5", "6"), edited.callouts[","])
+        assertEquals(listOf("{", "}", "1", "2", "3", "4", "5", "6", "7"), edited.callouts[","])
+    }
+
+    @Test
+    fun `a universal layout's built-in tone list holds both tone-9 marks`() {
+        // trace: LayoutTestAssets.toneVariations universal `a` = TL list + POJ ă; qwerty_tl `a` has no popup of its own.
+        val universal = tables.withUse(qwerty, LayoutUse.UNIVERSAL)
+        val builtIn = tables.defaultCallouts(universal, "a")
+        assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋", "ă"), builtIn)
+        assertTrue(universal.withList("a", builtIn).callouts.isEmpty())
+        // A TL layout keeps the TL list.
+        assertEquals("a̋", tables.defaultCallouts(qwerty, "a").last())
+    }
+
+    @Test
+    fun `a nine-entry list survives the cap`() {
+        val nine = listOf("ń", "ǹ", "n̂", "ň", "n̄", "n̍", "n̋", "n̆", "ⁿ")
+        assertEquals(nine, qwerty.withList("n", nine).callouts["n"])
+    }
+
+    @Test
+    fun `changing the use keeps stored lists`() {
+        // A stored list is never rewritten; keys without one follow the new use's built-in list.
+        val edited = qwerty.withList("a", listOf("á", "à"))
+        assertEquals(listOf("á", "à"), tables.withUse(edited, LayoutUse.UNIVERSAL).callouts["a"])
+        val universal = tables.withUse(qwerty, LayoutUse.UNIVERSAL).withList("a", listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"))
+        assertEquals("a̋", tables.withUse(universal, LayoutUse.TL).callouts["a"]?.last())
     }
 
     @Test
     fun `the built-in list is not stored and an empty list is`() {
-        // trace: taigi_tl.json `a` = á à â ǎ ā a̍ a̋; qwerty_tl `a` has no popup of its own.
+        // trace: LayoutTestAssets.toneVariations TL `a` = á à â ǎ ā a̍ a̋; qwerty_tl `a` has no popup of its own.
         val builtIn = tables.defaultCallouts(qwerty, "a")
         assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"), builtIn)
         assertTrue(qwerty.withList("a", builtIn).callouts.isEmpty())
@@ -82,7 +108,7 @@ class CustomLayoutCalloutsTest {
         val edited = swapped.withList(",", listOf("{", "an")).withList("a", emptyList())
         val rows = substituted(edited)
         rows.key("a").popup.add(KeyData(225, "á"))
-        tables.applyCallouts(rows, edited)
+        tables.applyCallouts(rows, edited, isFullWidthPunctuation = false)
 
         // `,` moved to the first place and kept its list; one code point types itself, `an` has code 0.
         assertEquals(",", rows[1][0].label)
@@ -96,8 +122,9 @@ class CustomLayoutCalloutsTest {
     fun `the full-width key shows the half-width key's list, with a key removed`() {
         val edited = qwerty.removed(LayoutPlace.Key(0)).withList(",", listOf("{")).withList("w", listOf("x"))
         val rows = substituted(edited, isFullWidthPunctuation = true)
-        tables.applyCallouts(rows, edited)
-        assertEquals(listOf("{"), rows.key("，").popup.map { it.label })
+        tables.applyCallouts(rows, edited, isFullWidthPunctuation = true)
+        // trace: symbols2 western_fullwidth types `{` as `｛`.
+        assertEquals(listOf("｛"), rows.key("，").popup.map { it.label })
         assertEquals(listOf("x"), rows.key("w").popup.map { it.label })
         assertEquals(emptyList<KeyData>(), rows.key("e").popup)
     }
@@ -111,8 +138,31 @@ class CustomLayoutCalloutsTest {
         // trace: `•` and the first page's `‧` share the full-width form `·`; only `•` is placed.
         val bullet = qwerty.copy(keys = listOf("•") + qwerty.keys.drop(1)).withList("•", listOf("x"))
         val rows = substituted(bullet, isFullWidthPunctuation = true)
-        tables.applyCallouts(rows, bullet)
+        tables.applyCallouts(rows, bullet, isFullWidthPunctuation = true)
         assertEquals(listOf("x"), rows.key("·").popup.map { it.label })
+    }
+
+    // INVARIANT_CUSTOM_CALLOUT_FULL_WIDTH (§63)
+    @Test
+    fun `full-width punctuation types each entry in the board's form`() {
+        val entries = listOf(",", "，", "!", "'", "-", "a", "{")
+        val phahTaigi = unchanged("phahTaigi", LayoutScript.TL).withList(".", entries)
+
+        // trace: PhahTaigi `,` → `，`, `!` → `！` (board keys); `'` → `、`, `{` → `｛` (catalog, symbol
+        // pages); `-` and `a` have no full-width form; `，` twice collapses.
+        val full = substituted(phahTaigi, isFullWidthPunctuation = true)
+        tables.applyCallouts(full, phahTaigi, isFullWidthPunctuation = true)
+        assertEquals(listOf("，", "！", "、", "-", "a", "｛"), full.key("。").popup.map { it.label })
+
+        val half = substituted(phahTaigi)
+        tables.applyCallouts(half, phahTaigi, isFullWidthPunctuation = false)
+        assertEquals(entries, half.key(".").popup.map { it.label })
+
+        // trace: MOE1's own `(` keeps its half-width form at full width (CustomLayoutTables catalog note).
+        val moe1 = unchanged("moe1", LayoutScript.TL).withList(")", listOf("("))
+        val moe1Full = substituted(moe1, isFullWidthPunctuation = true)
+        tables.applyCallouts(moe1Full, moe1, isFullWidthPunctuation = true)
+        assertEquals(listOf("("), moe1Full.key(")").popup.map { it.label })
     }
 
     @Test

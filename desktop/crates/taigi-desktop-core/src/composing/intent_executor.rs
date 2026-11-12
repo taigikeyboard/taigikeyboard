@@ -183,15 +183,10 @@ pub fn perform_intent(
             else {
                 return false;
             };
-            // The swap is read before the width (the word in front of the
-            // caret is romanization, which keeps Latin marks); TPS has only
-            // the full width, so there the swap attaches the glyph written.
             let punctuation = document_punctuation(settings, &typed);
-            let swapping = if is_tps(settings) {
-                punctuation.as_deref().unwrap_or(&typed)
-            } else {
-                &typed
-            };
+            // The swap attaches what the key writes: the mark follows the
+            // output's width, not the script of the word before the caret.
+            let swapping = punctuation.as_deref().unwrap_or(&typed);
             if swap_auto_space(swapping, settings, manager, surface) {
                 return true;
             }
@@ -319,6 +314,22 @@ pub fn pass_through_may_consume(
         && engine::is_attaching_punctuation(&typed)
 }
 
+/// Whether a key the classifier passes through outside a composition would
+/// take an armed auto space's place: Auto-Space on and the text the swap
+/// writes for it attaching punctuation (`swap_auto_space`). For a shell
+/// that must make the swap's client checks before the key runs (macOS),
+/// and only asks them when this holds.
+pub fn pass_through_may_swap(snapshot: &KeyEventSnapshot, settings: &SettingsDocument) -> bool {
+    let Some(typed) =
+        ComposingKeyIntent::document_text(snapshot, settings.choice(&keys::INPUT_MODE))
+    else {
+        return false;
+    };
+    let punctuation = document_punctuation(settings, &typed);
+    settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        && engine::is_attaching_punctuation(punctuation.as_deref().unwrap_or(&typed))
+}
+
 /// Re-reads the candidates for the composition as it now stands. With the
 /// Show Candidate Window setting off nothing is fetched, not merely not
 /// shown: a list kept behind no window would hand Space and the slot keys to
@@ -429,22 +440,32 @@ fn commit_candidate(
 /// The swap for `text` about to be written outside a composition. The arm's
 /// EXISTENCE is the verdict — it is only ever set after a commit that wrote
 /// romanization earned its space — so only Auto-Space itself is re-read
-/// live here. On success the swap is re-armed (`?!` chains) and the engine
-/// hears about the character as the end of a context.
+/// live here. A half-width mark moves the space after itself and re-arms
+/// the swap (`?!` chains); a full-width mark takes the space's place and
+/// arms nothing. Either way the engine hears about the character as the end
+/// of a context.
 fn swap_auto_space(
     text: &str,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     surface: &mut impl IntentSurface,
 ) -> bool {
-    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        || !engine::is_attaching_punctuation(text)
-        || !surface.swap_preceding_space(&format!("{text} "))
-    {
+    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED) || !engine::is_attaching_punctuation(text) {
+        return false;
+    }
+    let is_spaced = engine::is_spaced_punctuation(text);
+    let replacement = if is_spaced {
+        format!("{text} ")
+    } else {
+        text.to_owned()
+    };
+    if !surface.swap_preceding_space(&replacement) {
         return false;
     }
     manager.note_character_typed_outside_composition(text);
-    surface.arm_swap();
+    if is_spaced {
+        surface.arm_swap();
+    }
     true
 }
 

@@ -172,14 +172,15 @@ final class ComposingBackendTests: XCTestCase {
 
     /// TPS writes only full width, so a bare key attaches the glyph it maps
     /// to: `}` (no TPS layout key) attaches to nothing, its `』` does. Under
-    /// TL `}` is asked about as typed — the negative control.
+    /// TL Roman-first `}` is asked about as typed — the negative control.
     func testTheSwapCheck_underTps_followsTheFullWidthGlyph() throws {
         let store = try makeScratchSettingsStore()
         store.isAutoSpaceEnabled = true
+        store.storedIsHanjiFirst = false
 
         _ = try activatedBackend(composing: false)
             .key(Self.key("}"), in: request(settings: store, armed: true))
-        XCTAssertFalse(isSwapCheckAsked, "TL: } attaches to nothing")
+        XCTAssertFalse(isSwapCheckAsked, "TL Roman-first: } attaches to nothing")
 
         store.switchInputMode(.pick(.tps))
         _ = try activatedBackend(composing: false)
@@ -216,15 +217,21 @@ final class ComposingBackendTests: XCTestCase {
 
     /// A back end whose transport records every request and answers with
     /// `answer`, activated for `session` with a composition running or not.
+    /// The swap gate is the core's verdict, so that request goes to the real
+    /// core, under the settings of the request's store.
     private func activatedBackend(composing: Bool) throws -> ComposingBackend {
+        let runtime = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
         let backend = ComposingBackend(
             coordinator: TestFixtures.makeCoordinator(),
-            runtime: { nil },
+            runtime: { runtime },
             transport: { [unowned self] bytes in
                 guard let request = try? Taigi_DesktopShell_DesktopRequest(serializedBytes: Data(bytes)) else {
                     return []
                 }
                 sent.append(request)
+                if case .passThroughSwap = request.request {
+                    return DesktopCoreBridge.send(bytes)
+                }
                 return answer(request)
             },
         )

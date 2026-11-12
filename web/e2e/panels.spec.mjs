@@ -1,9 +1,18 @@
-// The TPS key panel, the symbol picker through the candidate panel, and the
+// The TPS key panel, the Telex guide, the symbol picker through the candidate panel, and the
 // a11y rows of docs/architecture/web-roadmap.md § Phase 5.
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, open, panel, preedit, TIER } from "./helpers.mjs";
+import {
+  candidates,
+  expectNotText,
+  expectText,
+  open,
+  panel,
+  preedit,
+  TIER,
+  textOf,
+} from "./helpers.mjs";
 
 const keyPanel = (page) => page.locator("#tps-keyboard");
 const cap = (page, glyph) =>
@@ -34,7 +43,7 @@ test("the panel's chord leaves a composition standing", async ({ page }) => {
   await editor.press("8");
   await editor.press(`${TIER}+j`);
   await expect(preedit(page)).toContainText("ㄚ");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("the panel follows the mode, and the choice waits for the way back", async ({
@@ -64,12 +73,72 @@ test("the panel leaves the text on screen", async ({ page }) => {
   await expect(cap(page, "ㄅ")).toBeInViewport();
 });
 
+const guide = (page) => page.locator("#telex-guide");
+
+test("the guide's chord shows and hides its card, and a reload keeps it", async ({
+  page,
+}) => {
+  // No `settings`: a seed would run again on the reload. Ctrl+Alt+/ =
+  // ShowTelexGuide; English `settings.toneSchemeTelex` = "Telex",
+  // `desktop.telexGuideTone` = "Tone {tone}", ROWS[0] = x → "1 / 4".
+  const editor = await open(page);
+  await expect(guide(page)).toBeHidden();
+  await editor.press(`${TIER}+/`);
+  await expect(guide(page)).toBeVisible();
+  await expect(guide(page).locator("h2")).toHaveText("Telex");
+  await expect(guide(page).locator("dt").first()).toHaveText("x");
+  await expect(guide(page).locator("dd").first()).toHaveText("Tone 1 / 4");
+  await expect(panel(page)).toBeHidden();
+  await page.reload();
+  // The rows are the session's: wait for them, not for the page.
+  await expect(guide(page)).toBeVisible();
+  await expect(guide(page).locator("h2")).toHaveText("Telex");
+  await editor.press(`${TIER}+/`);
+  await expect(guide(page)).toBeHidden();
+});
+
+test("the guide floats over the editor and moves nothing", async ({ page }) => {
+  const editor = await open(page);
+  const before = await editor.boundingBox();
+  await editor.press(`${TIER}+/`);
+  await expect(guide(page).locator("h2")).toHaveText("Telex");
+  expect(await editor.boundingBox()).toEqual(before);
+  const card = await guide(page).boundingBox();
+  expect(card.y + card.height).toBeLessThanOrEqual(before.y + before.height);
+});
+
+test("the guide stays up beside the candidate list", async ({ page }) => {
+  const editor = await open(page, { settings: { telexGuideShown: true } });
+  await editor.pressSequentially("tai");
+  await expect(candidates(page).first()).toBeVisible();
+  await expect(guide(page)).toBeVisible();
+  await expect(candidates(page).first()).not.toHaveText(/Telex/);
+  await editor.press("Escape");
+  await expect(guide(page)).toBeVisible();
+});
+
+test("the guide goes under TPS and comes back after", async ({ page }) => {
+  // trace: Ctrl+Alt+P = ToggleTps; `is_telex_guide_wanted`.
+  const editor = await open(page, { settings: { telexGuideShown: true } });
+  await editor.press(`${TIER}+p`);
+  await expect(guide(page)).toBeHidden();
+  await editor.press(`${TIER}+p`);
+  await expect(guide(page)).toBeVisible();
+});
+
+test("the guide is spelled in the display language", async ({ page }) => {
+  // trace: Hanji `desktop.telexGuideTone` = "第 {tone} 調"; English "Tone {tone}".
+  await open(page, { settings: { telexGuideShown: true } });
+  await page.locator('select[name="displayLanguage"]').selectOption("hanji");
+  await expect(guide(page).locator("dd").first()).toHaveText("第 1 / 4 調");
+});
+
 test("a click types the bare glyph, and the focus stays", async ({ page }) => {
   const editor = await open(page, { settings: typingTps });
   await cap(page, "ㄚ").click(bareLayer);
   await expect(preedit(page)).toContainText("ㄚ");
   await expect(editor).toBeFocused();
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("the top half or a held Shift types the Shift glyph", async ({ page }) => {
@@ -86,7 +155,7 @@ test("a click on a cap keeps the running composition", async ({ page }) => {
   await editor.press("1");
   await cap(page, "ㄚ").click(bareLayer);
   await expect(preedit(page)).toContainText("ㄅㄚ");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("a key lights its cap for a moment", async ({ page }) => {
@@ -115,10 +184,10 @@ test("a slot key writes a symbol, and it leads the next picker", async ({
   const second = await candidates(page).nth(1).textContent();
   await editor.press("Enter");
   await expect(panel(page)).toBeHidden();
-  const symbol = await editor.inputValue();
+  const symbol = await textOf(editor);
   expect(second).toContain(symbol);
   await page.reload();
-  await expect(editor).toBeEnabled();
+  await expect(editor).toHaveAttribute("contenteditable", "true");
   await editor.press(`${TIER}+,`);
   await expect(candidates(page).first()).toContainText(symbol);
 });
@@ -129,10 +198,10 @@ test("a click on a symbol selects it and Enter writes it", async ({ page }) => {
   const cell = candidates(page).nth(2);
   await cell.click();
   await expect(cell).toHaveAttribute("aria-current", "true");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await editor.press("Enter");
   await expect(panel(page)).toBeHidden();
-  await expect(editor).not.toHaveValue("");
+  await expectNotText(editor, "");
 });
 
 /// What a cell says aloud: its drawn parts, apart.

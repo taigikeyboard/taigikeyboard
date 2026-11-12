@@ -89,6 +89,9 @@ pub struct ExpandableGeometryInput<'a> {
     /// ends up scrolling.
     pub scroller_width: f32,
     pub item_height: f32,
+    /// How many candidates the collapsed list shows and an unfolded column
+    /// stacks — one per slot key (`CandidateSlotKeySet::page_size`).
+    pub page_size: usize,
 }
 
 /// The expanded window's size:
@@ -244,6 +247,9 @@ pub struct ExpandableListModel {
     item_height: f32,
     chrome_width: f32,
     scroller_width: f32,
+    /// `ExpandableGeometryInput::page_size`: the collapsed list's length at
+    /// most, and an unfolded column's height in candidates.
+    page_size: usize,
     /// The collapsed cells in reading order, framed once per list: the
     /// first page of the horizontal packer end to end (row), or the first
     /// page stacked at one aligned width (column).
@@ -255,7 +261,7 @@ pub struct ExpandableListModel {
     /// starts after; `None` for a row.
     collapsed_primary_column_width: Option<f32>,
     /// Row: the whole list, row-major. Column: the selected page only —
-    /// `ROWS_PER_COLUMN`-tall columns, `column_count` of them a page,
+    /// `page_size`-tall columns, `column_count` of them a page,
     /// Microsoft Bopomofo's shape — transposed into visual rows
     /// (`ExpandedGridLayout::column_major_page`), so renderers draw both from
     /// the same rows.
@@ -278,8 +284,6 @@ impl ExpandableListModel {
     /// Two thirds of a page: `PAGE_SIZE - PAGE_SIZE / 3`.
     pub const EXPANDED_COLUMN_COUNT: usize =
         HorizontalPageLayout::PAGE_SIZE - HorizontalPageLayout::PAGE_SIZE / 3;
-    /// An unfolded column's height in candidates: one page of the list.
-    pub const ROWS_PER_COLUMN: usize = HorizontalPageLayout::PAGE_SIZE;
     /// How many columns an unfolded column shows at once at most — a third of
     /// a page, Microsoft Bopomofo's three.
     pub const COLUMNS_PER_PAGE: usize = HorizontalPageLayout::PAGE_SIZE / 3;
@@ -336,7 +340,7 @@ impl ExpandableListModel {
                     column_width,
                     ExpandedGridLayout::column_major_page(
                         count,
-                        Self::ROWS_PER_COLUMN,
+                        geometry.page_size.max(1),
                         0,
                         columns_per_page,
                     ),
@@ -348,6 +352,7 @@ impl ExpandableListModel {
             axis,
             count,
             item_height: geometry.item_height,
+            page_size: geometry.page_size.max(1),
             chrome_width: geometry.chrome_width,
             scroller_width: geometry.scroller_width,
             collapsed_cells: collapsed.cells,
@@ -372,6 +377,7 @@ impl ExpandableListModel {
             geometry.base_width,
             geometry.maximum_window_width,
             geometry.chrome_width,
+            geometry.page_size,
         )
         .pages
         .into_iter()
@@ -410,7 +416,7 @@ impl ExpandableListModel {
         geometry: &ExpandableGeometryInput<'_>,
     ) -> CollapsedFrames {
         let rows = count
-            .min(Self::ROWS_PER_COLUMN)
+            .min(geometry.page_size.max(1))
             .min(primary_widths.len())
             .min(annotation_widths.len());
         let chrome = if count > rows {
@@ -492,7 +498,7 @@ impl ExpandableListModel {
             geometry,
         );
         let width = width.max(collapsed_width);
-        let columns = count.div_ceil(Self::ROWS_PER_COLUMN);
+        let columns = count.div_ceil(geometry.page_size.max(1));
         let fit = |chrome: f32| {
             let fit = ((geometry.maximum_window_width - chrome) / width)
                 .floor()
@@ -514,13 +520,13 @@ impl ExpandableListModel {
         rows as f32 * item_height + rows.saturating_sub(1) as f32 * Self::SEPARATOR_HEIGHT
     }
 
-    /// The nine-slot row the collapsed mode packs to, widened until the
+    /// The `page_size`-slot row the collapsed mode packs to, widened until the
     /// longest candidate fits a full row of columns, and capped by what the
     /// screen leaves once the scroller has its share. Widening the columns
     /// rather than letting a cell span more of them keeps the grid a grid
     /// (columns widen, spans stay whole).
     fn resolved_column_width(widths: &[f32], geometry: &ExpandableGeometryInput<'_>) -> f32 {
-        let baseline = HorizontalPageLayout::row_budget(geometry.base_width);
+        let baseline = HorizontalPageLayout::row_budget(geometry.base_width, geometry.page_size);
         let budget = geometry.maximum_window_width - geometry.scroller_width;
         let widest = widths.iter().copied().fold(0.0, f32::max);
         let narrowest = geometry.base_width * Self::EXPANDED_COLUMN_COUNT as f32;
@@ -592,8 +598,7 @@ impl ExpandableListModel {
 
     /// The candidates one page of an unfolded column holds; `None` for a row.
     fn page_span(&self) -> Option<usize> {
-        (self.axis == ExpandableAxis::Column)
-            .then(|| self.grid.column_count * Self::ROWS_PER_COLUMN)
+        (self.axis == ExpandableAxis::Column).then(|| self.grid.column_count * self.page_size)
     }
 
     /// Whether an unfolded column pages at all — what reserves its chevron
@@ -1005,8 +1010,7 @@ impl ExpandableListModel {
                 if !self.has_overflow() {
                     return None;
                 }
-                self.selected_index =
-                    (self.selected_index + Self::ROWS_PER_COLUMN).min(self.count - 1);
+                self.selected_index = (self.selected_index + self.page_size).min(self.count - 1);
                 self.expand()
             }
             _ if direction == across => self.expand_if_overflowing(),
@@ -1046,7 +1050,7 @@ impl ExpandableListModel {
         use CandidateNavigation::*;
         let index = self.selected_index;
         let last = self.count - 1;
-        let rows = Self::ROWS_PER_COLUMN;
+        let rows = self.page_size;
         match direction {
             Down | NextCandidate if index < last => self.select(index + 1),
             Up | PreviousCandidate if index > 0 => self.select(index - 1),
@@ -1182,7 +1186,7 @@ impl ExpandableListModel {
         // beside a column it keeps its row first, as `←` and PageUp fold from
         // any column.
         if self.axis == ExpandableAxis::Column {
-            self.selected_index %= Self::ROWS_PER_COLUMN;
+            self.selected_index %= self.page_size;
         }
         if self.selected_index >= self.collapsed_cells.len() {
             self.selected_index = self.collapsed_cells.len().saturating_sub(1);
@@ -1220,7 +1224,7 @@ impl ExpandableListModel {
             let columns = self.grid.column_count;
             self.grid = ExpandedGridLayout::column_major_page(
                 self.count,
-                Self::ROWS_PER_COLUMN,
+                self.page_size,
                 self.selected_index / span * columns,
                 columns,
             );
@@ -1261,6 +1265,7 @@ mod tests {
             chrome_width: 20.0,
             scroller_width: 15.0,
             item_height: 30.0,
+            page_size: HorizontalPageLayout::PAGE_SIZE,
         }
     }
 
@@ -1301,6 +1306,46 @@ mod tests {
     /// `count` annotation-less candidates whose candidate text is `primary` wide.
     fn column_model(metrics: &CandidateMetrics, primary: f32, count: usize) -> ExpandableListModel {
         column_model_with(metrics, &vec![primary; count], &vec![None; count])
+    }
+
+    #[test]
+    fn a_page_of_eight_collapses_to_eight_and_stacks_columns_of_eight() {
+        // trace: Type - with f leaves eight slot keys; the row packs 8 (row
+        // budget 80), the column stacks 8, and `→` beside it lands a column
+        // over at 0 + 8.
+        let row = ExpandableListModel::new(
+            &[5.0; 20],
+            ExpandableGeometryInput {
+                page_size: 8,
+                ..geometry()
+            },
+        );
+        assert_eq!(row.collapsed_cells().len(), 8);
+        let metrics = inline_metrics();
+        let primary = vec![5.0; 20];
+        let annotation = vec![None; 20];
+        let widths: Vec<f32> = primary
+            .iter()
+            .map(|&p| metrics.cell_width(p, None))
+            .collect();
+        let mut column = ExpandableListModel::new(
+            &widths,
+            ExpandableGeometryInput {
+                collapsed: CollapsedLayout::Column {
+                    metrics: &metrics,
+                    primary_widths: &primary,
+                    annotation_widths: &annotation,
+                },
+                base_width: metrics.base_width(),
+                page_size: 8,
+                ..geometry()
+            },
+        );
+        assert_eq!(column.collapsed_cells().len(), 8);
+        assert_eq!(column.visible_rows(), 8);
+        column.navigate(Right);
+        assert_eq!(column.selected_index(), 8);
+        assert_eq!(column.mode(), ExpandableDisplayMode::Expanded);
     }
 
     #[test]

@@ -12,15 +12,15 @@ final class ShortcutSettingsTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "ShortcutSettingsTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     /// A row whose text is missing in one language reads as an identifier — or

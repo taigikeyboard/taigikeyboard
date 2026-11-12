@@ -25,12 +25,13 @@ pub use key::{
 };
 pub use list_selection::{ListLayout, ListSelection};
 pub use selection::LookupSelection;
-pub use state::{EngineState, KeyReply, SymbolPicker};
+pub use state::{EngineState, KeyReply, SymbolPicker, TextBeforeCaret};
 pub(crate) use table::{is_vertical_layout, present_table};
 
 use crate::candidates::HorizontalPageLayout;
 
-/// The slot keys a page holds, the same on every desktop.
+/// The most slot keys a page holds, the same on every desktop; the live set
+/// may hold fewer (`CandidateSlotKeySet::page_size`).
 pub const PAGE_SIZE: usize = HorizontalPageLayout::PAGE_SIZE;
 
 #[cfg(test)]
@@ -54,6 +55,7 @@ pub(crate) mod test_support {
                 chrome_width: 20.0,
                 scroller_width: 0.0,
                 item_height: 30.0,
+                page_size: super::PAGE_SIZE,
             },
         )
     }

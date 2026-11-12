@@ -39,6 +39,12 @@ struct GeneralSettingsView: View {
     @AppStorage(SettingsStore.Keys.toneInputScheme.name)
     private var toneInputScheme = SettingsStore.Keys.toneInputScheme.defaultValue
 
+    @AppStorage(SettingsStore.Keys.isCAffricateEnabled.name)
+    private var isCAffricateEnabled = SettingsStore.Keys.isCAffricateEnabled.defaultValue
+
+    @AppStorage(SettingsStore.Keys.isFHyphenEnabled.name)
+    private var isFHyphenEnabled = SettingsStore.Keys.isFHyphenEnabled.defaultValue
+
     /// The STORED swap — the same key the `` ` `` shortcut flips, so the
     /// picker and the chord are one setting seen from two places. Read raw
     /// on purpose: the picker shows what is stored, and `candidateDisplayMode`
@@ -115,6 +121,15 @@ struct GeneralSettingsView: View {
                     Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
                     Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
                 }
+
+                // Under Tone Keys, independent of it: both say what a letter
+                // types. TPS has no `c` initial, so the row greys there.
+                Toggle(language.string(.settingsCAffricate), isOn: $isCAffricateEnabled)
+                    .disabled(inputMode == .tps)
+                // Beside it for the same reason; TPS has no romanization
+                // hyphen on `f`, so the row greys there too.
+                Toggle(language.string(.settingsFHyphen), isOn: $isFHyphenEnabled)
+                    .disabled(inputMode == .tps)
 
                 // S33 (USER 2026-09-08): off means no window at all — the
                 // user types romanization and Space / Return write it as

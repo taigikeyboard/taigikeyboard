@@ -8,8 +8,9 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
-    insert_symbol, pass_through_may_consume, perform_intent, represent_list, CandidateSource,
-    ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface, SystemClock,
+    insert_symbol, pass_through_may_consume, pass_through_may_swap, perform_intent, represent_list,
+    CandidateSource, ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface,
+    SystemClock,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
@@ -240,6 +241,31 @@ fn a_slot_key_commits_its_hanji_cell_without_a_space() {
 }
 
 #[test]
+fn a_mixed_han_lo_candidate_appends_a_space_only_with_auto_space_on() {
+    for enabled in [false, true] {
+        let mut rig = configured_rig(enabled, |settings| {
+            settings.set_bool(&keys::IS_HANJI_FIRST, true);
+            settings.set_bool(&keys::IS_LKK_ENABLED, true);
+        });
+        rig.type_word("siannmih");
+        rig.surface.selected = Some(
+            rig.list
+                .cells()
+                .iter()
+                .position(|cell| cell.text == "啥mih")
+                .expect("production dictionary offers 啥mih / siánn-mih"),
+        );
+        assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+        let expected = if enabled {
+            vec!["commit 啥mih", "list closed", "insert \" \"", "arm"]
+        } else {
+            vec!["commit 啥mih", "list closed"]
+        };
+        assert_eq!(rig.calls(), expected);
+    }
+}
+
+#[test]
 fn a_slot_past_the_list_or_no_highlight_is_consumed_and_commits_nothing() {
     let mut rig = new_rig(true);
     rig.type_word("ho");
@@ -269,13 +295,38 @@ fn a_typed_comma_swaps_an_armed_space_or_is_written_full_width() {
     let mut rig = new_rig(true);
     rig.surface.can_swap = true;
     assert!(rig.run(ComposingKeyIntent::PassThrough, &comma()));
-    assert_eq!(rig.calls(), ["swap \", \"", "arm"]);
+    // trace: Hanji-first maps `,` to `，`, and the swap attaches that mark
+    // even after a romanized commit, as the symbol picker does. Full width
+    // is not spaced (`is_spaced_punctuation`): the mark takes the space's
+    // place and arms nothing.
+    assert_eq!(rig.calls(), ["swap \"，\""]);
 
     drop(rig);
     let mut rig = new_rig(true);
     rig.surface.can_swap = false;
     assert!(rig.run(ComposingKeyIntent::PassThrough, &comma()));
-    assert_eq!(rig.calls(), ["swap \", \"", "insert \"，\""]);
+    assert_eq!(rig.calls(), ["swap \"，\"", "insert \"，\""]);
+}
+
+/// #852: in the full width `^` and `_` write the two-cell ellipsis and dash,
+/// whole, and neither takes an armed space's place (neither attaches).
+#[test]
+fn caret_and_underscore_write_the_two_cell_ellipsis_and_dash() {
+    for (typed, mark) in [("^", "……"), ("_", "——")] {
+        let mut rig = new_rig(true);
+        rig.surface.can_swap = true;
+        let key = KeyEventSnapshot::text(typed, KeyModifiers::SHIFT);
+        assert!(!pass_through_may_swap(&key, &rig.settings), "{typed}");
+        assert!(rig.run(ComposingKeyIntent::PassThrough, &key));
+        assert_eq!(rig.calls(), [format!("insert \"{mark}\"")]);
+
+        // Roman-first: half width, the client's key.
+        drop(rig);
+        let mut rig = new_rig(true);
+        rig.settings.set_bool(&keys::IS_HANJI_FIRST, false);
+        assert!(!rig.run(ComposingKeyIntent::PassThrough, &key));
+        assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+    }
 }
 
 #[test]
@@ -342,7 +393,14 @@ fn a_picked_symbol_swaps_only_when_it_attaches() {
     );
     rig.surface.calls.clear();
     insert_symbol("，", &rig.settings, &mut rig.manager, &mut rig.surface);
-    assert_eq!(rig.calls(), ["swap \"， \"", "arm"]);
+    assert_eq!(
+        rig.calls(),
+        ["swap \"，\""],
+        "full width: no space after it"
+    );
+    rig.surface.calls.clear();
+    insert_symbol(",", &rig.settings, &mut rig.manager, &mut rig.surface);
+    assert_eq!(rig.calls(), ["swap \", \"", "arm"], "half width keeps it");
 }
 
 /// No chord types the other width (USER 2026-10-07): outside TPS, Ctrl on a
@@ -377,6 +435,39 @@ fn a_pass_through_key_is_consumed_for_punctuation_or_an_armed_swap() {
     let letter = KeyEventSnapshot::text("a", KeyModifiers::NONE);
     assert!(!pass_through_may_consume(&letter, &settings, true));
     assert!(!pass_through_may_consume(&no_key(), &settings, true));
+}
+
+#[test]
+fn a_pass_through_key_may_swap_when_what_the_swap_writes_attaches() {
+    let mut settings = SettingsDocument::default();
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
+    let apostrophe = KeyEventSnapshot::text("'", KeyModifiers::NONE);
+    for is_hanji_first in [true, false] {
+        settings.set_bool(&keys::IS_HANJI_FIRST, is_hanji_first);
+        assert!(pass_through_may_swap(&comma(), &settings));
+        // trace: the swap writes what the key writes — Hanji-first maps the
+        // straight quote to `、`, which attaches (`punctuation.rs`
+        // ATTACHING); Roman-first leaves `'`, which does not.
+        assert_eq!(
+            pass_through_may_swap(&apostrophe, &settings),
+            is_hanji_first
+        );
+    }
+    // An opening bracket, a letter, a host chord, no key: nothing attaches.
+    for key in [
+        KeyEventSnapshot::text("(", KeyModifiers::NONE),
+        KeyEventSnapshot::text("a", KeyModifiers::NONE),
+        KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL),
+        no_key(),
+    ] {
+        assert!(!pass_through_may_swap(&key, &settings), "{key:?}");
+    }
+    // TPS swaps the glyph written: the chord's `'` writes `、`, which attaches.
+    settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+    let ctrl_apostrophe = KeyEventSnapshot::chord(None, "'", KeyModifiers::CONTROL);
+    assert!(pass_through_may_swap(&ctrl_apostrophe, &settings));
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false);
+    assert!(!pass_through_may_swap(&ctrl_apostrophe, &settings));
 }
 
 /// A key read in the user's Dvorak / Colemak layout (`is_remapped`): the
@@ -503,12 +594,15 @@ fn punctuation_uses_the_highlighted_cells_script_and_auto_space_verdict() {
 
     for mode in [InputMode::Tl, InputMode::Poj] {
         for auto_space in [false, true] {
+            // Roman-first keeps `?` half width, the mark the auto space
+            // follows, so the verdict shows in the write.
             let mut rig = configured_rig(auto_space, |settings| {
                 settings.set_choice(&keys::INPUT_MODE, mode);
                 settings.set_choice(
                     &keys::CANDIDATE_DISPLAY_MODE,
                     CandidateDisplayMode::Combined,
                 );
+                settings.set_bool(&keys::IS_HANJI_FIRST, false);
             });
             rig.type_word("ho");
             let roman = rig
@@ -520,7 +614,7 @@ fn punctuation_uses_the_highlighted_cells_script_and_auto_space_verdict() {
             rig.surface.selected = Some(roman);
             assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".into()), &no_key()));
             let mut expected = vec![
-                format!("commit hó？{}", if auto_space { " " } else { "" }),
+                format!("commit hó?{}", if auto_space { " " } else { "" }),
                 "list closed".into(),
             ];
             if auto_space {
@@ -544,7 +638,8 @@ fn punctuation_after_a_prefix_pick_keeps_the_unconsumed_tail() {
         .expect("a prefix candidate for tai, leaving gi pending");
     rig.surface.selected = Some(index);
     assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".into()), &no_key()));
-    assert_eq!(rig.calls(), ["commit 台gi？ ", "list closed", "arm"]);
+    // trace: `？` is full width, so it takes the tail's auto space's place.
+    assert_eq!(rig.calls(), ["commit 台gi？", "list closed"]);
     assert!(!rig.manager.is_composing());
 }
 
@@ -557,7 +652,7 @@ fn punctuation_with_a_hidden_list_commits_the_preedit() {
     rig.surface.selected = Some(1); // A stale surface highlight has no cell to resolve.
     assert!(rig.list.is_empty());
     assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".into()), &no_key()));
-    assert_eq!(rig.calls(), ["commit ho？ ", "list closed", "arm"]);
+    assert_eq!(rig.calls(), ["commit ho？", "list closed"]);
 }
 
 #[test]
@@ -576,23 +671,36 @@ fn punctuation_does_not_replace_a_rejected_pick_with_raw_text() {
 
 #[test]
 fn punctuation_on_a_literal_candidate_does_not_arm_after_a_failed_write() {
-    let mut rig = new_rig(true);
+    // Roman-first: the half-width `?` is the mark that would arm.
+    let mut rig = configured_rig(true, |settings| {
+        settings.set_bool(&keys::IS_HANJI_FIRST, false);
+    });
     rig.type_word("ho");
     rig.surface.selected = Some(0);
     rig.surface.has_failed = true;
     assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".into()), &no_key()));
-    assert_eq!(rig.calls(), ["commit ho？ ", "list closed"]);
+    assert_eq!(rig.calls(), ["commit ho? ", "list closed"]);
 }
 
 #[test]
 fn punctuation_mid_composition_commits_both_in_one_write_and_arms_the_space() {
-    // trace (read by running): Hanji-first maps `?` to `？`; the preedit as
-    // typed is romanization, so the one write carries the auto space too.
+    // trace (read by running): the preedit as typed is romanization, so under
+    // Roman-first the one write carries the auto space after the half-width
+    // `?` and arms it. Hanji-first maps `?` to `？`, which takes the space's
+    // place and arms nothing.
+    let key = KeyEventSnapshot::text("?", KeyModifiers::NONE);
+    let mut rig = configured_rig(true, |settings| {
+        settings.set_bool(&keys::IS_HANJI_FIRST, false);
+    });
+    rig.type_word("ho");
+    assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".to_owned()), &key));
+    assert_eq!(rig.calls(), ["commit ho? ", "list closed", "arm"]);
+
+    drop(rig);
     let mut rig = new_rig(true);
     rig.type_word("ho");
-    let key = KeyEventSnapshot::text("?", KeyModifiers::NONE);
     assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".to_owned()), &key));
-    assert_eq!(rig.calls(), ["commit ho？ ", "list closed", "arm"]);
+    assert_eq!(rig.calls(), ["commit ho？", "list closed"]);
 }
 
 #[test]
@@ -845,7 +953,7 @@ fn tps_ctrl_punctuation_writes_the_full_width_mark() {
         assert!(rig.run(ComposingKeyIntent::PassThrough, &key));
         assert_eq!(
             rig.calls(),
-            [format!("swap \"{mark} \""), format!("insert \"{mark}\"")]
+            [format!("swap \"{mark}\""), format!("insert \"{mark}\"")]
         );
     }
 }
@@ -1052,17 +1160,17 @@ fn tps_ctrl_on_a_non_layout_mark_stays_full_width() {
 }
 
 /// An auto space armed before a switch into TPS: a bare attaching mark
-/// swaps with it in full width, the only width TPS writes.
+/// takes its place in full width, the only width TPS writes.
 #[test]
 fn tps_a_bare_mark_swaps_the_armed_space_in_full_width() {
     // trace: `?` is no TPS layout key → PassThrough; the width is full and
     // the swap attaches what is written: `full_width_mapped("?")` = `？`,
-    // attaching (`punctuation.rs` ATTACHING) → swap `？ `.
+    // attaching (`punctuation.rs` ATTACHING) and not spaced → swap `？`.
     let mut rig = new_tps_rig();
     rig.surface.can_swap = true;
     let question = KeyEventSnapshot::text("?", KeyModifiers::SHIFT);
     assert!(rig.run(ComposingKeyIntent::PassThrough, &question));
-    assert_eq!(rig.calls(), ["swap \"？ \"", "arm"]);
+    assert_eq!(rig.calls(), ["swap \"？\""]);
 }
 
 /// A composition a switch across TPS left behind, reached by a commit that

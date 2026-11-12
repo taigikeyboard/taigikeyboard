@@ -7,4 +7,4 @@ paths:
 
 # UI Style Guide (Cross-Platform)
 
-Read `docs/contributing/ui-style-guide.md` before editing files this rule covers — it is the single copy of these rules.
+The rules live in `docs/contributing/ui-style-guide.md` — the single copy. Read it once per session, before the first edit to the files this rule covers; re-read only the section a later change touches.

@@ -101,6 +101,52 @@ fn a_hanji_led_final_pick_writes_the_hanji_and_earns_no_space() {
 }
 
 #[test]
+fn a_mixed_han_lo_final_pick_earns_a_space_only_when_it_ends_in_romanization() {
+    for (script, hanji_first) in [
+        (CommitScript::Lead, true),
+        (CommitScript::Other, false),
+        (CommitScript::Hanji, true),
+    ] {
+        let config = AppConfig {
+            is_hanji_first: hanji_first,
+            ..config_tl()
+        };
+        for (spelling, wrote_romanization, earns_space) in [
+            ("啥mih", true, true),
+            ("啥ê", true, true),
+            ("啥e\u{0302}", true, true),
+            ("啥mih-", true, false),
+            ("烏o\u{0358}", true, true),
+            ("啥siⁿ", true, true),
+            ("好m\u{0304}", true, true),
+            ("m\u{0304}好", false, false),
+            ("tsit塊", false, false),
+            ("啥物", false, false),
+            ("啥ㄇㄧ㆐", false, false),
+        ] {
+            let handle = continuous("siannmih", 1, &config);
+            let applied = send(
+                &handle,
+                1,
+                pick(script, "siánn-mih", Some(spelling), "siánn-mih", 8),
+                &config,
+            );
+            assert_eq!(commit_text(&applied.response).as_deref(), Some(spelling));
+            assert_eq!(
+                applied.response.commit,
+                Some(resolution(
+                    CommitOutcome::Finalized,
+                    spelling,
+                    wrote_romanization,
+                    earns_space,
+                )),
+                "{script:?} {spelling}",
+            );
+        }
+    }
+}
+
+#[test]
 fn a_hyphen_tail_earns_no_space() {
     // trace: the §34 literal `tâi-` (no Hanji) consumes `tai-` whole; the
     // document string ends in `-`, which a platform never spaces after.

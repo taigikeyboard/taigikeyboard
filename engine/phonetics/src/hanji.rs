@@ -9,9 +9,10 @@
 //!   silently missed Extensions B/C/D/E because Kotlin `Char.code` tops out
 //!   at 0xFFFF).
 //! - `is_roman_only_spelling` — whether the spelling in a word's Hanji column
-//!   is written only in romanization (`lán`), so the word has no Hanji: the
-//!   custom dictionary's write boundary (`userdata`), the rule the dictionary
-//!   pipeline applies to the shipped rows.
+//!   is written only in romanization (`lán`): the rule the dictionary
+//!   pipeline applies to the shipped rows, and one half of the custom
+//!   dictionary's write-boundary rule (`userdata` `stored_hanji` also requires
+//!   the spelling to equal the stored roman).
 //!
 //! Pure functions — no I/O, no engine handle. INVARIANT contracts live in
 //! `docs/architecture/behavioral-invariants.md` under the umbrella label

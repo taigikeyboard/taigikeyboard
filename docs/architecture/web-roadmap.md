@@ -131,6 +131,8 @@ The Linux shell already answers a key with a list of signals: `KeyReply { handle
 
 ### Text surface
 
+> **Superseded 2026-11-10** (maintainer: formatting that shows, as in ZenPen and Calmly Writer): the text is a Lexical editor, not a `<textarea>`; writes go through Lexical updates, not `execCommand`, and undo is Lexical's history. The composition still draws in an overlay and reaches the text only at commit, and every row of the table below still holds and is still tested. Current rules: `docs/contributing/web-guidelines.md` § Page. Native `contenteditable` with `execCommand` was spiked first and dropped (Chromium and WebKit nest `<h2><ul>` and rewrite the next block on `insertHTML`).
+
 A plain `<textarea>`. The composition is drawn in an overlay and nothing reaches the textarea until commit, so the undo stack only holds committed words.
 
 Commit uses `document.execCommand("insertText")`, which MDN marks deprecated and which is the only call that keeps the native undo history. McBopomofoWeb assigns `textArea.value` (`index.js:235-245`), which wipes that history. One write path, no fallback (`AGENTS.md` § No redundant fallback): Phase 4 tests it in Chromium, Firefox and WebKit, and if a browser refuses it, that test decides the single call the page uses.
@@ -300,6 +302,7 @@ session.clickCandidate(position) -> reply    // click_from_panel
 session.commitComposition() -> reply         // § Text surface
 session.tpsKeyboardRows()                    // JSON, from `keys/tps_keyboard_rows.rs`
 session.tpsKeyPress(glyph) -> reply          // a click on a cap
+session.telexGuide()                         // JSON { title, rows }, from `keys/telex_guide_rows.rs`
 session.caretMoved()                         // disarms the auto-space swap, spends a Shift press
 session.focusLost()
 session.setSettings(settingsJson)
@@ -463,7 +466,7 @@ Deliberately not adopted:
 - **`simple-keyboard`** in the first scope. See D2.
 - **Worker-hosted engine**. See § Why the main thread.
 - **A `Web` variant of `DesktopPlatform`**. The existing values carry the rules; YAGNI.
-- **`EditContext`, `contenteditable`**. Support is limited, and a textarea does the job.
+- **`EditContext`**. Support is limited. (`contenteditable` came in on Lexical, maintainer 2026-11-10, for formatting that shows: § Text surface.)
 - **Text services** (Hanji to Bopomofo, braille, MCP). Not the goal here. taigi-converter already exists.
 
 ## Reproducing the spike

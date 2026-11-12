@@ -7,6 +7,7 @@ import {
   candidates,
   commitWord,
   expectState,
+  expectText,
   inputMode,
   open,
   panel,
@@ -19,10 +20,12 @@ test("Enter commits the highlighted candidate", async ({ page }) => {
   await editor.pressSequentially("taiuan");
   await expect(preedit(page)).toContainText("taiuan");
   await expect(candidates(page).first()).toBeVisible();
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await editor.press("Enter");
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
   await expect(panel(page)).toBeHidden();
+  // A commit inside the reply's one update is a write that took.
+  await expectState(page, "ready");
 });
 
 /// The cell the slot key `key` picks.
@@ -37,7 +40,7 @@ test("a slot key picks its candidate", async ({ page }) => {
   const labelled = keyedCell(page, "w");
   const word = await labelled.locator(".text").textContent();
   await editor.press("w");
-  await expect(editor).toHaveValue(word);
+  await expectText(editor, word);
 });
 
 test("a click selects, Enter commits", async ({ page }) => {
@@ -48,9 +51,9 @@ test("a click selects, Enter commits", async ({ page }) => {
   await cell.click();
   await expect(editor).toBeFocused();
   await expect(cell).toHaveAttribute("aria-current", "true");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
   await editor.press("Enter");
-  await expect(editor).toHaveValue(word);
+  await expectText(editor, word);
 });
 
 test("the second page's cells select by position", async ({ page }) => {
@@ -66,15 +69,15 @@ test("the second page's cells select by position", async ({ page }) => {
   const cell = candidates(page).nth(1);
   await cell.click();
   await expect(cell).toHaveAttribute("aria-current", "true");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("undo takes a committed word back", async ({ page }) => {
   const editor = await open(page);
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
   await editor.press("ControlOrMeta+z");
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("Backspace goes through a composition and ends it", async ({ page }) => {
@@ -85,7 +88,7 @@ test("Backspace goes through a composition and ends it", async ({ page }) => {
   await editor.press("Backspace");
   await editor.press("Backspace");
   await expect(panel(page)).toBeHidden();
-  await expect(editor).toHaveValue("");
+  await expectText(editor, "");
 });
 
 test("TPS keys compose glyphs", async ({ page }) => {
@@ -99,12 +102,33 @@ test("a Shift tap hands the keys to the page and back", async ({ page }) => {
   const editor = await open(page);
   await editor.press("Shift");
   await editor.pressSequentially("ab");
-  await expect(editor).toHaveValue("ab");
+  await expectText(editor, "ab");
   await expect(panel(page)).toBeHidden();
   await editor.press("Shift");
   await editor.pressSequentially("a");
   await expect(preedit(page)).toContainText("a");
-  await expect(editor).toHaveValue("ab");
+  await expectText(editor, "ab");
+});
+
+test("the mode line follows the script and the Shift tap", async ({ page }) => {
+  // trace: Ctrl+Alt+C = ToggleRomanization, TL → POJ (`settings.pojMode`);
+  // English names the way back behind a Shift cap (`mode_line_json`).
+  const line = page.locator("#mode-line");
+  const name = page.locator("#mode-name");
+  const detail = page.locator("#mode-detail");
+  const editor = await open(page);
+  await expect(name).toHaveText("Taigi");
+  await expect(detail).toHaveText("Tâi-lô");
+  await expect(line).not.toHaveAttribute("data-english");
+  await editor.press(`${TIER}+c`);
+  await expect(detail).toContainText("Pe̍h-ōe-jī");
+  await editor.press("Shift");
+  await expect(line).toHaveAttribute("data-english");
+  await expect(name).toHaveText("English");
+  await expect(detail).toHaveText("⇧Taigi");
+  await editor.press("Shift");
+  await expect(line).not.toHaveAttribute("data-english");
+  await expect(detail).toContainText("Pe̍h-ōe-jī");
 });
 
 test("every default chord reaches the page", async ({ page }) => {
@@ -165,18 +189,11 @@ test("a switch names the new mode, then gets out of the way", async ({
   await expect(flash).toBeHidden();
 });
 
-test("the picker and the guide open and close at the caret", async ({
-  page,
-}) => {
+test("the picker opens and closes at the caret", async ({ page }) => {
   const editor = await open(page);
   await editor.press(`${TIER}+,`);
   await expect(candidates(page).first()).toBeVisible();
   await editor.press("Escape");
-  await expect(panel(page)).toBeHidden();
-
-  await editor.press(`${TIER}+/`);
-  await expect(candidates(page).first()).toBeVisible();
-  await editor.press(`${TIER}+/`);
   await expect(panel(page)).toBeHidden();
 });
 
@@ -194,11 +211,11 @@ test("keys before the install type romanization", async ({ page }) => {
   await expect(preedit(page)).toContainText("a");
   await expect(candidates(page)).toHaveCount(0);
   await editor.press("Enter");
-  await expect(editor).toHaveValue(/^a/);
+  await expectText(editor, /^a/);
   release();
   await expectState(page, "ready");
   await commitWord(editor);
-  await expect(editor).toHaveValue(/^a\s*台灣$/);
+  await expectText(editor, /^a\s*台灣$/);
 });
 
 test("a stored document the session refuses leaves the defaults", async ({
@@ -210,7 +227,7 @@ test("a stored document the session refuses leaves the defaults", async ({
   const editor = await open(page);
   await expect(inputMode(page)).toHaveValue("tl");
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
 });
 
 test("a failed download leaves romanization working", async ({ page }) => {
@@ -226,7 +243,7 @@ test("a failed download leaves romanization working", async ({ page }) => {
 test("a trap loses the composition, not the text", async ({ page }) => {
   const editor = await open(page);
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
   await editor.pressSequentially("tai");
 
   // What a panic reaches the page as. Wrecking the instance's memory for a real
@@ -240,10 +257,10 @@ test("a trap loses the composition, not the text", async ({ page }) => {
   await editor.press("a");
 
   await expect(panel(page)).toBeHidden();
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
   await expectState(page, "ready");
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣台灣");
+  await expectText(editor, "台灣台灣");
 });
 
 test("another input method's keys stay its own", async ({ page }) => {
@@ -252,6 +269,11 @@ test("another input method's keys stay its own", async ({ page }) => {
   await expect(notice).toBeHidden();
   await editor.dispatchEvent("compositionstart");
   await expect(notice).toBeVisible();
+  // Drawn in the mode chip, in the mode's place.
+  await expect(page.locator("#mode-line > #notice")).toHaveText(
+    "Another input method is active. Turn it off to type here.",
+  );
+  await expect(page.locator("#mode-name")).toBeHidden();
   await page.evaluate(() => {
     const event = new KeyboardEvent("keydown", {
       key: "a",
@@ -264,4 +286,5 @@ test("another input method's keys stay its own", async ({ page }) => {
   await expect(panel(page)).toBeHidden();
   await editor.dispatchEvent("compositionend");
   await expect(notice).toBeHidden();
+  await expect(page.locator("#mode-name")).toBeVisible();
 });

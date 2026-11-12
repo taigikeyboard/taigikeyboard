@@ -20,8 +20,8 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     /// the row is pinned to its default for the case and handed back after.
     private var savedPickerShortcut: KeyboardShortcuts.Shortcut?
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         InstalledLexicon.installOnce()
         suiteName = "TaigiInputControllerSymbolPickerTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -35,10 +35,10 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         KeyboardShortcuts.setShortcut(ShortcutAction.showSymbolPicker.defaultShortcut, for: .showSymbolPicker)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         KeyboardShortcuts.setShortcut(savedPickerShortcut, for: .showSymbolPicker)
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - The chord
@@ -388,7 +388,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.press(.leftArrow)
         try session.type("w")
 
-        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
+        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)，")
     }
 
     /// The chord after an ordinary commit does not spend the arm either: the
@@ -406,7 +406,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.pressPickerChord(isARepeat: true)
         try session.type("w")
 
-        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
+        XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)，")
     }
 
     // MARK: - Who takes it down

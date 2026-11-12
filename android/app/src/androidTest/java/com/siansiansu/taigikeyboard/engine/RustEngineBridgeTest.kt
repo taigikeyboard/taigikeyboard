@@ -41,6 +41,17 @@ class RustEngineBridgeTest {
         assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
     }
 
+    @Test fun op_toneVariations_decodesAllThreeMaps() {
+        // trace: tones 2 3 5 6 7 8 9; tone 9 = U+030B (TL) / U+0306 (POJ); `n` ends with ⁿ.
+        val tones = RustEngineBridge.toneVariations
+        assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"), tones.tl["a"])
+        assertEquals("ă", tones.poj["a"]?.last())
+        assertTrue(tones.poj.containsKey("o͘"))
+        assertEquals("ⁿ", tones.tl["n"]?.last())
+        // Universal: TL and POJ interleaved, both tone-9 marks.
+        assertEquals(listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋", "ă"), tones.universal["a"])
+    }
+
     // endregion
     // region TPS
 
@@ -50,6 +61,12 @@ class RustEngineBridgeTest {
 
     @Test fun op_isTpsToneMark_letterIsNotToneMark() {
         assertFalse(RustEngineBridge.isTpsToneMark('a'))
+    }
+
+    // The TPS Space key reads the raw buffer's last char; after `˙` on a stop
+    // coda that is the combining tone-8 dot U+0307.
+    @Test fun op_isTpsToneMark_combiningToneEightDotIsToneMark() {
+        assertTrue(RustEngineBridge.isTpsToneMark('\u0307'))
     }
 
     // The engine's attaching set (`phonetics::punctuation`, full roster pinned
@@ -65,6 +82,12 @@ class RustEngineBridgeTest {
         assertTrue(RustEngineBridge.isJoinerPunctuation("\u00B7"))
         assertFalse(RustEngineBridge.isJoinerPunctuation("?"))
         assertFalse(RustEngineBridge.isJoinerPunctuation("-"))
+    }
+
+    @Test fun op_isSpacedPunctuation_onlyTheHalfWidthMarks() {
+        assertTrue(RustEngineBridge.isSpacedPunctuation("?"))
+        assertFalse(RustEngineBridge.isSpacedPunctuation("？"))
+        assertFalse(RustEngineBridge.isSpacedPunctuation("("))
     }
 
     // The engine's digit-tone fold (`phonetics::external_lookup`, full table

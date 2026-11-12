@@ -66,6 +66,133 @@ impl SettingChoice for CandidateLayout {
     }
 }
 
+/// The Linux candidate window's color theme. Order is the Appearance picker:
+/// the shipped default, the six built-in palettes (the mobile theme names),
+/// then custom. A built-in theme owns the four colors; custom reads the four
+/// color keys.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum CandidateColorTheme {
+    Default,
+    Sakura,
+    Gold,
+    SeaBreeze,
+    Jade,
+    Wisteria,
+    Catppuccin,
+    Custom,
+}
+
+/// One built-in theme's four `#RRGGBB` colors: text, highlighted text,
+/// background, highlighted background.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CandidateSwatch {
+    pub text: &'static str,
+    pub selected_text: &'static str,
+    pub background: &'static str,
+    pub selected_background: &'static str,
+}
+
+/// The four colors the candidate window paints, as `0xRRGGBB`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CandidateColors {
+    pub text: u32,
+    pub selected_text: u32,
+    pub background: u32,
+    pub selected_background: u32,
+}
+
+impl CandidateColorTheme {
+    /// The picker's i18n key. Built-in names are the mobile theme names.
+    pub fn label_key(self) -> crate::strings::StringKey {
+        use crate::strings::StringKey;
+        match self {
+            Self::Default => StringKey::ThemePaletteDefault,
+            Self::Sakura => StringKey::ThemePalettePink,
+            Self::Gold => StringKey::ThemePaletteGold,
+            Self::SeaBreeze => StringKey::ThemePaletteBlue,
+            Self::Jade => StringKey::ThemePaletteGreen,
+            Self::Wisteria => StringKey::ThemePalettePurple,
+            Self::Catppuccin => StringKey::ThemePaletteCatppuccin,
+            Self::Custom => StringKey::ThemeCardMenuCustomize,
+        }
+    }
+
+    /// The fixed colors, or nothing when the four color keys decide.
+    pub fn swatch(self) -> Option<CandidateSwatch> {
+        Some(match self {
+            Self::Custom => return None,
+            Self::Default => CandidateSwatch {
+                text: "#1A1A1A",
+                selected_text: "#FFFFFF",
+                background: "#F6F5F4",
+                selected_background: "#1A5FB4",
+            },
+            Self::Sakura => CandidateSwatch {
+                text: "#1A1A1A",
+                selected_text: "#FFFFFF",
+                background: "#E6E5E3",
+                selected_background: "#A53945",
+            },
+            Self::Gold => CandidateSwatch {
+                text: "#1A1A1A",
+                selected_text: "#FFFFFF",
+                background: "#E6E5E3",
+                selected_background: "#D39D19",
+            },
+            Self::SeaBreeze => CandidateSwatch {
+                text: "#FFFFFF",
+                selected_text: "#FFFFFF",
+                background: "#607A99",
+                selected_background: "#2B4A70",
+            },
+            Self::Jade => CandidateSwatch {
+                text: "#3D3846",
+                selected_text: "#FFFFFF",
+                background: "#F6F5F4",
+                selected_background: "#5C8273",
+            },
+            Self::Wisteria => CandidateSwatch {
+                text: "#FFFFFF",
+                selected_text: "#FFFFFF",
+                background: "#7E6785",
+                selected_background: "#563F68",
+            },
+            Self::Catppuccin => CandidateSwatch {
+                text: "#EBEBEB",
+                selected_text: "#FFFFFF",
+                background: "#1A1A1A",
+                selected_background: "#314968",
+            },
+        })
+    }
+}
+
+impl SettingChoice for CandidateColorTheme {
+    const ALL: &'static [Self] = &[
+        Self::Default,
+        Self::Sakura,
+        Self::Gold,
+        Self::SeaBreeze,
+        Self::Jade,
+        Self::Wisteria,
+        Self::Catppuccin,
+        Self::Custom,
+    ];
+    const DEFAULT: Self = Self::Default;
+    fn raw(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Sakura => "sakura",
+            Self::Gold => "gold",
+            Self::SeaBreeze => "seaBreeze",
+            Self::Jade => "jade",
+            Self::Wisteria => "wisteria",
+            Self::Catppuccin => "catppuccin",
+            Self::Custom => "custom",
+        }
+    }
+}
+
 /// The keyboard layout TL / POJ keys are read in. Same key and raw strings
 /// as macOS (`KeyboardLayout.swift`, `SettingsStore.swift` `Keys.keyboardLayout`).
 /// TPS ignores it and keeps QWERTY positions. Read by Windows only: the
@@ -490,6 +617,7 @@ mod tests {
     #[test]
     fn every_choice_round_trips_and_has_a_listed_default() {
         round_trips::<CandidateLayout>();
+        round_trips::<CandidateColorTheme>();
         round_trips::<KeyboardLayout>();
         round_trips::<crate::settings::CandidateDisplayMode>();
         round_trips::<AppearanceMode>();

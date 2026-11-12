@@ -12,7 +12,6 @@ import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
-import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 private typealias LTN = Pair<LayoutType, String>
 
@@ -79,36 +78,17 @@ class LayoutManager(
         val computedArrangement =
             if (custom == null) merged else compositionRoot.customLayoutTables.substitute(merged, custom, isFullWidthPunctuation)
 
-        // TODO: consolidate the KeyVariation→popup-suffix mapping
-        // (NORMAL/PASSWORD → "~normal", EMAIL_ADDRESS/URI → "~uri") to
-        // remove the nested if/else duplication below.
         if (keyboardMode == KeyboardMode.CHARACTERS) {
-            val extendedPopups = assets.extendedPopups(prefs.inputMode)
-            for (computedRow in computedArrangement) {
-                for (keyData in computedRow) {
-                    if (keyData.variation != KeyVariation.ALL) {
-                        if (keyData.variation == KeyVariation.NORMAL ||
-                            keyData.variation == KeyVariation.PASSWORD
-                        ) {
-                            if (extendedPopups.containsKey(keyData.label + "~normal")) {
-                                keyData.popup.addAll(extendedPopups[keyData.label + "~normal"] ?: listOf())
-                            }
-                        }
-                        if (keyData.variation == KeyVariation.EMAIL_ADDRESS ||
-                            keyData.variation == KeyVariation.URI
-                        ) {
-                            if (extendedPopups.containsKey(keyData.label + "~uri")) {
-                                keyData.popup.addAll(extendedPopups[keyData.label + "~uri"] ?: listOf())
-                            }
-                        }
-                    }
-                    if (extendedPopups.containsKey(keyData.label)) {
-                        keyData.popup.addAll(extendedPopups[keyData.label] ?: listOf())
-                    }
-                }
+            // The engine's tone marks by key label (TL / POJ only; `custom` is null in other modes): a
+            // universal custom layout's are both scripts'. Each key gets fresh entries.
+            val tones = compositionRoot.toneVariations()
+            val toneMarks =
+                if (custom?.isUniversal == true) tones.universal else LayoutScript.fromStorage(prefs.inputMode)?.toneMarks(tones).orEmpty()
+            for (keyData in computedArrangement.flatten()) {
+                toneMarks[keyData.label]?.let { entries -> keyData.popup.addAll(entries.map(KeyData::ofEntry)) }
             }
             // After the extended popups: a user's list replaces the key's whole built-in list.
-            if (custom != null) compositionRoot.customLayoutTables.applyCallouts(computedArrangement, custom)
+            if (custom != null) compositionRoot.customLayoutTables.applyCallouts(computedArrangement, custom, isFullWidthPunctuation)
         }
 
         return ComputedLayoutData(

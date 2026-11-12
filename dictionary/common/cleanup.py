@@ -7,7 +7,7 @@ import unicodedata
 import pandas as pd
 
 from .cjk import is_cjk, is_kana
-from .taigi_bridge import is_valid_romanization, normalize_taibun
+from .taigi_bridge import is_valid_romanization, normalize_taibun, prefetch_is_valid_romanization
 
 BRACKET_PATTERN = re.compile(r"[（(〈《「『【\[].*?[）)〉》」』】\]]")
 PROVERB_PUNCTUATION = "，。！；？、"
@@ -246,6 +246,9 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     collect_dropped(proverb_mask, "proverb")
     df = df[~proverb_mask]
 
+    prefetch_is_valid_romanization(
+        {str(t).strip() for t in df["tl"].dropna().unique()} - {""}
+    )
     valid_tl_mask = df["tl"].apply(is_valid_tl)
     invalid_tl_count = (~valid_tl_mask).sum()
     if invalid_tl_count > 0 and logger:

@@ -19,8 +19,8 @@ final class CustomFontLibraryTests: XCTestCase {
     private var directory: URL!
     private var library: CustomFontLibrary!
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         let scratch = try TestFixtures.scratchDirectory()
         addTeardownBlock { try? FileManager.default.removeItem(at: scratch) }
         directory = scratch

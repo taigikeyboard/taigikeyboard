@@ -145,6 +145,7 @@ enum StringKey: String {
     case homeWebsiteLink = "i18n_home_websiteLink"
     case homeGithubLink = "i18n_home_githubLink"
     case homeDiscordLink = "i18n_home_discordLink"
+    case homeDiscordCommunity = "i18n_home_discordCommunity"
     case homeFacebookLink = "i18n_home_facebookLink"
     case homeInstagramLink = "i18n_home_instagramLink"
     case homeThreadsLink = "i18n_home_threadsLink"

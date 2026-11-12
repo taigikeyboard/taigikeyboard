@@ -17,10 +17,10 @@
 //! fresh install types with, so the cross-platform alignment has one home.
 
 use super::choices::{
-    AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateSizeChoice, KeyboardLayout,
-    SettingChoice, SettingsPane,
+    AppearanceMode, CandidateColorTheme, CandidateColors, CandidateFontChoice, CandidateLayout,
+    CandidateSizeChoice, CandidateSwatch, KeyboardLayout, SettingChoice, SettingsPane,
 };
-use super::document::SettingsKey;
+use super::document::{SettingsDocument, SettingsKey};
 use super::engine_settings::{
     CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, Romanization,
     SyllableSeparator,
@@ -76,6 +76,16 @@ pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::ne
     "nasalMarkerUppercaseEnabled",
     ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
 );
+/// Type ts / ch with c (`EngineSettings::is_c_affricate_enabled`). Desktop-only
+/// like `toneInputScheme`, and independent of it. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `isCAffricateEnabled`.
+pub const IS_C_AFFRICATE_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("cAffricateEnabled", ENGINE_DEFAULTS.is_c_affricate_enabled);
+/// Type - with f (`EngineSettings::is_f_hyphen_enabled`). Desktop-only like
+/// `toneInputScheme`, and independent of it. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `isFHyphenEnabled`.
+pub const IS_F_HYPHEN_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("fHyphenEnabled", ENGINE_DEFAULTS.is_f_hyphen_enabled);
 // RETIRED 2026-09-30: `frequencyRecordingEnabled`. No platform has a UI for it
 // and the engine counts every pick now (`RecordUsage` tag 4 reserved). A
 // hand-edited `false` in an existing `settings.json` is inert; spelling reserved.
@@ -210,6 +220,150 @@ pub const APPEARANCE_MODE: SettingsKey<AppearanceMode> =
 /// (`CandidateSizeChoice::from_raw`).
 pub const CANDIDATE_SIZE: SettingsKey<CandidateSizeChoice> =
     SettingsKey::new("candidateTextSize", CandidateSizeChoice::Standard);
+/// The Linux candidate window's primary size, in px. That is the leading
+/// line of a paired cell, and a one-script cell whose script is the mode's
+/// leading script (Hanji mode or romanization mode). The stored name stays
+/// `hanjiFontSize`, so a size chosen when the row was the Hanji size remains
+/// the primary size. The other desktops size both scripts from
+/// `candidateTextSize`. Clamped to `CANDIDATE_FONT_PX_RANGE`. macOS removes
+/// it in `resetAppearanceSettings`.
+pub const HANJI_FONT_SIZE: SettingsKey<i64> = SettingsKey::new("hanjiFontSize", 16);
+/// The Linux candidate window's secondary size, in px: the other line of a
+/// paired cell, and a one-script cell in the mode's other script. The stored
+/// name stays `romanFontSize`. Same range and reset as the primary size.
+pub const ROMAN_FONT_SIZE: SettingsKey<i64> = SettingsKey::new("romanFontSize", 16);
+/// What a Hanji or romanization size is allowed to be. The settings row
+/// stops at the ends; a hand-edited value is clamped to the same range.
+pub const CANDIDATE_FONT_PX_RANGE: std::ops::RangeInclusive<i64> = 12..=48;
+/// The Linux candidate window's Hanji typeface, a fontconfig family name.
+/// Empty is the system sans — the same default as `fontType` = system on
+/// macOS and Windows. The other desktops keep one `fontType`.
+pub const HANJI_FONT_FAMILY: SettingsKey<&'static str> = SettingsKey::new("hanjiFontFamily", "");
+/// The Linux candidate window's romanization typeface. Empty is the system sans,
+/// the same default as the Hanji row.
+pub const ROMAN_FONT_FAMILY: SettingsKey<&'static str> = SettingsKey::new("romanFontFamily", "");
+/// Corner radius of the Linux candidate window, in px. `0` is square.
+pub const CANDIDATE_CORNER_RADIUS: SettingsKey<i64> = SettingsKey::new("candidateCornerRadius", 8);
+/// The air around the Linux candidate window's text, in px. It is the window
+/// pad; the cell pad, the gap, the line gap and the stacked-script gap stay
+/// in the same ratio (`taigikeyboard-popup` `pads`). A new spelling:
+/// `candidateWindowSize` is retired and must not be reused.
+pub const CANDIDATE_WINDOW_PADDING: SettingsKey<i64> =
+    SettingsKey::new("candidateWindowPadding", 4);
+/// How full the Linux candidate window's highlight is, 0–100. `0` is the
+/// cell. `100` meets the window's outer edge, so no pad shows around the
+/// highlighted candidate. A new spelling: `candidateWindowSize` stays retired.
+pub const CANDIDATE_HIGHLIGHT_FILL: SettingsKey<i64> =
+    SettingsKey::new("candidateHighlightFill", 25);
+/// What `candidateHighlightFill` is allowed to be.
+pub const CANDIDATE_HIGHLIGHT_FILL_RANGE: std::ops::RangeInclusive<i64> = 0..=100;
+/// Which color set the Linux candidate window uses. `Custom` reads the four
+/// color keys; every other value paints its swatch. A new spelling.
+pub const CANDIDATE_COLOR_THEME: SettingsKey<CandidateColorTheme> =
+    SettingsKey::new("candidateColorTheme", CandidateColorTheme::Default);
+/// `#RRGGBB` for the Linux candidate window, read while the color theme is
+/// custom. A hand-edited value that is not six hex digits reads as the default.
+pub const CANDIDATE_TEXT_COLOR: SettingsKey<&'static str> =
+    SettingsKey::new("candidateTextColor", "#1A1A1A");
+/// The highlighted cell's text.
+pub const CANDIDATE_SELECTED_TEXT_COLOR: SettingsKey<&'static str> =
+    SettingsKey::new("candidateSelectedTextColor", "#FFFFFF");
+/// The window background.
+pub const CANDIDATE_BACKGROUND_COLOR: SettingsKey<&'static str> =
+    SettingsKey::new("candidateBackgroundColor", "#F6F5F4");
+/// The highlighted cell's background.
+pub const CANDIDATE_SELECTED_BACKGROUND_COLOR: SettingsKey<&'static str> =
+    SettingsKey::new("candidateSelectedBackgroundColor", "#1A5FB4");
+/// What the corner radius and the window padding are allowed to be.
+pub const CANDIDATE_CHROME_PX_RANGE: std::ops::RangeInclusive<i64> = 0..=32;
+
+/// `#RRGGBB` (or `RRGGBB`) as `0xRRGGBB`. Anything else is `fallback`.
+pub fn rgb_from_stored(text: &str, fallback: u32) -> u32 {
+    let hex = text.trim().trim_start_matches('#');
+    if hex.len() == 6 && hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        u32::from_str_radix(hex, 16).unwrap_or(fallback) & 0x00FF_FFFF
+    } else {
+        fallback & 0x00FF_FFFF
+    }
+}
+
+/// `0xRRGGBB` as `#RRGGBB`.
+pub fn rgb_to_stored(rgb: u32) -> String {
+    format!("#{:06X}", rgb & 0x00FF_FFFF)
+}
+
+fn stored_rgb(document: &SettingsDocument, key: &SettingsKey<&'static str>) -> u32 {
+    rgb_from_stored(&document.string(key), rgb_from_stored(key.default, 0))
+}
+
+fn swatch_colors(swatch: CandidateSwatch) -> CandidateColors {
+    CandidateColors {
+        text: rgb_from_stored(swatch.text, 0),
+        selected_text: rgb_from_stored(swatch.selected_text, 0),
+        background: rgb_from_stored(swatch.background, 0),
+        selected_background: rgb_from_stored(swatch.selected_background, 0),
+    }
+}
+
+/// The theme the Appearance picker shows. A stored theme wins. Before that
+/// key existed, the four color keys are the choice: an exact swatch match
+/// selects that theme, and anything else is custom.
+pub fn shown_candidate_color_theme(document: &SettingsDocument) -> CandidateColorTheme {
+    if document.contains(CANDIDATE_COLOR_THEME.name) {
+        return document.choice(&CANDIDATE_COLOR_THEME);
+    }
+    let stored = CandidateColors {
+        text: stored_rgb(document, &CANDIDATE_TEXT_COLOR),
+        selected_text: stored_rgb(document, &CANDIDATE_SELECTED_TEXT_COLOR),
+        background: stored_rgb(document, &CANDIDATE_BACKGROUND_COLOR),
+        selected_background: stored_rgb(document, &CANDIDATE_SELECTED_BACKGROUND_COLOR),
+    };
+    CandidateColorTheme::ALL
+        .iter()
+        .copied()
+        .find(|theme| {
+            theme
+                .swatch()
+                .is_some_and(|swatch| swatch_colors(swatch) == stored)
+        })
+        .unwrap_or(CandidateColorTheme::Custom)
+}
+
+/// The four colors the candidate window paints for `document`.
+pub fn candidate_colors(document: &SettingsDocument) -> CandidateColors {
+    match shown_candidate_color_theme(document).swatch() {
+        Some(swatch) => swatch_colors(swatch),
+        None => CandidateColors {
+            text: stored_rgb(document, &CANDIDATE_TEXT_COLOR),
+            selected_text: stored_rgb(document, &CANDIDATE_SELECTED_TEXT_COLOR),
+            background: stored_rgb(document, &CANDIDATE_BACKGROUND_COLOR),
+            selected_background: stored_rgb(document, &CANDIDATE_SELECTED_BACKGROUND_COLOR),
+        },
+    }
+}
+
+/// Stores `theme` and the four colors it paints, so switching to custom
+/// starts from the colors that were on screen.
+pub fn apply_candidate_color_theme(document: &mut SettingsDocument, theme: CandidateColorTheme) {
+    let painted = theme
+        .swatch()
+        .map(swatch_colors)
+        .unwrap_or_else(|| candidate_colors(document));
+    document.set_choice(&CANDIDATE_COLOR_THEME, theme);
+    document.set_string(&CANDIDATE_TEXT_COLOR, &rgb_to_stored(painted.text));
+    document.set_string(
+        &CANDIDATE_SELECTED_TEXT_COLOR,
+        &rgb_to_stored(painted.selected_text),
+    );
+    document.set_string(
+        &CANDIDATE_BACKGROUND_COLOR,
+        &rgb_to_stored(painted.background),
+    );
+    document.set_string(
+        &CANDIDATE_SELECTED_BACKGROUND_COLOR,
+        &rgb_to_stored(painted.selected_background),
+    );
+}
 // RETIRED 2026-09-23 (USER): `candidateWindowSize` (`small` / `medium` /
 // `large`), the separate knob for the air around the text. The air now scales
 // with the text at one fixed ratio (`CandidateMetrics::resolve`). The spelling
@@ -293,13 +447,15 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub const GENERAL_KEYS: [&str; 12] = [
+pub const GENERAL_KEYS: [&str; 14] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
     TPS_KEYBOARD_SHOWN.name,
     TELEX_GUIDE_SHOWN.name,
     TONE_INPUT_SCHEME.name,
+    IS_C_AFFRICATE_ENABLED.name,
+    IS_F_HYPHEN_ENABLED.name,
     IS_HANJI_FIRST.name,
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,
@@ -310,11 +466,23 @@ pub const GENERAL_KEYS: [&str; 12] = [
 
 /// The keys the Appearance pane's reset removes (`SettingsStore.swift`
 /// `resetAppearanceSettings` is the macOS twin).
-pub const APPEARANCE_KEYS: [&str; 4] = [
+pub const APPEARANCE_KEYS: [&str; 16] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
     CANDIDATE_DISPLAY_MODE.name,
     CANDIDATE_SIZE.name,
+    HANJI_FONT_SIZE.name,
+    ROMAN_FONT_SIZE.name,
+    HANJI_FONT_FAMILY.name,
+    ROMAN_FONT_FAMILY.name,
+    CANDIDATE_CORNER_RADIUS.name,
+    CANDIDATE_WINDOW_PADDING.name,
+    CANDIDATE_HIGHLIGHT_FILL.name,
+    CANDIDATE_COLOR_THEME.name,
+    CANDIDATE_TEXT_COLOR.name,
+    CANDIDATE_SELECTED_TEXT_COLOR.name,
+    CANDIDATE_BACKGROUND_COLOR.name,
+    CANDIDATE_SELECTED_BACKGROUND_COLOR.name,
 ];
 
 /// The 13 source toggles + 12 subcollection toggles the Dictionary Sources pane's reset
@@ -359,6 +527,31 @@ mod tests {
         assert_eq!(IS_KAUTIAN_ENABLED.name, "moeDictEnabled");
         assert_eq!(IS_HANJI_FIRST.name, "isTranslateSwapped");
         assert_eq!(CANDIDATE_DISPLAY_MODE.name, "candidateDisplayMode");
+        assert_eq!(HANJI_FONT_SIZE.name, "hanjiFontSize");
+        assert_eq!(HANJI_FONT_SIZE.default, 16);
+        assert_eq!(ROMAN_FONT_SIZE.name, "romanFontSize");
+        assert_eq!(ROMAN_FONT_SIZE.default, 16);
+        assert_eq!(CANDIDATE_FONT_PX_RANGE, 12..=48);
+        assert_eq!(HANJI_FONT_FAMILY.name, "hanjiFontFamily");
+        assert_eq!(HANJI_FONT_FAMILY.default, "");
+        assert_eq!(ROMAN_FONT_FAMILY.default, "");
+        assert_eq!(CANDIDATE_CORNER_RADIUS.name, "candidateCornerRadius");
+        assert_eq!(CANDIDATE_CORNER_RADIUS.default, 8);
+        assert_eq!(CANDIDATE_WINDOW_PADDING.name, "candidateWindowPadding");
+        assert_eq!(CANDIDATE_WINDOW_PADDING.default, 4);
+        assert_eq!(CANDIDATE_HIGHLIGHT_FILL.name, "candidateHighlightFill");
+        assert_eq!(CANDIDATE_HIGHLIGHT_FILL.default, 25);
+        assert_eq!(CANDIDATE_HIGHLIGHT_FILL_RANGE, 0..=100);
+        assert_eq!(CANDIDATE_CHROME_PX_RANGE, 0..=32);
+        assert_eq!(CANDIDATE_COLOR_THEME.name, "candidateColorTheme");
+        assert_eq!(CANDIDATE_COLOR_THEME.default, CandidateColorTheme::Default);
+        assert_eq!(CANDIDATE_TEXT_COLOR.default, "#1A1A1A");
+        assert_eq!(CANDIDATE_SELECTED_TEXT_COLOR.default, "#FFFFFF");
+        assert_eq!(CANDIDATE_BACKGROUND_COLOR.default, "#F6F5F4");
+        assert_eq!(CANDIDATE_SELECTED_BACKGROUND_COLOR.default, "#1A5FB4");
+        assert_eq!(rgb_from_stored("#d6e4ff", 0), 0x00D6_E4FF);
+        assert_eq!(rgb_from_stored("nope", 0x11), 0x11);
+        assert_eq!(rgb_to_stored(0x1A1A1A), "#1A1A1A");
         assert_eq!(
             CANDIDATE_DISPLAY_MODE.default,
             CandidateDisplayMode::SideBySide
@@ -379,5 +572,62 @@ mod tests {
         assert_no_duplicates(&GENERAL_KEYS);
         assert_no_duplicates(&APPEARANCE_KEYS);
         assert_no_duplicates(&DICTIONARY_SOURCE_KEYS);
+    }
+
+    #[test]
+    fn a_color_theme_paints_its_swatch_until_custom() {
+        let fresh = SettingsDocument::default();
+        assert_eq!(
+            shown_candidate_color_theme(&fresh),
+            CandidateColorTheme::Default
+        );
+        assert_eq!(candidate_colors(&fresh).text, 0x1A_1A_1A);
+        assert_eq!(candidate_colors(&fresh).selected_background, 0x1A_5FB4);
+
+        let mut document = SettingsDocument::default();
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::Sakura);
+        assert_eq!(candidate_colors(&document).background, 0xE6_E5E3);
+        assert_eq!(candidate_colors(&document).selected_background, 0xA5_3945);
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::Gold);
+        assert_eq!(candidate_colors(&document).selected_background, 0xD3_9D19);
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::SeaBreeze);
+        assert_eq!(candidate_colors(&document).text, 0xFF_FFFF);
+        assert_eq!(candidate_colors(&document).background, 0x60_7A99);
+        assert_eq!(candidate_colors(&document).selected_background, 0x2B_4A70);
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::Jade);
+        assert_eq!(candidate_colors(&document).selected_background, 0x5C_8273);
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::Wisteria);
+        assert_eq!(candidate_colors(&document).text, 0xFF_FFFF);
+        assert_eq!(candidate_colors(&document).background, 0x7E_6785);
+        assert_eq!(candidate_colors(&document).selected_background, 0x56_3F68);
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::Catppuccin);
+        assert_eq!(candidate_colors(&document).text, 0xEB_EBEB);
+        assert_eq!(candidate_colors(&document).background, 0x1A_1A1A);
+        assert_eq!(candidate_colors(&document).selected_background, 0x31_4968);
+
+        apply_candidate_color_theme(&mut document, CandidateColorTheme::Custom);
+        assert_eq!(
+            shown_candidate_color_theme(&document),
+            CandidateColorTheme::Custom
+        );
+        assert_eq!(candidate_colors(&document).selected_background, 0x31_4968);
+        document.set_string(&CANDIDATE_TEXT_COLOR, "#010203");
+        assert_eq!(candidate_colors(&document).text, 0x01_0203);
+    }
+
+    #[test]
+    fn colors_chosen_before_the_theme_key_still_select_a_swatch() {
+        let mut document = SettingsDocument::default();
+        document.set_string(&CANDIDATE_BACKGROUND_COLOR, "#E6E5E3");
+        document.set_string(&CANDIDATE_SELECTED_BACKGROUND_COLOR, "#A53945");
+        assert_eq!(
+            shown_candidate_color_theme(&document),
+            CandidateColorTheme::Sakura
+        );
+        document.set_string(&CANDIDATE_TEXT_COLOR, "#112233");
+        assert_eq!(
+            shown_candidate_color_theme(&document),
+            CandidateColorTheme::Custom
+        );
     }
 }

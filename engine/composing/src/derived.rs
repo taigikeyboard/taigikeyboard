@@ -217,6 +217,8 @@ mod tests {
             hanji_conversion: None,
             dictionary_sources: None,
             custom_dictionary_disabled: false,
+            c_types_affricate: false,
+            f_types_hyphen: false,
         }
     }
 

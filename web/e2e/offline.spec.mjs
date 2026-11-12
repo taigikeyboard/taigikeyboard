@@ -21,6 +21,7 @@ import {
   commitWord,
   emptyBox,
   expectState,
+  expectText,
   open,
 } from "./helpers.mjs";
 
@@ -66,7 +67,7 @@ test("a visit types Hanji offline from then on", async ({ page, context }) => {
   await expectState(page, "ready");
   await emptyBox(editor);
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
 });
 
 test("a second visit downloads nothing", async ({ page }) => {
@@ -110,7 +111,7 @@ test("a corrupt download keeps romanization and offers retry", async ({
   await editor.press("a");
   await expect(page.locator("#preedit")).toContainText("a");
   await editor.press("Enter");
-  await expect(editor).toHaveValue(/^a/);
+  await expectText(editor, /^a/);
   expect(await storedDictionaries(page)).not.toContainEqual(
     expect.stringContaining("dictionary.bin"),
   );
@@ -121,7 +122,7 @@ test("a corrupt download keeps romanization and offers retry", async ({
   await expect(retry).toBeHidden();
   await editor.fill("");
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
 });
 
 test("a damaged stored dictionary downloads again", async ({ page }) => {
@@ -139,7 +140,7 @@ test("a damaged stored dictionary downloads again", async ({ page }) => {
   await expectState(page, "ready");
   await emptyBox(page.locator("#text"));
   await commitWord(page.locator("#text"));
-  await expect(page.locator("#text")).toHaveValue("台灣");
+  await expectText(page.locator("#text"), "台灣");
 });
 
 test("the policy blocks an inline script and nothing the page uses", async ({
@@ -285,7 +286,7 @@ test.describe("a new version", () => {
     expect(stored).not.toContain(old);
     await emptyBox(next.locator("#text"));
     await commitWord(next.locator("#text"));
-    await expect(next.locator("#text")).toHaveValue("台灣");
+    await expectText(next.locator("#text"), "台灣");
     await expect(candidates(next)).toHaveCount(0);
   });
 });

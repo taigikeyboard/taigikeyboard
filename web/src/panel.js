@@ -1,5 +1,5 @@
 // The composition and the candidate list, drawn at the caret. Nothing here
-// reaches the textarea until a commit, so its undo stack holds only committed
+// reaches the editor until a commit, so its undo stack holds only committed
 // words (docs/architecture/web-roadmap.md § Text surface).
 
 function span(className, text) {
@@ -76,7 +76,7 @@ export class Panel {
     this.#candidates.addEventListener("scroll", () => {
       onScrolled(this.#candidates.scrollTop);
     });
-    // Focus stays in the textarea, which a commit needs.
+    // Focus stays in the editor, which a commit needs.
     for (const part of [root, this.#preedit]) {
       part.addEventListener("mousedown", (event) => event.preventDefault());
     }
@@ -256,7 +256,7 @@ export class Panel {
     this.#unfoldFrom = null;
   }
 
-  /// Focus stays in the textarea, so a screen reader hears the list only here:
+  /// Focus stays in the editor, so a screen reader hears the list only here:
   /// the one cell Enter would take, not the page on every key.
   #speak(label, cell) {
     this.#spoken.textContent = [label, cell?.text, cell?.annotation]
@@ -446,7 +446,7 @@ export class Panel {
   /// The composition on the caret's own line, over the text there, and the list
   /// under that line, or above it, or beside it where neither has the room: it
   /// never covers the composition, Copy or Clear. A caret scrolled out of view
-  /// leaves both at the textarea's edge.
+  /// leaves both at the editor's edge.
   place({ left, top, lineHeight }) {
     const editor = this.#editor;
     const preedit = this.#preedit;

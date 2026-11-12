@@ -5,7 +5,7 @@
 > **Related**: desktop-release.md (the shared flow), linux-roadmap.md (L10 / L11), windows-release.md (the sibling half)
 
 How the Linux half of a desktop version ships. The shared flow — one draft
-release `desktop-<version>` for all three desktops, tested and published by a
+release `desktop-<version>` for every desktop platform, tested and published by a
 person — is `desktop-release.md`; installing one as a user is
 [`docs/INSTALL.md` § Linux](../INSTALL.md#linux). This file is only what the
 Linux artifact is and how it is built.

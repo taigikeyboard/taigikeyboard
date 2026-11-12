@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   commitWord,
+  expectText,
   firstSection,
   open,
   seedSettings,
@@ -67,9 +68,9 @@ test("Display Language redraws the page and survives a reload", async ({
 
 test("the title stays put in every language", async ({ page }) => {
   await open(page, { settings: { displayLanguage: "ja" } });
-  await expect(page).toHaveTitle("台語齒盤網頁版 - 台語簿仔紙");
+  await expect(page).toHaveTitle("台語齒盤網頁版：台語簿仔紙");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "台語齒盤網頁版 - 台語簿仔紙",
+    "台語齒盤網頁版：台語簿仔紙",
   );
 });
 
@@ -121,7 +122,7 @@ test("the default font is the only one fetched", async ({ page }) => {
   });
   const editor = await open(page);
   await commitWord(editor);
-  await expect(editor).toHaveValue("台灣");
+  await expectText(editor, "台灣");
   // None at all where the machine has Iansui installed (`local()`).
   const others = fonts.filter((path) => !path.endsWith("iansui_regular.woff2"));
   expect(others).toEqual([]);

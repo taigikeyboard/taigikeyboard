@@ -29,9 +29,11 @@ import AppKit
 /// bottom peek that shows there is more to scroll to, the scroller-style-aware
 /// geometry, and Tahoe's separator treatment.
 final class VerticalCandidatePanel: CandidateBasePanel {
-    /// How many rows the window shows and the chords address — the same nine
-    /// the horizontal page holds.
-    private static let visibleRows = HorizontalPageLayout.pageSize
+    /// How many rows the window shows and the slot keys address — one per
+    /// key, as many as the horizontal page holds.
+    private var visibleRows: Int {
+        slotKeySet.pageSize
+    }
 
     /// Air between an overlay scroller and the text it would otherwise touch.
     private static let overlayScrollerGap: CGFloat = 2
@@ -184,11 +186,11 @@ final class VerticalCandidatePanel: CandidateBasePanel {
 
     // MARK: - Selection
 
-    /// The `⌃(slot+1)` chord addresses the nine rows starting at the
+    /// The `slot`-th key addresses the `visibleRows` rows starting at the
     /// viewport's anchor, so the chords follow what the user can see even
     /// though the slot numbers themselves are not drawn.
     override func candidateIndex(forSlot slot: Int) -> Int? {
-        guard (0 ..< Self.visibleRows).contains(slot) else { return nil }
+        guard (0 ..< visibleRows).contains(slot) else { return nil }
         let index = anchorRow + slot
         return cells.indices.contains(index) ? index : nil
     }
@@ -215,7 +217,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     /// underneath, which is what a page key reads as. Clamps into the ends.
     private func jumpPage(by pages: Int) {
         let visualOffset = max(selectedIndex - anchorRow, 0)
-        let targetAnchor = anchorRow + pages * Self.visibleRows
+        let targetAnchor = anchorRow + pages * visibleRows
         if targetAnchor >= 0, targetAnchor < cells.count {
             let target = min(targetAnchor + visualOffset, cells.count - 1)
             scrollRowToTop(targetAnchor)
@@ -250,11 +252,11 @@ final class VerticalCandidatePanel: CandidateBasePanel {
         guard !cells.isEmpty else { return .zero }
 
         let itemHeight = metrics.itemHeight
-        let hasOverflow = cells.count > Self.visibleRows
+        let hasOverflow = cells.count > visibleRows
 
-        // Height: nine rows, plus half a row peeking when there is more — the
+        // Height: `visibleRows` rows, plus half a row peeking when there is more — the
         // cut-off row is what says "scroll me".
-        let visibleCount = min(cells.count, Self.visibleRows)
+        let visibleCount = min(cells.count, visibleRows)
         let bottomPeek: CGFloat = hasOverflow ? itemHeight / 2 : 0
         let windowHeight = CGFloat(visibleCount) * itemHeight
             + CGFloat(max(visibleCount - 1, 0)) * Self.separatorHeight
@@ -304,7 +306,7 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     /// 舅仔 / kǔ-á had widened the column.
     private func resolveWidth() -> (windowWidth: CGFloat, itemWidth: CGFloat, itemTrailing: CGFloat, primaryColumnWidth: CGFloat) {
         let widestPrimary = primaryWidths.prefix(revealedRows).max() ?? 0
-        let scroller = scrollerLayout(hasOverflow: cells.count > Self.visibleRows)
+        let scroller = scrollerLayout(hasOverflow: cells.count > visibleRows)
         let contentWidth = metrics.inlineColumnWidth(
             widestPrimary: widestPrimary,
             widestAnnotation: annotationWidths.prefix(revealedRows).max() ?? 0,
@@ -405,10 +407,10 @@ final class VerticalCandidatePanel: CandidateBasePanel {
     }
 
     /// The clip view's bounds — or, before the window is presented and the
-    /// clip view has no size, the nine rows the window opens on.
+    /// clip view has no size, the `visibleRows` rows the window opens on.
     private var effectiveViewport: NSRect {
         var viewport = scrollView.contentView.bounds
-        viewport.size.height = max(viewport.height, CGFloat(Self.visibleRows) * rowHeight)
+        viewport.size.height = max(viewport.height, CGFloat(visibleRows) * rowHeight)
         return viewport
     }
 

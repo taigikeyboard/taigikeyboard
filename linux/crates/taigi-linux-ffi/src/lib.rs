@@ -13,9 +13,10 @@
 use std::ffi::{c_char, CStr, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::ptr;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
+use taigi_linux_core::popup::{self, Caret, Event};
 use taigi_linux_core::{chrome, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime};
 use taigi_linux_platform::{open_settings, RawKeyEvent};
 
@@ -55,6 +56,9 @@ struct ReplyTable {
     cursor_visible: bool,
     page_size: u32,
     vertical: bool,
+    /// The cells the candidate window draws. The joined strings above stay
+    /// for `taigi_reply_table_candidate`.
+    content: LookupTableContent,
 }
 
 /// The panel menu rows, resolved in the display language of the moment.
@@ -149,6 +153,7 @@ fn reply_table(content: LookupTableContent) -> ReplyTable {
         cursor_visible: content.cursor_visible,
         page_size: content.page_size,
         vertical: content.vertical,
+        content,
     }
 }
 
@@ -186,9 +191,9 @@ pub extern "C" fn taigi_runtime_new() -> *mut TaigiRuntime {
     guarded("taigi_runtime_new", ptr::null_mut(), || {
         taigi_linux_platform::install_debug_logger();
         log::info!("ffi.runtime_new version={}", env!("CARGO_PKG_VERSION"));
-        Box::into_raw(Box::new(TaigiRuntime {
-            inner: Arc::new(Runtime::probe()),
-        }))
+        let runtime = Arc::new(Runtime::probe());
+        let _ = POPUP_RUNTIME.set(Arc::clone(&runtime));
+        Box::into_raw(Box::new(TaigiRuntime { inner: runtime }))
     })
 }
 
@@ -431,6 +436,31 @@ pub unsafe extern "C" fn taigi_engine_set_password_field(
     // SAFETY: non-null and, by contract, a live engine the caller owns.
     let engine = unsafe { &mut *engine };
     engine.state.is_password_field = is_password;
+}
+
+/// # Safety
+/// `engine` is a live engine; `text`, when non-null, a NUL-terminated
+/// UTF-8 string the call only borrows.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_engine_set_surrounding_text(
+    engine: *mut TaigiEngine,
+    text: *const c_char,
+    cursor: u32,
+    anchor: u32,
+) {
+    if engine.is_null() {
+        return;
+    }
+    // SAFETY: non-null and, by contract, a live engine the caller owns.
+    let engine = unsafe { &mut *engine };
+    // SAFETY: non-null and, by contract, NUL-terminated.
+    let text = (!text.is_null())
+        .then(|| unsafe { CStr::from_ptr(text) }.to_str().ok())
+        .flatten();
+    session::set_surrounding_text(
+        &mut engine.state,
+        text.map(|text| (text, cursor as usize, anchor as usize)),
+    );
 }
 
 /// # Safety
@@ -741,6 +771,85 @@ pub unsafe extern "C" fn taigi_reply_table_vertical(
     unsafe { emit_at(reply, index) }
         .and_then(|emit| emit.table.as_ref())
         .is_some_and(|table| table.vertical)
+}
+
+/// The runtime `taigi_popup_show` reads the font sizes from. One per process.
+static POPUP_RUNTIME: OnceLock<Arc<Runtime>> = OnceLock::new();
+
+fn popup_style() -> popup::PopupStyle {
+    match POPUP_RUNTIME.get() {
+        Some(runtime) => popup::PopupStyle::from_document(&runtime.settings.current()),
+        None => popup::PopupStyle::standard(),
+    }
+}
+
+/// # Safety
+/// `reply` is a live reply or null. Shows that entry's candidate page in the
+/// shared window, under the caret rect `(x, y, w, h)` in screen pixels.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_popup_show(
+    reply: *const TaigiReply,
+    index: usize,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+) {
+    if reply.is_null() {
+        return;
+    }
+    guarded("taigi_popup_show", (), || {
+        // SAFETY: non-null and, by contract, a live reply the caller owns.
+        let Some(table) = (unsafe { emit_at(reply, index) }).and_then(|emit| emit.table.as_ref())
+        else {
+            return;
+        };
+        popup::present(&table.content, popup_style(), Caret { x, y, w, h });
+    });
+}
+
+/// Hides the candidate window.
+#[no_mangle]
+pub extern "C" fn taigi_popup_hide() {
+    guarded("taigi_popup_hide", (), popup::hide);
+}
+
+/// The read end that becomes readable when the window reports a click or a
+/// page turn. Valid for the process lifetime; the caller does not close it.
+/// `-1` when the pipe could not be created.
+#[no_mangle]
+pub extern "C" fn taigi_popup_fd() -> i32 {
+    guarded("taigi_popup_fd", -1, popup::notify_fd)
+}
+
+/// # Safety
+/// `kind` and `position` are writable. One queued event: `TAIGI_POPUP_CLICK`
+/// (`position` is the cell on the page) or `TAIGI_POPUP_PAGE` (`position` 0
+/// is the previous page, 1 the next). False when the queue is empty.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_popup_poll(kind: *mut u32, position: *mut u32) -> bool {
+    if kind.is_null() || position.is_null() {
+        return false;
+    }
+    guarded("taigi_popup_poll", false, || {
+        let Some(event) = popup::poll_one() else {
+            return false;
+        };
+        // SAFETY: the pointers are non-null and, by contract, writable.
+        unsafe {
+            match event {
+                Event::Click { position: index } => {
+                    *kind = 1;
+                    *position = index;
+                }
+                Event::Page { forward } => {
+                    *kind = 2;
+                    *position = u32::from(forward);
+                }
+            }
+        }
+        true
+    })
 }
 
 /// # Safety

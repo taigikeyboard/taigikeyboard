@@ -1,7 +1,9 @@
 # corpus
 
-Real Taiwanese text. Nothing here feeds a build, a dictionary artifact, or an
-automated test yet.
+Real Taiwanese text. Nothing here feeds a build or a dictionary artifact.
+The Linux long-horizon test harness reads `taigi-typing/exampleSentences.js`
+when available, or a file selected with `TAIGI_TYPING_CORPUS_PATH`; without it,
+the harness uses its synthetic test sentences.
 
 - `taigi-typing/` — where dogfood sentences come from, so a dogfood check can
   cite a sentence a person actually wrote instead of one made up for the test.

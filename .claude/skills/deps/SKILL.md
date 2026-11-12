@@ -2,6 +2,8 @@
 name: deps
 description: Evaluate which third-party dependencies can be upgraded — Rust crates (engine / desktop / windows / linux / macos / web workspaces), Android Gradle deps + plugins + wrapper, Swift packages (macOS + iOS), Python (dictionary pipeline, emoji/), mise tools, open Dependabot PRs/alerts. Classifies every candidate SAFE / REVIEW / MAJOR / BLOCKED / USER-ONLY against the repo's standing pins and proposes PR groupings. Use when asked "what can we upgrade", "check outdated packages", "dependency audit". Read-only — never edits manifests or lockfiles, never builds, branches or opens a round. Args: scope `rust` | `android` | `apple` | `python` | `tools` | `all` (default all). App-version upgrade compatibility is /upgrade-check.
 disable-model-invocation: false
+context: fork
+model: sonnet
 ---
 
 # Dependency upgrade evaluation

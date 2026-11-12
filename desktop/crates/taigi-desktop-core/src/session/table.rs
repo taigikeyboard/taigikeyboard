@@ -1,7 +1,7 @@
 //! The lookup table as the shell draws it: the candidate list, the symbol
 //! picker or the Telex guide, with labels, highlight and orientation.
 
-use super::{Emit, EngineState, ListSelection, LookupTableContent, SymbolPicker, PAGE_SIZE};
+use super::{Emit, EngineState, ListSelection, LookupTableContent, SymbolPicker};
 use crate::candidates::MAX_DISPLAY_CANDIDATES;
 use crate::composing::CandidateCellContent;
 use crate::keys::{telex_guide_rows, CandidateSlotKeySet, ComposingKeyBindings};
@@ -12,7 +12,8 @@ use crate::strings::StringKey;
 /// The lookup table as things now stand — the symbol picker while it is
 /// up, else the candidate list, else the Telex guide if it is wanted: shown,
 /// updated in place, or taken down. The guide gives way to the list because
-/// the framework has one table to draw (#684). Appended after the composing
+/// the framework has one table to draw (#684); a shell with a card of its own
+/// for the guide (`EngineState::draws_telex_guide`) never gets it here. Appended after the composing
 /// signals so the preedit the list describes is already on screen.
 pub(crate) fn present_table(
     runtime: &DesktopRuntime,
@@ -21,7 +22,7 @@ pub(crate) fn present_table(
     bindings: &ComposingKeyBindings,
     emits: &mut Vec<Emit>,
 ) {
-    lay_out_table(state, settings);
+    lay_out_table(state, settings, bindings.slot_key_set().page_size());
     if let Some(picker) = &state.symbol_picker {
         emits.push(Emit::LookupTable(symbol_picker_table(
             picker, settings, bindings,
@@ -31,8 +32,8 @@ pub(crate) fn present_table(
     }
     let slot_key_set = bindings.slot_key_set();
     if state.candidates.is_empty() {
-        if settings.is_telex_guide_wanted() {
-            emits.push(Emit::LookupTable(telex_guide_table(runtime, settings)));
+        if settings.is_telex_guide_wanted() && !state.draws_telex_guide {
+            emits.push(Emit::LookupTable(telex_guide_table(runtime)));
             state.is_table_shown = true;
         } else if state.is_table_shown {
             emits.push(Emit::HideLookupTable);
@@ -48,12 +49,16 @@ pub(crate) fn present_table(
     state.is_table_shown = true;
 }
 
-/// Gives the list in view its model, when the shell measures its own window
-/// (`EngineState::list_layout`). Here rather than in `list_changed`: this is
-/// the one step every list passes on its way to the screen, it runs before the
-/// labels are read, and the keys that read a model come after it, on the next
-/// event.
-fn lay_out_table(state: &mut EngineState, settings: &SettingsDocument) {
+/// Pages the list in view one cell per slot key, and gives it its model when
+/// the shell measures its own window (`EngineState::list_layout`). Here rather
+/// than in `list_changed`: this is the one step every list passes on its way
+/// to the screen, it runs before the labels are read, and the keys that read
+/// a page come after it, on the next event.
+fn lay_out_table(state: &mut EngineState, settings: &SettingsDocument, page_size: usize) {
+    state.selection.set_page_size(page_size);
+    if let Some(picker) = &mut state.symbol_picker {
+        picker.selection.set_page_size(page_size);
+    }
     let Some(layout) = &state.list_layout else {
         return;
     };
@@ -69,7 +74,7 @@ fn lay_out_table(state: &mut EngineState, settings: &SettingsDocument) {
     };
     let count = cells.len();
     cells.truncate(MAX_DISPLAY_CANDIDATES);
-    selection.adopt(layout.layout(&cells, settings), count);
+    selection.adopt(layout.layout(&cells, settings, page_size), count);
 }
 
 /// The cells as the panel draws them; labels = the slot keys, one per position of the
@@ -84,7 +89,8 @@ fn table_content(
 ) -> LookupTableContent {
     let cells = state.candidates.cells();
     let shift = state.selection.key_slot_shift();
-    let labels = (0..PAGE_SIZE)
+    let page_size = slot_key_set.page_size();
+    let labels = (0..page_size)
         .map(|position| match position.checked_sub(shift) {
             Some(slot) => slot_key_set.label_for_slot(slot),
             None => String::new(),
@@ -95,7 +101,7 @@ fn table_content(
         labels,
         cursor: state.selection.selected_index().unwrap_or(0) as u32,
         cursor_visible: true,
-        page_size: PAGE_SIZE as u32,
+        page_size: page_size as u32,
         vertical: is_vertical_layout(settings),
     }
 }
@@ -108,14 +114,15 @@ fn symbol_picker_table(
     bindings: &ComposingKeyBindings,
 ) -> LookupTableContent {
     let slot_key_set = bindings.slot_key_set();
+    let page_size = slot_key_set.page_size();
     LookupTableContent {
         cells: plain_cells(picker.symbols.iter().cloned()),
-        labels: (0..PAGE_SIZE)
+        labels: (0..page_size)
             .map(|slot| slot_key_set.label_for_slot(slot))
             .collect(),
         cursor: picker.selection.selected_index().unwrap_or(0) as u32,
         cursor_visible: true,
-        page_size: PAGE_SIZE as u32,
+        page_size: page_size as u32,
         vertical: is_vertical_layout(settings),
     }
 }
@@ -123,13 +130,13 @@ fn symbol_picker_table(
 /// The Telex key table as a lookup table: the title row, then `key  meaning`
 /// per row, no labels, no highlight, one vertical page (Linux roadmap L4 —
 /// platform-adapted presentation of `keys::telex_guide_rows`).
-fn telex_guide_table(runtime: &DesktopRuntime, settings: &SettingsDocument) -> LookupTableContent {
+fn telex_guide_table(runtime: &DesktopRuntime) -> LookupTableContent {
     let strings = runtime.strings();
     let mut rows = vec![strings
         .resolve(StringKey::SettingsToneSchemeTelex)
         .to_owned()];
     rows.extend(
-        telex_guide_rows(settings.choice(&keys::INPUT_MODE), &strings)
+        telex_guide_rows(&strings)
             .into_iter()
             .map(|row| format!("{}  {}", row.key, row.meaning)),
     );
@@ -166,7 +173,7 @@ mod tests {
     use crate::keys::ComposingKeyBindings;
     use crate::platform::test_support::TEST_PLATFORM;
     use crate::session::test_support::{row_model, runtime};
-    use crate::session::ListLayout;
+    use crate::session::{ListLayout, PAGE_SIZE};
 
     fn present_under(state: &mut EngineState, settings: SettingsDocument) -> Vec<Emit> {
         let bindings = ComposingKeyBindings::from_document(&settings, TEST_PLATFORM);
@@ -197,6 +204,7 @@ mod tests {
             &self,
             cells: &[CandidateCellContent],
             _settings: &SettingsDocument,
+            _page_size: usize,
         ) -> Option<ExpandableListModel> {
             self.cell_counts.lock().unwrap().push(cells.len());
             Some(row_model(cells.len()))
@@ -214,6 +222,7 @@ mod tests {
             &self,
             _cells: &[CandidateCellContent],
             _settings: &SettingsDocument,
+            _page_size: usize,
         ) -> Option<ExpandableListModel> {
             *self.asked.lock().unwrap() += 1;
             None
@@ -272,6 +281,30 @@ mod tests {
     }
 
     #[test]
+    fn type_hyphen_with_f_pages_eight_and_labels_eight() {
+        // trace: Standard + Type - with f → `BareKeysWithoutF`, eight keys:
+        // the table pages eight, labels `q w d z x v y ;`, and PageDown
+        // lands on cell 8 — the ninth cell no key picks is never shown.
+        let mut settings = SettingsDocument::default();
+        settings.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
+        let mut state = EngineState {
+            symbol_picker: Some(picker_of(20)),
+            ..EngineState::default()
+        };
+        let emits = present_under(&mut state, settings);
+        let [Emit::LookupTable(table)] = emits.as_slice() else {
+            panic!("one lookup table, got {emits:?}");
+        };
+        assert_eq!(table.page_size, 8);
+        assert_eq!(table.labels, ["q", "w", "d", "z", "x", "v", "y", ";"]);
+        let picker = state.symbol_picker.as_mut().expect("the picker");
+        picker
+            .selection
+            .navigate(crate::keys::CandidateNavigation::PageDown, false);
+        assert_eq!(picker.selection.selected_index(), Some(8));
+    }
+
+    #[test]
     fn with_no_layout_a_list_stays_paged() {
         let mut state = EngineState {
             symbol_picker: Some(picker_of(40)),
@@ -300,6 +333,22 @@ mod tests {
         });
         let emits = present_under(&mut state, guide_wanted());
         assert!(matches!(emits.as_slice(), [Emit::LookupTable(table)] if table.cursor_visible));
+    }
+
+    #[test]
+    fn a_shell_that_draws_its_own_guide_gets_no_guide_table() {
+        // trace: telexGuideShown, but draws_telex_guide → the guide is not a
+        // table; one left on screen goes down.
+        let mut state = EngineState {
+            draws_telex_guide: true,
+            is_table_shown: true,
+            ..EngineState::default()
+        };
+        assert_eq!(
+            present_under(&mut state, guide_wanted()),
+            vec![Emit::HideLookupTable]
+        );
+        assert!(present_under(&mut state, guide_wanted()).is_empty());
     }
 
     #[test]

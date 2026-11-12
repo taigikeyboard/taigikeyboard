@@ -7,6 +7,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
@@ -34,8 +35,10 @@ data class GridKey(
     }
 }
 
+/** Over the layout [assets] and the engine's tone-mark table [toneVariations] (JVM tests pass their own). */
 class CustomLayoutTables(
     private val assets: LayoutAssets,
+    private val toneVariations: () -> RustEngineBridge.ToneVariations,
 ) {
     /** A base table's places below the digit row, in reading order. */
     class BaseTable(
@@ -89,18 +92,16 @@ class CustomLayoutTables(
 
     /**
      * Tone-marked letters for long-press lists, one row per lowercase base (Shift uppercases them on
-     * the keyboard): a e i o oo o͘ u m n ng first, then any other base; each row TL's marks, then the
-     * marks only POJ has. iOS `CustomLayout.toneRows`.
+     * the keyboard): a e i o oo o͘ u m n ng first, then any other base; each row the engine's universal
+     * list (both scripts' marks, both tone-9 marks). iOS `CustomLayout.toneRows`.
      */
     val toneRows: List<List<String>> by lazy {
-        val toneBases = toneMarks.values
-            .flatMap { it.keys }
-            .filter { it == it.lowercase() }
-            .toSet()
+        val universal = toneVariations().universal
+        val toneBases = universal.keys.filter { it == it.lowercase() }.toSet()
         val leadingBases = listOf("a", "e", "i", "o", "oo", "o\u0358", "u", "m", "n", "ng").filter { it in toneBases }
         (leadingBases + (toneBases - leadingBases.toSet()).sorted()).map { base ->
             // ⁿ rides the `n` list but is no tone mark: it sits with the letters.
-            composedUnique(toneMarks.values.flatMap { it[base].orEmpty() }).filterNot { it == TRAY_NASAL_MARKER }
+            universal[base].orEmpty().filterNot { it == TRAY_NASAL_MARKER }
         }
     }
 
@@ -124,13 +125,6 @@ class CustomLayoutTables(
     }
 
     // The long-press tables above and below serve the editor only, so the keyboard never parses them.
-
-    /** Tone-mark long-press entries by script, then by key label. */
-    private val toneMarks: Map<LayoutScript, Map<String, List<String>>> by lazy {
-        LayoutScript.entries.associateWith { script ->
-            assets.extendedPopups(script.inputMode).mapValues { (_, keys) -> keys.mapNotNull(::entry) }
-        }
-    }
 
     init {
         // Bases share files (PhahTaigi has one table for both scripts, modifiers ignore the script,
@@ -225,14 +219,15 @@ class CustomLayoutTables(
 
     /**
      * The built-in long-press list of the key labelled [label] on [layout]'s base and script: the base's
-     * own key for that label (else the catalog's half-width key), then its tone marks.
+     * own key for that label (else the catalog's half-width key), then its tone marks
+     * ([CustomLayout.toneMarks]: a universal layout's are both scripts').
      */
     fun defaultCallouts(
         layout: CustomLayout,
         label: String,
     ): List<String> {
         val ownPopups = baseTable(layout.base, layout.script)?.keyPopups?.get(label) ?: catalog[label]?.first?.let(::popupEntries).orEmpty()
-        return ownPopups + toneMarks[layout.script]?.get(label).orEmpty()
+        return ownPopups + layout.toneMarks(toneVariations())[label].orEmpty()
     }
 
     /** The long-press list the key labelled [label] shows: [layout]'s own, else the built-in one. */
@@ -254,11 +249,15 @@ class CustomLayoutTables(
     /**
      * [arrangement] — the keyboard [substitute] made from [layout], extended popups added — with each
      * board key's long-press list replaced by [layout]'s own, where it has one. An empty list leaves the
-     * key without a long-press.
+     * key without a long-press. [isFullWidthPunctuation] gives each entry the form the board would type
+     * (`,` → `，`): the board's key with that label first (MOE1 `(` stays half-width), else the catalog
+     * key; each entry once. Half-width keeps the list as stored, so a stored `，` stays full-width. iOS
+     * `CustomLayout.typedCallouts`.
      */
     fun applyCallouts(
         arrangement: ComputedLayoutDataArrangement,
         layout: CustomLayout,
+        isFullWidthPunctuation: Boolean,
     ) {
         if (layout.callouts.isEmpty()) return
         val placed = layout.keys.filterNotNullTo(LinkedHashSet())
@@ -266,10 +265,23 @@ class CustomLayoutTables(
         // first in reading order winning (iOS `halfWidthLabel`): `‧` and `•` share the full-width form `·`.
         val halfWidthLabels = HashMap<String, String>()
         placed.forEach { label -> catalog[label]?.let { (_, full) -> halfWidthLabels.putIfAbsent(full.label, label) } }
-        for (piece in arrangement.drop(1).flatMap(::pieces)) {
-            val key = (piece as? Piece.Character)?.key ?: continue
-            val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label] ?: continue
-            layout.callouts[label]?.let { entries -> key.popup = entries.mapTo(mutableListOf(), ::calloutKey) }
+        val boardKeys =
+            arrangement.drop(1).flatMap(::pieces).mapNotNull { piece ->
+                val key = (piece as? Piece.Character)?.key ?: return@mapNotNull null
+                val label = key.label.takeIf { it in placed } ?: halfWidthLabels[key.label] ?: return@mapNotNull null
+                label to key
+            }
+        // What the board types for each half-width label right now: the key's own form at full width.
+        val boardForms = if (isFullWidthPunctuation) boardKeys.associate { (label, key) -> label to key.label } else emptyMap()
+
+        fun typed(entries: List<String>): List<String> =
+            if (!isFullWidthPunctuation) {
+                entries
+            } else {
+                entries.map { text -> boardForms[text] ?: catalog[text]?.second?.let(::entry) ?: text }.distinct()
+            }
+        for ((label, key) in boardKeys) {
+            layout.callouts[label]?.let { entries -> key.popup = typed(entries).mapTo(mutableListOf(), KeyData::ofEntry) }
         }
     }
 
@@ -294,12 +306,7 @@ class CustomLayoutTables(
         layout: CustomLayout,
         use: LayoutUse,
     ): CustomLayout {
-        val script =
-            when (use) {
-                LayoutUse.UNIVERSAL -> return layout.copy(isUniversal = true)
-                LayoutUse.TL -> LayoutScript.TL
-                LayoutUse.POJ -> LayoutScript.POJ
-            }
+        val script = use.script ?: return layout.copy(isUniversal = true)
         val oldCounts = characterCountsPerRow(baseTable(layout.base, layout.script) ?: return layout)
         val newCounts = characterCountsPerRow(baseTable(layout.base, script) ?: return layout)
         var start = 0
@@ -494,9 +501,6 @@ class CustomLayoutTables(
         }
 
         fun popupEntries(key: KeyData): List<String> = key.popup.mapNotNull(::entry)
-
-        /** A long-press entry as a key: one code point types itself; longer text has code 0, as the tray's finals do. */
-        fun calloutKey(entry: String): KeyData = KeyData(if (entry.codePointCount(0, entry.length) == 1) entry.codePointAt(0) else 0, entry)
 
         /** [chars] in NFC, each once (TL and POJ spell some marks in different forms). */
         fun composedUnique(chars: List<String>): List<String> = chars.map { Normalizer.normalize(it, Normalizer.Form.NFC) }.distinct()

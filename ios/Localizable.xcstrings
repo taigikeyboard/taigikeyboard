@@ -614,7 +614,7 @@
       }
     },
     "i18n_desktop_telexGuideHyphen": {
-      "comment": "The syllable hyphen: the Telex guide row meaning for f, and the Syllable Separator picker's Hyphen value (settings.syllableSeparator).",
+      "comment": "The syllable hyphen: the Syllable Separator picker's Hyphen value (settings.syllableSeparator). Named for the Telex guide's f row, which went when f left the Telex keys (2026-11-10).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2395,6 +2395,24 @@
         }
       }
     },
+    "i18n_home_discordCommunity": {
+      "comment": "Home: last row of the Other (FAQ) section, beside the Discord logo: opens the Discord server for a question the FAQ does not answer. Matches the issue chooser's Discord entry (問題討論).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questions & Discussion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "質問・ディスカッション"
+          }
+        }
+      }
+    },
     "i18n_home_discordLink": {
       "comment": "About page footer: tooltip + accessibility name of the Discord icon link. A product name — same in every language.",
       "extractionState": "manual",
@@ -3224,7 +3242,7 @@
       }
     },
     "i18n_layout_editorTitleNew": {
-      "comment": "Layout editor top-bar title in create mode; also the name-field placeholder and the name a layout saved with a blank name gets. Edit mode shows the layout's own name.",
+      "comment": "Name-field placeholder of the layout name dialog (create and Save), and the name a layout created with a blank name gets. The editor's top bar shows the layout's own name.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -3278,7 +3296,7 @@
       }
     },
     "i18n_layout_nameHeader": {
-      "comment": "Layout name alert header, shown on Save in the layout editor.",
+      "comment": "Layout name dialog header, shown when creating a layout (Layout tab) and on Save when editing one.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -4502,7 +4520,7 @@
       }
     },
     "i18n_theme_cardMenuCustomize": {
-      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
+      "comment": "Built-in theme card action-menu item: open the theme editor on a new custom theme prefilled from this built-in theme. Linux Appearance uses the same word for the custom color theme. DRAFT TL/POJ (same reading as customThemesSection's 自訂) + en/ja pending USER proofread.",
       "extractionState": "manual",
       "localizations": {
         "en": {

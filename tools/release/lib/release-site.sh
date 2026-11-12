@@ -19,6 +19,11 @@ WINDOWS_SITE_PATH="_data/windows_release.json"
 LINUX_SITE_PATH="_data/linux_release.json"
 LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
 LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
+# ChromeOS has site data but no manifest: the Chrome Web Store updates it.
+CHROMEOS_SITE_PATH="_data/chromeos_release.json"
+# The unlisted /beta page (`tools/release/beta-release.sh` writes it; the page
+# hides a beta whose version a `_data/*_release.json` already names).
+BETA_SITE_PATH="_data/beta_release.json"
 MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 
@@ -26,8 +31,11 @@ WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 # ISPs, so the website and both appcasts name this R2 mirror instead
 # (docs/architecture/desktop-release.md § One-time: the R2 mirror).
 R2_BUCKET="taigikeyboard-downloads"
+DOWNLOAD_HOST_URL="https://dl.taigikeyboard.tw"
+# Published releases. Every appcast and the Homebrew cask name objects here.
 R2_PREFIX="desktop"
-DOWNLOAD_BASE_URL="https://dl.taigikeyboard.tw/$R2_PREFIX"
+DOWNLOAD_BASE_URL="$DOWNLOAD_HOST_URL/$R2_PREFIX"
+# (`beta/` holds internal-test copies of a draft: tools/release/beta-release.sh.)
 
 # Fail before anything is uploaded when the mirror cannot be written.
 require_r2() {
@@ -80,14 +88,20 @@ anonymous_download_retrying() {
     done
 }
 
-# Copy a verified installer and its staged receipt to the R2 mirror, then read
-# the installer back the way users will and hold it to the digest it was
-# verified at — the website is about to name the mirror URL, not GitHub's.
+# Copy an installer and its staged receipt to the R2 mirror, then read the
+# installer back the way users will and hold it to its digest — the website is
+# about to name the mirror URL, not GitHub's. The receipt must name the
+# installer's bytes: it is mirrored as-is, never regenerated, so the mirror
+# carries the staged digest.
 #
-#   mirror_asset <file> <receipt file> <asset name> <sha256>
+#   mirror_asset <file> <receipt file> <asset name> <sha256 of file> <bucket prefix>
 mirror_asset() {
-    local file="$1" receipt="$2" name="$3" sha256="$4"
-    local key="s3://$R2_BUCKET/$R2_PREFIX/$name" url="$DOWNLOAD_BASE_URL/$name"
+    local file="$1" receipt="$2" name="$3" sha256="$4" prefix="$5" receipt_sha256
+    [[ -n "$prefix" ]] || fail "mirror_asset needs a bucket prefix"
+    receipt_sha256="$(cut -d' ' -f1 "$receipt")"
+    [[ "$receipt_sha256" == "$sha256" ]] ||
+        fail "$name.sha256 says $receipt_sha256, but the installer hashes to $sha256"
+    local key="s3://$R2_BUCKET/$prefix/$name" url="$DOWNLOAD_HOST_URL/$prefix/$name"
     local mirrored="$RELEASE_TEMP_DIR/mirror-$name"
 
     echo "  mirroring to $url"

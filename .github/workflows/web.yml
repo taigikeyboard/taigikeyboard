@@ -1,17 +1,18 @@
 name: Web
 
 # The web version's gates: `make web-check` (the wasm build, the Node smoke test
-# over the real dictionaries, clippy, biome, fmt) and `make web-e2e` (Playwright
-# in Chromium over the same dictionaries). An engine, desktop-shared or
-# dictionary change triggers it too, because `taigi-web` links those crates and
+# over the real dictionaries, clippy, biome, fmt) and Playwright in Chromium
+# over the staged site, using the official image's browsers and system libraries.
+# An engine, desktop-shared or dictionary change triggers it too, because
+# `taigi-web` links those crates and
 # asserts top candidates against that data; a font or string change, because the
 # page ships them; the iOS app icon too. A push to main runs the gates only; the
-# site deploys nightly at 00:00 Taiwan time (16:00 UTC), from main's head, when
-# that head passes the gates and differs from the last nightly run's
+# site deploys hourly (minute 0), from main's head, when
+# that head passes the gates and differs from the last scheduled run's
 # (docs/architecture/web-release.md).
 on:
   schedule:
-    - cron: '0 16 * * *'
+    - cron: '0 * * * *'
   pull_request:
     paths:
       - 'web/**'
@@ -46,10 +47,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # A nightly run whose head the last successful nightly run already had
+  # A scheduled run whose head the last successful scheduled run already had
   # deploys nothing: that run deployed it, or skipped it for the same reason.
   changed:
-    name: main moved since last nightly
+    name: main moved since last scheduled run
     if: github.event_name == 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -63,7 +64,7 @@ jobs:
           last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow web.yml --event schedule \
             --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
           if [ "$last" = "$GITHUB_SHA" ]; then moved=false; else moved=true; fi
-          echo "last nightly: ${last:-none}, head: $GITHUB_SHA, moved: $moved"
+          echo "last scheduled: ${last:-none}, head: $GITHUB_SHA, moved: $moved"
           echo "moved=$moved" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
@@ -85,7 +86,7 @@ jobs:
       # contributor installs; protoc is there because engine/protos/build.rs
       # shells out to it; uv is what mise installs fonttools with; zig compiles
       # and archives SQLite's wasm objects (web/Makefile).
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: 2026.11.2
           install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome uv pipx:fonttools zig
@@ -100,8 +101,8 @@ jobs:
           workspaces: web
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make web-e2e`'s
-      # `site` step and change only with their inputs (web/Makefile's
+      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make -C web site`
+      # and change only with their inputs (web/Makefile's
       # `$(FONTS)/.stamp` rule; fonttools' pin is in mise.toml). After
       # rust-cache, which owns the rest of web/target.
       - id: fonts
@@ -118,8 +119,26 @@ jobs:
       - name: make web-check
         run: make web-check
 
-      - name: make web-e2e
-        run: make web-e2e
+      # The ChromeOS input method's store zip, over the wasm web-check just
+      # built; the release builds it in chromeos-build.yml.
+      - name: make -C web chromeos
+        run: make -C web chromeos
+
+      - name: Stage the site
+        run: make -C web site
+
+      # The image includes system libraries, avoiding apt and Ubuntu mirror DNS
+      # outages at test time. Match the installed
+      # package exactly, since each Playwright version needs its own browsers.
+      # Rust and mise stay on the host; only the browser tests use the image.
+      - name: Playwright (Chromium)
+        run: |
+          version=$(node --print 'require("./web/node_modules/@playwright/test/package.json").version')
+          docker run --rm --init --ipc=host \
+            --env CI=true \
+            --volume "$PWD/web:/work" --workdir /work \
+            "mcr.microsoft.com/playwright:v${version}-noble" \
+            npx --no-install playwright test --project=chromium
 
   deploy:
     name: Deploy
@@ -129,6 +148,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Start the deploy in taigikeyboard/web
-        run: gh workflow run deploy.yml --repo taigikeyboard/web --field "commit=$GITHUB_SHA"
+        run: gh workflow run deploy.yml --repo taigikeyboard/web
         env:
           GH_TOKEN: ${{ secrets.WEB_DEPLOY_TOKEN }}

@@ -1,0 +1,147 @@
+name: Emoji watch
+
+# Checks whether Unicode has published an Emoji version newer than the pin in
+# emoji/Makefile (UNICODE_EMOJI_VERSION) and opens one issue per new version,
+# carrying the emoji-test.txt diff against the committed snapshot. An open issue
+# is refreshed on every run; a closed one is left alone.
+# Unicode ships one Emoji version a year, in September: weekly checks
+# August–October, monthly otherwise. Bump steps: emoji/data/SOURCES.md § Version pin.
+on:
+  schedule:
+    # 08:00 Taiwan time.
+    - cron: '0 0 * 8-10 1'
+    - cron: '0 0 1 1-7,11-12 *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emoji-watch
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_URL: https://unicode.org/Public/emoji/latest/emoji-test.txt
+  SNAPSHOT_PATH: emoji/data/emoji-test.txt
+
+jobs:
+  check:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            emoji/Makefile
+            emoji/data/emoji-test.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Compare pinned and upstream versions
+        id: compare
+        run: |
+          set -euo pipefail
+          pinned=$(sed -n 's/^UNICODE_EMOJI_VERSION := *//p' emoji/Makefile)
+          curl --fail --silent --show-error --max-time 120 --retry 3 \
+            --output "$RUNNER_TEMP/emoji-test.txt" "$UPSTREAM_URL"
+          upstream=$(sed -n 's/^# Version: *//p' "$RUNNER_TEMP/emoji-test.txt" | head -n 1)
+          upstream_date=$(sed -n 's/^# Date: *//p' "$RUNNER_TEMP/emoji-test.txt" | head -n 1)
+          if [ -z "$pinned" ] || [ -z "$upstream" ]; then
+            echo "::error::Could not parse versions (pinned='$pinned', upstream='$upstream')"
+            exit 1
+          fi
+          echo "Pinned Emoji $pinned; upstream Emoji $upstream ($upstream_date)"
+          newest=$(printf '%s\n%s\n' "$pinned" "$upstream" | sort -V | tail -n 1)
+          {
+            echo "pinned=$pinned"
+            echo "upstream=$upstream"
+            echo "upstream_date=$upstream_date"
+            echo "newer=$([ "$newest" = "$pinned" ] && echo false || echo true)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Diff against committed snapshot
+        id: diff
+        if: steps.compare.outputs.newer == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/diff"
+          # diff exits 1 when the files differ.
+          diff -u --label "a/$SNAPSHOT_PATH" --label "b/$SNAPSHOT_PATH" \
+            "$SNAPSHOT_PATH" "$RUNNER_TEMP/emoji-test.txt" > "$RUNNER_TEMP/diff/emoji-test.diff" || [ $? -eq 1 ]
+          added=$(grep -c '^+[0-9A-F].*; fully-qualified' "$RUNNER_TEMP/diff/emoji-test.diff" || true)
+          removed=$(grep -c '^-[0-9A-F].*; fully-qualified' "$RUNNER_TEMP/diff/emoji-test.diff" || true)
+          echo "added=$added" >> "$GITHUB_OUTPUT"
+          echo "removed=$removed" >> "$GITHUB_OUTPUT"
+
+      - name: Upload full diff
+        id: artifact
+        if: steps.compare.outputs.newer == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: emoji-test-diff
+          path: ${{ runner.temp }}/diff/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Create or refresh issue
+        if: steps.compare.outputs.newer == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.compare.outputs.pinned }}
+          UPSTREAM: ${{ steps.compare.outputs.upstream }}
+          UPSTREAM_DATE: ${{ steps.compare.outputs.upstream_date }}
+          ADDED: ${{ steps.diff.outputs.added }}
+          REMOVED: ${{ steps.diff.outputs.removed }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          export TITLE="chore(emoji): Unicode Emoji $UPSTREAM available"
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state all --limit 100 \
+            --search "in:title \"Unicode Emoji $UPSTREAM available\"" \
+            --json number,title,state --jq '.[] | select(.title == env.TITLE) | "\(.number) \(.state)"' | head -n 1)
+          if [ "${existing#* }" = "CLOSED" ]; then
+            echo "::notice::Issue #${existing% *} is closed; leaving Emoji $UPSTREAM alone"
+            exit 0
+          fi
+
+          # GitHub caps an issue body at 65536 characters; bytes >= characters.
+          diff_file="$RUNNER_TEMP/diff/emoji-test.diff"
+          limit=60000
+          cldr=$(gh api repos/unicode-org/cldr/releases/latest --jq .tag_name || echo unknown)
+          {
+            echo "Unicode published **Emoji $UPSTREAM** (\`emoji-test.txt\` Date: $UPSTREAM_DATE)."
+            echo "The repository pins Emoji $PINNED (\`UNICODE_EMOJI_VERSION\` in \`emoji/Makefile\`)."
+            echo
+            echo "Fully-qualified lines: **+$ADDED / -$REMOVED** (skin-tone forms counted separately)."
+            echo
+            echo "Latest CLDR release: \`$cldr\` — keywords come from CLDR; bump \`CLDR_TAG\` together."
+            echo
+            echo "Bump steps: \`emoji/data/SOURCES.md\` § Version pin (\`fetch-emoji\` skill): \`make fetch\` + \`make build\` in \`emoji/\` and review the diff."
+            echo
+            echo "<details open><summary><code>$SNAPSHOT_PATH</code> → upstream</summary>"
+            echo
+            echo '```diff'
+            if [ "$(wc -c < "$diff_file")" -gt "$limit" ]; then
+              head -c "$limit" "$diff_file" | sed '$d'
+              echo '```'
+              echo
+              echo "**Truncated** — full diff: $ARTIFACT_URL"
+            else
+              cat "$diff_file"
+              echo '```'
+            fi
+            echo
+            echo "</details>"
+            echo
+            echo "Source: $UPSTREAM_URL · Full diff: $ARTIFACT_URL"
+            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > "$RUNNER_TEMP/issue.md"
+
+          if [ -n "$existing" ]; then
+            gh issue edit "${existing% *}" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/issue.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$RUNNER_TEMP/issue.md"
+          fi

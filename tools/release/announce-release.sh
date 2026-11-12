@@ -129,18 +129,14 @@ fetch_platform_asset() {
     [[ "$ASSET_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "cannot hash the download from $asset_url"
     echo "  sha256 $ASSET_SHA256"
 
-    # The receipt staging wrote must name the bytes GitHub serves; it is
-    # mirrored as-is, never regenerated, so the mirror carries the staged digest.
+    # The staged receipt, checked against the installer by mirror_asset.
     # Every `|| fail` below is load-bearing: this function runs as an `if`
     # condition, where `set -e` does not stop it.
-    local receipt="$downloaded.sha256" receipt_sha256
+    local receipt="$downloaded.sha256"
     anonymous_download "$asset_url.sha256" "$receipt" ||
         fail "$asset_url.sha256 is not anonymously reachable — staging attaches one beside every installer"
-    receipt_sha256="$(cut -d' ' -f1 "$receipt")"
-    [[ "$receipt_sha256" == "$ASSET_SHA256" ]] ||
-        fail "$asset_name.sha256 on $DESKTOP_TAG says $receipt_sha256, but the installer hashes to $ASSET_SHA256"
 
-    mirror_asset "$downloaded" "$receipt" "$asset_name" "$ASSET_SHA256"
+    mirror_asset "$downloaded" "$receipt" "$asset_name" "$ASSET_SHA256" "$R2_PREFIX"
 
     ASSET_URL="$DOWNLOAD_BASE_URL/$asset_name"
     announced_platforms+=("$platform")
@@ -181,20 +177,23 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
     )
 fi
 
-# No manifest to wait for: nothing installed polls for a Linux package.
+# No manifest to wait for: nothing installed polls for a Linux package, and the
+# Chrome Web Store updates the ChromeOS input method. The ChromeOS data still
+# matters: it is what tells the /beta page this version is out.
 # One triple per format: platform label, asset name, site data path.
-for linux_format in \
+for unpolled_format in \
     "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
     "Fedora|$LINUX_RPM_ASSET|$LINUX_RPM_SITE_PATH" \
-    "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH"; do
-    IFS='|' read -r label asset site_path <<< "$linux_format"
+    "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH" \
+    "ChromeOS|$CHROMEOS_ASSET|$CHROMEOS_SITE_PATH"; do
+    IFS='|' read -r label asset site_path <<< "$unpolled_format"
     if fetch_platform_asset "$label" "$asset"; then
         site_files+=("$site_path" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
     fi
 done
 
 [[ ${#site_files[@]} -gt 0 ]] ||
-    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET — there is nothing to announce"
+    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET, $CHROMEOS_ASSET — there is nothing to announce"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. A manifest published before its download is reachable
@@ -213,3 +212,8 @@ echo ""
 echo "✓ announced $SHORT_VERSION for ${announced_platforms[*]}"
 echo "  release   $RELEASE_PAGE_URL"
 echo "  website   https://taigikeyboard.tw/#download"
+if [[ " ${announced_platforms[*]} " == *" ChromeOS "* ]]; then
+    echo ""
+    echo "  ChromeOS: upload $CHROMEOS_ASSET from the release to the Chrome Web Store"
+    echo "  Developer Dashboard and submit it for review (docs/architecture/chromeos-release.md)."
+fi

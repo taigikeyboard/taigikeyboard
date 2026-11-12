@@ -27,8 +27,9 @@ struct HorizontalPageLayout: Equatable {
     /// so the arrow edge does not wander as the pages turn.
     let pageBudget: CGFloat
 
-    /// How many candidates one page of the window can hold, which is also how
-    /// many the nine slot keys can address.
+    /// The most candidates one page of the window can hold — the nine slot
+    /// keys of the fullest set. A page holds as many as the live set has keys
+    /// (`CandidateSlotKeySet.pageSize`), which callers pass as `pageSize`.
     static let pageSize = 9
 
     /// A page never packs fewer potential columns than this: a run of very wide
@@ -39,10 +40,10 @@ struct HorizontalPageLayout: Equatable {
     /// The empty layout, for a window with no candidates in it.
     static let empty = HorizontalPageLayout(pages: [], pageBudget: 0)
 
-    /// The nominal width of a full row of slots — nine of them, or the four
-    /// upstream's narrowest window keeps, whichever is more. Both the packer
-    /// and the expandable grid's baseline column width are stated in it.
-    static func rowBudget(slotWidth: CGFloat) -> CGFloat {
+    /// The nominal width of a full row of slots — `pageSize` of them, or the
+    /// four upstream's narrowest window keeps, whichever is more. Both the
+    /// packer and the expandable grid's baseline column width are stated in it.
+    static func rowBudget(slotWidth: CGFloat, pageSize: Int) -> CGFloat {
         slotWidth * CGFloat(max(pageSize, minimumPageColumns))
     }
 
@@ -62,10 +63,16 @@ struct HorizontalPageLayout: Equatable {
         slotWidth: CGFloat,
         windowBudget: CGFloat,
         chromeWidth: CGFloat,
+        pageSize: Int,
     ) -> HorizontalPageLayout {
-        let chromeless = pack(widths: widths, slotWidth: slotWidth, maxCellWidth: windowBudget)
+        let chromeless = pack(widths: widths, slotWidth: slotWidth, maxCellWidth: windowBudget, pageSize: pageSize)
         guard chromeless.pages.count > 1 else { return chromeless }
-        return pack(widths: widths, slotWidth: slotWidth, maxCellWidth: windowBudget - chromeWidth)
+        return pack(
+            widths: widths,
+            slotWidth: slotWidth,
+            maxCellWidth: windowBudget - chromeWidth,
+            pageSize: pageSize,
+        )
     }
 
     /// Packs `widths` into pages. A cell renders at its measured width, floored
@@ -74,18 +81,20 @@ struct HorizontalPageLayout: Equatable {
     /// passes the page budget — unless the page is still empty, so a single
     /// candidate wider than the budget gets a page of its own AT ITS MEASURED
     /// WIDTH rather than being squeezed into the budget and truncated — and no
-    /// page holds more than `pageSize` candidates, because the chords cannot
-    /// address a tenth.
+    /// page holds more than `pageSize` candidates, because no key would pick
+    /// the one after.
     static func pack(
         widths: [CGFloat],
         slotWidth: CGFloat,
         maxCellWidth: CGFloat,
+        pageSize: Int,
     ) -> HorizontalPageLayout {
+        let pageSize = max(pageSize, 1)
         let cellLimit = max(slotWidth, maxCellWidth)
-        // The nine-slot budget, never wider than one cell may be: on a narrow
+        // The full-page budget, never wider than one cell may be: on a narrow
         // screen the budget is what the screen leaves, or a full page would
         // render wider than the window can be placed at.
-        let pageBudget = min(rowBudget(slotWidth: slotWidth), cellLimit)
+        let pageBudget = min(rowBudget(slotWidth: slotWidth, pageSize: pageSize), cellLimit)
         var pages: [[Slot]] = []
         var page: [Slot] = []
         var usedWidth: CGFloat = 0

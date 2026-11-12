@@ -384,10 +384,12 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     /// The punctuation swap has to follow it. The space the Hanji/romanization key wrote is
-    /// this controller's, so `?` must swap with it (`我ê? `) — re-reading the
+    /// this controller's, so `?` must swap with it (`我ê？`) — re-reading the
     /// gate under the OUTPUT MODE instead would refuse, because Hanji mode says
     /// no commit earns a space, and the one that just did would be denied its
-    /// own. What the armed script is stored for.
+    /// own. What the armed script is stored for. The mark is Hanji mode's
+    /// full width — punctuation follows the output, not the word before it —
+    /// so it takes the space's place and leaves none.
     func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
         try withHanjiFirst(true) {
             let session = try composedSession { $0.isAutoSpaceEnabled = true }
@@ -404,7 +406,7 @@ final class AutoSpaceControllerTests: XCTestCase {
             )
 
             XCTAssertTrue(handled)
-            XCTAssertEqual(session.client.insertedTexts, ["? "])
+            XCTAssertEqual(session.client.insertedTexts, ["？"])
         }
     }
 
@@ -423,24 +425,6 @@ final class AutoSpaceControllerTests: XCTestCase {
 
         XCTAssertTrue(handled, "the space this controller wrote is still ours to swap")
         XCTAssertEqual(session.client.insertedTexts, ["? "])
-    }
-
-    /// And the precedence the Hanji/romanization key newly makes reachable: in Hanji mode a
-    /// Space-written romanization arms a space, so the `?` that follows matches
-    /// BOTH the auto-space swap and the full-width map. The swap wins and the
-    /// punctuation stays half-width — the word in front of the caret is
-    /// romanization, which reads as Latin text.
-    func testTheSwapOutranksTheFullWidthMap_afterAnAlternateCommit() throws {
-        let session = try withHanjiFirstSession()
-
-        _ = try session.controller.handle(
-            TestFixtures.keyDownEvent(characters: ","), client: session.client,
-        )
-
-        XCTAssertEqual(
-            session.client.insertedTexts, [", "],
-            "half-width — the full-width map would have written 「，」",
-        )
     }
 
     // MARK: - Hanji with Romanization: the gate follows the cell's script

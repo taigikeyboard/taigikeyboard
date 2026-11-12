@@ -127,7 +127,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Origin URL**: TBD
 - **Format**: CSV (no header)
 - **Captured**: `data/raw/khpoo.csv` — capture date TBD
-- **Licence**: **Unverified** — origin and rights holder not established.
+- **Licence**: **Unverified** — origin and rights holder not established. Contributed rows: see `dictionary/LICENSE`.
 - **Notes**: Pre-processed data — pipeline uses `cleanup.minimal: true`
   (normalize_roman only). ~4.2k rows.
 

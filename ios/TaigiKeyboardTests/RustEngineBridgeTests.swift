@@ -34,7 +34,7 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
     }
 
-    func test_op_toneVariations_lazyCache_returnsBothModes() {
+    func test_op_toneVariations_lazyCache_returnsAllThreeMaps() {
         let cache = RustEngineBridge.toneVariations
         XCTAssertFalse(cache.poj.isEmpty, "POJ map should populate")
         XCTAssertFalse(cache.tl.isEmpty, "TL map should populate")
@@ -42,6 +42,8 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["a"])
         XCTAssertNotNil(cache.tl["oo"])
         XCTAssertNotNil(cache.poj["o\u{0358}"])
+        // Universal: TL and POJ interleaved, both tone-9 marks.
+        XCTAssertEqual(cache.universal["a"]?.suffix(2), ["a\u{30B}", "ă"])
     }
 
     // MARK: - TPS
@@ -52,6 +54,14 @@ final class RustEngineBridgeTests: XCTestCase {
 
     func test_op_isTPSToneMark_letterIsNotToneMark() {
         XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
+    }
+
+    /// The TPS Space key asks whether the raw buffer's last Character ends in a
+    /// tone mark; after `˙` on a stop coda that Character is `ㆻ` + U+0307.
+    func test_op_isTPSToneMark_codaWithCombiningToneEightDotIsToneMark() {
+        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{0307}"))
+        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{31BB}\u{0307}"))
+        XCTAssertFalse(RustEngineBridge.isTPSToneMark("\u{31BB}"))
     }
 
     // MARK: - Platform text helpers
@@ -70,6 +80,12 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertTrue(RustEngineBridge.isJoinerPunctuation("\u{00B7}"))
         XCTAssertFalse(RustEngineBridge.isJoinerPunctuation("?"))
         XCTAssertFalse(RustEngineBridge.isJoinerPunctuation("-"))
+    }
+
+    func test_op_isSpacedPunctuation_onlyTheHalfWidthMarks() {
+        XCTAssertTrue(RustEngineBridge.isSpacedPunctuation("?"))
+        XCTAssertFalse(RustEngineBridge.isSpacedPunctuation("？"))
+        XCTAssertFalse(RustEngineBridge.isSpacedPunctuation("("))
     }
 
     // MARK: - T1: panic at FFI

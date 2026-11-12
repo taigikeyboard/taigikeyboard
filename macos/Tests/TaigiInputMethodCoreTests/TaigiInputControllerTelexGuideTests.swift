@@ -14,8 +14,8 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
     private var suiteName = ""
     private var userDefaults = UserDefaults.standard
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    override func setUp() async throws {
+        try await super.setUp()
         InstalledLexicon.installOnce()
         suiteName = "TaigiInputControllerTelexGuideTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -24,10 +24,10 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         TelexGuidePanel.shared.hideNow()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         TelexGuidePanel.shared.hideNow()
         userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - The chord
@@ -52,28 +52,23 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertFalse(session.controller.settings.isTelexGuideShown)
     }
 
-    /// The card is spelled for the romanization in use: `c` spells `ts`
-    /// under TL and `ch` under POJ, which the meaning column names now that
-    /// the example column is gone (USER 2026-09-09). A switch respells the
-    /// guide in place.
-    func testTheGuide_isSpelledForTheRomanizationInUse() throws {
+    /// The card is the Telex keys only — the tones; `c` and `f` are their
+    /// own settings, not Telex keys — row for row with desktop-core's
+    /// `telex_guide_rows`. A romanization switch keeps it up.
+    func testTheGuide_listsTheTelexKeys_andSurvivesARomanizationSwitch() throws {
         let session = try makeSession()
         let language = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
 
         session.controller.performShortcutAction(.showTelexGuide)
-        let tl = TelexGuidePanel.meanings(under: .tl, language: language)
-        XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .tl)
-        XCTAssertTrue(tl.contains { $0.contains("ts") && !$0.contains("tsh") }, "\(tl)")
-        XCTAssertTrue(tl.contains { $0.contains("tsh") }, "\(tl)")
+        XCTAssertEqual(
+            TelexGuidePanel.table(language: language).map(\.key),
+            ["x", "v", "y", "d", "z", "w", "q"],
+        )
 
         session.controller.performShortcutAction(.toggleRomanization)
 
-        let poj = TelexGuidePanel.meanings(under: .poj, language: language)
         XCTAssertTrue(TelexGuidePanel.shared.isShowing, "the switch does not close it")
         XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .poj)
-        XCTAssertTrue(poj.contains { $0.contains("ch") && !$0.contains("chh") }, "\(poj)")
-        XCTAssertTrue(poj.contains { $0.contains("chh") }, "\(poj)")
-        XCTAssertFalse(poj.contains { $0.contains("ts") }, "\(poj)")
     }
 
     /// Under TPS, which types no Telex keys, the guide goes; the wish stays,

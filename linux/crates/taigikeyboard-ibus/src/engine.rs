@@ -11,12 +11,13 @@
 
 use crate::wire::{self, LookupTable, Orientation, PropType, Property};
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
+use taigi_linux_core::popup::{self, Caret};
+use taigi_linux_core::Emit;
 use taigi_linux_core::{chrome, MenuItem, Runtime};
 use taigi_linux_core::{session, EngineState};
-use taigi_linux_core::{Emit, LookupTableContent};
 use taigi_linux_platform::RawKeyEvent;
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, Value};
@@ -45,6 +46,8 @@ pub struct Engine {
     token: ContextToken,
     path: OwnedObjectPath,
     state: EngineState,
+    /// The caret from the last `SetCursorLocation`, in screen pixels.
+    caret: Mutex<Caret>,
 }
 
 impl Engine {
@@ -54,6 +57,37 @@ impl Engine {
             token,
             path,
             state: EngineState::default(),
+            caret: Mutex::new(Caret {
+                x: 0,
+                y: 0,
+                w: 0,
+                h: 0,
+            }),
+        }
+    }
+
+    /// A click or a page turn from the candidate window. Selecting never
+    /// commits; a page turn is the panel's page up / page down.
+    async fn on_popup(&mut self, emitter: &SignalEmitter<'_>, event: popup::Event) {
+        match event {
+            popup::Event::Click { position } => {
+                let emits = self.guarded("popup.click", Vec::new(), |engine| {
+                    session::click_from_panel(&engine.runtime, &mut engine.state, position as usize)
+                });
+                self.replay(emitter, emits).await;
+            }
+            popup::Event::Page { forward } => {
+                self.navigate(
+                    "popup.page",
+                    emitter,
+                    if forward {
+                        CandidateNavigation::PageDown
+                    } else {
+                        CandidateNavigation::PageUp
+                    },
+                )
+                .await;
+            }
         }
     }
 
@@ -87,9 +121,21 @@ impl Engine {
                     Self::delete_surrounding_text(emitter, offset, count).await
                 }
                 Emit::LookupTable(content) => {
-                    Self::update_lookup_table(emitter, table_value(&content), true).await
+                    // The window draws the page. An empty table goes to the
+                    // daemon as well, so GNOME Shell does not draw a second
+                    // list from the same reply.
+                    let style = popup::PopupStyle::from_document(&self.runtime.settings.current());
+                    let caret = *self
+                        .caret
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    set_popup_target(self.path.clone());
+                    popup::present(&content, style, caret);
+                    Self::update_lookup_table(emitter, empty_table_value(), false).await
                 }
                 Emit::HideLookupTable => {
+                    popup::hide();
+                    clear_popup_target(&self.path);
                     Self::update_lookup_table(emitter, empty_table_value(), false).await
                 }
                 Emit::ModeChanged => {
@@ -168,23 +214,65 @@ impl Engine {
     }
 }
 
-fn table_value(content: &LookupTableContent) -> Value<'static> {
-    let labels = panel_labels(content);
-    let candidates = content.joined_candidates();
-    LookupTable {
-        page_size: content.page_size,
-        cursor_pos: content.cursor,
-        cursor_visible: content.cursor_visible,
-        round: false,
-        orientation: if content.vertical {
-            Orientation::Vertical
-        } else {
-            Orientation::Horizontal
-        },
-        candidates: &candidates,
-        labels: &labels,
+/// The engine the window's clicks belong to: the one that last showed a page.
+fn set_popup_target(path: OwnedObjectPath) {
+    *POPUP_TARGET
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(path);
+}
+
+fn clear_popup_target(path: &OwnedObjectPath) {
+    let mut target = POPUP_TARGET
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if target.as_ref() == Some(path) {
+        *target = None;
     }
-    .to_value()
+}
+
+fn popup_target() -> Option<OwnedObjectPath> {
+    POPUP_TARGET
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .clone()
+}
+
+static POPUP_TARGET: Mutex<Option<OwnedObjectPath>> = Mutex::new(None);
+
+/// Blocks on the window and dispatches clicks onto the engine that showed
+/// it. A second `block_on` from this thread is the same shape as `Destroy`:
+/// the daemon's executor is already running on the main thread.
+pub fn watch_popup(connection: Connection) {
+    let _ = std::thread::Builder::new()
+        .name("taigi-popup".into())
+        .spawn(move || loop {
+            let events = popup::wait();
+            if events.is_empty() {
+                continue;
+            }
+            let connection = connection.clone();
+            zbus::block_on(apply_popup(connection, events));
+        });
+}
+
+async fn apply_popup(connection: Connection, events: Vec<popup::Event>) {
+    let Some(path) = popup_target() else {
+        return;
+    };
+    let Ok(iface) = connection
+        .object_server()
+        .interface::<_, Engine>(&path)
+        .await
+    else {
+        return;
+    };
+    let Ok(emitter) = SignalEmitter::new(&connection, &path) else {
+        return;
+    };
+    let mut engine = iface.get_mut().await;
+    for event in events {
+        engine.on_popup(&emitter, event).await;
+    }
 }
 
 /// The menu root: a `PROP_TYPE_MENU` whose symbol and icon are the mode
@@ -243,22 +331,6 @@ fn menu_values(runtime: &Runtime) -> MenuValues {
     MenuValues { root, rows }
 }
 
-/// The labels as the panel must receive them. It fills an empty label list —
-/// and each empty string — with its own `1…9, 0` (GNOME 46
-/// `ibusCandidatePopup.js` `setCandidates`), so a label-less table (the
-/// Telex guide) sends one space per page position, and a blank label (the
-/// unkeyed §34 literal) a space.
-fn panel_labels(content: &LookupTableContent) -> Vec<String> {
-    if content.labels.is_empty() {
-        return vec![" ".to_owned(); content.page_size as usize];
-    }
-    content
-        .labels
-        .iter()
-        .map(|label| if label.is_empty() { " " } else { label }.to_owned())
-        .collect()
-}
-
 fn empty_table_value() -> Value<'static> {
     LookupTable {
         page_size: 9,
@@ -298,7 +370,14 @@ impl Engine {
         reply.handled
     }
 
-    async fn set_cursor_location(&self, _x: i32, _y: i32, _w: i32, _h: i32) {}
+    async fn set_cursor_location(&self, x: i32, y: i32, w: i32, h: i32) {
+        let caret = Caret { x, y, w, h };
+        *self
+            .caret
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = caret;
+        popup::move_to(caret);
+    }
 
     async fn process_hand_writing_event(&self, _coordinates: Vec<f64>) {}
 
@@ -344,6 +423,13 @@ impl Engine {
 
     async fn focus_in(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.focus_in token={:?}", self.token);
+        // The client sends its surrounding text only once an engine asks
+        // (ibus `ibus_input_context_needs_surrounding_text`). Asked here
+        // rather than through `ActiveSurroundingText`, which daemons before
+        // 1.5.28 never read.
+        if let Err(error) = Self::require_surrounding_text(&emitter).await {
+            log::error!("engine.require_surrounding_text_failed error={error}");
+        }
         self.register_menu(&emitter).await;
         self.begin_session("FocusIn", &emitter).await;
     }
@@ -397,7 +483,18 @@ impl Engine {
             .await;
     }
 
-    async fn set_surrounding_text(&self, _text: Value<'_>, _cursor_pos: u32, _anchor_pos: u32) {}
+    /// What precedes the caret, for the auto-space swap to check before it
+    /// deletes (#866). Positions count characters.
+    async fn set_surrounding_text(&mut self, text: Value<'_>, cursor_pos: u32, anchor_pos: u32) {
+        let text = wire::text_of(&text);
+        if text.is_none() {
+            log::warn!("engine.surrounding_text_unreadable token={:?}", self.token);
+        }
+        session::set_surrounding_text(
+            &mut self.state,
+            text.map(|text| (text, cursor_pos as usize, anchor_pos as usize)),
+        );
+    }
 
     async fn panel_extension_received(&self, _event: Value<'_>) {}
 
@@ -417,7 +514,8 @@ impl Engine {
         (false,)
     }
 
-    /// `false`: nothing in the key table reads the document.
+    /// `false`: `FocusIn` asks for the surrounding text itself
+    /// (`RequireSurroundingText`), the way every daemon version honours.
     #[zbus(property)]
     async fn active_surrounding_text(&self) -> (bool,) {
         (false,)
@@ -454,6 +552,9 @@ impl Engine {
         keycode: u32,
         state: u32,
     ) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    async fn require_surrounding_text(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
 
     #[zbus(signal)]
     async fn delete_surrounding_text(
@@ -532,30 +633,5 @@ impl Service {
                 })
             })
             .ok();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn table(labels: &[&str]) -> LookupTableContent {
-        LookupTableContent {
-            cells: Vec::new(),
-            labels: labels.iter().map(|label| (*label).to_owned()).collect(),
-            cursor: 0,
-            cursor_visible: true,
-            page_size: 3,
-            vertical: false,
-        }
-    }
-
-    #[test]
-    fn a_blank_label_reaches_the_panel_as_a_space() {
-        // The unkeyed §34 literal: GNOME would number an empty string.
-        assert_eq!(panel_labels(&table(&["", "q", "w"])), [" ", "q", "w"]);
-        // The Telex guide: no labels at all, one space per page position.
-        assert_eq!(panel_labels(&table(&[])), [" ", " ", " "]);
-        assert_eq!(panel_labels(&table(&["q", "w", "d"])), ["q", "w", "d"]);
     }
 }

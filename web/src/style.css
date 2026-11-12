@@ -23,7 +23,7 @@
     "Helvetica Neue", Helvetica, "PingFang TC", "Noto Sans TC", Arial,
     sans-serif;
   --font: var(--system-font);
-  /* ZenPen's `article`: the textarea. */
+  /* ZenPen's `article`: the editor. */
   --editor-font: 22px / 30px var(--font);
   /* ZenPen's `section`. */
   --measure: 600px;
@@ -88,6 +88,8 @@ body {
   font: 1.0625rem / 1.65 var(--font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* `#mode-line` measures the window's column against `main`. */
+  container-type: inline-size;
 }
 
 a {
@@ -428,28 +430,76 @@ summary:focus-visible {
 #editor {
   position: relative;
   display: flex;
-  flex: 1;
+  /* A zero basis, not `1`'s 0%: against the body's indefinite height a percentage
+     reads as the content, and the editor's text would stretch the page. */
+  flex: 1 1 0;
   flex-direction: column;
   min-height: 14rem;
 }
 
+/* The editor (Lexical's root): not a flex container, which Lexical's blocks
+   would break; `#editor` is. Lexical sets `white-space` itself. */
 #text {
-  display: block;
-  flex: 1;
+  flex: 1 1 0;
   width: 100%;
   min-height: 0;
+  overflow-y: auto;
   /* ZenPen's `article` sits 22px under the title. */
   padding: 22px 0 0;
-  border: 0;
   outline: none;
-  background: none;
-  color: inherit;
   font: var(--editor-font);
-  resize: none;
+  overflow-wrap: break-word;
 }
 
-#text:disabled {
+#text[contenteditable="false"] {
   color: var(--secondary);
+}
+
+/* A blank line between blocks, as the textarea's text had between paragraphs.
+   Line heights in px: the panel reads them, and `normal` reads as nothing. */
+#text :is(p, h1, h2, h3, blockquote, ul, ol) {
+  margin: 0 0 30px;
+}
+
+#text h1 {
+  font-size: 34px;
+  line-height: 42px;
+}
+
+#text h2 {
+  font-size: 28px;
+  line-height: 36px;
+}
+
+#text h3 {
+  font-size: 24px;
+  line-height: 32px;
+}
+
+#text blockquote {
+  padding-left: 16px;
+  border-left: 3px solid var(--border);
+  color: var(--secondary);
+}
+
+#text :is(ul, ol) {
+  padding-left: 1.5em;
+}
+
+#text .is-bold {
+  font-weight: bold;
+}
+
+#text .is-italic {
+  font-style: italic;
+}
+
+#text .is-underline {
+  text-decoration: underline;
+}
+
+#text .is-link {
+  color: var(--accent);
 }
 
 /* macOS Tahoe's candidate window (`CandidateMetrics.swift`, base values at 16 pt,
@@ -505,7 +555,7 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
-/* Reads as the line it sits on: the textarea's font, its background over what
+/* Reads as the line it sits on: the editor's font, its background over what
    the composition covers. */
 #preedit {
   position: absolute;
@@ -792,12 +842,66 @@ summary:focus-visible {
   backdrop-filter: blur(24px) saturate(180%);
 }
 
-#notice {
+/* In the mode chip, in the mode's place: drawn, because a composition the
+   browser keeps open looks like a page that ignores its keys. */
+#notice:not([data-active]),
+#mode-line:has(#notice[data-active]) > :not(#notice) {
+  display: none;
+}
+
+/* A chip in the row under the editor, which keeps its room, so it moves
+   nothing: the mode and the input script. Black, white and grey only. English
+   mode turns it solid and names the Shift tap back: there the page looks as if
+   it ignores the engine, as it does while `#notice` is up. Unseen until the
+   session spells it: a marker, as `#telex-guide` has. On the window's right
+   gutter, not the column's edge: the margin spends the half of the body's
+   width that centering left beside `main`. */
+#mode-line {
+  display: flex;
+  margin-right: calc((100% - 100cqw) / 2);
+  align-items: center;
+  gap: 0.4em;
+  min-width: 0;
+  height: 1.5rem;
+  padding: 0 0.625rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.75rem;
+  color: var(--secondary);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+#mode-line:not([data-drawn]) {
   visibility: hidden;
 }
 
-#notice[data-active] {
-  visibility: visible;
+#mode-line::before {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+#mode-line:is([data-english], :has(#notice[data-active])) {
+  border-color: transparent;
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+#mode-line .separator {
+  opacity: 0.5;
+}
+
+#mode-line kbd {
+  margin-right: 0.25em;
+  padding: 0 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 400;
 }
 
 .action {
@@ -814,7 +918,7 @@ summary:focus-visible {
   height: 1.0625rem;
 }
 
-/* Asked for, so it may move what is below the textarea. `height` is set before
+/* Asked for, so it may move what is below the editor. `height` is set before
    the wasm arrives: the caps fill the room `prepaint.js` kept. */
 #tps-keyboard {
   display: none;
@@ -829,6 +933,63 @@ summary:focus-visible {
 
 :root[data-tps-keyboard] #tps-keyboard {
   display: flex;
+}
+
+/* The macOS Telex guide (`TelexGuidePanel.swift`): a small HUD card on the mode
+   flash's chrome, floating over the editor's bottom centre as the macOS one floats
+   over the screen's, so it moves nothing. Display-only: clicks go to the text under
+   it, and the candidate panel draws over it. Unseen until the session spells it:
+   a marker, not `:empty`, which Firefox does not re-match after `replaceChildren`. */
+#telex-guide {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  z-index: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: min(360px, 100%);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--glass);
+  box-shadow: var(--menu-shadow);
+  font: 13px / 1.3 var(--system-font);
+  -webkit-user-select: none;
+  user-select: none;
+  translate: -50% 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+:root[data-telex-guide] #telex-guide[data-drawn] {
+  display: flex;
+}
+
+#telex-guide h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Key | meaning. The key is monospaced semibold: a thing the user types, and the
+   one the eye lands on. */
+#telex-guide dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 16px;
+  margin: 0;
+}
+
+#telex-guide dt {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 600;
+}
+
+#telex-guide dd {
+  margin: 0;
 }
 
 /* Twelve keys wide, the number row. `--indent` is the row's stagger. */
@@ -962,4 +1123,67 @@ footer p {
   :root[data-sidebar="open"] #sidebar {
     transition: none;
   }
+}
+
+/* The format bubble wears the candidate panel's glass. It shows where the
+   selection is, over the text, so nothing slides and nothing below it moves. */
+#format-bubble {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--glass);
+  box-shadow:
+    0 0 0 1px var(--border),
+    var(--menu-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+}
+
+#format-bubble[hidden] {
+  display: none;
+}
+
+#format-bubble button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--text);
+  /* H1 to H3 are their own labels. */
+  font: 600 13px var(--system-font);
+  transition: none;
+}
+
+#format-bubble svg {
+  width: 14px;
+  height: 14px;
+}
+
+#format-bubble input {
+  display: none;
+  width: min(18rem, 60vw);
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  outline: none;
+  background: var(--field);
+  color: var(--text);
+  font: 15px var(--system-font);
+}
+
+/* Link mode: the link button stays, the field takes the others' room. */
+#format-bubble[data-mode="link"] button:not([data-markup="link"]) {
+  display: none;
+}
+
+#format-bubble[data-mode="link"] input {
+  display: block;
 }

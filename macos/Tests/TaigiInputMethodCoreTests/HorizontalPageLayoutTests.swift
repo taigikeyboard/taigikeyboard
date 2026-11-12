@@ -19,11 +19,13 @@ final class HorizontalPageLayoutTests: XCTestCase {
     private func pack(
         _ widths: [CGFloat],
         maxCellWidth: CGFloat = HorizontalPageLayoutTests.roomyCellWidth,
+        pageSize: Int = HorizontalPageLayout.pageSize,
     ) -> HorizontalPageLayout {
         HorizontalPageLayout.pack(
             widths: widths,
             slotWidth: Self.slotWidth,
             maxCellWidth: maxCellWidth,
+            pageSize: pageSize,
         )
     }
 
@@ -39,6 +41,7 @@ final class HorizontalPageLayoutTests: XCTestCase {
             slotWidth: Self.slotWidth,
             windowBudget: windowBudget,
             chromeWidth: chromeWidth,
+            pageSize: HorizontalPageLayout.pageSize,
         )
     }
 
@@ -56,6 +59,19 @@ final class HorizontalPageLayoutTests: XCTestCase {
             9,
             "pages partition the list in display order — page 2 starts where page 1 ended",
         )
+    }
+
+    func testPack_aPageOfEightFillsEightPerPage() {
+        // trace: Type - with f leaves eight slot keys
+        // (`CandidateSlotKeySet.bareKeysWithoutF.pageSize`); budget 8 × 10 = 80
+        // → pages of 8, 8, 4.
+        let layout = pack(
+            Array(repeating: 5, count: 20),
+            pageSize: CandidateSlotKeySet.bareKeysWithoutF.pageSize,
+        )
+
+        XCTAssertEqual(layout.pages.map(\.count), [8, 8, 4])
+        XCTAssertEqual(layout.pageBudget, 80)
     }
 
     func testPack_wideItemBreaksThePageAndKeepsItsMeasuredWidth() {

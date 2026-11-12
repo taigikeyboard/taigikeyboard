@@ -44,8 +44,8 @@ def run(ctx: PipelineContext) -> None:
         df = sheets[name]
         all_dfs.append(df)
         total_rows += len(df)
-        for _, row in df.iterrows():
-            all_records.append({"hanzi": row["hanzi"], "tl": row["tl"], "source": name})
+        for hanzi, tl in zip(df["hanzi"], df["tl"]):
+            all_records.append({"hanzi": hanzi, "tl": tl, "source": name})
         ctx.logger.info(f"  [load] {name}: {len(df)} rows")
 
     ctx.logger.info(f"Total loaded: {total_rows} rows")

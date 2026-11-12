@@ -44,7 +44,7 @@ Each PR 200–500 LOC. Pre-gates per `~/.claude/rules/round-workflow.md`; Codex 
 | F1 | desktop-core `perform_global(action) → GlobalOutcome { represent, refetch, announce }`; Linux / Windows / macOS keep OS calls (macOS static-icon flash = documented exception) | refactor · `refactor-reviewer` · dogfood S113 / S114 | 1 | Pending |
 | F2 | Symbol-picker lifecycle in desktop-core | refactor · `refactor-reviewer` | 1 | Pending |
 | F3 | Windows `session.rs` → `surface.rs`, lang-bar impls → `lang_bar.rs`, `draw_all` by layout; macOS `TaigiInputController` → `+Menu` / `+AutoSpace` | refactor · sandwich skipped (moves) | 1–2 | Pending |
-| F4 | macOS defaults from `Configure`; `FullWidthPunctuation` in `SessionReply`; `TELEX_KEYS` once; session owner from core reply; atomic export write in `desktop-storage` | refactor · `refactor-reviewer` | 1 | Pending |
+| F4 | macOS defaults from `Configure`; ~~`FullWidthPunctuation` in `SessionReply`~~ (done 2026-11-11: the Swift twin is gone, the swap gate is the `PassThroughSwap` request); `TELEX_KEYS` once; session owner from core reply; atomic export write in `desktop-storage` | refactor · `refactor-reviewer` | 1 | Pending |
 | G1 | Android: option lists → `ime/settings`, icons neutral; screens through view models; logger injected | refactor · after #471 | 1 | Pending |
 | G2 | Android `RustEngineBridge.kt` DTOs → per-area `*Bridge.kt`; `SmartbarManager` forwarders removed | refactor · sandwich skipped (moves) | 1 | Pending |
 | G3 | iOS: Platform-layer `SharedSettings.shared` consumers injected; `ActionHandler` deps injected (iOS `UsageRecorder` deleted by D2); Engine-layer purity | refactor · `refactor-reviewer` · after #471 | 1 | Pending |

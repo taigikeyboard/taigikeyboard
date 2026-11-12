@@ -43,6 +43,17 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         keys::TONE_INPUT_SCHEME,
         ToneInputScheme::label_key,
     );
+    // Under Tone Keys, independent of it: both say what a letter types.
+    context.switch_row(
+        &group,
+        StringKey::SettingsCAffricate,
+        keys::IS_C_AFFRICATE_ENABLED,
+    );
+    context.switch_row(
+        &group,
+        StringKey::SettingsFHyphen,
+        keys::IS_F_HYPHEN_ENABLED,
+    );
     context.switch_row(
         &group,
         StringKey::SettingsCandidateWindow,

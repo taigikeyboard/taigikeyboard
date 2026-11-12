@@ -5,30 +5,19 @@ import AppKit
 /// One row of the guide: the key and what it does.
 ///
 /// Two columns, no examples and no dismiss hint (USER 2026-09-09: "no extra
-/// explanatory text… no examples, no explaining how to exit"). What the affricate keys spell
-/// still has to follow the romanization in use, so `c` carries its spelling —
-/// `ts` under TL, `ch` under POJ — inside the meaning itself.
+/// explanatory text… no examples, no explaining how to exit"). The same under
+/// TL and POJ, and only the tones: `c` → `ts` / `ch` and `f` → `-` are their
+/// own settings, not Telex keys.
 private struct TelexGuideRow {
     let key: String
-    let meaning: Meaning
-
-    enum Meaning {
-        case tone(String)
-        /// `c` / `ch`, with the initial each spells under TL and under POJ.
-        case initial(tl: String, poj: String)
-        case hyphen
-    }
+    /// The tone the key writes, as the meaning column names it.
+    let tone: String
 
     /// Never raised under TPS (`ShortcutAction.isInert(under:)`); a TPS mode
     /// would read as TL here.
     @MainActor
-    func meaningText(_ inputMode: InputMode, _ language: DisplayLanguageStore) -> String {
-        switch meaning {
-        case let .tone(tone): language.resolver.desktopTelexGuideTone(tone: tone)
-        case let .initial(tl, poj):
-            language.resolver.desktopTelexGuideInitial(initial: inputMode == .poj ? poj : tl)
-        case .hyphen: language.string(.desktopTelexGuideHyphen)
-        }
+    func meaningText(_ language: DisplayLanguageStore) -> String {
+        language.resolver.desktopTelexGuideTone(tone: tone)
     }
 }
 
@@ -86,28 +75,24 @@ final class TelexGuidePanel {
     /// The gap under the card, the TPS key panel's.
     private static let bottomMargin: CGFloat = 24
 
-    /// Row order is reading order: the tones by number, then the two
-    /// consonant keys, then the hyphen. `x` and `v` each carry a pair split
+    /// Row order is reading order: the tones by number. `x` and `v` each carry a pair split
     /// by the coda (`engine/composing/src/telex.rs`): 1 / 4 and 2 / 8, the
     /// open tone on any other syllable, the checked one after `p t k h`.
     private static let rows: [TelexGuideRow] = [
-        TelexGuideRow(key: "x", meaning: .tone("1 / 4")),
-        TelexGuideRow(key: "v", meaning: .tone("2 / 8")),
-        TelexGuideRow(key: "y", meaning: .tone("3")),
-        TelexGuideRow(key: "d", meaning: .tone("5")),
-        TelexGuideRow(key: "z", meaning: .tone("6")),
-        TelexGuideRow(key: "w", meaning: .tone("7")),
-        TelexGuideRow(key: "q", meaning: .tone("9")),
-        TelexGuideRow(key: "c", meaning: .initial(tl: "ts", poj: "ch")),
-        TelexGuideRow(key: "ch", meaning: .initial(tl: "tsh", poj: "chh")),
-        TelexGuideRow(key: "f", meaning: .hyphen),
+        TelexGuideRow(key: "x", tone: "1 / 4"),
+        TelexGuideRow(key: "v", tone: "2 / 8"),
+        TelexGuideRow(key: "y", tone: "3"),
+        TelexGuideRow(key: "d", tone: "5"),
+        TelexGuideRow(key: "z", tone: "6"),
+        TelexGuideRow(key: "w", tone: "7"),
+        TelexGuideRow(key: "q", tone: "9"),
     ]
 
-    /// The meanings the guide shows under `inputMode`, in row order — what a
-    /// test reads to pin the romanization without walking the view tree.
+    /// The keys and meanings the guide shows, in row order — what a test
+    /// reads without walking the view tree.
     @MainActor
-    static func meanings(under inputMode: InputMode, language: DisplayLanguageStore) -> [String] {
-        rows.map { $0.meaningText(inputMode, language) }
+    static func table(language: DisplayLanguageStore) -> [(key: String, meaning: String)] {
+        rows.map { ($0.key, $0.meaningText(language)) }
     }
 
     /// Up for `owner`, or kept up and handed to it — placed again each time,
@@ -124,7 +109,7 @@ final class TelexGuidePanel {
         }
         if !isShowing || shownInputMode != inputMode || shownLanguage != language.language {
             panel?.orderOut(nil)
-            panel = Self.makePanel(inputMode: inputMode, language: language)
+            panel = Self.makePanel(language: language)
         }
         guard let panel else { return }
         if let frame = HUDPanel.typingScreenFrame {
@@ -163,11 +148,11 @@ final class TelexGuidePanel {
 
     /// The card: the scheme's name and the two-column table, on the same HUD
     /// chrome as the mode flash.
-    static func makePanel(inputMode: InputMode, language: DisplayLanguageStore) -> NSPanel {
+    static func makePanel(language: DisplayLanguageStore) -> NSPanel {
         let title = NSTextField(labelWithString: language.string(.settingsToneSchemeTelex))
         title.font = .systemFont(ofSize: titleFontSize, weight: .semibold)
 
-        let grid = makeGrid(inputMode: inputMode, language: language)
+        let grid = makeGrid(language: language)
 
         let stack = NSStackView(views: [title, grid])
         stack.orientation = .vertical
@@ -200,13 +185,13 @@ final class TelexGuidePanel {
 
     /// Key | meaning. The key is monospaced semibold because it is a thing
     /// the user types and the one the eye lands on.
-    private static func makeGrid(inputMode: InputMode, language: DisplayLanguageStore) -> NSGridView {
+    private static func makeGrid(language: DisplayLanguageStore) -> NSGridView {
         let keyFont = NSFont.monospacedSystemFont(ofSize: rowFontSize, weight: .semibold)
 
         let cells = rows.map { row -> [NSView] in
             let key = NSTextField(labelWithString: row.key)
             key.font = keyFont
-            let meaning = NSTextField(labelWithString: row.meaningText(inputMode, language))
+            let meaning = NSTextField(labelWithString: row.meaningText(language))
             meaning.font = .systemFont(ofSize: rowFontSize)
             return [key, meaning]
         }

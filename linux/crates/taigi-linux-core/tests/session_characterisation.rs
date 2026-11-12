@@ -13,7 +13,10 @@ use std::sync::{Mutex, MutexGuard};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_storage::SettingsFileStore;
-use taigi_linux_core::session::{begin_session, end_session, process_raw_key, EngineState};
+use taigi_linux_core::session::{
+    begin_session, end_session, process_raw_key, set_capabilities, set_surrounding_text,
+    EngineState, TextBeforeCaret,
+};
 use taigi_linux_core::{Emit, LookupTableContent, Runtime};
 use taigi_linux_platform::key_translation::state;
 use taigi_linux_platform::{RawKeyEvent, UserDirectories};
@@ -24,6 +27,10 @@ const PERIOD: u32 = 0x2e;
 const RETURN: u32 = 0xff0d;
 const ESCAPE: u32 = 0xff1b;
 const BACKSPACE: u32 = 0xff08;
+const HOME: u32 = 0xff50;
+const LEFT: u32 = 0xff51;
+/// `IBUS_CAP_SURROUNDING_TEXT`.
+const CAP_SURROUNDING_TEXT: u32 = 1 << 5;
 
 /// A session over the real dictionaries with auto-space on or off, and a
 /// client that can (or cannot) delete surrounding text.
@@ -299,13 +306,11 @@ fn punctuation_inside_a_composition_commits_the_literal_with_the_full_width_mark
     session.type_word("tsiah");
     assert_eq!(
         session.press(COMMA),
-        [
-            Emit::ClearPreedit,
-            commit("tsiah， "),
-            Emit::HideLookupTable
-        ]
+        [Emit::ClearPreedit, commit("tsiah，"), Emit::HideLookupTable]
     );
-    assert!(session.state.armed_auto_space);
+    // trace: auto-space on, but a full-width mark takes the space's place
+    // (`is_spaced_punctuation`), so there is no space to arm.
+    assert!(!session.state.armed_auto_space);
 }
 
 #[test]
@@ -328,8 +333,8 @@ fn the_auto_space_swap_needs_the_surrounding_text_capability() {
     assert_eq!(session.press(COMMA), [commit("，")]);
     assert!(!session.state.armed_auto_space);
 
-    // With it the space goes and the mark takes its half-width romanized form
-    // plus the space.
+    // With it the space goes and the mark takes its place in the width the
+    // output writes. Full width (Hanji-first) adds no space after itself.
     let mut session = Session::new(true, true);
     session.type_word("ho");
     session.press(RETURN);
@@ -340,12 +345,11 @@ fn the_auto_space_swap_needs_the_surrounding_text_capability() {
                 offset: -1,
                 count: 1
             },
-            commit(", ")
+            commit("，")
         ]
     );
-    // trace (read by running HEAD): the swapped mark ends in a space of its
-    // own, so the next mark may swap again.
-    assert!(session.state.armed_auto_space);
+    // trace: with no space after the mark there is nothing left to swap.
+    assert!(!session.state.armed_auto_space);
 }
 
 #[test]
@@ -359,6 +363,67 @@ fn the_armed_swap_lasts_exactly_one_key() {
     assert!(!session.state.armed_auto_space, "any key spends the arm");
     session.press(ESCAPE);
     assert_eq!(session.press(COMMA), [commit("，")], "no swap two keys on");
+}
+
+#[test]
+fn a_key_the_client_takes_spends_the_arm() {
+    let _serial = serial();
+    // #866: each of these reaches the document unseen — a newline, a typed
+    // digit, a deleted space, a caret move — so the swap after it would
+    // delete whatever now precedes the caret.
+    for keyval in [RETURN, '2' as u32, BACKSPACE, LEFT, HOME] {
+        let mut session = Session::new(true, true);
+        session.type_word("ho");
+        session.press(RETURN);
+        assert!(session.state.armed_auto_space);
+        assert_eq!(session.press_with(keyval, 0), (false, Vec::new()));
+        assert!(!session.state.armed_auto_space, "key {keyval:#x}");
+        assert_eq!(session.press(COMMA), [commit("，")], "key {keyval:#x}");
+    }
+}
+
+#[test]
+fn a_reported_text_lets_the_swap_take_only_a_space() {
+    let _serial = serial();
+    let armed = || {
+        let mut session = Session::new(true, true);
+        set_capabilities(&mut session.state, CAP_SURROUNDING_TEXT);
+        session.type_word("ho");
+        session.press(RETURN);
+        assert!(session.state.armed_auto_space);
+        session
+    };
+    let swapped = [
+        Emit::DeleteSurrounding {
+            offset: -1,
+            count: 1,
+        },
+        commit("，"),
+    ];
+
+    // The commit outdated the last report, and none came after it.
+    let mut session = armed();
+    assert_eq!(
+        session.state.text_before_caret,
+        TextBeforeCaret::Reported(None)
+    );
+    assert_eq!(session.press(COMMA), [commit("，")]);
+
+    let mut session = armed();
+    set_surrounding_text(&mut session.state, Some(("hó ", 3, 3)));
+    assert_eq!(session.press(COMMA), swapped);
+
+    // What the arm cannot see: a character before the caret that is not
+    // the space, or a selection.
+    for (text, cursor, anchor) in [("hó 2", 4, 4), ("hó ", 2, 2), ("hó ", 3, 0)] {
+        let mut session = armed();
+        set_surrounding_text(&mut session.state, Some((text, cursor, anchor)));
+        assert_eq!(
+            session.press(COMMA),
+            [commit("，")],
+            "{text:?} caret {cursor} anchor {anchor}"
+        );
+    }
 }
 
 #[test]

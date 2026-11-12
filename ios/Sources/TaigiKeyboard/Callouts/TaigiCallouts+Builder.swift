@@ -14,18 +14,20 @@ public extension TaigiCallouts {
             return KeyboardCalloutActions.english.actions(for: params.action)
         }
         let settings = SharedSettings.shared
-        if let entries = customCalloutChars(
+        let customLayout = settings.activeCustomLayout
+        if let layout = customLayout, let entries = customCalloutChars(
             for: char,
             inputMode: settings.inputMode,
             keyboardType: params.context.keyboardType,
-            customLayout: settings.activeCustomLayout,
+            customLayout: layout,
         ) {
-            return entries.map { .character($0) }
+            return layout.typedCallouts(entries, typesFullWidth: settings.isFullWidthPunctuation).map { .character($0) }
         }
         return calloutChars(
             for: char,
             inputMode: settings.inputMode,
             layoutType: settings.keyboardLayoutType,
+            universalTones: customLayout?.isUniversal == true,
         )?.map { .character($0) }
     }
 
@@ -42,13 +44,15 @@ public extension TaigiCallouts {
         return customLayout?.calloutOverride(for: char)
     }
 
-    /// Callout characters for `char`, or nil for none.
+    /// Callout characters for `char`, or nil for none. `universalTones` (a universal custom layout)
+    /// takes the tone marks of both scripts, both tone-9 marks, in TL and POJ alike.
     // CROSS-PLATFORM INVARIANT — English mode offers symbol callouts only, as
-    // Android `LayoutAssets.extendedPopups` loads no Taigi popups there.
+    // Android `LayoutManager.mergeLayouts` adds no tone marks there.
     internal static func calloutChars(
         for char: String,
         inputMode: InputMode,
         layoutType: KeyboardLayoutType,
+        universalTones: Bool = false,
     ) -> [String]? {
         if inputMode == .english {
             return SymbolCallouts.actions[char]
@@ -78,9 +82,9 @@ public extension TaigiCallouts {
             return actions
         }
 
-        let toneMap = inputMode == .poj
-            ? TaigiToneMaps.poj
-            : TaigiToneMaps.tl
+        let toneMap = universalTones
+            ? TaigiToneMaps.universal
+            : inputMode == .poj ? TaigiToneMaps.poj : TaigiToneMaps.tl
         return toneMap[char]
     }
 }

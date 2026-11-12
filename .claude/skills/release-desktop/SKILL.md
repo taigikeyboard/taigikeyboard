@@ -1,12 +1,12 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) of the version already in the tree - changelog, rebuild, commit, and stage the installers on an unpublished draft; stops before publishing. Optional args: a patch platform (`macos` / `windows` / `linux`) or a release base. Mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows + Linux + ChromeOS, one shared version) of the version already in the tree - changelog, rebuild, commit, and stage the installers on an unpublished draft; stops before publishing. Optional args: a patch platform (`macos` / `windows` / `linux` / `chromeos`) or a release base. Mobile train (iOS + Android) is `release-mobile`.
 disable-model-invocation: true
 ---
 
 # Release Desktop
 
-The desktop train is macOS + Windows + Linux, sharing one version, moved by
+The desktop train is macOS + Windows + Linux + ChromeOS, sharing one version, moved by
 `make version-desktop x.y.z`, unrelated to the mobile number. The mobile train
 has its own skill (`release-mobile`); a release never mixes the two.
 
@@ -16,7 +16,7 @@ before invoking. Example: `/release-desktop`
 
 Optional arguments, in any order:
 
-- `<platform>` — `macos`, `windows` or `linux`: a **patch release** of that
+- `<platform>` — `macos`, `windows`, `linux` or `chromeos`: a **patch release** of that
   platform alone. Example: `/release-desktop linux`
 - `<base-ref>` — overrides the derived release base.
   Example: `/release-desktop desktop-3.6.7`
@@ -26,8 +26,9 @@ patch (`x.y.z`, z > 0) ships only the platform it fixes. Policy:
 `docs/architecture/desktop-release.md` § Version numbers.
 
 This skill takes a release as far as it can go without a person: it rebuilds,
-writes the changelog, commits, and stages **all three** installers on a draft release
-nobody can reach. It stops there. Publishing that draft is the maintainer's,
+writes the changelog, commits, and stages **every** platform's installers on a draft release
+nobody can reach (staging also dispatches the beta run for the unlisted /beta
+page). It stops there. Publishing that draft is the maintainer's,
 because it is the decision the draft exists to protect — and publishing
 announces the release itself.
 
@@ -44,7 +45,7 @@ python3 tools/release_notes.py check-versions --train desktop --version <target>
 ```
 
 That check is what proves `windows/Cargo.toml`, `desktop/Cargo.toml`,
-`linux/Cargo.toml`, `macos/Cargo.toml` and both macOS plist keys carry the same number, so a
+`linux/Cargo.toml`, `macos/Cargo.toml`, `web/chromeos/manifest.json` and both macOS plist keys carry the same number, so a
 half-applied bump stops here instead of shipping desktop platforms on different
 versions. When they disagree, run `make version-desktop <target>` — it writes
 every file in one pass, or none, then refreshes each desktop `Cargo.lock`'s
@@ -89,7 +90,7 @@ git log <base-ref>..HEAD --format="%s%n%b%n---"
 ```
 
 For a patch, the changelog covers only what reaches that platform: its own tree
-(`macos/`, `windows/`, `linux/`) plus the shared `desktop/`, `engine/` and
+(`macos/`, `windows/`, `linux/`, `web/chromeos/`) plus the shared `desktop/`, `engine/` and
 `dictionary/` changes its build picks up.
 
 Trace user-visible behavior by platform. Do not infer release scope from commit
@@ -100,6 +101,8 @@ Sort every user-visible change before writing anything:
 - **macOS-only** → the `### macOS` section.
 - **Windows-only** → the `### Windows` section.
 - **Linux-only** → the `### Linux` section.
+- **ChromeOS-only** → the `### ChromeOS` section (it shares `web/src/` and the
+  wasm engine with the web version, which has no release of its own).
 - **Shared** (engine, dictionary, a behavior landing on several desktop
   platforms) → describe it in **each affected platform's** section, in that
   platform's own terms (its own shortcut spelling: `⌃⌘H` on macOS,
@@ -164,8 +167,8 @@ tree.
 
 | File | Purpose |
 | --- | --- |
-| `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS`, `### Windows` and `### Linux` |
-| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux` list (newest first) |
+| `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS`, `### Windows`, `### Linux` and `### ChromeOS` |
+| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux + ChromeOS` list (newest first) |
 
 Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
 body, so it is what users read on the release page:
@@ -186,6 +189,10 @@ body, so it is what users read on the release page:
 #### <same shape>
 
 ### Linux
+
+#### <same shape>
+
+### ChromeOS
 
 #### <same shape>
 ```
@@ -235,16 +242,16 @@ straight to staging: the maintainer reads the changelog on the draft page before
 publishing, since deterministic validation cannot tell whether a sentence
 describes the behavior that shipped.
 
-## 7. Stage all three installers
+## 7. Stage every platform
 
 ```bash
 make desktop-release
 ```
 
-It builds the macOS `.pkg` here and dispatches the hosted Windows and Linux
-builds from the same commit onto the **draft** `desktop-<target>` (what each
+It builds the macOS `.pkg` here and dispatches the hosted Windows, Linux and
+ChromeOS builds from the same commit onto the **draft** `desktop-<target>` (what each
 step does and checks: `docs/architecture/desktop-release.md` § The flow,
-§ What staging checks). A full release is all three or none; an existing draft
+§ What staging checks). A full release is every platform or none; an existing draft
 for this version is deleted first, so if a half fails or `main` moved while it
 was waited on, fix that and run the whole thing again.
 
@@ -263,11 +270,12 @@ Report the draft URL.
 
 **Test what was staged, then publish it** — on the draft's own page, which step
 7 printed. A draft is visible in the web UI to anyone who can write this
-repository: the three installers are download links there, and **Publish release** is a
+repository: the installers are download links there, and **Publish release** is a
 button on the same page. This is the decision the draft exists to protect, so the
 skill never presses it.
 
-Install each (the `.deb` on the Linux VM, S74), run the dogfood checklist items
+Install each (the `.deb` on the Linux VM, S74; the ChromeOS zip unpacked in
+the ChromeOS VM, `docs/architecture/chromeos-roadmap.md` § Spike result), run the manual checks
 this release touches, then publish.
 (The same two steps from a terminal, if that is closer to hand:
 `gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`
@@ -279,6 +287,10 @@ Publishing creates the tag and runs the announcement
 The website's Linux button stays hidden until `enable_linux_download` is `true`
 in the website's `_config.yml` — the maintainer's switch, like the publish. It
 hides the button, not the packages, which are public once published.
+
+**After a release carrying the ChromeOS zip is published**, remind the
+maintainer to upload it to the Chrome Web Store (the announcement prints the
+same reminder; `docs/architecture/chromeos-release.md` § Upload).
 
 **After a release carrying a macOS `.pkg` is published**, remind the maintainer
 to bump the Homebrew cask (or do it when asked) — steps in

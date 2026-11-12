@@ -19,6 +19,11 @@ glyph filter — not by shipping per-version files. Bump the pin (`MAX_EMOJI_VER
 `CLDR_VERSION` in `scripts/generate.py`, `UNICODE_EMOJI_VERSION` + `CLDR_TAG` in the
 `Makefile`) together when raising it.
 
+**Update watch**: `.github/workflows/emoji-watch.yml` compares `UNICODE_EMOJI_VERSION` with
+`/Public/emoji/latest/emoji-test.txt` (weekly August–October around the September release,
+monthly otherwise) and opens one issue per newer Emoji version with the `emoji-test.txt` diff
+(open issue refreshed each run; closed issue left alone — reopen to re-raise).
+
 **E17 source note**: Unicode has not yet populated `/Public/emoji/17.0/`; the canonical
 machine-readable `emoji-test.txt` for Emoji 17.0 (Version: 17.0, Date: 2025-08-04) is served
 from `/Public/emoji/latest/`. The committed `data/emoji-test.txt` snapshot is the

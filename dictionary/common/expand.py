@@ -34,7 +34,7 @@ def expand_dataframe(df, separators=None, logger=None):
     expanded_rows = []
     expanded_count = 0
 
-    for _, row in df.iterrows():
+    for row in df.to_dict("records"):
         tl_variants = split_variants(row.get("tl", ""), separators)
         hanzi_variants = split_variants(row.get("hanzi", ""), separators)
 

@@ -1,0 +1,8 @@
+New: Custom Layouts: edit each key's long-press characters.
+New: Duplicate a custom theme or layout, or customize a built-in theme.
+New: TL and POJ each remember their own layout.
+Improved: Custom Layouts can hold ⁿ, the final or, and more symbols.
+Improved: Custom Dictionary lists and searches every word.
+Improved: Fewer one-word splits: ue5 gives 鞋.
+Improved: Phonetic Symbols conversion uses your custom words.
+Changed: Reset and delete actions run without a confirmation dialog.
