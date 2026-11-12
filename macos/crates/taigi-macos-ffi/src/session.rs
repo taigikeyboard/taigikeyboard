@@ -1041,9 +1041,10 @@ mod tests {
         assert_eq!(effects(&reply), vec![insert("h"), closed()]);
     }
 
-    /// Outside a composition: an attaching mark swaps with the armed space
-    /// when Swift says it can; otherwise it is written full width; a digit
-    /// goes to the host untouched.
+    /// Outside a composition: an attaching mark takes the armed space's
+    /// place when Swift says it can — full width, so no space after it and
+    /// no re-arm; otherwise it is written full width; a digit goes to the
+    /// host untouched.
     #[test]
     fn pass_through_swaps_maps_or_hands_the_key_back() {
         let (_engine, shell) = engine_shell();
@@ -1056,12 +1057,11 @@ mod tests {
         assert!(swapped.handled);
         assert_eq!(
             effects(&swapped),
-            vec![
-                effect::Effect::SwapPrecedingSpace(proto::SwapPrecedingSpace {
-                    replacement: "? ".to_owned()
-                }),
-                arm()
-            ]
+            vec![effect::Effect::SwapPrecedingSpace(
+                proto::SwapPrecedingSpace {
+                    replacement: "？".to_owned()
+                }
+            )]
         );
 
         let mapped = typist.key(typed("?"), no_list());
@@ -1187,9 +1187,10 @@ mod tests {
         assert_eq!(effects(&reply), vec![]);
     }
 
-    /// The picker's symbol: an attaching mark swaps with the armed space
-    /// and re-arms; with no swap it is written as it is, and a mark that
-    /// does not attach is written even when a swap is armed.
+    /// The picker's symbol: a half-width attaching mark swaps with the armed
+    /// space and re-arms, a full-width one takes its place and arms nothing;
+    /// with no swap it is written as it is, and a mark that does not attach
+    /// is written even when a swap is armed.
     #[test]
     fn a_picked_symbol_swaps_or_is_written_as_picked() {
         let (_engine, shell) = engine_shell();
@@ -1198,16 +1199,24 @@ mod tests {
             swap_available: true,
             ..no_list()
         };
-        let swapped = typist.insert_symbol("？", swappable.clone());
+        let swapped = typist.insert_symbol("?", swappable.clone());
         assert!(!swapped.handled && !swapped.ignored);
         assert_eq!(
             effects(&swapped),
             vec![
                 effect::Effect::SwapPrecedingSpace(proto::SwapPrecedingSpace {
-                    replacement: "？ ".to_owned()
+                    replacement: "? ".to_owned()
                 }),
                 arm()
             ]
+        );
+        assert_eq!(
+            effects(&typist.insert_symbol("？", swappable.clone())),
+            vec![effect::Effect::SwapPrecedingSpace(
+                proto::SwapPrecedingSpace {
+                    replacement: "？".to_owned()
+                }
+            )]
         );
         assert_eq!(
             effects(&typist.insert_symbol("？", no_list())),

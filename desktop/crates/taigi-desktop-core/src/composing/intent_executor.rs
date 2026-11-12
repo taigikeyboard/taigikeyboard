@@ -184,7 +184,9 @@ pub fn perform_intent(
                 return false;
             };
             let punctuation = document_punctuation(settings, &typed);
-            let swapping = swap_text(settings, &typed, punctuation.as_deref());
+            // The swap attaches what the key writes: the mark follows the
+            // output's width, not the script of the word before the caret.
+            let swapping = punctuation.as_deref().unwrap_or(&typed);
             if swap_auto_space(swapping, settings, manager, surface) {
                 return true;
             }
@@ -325,7 +327,7 @@ pub fn pass_through_may_swap(snapshot: &KeyEventSnapshot, settings: &SettingsDoc
     };
     let punctuation = document_punctuation(settings, &typed);
     settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        && engine::is_attaching_punctuation(swap_text(settings, &typed, punctuation.as_deref()))
+        && engine::is_attaching_punctuation(punctuation.as_deref().unwrap_or(&typed))
 }
 
 /// Re-reads the candidates for the composition as it now stands. With the
@@ -402,23 +404,6 @@ fn is_tps(settings: &SettingsDocument) -> bool {
     settings.choice(&keys::INPUT_MODE) == InputMode::Tps
 }
 
-/// What the swap attaches for a pass-through key that typed `typed` and
-/// writes `punctuation` (`document_punctuation`). The swap is read before
-/// the width (the word in front of the caret is romanization, which keeps
-/// Latin marks); TPS has only the full width, so there the swap attaches the
-/// glyph written.
-fn swap_text<'a>(
-    settings: &SettingsDocument,
-    typed: &'a str,
-    punctuation: Option<&'a str>,
-) -> &'a str {
-    if is_tps(settings) {
-        punctuation.unwrap_or(typed)
-    } else {
-        typed
-    }
-}
-
 /// Commits the candidate behind cell `cell`, in the cell's own script or
 /// (`flip`) the other one; the engine resolves what that script writes and
 /// whether it earns the auto space. No cell (no list, an index past it)
@@ -455,22 +440,32 @@ fn commit_candidate(
 /// The swap for `text` about to be written outside a composition. The arm's
 /// EXISTENCE is the verdict — it is only ever set after a commit that wrote
 /// romanization earned its space — so only Auto-Space itself is re-read
-/// live here. On success the swap is re-armed (`?!` chains) and the engine
-/// hears about the character as the end of a context.
+/// live here. A half-width mark moves the space after itself and re-arms
+/// the swap (`?!` chains); a full-width mark takes the space's place and
+/// arms nothing. Either way the engine hears about the character as the end
+/// of a context.
 fn swap_auto_space(
     text: &str,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     surface: &mut impl IntentSurface,
 ) -> bool {
-    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        || !engine::is_attaching_punctuation(text)
-        || !surface.swap_preceding_space(&format!("{text} "))
-    {
+    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED) || !engine::is_attaching_punctuation(text) {
+        return false;
+    }
+    let is_spaced = engine::is_spaced_punctuation(text);
+    let replacement = if is_spaced {
+        format!("{text} ")
+    } else {
+        text.to_owned()
+    };
+    if !surface.swap_preceding_space(&replacement) {
         return false;
     }
     manager.note_character_typed_outside_composition(text);
-    surface.arm_swap();
+    if is_spaced {
+        surface.arm_swap();
+    }
     true
 }
 

@@ -172,14 +172,15 @@ final class ComposingBackendTests: XCTestCase {
 
     /// TPS writes only full width, so a bare key attaches the glyph it maps
     /// to: `}` (no TPS layout key) attaches to nothing, its `』` does. Under
-    /// TL `}` is asked about as typed — the negative control.
+    /// TL Roman-first `}` is asked about as typed — the negative control.
     func testTheSwapCheck_underTps_followsTheFullWidthGlyph() throws {
         let store = try makeScratchSettingsStore()
         store.isAutoSpaceEnabled = true
+        store.storedIsHanjiFirst = false
 
         _ = try activatedBackend(composing: false)
             .key(Self.key("}"), in: request(settings: store, armed: true))
-        XCTAssertFalse(isSwapCheckAsked, "TL: } attaches to nothing")
+        XCTAssertFalse(isSwapCheckAsked, "TL Roman-first: } attaches to nothing")
 
         store.switchInputMode(.pick(.tps))
         _ = try activatedBackend(composing: false)

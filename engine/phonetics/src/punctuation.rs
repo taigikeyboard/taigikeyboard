@@ -6,6 +6,9 @@
 //! When auto-space is active, every committed word is followed by a trailing
 //! space. Typing *attaching* punctuation next must move that space to AFTER
 //! the punctuation (`guá ` + `?` → `guá? `), not leave it before (`guá ?`).
+//! Only a half-width (Latin) mark keeps the space after it: a full-width
+//! mark carries its own spacing, so it takes the space's place and leaves
+//! none (`taigi ` + `，` → `taigi，`; `IsSpacedPunctuation`).
 //! A *joiner* binds the next syllable to the word, so it takes the space's
 //! place and leaves none (`hōo ` + `·` → `hōo·`).
 
@@ -26,6 +29,14 @@ pub(crate) fn is_attaching_punctuation(text: &str) -> bool {
         (Some(c), None) => ATTACHING.contains(&c),
         _ => false,
     }
+}
+
+/// True when `text` is attaching punctuation the auto space follows: a
+/// half-width (Latin) mark, as in `guá? `. A full-width mark of
+/// [`ATTACHING`] is set in a two-cell box that already holds its spacing, so
+/// it takes the space's place and the space goes (`taigi，`).
+pub(crate) fn is_spaced_punctuation(text: &str) -> bool {
+    is_attaching_punctuation(text) && text.is_ascii()
 }
 
 /// True when `text` is the khinsiann dot, the one joiner: it stands between
@@ -63,6 +74,20 @@ mod tests {
         // every old platform copy answered false too.
         for text in ["", "a", "台", " ", "?!", "? ", "guá?", "?\u{0301}"] {
             assert!(!is_attaching_punctuation(text), "{text:?}");
+        }
+    }
+
+    #[test]
+    fn only_the_half_width_attaching_marks_keep_the_space() {
+        // trace: the eight ASCII glyphs of `ATTACHING`; its eleven
+        // full-width ones are not spaced, nor is anything outside it.
+        for glyph in [".", "!", "?", ",", ";", ":", ")", "]"] {
+            assert!(is_spaced_punctuation(glyph), "{glyph}");
+        }
+        for glyph in [
+            "。", "！", "？", "，", "、", "；", "：", "）", "】", "」", "』", "(", "a", "?!", "",
+        ] {
+            assert!(!is_spaced_punctuation(glyph), "{glyph:?}");
         }
     }
 

@@ -9,6 +9,7 @@ import com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation
+import com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
@@ -109,6 +110,17 @@ fun RustEngineBridge.isAttachingPunctuation(text: String): Boolean {
 fun RustEngineBridge.isJoinerPunctuation(text: String): Boolean {
     val payload = IsJoinerPunctuation.newBuilder().setText(text).build()
     return boolDispatch({ it.isJoinerPunctuation = payload }, "isJoinerPunctuation")
+}
+
+/**
+ * Whether attaching [text] keeps the auto space after itself — a half-width
+ * mark (`guá? `); a full-width one takes the space's place (`taigi，`) — the
+ * engine's answer. False when the engine fails: the mark is written with no
+ * space after it.
+ */
+fun RustEngineBridge.isSpacedPunctuation(text: String): Boolean {
+    val payload = IsSpacedPunctuation.newBuilder().setText(text).build()
+    return boolDispatch({ it.isSpacedPunctuation = payload }, "isSpacedPunctuation")
 }
 
 /**

@@ -82,6 +82,12 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertFalse(RustEngineBridge.isJoinerPunctuation("-"))
     }
 
+    func test_op_isSpacedPunctuation_onlyTheHalfWidthMarks() {
+        XCTAssertTrue(RustEngineBridge.isSpacedPunctuation("?"))
+        XCTAssertFalse(RustEngineBridge.isSpacedPunctuation("？"))
+        XCTAssertFalse(RustEngineBridge.isSpacedPunctuation("("))
+    }
+
     // MARK: - T1: panic at FFI
 
     /// The FFI seam must NEVER unwind across the boundary: a valid `Response`

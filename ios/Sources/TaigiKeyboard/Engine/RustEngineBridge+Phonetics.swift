@@ -98,6 +98,16 @@ public extension RustEngineBridge {
         return boolDispatch(method: .isJoinerPunctuation(payload), op: "isJoinerPunctuation")
     }
 
+    /// Whether attaching `text` keeps the auto space after itself — a
+    /// half-width mark (`guá? `); a full-width one takes the space's place
+    /// (`taigi，`) — the engine's answer. False when the engine fails: the
+    /// mark is written with no space after it.
+    static func isSpacedPunctuation(_ text: String) -> Bool {
+        var payload = Taigi_Engine_IsSpacedPunctuation()
+        payload.text = text
+        return boolDispatch(method: .isSpacedPunctuation(payload), op: "isSpacedPunctuation")
+    }
+
     /// The digit-tone spelling of a TL reading that the web dictionaries
     /// search by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every
     /// platform asks. The reading as written when the engine fails.

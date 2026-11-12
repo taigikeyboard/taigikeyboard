@@ -49,6 +49,12 @@ pub fn is_attaching_punctuation(text: &str) -> bool {
     crate::punctuation::is_attaching_punctuation(text)
 }
 
+/// Whether attaching text keeps the auto space after itself — the
+/// half-width marks; a full-width one takes the space's place (§23).
+pub fn is_spaced_punctuation(text: &str) -> bool {
+    crate::punctuation::is_spaced_punctuation(text)
+}
+
 /// Whether text is a joiner, which takes the place of an auto space (§23).
 pub fn is_joiner_punctuation(text: &str) -> bool {
     crate::punctuation::is_joiner_punctuation(text)

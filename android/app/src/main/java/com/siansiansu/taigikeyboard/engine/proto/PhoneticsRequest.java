@@ -28,6 +28,7 @@ public  final class PhoneticsRequest extends
     IS_ATTACHING_PUNCTUATION(40),
     EXTERNAL_LOOKUP_DIGIT_FORM(41),
     IS_JOINER_PUNCTUATION(42),
+    IS_SPACED_PUNCTUATION(43),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -51,6 +52,7 @@ public  final class PhoneticsRequest extends
         case 40: return IS_ATTACHING_PUNCTUATION;
         case 41: return EXTERNAL_LOOKUP_DIGIT_FORM;
         case 42: return IS_JOINER_PUNCTUATION;
+        case 43: return IS_SPACED_PUNCTUATION;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -527,6 +529,56 @@ public  final class PhoneticsRequest extends
    */
   private void clearIsJoinerPunctuation() {
     if (methodCase_ == 42) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int IS_SPACED_PUNCTUATION_FIELD_NUMBER = 43;
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   */
+  @java.lang.Override
+  public boolean hasIsSpacedPunctuation() {
+    return methodCase_ == 43;
+  }
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation getIsSpacedPunctuation() {
+    if (methodCase_ == 43) {
+       return (com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   */
+  private void setIsSpacedPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 43;
+  }
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   */
+  private void mergeIsSpacedPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 43 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 43;
+  }
+  /**
+   * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+   */
+  private void clearIsSpacedPunctuation() {
+    if (methodCase_ == 43) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1097,6 +1149,54 @@ public  final class PhoneticsRequest extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+     */
+    @java.lang.Override
+    public boolean hasIsSpacedPunctuation() {
+      return instance.hasIsSpacedPunctuation();
+    }
+    /**
+     * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation getIsSpacedPunctuation() {
+      return instance.getIsSpacedPunctuation();
+    }
+    /**
+     * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+     */
+    public Builder setIsSpacedPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation value) {
+      copyOnWrite();
+      instance.setIsSpacedPunctuation(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+     */
+    public Builder setIsSpacedPunctuation(
+        com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation.Builder builderForValue) {
+      copyOnWrite();
+      instance.setIsSpacedPunctuation(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+     */
+    public Builder mergeIsSpacedPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation value) {
+      copyOnWrite();
+      instance.mergeIsSpacedPunctuation(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsSpacedPunctuation is_spaced_punctuation = 43;</code>
+     */
+    public Builder clearIsSpacedPunctuation() {
+      copyOnWrite();
+      instance.clearIsSpacedPunctuation();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsRequest)
   }
   @java.lang.Override
@@ -1123,10 +1223,11 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.class,
             com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
             com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.class,
+            com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\r*\b\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000\"<\u0000" +
-              "#<\u0000(<\u0000)<\u0000*<\u0000";
+              "\u0000\t\u0001\u0000\r+\t\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000\"<\u0000" +
+              "#<\u0000(<\u0000)<\u0000*<\u0000+<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
