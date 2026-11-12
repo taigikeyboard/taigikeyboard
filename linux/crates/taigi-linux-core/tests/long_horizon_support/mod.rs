@@ -3,6 +3,8 @@
 //! long-horizon realistic user-interaction simulator.
 
 pub mod corpus;
+pub mod host;
+pub mod personas;
 pub mod rng;
 
 use std::path::{Path, PathBuf};
