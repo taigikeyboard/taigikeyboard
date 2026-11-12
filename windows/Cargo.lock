@@ -162,6 +162,7 @@ dependencies = [
  "prost",
  "protos",
  "ranking",
+ "serde_json",
  "userdata",
 ]
 
