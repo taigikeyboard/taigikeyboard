@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `腔口差`, `accent variations`, `contribution`, `issue form`, `GitHub App`, `khpoo`, `齒盤補充辭典`
-> **Status**: Draft 2026-11-12 — Phase 1 in review; all decisions settled
+> **Status**: Draft 2026-11-12 — Phase 1 merged (#873); Phase 2 next
 
 ## Goal
 
@@ -55,7 +55,7 @@ Closes #<issue>
 | Phase | PR | Scope | Status |
 |---|---|---|---|
 | 0 | admin | This roadmap + project memory | Done (533e2d093, 59bc9b98f) |
-| 1 | this repo | `dictionary/tools/verify_khpoo_append.py` + CI job + licence record | In review |
+| 1 | this repo | `dictionary/tools/verify_khpoo_append.py` + CI job + licence record | Merged #873 |
 | 2 | this repo | Issue form + intake workflow + GitHub App wiring | Pending |
 | 3 | new repo | Static site: search + form + Pages deploy | Pending |
 
