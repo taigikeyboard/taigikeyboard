@@ -30,6 +30,9 @@ e2e-trace = ["dispatch/e2e-trace"]
 
 [dev-dependencies]
 tempfile.workspace = true
+prost.workspace = true
+protos.workspace = true
+serde.workspace = true
 
 [lints]
 workspace = true
