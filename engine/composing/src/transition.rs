@@ -1557,9 +1557,9 @@ fn finalize_effects(text: String) -> Vec<Effect> {
 /// supplied it (`CommitContinuous.association_tl` / `NailedSegment
 /// .association_tl`), else the raw committed slice. The canonical-TL path
 /// keeps the learned `prev_tl` / `next_tl` aligned with a normal candidate
-/// commit (fixing continuous-vs-normal fragmentation); the raw fallback
-/// preserves pre-R2 behavior for legacy callers + TPS-OOV hanji-absent
-/// candidates that carry no canonical TL.
+/// commit (fixing continuous-vs-normal fragmentation). Every shell sends
+/// `association_tl`; the raw fallback covers a picked candidate that
+/// carries no canonical TL (TPS-OOV, hanji-absent).
 pub(crate) fn association_roman(association_tl: &str, raw_text: &str) -> String {
     if association_tl.is_empty() {
         raw_text.to_owned()

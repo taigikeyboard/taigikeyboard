@@ -47,28 +47,4 @@ public interface DecideResultOrBuilder extends
    * @return The predictionsVisible.
    */
   boolean getPredictionsVisible();
-
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   * @return The lastSelectedWord.
-   */
-  java.lang.String getLastSelectedWord();
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   * @return The bytes for lastSelectedWord.
-   */
-  com.google.protobuf.ByteString
-      getLastSelectedWordBytes();
 }

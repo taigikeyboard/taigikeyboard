@@ -718,12 +718,6 @@ impl ExpandableListModel {
         }
     }
 
-    /// The collapsed cell frames: end to end along a row, stacked down a
-    /// column.
-    pub fn collapsed_cell_rect(&self, slot: usize) -> Option<Rect> {
-        self.collapsed_cells.get(slot).map(|cell| cell.rect)
-    }
-
     /// A grid cell's frame in CONTENT coordinates (before the scroll offset).
     pub fn grid_cell_rect(&self, candidate_index: usize) -> Option<Rect> {
         let (row, cell) = self.grid.position_of(candidate_index)?;
@@ -1618,10 +1612,9 @@ mod tests {
         assert_eq!(m.collapsed_window_width(), width + 20.0);
         assert_eq!(m.collapsed_window_height(), 9.0 * 30.0 + 8.0);
         assert_eq!(
-            m.collapsed_cell_rect(2),
-            Some(Rect::new(0.0, 62.0, width, 30.0))
+            m.collapsed_cells()[2].rect,
+            Rect::new(0.0, 62.0, width, 30.0)
         );
-        assert_eq!(m.collapsed_cell_rect(9), None);
         assert_eq!(m.collapsed_primary_column_width(), Some(5.0));
         assert_eq!(model(&[5.0; 3]).collapsed_primary_column_width(), None);
     }

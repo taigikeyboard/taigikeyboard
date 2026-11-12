@@ -506,12 +506,6 @@ object RustEngineBridge {
         val effects: List<Effect>,
         val currentGeneration: Long,
         val predictionsVisible: Boolean,
-        /**
-         * `null` when the engine has no last-selected word; otherwise the
-         * echo of `state.last_selected_word`. Empty wire string maps to
-         * `null` per proto contract (`""` == `nil`).
-         */
-        val lastSelectedWord: String?,
     ) {
         sealed class Effect {
             data class RescheduleContextTimeout(
@@ -543,7 +537,6 @@ object RustEngineBridge {
                 effects = emptyList(),
                 currentGeneration = 0L,
                 predictionsVisible = false,
-                lastSelectedWord = null,
             )
         }
     }

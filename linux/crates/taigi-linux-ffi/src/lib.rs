@@ -46,19 +46,8 @@ struct ReplyEmit {
     caret: u32,
     delete_offset: i32,
     delete_count: u32,
-    table: Option<ReplyTable>,
-}
-
-struct ReplyTable {
-    candidates: Vec<CString>,
-    labels: Vec<CString>,
-    cursor: u32,
-    cursor_visible: bool,
-    page_size: u32,
-    vertical: bool,
-    /// The cells the candidate window draws. The joined strings above stay
-    /// for `taigi_reply_table_candidate`.
-    content: LookupTableContent,
+    /// The cells the candidate window (`taigi_popup_show`) draws.
+    table: Option<LookupTableContent>,
 }
 
 /// The panel menu rows, resolved in the display language of the moment.
@@ -126,7 +115,7 @@ fn reply_emit(emit: Emit) -> Option<ReplyEmit> {
         }
         Emit::LookupTable(content) => {
             reply.kind = EMIT_LOOKUP_TABLE;
-            reply.table = Some(reply_table(content));
+            reply.table = Some(content);
         }
         Emit::HideLookupTable => reply.kind = EMIT_HIDE_LOOKUP_TABLE,
         Emit::ModeChanged => reply.kind = EMIT_MODE_CHANGED,
@@ -139,22 +128,6 @@ fn reply_emit(emit: Emit) -> Option<ReplyEmit> {
         }
     }
     Some(reply)
-}
-
-fn reply_table(content: LookupTableContent) -> ReplyTable {
-    ReplyTable {
-        candidates: content
-            .joined_candidates()
-            .iter()
-            .map(|c| c_string(c))
-            .collect(),
-        labels: content.labels.iter().map(|l| c_string(l)).collect(),
-        cursor: content.cursor,
-        cursor_visible: content.cursor_visible,
-        page_size: content.page_size,
-        vertical: content.vertical,
-        content,
-    }
 }
 
 fn reply_from(handled: bool, emits: Vec<Emit>) -> *mut TaigiReply {
@@ -669,110 +642,6 @@ pub unsafe extern "C" fn taigi_reply_delete_count(reply: *const TaigiReply, inde
     unsafe { emit_at(reply, index) }.map_or(0, |emit| emit.delete_count)
 }
 
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_count(reply: *const TaigiReply, index: usize) -> usize {
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .map_or(0, |table| table.candidates.len())
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_candidate(
-    reply: *const TaigiReply,
-    index: usize,
-    row: usize,
-) -> *const c_char {
-    static EMPTY: &CStr = c"";
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .and_then(|table| table.candidates.get(row))
-        .map_or(EMPTY.as_ptr(), |text| text.as_ptr())
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_label_count(
-    reply: *const TaigiReply,
-    index: usize,
-) -> usize {
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .map_or(0, |table| table.labels.len())
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_label(
-    reply: *const TaigiReply,
-    index: usize,
-    position: usize,
-) -> *const c_char {
-    static EMPTY: &CStr = c"";
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .and_then(|table| table.labels.get(position))
-        .map_or(EMPTY.as_ptr(), |text| text.as_ptr())
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_cursor(reply: *const TaigiReply, index: usize) -> u32 {
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .map_or(0, |table| table.cursor)
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_cursor_visible(
-    reply: *const TaigiReply,
-    index: usize,
-) -> bool {
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .is_some_and(|table| table.cursor_visible)
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_page_size(
-    reply: *const TaigiReply,
-    index: usize,
-) -> u32 {
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .map_or(0, |table| table.page_size)
-}
-
-/// # Safety
-/// `reply` is a live reply or null.
-#[no_mangle]
-pub unsafe extern "C" fn taigi_reply_table_vertical(
-    reply: *const TaigiReply,
-    index: usize,
-) -> bool {
-    // SAFETY: forwarded contract.
-    unsafe { emit_at(reply, index) }
-        .and_then(|emit| emit.table.as_ref())
-        .is_some_and(|table| table.vertical)
-}
-
 /// The runtime `taigi_popup_show` reads the font sizes from. One per process.
 static POPUP_RUNTIME: OnceLock<Arc<Runtime>> = OnceLock::new();
 
@@ -804,7 +673,7 @@ pub unsafe extern "C" fn taigi_popup_show(
         else {
             return;
         };
-        popup::present(&table.content, popup_style(), Caret { x, y, w, h });
+        popup::present(table, popup_style(), Caret { x, y, w, h });
     });
 }
 
@@ -902,22 +771,18 @@ mod tests {
             );
             assert_eq!(taigi_reply_caret(reply, 0), 3);
             assert_eq!(taigi_reply_kind(reply, 1), EMIT_LOOKUP_TABLE);
-            assert_eq!(taigi_reply_table_count(reply, 1), 2);
-            assert_eq!(
-                CStr::from_ptr(taigi_reply_table_candidate(reply, 1, 1)).to_str(),
-                Ok("tâi")
-            );
-            assert_eq!(
-                CStr::from_ptr(taigi_reply_table_label(reply, 1, 0)).to_str(),
-                Ok("q")
-            );
-            assert_eq!(taigi_reply_table_cursor(reply, 1), 1);
-            assert_eq!(taigi_reply_table_page_size(reply, 1), 9);
-            assert!(!taigi_reply_table_vertical(reply, 1));
+            let table = emit_at(reply, 1)
+                .and_then(|emit| emit.table.as_ref())
+                .expect("the lookup-table emit carries its table");
+            assert_eq!(table.joined_candidates(), ["台", "tâi"]);
+            assert_eq!(table.labels, ["q", "w"]);
+            assert_eq!(table.cursor, 1);
+            assert_eq!(table.page_size, 9);
+            assert!(!table.vertical);
+            assert!(emit_at(reply, 0).is_some_and(|emit| emit.table.is_none()));
             // Out of range answers the documented zero / empty, never a fault.
             assert_eq!(taigi_reply_kind(reply, 9), 0);
             assert_eq!(CStr::from_ptr(taigi_reply_text(reply, 9)).to_str(), Ok(""));
-            assert_eq!(taigi_reply_table_count(reply, 0), 0);
             taigi_reply_free(reply);
         }
     }

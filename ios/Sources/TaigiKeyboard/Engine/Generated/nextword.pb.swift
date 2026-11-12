@@ -550,11 +550,6 @@ public nonisolated struct Taigi_Engine_DecideResult: Sendable {
 
   public var predictionsVisible: Bool = false
 
-  /// Echo of last_selected_word so platform can implement
-  /// SelectionContextProvider without holding a parallel cache.
-  /// Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-  public var lastSelectedWord: String = String()
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1471,7 +1466,7 @@ nonisolated extension Taigi_Engine_NextWordResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DecideResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{3}current_generation\0\u{3}predictions_visible\0\u{3}last_selected_word\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{3}current_generation\0\u{3}predictions_visible\0\u{b}last_selected_word\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1482,7 +1477,6 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.effects) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.currentGeneration) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.predictionsVisible) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.lastSelectedWord) }()
       default: break
       }
     }
@@ -1498,9 +1492,6 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
     if self.predictionsVisible != false {
       try visitor.visitSingularBoolField(value: self.predictionsVisible, fieldNumber: 3)
     }
-    if !self.lastSelectedWord.isEmpty {
-      try visitor.visitSingularStringField(value: self.lastSelectedWord, fieldNumber: 4)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1508,7 +1499,6 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
     if lhs.effects != rhs.effects {return false}
     if lhs.currentGeneration != rhs.currentGeneration {return false}
     if lhs.predictionsVisible != rhs.predictionsVisible {return false}
-    if lhs.lastSelectedWord != rhs.lastSelectedWord {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
