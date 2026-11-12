@@ -116,14 +116,16 @@ publish() {
     RELEASE_TEMP_DIR="$(mktemp -d)"
     trap 'rm -rf "$RELEASE_TEMP_DIR"' EXIT
 
-    local prefix="beta/$run_name" asset sha256
+    local prefix="beta/$run_name" row asset details sha256
     local -a entries=()
-    for asset in "${DESKTOP_ASSETS[@]}"; do
+    for row in "${DESKTOP_ASSET_ROWS[@]}"; do
+        asset="${row%%|*}" details="${row#*|}"
         [[ -f "$assets_dir/$asset" ]] || continue
         echo "==> $asset"
         sha256="$(release_sha256 "$assets_dir/$asset")"
         mirror_asset "$assets_dir/$asset" "$assets_dir/$asset.sha256" "$asset" "$sha256" "$prefix"
-        entries+=("$asset" "$DOWNLOAD_HOST_URL/$prefix/$asset" "$sha256")
+        # One "<name>|<url>|<sha256>|<label>|<requires>" argument per asset.
+        entries+=("$asset|$DOWNLOAD_HOST_URL/$prefix/$asset|$sha256|$details")
     done
     [[ ${#entries[@]} -gt 0 ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
 
@@ -131,7 +133,8 @@ publish() {
     data="$(python3 -c '
 import json, sys
 version, commit, *rest = sys.argv[1:]
-assets = [{"name": n, "url": u, "sha256": s} for n, u, s in zip(rest[0::3], rest[1::3], rest[2::3])]
+keys = ("name", "url", "sha256", "label", "requires")
+assets = [dict(zip(keys, entry.split("|"), strict=True)) for entry in rest]
 print(json.dumps({"version": version, "commit": commit, "assets": assets}, indent=2))
 ' "$SHORT_VERSION" "$source_sha" "${entries[@]}")"
     echo "==> writing $BETA_SITE_PATH"
@@ -167,21 +170,18 @@ prune_older_betas() {
 
 BETA_PAGE_URL="https://taigikeyboard.tw/beta"
 
-# What each installer is called in the Discord post, in DESKTOP_ASSETS order.
-DESKTOP_ASSET_LABELS=("macOS" "Windows" "Linux (.deb)" "Fedora (.rpm)" "Arch")
-
 announce() {
-    local source_sha="$1" run_id="$2" message attempt page i
+    local source_sha="$1" run_id="$2" message attempt page
     [[ -n "${DISCORD_BETA_WEBHOOK:-}" ]] || fail "DISCORD_BETA_WEBHOOK is not set"
     [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || fail "source sha '$source_sha' is not 40 hex characters"
-    [[ ${#DESKTOP_ASSET_LABELS[@]} -eq ${#DESKTOP_ASSETS[@]} ]] ||
-        fail "DESKTOP_ASSET_LABELS no longer lines up with DESKTOP_ASSETS (lib/desktop-release.sh)"
     local prefix_url="$DOWNLOAD_HOST_URL/beta/$(beta_run_name "$source_sha" "$run_id")"
     # One "- <label>: <url>" bullet per installer this run mirrored.
     local downloads=""
-    for i in "${!DESKTOP_ASSETS[@]}"; do
-        [[ -f "$assets_dir/${DESKTOP_ASSETS[$i]}" ]] || continue
-        downloads+="- ${DESKTOP_ASSET_LABELS[$i]}: $prefix_url/${DESKTOP_ASSETS[$i]}"$'\n'
+    local row asset label
+    for row in "${DESKTOP_ASSET_ROWS[@]}"; do
+        IFS='|' read -r asset label _ <<< "$row"
+        [[ -f "$assets_dir/$asset" ]] || continue
+        downloads+="- $label: $prefix_url/$asset"$'\n'
     done
     [[ -n "$downloads" ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
     # The page lists this run's mirror URLs once Pages has deployed it; a post

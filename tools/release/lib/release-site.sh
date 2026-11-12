@@ -19,6 +19,8 @@ WINDOWS_SITE_PATH="_data/windows_release.json"
 LINUX_SITE_PATH="_data/linux_release.json"
 LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
 LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
+# ChromeOS has site data but no manifest: the Chrome Web Store updates it.
+CHROMEOS_SITE_PATH="_data/chromeos_release.json"
 # The unlisted /beta page (`tools/release/beta-release.sh` writes it; the page
 # hides a beta whose version a `_data/*_release.json` already names).
 BETA_SITE_PATH="_data/beta_release.json"

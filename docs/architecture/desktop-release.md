@@ -1,10 +1,11 @@
-# Desktop release — one draft, three builds, published by hand
+# Desktop release — one draft, every desktop build, published by hand
 
-How a desktop version (macOS + Windows + Linux, one shared number) gets from a commit to
+How a desktop version (macOS + Windows + Linux + ChromeOS, one shared number) gets from a commit to
 a user. The platform-specific halves are `macos-release.md` (certificates,
 notarization, the package), `windows-release.md` (signing status, the
-installer, the box) and `linux-release.md` (the `.deb` / `.rpm` / Arch packages); everything below is
-shared by all three, and is the single
+installer, the box), `linux-release.md` (the `.deb` / `.rpm` / Arch packages)
+and `chromeos-release.md` (the Chrome Web Store zip); everything below is
+shared by all four, and is the single
 description of the flow — the platform documents link here rather than repeat it.
 
 ## The flow
@@ -16,13 +17,14 @@ approves its run:
 
 | | Runs | Does |
 |---|---|---|
-| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the Linux `.deb` / `.rpm` / Arch packages from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the Linux half: `linux-release.md`) |
-| Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
+| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml`, `linux-build.yml` and `chromeos-build.yml` together and waits for each: GitHub-hosted runners build the `.exe`, the Linux `.deb` / `.rpm` / Arch packages and the ChromeOS Web Store zip from the same commit and attach them to the same draft. Every platform or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the Linux half: `linux-release.md`; the ChromeOS half: `chromeos-release.md`) |
+| Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux\|chromeos` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
 | Beta | **automatic** dispatch at the end of a successful stage; runs after the release Approver approves `desktop-beta.yml` | Copies the draft's installers to R2 `beta/<version>-<sha7>-<run id>/` and lists them on the unlisted `https://taigikeyboard.tw/beta` (`noindex`, not in the sitemap, linked from nowhere) for internal testers, who cannot open a draft. Only the newest beta is kept; the page hides a beta once its version is published (`tools/release/beta-release.sh`). Once the live page lists the build, the run posts the page link, each installer's R2 link and the release-on-the-5th note to Discord #announcements, with link previews suppressed through the `DISCORD_BETA_WEBHOOK` secret (`release` environment); a failed post only warns. Unapproved, the run expires and the page keeps what it had. A beta and an announcement committing to the website at once: the loser fails loudly, and re-running it is the fix |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
-| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux has none). `make desktop-announce` is the same script, for a re-run |
-| Bump the Homebrew cask | the maintainer, by hand — only after a release carrying a macOS `.pkg` is published | Sets `version` and `sha256` (from the release's `TaigiKeyboard-<version>.pkg.sha256`) in `Casks/taigikeyboard.rb` of `taigikeyboard/homebrew-tap`, then `brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard`. A Windows- or Linux-only patch leaves the cask alone |
+| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux and ChromeOS have none). `make desktop-announce` is the same script, for a re-run |
+| Upload to the Chrome Web Store | the maintainer, by hand — only after a release carrying the ChromeOS zip is published (the announcement prints the reminder) | Uploads `TaigiKeyboard-<version>-chromeos.zip` from the release in the Developer Dashboard and submits it for review; the store, not the release, is how users install and update it (`chromeos-release.md` § Upload) |
+| Bump the Homebrew cask | the maintainer, by hand — only after a release carrying a macOS `.pkg` is published | Sets `version` and `sha256` (from the release's `TaigiKeyboard-<version>.pkg.sha256`) in `Casks/taigikeyboard.rb` of `taigikeyboard/homebrew-tap`, then `brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard`. A Windows-, Linux- or ChromeOS-only patch leaves the cask alone |
 
 ### Version numbers: full releases and patches
 
@@ -59,7 +61,7 @@ The release goes in **this** repository; only the website's own data goes to
 | Each installer and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, every desktop platform on one release | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes are that commit's changelog. Release assets live outside git, so they cost the repository no size or bandwidth allowance. |
 | The download mirror: each installer and its `.sha256` | the Cloudflare R2 bucket `taigikeyboard-downloads`, served at `https://dl.taigikeyboard.tw/desktop/<asset>` — copied there by the announcement | GitHub's release-asset host crawls on some Taiwanese ISPs (HiNet measured ~40 KB/s on 2026-10-09, against ~16 MB/s from R2), so the website buttons and both appcasts name the mirror; the GitHub release stays the original it is checked against. See *One-time: the R2 mirror* and *Pruning the mirror*. |
 | The beta copy of a draft and `_data/beta_release.json` | R2 `beta/<version>-<sha7>-<run id>/` (newest only) and the website repository, written by `desktop-beta.yml` | Internal testers have no write access to see a draft. A fresh prefix per run because the download host caches for 30 days and a re-stage at one commit builds different bytes. |
-| `_data/{macos,windows,linux,linux_rpm,linux_arch}_release.json` | committed site data in the website repository — written only by the announcement, all in one commit (`tools/release/lib/release-site.sh`) | The landing page's download buttons read them; the macOS one and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
+| `_data/{macos,windows,linux,linux_rpm,linux_arch,chromeos}_release.json` | committed site data in the website repository — written only by the announcement, all in one commit (`tools/release/lib/release-site.sh`) | The landing page's download buttons read them, and the /beta page hides a beta whose version one of them names (the ChromeOS file exists for that alone, since the store distributes the zip); the macOS one and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
 | `appcast/{macos,windows}.json` | **rendered** from that data by the site's own build, served from `https://taigikeyboard.tw/appcast/` | Every installed copy has its URL baked in (`UpdateChecker.publishedURL`, `manifest::PUBLISHED_URL`) and expects a fixed shape, so the manifest stays a static file on the project's own domain rather than anything GitHub serves. Rendered rather than written, so each release is one committed file per platform: [`macos/updates/README.md` § One published fact, one committed file](../../macos/updates/README.md#one-published-fact-one-committed-file). |
 | `Casks/taigikeyboard.rb` | the `taigikeyboard/homebrew-tap` repository (`brew install --cask taigikeyboard/tap/taigikeyboard`) | Homebrew finds a tap only in a repository named `homebrew-*`. The cask names the last **published** macOS `.pkg` — never a draft or the in-tree version — and its `livecheck` counts only published releases carrying a `TaigiKeyboard-<version>.pkg` asset, so a Linux-only patch release or a `mobile-*` tag never looks like a new macOS version. Its `url` is the R2 mirror (`https://dl.taigikeyboard.tw/desktop/`), so a bump must follow the announcement that mirrors the package; `livecheck` names the GitHub repository explicitly. The app's own update check still applies (`auto_updates true`). |
 
@@ -175,7 +177,7 @@ prefixes itself; it never touches `desktop/`.) Removing a superseded version is 
 manual step, after its successor is announced on every platform: a manifest an
 installed copy has already fetched, or a cached download page, can still name
 the old object, so deleting it at announce time would turn those into failed
-downloads. List what the five `_data/*_release.json` files name, and delete
+downloads. List what the six `_data/*_release.json` files name, and delete
 every other `desktop/` object (and its `.sha256`) with `aws s3 rm` against the
 same endpoint. GitHub keeps every release, so older versions stay downloadable
 there.

@@ -355,6 +355,15 @@ prost = "0.14"
 """
 
 
+CHROMEOS_MANIFEST_FIXTURE = """{
+  "manifest_version": 3,
+  "name": "Taigi",
+  "version": "3.6.6",
+  "minimum_chrome_version": "116"
+}
+"""
+
+
 PROJECT_FILES = (
     release_notes.ANDROID_GRADLE_FILE,
     release_notes.IOS_PROJECT_FILE,
@@ -363,6 +372,7 @@ PROJECT_FILES = (
     release_notes.DESKTOP_SHARED_CARGO_FILE,
     release_notes.LINUX_CARGO_FILE,
     release_notes.MACOS_CARGO_FILE,
+    release_notes.CHROMEOS_MANIFEST_FILE,
 )
 
 
@@ -405,10 +415,12 @@ class ProjectVersionWriterTests(unittest.TestCase):
         desktop_cargo: str = DESKTOP_SHARED_CARGO_FIXTURE,
         linux_cargo: str = LINUX_CARGO_FIXTURE,
         macos_cargo: str = MACOS_CARGO_FIXTURE,
+        chromeos_manifest: str = CHROMEOS_MANIFEST_FIXTURE,
     ) -> None:
         for relative_path, content in zip(
             PROJECT_FILES,
-            (gradle, pbxproj, plist, cargo, desktop_cargo, linux_cargo, macos_cargo),
+            (gradle, pbxproj, plist, cargo, desktop_cargo, linux_cargo, macos_cargo, chromeos_manifest),
+            strict=True,
         ):
             path = self.repo_root / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -479,8 +491,41 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 "desktop/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
                 "linux/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
                 "macos/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
+                "web/chromeos/manifest.json: version 3.6.6 -> 3.7.0",
             ),
         )
+        # Only the version moved: the other keys, including the two that end
+        # in "version", keep their values and the file keeps its layout.
+        self.assertEqual(
+            self.read(release_notes.CHROMEOS_MANIFEST_FILE),
+            CHROMEOS_MANIFEST_FIXTURE.replace('"version": "3.6.6"', '"version": "3.7.0"'),
+        )
+
+    def test_check_refuses_a_chromeos_manifest_on_another_version(self) -> None:
+        # chromeos-build.yml names the draft from the manifest: one left behind
+        # would attach to last release's draft, or to none.
+        self.write_tree(
+            chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE.replace('"3.6.6"', '"3.6.5"')
+        )
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "web/chromeos/manifest.json version is 3.6.5"
+        ):
+            release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
+
+    def test_refuses_to_move_a_chromeos_manifest_backwards(self) -> None:
+        # The store refuses a version that is not higher than the last it took.
+        self.write_tree(
+            chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE.replace('"3.6.6"', '"3.8.0"')
+        )
+
+        self.assert_rejected("3.8.0", "3.7.0", "desktop")
+
+    def test_check_refuses_a_chromeos_manifest_that_is_not_json(self) -> None:
+        self.write_tree(chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE + "}")
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "not valid JSON"):
+            release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
 
     def test_check_refuses_a_linux_workspace_on_another_version(self) -> None:
         # The `.deb` is named from linux/Cargo.toml: a Linux workspace left

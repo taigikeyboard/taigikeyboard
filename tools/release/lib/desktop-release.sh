@@ -50,9 +50,26 @@ WINDOWS_ASSET="TaigiKeyboard-$SHORT_VERSION.exe"
 LINUX_ASSET="taigikeyboard_${SHORT_VERSION}_amd64.deb"
 LINUX_RPM_ASSET="taigikeyboard-${SHORT_VERSION}-1.x86_64.rpm"
 LINUX_ARCH_ASSET="taigikeyboard-${SHORT_VERSION}-1-x86_64.pkg.tar.zst"
-# Every installer a full release carries; a patch carries a subset. Adding or
-# reordering one: also DESKTOP_ASSET_LABELS in tools/release/beta-release.sh.
-DESKTOP_ASSETS=("$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET")
+# The ChromeOS input method's Chrome Web Store package, built by
+# `.github/workflows/chromeos-build.yml` (`make -C web chromeos`); the store,
+# not this release, is how users install it (docs/architecture/chromeos-release.md).
+CHROMEOS_ASSET="TaigiKeyboard-$SHORT_VERSION-chromeos.zip"
+# Every installer a full release carries (a patch carries a subset), one
+# "<asset>|<label>|<requires>" row each: what the /beta page and its Discord
+# post call it, and the oldest system it runs on. The floors come from each
+# platform's own source: LSMinimumSystemVersion (macos/App/Info.plist),
+# MinVersion (windows/installer/TaigiKeyboard.iss) and windows-release.md
+# § Architectures, the targeted distributions in linux-release.md,
+# minimum_chrome_version (web/chromeos/manifest.json).
+DESKTOP_ASSET_ROWS=(
+    "$MACOS_ASSET|macOS|macOS 14 or later"
+    "$WINDOWS_ASSET|Windows|Windows 10 1809 or later; Arm64 needs Windows 11"
+    "$LINUX_ASSET|Linux (.deb)|Ubuntu 24.04+ / Debian 13+"
+    "$LINUX_RPM_ASSET|Fedora (.rpm)|Fedora 44 or later"
+    "$LINUX_ARCH_ASSET|Arch|current Arch Linux"
+    "$CHROMEOS_ASSET|ChromeOS|ChromeOS 116 or later"
+)
+DESKTOP_ASSETS=("${DESKTOP_ASSET_ROWS[@]%%|*}")
 
 # A file's SHA-256 as lowercase hex, on either host: macOS ships `shasum`, Git
 # Bash on the Windows box ships `sha256sum`. It is what the Windows manifest

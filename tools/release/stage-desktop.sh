@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Stage the desktop installers on this version's draft release: the package
-# built here, the Windows installer and the Linux packages built on
-# GitHub-hosted runners.
+# built here; the Windows installer, the Linux packages and the ChromeOS Web
+# Store zip built on GitHub-hosted runners.
 #
 # Usage: stage-desktop.sh              a full release — every platform
-#        stage-desktop.sh <platform>   a patch release — macos | windows | linux
+#        stage-desktop.sh <platform>   a patch release — macos | windows | linux | chromeos
 #
 # The builds cannot share a machine — one needs Xcode and a Developer ID, one
 # MSVC and Inno Setup, one a Linux with the Fcitx5 headers — so this runs the
@@ -41,10 +41,10 @@ fail() {
 REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 case "$#:${1:-}" in
-    0:) PLATFORMS=(macos windows linux) ;;
-    1:macos | 1:windows | 1:linux) PLATFORMS=("$1") ;;
+    0:) PLATFORMS=(macos windows linux chromeos) ;;
+    1:macos | 1:windows | 1:linux | 1:chromeos) PLATFORMS=("$1") ;;
     *)
-        echo "usage: stage-desktop.sh [macos|windows|linux]" >&2
+        echo "usage: stage-desktop.sh [macos|windows|linux|chromeos]" >&2
         echo "No argument stages a full release; one platform stages a patch release of it alone." >&2
         exit 2
         ;;
@@ -97,16 +97,17 @@ if stages macos; then
     make -C "$REPOSITORY_DIR" macos-release
 fi
 
-# The installer and the package are built by `.github/workflows/windows-build.yml`
-# and `linux-build.yml` on clean GitHub-hosted runners, never on the
+# The installer and the packages are built by
+# `.github/workflows/windows-build.yml`, `linux-build.yml` and
+# `chromeos-build.yml` on clean GitHub-hosted runners, never on the
 # maintainer's Windows box (`windows-release.md` § Building on a GitHub-hosted
-# runner says why); the Linux half has no machine of its own at all.
+# runner says why); the Linux and ChromeOS halves have no machine of their own.
 #
 # workflow_dispatch takes a branch or tag, never a bare SHA, so the commit being
 # staged has to be what `main` points at — which it is, since the release prep
-# was just pushed there. Both halves are dispatched together, right after that
-# check, so main has no wait to move in; the Linux attach job still refuses any
-# commit but the one it was handed.
+# was just pushed there. Every hosted half is dispatched together, right after
+# that check, so main has no wait to move in; the Linux and ChromeOS attach jobs
+# still refuse any commit but the one they were handed.
 git -C "$REPOSITORY_DIR" fetch --quiet origin main
 [[ "$SOURCE_COMMIT" == "$(git -C "$REPOSITORY_DIR" rev-parse FETCH_HEAD)" ]] ||
     fail "HEAD (${SOURCE_COMMIT:0:7}) is not origin/main's tip — the hosted builds run from main, so push this commit first"
@@ -151,15 +152,18 @@ fi
 
 windows_run=""
 linux_run=""
-if stages windows || stages linux; then
+chromeos_run=""
+if stages windows || stages linux || stages chromeos; then
     echo ""
     echo "==> Hosted runners — dispatched together, waited on in turn"
 fi
 stages windows && windows_run="$(dispatch windows-build.yml Windows)"
 # The commit travels with the dispatch: the Linux attach job refuses any other.
 stages linux && linux_run="$(dispatch linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT")"
+stages chromeos && chromeos_run="$(dispatch chromeos-build.yml ChromeOS -f "source_sha=$SOURCE_COMMIT")"
 [[ -z "$windows_run" ]] || wait_for "$windows_run" Windows
 [[ -z "$linux_run" ]] || wait_for "$linux_run" Linux
+[[ -z "$chromeos_run" ]] || wait_for "$chromeos_run" ChromeOS
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the
@@ -175,6 +179,7 @@ expected_assets=()
 stages macos && expected_assets+=("$MACOS_ASSET")
 stages windows && expected_assets+=("$WINDOWS_ASSET")
 stages linux && expected_assets+=("$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET")
+stages chromeos && expected_assets+=("$CHROMEOS_ASSET")
 for asset in "${expected_assets[@]}"; do
     for name in "$asset" "$asset.sha256"; do
         grep -qxF "$name" <<< "$STAGED_ASSET_NAMES" ||
