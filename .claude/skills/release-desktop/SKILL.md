@@ -27,8 +27,8 @@ patch (`x.y.z`, z > 0) ships only the platform it fixes. Policy:
 
 This skill takes a release as far as it can go without a person: it rebuilds,
 writes the changelog, commits, and stages **every** platform's installers on a draft release
-nobody can reach (staging also dispatches the approval-gated beta run for the
-unlisted /beta page). It stops there. Publishing that draft is the maintainer's,
+nobody can reach (staging also dispatches the beta run for the unlisted /beta
+page). It stops there. Publishing that draft is the maintainer's,
 because it is the decision the draft exists to protect — and publishing
 announces the release itself.
 

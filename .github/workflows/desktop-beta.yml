@@ -1,8 +1,9 @@
 name: Desktop beta
 
 # Puts a staged desktop draft on the unlisted https://taigikeyboard.tw/beta page
-# for internal testers. Dispatched by tools/release/stage-desktop.sh; waits for
-# the release Approver. What and why: tools/release/beta-release.sh.
+# for internal testers. Dispatched by tools/release/stage-desktop.sh; runs at
+# once (the `release` environment has no reviewer since 2026-11-12). What and
+# why: tools/release/beta-release.sh.
 on:
   workflow_dispatch:
     inputs:

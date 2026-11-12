@@ -152,7 +152,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 - The installer is built and staged by `make desktop-release` / `make desktop-patch` on the Mac,
   which dispatches the GitHub-hosted `windows-build.yml` onto the same **draft** `desktop-<version>`
   release; `make windows-release` (a Windows host, Git Bash) is the by-hand path
-  (`docs/architecture/windows-release.md`). Nothing reaches a user until the maintainer tests it and publishes by hand (apart from the approval-gated, unlisted `/beta` page for internal testers), which
+  (`docs/architecture/windows-release.md`). Nothing reaches a user until the maintainer tests it and publishes by hand (apart from the unlisted `/beta` page for internal testers), which
   runs the announcement itself (`docs/architecture/desktop-release.md`). Never run any of it
   without the maintainer's explicit release instruction.
 - Releases currently ship unsigned — policy and the package admission rule: `docs/architecture/windows-release.md` § Signing status (the single source; do not restate it).

@@ -13,8 +13,7 @@
 #
 # Nothing here reaches a user: every half stages on a DRAFT release
 # (`docs/architecture/desktop-release.md`). Publishing stays a person's. The
-# beta run dispatched at the end copies the draft to the unlisted /beta page
-# only once the release Approver approves it.
+# beta run dispatched at the end copies the draft to the unlisted /beta page.
 #
 # Every run stages ALL installers from one commit, and starts from a clean
 # draft: an existing one for this version is deleted first (USER 2026-09-10 —
@@ -203,7 +202,7 @@ echo "  remaining step: it tags the commit and announces the release itself."
 echo ""
 if gh workflow run desktop-beta.yml --repo "$RELEASE_REPOSITORY" --ref main \
     -f "version=$SHORT_VERSION" -f "release_id=$DRAFT_ID" -f "source_sha=$SOURCE_COMMIT" > /dev/null; then
-    echo "  Beta page for internal testers: approve the Desktop beta run, then"
+    echo "  Beta page for internal testers: the Desktop beta run starts now, and"
     echo "  https://taigikeyboard.tw/beta shows this draft once Pages deploys:"
     echo "    https://github.com/$RELEASE_REPOSITORY/actions/workflows/desktop-beta.yml"
 else

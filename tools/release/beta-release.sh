@@ -7,14 +7,14 @@
 #        beta-release.sh announce <dir> <source sha> <run id>
 #
 # Run by `.github/workflows/desktop-beta.yml`, which `stage-desktop.sh`
-# dispatches once a draft is fully staged; the release environment's approval
-# click is what lets it run. Two halves, two tokens:
+# dispatches once a draft is fully staged; it runs at once in the `release`
+# environment (no reviewer since 2026-11-12). Two halves, two tokens:
 #
 #   fetch    GH_TOKEN = the workflow token (contents: write — GitHub lists a
 #            draft only to push access). Downloads the installers of THE draft
 #            the staging run made, by release id: a later staging run deletes
-#            and re-creates the draft under the same tag and commit, and an old
-#            approval must not read the new, half-built one.
+#            and re-creates the draft under the same tag and commit, and an
+#            older beta run must not read the new, half-built one.
 #   publish  GH_TOKEN = SITE_CONTENTS_TOKEN, plus the three R2_* credentials.
 #            Mirrors each installer to R2 `beta/<version>-<sha7>-<run id>/` (a
 #            fresh prefix per run: the download host caches for 30 days, and a
