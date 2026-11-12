@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Six realistic user-interaction personas that compile real `CorpusSentence`s
 //! into lifelike `SimStep` streams with typos, prefix nailing, caret edits,
 //! inline English, punctuation attachment, overlays, and focus bounces.

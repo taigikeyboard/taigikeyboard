@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Metamorphic equivalence oracles, long-horizon learning drift probes,
 //! learning monotonicity checks, and corpus reachability / behavioral surprise
 //! detectors.

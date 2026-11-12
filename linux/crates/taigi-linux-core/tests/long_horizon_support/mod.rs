@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Shared process-singleton initialization and synchronization helpers for the
 //! long-horizon realistic user-interaction simulator.
 
@@ -6,6 +5,7 @@ pub mod corpus;
 pub mod host;
 pub mod oracles;
 pub mod personas;
+pub mod report;
 pub mod rng;
 pub mod shrinker;
 

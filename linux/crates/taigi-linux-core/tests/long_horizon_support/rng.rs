@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Deterministic SplitMix64 PRNG so every long-horizon marathon episode and
 //! failure reproduction is bit-for-bit reproducible from a single `u64` seed
 //! with zero external crate dependencies.

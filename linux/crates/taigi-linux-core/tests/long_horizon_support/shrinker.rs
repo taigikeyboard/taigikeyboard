@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Two-stage delta-debugging shrinker (prior-sentence reduction + intra-sentence
 //! keystroke minimization) and `e2e/scenarios/*.json` reproducer emitter.
 

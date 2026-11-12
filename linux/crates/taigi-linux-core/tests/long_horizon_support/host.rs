@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Stateful host-client + IME simulator wrapping `DesktopRuntime` and
 //! `taigi_desktop_core::session`, checking six per-keystroke invariants on
 //! every emitted signal.

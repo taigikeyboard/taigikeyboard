@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 //! Real-corpus loader (`corpus/taigi-typing/exampleSentences.js`, read-only per
 //! `corpus/README.md`) + synthetic fallback + authoritative engine-backed
 //! keystroke encoders for TL, POJ, Telex, and TPS.
