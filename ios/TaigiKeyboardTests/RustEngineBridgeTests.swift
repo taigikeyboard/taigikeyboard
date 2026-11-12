@@ -48,16 +48,9 @@ final class RustEngineBridgeTests: XCTestCase {
 
     // MARK: - TPS
 
-    func test_op_isTPSToneMark_acuteIsToneMark() {
-        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{02ca}"))
-    }
-
-    func test_op_isTPSToneMark_letterIsNotToneMark() {
-        XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
-    }
-
-    /// The TPS Space key asks whether the raw buffer's last Character ends in a
-    /// tone mark; after `˙` on a stop coda that Character is `ㆻ` + U+0307.
+    /// Both decode branches (true / false) in one pin. The TPS Space key asks
+    /// whether the raw buffer's last Character ends in a tone mark; after `˙`
+    /// on a stop coda that Character is `ㆻ` + U+0307.
     func test_op_isTPSToneMark_codaWithCombiningToneEightDotIsToneMark() {
         XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{0307}"))
         XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{31BB}\u{0307}"))

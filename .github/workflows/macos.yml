@@ -11,8 +11,8 @@ name: macOS
 # that Xcode. The public repo runs macOS minutes free.
 #
 # The engine is built for the runner's architecture only
-# (TAIGI_MACOS_TARGETS): `swift test` links one slice, and the second
-# release + LTO build of swift-ffi would roughly double the Rust time. The
+# (TAIGI_MACOS_TARGETS): `swift test` links one slice, and a second
+# release build of swift-ffi would roughly double the Rust time. The
 # universal build stays with `make build` / the release pipeline.
 on:
   pull_request:
@@ -66,6 +66,11 @@ jobs:
       # architectures), so only the host target — the one built here — is installed.
       RUSTUP_TOOLCHAIN: stable
       TAIGI_MACOS_TARGETS: aarch64-apple-darwin
+      # Test build only: fat LTO with one codegen unit (macos/Cargo.toml's
+      # release profile) spends ~45 s linking an archive `swift test` links
+      # once. Same code and `panic = "unwind"`; the release pipeline keeps LTO.
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -94,8 +99,34 @@ jobs:
       - name: Build the engine xcframework (arm64)
         run: bash engine/scripts/build-macos-xcframework.sh
 
+      # SwiftPM's checkouts and debug build: fetching and compiling
+      # swift-protobuf + KeyboardShortcuts is ~75 s of every run. The checkout
+      # gives this repo's sources newer mtimes than the cached objects, so only
+      # the dependencies are reused. Keyed on the pins and the compiler; saved
+      # from main only, like rust-cache.
+      - id: swift
+        run: echo "version=$(swift --version 2>&1 | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - id: spm
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: macos/.build
+          key: spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('macos/Package.swift', 'macos/Package.resolved') }}
+
+      # The cache holds main's copy of the engine archive SwiftPM links; the
+      # step above built this commit's, so the old copy must not stand in for
+      # it. (A `!` path in actions/cache does not exclude a nested file.)
+      - name: Drop the cached engine archive
+        run: rm -f macos/.build/*/debug/librust_taigi.a
+
       - name: make -C macos test
         run: make -C macos test
+
+      - if: github.ref == 'refs/heads/main' && steps.spm.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: macos/.build
+          key: ${{ steps.spm.outputs.cache-primary-key }}
 
   # The macOS Cargo workspace (`macos/`: the `taigi-macos-ffi` archive) on its
   # own, gated like desktop.yml gates `desktop/`: native tests, clippy, fmt —

@@ -19,7 +19,7 @@ ChromeOS is a desktop platform like macOS, Windows and Linux (USER 2026-11-12): 
 | Publish → announce | Mirrors the zip to `dl.taigikeyboard.tw/desktop/` and writes `_data/chromeos_release.json`, which hides the beta; prints the upload reminder |
 | Upload | By hand, below |
 
-Every pull request that runs `web.yml` also builds the zip (`make -C web chromeos` after `make web-check`); dispatching `chromeos-build.yml` without `source_sha` builds it without attaching. To build locally:
+Every pull request that runs `web.yml` also builds the zip (`make -C web chromeos` after `make -C web test smoke`); dispatching `chromeos-build.yml` without `source_sha` builds it without attaching. To build locally:
 
 ```
 make -C web chromeos        # → web/target/taigi-keyboard-chromeos.zip (~16 MB)

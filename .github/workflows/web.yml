@@ -1,7 +1,8 @@
 name: Web
 
-# The web version's gates: `make web-check` (the wasm build, the Node smoke test
-# over the real dictionaries, clippy, biome, fmt) and Playwright in Chromium
+# The web version's gates: `make web-check`'s steps (the wasm build and the Node
+# smoke test over the real dictionaries in `check`; clippy, biome and fmt in the
+# parallel `lint` job, so neither waits on the other) and Playwright in Chromium
 # over the staged site, using the official image's browsers and system libraries.
 # An engine, desktop-shared or dictionary change triggers it too, because
 # `taigi-web` links those crates and
@@ -70,7 +71,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   check:
-    name: wasm build + smoke + lint + Playwright
+    name: wasm build + smoke + Playwright
     needs: changed
     if: ${{ !cancelled() && (needs.changed.result == 'skipped' || needs.changed.outputs.moved == 'true') }}
     runs-on: ubuntu-24.04
@@ -116,10 +117,11 @@ jobs:
         if: steps.fonts.outputs.cache-hit == 'true'
         run: touch web/target/fonts/.stamp
 
-      - name: make web-check
-        run: make web-check
+      # `make web-check` minus `lint`, which the `lint` job runs.
+      - name: make -C web test smoke
+        run: make -C web test smoke
 
-      # The ChromeOS input method's store zip, over the wasm web-check just
+      # The ChromeOS input method's store zip, over the wasm `smoke` just
       # built; the release builds it in chromeos-build.yml.
       - name: make -C web chromeos
         run: make -C web chromeos
@@ -140,9 +142,41 @@ jobs:
             "mcr.microsoft.com/playwright:v${version}-noble" \
             npx --no-install playwright test --project=chromium
 
+  # `make -C web lint`: clippy over the wasm target compiles a dev build of its
+  # own (~45 s), which `check`'s release build cannot share, so it runs beside it.
+  lint:
+    name: clippy + biome + fmt
+    needs: changed
+    if: ${{ !cancelled() && (needs.changed.result == 'skipped' || needs.changed.outputs.moved == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # protoc for engine/protos/build.rs, zig for SQLite's C, biome for the
+      # page's JS; the same install as `check`, so both share mise's cache.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.2
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome uv pipx:fonttools zig
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install the toolchain (web/rust-toolchain.toml)
+        working-directory: web
+        run: rustup toolchain install --no-self-update
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: web
+          key: lint
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: make -C web lint
+        run: make -C web lint
+
   deploy:
     name: Deploy
-    needs: check
+    needs: [check, lint]
     if: github.event_name == 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
