@@ -247,6 +247,31 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertTrue(session.client.writes.isEmpty, "degrading must not touch the document")
     }
 
+    /// Chromium hosts answer `selectedRange()` right after a write with the
+    /// caret from before it; the arm is computed from where the writes began,
+    /// so the swap still finds its space once the renderer has caught up.
+    func testAClientWhoseSelectionLagsItsWrites_stillSwaps() throws {
+        let session = try makeSession()
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        session.client.selectionLagsWrites = true
+        for character in Self.composition.map(String.init) {
+            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: character), client: session.client)
+            session.client.settleSelection()
+        }
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+        session.client.settleSelection()
+        let documentBefore = try XCTUnwrap(session.client.documentTextForReads)
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "?"), client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.client.documentTextForReads, documentBefore.dropLast() + "? ")
+    }
+
     func testAMovedCaret_declinesTheSwap() throws {
         let session = try swappableCommittedSession()
         session.client.selectedRangeToReturn = NSRange(
@@ -408,6 +433,41 @@ final class AutoSpaceControllerTests: XCTestCase {
             XCTAssertTrue(handled)
             XCTAssertEqual(session.client.insertedTexts, ["？"])
         }
+    }
+
+    func testACommaAfterASpaceCommit_swapsWithTheAutoSpace() throws {
+        try withHanjiFirst(true) {
+            let session = try composedSession { $0.isAutoSpaceEnabled = true }
+            session.client.documentTextForReads = ""
+            session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+            try session.walkToFirstTwoScriptCell()
+            _ = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: " "), client: session.client,
+            )
+            session.client.clearWrites()
+
+            let handled = try session.controller.handle(
+                TestFixtures.keyDownEvent(characters: ","), client: session.client,
+            )
+
+            XCTAssertTrue(handled)
+            XCTAssertEqual(session.client.insertedTexts, ["，"])
+        }
+    }
+
+    func testACommaAfterASpaceCommit_romanFirst_swapsWithTheAutoSpace() throws {
+        let session = try composedSession()
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: " "), client: session.client)
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: ","), client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.client.insertedTexts.last, ", ")
     }
 
     /// A mode change does NOT invalidate an armed space, deliberately: what

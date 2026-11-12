@@ -42,6 +42,17 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     /// replaces it (`IMKInputSession.h:63-74`).
     private(set) var markedRangeInDocument: NSRange?
 
+    /// Plays a Chromium host: `selectedRange()` keeps answering the selection
+    /// from before this key's first write until `settleSelection()` — the
+    /// renderer's update arriving between two key events.
+    var selectionLagsWrites = false
+    private var laggingSelection: NSRange?
+
+    /// The renderer caught up: `selectedRange()` answers the live selection.
+    func settleSelection() {
+        laggingSelection = nil
+    }
+
     /// The replacement range of each `insertText`, in write order — how a case
     /// tells an at-caret insert from a rewrite of committed text.
     private(set) var insertReplacementRanges: [NSRange] = []
@@ -88,6 +99,7 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     func insertText(_ string: Any!, replacementRange: NSRange) {
         let text = Self.plainText(string)
         writes.append(.insertText(text))
+        holdSelectionIfLagging()
         insertReplacementRanges.append(replacementRange)
         simulateDocumentMutation(text, replacementRange: replacementRange)
         afterInsertText?(text)
@@ -146,9 +158,16 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     func setMarkedText(_ string: Any!, selectionRange: NSRange, replacementRange _: NSRange) {
         let text = Self.plainText(string)
         writes.append(.setMarkedText(text, selectionLocation: selectionRange.location))
+        holdSelectionIfLagging()
         simulateMarkedText(text, selectionRange: selectionRange)
         lastMarkedTextAttributes = (string as? NSAttributedString)
             .flatMap { $0.length > 0 ? $0.attributes(at: 0, effectiveRange: nil) : [:] } ?? [:]
+    }
+
+    private func holdSelectionIfLagging() {
+        if selectionLagsWrites, laggingSelection == nil {
+            laggingSelection = selectedRangeToReturn
+        }
     }
 
     func overrideKeyboard(withKeyboardNamed name: String!) {
@@ -168,12 +187,14 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
 
     func selectedRange() -> NSRange {
         readCalls.append(#function)
-        return selectedRangeToReturn
+        return laggingSelection ?? selectedRangeToReturn
     }
 
+    /// The simulated marked region; "none" without a simulated document, or
+    /// with nothing marked in it.
     func markedRange() -> NSRange {
         readCalls.append(#function)
-        return NSRange(location: NSNotFound, length: NSNotFound)
+        return markedRangeInDocument ?? NSRange(location: NSNotFound, length: NSNotFound)
     }
 
     func attributedSubstring(from range: NSRange) -> NSAttributedString! {
