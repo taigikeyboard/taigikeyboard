@@ -16,7 +16,7 @@ Decisions (maintainer, 2026-11-12):
 - **D4 Site location** — a separate repository (like `taigikeyboard/kautian-mirror`), published under `taigikeyboard.tw/<name>/`; its build reads this repository's dictionary data. The intake workflow and the checks stay here.
 - **D5 Data destination** — append to `dictionary/sources/supplementary/khpoo/data/raw/khpoo.csv`. Entries ship as 齒盤補充辭典 (source bit 8) through the existing khpoo pipeline; no new data file, no new source bit, no engine or platform change. The accent and the reason are not in the data (the file has two columns); they are recorded as commit trailers and in the PR body.
 
-- **D6 TL only** — the romanization field accepts Tâi-lô only; POJ and TPS are rejected. TL with diacritics, or with tone digits (`peh4-gueh8`) converted to diacritics before submit. The rule is TL membership only, no separate POJ detector: every syllable must parse as a TL initial + TL final (`engine/phonetics/src/tables.rs:9-34`). POJ shapes fail by construction — no `ch` / `chh` initial, no `oa` / `oe` / `ek` final, no `o͘` / `ⁿ`; `eng` is a TL dialectal final and stays accepted. One validator (taigi-converter, the submodule kautian-mirror already vendors) runs in the browser before submit and in CI; the error says "use Tâi-lô" with the TL form when the converter can derive it from POJ.
+- **D6 TL, reviewed by hand** — the romanization field asks for Tâi-lô only (label and placeholder say so). Whether the TL is correct is decided by the maintainer's review of the PR: only entries that pass review are merged. No automated TL validator in the site or in CI — the reviewer is the gate, and a machine check would add a second, possibly disagreeing, definition of TL.
 
 Open (maintainer):
 
@@ -67,11 +67,11 @@ Closes #<issue>
 `verify_khpoo_append.py` (pipeline helpers, no new dependency), run by `python.yml` on PRs that change the khpoo raw file. It checks only the lines the PR adds (diff against the base), so the 4.2k existing rows are not re-judged:
 
 1. Format: two fields, CRLF, NFC, already `normalize_roman`-normalised, file still ends with a newline.
-2. TL only (D6): every syllable a TL initial + TL final with TL tone-mark placement, via taigi-converter (`dictionary/common/taigi_bridge.py`); POJ / TPS input fails. Hanji count = syllable count, as the cleanup Han-Lo check (khpoo's `cleanup.minimal` skips both, so CI is the only server-side gate). Phase 1 first confirms taigi-converter's TL tables match `engine/phonetics/src/tables.rs`, so the site and the keyboard agree on what TL is.
+2. No TL correctness check (D6): khpoo's `cleanup.minimal` does not validate either, so the reviewer's merge is the only gate on TL.
 3. Dedup: the normalised `(hanzi, tl)` must not already be in the khpoo raw file, in `dictionary/output/dictionary.csv` (any source), or twice in the PR.
 4. Tests in `dictionary/tests/`.
 
-The intake workflow runs the same script before it commits, so a bad submission is answered on the issue and never becomes a PR.
+The intake workflow runs the same script before it commits, so a duplicate or malformed submission is answered on the issue and never becomes a PR. Everything else becomes a PR and waits for review.
 
 ### Phase 2 — intake
 
@@ -91,7 +91,7 @@ The intake workflow runs the same script before it commits, so a bad submission 
 - Repo `taigikeyboard/<name>`, Pages under `taigikeyboard.tw/<name>/`; style tokens and fonts from `web/src/style.css` / kautian-mirror.
 - Build: fetch `dictionary.csv` and the khpoo raw file at a pinned `main` commit → compact JSON (hanzi, tl, poj, no-tone keys). The raw file is included because merged contributions reach `dictionary.csv` only at the next `make dict`.
 - Search: Hanji, TL, POJ, toneless; a hit shows its readings and sources. "Add" offered when the exact `(hanzi, tl)` is absent.
-- Form: Hanji, TL (D6: validated as you type with the same taigi-converter check, tone digits converted to diacritics, submit disabled until valid), accents (ten + 其他), reason, licence consent → opens the prefilled issue URL. The form says the contributor's GitHub account will appear as the commit author.
+- Form: Hanji, TL (D6: labelled Tâi-lô, reviewed by the maintainer after submit), accents (ten + 其他), reason, licence consent → opens the prefilled issue URL. The form says the contributor's GitHub account will appear as the commit author.
 - Rebuild daily (the kautian-mirror schedule).
 
 ## Best practices alignment
@@ -103,5 +103,5 @@ The intake workflow runs the same script before it commits, so a bad submission 
 | Contributors credited by commit author email | GitHub Docs § About contributors | D2 |
 | Static site, data built at deploy, no backend | kautian-mirror `planning.md` § Scope | Phase 3 |
 
-- Rules: `rules/planning.md` (grounded in code, roadmap + memory), `rules/code-review-rules.md` §2 (reuse the pipeline's `normalize_roman` and TL checks rather than a second validator), `rules/round-workflow.md` (one PR per phase).
+- Rules: `rules/planning.md` (grounded in code, roadmap + memory), `rules/code-review-rules.md` §2 (reuse the pipeline's `normalize_roman` rather than a second normaliser), `rules/round-workflow.md` (one PR per phase).
 - Deliberately not adopted: a Cloudflare Worker OAuth login (extra secret and service for one saved click); an accent column in khpoo (breaks the two-column `csv_noheader` contract every stage reads; git trailers carry it); per-accent toggles for contributed rows (maintainer chose khpoo, D5); fuzzy dedup beyond normalisation (a near-duplicate reading may be the accent difference itself).
