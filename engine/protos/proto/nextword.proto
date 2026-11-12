@@ -218,13 +218,12 @@ message NextWordResponse {
 }
 
 message DecideResult {
+  reserved 4;
+  reserved "last_selected_word";
+
   repeated NextWordEffect effects             = 1;  // ordered, executor runs sequentially
   uint64                  current_generation  = 2;
   bool                    predictions_visible = 3;
-  // Echo of last_selected_word so platform can implement
-  // SelectionContextProvider without holding a parallel cache.
-  // Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-  string                  last_selected_word  = 4;
 }
 
 message FilterResult {

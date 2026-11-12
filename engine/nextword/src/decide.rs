@@ -397,7 +397,6 @@ fn snapshot_into_decide_result(
         effects,
         current_generation: state.current_generation,
         predictions_visible: state.predictions_visible,
-        last_selected_word: state.last_selected_word.clone().unwrap_or_default(),
     }
 }
 
@@ -1106,6 +1105,19 @@ mod tests {
                 "intent {:?} should bump generation",
                 intent
             );
+        }
+    }
+
+    #[test]
+    fn timeout_and_reset_drop_the_committed_context() {
+        for intent in [
+            Intent::ContextTimeoutFired { now_ms: 2_000 },
+            Intent::ResetAll { now_ms: 2_000 },
+        ] {
+            let mut state = after_gua();
+            apply(&mut state, intent.clone(), &config(false));
+            assert_eq!(state.last_selected_word, None, "{intent:?}");
+            assert_eq!(state.last_selected_roman, None, "{intent:?}");
         }
     }
 

@@ -12,7 +12,7 @@ Executors own the clock, the context-timeout timer, the main-thread hop and the 
 
 ## 2. Contract shape
 
-Each intent (`WordSelected`, `Backspace`, `ContextTimeoutFired`, `ClearForNewComposing`, `ResetAll`, `UpdateLastSelectedWord`, `SetPredictionsVisible`) carries a `DecisionInput` (`now_ms` + settings snapshot) and returns a `DecideResult`: `NextWordEffect`s to run in order, plus a state echo (`current_generation`, `predictions_visible`, `last_selected_word`). Effects:
+Each intent (`WordSelected`, `Backspace`, `ContextTimeoutFired`, `ClearForNewComposing`, `ResetAll`, `UpdateLastSelectedWord`, `SetPredictionsVisible`) carries a `DecisionInput` (`now_ms` + settings snapshot) and returns a `DecideResult`: `NextWordEffect`s to run in order, plus a state echo (`current_generation`, `predictions_visible`). Effects:
 
 | Effect | Executor does |
 |---|---|

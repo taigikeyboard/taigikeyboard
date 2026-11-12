@@ -162,14 +162,14 @@ pub struct NailedSegment {
     // (the chosen `CandidateMessage.canonical_tl`). The NextWord
     // `WordSelected` / `UpdateLastSelectedWord` `roman` arg is built from
     // this (so the learned `prev_tl` / `next_tl` matches a normal
-    // candidate commit), falling back to `raw_text` when empty (legacy
-    // callers / TPS-OOV hanji-absent). Kept SEPARATE from `raw_text`,
+    // candidate commit), falling back to `raw_text` when empty (a picked
+    // candidate with no canonical TL: TPS-OOV, hanji-absent). Kept SEPARATE from `raw_text`,
     // which stays the authority for span / unnail mechanics (Codex
     // pre-impl 2026-06-03 SHOULD).
     pub association_tl: String,
     // Learned phrases (§50) — the chosen `CandidateMessage.hanji`, present
     // only when the platform picked a hanji-bearing candidate (any output
-    // script). `None` for a hanji-less pick or a legacy caller; the final
+    // script). `None` for a hanji-less pick; the final
     // commit learns the composition only when every nailed segment has one.
     pub hanji: Option<String>,
     pub raw_span: (usize, usize),

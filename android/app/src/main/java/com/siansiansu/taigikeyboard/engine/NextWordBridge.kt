@@ -315,7 +315,6 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
         effects = effects,
         currentGeneration = proto.currentGeneration,
         predictionsVisible = proto.predictionsVisible,
-        lastSelectedWord = if (proto.lastSelectedWord.isEmpty()) null else proto.lastSelectedWord,
     )
 }
 

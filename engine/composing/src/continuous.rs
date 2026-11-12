@@ -361,6 +361,12 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 // Inner fetchers — take pre-resolved lexicon state (no with_state inside).
 // ============================================================================
 
+/// A lexicon partial-prefix fetch: the bounded
+/// [`fetch_partial_prefix_candidates`] or the un-truncated
+/// [`fetch_partial_prefix_candidates_unbounded`].
+type PartialPrefixFetch =
+    fn(&(ConsumedSpan, String), u32, &ContinuousFetchCtx<'_>) -> Vec<RawCandidate>;
+
 /// v3.5.9 A2 — partial-prefix fetch inner. Pre-A2 `fetch_via_lexicon_partial`'s
 /// body minus the `LexiconHandle::with_state` opener.
 /// [`build_partial_prefix_key`] (renamed from `_tl` suffix in v3.5.9
@@ -377,50 +383,24 @@ fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
 /// keeping the seam's single-source-of-truth invariant. v3.5.9 B-2
 /// makes the emitter mode-aware so POJ partial-prefix keys land in the
 /// `poj:` family rather than folding through the TL chain.
+///
+/// `fetch`: the empty-keys branch passes the bounded
+/// [`fetch_partial_prefix_candidates`] (no FULL block to exclude against).
+/// v3.5.9 Step 4b passes [`fetch_partial_prefix_candidates_unbounded`]: it
+/// applies its FULL-block exclude on the un-truncated pool, then truncates
+/// itself — addresses Codex PR #351 r3321758666 (exact-key homophones
+/// would otherwise eat the entire output cap before the dedupe ran).
 fn fetch_via_lexicon_partial_inner(
     raw: &str,
     raw_len: u32,
     mode: phonetics::InputMode,
     ctx: &ContinuousFetchCtx<'_>,
-) -> Vec<RawCandidate> {
-    fetch_via_lexicon_partial_inner_impl(raw, raw_len, mode, ctx, /* bounded */ true)
-}
-
-/// v3.5.9 Step 4b — un-truncated partial-prefix fetch for the FULL +
-/// PARTIAL cross-batch path. Same hydrate/dedupe/sort/recase as
-/// [`fetch_via_lexicon_partial_inner`] but returns the pool without
-/// applying the `PARTIAL_PREFIX_OUTPUT_CAP` truncate. Step 4b applies
-/// its FULL-block exclude on the un-truncated pool, then truncates
-/// itself — addresses Codex PR #351 r3321758666 (exact-key homophones
-/// would otherwise eat the entire output cap before the dedupe ran).
-///
-/// The empty-keys branch keeps using
-/// [`fetch_via_lexicon_partial_inner`] (bounded wrapper) because it has
-/// no FULL block to exclude against.
-fn fetch_via_lexicon_partial_inner_unbounded(
-    raw: &str,
-    raw_len: u32,
-    mode: phonetics::InputMode,
-    ctx: &ContinuousFetchCtx<'_>,
-) -> Vec<RawCandidate> {
-    fetch_via_lexicon_partial_inner_impl(raw, raw_len, mode, ctx, /* bounded */ false)
-}
-
-fn fetch_via_lexicon_partial_inner_impl(
-    raw: &str,
-    raw_len: u32,
-    mode: phonetics::InputMode,
-    ctx: &ContinuousFetchCtx<'_>,
-    bounded: bool,
+    fetch: PartialPrefixFetch,
 ) -> Vec<RawCandidate> {
     let Some(key) = build_partial_prefix_key(raw, mode) else {
         return Vec::new();
     };
-    let mut out = if bounded {
-        fetch_partial_prefix_candidates(&key, raw_len, ctx)
-    } else {
-        fetch_partial_prefix_candidates_unbounded(&key, raw_len, ctx)
-    };
+    let mut out = fetch(&key, raw_len, ctx);
     // Partial-prefix candidates carry `consumed_span = (0, raw_len)` by
     // construction (`build_partial_prefix_key` pins the span). Recase against
     // the full raw buffer so the keys-empty branch and the Step 4b extension
@@ -1258,7 +1238,13 @@ pub(crate) fn assemble_candidates(
             // returns `None` for empty-after-tone-strip input (bare tone
             // mark / hyphen-only / digit-only), so no unbounded scan.
             if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx)
+                fetch_via_lexicon_partial_inner(
+                    raw,
+                    raw_len,
+                    mode,
+                    ctx,
+                    fetch_partial_prefix_candidates,
+                )
             } else {
                 Vec::new()
             }
@@ -1290,7 +1276,13 @@ pub(crate) fn assemble_candidates(
                     && raw.chars().next().is_some_and(phonetics::is_tps_char)
                     && !literal_glyph_in_inventory;
                 if bare_expanded_only {
-                    c.extend(fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx));
+                    c.extend(fetch_via_lexicon_partial_inner(
+                        raw,
+                        raw_len,
+                        mode,
+                        ctx,
+                        fetch_partial_prefix_candidates,
+                    ));
                     appended_blocks = true;
                 }
             }
@@ -1563,8 +1555,13 @@ pub(crate) fn assemble_candidates(
                     // sorted pool (≤ `PARTIAL_PREFIX_HYDRATE_CAP` after
                     // dedupe); composing-side filters out FULL duplicates,
                     // then applies `PARTIAL_PREFIX_OUTPUT_CAP` itself.
-                    let mut ext =
-                        fetch_via_lexicon_partial_inner_unbounded(raw, raw_len, mode, ctx);
+                    let mut ext = fetch_via_lexicon_partial_inner(
+                        raw,
+                        raw_len,
+                        mode,
+                        ctx,
+                        fetch_partial_prefix_candidates_unbounded,
+                    );
                     // Borrowed key shape — `c` is not mutated during the
                     // retain on `ext`, so HashSet entries can hold &str
                     // slices into `c` and avoid per-keystroke String allocs.

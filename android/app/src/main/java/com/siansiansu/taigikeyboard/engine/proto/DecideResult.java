@@ -16,7 +16,6 @@ public  final class DecideResult extends
     DecideResultOrBuilder {
   private DecideResult() {
     effects_ = emptyProtobufList();
-    lastSelectedWord_ = "";
   }
   public static final int EFFECTS_FIELD_NUMBER = 1;
   private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.NextWordEffect> effects_;
@@ -206,83 +205,6 @@ public  final class DecideResult extends
   private void clearPredictionsVisible() {
 
     predictionsVisible_ = false;
-  }
-
-  public static final int LAST_SELECTED_WORD_FIELD_NUMBER = 4;
-  private java.lang.String lastSelectedWord_;
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   * @return The lastSelectedWord.
-   */
-  @java.lang.Override
-  public java.lang.String getLastSelectedWord() {
-    return lastSelectedWord_;
-  }
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   * @return The bytes for lastSelectedWord.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getLastSelectedWordBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(lastSelectedWord_);
-  }
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   * @param value The lastSelectedWord to set.
-   */
-  private void setLastSelectedWord(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    lastSelectedWord_ = value;
-  }
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   */
-  private void clearLastSelectedWord() {
-
-    lastSelectedWord_ = getDefaultInstance().getLastSelectedWord();
-  }
-  /**
-   * <pre>
-   * Echo of last_selected_word so platform can implement
-   * SelectionContextProvider without holding a parallel cache.
-   * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-   * </pre>
-   *
-   * <code>string last_selected_word = 4;</code>
-   * @param value The bytes for lastSelectedWord to set.
-   */
-  private void setLastSelectedWordBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    lastSelectedWord_ = value.toStringUtf8();
-
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.DecideResult parseFrom(
@@ -588,85 +510,6 @@ public  final class DecideResult extends
       return this;
     }
 
-    /**
-     * <pre>
-     * Echo of last_selected_word so platform can implement
-     * SelectionContextProvider without holding a parallel cache.
-     * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-     * </pre>
-     *
-     * <code>string last_selected_word = 4;</code>
-     * @return The lastSelectedWord.
-     */
-    @java.lang.Override
-    public java.lang.String getLastSelectedWord() {
-      return instance.getLastSelectedWord();
-    }
-    /**
-     * <pre>
-     * Echo of last_selected_word so platform can implement
-     * SelectionContextProvider without holding a parallel cache.
-     * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-     * </pre>
-     *
-     * <code>string last_selected_word = 4;</code>
-     * @return The bytes for lastSelectedWord.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getLastSelectedWordBytes() {
-      return instance.getLastSelectedWordBytes();
-    }
-    /**
-     * <pre>
-     * Echo of last_selected_word so platform can implement
-     * SelectionContextProvider without holding a parallel cache.
-     * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-     * </pre>
-     *
-     * <code>string last_selected_word = 4;</code>
-     * @param value The lastSelectedWord to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLastSelectedWord(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setLastSelectedWord(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * Echo of last_selected_word so platform can implement
-     * SelectionContextProvider without holding a parallel cache.
-     * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-     * </pre>
-     *
-     * <code>string last_selected_word = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLastSelectedWord() {
-      copyOnWrite();
-      instance.clearLastSelectedWord();
-      return this;
-    }
-    /**
-     * <pre>
-     * Echo of last_selected_word so platform can implement
-     * SelectionContextProvider without holding a parallel cache.
-     * Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
-     * </pre>
-     *
-     * <code>string last_selected_word = 4;</code>
-     * @param value The bytes for lastSelectedWord to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLastSelectedWordBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setLastSelectedWordBytes(value);
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.DecideResult)
   }
   @java.lang.Override
@@ -687,11 +530,10 @@ public  final class DecideResult extends
             com.siansiansu.taigikeyboard.engine.proto.NextWordEffect.class,
             "currentGeneration_",
             "predictionsVisible_",
-            "lastSelectedWord_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u001b\u0002\u0003" +
-              "\u0003\u0007\u0004\u0208";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u001b\u0002\u0003" +
+              "\u0003\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -193,8 +193,8 @@ public  final class CommitContinuous extends
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+   * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
    * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -217,8 +217,8 @@ public  final class CommitContinuous extends
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+   * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
    * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -242,8 +242,8 @@ public  final class CommitContinuous extends
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+   * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
    * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -268,8 +268,8 @@ public  final class CommitContinuous extends
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+   * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
    * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -291,8 +291,8 @@ public  final class CommitContinuous extends
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-   * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+   * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+   * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
    * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -317,8 +317,8 @@ public  final class CommitContinuous extends
    * whenever the picked candidate carries hanji regardless of which script
    * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
    * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-   * and for legacy callers; a composition with any hanji-less segment is
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+   * a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
    * F2: hanji is an explicit sidechannel, never inferred from
    * `canonical_text` vs `association_tl`).
@@ -337,8 +337,8 @@ public  final class CommitContinuous extends
    * whenever the picked candidate carries hanji regardless of which script
    * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
    * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-   * and for legacy callers; a composition with any hanji-less segment is
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+   * a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
    * F2: hanji is an explicit sidechannel, never inferred from
    * `canonical_text` vs `association_tl`).
@@ -357,8 +357,8 @@ public  final class CommitContinuous extends
    * whenever the picked candidate carries hanji regardless of which script
    * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
    * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-   * and for legacy callers; a composition with any hanji-less segment is
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+   * a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
    * F2: hanji is an explicit sidechannel, never inferred from
    * `canonical_text` vs `association_tl`).
@@ -378,8 +378,8 @@ public  final class CommitContinuous extends
    * whenever the picked candidate carries hanji regardless of which script
    * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
    * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-   * and for legacy callers; a composition with any hanji-less segment is
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+   * a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
    * F2: hanji is an explicit sidechannel, never inferred from
    * `canonical_text` vs `association_tl`).
@@ -400,8 +400,8 @@ public  final class CommitContinuous extends
    * whenever the picked candidate carries hanji regardless of which script
    * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
    * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-   * and for legacy callers; a composition with any hanji-less segment is
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+   * a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
    * F2: hanji is an explicit sidechannel, never inferred from
    * `canonical_text` vs `association_tl`).
@@ -419,8 +419,8 @@ public  final class CommitContinuous extends
    * whenever the picked candidate carries hanji regardless of which script
    * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
    * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-   * and for legacy callers; a composition with any hanji-less segment is
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+   * a composition with any hanji-less segment is
    * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
    * F2: hanji is an explicit sidechannel, never inferred from
    * `canonical_text` vs `association_tl`).
@@ -879,8 +879,8 @@ public  final class CommitContinuous extends
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+     * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
      * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -903,8 +903,8 @@ public  final class CommitContinuous extends
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+     * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
      * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -928,8 +928,8 @@ public  final class CommitContinuous extends
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+     * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
      * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -955,8 +955,8 @@ public  final class CommitContinuous extends
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+     * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
      * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -980,8 +980,8 @@ public  final class CommitContinuous extends
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
-     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (legacy callers,
-     * the other 12 methods, TPS-OOV hanji-absent candidates with no dict
+     * `taigi` vs canonical `tâi-gí`). Wire-absent / empty (the other 12
+     * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
      * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
@@ -1005,8 +1005,8 @@ public  final class CommitContinuous extends
      * whenever the picked candidate carries hanji regardless of which script
      * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
      * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-     * and for legacy callers; a composition with any hanji-less segment is
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+     * a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
      * F2: hanji is an explicit sidechannel, never inferred from
      * `canonical_text` vs `association_tl`).
@@ -1025,8 +1025,8 @@ public  final class CommitContinuous extends
      * whenever the picked candidate carries hanji regardless of which script
      * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
      * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-     * and for legacy callers; a composition with any hanji-less segment is
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+     * a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
      * F2: hanji is an explicit sidechannel, never inferred from
      * `canonical_text` vs `association_tl`).
@@ -1045,8 +1045,8 @@ public  final class CommitContinuous extends
      * whenever the picked candidate carries hanji regardless of which script
      * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
      * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-     * and for legacy callers; a composition with any hanji-less segment is
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+     * a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
      * F2: hanji is an explicit sidechannel, never inferred from
      * `canonical_text` vs `association_tl`).
@@ -1066,8 +1066,8 @@ public  final class CommitContinuous extends
      * whenever the picked candidate carries hanji regardless of which script
      * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
      * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-     * and for legacy callers; a composition with any hanji-less segment is
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+     * a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
      * F2: hanji is an explicit sidechannel, never inferred from
      * `canonical_text` vs `association_tl`).
@@ -1089,8 +1089,8 @@ public  final class CommitContinuous extends
      * whenever the picked candidate carries hanji regardless of which script
      * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
      * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-     * and for legacy callers; a composition with any hanji-less segment is
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+     * a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
      * F2: hanji is an explicit sidechannel, never inferred from
      * `canonical_text` vs `association_tl`).
@@ -1110,8 +1110,8 @@ public  final class CommitContinuous extends
      * whenever the picked candidate carries hanji regardless of which script
      * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
      * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
-     * and for legacy callers; a composition with any hanji-less segment is
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
+     * a composition with any hanji-less segment is
      * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
      * F2: hanji is an explicit sidechannel, never inferred from
      * `canonical_text` vs `association_tl`).

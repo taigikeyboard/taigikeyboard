@@ -40,7 +40,7 @@ enum {
     TAIGI_EMIT_CLEAR_PREEDIT = 2,      /* the preedit goes away without a commit */
     TAIGI_EMIT_COMMIT = 3,             /* text written into the document */
     TAIGI_EMIT_DELETE_SURROUNDING = 4, /* delete_offset / delete_count, before the caret */
-    TAIGI_EMIT_LOOKUP_TABLE = 5,       /* the candidate list (table accessors) */
+    TAIGI_EMIT_LOOKUP_TABLE = 5,       /* the candidate list (draw with taigi_popup_show) */
     TAIGI_EMIT_HIDE_LOOKUP_TABLE = 6,  /* the candidate list goes away */
     TAIGI_EMIT_MODE_CHANGED = 7,       /* the mode changed: re-read taigi_runtime_mode_label / _symbol / _icon */
     TAIGI_EMIT_ANNOUNCE_MODE = 8       /* show the mode briefly (showInputMethodInformation) */
@@ -137,15 +137,6 @@ const char *taigi_reply_text(const TaigiReply *reply, size_t index);
 uint32_t taigi_reply_caret(const TaigiReply *reply, size_t index);
 int32_t taigi_reply_delete_offset(const TaigiReply *reply, size_t index);
 uint32_t taigi_reply_delete_count(const TaigiReply *reply, size_t index);
-size_t taigi_reply_table_count(const TaigiReply *reply, size_t index);
-const char *taigi_reply_table_candidate(const TaigiReply *reply, size_t index, size_t row);
-size_t taigi_reply_table_label_count(const TaigiReply *reply, size_t index);
-const char *taigi_reply_table_label(const TaigiReply *reply, size_t index, size_t position);
-uint32_t taigi_reply_table_cursor(const TaigiReply *reply, size_t index);
-/* false = no highlight (the Telex guide). */
-bool taigi_reply_table_cursor_visible(const TaigiReply *reply, size_t index);
-uint32_t taigi_reply_table_page_size(const TaigiReply *reply, size_t index);
-bool taigi_reply_table_vertical(const TaigiReply *reply, size_t index);
 
 /* What `taigi_popup_poll` reports. A click selects and never commits; a
  * page turn is the previous (position 0) or next (position 1) page. */

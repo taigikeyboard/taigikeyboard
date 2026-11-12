@@ -211,11 +211,10 @@ extension ThemeAppearance {
 /// A user-created, named, persisted keyboard theme: identity + name + the full
 /// `ThemeAppearance` bundle + timestamps.
 ///
-/// No backward-compat decode is needed: the user-theme write path (CRUD) has
-/// never shipped (PR-3) and no seeding/migration ever wrote `user_themes.json`
-/// (verified — the only `userThemeStore` mutators are the unused CRUD wrappers),
-/// so no legacy envelope can exist on any device. Schema growth is handled
-/// forward by `ThemeAppearance`'s `decodeIfPresent` decoder.
+/// Shipped with the v3.6.2 theme editor (`133e78693`), so `user_themes.json` exists on devices.
+/// Older files still decode: `ThemeAppearance` reads every field with `decodeIfPresent`
+/// and Codable ignores dropped keys (`fontType`); `UserThemeStore.load()` fills nil
+/// color roles from the seed and answers `[]` for an unreadable file.
 struct UserTheme: Codable, Equatable, Identifiable {
     let id: UUID
     var name: String

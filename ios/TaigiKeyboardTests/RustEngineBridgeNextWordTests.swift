@@ -55,7 +55,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             generation: envelopeGen,
         )
         baselineGen = baseline.currentGeneration
-        XCTAssertNil(baseline.lastSelectedWord)
         XCTAssertFalse(baseline.predictionsVisible)
     }
 
@@ -66,11 +65,11 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     func testWordSelected_bumpsGenerationAndBecomesTheContext() {
         let primed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         XCTAssertEqual(primed.currentGeneration, baselineGen &+ 1)
-        XCTAssertEqual(primed.lastSelectedWord, "早")
+        XCTAssertEqual(queriedWords(primed), ["早"])
 
         let result = wordSelected(text: "安", roman: "an", nowMs: 5000)
         XCTAssertEqual(result.currentGeneration, baselineGen &+ 2)
-        XCTAssertEqual(result.lastSelectedWord, "安")
+        XCTAssertEqual(queriedWords(result), ["安"])
     }
 
     // INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT (behavioral-invariants.md §40)
@@ -80,7 +79,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         for text in ["(彼)", " 彼"] {
             let result = wordSelected(text: text, roman: "hit", nowMs: 0)
             XCTAssertEqual(
-                result.lastSelectedWord, text,
+                queriedWords(result), [text],
                 "a commit that merely starts with punctuation is still a word",
             )
         }
@@ -146,10 +145,11 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     // MARK: - Decide: ContextTimeoutFired
 
-    func testContextTimeoutFired_resetsStateAndCancelsTimer() {
+    // Clearing the context itself is pinned in `engine/nextword/src/decide.rs`
+    // (`timeout_and_reset_drop_the_committed_context`).
+    func testContextTimeoutFired_cancelsTimer() {
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         let result = contextTimeoutFired(nowMs: 30000)
-        XCTAssertNil(result.lastSelectedWord)
         XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
     }
 
@@ -213,6 +213,16 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// The words the decision asks predictions for — the word that became the context.
+    private func queriedWords(_ result: RustEngineBridge.NextWordDecideResult) -> [String] {
+        result.effects.compactMap { effect in
+            if case let .queryPredictions(word, _, _, _) = effect {
+                return word
+            }
+            return nil
+        }
+    }
 
     private func wordSelected(
         text: String,

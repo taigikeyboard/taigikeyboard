@@ -253,8 +253,6 @@ class SmartbarManager(
         }
     }
 
-    fun getLastSelectedWord(): String? = nextWordController.getLastSelectedWord()
-
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
 
     fun selectOneHandedMode(mode: OneHandedMode) = toolbarManager.selectOneHandedMode(mode)

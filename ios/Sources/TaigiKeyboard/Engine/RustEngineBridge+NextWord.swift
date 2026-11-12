@@ -34,16 +34,11 @@ public extension RustEngineBridge {
         public let effects: [Effect]
         public let currentGeneration: UInt64
         public let predictionsVisible: Bool
-        /// `nil` when the engine has no last-selected word; otherwise the
-        /// echo of `state.last_selected_word`. Empty wire string maps to
-        /// `nil` per proto contract.
-        public let lastSelectedWord: String?
 
         public static let noop = NextWordDecideResult(
             effects: [],
             currentGeneration: 0,
             predictionsVisible: false,
-            lastSelectedWord: nil,
         )
     }
 
@@ -339,7 +334,6 @@ public extension RustEngineBridge {
             effects: effects,
             currentGeneration: proto.currentGeneration,
             predictionsVisible: proto.predictionsVisible,
-            lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord,
         )
     }
 }

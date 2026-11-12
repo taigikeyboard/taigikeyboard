@@ -1,6 +1,6 @@
 // NextWord platform executor — Android wiring into the Rust nextword crate (since v3.5.5).
 // Decisions/state live in Rust; this file handles intent serialization, Effect interpretation
-// (timeout / UI callback), and caches lastSelectedWord/predictionsVisible from engine.
+// (timeout / UI callback), and caches predictionsVisible from engine.
 
 package com.siansiansu.taigikeyboard.ime.text.nextword
 
@@ -40,7 +40,7 @@ import kotlinx.coroutines.withContext
  * - interprets the returned `NextWordDecideResult.Effect` list against
  *   coroutine-scheduled timeout and UI callbacks (the engine keeps the
  *   learned bigrams and reads them for predictions itself — roadmap P8b),
- * - caches `lastSelectedWord` / `predictionsVisible` echoed back from the engine so
+ * - caches `predictionsVisible` echoed back from the engine so
  *   `SmartbarManager` / `CandidateClickHandler` reads stay synchronous,
  * - pushes UI visibility back into the engine via `nextwordSetPredictionsVisible`
  *   after async predict() results render so downstream clear/reset paths
@@ -63,9 +63,8 @@ class NextWordController(
     // the next prediction list. Same provider shape as CandidateUpdateCoordinator.
     private val splitCombinedCellsProvider: () -> Boolean,
 ) {
-    // / Cached state echoed from every decide call. Synchronous read for
+    // / Predictions visibility echoed from every decide call. Synchronous read for
     // / SmartbarManager / CandidateClickHandler.
-    private var cachedLastSelectedWord: String? = null
     private var cachedPredictionsVisible: Boolean = false
 
     // / Active context-timeout job. `null` when no timeout scheduled.
@@ -75,8 +74,6 @@ class NextWordController(
     // / on mismatch BEFORE applying the request. Bumped on real input-context
     // / changes via [resetContext] (called from `onStartInputView`).
     private var envelopeGen: Long = 1L
-
-    fun getLastSelectedWord(): String? = cachedLastSelectedWord
 
     fun isShowingNextWordCandidates(): Boolean = cachedPredictionsVisible
 
@@ -289,7 +286,6 @@ class NextWordController(
         result: RustEngineBridge.NextWordDecideResult,
         isUiAlreadyCleared: Boolean = false,
     ) {
-        cachedLastSelectedWord = result.lastSelectedWord
         cachedPredictionsVisible = result.predictionsVisible
         for (effect in result.effects) {
             execute(effect, isUiAlreadyCleared)
