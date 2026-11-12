@@ -109,6 +109,7 @@ dependencies = [
  "prost",
  "protos",
  "ranking",
+ "serde_json",
 ]
 
 [[package]]

@@ -21,6 +21,11 @@ pub use composing::{
     confirm_composition_then_insert, delete_backward, fetch_at_pos, move_caret, reset, telex_key,
     tps_key, CommitContinuousArgs, CommitScript,
 };
+
+/// The config every engine request carries, from the settings in force.
+pub fn app_config(settings: &crate::settings::EngineSettings) -> protos::engine::AppConfig {
+    bridge::app_config(settings)
+}
 pub use external_lookup::{chhoe_url, moe_url};
 pub use lexicon::{
     dictionary_filters, install as lexicon_install, is_hanji, search_by_hanji, search_with_sources,

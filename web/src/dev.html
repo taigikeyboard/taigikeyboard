@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" data-font="iansui">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title data-i18n="web.inspectorTitle">Ranking Engine Lab</title>
+    <link rel="icon" href="icons/196.png">
+    <link rel="stylesheet" href="fonts.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="dev.css">
+    <script type="module" src="dev.js"></script>
+  </head>
+  <body class="dev">
+    <script src="prepaint.js"></script>
+    <button id="sidebar-toggle" class="corner-button" type="button" aria-controls="sidebar" data-i18n-aria-label="desktop.menuSettings" data-i18n-title="desktop.menuSettings">
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <rect x="2.75" y="4" width="14.5" height="12" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M7.75 4v12" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <aside id="sidebar" popover data-i18n-aria-label="desktop.menuSettings">
+      <div class="sidebar-close">
+        <button class="corner-button" type="button" popovertarget="sidebar" popovertargetaction="hide" data-i18n-aria-label="common.close" data-i18n-title="common.close">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <form id="settings">
+        <details class="sidebar-section" open>
+          <summary data-i18n="desktop.generalTab">General</summary>
+          <label class="setting"><span data-i18n="settings.inputScript">Input Script</span>
+            <select name="inputMode">
+              <option value="tl" selected data-i18n="settings.tlMode">Tâi-lô</option>
+              <option value="poj" data-i18n="settings.pojMode">Pe̍h-ōe-jī</option>
+              <option value="tps" data-i18n="settings.tpsMode">Phonetic Symbols</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.toneInputScheme">Tone Keys</span>
+            <select name="toneInputScheme">
+              <option value="standard" selected data-i18n="settings.toneSchemeStandard">Numeric Tones</option>
+              <option value="telex" data-i18n="settings.toneSchemeTelex">Telex</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="desktop.shortcutShowTpsKeyboard">Show Phonetic Symbols Mini Keyboard</span>
+            <input type="checkbox" name="tpsKeyboardShown">
+          </label>
+          <label class="setting"><span data-i18n="settings.literalRomanCandidate">Show Typed Text First</span>
+            <input type="checkbox" name="literalRomanCandidateEnabled">
+          </label>
+          <label class="setting"><span data-i18n="settings.outputScript">Output Script</span>
+            <select name="isTranslateSwapped" data-boolean>
+              <option value="true" selected data-i18n="settings.outputScriptHanji">Hanji</option>
+              <option value="false" data-i18n="settings.outputScriptRoman">Romanization</option>
+            </select>
+          </label>
+          <label class="setting"><span data-i18n="settings.displayLanguage">Display Language</span>
+            <select name="displayLanguage">
+              <option value="system" selected data-i18n="settings.displayLanguageAutomatic">Automatic</option>
+              <option value="hanji">漢字</option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
+          </label>
+          <button id="clear-learning" class="setting-reset" type="button" data-i18n="dictionary.clearLearningRecords">Delete Learning Records</button>
+        </details>
+      </form>
+      <details id="custom-words" class="sidebar-section" open>
+        <summary data-i18n="dictionary.customDictionary">Custom Dictionary</summary>
+        <p class="sidebar-note" data-i18n="web.inspectorCustomNote">A word saved here is found on the writing page too. Delete Learning Records leaves custom words in place.</p>
+        <form id="custom-form" class="custom-form">
+          <label>
+            <span data-i18n="dictionary.romanLabel">Romanization</span>
+            <input id="custom-roman" name="roman" autocomplete="off" spellcheck="false" autocapitalize="off" disabled>
+          </label>
+          <label>
+            <span data-i18n="dictionary.hanziLabel">Hanji</span>
+            <input id="custom-hanji" name="hanji" autocomplete="off" spellcheck="false" disabled>
+          </label>
+          <button id="custom-save" class="setting-reset" type="submit" data-i18n="common.save" disabled>Save</button>
+        </form>
+        <p id="custom-status" class="sidebar-note" role="status"></p>
+        <ul id="custom-list"></ul>
+      </details>
+      <details class="sidebar-section" open>
+        <summary data-i18n="web.inspectorMechanismTitle">Sort Rules</summary>
+        <div class="preset" role="radiogroup" data-i18n-aria-label="web.inspectorMechanismTitle">
+          <label>
+            <input type="radio" name="sortPreset" value="original" checked>
+            <span data-i18n="web.inspectorPresetOriginal">Original</span>
+          </label>
+          <label>
+            <input type="radio" name="sortPreset" value="proposal">
+            <span data-i18n="web.inspectorPresetProposal">Jianzhong Proposal</span>
+          </label>
+          <label>
+            <input type="radio" name="sortPreset" value="test">
+            <span data-i18n="web.inspectorPresetTest">Test</span>
+          </label>
+        </div>
+        <label class="setting" id="rank-one-word">
+          <span data-i18n="web.inspectorRankOneWord">Rank a one-word sentence</span>
+          <input id="rank-one-word-input" type="checkbox">
+        </label>
+        <p class="sidebar-note" data-i18n="web.inspectorRankOneWordNote">When this is on, a one-word path such as kip joins the twelve stages instead of staying at the front. A sentence of several words stays pinned. The writing page never turns this on.</p>
+        <div id="mechanism"></div>
+      </details>
+    </aside>
+    <header class="dev-bar">
+      <div class="title-row">
+        <h1 data-i18n="web.inspectorTitle">Ranking Engine Lab</h1>
+        <a href="index.html" data-i18n="web.inspectorBack">Back to the page</a>
+      </div>
+      <div id="load-slot">
+        <progress id="progress" aria-labelledby="message" max="1" value="0"></progress>
+        <button id="retry" class="action" type="button" data-i18n="desktop.updateRetryAction">Try Again</button>
+      </div>
+      <p id="message" role="status" data-state="loading"></p>
+    </header>
+    <main>
+      <section class="composer">
+        <div id="preedit" hidden></div>
+        <textarea id="text" data-i18n-aria-label="web.inspectorInput" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
+        <div class="choice-bar">
+          <h2 data-i18n="web.inspectorChoices">Candidates</h2>
+          <div class="pages">
+            <button id="page-up" type="button" data-i18n="web.inspectorPageUp" hidden>Previous page</button>
+            <button id="page-down" type="button" data-i18n="web.inspectorPageDown" hidden>Next page</button>
+          </div>
+        </div>
+        <ol id="candidates"></ol>
+      </section>
+      <section id="tps-keyboard" data-i18n-aria-label="desktop.shortcutShowTpsKeyboard"></section>
+      <div id="inspector-body"></div>
+      <p id="notice" class="unseen" role="status" data-i18n="web.otherInputMethod">Another input method is active. Turn it off to type here.</p>
+    </main>
+  </body>
+</html>

@@ -20,7 +20,8 @@ pub(crate) use executor::{KeySurface, Recorder};
 pub use global::{mode_label, perform_global};
 pub use key::{
     begin_session, click_from_panel, commit_composition, end_session, is_composing,
-    navigate_from_panel, process_key, toggle_language_mode, tps_keyboard_press,
+    navigate_from_panel, process_key, refresh_composition, toggle_language_mode,
+    tps_keyboard_press,
 };
 pub use list_selection::{ListLayout, ListSelection};
 pub use selection::LookupSelection;

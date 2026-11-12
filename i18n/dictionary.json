@@ -9,7 +9,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -203,7 +204,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -222,7 +224,8 @@
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -244,7 +247,8 @@
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -263,7 +267,8 @@
       "scope": {
         "platforms": [
           "android",
-          "ios"
+          "ios",
+          "web"
         ],
         "surfaces": [
           "host"
@@ -1527,14 +1532,15 @@
       }
     },
     "clearLearningRecords": {
-      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Runs on the press, no confirmation.",
+      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile), and the developer page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Runs on the press, no confirmation.",
       "scope": {
         "platforms": [
           "android",
           "ios",
           "macos",
           "windows",
-          "linux"
+          "linux",
+          "web"
         ],
         "surfaces": [
           "host"

@@ -13,7 +13,10 @@
 //! lock is dropped.
 
 use super::global::{perform_global, pick_symbol};
-use super::{is_vertical_layout, present_table, Emit, EngineState, KeyReply, KeySurface, Recorder};
+use super::{
+    is_vertical_layout, present_table, Emit, EngineState, KeyReply, KeySurface, ListSelection,
+    Recorder,
+};
 use crate::composing::{
     pass_through_may_consume, perform_intent, ComposingEffectExecutor, ComposingManager,
     ContextToken,
@@ -245,6 +248,28 @@ pub fn end_session(
     state.armed_auto_space = false;
     state.symbol_picker = None;
     state.latched_chord = None;
+    emits
+}
+
+/// Re-fetch the open composition's candidates and draw the table again.
+/// The web developer page calls this after changing the test sort order,
+/// so the list on screen follows the new comparison without another key.
+pub fn refresh_composition(
+    runtime: &DesktopRuntime,
+    token: ContextToken,
+    state: &mut EngineState,
+) -> Vec<Emit> {
+    let settings = runtime.settings.current();
+    let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
+    if is_composing(runtime, token) {
+        let mut coordinator = runtime.lock_coordinator();
+        if let Some(manager) = coordinator.manager(token) {
+            crate::composing::refresh_list(&settings, manager, &mut state.candidates);
+            state.selection = ListSelection::new(0);
+        }
+    }
+    let mut emits = Vec::new();
+    present_table(runtime, state, &settings, &bindings, &mut emits);
     emits
 }
 

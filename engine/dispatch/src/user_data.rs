@@ -29,6 +29,49 @@ pub(crate) fn respond(
     crate::error_response(id, protos::engine::ErrorCode::FailInvariant)
 }
 
+/// The open composition's cut and candidate order, or `None` when nothing
+/// is being composed. With the stores open, the same two passes a fetch
+/// uses so the weights are the ones the list sorted by.
+pub(crate) fn explain_composition(
+    config: &AppConfig,
+    generation: u64,
+    now_ms: i64,
+    literal_roman_candidate_disabled: bool,
+) -> Option<composing::explain::Mechanism> {
+    #[cfg(feature = "user-data")]
+    if let Some(stores) = userdata::UserDataHandle::instance().stores() {
+        return with_stores::explain(
+            stores,
+            config,
+            generation,
+            now_ms,
+            literal_roman_candidate_disabled,
+        );
+    }
+    explain_without_stores(config, generation, now_ms, literal_roman_candidate_disabled)
+}
+
+fn explain_without_stores(
+    config: &AppConfig,
+    generation: u64,
+    now_ms: i64,
+    literal_roman_candidate_disabled: bool,
+) -> Option<composing::explain::Mechanism> {
+    let composing = composing::EngineHandle::instance();
+    let engine = composing.engine_at(generation)?;
+    let snapshot = engine.pending_snapshot(config);
+    let context =
+        crate::context::bundled_ranks(crate::context::context_word(&snapshot, now_ms).as_ref());
+    composing::requests::mechanism(
+        &engine,
+        now_ms,
+        &composing::UserRows::default(),
+        &context,
+        literal_roman_candidate_disabled,
+        config,
+    )
+}
+
 /// A composing request — the `Composing` arm of `crate::run`.
 pub(crate) fn handle_composing(
     request: &ComposingRequest,

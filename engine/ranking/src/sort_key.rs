@@ -2,9 +2,87 @@
 //! candidate list and the walker's edge pick share, the [`CandidateRankFacts`]
 //! it reads, and its NaN-safe score wrapper.
 
-use std::cmp::Reverse;
+use std::cell::Cell;
+use std::cmp::{Ordering, Reverse};
 
 use crate::{source_tier_rank, CONTEXT_RANK_NONE};
+
+/// The twelve comparison fields, in the order [`CandidateSortKey`] uses when
+/// [`set_dev_sort_order`] has not been called. Names are what
+/// [`CandidateSortKey::deciding_field`] returns.
+pub const SORT_FIELDS: [&str; 12] = [
+    "tier",
+    "abbreviation",
+    "preference_class",
+    "coverage_kind",
+    "user_weight",
+    "context_rank",
+    "walker_cost",
+    "score",
+    "frequency",
+    "coverage",
+    "source_rank",
+    "stable_idx",
+];
+
+thread_local! {
+    /// Field indices in comparison order. The default is `0..12`, which is
+    /// [`SORT_FIELDS`]. Each thread keeps its own copy, so a web test does
+    /// not change a desktop engine running in another thread.
+    static DEV_SORT_ORDER: Cell<[u8; 12]> = const { Cell::new([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) };
+    /// When set, a one-word walker path joins [`CandidateSortKey`] instead of
+    /// staying at slot 0. A path of several words stays ahead of the sort.
+    /// Official input methods leave this unset.
+    static DEV_RANK_ONE_WORD: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Install a comparison order for this thread. `fields` is a permutation of
+/// [`SORT_FIELDS`]. Returns `false` and keeps the current order when it is
+/// not. Official input methods never call this.
+pub fn set_dev_sort_order(fields: &[&str]) -> bool {
+    let Some(order) = order_from_names(fields) else {
+        return false;
+    };
+    DEV_SORT_ORDER.with(|cell| cell.set(order));
+    true
+}
+
+/// Restore this thread to [`SORT_FIELDS`].
+pub fn reset_dev_sort_order() {
+    DEV_SORT_ORDER.with(|cell| cell.set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
+}
+
+/// Whether this thread ranks a one-word best path with the other rows.
+/// Default `false`: that path stays at slot 0, ahead of the twelve stages.
+pub fn dev_rank_one_word_path() -> bool {
+    DEV_RANK_ONE_WORD.with(|cell| cell.get())
+}
+
+/// The developer page's switch. Official input methods never call this.
+pub fn set_dev_rank_one_word_path(enabled: bool) {
+    DEV_RANK_ONE_WORD.with(|cell| cell.set(enabled));
+}
+
+fn order_from_names(fields: &[&str]) -> Option<[u8; 12]> {
+    if fields.len() != SORT_FIELDS.len() {
+        return None;
+    }
+    let mut order = [0u8; 12];
+    let mut seen = [false; 12];
+    for (place, name) in fields.iter().enumerate() {
+        let dim = SORT_FIELDS.iter().position(|field| field == name)?;
+        if seen[dim] {
+            return None;
+        }
+        seen[dim] = true;
+        order[place] = u8::try_from(dim).unwrap_or(0);
+    }
+    Some(order)
+}
+
+fn active_order() -> [u8; 12] {
+    DEV_SORT_ORDER.with(|cell| cell.get())
+}
 
 /// [`CandidateRankFacts::coverage_kind`] of a full-syllable hit: the typed
 /// span is the record's whole toneless reading.
@@ -132,7 +210,7 @@ fn preference_class(facts: &CandidateRankFacts) -> u8 {
 // priority, so longest-coverage-first inside a tier only buried the
 // short single-syllable first-segment candidate.
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CandidateSortKey {
     /// Leading dim: `0` = Tier 0 (the candidate consumes the whole input),
     /// `1` = Tier 1 (only its front). A word covering everything typed —
@@ -233,6 +311,53 @@ impl CandidateSortKey {
             context_rank: CONTEXT_RANK_NONE,
             ..Self::new(facts, raw_len, stable_idx)
         }
+    }
+
+    /// The first dimension on which `self` sorts ahead of `other`, in the
+    /// order this thread is comparing ([`set_dev_sort_order`], or
+    /// [`SORT_FIELDS`]). Equal keys answer `stable_idx`.
+    pub fn deciding_field(&self, other: &Self) -> &'static str {
+        for dim in active_order() {
+            if self.cmp_dim(other, dim) != Ordering::Equal {
+                return SORT_FIELDS[usize::from(dim)];
+            }
+        }
+        "stable_idx"
+    }
+
+    fn cmp_dim(&self, other: &Self, dim: u8) -> Ordering {
+        match dim {
+            0 => self.tier.cmp(&other.tier),
+            1 => self.abbreviation.cmp(&other.abbreviation),
+            2 => self.preference_class.cmp(&other.preference_class),
+            3 => self.coverage_kind.cmp(&other.coverage_kind),
+            4 => self.neg_user_weight.cmp(&other.neg_user_weight),
+            5 => self.context_rank.cmp(&other.context_rank),
+            6 => self.walker_cost.cmp(&other.walker_cost),
+            7 => self.neg_score.cmp(&other.neg_score),
+            8 => self.neg_freq.cmp(&other.neg_freq),
+            9 => self.neg_coverage.cmp(&other.neg_coverage),
+            10 => self.source_rank.cmp(&other.source_rank),
+            _ => self.stable_idx.cmp(&other.stable_idx),
+        }
+    }
+}
+
+impl PartialOrd for CandidateSortKey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CandidateSortKey {
+    fn cmp(&self, other: &Self) -> Ordering {
+        for dim in active_order() {
+            let compared = self.cmp_dim(other, dim);
+            if compared != Ordering::Equal {
+                return compared;
+            }
+        }
+        Ordering::Equal
     }
 }
 
@@ -759,5 +884,63 @@ mod tests {
             key(&high, raw_len, 0) < key(&low, raw_len, 1),
             "inside coverage_kind=1, higher score still wins"
         );
+    }
+
+    #[test]
+    fn deciding_field_names_the_first_dimension_that_differs() {
+        let raw_len: u32 = 6;
+        let whole = key(&cand_with_user_weight(0, 6, 1.0, 1, 0, 0.0), raw_len, 1);
+        let front = key(&cand_with_user_weight(0, 2, 100.0, 100, 0, 0.0), raw_len, 0);
+        assert_eq!(whole.deciding_field(&front), "tier");
+        let heavier = key(&cand_with_user_weight(0, 3, 1.0, 1, 0, 0.5), 3, 0);
+        let lighter = key(&cand_with_user_weight(0, 3, 1.0, 1, 0, 0.1), 3, 1);
+        assert_eq!(heavier.deciding_field(&lighter), "user_weight");
+        assert_eq!(heavier.deciding_field(&heavier), "stable_idx");
+    }
+
+    #[test]
+    fn dev_sort_order_moves_the_deciding_field() {
+        let _restore = RestoreOrder;
+        let raw_len: u32 = 6;
+        let whole = key(&cand_with_user_weight(0, 6, 1.0, 1, 0, 0.0), raw_len, 1);
+        let front = key(&cand_with_user_weight(0, 2, 100.0, 100, 0, 0.0), raw_len, 0);
+        assert!(whole < front);
+        let mut fields = SORT_FIELDS.to_vec();
+        fields.retain(|field| *field != "score" && *field != "tier");
+        fields.insert(0, "score");
+        fields.push("tier");
+        assert!(set_dev_sort_order(&fields));
+        assert!(front < whole, "the higher score now leads");
+        assert_eq!(front.deciding_field(&whole), "score");
+        assert!(!set_dev_sort_order(&["tier"]));
+        assert!(front < whole, "a rejected order leaves the installed one");
+        reset_dev_sort_order();
+        assert!(whole < front);
+    }
+
+    #[test]
+    fn dev_rank_one_word_path_defaults_off() {
+        let _restore = RestoreOneWord;
+        assert!(!dev_rank_one_word_path());
+        set_dev_rank_one_word_path(true);
+        assert!(dev_rank_one_word_path());
+        set_dev_rank_one_word_path(false);
+        assert!(!dev_rank_one_word_path());
+    }
+
+    struct RestoreOneWord;
+
+    impl Drop for RestoreOneWord {
+        fn drop(&mut self) {
+            set_dev_rank_one_word_path(false);
+        }
+    }
+
+    struct RestoreOrder;
+
+    impl Drop for RestoreOrder {
+        fn drop(&mut self) {
+            reset_dev_sort_order();
+        }
     }
 }

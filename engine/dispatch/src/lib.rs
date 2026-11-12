@@ -16,7 +16,7 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use prost::Message;
-use protos::engine::{request, response, ErrorCode, Request, Response};
+use protos::engine::{request, response, AppConfig, ErrorCode, Request, Response};
 
 mod case;
 mod context;
@@ -37,6 +37,90 @@ pub const CUSTOM_CSV_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
 /// `android-jni` import this constant for their pre-allocation early
 /// rejection so the cap stays in lock-step across both FFI seams.
 pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
+
+/// The open composition's segmentation and candidate order, as JSON, or
+/// `None` when nothing is being composed. The same walk and the same sort
+/// the candidate list uses (`composing::requests::mechanism`). A shell that
+/// draws the mechanism calls this beside the key path; the key path itself
+/// is unchanged.
+/// Install a twelve-field comparison order for this thread. `fields` is a
+/// permutation of [`ranking::SORT_FIELDS`]. `false` leaves the current order
+/// in place. The web developer page is the caller; an official input method
+/// never sets one, and another thread keeps the field order of
+/// [`ranking::CandidateSortKey`].
+pub fn set_dev_sort_order(fields: &[&str]) -> bool {
+    ranking::set_dev_sort_order(fields)
+}
+
+/// Restore this thread's comparison to [`ranking::SORT_FIELDS`].
+pub fn reset_dev_sort_order() {
+    ranking::reset_dev_sort_order();
+}
+
+/// The developer page's switch: a one-word best path joins the twelve-stage
+/// comparison. A path of several words stays at slot 0. Official input
+/// methods never call this.
+pub fn set_dev_rank_one_word_path(enabled: bool) {
+    ranking::set_dev_rank_one_word_path(enabled);
+}
+
+pub fn explain_composition(
+    config: &AppConfig,
+    generation: u64,
+    now_ms: i64,
+    literal_roman_candidate_disabled: bool,
+) -> Option<String> {
+    let view = user_data::explain_composition(
+        config,
+        generation,
+        now_ms,
+        literal_roman_candidate_disabled,
+    )?;
+    Some(explain_json(&view))
+}
+
+fn explain_json(view: &composing::explain::Mechanism) -> String {
+    let piece = |text: &str, gap: bool| serde_json::json!({ "text": text, "gap": gap });
+    serde_json::json!({
+        "raw": view.raw,
+        "cutBy": view.cut_by,
+        "syllables": view.syllables.iter().map(|cut| piece(&cut.text, cut.gap)).collect::<Vec<_>>(),
+        "words": view.words.iter().map(|word| serde_json::json!({
+            "text": word.text,
+            "hanji": word.hanji,
+            "roman": word.roman,
+            "kind": word.kind,
+            "userRow": word.user_row,
+            "picks": word.picks,
+            "weight": word.weight,
+        })).collect::<Vec<_>>(),
+        "candidates": view.candidates.iter().map(|row| serde_json::json!({
+            "hanji": row.hanji,
+            "roman": row.roman,
+            "before": row.before,
+            "head": row.head,
+            "rest": row.rest,
+            "role": row.role,
+            "placedBy": row.placed_by,
+            "preference": row.preference,
+            "coverage": row.coverage,
+            "context": row.context,
+            "picks": row.picks,
+            "syllables": row.syllables,
+            "weight": row.weight,
+            "lastUsedMs": row.last_used_ms,
+            "tier": row.tier,
+            "score": row.score,
+            "frequency": row.frequency,
+            "walkerCost": row.walker_cost,
+            "coverageBytes": row.coverage_bytes,
+            "sourceRank": row.source_rank,
+            "sources": row.sources,
+            "rankingSource": row.ranking_source,
+        })).collect::<Vec<_>>(),
+    })
+    .to_string()
+}
 
 /// The FFI adapters' pre-dispatch size gate: true when a request of `len`
 /// bytes must be refused with `FAIL_INVARIANT`. Owning the check here keeps

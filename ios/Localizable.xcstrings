@@ -686,7 +686,7 @@
       }
     },
     "i18n_dictionary_clearLearningRecords": {
-      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile): deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Runs on the press, no confirmation.",
+      "comment": "Destructive row at the bottom of the Learning Records page (desktop) / subpage (mobile), and the developer page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Runs on the press, no confirmation.",
       "extractionState": "manual",
       "localizations": {
         "en": {
