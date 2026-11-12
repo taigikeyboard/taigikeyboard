@@ -28,7 +28,7 @@ Row counts are from `dictionary/output/dictionary.csv` (169,435 rows total).
 | `stti` 學科術語辭典 | 4,901 | 2,411 | 開放政府資料授權條款 1.0 | in-app credits screen; publisher statement not re-confirmed |
 | `kungge` 台語工藝詞庫 | 994 | 668 | no data licence published; images-only CC BY-NC-ND | ✅ 2026-09-07, publisher's 圖像授權 page |
 | `khiin` frequency data | 8,086 | 8,086 | **Unverified** | Khiin project (<https://github.com/khiin-pjh/khiin>); the specific file's terms not confirmed |
-| `khpoo` 齒盤補充辭典 | 4,198 | 3,579 | **Unverified** | origin and rights holder not established |
+| `khpoo` 齒盤補充辭典 | 4,198 | 3,579 | **Unverified**; rows added through the contribution site: Apache-2.0 | original rows: origin and rights holder not established. Contributed rows (commits carrying an `Accent:` trailer, `docs/architecture/khiunnkhau-contrib-roadmap.md`): Apache-2.0, the contributor agrees on the submission form (maintainer 2026-11-12) |
 | `lkk` 漢羅合用建議用字 | 468 | 468 | CC BY | stated by the maintainer 2026-11-06, version not recorded; publisher verified 2026-10-17 via [the publisher's word-list page](https://tsbp.tgb.org.tw/p/bong_8.html) |
 | `char_freq_merged.txt` | — | — | **Unverified** | corpus provenance not established |
 | `dev` 開發者補充辭典 | 3,449 | 2,563 | Apache-2.0 | written by this project's maintainers |

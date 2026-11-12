@@ -17,6 +17,7 @@ on:
       - 'dictionary/requirements.txt'
       # Curated LKK invariants also depend on these data-only edits.
       - 'dictionary/supplementary/lkk/data/lkk.csv'
+      - 'dictionary/sources/supplementary/khpoo/data/raw/khpoo.csv'
       - 'dictionary/sources/official/kautian/data/kautian.csv'
       - 'taigi-converter'
       - 'tools/*.py'
@@ -31,6 +32,7 @@ on:
       - 'dictionary/**/*.py'
       - 'dictionary/requirements.txt'
       - 'dictionary/supplementary/lkk/data/lkk.csv'
+      - 'dictionary/sources/supplementary/khpoo/data/raw/khpoo.csv'
       - 'dictionary/sources/official/kautian/data/kautian.csv'
       - 'taigi-converter'
       - 'tools/*.py'
@@ -56,6 +58,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 2
 
       # Only the converter: corpus/ is manual-test text, never a build input.
       - name: Check out taigi-converter
@@ -81,6 +84,14 @@ jobs:
       - name: Dictionary pipeline tests
         working-directory: dictionary
         run: python -m pytest tests -q
+
+      # Lines a PR appends to khpoo (contribution-site intake) must be well-formed
+      # and new; their TL is reviewed by hand. HEAD is the PR merge commit, so
+      # HEAD^1 is exactly the main it merges into (checkout fetch-depth: 2).
+      - name: khpoo appended lines
+        if: github.event_name == 'pull_request'
+        working-directory: dictionary
+        run: python tools/verify_khpoo_append.py --base HEAD^1
 
       - name: Release-notes tool tests
         run: python tools/release_notes_test.py
