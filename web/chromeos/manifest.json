@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "台語齒盤",
   "short_name": "Taigi Keyboard",
-  "version": "0.1.0",
+  "version": "3.9.0",
   "description": "Taigi (Taiwanese Hokkien) input method: POJ, TL, TPS, Hanji.",
   "minimum_chrome_version": "116",
   "background": { "service_worker": "worker.js", "type": "module" },
