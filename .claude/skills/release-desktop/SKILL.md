@@ -168,7 +168,7 @@ tree.
 | File | Purpose |
 | --- | --- |
 | `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS`, `### Windows`, `### Linux` and `### ChromeOS` |
-| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux` list (newest first) |
+| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux + ChromeOS` list (newest first) |
 
 Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
 body, so it is what users read on the release page:

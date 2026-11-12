@@ -10,7 +10,8 @@ search words. The Telex guide stays on screen until you hide it. Phonetic
 Symbols gets a reworked key layout. The walker no longer splits a word into two
 frequent single syllables. About 770 words from the MOE Dictionary and LKK
 are added, most with no Hanji. Windows ships one installer for x64 and Arm64.
-Upgrade from v3.8.0.
+ChromeOS gets its first release, through the Chrome Web Store. Upgrade from
+v3.8.0.
 
 ### macOS
 
@@ -23,9 +24,10 @@ Upgrade from v3.8.0.
   with Telex and Numeric Tones alike. If you typed `-` with `f` under Telex,
   turn on **Type - with f** to keep it. An `f` with nothing being typed then
   writes `-`, so `ffah` gives `--ah`. While it is on, `f` no longer picks a
-  candidate under Numeric Tones; the candidate keys shift left. An `h` after
+  candidate under Numeric Tones; the candidate keys shift left and a page holds
+  eight candidates, one per key. An `h` after
   `tsh` / `chh` is now an ordinary letter. Both settings are greyed out under
-  Phonetic Symbols. (#731, #823, #835)
+  Phonetic Symbols. (#731, #823, #835, #857)
 - **The Telex guide stays on screen** until its shortcut hides it, like the
   Phonetic Symbols Mini Keyboard, instead of closing on the next key. It is
   smaller and sits at the bottom centre of the screen. (#687, #688)
@@ -38,6 +40,10 @@ Upgrade from v3.8.0.
   typed or a romanization-only word, instead of doing nothing. (#748)
 - **Auto-Space after a Han-Lo word that ends in romanization.** Picking 啥mih
   adds the space, as a romanized pick does. (#856)
+- **Full-width punctuation takes the auto space's place.** 想beh + `,` gives
+  想beh， with no space left behind, and the mark follows the output script
+  under Hanji first (taigi，, not taigi, ). Half-width marks keep the space
+  after them, as before. (#860)
 - **The Hanji / Romanization swap is always announced** under Side by Side,
   with or without a candidate list. (#570)
 - **Fewer lost keystrokes when switching input methods quickly.** Switching
@@ -117,9 +123,10 @@ Upgrade from v3.8.0.
   with Telex and Numeric Tones alike. If you typed `-` with `f` under Telex,
   turn on **Type - with f** to keep it. An `f` with nothing being typed then
   writes `-`, so `ffah` gives `--ah`. While it is on, `f` no longer picks a
-  candidate under Numeric Tones; the candidate keys shift left. An `h` after
+  candidate under Numeric Tones; the candidate keys shift left and a page holds
+  eight candidates, one per key. An `h` after
   `tsh` / `chh` is now an ordinary letter. Both settings are greyed out under
-  Phonetic Symbols. (#731, #823, #835)
+  Phonetic Symbols. (#731, #823, #835, #857)
 - **The Telex guide stays on screen** until its shortcut hides it, like the
   Phonetic Symbols Mini Keyboard, instead of closing on the next key. (#687,
   #695)
@@ -132,6 +139,10 @@ Upgrade from v3.8.0.
   typed or a romanization-only word, instead of doing nothing. (#748)
 - **Auto-Space after a Han-Lo word that ends in romanization.** Picking 啥mih
   adds the space, as a romanized pick does. (#856)
+- **Full-width punctuation takes the auto space's place.** 想beh + `,` gives
+  想beh， with no space left behind, and the mark follows the output script
+  under Hanji first (taigi，, not taigi, ). Half-width marks keep the space
+  after them, as before. (#860)
 - **The Hanji / Romanization swap shows a notice** under Side by Side. Before,
   only the tray icon changed. (#570)
 
@@ -216,9 +227,10 @@ Upgrade from v3.8.0.
   with Telex and Numeric Tones alike. If you typed `-` with `f` under Telex,
   turn on **Type - with f** to keep it. An `f` with nothing being typed then
   writes `-`, so `ffah` gives `--ah`. While it is on, `f` no longer picks a
-  candidate under Numeric Tones; the candidate keys shift left. An `h` after
+  candidate under Numeric Tones; the candidate keys shift left and a page holds
+  eight candidates, one per key. An `h` after
   `tsh` / `chh` is now an ordinary letter. Both settings are greyed out under
-  Phonetic Symbols. (#731, #823, #835)
+  Phonetic Symbols. (#731, #823, #835, #857)
 - **The Telex guide stays up** until its shortcut hides it, instead of closing
   on the next key. While candidates or the symbol picker are shown it gives
   way, and returns when you write or cancel. (#687, #694)
@@ -231,6 +243,10 @@ Upgrade from v3.8.0.
   typed or a romanization-only word, instead of doing nothing. (#748)
 - **Auto-Space after a Han-Lo word that ends in romanization.** Picking 啥mih
   adds the space, as a romanized pick does. (#856)
+- **Full-width punctuation takes the auto space's place.** 想beh + `,` gives
+  想beh， with no space left behind, and the mark follows the output script
+  under Hanji first (taigi，, not taigi, ). Half-width marks keep the space
+  after them, as before. (#860)
 - **The Hanji / Romanization swap is announced** under Side by Side: the mode
   label shows the output script and Fcitx5 shows a notice. IBus has no notice.
   (#570)
@@ -281,3 +297,14 @@ Upgrade from v3.8.0.
 - **Custom Dictionary keeps a Latin Hanji form** such as `KTV` or `5W1H`. A
   Hanji column that only repeats the romanization is stored as a
   romanization-only word. (#752, #820)
+
+### ChromeOS
+
+#### Install
+
+- **First release.** TaigiKeyboard is an input method for ChromeOS 116 or
+  later, from the Chrome Web Store. Add it under Settings → Keyboard and inputs
+  → Input methods. It types TL, POJ and TPS with Hanji candidates in the
+  system candidate window, learns your picks, and keeps its settings in your
+  Google account. It shares the web version's engine and dictionaries.
+  (#759, #765, #766, #767)
