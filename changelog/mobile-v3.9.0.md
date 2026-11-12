@@ -18,9 +18,11 @@ not touch phones.
 - **Long-Press Characters in Custom Layouts.** Select a character key in the
   layout editor and its long-press list appears as a bubble above the board:
   tap a slot, then a tray character to fill it; remove, reorder or reset to the
-  built-in list. Up to eight characters; an empty list turns long-press off.
+  built-in list. Up to nine characters; an empty list turns long-press off.
   The tray groups letters, tone rows and symbols. The custom list replaces the
-  built-in one on the TL / POJ letter page. (#577, #579, #581)
+  built-in one on the TL / POJ letter page. With full-width punctuation on,
+  each entry types the form the board would (`,` → `，`, `{` → `｛`).
+  (#577, #579, #581, #833, #836)
 - **Duplicate** on custom theme and custom layout cards saves a copy named
   "{name} Copy" right after the original. Hidden once you have five. (#580)
 - **Customize a built-in theme.** A built-in theme card's menu offers Apply /
@@ -28,7 +30,10 @@ not touch phones.
   reset returns to it. (#575)
 - **TL and POJ each remember their layout.** Switching romanization script
   brings back the layout (built-in or custom) you last used with it; applying a
-  custom layout switches to its script. (#666)
+  custom layout switches to its script. New Layout… asks for the Layout Name
+  and its use (Universal / TL / POJ) before the editor opens; a Universal
+  layout's long-press lists carry both the TL and the POJ tone-9 mark
+  (`a` → a̋ ă). (#666, #836)
 - **Questions & Discussion** row with the Discord logo at the end of Home's
   Other section. (#814)
 
@@ -36,7 +41,8 @@ not touch phones.
 
 - **Custom Layout tray additions**: the nasal marker `ⁿ`, the final `or`, and
   the second symbol page (`{` `«` `€` `→` …, typed in full-width form). With a
-  key selected, chips that cannot go on it are dimmed. (#571, #691, #803)
+  key selected, chips that cannot go on it are dimmed. The `er` / `ir` / `or`
+  keys get tone long-press lists. (#571, #691, #803, #832)
 - **Custom Dictionary lists every word.** The list loads page by page as you
   scroll, instead of stopping at 100, and search runs in the engine, so a
   numbered reading such as `tsui2` finds its words. A failed read keeps the
@@ -86,6 +92,11 @@ not touch phones.
   custom 退伍). (#515, #517)
 - A custom word reached by abbreviation counts its real syllables, so a
   following compound joins correctly. (#516)
+- **Full-width punctuation after an auto space** takes the space's place:
+  `想beh` + `，` gives `想beh，`, with no space left before or after the mark.
+  Half-width marks keep the space after them (`guá? `). (#860)
+- **A Han-Lo pick that ends in romanization** (`啥mih`) earns the auto space
+  under Hanji output, like a romanized pick; `m̄好` still does not. (#856)
 
 ### iOS
 
@@ -115,6 +126,8 @@ not touch phones.
   Kautian, Taiwanese TV, Kungge and STTI no longer drop out; LKK adds 386 fully
   romanized words, and its mixed-script supplement grows. A roman-only word
   inside a sentence keeps the sentence Hanji (`我má-tsiah`). (#525, #702)
+- 二來 `jī--lâi` is found with the default dictionary sources (`ji7lai5`,
+  `jilai`). (#872)
 - 31 neutral-tone pieces that start with `--` (`--ah`, 起來 `--khí-lâi`,
   一下 `--tsi̍t-ē`). (#799)
 - Merging keeps source order, so an unrelated addition no longer changes a
