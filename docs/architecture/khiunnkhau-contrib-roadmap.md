@@ -16,6 +16,8 @@ Decisions (maintainer, 2026-11-12):
 - **D4 Site location** — a separate repository (like `taigikeyboard/kautian-mirror`), published under `taigikeyboard.tw/<name>/`; its build reads this repository's dictionary data. The intake workflow and the checks stay here.
 - **D5 Data destination** — append to `dictionary/sources/supplementary/khpoo/data/raw/khpoo.csv`. Entries ship as 齒盤補充辭典 (source bit 8) through the existing khpoo pipeline; no new data file, no new source bit, no engine or platform change. The accent and the reason are not in the data (the file has two columns); they are recorded as commit trailers and in the PR body.
 
+- **D6 TL only** — the romanization field accepts Tâi-lô only; POJ and TPS are rejected. TL with diacritics, or with tone digits (`peh4-gueh8`) converted to diacritics before submit. The rule is TL membership only, no separate POJ detector: every syllable must parse as a TL initial + TL final (`engine/phonetics/src/tables.rs:9-34`). POJ shapes fail by construction — no `ch` / `chh` initial, no `oa` / `oe` / `ek` final, no `o͘` / `ⁿ`; `eng` is a TL dialectal final and stays accepted. One validator (taigi-converter, the submodule kautian-mirror already vendors) runs in the browser before submit and in CI; the error says "use Tâi-lô" with the TL form when the converter can derive it from POJ.
+
 Open (maintainer):
 
 - **D7 Licence of contributed rows** — khpoo is **Unverified** (`dictionary/LICENSE:31`, `dictionary/docs/SOURCES.md:130`). New rows need the contributor's consent to a stated licence, given on the form. Recommended: Apache-2.0, like `dev` (`dictionary/LICENSE:34`); alternatives CC BY (like `lkk`) or CC0. The form cannot go live before this is settled.
@@ -65,7 +67,7 @@ Closes #<issue>
 `verify_khpoo_append.py` (pipeline helpers, no new dependency), run by `python.yml` on PRs that change the khpoo raw file. It checks only the lines the PR adds (diff against the base), so the 4.2k existing rows are not re-judged:
 
 1. Format: two fields, CRLF, NFC, already `normalize_roman`-normalised, file still ends with a newline.
-2. TL validity: strict TL→POJ conversion per syllable (`dictionary/common/romanization.py`, the check `kautian_accent_wordgen` uses); Hanji count = syllable count, as the cleanup Han-Lo check (khpoo's `cleanup.minimal` skips both, so CI is the only gate).
+2. TL only (D6): every syllable a TL initial + TL final with TL tone-mark placement, via taigi-converter (`dictionary/common/taigi_bridge.py`); POJ / TPS input fails. Hanji count = syllable count, as the cleanup Han-Lo check (khpoo's `cleanup.minimal` skips both, so CI is the only server-side gate). Phase 1 first confirms taigi-converter's TL tables match `engine/phonetics/src/tables.rs`, so the site and the keyboard agree on what TL is.
 3. Dedup: the normalised `(hanzi, tl)` must not already be in the khpoo raw file, in `dictionary/output/dictionary.csv` (any source), or twice in the PR.
 4. Tests in `dictionary/tests/`.
 
@@ -89,7 +91,7 @@ The intake workflow runs the same script before it commits, so a bad submission 
 - Repo `taigikeyboard/<name>`, Pages under `taigikeyboard.tw/<name>/`; style tokens and fonts from `web/src/style.css` / kautian-mirror.
 - Build: fetch `dictionary.csv` and the khpoo raw file at a pinned `main` commit → compact JSON (hanzi, tl, poj, no-tone keys). The raw file is included because merged contributions reach `dictionary.csv` only at the next `make dict`.
 - Search: Hanji, TL, POJ, toneless; a hit shows its readings and sources. "Add" offered when the exact `(hanzi, tl)` is absent.
-- Form: Hanji, TL, accents (ten + 其他), reason, licence consent → opens the prefilled issue URL. The form says the contributor's GitHub account will appear as the commit author.
+- Form: Hanji, TL (D6: validated as you type with the same taigi-converter check, tone digits converted to diacritics, submit disabled until valid), accents (ten + 其他), reason, licence consent → opens the prefilled issue URL. The form says the contributor's GitHub account will appear as the commit author.
 - Rebuild daily (the kautian-mirror schedule).
 
 ## Best practices alignment
