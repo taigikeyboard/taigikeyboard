@@ -305,7 +305,9 @@ introspection XML and the `serialize` functions were read, not remembered).
   The §34 literal cell is keyless as on macOS / Windows (the window draws the label the
   core sends, and an empty label takes no column). The auto-space swap (§23) needs the client's surrounding text
   (`IBUS_CAP_SURROUNDING_TEXT` → `DeleteSurroundingText`); a client without it gets
-  the mark after the space, as typed (logged, named). The Telex guide (Windows draws a card, macOS a panel) is shown
+  the mark after the space, as typed (logged, named). The delete is blind, so the swap first
+  checks that the client's surrounding text reports a space before a collapsed caret (IBus
+  `SetSurroundingText`, asked for on `FocusIn`; Fcitx5 `surroundingText()`, read per key; #866). The Telex guide (Windows draws a card, macOS a panel) is shown
   as a lookup table of guide rows with no labels and a non-visible cursor, while `telexGuideShown` is on
   and neither candidates nor the picker hold the table: the framework has one table, so the guide gives way
   while candidates are up and returns when they go (#684, named divergence). The symbol picker (`toggle_symbol_picker`) is a lookup table of the

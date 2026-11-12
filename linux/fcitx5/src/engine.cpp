@@ -80,12 +80,18 @@ State::~State() { taigi_engine_free(handle_); }
 
 /* The field's flags, read per key rather than on activate: a browser moves
  * focus between fields inside one input context, flipping only the flags —
- * where IBus re-sends SetCapabilities / ContentType. */
+ * where IBus re-sends SetCapabilities / ContentType. The surrounding text
+ * too, which fcitx5-gtk re-sends before every key press: the auto-space swap
+ * checks it before it deletes (#866). */
 void State::syncFieldFlags() {
     const auto flags = ic_.capabilityFlags();
     taigi_engine_set_capabilities(
         handle_, flags.test(CapabilityFlag::SurroundingText) ? TAIGI_CAP_SURROUNDING_TEXT : 0);
     taigi_engine_set_password_field(handle_, flags.test(CapabilityFlag::Password));
+    const auto &surrounding = ic_.surroundingText();
+    taigi_engine_set_surrounding_text(handle_,
+                                      surrounding.isValid() ? surrounding.text().c_str() : nullptr,
+                                      surrounding.cursor(), surrounding.anchor());
 }
 
 void State::keyEvent(KeyEvent &event) {

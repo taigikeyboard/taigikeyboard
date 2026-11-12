@@ -298,7 +298,7 @@ pub(super) fn pick_symbol(
     runtime.prepare_for_first_key();
     let is_swap_armed = std::mem::take(&mut state.armed_auto_space);
     let mut surface = KeySurface {
-        recorder: Recorder::new(state.can_delete_surrounding),
+        recorder: Recorder::new(state.can_delete_surrounding, state.text_before_caret),
         is_swap_armed,
         selection: &mut state.selection,
         is_vertical: is_vertical_layout(settings),
@@ -310,6 +310,9 @@ pub(super) fn pick_symbol(
     }
     let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
+    if recorder.has_written() {
+        state.text_before_caret.outdate();
+    }
     let mut emits = recorder.emits;
     present_table(runtime, state, settings, bindings, &mut emits);
     // The recents write is on the key path (the shell replays the commit

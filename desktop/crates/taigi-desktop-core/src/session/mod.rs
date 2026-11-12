@@ -24,7 +24,7 @@ pub use key::{
 };
 pub use list_selection::{ListLayout, ListSelection};
 pub use selection::LookupSelection;
-pub use state::{EngineState, KeyReply, SymbolPicker};
+pub use state::{EngineState, KeyReply, SymbolPicker, TextBeforeCaret};
 pub(crate) use table::{is_vertical_layout, present_table};
 
 use crate::candidates::HorizontalPageLayout;

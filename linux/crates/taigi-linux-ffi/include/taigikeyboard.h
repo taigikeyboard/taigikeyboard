@@ -105,6 +105,11 @@ void taigi_engine_set_capabilities(TaigiEngine *engine, uint32_t caps);
 /* The focused field hides what is typed (CapabilityFlag::Password): keys
  * pass through uncomposed, nothing is learned. */
 void taigi_engine_set_password_field(TaigiEngine *engine, bool is_password);
+/* The client's surrounding text, caret and selection anchor in characters
+ * (Fcitx5 SurroundingText); NULL `text` when it holds none valid. The
+ * auto-space swap deletes only a space this reports before the caret. */
+void taigi_engine_set_surrounding_text(TaigiEngine *engine, const char *text, uint32_t cursor,
+                                       uint32_t anchor);
 
 /* One key press or release: X11 keysym, hardware keycode (X keycode = evdev
  * + 8), modifier mask. `taigi_reply_handled` says whether the key was

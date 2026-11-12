@@ -439,6 +439,31 @@ pub unsafe extern "C" fn taigi_engine_set_password_field(
 }
 
 /// # Safety
+/// `engine` is a live engine; `text`, when non-null, a NUL-terminated
+/// UTF-8 string the call only borrows.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_engine_set_surrounding_text(
+    engine: *mut TaigiEngine,
+    text: *const c_char,
+    cursor: u32,
+    anchor: u32,
+) {
+    if engine.is_null() {
+        return;
+    }
+    // SAFETY: non-null and, by contract, a live engine the caller owns.
+    let engine = unsafe { &mut *engine };
+    // SAFETY: non-null and, by contract, NUL-terminated.
+    let text = (!text.is_null())
+        .then(|| unsafe { CStr::from_ptr(text) }.to_str().ok())
+        .flatten();
+    session::set_surrounding_text(
+        &mut engine.state,
+        text.map(|text| (text, cursor as usize, anchor as usize)),
+    );
+}
+
+/// # Safety
 /// `engine` is a live engine. The reply must be freed with `taigi_reply_free`.
 #[no_mangle]
 pub unsafe extern "C" fn taigi_engine_key(

@@ -270,7 +270,7 @@ pub fn commit_composition(
     token: ContextToken,
     state: &mut EngineState,
 ) -> Vec<Emit> {
-    let mut recorder = Recorder::new(state.can_delete_surrounding);
+    let mut recorder = Recorder::new(state.can_delete_surrounding, state.text_before_caret);
     if is_composing(runtime, token) {
         let mut coordinator = runtime.lock_coordinator();
         if let Some(manager) = coordinator.manager(token) {
@@ -554,7 +554,7 @@ fn run_key(
     }
     let manager = coordinator.claim(token);
     let mut surface = KeySurface {
-        recorder: Recorder::new(state.can_delete_surrounding),
+        recorder: Recorder::new(state.can_delete_surrounding, state.text_before_caret),
         is_swap_armed,
         selection: &mut state.selection,
         is_vertical: is_vertical_layout(settings),
@@ -569,6 +569,9 @@ fn run_key(
     );
     let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
+    if recorder.has_written() {
+        state.text_before_caret.outdate();
+    }
     drop(coordinator);
     let mut emits = recorder.emits;
     present_table(runtime, state, settings, bindings, &mut emits);

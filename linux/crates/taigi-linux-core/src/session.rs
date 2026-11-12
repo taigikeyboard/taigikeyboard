@@ -12,15 +12,33 @@ use taigi_linux_platform::{open_settings, snapshot, toggle_tps_keyboard, RawKeyE
 
 pub use taigi_desktop_core::session::{
     begin_session, click_from_panel, navigate_from_panel, Emit, EngineState, KeyReply,
+    TextBeforeCaret,
 };
 
 /// `IBUS_CAP_SURROUNDING_TEXT` (ibus `src/ibustypes.h:124`).
 const CAP_SURROUNDING_TEXT: u32 = 1 << 5;
 
 /// The client's `SetCapabilities` mask, read for the one bit the session
-/// cares about.
+/// cares about. A client with surrounding text also reports it, so from here
+/// the swap waits for that report rather than delete blind (#866).
 pub fn set_capabilities(state: &mut EngineState, capabilities: u32) {
     state.can_delete_surrounding = capabilities & CAP_SURROUNDING_TEXT != 0;
+    if state.can_delete_surrounding && state.text_before_caret == TextBeforeCaret::Unreported {
+        state.text_before_caret = TextBeforeCaret::Reported(None);
+    }
+}
+
+/// The client's surrounding text — IBus `SetSurroundingText`, Fcitx5
+/// `InputContext::surroundingText` — with the caret and the selection's
+/// anchor in characters; `None` when the client holds none valid. Both
+/// frameworks' GTK modules send it before every key press
+/// (`ibusimcontext.c` `_request_surrounding_text`, `fcitximcontext.cpp`
+/// `fcitx_im_context_filter_keypress`).
+pub fn set_surrounding_text(state: &mut EngineState, text: Option<(&str, usize, usize)>) {
+    state.text_before_caret = match text {
+        Some((text, cursor, anchor)) => TextBeforeCaret::from_surrounding(text, cursor, anchor),
+        None => TextBeforeCaret::Reported(None),
+    };
 }
 
 /// A key as the framework hands it — keysym, keycode, modifier mask with
@@ -127,5 +145,22 @@ mod tests {
         assert!(state.can_delete_surrounding);
         set_capabilities(&mut state, !CAP_SURROUNDING_TEXT);
         assert!(!state.can_delete_surrounding);
+    }
+
+    #[test]
+    fn a_client_with_surrounding_text_holds_the_swap_until_it_reports() {
+        let mut state = EngineState::default();
+        set_capabilities(&mut state, CAP_SURROUNDING_TEXT);
+        assert_eq!(state.text_before_caret, TextBeforeCaret::Reported(None));
+        set_surrounding_text(&mut state, Some(("guá ", 4, 4)));
+        // A repeated SetCapabilities keeps the report: the daemon sends only
+        // a text that changed.
+        set_capabilities(&mut state, CAP_SURROUNDING_TEXT);
+        assert_eq!(
+            state.text_before_caret,
+            TextBeforeCaret::Reported(Some(' '))
+        );
+        set_surrounding_text(&mut state, None);
+        assert_eq!(state.text_before_caret, TextBeforeCaret::Reported(None));
     }
 }
