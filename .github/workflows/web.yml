@@ -7,12 +7,12 @@ name: Web
 # `taigi-web` links those crates and
 # asserts top candidates against that data; a font or string change, because the
 # page ships them; the iOS app icon too. A push to main runs the gates only; the
-# site deploys nightly at 00:00 Taiwan time (16:00 UTC), from main's head, when
-# that head passes the gates and differs from the last nightly run's
+# site deploys hourly (minute 0), from main's head, when
+# that head passes the gates and differs from the last scheduled run's
 # (docs/architecture/web-release.md).
 on:
   schedule:
-    - cron: '0 16 * * *'
+    - cron: '0 * * * *'
   pull_request:
     paths:
       - 'web/**'
@@ -47,10 +47,10 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # A nightly run whose head the last successful nightly run already had
+  # A scheduled run whose head the last successful scheduled run already had
   # deploys nothing: that run deployed it, or skipped it for the same reason.
   changed:
-    name: main moved since last nightly
+    name: main moved since last scheduled run
     if: github.event_name == 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -64,7 +64,7 @@ jobs:
           last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow web.yml --event schedule \
             --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
           if [ "$last" = "$GITHUB_SHA" ]; then moved=false; else moved=true; fi
-          echo "last nightly: ${last:-none}, head: $GITHUB_SHA, moved: $moved"
+          echo "last scheduled: ${last:-none}, head: $GITHUB_SHA, moved: $moved"
           echo "moved=$moved" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
