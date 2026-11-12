@@ -168,10 +168,10 @@ pub(crate) struct BestPath {
 /// the best state at every offset is the old per-offset node and the walk
 /// returns the same path, choices and cost as the unigram walker.
 ///
-/// Tie handling: among paths of equal accumulated cost the first one
-/// reached in the ascending-`(start, end)` edge order wins — a state's
-/// prefix is the first minimum among the states at its start, and the
-/// sink is the first minimum among the states at `shadow_len`. `lattice.edges()` is
+/// Tie handling: a state's prefix is the minimum among the states at its
+/// start by (total with this edge, then prefix cost), the first one reached
+/// in the ascending-`(start, end)` edge order on a full tie; the sink is the
+/// first minimum among the states at `shadow_len`. `lattice.edges()` is
 /// sorted, so this is deterministic. No edge-count tiebreak: the S2
 /// "more edges wins" lever existed only to force the no-dict
 /// per-syllable split, which S5 moves to the explicit
@@ -225,8 +225,8 @@ pub(crate) fn walk_best<B: WalkerBigram>(
         let Some(choice) = edge_choice(start, end) else {
             continue; // caller dropped this edge.
         };
-        // Replace only on a strictly lower cost, so on an exact tie the
-        // first state at `start` (first-reached prefix) is kept.
+        // An equal total goes to the cheaper prefix: adding this edge's cost
+        // can round two prefixes to one total even under an empty table.
         let mut best: Option<(f64, usize)> = None;
         for &index in incoming {
             let state = &states[index];
@@ -238,7 +238,10 @@ pub(crate) fn walk_best<B: WalkerBigram>(
             // OOV pricing is selected from the explicit `dict_hit` flag, never
             // `frequency == 0` (Codex pre-impl Q2).
             let cost = state.cost + edge_cost(&choice, custom_word_cost, evidence.as_ref());
-            if best.is_none_or(|(best_cost, _)| cost < best_cost) {
+            let replaces = best.is_none_or(|(best_cost, best_index)| {
+                cost < best_cost || (cost == best_cost && state.cost < states[best_index].cost)
+            });
+            if replaces {
                 best = Some((cost, index));
             }
         }
@@ -806,6 +809,39 @@ mod tests {
         })
         .unwrap();
         assert_eq!(path.edges, vec![(0, 2)]);
+    }
+
+    /// `empty_bigram_walk_is_the_unigram_walk`'s shrunk counterexample (CI,
+    /// main `7c16bb431`). The fractional delta on (0,1) makes the two prefixes
+    /// into offset 5 — (2,5) and (2,4)+(4,5) — differ only by float rounding,
+    /// the second one lower; adding the OOV (5,7) rounds both totals equal. The
+    /// prefix with the lower cost must still win, as in the unigram walker.
+    #[test]
+    fn a_rounding_tie_after_the_next_edge_keeps_the_cheaper_prefix() {
+        let edges = [
+            (
+                (0, 1),
+                EdgeChoice {
+                    user_weight_delta: 0.243_486_111_781_346_85,
+                    ..word(0, "字", 0, 2, 1)
+                },
+            ),
+            ((1, 2), word(0, "字", 0, 1, 1)),
+            ((2, 4), word(0, "字", 4_000, 1, 1)),
+            ((2, 5), word(0, "字", 8_000, 1, 1)),
+            ((4, 5), word(0, "字", 4_000, 1, 1)),
+            ((5, 7), roman_n("a", 1)),
+        ];
+        let lat = lattice(edges.iter().map(|(span, _)| *span).collect());
+        let content = |s, e| {
+            edges
+                .iter()
+                .find(|(span, _)| *span == (s, e))
+                .map(|(_, c)| c.clone())
+        };
+        let walked = walk(&lat, 7, content).unwrap();
+        assert_eq!(Some(walked.clone()), unigram_walk(&lat, 7, content));
+        assert_eq!(walked.edges, vec![(0, 1), (1, 2), (2, 4), (4, 5), (5, 7)]);
     }
 
     /// The unigram walker as of HEAD~1 (one node per offset), kept as the
