@@ -12,8 +12,8 @@ use composing::{ConversionFrequency, PendingSnapshot, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
     composing_request, next_word_request, response, AppConfig, ComposingRequest, ComposingResponse,
-    ErrorCode, NextWordRequest, NextWordResponse, RawNextWordPrediction, Response, Source,
-    UserDataRequest,
+    ErrorCode, FetchAtPos, NextWordRequest, NextWordResponse, RawNextWordPrediction, Response,
+    Source, UserDataRequest,
 };
 use ranking::{ContextRanks, FrequencyData, FrequencyMap, CONTEXT_RANK_USER};
 use userdata::{
@@ -102,6 +102,42 @@ pub(super) fn handle_composing(
     };
     rows.frequency = frequency;
     Ok(fetch(rows, context))
+}
+
+/// [`handle_composing`]'s two passes, then the mechanism view ranked with
+/// the rows the second pass would have used.
+pub(super) fn explain(
+    stores: &UserDataStores,
+    config: &AppConfig,
+    generation: u64,
+    now_ms: i64,
+    literal_roman_candidate_disabled: bool,
+) -> Option<composing::explain::Mechanism> {
+    let composing = composing::EngineHandle::instance();
+    let engine = composing.engine_at(generation)?;
+    let snapshot = engine.pending_snapshot(config);
+    let mut rows = buffer_rows(stores, &snapshot.listed_raw, config);
+    let context = context_ranks(stores, &snapshot, now_ms);
+    let sent = FetchAtPos {
+        now_ms,
+        literal_roman_candidate_disabled,
+    };
+    let neutral = composing::requests::query(
+        &composing::requests::fetch_at_pos_intent(&sent, rows.clone(), context.clone()),
+        &engine,
+        config,
+    );
+    if let Some(frequency) = frequency_map(stores, &neutral) {
+        rows.frequency = frequency;
+    }
+    composing::requests::mechanism(
+        &engine,
+        now_ms,
+        &rows,
+        &context,
+        literal_roman_candidate_disabled,
+        config,
+    )
 }
 
 /// The user data a Hanji conversion walk ranks with: the open

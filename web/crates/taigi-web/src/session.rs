@@ -13,7 +13,8 @@ use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 use taigi_desktop_core::session::{
     begin_session, click_from_panel, commit_composition, end_session, navigate_from_panel,
-    process_key, toggle_language_mode, tps_keyboard_press, Emit, EngineState, ListSelection,
+    process_key, refresh_composition, toggle_language_mode, tps_keyboard_press, Emit, EngineState,
+    ListSelection,
 };
 use taigi_desktop_core::settings::presentation::output_script_label;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
@@ -75,6 +76,111 @@ impl WebSession {
             shift_tap: ShiftTapTracker::default(),
             shifts_down: [false; 2],
         })
+    }
+
+    /// Install the developer page's comparison order and re-fetch the open
+    /// list so the candidates follow it. `null` restores the engine's field
+    /// order. The order lives on this thread only.
+    pub(crate) fn set_sort_order(&mut self, json: &str) -> Result<String, String> {
+        if json == "null" {
+            dispatch::reset_dev_sort_order();
+        } else {
+            let names: Vec<String> =
+                serde_json::from_str(json).map_err(|error| error.to_string())?;
+            let fields: Vec<&str> = names.iter().map(String::as_str).collect();
+            if !dispatch::set_dev_sort_order(&fields) {
+                return Err("sort order".into());
+            }
+        }
+        let emits = refresh_composition(&self.runtime, CONTEXT, &mut self.state);
+        Ok(self.reply(true, &emits, None))
+    }
+
+    /// The custom dictionary, newest edit first, as `{ "entries": [{ "id",
+    /// "roman", "hanji" }] }`.
+    pub(crate) fn list_custom_entries(&self) -> Result<String, String> {
+        let listing = taigi_desktop_core::engine::user_data::list_custom_entries("", 200, 0)
+            .map_err(|error| error.to_string())?;
+        let entries: Vec<serde_json::Value> = listing
+            .entries
+            .iter()
+            .map(|entry| {
+                serde_json::json!({
+                    "id": entry.id,
+                    "roman": entry.roman,
+                    "hanji": entry.hanji,
+                })
+            })
+            .collect();
+        Ok(serde_json::json!({ "entries": entries }).to_string())
+    }
+
+    /// Adds a custom word and fetches the open list again. A word already
+    /// stored with the same romanization and Hanji is left as it is.
+    pub(crate) fn save_custom_entry(&mut self, roman: &str, hanji: &str) -> Result<String, String> {
+        let roman = roman.trim();
+        let hanji = hanji.trim();
+        let stored = taigi_desktop_core::engine::user_data::list_custom_entries(roman, 50, 0)
+            .map_err(|error| error.to_string())?;
+        let already = stored
+            .entries
+            .iter()
+            .any(|entry| entry.roman == roman && entry.hanji == hanji);
+        if !already {
+            taigi_desktop_core::engine::user_data::save_custom_entry("", roman, hanji)
+                .map_err(|error| error.to_string())?;
+        }
+        let emits = refresh_composition(&self.runtime, CONTEXT, &mut self.state);
+        Ok(self.reply(true, &emits, None))
+    }
+
+    /// Removes one custom word and fetches the open list again.
+    pub(crate) fn delete_custom_entry(&mut self, id: &str) -> Result<String, String> {
+        taigi_desktop_core::engine::user_data::delete_custom_entry(id)
+            .map_err(|error| error.to_string())?;
+        let emits = refresh_composition(&self.runtime, CONTEXT, &mut self.state);
+        Ok(self.reply(true, &emits, None))
+    }
+
+    /// Empties word frequency, next-word association and learned phrases.
+    /// Custom words stay. The open list is fetched again, so a weight that
+    /// came from a pick is gone.
+    pub(crate) fn clear_learning_records(&mut self) -> Result<String, String> {
+        taigi_desktop_core::engine::user_data::clear_learning_records()
+            .map_err(|error| error.to_string())?;
+        let emits = refresh_composition(&self.runtime, CONTEXT, &mut self.state);
+        Ok(self.reply(true, &emits, None))
+    }
+
+    /// The developer page's switch. A one-word best path joins the twelve
+    /// stages instead of staying at slot 0. A path of several words stays
+    /// pinned. This thread only; official input methods never set it.
+    pub(crate) fn set_rank_one_word(&mut self, enabled: bool) -> String {
+        dispatch::set_dev_rank_one_word_path(enabled);
+        let emits = refresh_composition(&self.runtime, CONTEXT, &mut self.state);
+        self.reply(true, &emits, None)
+    }
+
+    /// The open composition's segmentation and candidate order, JSON, or
+    /// `null` when nothing is being composed. The dev page draws it.
+    pub(crate) fn explain(&self) -> String {
+        let Some(coordinator) = self.runtime.try_coordinator() else {
+            return "null".into();
+        };
+        let Some(manager) = coordinator.manager_ref(CONTEXT) else {
+            return "null".into();
+        };
+        let generation = manager.generation();
+        drop(coordinator);
+        let settings = self.runtime.settings.current().engine_settings();
+        let config = taigi_desktop_core::engine::app_config(&settings);
+        dispatch::explain_composition(
+            &config,
+            generation,
+            self.clock.now_ms(),
+            !settings.is_literal_roman_candidate_enabled,
+        )
+        .unwrap_or_else(|| "null".into())
     }
 
     pub(crate) fn key_down(&mut self, key: &BrowserKey) -> String {
@@ -847,6 +953,28 @@ mod tests {
             .unwrap();
         // trace: "a" cancelled by end_session, so "b" opens a new composition.
         assert_eq!(preedit["text"], "b");
+    }
+
+    #[test]
+    fn explain_names_the_buffer_being_composed() {
+        let mut session = session();
+        assert_eq!(session.explain(), "null");
+        session.key_down(&press("a", "KeyA"));
+        let view: Value = serde_json::from_str(&session.explain()).unwrap();
+        assert_eq!(view["raw"], "a");
+        assert!(view["cutBy"].is_string());
+        let rows = view["candidates"].as_array().unwrap();
+        for row in rows {
+            assert!(row["sources"].is_array());
+            assert!(row["rankingSource"].is_string());
+            assert!(row["tier"].is_string());
+            assert!(row["score"].is_number());
+            assert!(row["frequency"].is_number());
+            assert!(row["coverageBytes"].is_number());
+            assert!(row["sourceRank"].is_number());
+            assert!(row["walkerCost"].is_null() || row["walkerCost"].is_number());
+            assert!(row["syllables"].is_number());
+        }
     }
 
     #[test]

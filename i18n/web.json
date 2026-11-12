@@ -273,6 +273,1351 @@
         "en": "Plain Text",
         "ja": "プレーンテキスト"
       }
+    },
+    "inspectorTitle": {
+      "comment": "Title of the segmentation and ranking inspector.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "排序ia̋n-jín實驗室",
+        "tailo": "Pâi-sū ia̋n-jín si̍t-giām-sik",
+        "poj": "Pâi-sū ia̋n-jín si̍t-giām-sek",
+        "en": "Ranking Engine Lab",
+        "ja": "並べ替えエンジン実験室"
+      }
+    },
+    "inspectorSyllables": {
+      "comment": "Label of the syllable row in the inspector.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "音節",
+        "tailo": "Im-chat",
+        "poj": "Im-chat",
+        "en": "Syllables",
+        "ja": "音節"
+      }
+    },
+    "inspectorWords": {
+      "comment": "Label of the word-cut row in the inspector.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "斷做詞",
+        "tailo": "Tuànn chò sû",
+        "poj": "Toàn chò sû",
+        "en": "Word cut",
+        "ja": "単語の区切り"
+      }
+    },
+    "inspectorCandidates": {
+      "comment": "Heading of the comparison grid on the dev page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "排序對照",
+        "tailo": "Pâi-sū tuì-tsiò",
+        "poj": "Pâi-sū tùi-chiò",
+        "en": "Ranking comparison",
+        "ja": "並べ替えの対照"
+      }
+    },
+    "inspectorEmpty": {
+      "comment": "Inspector while nothing is being composed.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "開始拍字了後，遮會顯示引擎按怎切詞、按怎排候選。",
+        "tailo": "Khai-sí phah-jī liáu-āu, tsia ē hián-sī ian-jín án-tsuánn tshiat-sû, án-tsuánn pâi hāu-suán.",
+        "poj": "Khai-sí phah-jī liáu-āu, chia ē hián-sī en-jín án-chóaⁿ chhiat-sû, án-chóaⁿ pâi hāu-soán.",
+        "en": "Start typing. This shows how the engine cuts the input and orders the candidates.",
+        "ja": "入力を始めると、区切り方と候補の順がここに出ます。"
+      }
+    },
+    "inspectorNoCut": {
+      "comment": "Inspector when the buffer is not a whole syllable yet, so there is no word cut.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這段猶未有完整的音節，所以猶未斷詞。下面若有，是打到一半的詞。",
+        "tailo": "Tsit tuānn iáu-bē ū uân-tsíng ê im-chat, sóo-í iáu-bē tuànn-sû. Ē-bīn nā ū, sī phah kàu puànn-lōo ê sû.",
+        "poj": "Chit toāⁿ iáu-bē ū oân-chéng ê im-chat, só͘-í iáu-bē toàn-sû. Ē-bīn nā ū, sī phah kàu pòaⁿ-lō͘ ê sû.",
+        "en": "This is not a whole syllable yet, so nothing is cut into words. Rows below, if any, are words the typing is heading toward.",
+        "ja": "まだ音節が揃っていないので、単語には切っていません。下に出るのは途中の語です。"
+      }
+    },
+    "inspectorCutWalker": {
+      "comment": "Caption when the word row is the walker's lowest-cost cover.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "頂面是音節，下面是引擎選的切法：規段成本上低的一條。你選過的多音節詞，或者你存過的詞，會予彼一段較袂閣被切開。",
+        "tailo": "Tíng-bīn sī im-chat, ē-bīn sī ian-jín suán ê tshiat-huat: kui tuānn sêng-pún siōng-kē ê tsi̍t tiâu. Lí suán-kuè ê to-im-chat sû, hi̍k-tsiá lí tshûn-kuè ê sû, ē hōo hit tsi̍t tuānn khah bē koh pī tshiat-khui.",
+        "poj": "Téng-bīn sī im-chat, ē-bīn sī en-jín soán ê chhiat-hoat: kui toāⁿ sêng-pún siōng-kē ê chi̍t tiâu. Lí soán-kòe ê to-im-chat sû, he̍k-chiá lí chhûn-kòe ê sû, ē hō͘ hit chi̍t toāⁿ khah bē koh pī chhiat-khui.",
+        "en": "Syllables are on top. Under them is the cut the engine chose: the lowest-cost cover of the whole input. A multi-syllable word you have picked, or a word you saved, makes that stretch harder to split.",
+        "ja": "上は音節です。下はエンジンが選んだ区切りで、入力全体のコストが一番低い切り方です。選んだ多音節語や登録した語は、その区間が割れにくくなります。"
+      }
+    },
+    "inspectorCutSyllables": {
+      "comment": "Caption when no dictionary word covers the buffer, so the reading stays in syllables.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典無詞通蓋這段，所以無併做一塊，改照音節來讀。",
+        "tailo": "Sû-tián bô sû thang khàm tsit tuānn, sóo-í bô pīng chò tsi̍t tè, kái tsiàu im-chat lâi tha̍k.",
+        "poj": "Sû-tián bô sû thang khàm chit toāⁿ, só͘-í bô pèng chò chi̍t tè, kái chiàu im-chat lâi tha̍k.",
+        "en": "No dictionary word covers this, so the engine does not glue it into one piece. It reads the syllables.",
+        "ja": "この区間を覆う辞書の語がないので、一つにはまとめず、音節のまま読みます。"
+      }
+    },
+    "inspectorRankOneWord": {
+      "comment": "Developer-page switch. A one-word best path joins the twelve sort stages.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "單音節整句參加排序",
+        "tailo": "Tan-im-tsiat tsíng-kù tsham-ka pâi-sū",
+        "poj": "Tan-im-chiat chéng-kù chham-ka pâi-sū",
+        "en": "Rank a one-word sentence",
+        "ja": "一語の文も並べ替えに入れる"
+      }
+    },
+    "inspectorRankOneWordNote": {
+      "comment": "What the developer-page switch changes, and that the writing page leaves it off.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "像 kip 這款一个詞的會進入排序比較，袂閣固定排頭前。選詞權重排佇縮寫頭前的時，選過的縮寫就排會贏。多詞的整句照舊固定。書寫頁面無開這个。",
+        "tailo": "Phah--khui liáu-āu, kip tsit khuán tsi̍t ê sû ê tsíng-kù ē tsìn-ji̍p tsa̍p-jī kuan, bô-koh kòo-tīng pâi thâu-tsîng. Suán-sû kuân-tāng pâi tī sok-siá thâu-tsîng ê sî, suán-kuè ê sok-siá tō pâi ē iâⁿ. To-sû ê tsíng-kù tsiàu-kū kòo-tīng. Su-siá ia̍h-bīn bô khui tsit ê.",
+        "poj": "Phah--khui liáu-āu, kip chit khoán chi̍t ê sû ê chéng-kù ē chìn-ji̍p cha̍p-jī koan, bô-koh kò͘-tēng pâi thâu-chêng. Soán-sû koân-tāng pâi tī sok-siá thâu-chêng ê sî, soán-kòe ê sok-siá tō pâi ē iâⁿ. To-sû ê chéng-kù chiàu-kū kò͘-tēng. Su-siá ia̍h-bīn bô khui chit ê.",
+        "en": "When this is on, a one-word path such as kip joins the twelve stages instead of staying at the front. A picked abbreviation can then lead, once selection weight is ordered ahead of abbreviation. A sentence of several words stays pinned. The writing page never turns this on.",
+        "ja": "オンにすると、kip のような一語の文は先頭に固定されず、十二段階に入ります。選択の重みが略称より前なら、選んだ略称が上に来られます。複数語の文は固定のままです。執筆ページではオンになりません。"
+      }
+    },
+    "inspectorCustomNote": {
+      "comment": "The developer page writes the same custom dictionary the writing page reads.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "佇遮加入的詞，書寫頁面也會揣著。刪除學習紀錄袂清掉自訂詞。",
+        "tailo": "Tī tsia ka-ji̍p ê sû, su-siá ia̍h-bīn iā ē tshuē--tio̍h. San-tî ha̍k-si̍p kì-lio̍k bē tshing-tiāu tsū-tīng-sû.",
+        "poj": "Tī chia ka-ji̍p ê sû, su-siá ia̍h-bīn iā ē chhōe--tio̍h. San-tî ha̍k-si̍p kì-lio̍k bē chheng-tiāu chū-tēng-sû.",
+        "en": "A word saved here is found on the writing page too. Delete Learning Records leaves custom words in place.",
+        "ja": "ここで保存した語は執筆ページでも見つかります。学習記録を削除してもカスタム語は残ります。"
+      }
+    },
+    "inspectorFrontLead": {
+      "comment": "The checks that fill slot 0 before the twelve sort stages run.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "第 0 格佇這幾關就定矣，無參加下面十二關。拖順序無影響。頭一關無過，後壁的關就無比。",
+        "tailo": "Tē 0 keh tī tsit kuí kuan tō tiānn--ah, bô tsham-ka ē-bīn tsa̍p-jī kuan. Thua sūn-sī bô íng-hióng. Thâu tsi̍t kuan bô kuè, āu-piah ê kuan tō bô pí.",
+        "poj": "Tē 0 keh tī chit kúi koan tō tiāⁿ--ah, bô chham-ka ē-bīn cha̍p-jī koan. Thoa sūn-sī bô éng-hióng. Thâu chi̍t koan bô kè, āu-piah ê koan tō bô pí.",
+        "en": "Slot 0 is decided in these checks, before the twelve stages. Reordering those stages does not move it. Once a check fails, the later checks are not compared.",
+        "ja": "0 枠はこの段階で決まり、下の十二段階には入りません。順番を入れ替えても動きません。一つの段階で落ちると、それより後は比べません。"
+      }
+    },
+    "inspectorFrontWords": {
+      "comment": "Front check: how many words the whole-buffer path was cut into.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "整句幾個詞",
+        "tailo": "Tsíng-kù kuí ê sû",
+        "poj": "Chéng-kù kúi ê sû",
+        "en": "Words in the sentence",
+        "ja": "文の語数"
+      }
+    },
+    "inspectorFrontOneWord": {
+      "comment": "The whole-buffer path is a single word, so nothing can take slot 0.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "1 个詞",
+        "tailo": "1 ê sû",
+        "poj": "1 ê sû",
+        "en": "1 word",
+        "ja": "1 語"
+      }
+    },
+    "inspectorFrontManyWords": {
+      "comment": "The whole-buffer path is several words, so a later check may replace it. {count} is the word count.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "{count} 个詞",
+        "tailo": "{count} ê sû",
+        "poj": "{count} ê sû",
+        "en": "{count} words",
+        "ja": "{count} 語"
+      },
+      "placeholders": { "count": "string" }
+    },
+    "inspectorFrontKind": {
+      "comment": "Front check: the next row has to be a prefix longer than what was typed.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "後一名的種類",
+        "tailo": "Āu tsi̍t miâ ê tsíng-luī",
+        "poj": "Āu chi̍t miâ ê chéng-lūi",
+        "en": "Kind of the next row",
+        "ja": "次の候補の種類"
+      }
+    },
+    "inspectorFrontSpan": {
+      "comment": "Front check: the next row has to cover the whole buffer.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "後一名食的範圍",
+        "tailo": "Āu tsi̍t miâ tsia̍h ê huān-uî",
+        "poj": "Āu chi̍t miâ chia̍h ê hoān-ûi",
+        "en": "How much the next row covers",
+        "ja": "次の候補が覆う範囲"
+      }
+    },
+    "inspectorFrontSyllables": {
+      "comment": "Front check: the next row has to be at least two syllables.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "後一名的音節",
+        "tailo": "Āu tsi̍t miâ ê im-tsiat",
+        "poj": "Āu chi̍t miâ ê im-chiat",
+        "en": "Syllables of the next row",
+        "ja": "次の候補の音節"
+      }
+    },
+    "inspectorFrontWeight": {
+      "comment": "Front check: the next row's selection weight has to be higher than the sentence.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "後一名的權重",
+        "tailo": "Āu tsi̍t miâ ê kuân-tāng",
+        "poj": "Āu chi̍t miâ ê koân-tāng",
+        "en": "Weight of the next row",
+        "ja": "次の候補の重み"
+      }
+    },
+    "inspectorFrontSyllableValue": {
+      "comment": "Syllable count of the row challenging slot 0. {count} is the number.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "{count} 个音節",
+        "tailo": "{count} ê im-tsiat",
+        "poj": "{count} ê im-chiat",
+        "en": "{count} syllables",
+        "ja": "{count} 音節"
+      },
+      "placeholders": { "count": "string" }
+    },
+    "inspectorFrontHeldWords": {
+      "comment": "Slot 0 stays because the best path is one word. Later checks, including selection weight, are not compared.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這段干焦一个詞，整句固定排頭前。後壁的條件無比，選詞權重無搖會換掉伊。",
+        "tailo": "Tsit tuānn kan-ta tsi̍t ê sû, tsíng-kù kòo-tīng pâi thâu-tsîng. Āu-piah ê tiâu-kiānn bô pí, suán-sû kuân-tāng bô iô-uē uānn-tiāu i.",
+        "poj": "Chit toāⁿ kan-ta chi̍t ê sû, chéng-kù kò͘-tēng pâi thâu-chêng. Āu-piah ê tiâu-kiāⁿ bô pí, soán-sû koân-tāng bô iô-ōe ōaⁿ-tiāu i.",
+        "en": "This stretch is one word, so the sentence stays at the front. The later checks are not compared, and selection weight cannot replace it.",
+        "ja": "この区間は一語なので、文全体は先頭のままです。後の条件は比べず、選択の重みでは入れ替わりません。"
+      }
+    },
+    "inspectorFrontHeldHere": {
+      "comment": "Slot 0 stays because row {index} failed the check named by {reason}. Later checks are not compared.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "第 {index} 名佇「{reason}」無符合，所以整句留佇頭前。後壁的關無比。",
+        "tailo": "Tē {index} miâ tī \"{reason}\" bô hû-ha̍p, sóo-í tsíng-kù lâu tī thâu-tsîng. Āu-piah ê kuan bô pí.",
+        "poj": "Tē {index} miâ tī \"{reason}\" bô hû-ha̍p, só͘-í chéng-kù lâu tī thâu-chêng. Āu-piah ê koan bô pí.",
+        "en": "Row {index} fails “{reason}”, so the sentence stays at the front. The later checks are not compared.",
+        "ja": "{index} 位は「{reason}」を満たさないので、文全体は先頭のままです。後の段階は比べません。"
+      },
+      "placeholders": { "index": "string", "reason": "string" }
+    },
+    "inspectorFrontTaken": {
+      "comment": "Every front check passed, so row {index} replaced the sentence at slot 0.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "第 {index} 名這幾關攏過，選詞權重嘛較大，所以換掉整句。",
+        "tailo": "Tē {index} miâ tsit kuí kuan lóng kuè, suán-sû kuân-tāng mā khah tuā, sóo-í uānn-tiāu tsíng-kù.",
+        "poj": "Tē {index} miâ chit kúi koan lóng kè, soán-sû koân-tāng mā khah tōa, só͘-í ōaⁿ-tiāu chéng-kù.",
+        "en": "Row {index} passes every check, and its selection weight is higher, so it replaces the sentence.",
+        "ja": "{index} 位はすべての段階を通り、選択の重みも大きいので、文全体と入れ替わります。"
+      },
+      "placeholders": { "index": "string" }
+    },
+    "inspectorSentence": {
+      "comment": "Why the whole-sentence segmentation occupies the first candidate slot.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這是整句的斷詞，固定先佔一格，無佮下面的詞比分數。",
+        "tailo": "Tse sī tsíng-kù ê tuànn-sû, kòo-tīng sing tsiàm tsi̍t keh, bô kah ē-bīn ê sû pí hun-sòo.",
+        "poj": "Che sī chéng-kù ê toàn-sû, kò͘-tēng seng chiàm chi̍t keh, bô kah ē-bīn ê sû pí hun-sò͘.",
+        "en": "This is the whole-sentence cut. It takes a slot before the words are scored against each other.",
+        "ja": "これは文全体の区切りです。下の語と点数を比べる前に、一つの枠を取ります。"
+      }
+    },
+    "inspectorSentenceAfter": {
+      "comment": "The sentence cut was moved down because a picked word outranks it.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "你選過的詞蓋過整句斷詞，所以整句被推落來。",
+        "tailo": "Lí suán-kuè ê sû khàm-kuè tsíng-kù tuànn-sû, sóo-í tsíng-kù pī thui--lo̍h-lâi.",
+        "poj": "Lí soán-kòe ê sû khàm-kòe chéng-kù toàn-sû, só͘-í chéng-kù pī thui--lo̍h-lâi.",
+        "en": "A word you have picked outranks the sentence, so the sentence moves down.",
+        "ja": "選んだ語が文全体の区切りより上なので、区切りは下に下がります。"
+      }
+    },
+    "inspectorLiteral": {
+      "comment": "The row that is exactly the typed text, pinned at the front.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這格是你拍的字本身，固定排頭前。",
+        "tailo": "Tsit keh sī lí phah ê jī pún-sin, kòo-tīng pâi thâu-tsîng.",
+        "poj": "Chit keh sī lí phah ê jī pún-sin, kò͘-tēng pâi thâu-chêng.",
+        "en": "This row is exactly what you typed. It stays at the front.",
+        "ja": "これは打った文字そのものです。いつも先頭に置きます。"
+      }
+    },
+    "inspectorLead": {
+      "comment": "The first row the sort itself chose, after any pinned rows.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "除去固定排頭前的，這是排序的第一名。",
+        "tailo": "Tû-khì kòo-tīng pâi thâu-tsîng ê, tse sī pâi-sū ê tē-it miâ.",
+        "poj": "Tû-khì kò͘-tēng pâi thâu-chêng ê, che sī pâi-sū ê tē-it miâ.",
+        "en": "This is the first row the sort itself chose.",
+        "ja": "固定で先頭に置くものを除くと、並べ替えの一位はこれです。"
+      }
+    },
+    "inspectorPinnedAhead": {
+      "comment": "A row sits first even though row {index} sorts ahead of it at the stage named by {reason}.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這筆固定排佇頭前。第 {index} 名佇{reason}較贏。",
+        "tailo": "Tsit pit kòo-tīng pâi tī thâu-tsîng. Tē {index} miâ tī {reason} khah iâⁿ.",
+        "poj": "Chit pit kò͘-tēng pâi tī thâu-chêng. Tē {index} miâ tī {reason} khah iâⁿ.",
+        "en": "This row is pinned at the front. Row {index} sorts ahead at {reason}.",
+        "ja": "この候補は先頭に固定されています。{index} 位が{reason}で上です。"
+      },
+      "placeholders": { "index": "string", "reason": "string" }
+    },
+    "inspectorPickedOver": {
+      "comment": "A picked word took the slot ahead of the sentence cut.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "你選過這个詞，而且伊蓋過整句斷詞，所以排頭前。",
+        "tailo": "Lí suán-kuè tsit ê sû, jî-tshiánn i khàm-kuè tsíng-kù tuànn-sû, sóo-í pâi thâu-tsîng.",
+        "poj": "Lí soán-kòe chit ê sû, jî-chhiáⁿ i khàm-kòe chéng-kù toàn-sû, só͘-í pâi thâu-chêng.",
+        "en": "You have picked this word, and it outranks the sentence cut, so it leads.",
+        "ja": "この語は選んだことがあり、文全体の区切りより上なので先頭です。"
+      }
+    },
+    "inspectorBeats": {
+      "comment": "Why this candidate is ahead of the previous one. {reason} is a clause.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "排佇上一筆頭前，因為{reason}。",
+        "tailo": "Pâi tī tsi̍t-pí thâu-tsîng, in-uī {reason}.",
+        "poj": "Pâi tī chi̍t-pí thâu-chêng, in-ūi {reason}.",
+        "en": "Ahead of the row above, because {reason}.",
+        "ja": "一つ上より前なのは、{reason}からです。"
+      },
+      "placeholders": { "reason": "string" }
+    },
+    "inspectorReasonTier": {
+      "comment": "Sort reason: this row covers the whole input and the previous one covers only the front.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "伊食規段輸入，上一筆干焦食頭前",
+        "tailo": "i tsia̍h kui tuānn su-ji̍p, tsi̍t-pí kan-na tsia̍h thâu-tsîng",
+        "poj": "i chia̍h kui toāⁿ su-ji̍p, chi̍t-pí kan-na chia̍h thâu-chêng",
+        "en": "it covers everything typed, and the row above covers only the front",
+        "ja": "入力全体を食べていて、一つ上は先頭だけ"
+      }
+    },
+    "inspectorReasonAbbreviation": {
+      "comment": "Sort reason: the previous row is an abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "上一筆是縮寫",
+        "tailo": "tsi̍t-pí sī sok-siá",
+        "poj": "chi̍t-pí sī sok-siá",
+        "en": "the row above is an abbreviation",
+        "ja": "一つ上は略称"
+      }
+    },
+    "inspectorReasonPreference": {
+      "comment": "Sort reason: this row was picked, or it is a saved custom word.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "你選過伊，抑是伊是你存的詞",
+        "tailo": "lí suán-kuè i, ia̍h-sī i sī lí tshûn ê sû",
+        "poj": "lí soán-kòe i, ia̍h-sī i sī lí chhûn ê sû",
+        "en": "you have picked it, or it is a word you saved",
+        "ja": "選んだことがあるか、登録した語"
+      }
+    },
+    "inspectorReasonCoverage": {
+      "comment": "Sort reason: a closer syllable match than the row above.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "伊比上一筆較接近完整的音節",
+        "tailo": "i pí tsi̍t-pí khah tsiap-kīn uân-tsíng ê im-chat",
+        "poj": "i pí chi̍t-pí khah chiap-kīn oân-chéng ê im-chat",
+        "en": "it matches the syllables more closely than the row above",
+        "ja": "一つ上より音節の一致が近い"
+      }
+    },
+    "inspectorReasonUserWeight": {
+      "comment": "Sort reason: a higher decayed selection weight.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "你選伊的次數較濟，權重猶佇咧",
+        "tailo": "lí suán i ê tshù-sòo khah tsē, khuân-tāng iáu tī--leh",
+        "poj": "lí soán i ê chhù-sò͘ khah chē, koân-tāng iáu tī--leh",
+        "en": "you have picked it more, and that weight is still there",
+        "ja": "選んだ回数が多く、その重みがまだ残っている"
+      }
+    },
+    "inspectorReasonContext": {
+      "comment": "Sort reason: it continues the previous word.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "伊接佇上一个詞後面",
+        "tailo": "i tsiap tī tsi̍t ê sû āu-bīn",
+        "poj": "i chiap tī chi̍t ê sû āu-bīn",
+        "en": "it continues the previous word",
+        "ja": "前の語の続き"
+      }
+    },
+    "inspectorReasonWalkerCost": {
+      "comment": "Sort reason: the corpus sees it more often.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "語料裡伊較常見",
+        "tailo": "gí-liāu--ni̍h i khah tsiông-kiàn",
+        "poj": "gí-liāu--ni̍h i khah chiông-kiàn",
+        "en": "the corpus sees it more often",
+        "ja": "コーパスでよりよく出る"
+      }
+    },
+    "inspectorReasonScore": {
+      "comment": "Sort reason: a higher dictionary score.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典分數較懸",
+        "tailo": "sû-tián hun-sòo khah kuân",
+        "poj": "sû-tián hun-sò͘ khah koân",
+        "en": "its dictionary score is higher",
+        "ja": "辞書の点が高い"
+      }
+    },
+    "inspectorReasonFrequency": {
+      "comment": "Sort reason: a higher dictionary frequency.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典詞頻較懸",
+        "tailo": "sû-tián sû-pîn khah kuân",
+        "poj": "sû-tián sû-pîn khah koân",
+        "en": "its dictionary frequency is higher",
+        "ja": "辞書の頻度が高い"
+      }
+    },
+    "inspectorReasonCoverageBytes": {
+      "comment": "Sort reason: it consumes more of what was typed.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "伊食的字較濟",
+        "tailo": "i tsia̍h ê jī khah tsē",
+        "poj": "i chia̍h ê jī khah chē",
+        "en": "it consumes more of what you typed",
+        "ja": "食べている文字が多い"
+      }
+    },
+    "inspectorReasonSource": {
+      "comment": "Sort reason: its dictionary source ranks higher.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典來源較優先",
+        "tailo": "sû-tián lâi-guân khah iu-sian",
+        "poj": "sû-tián lâi-goân khah iu-sian",
+        "en": "its dictionary source ranks higher",
+        "ja": "辞書の出所が優先"
+      }
+    },
+    "inspectorReasonStable": {
+      "comment": "Sort reason: every other field ties.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "其他條件攏仝款",
+        "tailo": "kî-thann tiâu-kiānn lóng kâng-khuán",
+        "poj": "kî-thaⁿ tiâu-kiāⁿ lóng kâng-khoán",
+        "en": "every other field ties",
+        "ja": "ほかの条件は同じ"
+      }
+    },
+    "inspectorPicks": {
+      "comment": "How many times the user has picked this word. {count} is a number.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "選過 {count} 次",
+        "tailo": "suán-kuè {count} tshù",
+        "poj": "soán-kòe {count} chhù",
+        "en": "Picked {count} times",
+        "ja": "{count} 回選んだ"
+      },
+      "placeholders": { "count": "string" }
+    },
+    "inspectorPicksAgo": {
+      "comment": "Pick count plus how many days since the last pick. {count} and {days} are numbers.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "選過 {count} 次，約 {days} 日前",
+        "tailo": "suán-kuè {count} tshù, iok {days} ji̍t-tsîng",
+        "poj": "soán-kòe {count} chhù, iok {days} ji̍t-chêng",
+        "en": "Picked {count} times, about {days} days ago",
+        "ja": "{count} 回、約 {days} 日前"
+      },
+      "placeholders": { "count": "string", "days": "string" }
+    },
+    "inspectorNever": {
+      "comment": "This word has never been picked.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "猶未選過",
+        "tailo": "Iáu-bē suán-kuè",
+        "poj": "Iáu-bē soán-kòe",
+        "en": "Not picked yet",
+        "ja": "まだ選んでいない"
+      }
+    },
+    "inspectorWeight": {
+      "comment": "The decayed selection weight. {weight} is a number like 1.20.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "權重 {weight}",
+        "tailo": "khuân-tāng {weight}",
+        "poj": "koân-tāng {weight}",
+        "en": "weight {weight}",
+        "ja": "重み {weight}"
+      },
+      "placeholders": { "weight": "string" }
+    },
+    "inspectorCoversAll": {
+      "comment": "This candidate consumes the whole input.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "食規段",
+        "tailo": "tsia̍h kui tuānn",
+        "poj": "chia̍h kui toāⁿ",
+        "en": "Covers the whole input",
+        "ja": "入力全体"
+      }
+    },
+    "inspectorCoversFront": {
+      "comment": "This candidate consumes only part of the input.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "干焦食一截",
+        "tailo": "kan-na tsia̍h tsi̍t tsat",
+        "poj": "kan-na chia̍h chi̍t chat",
+        "en": "Covers only part",
+        "ja": "一部だけ"
+      }
+    },
+    "inspectorKindDictionary": {
+      "comment": "A word cut that came from the dictionary.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典",
+        "tailo": "sû-tián",
+        "poj": "sû-tián",
+        "en": "Dictionary",
+        "ja": "辞書"
+      }
+    },
+    "inspectorKindCustom": {
+      "comment": "A word cut that is a custom-dictionary entry.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "自訂詞",
+        "tailo": "tsū-tīng sû",
+        "poj": "chū-tēng sû",
+        "en": "Your word",
+        "ja": "登録した語"
+      }
+    },
+    "inspectorKindReading": {
+      "comment": "A stretch the dictionary has no word for, read as syllables.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "無這个詞",
+        "tailo": "bô tsit ê sû",
+        "poj": "bô chit ê sû",
+        "en": "No dictionary word",
+        "ja": "辞書にない"
+      }
+    },
+    "inspectorUserSpan": {
+      "comment": "A saved or learned word sits on this stretch, so the cut prefers to keep it whole.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這段有你存過抑是學過的詞，斷詞會盡量莫閣切開",
+        "tailo": "Tsit tuānn ū lí tshûn-kuè ia̍h-sī o̍h-kuè ê sû, tuànn-sû ē tsīn-liōng mài koh tshiat-khui",
+        "poj": "Chit toāⁿ ū lí chhûn-kòe ia̍h-sī o̍h-kòe ê sû, toàn-sû ē chīn-liōng mài koh chhiat-khui",
+        "en": "A word you saved or learned sits here, so the cut tries to keep this stretch whole",
+        "ja": "登録した語か学習した語がここにあるので、この区間はなるべく割らない"
+      }
+    },
+    "inspectorMore": {
+      "comment": "Button that draws the next candidates. {count} is how many the click reveals.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "展開後面 {count} 筆",
+        "tailo": "Tián-khui āu-bīn {count} pit",
+        "poj": "Tián-khui āu-bīn {count} pit",
+        "en": "Show the next {count}",
+        "ja": "次の {count} 件を開く"
+      },
+      "placeholders": { "count": "string" }
+    },
+    "inspectorBack": {
+      "comment": "Link from the dev page back to the writing page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "轉去網頁版",
+        "tailo": "Tńg-khì bāng-ia̍h pán",
+        "poj": "Tńg-khì bāng-ia̍h pán",
+        "en": "Back to the page",
+        "ja": "ページに戻る"
+      }
+    },
+    "inspectorInput": {
+      "comment": "Accessible name of the dev page's typing field.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "佇遮拍字，看引擎按怎決定",
+        "tailo": "Tī tsia phah-jī, khuànn ian-jín án-tsuánn kuat-tīng",
+        "poj": "Tī chia phah-jī, khoàⁿ en-jín án-chóaⁿ koat-tēng",
+        "en": "Type here to see how the engine decides",
+        "ja": "ここに打つと、エンジンの決め方が出ます"
+      }
+    },
+    "inspectorChoices": {
+      "comment": "Label of the candidate strip on the dev page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "候選窗",
+        "tailo": "Hāu-suán-thang",
+        "poj": "Hāu-soán-thang",
+        "en": "Candidates",
+        "ja": "候補"
+      }
+    },
+    "inspectorRaw": {
+      "comment": "Label of the typed buffer on the dev page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "輸入",
+        "tailo": "Su-ji̍p",
+        "poj": "Su-ji̍p",
+        "en": "Input",
+        "ja": "入力"
+      }
+    },
+    "inspectorHint": {
+      "comment": "How to read the comparison cards. Each card is one candidate.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "每一張是一个候選。藍色是決勝的階段，橘色是輸的階段，灰色是頭前已經分出。",
+        "tailo": "Muí tsi̍t tiunn sī tsi̍t ê hāu-suán. Nâ-sik sī kuat-sèng ê kai-tuānn, kiaⁿ-á-sik sī su ê kai-tuānn, phuê-sik sī thâu-tsîng í-king hun-tshut.",
+        "poj": "Múi chi̍t tiuⁿ sī chi̍t ê hāu-soán. Nâ-sek sī koat-sèng ê kai-toāⁿ, kiⁿ-á-sek sī su ê kai-toāⁿ, phuê-sek sī thâu-chêng í-king hun-chhut.",
+        "en": "Each card is a candidate. Blue is the deciding stage, orange is a loss, and grey comes after the decision.",
+        "ja": "各カードが候補です。青が決着の段階、橙が負けた段階、灰色はその前に決着した段階です。"
+      }
+    },
+    "inspectorMechanismTitle": {
+      "comment": "Heading of the sort-rule section on the dev page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "排序規則",
+        "tailo": "Pâi-sū kui-tsik",
+        "poj": "Pâi-sū kui-chek",
+        "en": "Sort Rules",
+        "ja": "並べ替え規則"
+      }
+    },
+    "inspectorPresetOriginal": {
+      "comment": "Sort-rules choice that restores the engine's built-in order and turns off ranking a one-word sentence.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "原始",
+        "tailo": "Guân-sí",
+        "poj": "Goân-sí",
+        "en": "Original",
+        "ja": "元の順序"
+      }
+    },
+    "inspectorPresetProposal": {
+      "comment": "Sort-rules choice named by the person who proposed it. Preference, selection weight, and syllable match move ahead of abbreviation, and a one-word sentence joins the sort.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "建中提案",
+        "tailo": "Kiàn-tiong thê-àn",
+        "poj": "Kiàn-tiong thê-àn",
+        "en": "Jianzhong Proposal",
+        "ja": "建中案"
+      }
+    },
+    "inspectorPresetTest": {
+      "comment": "Sort-rules choice selected once the user changes the stage order or the one-word switch.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "測試",
+        "tailo": "Tshik-tshì",
+        "poj": "Chhek-chhì",
+        "en": "Test",
+        "ja": "テスト"
+      }
+    },
+    "inspectorSortNote": {
+      "comment": "The twelve stages on the developer page can be reordered. The official input method keeps its own order.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "拖曳一關，或者用上下鍵，候選會馬上照新的順序重排。只影響這個開發頁面，正式輸入法照舊。",
+        "tailo": "Thua tsi̍t kuan, hi̍k-tsiá iōng siōng-hā kiàn, hāu-suán ē bē-kín tsiàu sin ê sūn-sī tîng-pâi. Kan íng-hióng tsit ê khai-huat ia̍h-bīn, tsìng-sik su-ji̍p-huat tsiàu-kū.",
+        "poj": "Thua chi̍t koan, he̍k-chiá ēng siōng-hā kiàn, hāu-soán ē bē-kín chiàu sin ê sūn-sī têng-pâi. Kan éng-hióng chit ê khai-hoat ia̍h-bīn, chèng-sek su-ji̍p-hoat chiàu-kū.",
+        "en": "Drag a stage, or use the arrow keys. The candidates re-sort immediately. This page only; the input method keeps its own order.",
+        "ja": "段階をドラッグするか、上下キーで動かすと、候補はすぐ並び直ります。この開発ページだけで、入力メソッド本体の順序は変わりません。"
+      }
+    },
+    "inspectorSortReset": {
+      "comment": "Restores the engine's built-in twelve-stage order on the developer page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "還原預設順序",
+        "tailo": "Tńg tńg ū-tīng ê sūn-sī",
+        "poj": "Tńg tńg ū-tēng ê sūn-sī",
+        "en": "Restore the default order",
+        "ja": "既定の順序に戻す"
+      }
+    },
+    "inspectorMechanismLead": {
+      "comment": "How the twelve sort stages decide a pair. Smaller wins except the four descending fields named in the sentence.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "由第 1 關比到第 12 關。兩筆頭一个無仝的關就是決勝，後壁的關無閣比。數字愈細的贏；選詞權重、辭典分數、辭典詞頻、食的長度是愈大愈贏。第 0 格佇頂面「十二關頭前」就定矣，無參加這十二關。",
+        "tailo": "Uì tē 1 kuan pí kàu tē 12 kuan. Nn̄g pit thâu tsi̍t ê bô kâng ê kuan tō sī kuat-sèng, āu-piah ê kuan bô koh pí. Sòo-jī jú sè jú iâⁿ; suán-sû kuân-tāng, sû-tián hun-sòo, sû-tián sû-pîn, tsia̍h ê tn̂g-tōo sī jú tuā jú iâⁿ. Tē 0 keh tī tíng-bīn \"tsa̍p-jī kuan thâu-tsîng\" tō tiānn--ah, bô tsham-ka tsit tsa̍p-jī kuan.",
+        "poj": "Ùi tē 1 koan pí kàu tē 12 koan. Nn̄g pit thâu chi̍t ê bô kâng ê koan tō sī koat-sèng, āu-piah ê koan bô koh pí. Sò͘-jī jú sè jú iâⁿ; soán-sû koân-tāng, sû-tián hun-sò͘, sû-tián sû-pîn, chia̍h ê tn̂g-tō͘ sī jú tōa jú iâⁿ. Tē 0 keh tī téng-bīn \"cha̍p-jī koan thâu-chêng\" tō tiāⁿ--ah, bô chham-ka chit cha̍p-jī koan.",
+        "en": "The stages run from 1 to 12. The first stage where two rows differ is the decision, and the later stages are not compared. A smaller number wins, except selection weight, dictionary score, dictionary frequency, and bytes covered, where a larger number wins. Slot 0 is already decided in the section above these twelve stages.",
+        "ja": "第 1 段階から第 12 段階まで比べます。二つが最初に違う段階が決着で、それより後は比べません。数字が小さい方が勝ちます。選択の重み、辞書スコア、辞書の頻度、覆った長さは大きい方が勝ちます。0 枠は上の「十二の段階の前」で決まっていて、この十二段階には入りません。"
+      }
+    },
+    "inspectorDetailTier": {
+      "comment": "Stage 1: a span that reaches the end of the input leads a front segment.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "食到輸入尾的排頭前，干焦食頭前一段的排後壁。taiuanl 的「台灣人」會排佇「台灣」頭前。",
+        "tailo": "Tsia̍h kàu su-ji̍p bué ê pâi thâu-tsîng, kan-ta tsia̍h thâu-tsîng tsi̍t tuānn ê pâi āu-piah. taiuanl ê \"Tâi-uân-lâng\" ē pâi tī \"Tâi-uân\" thâu-tsîng.",
+        "poj": "Chia̍h kàu su-ji̍p bé ê pâi thâu-chêng, kan-ta chia̍h thâu-chêng chi̍t toāⁿ ê pâi āu-piah. taiuanl ê \"Tâi-oân-lâng\" ē pâi tī \"Tâi-oân\" thâu-chêng.",
+        "en": "A row that reaches the end of what you typed comes first. A row that covers only a front stretch comes after. For taiuanl, 台灣人 comes before 台灣.",
+        "ja": "入力の末尾まで覆う候補が先です。先頭の一部だけを覆う候補は後です。taiuanl では「台灣人」が「台灣」より前に来ます。"
+      }
+    },
+    "inspectorDetailAbbreviation": {
+      "comment": "Stage 2: within a tier, a reading leads an abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "仝一段內，照讀音拍的排佇縮寫頭前。縮寫是逐个音節的頭一个字母。",
+        "tailo": "Kāng tsi̍t tuānn lāi, tiàu tha̍k-im phah ê pâi tī sok-siá thâu-tsîng. Sok-siá sī ta̍k ê im-tsiat ê thâu tsi̍t ê jī-bó.",
+        "poj": "Kāng chi̍t toāⁿ lāi, tiàu tha̍k-im phah ê pâi tī sok-siá thâu-chêng. Sok-siá sī ta̍k ê im-chiat ê thâu chi̍t ê jī-bó.",
+        "en": "Inside the same tier, a reading comes before an abbreviation. An abbreviation is the first letter of each syllable.",
+        "ja": "同じ段の中では、読みで打った候補が略称より前です。略称は各音節の最初の字です。"
+      }
+    },
+    "inspectorDetailPreference": {
+      "comment": "Stage 3: selected words, then never-selected custom words, then the rest.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "選過的詞排頭前，閣來是存過、猶未選的自訂詞，閣來是其他。",
+        "tailo": "Suán-kuè ê sû pâi thâu-tsîng, koh-lâi sī tsûn-kuè, iáu-buē suán ê tsū-tīng sû, koh-lâi sī kî-thann.",
+        "poj": "Soán-kòe ê sû pâi thâu-chêng, koh-lâi sī chûn-kòe, iáu-bōe soán ê chū-tēng sû, koh-lâi sī kî-thaⁿ.",
+        "en": "Words you have picked come first, then custom words you saved and have not picked, then everything else.",
+        "ja": "選んだ語が先、次に保存してまだ選んでいないカスタム語、その次がその他です。"
+      }
+    },
+    "inspectorDetailCoverage": {
+      "comment": "Stage 4: full syllable, then prefix, then abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "完整音節排頭前，閣來是拍一半的前綴，閣來是縮寫。",
+        "tailo": "Uân-tsíng im-tsiat pâi thâu-tsîng, koh-lâi sī phah tsi̍t puànn ê tsiân-tzuì, koh-lâi sī sok-siá.",
+        "poj": "Oân-chéng im-chiat pâi thâu-chêng, koh-lâi sī phah chi̍t pòaⁿ ê chiân-chuì, koh-lâi sī sok-siá.",
+        "en": "A full syllable comes first, then a prefix of a longer reading, then an abbreviation.",
+        "ja": "完全な音節が先、次に読みの途中までの接頭、その次が略称です。"
+      }
+    },
+    "inspectorDetailUserWeight": {
+      "comment": "Stage 5: higher decayed selection weight wins.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "愈大愈頭前。選過的詞佇這關再分先後；無選過的權重是 0。",
+        "tailo": "Jú tuā jú thâu-tsîng. Suán-kuè ê sû tī tsit kuan koh hun sian-āu; bô suán-kuè ê kuân-tāng sī 0.",
+        "poj": "Jú tōa jú thâu-chêng. Soán-kòe ê sû tī chit koan koh hun sian-āu; bô soán-kòe ê koân-tāng sī 0.",
+        "en": "A larger weight comes first. This is where picked words separate from each other. A word never picked has weight 0.",
+        "ja": "大きい方が先です。選んだ語どうしの順番はここで分かれます。一度も選んでいない語の重みは 0 です。"
+      }
+    },
+    "inspectorDetailContext": {
+      "comment": "Stage 6: a continuation of the previous word, learned before bundled.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "接前一詞的排頭前：你學過的、閣來是內建語料、閣來是無接。",
+        "tailo": "Tsiap tsîng tsi̍t sû ê pâi thâu-tsîng: lí ha̍k-kuè ê, koh-lâi sī luē-kiàn gí-liāu, koh-lâi sī bô tsiap.",
+        "poj": "Chiap chêng chi̍t sû ê pâi thâu-chêng: lí ha̍k-kòe ê, koh-lâi sī lōe-kiàn gí-liāu, koh-lâi sī bô chiap.",
+        "en": "A word that continues the previous one comes first: one you learned, then one from the bundled corpus, then no continuation.",
+        "ja": "前の語に続く候補が先です。学習したもの、次に同梱コーパス、その次が続きでないものです。"
+      }
+    },
+    "inspectorDetailWalkerCost": {
+      "comment": "Stage 7: lower corpus cost wins. Unpriced sorts after every priced row.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "愈細愈頭前，語料愈常寫的愈頭前。無標價的排佇有標價的後壁。",
+        "tailo": "Jú sè jú thâu-tsîng, gí-liāu jú tsiâng siá ê jú thâu-tsîng. Bô piau-kè ê pâi tī ū piau-kè ê āu-piah.",
+        "poj": "Jú sè jú thâu-chêng, gí-liāu jú chiâng siá ê jú thâu-chêng. Bô piau-kè ê pâi tī ū piau-kè ê āu-piah.",
+        "en": "A smaller cost comes first: the word the corpus writes more often. A row the corpus does not price comes after every priced row.",
+        "ja": "小さい方が先で、コーパスでよく書かれる語が先です。値段のない候補は、値段のある候補の後です。"
+      }
+    },
+    "inspectorDetailScore": {
+      "comment": "Stage 8: higher frequency times syllable bias times boost wins.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "詞頻乘音節偏向乘加成，愈大愈頭前。",
+        "tailo": "Sû-pîn sîng im-tsiat phian-hiòng sîng ka-sîng, jú tuā jú thâu-tsîng.",
+        "poj": "Sû-pîn sêng im-chiat phian-hiòng sêng ka-sêng, jú tōa jú thâu-chêng.",
+        "en": "Frequency times a syllable bias times a boost. A larger score comes first.",
+        "ja": "頻度 × 音節の偏り × 加成です。大きい方が先です。"
+      }
+    },
+    "inspectorDetailFrequency": {
+      "comment": "Stage 9: higher raw dictionary frequency wins.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典裡的原始詞頻，愈大愈頭前。分數平手才用著。",
+        "tailo": "Sû-tián lāi ê guân-sú sû-pîn, jú tuā jú thâu-tsîng. Hun-sòo pênn-tshiú tsiah īng--tio̍h.",
+        "poj": "Sû-tián lāi ê goân-sú sû-pîn, jú tōa jú thâu-chêng. Hun-sò͘ pêⁿ-chhiú chiah ēng--tio̍h.",
+        "en": "The raw count in the dictionary. A larger count comes first. It is used when the scores tie.",
+        "ja": "辞書にある生の頻度です。大きい方が先です。スコアが同じときだけ使います。"
+      }
+    },
+    "inspectorDetailCoverageBytes": {
+      "comment": "Stage 10: more covered bytes win, only after score and frequency tie.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這筆食的位元組愈長愈頭前。分數佮詞頻攏平手才用著。",
+        "tailo": "Tsit pit tsia̍h ê ūi-guân-tsoo jú tn̂g jú thâu-tsîng. Hun-sòo kah sû-pîn lóng pênn-tshiú tsiah īng--tio̍h.",
+        "poj": "Chit pit chia̍h ê ūi-goân-chó͘ jú tn̂g jú thâu-chêng. Hun-sò͘ kah sû-pîn lóng pêⁿ-chhiú chiah ēng--tio̍h.",
+        "en": "More bytes of the input covered comes first. It is used only when the score and the frequency both tie.",
+        "ja": "覆ったバイトが長い方が先です。スコアと頻度がどちらも同じときだけ使います。"
+      }
+    },
+    "inspectorDetailSource": {
+      "comment": "Stage 11: source rank, smaller first. Order matches source_tier_rank.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "順位愈細愈頭前：自訂、教育部臺灣台語常用詞辭典、公視台語台台語新詞辭庫、教育部學科術語臺灣台語對譯、工藝中心臺灣台語工藝詞庫。其他辭典共一个順位。",
+        "tailo": "Sūn-uī jú sè jú thâu-tsîng: tsū-tīng, Kàu-io̍k-pōo Tâi-uân Tâi-gí Siông-iōng-sû Sû-tián, Kong-sī Tâi-gí-tâi sin-sû, Kàu-io̍k-pōo ha̍k-kho su̍t-gí, Kang-gē tiong-sim kang-gē sû-khòo. Kî-thann sû-tián kāng tsi̍t ê sūn-uī.",
+        "poj": "Sūn-ūi jú sè jú thâu-chêng: chū-tēng, Kàu-io̍k-pō͘ Tâi-oân Tâi-gí Siông-iōng-sû Sû-tián, Kong-sī Tâi-gí-tâi sin-sû, Kàu-io̍k-pō͘ ha̍k-kho su̍t-gí, Kang-gē tiong-sim kang-gē sû-khò͘. Kî-thaⁿ sû-tián kāng chi̍t ê sūn-ūi.",
+        "en": "A smaller rank comes first: custom, MOE Dictionary of Common Taiwanese Words, PTS Taigi New-Word Lexicon, MOE Academic Subject Terminology (Taigi), NTCRI Taiwanese Craft Glossary. Every other dictionary shares one rank.",
+        "ja": "順位が小さい方が先です。カスタム、教育部 台湾語常用語辞典、公視台語台 台湾語新語辞書、教育部 学術用語 台湾語対訳、工芸センター 台湾語工芸用語辞書。それ以外の辞書は同じ順位です。"
+      }
+    },
+    "inspectorDetailStable": {
+      "comment": "Stage 12: the earlier insertion wins when every other field ties.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "頭前攏平手，就照查出來的順序，較早查著的贏。",
+        "tailo": "Thâu-tsîng lóng pênn-tshiú, tō tiàu tshiau--tshut-lâi ê sūn-sū, khah tsá tshiau-tio̍h ê iâⁿ.",
+        "poj": "Thâu-chêng lóng pêⁿ-chhiú, tō tiàu chhiau--chhut-lâi ê sūn-sū, khah chá chhiau-tio̍h ê iâⁿ.",
+        "en": "When every earlier stage ties, the row found first wins.",
+        "ja": "ここまで全部同じなら、先に見つかった候補が勝ちます。"
+      }
+    },
+    "inspectorPinnedHeading": {
+      "comment": "Heading for candidate rows that do not enter the sort.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "無參排序",
+        "tailo": "Bô tsham pâi-sū",
+        "poj": "Bô chham pâi-sū",
+        "en": "Outside the sort",
+        "ja": "並べ替えの外"
+      }
+    },
+    "inspectorNoScored": {
+      "comment": "Shown when every visible row sits outside the sort.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這幾格無參排序，所以無比較階段。",
+        "tailo": "Tsit kuí keh bô tsham pâi-sū, sóo-í bô pí-kàu kai-tuānn.",
+        "poj": "Chit kúi keh bô chham pâi-sū, só͘-í bô pí-kàu kai-toāⁿ.",
+        "en": "These rows sit outside the sort, so no stage compares them.",
+        "ja": "これらは並べ替えに入らないので、比較の段階はありません。"
+      }
+    },
+    "inspectorLostTo": {
+      "comment": "The candidate at {index} won at the stage named by {reason}.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "第 {index} 名佇{reason}贏過這筆。",
+        "tailo": "Tē {index} miâ tī {reason} iâⁿ-kuè tsit pit.",
+        "poj": "Tē {index} miâ tī {reason} iâⁿ-kòe chit pit.",
+        "en": "Row {index} is ahead at {reason}.",
+        "ja": "{index} 位が{reason}でこちらに勝っています。"
+      },
+      "placeholders": { "index": "string", "reason": "string" }
+    },
+    "inspectorBeatsRow": {
+      "comment": "This candidate beat the row at {index}. {reason} is the deciding stage name.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "佇{reason}贏過第 {index} 名。",
+        "tailo": "Tī {reason} iâⁿ-kuè tē {index} miâ.",
+        "poj": "Tī {reason} iâⁿ-kòe tē {index} miâ.",
+        "en": "Beats row {index} at {reason}.",
+        "ja": "{reason}で {index} 位に勝っています。"
+      },
+      "placeholders": { "index": "string", "reason": "string" }
+    },
+    "inspectorStageTier": {
+      "comment": "Sort stage: whole input before a front segment.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "規段抑是頭前",
+        "tailo": "Kui tuānn ia̍h-sī thâu-tsîng",
+        "poj": "Kui toāⁿ ia̍h-sī thâu-chêng",
+        "en": "Whole input or front",
+        "ja": "全体か先頭"
+      }
+    },
+    "inspectorStageAbbreviation": {
+      "comment": "Sort stage: a reading before an abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "敢是縮寫",
+        "tailo": "Sok-siá",
+        "poj": "Sok-siá",
+        "en": "Abbreviation",
+        "ja": "略称"
+      }
+    },
+    "inspectorStagePreference": {
+      "comment": "Sort stage: picked words, then saved words, then the rest.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "敢捌拍過",
+        "tailo": "Phian-hònn",
+        "poj": "Phian-hòⁿ",
+        "en": "Preference",
+        "ja": "好み"
+      }
+    },
+    "inspectorStageCoverageKind": {
+      "comment": "Sort stage: full syllable, then prefix, then abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "音節敢有完整",
+        "tailo": "Im-chat uah-ha̍p",
+        "poj": "Im-chat oah-ha̍p",
+        "en": "Syllable match",
+        "ja": "音節の一致"
+      }
+    },
+    "inspectorStageUserWeight": {
+      "comment": "Sort stage: decayed selection weight.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "選詞權重",
+        "tailo": "Suán-sû khuân-tāng",
+        "poj": "Soán-sû koân-tāng",
+        "en": "Selection weight",
+        "ja": "選択の重み"
+      }
+    },
+    "inspectorStageContext": {
+      "comment": "Sort stage: continuation of the previous word.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "接前一詞",
+        "tailo": "Tsiap tsîng tsi̍t sû",
+        "poj": "Chiap chêng chi̍t sû",
+        "en": "Previous word",
+        "ja": "前の語の続き"
+      }
+    },
+    "inspectorStageWalkerCost": {
+      "comment": "Sort stage: corpus cost.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "語料詞頻",
+        "tailo": "Gí-liāu sêng-pún",
+        "poj": "Gí-liāu sêng-pún",
+        "en": "Corpus cost",
+        "ja": "コーパスのコスト"
+      }
+    },
+    "inspectorStageScore": {
+      "comment": "Sort stage: dictionary score.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典優先度",
+        "tailo": "Sû-tián hun-sòo",
+        "poj": "Sû-tián hun-sò͘",
+        "en": "Dictionary score",
+        "ja": "辞書の点"
+      }
+    },
+    "inspectorStageFrequency": {
+      "comment": "Sort stage: dictionary frequency.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典詞頻",
+        "tailo": "Sû-tián sû-pîn",
+        "poj": "Sû-tián sû-pîn",
+        "en": "Dictionary frequency",
+        "ja": "辞書の頻度"
+      }
+    },
+    "inspectorStageCoverageBytes": {
+      "comment": "Sort stage: how much of the input the row consumes.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "利用偌長的輸入碼",
+        "tailo": "Tsia̍h ê tn̂g-tōo",
+        "poj": "Chia̍h ê tn̂g-tō͘",
+        "en": "Length covered",
+        "ja": "食べた長さ"
+      }
+    },
+    "inspectorStageSource": {
+      "comment": "Sort stage: dictionary source rank.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "辭典來源",
+        "tailo": "Sû-tián lâi-guân",
+        "poj": "Sû-tián lâi-goân",
+        "en": "Dictionary source",
+        "ja": "辞書の出所"
+      }
+    },
+    "inspectorStageStable": {
+      "comment": "Sort stage: insertion order, after every other field ties.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "插入順序",
+        "tailo": "Tshap-ji̍p sūn-sū",
+        "poj": "Chhap-ji̍p sūn-sū",
+        "en": "Insertion order",
+        "ja": "挿入順"
+      }
+    },
+    "inspectorTierWhole": {
+      "comment": "Stage value: the row reaches the end of the input.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "規段",
+        "tailo": "Kui tuānn",
+        "poj": "Kui toāⁿ",
+        "en": "Whole input",
+        "ja": "全体"
+      }
+    },
+    "inspectorTierFront": {
+      "comment": "Stage value: the row covers only a front segment.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "干焦頭前",
+        "tailo": "Kan-na thâu-tsîng",
+        "poj": "Kan-na thâu-chêng",
+        "en": "Front only",
+        "ja": "先頭だけ"
+      }
+    },
+    "inspectorReading": {
+      "comment": "Stage value: the row is a reading, not an abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "讀音",
+        "tailo": "Tha̍k-im",
+        "poj": "Tha̍k-im",
+        "en": "Reading",
+        "ja": "読み"
+      }
+    },
+    "inspectorAbbreviation": {
+      "comment": "Stage value: the row was reached as an abbreviation.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "縮寫",
+        "tailo": "Sok-siá",
+        "poj": "Sok-siá",
+        "en": "Abbreviation",
+        "ja": "略称"
+      }
+    },
+    "inspectorPrefPicked": {
+      "comment": "Stage value: the user has picked this word.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "選過",
+        "tailo": "Suán-kuè",
+        "poj": "Soán-kòe",
+        "en": "Picked",
+        "ja": "選択済み"
+      }
+    },
+    "inspectorPrefCustom": {
+      "comment": "Stage value: a saved word the user has not picked.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "自訂",
+        "tailo": "Tsū-tīng",
+        "poj": "Chū-tēng",
+        "en": "Saved",
+        "ja": "登録"
+      }
+    },
+    "inspectorPrefRest": {
+      "comment": "Stage value: neither a pick nor a saved word.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "其他",
+        "tailo": "Kî-thann",
+        "poj": "Kî-thaⁿ",
+        "en": "Other",
+        "ja": "その他"
+      }
+    },
+    "inspectorCovFull": {
+      "comment": "Stage value: the typed span is the word's whole reading.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "完整音節",
+        "tailo": "Uân-tsíng im-chat",
+        "poj": "Oân-chéng im-chat",
+        "en": "Full syllable",
+        "ja": "音節全体"
+      }
+    },
+    "inspectorCovPrefix": {
+      "comment": "Stage value: the typed span is a prefix of the word's reading.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "音節前綴",
+        "tailo": "Im-chat tsiân-tuà",
+        "poj": "Im-chat chêng-tòa",
+        "en": "Syllable prefix",
+        "ja": "音節の前方"
+      }
+    },
+    "inspectorContextLearned": {
+      "comment": "Stage value: a continuation the user has learned.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "你學過",
+        "tailo": "Lí o̍h-kuè",
+        "poj": "Lí o̍h-kòe",
+        "en": "You learned it",
+        "ja": "学習した続き"
+      }
+    },
+    "inspectorContextBundled": {
+      "comment": "Stage value: a continuation from the bundled corpus.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "語料有接",
+        "tailo": "Gí-liāu ū tsiap",
+        "poj": "Gí-liāu ū chiap",
+        "en": "Corpus continuation",
+        "ja": "コーパスの続き"
+      }
+    },
+    "inspectorContextNone": {
+      "comment": "Stage value: the row does not continue the previous word.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "無",
+        "tailo": "Bô",
+        "poj": "Bô",
+        "en": "None",
+        "ja": "なし"
+      }
+    },
+    "inspectorUnpriced": {
+      "comment": "Stage value: the corpus does not price this row.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "無標價",
+        "tailo": "Bô pio-kè",
+        "poj": "Bô pio-kè",
+        "en": "Unpriced",
+        "ja": "値なし"
+      }
+    },
+    "inspectorSourceOther": {
+      "comment": "Source rank when no priority dictionary bit is set.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "其他辭典",
+        "tailo": "Kî-thann sû-tián",
+        "poj": "Kî-thaⁿ sû-tián",
+        "en": "Another dictionary",
+        "ja": "その他の辞書"
+      }
+    },
+    "inspectorNoSource": {
+      "comment": "The row has no dictionary record.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "無辭典紀錄",
+        "tailo": "Bô sû-tián kì-lo̍k",
+        "poj": "Bô sû-tián kì-lio̍k",
+        "en": "No dictionary record",
+        "ja": "辞書の記録なし"
+      }
+    },
+    "inspectorSources": {
+      "comment": "Heading of a candidate's dictionary sources.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "來源",
+        "tailo": "Lâi-guân",
+        "poj": "Lâi-goân",
+        "en": "Sources",
+        "ja": "出所"
+      }
+    },
+    "inspectorDecided": {
+      "comment": "Mark on the comparison cell that decided this column.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "決勝",
+        "tailo": "Koat-sèng",
+        "poj": "Koat-sèng",
+        "en": "Decided",
+        "ja": "決着"
+      }
+    },
+    "inspectorTie": {
+      "comment": "Legend: this stage tied with the column on the left.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "平手",
+        "tailo": "Pênn-tshiú",
+        "poj": "Pêⁿ-chhiú",
+        "en": "Tie",
+        "ja": "同点"
+      }
+    },
+    "inspectorLater": {
+      "comment": "Legend: an earlier stage already decided, so this one was not compared.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "未比",
+        "tailo": "Buē pí",
+        "poj": "Bē pí",
+        "en": "Not compared",
+        "ja": "未比較"
+      }
+    },
+    "inspectorRank": {
+      "comment": "The source-rank number the sort used. {rank} is a number.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "順位 {rank}",
+        "tailo": "Sūn-uī {rank}",
+        "poj": "Sūn-uī {rank}",
+        "en": "Rank {rank}",
+        "ja": "順位 {rank}"
+      },
+      "placeholders": { "rank": "string" }
+    },
+    "inspectorPosition": {
+      "comment": "A candidate's place in the list. {index} is a number.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "第 {index} 名",
+        "tailo": "Tē {index} miâ",
+        "poj": "Tē {index} miâ",
+        "en": "Row {index}",
+        "ja": "{index} 位"
+      },
+      "placeholders": { "index": "string" }
+    },
+    "inspectorLegendWin": {
+      "comment": "Legend swatch: the stage that decided the pair.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這階段分出勝負",
+        "tailo": "Tsit kai-tuānn hun-tshut sèng-pāi",
+        "poj": "Chit kai-toāⁿ hun-chhut sèng-pāi",
+        "en": "This stage decided",
+        "ja": "この段階で決着"
+      }
+    },
+    "inspectorLegendLose": {
+      "comment": "Legend swatch: this candidate lost at this stage.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這階段輸去",
+        "tailo": "Tsit kai-tuānn su--khì",
+        "poj": "Chit kai-toāⁿ su--khì",
+        "en": "Lost at this stage",
+        "ja": "この段階で負け"
+      }
+    },
+    "inspectorLegendTie": {
+      "comment": "Legend swatch: the stage tied.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這階段平手",
+        "tailo": "Tsit kai-tuānn pênn-tshiú",
+        "poj": "Chit kai-toāⁿ pêⁿ-chhiú",
+        "en": "This stage tied",
+        "ja": "この段階は同点"
+      }
+    },
+    "inspectorLegendSkip": {
+      "comment": "Legend swatch: an earlier stage already decided.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "頭前已經分出",
+        "tailo": "Thâu-tsîng í-king hun-tshut",
+        "poj": "Thâu-chêng í-king hun-chhut",
+        "en": "An earlier stage decided",
+        "ja": "前の段階で決着"
+      }
+    },
+    "inspectorLegendBase": {
+      "comment": "Legend swatch: the first row of the sort, the baseline.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "排序的頭一筆",
+        "tailo": "Pâi-sū ê thâu tsi̍t pit",
+        "poj": "Pâi-sū ê thâu chi̍t pit",
+        "en": "First row of the sort",
+        "ja": "並べ替えの先頭"
+      }
+    },
+    "inspectorPageUp": {
+      "comment": "Button that shows the previous page of candidates on the dev page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "上一頁",
+        "tailo": "Tíng tsi̍t ia̍h",
+        "poj": "Téng chi̍t ia̍h",
+        "en": "Previous page",
+        "ja": "前のページ"
+      }
+    },
+    "inspectorPageDown": {
+      "comment": "Button that shows the next page of candidates on the dev page.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "下一頁",
+        "tailo": "Ē tsi̍t ia̍h",
+        "poj": "Ē chi̍t ia̍h",
+        "en": "Next page",
+        "ja": "次のページ"
+      }
     }
   }
 }

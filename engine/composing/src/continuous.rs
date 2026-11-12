@@ -1233,8 +1233,10 @@ pub(crate) fn assemble_candidates(
         // edges, not one word: the only slot a picked extension may take.
         let mut walker_slot0_is_sentence = false;
         // Whether a block was appended after the first sorted one (the §35
-        // bare merge, Step 4b, Step 4c) — the only case Step 4d must re-sort.
+        // bare merge, Step 4b, Step 4c) — the only case Step 4d must re-sort,
+        // along with a one-word path the developer page released from slot 0.
         let mut appended_blocks = false;
+        let mut release_one_word = false;
 
         // ---- Step 2: empty-keys partial-prefix vs span-local fetch.
         let mut candidates: Vec<RawCandidate> = if keys.is_empty() {
@@ -1349,7 +1351,7 @@ pub(crate) fn assemble_candidates(
                         // promote branch below `slot0_cand` is discarded and the
                         // promoted dict row carries its own `record.tl`
                         // `canonical_tl`.
-                        let slot0_cand = RawCandidate {
+                        let mut slot0_cand = RawCandidate {
                             rowid: NO_ROWID,
                             consumed_span: slot0.consumed_span,
                             syllable_count: slot0.syllable_count,
@@ -1404,23 +1406,43 @@ pub(crate) fn assemble_candidates(
                         //   identical-form synth (`iā sī`, a one-edge `gín-á`)
                         //   stays and the dedupe below drops its twin;
                         //   promoting its sibling `gín--á` would swap the
-                        //   walker's pick (behavioral-invariants §22).
+                        //   walker's pick (behavioral-invariants §22). The
+                        //   twin's dictionary fields are copied onto the
+                        //   synth first: the synth is built with an empty
+                        //   source, score, frequency and corpus cost, and
+                        //   dropping the twin otherwise leaves `khì` / 去
+                        //   looking unrecorded and sorting last on cost.
                         let is_same_full_span_word = |x: &RawCandidate| {
                             x.coverage_kind == COVERAGE_KIND_FULL
                                 && x.consumed_span == slot0_cand.consumed_span
                                 && x.hanji == slot0_cand.hanji
                         };
-                        let has_exact_twin = c
+                        let exact_idx = c
                             .iter()
-                            .any(|x| is_same_full_span_word(x) && x.roman == slot0_cand.roman);
+                            .position(|x| is_same_full_span_word(x) && x.roman == slot0_cand.roman);
                         let same_reading_idx = c.iter().position(|x| {
                             is_same_full_span_word(x)
                                 && roman_reading_eq(&x.roman, &slot0_cand.roman)
                         });
                         walker_slot0_is_sentence =
                             composed_from_edges && same_reading_idx.is_none();
-                        let promote_idx =
-                            same_reading_idx.filter(|_| !slot0_cand.is_custom && !has_exact_twin);
+                        if let Some(i) = exact_idx.filter(|_| !slot0_cand.is_custom) {
+                            let twin = &c[i];
+                            slot0_cand.rowid = twin.rowid;
+                            slot0_cand.score = twin.score;
+                            slot0_cand.frequency = twin.frequency;
+                            slot0_cand.walker_cost = twin.walker_cost;
+                            slot0_cand.bitmask = twin.bitmask;
+                            slot0_cand.syllable_count = twin.syllable_count;
+                            if twin.user_weight > slot0_cand.user_weight {
+                                slot0_cand.user_weight = twin.user_weight;
+                            }
+                            if twin.context_rank < slot0_cand.context_rank {
+                                slot0_cand.context_rank = twin.context_rank;
+                            }
+                        }
+                        let promote_idx = same_reading_idx
+                            .filter(|_| !slot0_cand.is_custom && exact_idx.is_none());
                         // Slot 0 is either the promoted canonical dict row
                         // (removed from its current position) or the synth.
                         // Both then run the SAME dedupe — same word identity
@@ -1442,6 +1464,15 @@ pub(crate) fn assemble_candidates(
                         });
                         c.insert(0, slot0);
                         walker_slot0_len = 1;
+                        // A one-word path is the whole sentence, so it normally
+                        // stays at slot 0 ahead of the twelve stages (`kip` →
+                        // 級, and an abbreviation of those letters cannot pass
+                        // it). The developer page can let that one word join
+                        // the sort. A path of several words stays pinned.
+                        if !composed_from_edges && ranking::dev_rank_one_word_path() {
+                            walker_slot0_len = 0;
+                            release_one_word = true;
+                        }
                     }
                 }
             }
@@ -1600,7 +1631,7 @@ pub(crate) fn assemble_candidates(
         // the concatenation is re-sorted (stable — each block's own order and
         // its exclude → truncate are kept). The walker's slot 0 stays put,
         // unless a picked word the walker cannot reach outranks its sentence.
-        if appended_blocks {
+        if appended_blocks || release_one_word {
             let ranked = candidates.split_off(walker_slot0_len.min(candidates.len()));
             candidates.extend(sort_by_candidate_key(
                 ranked,
@@ -1726,6 +1757,219 @@ pub(crate) fn assemble_candidates(
     .unwrap_or_default()
     // Step 6 (wrap into `ContinuousResponse` via `raw_to_proto_candidate`
     // + `with_continuous`) stays in `requests::handle_fetch_at_pos`.
+}
+
+/// One piece of the typed buffer, in order. `gap` is the stretch the
+/// syllable grid or the walk did not cover (a trailing hyphen, an unfinished
+/// onset).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct BufferCut {
+    pub text: String,
+    pub gap: bool,
+}
+
+/// One word of the cut the engine shows: the walker's lowest-cost cover, or
+/// the syllable reading when no dictionary word is on that path.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct WordCut {
+    pub text: String,
+    pub hanji: Option<String>,
+    pub roman: String,
+    pub kind: &'static str,
+    pub user_row: bool,
+    pub picks: i32,
+    pub weight: f64,
+}
+
+/// How the pending buffer is read and cut. `cut_by` is `walker` (a dictionary
+/// path won), `syllables` (nothing in the dictionary covers it, so the
+/// reading stays split) or `none`.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Segmentation {
+    pub cut_by: &'static str,
+    pub syllables: Vec<BufferCut>,
+    pub words: Vec<WordCut>,
+}
+
+impl Default for Segmentation {
+    fn default() -> Self {
+        Self {
+            cut_by: "none",
+            syllables: Vec::new(),
+            words: Vec::new(),
+        }
+    }
+}
+
+/// The syllable grid and the sentence cut for `raw`, from the same walk the
+/// candidate list's slot 0 uses. An unfinished buffer has syllables (or
+/// neither) and no word cut. The arguments are the fetch's own, the same
+/// set [`assemble_candidates`] takes.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn explain_segmentation(
+    raw: &str,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    custom: &[CustomEntry],
+    learned: &[LearnedEntry],
+    mode: phonetics::InputMode,
+    enabled_sources_bitmask: u32,
+    context: &ranking::ContextRanks,
+) -> Segmentation {
+    LexiconHandle::with_state(|state| {
+        let Some(inv) = state.syllable_inventory.as_ref() else {
+            return Ok(Segmentation::default());
+        };
+        let keys = build_continuous_keys(raw, inv, mode);
+        let syllables = cuts_from_shadow(raw, &keys.shadow_to_raw_end, &keys.one_syllable_segments);
+        let Some(prefix) = state.prefix_index.as_ref() else {
+            return Ok(Segmentation {
+                syllables,
+                ..Segmentation::default()
+            });
+        };
+        let Some(dict) = state.dictionary.as_ref() else {
+            return Ok(Segmentation {
+                syllables,
+                ..Segmentation::default()
+            });
+        };
+        let ctx = ContinuousFetchCtx {
+            enabled_sources_bitmask,
+            freq_map,
+            now_ms,
+            context,
+            custom,
+            learned,
+            prefix_index: prefix,
+            dict,
+            mode,
+            tone_pin: crate::shadow::whole_buffer_tone_pin(raw, mode, Some(inv)),
+            whole_buffer_key: None,
+        };
+        let Some(path) = walk_buffer(&keys, inv, &ctx) else {
+            return Ok(Segmentation {
+                syllables,
+                ..Segmentation::default()
+            });
+        };
+        if path.choices.iter().any(|choice| choice.dict_hit) {
+            let words = path
+                .edges
+                .iter()
+                .zip(&path.choices)
+                .filter_map(|(&(start, end), choice)| {
+                    let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
+                    let text = raw.get(raw_start..raw_end)?.to_owned();
+                    let roman = recase_roman(&choice.roman, &text, mode);
+                    let display = choice
+                        .hanji
+                        .clone()
+                        .unwrap_or_else(|| choice.canonical_tl.clone());
+                    let picks = freq_map.get(&display, &choice.canonical_tl);
+                    Some(WordCut {
+                        text,
+                        hanji: choice.hanji.clone(),
+                        roman,
+                        kind: if choice.is_custom {
+                            "custom"
+                        } else if choice.dict_hit {
+                            "dictionary"
+                        } else {
+                            "reading"
+                        },
+                        user_row: choice.user_row,
+                        picks: picks.count,
+                        weight: choice.user_weight_delta,
+                    })
+                })
+                .collect();
+            return Ok(Segmentation {
+                cut_by: "walker",
+                syllables,
+                words,
+            });
+        }
+        let barriers =
+            crate::shadow::oov_reading_barriers(&keys.barriers, 0, keys.shadow.len(), mode);
+        let Some(segs) = greedy_longest_syllabification(&keys.shadow, inv, mode, &barriers) else {
+            return Ok(Segmentation {
+                syllables,
+                ..Segmentation::default()
+            });
+        };
+        let words: Vec<WordCut> = segs
+            .iter()
+            .filter_map(|&(start, end)| {
+                let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
+                let text = raw.get(raw_start..raw_end)?.to_owned();
+                let roman = strip_tones_for_mode(&keys.shadow[start..end], mode);
+                Some(WordCut {
+                    text,
+                    hanji: None,
+                    roman,
+                    kind: "reading",
+                    user_row: false,
+                    picks: 0,
+                    weight: 0.0,
+                })
+            })
+            .collect();
+        Ok(Segmentation {
+            cut_by: if words.is_empty() {
+                "none"
+            } else {
+                "syllables"
+            },
+            syllables,
+            words,
+        })
+    })
+    .unwrap_or_default()
+}
+
+fn raw_bounds(map: &[usize], start: usize, end: usize) -> Option<(usize, usize)> {
+    let raw_start = *map.get(start)?;
+    let raw_end = *map.get(end)?;
+    (raw_start <= raw_end).then_some((raw_start, raw_end))
+}
+
+fn cuts_from_shadow(raw: &str, map: &[usize], spans: &[(usize, usize)]) -> Vec<BufferCut> {
+    let mut cuts = Vec::new();
+    let mut covered = 0usize;
+    for &(start, end) in spans {
+        let Some((raw_start, raw_end)) = raw_bounds(map, start, end) else {
+            continue;
+        };
+        if raw_start > covered {
+            if let Some(gap) = raw.get(covered..raw_start) {
+                if !gap.is_empty() {
+                    cuts.push(BufferCut {
+                        text: gap.to_owned(),
+                        gap: true,
+                    });
+                }
+            }
+        }
+        if let Some(text) = raw.get(raw_start..raw_end) {
+            if !text.is_empty() {
+                cuts.push(BufferCut {
+                    text: text.to_owned(),
+                    gap: false,
+                });
+            }
+        }
+        covered = covered.max(raw_end);
+    }
+    if let Some(tail) = raw.get(covered..) {
+        if !tail.is_empty() {
+            cuts.push(BufferCut {
+                text: tail.to_owned(),
+                gap: true,
+            });
+        }
+    }
+    cuts
 }
 
 #[cfg(test)]

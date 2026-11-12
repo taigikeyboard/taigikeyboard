@@ -43,6 +43,8 @@ export class Learning {
   /// The host's `run` (`ime.js`, the ChromeOS worker): an engine call,
   /// `undefined` after a trap, which the host recovers from in its own way.
   #run;
+  /// After this tab's stores are open. The dev page lists custom words then.
+  #onOpen;
   #holdsLock = false;
   /// The session being opened, so a second `attach` does not hand files in
   /// twice.
@@ -61,9 +63,10 @@ export class Learning {
   #stopped = false;
   #saveTimer;
 
-  constructor(current, run) {
+  constructor(current, run, onOpen) {
     this.#current = current;
     this.#run = run;
+    this.#onOpen = onOpen;
     // Without Web Locks the tabs could not agree on one learner, so none
     // learns. Every browser the page supports has them.
     navigator.locks
@@ -117,6 +120,7 @@ export class Learning {
     }
     if (this.#run((current) => current.openUserData()) === true) {
       this.#opened = session;
+      this.#onOpen?.();
     }
   }
 

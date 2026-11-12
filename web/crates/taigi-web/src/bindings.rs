@@ -163,6 +163,11 @@ impl Session {
             .map_err(|error| JsError::new(&format!("{name}: {error}")))
     }
 
+    /// The open composition's segmentation and ranking, JSON, or `null`.
+    pub fn explain(&self) -> String {
+        self.inner.explain()
+    }
+
     #[wasm_bindgen(js_name = keyDown)]
     pub fn key_down(&mut self, key_json: &str) -> Result<String, JsError> {
         Ok(self.inner.key_down(&parse_key(key_json)?))
@@ -257,5 +262,51 @@ impl Session {
         self.inner
             .set_settings(settings_json)
             .map_err(|error| JsError::new(&error.to_string()))
+    }
+
+    #[wasm_bindgen(js_name = setSortOrder)]
+    pub fn set_sort_order(&mut self, json: &str) -> Result<String, JsError> {
+        self.inner
+            .set_sort_order(json)
+            .map_err(|error| JsError::new(&error))
+    }
+
+    /// A one-word best path joins the twelve stages. Several words stay pinned.
+    #[wasm_bindgen(js_name = setRankOneWord)]
+    pub fn set_rank_one_word(&mut self, enabled: bool) -> String {
+        self.inner.set_rank_one_word(enabled)
+    }
+
+    /// The custom dictionary as JSON `{ "entries": [...] }`.
+    #[wasm_bindgen(js_name = listCustomEntries)]
+    pub fn list_custom_entries(&self) -> Result<String, JsError> {
+        self.inner
+            .list_custom_entries()
+            .map_err(|error| JsError::new(&error))
+    }
+
+    /// Adds a custom word. A refusal (no romanization, a full dictionary)
+    /// is an error whose message is the engine's.
+    #[wasm_bindgen(js_name = saveCustomEntry)]
+    pub fn save_custom_entry(&mut self, roman: &str, hanji: &str) -> Result<String, JsError> {
+        self.inner
+            .save_custom_entry(roman, hanji)
+            .map_err(|error| JsError::new(&error))
+    }
+
+    /// Removes the custom word with `id`.
+    #[wasm_bindgen(js_name = deleteCustomEntry)]
+    pub fn delete_custom_entry(&mut self, id: &str) -> Result<String, JsError> {
+        self.inner
+            .delete_custom_entry(id)
+            .map_err(|error| JsError::new(&error))
+    }
+
+    /// Empties the three learning stores. Custom words stay.
+    #[wasm_bindgen(js_name = clearLearningRecords)]
+    pub fn clear_learning_records(&mut self) -> Result<String, JsError> {
+        self.inner
+            .clear_learning_records()
+            .map_err(|error| JsError::new(&error))
     }
 }

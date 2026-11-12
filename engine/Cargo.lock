@@ -180,6 +180,7 @@ dependencies = [
  "prost",
  "protos",
  "ranking",
+ "serde_json",
  "tempfile",
  "test-support",
  "userdata",

@@ -10,6 +10,7 @@
 //! Spec: `docs/engine/composing.md`.
 
 pub mod api;
+pub mod explain;
 pub mod handle;
 pub mod requests;
 pub mod syllabifier;
