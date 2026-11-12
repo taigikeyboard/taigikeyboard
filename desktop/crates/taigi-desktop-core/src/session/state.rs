@@ -15,6 +15,51 @@ pub struct SymbolPicker {
     pub selection: ListSelection,
 }
 
+/// What the shell knows of the document just before the caret. The swap's
+/// `DeleteSurrounding` deletes blind, so a shell that can read the client's
+/// surrounding text has the swap check it first — the Mac's and Windows'
+/// verification against the document, with the client's report standing in
+/// for the document (#866).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum TextBeforeCaret {
+    /// The shell reports nothing; it keeps the arm from going stale itself
+    /// (web: `ime.js` disarms on any change the page did not make).
+    #[default]
+    Unreported,
+    /// The character before a collapsed caret as the client last reported
+    /// it. `None`: not reported yet, out of date, at the start of the text,
+    /// or a selection — the swap does not run.
+    Reported(Option<char>),
+}
+
+impl TextBeforeCaret {
+    /// From a client's surrounding text; `cursor` and `anchor` count
+    /// characters, as IBus and Fcitx5 both do.
+    pub fn from_surrounding(text: &str, cursor: usize, anchor: usize) -> Self {
+        let before = cursor
+            .checked_sub(1)
+            .filter(|_| cursor == anchor)
+            .and_then(|index| text.chars().nth(index));
+        Self::Reported(before)
+    }
+
+    /// Whether the swap may take the character before the caret for the
+    /// auto space it left.
+    pub fn may_be_the_auto_space(self) -> bool {
+        match self {
+            Self::Unreported => true,
+            Self::Reported(before) => before == Some(' '),
+        }
+    }
+
+    /// A write of ours moved the text: the report waits for the client's next.
+    pub(crate) fn outdate(&mut self) {
+        if let Self::Reported(before) = self {
+            *before = None;
+        }
+    }
+}
+
 /// What one engine object remembers between keys.
 #[derive(Debug)]
 pub struct EngineState {
@@ -33,6 +78,9 @@ pub struct EngineState {
     pub armed_auto_space: bool,
     /// The client can take an [`Emit::DeleteSurrounding`].
     pub can_delete_surrounding: bool,
+    /// What the client last said precedes the caret, which the swap checks
+    /// before it deletes.
+    pub text_before_caret: TextBeforeCaret,
     /// The focused field hides what is typed (IBus content purpose
     /// `PASSWORD` / `PIN`, Fcitx5 `CapabilityFlag::Password`): nothing
     /// composes and nothing is learned there — the Windows
@@ -61,6 +109,7 @@ impl Default for EngineState {
             draws_telex_guide: false,
             armed_auto_space: false,
             can_delete_surrounding: false,
+            text_before_caret: TextBeforeCaret::default(),
             is_password_field: false,
             is_table_shown: false,
             latched_chord: None,

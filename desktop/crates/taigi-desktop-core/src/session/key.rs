@@ -182,8 +182,11 @@ pub fn process_key(
         _ => true,
     };
     if !would_consume && !matches!(intent, ComposingKeyIntent::CommitThenPassThrough) {
-        // Not ours, and nothing to finish — but a character reaching the
-        // document outside a composition still ends the next-word context.
+        // Not ours, and nothing to finish. The client acts on the key where
+        // the swap cannot see — a typed `2`, a newline, a caret move — so the
+        // arm is spent with it (#866). A character reaching the document
+        // outside a composition also ends the next-word context.
+        state.armed_auto_space = false;
         if let Some(typed) = ComposingKeyIntent::document_text(snapshot, bindings.input_mode) {
             if let Some(coordinator) = runtime.coordinator_if_built() {
                 if let Ok(mut coordinator) = coordinator.try_lock() {
@@ -267,7 +270,7 @@ pub fn commit_composition(
     token: ContextToken,
     state: &mut EngineState,
 ) -> Vec<Emit> {
-    let mut recorder = Recorder::new(state.can_delete_surrounding);
+    let mut recorder = Recorder::new(state.can_delete_surrounding, state.text_before_caret);
     if is_composing(runtime, token) {
         let mut coordinator = runtime.lock_coordinator();
         if let Some(manager) = coordinator.manager(token) {
@@ -551,7 +554,7 @@ fn run_key(
     }
     let manager = coordinator.claim(token);
     let mut surface = KeySurface {
-        recorder: Recorder::new(state.can_delete_surrounding),
+        recorder: Recorder::new(state.can_delete_surrounding, state.text_before_caret),
         is_swap_armed,
         selection: &mut state.selection,
         is_vertical: is_vertical_layout(settings),
@@ -566,6 +569,9 @@ fn run_key(
     );
     let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
+    if recorder.has_written() {
+        state.text_before_caret.outdate();
+    }
     drop(coordinator);
     let mut emits = recorder.emits;
     present_table(runtime, state, settings, bindings, &mut emits);

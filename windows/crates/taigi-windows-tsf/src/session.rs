@@ -251,6 +251,12 @@ impl TextService_Impl {
             ComposingKeyIntent::CommitThenPassThrough => is_composing,
             _ => true,
         };
+        // A key the host gets — refused here at the test, when TSF never
+        // delivers it, or handed back below — acts on the document where
+        // the swap cannot see, so the arm is spent with it (#866).
+        if !would_consume {
+            self.spend_auto_space_arm(identity);
+        }
         if phase == KeyPhase::Test {
             return BOOL::from(would_consume);
         }
@@ -342,6 +348,18 @@ impl TextService_Impl {
             .presenter()
             .is_some_and(|presenter| presenter.borrow().is_showing(token));
         (is_composing, is_showing)
+    }
+
+    /// Drops the auto-space arm of this context: a key it did not take
+    /// reached the document. Moved out under the borrow, released after it.
+    fn spend_auto_space_arm(&self, identity: usize) {
+        let arm = self
+            .state
+            .borrow_mut()
+            .contexts
+            .entry_mut(identity)
+            .and_then(|entry| entry.state.armed_auto_space.take());
+        drop(arm);
     }
 
     /// The pass-through keys this input method consumes: attaching

@@ -423,6 +423,13 @@ impl Engine {
 
     async fn focus_in(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.focus_in token={:?}", self.token);
+        // The client sends its surrounding text only once an engine asks
+        // (ibus `ibus_input_context_needs_surrounding_text`). Asked here
+        // rather than through `ActiveSurroundingText`, which daemons before
+        // 1.5.28 never read.
+        if let Err(error) = Self::require_surrounding_text(&emitter).await {
+            log::error!("engine.require_surrounding_text_failed error={error}");
+        }
         self.register_menu(&emitter).await;
         self.begin_session("FocusIn", &emitter).await;
     }
@@ -476,7 +483,18 @@ impl Engine {
             .await;
     }
 
-    async fn set_surrounding_text(&self, _text: Value<'_>, _cursor_pos: u32, _anchor_pos: u32) {}
+    /// What precedes the caret, for the auto-space swap to check before it
+    /// deletes (#866). Positions count characters.
+    async fn set_surrounding_text(&mut self, text: Value<'_>, cursor_pos: u32, anchor_pos: u32) {
+        let text = wire::text_of(&text);
+        if text.is_none() {
+            log::warn!("engine.surrounding_text_unreadable token={:?}", self.token);
+        }
+        session::set_surrounding_text(
+            &mut self.state,
+            text.map(|text| (text, cursor_pos as usize, anchor_pos as usize)),
+        );
+    }
 
     async fn panel_extension_received(&self, _event: Value<'_>) {}
 
@@ -496,7 +514,8 @@ impl Engine {
         (false,)
     }
 
-    /// `false`: nothing in the key table reads the document.
+    /// `false`: `FocusIn` asks for the surrounding text itself
+    /// (`RequireSurroundingText`), the way every daemon version honours.
     #[zbus(property)]
     async fn active_surrounding_text(&self) -> (bool,) {
         (false,)
@@ -533,6 +552,9 @@ impl Engine {
         keycode: u32,
         state: u32,
     ) -> zbus::Result<()>;
+
+    #[zbus(signal)]
+    async fn require_surrounding_text(emitter: &SignalEmitter<'_>) -> zbus::Result<()>;
 
     #[zbus(signal)]
     async fn delete_surrounding_text(

@@ -6,9 +6,9 @@
 //! should be kept", `src/ibusenginedesc.c`), so each builder pins its
 //! signature in a test.
 //!
-//! Only the direction engine → daemon is needed: the daemon never sends an
-//! engine a serialisable this process must decode except
-//! `SetSurroundingText`'s text, which this engine does not read.
+//! Nearly everything goes engine → daemon. The one serialisable the
+//! daemon sends that this engine decodes is `SetSurroundingText`'s text
+//! ([`text_of`]).
 
 use zbus::zvariant::{Array, Dict, Signature, Str, Structure, StructureBuilder, Value};
 
@@ -90,6 +90,23 @@ pub fn text(text: &str, attributes: Vec<Value<'static>>) -> Value<'static> {
 }
 
 /// A plain text with no attributes.
+/// The string of an `IBusText` the daemon sent: `(s "IBusText", a{sv},
+/// s text, v attrs)`, possibly still inside its `v`.
+pub fn text_of<'a>(value: &'a Value<'_>) -> Option<&'a str> {
+    match value {
+        Value::Value(inner) => text_of(inner),
+        Value::Structure(structure) => match structure.fields() {
+            [Value::Str(type_name), _, Value::Str(text), ..]
+                if type_name.as_str() == "IBusText" =>
+            {
+                Some(text.as_str())
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 pub fn plain_text(text: &str) -> Value<'static> {
     self::text(text, Vec::new())
 }
@@ -249,6 +266,14 @@ mod tests {
         assert_eq!(structure.fields()[0], Value::from("IBusText"));
         assert_eq!(signature_of(&structure.fields()[1]), "a{sv}");
         assert_eq!(structure.fields()[2], Value::from("x"));
+    }
+
+    #[test]
+    fn an_ibus_text_reads_back_bare_or_boxed() {
+        let sent = plain_text("guá 2");
+        assert_eq!(text_of(&sent), Some("guá 2"));
+        assert_eq!(text_of(&boxed(sent.try_clone().unwrap())), Some("guá 2"));
+        assert_eq!(text_of(&Value::from("guá")), None);
     }
 
     #[test]

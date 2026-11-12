@@ -1,0 +1,11 @@
+{
+  "id": "s866-swap-after-auto-space",
+  "source": "Issue #866 control: an attaching mark right after a Roman pick's auto space takes the space's place (the swap), now checked against the client's surrounding text on Linux.",
+  "settings": { "romanization": "tl", "output": "roman", "auto_space": true },
+  "steps": [
+    { "type": "text", "value": "ho" },
+    { "type": "pick", "tl": "hó" },
+    { "type": "text", "value": "," }
+  ],
+  "expect": { "committed": "hó, " }
+}
