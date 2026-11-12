@@ -86,12 +86,8 @@ impl MarathonReport {
         std::fs::write(out_dir.join("report.md"), self.to_markdown())?;
 
         for bug in &self.hard_failures {
-            let scen_bytes =
-                serde_json::to_vec_pretty(&bug.reproducer.e2e_scenario).expect("scenario json");
-            std::fs::write(
-                out_dir.join(format!("{}.scenario.json", bug.id)),
-                scen_bytes,
-            )?;
+            let repro_bytes = serde_json::to_vec_pretty(bug).expect("native reproducer json");
+            std::fs::write(out_dir.join(format!("{}.repro.json", bug.id)), repro_bytes)?;
         }
         Ok(())
     }
@@ -252,6 +248,17 @@ impl MarathonReport {
                     bug.reproducer.shrunk_prior_sentences,
                     bug.reproducer.original_steps,
                     bug.reproducer.shrunk_steps
+                );
+                let _ = writeln!(
+                    md,
+                    "- **Replay verified**: {}",
+                    bug.reproducer.replay_verified
+                );
+                let _ = writeln!(md, "- **Native replay**: `{}.repro.json` (settings, capability, priming, exact actions and paired oracle / SQLite snapshot where needed)", bug.id);
+                let _ = writeln!(
+                    md,
+                    "- **Portable e2e scenario unavailable**: {}",
+                    bug.reproducer.e2e_scenario_unavailable
                 );
                 let _ = writeln!(
                     md,

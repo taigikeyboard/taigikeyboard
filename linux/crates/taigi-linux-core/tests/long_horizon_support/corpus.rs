@@ -402,13 +402,10 @@ fn derive_poj_ascii_keys(toneless_tl: &str) -> String {
 }
 
 fn derive_tps_strokes(display_tl: &str) -> Vec<TpsStroke> {
-    let Some(tps_text) = tl_display_to_tps(display_tl, TPS_OR_MAPS_TO_ER) else {
-        return Vec::new();
-    };
     let mut strokes = Vec::new();
     // Split by hyphen / khinsiann so unmarked tone 1/4 syllables get a Space pin
     // before the next syllable when needed.
-    let parts: Vec<&str> = tps_text.split('-').collect();
+    let parts: Vec<&str> = display_tl.split('-').collect();
     for (idx, part) in parts.iter().enumerate() {
         if idx > 0 {
             // `-` is typed with `=` on the TPS layout (`--` -> `==`).
@@ -420,8 +417,16 @@ fn derive_tps_strokes(display_tl: &str) -> Vec<TpsStroke> {
         if part.is_empty() {
             continue;
         }
+        // Convert each original syllable separately: the display converter joins
+        // syllables with spaces and discards empty `--` tokens (phonetics/api.rs).
+        let Some(tps_text) = tl_display_to_tps(part, TPS_OR_MAPS_TO_ER) else {
+            return Vec::new();
+        };
         let mut last_was_tone = false;
-        for ch in part.chars() {
+        for ch in tps_text.chars() {
+            // Rule 4 in docs/phonetics/tps-auto-correct-rules.md: the layout
+            // types U+02D9; the canonical converter returns U+0307 on codas.
+            let ch = if ch == '\u{0307}' { '\u{02d9}' } else { ch };
             let mut buf = [0u8; 4];
             let needle = ch.encode_utf8(&mut buf);
             if let Some(&(key_ch, _)) = TPS_LAYOUT_KEYS.iter().find(|(_, glyph)| *glyph == needle) {
@@ -523,4 +528,24 @@ fn synthetic_items() -> Vec<RawCorpusItem> {
             dic_url: format!("synthetic://{idx}"),
         })
         .collect()
+}
+
+#[cfg(test)]
+mod regression_tests {
+    use super::*;
+
+    #[test]
+    fn tps_strokes_preserve_tone_eight_and_syllable_boundaries() {
+        // TPS reference §5 and tps-auto-correct-rules.md Rule 4: tone 8
+        // types the spacing dot, which the engine folds onto the stop coda.
+        let keys = |word| {
+            derive_tps_strokes(word)
+                .iter()
+                .map(|s| s.ch)
+                .collect::<String>()
+        };
+        assert_eq!(keys("tsia̍h"), "ru8z7");
+        assert_eq!(keys("kau-tài"), "el =293");
+        assert_eq!(keys("tsia̍h--pá"), "ru8z7==184");
+    }
 }

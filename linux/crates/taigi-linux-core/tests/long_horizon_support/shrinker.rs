@@ -1,23 +1,46 @@
-//! Two-stage delta-debugging shrinker (prior-sentence reduction + intra-sentence
-//! keystroke minimization) and `e2e/scenarios/*.json` reproducer emitter.
+//! Bounded delta debugging with lossless native replay artifacts. The portable
+//! e2e schema cannot express host invariants, paired observations, every live
+//! setting, or all simulator actions, so it must not receive a lossy scenario.
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use taigi_desktop_core::keys::ToneInputScheme;
-use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
+use taigi_desktop_core::settings::SettingsDocument;
 
-use super::host::{SimStep, SpecialKey};
+use super::host::SimStep;
+use super::oracles::MetamorphicCase;
+use super::UserDataSnapshot;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ReproSetup {
+    pub settings: SettingsDocument,
+    pub can_delete_surrounding: bool,
+    pub user_data_snapshot: Option<UserDataSnapshot>,
+}
+
+impl ReproSetup {
+    pub fn new(settings: &SettingsDocument, can_delete_surrounding: bool) -> Self {
+        Self {
+            settings: settings.clone(),
+            can_delete_surrounding,
+            user_data_snapshot: None,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShrunkReproducer {
+    pub setup: ReproSetup,
     pub original_prior_sentences: usize,
     pub shrunk_prior_sentences: usize,
     pub original_steps: usize,
     pub shrunk_steps: usize,
     pub priming_batches: Vec<Vec<SimStep>>,
     pub minimal_steps: Vec<SimStep>,
-    pub e2e_scenario: Value,
+    pub metamorphic_case: Option<MetamorphicCase>,
+    pub replay_verified: bool,
+    pub e2e_scenario_unavailable: String,
 }
+
+const E2E_UNAVAILABLE: &str = "The portable e2e schema cannot express this failure predicate and full simulator setup/actions. Use the lossless .repro.json with long_horizon_replay.";
 
 /// Generic `ddmin` over a slice, preserving element order, bounded by `budget`.
 fn ddmin_bounded<T: Clone>(
@@ -108,117 +131,140 @@ fn ddmin_bounded<T: Clone>(
 }
 
 pub fn shrink_episode_failure(
-    id: &str,
-    source_note: &str,
-    settings: &SettingsDocument,
+    setup: &ReproSetup,
     prior_batches: &[Vec<SimStep>],
     failing_steps: &[SimStep],
     mut reproduces: impl FnMut(&[Vec<SimStep>], &[SimStep]) -> bool,
 ) -> ShrunkReproducer {
-    let stage_budget = std::time::Duration::from_secs(15);
-
-    // Stage 1: Shrink prior sentences (fast-paths `[]` and tail 1/2/4 checked first).
-    let shrunk_prior = ddmin_bounded(prior_batches, stage_budget, &mut |candidate_prior| {
-        reproduces(candidate_prior, failing_steps)
-    });
-
-    // Stage 2: Shrink steps inside the failing sentence.
-    let minimal_steps = ddmin_bounded(failing_steps, stage_budget, &mut |candidate_steps| {
-        !candidate_steps.is_empty() && reproduces(&shrunk_prior, candidate_steps)
-    });
-
-    let e2e_scenario = steps_to_e2e_scenario_json(id, source_note, settings, &minimal_steps);
-
+    let budget = std::time::Duration::from_secs(15);
+    // Do not claim an unreproducible original was minimized successfully.
+    let (priming_batches, minimal_steps) = if reproduces(prior_batches, failing_steps) {
+        let prior = ddmin_bounded(prior_batches, budget, &mut |candidate| {
+            reproduces(candidate, failing_steps)
+        });
+        let steps = ddmin_bounded(failing_steps, budget, &mut |candidate| {
+            !candidate.is_empty() && reproduces(&prior, candidate)
+        });
+        (prior, steps)
+    } else {
+        (prior_batches.to_vec(), failing_steps.to_vec())
+    };
+    let replay_verified = reproduces(&priming_batches, &minimal_steps);
     ShrunkReproducer {
+        setup: setup.clone(),
         original_prior_sentences: prior_batches.len(),
-        shrunk_prior_sentences: shrunk_prior.len(),
+        shrunk_prior_sentences: priming_batches.len(),
         original_steps: failing_steps.len(),
         shrunk_steps: minimal_steps.len(),
-        priming_batches: shrunk_prior,
+        priming_batches,
         minimal_steps,
-        e2e_scenario,
+        metamorphic_case: None,
+        replay_verified,
+        e2e_scenario_unavailable: E2E_UNAVAILABLE.to_owned(),
     }
 }
 
-/// Translates `SimStep`s into the repo's `e2e/scenarios/*.json` schema where representable.
-pub fn steps_to_e2e_scenario_json(
-    id: &str,
-    source_note: &str,
-    settings: &SettingsDocument,
-    steps: &[SimStep],
-) -> Value {
-    let romanization = match settings.choice(&keys::INPUT_MODE) {
-        InputMode::Poj => "poj",
-        InputMode::Tps => "tps",
-        InputMode::Tl => "tl",
-    };
-    let output = if settings.bool(&keys::IS_HANJI_FIRST) {
-        "hanji"
-    } else {
-        "roman"
-    };
-    let tone_input = match settings.choice(&keys::TONE_INPUT_SCHEME) {
-        ToneInputScheme::Standard => "standard",
-        ToneInputScheme::Telex => "telex",
-    };
-
-    let mut json_steps: Vec<Value> = Vec::new();
-    let mut pending_text = String::new();
-    let flush_text = |pending: &mut String, out: &mut Vec<Value>| {
-        if !pending.is_empty() {
-            out.push(json!({ "type": "text", "value": std::mem::take(pending) }));
-        }
-    };
-
-    for step in steps {
-        match step {
-            SimStep::KeyChar { ch, shift: _ } => {
-                pending_text.push(*ch);
-            }
-            SimStep::Special(spec) => {
-                flush_text(&mut pending_text, &mut json_steps);
-                let key_name = match spec {
-                    SpecialKey::Enter | SpecialKey::ShiftEnter => Some("enter"),
-                    SpecialKey::Space => Some("space"),
-                    SpecialKey::Backspace | SpecialKey::DeleteForward => Some("backspace"),
-                    SpecialKey::Escape => Some("escape"),
-                    SpecialKey::Tab
-                    | SpecialKey::ShiftTab
-                    | SpecialKey::PagePrevBracket
-                    | SpecialKey::PageNextBracket => None,
+pub fn shrink_metamorphic_failure(
+    setup: &ReproSetup,
+    case: &MetamorphicCase,
+    mut reproduces: impl FnMut(&MetamorphicCase) -> bool,
+) -> ShrunkReproducer {
+    let input = if reproduces(case) {
+        ddmin_bounded(
+            &case.input,
+            std::time::Duration::from_secs(15),
+            &mut |input| {
+                let candidate = MetamorphicCase {
+                    oracle: case.oracle,
+                    input: input.to_vec(),
                 };
-                if let Some(k) = key_name {
-                    json_steps.push(json!({ "type": "key", "value": k }));
-                }
-            }
-            SimStep::PickSlot { slot, .. } if *slot <= 8 => {
-                flush_text(&mut pending_text, &mut json_steps);
-                let key_val = ((*slot + 1) % 10).to_string();
-                json_steps.push(json!({ "type": "key", "value": key_val }));
-            }
-            _ => {
-                flush_text(&mut pending_text, &mut json_steps);
-            }
-        }
+                candidate.is_valid() && reproduces(&candidate)
+            },
+        )
+    } else {
+        case.input.clone()
+    };
+    let minimized = MetamorphicCase {
+        oracle: case.oracle,
+        input,
+    };
+    let replay_verified = reproduces(&minimized);
+    let minimal_steps = minimized.dirty_steps();
+    ShrunkReproducer {
+        setup: setup.clone(),
+        original_prior_sentences: 0,
+        shrunk_prior_sentences: 0,
+        original_steps: case.dirty_steps().len(),
+        shrunk_steps: minimal_steps.len(),
+        priming_batches: Vec::new(),
+        minimal_steps,
+        metamorphic_case: Some(minimized),
+        replay_verified,
+        e2e_scenario_unavailable: E2E_UNAVAILABLE.to_owned(),
     }
-    flush_text(&mut pending_text, &mut json_steps);
+}
 
-    json!({
-        "id": id,
-        "source": source_note,
-        "settings": {
-            "romanization": romanization,
-            "continuous_input": true,
-            "output": output,
-            "show_typed_text_first": settings.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
-            "tone_input": tone_input,
-            "c_affricate": settings.bool(&keys::IS_C_AFFRICATE_ENABLED),
-            "f_hyphen": settings.bool(&keys::IS_F_HYPHEN_ENABLED),
-            "auto_space": settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        },
-        "steps": json_steps,
-        "expect": {
-            "committed": ""
-        }
-    })
+#[cfg(test)]
+mod regression_tests {
+    use super::super::host::{CaretStep, SpecialKey};
+    use super::super::oracles::MetamorphicOracle;
+    use super::*;
+
+    #[test]
+    fn metamorphic_shrinking_keeps_the_equivalence_transformation() {
+        let case = MetamorphicCase {
+            oracle: MetamorphicOracle::MidInsertDelete,
+            input: "tai5-uan5"
+                .chars()
+                .map(|ch| SimStep::KeyChar { ch, shift: false })
+                .collect(),
+        };
+        let shrunk = shrink_metamorphic_failure(
+            &ReproSetup::new(&SettingsDocument::default(), true),
+            &case,
+            |candidate| {
+                // Model an oracle failure tied to an input token, while every probe
+                // still has the same reversible edit and corresponding clean input.
+                let dirty = candidate.dirty_steps();
+                assert!(dirty.contains(&SimStep::MoveCaret(CaretStep::Left)));
+                assert!(dirty.contains(&SimStep::Special(SpecialKey::Backspace)));
+                candidate.input.contains(&SimStep::KeyChar {
+                    ch: 'u',
+                    shift: false,
+                })
+            },
+        );
+        let minimized = shrunk.metamorphic_case.expect("paired replay");
+        assert!(minimized.is_valid());
+        assert_eq!(minimized.oracle, case.oracle);
+        assert_eq!(minimized.input.len(), 4);
+        assert_eq!(shrunk.minimal_steps, minimized.dirty_steps());
+        assert!(shrunk.replay_verified);
+    }
+
+    #[test]
+    fn exported_reproducer_retains_priming_and_exact_actions() {
+        let priming = vec![vec![SimStep::KeyChar {
+            ch: 'a',
+            shift: false,
+        }]];
+        let actions = vec![
+            SimStep::MoveCaret(CaretStep::Home),
+            SimStep::Special(SpecialKey::ShiftEnter),
+            SimStep::Special(SpecialKey::DeleteForward),
+            SimStep::FlipLiveSettings,
+        ];
+        let setup = ReproSetup::new(&SettingsDocument::default(), false);
+        let shrunk = shrink_episode_failure(&setup, &priming, &actions, |p, s| {
+            !p.is_empty() && s == actions
+        });
+        let json = serde_json::to_vec(&shrunk).expect("serialize replay");
+        let restored: ShrunkReproducer = serde_json::from_slice(&json).expect("read replay");
+        assert_eq!(restored.setup.settings, setup.settings);
+        assert!(!restored.setup.can_delete_surrounding);
+        assert!(!restored.e2e_scenario_unavailable.is_empty());
+        assert_eq!(restored.priming_batches, priming);
+        assert_eq!(restored.minimal_steps, actions);
+        assert!(restored.replay_verified);
+    }
 }

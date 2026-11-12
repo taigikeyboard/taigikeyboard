@@ -26,8 +26,7 @@ pub struct OracleFailure {
     pub sentence_index: usize,
     pub sentence_tailo: String,
     pub detail: String,
-    pub clean_steps: Vec<SimStep>,
-    pub dirty_steps: Vec<SimStep>,
+    pub case: MetamorphicCase,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -83,7 +82,7 @@ pub struct ProbeSnapshot {
     pub rank1_per_probe: Vec<(String, Option<String>)>,
 }
 
-fn standard_tl_settings() -> SettingsDocument {
+pub fn standard_tl_settings() -> SettingsDocument {
     let mut doc = SettingsDocument::default();
     doc.set_choice(&keys::INPUT_MODE, InputMode::Tl);
     doc.set_choice(&keys::TONE_INPUT_SCHEME, ToneInputScheme::Standard);
@@ -189,181 +188,151 @@ pub fn run_metamorphic_suite(
         .chars()
         .map(|ch| SimStep::KeyChar { ch, shift: false })
         .collect();
-    let split = (clean_steps.len() / 2).max(2);
-
-    // Reference clean observation.
-    let (clean_preedit, clean_cells) =
-        observe_composing_state(user_data_dir, dictionaries_dir, &settings, &clean_steps)?;
-
-    // 1. Caret walk roundtrip: Ctrl+Left x2 -> Ctrl+Right x2 -> Home -> End.
-    let mut caret_steps = clean_steps[..split].to_vec();
-    caret_steps.push(SimStep::MoveCaret(CaretStep::Left));
-    caret_steps.push(SimStep::MoveCaret(CaretStep::Left));
-    caret_steps.push(SimStep::MoveCaret(CaretStep::Right));
-    caret_steps.push(SimStep::MoveCaret(CaretStep::Right));
-    caret_steps.push(SimStep::MoveCaret(CaretStep::Home));
-    caret_steps.push(SimStep::MoveCaret(CaretStep::End));
-    caret_steps.extend_from_slice(&clean_steps[split..]);
-    stats.metamorphic_checks += 1;
-    let (caret_preedit, caret_cells) =
-        observe_composing_state(user_data_dir, dictionaries_dir, &settings, &caret_steps)?;
-    if (clean_preedit.as_ref(), &clean_cells) != (caret_preedit.as_ref(), &caret_cells) {
-        return Err(Box::new(OracleFailure {
-            oracle: "METAMORPHIC_CARET_ROUNDTRIP",
-            sentence_index: sentence.index,
-            sentence_tailo: sentence.tailo.clone(),
-            detail: format!(
-                "caret walk diverged: clean=({clean_preedit:?}, top={:?}) vs dirty=({caret_preedit:?}, top={:?})",
-                &clean_cells[..clean_cells.len().min(5)],
-                &caret_cells[..caret_cells.len().min(5)],
-            ),
-            clean_steps,
-            dirty_steps: caret_steps,
-        }));
+    for oracle in MetamorphicOracle::ALL {
+        let case = MetamorphicCase {
+            oracle,
+            input: clean_steps.clone(),
+        };
+        stats.metamorphic_checks += 1;
+        check_metamorphic_case(user_data_dir, dictionaries_dir, &settings, &case).map_err(
+            |mut failure| {
+                failure.sentence_index = sentence.index;
+                failure.sentence_tailo = sentence.tailo.clone();
+                failure
+            },
+        )?;
     }
-
-    // 2. Tail typo `'b'` + immediate Backspace confluence.
-    let mut typo_steps = clean_steps[..split].to_vec();
-    typo_steps.push(SimStep::KeyChar {
-        ch: 'b',
-        shift: false,
-    });
-    typo_steps.push(SimStep::Special(SpecialKey::Backspace));
-    typo_steps.extend_from_slice(&clean_steps[split..]);
-    stats.metamorphic_checks += 1;
-    let (typo_preedit, typo_cells) =
-        observe_composing_state(user_data_dir, dictionaries_dir, &settings, &typo_steps)?;
-    if (clean_preedit.as_ref(), &clean_cells) != (typo_preedit.as_ref(), &typo_cells) {
-        return Err(Box::new(OracleFailure {
-            oracle: "METAMORPHIC_TYPO_BACKSPACE_CONFLUENCE",
-            sentence_index: sentence.index,
-            sentence_tailo: sentence.tailo.clone(),
-            detail: format!(
-                "tail typo+Backspace diverged: clean=({clean_preedit:?}, top={:?}) vs dirty=({typo_preedit:?}, top={:?})",
-                &clean_cells[..clean_cells.len().min(5)],
-                &typo_cells[..typo_cells.len().min(5)],
-            ),
-            clean_steps,
-            dirty_steps: typo_steps,
-        }));
-    }
-
-    // 3. Mid-word caret step + `'b'` + Backspace + return to End.
-    let mut mid_steps = clean_steps[..split].to_vec();
-    mid_steps.push(SimStep::MoveCaret(CaretStep::Left));
-    mid_steps.push(SimStep::KeyChar {
-        ch: 'b',
-        shift: false,
-    });
-    mid_steps.push(SimStep::Special(SpecialKey::Backspace));
-    mid_steps.push(SimStep::MoveCaret(CaretStep::End));
-    mid_steps.extend_from_slice(&clean_steps[split..]);
-    stats.metamorphic_checks += 1;
-    let (mid_preedit, mid_cells) =
-        observe_composing_state(user_data_dir, dictionaries_dir, &settings, &mid_steps)?;
-    if (clean_preedit.as_ref(), &clean_cells) != (mid_preedit.as_ref(), &mid_cells) {
-        return Err(Box::new(OracleFailure {
-            oracle: "METAMORPHIC_MID_INSERT_DELETE_CONFLUENCE",
-            sentence_index: sentence.index,
-            sentence_tailo: sentence.tailo.clone(),
-            detail: format!(
-                "mid-word insert+Backspace diverged: clean=({clean_preedit:?}, top={:?}) vs dirty=({mid_preedit:?}, top={:?})",
-                &clean_cells[..clean_cells.len().min(5)],
-                &mid_cells[..mid_cells.len().min(5)],
-            ),
-            clean_steps,
-            dirty_steps: mid_steps,
-        }));
-    }
-
-    // 4. Aborted composition (`Escape`) leaves zero residue for the following sentence.
-    let mut abort_steps = vec![
-        SimStep::KeyChar {
-            ch: 't',
-            shift: false,
-        },
-        SimStep::KeyChar {
-            ch: 's',
-            shift: false,
-        },
-        SimStep::KeyChar {
-            ch: 'i',
-            shift: false,
-        },
-        SimStep::KeyChar {
-            ch: 'a',
-            shift: false,
-        },
-        SimStep::KeyChar {
-            ch: 'h',
-            shift: false,
-        },
-        SimStep::KeyChar {
-            ch: '8',
-            shift: false,
-        },
-        SimStep::Navigate(NavDir::Down),
-        SimStep::Special(SpecialKey::Escape),
-    ];
-    abort_steps.extend_from_slice(&clean_steps);
-    stats.metamorphic_checks += 1;
-    let (abort_preedit, abort_cells) =
-        observe_composing_state(user_data_dir, dictionaries_dir, &settings, &abort_steps)?;
-    if (clean_preedit.as_ref(), &clean_cells) != (abort_preedit.as_ref(), &abort_cells) {
-        return Err(Box::new(OracleFailure {
-            oracle: "METAMORPHIC_ESCAPE_CLEAN_SLATE",
-            sentence_index: sentence.index,
-            sentence_tailo: sentence.tailo.clone(),
-            detail: format!(
-                "Escape residue diverged: clean=({clean_preedit:?}, top={:?}) vs post-Escape=({abort_preedit:?}, top={:?})",
-                &clean_cells[..clean_cells.len().min(5)],
-                &abort_cells[..abort_cells.len().min(5)],
-            ),
-            clean_steps,
-            dirty_steps: abort_steps,
-        }));
-    }
-
     Ok(())
 }
 
-type ObservedComposingState = (Option<(String, u32)>, Vec<String>);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MetamorphicOracle {
+    CaretRoundtrip,
+    TypoBackspace,
+    MidInsertDelete,
+    EscapeCleanSlate,
+}
 
-fn observe_composing_state(
+impl MetamorphicOracle {
+    pub const ALL: [Self; 4] = [
+        Self::CaretRoundtrip,
+        Self::TypoBackspace,
+        Self::MidInsertDelete,
+        Self::EscapeCleanSlate,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::CaretRoundtrip => "METAMORPHIC_CARET_ROUNDTRIP",
+            Self::TypoBackspace => "METAMORPHIC_TYPO_BACKSPACE_CONFLUENCE",
+            Self::MidInsertDelete => "METAMORPHIC_MID_INSERT_DELETE_CONFLUENCE",
+            Self::EscapeCleanSlate => "METAMORPHIC_ESCAPE_CLEAN_SLATE",
+        }
+    }
+}
+
+/// The shared input and the reversible edit being tested. Shrinking the input
+/// regenerates BOTH sequences, so deleting text cannot itself prove a failure.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MetamorphicCase {
+    pub oracle: MetamorphicOracle,
+    pub input: Vec<SimStep>,
+}
+
+impl MetamorphicCase {
+    pub fn is_valid(&self) -> bool {
+        self.input.len() >= 4
+            && self
+                .input
+                .iter()
+                .all(|s| matches!(s, SimStep::KeyChar { .. }))
+    }
+
+    pub fn dirty_steps(&self) -> Vec<SimStep> {
+        assert!(
+            self.is_valid(),
+            "metamorphic input needs at least four characters"
+        );
+        let split = (self.input.len() / 2).max(2);
+        let typo = SimStep::KeyChar {
+            ch: 'b',
+            shift: false,
+        };
+        let edits = match self.oracle {
+            MetamorphicOracle::CaretRoundtrip => vec![
+                SimStep::MoveCaret(CaretStep::Left),
+                SimStep::MoveCaret(CaretStep::Left),
+                SimStep::MoveCaret(CaretStep::Right),
+                SimStep::MoveCaret(CaretStep::Right),
+                SimStep::MoveCaret(CaretStep::Home),
+                SimStep::MoveCaret(CaretStep::End),
+            ],
+            MetamorphicOracle::TypoBackspace => vec![typo, SimStep::Special(SpecialKey::Backspace)],
+            MetamorphicOracle::MidInsertDelete => vec![
+                SimStep::MoveCaret(CaretStep::Left),
+                typo,
+                SimStep::Special(SpecialKey::Backspace),
+                SimStep::MoveCaret(CaretStep::End),
+            ],
+            MetamorphicOracle::EscapeCleanSlate => {
+                let mut steps: Vec<_> = "tsiah8"
+                    .chars()
+                    .map(|ch| SimStep::KeyChar { ch, shift: false })
+                    .collect();
+                steps.extend([
+                    SimStep::Navigate(NavDir::Down),
+                    SimStep::Special(SpecialKey::Escape),
+                ]);
+                steps.extend_from_slice(&self.input);
+                return steps;
+            }
+        };
+        let mut steps = self.input[..split].to_vec();
+        steps.extend(edits);
+        steps.extend_from_slice(&self.input[split..]);
+        steps
+    }
+}
+
+pub fn check_metamorphic_case(
     user_data_dir: &Path,
     dictionaries_dir: &Path,
     settings: &SettingsDocument,
-    steps: &[SimStep],
-) -> Result<ObservedComposingState, Box<OracleFailure>> {
-    reset_transient_engine_state();
-    let mut sim = HostSimulator::new(user_data_dir, dictionaries_dir, settings, true);
-    for s in steps {
-        sim.step(s).map_err(|v| {
-            Box::new(OracleFailure {
-                oracle: v.code,
-                sentence_index: 0,
-                sentence_tailo: String::new(),
-                detail: v.message,
-                clean_steps: Vec::new(),
-                dirty_steps: steps.to_vec(),
-            })
-        })?;
-    }
-    let cells = sim
-        .buffer
-        .lookup
-        .as_ref()
-        .map(|t| {
-            t.cells
-                .iter()
-                .map(|c| match &c.annotation {
-                    Some(a) => format!("{}:{a}", c.text),
-                    None => c.text.clone(),
-                })
-                .collect()
+    case: &MetamorphicCase,
+) -> Result<(), Box<OracleFailure>> {
+    let failure = |oracle, detail| {
+        Box::new(OracleFailure {
+            oracle,
+            detail,
+            sentence_index: 0,
+            sentence_tailo: String::new(),
+            case: case.clone(),
         })
-        .unwrap_or_default();
-    Ok((sim.buffer.preedit.clone(), cells))
+    };
+    let observe = |steps: &[SimStep]| {
+        let mut sim = HostSimulator::new(user_data_dir, dictionaries_dir, settings, true);
+        for step in steps {
+            sim.step(step).map_err(|v| failure(v.code, v.message))?;
+        }
+        // Keep annotations, exactly as in the original oracle. The shrinker and
+        // replay use this same comparison rather than a weaker text-only one.
+        let cells: Vec<_> = sim
+            .buffer
+            .lookup
+            .as_ref()
+            .map(|t| t.cells.clone())
+            .unwrap_or_default();
+        Ok::<_, Box<OracleFailure>>((sim.buffer.preedit.clone(), cells))
+    };
+    let clean = observe(&case.input)?;
+    let dirty = observe(&case.dirty_steps())?;
+    if clean != dirty {
+        return Err(failure(
+            case.oracle.name(),
+            format!("clean={clean:?} vs dirty={dirty:?}"),
+        ));
+    }
+    Ok(())
 }
 
 /// Checks explicit pick promotion monotonicity: picking a candidate at slot `1`
@@ -521,7 +490,7 @@ pub fn evaluate_corpus_reachability(
             .buffer
             .lookup
             .as_ref()
-            .and_then(|t| t.cells.iter().position(|c| c.text == target_hanji));
+            .and_then(|_| word_position(&sim, &target_hanji, &word.display_tl));
         let top_preview: Vec<String> = sim
             .buffer
             .lookup
@@ -591,7 +560,7 @@ pub fn evaluate_corpus_reachability(
             .buffer
             .lookup
             .as_ref()
-            .and_then(|t| t.cells.iter().position(|c| c.text == target_hanji));
+            .and_then(|_| word_position(&sim, &target_hanji, &word.display_tl));
         let _ = sim.step(&SimStep::Special(SpecialKey::Escape));
 
         match toneless_pos {
@@ -704,4 +673,43 @@ fn find_matching_lexicon_hanji(
         }
     }
     None
+}
+
+// Resolve the presented cell back to its engine identity; annotations are display
+// strings and may omit or restyle the reading (AGENTS.md Core Principle 6).
+fn word_position(sim: &HostSimulator, hanji: &str, canonical_tl: &str) -> Option<usize> {
+    (0..sim.state.candidates.len()).find(|&index| {
+        sim.state
+            .candidates
+            .resolve(index, false)
+            .is_some_and(|(candidate, _)| {
+                candidate.hanji.as_deref() == Some(hanji)
+                    && candidate.canonical_tl.to_lowercase() == canonical_tl.to_lowercase()
+            })
+    })
+}
+
+#[cfg(test)]
+mod regression_tests {
+    use super::*;
+
+    #[test]
+    fn reachability_distinguishes_same_hanji_with_different_readings() {
+        let env = super::super::acquire_process_env();
+        super::super::reset_all_persistent_state();
+        let mut sim = HostSimulator::new(
+            env.user_data_dir,
+            env.dictionaries_dir,
+            &standard_tl_settings(),
+            true,
+        );
+        for ch in "tai".chars() {
+            sim.step(&SimStep::KeyChar { ch, shift: false })
+                .expect("type reading");
+        }
+        let tai7 = word_position(&sim, "代", "tāi").expect("dictionary has 代/tāi");
+        let tai3 = word_position(&sim, "代", "tài").expect("dictionary has 代/tài");
+        assert_ne!(tai7, tai3);
+        assert_eq!(word_position(&sim, "代", "tái"), None);
+    }
 }

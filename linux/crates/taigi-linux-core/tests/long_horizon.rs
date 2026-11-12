@@ -7,6 +7,14 @@
 //!
 //! 30-minute marathon run (release-optimized):
 //!   `TAIGI_MARATHON_SECS=1800 cargo test --release -p taigi-linux-core --test long_horizon long_horizon_marathon -- --ignored --nocapture`
+//!
+//! Failure reports include lossless `<id>.repro.json` artifacts. Replay one in
+//! a fresh filtered process (the saved SQLite state is loaded before opening):
+//!   `TAIGI_REPRO_PATH=<report-dir>/<id>.repro.json cargo test --release -p taigi-linux-core --test long_horizon long_horizon_replay -- --ignored --nocapture`
+//! These artifacts retain full settings, capabilities, priming and exact actions.
+//! Metamorphic replays also retain both input sequences and all four user-data
+//! stores. Portable e2e scenarios are explicitly unavailable: that schema cannot
+//! express these failure predicates and every simulator interaction faithfully.
 
 mod long_horizon_support;
 
@@ -18,15 +26,18 @@ use long_horizon_support::corpus::{load_corpus, parse_example_sentences_js};
 use long_horizon_support::host::{HostSimulator, SimStep, SpecialKey};
 use long_horizon_support::oracles::{
     capture_probe_snapshot, check_committed_output_surprises, check_learning_monotonicity,
-    diff_probe_snapshots, evaluate_corpus_reachability, run_metamorphic_suite, ReachabilityStats,
-    SurpriseFinding,
+    check_metamorphic_case, diff_probe_snapshots, evaluate_corpus_reachability,
+    run_metamorphic_suite, standard_tl_settings, ReachabilityStats, SurpriseFinding,
 };
 use long_horizon_support::personas::{build_episode_settings, compile_sentence_steps, PersonaKind};
 use long_horizon_support::report::{BugReproRecord, LatencySummary, MarathonReport, PersonaStats};
 use long_horizon_support::rng::Rng;
-use long_horizon_support::shrinker::shrink_episode_failure;
+use long_horizon_support::shrinker::{
+    shrink_episode_failure, shrink_metamorphic_failure, ReproSetup,
+};
 use long_horizon_support::{
-    acquire_process_env, reset_all_persistent_state, sync_user_data_workers, UserDataCounts,
+    acquire_process_env, acquire_process_env_with_snapshot, capture_user_data_snapshot,
+    reset_all_persistent_state, sync_user_data_workers, LockedProcessEnv, UserDataCounts,
 };
 
 const MONOTONICITY_READINGS: &[&str] = &[
@@ -161,9 +172,7 @@ fn metamorphic_confluences_and_shrinker_work() {
         SimStep::Special(SpecialKey::Enter),
     ];
     let shrunk = shrink_episode_failure(
-        "synthetic-fault",
-        "unit test",
-        &settings,
+        &ReproSetup::new(&settings, true),
         &prior,
         &failing,
         |_p, s| {
@@ -318,37 +327,13 @@ fn long_horizon_marathon() {
                         violation.code.to_lowercase()
                     );
                     let target_code = violation.code;
+                    let setup = ReproSetup::new(&settings, initial_surrounding);
                     let repro = shrink_episode_failure(
-                        &bug_id,
-                        &format!(
-                            "Long-horizon {} seed=0x{episode_seed:016X} sentence #{}",
-                            persona.name(),
-                            sentence.index
-                        ),
-                        &settings,
+                        &setup,
                         &prior_batches,
                         &steps[..executed],
-                        |cand_prior, cand_steps| {
-                            reset_all_persistent_state();
-                            let mut replay_sim = HostSimulator::new(
-                                env.user_data_dir,
-                                env.dictionaries_dir,
-                                &settings,
-                                initial_surrounding,
-                            );
-                            for batch in cand_prior {
-                                for st in batch {
-                                    if replay_sim.step(st).is_err() {
-                                        return false;
-                                    }
-                                }
-                            }
-                            for st in cand_steps {
-                                if let Err(v2) = replay_sim.step(st) {
-                                    return v2.code == target_code;
-                                }
-                            }
-                            false
+                        |prior, steps| {
+                            reproduces_host_failure(&env, &setup, prior, steps, target_code)
                         },
                     );
                     println!(
@@ -394,6 +379,7 @@ fn long_horizon_marathon() {
 
             // Periodic deep metamorphic checks over live accumulated user data.
             if sent_offset % 14 == 7 {
+                let oracle_snapshot = capture_user_data_snapshot(env.user_data_dir);
                 if let Err(oracle_fail) = run_metamorphic_suite(
                     env.user_data_dir,
                     env.dictionaries_dir,
@@ -407,57 +393,21 @@ fn long_horizon_marathon() {
                             hard_failures.len() + 1,
                             oracle_fail.oracle.to_lowercase()
                         );
-                        let clean_ref = oracle_fail.clean_steps.clone();
-                        let settings_std =
-                            taigi_desktop_core::settings::SettingsDocument::default();
-                        let shrunk = shrink_episode_failure(
-                            &bug_id,
-                            &format!(
-                                "Metamorphic {} on sentence #{}",
-                                oracle_fail.oracle, sentence.index
-                            ),
-                            &settings_std,
-                            &[],
-                            &oracle_fail.dirty_steps,
-                            |_, cand_dirty| {
-                                let (clean_pre, clean_cells) = {
-                                    let mut s_clean = HostSimulator::new(
-                                        env.user_data_dir,
-                                        env.dictionaries_dir,
-                                        &settings_std,
-                                        true,
-                                    );
-                                    for st in &clean_ref {
-                                        let _ = s_clean.step(st);
-                                    }
-                                    let cells: Vec<String> = s_clean
-                                        .buffer
-                                        .lookup
-                                        .as_ref()
-                                        .map(|t| t.cells.iter().map(|c| c.text.clone()).collect())
-                                        .unwrap_or_default();
-                                    (s_clean.buffer.preedit.clone(), cells)
-                                };
-                                let mut s_dirty = HostSimulator::new(
+                        let setup = ReproSetup {
+                            settings: standard_tl_settings(),
+                            can_delete_surrounding: true,
+                            user_data_snapshot: Some(oracle_snapshot),
+                        };
+                        let shrunk =
+                            shrink_metamorphic_failure(&setup, &oracle_fail.case, |case| {
+                                check_metamorphic_case(
                                     env.user_data_dir,
                                     env.dictionaries_dir,
-                                    &settings_std,
-                                    true,
-                                );
-                                for st in cand_dirty {
-                                    if s_dirty.step(st).is_err() {
-                                        return true;
-                                    }
-                                }
-                                let dirty_cells: Vec<String> = s_dirty
-                                    .buffer
-                                    .lookup
-                                    .as_ref()
-                                    .map(|t| t.cells.iter().map(|c| c.text.clone()).collect())
-                                    .unwrap_or_default();
-                                clean_pre != s_dirty.buffer.preedit || clean_cells != dirty_cells
-                            },
-                        );
+                                    &setup.settings,
+                                    case,
+                                )
+                                .is_err_and(|failure| failure.oracle == oracle_fail.oracle)
+                            });
                         println!(
                             "[long-horizon] METAMORPHIC FAILURE: {} on sentence #{}",
                             oracle_fail.oracle, sentence.index
@@ -596,4 +546,74 @@ fn long_horizon_marathon() {
         final_report.surprises.len(),
         out_dir.join("report.md").display()
     );
+}
+
+/// Replays the exact setup, sentence boundaries and actions the host shrinker
+/// tests. Keeping this shared prevents the exported native replay from drifting.
+fn reproduces_host_failure(
+    env: &LockedProcessEnv<'_>,
+    setup: &ReproSetup,
+    prior_batches: &[Vec<SimStep>],
+    steps: &[SimStep],
+    code: &str,
+) -> bool {
+    reset_all_persistent_state();
+    let mut sim = HostSimulator::new(
+        env.user_data_dir,
+        env.dictionaries_dir,
+        &setup.settings,
+        setup.can_delete_surrounding,
+    );
+    for batch in prior_batches {
+        sim.clear_committed_buffer();
+        for step in batch {
+            if sim.step(step).is_err() {
+                return false;
+            }
+        }
+    }
+    sim.clear_committed_buffer();
+    for step in steps {
+        if let Err(violation) = sim.step(step) {
+            return violation.code == code;
+        }
+    }
+    false
+}
+
+/// TAIGI_REPRO_PATH=<report-dir>/<id>.repro.json cargo test -p taigi-linux-core
+/// --test long_horizon long_horizon_replay -- --ignored --nocapture
+#[test]
+#[ignore = "native reproducer replay; requires TAIGI_REPRO_PATH and a fresh filtered test process"]
+fn long_horizon_replay() {
+    let path =
+        std::env::var("TAIGI_REPRO_PATH").expect("set TAIGI_REPRO_PATH to a .repro.json file");
+    let record: BugReproRecord =
+        serde_json::from_slice(&std::fs::read(path).expect("read reproducer"))
+            .expect("decode native reproducer");
+    let repro = record.reproducer;
+    let env = acquire_process_env_with_snapshot(repro.setup.user_data_snapshot.as_ref());
+    let reproduced = if let Some(case) = &repro.metamorphic_case {
+        check_metamorphic_case(
+            env.user_data_dir,
+            env.dictionaries_dir,
+            &repro.setup.settings,
+            case,
+        )
+        .is_err_and(|failure| failure.oracle == record.code)
+    } else {
+        reproduces_host_failure(
+            &env,
+            &repro.setup,
+            &repro.priming_batches,
+            &repro.minimal_steps,
+            &record.code,
+        )
+    };
+    assert!(
+        reproduced,
+        "native replay did not reproduce {}",
+        record.code
+    );
+    println!("[long-horizon] reproduced {} ({})", record.id, record.code);
 }

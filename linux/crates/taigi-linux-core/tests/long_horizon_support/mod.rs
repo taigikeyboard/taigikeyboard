@@ -9,6 +9,7 @@ pub mod report;
 pub mod rng;
 pub mod shrinker;
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
@@ -39,13 +40,39 @@ pub struct LockedProcessEnv<'a> {
 /// Acquires the single-engine process lock and ensures the shipped lexicon and
 /// synchronous WAL user-data SQLite stores are initialized.
 pub fn acquire_process_env() -> LockedProcessEnv<'static> {
+    acquire_process_env_with_snapshot(None)
+}
+
+/// Replay runs in its own filtered test process, before any stores are opened.
+/// This restores all four SQLite databases, including learned phrases which a
+/// portable `.taigi` backup deliberately excludes.
+pub fn acquire_process_env_with_snapshot(
+    snapshot: Option<&UserDataSnapshot>,
+) -> LockedProcessEnv<'static> {
     let guard = PROCESS_LOCK
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if snapshot.is_some() {
+        assert!(
+            PROCESS_ENV.get().is_none(),
+            "replay must run in a fresh test process"
+        );
+    }
     let env = PROCESS_ENV.get_or_init(|| {
         let temp_dir = tempfile::tempdir().expect("process tempdir");
         let user_data_dir = temp_dir.path().join("userdata");
         std::fs::create_dir_all(&user_data_dir).expect("userdata dir");
+        if let Some(snapshot) = snapshot {
+            for (name, bytes) in snapshot {
+                assert!(
+                    USER_DATA_FILES
+                        .iter()
+                        .any(|base| name == base || name == &format!("{base}-wal")),
+                    "unknown snapshot file"
+                );
+                std::fs::write(user_data_dir.join(name), bytes).expect("restore SQLite snapshot");
+            }
+        }
 
         let dictionaries_dir = corpus::repo_root().join("assets/dictionaries");
         let artifacts =
@@ -188,4 +215,96 @@ pub struct UserDataCounts {
     pub association_rows: usize,
     pub learned_phrase_rows: usize,
     pub custom_rows: usize,
+}
+
+const USER_DATA_FILES: &[&str] = &[
+    "user_frequency.db",
+    "user_association.db",
+    "learned_phrases.db",
+    "custom_dictionary.db",
+];
+pub type UserDataSnapshot = BTreeMap<String, Vec<u8>>;
+
+/// With the process lock held, all writers are our workers. Drain their queues
+/// before copying main databases + WALs, with no further writes during copying.
+/// SQLite rebuilds its shared-memory indexes when replay opens these files.
+pub fn capture_user_data_snapshot(directory: &Path) -> UserDataSnapshot {
+    let _ = sync_user_data_workers();
+    let mut snapshot = UserDataSnapshot::new();
+    for base in USER_DATA_FILES {
+        for name in [base.to_string(), format!("{base}-wal")] {
+            match std::fs::read(directory.join(&name)) {
+                Ok(bytes) => {
+                    snapshot.insert(name, bytes);
+                }
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::NotFound && name.ends_with("-wal") => {}
+                Err(error) => panic!("snapshot {name}: {error}"),
+            }
+        }
+    }
+    snapshot
+}
+
+#[cfg(test)]
+mod regression_tests {
+    use super::host::{HostSimulator, SimStep};
+    use super::*;
+
+    #[test]
+    fn sqlite_snapshot_reopens_all_stores_in_a_fresh_process() {
+        const INPUT: &str = "TAIGI_SNAPSHOT_TEST_INPUT";
+        const TEST: &str = "long_horizon_support::regression_tests::sqlite_snapshot_reopens_all_stores_in_a_fresh_process";
+        if let Ok(path) = std::env::var(INPUT) {
+            let (snapshot, counts): (UserDataSnapshot, UserDataCounts) =
+                serde_json::from_slice(&std::fs::read(path).expect("read snapshot fixture"))
+                    .expect("decode fixture");
+            let _env = acquire_process_env_with_snapshot(Some(&snapshot));
+            assert_eq!(sync_user_data_workers(), counts);
+            return;
+        }
+
+        let env = acquire_process_env();
+        reset_all_persistent_state();
+        user_data::save_custom_entry("", "tâi-gí-lâng", "台語人").expect("custom word");
+        let mut sim = HostSimulator::new(
+            env.user_data_dir,
+            env.dictionaries_dir,
+            &oracles::standard_tl_settings(),
+            true,
+        );
+        for ch in "tai5-gi2".chars() {
+            sim.step(&SimStep::KeyChar { ch, shift: false })
+                .expect("type reading");
+        }
+        sim.step(&SimStep::PickSlot {
+            slot: 0,
+            alternate_script: false,
+        })
+        .expect("learn a pick");
+        let counts = sync_user_data_workers();
+        assert!(counts.frequency_rows > 0);
+        assert_eq!(counts.custom_rows, 1);
+        let snapshot = capture_user_data_snapshot(env.user_data_dir);
+        assert!(USER_DATA_FILES
+            .iter()
+            .all(|file| snapshot.contains_key(*file)));
+        let fixture = tempfile::NamedTempFile::new().expect("fixture file");
+        std::fs::write(
+            fixture.path(),
+            serde_json::to_vec(&(snapshot, counts)).expect("encode fixture"),
+        )
+        .expect("write fixture");
+        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+            .args(["--exact", TEST, "--nocapture"])
+            .env(INPUT, fixture.path())
+            .output()
+            .expect("start fresh replay process");
+        assert!(
+            output.status.success(),
+            "snapshot replay failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        reset_all_persistent_state();
+    }
 }
