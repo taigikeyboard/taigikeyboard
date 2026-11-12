@@ -4,8 +4,10 @@
 
 pub mod corpus;
 pub mod host;
+pub mod oracles;
 pub mod personas;
 pub mod rng;
+pub mod shrinker;
 
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, OnceLock};
