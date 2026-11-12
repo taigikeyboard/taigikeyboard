@@ -8,13 +8,13 @@ The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigik
 
 ## Deploy
 
-`.github/workflows/web.yml` deploys hourly at minute 0 (GitHub may start a scheduled run late): it runs its gates on `main`'s head and, when they pass, starts a deploy, which builds `main`'s head again (a commit pushed between the two goes out ungated). An hour whose head is the one the last successful scheduled run had deploys nothing. A push to `main` runs the gates only. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
+`.github/workflows/web.yml` deploys hourly at minute 17 (drawn at random, after GitHub dropped most runs at the crowded minute 0 and the site went 38 hours without a deploy; GitHub may still start a scheduled run late or skip it): it runs its gates on `main`'s head and, when they pass, starts a deploy, which builds `main`'s head again (a commit pushed between the two goes out ungated). An hour whose head is the one the last successful scheduled run had deploys nothing. A push to `main` runs the gates only. A manual run (Actions → Web → Run workflow, on `main`) runs the gates and, when they pass, deploys `main`'s head whether or not it moved. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
 
 The CI job builds and stages the site on the host, then runs the Chromium tests in the official `mcr.microsoft.com/playwright:v<version>-noble` image. The version comes from the installed `@playwright/test` package, pinned by `web/package-lock.json`. Browsers and their system libraries are already in that image, so the browser gate does not run apt against Ubuntu mirrors. Local `make web-e2e` still installs browsers on the host.
 
 The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next hourly deploy replaces the site.
 
-To deploy by hand: `taigikeyboard/web` → Actions → Deploy → Run workflow. The deploy takes no input and always builds `main`'s head (maintainer 2026-11-10); there is no rollback to an older commit — fix forward on `main`.
+To deploy by hand, prefer the gated manual run of `web.yml` above. `taigikeyboard/web` → Actions → Deploy → Run workflow deploys ungated. The deploy takes no input and always builds `main`'s head (maintainer 2026-11-10); there is no rollback to an older commit — fix forward on `main`.
 
 Secret:
 
