@@ -377,7 +377,7 @@
       "comment": "What the developer-page switch changes, and that the writing page leaves it off.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
-        "hanji": "打開了後，kip 這種一個詞的整句會進入十二關，不再固定排頭前。選詞權重排佇縮寫頭前的時，選過的縮寫就排會贏。多詞的整句照舊固定。書寫頁面無開這个。",
+        "hanji": "像 kip 這款一个詞的會進入排序比較，袂閣固定排頭前。選詞權重排佇縮寫頭前的時，選過的縮寫就排會贏。多詞的整句照舊固定。書寫頁面無開這个。",
         "tailo": "Phah--khui liáu-āu, kip tsit khuán tsi̍t ê sû ê tsíng-kù ē tsìn-ji̍p tsa̍p-jī kuan, bô-koh kòo-tīng pâi thâu-tsîng. Suán-sû kuân-tāng pâi tī sok-siá thâu-tsîng ê sî, suán-kuè ê sok-siá tō pâi ē iâⁿ. To-sû ê tsíng-kù tsiàu-kū kòo-tīng. Su-siá ia̍h-bīn bô khui tsit ê.",
         "poj": "Phah--khui liáu-āu, kip chit khoán chi̍t ê sû ê chéng-kù ē chìn-ji̍p cha̍p-jī koan, bô-koh kò͘-tēng pâi thâu-chêng. Soán-sû koân-tāng pâi tī sok-siá thâu-chêng ê sî, soán-kòe ê sok-siá tō pâi ē iâⁿ. To-sû ê chéng-kù chiàu-kū kò͘-tēng. Su-siá ia̍h-bīn bô khui chit ê.",
         "en": "When this is on, a one-word path such as kip joins the twelve stages instead of staying at the front. A picked abbreviation can then lead, once selection weight is ordered ahead of abbreviation. A sentence of several words stays pinned. The writing page never turns this on.",

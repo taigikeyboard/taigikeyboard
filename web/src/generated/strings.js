@@ -116,7 +116,7 @@ export const STRINGS = {
     "web.inspectorCutWalker": "頂面是音節，下面是引擎選的切法：規段成本上低的一條。你選過的多音節詞，或者你存過的詞，會予彼一段較袂閣被切開。",
     "web.inspectorCutSyllables": "辭典無詞通蓋這段，所以無併做一塊，改照音節來讀。",
     "web.inspectorRankOneWord": "單音節整句參加排序",
-    "web.inspectorRankOneWordNote": "打開了後，kip 這種一個詞的整句會進入十二關，不再固定排頭前。選詞權重排佇縮寫頭前的時，選過的縮寫就排會贏。多詞的整句照舊固定。書寫頁面無開這个。",
+    "web.inspectorRankOneWordNote": "像 kip 這款一个詞的會進入排序比較，袂閣固定排頭前。選詞權重排佇縮寫頭前的時，選過的縮寫就排會贏。多詞的整句照舊固定。書寫頁面無開這个。",
     "web.inspectorCustomNote": "佇遮加入的詞，書寫頁面也會揣著。刪除學習紀錄袂清掉自訂詞。",
     "web.inspectorFrontLead": "第 0 格佇這幾關就定矣，無參加下面十二關。拖順序無影響。頭一關無過，後壁的關就無比。",
     "web.inspectorFrontWords": "整句幾個詞",
