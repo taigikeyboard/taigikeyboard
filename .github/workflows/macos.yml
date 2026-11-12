@@ -68,8 +68,11 @@ jobs:
       TAIGI_MACOS_TARGETS: aarch64-apple-darwin
       # Test build only: fat LTO with one codegen unit (macos/Cargo.toml's
       # release profile) spends ~45 s linking an archive `swift test` links
-      # once. Same code and `panic = "unwind"`; the release pipeline keeps LTO.
-      CARGO_PROFILE_RELEASE_LTO: "false"
+      # once; thin LTO over 16 units is ~2.4x faster locally. Same code and
+      # `panic = "unwind"`; the release pipeline keeps fat LTO. Not `false`:
+      # without LTO the archive carries std's bitcode members, which Apple's
+      # nm cannot read, and the script's export check fails.
+      CARGO_PROFILE_RELEASE_LTO: "thin"
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
