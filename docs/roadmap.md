@@ -15,6 +15,8 @@
 
 ## Active / In-flight items
 
+- **Desktop release automation** — [`architecture/release-automation-roadmap.md`](architecture/release-automation-roadmap.md): the desktop train cuts itself on the 1st and publishes on the 5th (CalVer, changelog fragments, no LLM, GitHub App release identity, `RELEASE_HOLD`). Accepted 2026-11-12; Phase 0.
+
 - **Maintainability audit follow-up (2026-10)** — [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md), rounds over [`reports/2026-10-09-audit-all.md`](reports/2026-10-09-audit-all.md). **Paused** by the maintainer 2026-10-14; resume point is the maintainer's call.
 - **Web version** — [`architecture/web-roadmap.md`](architecture/web-roadmap.md): the Rust engine in WASM behind a browser shell. Accepted 2026-11-06 (decisions D1–D6 settled). Phases 0–7 done; live at `taigikeyboard.tw/web/`. Phase 4's iPad and AltGr device checks stay open.
 - **Windows on Arm64** — [`architecture/windows-arm64-roadmap.md`](architecture/windows-arm64-roadmap.md) (issue #721): Arm64X forwarder + native Arm64 service and settings exe in one universal installer. Done 2026-11-08: Phases 0–4 merged (TSF + forwarder #760, release tooling + CI smoke #764, universal installer #768, aarch64 `check-box.sh` step #777); issue closed.
