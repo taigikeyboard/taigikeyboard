@@ -2,19 +2,34 @@
 
 > **Type**: Release flow
 > **Keywords**: `chromeos`, `chrome web store`, `extension`, `input method`
-> **Status**: Draft 2026-11-08, nothing published. Plan and decisions: `chromeos-roadmap.md`. Publishing is the maintainer's.
+> **Status**: On the desktop train since 2026-11-12; nothing published to the store yet. Plan and decisions: `chromeos-roadmap.md`. Publishing is the maintainer's.
 
 The ChromeOS input method ships as one Chrome Web Store item, an MV3 extension built from `web/chromeos/` over the web version's wasm. On a Chromebook the store's "Add to Chrome" is the installer; the store updates it.
 
-## Build
+## On the desktop train
+
+ChromeOS is a desktop platform like macOS, Windows and Linux (USER 2026-11-12): one version, one draft, one beta, one publish ([`desktop-release.md` § The flow](desktop-release.md#the-flow)).
+
+| Step | What happens to ChromeOS |
+|---|---|
+| `make version-desktop <v>` | Writes `version` in `web/chromeos/manifest.json` with the rest of the train; `check-versions --train desktop` holds it there. The store refuses a version that is not higher than the last one it took, which the train's downgrade guard already enforces |
+| `make desktop-release` | Dispatches `.github/workflows/chromeos-build.yml`, which runs `make -C web chromeos` on a hosted runner and attaches `TaigiKeyboard-<v>-chromeos.zip` + `.sha256` to the draft |
+| `make desktop-patch PLATFORM=chromeos` | A ChromeOS-only patch: its own version, only the zip on the draft |
+| Beta | The zip is on `https://taigikeyboard.tw/beta` with the other installers. Testers unpack it and use **Load unpacked** in `chrome://extensions` (Developer mode). An unpacked copy has its own extension ID, separate from the store item, so its settings and learned words are separate too, and it never updates itself |
+| Publish → announce | Mirrors the zip to `dl.taigikeyboard.tw/desktop/` and writes `_data/chromeos_release.json`, which hides the beta; prints the upload reminder |
+| Upload | By hand, below |
+
+Every pull request that runs `web.yml` also builds the zip (`make -C web chromeos` after `make web-check`); dispatching `chromeos-build.yml` without `source_sha` builds it without attaching. To build locally:
 
 ```
 make -C web chromeos        # → web/target/taigi-keyboard-chromeos.zip (~16 MB)
 ```
 
-It builds the wasm from source, so there is no stale-artifact step. `make web-check` (CI) already runs the ChromeOS Node tests; the zip itself is built only by hand.
+It builds the wasm from source, so there is no stale-artifact step. `make web-check` (CI) runs the ChromeOS Node tests.
 
-Before an upload, set `version` in `web/chromeos/manifest.json`: the store refuses a version that is not higher than the last one it took.
+## Upload
+
+After the release is published, download `TaigiKeyboard-<v>-chromeos.zip` from it, then in the Developer Dashboard: the item → Package → Upload new package → Submit for review. Automating this through the Chrome Web Store API needs a Google OAuth client and refresh token in the `release` environment; not set up.
 
 ## First upload
 
@@ -56,7 +71,7 @@ The candidate window over a text field, and the settings page (Display Language 
 
 ## Timing
 
-Maintainer 2026-11-08: "no rush to release; handle it when releasing v3.9.0 together with the other desktops". The first upload goes out with the desktop v3.9.0 release, as version 3.9.0.
+Maintainer 2026-11-08: "no rush to release; handle it when releasing v3.9.0 together with the other desktops". The first upload goes out with the desktop v3.9.0 release, as version 3.9.0. That draft was staged before ChromeOS joined the train, so the 3.9.0 zip is built by hand (`make -C web chromeos`); later versions come from the draft.
 
 ## Open (maintainer)
 

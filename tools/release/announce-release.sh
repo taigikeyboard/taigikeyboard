@@ -177,20 +177,23 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
     )
 fi
 
-# No manifest to wait for: nothing installed polls for a Linux package.
+# No manifest to wait for: nothing installed polls for a Linux package, and the
+# Chrome Web Store updates the ChromeOS input method. The ChromeOS data still
+# matters: it is what tells the /beta page this version is out.
 # One triple per format: platform label, asset name, site data path.
-for linux_format in \
+for unpolled_format in \
     "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
     "Fedora|$LINUX_RPM_ASSET|$LINUX_RPM_SITE_PATH" \
-    "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH"; do
-    IFS='|' read -r label asset site_path <<< "$linux_format"
+    "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH" \
+    "ChromeOS|$CHROMEOS_ASSET|$CHROMEOS_SITE_PATH"; do
+    IFS='|' read -r label asset site_path <<< "$unpolled_format"
     if fetch_platform_asset "$label" "$asset"; then
         site_files+=("$site_path" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
     fi
 done
 
 [[ ${#site_files[@]} -gt 0 ]] ||
-    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET — there is nothing to announce"
+    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET, $CHROMEOS_ASSET — there is nothing to announce"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. A manifest published before its download is reachable
@@ -209,3 +212,8 @@ echo ""
 echo "✓ announced $SHORT_VERSION for ${announced_platforms[*]}"
 echo "  release   $RELEASE_PAGE_URL"
 echo "  website   https://taigikeyboard.tw/#download"
+if [[ " ${announced_platforms[*]} " == *" ChromeOS "* ]]; then
+    echo ""
+    echo "  ChromeOS: upload $CHROMEOS_ASSET from the release to the Chrome Web Store"
+    echo "  Developer Dashboard and submit it for review (docs/architecture/chromeos-release.md)."
+fi

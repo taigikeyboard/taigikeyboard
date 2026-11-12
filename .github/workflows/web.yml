@@ -119,6 +119,11 @@ jobs:
       - name: make web-check
         run: make web-check
 
+      # The ChromeOS input method's store zip, over the wasm web-check just
+      # built; the release builds it in chromeos-build.yml.
+      - name: make -C web chromeos
+        run: make -C web chromeos
+
       - name: Stage the site
         run: make -C web site
 

@@ -202,9 +202,9 @@ web-serve:
 web-e2e:
 	$(MAKE) -C web e2e
 
-# Stage the THREE desktop installers on this version's draft release: the
-# package here, the Windows installer and the Linux .deb on GitHub-hosted
-# runners (tools/release/stage-desktop.sh). The builds cannot share a machine, so
+# Stage every desktop platform on this version's draft release: the package
+# here; the Windows installer, the Linux packages and the ChromeOS Web Store zip
+# on GitHub-hosted runners (tools/release/stage-desktop.sh). The builds cannot share a machine, so
 # this drives the others rather than pretending they are one build. All or
 # none: a draft holding installers from two commits is not something a tag
 # can describe (a patch is a smaller release, not a half: desktop-patch).
@@ -213,11 +213,11 @@ web-e2e:
 desktop-release:
 	bash tools/release/stage-desktop.sh
 
-# A patch release of ONE platform (PLATFORM=macos|windows|linux): its own
+# A patch release of ONE platform (PLATFORM=macos|windows|linux|chromeos): its own
 # version, holding only that platform's installers; announcing it leaves the
 # other platforms on the version they have (docs/architecture/desktop-release.md).
 desktop-patch:
-	@test -n "$(PLATFORM)" || { echo "usage: make desktop-patch PLATFORM=macos|windows|linux" >&2; exit 2; }
+	@test -n "$(PLATFORM)" || { echo "usage: make desktop-patch PLATFORM=macos|windows|linux|chromeos" >&2; exit 2; }
 	bash tools/release/stage-desktop.sh $(PLATFORM)
 
 # Announce a desktop release a person has already published: prove each
@@ -386,10 +386,10 @@ help:
 	@echo ""
 	@echo "Maintainer releases"
 	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
-	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows + Linux)"
+	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows + Linux + ChromeOS)"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"
-	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
+	@echo "  make desktop-release    Stage every desktop platform on the draft (Mac + hosted runners)"
 	@echo "  make desktop-patch PLATFORM=linux  Stage ONE platform's patch release on its own draft"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"

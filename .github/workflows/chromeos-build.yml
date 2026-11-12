@@ -1,0 +1,128 @@
+name: ChromeOS build
+
+# The ChromeOS input method's Chrome Web Store package: `make -C web chromeos`
+# on a clean runner, kept as the workflow artifact `chromeos-zip`.
+#
+# On a dispatch from `tools/release/stage-desktop.sh` the run attaches the zip
+# to the `desktop-<version>` draft — the ChromeOS half of a desktop release, the
+# way `linux-build.yml` is the Linux half (docs/architecture/chromeos-release.md).
+# Pull requests build the same zip in web.yml (`make -C web chromeos` after
+# `make web-check`, over the wasm it just built); a dispatch without
+# `source_sha` builds without attaching.
+#
+# Budget: ~3 min warm, ~8 min cold (wasm compile); main saves the cache, so a
+# release dispatch after the first one is warm.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: The commit stage-desktop.sh staged; attach runs only when it is set and matches
+        required: false
+        type: string
+
+# Only `attach` writes (its own block below).
+permissions:
+  contents: read
+
+concurrency:
+  group: chromeos-build-${{ github.sha }}
+
+jobs:
+  build:
+    name: make -C web chromeos
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      # Only what `make -C web chromeos` runs (web/Makefile `build`): protoc for
+      # engine/protos/build.rs, wasm-bindgen, binaryen's wasm-opt, zig for the
+      # SQLite wasm objects. Versions are mise.toml's, as in web.yml.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.2
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen zig
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install the toolchain (web/rust-toolchain.toml)
+        working-directory: web
+        run: rustup toolchain install --no-self-update
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: web
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: make -C web chromeos
+        run: make -C web chromeos
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chromeos-zip
+          path: web/target/taigi-keyboard-chromeos.zip
+          if-no-files-found: error
+
+  attach:
+    name: attach to the draft
+    needs: build
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.source_sha != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chromeos-zip
+          path: web/target
+
+      - name: Attach the zip to the draft release
+        working-directory: web/target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          # The commit the staging run meant, not whatever main points at by
+          # the time this run started.
+          [ "$SOURCE_SHA" = "$GITHUB_SHA" ] || {
+              echo "::error::this run built $GITHUB_SHA but the staging run staged $SOURCE_SHA — main moved; re-run stage-desktop.sh"
+              exit 1
+          }
+          # `make version-desktop` writes the manifest with the rest of the
+          # train, so its version names the draft.
+          version="$(node --print 'require("../chromeos/manifest.json").version')"
+          tag="desktop-$version"
+          # The draft is stage-desktop.sh's, created on the staged commit. A
+          # published release means the staging order was broken; a draft on
+          # another commit is another staging run's.
+          state="$(gh release view "$tag" --json isDraft,targetCommitish \
+              --jq '"\(.isDraft) \(.targetCommitish)"' 2>&1)" || {
+              echo "no release $tag: $state" >&2
+              echo "stage-desktop.sh creates the draft before dispatching this run." >&2
+              exit 1
+          }
+          read -r is_draft target <<< "$state"
+          [ "$is_draft" = true ] || {
+              echo "$tag is already published — an asset added now would be public with no test" >&2
+              exit 1
+          }
+          [ "$target" = "$GITHUB_SHA" ] || {
+              echo "::error::the $tag draft targets $target, not $GITHUB_SHA — another staging run owns it"
+              exit 1
+          }
+          # The name tools/release/lib/desktop-release.sh looks for (CHROMEOS_ASSET).
+          asset="TaigiKeyboard-${version}-chromeos.zip"
+          mv taigi-keyboard-chromeos.zip "$asset"
+          sha256sum "$asset" > "$asset.sha256"
+          gh release upload "$tag" "$asset" "$asset.sha256" --repo "$GITHUB_REPOSITORY"
+          echo "attached $asset to $tag (built from $GITHUB_SHA)"

@@ -22,7 +22,7 @@ Two version numbers, moving independently:
 | Train | Platforms | Version files | Detailed record | Announces itself through |
 | --- | --- | --- | --- | --- |
 | **mobile** | iOS + Android | Android `versionName`, iOS shipping targets' `MARKETING_VERSION` | `changelog/mobile-vMAJOR.MINOR.PATCH.md` | App Store / Google Play What's New (`changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt`) |
-| **desktop** | macOS + Windows + Linux | both macOS plist keys, the `[workspace.package] version` of `windows/Cargo.toml`, `desktop/Cargo.toml`, `linux/Cargo.toml` and `macos/Cargo.toml` | `changelog/desktop-vMAJOR.MINOR.PATCH.md` | one GitHub release in this repository, tagged `desktop-MAJOR.MINOR.PATCH`, holding every platform's installer, whose body is that whole file — staged as a draft, published by a person, announced automatically ([`desktop-release.md` § The flow](desktop-release.md#the-flow)) |
+| **desktop** | macOS + Windows + Linux + ChromeOS | both macOS plist keys, the `[workspace.package] version` of `windows/Cargo.toml`, `desktop/Cargo.toml`, `linux/Cargo.toml` and `macos/Cargo.toml`, and `web/chromeos/manifest.json` `version` | `changelog/desktop-vMAJOR.MINOR.PATCH.md` | one GitHub release in this repository, tagged `desktop-MAJOR.MINOR.PATCH`, holding every platform's installer, whose body is that whole file — staged as a draft, published by a person, announced automatically ([`desktop-release.md` § The flow](desktop-release.md#the-flow)) |
 
 Within a train the platforms cannot drift apart — `set-versions` writes every version file of the train or none, and `check-versions` holds them all to one number. Across trains nothing is compared: a mobile 3.6.7 and a desktop 3.7.0 are two unrelated facts, and the same number appearing in both is a coincidence, not a link. A train therefore never skips a number because the other train used it: after desktop 3.6.7 the next mobile release is still whatever follows the last *mobile* number. The mobile train's git tags are `mobile-MAJOR.MINOR.PATCH` (bare `vMAJOR.MINOR.PATCH` up to `v3.6.5`; `dictionary/build/version_snapshot.py` reads both); the desktop train's are `desktop-MAJOR.MINOR.PATCH`, created by publishing the release (desktop releases cut before 2026-09-09 are tagged `macos-v…` / `windows-v…` on the website repository).
 
@@ -30,7 +30,7 @@ The store notes cover the mobile train only. Shared-engine work that ships on ev
 
 `validate_notes` enforces the exclusion: `macOS` and `Mac` are forbidden terms in both `ios.txt` and `android.txt`, matched as whole words so ordinary release-note words such as "machine" and "match" still pass.
 
-`check-versions --train desktop` holds `macos/App/Info.plist` to the desktop version — `CFBundleShortVersionString` equals it, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`, the same derivation `macos/scripts/release-app.sh` enforces at package time — and `windows/Cargo.toml`, `desktop/Cargo.toml`, `linux/Cargo.toml` and `macos/Cargo.toml` to the same number. That build number is what Installer compares between packages, so the desktop train only ever moves upward; the per-train downgrade guard in `set-versions` is what enforces it. The formula also caps MINOR and PATCH at 99 each (`MAX_MACOS_VERSION_COMPONENT`, `tools/release_notes.py`); beyond that two versions would collide.
+`check-versions --train desktop` holds `macos/App/Info.plist` to the desktop version — `CFBundleShortVersionString` equals it, and `CFBundleVersion` equals `MAJOR*10000 + MINOR*100 + PATCH`, the same derivation `macos/scripts/release-app.sh` enforces at package time — and `windows/Cargo.toml`, `desktop/Cargo.toml`, `linux/Cargo.toml`, `macos/Cargo.toml` and `web/chromeos/manifest.json` to the same number. That build number is what Installer compares between packages, so the desktop train only ever moves upward; the per-train downgrade guard in `set-versions` is what enforces it. The formula also caps MINOR and PATCH at 99 each (`MAX_MACOS_VERSION_COMPONENT`, `tools/release_notes.py`); beyond that two versions would collide.
 
 ## Set the version
 
@@ -38,7 +38,7 @@ One command per train writes that train's version into all of its project files,
 
 ```bash
 make version-mobile MAJOR.MINOR.PATCH    # iOS + Android
-make version-desktop MAJOR.MINOR.PATCH   # macOS + Windows + Linux
+make version-desktop MAJOR.MINOR.PATCH   # macOS + Windows + Linux + ChromeOS
 ```
 
 One train per invocation. Neither build number is a maintainer's problem: the iOS `CURRENT_PROJECT_VERSION` is pinned to 1 because App Store Connect numbers a marketing version's uploads itself, Android's `versionCode` is epoch minutes, and the macOS `CFBundleVersion` derives from the desktop version.
