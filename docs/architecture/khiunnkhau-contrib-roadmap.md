@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `腔口差`, `accent variations`, `contribution`, `issue form`, `GitHub App`, `khpoo`, `齒盤補充辭典`
-> **Status**: Draft 2026-11-12 — Phase 1 merged (#873); Phase 2 next
+> **Status**: Draft 2026-11-12 — Phase 1 merged (#873); Phase 2 design PAUSED 2026-11-12 — pre-impl review REVISE, two maintainer decisions open (App isolation, reason placement)
 
 ## Goal
 
@@ -67,16 +67,22 @@ The intake workflow runs the same script before it commits, so a duplicate or ma
 
 ### Phase 2 — intake
 
-- `.github/ISSUE_TEMPLATE/khiunnkhau.yml`: inputs `hanzi`, `tl`, `reason`; accents (ten + 其他, multi), `other_place`; a required licence checkbox (D7).
-- Spike first (≤20 lines): does an issue-form URL prefill a dropdown / checkbox by field `id`? The docs name `id` as the prefill key but show no dropdown example. If not, accents travel in a prefilled text input that the workflow validates.
-- `.github/workflows/khiunnkhau-intake.yml`, on `issues: opened` with the form's label:
-  1. Parse the form body; run `verify_khpoo_append.py`; on failure comment the reason and close as not planned.
-  2. Branch `khiunnkhau/issue-<n>`, append the row (CRLF), commit with `--author "<login> <id+login@users.noreply.github.com>"` and the trailers above, push with the App token.
-  3. `gh pr create` (body: row, accents, reason, `Closes #<n>`), comment the PR link on the issue.
-- Token: a GitHub App (contents + pull requests + issues write on this repository). A PR opened with `GITHUB_TOKEN` does not trigger `pull_request` workflows, so Phase 1's check would never run. The release-automation App (`architecture/release-automation-roadmap.md` D3) can carry these permissions, or a separate App — maintainer setup either way.
+**Token (maintainer, 2026-11-12: shared App)** — the release-automation App `taigikeyboard-release` (`architecture/release-automation-roadmap.md` Phase 3), with **issues write** and **pull requests write** added to its contents write. `RELEASE_APP_ID` (variable) and `RELEASE_APP_PRIVATE_KEY` (secret) live in the `release` environment, whose deployment branches are `main` + release tags; an `issues` event runs on the default branch, so the job may use it. A PR opened with `GITHUB_TOKEN` would not trigger `pull_request` workflows, so Phase 1's check would never run.
+
+**Isolation** — the App is on the `main` ruleset's bypass list, so a job holding its token can push to `main`. Untrusted issue text never reaches that job:
+
+| Job | Token | Does |
+|---|---|---|
+| `parse` | `GITHUB_TOKEN`: `contents: read`, `issues: write` | Reads the issue body from `env` into `dictionary/tools/khpoo_intake.py`: parse the form, validate, normalise, dedup with `verify_khpoo_append.check_added`. Failure → comment the reason, close as not planned. Success → a JSON artifact `{hanzi, tl, accents, reason}` |
+| `open-pr` | App token minted with `actions/create-github-app-token`, `permission-contents: write`, `permission-pull-requests: write`, `permission-issues: write`; `environment: release` | Downloads the artifact, re-validates it with the same script (the artifact is the only input), appends the CRLF row, commits with `--author "<login> <id+login@users.noreply.github.com>"` (from the event, not the body) and a message file carrying the trailers, pushes `khiunnkhau/issue-<n>`, `gh pr create` (body file, `Closes #<n>`), comments the PR link |
+
+No field is ever interpolated into a `run:` script; everything travels through `env`, files and the artifact. Third-party actions pinned by SHA like the rest of `.github/workflows/`.
+
+**Form** — `.github/ISSUE_TEMPLATE/khiunnkhau.yml`, label `khiunnkhau` (created with the template). Inputs only, so every field is URL-prefillable by `id` without a spike: `hanzi`, `tl` (Tâi-lô), `accents` (comma-separated: the ten names, or `其他:<place>`), `reason` (textarea), a required Apache-2.0 consent checkbox. Limits checked by `khpoo_intake.py`: one line per input field, hanzi ≤ 20 characters, TL ≤ 80, reason ≤ 1,000, accents from the list only.
+
+**Concurrent PRs** — two open intake PRs both append at the end, so the second conflicts once the first merges. In this phase the maintainer re-runs the intake for the second issue (close its PR, `gh workflow run` on the issue number via `workflow_dispatch`), which re-appends on the new `main`; an automatic rebase job waits until conflicts actually happen.
+
 - Merge with a merge commit or rebase (D2).
-- Abuse guard: input lengths capped; form fields treated as data (passed through env to a script file, never interpolated into shell).
-- Two open intake PRs both append at the end → the second conflicts after the first merges. The workflow rebases open `khiunnkhau/*` branches on push to `main` (re-append), keeping the contributor as author.
 
 ### Phase 3 — site
 
