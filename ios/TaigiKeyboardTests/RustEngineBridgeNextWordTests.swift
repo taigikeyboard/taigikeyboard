@@ -217,7 +217,9 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     /// The words the decision asks predictions for — the word that became the context.
     private func queriedWords(_ result: RustEngineBridge.NextWordDecideResult) -> [String] {
         result.effects.compactMap { effect in
-            if case let .queryPredictions(word, _, _, _) = effect { return word }
+            if case let .queryPredictions(word, _, _, _) = effect {
+                return word
+            }
             return nil
         }
     }
