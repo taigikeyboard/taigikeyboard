@@ -27,12 +27,18 @@ unlisted beta page, which the stage fills on its own:
 
 ### Version numbers: full releases and patches
 
-A **full release** bumps the minor number and stages every platform: 3.7.0,
-3.8.0. A **patch** bumps the third number and stages only the platform it fixes:
-3.7.1 macOS, 3.7.2 Windows. The patch counter is shared, so each
-patch is one version, one tag, one draft; a platform skips the numbers it did not
-ship (Windows goes 3.7.0 → 3.7.2) and its update check only compares, so the gap is
-harmless. Announcing a patch writes only its platform's `_data` / appcast, so the
+The desktop train is numbered by the calendar, `YYYY.M.P`, from the first
+release after 3.9.0, the last SemVer one. Every CalVer number is higher
+than it (macOS build version 20261200 > 30900). A **full release** is the
+month's `YYYY.M.0` and stages every platform: 2026.12.0, 2027.1.0. A **patch**
+bumps the third number within its month and stages only the platform it fixes:
+2026.12.1 macOS, 2026.12.2 Windows — and a patch before the first train is
+2026.11.P. Month and patch carry no leading zero (Cargo's SemVer parser refuses
+one); `set-versions` refuses anything else for this train. The patch counter is
+shared, so each patch is one version, one tag, one draft; a platform skips the
+numbers it did not ship (Windows goes 2026.12.0 → 2026.12.2) and its update check
+only compares, so the gap is harmless. Announcing a patch writes only its
+platform's `_data` / appcast, so the
 others keep offering the version they have. The next full release lines every
 platform up again. Its changelog `changelog/desktop-v<version>.md` has only the
 patched platform's section. Setting the number, and why minor and patch each stop

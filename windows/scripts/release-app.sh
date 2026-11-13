@@ -56,7 +56,7 @@ if [[ "$publish" == true ]]; then
 fi
 
 [[ "$SHORT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
-    fail "windows/Cargo.toml version '$SHORT_VERSION' is not MAJOR.MINOR.PATCH — run 'make version-desktop x.y.z' at the repository root"
+    fail "windows/Cargo.toml version '$SHORT_VERSION' is not MAJOR.MINOR.PATCH — run 'make version-desktop YYYY.M.P' at the repository root"
 
 echo "==> Checking the working tree"
 TREE_STATUS="$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)"

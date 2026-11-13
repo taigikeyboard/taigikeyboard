@@ -4,7 +4,7 @@
 # platform), consumed by path.
 #
 # Version is the desktop release train's (macOS + Windows + Linux share one
-# number), written by the repo-root `make version-desktop x.y.z`.
+# number), written by the repo-root `make version-desktop YYYY.M.P`.
 # Design record: docs/architecture/linux-roadmap.md.
 
 [workspace]

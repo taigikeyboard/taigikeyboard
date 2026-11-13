@@ -247,7 +247,7 @@ windows-release:
 # moving independently:
 #
 #   make version-mobile 3.6.7
-#   make version-desktop 3.7.0
+#   make version-desktop 2026.12.0   (CalVer YYYY.M.P)
 #
 # Policy and semantics: docs/architecture/manual-release-notes.md § Set the version.
 # The iOS `.pbxproj` is user-owned (Claude may not edit it); this target is the
@@ -261,7 +261,7 @@ VERSION_TARGETS := version-mobile version-desktop
 VERSION_ARGS := $(filter-out $(VERSION_TARGETS),$(MAKECMDGOALS))
 ifneq ($(filter $(VERSION_TARGETS),$(MAKECMDGOALS)),)
 ifneq ($(words $(filter $(VERSION_TARGETS),$(MAKECMDGOALS))),1)
-$(error one release train per invocation: make version-mobile X.Y.Z  or  make version-desktop X.Y.Z)
+$(error one release train per invocation: make version-mobile X.Y.Z  or  make version-desktop YYYY.M.P)
 endif
 ifneq ($(VERSION_ARGS),)
 $(eval $(VERSION_ARGS):;@:)
@@ -270,7 +270,7 @@ endif
 
 version-mobile version-desktop:
 	@version="$(firstword $(VERSION_ARGS) $(VERSION))"; \
-	if [ -z "$$version" ]; then echo "Usage: make $@ <MAJOR.MINOR.PATCH>"; exit 2; fi; \
+	if [ -z "$$version" ]; then echo "Usage: make version-mobile <MAJOR.MINOR.PATCH> | make version-desktop <YYYY.M.P>"; exit 2; fi; \
 	python3 tools/release_notes.py set-versions --train "$(patsubst version-%,%,$@)" --version "$$version"
 
 # ---------------------------------------------------------------------------
@@ -386,7 +386,7 @@ help:
 	@echo ""
 	@echo "Maintainer releases"
 	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
-	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows + Linux + ChromeOS)"
+	@echo "  make version-desktop 2026.12.0  Set the desktop train's CalVer version (macOS + Windows + Linux + ChromeOS)"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"

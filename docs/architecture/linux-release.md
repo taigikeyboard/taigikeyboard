@@ -85,7 +85,7 @@ User data is never in the package: `~/.config/taigikeyboard/settings.json` and
    layout, so the package and a source install cannot drift (both shells,
    the registration files, the dictionaries, the desktop entry, the icons).
 2. `packaging/control.in` rendered with the version from `linux/Cargo.toml`
-   (moved by `make version-desktop x.y.z` with the other two desktops, and
+   (moved by `make version-desktop YYYY.M.P` with the other two desktops, and
    held to their number by `release_notes.py check-versions --train desktop`) and
    the `Depends` `dpkg-shlibdeps` computes over the settings window, the IBus
    engine and the Fcitx5 addon.

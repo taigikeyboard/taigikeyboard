@@ -22,7 +22,7 @@
 #
 # A PATCH release is its own version holding ONE platform's installers (USER
 # 2026-09-24 — "let each desktop version take a patch on its own, without running the release
-# pipeline from the top"): 3.7.0 ships every platform, 3.7.1 only the platform it fixes.
+# pipeline from the top"): 2026.12.0 ships every platform, 2026.12.1 only the platform it fixes.
 # That is not a way to stage one half of a release — the old escapes that
 # stranded a draft with installers from two commits stay gone. The draft still
 # starts clean and everything on it is built from one commit; it just names
