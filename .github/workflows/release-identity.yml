@@ -1,0 +1,58 @@
+name: Release identity check
+
+# Mints the release App token and checks its `main` + `release tags` ruleset
+# bypass; changes nothing. Run after rotating the App's key or changing its
+# installation. Setup: docs/architecture/desktop-release.md § One-time: the
+# release App.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    name: mint token + ruleset bypass
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The App's client id and key live here. No checkout: no repository code
+    # runs while the token exists.
+    environment: release
+    steps:
+      # Fails if the installation lacks either repository or any permission.
+      - name: Mint the App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: taigikeyboard
+          repositories: taigikeyboard,homebrew-tap
+          permission-contents: write
+          permission-actions: write
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Check the ruleset bypass
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          fail=0
+          for ruleset in main 'release tags'; do
+            id=$(gh api repos/taigikeyboard/taigikeyboard/rulesets \
+              --jq ".[] | select(.source_type == \"Repository\" and .name == \"$ruleset\") | .id")
+            if [ -z "$id" ]; then
+              echo "::error::ruleset '$ruleset' not found"; fail=1; continue
+            fi
+            # Only the single-ruleset endpoint returns current_user_can_bypass.
+            bypass=$(gh api "repos/taigikeyboard/taigikeyboard/rulesets/$id" \
+              --jq '.current_user_can_bypass // "unknown"')
+            echo "ruleset '$ruleset' ($id): current_user_can_bypass=$bypass"
+            if [ "$bypass" != always ]; then
+              echo "::error::App cannot always bypass ruleset '$ruleset' — add it to the ruleset's bypass list with mode Always"
+              fail=1
+            fi
+          done
+          exit "$fail"

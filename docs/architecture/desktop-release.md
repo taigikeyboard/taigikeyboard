@@ -159,6 +159,39 @@ Give it an expiry and let it lapse: the day it does, the workflow fails loudly
 and `make desktop-announce` from a machine with `gh` logged in does the same
 job, so a release is never blocked on it.
 
+### One-time: the release App
+
+The scheduled train acts through a GitHub App, not `GITHUB_TOKEN`
+(`release-automation-roadmap.md` D3); the accent-contribution intake
+(`khiunnkhau-contrib-roadmap.md` Phase 2) shares it. This section is the one
+place its setup is written down.
+
+- App `taigikeyboard-app`, owned by the `taigikeyboard` organization, installed
+  on `taigikeyboard/taigikeyboard` and `taigikeyboard/homebrew-tap`.
+- Permissions: **Contents**, **Actions**, **Issues** and **Pull requests**:
+  write. **Workflows** is deliberately absent and must stay so: GitHub refuses
+  a push by an App without it that adds or changes a file under
+  `.github/workflows/`. The `release` environment's gate (only `main` and
+  `*-*.*.*` tags, both of which the App may bypass) relies on that refusal to
+  keep a leaked token from running a rewritten workflow with the `release`
+  secrets. The release commit only touches version files.
+- Bypass mode **Always** on the `main` ruleset (release commit) and the
+  `release tags` ruleset (publishing creates the `desktop-*` tag).
+  `homebrew-tap` has no ruleset.
+- Stored in the `release` environment: variable `RELEASE_APP_CLIENT_ID` (the
+  client id, not the deprecated numeric app id) and secret `RELEASE_APP_PRIVATE_KEY` (the
+  `.pem`).
+- Commits it makes carry the bot identity `taigikeyboard-app[bot]`,
+  `356315920+taigikeyboard-app[bot]@users.noreply.github.com`. A job that
+  pushes checks out with `persist-credentials: false` and pushes with the App
+  token, never `GITHUB_TOKEN`.
+
+Rotating the key: new private key on the App's settings page → replace
+`RELEASE_APP_PRIVATE_KEY` → delete the old key → `gh workflow run
+release-identity.yml`, which mints a token with every permission above for both
+repositories and checks both bypasses. It changes nothing; run it after any
+change to the installation too.
+
 
 ### One-time: the R2 mirror
 
