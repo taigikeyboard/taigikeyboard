@@ -157,7 +157,7 @@ fn tps_lattice_empty_input_yields_no_keys() {
 /// `build_keys_tps_caps_at_max_syllables` shape from the retired
 /// `build_keys_tps` in-crate test. With the unified shadow-lattice path
 /// the cap is enforced by `build_lattice`'s `max_syllables` arg
-/// (=`shadow::MAX_SYLLABLES` = 8) flowing into
+/// (=`shadow::lattice::MAX_SYLLABLES` = 8) flowing into
 /// `syllabifier::tps::valid_span_endings_lowered`'s BFS depth.
 /// A buffer with `MAX_SYLLABLES + 1` well-formed TPS syllables must
 /// emit at most `MAX_SYLLABLES` left-anchored phrase endings (no

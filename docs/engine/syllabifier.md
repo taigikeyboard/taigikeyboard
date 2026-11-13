@@ -25,7 +25,7 @@
 | `engine/composing/src/syllabifier/mod.rs` | Mode-aware dispatch `valid_span_endings_lowered_with_barriers` |
 | `engine/composing/src/syllabifier/tl.rs` | BFS scanner for TL / POJ / English |
 | `engine/composing/src/syllabifier/tps.rs` | BFS scanner for TPS |
-| `engine/composing/src/shadow.rs` | `span_min_syllable_count` (min-hop BFS) |
+| `engine/composing/src/shadow/keys.rs` | `span_min_syllable_count` (min-hop BFS) |
 | `engine/build-helpers/fst-builder/src/syllables.rs`, `dictionary/build/create_syllables_fst.py` | Offline build of `syllables.fst` |
 
 ---
@@ -78,7 +78,7 @@ The scanners are FIFO BFS from `pos`: for each char-boundary `end` within `MAX_S
 - **BFS, not longest-match** — typing `tsua` must surface both `珠` (span 3) and `紙`/`珠仔` (span 4) as candidate sources; pure longest-match (khiin-rs style) would commit to `tsua` and lose `珠`.
 - `is_false_toneless_boundary` suppresses a toneless match sitting immediately before a tone digit — the digit belongs to the syllable (the FST also holds the numeric form).
 
-**`span_min_syllable_count(span, inv, mode) -> Option<usize>`** (`shadow.rs`) — unweighted shortest path (fewest hops) from 0 to end, each hop one valid single syllable, so a span still syllabifiable via a non-greedy split (`ta`+`nia` when `tan`+`ia` dead-ends) is counted. `None` only when the end is not single-syllable-reachable; the caller fail-closes by dropping that lattice edge. It is the **metadata** syllable sum for the synthesized OOV slot-0 candidate, not a ranking penalty.
+**`span_min_syllable_count(span, inv, mode) -> Option<usize>`** (`shadow/keys.rs`) — unweighted shortest path (fewest hops) from 0 to end, each hop one valid single syllable, so a span still syllabifiable via a non-greedy split (`ta`+`nia` when `tan`+`ia` dead-ends) is counted. `None` only when the end is not single-syllable-reachable; the caller fail-closes by dropping that lattice edge. It is the **metadata** syllable sum for the synthesized OOV slot-0 candidate, not a ranking penalty.
 
 **Lattice** — `lattice/builder.rs::build_lattice_with_barriers` pushes every `(start, end)` edge the scanner returns (single-syllable and multi-syllable phrase ends). The display-layer longest-match suppression lives separately (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`, behavioral-invariants §18).
 
