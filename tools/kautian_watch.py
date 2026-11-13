@@ -41,13 +41,14 @@ READING_SHEETS = {
         "臺中偏漳腔",
     ),
 }
-VARIANT_SHEET = "異用字"
 # Same separators as dictionary/common/expand.py DEFAULT_SEPARATORS.
 SEPARATORS = re.compile(r"[/,]")
 # Keeps the issue body (summary tables + 24,000-char diff) under GitHub's limit.
 SUMMARY_TABLE_CHARS = 4000
-# Plain-language names for sheets the dictionary build does not read.
+# Plain-language names for sheets that do not reach the dictionary.
 SHEET_TOPICS = {
+    # Dropped at merge; the variants stage reads the frozen variants.csv instead.
+    "異用字": "variant spellings (frozen variants.csv used)",
     "義項": "definitions",
     "例句": "example sentences",
     "羅馬字清單": "romanization reference list",
@@ -411,19 +412,22 @@ def cell(row: Row, columns: Row, name: str) -> str:
 
 
 def split_pairs(hanji: str, reading: str) -> list[tuple[str, str]]:
-    # Mirrors expand_dataframe: pair by index; a single side repeats.
-    hanjis = [part.strip() for part in SEPARATORS.split(hanji) if part.strip()]
+    # Mirrors dictionary/common/expand.py expand_dataframe pairing and padding.
     readings = [part.strip() for part in SEPARATORS.split(reading) if part.strip()]
-    if len(hanjis) == 1:
-        hanjis *= len(readings)
-    if len(readings) == 1:
-        readings *= len(hanjis)
-    return list(zip(hanjis, readings))
+    hanjis = [part.strip() for part in SEPARATORS.split(hanji) if part.strip()]
+    width = max(len(readings), len(hanjis))
+    return [
+        (
+            hanjis[index] if index < len(hanjis) else (hanjis[0] if hanjis else ""),
+            readings[index] if index < len(readings) else readings[0],
+        )
+        for index in range(width if readings else 0)
+    ]
 
 
-def readings(sheets: dict[str, Sheet]) -> dict[tuple[str, str], list[str]]:
-    """(Hanji, romanization) pairs the dictionary build sees → sheets holding them."""
-    found: dict[tuple[str, str], list[str]] = {}
+def readings(sheets: dict[str, Sheet]) -> dict[tuple[str, str], set[str]]:
+    """(Hanji, romanization) pairs the dictionary build sees → sheets / dialects holding them."""
+    found: dict[tuple[str, str], set[str]] = {}
     for name, reading_columns in READING_SHEETS.items():
         sheet = sheets.get(name)
         if not sheet or "漢字" not in sheet.columns:
@@ -432,21 +436,10 @@ def readings(sheets: dict[str, Sheet]) -> dict[tuple[str, str], list[str]]:
         for row in sheet.rows:
             hanji = cell(row, sheet.columns, "漢字")
             for column in present:
+                holder = column if len(reading_columns) > 1 else name
                 for pair in split_pairs(hanji, cell(row, sheet.columns, column)):
-                    holders = found.setdefault(pair, [])
-                    if name not in holders:
-                        holders.append(name)
+                    found.setdefault(pair, set()).add(holder)
     return found
-
-
-def variants(sheets: dict[str, Sheet]) -> set[tuple[str, str]]:
-    sheet = sheets.get(VARIANT_SHEET)
-    if not sheet or not {"漢字", "異用字"} <= set(sheet.columns):
-        return set()
-    pairs = {
-        (cell(row, sheet.columns, "異用字"), cell(row, sheet.columns, "漢字")) for row in sheet.rows
-    }
-    return {pair for pair in pairs if all(pair)}
 
 
 def sheet_topic(name: str) -> str:
@@ -454,34 +447,37 @@ def sheet_topic(name: str) -> str:
         return "synonym links"
     if "反義" in name:
         return "antonym links"
-    return SHEET_TOPICS.get(name, name)
+    return SHEET_TOPICS.get(name) or safe(name, 80)
+
+
+def bounded(lines: list[str], *, brief: bool) -> list[str]:
+    shown, length = [], 0
+    for line in lines:
+        length += len(line) + 1
+        if brief and length > SUMMARY_TABLE_CHARS:
+            return shown + ["", f"…and {len(lines) - len(shown)} more in the full report."]
+        shown.append(line)
+    return shown
 
 
 def pair_table(title: str, header: Row, rows: list[Row], *, brief: bool) -> str:
-    lines = [f"**{title} ({len(rows)})**", "", f"| {' | '.join(header)} |", "| --- | --- | --- |"]
-    shown, length = 0, 0
-    for row in rows:
-        line = f"| {' | '.join(safe(value, 80 if brief else None) for value in row)} |"
-        length += len(line) + 1
-        if brief and length > SUMMARY_TABLE_CHARS:
-            break
-        lines.append(line)
-        shown += 1
-    if shown < len(rows):
-        lines += ["", f"…and {len(rows) - shown} more in the full report."]
-    return "\n".join(lines)
+    body = [
+        f"| {' | '.join(safe(value, 80 if brief else None) for value in row)} |" for row in rows
+    ]
+    head = [f"**{title} ({len(rows)})**", "", f"| {' | '.join(header)} |", "| --- | --- | --- |"]
+    return "\n".join(head + bounded(body, brief=brief))
 
 
-def side_effects(differences: list[SheetDiff]) -> list[str]:
-    """Changed source rows that alter no (Hanji, romanization) pair or variant spelling."""
+def side_effects(differences: list[SheetDiff], *, brief: bool) -> list[str]:
+    """Changed source rows that alter no (Hanji, romanization) pair."""
     edits: dict[str, Counter[str]] = {}
     topics: dict[str, list[int]] = {}
     for sheet in differences:
         if not changed(sheet):
             continue
-        if sheet.name in READING_SHEETS or sheet.name == VARIANT_SHEET:
+        if sheet.name in READING_SHEETS:
             columns = sheet.columns_before or ()
-            typing_columns = {"漢字", "異用字", *READING_SHEETS.get(sheet.name, ())}
+            typing_columns = {"漢字", *READING_SHEETS[sheet.name]}
             for modification in sheet.modified:
                 width = max(len(modification.before), len(modification.after))
                 touched = [
@@ -497,9 +493,9 @@ def side_effects(differences: list[SheetDiff]) -> list[str]:
         for index, number in enumerate(counts(sheet)):
             totals[index] += number
     lines = [
-        f"- {safe(name)}: "
-        + ", ".join(f"{safe(column, 80)} edited ×{number}" for column, number in fields.items())
+        f"- {safe(name)}: {safe(column, 80)} edited ×{number}"
         for name, fields in edits.items()
+        for column, number in fields.items()
     ]
     for topic, totals in topics.items():
         labels = ", ".join(
@@ -507,33 +503,42 @@ def side_effects(differences: list[SheetDiff]) -> list[str]:
             for number, label in zip(totals, ("added", "removed", "edited"))
             if number
         )
-        lines.append(f"- {safe(topic, 80)}: {labels or 'column headers changed'}")
-    return lines
+        lines.append(f"- {topic}: {labels or 'column headers changed'}")
+    return bounded(lines, brief=brief)
 
 
 def typing_summary(
     before: dict[str, Sheet], after: dict[str, Sheet], differences: list[SheetDiff], *, brief: bool
 ) -> str:
     old, new = readings(before), readings(after)
-    added = sorted((*pair, ", ".join(new[pair])) for pair in new.keys() - old.keys())
-    removed = sorted((*pair, ", ".join(old[pair])) for pair in old.keys() - new.keys())
-    old_variants, new_variants = variants(before), variants(after)
-    variant_rows = sorted(
-        [(*pair, "added") for pair in new_variants - old_variants]
-        + [(*pair, "removed") for pair in old_variants - new_variants]
+    added = sorted((*pair, ", ".join(sorted(new[pair]))) for pair in new.keys() - old.keys())
+    removed = sorted((*pair, ", ".join(sorted(old[pair]))) for pair in old.keys() - new.keys())
+    # Sheet / dialect membership feeds the Kautian subtag and accent mask.
+    moved = sorted(
+        (*pair, f"{', '.join(sorted(old[pair]))} → {', '.join(sorted(new[pair]))}")
+        for pair in old.keys() & new.keys()
+        if old[pair] != new[pair]
     )
     blocks = ["## What changes for typing"]
+    if headers := [
+        sheet.name
+        for sheet in differences
+        if sheet.name in READING_SHEETS and sheet.columns_before != sheet.columns_after
+    ]:
+        blocks.append(
+            f"⚠ Column headers changed: {', '.join(safe(name, 80) for name in headers)}. "
+            "List unreliable; dictionary build will likely fail."
+        )
     header = ("Hanji", "Romanization", "Sheet")
     if added:
         blocks.append(pair_table("New in 教典", header, added, brief=brief))
     if removed:
         blocks.append(pair_table("No longer in 教典", header, removed, brief=brief))
-    if variant_rows:
-        variant_header = ("Variant", "Standard Hanji", "Change")
-        blocks.append(pair_table("Variant spellings", variant_header, variant_rows, brief=brief))
-    if not (added or removed or variant_rows):
+    if moved:
+        blocks.append(pair_table("Moved", header, moved, brief=brief))
+    if not (added or removed or moved):
         blocks.append("No typing changes.")
-    if others := side_effects(differences):
+    if others := side_effects(differences, brief=brief):
         blocks.append("**No effect on typing**\n\n" + "\n".join(others))
     return "\n\n".join(blocks) + "\n\n"
 

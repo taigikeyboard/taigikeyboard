@@ -24,6 +24,7 @@ on:
       - 'tools/mise-path-prefix.sh'
       - 'mise.toml'
       - 'tools/windows/**'
+      - 'dictionary/sources/official/kautian/config.yaml'
       - '.github/workflows/kautian-watch.yml'
       - '.github/workflows/python.yml'
   push:
@@ -39,6 +40,7 @@ on:
       - 'tools/mise-path-prefix.sh'
       - 'mise.toml'
       - 'tools/windows/**'
+      - 'dictionary/sources/official/kautian/config.yaml'
       - '.github/workflows/kautian-watch.yml'
       - '.github/workflows/python.yml'
 
