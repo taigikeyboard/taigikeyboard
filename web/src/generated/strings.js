@@ -243,7 +243,15 @@ export const STRINGS = {
     "web.inspectorLegendSkip": "頭前已經分出",
     "web.inspectorLegendBase": "排序的頭一筆",
     "web.inspectorPageUp": "上一頁",
-    "web.inspectorPageDown": "下一頁"
+    "web.inspectorPageDown": "下一頁",
+    "web.extensionOff": "關掉",
+    "web.extensionNoAccess": "這个網站猶未啟用",
+    "web.extensionEnableSite": "佇這个網站使用",
+    "web.extensionRemoveSite": "莫佇這个網站使用",
+    "web.extensionTurnOn": "開始拍字",
+    "web.extensionTurnOff": "停止拍字",
+    "web.extensionUnavailable": "這頁袂當用台語齒盤",
+    "web.extensionUnsupported": "這格無支援"
   },
   "en": {
     "common.delete": "Delete",
@@ -487,7 +495,15 @@ export const STRINGS = {
     "web.inspectorLegendSkip": "An earlier stage decided",
     "web.inspectorLegendBase": "First row of the sort",
     "web.inspectorPageUp": "Previous page",
-    "web.inspectorPageDown": "Next page"
+    "web.inspectorPageDown": "Next page",
+    "web.extensionOff": "Off",
+    "web.extensionNoAccess": "Not enabled on this site",
+    "web.extensionEnableSite": "Use on This Site",
+    "web.extensionRemoveSite": "Stop Using on This Site",
+    "web.extensionTurnOn": "Start Typing",
+    "web.extensionTurnOff": "Stop Typing",
+    "web.extensionUnavailable": "TaigiKeyboard cannot run on this page",
+    "web.extensionUnsupported": "Field not supported"
   },
   "ja": {
     "common.delete": "削除",
@@ -731,7 +747,15 @@ export const STRINGS = {
     "web.inspectorLegendSkip": "前の段階で決着",
     "web.inspectorLegendBase": "並べ替えの先頭",
     "web.inspectorPageUp": "前のページ",
-    "web.inspectorPageDown": "次のページ"
+    "web.inspectorPageDown": "次のページ",
+    "web.extensionOff": "オフ",
+    "web.extensionNoAccess": "このサイトではまだ有効になっていません",
+    "web.extensionEnableSite": "このサイトで使う",
+    "web.extensionRemoveSite": "このサイトでの使用をやめる",
+    "web.extensionTurnOn": "入力を始める",
+    "web.extensionTurnOff": "入力をやめる",
+    "web.extensionUnavailable": "このページでは台湾語キーボードを使えません",
+    "web.extensionUnsupported": "この欄は非対応です"
   },
   "tailo": {
     "common.delete": "San-tî",
@@ -975,7 +999,15 @@ export const STRINGS = {
     "web.inspectorLegendSkip": "Thâu-tsîng í-king hun-tshut",
     "web.inspectorLegendBase": "Pâi-sū ê thâu tsi̍t pit",
     "web.inspectorPageUp": "Tíng tsi̍t ia̍h",
-    "web.inspectorPageDown": "Ē tsi̍t ia̍h"
+    "web.inspectorPageDown": "Ē tsi̍t ia̍h",
+    "web.extensionOff": "Kuainn-tiāu",
+    "web.extensionNoAccess": "Tsit ê bāng-tsām iáu-buē khé-iōng",
+    "web.extensionEnableSite": "Tī tsit ê bāng-tsām sú-iōng",
+    "web.extensionRemoveSite": "Mài tī tsit ê bāng-tsām sú-iōng",
+    "web.extensionTurnOn": "Khai-sí phah-jī",
+    "web.extensionTurnOff": "Thîng-tsí phah-jī",
+    "web.extensionUnavailable": "Tsit ia̍h bē-tàng iōng Tâi-gí Khí-puânn",
+    "web.extensionUnsupported": "Tsit keh bô tsi-uān"
   },
   "poj": {
     "common.delete": "San-tî",
@@ -1219,6 +1251,14 @@ export const STRINGS = {
     "web.inspectorLegendSkip": "Thâu-chêng í-king hun-chhut",
     "web.inspectorLegendBase": "Pâi-sū ê thâu chi̍t pit",
     "web.inspectorPageUp": "Téng chi̍t ia̍h",
-    "web.inspectorPageDown": "Ē chi̍t ia̍h"
+    "web.inspectorPageDown": "Ē chi̍t ia̍h",
+    "web.extensionOff": "Koaiⁿ-tiāu",
+    "web.extensionNoAccess": "Chit ê bāng-chām iáu-bōe khé-iōng",
+    "web.extensionEnableSite": "Tī chit ê bāng-chām sú-iōng",
+    "web.extensionRemoveSite": "Mài tī chit ê bāng-chām sú-iōng",
+    "web.extensionTurnOn": "Khai-sí phah-jī",
+    "web.extensionTurnOff": "Thêng-chí phah-jī",
+    "web.extensionUnavailable": "Chit ia̍h bē-tàng iōng Tâi-gí Khí-pôaⁿ",
+    "web.extensionUnsupported": "Chit keh bô chi-oān"
   }
 };

@@ -37,9 +37,15 @@ export function translate(key, placeholders = {}) {
   );
 }
 
+/// `translate` answers in the language of `tag` from here on. For a caller
+/// with no page of its own to draw (the browser extension on a website).
+export function chooseLanguage(tag) {
+  language = effectiveLanguage(tag, navigator.language);
+}
+
 /// Draws the page in the language of `tag`.
 export function setDisplayLanguage(tag) {
-  language = effectiveLanguage(tag, navigator.language);
+  chooseLanguage(tag);
   const root = document.documentElement;
   root.lang = LANGUAGE_TAGS[language];
   for (const element of document.querySelectorAll("[data-i18n]")) {
