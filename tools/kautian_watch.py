@@ -522,14 +522,7 @@ def typing_summary(
         [(*pair, "added") for pair in new_variants - old_variants]
         + [(*pair, "removed") for pair in old_variants - new_variants]
     )
-    blocks = [
-        "## What changes for typing",
-        (
-            "Words and readings in the sheets the keyboard dictionary is built from. "
-            "Approximate: the data PR's rebuilt `dictionary.csv` is authoritative, "
-            "and a word may already exist from another dictionary."
-        ),
-    ]
+    blocks = ["## What changes for typing"]
     header = ("Hanji", "Romanization", "Sheet")
     if added:
         blocks.append(pair_table("New in 教典", header, added, brief=brief))
@@ -539,7 +532,7 @@ def typing_summary(
         variant_header = ("Variant", "Standard Hanji", "Change")
         blocks.append(pair_table("Variant spellings", variant_header, variant_rows, brief=brief))
     if not (added or removed or variant_rows):
-        blocks.append("No words, readings or variant spellings changed.")
+        blocks.append("No typing changes.")
     if others := side_effects(differences):
         blocks.append("**No effect on typing**\n\n" + "\n".join(others))
     return "\n\n".join(blocks) + "\n\n"
@@ -653,15 +646,10 @@ def publish(arguments: argparse.Namespace) -> None:
         print(f"Updated issue #{current['number']}")
     else:
         body = (
-            "The Ministry of Education (MoE) published a new export of its Taigi dictionary "
-            "(教典, `kautian.ods`) that differs from the copy the keyboard is built from. "
-            "*What changes for typing* lists the words and readings affected; "
-            "*Source sheet diff* shows the raw spreadsheet rows.\n\n"
-            "Source: https://sutian.moe.edu.tw/media/senn/ods/kautian.ods\n\n"
-            "Daily automation rebuilds dictionary data and opens a PR for manual merge "
-            "after Python and Engine verification. Merging that PR closes this issue. "
-            "If verification fails, inspect the linked run; corpus membership changes "
-            "require complete `build.corpus_bigrams` regeneration before retrying."
+            "MoE published a new 教典 export: "
+            "https://sutian.moe.edu.tw/media/senn/ods/kautian.ods\n\n"
+            "Merging the automated data PR closes this issue. Corpus membership changes "
+            "need full `build.corpus_bigrams` regeneration before retrying."
         )
         issue = github(
             endpoint,

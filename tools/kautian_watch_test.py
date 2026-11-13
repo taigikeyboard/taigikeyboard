@@ -430,7 +430,7 @@ def test_typing_summary_lists_pairs_variants_and_side_effects():
 def test_typing_summary_without_reading_changes_and_bounded():
     columns = ("漢字", "羅馬字")
     sheet = watch.Sheet(columns, Counter({("甲", "kah"): 1}))
-    assert "No words, readings or variant spellings changed." in watch.typing_summary(
+    assert "No typing changes." in watch.typing_summary(
         {"名": sheet}, {"名": sheet}, [], brief=True
     )
     many = watch.Sheet(columns, Counter({(f"字{i}", "lī" * 50): 1 for i in range(2000)}))
