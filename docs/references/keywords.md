@@ -27,7 +27,7 @@ How engine and platform identifiers name recurring concepts. New code follows th
 
 - `hanzi` — SQLite columns (`custom_dictionary.db`, `learned_phrases.db`), `.taigi` backup JSON key `customDictionary[].hanzi`, the `hanzi:` FST key prefix (`phonetics::HANJI_KEY_PREFIX`), the `dictionary.csv` column, the `hanzi_len` field of the `dictionary.bin` layout, i18n keys `dictionary.hanziLabel` / `hanziPlaceholder`, iOS `Suggestion.additionalInfo["hanzi"]`.
 - `prev_word` / `prev_tl` — SQLite columns, `.taigi` JSON keys `prevWord` / `prevTl`, the `association.bin` layout.
-- `isTranslateSwapped` / `keyboard__is_translate_swapped` settings keys, the `toggleTranslateSwapped` shortcut action id, `didMoveTranslateSwappedDefaultToBacktick`.
+- `isTranslateSwapped` / `keyboard__is_translate_swapped` settings keys, the `toggleTranslateSwapped` shortcut action id. Reserved, never reuse: macOS `didMoveTranslateSwappedDefaultToBacktick` / `didMoveRomanizationDefaultToControlCommandC` (written by released builds, read by nothing since the migration went).
 - Retired proto field tags stay `reserved`.
 
 ---

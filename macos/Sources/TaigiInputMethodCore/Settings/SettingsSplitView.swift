@@ -8,8 +8,8 @@ import SwiftUI
 ///
 /// `String` raw values so the selected pane can persist through
 /// `@AppStorage` — Apple's Settings guidance is to reopen on the pane the
-/// user last used. A value persisted by a build whose case is since removed is
-/// cleared at launch (`RetiredSettingsCleanup`), landing on the default, General.
+/// user last used. Every case a released build persisted is still a case;
+/// retiring one needs a tombstone in `RetiredSettingsCleanup`.
 enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance

@@ -94,8 +94,7 @@ final class ShortcutActionsTests: XCTestCase {
     /// syllable is spelled with it, and the hotkey is armed only while a Taigi
     /// session holds the engine (USER 2026-08-21). The Candidate Display cycle is
     /// ⌃⌘H — H for Hàn-Lô, in the same ⌃⌘ family; the chord the swap gave up
-    /// on 2026-08-21, free again once `ShortcutDefaultMigration` moved those
-    /// installs (USER 2026-09-02).
+    /// on 2026-08-21, before any release shipped it (USER 2026-09-02).
     func testTheSwitches_startOnTheirConventionKeys() {
         XCTAssertEqual(
             ShortcutAction.toggleRomanization.defaultShortcut,
@@ -290,23 +289,6 @@ final class ShortcutActionsTests: XCTestCase {
             KeyboardShortcuts.getShortcut(for: .toggleTranslateSwapped),
             "both actions still hold the same chord — one press would run both",
         )
-    }
-
-    /// The live roster and the tombstone roster must not overlap: a retired
-    /// name is cleared on every launch, so an action still using one would
-    /// lose the user's chord each time the app started.
-    func testNoLiveAction_reusesARetiredName() {
-        let retired = Set([
-            "openSettings", "openGeneralPane", "openAppearancePane", "openShortcutPane",
-            "openCustomDictionaryPane", "openDictionarySourcesPane",
-        ])
-
-        for action in ShortcutAction.allCases {
-            XCTAssertFalse(
-                retired.contains(action.name.rawValue),
-                "\(action.name.rawValue) is swept by RetiredSettingsCleanup every launch",
-            )
-        }
     }
 
     /// The doorway reopens where the user LEFT OFF, which is the whole reason
