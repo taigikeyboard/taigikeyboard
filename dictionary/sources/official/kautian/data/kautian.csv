@@ -26710,6 +26710,7 @@ tsuí-kau,水溝,True,False,0,False,25,chúi-kau,tsui2kau1,chui2kau1,ㄗㄨㄧˋ
 tsuí-un,水溫,True,False,0,False,25,chúi-un,tsui2un1,chui2un1,ㄗㄨㄧˋㄨㄣ,,tsuiun,chuiun,ㄗㄨㄧㄨㄣ,,tsu,chu,ㄗㄨ,,True,False
 tsuí-tīnn,水滇,True,False,0,False,25,chúi-tīⁿ,tsui2tinn7,chui2tinn7,ㄗㄨㄧˋㄉㆪ˫,,tsuitinn,chuitinn,ㄗㄨㄧㄉㆪ,,tst,cht,ㄗㄉ,,True,False
 tsuí-tiòng,水漲,True,False,0,False,25,chúi-tiòng,tsui2tiong3,chui2tiong3,ㄗㄨㄧˋㄉㄧㆲ˪,,tsuitiong,chuitiong,ㄗㄨㄧㄉㄧㆲ,,tst,cht,ㄗㄉ,,True,False
+tsuí-tsuānn,水濺,True,False,0,False,25,chúi-chōaⁿ,tsui2tsuann7,chui2choann7,ㄗㄨㄧˋㄗㄨㆩ˫,,tsuitsuann,chuichoann,ㄗㄨㄧㄗㄨㆩ,,tsts,chch,ㄗㄗ,,True,False
 tsuí-tsai,水災,True,False,0,False,25,chúi-chai,tsui2tsai1,chui2chai1,ㄗㄨㄧˋㄗㄞ,,tsuitsai,chuichai,ㄗㄨㄧㄗㄞ,,tsts,chch,ㄗㄗ,,True,False
 tsuí-ting,水燈,True,False,0,False,25,chúi-teng,tsui2ting1,chui2teng1,ㄗㄨㄧˋㄉㄧㄥ,,tsuiting,chuiteng,ㄗㄨㄧㄉㄧㄥ,,tst,cht,ㄗㄉ,,True,False
 suí-gû,水牛,True,False,0,False,25,súi-gû,sui2gu5,sui2gu5,ㄙㄨㄧˋㆣㄨˊ,,suigu,suigu,ㄙㄨㄧㆣㄨ,,sg,sg,ㄙㆣ,,True,False
@@ -34528,6 +34529,8 @@ tìn-lōo,鎮路,True,False,0,False,25,tìn-lō͘,tin3loo7,tin3loo7,ㄉㄧㄣ˪�
 tìn-tiónn,鎮長,False,False,16,False,25,tìn-tióⁿ,tin3tionn2,tin3tionn2,ㄉㄧㄣ˪ㄉㄧㆧˋ,,tintionn,tintionn,ㄉㄧㄣㄉㄧㆧ,,tt,tt,ㄉㄉ,,True,False
 tìn-tiúnn,鎮長,True,False,0,False,25,tìn-tiúⁿ,tin3tiunn2,tin3tiunn2,ㄉㄧㄣ˪ㄉㄧㆫˋ,,tintiunn,tintiunn,ㄉㄧㄣㄉㄧㆫ,,tt,tt,ㄉㄉ,,True,False
 tìn-tsīng,鎮靜,True,False,0,False,25,tìn-chēng,tin3tsing7,tin3cheng7,ㄉㄧㄣ˪ㄐㄧㄥ˫,,tintsing,tincheng,ㄉㄧㄣㄐㄧㄥ,,tts,tch,ㄉㄐ,,True,False
+kiànn-jîn,鏡仁,True,False,0,False,25,kiàⁿ-jîn,kiann3jin5,kiann3jin5,ㄍㄧㆩ˪ㆢㄧㄣˊ,,kiannjin,kiannjin,ㄍㄧㆩㆢㄧㄣ,,kj,kj,ㄍㆢ,,True,False
+kiànn-lîn,鏡仁,True,False,0,False,25,kiàⁿ-lîn,kiann3lin5,kiann3lin5,ㄍㄧㆩ˪ㄌㄧㄣˊ,,kiannlin,kiannlin,ㄍㄧㆩㄌㄧㄣ,,kl,kl,ㄍㄌ,,True,False
 kiànn-khing,鏡框,True,False,0,False,25,kiàⁿ-kheng,kiann3khing1,kiann3kheng1,ㄍㄧㆩ˪ㄎㄧㄥ,,kiannkhing,kiannkheng,ㄍㄧㆩㄎㄧㄥ,,kkh,kkh,ㄍㄎ,,True,False
 kiànn-phìnn,鏡片,True,False,0,False,25,kiàⁿ-phìⁿ,kiann3phinn3,kiann3phinn3,ㄍㄧㆩ˪ㄆㆪ˪,,kiannphinn,kiannphinn,ㄍㄧㆩㄆㆪ,,kph,kph,ㄍㄆ,,True,False
 tsām-á,鏨仔,True,False,0,False,25,chām-á,tsam7a2,cham7a2,ㄗㆰ˫ㄚˋ,,tsama,chama,ㄗㆰㄚ,,tsa,cha,ㄗㄚ,,True,False
