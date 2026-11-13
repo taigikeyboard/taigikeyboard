@@ -63,6 +63,19 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 - `onKeyEvent` takes one listener. Google Docs and X send `onReset` while typing; `isResetStorm` skips those (from McBopomofoWeb, unverified here).
 - Dev loop without a Chromebook: Chromium's `Linux_ChromiumOS_Full` snapshot in an Apple Virtualization Linux VM with Rosetta (recipe in the roadmap's § Spike result). Chrome keeps an unpacked extension's service worker across restarts, so after a rebuild start from a new profile, or the old worker runs.
 
+## Browser extension
+
+- `web/extension/` is a Manifest V3 extension that types into websites' own fields. Design, the fields it supports and its known limits: `docs/architecture/browser-extension.md`. `make -C web extension` stages `web/target/extension/` and zips it; `make -C web extension-e2e` is its browser gate.
+- The engine runs in the tab (`typing.js`, the twin of `ime.js`), never in the service worker: `preventDefault` must run during `keydown`. `content.js` is all a page gets until typing is turned on in its tab; nothing else may be added to it.
+- `content.js` adds the window's `keydown` / `keyup` capture listeners at `document_start`, so they are the first. A key the engine took is `preventDefault`ed and `stopImmediatePropagation`ed, and so is its release: a site must not act on the Enter that picked a candidate.
+- One write path into a site's field: `execCommand` through `field.js`. Never assign `value` or edit the DOM of a site's editor: both lose its undo history.
+- The page's `panel.js`, `surface.js`, `i18n.js`, `settings.js` and `style.css` ship in the extension as they are, and its panel markup and settings form are cut from `index.html` at build time (`scripts/stage-extension.mjs`). None of them may touch the page's own DOM at load, and a renamed element in `index.html` fails `make -C web extension`.
+- Everything the extension draws is in one open shadow tree under `<taigi-keyboard>`, appended to `<html>`. The host's own style is inline and `!important`; `#box` resets inheritance with `all: initial`.
+- A site's Content Security Policy does not stop the extension's modules, styles or `fetch`, only `WebAssembly.compile` when `script-src` omits `'wasm-unsafe-eval'`. On `WebAssembly.CompileError`, `engine.js` falls back to `pkg/taigi_web_asm.js` + `pkg/taigi_web_js.js` (`scripts/build-wasm2js.mjs`); normal sites never load those files.
+- The settings document is `chrome.storage.sync` `taigi.settings`, as on ChromeOS; the options page is `chromeos/options.js` over the extension's cut of the form. A tab's mode is `chrome.storage.session`; the learned data is the service worker's IndexedDB (`learning-store.js`), and a content script reaches it only by message.
+- A message handler in `background.js` answers only this extension's own senders, and refuses a private tab's learning messages.
+- Tests give the copy under test its sites in the manifest, because the browser's permission dialog cannot be answered by a harness. The grant itself is checked by hand.
+
 ## Tests
 
 - Native tests cover the session and the key translation, with no lexicon. The engine is one per process, so a test that asserts what it composed takes the `ENGINE` turn and leaves it idle (`taigi-web` `session.rs`, `desktop/crates/taigi-desktop-core/tests/session_language_mode.rs`).

@@ -1618,6 +1618,94 @@
         "en": "Next page",
         "ja": "次のページ"
       }
+    },
+    "extensionOff": {
+      "comment": "Browser extension: the typing state of a tab where the user has not started typing; toolbar tooltip, popup and nothing near the field.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "關掉",
+        "tailo": "Kuainn-tiāu",
+        "poj": "Koaiⁿ-tiāu",
+        "en": "Off",
+        "ja": "オフ"
+      }
+    },
+    "extensionNoAccess": {
+      "comment": "Browser extension popup: the user has not let the extension work on the site in this tab.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這个網站猶未啟用",
+        "tailo": "Tsit ê bāng-tsām iáu-buē khé-iōng",
+        "poj": "Chit ê bāng-chām iáu-bōe khé-iōng",
+        "en": "Not enabled on this site",
+        "ja": "このサイトではまだ有効になっていません"
+      }
+    },
+    "extensionEnableSite": {
+      "comment": "Browser extension popup: button that asks the browser for access to this tab's site and starts typing there.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "佇這个網站使用",
+        "tailo": "Tī tsit ê bāng-tsām sú-iōng",
+        "poj": "Tī chit ê bāng-chām sú-iōng",
+        "en": "Use on This Site",
+        "ja": "このサイトで使う"
+      }
+    },
+    "extensionRemoveSite": {
+      "comment": "Browser extension popup: button that gives up the access to this tab's site.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "莫佇這个網站使用",
+        "tailo": "Mài tī tsit ê bāng-tsām sú-iōng",
+        "poj": "Mài tī chit ê bāng-chām sú-iōng",
+        "en": "Stop Using on This Site",
+        "ja": "このサイトでの使用をやめる"
+      }
+    },
+    "extensionTurnOn": {
+      "comment": "Browser extension popup: button that starts typing Taigi in this tab.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "開始拍字",
+        "tailo": "Khai-sí phah-jī",
+        "poj": "Khai-sí phah-jī",
+        "en": "Start Typing",
+        "ja": "入力を始める"
+      }
+    },
+    "extensionTurnOff": {
+      "comment": "Browser extension popup: button that stops typing Taigi in this tab.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "停止拍字",
+        "tailo": "Thîng-tsí phah-jī",
+        "poj": "Thêng-chí phah-jī",
+        "en": "Stop Typing",
+        "ja": "入力をやめる"
+      }
+    },
+    "extensionUnavailable": {
+      "comment": "Browser extension popup: the browser lets no extension work on this page (a browser page, the extension store).",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這頁袂當用台語齒盤",
+        "tailo": "Tsit ia̍h bē-tàng iōng Tâi-gí Khí-puânn",
+        "poj": "Chit ia̍h bē-tàng iōng Tâi-gí Khí-pôaⁿ",
+        "en": "TaigiKeyboard cannot run on this page",
+        "ja": "このページでは台湾語キーボードを使えません"
+      }
+    },
+    "extensionUnsupported": {
+      "comment": "Browser extension: the focused field is one the extension leaves alone (a password, a number, an embedded frame); its keys reach the page as typed. Chip beside the field, toolbar tooltip and popup.",
+      "scope": { "platforms": ["web"], "surfaces": ["host"] },
+      "values": {
+        "hanji": "這格無支援",
+        "tailo": "Tsit keh bô tsi-uān",
+        "poj": "Chit keh bô chi-oān",
+        "en": "Field not supported",
+        "ja": "この欄は非対応です"
+      }
     }
   }
 }

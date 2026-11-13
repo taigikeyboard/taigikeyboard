@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <!-- A site that allows nothing but its own files, no WebAssembly, and
+         requires Trusted Types: the extension's engine and overlay are not
+         the site's, and must still load. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; require-trusted-types-for 'script'">
+    <title>Strict</title>
+  </head>
+  <body>
+    <input id="text" type="text">
+  </body>
+</html>

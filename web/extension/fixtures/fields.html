@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Fields</title>
+    <style>
+      body { margin: 2rem; font: 16px/1.5 sans-serif; }
+      label { display: block; margin-bottom: 1rem; }
+      input, textarea { display: block; width: 24rem; font: inherit; }
+      textarea { height: 6rem; }
+    </style>
+  </head>
+  <body>
+    <!-- The extension's ordinary fields, and the ones it leaves alone. `#log`
+         is every key event the page's own listeners received. -->
+    <label>Text <input id="text" type="text"></label>
+    <label>Second <input id="second" type="text"></label>
+    <label>Area <textarea id="area"></textarea></label>
+    <label>Password <input id="password" type="password"></label>
+    <label>Number <input id="number" type="number"></label>
+    <label>Read-only <input id="readonly" type="text" readonly value="fixed"></label>
+    <a id="elsewhere" href="other.html">Another page of this site</a>
+    <pre id="log"></pre>
+    <script src="fields.js"></script>
+  </body>
+</html>

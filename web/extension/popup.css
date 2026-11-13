@@ -1,0 +1,41 @@
+/* The toolbar popup, over the page's style.css: its colours and its buttons,
+   not its layout. */
+body.popup {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 17rem;
+  min-height: 0;
+  padding: 0.875rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.popup p {
+  margin: 0;
+}
+
+.popup #site {
+  color: var(--secondary);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.popup #site:empty {
+  display: none;
+}
+
+.popup #status {
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+/* style.css gives every button a display, which outranks `hidden`. */
+.popup [hidden] {
+  display: none;
+}
+
+.popup .setting-reset {
+  width: 100%;
+  margin: 0;
+}

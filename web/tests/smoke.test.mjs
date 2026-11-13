@@ -98,6 +98,18 @@ test("a Shift tap hands the keys to the page and back", () => {
   assert.equal(lastOf(tap(), "modeChanged").symbol, "台");
   assert.equal(type(session, "a")[0].handled, true);
   cancel(session);
+
+  assert.equal(
+    lastOf(JSON.parse(session.toggleLanguageMode()), "modeChanged").symbol,
+    "英",
+  );
+  assert.equal(JSON.parse(session.modeLine()).isEnglish, true);
+  assert.equal(type(session, "a")[0].handled, false);
+  assert.equal(
+    lastOf(JSON.parse(session.toggleLanguageMode()), "modeChanged").symbol,
+    "台",
+  );
+  assert.equal(JSON.parse(session.modeLine()).isEnglish, false);
 });
 
 test("the symbol picker chord opens the picker", () => {

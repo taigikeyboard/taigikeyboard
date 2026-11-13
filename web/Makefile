@@ -14,16 +14,18 @@ TARGET := wasm32-unknown-unknown
 export CC_wasm32_unknown_unknown := $(CURDIR)/scripts/zig-cc-wasm32.sh
 export AR_wasm32_unknown_unknown := zig ar
 PKG := target/pkg
+PKG_JS := target/pkg-js
 WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site
 CHROMEOS := target/chromeos
+EXTENSION := target/extension
 FONT_SOURCES := ../assets/fonts/font
 FONTS := target/fonts
 # Lexical in one module (vendor/lexical.js), its licence beside it.
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site chromeos serve test smoke e2e check-live lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site chromeos extension extension-fixtures extension-e2e serve test smoke e2e check-live lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -34,6 +36,8 @@ help:
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
 	@echo "  make site    - Stage the page, bindings, dictionaries, fonts and manifest into $(SITE)/"
 	@echo "  make chromeos - Stage the ChromeOS input method into $(CHROMEOS)/ and zip it"
+	@echo "  make extension - Stage the browser extension into $(EXTENSION)/ and zip it"
+	@echo "  make extension-e2e - Load the staged extension in Chromium and type through it"
 	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
@@ -63,6 +67,12 @@ build: bindgen-version
 target/.pkg-stamp: $(WASM) ../mise.toml
 	wasm-bindgen --target web --out-dir $(PKG) $(WASM)
 	wasm-opt -O3 --strip-debug --strip-producers $(PKG)/taigi_web_bg.wasm -o $(PKG)/taigi_web_bg.wasm
+	touch $@
+
+# The browser extension's pure-JS fallback (~18 s), for sites whose CSP omits
+# 'wasm-unsafe-eval'. Cached on the same inputs as target/.pkg-stamp.
+$(PKG_JS)/.stamp: $(WASM) scripts/build-wasm2js.mjs ../mise.toml node_modules/.package-lock.json
+	node scripts/build-wasm2js.mjs $(WASM) $(PKG_JS)
 	touch $@
 
 # The pinned packages, once per lock change: the bundle and Playwright share them.
@@ -108,6 +118,37 @@ chromeos: build
 	cp ../assets/dictionaries/* $(CHROMEOS)/dictionaries/
 	cp $(ICONS)/16.png $(ICONS)/48.png $(ICONS)/128.png $(CHROMEOS)/icons/
 	cd $(CHROMEOS) && zip -qrX ../taigi-keyboard-chromeos.zip .
+
+# The browser extension (docs/architecture/browser-extension.md): the engine
+# and the dictionaries in the package, as ChromeOS has them, and the page's
+# panel, stylesheet and settings form cut by stage-extension.mjs.
+EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js
+extension: build node_modules/.package-lock.json
+	@$(MAKE) --no-print-directory $(PKG_JS)/.stamp
+	rm -rf $(EXTENSION) target/taigi-keyboard-extension.zip
+	mkdir -p $(EXTENSION)/pkg $(EXTENSION)/dictionaries $(EXTENSION)/icons $(EXTENSION)/generated
+	cp extension/manifest.json extension/*.js extension/popup.html extension/popup.css $(EXTENSION)/
+	cp -R extension/_locales $(EXTENSION)/
+	cp $(addprefix src/,$(EXTENSION_PAGE_MODULES)) src/style.css src/chevron.svg chromeos/options.js $(EXTENSION)/
+	cp src/generated/strings.js $(EXTENSION)/generated/
+	node scripts/stage-extension.mjs src extension $(EXTENSION)
+	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(PKG_JS)/taigi_web_asm.js $(PKG_JS)/taigi_web_js.js $(EXTENSION)/pkg/
+	cp ../assets/dictionaries/* $(EXTENSION)/dictionaries/
+	cp $(ICONS)/16.png $(ICONS)/32.png $(ICONS)/48.png $(ICONS)/128.png $(EXTENSION)/icons/
+	cd $(EXTENSION) && zip -qrX ../taigi-keyboard-extension.zip .
+
+# The extension's browser gate: Playwright loads the staged extension into its
+# own Chromium (EXTENSION_BROWSER names another Chromium's executable).
+# The fixtures are served from one directory with the pinned Quill and Lexical beside them.
+EXTENSION_FIXTURES := target/extension-fixtures
+extension-fixtures: $(VENDOR)/lexical.js node_modules/.package-lock.json
+	rm -rf $(EXTENSION_FIXTURES)
+	mkdir -p $(EXTENSION_FIXTURES)
+	cp extension/fixtures/* $(VENDOR)/lexical.js node_modules/quill/dist/quill.js node_modules/quill/dist/quill.snow.css $(EXTENSION_FIXTURES)/
+
+extension-e2e: extension extension-fixtures
+	npx playwright install $(if $(CI),--with-deps) chromium
+	npx playwright test --config extension/playwright.config.mjs
 
 serve: site
 	node scripts/serve.mjs $(SITE) 8000
