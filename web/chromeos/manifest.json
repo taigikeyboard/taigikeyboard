@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "台語齒盤 ChromeOS",
-  "short_name": "Taigi Keyboard",
+  "name": "__MSG_name__",
+  "short_name": "TaigiKeyboard",
   "version": "3.9.0",
-  "description": "Taigi (Taiwanese Hokkien) input method: POJ, TL, TPS, Hanji.",
+  "description": "__MSG_description__",
+  "default_locale": "zh_TW",
   "minimum_chrome_version": "116",
   "background": { "service_worker": "worker.js", "type": "module" },
   "permissions": ["input", "offscreen", "storage"],
@@ -22,7 +23,7 @@
       "type": "ime",
       "id": "taigi",
       "indicator": "台",
-      "description": "Taigi Keyboard",
+      "description": "TaigiKeyboard",
       "language": "zh-TW",
       "options_page": "options.html",
       "layouts": ["us"]
