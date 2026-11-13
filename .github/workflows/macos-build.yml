@@ -1,0 +1,220 @@
+name: macOS build
+
+# The macOS half of a desktop release: build, sign, notarize and attach the
+# `.pkg` to the `desktop-<version>` draft (docs/architecture/macos-release.md
+# § Cutting a release). Dispatched from `main` by `tools/release/stage-desktop.sh`
+# with the commit it staged. A pull request touching this workflow,
+# `bundle-app.sh` or `release-app.sh` assembles the release bundle unsigned.
+#
+# Budget: ~25 min — two release builds (one per architecture, fat LTO) with no
+# cache, plus the notarization wait.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: The commit stage-desktop.sh staged; the run refuses any other
+        required: true
+        type: string
+  pull_request:
+    paths:
+      - '.github/workflows/macos-build.yml'
+      - 'macos/scripts/bundle-app.sh'
+      - 'macos/scripts/release-app.sh'
+
+permissions: {}
+
+concurrency:
+  group: macos-build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Same protoc as macos.yml (engine/protos/build.rs shells out to it).
+  PROTOC_VERSION: 36.1
+  PROTOC_SHA256: de56d57afe30c5d191b11d24ff93dd4025728d7fb43b773886b2d3613e0bdbb2
+  # Pinned, not the image default, so a runner image update cannot change the
+  # SDK a release links against. macos-26 carries GA Xcode 26.x only; KeyboardShortcuts
+  # needs Swift 6.2+ (macos.yml says why).
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  # The release build without credentials: what `release` runs up to signing.
+  bundle:
+    name: release bundle (unsigned)
+    if: github.event_name == 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the toolchain (macos/rust-toolchain.toml)
+        working-directory: macos
+        run: |
+          set -euo pipefail
+          rustup toolchain install --no-self-update
+          rustup target list --installed
+          xcodebuild -version && swift --version && protoc --version
+
+      - name: Build the engine xcframework (universal)
+        run: make macos-libs
+
+      # Ad-hoc signed: every assembly check of a release bundle, both slices.
+      - name: bundle-app.sh release
+        run: bash macos/scripts/bundle-app.sh release
+
+  release:
+    name: build, sign, notarize, attach
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      # generate-notes and the upload, in the attach step only.
+      contents: write
+    steps:
+      # No token on disk: the build runs every crate's build script.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Fail in seconds, not after the build: the commit the staging run meant,
+      # the token publish-release.sh will use, and the draft it will join
+      # (`join_desktop_draft` again joins — never moves — at attach time).
+      - name: Check the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [ "$SOURCE_SHA" = "$GITHUB_SHA" ] || {
+              echo "::error::this run builds $GITHUB_SHA but the staging run staged $SOURCE_SHA — main moved; re-run stage-desktop.sh"
+              exit 1
+          }
+          gh auth status
+          source macos/scripts/lib/bundle-identity.sh
+          source tools/release/lib/desktop-release.sh
+          DESKTOP_SOURCE_COMMIT="$GITHUB_SHA"
+          join_desktop_draft
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      # Both macOS targets, from macos/rust-toolchain.toml.
+      - name: Install the toolchain (macos/rust-toolchain.toml)
+        working-directory: macos
+        run: |
+          set -euo pipefail
+          rustup toolchain install --no-self-update
+          rustup target list --installed
+          xcodebuild -version && swift --version && protoc --version
+
+      # The universal engine archive the app links (generated, gitignored).
+      # Before any credential exists on the runner.
+      - name: Build the engine xcframework (universal)
+        run: make macos-libs
+
+      # A keychain of its own, holding only the two Developer ID identities and
+      # Apple's intermediates, first in the search list so `security
+      # find-identity -v` (release-app.sh) sees exactly one of each. Keys are
+      # imported non-exportable (-x); the partition list lets codesign /
+      # productbuild use them without a prompt. GitHub docs: "Installing an
+      # Apple certificate on macOS runners".
+      - name: Import the Developer ID certificates
+        env:
+          APPLICATION_P12: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 }}
+          INSTALLER_P12: ${{ secrets.MACOS_DEVELOPER_ID_INSTALLER_P12 }}
+          P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          keychain_password="$(openssl rand -base64 32)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          for name in APPLICATION INSTALLER; do
+            p12="$RUNNER_TEMP/$name.p12"
+            variable="${name}_P12"
+            printf '%s' "${!variable}" | base64 --decode > "$p12"
+            security import "$p12" -k "$keychain" -P "$P12_PASSWORD" -f pkcs12 -x \
+              -T /usr/bin/codesign -T /usr/bin/productbuild -T /usr/bin/pkgbuild
+            rm -f "$p12"
+          done
+          # Both Developer ID intermediates: which one issued the certificates
+          # depends on when they were created (G2 from 2021-09-17).
+          for ca in DeveloperIDCA DeveloperIDG2CA; do
+            curl -sSfL --retry 5 -o "$RUNNER_TEMP/$ca.cer" "https://www.apple.com/certificateauthority/$ca.cer"
+            security import "$RUNNER_TEMP/$ca.cer" -k "$keychain"
+          done
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain" > /dev/null
+          # shellcheck disable=SC2046
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v | grep "Developer ID"
+
+      # The .p8 exactly as App Store Connect downloads it (PEM).
+      - name: Write the App Store Connect API key
+        env:
+          API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/AuthKey_$API_KEY_ID.p8"
+          printf '%s\n' "$API_KEY_P8" > "$key"
+          chmod 600 "$key"
+          grep -q 'BEGIN PRIVATE KEY' "$key" || {
+              echo "::error::APPLE_API_KEY_P8 is not the .p8 file's PEM text — set it with: gh secret set APPLE_API_KEY_P8 --env release < AuthKey_<id>.p8"
+              exit 1
+          }
+          echo "NOTARY_API_KEY=$key" >> "$GITHUB_ENV"
+
+      # Build, sign, verify, package, notarize, staple. No GitHub token here.
+      - name: release-app.sh
+        env:
+          NOTARY_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
+          NOTARY_API_ISSUER: ${{ vars.APPLE_API_ISSUER_ID }}
+        run: bash macos/scripts/release-app.sh
+
+      # Credentials go before the token arrives.
+      - name: Remove the keychain and the API key
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/release.keychain-db" 2> /dev/null || true
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+
+      # Stapled, Gatekeeper, declared identity and version, then join the draft
+      # (refused if a newer staging run re-created it during the build), attach
+      # and read back (desktop-release.md § What staging checks).
+      - name: publish-release.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash macos/scripts/publish-release.sh
+
+      # A rejection's notary log, for a person to read.
+      - name: Keep the notarization log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-notarization
+          path: macos/.build/distribution/staging/notarization-*
+          if-no-files-found: ignore
+          retention-days: 14

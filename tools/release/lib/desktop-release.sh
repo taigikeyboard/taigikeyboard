@@ -7,10 +7,10 @@
 # repository: `docs/architecture/macos-release.md` § Publishing the package.
 #
 # One desktop version is ONE release, tagged `desktop-<version>`, holding every
-# platform's installer. They are built on different machines at different
-# times — the package on a Mac once Apple has notarized it, the installer and
-# the `.deb` on hosted runners — so the Mac creates the release and the others
-# attach their assets.
+# platform's installer. They are built on different hosted runners at
+# different times — the package once Apple has notarized it, the installer, the
+# Linux packages, the ChromeOS zip — so `stage-desktop.sh` creates the draft
+# and each runner attaches its assets.
 #
 # That release is a DRAFT until a person publishes it. A draft has no public
 # asset URL and no git tag, so nothing here reaches a user: the maintainer
@@ -172,6 +172,9 @@ _write_release_notes() {
 # staged: on Windows, where releases are unsigned, it is what a user can check a
 # manual download against, and `windows-release.md` promises every release
 # publishes one.
+#
+# The caller opens the draft first — `ensure_desktop_draft` or
+# `join_desktop_draft` — which leaves STAGED_ASSET_NAMES set.
 stage_desktop_asset() {
     local asset_path="$1"
     local asset_name local_sha256 receipt
@@ -179,8 +182,6 @@ stage_desktop_asset() {
     local_sha256="$(release_sha256 "$asset_path")"
     receipt="$RELEASE_TEMP_DIR/$asset_name.sha256"
     printf '%s  %s\n' "$local_sha256" "$asset_name" > "$receipt"
-
-    ensure_desktop_draft
 
     if grep -qxF "$asset_name" <<< "$STAGED_ASSET_NAMES"; then
         echo "==> $asset_name is already on $DESKTOP_TAG — verifying it"
@@ -200,9 +201,9 @@ stage_desktop_asset() {
 }
 
 # This version's draft on the commit being staged, created empty when no
-# platform has staged yet — the macOS half on a full release, `stage-desktop.sh`
-# itself before a hosted-only patch, whose CI attach steps join a draft and
-# never create one. Leaves STAGED_ASSET_NAMES set.
+# platform has staged yet, an existing tag or draft moved onto that commit —
+# what the run that owns the draft does (`stage-desktop.sh`, the Windows box).
+# Leaves STAGED_ASSET_NAMES set.
 ensure_desktop_draft() {
     _align_release_with_commit
     # Called directly, not in a command substitution: `fail` inside one exits
@@ -223,6 +224,24 @@ ensure_desktop_draft() {
         --notes-file "$DESKTOP_NOTES_FILE" > /dev/null ||
         fail "cannot create the draft $DESKTOP_TAG"
     STAGED_ASSET_NAMES=""
+}
+
+# The draft a hosted half attaches to: it must exist, still be a draft and
+# target DESKTOP_SOURCE_COMMIT. Never creates or moves anything — on a runner,
+# a draft on another commit belongs to a newer staging run. Leaves
+# STAGED_ASSET_NAMES set.
+join_desktop_draft() {
+    local state is_draft target
+    state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
+        --json isDraft,targetCommitish --jq '(.isDraft|tostring) + " " + .targetCommitish' 2>&1)" ||
+        fail "no draft $DESKTOP_TAG to join: $state — stage-desktop.sh creates it before dispatching the builds"
+    read -r is_draft target <<< "$state"
+    [[ "$is_draft" == true ]] ||
+        fail "$DESKTOP_TAG is already published — an asset added now would be public with no test"
+    [[ "$target" == "$DESKTOP_SOURCE_COMMIT" ]] ||
+        fail "the $DESKTOP_TAG draft targets $target, not $DESKTOP_SOURCE_COMMIT — another staging run owns it; re-run stage-desktop.sh"
+    _read_staged_asset_names || fail "the draft $DESKTOP_TAG vanished while it was read"
+    echo "  joining the draft $DESKTOP_TAG on ${DESKTOP_SOURCE_COMMIT:0:7}"
 }
 
 # Sets STAGED_ASSET_NAMES to the names already on the draft, one per line, and

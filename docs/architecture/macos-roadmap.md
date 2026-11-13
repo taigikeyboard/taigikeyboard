@@ -62,8 +62,8 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   (no Xcode `$(…)` placeholders); bundle ID `com.siansiansu.inputmethod.TaigiKeyboard`
   (mandatory `.inputmethod.` third segment). Mach-register temporary exception
   entitlement required if sandboxed. Ad-hoc codesign for local dev; Developer-ID
-  signing + notarization ship as `make macos-release`
-  (`macos/scripts/release-app.sh`). azooKey-Desktop `pkgbuild.sh` was the
+  signing + notarization ship as `macos/scripts/release-app.sh`, run by
+  `.github/workflows/macos-build.yml` since the release train's phase 4. azooKey-Desktop `pkgbuild.sh` was the
   pipeline reference; what was and was not adopted from it, and why, lives in
   `docs/architecture/macos-release.md`.
   The package is a library (`TaigiInputMethodCore`) plus

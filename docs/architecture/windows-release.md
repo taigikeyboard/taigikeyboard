@@ -243,7 +243,7 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
 
 ## Cutting a release
 
-A release does not build here at all: `make desktop-release` on the Mac
+A release does not build here at all: `make desktop-release` (any machine with `gh`)
 dispatches `.github/workflows/windows-build.yml`, which builds the installer on
 a GitHub-hosted runner and attaches it to the same draft the macOS package is
 staged on (`desktop-release.md`). `make windows-release` remains what a person
