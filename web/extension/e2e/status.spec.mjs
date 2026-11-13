@@ -2,15 +2,21 @@
 // beside the focused field, and the popup
 // (docs/architecture/browser-extension.md § Status).
 
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import {
   A,
   chip,
   commitWord,
   expect,
   expectToolbar,
+  launch,
   openPopup,
   openTyping,
   preedit,
+  STORE,
   test,
   toolbar,
   turnOn,
@@ -113,44 +119,70 @@ test("the popup says so on a page no extension may enter", async ({
   await expect(popup.locator("#settings")).toBeVisible();
   await popup.close();
 
-  // The web store is `https:` yet restricted all the same.
-  await page.route("https://chromewebstore.google.com/**", (route) =>
-    route.fulfill({ contentType: "text/html", body: "<!doctype html>" }),
-  );
-  await page.goto("https://chromewebstore.google.com/detail/taigikeyboard");
-  const storePopup = await openPopup(context, worker, page);
+  // The web store is `http(s):` yet restricted all the same. Served by the
+  // fixture server rather than `page.route`: `Fetch.fulfillRequest` on the
+  // web store host crashes Chrome for Testing.
+  const storePage = await context.newPage();
+  await storePage.goto(`${STORE}/fields.html`);
+  const storePopup = await openPopup(context, worker, storePage);
   await expect(storePopup.locator("#status")).toHaveText(
     "TaigiKeyboard cannot run on this page",
   );
   await expect(storePopup.locator("#enable")).toBeHidden();
 });
 
-test("a site that forbids WebAssembly keeps its keys, and says why not", async ({
+test("a site that forbids WebAssembly types through the JS fallback", async ({
   context,
   worker,
   page,
 }) => {
-  await page.goto(`${A}/strict.html`);
-  const popup = await openPopup(context, worker, page);
-  await popup.locator("#turn-on").click();
-  await page.bringToFront();
-  await expectToolbar(worker, page, "!");
-  const field = page.locator("#text");
-  await field.click();
-  await expect(chip(page)).toHaveAttribute("data-state", "failed");
-  await expect(chip(page)).toHaveText("Could not load");
+  const field = await openTyping(
+    context,
+    worker,
+    page,
+    `${A}/strict.html`,
+    "#text",
+  );
   await commitWord(page);
-  await expect(field).toHaveValue("taiuan");
+  await expect(field).toHaveValue("台灣");
   await expect(preedit(page)).toBeEmpty();
+});
 
-  // Turning off clears the failure badge and chip.
-  const offPopup = await openPopup(context, worker, page);
-  await Promise.all([
-    offPopup.waitForEvent("close"),
-    offPopup.locator("#turn-off").click(),
-  ]);
-  await expectToolbar(worker, page, "");
-  await expect(chip(page)).toBeHidden();
+test("a broken package keeps the site's keys, and says why not", async ({
+  extension,
+  profile,
+}) => {
+  const broken = mkdtempSync(join(tmpdir(), "taigi-broken-"));
+  cpSync(extension, broken, { recursive: true });
+  rmSync(join(broken, "pkg", "taigi_web_bg.wasm"));
+  const { context, worker } = await launch(broken, profile);
+  try {
+    const page = await context.newPage();
+    await page.goto(FIELDS);
+    const popup = await openPopup(context, worker, page);
+    await popup.locator("#turn-on").click();
+    await page.bringToFront();
+    await expectToolbar(worker, page, "!");
+    const field = page.locator("#text");
+    await field.click();
+    await expect(chip(page)).toHaveAttribute("data-state", "failed");
+    await expect(chip(page)).toHaveText("Could not load");
+    await commitWord(page);
+    await expect(field).toHaveValue("taiuan");
+    await expect(preedit(page)).toBeEmpty();
+
+    // Turning off clears the failure badge and chip.
+    const offPopup = await openPopup(context, worker, page);
+    await Promise.all([
+      offPopup.waitForEvent("close"),
+      offPopup.locator("#turn-off").click(),
+    ]);
+    await expectToolbar(worker, page, "");
+    await expect(chip(page)).toBeHidden();
+  } finally {
+    await context.close();
+    rmSync(broken, { recursive: true, force: true });
+  }
 });
 
 test("a settings change reaches a tab that is typing", async ({

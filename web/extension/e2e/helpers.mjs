@@ -32,6 +32,7 @@ const ENABLED_SITES = ["*://a.test/*", "*://b.test/*", "*://quilljs.com/*"];
 export const A = `http://a.test:${PORT}`;
 export const B = `http://b.test:${PORT}`;
 export const C = `http://c.test:${PORT}`;
+export const STORE = `http://chromewebstore.google.com:${PORT}`;
 
 /// Waits for any force-installed MV2 background page (such as Helium's bundled
 /// uBlock Origin, which reloads tabs opened before its filter lists finish
@@ -106,7 +107,7 @@ export async function launch(extension, profile) {
     args: [
       `--disable-extensions-except=${extension}`,
       `--load-extension=${extension}`,
-      "--host-resolver-rules=MAP *.test 127.0.0.1",
+      "--host-resolver-rules=MAP *.test 127.0.0.1, MAP chromewebstore.google.com 127.0.0.1",
     ],
   });
   const worker =

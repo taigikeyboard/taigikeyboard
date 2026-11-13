@@ -14,6 +14,7 @@ TARGET := wasm32-unknown-unknown
 export CC_wasm32_unknown_unknown := $(CURDIR)/scripts/zig-cc-wasm32.sh
 export AR_wasm32_unknown_unknown := zig ar
 PKG := target/pkg
+PKG_JS := target/pkg-js
 WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site
 CHROMEOS := target/chromeos
@@ -68,6 +69,12 @@ target/.pkg-stamp: $(WASM) ../mise.toml
 	wasm-opt -O3 --strip-debug --strip-producers $(PKG)/taigi_web_bg.wasm -o $(PKG)/taigi_web_bg.wasm
 	touch $@
 
+# The browser extension's pure-JS fallback (~18 s), for sites whose CSP omits
+# 'wasm-unsafe-eval'. Cached on the same inputs as target/.pkg-stamp.
+$(PKG_JS)/.stamp: $(WASM) scripts/build-wasm2js.mjs ../mise.toml node_modules/.package-lock.json
+	node scripts/build-wasm2js.mjs $(WASM) $(PKG_JS)
+	touch $@
+
 # The pinned packages, once per lock change: the bundle and Playwright share them.
 node_modules/.package-lock.json: package-lock.json
 	npm ci --no-audit --no-fund
@@ -116,7 +123,8 @@ chromeos: build
 # and the dictionaries in the package, as ChromeOS has them, and the page's
 # panel, stylesheet and settings form cut by stage-extension.mjs.
 EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js
-extension: build
+extension: build node_modules/.package-lock.json
+	@$(MAKE) --no-print-directory $(PKG_JS)/.stamp
 	rm -rf $(EXTENSION) target/taigi-keyboard-extension.zip
 	mkdir -p $(EXTENSION)/pkg $(EXTENSION)/dictionaries $(EXTENSION)/icons $(EXTENSION)/generated
 	cp extension/manifest.json extension/*.js extension/popup.html extension/popup.css $(EXTENSION)/
@@ -124,7 +132,7 @@ extension: build
 	cp $(addprefix src/,$(EXTENSION_PAGE_MODULES)) src/style.css src/chevron.svg chromeos/options.js $(EXTENSION)/
 	cp src/generated/strings.js $(EXTENSION)/generated/
 	node scripts/stage-extension.mjs src extension $(EXTENSION)
-	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(EXTENSION)/pkg/
+	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(PKG_JS)/taigi_web_asm.js $(PKG_JS)/taigi_web_js.js $(EXTENSION)/pkg/
 	cp ../assets/dictionaries/* $(EXTENSION)/dictionaries/
 	cp $(ICONS)/16.png $(ICONS)/32.png $(ICONS)/48.png $(ICONS)/128.png $(EXTENSION)/icons/
 	cd $(EXTENSION) && zip -qrX ../taigi-keyboard-extension.zip .
