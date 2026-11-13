@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ---------------------------------------------------------------------------
-# Preflight. The shared half first, so a dirty tree or an uncommitted changelog
+# Preflight. The shared half first, so a dirty tree or an unreachable GitHub API
 # stops before Gatekeeper is asked anything.
 # ---------------------------------------------------------------------------
 

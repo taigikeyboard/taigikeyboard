@@ -40,8 +40,7 @@ numbers it did not ship (Windows goes 2026.12.0 → 2026.12.2) and its update ch
 only compares, so the gap is harmless. Announcing a patch writes only its
 platform's `_data` / appcast, so the
 others keep offering the version they have. The next full release lines every
-platform up again. Its changelog `changelog/desktop-v<version>.md` has only the
-patched platform's section. Setting the number, and why minor and patch each stop
+platform up again. Setting the number, and why minor and patch each stop
 at 99: [`manual-release-notes.md` § Set the version](manual-release-notes.md#set-the-version).
 
 Staging creates no tag — publishing does — and a draft has no public asset URL,
@@ -63,7 +62,7 @@ The release goes in **this** repository; only the website's own data goes to
 
 | What | Where | Why there |
 |---|---|---|
-| Each installer and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, every desktop platform on one release | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes are that commit's changelog. Release assets live outside git, so they cost the repository no size or bandwidth allowance. |
+| Each installer and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, every desktop platform on one release | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes list the pull requests merged up to it. Release assets live outside git, so they cost the repository no size or bandwidth allowance. |
 | The download mirror: each installer and its `.sha256` | the Cloudflare R2 bucket `taigikeyboard-downloads`, served at `https://dl.taigikeyboard.tw/desktop/<asset>` — copied there by the announcement | GitHub's release-asset host crawls on some Taiwanese ISPs (HiNet measured ~40 KB/s on 2026-10-09, against ~16 MB/s from R2), so the website buttons and both appcasts name the mirror; the GitHub release stays the original it is checked against. See *One-time: the R2 mirror* and *Pruning the mirror*. |
 | The beta copy of a draft and `_data/beta_release.json` | R2 `beta/<version>-<sha7>-<run id>/` (newest only) and the website repository, written by `desktop-beta.yml` | Internal testers have no write access to see a draft. A fresh prefix per run because the download host caches for 30 days and a re-stage at one commit builds different bytes. |
 | `_data/{macos,windows,linux,linux_rpm,linux_arch,chromeos}_release.json` | committed site data in the website repository — written only by the announcement, all in one commit (`tools/release/lib/release-site.sh`) | The landing page's download buttons read them, and the /beta page hides a beta whose version one of them names (the ChromeOS file exists for that alone, since the store distributes the zip); the macOS one and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
@@ -78,10 +77,13 @@ own artifact; everything above it is shared (see *Where it all lives* below).
 1. The shared preconditions, before any evidence is gathered about the artifact,
    so a mistake costs a second rather than a notarization wait or a signtool
    round trip: `gh` present and authenticated, a dotted-integer version, a clean
-   tree, HEAD an ancestor of `origin/main`, and `changelog/desktop-v<version>.md`
-   present **in that commit**. Not `main`'s tip — `main` may move between the two
-   platforms' staging runs, and requiring the tip would strand whichever runs
-   second.
+   tree, and HEAD an ancestor of `origin/main` — not `main`'s tip, which may move
+   between the platforms' staging runs and would strand whichever runs second.
+   Then the release body: GitHub's generated notes for the pull requests merged
+   between the previous published `desktop-*` release and HEAD (named
+   explicitly, since the repository's latest release may be a `mobile-*` one),
+   plus the Code signing policy link SignPath asks for
+   (`tools/release/lib/desktop-release.sh` `_write_release_notes`).
 2. What only that platform can assert about its own artifact: notarization,
    Gatekeeper and the package's declared identity on macOS
    (`macos-release.md`); the installer's name, VERSIONINFO and Authenticode
@@ -100,9 +102,8 @@ own artifact; everything above it is shared (see *Where it all lives* below).
    downloadable, so moving its tag would rewrite what a version people already
    have means. Immutable releases (repository setting, on since 2026-11-04) lock
    its tag and assets too, so the only way forward is a new version.
-4. `gh release create --draft --target <commit>` with the whole
-   `changelog/desktop-v<version>.md` as the notes (every platform shares the
-   page, so every section belongs on it), or an upload into the existing draft.
+4. `gh release create --draft --target <commit>` with that body as the notes,
+   or an upload into the existing draft.
    Never `--clobber`, and never over an asset already staged: an identical one
    is verified in place, a differing one stops the run.
 5. The staged asset is downloaded back — authenticated, since a draft has no

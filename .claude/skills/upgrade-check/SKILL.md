@@ -117,7 +117,7 @@ Emit a markdown report:
 |---|------|------|-------------------------------|--------|
 ...
 
-## Behavior changes — confirm each is in changelog/mobile-v<version>.md (mobile) / changelog/desktop-v<version>.md (desktop)
+## Behavior changes — confirm each is in changelog/mobile-v<version>.md (mobile; desktop notes are GitHub-generated)
 - ...
 
 ## Blocking — must fix before release
@@ -127,7 +127,7 @@ Emit a markdown report:
 Rules:
 - Every row cites `file:line` + the old→new value. No claim without evidence.
 - A SAFE result for a whole area still gets one row ("schema: all unchanged → no migration runs").
-- BEHAVIOR-CHANGE findings are cross-checked against the target changelog file (`changelog/mobile-v<version>.md` / `changelog/desktop-v<version>.md`); flag any that are missing from the changelog.
+- Mobile: BEHAVIOR-CHANGE findings are cross-checked against `changelog/mobile-v<version>.md`; flag any that are missing. Desktop: the release body is GitHub's generated notes (PR titles), so there is no file to check — report the findings only.
 - Never assign release scope (in/out of vX) — that is the maintainer's call. Report compat facts only.
 - This skill does not fix anything. If a BLOCKING finding needs a code change, that is a separate user-gated bugfix round (Core Principle #4).
 
