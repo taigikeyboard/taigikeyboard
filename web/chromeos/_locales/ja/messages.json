@@ -1,4 +1,6 @@
 {
   "name": { "message": "台語齒盤 ChromeOS：台湾語入力メソッド" },
-  "description": { "message": "無料でオープンソース、デバイスをまたいで使える台湾語入力ツール。" }
+  "description": {
+    "message": "無料でオープンソース、デバイスをまたいで使える台湾語入力ツール。"
+  }
 }
