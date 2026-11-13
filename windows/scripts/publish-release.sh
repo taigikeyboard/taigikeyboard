@@ -83,6 +83,7 @@ elif [[ "$allow_unsigned" == false ]]; then
     echo "  note: WINDOWS_SIGNING_THUMBPRINT is not set — the signer is trusted but not pinned to the release certificate"
 fi
 
+ensure_desktop_draft
 stage_desktop_asset "$installer_path"
 desktop_draft_summary Windows
 

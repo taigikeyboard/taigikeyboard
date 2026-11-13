@@ -4,8 +4,8 @@ macOS input methods cannot ship on the Mac App Store: an App Sandbox process
 cannot register the system-wide mach service that InputMethodKit requires of an
 input-method server, and Apple's developer support has confirmed the category is
 out of scope for the store. The only distribution route is a Developer ID
-installer package downloaded from the web, which is what `make macos-release`
-produces.
+installer package downloaded from the web, which is what
+`.github/workflows/macos-build.yml` produces on a GitHub-hosted Mac.
 
 iOS is unaffected — it continues to ship through App Store Connect.
 
@@ -22,15 +22,15 @@ architectures:
 | App executable | One `swift build --arch <arch>` per architecture, then `lipo -create`. Deliberately not the Swift Build backend's multi-architecture mode, which SwiftPM documents for universal binaries but which cannot link this package — it drops the `@_cdecl` logger-sink symbols the Rust archive imports and fails for *both* architectures. Since Swift 6.4 (Xcode 27) that backend is the default even for a single `--arch`, so `bundle-app.sh` passes `--build-system native` explicitly. vChewing builds per-architecture for the same reason. |
 | Installer | `hostArchitectures="arm64,x86_64"` in the generated distribution. |
 
-`engine/rust-toolchain.toml` declares both Apple desktop targets, so the
+`macos/rust-toolchain.toml` declares both Apple desktop targets, so the
 prerequisite is a checkout concern rather than something a build script installs
 behind the developer's back.
 
 **Debug stays native.** `bundle-app.sh debug` builds only for the host
 architecture — recompiling the whole dependency graph for an architecture this
 Mac cannot execute costs every dev-loop iteration and catches nothing.
-`release-app.sh` always passes `release`, so the shipping path cannot take the
-native branch.
+`release-app.sh` refuses a bundle without both slices, so the shipping path
+cannot take the native branch.
 
 Three assertions pin the contract, each an exact set rather than a
 "contains" check, because a bundle that silently lost x86_64 still contains
@@ -46,8 +46,10 @@ arm64 and only an Intel Mac would ever find out:
 
 ## One-time account setup
 
-Everything here is done once per machine. `make macos-release` fails fast with
-the exact remedy when a piece is missing.
+Everything here is done once per account, on the maintainer's Mac; the result
+goes into the `release` environment (*3. The release environment* below), and
+the release runner never touches a person's keychain. `release-app.sh` fails
+fast with the exact remedy when a piece is missing.
 
 ### 1. Two certificates
 
@@ -65,7 +67,7 @@ Confirm both landed in the login keychain:
 security find-identity -v | grep "Developer ID"
 ```
 
-`make macos-release` resolves each certificate itself and stops if more than one
+`release-app.sh` resolves each certificate itself and stops if more than one
 is valid — which happens while a renewed certificate overlaps the one it
 replaces, since both carry the same name. Name the one to sign with through
 `DEVELOPER_ID_APPLICATION` / `DEVELOPER_ID_INSTALLER` when that is the case.
@@ -74,10 +76,17 @@ Back up the private keys (Keychain Access → export as `.p12`). A lost Develope
 ID key cannot be re-issued for the same certificate, and Apple caps how many of
 each type an account may hold.
 
-### 2. A stored notarization credential
+### 2. An App Store Connect API key
 
-Notarization authenticates separately from code signing. Store it once under the
-profile name the release script expects:
+Notarization authenticates separately from code signing. App Store Connect →
+Users and Access → Integrations → **Team Keys** → **+**, access *Developer*.
+Download the `.p8` (offered once) and note the key ID and the issuer ID shown
+above the list. `release-app.sh` uses it when `NOTARY_API_KEY` (the `.p8`
+path), `NOTARY_API_KEY_ID` and `NOTARY_API_ISSUER` are set — `notarytool
+--key / --key-id / --issuer`.
+
+A local, unpublished build may still notarize through a stored keychain profile
+(`NOTARY_PROFILE`, default `TaigiKeyboard`), used when `NOTARY_API_KEY` is unset:
 
 ```sh
 xcrun notarytool store-credentials "TaigiKeyboard" \
@@ -86,30 +95,63 @@ xcrun notarytool store-credentials "TaigiKeyboard" \
   --password <app-specific-password>
 ```
 
-The password is an **app-specific password** from appleid.apple.com, not the
-Apple ID password. Override the profile name with `NOTARY_PROFILE` if an
-existing profile should be reused.
+### 3. The release environment
+
+The release runner reads everything from the repository's `release`
+environment (only `main` and the release tags may use it):
+
+| Name | Kind | Value |
+|---|---|---|
+| `MACOS_DEVELOPER_ID_APPLICATION_P12` | secret | the Developer ID Application certificate + key, exported as `.p12`, base64 (`base64 -i app.p12 \| pbcopy`) |
+| `MACOS_DEVELOPER_ID_INSTALLER_P12` | secret | the same for Developer ID Installer |
+| `MACOS_P12_PASSWORD` | secret | the export password of both `.p12` |
+| `APPLE_API_KEY_P8` | secret | the `.p8` file's PEM text (`gh secret set APPLE_API_KEY_P8 --env release < AuthKey_<id>.p8`) |
+| `APPLE_API_KEY_ID` | variable | the key ID |
+| `APPLE_API_ISSUER_ID` | variable | the issuer ID |
+
+Set with `gh secret set <name> --env release` / `gh variable set <name> --env
+release`. A renewed certificate is a new `.p12` in the same secret; the runner's
+keychain only ever holds the one in the environment, so the renewal overlap
+described above cannot happen there.
 
 ## Cutting a release
 
-```sh
-make i18n
-make build          # always: see below
-make macos-release
-```
+`make desktop-release` (or `make desktop-patch PLATFORM=macos`) on any machine
+dispatches `.github/workflows/macos-build.yml` with the staged commit
+(`desktop-release.md`). Two jobs on two `macos-26` runners, Xcode pinned
+through `DEVELOPER_DIR` (an image update cannot change the SDK a release links):
 
-`make macos-release` does not rebuild the engine itself, and the rebuild above
-is not optional: the xcframework this app links
-(`macos/RustEngine/RustTaigi.xcframework/`) is generated and gitignored, so a
-clean tree says nothing about it ([`build-artifacts.md` § A release rebuilds first](build-artifacts.md#a-release-rebuilds-first)).
+| Job | Has | Runs |
+|---|---|---|
+| `build` | no secret, no environment, a read-only token, none on disk | refuses a commit other than the staged one; `make macos-libs` (the universal engine xcframework — generated and gitignored, so always built from the commit, [`build-artifacts.md` § A release rebuilds first](build-artifacts.md#a-release-rebuilds-first)); `bundle-app.sh release` (ad-hoc signed); checks the tree is unchanged; hands the bundle on as a one-day artifact |
+| `release` | the `release` environment: both `.p12`, the `.p8`, a write token | on a fresh VM, compiles nothing: joins the draft (`join_desktop_draft`); imports both `.p12` (non-exportable) into a temporary keychain with Apple's two Developer ID intermediates and writes the `.p8`; `release-app.sh` with no GitHub token; removes the keychain and the key; then `publish-release.sh` with the token, which joins the draft again — refusing one a newer staging run re-created on another commit, never moving it — and attaches the package |
 
-What the script does, in order:
+**Why two jobs:** the build executes third-party code — every crate's build
+script and proc macro, every SwiftPM package. In one job, such code could leave
+a process behind that outlives its step and waits for the keychain or the
+`.p8`. On separate machines, nothing that ran there ever coexists with a
+credential; the signing machine runs only Apple's tools, this repository's
+scripts and two SHA-pinned GitHub actions. It signs the bundle `build` produced
+— that is the product, and notarization scans it — but executes none of it.
+
+A rejected notarization keeps its log as the `macos-notarization` artifact.
+
+Re-staging the same commit while an earlier macOS run is still building fails
+the later run's read-back (a re-signed package has other bytes than the one
+already attached); wait for the earlier run to finish, then stage again — the
+same recovery as the Linux half.
+
+A pull request touching the workflow or the release scripts runs the `build`
+job alone.
+
+What `release-app.sh` does, in order — it builds nothing:
 
 1. **Preflight** — clean working tree, each certificate resolvable to exactly
    one fingerprint, notarization credential authenticates.
-2. **Build and sign** — `scripts/bundle-app.sh release --sign <Developer ID
-   Application>`, which runs every assembly check the dev loop runs and then
-   signs with the hardened runtime and a secure timestamp.
+2. **Sign** — the release bundle `bundle-app.sh release` assembled
+   (`macos/.build/bundle/`, refused unless it carries both slices) is re-signed
+   with the Developer ID Application identity, the hardened runtime and a
+   secure timestamp.
 3. **Verify the signature** — signed by a Developer ID Application certificate,
    hardened-runtime flag present, secure timestamp present, no entitlements.
    All four are notarization prerequisites, and catching them here costs
@@ -125,28 +167,20 @@ What the script does, in order:
 6. **Name the output** — move the finished package to
    `macos/.build/distribution/TaigiKeyboard-<version>.pkg` only after every check
    passed, and print its SHA-256.
-7. **Stage** — hand the package to `macos/scripts/publish-release.sh`, which
-   puts it on the draft (*Publishing the package* below).
+Staging is `macos/scripts/publish-release.sh`, the workflow's next step
+(*Publishing the package* below). It picks up only that exact name, so a
+throwaway package can never be staged.
 
 Flags:
 
-`make macos-release` passes `--force --publish`, so cutting a release needs no
-flags: it publishes, and it overwrites the local package left by a previous
-attempt at the same version. Re-cutting a version is the normal case — a release
-flow is verified by running it — and both defaults exist so that verifying it
-twice takes the same command as verifying it once.
-
-`--publish` refuses to run alongside either throwaway flag, and the refusal comes
-before the build rather than after the notarization wait. Those builds therefore
-bypass the make target:
+The release runner passes none: a fresh runner has no package from a previous
+attempt to `--force` over. A local throwaway build:
 
 ```sh
+make macos-libs && bash macos/scripts/bundle-app.sh release
 bash macos/scripts/release-app.sh --skip-notarize   # packaging only, unshippable
-bash macos/scripts/release-app.sh --allow-dirty     # build from a dirty tree
+bash macos/scripts/release-app.sh --allow-dirty     # package from a dirty tree
 ```
-
-`RELEASE_FLAGS` still reaches the script for anything else, but passing either of
-the two above through it fails on purpose.
 
 `--skip-notarize` and `--allow-dirty` both stamp the reason into the output
 filename, so an unpublishable package cannot be confused for a release.

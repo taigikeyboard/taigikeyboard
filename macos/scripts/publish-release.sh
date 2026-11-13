@@ -20,7 +20,8 @@
 # version.
 #
 # Re-running after a failure is the intended recovery: the draft is added to,
-# never torn down, and an asset already staged is verified rather than replaced.
+# never torn down or moved, and an asset already staged is verified rather than
+# replaced.
 
 set -euo pipefail
 
@@ -58,7 +59,7 @@ desktop_release_preflight
 # (`-dirty`, `-unnotarized`) carries a qualifier and therefore cannot be picked
 # up by accident here.
 [[ -n "$pkg_path" ]] || pkg_path="$DISTRIBUTION_DIR/$MACOS_ASSET"
-[[ -f "$pkg_path" ]] || fail "no package at $pkg_path — run 'make macos-release' first"
+[[ -f "$pkg_path" ]] || fail "no package at $pkg_path — run 'release-app.sh' first"
 PKG_NAME="$(basename "$pkg_path")"
 # Absolute from here on: the identity check below reads the package from inside
 # a temporary directory, where a relative --pkg would no longer resolve.
@@ -104,5 +105,8 @@ print((reference.get("version") or "") if reference is not None else "")
 [[ "$PACKAGE_VERSION" == "$BUILD_VERSION" ]] ||
     fail "$PKG_NAME is build $PACKAGE_VERSION, but this checkout is $BUILD_VERSION ($SHORT_VERSION) — it would be announced as the wrong version"
 
+# Run by the release workflow (macos-build.yml): it joins the draft
+# stage-desktop.sh created on this commit, never creates or moves one.
+join_desktop_draft
 stage_desktop_asset "$pkg_path"
 desktop_draft_summary macOS

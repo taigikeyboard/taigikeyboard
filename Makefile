@@ -21,7 +21,7 @@ SHELL := /usr/bin/env sh
 .PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
         fmt lint lint-ps1 hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
-        macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
+        desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
         update-submodules
 
@@ -142,23 +142,6 @@ e2e:
 	e2e/drivers/$(PLATFORM)/run.sh "$(E2E_RUN)" $(E2E_ONLY)
 	python3 e2e/analyzer/analyze.py --run "$(E2E_RUN)"
 
-# Cut a macOS release: build, sign, notarize, and stage the package on this
-# version's DRAFT desktop release. The only entry point for one — `macos/Makefile`
-# is the dev loop and stops at `bundle`. Nothing here reaches a user: the draft
-# has no tag and no public download, and `make desktop-announce` is what
-# announces the release a person publishes after testing it.
-#
-# `--publish` is baked in because staging IS the point of this target, and
-# `--force` because re-cutting the same version is the normal case: a release is
-# tested by running this flow, and the local package from the previous attempt
-# must not be what stops the next one.
-#
-# The two throwaway builds contradict publishing and so are refused here by
-# design; run the script directly for those. Prerequisites and the one-time
-# Developer ID setup: docs/architecture/macos-release.md.
-macos-release:
-	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
-
 # Host-side gate for the Windows input method (no Windows machine needed):
 # i18n check + native tests for the pure crates + clippy against the
 # x86_64-pc-windows-gnu target (full crate graph via mingw-w64) + cargo check
@@ -231,14 +214,14 @@ desktop-announce:
 
 # Cut a Windows release — on a Windows machine, from Git Bash: release
 # builds, signing, the Inno Setup installer, and staging it on the same draft
-# desktop release the Mac's package goes on (windows/scripts/release-app.sh;
-# procedure and one-time setup in docs/architecture/windows-release.md). Like
-# the macOS target it announces nothing — `make desktop-announce` does, after a
+# desktop release the macOS package goes on (windows/scripts/release-app.sh;
+# procedure and one-time setup in docs/architecture/windows-release.md). It
+# announces nothing — `make desktop-announce` does, after a
 # person has tested and published. There is no certificate, so today the
 # operator types `make windows-release RELEASE_FLAGS=--skip-sign` — unsigned is
 # the Windows release channel (that doc's § Signing status), and the flag stays
 # explicit rather than defaulted so nothing publishes unsigned by accident.
-# Unlike macos-release, --publish therefore does NOT refuse the skip flag.
+# --publish therefore does NOT refuse the skip flag.
 windows-release:
 	bash windows/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
@@ -387,9 +370,8 @@ help:
 	@echo "Maintainer releases"
 	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
 	@echo "  make version-desktop 2026.12.0  Set the desktop train's CalVer version (macOS + Windows + Linux + ChromeOS)"
-	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"
-	@echo "  make desktop-release    Stage every desktop platform on the draft (Mac + hosted runners)"
+	@echo "  make desktop-release    Stage every desktop platform on the draft (hosted runners)"
 	@echo "  make desktop-patch PLATFORM=linux  Stage ONE platform's patch release on its own draft"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"

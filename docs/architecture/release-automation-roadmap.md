@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `release`, `release train`, `CalVer`, `generate-notes`, `GitHub App`, `schedule`
-> **Status**: Accepted 2026-11-12 — Phase 4 next (needs maintainer credentials)
+> **Status**: Accepted 2026-11-12 — Phase 4 in progress (credentials stored 2026-11-14)
 
 ## Goal
 
@@ -37,7 +37,7 @@ Decisions (maintainer, 2026-11-12):
 | Chrome Web Store | Manual upload in the Developer Dashboard | `docs/architecture/chromeos-release.md` § Upload |
 | Homebrew | Manual edit of `Casks/taigikeyboard.rb` in `taigikeyboard/homebrew-tap` | `docs/architecture/desktop-release.md` § The flow |
 
-The macOS half is the only one bound to a person's machine; every other half already runs on hosted runners.
+The macOS half is the only one bound to a person's machine; every other half already runs on hosted runners. (Baseline before phase 4, kept as the plan's starting point; phase 4 moved the macOS half to `macos-build.yml`.)
 
 ## Phases
 
@@ -49,7 +49,7 @@ One phase = one PR unless marked admin.
 | 1 | CalVer | `set-versions --train desktop` accepts `YYYY.M.P` (month 1–12, no leading zero, year ≥ 2026) and keeps the downgrade guard; `check-versions` and the macOS build number follow; `desktop-release.md` § Version numbers rewritten (full release `YYYY.M.0`, patch `YYYY.M.P`). CalVer only from 3.9.0 on — a patch before the first train is `2026.11.P` (maintainer, 2026-11-13) | — | Merged #895 |
 | 2 | Generated release notes | Staging (`tools/release/lib/desktop-release.sh` `_write_release_notes`) asks the Release Notes API (`POST /repos/{owner}/{repo}/releases/generate-notes`) for the body, from the previous published `desktop-*` release to the staged commit, and appends the Code signing policy link. No `changelog/desktop-v*.md` after 3.9.0; `CHANGELOG.md` points at the release pages. `/release-desktop` stops writing a changelog | — | Merged #899 |
 | 3 | Release identity | GitHub App `taigikeyboard-app` (shared with the accent-contribution intake), tokens minted with `actions/create-github-app-token`; `release-identity.yml` (dispatch only) checks the setup. Setup: `desktop-release.md` § One-time: the release App | Create the App, install it, add it to both rulesets' bypass lists, store the variable and the secret (done 2026-11-14) | Merged #900; `release-identity.yml` green 2026-11-14 |
-| 4 | macOS on a hosted runner | `macos-build.yml` (dispatch, `source_sha` like the Linux / ChromeOS builds): imports both Developer ID `.p12` into a temporary keychain, notarizes with an App Store Connect API key, attaches the `.pkg` to the draft. `stage-desktop.sh` dispatches it like the other three halves, so staging needs no Mac. `macos/scripts/release-app.sh` takes the API key in place of the keychain profile when it is set | Export both `.p12` (+ password) and an App Store Connect Team API key into the `release` environment: secrets `MACOS_DEVELOPER_ID_APPLICATION_P12`, `MACOS_DEVELOPER_ID_INSTALLER_P12` (base64), `MACOS_P12_PASSWORD`, `APPLE_API_KEY_P8`; variables `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID` | Pending |
+| 4 | macOS on a hosted runner | `macos-build.yml` (dispatch, `source_sha` like the Linux / ChromeOS builds): imports both Developer ID `.p12` into a temporary keychain, notarizes with an App Store Connect API key, attaches the `.pkg` to the draft. `stage-desktop.sh` dispatches it like the other three halves, so staging needs no Mac. `macos/scripts/release-app.sh` takes the API key in place of the keychain profile when it is set; `make macos-release` and `release-app.sh --publish` are removed (no local staging path) | Export both `.p12` (+ password) and an App Store Connect Team API key into the `release` environment: secrets `MACOS_DEVELOPER_ID_APPLICATION_P12`, `MACOS_DEVELOPER_ID_INSTALLER_P12` (base64), `MACOS_P12_PASSWORD`, `APPLE_API_KEY_P8`; variables `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID` | In progress — credentials stored 2026-11-14 |
 | 5 | Cut on the 1st | `desktop-train.yml`, `schedule: '0 1 1 * *'` + `workflow_dispatch`: stop if `RELEASE_HOLD` is set; stop with a Discord note if no pull request merged since the previous desktop release (empty month, no release); `set-versions` to `YYYY.M.0`, commit + push with the App token, then `stage-desktop.sh` | — | Pending |
 | 6 | Publish on the 5th | `desktop-publish.yml`, `schedule: '0 1 5 * *'` + `workflow_dispatch`: stop if `RELEASE_HOLD` is set; require the month's draft to carry every expected asset + `.sha256` and to name the commit the cut made; publish with the App token (fires `announce-release.yml`); a failure posts to Discord | — | Pending |
 | 7 | Stores | Chrome Web Store API upload + submit, and the Homebrew cask bump (version + sha256, `brew audit`), as jobs after the announcement in `announce-release.yml`; each runs only when the release carries its asset | Chrome Web Store API V2 (the V1 API stopped 2026-10-15) through a Google Cloud service account added in the Developer Dashboard: secret `CWS_SERVICE_ACCOUNT_JSON`, variables `CWS_PUBLISHER_ID`, `CWS_EXTENSION_ID`. The store item must exist first (V2 cannot create one), so the first upload stays manual | Pending |

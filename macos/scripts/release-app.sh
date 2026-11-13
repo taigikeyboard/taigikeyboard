@@ -3,18 +3,27 @@
 # distributed as. macOS input methods cannot ship on the Mac App Store, so a
 # Developer ID installer package downloaded from the web is the only route;
 # docs/architecture/macos-release.md covers the one-time account setup this
-# script assumes (two certificates and a stored notarytool profile).
+# script assumes (two certificates and a notarization credential). The release
+# runs it on a hosted Mac (.github/workflows/macos-build.yml).
 #
-# Usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force] [--publish]
+# It builds nothing: it signs the bundle `bundle-app.sh release` assembled
+# (`$BUILT_APP`) with Developer ID, then packages and notarizes it. The build
+# runs third-party code (crate build scripts, SwiftPM packages), so on the
+# release runner it happens in a job that never sees a credential, and only
+# this script — Apple's tools and this repository's code — runs where the
+# certificates are. Locally: `make macos-libs`, `bundle-app.sh release`, then
+# this.
 #
-#   --allow-dirty     Build from a dirty working tree. The output is named
+# Usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force]
+#
+#   --allow-dirty     Package from a dirty working tree. The output is named
 #                     `-dirty` and must not be published.
 #   --skip-notarize   Stop after signing the package. The output is named
 #                     `-unnotarized`; Gatekeeper blocks it on any other Mac.
 #   --force           Overwrite an existing package with the same name.
-#   --publish         On success, hand the package to publish-release.sh, which
-#                     uploads it and announces it. Refuses the two flags above
-#                     that produce an unpublishable package.
+#
+# Staging the package on the draft is `publish-release.sh`, a separate step of
+# the release workflow — it runs after the signing credentials are removed.
 #
 # Environment overrides, the first two only needed when a certificate cannot be
 # resolved unambiguously:
@@ -22,6 +31,14 @@
 #   DEVELOPER_ID_APPLICATION  certificate common name used to sign the bundle
 #   DEVELOPER_ID_INSTALLER    certificate common name used to sign the package
 #   NOTARY_PROFILE            notarytool keychain profile (default: TaigiKeyboard)
+#
+# Notarization authenticates with an App Store Connect API key when
+# NOTARY_API_KEY is set — the release runner's way (.github/workflows/
+# macos-build.yml) — and with the keychain profile otherwise:
+#
+#   NOTARY_API_KEY            path to the .p8 private key
+#   NOTARY_API_KEY_ID         its key ID
+#   NOTARY_API_ISSUER         the team's issuer ID
 
 set -euo pipefail
 
@@ -43,41 +60,39 @@ STAGING_ROOT="$STAGING_DIR/root"
 COMPONENT_INSTALL_LOCATION="/Library/Input Methods"
 
 NOTARY_PROFILE="${NOTARY_PROFILE:-TaigiKeyboard}"
+# Every notarytool call authenticates the same way.
+if [[ -n "${NOTARY_API_KEY:-}" ]]; then
+    [[ -f "$NOTARY_API_KEY" ]] || fail "NOTARY_API_KEY '$NOTARY_API_KEY' is not a file"
+    [[ -n "${NOTARY_API_KEY_ID:-}" && -n "${NOTARY_API_ISSUER:-}" ]] ||
+        fail "NOTARY_API_KEY needs NOTARY_API_KEY_ID and NOTARY_API_ISSUER"
+    NOTARY_AUTH=(--key "$NOTARY_API_KEY" --key-id "$NOTARY_API_KEY_ID" --issuer "$NOTARY_API_ISSUER")
+    NOTARY_AUTH_NAME="App Store Connect API key $NOTARY_API_KEY_ID"
+else
+    NOTARY_AUTH=(--keychain-profile "$NOTARY_PROFILE")
+    NOTARY_AUTH_NAME="notarytool profile '$NOTARY_PROFILE'"
+fi
 
 allow_dirty=false
 skip_notarize=false
 force_overwrite=false
-publish=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --allow-dirty) allow_dirty=true ;;
         --skip-notarize) skip_notarize=true ;;
         --force) force_overwrite=true ;;
-        --publish) publish=true ;;
         *)
             echo "error: unknown argument '$1'" >&2
-            echo "usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force] [--publish]" >&2
+            echo "usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force]" >&2
             exit 2
             ;;
     esac
     shift
 done
 
-# Both throwaway flags contradict --publish, and both are rejected on the flag
-# rather than on what the flag turns out to allow: --allow-dirty over a tree
-# that happens to be clean still says "I am not building a release". Caught here
-# because the build plus notarization stands between this point and the end.
-if [[ "$publish" == true ]]; then
-    [[ "$skip_notarize" == false ]] ||
-        fail "--publish and --skip-notarize contradict: an unnotarized package cannot be distributed"
-    [[ "$allow_dirty" == false ]] ||
-        fail "--publish and --allow-dirty contradict: a published package must be reproducible from a commit"
-fi
-
 # ---------------------------------------------------------------------------
-# Preflight. Everything that can be known before the build is checked before
-# the build, because the build plus the notarization round trip is minutes.
+# Preflight. Everything that can be known before signing is checked first,
+# because the notarization round trip is minutes.
 # ---------------------------------------------------------------------------
 
 # The marketing version names the download; the build version is what the
@@ -106,14 +121,12 @@ if [[ "$SHORT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
 fi
 
 echo "==> Checking the working tree"
-# Untracked files count: SwiftPM compiles everything under Sources/, so an
-# uncommitted source file would otherwise ship inside a package that claims to
-# be HEAD. Submodules count for the same reason.
-#
-# A clean tree proves the bundle ships exactly what is committed at HEAD. It
-# does NOT prove the committed xcframework and dictionary artifacts were
-# regenerated from the committed sources — nothing here can prove that, so run
-# `make build` (and `make dict` when dictionary sources moved) beforehand.
+# A clean tree proves the packaging — this script, the plist it reads — is what
+# HEAD commits. It cannot prove the bundle was built from HEAD: this script
+# builds nothing. On the release runner that proof is the `build` job's, which
+# builds a fresh checkout of the staged commit and checks the build changed
+# nothing tracked. A local bundle built from a dirty tree and packaged after a
+# commit is a throwaway either way: only the release workflow stages.
 TREE_STATUS="$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)"
 if [[ -n "$TREE_STATUS" ]]; then
     if [[ "$allow_dirty" == false ]]; then
@@ -183,12 +196,13 @@ echo "  pkg: $INSTALLER_IDENTITY"
 
 if [[ "$skip_notarize" == false ]]; then
     echo "==> Checking the notarization credentials"
-    # Cheapest call that proves the stored profile authenticates. Without it the
-    # first notarization failure would arrive after the whole build.
-    if ! xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" \
+    # Cheapest call that proves the credential authenticates. Without it the
+    # first notarization failure would arrive after signing and packaging.
+    if ! xcrun notarytool history "${NOTARY_AUTH[@]}" \
         --output-format json > /dev/null 2>&1; then
-        echo "error: notarytool profile '$NOTARY_PROFILE' is missing or cannot authenticate." >&2
-        echo "       Store it once with:" >&2
+        echo "error: $NOTARY_AUTH_NAME is missing or cannot authenticate." >&2
+        [[ -z "${NOTARY_API_KEY:-}" ]] || exit 1
+        echo "       Store the profile once with:" >&2
         echo "         xcrun notarytool store-credentials \"$NOTARY_PROFILE\" \\" >&2
         echo "           --apple-id <apple-id> --team-id <team-id> --password <app-specific-password>" >&2
         exit 1
@@ -203,13 +217,26 @@ if [[ -d "$INSTALLED_APP" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Build.
+# Sign the release bundle.
 # ---------------------------------------------------------------------------
+
+[[ -d "$BUILT_APP" ]] ||
+    fail "no bundle at $BUILT_APP — run 'bash macos/scripts/bundle-app.sh release' first"
+# A debug bundle carries one slice; only a release bundle carries both
+# (bundle-app.sh asserts the set, this refuses the wrong configuration).
+BUNDLE_ARCHITECTURES="$(lipo -archs "$BUILT_APP/Contents/MacOS/$EXECUTABLE_NAME" | tr ' ' '\n' | LC_ALL=C sort | paste -sd, -)"
+[[ "$BUNDLE_ARCHITECTURES" == "arm64,x86_64" ]] ||
+    fail "$BUILT_APP has architectures '$BUNDLE_ARCHITECTURES', not arm64,x86_64 — rebuild it with 'bundle-app.sh release'"
 
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_ROOT"
 
-bash "$PACKAGE_DIR/scripts/bundle-app.sh" release --sign "$APPLICATION_IDENTITY"
+echo "==> Signing with $APPLICATION_IDENTITY"
+# Replaces bundle-app.sh's ad-hoc signature. Hardened runtime and a secure
+# timestamp are both required for notarization. No `--deep`: it papers over
+# nested-code signing mistakes, and there is no nested code to sign —
+# bundle-app.sh copies one executable and data files, nothing else.
+codesign --force --sign "$APPLICATION_IDENTITY" --options runtime --timestamp "$BUILT_APP"
 
 echo "==> Verifying the signature"
 # `--deep` is wrong for signing but right for verifying: it walks whatever
@@ -378,7 +405,7 @@ if [[ "$skip_notarize" == false ]]; then
     # not the exit code.
     SUBMIT_EXIT=0
     xcrun notarytool submit "$STAGED_PKG" \
-        --keychain-profile "$NOTARY_PROFILE" \
+        "${NOTARY_AUTH[@]}" \
         --wait --no-progress --output-format json \
         > "$SUBMISSION_JSON" 2> "$SUBMISSION_STDERR" || SUBMIT_EXIT=$?
 
@@ -410,7 +437,7 @@ for key in ("status", "id"):
     report_notarization_issues() {
         [[ -n "$SUBMISSION_ID" ]] || return 0
         local log="$STAGING_DIR/notarization-log.json"
-        xcrun notarytool log "$SUBMISSION_ID" --keychain-profile "$NOTARY_PROFILE" "$log" || return 0
+        xcrun notarytool log "$SUBMISSION_ID" "${NOTARY_AUTH[@]}" "$log" || return 0
         [[ -s "$log" ]] || return 0
         echo "       full log: $log" >&2
         python3 -c '
@@ -467,19 +494,7 @@ if [[ "$skip_notarize" == true ]]; then
     echo "  ⚠ not notarized — Gatekeeper blocks this on every Mac but this one."
 fi
 
-# Uploading and announcing is a separate script, and stays separate even when
-# chained: everything above here is minutes of build and notarization that must
-# not be repeated because a network step failed.
-if [[ "$publish" == true ]]; then
-    # The tree was clean minutes ago, before a build and a notarization wait.
-    # Re-read it: what gets published has to be reproducible from the commit
-    # this claims to be, and an edit landing mid-build would silently break that.
-    [[ "$(git -C "$REPOSITORY_DIR" rev-parse --short HEAD)" == "$HEAD_COMMIT" &&
-        -z "$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)" ]] ||
-        fail "the working tree changed during the build — this package no longer matches $HEAD_COMMIT, rebuild before publishing"
-    echo ""
-    bash "$PACKAGE_DIR/scripts/publish-release.sh" --pkg "$OUTPUT_PKG"
-else
-    echo ""
-    echo "  Publish it with: bash macos/scripts/publish-release.sh"
-fi
+# Staging is a separate script (`publish-release.sh`): everything above is
+# minutes of build and notarization that must not be repeated because a network
+# step failed, and the release workflow runs it only after the signing
+# credentials are gone. Its preflight re-checks the tree is clean at this commit.

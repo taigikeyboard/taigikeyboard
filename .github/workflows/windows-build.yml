@@ -435,8 +435,7 @@ jobs:
           ' windows/Cargo.toml)"
           tag="desktop-$version"
 
-          # The draft is stage-desktop.sh's (the macOS half, or the script
-          # itself for a patch); this run joins it. A published release means
+          # The draft is stage-desktop.sh's; this run joins it. A published release means
           # the staging order was broken — an asset added to it would be public
           # with no test — and no release at all means nothing staged yet.
           state="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {

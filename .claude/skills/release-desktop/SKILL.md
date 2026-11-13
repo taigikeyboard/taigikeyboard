@@ -174,8 +174,8 @@ then go straight to staging.
 make desktop-release
 ```
 
-It builds the macOS `.pkg` here and dispatches the hosted Windows, Linux and
-ChromeOS builds from the same commit onto the **draft** `desktop-<target>` (what each
+It creates the draft and dispatches the hosted macOS (signed + notarized on the
+runner), Windows, Linux and ChromeOS builds from the same commit onto the **draft** `desktop-<target>` (what each
 step does and checks: `docs/architecture/desktop-release.md` § The flow,
 § What staging checks). A full release is every platform or none; an existing draft
 for this version is deleted first, so if a half fails or `main` moved while it

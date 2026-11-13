@@ -140,7 +140,7 @@ the way `windows-build.yml` is the Windows half:
   `source_sha`, refuses any commit but that one, refuses a published release
   or a draft targeting another commit, and uploads the `.deb`, the `.rpm`
   and the Arch `.pkg.tar.zst`, each with its `.sha256`, to the
-  `desktop-<version>` draft the macOS half created — never
+  `desktop-<version>` draft `stage-desktop.sh` created — never
   over an asset already there. A dispatch from any other ref, or without
   `source_sha`, only builds. The build job also checks the package's control
   `Version` / `Architecture` and that the build rewrote nothing tracked

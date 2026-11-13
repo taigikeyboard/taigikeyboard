@@ -5,7 +5,7 @@
 # Usage: announce-release.sh [--version <x.y.z>]
 #
 # This is the second half of the desktop release. The first half
-# (`make macos-release` / `make windows-release`, via
+# (`make desktop-release` → the hosted `*-build.yml` runs, via
 # `tools/release/lib/desktop-release.sh`) stages each platform's installer on a DRAFT
 # release, which no user can reach. Between the two halves the maintainer
 # downloads what was staged, tests it, and publishes the release by hand.

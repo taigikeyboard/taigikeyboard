@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Stage the desktop installers on this version's draft release: the package
-# built here; the Windows installer, the Linux packages and the ChromeOS Web
-# Store zip built on GitHub-hosted runners.
+# Stage the desktop installers on this version's draft release: the macOS
+# package, the Windows installer, the Linux packages and the ChromeOS Web Store
+# zip, each built on a GitHub-hosted runner. Staging needs no Mac.
 #
 # Usage: stage-desktop.sh              a full release — every platform
 #        stage-desktop.sh <platform>   a patch release — macos | windows | linux | chromeos
 #
 # The builds cannot share a machine — one needs Xcode and a Developer ID, one
-# MSVC and Inno Setup, one a Linux with the Fcitx5 headers — so this runs the
-# first here and dispatches the others to CI, then waits for each. All build
-# from this commit.
+# MSVC and Inno Setup, one a Linux with the Fcitx5 headers — so this creates the
+# draft here, dispatches every half to CI, then waits for each. All build from
+# this commit.
 #
 # Nothing here reaches a user: every half stages on a DRAFT release
 # (`docs/architecture/desktop-release.md`). Publishing stays a person's. The
@@ -90,22 +90,18 @@ case "$existing_state" in
         ;;
 esac
 
-if stages macos; then
-    echo ""
-    echo "==> macOS — build, sign, notarize, stage (this Mac)"
-    make -C "$REPOSITORY_DIR" macos-release
-fi
-
-# The installer and the packages are built by
-# `.github/workflows/windows-build.yml`, `linux-build.yml` and
-# `chromeos-build.yml` on clean GitHub-hosted runners, never on the
-# maintainer's Windows box (`windows-release.md` § Building on a GitHub-hosted
-# runner says why); the Linux and ChromeOS halves have no machine of their own.
+# The package, the installer and the packages are built by
+# `.github/workflows/macos-build.yml`, `windows-build.yml`, `linux-build.yml`
+# and `chromeos-build.yml` on clean GitHub-hosted runners, never on the
+# maintainer's own machines (`windows-release.md` § Building on a GitHub-hosted
+# runner says why; the macOS half signs with the Developer ID certificates and
+# notarizes with the API key held in the `release` environment —
+# `macos-release.md`).
 #
 # workflow_dispatch takes a branch or tag, never a bare SHA, so the commit being
 # staged has to be what `main` points at — which it is, since the release prep
 # was just pushed there. Every hosted half is dispatched together, right after
-# that check, so main has no wait to move in; the Linux and ChromeOS attach jobs
+# that check, so main has no wait to move in; the macOS, Linux and ChromeOS runs
 # still refuse any commit but the one they were handed.
 git -C "$REPOSITORY_DIR" fetch --quiet origin main
 [[ "$SOURCE_COMMIT" == "$(git -C "$REPOSITORY_DIR" rev-parse FETCH_HEAD)" ]] ||
@@ -141,25 +137,25 @@ wait_for() {
         fail "the $what build failed — its log is at the URL above; fix it and run this again, which re-stages every half"
 }
 
-# The hosted attach steps join a draft and never create one; without the
-# macOS half, the draft is made here, on this commit, before they run.
-if ! stages macos; then
-    echo ""
-    desktop_release_preflight
-    ensure_desktop_draft
-fi
+# The hosted attach steps join a draft and never create one, so the draft is
+# made here, on this commit, before they run.
+echo ""
+desktop_release_preflight
+ensure_desktop_draft
 
+macos_run=""
 windows_run=""
 linux_run=""
 chromeos_run=""
-if stages windows || stages linux || stages chromeos; then
-    echo ""
-    echo "==> Hosted runners — dispatched together, waited on in turn"
-fi
+echo ""
+echo "==> Hosted runners — dispatched together, waited on in turn"
+# The commit travels with the dispatch: the macOS, Linux and ChromeOS runs
+# refuse any other.
+stages macos && macos_run="$(dispatch macos-build.yml macOS -f "source_sha=$SOURCE_COMMIT")"
 stages windows && windows_run="$(dispatch windows-build.yml Windows)"
-# The commit travels with the dispatch: the Linux attach job refuses any other.
 stages linux && linux_run="$(dispatch linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT")"
 stages chromeos && chromeos_run="$(dispatch chromeos-build.yml ChromeOS -f "source_sha=$SOURCE_COMMIT")"
+[[ -z "$macos_run" ]] || wait_for "$macos_run" macOS
 [[ -z "$windows_run" ]] || wait_for "$windows_run" Windows
 [[ -z "$linux_run" ]] || wait_for "$linux_run" Linux
 [[ -z "$chromeos_run" ]] || wait_for "$chromeos_run" ChromeOS
