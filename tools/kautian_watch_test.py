@@ -375,7 +375,7 @@ def test_reading_sheets_match_dictionary_config():
     options = yaml.safe_load(config.read_text(encoding="utf-8"))["stage_options"]
     select = options["select"]
     sheets = {name.removesuffix(".csv"): spec["columns"] for name, spec in select["sheets"].items()}
-    # 異用字 is dropped at merge, so it lists under 袂影響拍字.
+    # 異用字 is dropped at merge, so it lists under 其他改變.
     assert "異用字.csv" in options["merge"]["exclude"] and "異用字" in watch.SHEET_TOPICS
     del sheets["異用字"]
     assert sheets == {
@@ -439,15 +439,15 @@ def test_typing_summary_lists_pairs_moves_and_side_effects():
     summary = summarize(before, after)
     # trace: "kiànn-jîn/kiànn-lîn" splits on "/" → two (鏡仁, tl) pairs; 古/kóo
     # leaves 詞目 but stays in 又唸作 → moved, neither new nor removed.
-    assert "**增加（2）**" in summary
+    assert "**增加的音讀（2）**" in summary
     assert "| 鏡仁 | kiànn&#45;jîn | 詞目 |" in summary
     assert "| 鏡仁 | kiànn&#45;lîn | 詞目 |" in summary
-    assert "**刪掉" not in summary
-    assert "**徙位（1）**" in summary
+    assert "**刪掉的音讀" not in summary
+    assert "**徙位的音讀（1）**" in summary
     assert "| 古 | kóo | 詞目 → 又唸作 |" in summary
     assert "- 詞目：分類改 1 項" in summary
     assert "**近義（1）**" in summary and "| 甲 | 乙 | 刪掉 |" in summary
-    assert "- 異用字（拍字用固定的 variants.csv）：增加 1" in summary
+    assert "- 異用字：增加 1" in summary
     assert "⚠" not in summary
 
 
@@ -462,7 +462,7 @@ def test_typing_summary_warns_on_reading_sheet_header_change():
 def test_typing_summary_without_reading_changes_and_bounded():
     columns = ("漢字", "羅馬字")
     sheet = watch.Sheet(columns, Counter({("甲", "kah"): 1}))
-    assert "拍字無改變。" in summarize({"名": sheet}, {"名": sheet})
+    assert "音讀無改變。" in summarize({"名": sheet}, {"名": sheet})
     many = watch.Sheet(columns, Counter({(f"字{i}", "lī" * 50): 1 for i in range(2000)}))
     summary = summarize({}, {"名": many}, brief=True)
     assert len(summary) < 2 * watch.SUMMARY_TABLE_CHARS

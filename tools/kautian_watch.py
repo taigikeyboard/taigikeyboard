@@ -25,7 +25,7 @@ TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 TITLE = "chore(dictionary): MoE kautian.ods has new data"
 START, END = "<!-- kautian-watch:start -->", "<!-- kautian-watch:end -->"
 # Issue text is Taigi Hanji, worded after sutian.moe.edu.tw/und-hani (maintainer request).
-FORMAT_MARKER = "<!-- kautian-watch:format:5 -->"
+FORMAT_MARKER = "<!-- kautian-watch:format:6 -->"
 # Sheets the dictionary build reads, with their reading columns
 # (dictionary/sources/official/kautian/config.yaml select.sheets + dialect_sheet;
 # kautian_watch_test keeps the two in sync).
@@ -51,7 +51,7 @@ SUMMARY_TABLE_CHARS = 4000
 # Plain-language names for sheets that do not reach the dictionary.
 SHEET_TOPICS = {
     # Dropped at merge; the variants stage reads the frozen variants.csv instead.
-    "異用字": "異用字（拍字用固定的 variants.csv）",
+    "異用字": "異用字",
     "義項": "釋義",
     "例句": "例句",
     "羅馬字清單": "羅馬字清單",
@@ -557,11 +557,11 @@ def typing_summary(
         return ", ".join(sorted(side[pair]))
 
     tables = [
-        ("增加", [(*pair, holders(pair, new)) for pair in new.keys() - old.keys()]),
-        ("刪掉", [(*pair, holders(pair, old)) for pair in old.keys() - new.keys()]),
+        ("增加的音讀", [(*pair, holders(pair, new)) for pair in new.keys() - old.keys()]),
+        ("刪掉的音讀", [(*pair, holders(pair, old)) for pair in old.keys() - new.keys()]),
         # Sheet / dialect membership feeds the Kautian subtag and accent mask.
         (
-            "徙位",
+            "徙位的音讀",
             [
                 (*pair, f"{holders(pair, old)} → {holders(pair, new)}")
                 for pair in old.keys() & new.keys()
@@ -569,7 +569,7 @@ def typing_summary(
             ],
         ),
     ]
-    blocks = ["## 對拍字的影響"]
+    blocks = ["## 這擺教典的改變"]
     if headers := [
         safe(sheet.name, 80)
         for sheet in differences
@@ -578,11 +578,11 @@ def typing_summary(
         blocks.append(f"⚠ 欄位名有改：{'、'.join(headers)}。下面的清單無準。")
     blocks += [pair_table(title, sorted(rows), brief=brief) for title, rows in tables if rows]
     if not any(rows for _, rows in tables):
-        blocks.append("拍字無改變。")
+        blocks.append("音讀無改變。")
     others = side_effects(differences, brief=brief)
     parts = (["\n".join(others)] if others else []) + link_changes(differences, brief=brief)
     if parts:
-        blocks.append("\n\n".join(["**袂影響拍字**", *parts]))
+        blocks.append("\n\n".join(["**其他改變**", *parts]))
     return "\n\n".join(blocks) + "\n\n"
 
 
