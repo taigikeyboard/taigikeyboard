@@ -411,7 +411,7 @@ fn intent_telex_under_continuous_keeps_nailed_segments() {
     let resp = telex(&mut engine, "d", &config_tl());
     let preedit = resp.preedit.unwrap();
     assert_eq!(preedit.raw_input, "tsai5");
-    assert_eq!(preedit.display_text, "珠 tsâi");
+    assert_eq!(preedit.display_text, "珠tsâi");
     assert_eq!(nailed_texts(&engine), vec!["珠"]);
     // A no-op on the tail leaves the nailed prefix alone too.
     let resp = telex(&mut engine, "d", &config_tl());

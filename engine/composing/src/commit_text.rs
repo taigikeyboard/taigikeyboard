@@ -53,16 +53,49 @@ impl ResolvedCommit {
     }
 }
 
-/// Whether a Hanji-field spelling ends in romanization. The field also holds
-/// Han-Lo spellings: `啥mih` ends in a Latin syllable and is spaced like
-/// one; `m̄好` ends in Hanji and is not. NFKD finds the Latin base of an
-/// accented letter and of the nasal `ⁿ`; combining marks (`o͘`, a decomposed
-/// tone) and a continuation hyphen belong to the syllable before them.
-fn ends_in_romanization(text: &str) -> bool {
+/// Non-separator, non-mark NFKD base scalars of `text`.
+///
+/// NFKD decomposes precomposed toned vowels (`á`, `ê`, `ḿ`, `ǹ`) and the POJ
+/// nasal markers (`ⁿ` U+207F → `n`, `ᴺ` U+1D3A → `N`) to their ASCII Latin
+/// base; combining marks (`o͘` U+0358, decomposed tones), hyphens, and the
+/// neutral-tone dot (`·` U+00B7) belong to the neighboring syllable rather
+/// than changing its script.
+fn romanization_base_chars(text: &str) -> impl Iterator<Item = char> + '_ {
     text.nfkd()
-        .filter(|&c| !is_combining_mark(c) && c != '-')
+        .filter(|&c| !is_combining_mark(c) && c != '-' && c != '·')
+}
+
+/// Whether `text` opens with a Latin romanization syllable (`tāi-tsì`,
+/// `--khí-lâi`, `·guá`, `m̄好`, `tsit塊`), as opposed to Hanji (`啥mih`,
+/// `頭路`) or Bopomofo (`ㄏㄧㆵ`).
+pub(crate) fn starts_with_romanization(text: &str) -> bool {
+    romanization_base_chars(text)
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic())
+}
+
+/// Whether `text` ends in a Latin romanization syllable (`tāi-tsì`, `啥mih`,
+/// `啥siⁿ`, `烏o͘`, `tai-`), as opposed to Hanji (`m̄好`, `tsit塊`, `頭路`),
+/// bracketed annotations (`台 (tâi)`), or Bopomofo (`ㄏㄧㆵ`).
+pub(crate) fn ends_in_romanization(text: &str) -> bool {
+    romanization_base_chars(text)
         .last()
         .is_some_and(|c| c.is_ascii_alphabetic())
+}
+
+/// Whether `text` consists solely of Latin romanization letters (plus marks
+/// and `-` / `·` separators), with at least one letter — true for `tsa`,
+/// `bóo`, `--lâi`, `·guá`, `SIÂᴺ`; false for Hanji, mixed Han-Lo (`啥mih`,
+/// `ē得thang`), bracketed pairs (`查 (tsa)`), and Bopomofo.
+pub(crate) fn is_pure_romanization(text: &str) -> bool {
+    let mut has_letter = false;
+    for c in romanization_base_chars(text) {
+        if !c.is_ascii_alphabetic() {
+            return false;
+        }
+        has_letter = true;
+    }
+    has_letter
 }
 
 /// The TPS layout's rendering of a pick's romanization: the Bopomofo its cell
@@ -424,5 +457,51 @@ mod tests {
                 ..CommitResolution::default()
             }
         );
+    }
+
+    #[test]
+    fn romanization_edge_and_purity_classification() {
+        #[rustfmt::skip]
+        let rows = [
+            // (text, starts_roman, ends_roman, pure_roman)
+            ("tāi-tsì", true, true, true),
+            ("iáu", true, true, true),
+            ("e\u{0302}", true, true, true),
+            ("o\u{0358}", true, true, true),
+            ("m\u{0304}", true, true, true),
+            ("si\u{207f}", true, true, true),
+            ("SIÂ\u{1d3a}", true, true, true),
+            ("--khí-lâi", true, true, true),
+            ("·guá", true, true, true),
+            ("tai-", true, true, true),
+            ("啥mih", false, true, false),
+            ("啥mih-", false, true, false),
+            ("烏o\u{0358}", false, true, false),
+            ("啥si\u{207f}", false, true, false),
+            ("m\u{0304}好", true, false, false),
+            ("tsit塊", true, false, false),
+            ("ē得thang", true, true, false),
+            ("明仔ê昏", false, false, false),
+            ("頭路", false, false, false),
+            ("ㄏㄧㆵ", false, false, false),
+            ("啥ㄇㄧ㆐", false, false, false),
+            ("台 (tâi)", false, false, false),
+            ("tâi (台)", true, false, false),
+            ("tâi gí", true, true, false),
+            ("", false, false, false),
+            ("--", false, false, false),
+            ("·", false, false, false),
+        ];
+        for (text, starts, ends, pure) in rows {
+            assert_eq!(
+                (
+                    starts_with_romanization(text),
+                    ends_in_romanization(text),
+                    is_pure_romanization(text),
+                ),
+                (starts, ends, pure),
+                "{text:?}",
+            );
+        }
     }
 }

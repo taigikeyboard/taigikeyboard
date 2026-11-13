@@ -132,12 +132,12 @@ fn invariant_holds_after_mid_commit_leaves_pending_tail() {
     assert_preedit_model_b_invariants(&engine, &response, "after mid-commit");
 
     // Model B: display_text is the whole composition — nailed "紙" + derived
-    // display of the pending tail "li2" → "紙 lí". raw_input is the still-raw
+    // display of the pending tail "li2" → "紙lí". raw_input is the still-raw
     // pending tail "li2" alone (NOT the original "tsuali2").
     let preedit = response.preedit.as_ref().unwrap();
     assert_eq!(preedit.raw_input, "li2", "pending tail raw must be li2");
     assert_eq!(
-        preedit.display_text, "紙 lí",
+        preedit.display_text, "紙lí",
         "whole composition = nailed 紙 + derived(li2)"
     );
 }
@@ -212,7 +212,7 @@ fn invariant_holds_for_append_after_mid_commit() {
         "pending tail after append must reflect new tail li2, not stale pre-commit raw"
     );
     assert_eq!(
-        preedit.display_text, "紙 lí",
+        preedit.display_text, "紙lí",
         "whole composition = nailed 紙 + derived(li2)"
     );
 }
@@ -248,7 +248,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
     assert_preedit_model_b_invariants(&engine, &r1, "after first mid-commit");
     // Model B: whole composition = nailed "紙" + derived(pending "lipoo").
     assert_eq!(r1.preedit.as_ref().unwrap().raw_input, "lipoo");
-    assert_eq!(r1.preedit.as_ref().unwrap().display_text, "紙 lipoo");
+    assert_eq!(r1.preedit.as_ref().unwrap().display_text, "紙lipoo");
 
     // Step 2: nail "li" → 你, pending = "poo".
     let r2 = engine.apply(
@@ -273,7 +273,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
     );
     assert_eq!(
         r2.preedit.as_ref().unwrap().display_text,
-        "紙 你 poo",
+        "紙你poo",
         "whole composition = nailed 紙你 + derived(poo)"
     );
 

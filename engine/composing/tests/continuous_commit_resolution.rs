@@ -279,3 +279,251 @@ fn a_commit_naming_no_script_is_ignored() {
         "the composition is untouched"
     );
 }
+
+#[test]
+fn hanji_led_mixed_han_lo_and_roman_picks_preserve_internal_and_trailing_spacing() {
+    // #853: under Hanji-led (`is_hanji_first = true`), nailing `啥mih` over
+    // `siannmihtaitsi` shows `"啥mih taitsi"` in preedit; finalizing with
+    // romanization `tāi-tsì` commits `"啥mih tāi-tsì"` and earns trailing
+    // auto-space, while finalizing with Hanji `代誌` drops the boundary space
+    // to `"啥mih代誌"` and earns no trailing space.
+    let config = AppConfig {
+        is_hanji_first: true,
+        ..config_tl()
+    };
+
+    let handle = continuous("siannmihtaitsi", 1, &config);
+    let mut siannmih = CommitContinuous {
+        canonical_text: "啥mih".into(),
+        association_tl: "siánn-mih".into(),
+        hanji: Some("啥mih".into()),
+        consumed_bytes: 8,
+        syllable_count: 2,
+        script: CommitScript::Lead as i32,
+        roman: "siánn-mih".into(),
+    };
+    let nailed = send(
+        &handle,
+        1,
+        Method::CommitContinuous(siannmih.clone()),
+        &config,
+    );
+    assert_eq!(
+        nailed.response.preedit.as_ref().map(|p| (
+            p.raw_input.as_str(),
+            p.display_text.as_str(),
+            p.caret_utf16
+        )),
+        Some(("taitsi", "啥mih taitsi", 11))
+    );
+
+    let taitsi_roman = Method::CommitContinuous(CommitContinuous {
+        canonical_text: "代誌".into(),
+        association_tl: "tāi-tsì".into(),
+        hanji: Some("代誌".into()),
+        consumed_bytes: 6,
+        syllable_count: 2,
+        script: CommitScript::Other as i32,
+        roman: "tāi-tsì".into(),
+    });
+    let finalized_roman = send(&handle, 1, taitsi_roman, &config);
+    assert_eq!(
+        commit_text(&finalized_roman.response).as_deref(),
+        Some("啥mih tāi-tsì")
+    );
+    assert_eq!(
+        finalized_roman.response.commit,
+        Some(resolution(CommitOutcome::Finalized, "tāi-tsì", true, true))
+    );
+
+    // Same prefix finalized with Hanji `代誌`: no internal space, no trailing space.
+    let handle = continuous("siannmihtaitsi", 2, &config);
+    siannmih.script = CommitScript::Lead as i32;
+    send(&handle, 2, Method::CommitContinuous(siannmih), &config);
+    let taitsi_hanji = Method::CommitContinuous(CommitContinuous {
+        canonical_text: "代誌".into(),
+        association_tl: "tāi-tsì".into(),
+        hanji: Some("代誌".into()),
+        consumed_bytes: 6,
+        syllable_count: 2,
+        script: CommitScript::Lead as i32,
+        roman: "tāi-tsì".into(),
+    });
+    let finalized_hanji = send(&handle, 2, taitsi_hanji, &config);
+    assert_eq!(
+        commit_text(&finalized_hanji.response).as_deref(),
+        Some("啥mih代誌")
+    );
+    assert_eq!(
+        finalized_hanji.response.commit,
+        Some(resolution(CommitOutcome::Finalized, "代誌", false, false))
+    );
+
+    // Pure romanization picks under Hanji-first (`iáu` + `leh` → `"iáu leh"`,
+    // vs `iáu` + `咧` → `"iáu咧"`).
+    let handle = continuous("iauleh", 3, &config);
+    let nailed_iau = send(
+        &handle,
+        3,
+        pick(CommitScript::Other, "iáu", Some("猶"), "iáu", 3),
+        &config,
+    );
+    assert_eq!(
+        nailed_iau
+            .response
+            .preedit
+            .as_ref()
+            .map(|p| p.display_text.as_str()),
+        Some("iáu leh")
+    );
+    let finalized_leh = send(
+        &handle,
+        3,
+        pick(CommitScript::Other, "leh", Some("咧"), "leh", 3),
+        &config,
+    );
+    assert_eq!(
+        commit_text(&finalized_leh.response).as_deref(),
+        Some("iáu leh")
+    );
+    assert_eq!(
+        finalized_leh.response.commit,
+        Some(resolution(CommitOutcome::Finalized, "leh", true, true))
+    );
+
+    let handle = continuous("iauleh", 4, &config);
+    send(
+        &handle,
+        4,
+        pick(CommitScript::Other, "iáu", Some("猶"), "iáu", 3),
+        &config,
+    );
+    let finalized_leh_hanji = send(
+        &handle,
+        4,
+        pick(CommitScript::Lead, "leh", Some("咧"), "leh", 3),
+        &config,
+    );
+    assert_eq!(
+        commit_text(&finalized_leh_hanji.response).as_deref(),
+        Some("iáu咧")
+    );
+    assert_eq!(
+        finalized_leh_hanji.response.commit,
+        Some(resolution(CommitOutcome::Finalized, "咧", false, false))
+    );
+}
+
+#[test]
+fn roman_first_mixed_script_picks_preserve_script_transition_boundaries() {
+    let config = AppConfig {
+        is_hanji_first: false,
+        ..config_tl()
+    };
+    let handle = continuous("guaaili", 1, &config);
+    for (script, roman, hanji, bytes, display) in [
+        (CommitScript::Roman, "guá", "我", 3, "guá aili"),
+        (CommitScript::Hanji, "ài", "愛", 2, "guá愛li"),
+    ] {
+        let result = send(
+            &handle,
+            1,
+            pick(script, roman, Some(hanji), roman, bytes),
+            &config,
+        );
+        let preedit = result.response.effect.iter().find_map(|e| match &e.kind {
+            Some(protos::engine::effect::Kind::UpdatePreedit(p)) => Some(p.display.as_str()),
+            _ => None,
+        });
+        assert_eq!(preedit, Some(display));
+    }
+    let result = send(
+        &handle,
+        1,
+        pick(CommitScript::Roman, "lí", Some("你"), "lí", 2),
+        &config,
+    );
+    assert_eq!(commit_text(&result.response).as_deref(), Some("guá愛lí"));
+    assert_eq!(
+        result.response.commit,
+        Some(resolution(CommitOutcome::Finalized, "lí", true, true))
+    );
+}
+
+#[test]
+fn three_picks_switch_script_twice_in_both_modes() {
+    for is_hanji_first in [false, true] {
+        let config = AppConfig {
+            is_hanji_first,
+            ..config_tl()
+        };
+        let handle = continuous("iaulehleh", 1, &config);
+        send(
+            &handle,
+            1,
+            pick(CommitScript::Roman, "iáu", Some("猶"), "iáu", 3),
+            &config,
+        );
+        send(
+            &handle,
+            1,
+            pick(CommitScript::Hanji, "leh", Some("咧"), "leh", 3),
+            &config,
+        );
+        let result = send(
+            &handle,
+            1,
+            pick(CommitScript::Roman, "leh", Some("咧"), "leh", 3),
+            &config,
+        );
+        assert_eq!(commit_text(&result.response).as_deref(), Some("iáu咧leh"));
+    }
+}
+
+#[test]
+fn typed_neutral_run_after_hanji_survives_only_before_roman_pick() {
+    for separator in [
+        protos::engine::SyllableSeparator::Hyphen,
+        protos::engine::SyllableSeparator::None,
+        protos::engine::SyllableSeparator::Space,
+    ] {
+        for roman_tail in [false, true] {
+            let config = AppConfig {
+                is_hanji_first: true,
+                syllable_separator: separator as i32,
+                ..config_tl()
+            };
+            let handle = continuous("kong--leh", 1, &config);
+            send(
+                &handle,
+                1,
+                pick(CommitScript::Hanji, "kóng", Some("講"), "kóng", 4),
+                &config,
+            );
+            let result = send(
+                &handle,
+                1,
+                pick(
+                    if roman_tail {
+                        CommitScript::Roman
+                    } else {
+                        CommitScript::Hanji
+                    },
+                    "leh",
+                    Some("咧"),
+                    "leh",
+                    5,
+                ),
+                &config,
+            );
+            let expected = if !roman_tail {
+                "講咧"
+            } else if separator == protos::engine::SyllableSeparator::Hyphen {
+                "講--leh"
+            } else {
+                "講·leh"
+            };
+            assert_eq!(commit_text(&result.response).as_deref(), Some(expected));
+        }
+    }
+}

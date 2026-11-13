@@ -125,15 +125,16 @@ impl Phase {
     ///   Nailed segments are **not** in the document; they are part of the
     ///   marked region until a hard finalize.
     ///
-    /// v3.5.8 §10.2 segmented-spacing contract: adjacent segments (and
-    /// the nailed prefix ↔ pending tail) are joined by a single space
-    /// when the rendered script is roman-ish (roman-first / both-scripts);
-    /// hanji-first / TPS render as-is with no separator. See
-    /// [`continuous_word_space`] / [`nailed_prefix`]. This is the exact
+    /// §10.2 segmented-spacing contract: adjacent pieces (nailed segments,
+    /// and the nailed prefix ↔ pending tail) are joined by a single space
+    /// when both meeting edges are romanization (or `output_both_scripts`
+    /// annotates every pick in brackets); Hanji, Bopomofo, and Hanji↔roman
+    /// script transitions join with no separator. See
+    /// [`has_word_space_boundary`] / [`nailed_prefix`]. This is the exact
     /// string a hard finalize (Enter / final-commit) writes to the
     /// document, so the separator policy applies identically there.
     ///
-    /// [`continuous_word_space`]: crate::nailed::continuous_word_space
+    /// [`has_word_space_boundary`]: crate::nailed::has_word_space_boundary
     /// [`nailed_prefix`]: crate::nailed::nailed_prefix
     pub fn composing_display(&self, config: &AppConfig) -> String {
         match self {
