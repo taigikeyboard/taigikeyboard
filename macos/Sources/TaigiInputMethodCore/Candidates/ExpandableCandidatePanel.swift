@@ -87,6 +87,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// The collapsed cells: the row's first page of the horizontal packing,
     /// or the column's first page, every slot the column's one width.
     private var collapsedSlots: [HorizontalPageLayout.Slot] = []
+    /// The width a collapsed row that overflows is packed to. The row pads up
+    /// to it, so the window keeps one width from page to page and list to list
+    /// instead of tracking each first page's text — the horizontal layout's
+    /// rule (`HorizontalCandidatePanel.rebuildVisiblePage`). Zero for a column.
+    private var collapsedPageBudget: CGFloat = 0
     /// Row: the whole list, row-major. Column: the selected page only,
     /// transposed into visual rows (`ExpandedGridLayout.columnMajorPage`).
     private var grid = ExpandedGridLayout(rows: [], columnCount: 1)
@@ -402,13 +407,15 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
     /// chevron only shows when the row cannot hold the whole list, so the
     /// packing reserves its width only when it will really be there.
     private func packedCollapsedRow() -> [HorizontalPageLayout.Slot] {
-        HorizontalPageLayout.pack(
+        let layout = HorizontalPageLayout.pack(
             widths: measuredWidths,
             slotWidth: metrics.baseWidth,
             windowBudget: maximumWindowWidth,
             chromeWidth: chevronWidth,
             pageSize: slotKeySet.pageSize,
-        ).pages.first ?? []
+        )
+        collapsedPageBudget = layout.pageBudget
+        return layout.pages.first ?? []
     }
 
     /// The collapsed column: the first page stacked, sized as the vertical
@@ -768,7 +775,11 @@ final class ExpandableCandidatePanel: CandidateBasePanel {
         }
         let rowCount = axis == .row ? 1 : collapsedSlots.count
         // Every column slot is the column's one width.
-        let contentWidth = axis == .row ? rowX : collapsedSlots.first?.width ?? 0
+        // A row that overflows pads to the packing budget (a single candidate
+        // wider than it keeps its own width); a row that fits stays short.
+        let contentWidth = axis == .row
+            ? (hasOverflow ? max(rowX, collapsedPageBudget) : rowX)
+            : collapsedSlots.first?.width ?? 0
         let height = rowsHeight(rowCount)
         layoutSeparators(count: rowCount - 1, width: contentWidth)
         chevronView.isHidden = !hasOverflow
