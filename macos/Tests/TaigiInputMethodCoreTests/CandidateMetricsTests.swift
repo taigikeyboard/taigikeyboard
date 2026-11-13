@@ -14,6 +14,11 @@ final class CandidateMetricsTests: XCTestCase {
     /// the paddings are upstream's times `chromeRatio` 0.7 times the text
     /// scale, so the window keeps one proportion at every size.
     ///
+    /// Horizontal padding is 11 * scale (no chrome ratio) so text clears the
+    /// highlight's rounded ends: 13→9, 15→10, 17→12, 20→14, 23→16.
+    /// Vertical padding base is 14: v 13→8, 15→9, 17→10, 20→12, 23→14, so
+    /// item heights are 21 / 24 / 27 / 32 / 37. The "h", "v" and "item"
+    /// figures in the trace below predate these changes.
     /// trace, scale = size / 16, chrome = 0.7 * scale:
     /// 13 — ann 14*.8125=11.4→11, gap 7*.8125=5.7→6, h 9*.56875=5.1→5,
     ///      v 12*.56875=6.8→7, tahoe 8*.56875=4.55→5, item 13+7=20;
@@ -33,11 +38,11 @@ final class CandidateMetricsTests: XCTestCase {
         }
 
         XCTAssertEqual(resolved, [
-            [13, 11, 6, 5, 7, 5, 20],
-            [15, 13, 7, 6, 8, 5, 23],
-            [17, 15, 7, 7, 9, 6, 26],
-            [20, 18, 9, 8, 11, 7, 31],
-            [23, 20, 10, 9, 12, 8, 35],
+            [13, 11, 6, 9, 8, 5, 21],
+            [15, 13, 7, 10, 9, 5, 24],
+            [17, 15, 7, 12, 10, 6, 27],
+            [20, 18, 9, 14, 12, 7, 32],
+            [23, 20, 10, 16, 14, 8, 37],
         ])
     }
 
@@ -47,7 +52,7 @@ final class CandidateMetricsTests: XCTestCase {
     func testDefault_isTheStandardStep() {
         XCTAssertEqual(defaultMetrics.size, .standard)
         XCTAssertEqual(defaultMetrics.candidateFontSize, 17)
-        XCTAssertEqual(defaultMetrics.itemHeight, 26)
+        XCTAssertEqual(defaultMetrics.itemHeight, 27)
     }
 
     /// The ladder is declared smallest-first, which is the order the slider
