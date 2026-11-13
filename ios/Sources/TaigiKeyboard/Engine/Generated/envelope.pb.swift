@@ -87,7 +87,7 @@ public nonisolated enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIt
 /// and A1b retires that validation).
 ///
 /// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
-/// composing-buffer join (`composing::api::nailed_prefix` /
+/// composing-buffer join (`composing::nailed::nailed_prefix` /
 /// `combined_display`) inserts a word-boundary space between nailed
 /// segments only when the rendered script is roman-ish. `is_hanji_first`
 /// alone cannot distinguish "hanji-first" (no space) from "both-scripts"
@@ -206,7 +206,7 @@ public nonisolated enum Taigi_Engine_SyllableSeparator: SwiftProtobuf.Enum, Swif
 /// only — `phonetics::api::hyphenless_display` is applied to the candidate
 /// `roman` (`composing::requests`), the prediction `text`
 /// (`nextword::filter`) and the engine-synthesised compound joiner
-/// (`composing::api::nailed_prefix`); identity fields (`display_text`,
+/// (`composing::nailed::nailed_prefix`); identity fields (`display_text`,
 /// `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
 /// applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
 /// platform re-splits `roman` on `-` for bopomofo.
@@ -280,7 +280,7 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   /// The user's dictionary switches — the one carrier of the composing source
   /// filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
   /// `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-  /// compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+  /// compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
   /// read it. Absent = un-wired sender (test fixtures): every source on.
   public var dictionarySources: Taigi_Engine_DictionarySourceToggles {
     get {_dictionarySources ?? Taigi_Engine_DictionarySourceToggles()}

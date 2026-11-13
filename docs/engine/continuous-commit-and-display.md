@@ -27,13 +27,13 @@ There is no composing-text cell in the candidate strip. Slot 0 is the engine's t
 
 | Element | Content | Source |
 |---|---|---|
-| Inline pre-edit (iOS `markedText`, Android `setComposingText`) | `Σ nailed[i].display_text` joined to the derived display of the pending `raw` by the word-boundary separator | `Phase::composing_display` = `api::nailed_prefix` + `Phase::raw_input` → `derived::derived_display` |
+| Inline pre-edit (iOS `markedText`, Android `setComposingText`) | `Σ nailed[i].display_text` joined to the derived display of the pending `raw` by the word-boundary separator | `Phase::composing_display` = `nailed::nailed_prefix` + `Phase::raw_input` → `derived::derived_display` |
 | Candidate strip, slot 0 | Walker best path: roman line with word-boundary spaces, hanji line as-is | `continuous::fetch_walker_slot0_inner` |
 | Candidate strip, slot N ≥ 1 | Ranked candidates | [continuous-input-ranking.md](continuous-input-ranking.md) |
 
 **Pending tail.** `derived_display` applies POJ doubletap pre-processing, tone-mark rendering, NFC normalization and nasal-marker case. It does **not** syllabify, insert hyphens, match candidates or infer word boundaries; user-typed separators are kept (`goa2ai3li2` → `goáàilí`, behavioral-invariants §30). While a Hanji `conversion` is shown, the pre-edit carries the converted tail instead, and `composing_display` stays the text a commit writes.
 
-**Segmented-spacing contract.** Adjacent nailed segments, and the nailed prefix ↔ pending tail, are joined by one ASCII space **iff the rendered script is roman-ish**: `api::continuous_word_space` = `!config.renders_hanji_first() || config.output_both_scripts` (`renders_hanji_first` = hanji-first output or the TPS layout). Hanji-first and TPS join with nothing. No separator follows a hyphen-continuation segment (`tai-`). The separator is never stored in `NailedSegment.display_text` — backspace restores the tail from the separator-free `raw_text` — and the hard finalize writes the same joined string.
+**Segmented-spacing contract.** Adjacent nailed segments, and the nailed prefix ↔ pending tail, are joined by one ASCII space **iff the rendered script is roman-ish**: `nailed::continuous_word_space` = `!config.renders_hanji_first() || config.output_both_scripts` (`renders_hanji_first` = hanji-first output or the TPS layout). Hanji-first and TPS join with nothing. No separator follows a hyphen-continuation segment (`tai-`). The separator is never stored in `NailedSegment.display_text` — backspace restores the tail from the separator-free `raw_text` — and the hard finalize writes the same joined string.
 
 **Compound-hyphen.** When roman-ish, the longest run (n ≥ 2) of adjacent single-syllable nailed segments that spells a known n-syllable dictionary word is joined with the syllable joiner instead of a space. The word test (`lexicon::compound_hanji_exists`) asks for a record under the exact `hanzi:` key with:
 

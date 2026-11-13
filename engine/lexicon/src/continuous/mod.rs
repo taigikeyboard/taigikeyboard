@@ -1248,7 +1248,7 @@ pub struct EdgeBest {
 
 /// Does the exact hanji `hanji` resolve to a dictionary entry of
 /// **exactly `syllable_count` TL syllables**? Used by the composing
-/// render/commit join ([`crate`] consumer `composing::api::nailed_prefix`)
+/// render/commit join ([`crate`] consumer `composing::nailed::nailed_prefix`)
 /// to decide whether a contiguous run of manually-nailed single-syllable
 /// segments reconstructs a known n-syllable compound (`紅尾冬` /
 /// `âng-bóe-tang`, `查某` / `tsa-bóo`) and therefore render its internal

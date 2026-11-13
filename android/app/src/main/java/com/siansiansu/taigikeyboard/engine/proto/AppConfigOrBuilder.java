@@ -135,7 +135,7 @@ public interface AppConfigOrBuilder extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
@@ -148,7 +148,7 @@ public interface AppConfigOrBuilder extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *

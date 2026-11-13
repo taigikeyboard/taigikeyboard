@@ -2,7 +2,7 @@
 //! No logging, no FFI, no platform types. The dispatcher in `requests.rs`
 //! runs this and returns the response to callers. It reads the installed
 //! lexicon in two places — the compound oracle of the nailed join
-//! (`api::nailed_prefix`) and, when the request asks for it, the Hanji
+//! (`nailed::nailed_prefix`) and, when the request asks for it, the Hanji
 //! conversion of a TPS tail (`crate::conversion`) — so the preedit depends on
 //! the lexicon as well as on `(state, intent, config)`, and, through a
 //! conversion walk, on the user's learned counts the request supplies
@@ -28,9 +28,8 @@
 //! pick write what they always wrote.
 
 use crate::api::{
-    combined_display, join_nailed_prefix_and_tail, nailed_prefix, Applied, CaretDirection,
-    CommitScript, ContinuousPick, ConversionFrequency, EngineState, Intent, NailedSegment, Phase,
-    Usage,
+    Applied, CaretDirection, CommitScript, ContinuousPick, ConversionFrequency, EngineState,
+    Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{
     commit_resolution, finalized_composition_resolution, resolve_commit_text,
@@ -40,6 +39,7 @@ use crate::derived::{
     buffer_input_mode, derived_display, display_caret_utf16, learning_text,
     strip_tps_separator_markers,
 };
+use crate::nailed::{combined_display, join_nailed_prefix_and_tail, nailed_prefix};
 use lexicon::LearnedEntry;
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
@@ -1637,7 +1637,7 @@ fn next_word_word_selected(
 /// did not pick (B4), any segment without a hanji pick or without a
 /// canonical TL, or more than
 /// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join under
-/// the commit's word boundaries ([`crate::api::learned_reading`]): a
+/// the commit's word boundaries ([`crate::nailed::learned_reading`]): a
 /// dictionary compound with `-`, separate words with a space, and the
 /// separator the user typed wins — by kind only ([`canonical_separators`];
 /// the dictionary cannot cover every phrase and the user manages the
@@ -1660,7 +1660,7 @@ fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<Learne
         }
         hanji.push_str(h);
     }
-    let canonical_tl = canonical_separators(&crate::api::learned_reading(nailed, config));
+    let canonical_tl = canonical_separators(&crate::nailed::learned_reading(nailed, config));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();
     if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
         return None;

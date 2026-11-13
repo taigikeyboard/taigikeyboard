@@ -584,7 +584,7 @@ pub fn syllable_joiner_display(roman: &str, joiner: &str) -> String {
             run_len += 1;
         }
         // A piece rendered on its own (a nailed `--guá`) opens here too;
-        // `composing::api::push_boundary` writes its joiner.
+        // `composing::nailed::push_boundary` writes its joiner.
         let opens_word = out.is_empty() || out.ends_with(' ');
         let closes_word = matches!(chars.peek(), None | Some(' '));
         let joiner = if opens_word || closes_word {
@@ -601,7 +601,7 @@ pub fn syllable_joiner_display(roman: &str, joiner: &str) -> String {
 /// `joiner`, then one [`crate::tps::KHINSIANN_DOT`] per neutral-tone `--` (an
 /// odd hyphen left over is the plain syllable boundary the joiner already
 /// wrote). The dot stays glued to the syllable after it: `---` → ` ·`, never
-/// `· `. `composing::api::push_boundary` calls it for a typed run between
+/// `· `. `composing::nailed::push_boundary` calls it for a typed run between
 /// nailed segments, where no run ever opens the text.
 pub fn push_syllable_joiner_run(out: &mut String, run_len: usize, joiner: &str) {
     out.push_str(joiner);
