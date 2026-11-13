@@ -65,7 +65,9 @@ Order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Phases 1 and 2 need nothing 
 | Resume | `gh variable delete RELEASE_HOLD`, then fix on `main` and re-run the cut (`gh workflow run desktop-train.yml`) — it re-stages the draft from the new commit — or let the next month's cut pick it up | Publishing follows on the next scheduled 5th, or `gh workflow run desktop-publish.yml` |
 | A published release needs a fix | Fix on `main`, `make version-desktop YYYY.M.P`, `/release-desktop <platform>`, publish by hand | One-platform patch as today; the train is untouched |
 
-Open for phase 1 / 5: a patch while the month's draft is staged (between the 1st and the 5th) would number below the tree's `YYYY.M.0`, which the downgrade guard refuses. Proposed: in that window the fix goes onto `main` and the train draft is re-cut instead of a separate patch.
+Between releases the tree carries the last **published** version; only the cut's release commit moves it to `YYYY.M.0` (maintainer, 2026-11-13). No pre-bump: a hold or an empty month would leave a wrong month in the tree, and a mid-month hotfix `YYYY.M.P` stays above the tree's number.
+
+Open for phase 5: a patch while the month's draft is staged (between the 1st and the 5th) would number below the tree's `YYYY.M.0`, which the downgrade guard refuses. Proposed: in that window the fix goes onto `main` and the train draft is re-cut instead of a separate patch.
 
 ## Best practices alignment
 
