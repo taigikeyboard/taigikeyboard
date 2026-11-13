@@ -24,10 +24,6 @@ extension KeyboardShortcuts.Name {
     /// the family, the same one the switch below lives in. Apple's own list
     /// leaves ⌃⌘S alone (support.apple.com/en-us/102650), and the Command
     /// keeps it clear of the bare ⌃S that is XOFF in a terminal.
-    ///
-    /// Not the retired `openSettings` raw value, whatever the resemblance:
-    /// `RetiredSettingsCleanup` clears that name on every launch, and reusing
-    /// it would wipe the user's recorded chord each time.
     static let openLastSettingsPane = Self(
         "openLastSettingsPane",
         initial: .init(.s, modifiers: [.control, .command]),
@@ -46,7 +42,6 @@ extension KeyboardShortcuts.Name {
     /// on the bottom row: pinky, thumb and middle finger, hand never leaving
     /// position. R is two rows up with the pinky still anchored on ⌃. Apple
     /// put ⌘Z/⌘X/⌘C/⌘V on that row for the same reason.
-    /// `ShortcutDefaultMigration` moves installs still on ⌃⌘R.
     static let toggleRomanization = Self(
         "toggleRomanization",
         initial: .init(.c, modifiers: [.control, .command]),
@@ -67,10 +62,6 @@ extension KeyboardShortcuts.Name {
     /// that key prints. The recorder cannot re-record a modifierless key
     /// (library validation), so a user who moves off this default has no UI
     /// path back to it — known gap, accepted 2026-08-21.
-    ///
-    /// `ShortcutDefaultMigration` moves installs still on the previous ⌃⌘H
-    /// default onto this one; `initial:` alone only reaches installs that have
-    /// never persisted the action.
     static let toggleTranslateSwapped = Self(
         "toggleTranslateSwapped",
         initial: .init(.backtick),
@@ -84,12 +75,9 @@ extension KeyboardShortcuts.Name {
     /// — another input method's roster, not a system chord — and Apple's own
     /// list keeps ⌃⌘D (查字典), not H.
     ///
-    /// This chord WAS the swap's default until 2026-08-21.
-    /// `ShortcutDefaultMigration` moved those installs onto the backtick, and
-    /// it runs before `ShortcutConflicts.resolveDefaultsShadowedByRecordings`,
-    /// so an install that had not yet migrated is moved before this default
-    /// could collide with it; one that recorded ⌃⌘H by hand keeps it, and this
-    /// row empties — recording beats default, the standing rule.
+    /// This chord was the swap's default until 2026-08-21, before any release
+    /// shipped it. An install that recorded ⌃⌘H on the swap by hand keeps it,
+    /// and this row empties — recording beats default, the standing rule.
     static let cycleCandidateDisplayMode = Self(
         "cycleCandidateDisplayMode",
         initial: .init(.h, modifiers: [.control, .command]),

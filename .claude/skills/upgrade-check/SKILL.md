@@ -65,7 +65,7 @@ Engine `engine/userdata/src/backup.rs` — `BACKUP_VERSION` (write version) + th
 
 ### 3. Settings keys (storage)
 
-iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefaults()`); Android `ime/settings/PreferenceKeys.kt` (key names) + `ime/settings/PrefHelper.kt` (`preference(...)` delegates and defaults); desktop: macOS `macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift` (+ `RetiredSettingsCleanup.swift`, `ShortcutDefaultMigration.swift`), Windows + Linux `desktop/crates/taigi-desktop-core/src/settings/keys.rs` / `document.rs` (`settings.json` via `desktop/crates/taigi-desktop-storage/src/settings_file.rs`). `git diff` each.
+iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefaults()`); Android `ime/settings/PreferenceKeys.kt` (key names) + `ime/settings/PrefHelper.kt` (`preference(...)` delegates and defaults); desktop: macOS `macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift` (+ `RetiredSettingsCleanup.swift`), Windows + Linux `desktop/crates/taigi-desktop-core/src/settings/keys.rs` / `document.rs` (`settings.json` via `desktop/crates/taigi-desktop-storage/src/settings_file.rs`). `git diff` each.
 
 - **Key removed** while a reader still references it → BLOCKING (crash / lost setting). Grep the codebase for the removed key name at `<target>` to confirm no live reader.
 - **Default value flipped** on an existing key → BEHAVIOR-CHANGE. Only default-reliant users (never wrote the key) are affected; users who explicitly set it keep their stored value (the default applies only when the key is absent). The `resetToDefaults()` change does not run on upgrade — it fires only on an explicit user reset. Must be in the changelog.

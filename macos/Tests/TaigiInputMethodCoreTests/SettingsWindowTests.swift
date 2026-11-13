@@ -304,8 +304,7 @@ final class SettingsWindowTests: XCTestCase {
     /// renaming a case silently resets every user to General. The order is also
     /// the sidebar order — the flat list renders `sidebar` directly — so
     /// this doubles as the roster. Frequency Records / Association Records / Backup and Restore are absent by
-    /// decision, not by omission — see `RetiredSettingsCleanup`, which sweeps a
-    /// selection left pointing at one of them.
+    /// decision, not by omission; those panes were cut before any release shipped them.
     func testPaneRawValues_stayStable() {
         XCTAssertEqual(
             SettingsPane.allCases.map(\.rawValue),

@@ -237,7 +237,7 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   One private-API carve-out survives, guarded by `responds(to:)`: upstream's
   `_adaptiveAppearance` KVC on `NSGlassEffectView`. The
   `candidateWindowStyle` override was removed (asymmetric below
-  macOS 26) and is swept by `RetiredSettingsCleanup`. `maxDisplayCandidates =
+  macOS 26) before any release shipped it. `maxDisplayCandidates =
   200` is kept as a stated decision.
 
   Deliberately NOT carried over:
