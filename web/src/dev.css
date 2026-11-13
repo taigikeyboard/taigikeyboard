@@ -145,6 +145,13 @@ body.dev #preedit[hidden] {
   display: none;
 }
 
+/* The writing page's `#editor` grows to fill the window. Here the input is a
+   short box and the mechanism below it takes the rest. */
+body.dev #editor {
+  flex: none;
+  min-height: 0;
+}
+
 body.dev #text {
   flex: none;
   min-height: 8rem;
@@ -152,7 +159,6 @@ body.dev #text {
   border: 0;
   background: none;
   font: var(--editor-font);
-  resize: none;
 }
 
 .choice-bar {

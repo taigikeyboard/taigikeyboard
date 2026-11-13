@@ -96,8 +96,9 @@ pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 
 /// [`CandidateRankFacts::coverage_kind`] of a whole-buffer abbreviation hit:
 /// the typed buffer (`ss`, `tk`, `thng`, `ㄙㄒ`) equals the record's
-/// per-syllable-initial face. Ranks below every other match kind of its tier,
-/// custom words included (`abbreviation` sits above `preference_class`): an acronym-shaped buffer that
+/// per-syllable-initial face. The `abbreviation` field, compared before
+/// `preference_class`, ranks it below every reading of its tier, custom
+/// words included: an acronym-shaped buffer that
 /// is also a valid syllable or onset (`thng`, `ts`, `kh`) is a reading at
 /// least as often as it is an abbreviation, so the single-syllable hits the
 /// user was reaching for keep their positions and the abbreviated words trail
@@ -173,6 +174,13 @@ pub fn candidate_lead(facts: &CandidateRankFacts, raw_len: u32) -> (u8, u8) {
     (tier, abbreviation)
 }
 
+/// A partial prefix sorts after a full syllable or an abbreviation, which
+/// share one rank. The stored [`COVERAGE_KIND_ABBREV`] ordinal stays `2`
+/// so a caller can still tell the three kinds apart.
+fn coverage_kind_rank(kind: u8) -> u8 {
+    u8::from(kind == COVERAGE_KIND_PARTIAL_PREFIX)
+}
+
 /// `0` = selected (`user_weight > 0`, any source), `1` = a never-selected
 /// custom-dictionary word, `2` = every other word. The user's picks lead
 /// the words they filed, which lead the rest (USER 2026-10-16: a bulk-filed
@@ -229,9 +237,9 @@ pub struct CandidateSortKey {
     /// so there class `1` only appears in Tier 0; the walker's edge pick
     /// meets them at the edge's span.
     preference_class: u8,
-    /// Within a tier: full syllable `0` < partial prefix `1` < abbreviation
-    /// `2` ([`COVERAGE_KIND_FULL`] / [`COVERAGE_KIND_PARTIAL_PREFIX`] /
-    /// [`COVERAGE_KIND_ABBREV`]).
+    /// Within a tier: a partial prefix sorts after a full syllable or an
+    /// abbreviation, which tie ([`coverage_kind_rank`]). The stored ordinal
+    /// stays full `0`, prefix `1`, abbreviation `2`.
     coverage_kind: u8,
     /// Descending: [`CandidateRankFacts::user_weight`] — orders the
     /// selected words (`preference_class` already put every one of them
@@ -330,7 +338,8 @@ impl CandidateSortKey {
             0 => self.tier.cmp(&other.tier),
             1 => self.abbreviation.cmp(&other.abbreviation),
             2 => self.preference_class.cmp(&other.preference_class),
-            3 => self.coverage_kind.cmp(&other.coverage_kind),
+            3 => coverage_kind_rank(self.coverage_kind)
+                .cmp(&coverage_kind_rank(other.coverage_kind)),
             4 => self.neg_user_weight.cmp(&other.neg_user_weight),
             5 => self.context_rank.cmp(&other.context_rank),
             6 => self.walker_cost.cmp(&other.walker_cost),
@@ -858,6 +867,68 @@ mod tests {
         let never_full = cand(0, 3, 0.001, 1, 0);
         let never_partial = cand_partial(0, 3, f32::MAX, u32::MAX, KAUTIAN_BIT);
         assert!(key(&never_full, raw_len, 0) < key(&never_partial, raw_len, 1));
+    }
+
+    // The dev page's proposal order. `coverage_kind` holds a partial prefix
+    // behind a full syllable or an abbreviation, then `user_weight` can lift
+    // an abbreviation over a full syllable, and `abbreviation` breaks a
+    // weight tie. The built-in order still compares `abbreviation` first.
+    #[test]
+    fn proposal_order_holds_a_prefix_and_lets_weight_lift_an_abbreviation() {
+        let _restore = RestoreOrder;
+        let mut fields = SORT_FIELDS.to_vec();
+        let proposal = [
+            "tier",
+            "preference_class",
+            "coverage_kind",
+            "user_weight",
+            "abbreviation",
+        ];
+        fields.retain(|field| !proposal.contains(field));
+        fields.splice(0..0, proposal);
+        assert!(set_dev_sort_order(&fields));
+
+        let raw_len: u32 = 4;
+        let full_light = key(&cand_with_user_weight(0, 4, 1.0, 1, 0, 0.1), raw_len, 0);
+        let prefix_heavy = key(
+            &CandidateRankFacts {
+                user_weight: 4.0,
+                ..cand_partial(0, 4, f32::MAX, u32::MAX, KAUTIAN_BIT)
+            },
+            raw_len,
+            1,
+        );
+        let abbrev_light = key(
+            &CandidateRankFacts {
+                user_weight: 0.1,
+                ..cand_abbreviation(0, 4, 1.0, 1, 0)
+            },
+            raw_len,
+            2,
+        );
+        let abbrev_heavy = key(
+            &CandidateRankFacts {
+                user_weight: 4.0,
+                ..cand_abbreviation(0, 4, 1.0, 1, 0)
+            },
+            raw_len,
+            3,
+        );
+        assert!(full_light < prefix_heavy);
+        assert_eq!(full_light.deciding_field(&prefix_heavy), "coverage_kind");
+        assert!(abbrev_light < prefix_heavy);
+        assert_eq!(abbrev_light.deciding_field(&prefix_heavy), "coverage_kind");
+        assert!(abbrev_heavy < full_light);
+        assert_eq!(abbrev_heavy.deciding_field(&full_light), "user_weight");
+        assert!(full_light < abbrev_light);
+        assert_eq!(full_light.deciding_field(&abbrev_light), "abbreviation");
+
+        reset_dev_sort_order();
+        assert!(
+            full_light < abbrev_heavy,
+            "the built-in order still puts every reading before an abbreviation"
+        );
+        assert_eq!(full_light.deciding_field(&abbrev_heavy), "abbreviation");
     }
 
     // USER 2026-10-12: whole-input coverage leads the match kind — a

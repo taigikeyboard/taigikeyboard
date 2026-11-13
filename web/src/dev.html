@@ -122,7 +122,11 @@
     <main>
       <section class="composer">
         <div id="preedit" hidden></div>
-        <textarea id="text" data-i18n-aria-label="web.inspectorInput" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" disabled></textarea>
+        <div id="editor">
+          <!-- biome-ignore lint/a11y/useFocusableInteractive: contenteditable makes it focusable; Lexical core sets no role, only its React wrapper does -->
+          <!-- biome-ignore lint/a11y/useSemanticElements: a textarea holds no formatting -->
+          <div id="text" contenteditable="false" role="textbox" aria-multiline="true" data-i18n-aria-label="web.inspectorInput" spellcheck="false" autocapitalize="off" autocorrect="off"></div>
+        </div>
         <div class="choice-bar">
           <h2 data-i18n="web.inspectorChoices">Candidates</h2>
           <div class="pages">
