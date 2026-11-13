@@ -1,8 +1,7 @@
 ---
-platforms: [macos, windows, linux, chromeos]
+platforms: [macos, windows, chromeos]
 section: Install
 ---
-- **Version numbers follow the release month.** After 3.9.0 the desktop
-  versions are year.month.patch, such as 2026.12.0. Updates, Homebrew and the
-  Linux package managers all treat the new number as newer than 3.9.0; on the
-  AUR it shows as a jump from 3.9.0. (#895)
+- **Version numbers follow the release month.** After 3.9.0 the versions are
+  year.month.patch, such as 2026.12.0, and updates treat the new number as
+  newer than 3.9.0. (#895)
