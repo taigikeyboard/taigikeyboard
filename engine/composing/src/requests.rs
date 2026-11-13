@@ -741,7 +741,7 @@ fn literal_roman_candidate(
 /// (`#[doc(hidden)]`) for the test crate boundary; production callers
 /// must NOT reach for it. The pipeline is documented on
 /// [`crate::shadow::build_shadow_lattice_with_barriers`] and
-/// [`crate::shadow::left_anchored_keys_and_restrictions`].
+/// [`crate::shadow::keys::left_anchored_keys_and_restrictions`].
 #[doc(hidden)]
 pub fn build_continuous_keys_with_inventory(
     raw: &str,

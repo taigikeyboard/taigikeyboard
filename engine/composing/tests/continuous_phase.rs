@@ -987,7 +987,7 @@ fn commit_raw_under_continuous_tps_passes_through_verbatim() {
 // transition half of the contract (given full consumption, the engine leaves
 // Continuous); that the emitted candidate's span actually REACHES raw len is
 // pinned end-to-end in `tps_space_pinned_tone.rs` and at the offset-map level
-// in `shadow.rs`.
+// in `shadow/lattice.rs`.
 #[test]
 fn full_span_commit_consumes_the_trailing_separator_marker() {
     let raw = "ㄒㄧ ";
