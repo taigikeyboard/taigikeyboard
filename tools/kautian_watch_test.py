@@ -6,6 +6,7 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import Counter
+from pathlib import Path
 from unittest.mock import Mock
 
 import kautian_watch as watch
@@ -366,3 +367,74 @@ def test_github_errors_propagate_without_mutation(report, monkeypatch):
     with pytest.raises(RuntimeError, match="API failed"):
         watch.publish(report)
     assert api.call_count == 1
+
+
+def test_reading_sheets_match_dictionary_config():
+    yaml = pytest.importorskip("yaml")
+    config = Path(__file__).parents[1] / "dictionary/sources/official/kautian/config.yaml"
+    select = yaml.safe_load(config.read_text(encoding="utf-8"))["stage_options"]["select"]
+    sheets = {name.removesuffix(".csv"): spec["columns"] for name, spec in select["sheets"].items()}
+    assert sheets.pop(watch.VARIANT_SHEET) == ["漢字", "異用字"]
+    assert sheets == {
+        name: ["漢字", *columns]
+        for name, columns in watch.READING_SHEETS.items()
+        if name != select["dialect_sheet"].removesuffix(".csv")
+    }
+    assert tuple(select["dialect_columns"]) == watch.READING_SHEETS["語音差異"]
+
+
+def test_typing_summary_lists_pairs_variants_and_side_effects():
+    headword = ("詞目id", "漢字", "羅馬字", "分類")
+    synonym = ("詞目id", "詞目漢字", "對應詞目id", "對應詞目漢字")
+    before = {
+        "詞目": watch.Sheet(
+            headword,
+            Counter(
+                {
+                    ("1", "鏡仁", "", ""): 1,
+                    ("2", "古", "kóo", ""): 1,
+                    ("3", "水濺仔", "", ""): 1,
+                }
+            ),
+        ),
+        "異用字": watch.Sheet(("詞目id", "漢字", "異用字"), Counter()),
+        "詞目tuì詞目近義": watch.Sheet(synonym, Counter({("1", "甲", "2", "乙"): 1})),
+    }
+    after = {
+        "詞目": watch.Sheet(
+            headword,
+            Counter(
+                {
+                    ("1", "鏡仁", "kiànn-jîn/kiànn-lîn", ""): 1,
+                    ("3", "水濺仔", "", "生活用品"): 1,
+                    # Moving a pair to another sheet is not a typing change.
+                }
+            ),
+        ),
+        "又唸作": watch.Sheet(("詞目id", "漢字", "羅馬字"), Counter({("2", "古", "kóo"): 1})),
+        "異用字": watch.Sheet(("詞目id", "漢字", "異用字"), Counter({("4", "這", "即"): 1})),
+        "詞目tuì詞目近義": watch.Sheet(synonym, Counter()),
+    }
+    summary = watch.typing_summary(before, after, watch.compare(before, after), brief=True)
+    # trace: "kiànn-jîn/kiànn-lîn" splits on "/" → two (鏡仁, tl) pairs; 古/kóo
+    # leaves 詞目 but stays in 又唸作, so it is neither new nor removed.
+    assert "**New in 教典 (2)**" in summary
+    assert "| 鏡仁 | kiànn&#45;jîn | 詞目 |" in summary
+    assert "| 鏡仁 | kiànn&#45;lîn | 詞目 |" in summary
+    assert "No longer in 教典" not in summary
+    assert "| 即 | 這 | added |" in summary
+    assert "- 詞目: 分類 edited ×1" in summary
+    assert "- synonym links: 1 removed" in summary
+
+
+def test_typing_summary_without_reading_changes_and_bounded():
+    columns = ("漢字", "羅馬字")
+    sheet = watch.Sheet(columns, Counter({("甲", "kah"): 1}))
+    assert "No words, readings or variant spellings changed." in watch.typing_summary(
+        {"名": sheet}, {"名": sheet}, [], brief=True
+    )
+    many = watch.Sheet(columns, Counter({(f"字{i}", "lī" * 50): 1 for i in range(2000)}))
+    summary = watch.typing_summary({}, {"名": many}, [], brief=True)
+    assert len(summary) < 2 * watch.SUMMARY_TABLE_CHARS
+    assert "more in the full report." in summary
+    assert watch.typing_summary({}, {"名": many}, [], brief=False).count("| 字") == 2000

@@ -22,7 +22,37 @@ OFFICE = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
 TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 TITLE = "chore(dictionary): MoE kautian.ods has new data"
 START, END = "<!-- kautian-watch:start -->", "<!-- kautian-watch:end -->"
-FORMAT_MARKER = "<!-- kautian-watch:format:2 -->"
+FORMAT_MARKER = "<!-- kautian-watch:format:3 -->"
+# Sheets the dictionary build reads, with their reading columns
+# (dictionary/sources/official/kautian/config.yaml select.sheets + dialect_sheet;
+# kautian_watch_test keeps the two in sync).
+READING_SHEETS = {
+    **dict.fromkeys(("詞目", "又唸作", "合音唸作", "俗唸作", "詞彙比較", "名", "姓"), ("羅馬字",)),
+    "語音差異": (
+        "鹿港偏泉腔",
+        "三峽偏泉腔",
+        "臺北偏泉腔",
+        "宜蘭偏漳腔",
+        "臺南混合腔",
+        "高雄混合腔",
+        "金門偏泉腔",
+        "馬公偏泉腔",
+        "新竹偏泉腔",
+        "臺中偏漳腔",
+    ),
+}
+VARIANT_SHEET = "異用字"
+# Same separators as dictionary/common/expand.py DEFAULT_SEPARATORS.
+SEPARATORS = re.compile(r"[/,]")
+# Keeps the issue body (summary tables + 24,000-char diff) under GitHub's limit.
+SUMMARY_TABLE_CHARS = 4000
+# Plain-language names for sheets the dictionary build does not read.
+SHEET_TOPICS = {
+    "義項": "definitions",
+    "例句": "example sentences",
+    "羅馬字清單": "romanization reference list",
+    "漢字羅馬字對應": "Hanji-romanization reference list",
+}
 # These are source-record identifiers, not dictionary word/deduplication keys.
 SOURCE_KEYS = {
     "詞目": ("詞目id",),
@@ -323,7 +353,7 @@ def render(differences: list[SheetDiff], *, brief: bool) -> str:
     active = [sheet for sheet in differences if changed(sheet)]
     totals = [sum(counts(sheet)[index] for sheet in active) for index in range(3)]
     blocks = [
-        "## Data diff",
+        "## Source sheet diff",
         (
             f"**{totals[0]} added · {totals[1]} removed · {totals[2]} modified** "
             f"across {len(active)} sheets."
@@ -375,6 +405,146 @@ def render(differences: list[SheetDiff], *, brief: bool) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
+def cell(row: Row, columns: Row, name: str) -> str:
+    index = columns.index(name)
+    return row[index].strip() if index < len(row) else ""
+
+
+def split_pairs(hanji: str, reading: str) -> list[tuple[str, str]]:
+    # Mirrors expand_dataframe: pair by index; a single side repeats.
+    hanjis = [part.strip() for part in SEPARATORS.split(hanji) if part.strip()]
+    readings = [part.strip() for part in SEPARATORS.split(reading) if part.strip()]
+    if len(hanjis) == 1:
+        hanjis *= len(readings)
+    if len(readings) == 1:
+        readings *= len(hanjis)
+    return list(zip(hanjis, readings))
+
+
+def readings(sheets: dict[str, Sheet]) -> dict[tuple[str, str], list[str]]:
+    """(Hanji, romanization) pairs the dictionary build sees → sheets holding them."""
+    found: dict[tuple[str, str], list[str]] = {}
+    for name, reading_columns in READING_SHEETS.items():
+        sheet = sheets.get(name)
+        if not sheet or "漢字" not in sheet.columns:
+            continue
+        present = [column for column in reading_columns if column in sheet.columns]
+        for row in sheet.rows:
+            hanji = cell(row, sheet.columns, "漢字")
+            for column in present:
+                for pair in split_pairs(hanji, cell(row, sheet.columns, column)):
+                    holders = found.setdefault(pair, [])
+                    if name not in holders:
+                        holders.append(name)
+    return found
+
+
+def variants(sheets: dict[str, Sheet]) -> set[tuple[str, str]]:
+    sheet = sheets.get(VARIANT_SHEET)
+    if not sheet or not {"漢字", "異用字"} <= set(sheet.columns):
+        return set()
+    pairs = {
+        (cell(row, sheet.columns, "異用字"), cell(row, sheet.columns, "漢字")) for row in sheet.rows
+    }
+    return {pair for pair in pairs if all(pair)}
+
+
+def sheet_topic(name: str) -> str:
+    if "近義" in name:
+        return "synonym links"
+    if "反義" in name:
+        return "antonym links"
+    return SHEET_TOPICS.get(name, name)
+
+
+def pair_table(title: str, header: Row, rows: list[Row], *, brief: bool) -> str:
+    lines = [f"**{title} ({len(rows)})**", "", f"| {' | '.join(header)} |", "| --- | --- | --- |"]
+    shown, length = 0, 0
+    for row in rows:
+        line = f"| {' | '.join(safe(value, 80 if brief else None) for value in row)} |"
+        length += len(line) + 1
+        if brief and length > SUMMARY_TABLE_CHARS:
+            break
+        lines.append(line)
+        shown += 1
+    if shown < len(rows):
+        lines += ["", f"…and {len(rows) - shown} more in the full report."]
+    return "\n".join(lines)
+
+
+def side_effects(differences: list[SheetDiff]) -> list[str]:
+    """Changed source rows that alter no (Hanji, romanization) pair or variant spelling."""
+    edits: dict[str, Counter[str]] = {}
+    topics: dict[str, list[int]] = {}
+    for sheet in differences:
+        if not changed(sheet):
+            continue
+        if sheet.name in READING_SHEETS or sheet.name == VARIANT_SHEET:
+            columns = sheet.columns_before or ()
+            typing_columns = {"漢字", "異用字", *READING_SHEETS.get(sheet.name, ())}
+            for modification in sheet.modified:
+                width = max(len(modification.before), len(modification.after))
+                touched = [
+                    column_label(columns, index)
+                    for index in range(width)
+                    if modification.before[index : index + 1]
+                    != modification.after[index : index + 1]
+                ]
+                if not typing_columns & set(touched):
+                    edits.setdefault(sheet.name, Counter()).update(touched)
+            continue
+        totals = topics.setdefault(sheet_topic(sheet.name), [0, 0, 0])
+        for index, number in enumerate(counts(sheet)):
+            totals[index] += number
+    lines = [
+        f"- {safe(name)}: "
+        + ", ".join(f"{safe(column, 80)} edited ×{number}" for column, number in fields.items())
+        for name, fields in edits.items()
+    ]
+    for topic, totals in topics.items():
+        labels = ", ".join(
+            f"{number} {label}"
+            for number, label in zip(totals, ("added", "removed", "edited"))
+            if number
+        )
+        lines.append(f"- {safe(topic, 80)}: {labels or 'column headers changed'}")
+    return lines
+
+
+def typing_summary(
+    before: dict[str, Sheet], after: dict[str, Sheet], differences: list[SheetDiff], *, brief: bool
+) -> str:
+    old, new = readings(before), readings(after)
+    added = sorted((*pair, ", ".join(new[pair])) for pair in new.keys() - old.keys())
+    removed = sorted((*pair, ", ".join(old[pair])) for pair in old.keys() - new.keys())
+    old_variants, new_variants = variants(before), variants(after)
+    variant_rows = sorted(
+        [(*pair, "added") for pair in new_variants - old_variants]
+        + [(*pair, "removed") for pair in old_variants - new_variants]
+    )
+    blocks = [
+        "## What changes for typing",
+        (
+            "Words and readings in the sheets the keyboard dictionary is built from. "
+            "Approximate: the data PR's rebuilt `dictionary.csv` is authoritative, "
+            "and a word may already exist from another dictionary."
+        ),
+    ]
+    header = ("Hanji", "Romanization", "Sheet")
+    if added:
+        blocks.append(pair_table("New in 教典", header, added, brief=brief))
+    if removed:
+        blocks.append(pair_table("No longer in 教典", header, removed, brief=brief))
+    if variant_rows:
+        variant_header = ("Variant", "Standard Hanji", "Change")
+        blocks.append(pair_table("Variant spellings", variant_header, variant_rows, brief=brief))
+    if not (added or removed or variant_rows):
+        blocks.append("No words, readings or variant spellings changed.")
+    if others := side_effects(differences):
+        blocks.append("**No effect on typing**\n\n" + "\n".join(others))
+    return "\n\n".join(blocks) + "\n\n"
+
+
 def generate(arguments: argparse.Namespace) -> None:
     before, after = read_ods(arguments.committed), read_ods(arguments.upstream)
     differences = compare(before, after)
@@ -396,6 +566,7 @@ def generate(arguments: argparse.Namespace) -> None:
     for filename, brief in (("summary.md", True), ("diff.md", False)):
         (arguments.output / filename).write_text(
             ("" if brief else f"Baseline commit: `{arguments.baseline_commit}`\n\n")
+            + typing_summary(before, after, differences, brief=brief)
             + render(differences, brief=brief),
             encoding="utf-8",
         )
@@ -482,7 +653,10 @@ def publish(arguments: argparse.Namespace) -> None:
         print(f"Updated issue #{current['number']}")
     else:
         body = (
-            "MoE published data differing from the committed capture.\n\n"
+            "The Ministry of Education (MoE) published a new export of its Taigi dictionary "
+            "(教典, `kautian.ods`) that differs from the copy the keyboard is built from. "
+            "*What changes for typing* lists the words and readings affected; "
+            "*Source sheet diff* shows the raw spreadsheet rows.\n\n"
             "Source: https://sutian.moe.edu.tw/media/senn/ods/kautian.ods\n\n"
             "Daily automation rebuilds dictionary data and opens a PR for manual merge "
             "after Python and Engine verification. Merging that PR closes this issue. "
