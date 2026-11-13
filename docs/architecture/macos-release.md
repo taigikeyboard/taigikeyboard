@@ -29,8 +29,8 @@ behind the developer's back.
 **Debug stays native.** `bundle-app.sh debug` builds only for the host
 architecture — recompiling the whole dependency graph for an architecture this
 Mac cannot execute costs every dev-loop iteration and catches nothing.
-`release-app.sh` always passes `release`, so the shipping path cannot take the
-native branch.
+`release-app.sh` refuses a bundle without both slices, so the shipping path
+cannot take the native branch.
 
 Three assertions pin the contract, each an exact set rather than a
 "contains" check, because a bundle that silently lost x86_64 still contains
@@ -118,40 +118,40 @@ described above cannot happen there.
 
 `make desktop-release` (or `make desktop-patch PLATFORM=macos`) on any machine
 dispatches `.github/workflows/macos-build.yml` with the staged commit
-(`desktop-release.md`). The run, on a `macos-26` runner with Xcode pinned
+(`desktop-release.md`). Two jobs on two `macos-26` runners, Xcode pinned
 through `DEVELOPER_DIR` (an image update cannot change the SDK a release links):
 
-1. refuses a commit other than the staged one, or a draft that is missing,
-   published, or targets another commit;
-2. builds the universal engine xcframework (`make macos-libs` — generated and
-   gitignored, so it is always built from the commit,
-   [`build-artifacts.md` § A release rebuilds first](build-artifacts.md#a-release-rebuilds-first)),
-   before any credential is on the runner;
-3. imports both `.p12` (non-exportable) into a temporary keychain together with
-   Apple's two Developer ID intermediates, and writes the `.p8`;
-4. runs `bash macos/scripts/release-app.sh` with the API key and no GitHub
-   token, then removes the keychain and the key;
-5. runs `macos/scripts/publish-release.sh` with the token, which joins the
-   draft (`join_desktop_draft`: refuses one that a newer staging run re-created
-   on another commit during the build, never moves it) and attaches the
-   package. A rejected notarization keeps its log as the `macos-notarization`
-   artifact.
+| Job | Has | Runs |
+|---|---|---|
+| `build` | no secret, no environment, a read-only token, none on disk | refuses a commit other than the staged one; `make macos-libs` (the universal engine xcframework — generated and gitignored, so always built from the commit, [`build-artifacts.md` § A release rebuilds first](build-artifacts.md#a-release-rebuilds-first)); `bundle-app.sh release` (ad-hoc signed); checks the tree is unchanged; hands the bundle on as a one-day artifact |
+| `release` | the `release` environment: both `.p12`, the `.p8`, a write token | on a fresh VM, compiles nothing: joins the draft (`join_desktop_draft`); imports both `.p12` (non-exportable) into a temporary keychain with Apple's two Developer ID intermediates and writes the `.p8`; `release-app.sh` with no GitHub token; removes the keychain and the key; then `publish-release.sh` with the token, which joins the draft again — refusing one a newer staging run re-created on another commit, never moving it — and attaches the package |
+
+**Why two jobs:** the build executes third-party code — every crate's build
+script and proc macro, every SwiftPM package. In one job, such code could leave
+a process behind that outlives its step and waits for the keychain or the
+`.p8`. On separate machines, nothing that ran there ever coexists with a
+credential; the signing machine runs only Apple's tools, this repository's
+scripts and two SHA-pinned GitHub actions. It signs the bundle `build` produced
+— that is the product, and notarization scans it — but executes none of it.
+
+A rejected notarization keeps its log as the `macos-notarization` artifact.
 
 Re-staging the same commit while an earlier macOS run is still building fails
 the later run's read-back (a re-signed package has other bytes than the one
 already attached); wait for the earlier run to finish, then stage again — the
 same recovery as the Linux half.
 
-A pull request touching the workflow, `bundle-app.sh` or `release-app.sh` runs
-the same build unsigned (`bundle-app.sh release`, ad-hoc), with no credentials.
+A pull request touching the workflow or the release scripts runs the `build`
+job alone.
 
-What the script does, in order:
+What `release-app.sh` does, in order — it builds nothing:
 
 1. **Preflight** — clean working tree, each certificate resolvable to exactly
    one fingerprint, notarization credential authenticates.
-2. **Build and sign** — `scripts/bundle-app.sh release --sign <Developer ID
-   Application>`, which runs every assembly check the dev loop runs and then
-   signs with the hardened runtime and a secure timestamp.
+2. **Sign** — the release bundle `bundle-app.sh release` assembled
+   (`macos/.build/bundle/`, refused unless it carries both slices) is re-signed
+   with the Developer ID Application identity, the hardened runtime and a
+   secure timestamp.
 3. **Verify the signature** — signed by a Developer ID Application certificate,
    hardened-runtime flag present, secure timestamp present, no entitlements.
    All four are notarization prerequisites, and catching them here costs
@@ -174,12 +174,12 @@ throwaway package can never be staged.
 Flags:
 
 The release runner passes none: a fresh runner has no package from a previous
-attempt to `--force` over. A local throwaway build runs the script directly
-(after `make macos-libs`):
+attempt to `--force` over. A local throwaway build:
 
 ```sh
+make macos-libs && bash macos/scripts/bundle-app.sh release
 bash macos/scripts/release-app.sh --skip-notarize   # packaging only, unshippable
-bash macos/scripts/release-app.sh --allow-dirty     # build from a dirty tree
+bash macos/scripts/release-app.sh --allow-dirty     # package from a dirty tree
 ```
 
 `--skip-notarize` and `--allow-dirty` both stamp the reason into the output

@@ -3,11 +3,18 @@ name: macOS build
 # The macOS half of a desktop release: build, sign, notarize and attach the
 # `.pkg` to the `desktop-<version>` draft (docs/architecture/macos-release.md
 # § Cutting a release). Dispatched from `main` by `tools/release/stage-desktop.sh`
-# with the commit it staged. A pull request touching this workflow,
-# `bundle-app.sh` or `release-app.sh` assembles the release bundle unsigned.
+# with the commit it staged. A pull request touching this workflow or the
+# release scripts runs the `build` job alone.
 #
-# Budget: ~25 min — two release builds (one per architecture, fat LTO) with no
-# cache, plus the notarization wait.
+# Two jobs on two machines, so no credential is ever on a machine that ran
+# third-party code. `build` compiles every crate's build script and every
+# SwiftPM package with no secret and a read-only token; `release` gets the
+# Developer ID certificates and the notary key, on a fresh VM, and runs only
+# Apple's tools and this repository's scripts on the bundle `build` produced —
+# nothing it executes was compiled in this run.
+#
+# Budget: ~20 min build (two release slices, fat LTO, no cache) + ~5 min
+# release (signing, notarization wait).
 on:
   workflow_dispatch:
     inputs:
@@ -28,88 +35,37 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # Same protoc as macos.yml (engine/protos/build.rs shells out to it).
-  PROTOC_VERSION: 36.1
-  PROTOC_SHA256: de56d57afe30c5d191b11d24ff93dd4025728d7fb43b773886b2d3613e0bdbb2
   # Pinned, not the image default, so a runner image update cannot change the
-  # SDK a release links against. macos-26 carries GA Xcode 26.x only; KeyboardShortcuts
-  # needs Swift 6.2+ (macos.yml says why).
+  # SDK a release links against. macos-26 carries GA Xcode 26.x only;
+  # KeyboardShortcuts needs Swift 6.2+ (macos.yml says why).
   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
 
 jobs:
-  # The release build without credentials: what `release` runs up to signing.
-  bundle:
-    name: release bundle (unsigned)
-    if: github.event_name == 'pull_request'
+  # No secret, no environment, a read-only token, no token on disk.
+  build:
+    name: release bundle (no credentials)
     runs-on: macos-26
     timeout-minutes: 45
     permissions:
       contents: read
+    env:
+      # Same protoc as macos.yml (engine/protos/build.rs shells out to it).
+      PROTOC_VERSION: 36.1
+      PROTOC_SHA256: de56d57afe30c5d191b11d24ff93dd4025728d7fb43b773886b2d3613e0bdbb2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          set -euo pipefail
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
-          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
-          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
-
-      - name: Install the toolchain (macos/rust-toolchain.toml)
-        working-directory: macos
-        run: |
-          set -euo pipefail
-          rustup toolchain install --no-self-update
-          rustup target list --installed
-          xcodebuild -version && swift --version && protoc --version
-
-      - name: Build the engine xcframework (universal)
-        run: make macos-libs
-
-      # Ad-hoc signed: every assembly check of a release bundle, both slices.
-      - name: bundle-app.sh release
-        run: bash macos/scripts/bundle-app.sh release
-
-  release:
-    name: build, sign, notarize, attach
-    if: >-
-      github.event_name == 'workflow_dispatch' &&
-      github.repository == 'taigikeyboard/taigikeyboard' &&
-      github.ref == 'refs/heads/main'
-    runs-on: macos-26
-    timeout-minutes: 60
-    environment: release
-    permissions:
-      # generate-notes and the upload, in the attach step only.
-      contents: write
-    steps:
-      # No token on disk: the build runs every crate's build script.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # Fail in seconds, not after the build: the commit the staging run meant,
-      # the token publish-release.sh will use, and the draft it will join
-      # (`join_desktop_draft` again joins — never moves — at attach time).
-      - name: Check the draft
+      - name: Check the commit
+        if: github.event_name == 'workflow_dispatch'
         env:
-          GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          set -euo pipefail
           [ "$SOURCE_SHA" = "$GITHUB_SHA" ] || {
               echo "::error::this run builds $GITHUB_SHA but the staging run staged $SOURCE_SHA — main moved; re-run stage-desktop.sh"
               exit 1
           }
-          gh auth status
-          source macos/scripts/lib/bundle-identity.sh
-          source tools/release/lib/desktop-release.sh
-          DESKTOP_SOURCE_COMMIT="$GITHUB_SHA"
-          join_desktop_draft
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
@@ -129,10 +85,75 @@ jobs:
           rustup target list --installed
           xcodebuild -version && swift --version && protoc --version
 
-      # The universal engine archive the app links (generated, gitignored).
-      # Before any credential exists on the runner.
       - name: Build the engine xcframework (universal)
         run: make macos-libs
+
+      # Every assembly check of a release bundle, both slices, ad-hoc signed.
+      - name: bundle-app.sh release
+        run: bash macos/scripts/bundle-app.sh release
+
+      - name: Verify the build changed nothing tracked
+        run: |
+          status="$(git status --porcelain --ignore-submodules=none)"
+          [ -z "$status" ] || { echo "$status"; echo "::error::the build modified tracked files"; exit 1; }
+
+      # tar, because the artifact store drops the executable bit and symlinks.
+      - name: Pack the bundle
+        if: github.event_name == 'workflow_dispatch'
+        run: tar -C macos/.build/bundle -cf "$RUNNER_TEMP/bundle.tar" TaigiKeyboard.app
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: macos-bundle
+          path: ${{ runner.temp }}/bundle.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  # The credentials, on a machine that compiles nothing.
+  release:
+    name: sign, notarize, attach
+    needs: build
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.ref == 'refs/heads/main'
+    runs-on: macos-26
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      # generate-notes, the draft read, the upload — in the steps given the token.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-bundle
+          path: ${{ runner.temp }}
+
+      - name: Unpack the bundle
+        run: |
+          set -euo pipefail
+          mkdir -p macos/.build/bundle
+          tar -C macos/.build/bundle -xf "$RUNNER_TEMP/bundle.tar"
+          rm -f "$RUNNER_TEMP/bundle.tar"
+
+      # Before any credential: the token publish-release.sh will use, and the
+      # draft it will join (`join_desktop_draft` joins again — never moves —
+      # at attach time).
+      - name: Check the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth status
+          source macos/scripts/lib/bundle-identity.sh
+          source tools/release/lib/desktop-release.sh
+          DESKTOP_SOURCE_COMMIT="$GITHUB_SHA"
+          join_desktop_draft
 
       # A keychain of its own, holding only the two Developer ID identities and
       # Apple's intermediates, first in the search list so `security
@@ -147,8 +168,10 @@ jobs:
           P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
         run: |
           set -euo pipefail
+          umask 077
           keychain="$RUNNER_TEMP/release.keychain-db"
           keychain_password="$(openssl rand -base64 32)"
+          echo "::add-mask::$keychain_password"
           security create-keychain -p "$keychain_password" "$keychain"
           security set-keychain-settings -lut 21600 "$keychain"
           security unlock-keychain -p "$keychain_password" "$keychain"
@@ -179,15 +202,15 @@ jobs:
         run: |
           set -euo pipefail
           key="$RUNNER_TEMP/AuthKey_$API_KEY_ID.p8"
-          printf '%s\n' "$API_KEY_P8" > "$key"
-          chmod 600 "$key"
+          (umask 077; printf '%s\n' "$API_KEY_P8" > "$key")
           grep -q 'BEGIN PRIVATE KEY' "$key" || {
               echo "::error::APPLE_API_KEY_P8 is not the .p8 file's PEM text — set it with: gh secret set APPLE_API_KEY_P8 --env release < AuthKey_<id>.p8"
               exit 1
           }
           echo "NOTARY_API_KEY=$key" >> "$GITHUB_ENV"
 
-      # Build, sign, verify, package, notarize, staple. No GitHub token here.
+      # Re-sign with Developer ID, verify, package, notarize, staple. No
+      # GitHub token here.
       - name: release-app.sh
         env:
           NOTARY_API_KEY_ID: ${{ vars.APPLE_API_KEY_ID }}
@@ -199,11 +222,11 @@ jobs:
         if: always()
         run: |
           security delete-keychain "$RUNNER_TEMP/release.keychain-db" 2> /dev/null || true
-          rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+          rm -f "$RUNNER_TEMP"/AuthKey_*.p8 "$RUNNER_TEMP"/*.p12
 
       # Stapled, Gatekeeper, declared identity and version, then join the draft
-      # (refused if a newer staging run re-created it during the build), attach
-      # and read back (desktop-release.md § What staging checks).
+      # (refused if a newer staging run re-created it meanwhile), attach and
+      # read back (desktop-release.md § What staging checks).
       - name: publish-release.sh
         env:
           GH_TOKEN: ${{ github.token }}

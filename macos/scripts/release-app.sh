@@ -6,9 +6,17 @@
 # script assumes (two certificates and a notarization credential). The release
 # runs it on a hosted Mac (.github/workflows/macos-build.yml).
 #
+# It builds nothing: it signs the bundle `bundle-app.sh release` assembled
+# (`$BUILT_APP`) with Developer ID, then packages and notarizes it. The build
+# runs third-party code (crate build scripts, SwiftPM packages), so on the
+# release runner it happens in a job that never sees a credential, and only
+# this script — Apple's tools and this repository's code — runs where the
+# certificates are. Locally: `make macos-libs`, `bundle-app.sh release`, then
+# this.
+#
 # Usage: release-app.sh [--allow-dirty] [--skip-notarize] [--force]
 #
-#   --allow-dirty     Build from a dirty working tree. The output is named
+#   --allow-dirty     Package from a dirty working tree. The output is named
 #                     `-dirty` and must not be published.
 #   --skip-notarize   Stop after signing the package. The output is named
 #                     `-unnotarized`; Gatekeeper blocks it on any other Mac.
@@ -83,8 +91,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ---------------------------------------------------------------------------
-# Preflight. Everything that can be known before the build is checked before
-# the build, because the build plus the notarization round trip is minutes.
+# Preflight. Everything that can be known before signing is checked first,
+# because the notarization round trip is minutes.
 # ---------------------------------------------------------------------------
 
 # The marketing version names the download; the build version is what the
@@ -113,14 +121,12 @@ if [[ "$SHORT_VERSION" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
 fi
 
 echo "==> Checking the working tree"
-# Untracked files count: SwiftPM compiles everything under Sources/, so an
-# uncommitted source file would otherwise ship inside a package that claims to
-# be HEAD. Submodules count for the same reason.
-#
-# A clean tree proves the bundle ships exactly what is committed at HEAD. It
-# does NOT prove the committed xcframework and dictionary artifacts were
-# regenerated from the committed sources — nothing here can prove that, so run
-# `make build` (and `make dict` when dictionary sources moved) beforehand.
+# A clean tree proves the packaging — this script, the plist it reads — is what
+# HEAD commits. It cannot prove the bundle was built from HEAD: this script
+# builds nothing. On the release runner that proof is the `build` job's, which
+# builds a fresh checkout of the staged commit and checks the build changed
+# nothing tracked. A local bundle built from a dirty tree and packaged after a
+# commit is a throwaway either way: only the release workflow stages.
 TREE_STATUS="$(git -C "$REPOSITORY_DIR" status --porcelain --ignore-submodules=none)"
 if [[ -n "$TREE_STATUS" ]]; then
     if [[ "$allow_dirty" == false ]]; then
@@ -191,7 +197,7 @@ echo "  pkg: $INSTALLER_IDENTITY"
 if [[ "$skip_notarize" == false ]]; then
     echo "==> Checking the notarization credentials"
     # Cheapest call that proves the credential authenticates. Without it the
-    # first notarization failure would arrive after the whole build.
+    # first notarization failure would arrive after signing and packaging.
     if ! xcrun notarytool history "${NOTARY_AUTH[@]}" \
         --output-format json > /dev/null 2>&1; then
         echo "error: $NOTARY_AUTH_NAME is missing or cannot authenticate." >&2
@@ -211,13 +217,26 @@ if [[ -d "$INSTALLED_APP" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Build.
+# Sign the release bundle.
 # ---------------------------------------------------------------------------
+
+[[ -d "$BUILT_APP" ]] ||
+    fail "no bundle at $BUILT_APP — run 'bash macos/scripts/bundle-app.sh release' first"
+# A debug bundle carries one slice; only a release bundle carries both
+# (bundle-app.sh asserts the set, this refuses the wrong configuration).
+BUNDLE_ARCHITECTURES="$(lipo -archs "$BUILT_APP/Contents/MacOS/$EXECUTABLE_NAME" | tr ' ' '\n' | LC_ALL=C sort | paste -sd, -)"
+[[ "$BUNDLE_ARCHITECTURES" == "arm64,x86_64" ]] ||
+    fail "$BUILT_APP has architectures '$BUNDLE_ARCHITECTURES', not arm64,x86_64 — rebuild it with 'bundle-app.sh release'"
 
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_ROOT"
 
-bash "$PACKAGE_DIR/scripts/bundle-app.sh" release --sign "$APPLICATION_IDENTITY"
+echo "==> Signing with $APPLICATION_IDENTITY"
+# Replaces bundle-app.sh's ad-hoc signature. Hardened runtime and a secure
+# timestamp are both required for notarization. No `--deep`: it papers over
+# nested-code signing mistakes, and there is no nested code to sign —
+# bundle-app.sh copies one executable and data files, nothing else.
+codesign --force --sign "$APPLICATION_IDENTITY" --options runtime --timestamp "$BUILT_APP"
 
 echo "==> Verifying the signature"
 # `--deep` is wrong for signing but right for verifying: it walks whatever
