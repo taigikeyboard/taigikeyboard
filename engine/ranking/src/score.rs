@@ -108,7 +108,7 @@ impl FrequencyData {
 /// **The `canonical_tl == ""` bucket** holds two kinds of row: legacy ones
 /// (pre-R5 rows / old-backup imports that could not be re-keyed) and
 /// current empty-reading identities — an OOV pick, or a continuous commit
-/// whose reading could not be recovered (`composing/src/continuous.rs`
+/// whose reading could not be recovered (`composing/src/continuous/walk.rs`
 /// stamps `canonical_tl: String::new()`). [`get`](Self::get) consults it
 /// as a tolerant fallback for ANY reading of the `display_text` whose exact
 /// `(display, tl)` entry is absent — both 重/tîng and 重/tāng inherit the
