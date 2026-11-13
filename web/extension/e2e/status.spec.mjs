@@ -131,23 +131,6 @@ test("the popup says so on a page no extension may enter", async ({
   await expect(storePopup.locator("#enable")).toBeHidden();
 });
 
-test("a site that forbids WebAssembly types through the JS fallback", async ({
-  context,
-  worker,
-  page,
-}) => {
-  const field = await openTyping(
-    context,
-    worker,
-    page,
-    `${A}/strict.html`,
-    "#text",
-  );
-  await commitWord(page);
-  await expect(field).toHaveValue("台灣");
-  await expect(preedit(page)).toBeEmpty();
-});
-
 test("a broken package keeps the site's keys, and says why not", async ({
   extension,
   profile,

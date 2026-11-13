@@ -135,6 +135,21 @@ test("undo and redo are the field's own, one commit a step", async ({
   await expect(field).toHaveValue("");
   await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(field).toHaveValue("台灣");
+
+  // A romanized commit and its auto space join into one undo step too.
+  await worker.evaluate(() =>
+    chrome.storage.sync.set({
+      "taigi.settings": JSON.stringify({
+        revision: 1,
+        values: { autoSpaceEnabled: true },
+      }),
+    }),
+  );
+  await page.keyboard.press("`");
+  await commitWord(page);
+  await expect(field).toHaveValue("台灣tâi-uân ");
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(field).toHaveValue("台灣");
 });
 
 test("the site's own input handlers hear a commit", async ({

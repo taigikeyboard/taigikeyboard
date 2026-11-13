@@ -139,12 +139,12 @@ extension: build node_modules/.package-lock.json
 
 # The extension's browser gate: Playwright loads the staged extension into its
 # own Chromium (EXTENSION_BROWSER names another Chromium's executable).
-# The fixtures are served from one directory with the pinned Quill beside them.
+# The fixtures are served from one directory with the pinned Quill and Lexical beside them.
 EXTENSION_FIXTURES := target/extension-fixtures
-extension-fixtures: node_modules/.package-lock.json
+extension-fixtures: $(VENDOR)/lexical.js node_modules/.package-lock.json
 	rm -rf $(EXTENSION_FIXTURES)
 	mkdir -p $(EXTENSION_FIXTURES)
-	cp extension/fixtures/* node_modules/quill/dist/quill.js node_modules/quill/dist/quill.snow.css $(EXTENSION_FIXTURES)/
+	cp extension/fixtures/* $(VENDOR)/lexical.js node_modules/quill/dist/quill.js node_modules/quill/dist/quill.snow.css $(EXTENSION_FIXTURES)/
 
 extension-e2e: extension extension-fixtures
 	npx playwright install $(if $(CI),--with-deps) chromium
