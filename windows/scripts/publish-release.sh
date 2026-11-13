@@ -42,7 +42,7 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
-# The shared half first, so a dirty tree or an uncommitted changelog stops
+# The shared half first, so a dirty tree or an unreachable GitHub API stops
 # before signtool is asked anything.
 desktop_release_preflight
 [[ -n "$installer_path" ]] || installer_path="$DISTRIBUTION_DIR/$WINDOWS_ASSET"

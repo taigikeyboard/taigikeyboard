@@ -112,7 +112,7 @@ Update these surfaces idempotently:
 | File | Purpose |
 | --- | --- |
 | `CHANGELOG.md` | Link to the detailed version changelog |
-| `changelog/mobile-<target>.md` | Detailed Shared / iOS / Android / Dictionary record for the mobile train (desktop work lives in `changelog/desktop-v<version>.md`, not here) |
+| `changelog/mobile-<target>.md` | Detailed Shared / iOS / Android / Dictionary record for the mobile train (desktop work ships on the desktop train, whose notes GitHub generates — not here) |
 | `changelog/store/<target>/ios.txt` | Canonical English iOS What's New |
 | `changelog/store/<target>/android.txt` | Canonical English Android What's New |
 

@@ -320,9 +320,10 @@ _align_draft_with_commit() {
 
     echo "  the draft targets '$target'; pointing it at ${DESKTOP_SOURCE_COMMIT:0:7}"
     # A branch name here would tag whatever that branch points at on publish
-    # day, so the target is always rewritten to a full SHA.
+    # day, so the target is always rewritten to a full SHA. The body follows
+    # it: the generated notes list the pull requests up to this commit.
     gh release edit "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
-        --target "$DESKTOP_SOURCE_COMMIT" > /dev/null ||
+        --target "$DESKTOP_SOURCE_COMMIT" --notes-file "$DESKTOP_NOTES_FILE" > /dev/null ||
         fail "cannot point the draft $DESKTOP_TAG at ${DESKTOP_SOURCE_COMMIT:0:7}"
 }
 
