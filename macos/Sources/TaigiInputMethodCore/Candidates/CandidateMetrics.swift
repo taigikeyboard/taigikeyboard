@@ -219,8 +219,8 @@ struct CandidateMetrics: Equatable, Sendable {
     /// + 2` (`MacishCandidateItemView.swift:22-24`), enough for a digit's
     /// bearing on either side.
     private static let indexSlotPadding: CGFloat = 2
-    private static let baseHorizontalPadding: CGFloat = 9
-    private static let baseVerticalPadding: CGFloat = 12
+    private static let baseHorizontalPadding: CGFloat = 11
+    private static let baseVerticalPadding: CGFloat = 14
     private static let baseStackedLineGap: CGFloat = 2
     private static let baseTahoeSeparatorInset: CGFloat = 8
     /// What a window of two-line cells rounds to — see
@@ -253,7 +253,11 @@ struct CandidateMetrics: Equatable, Sendable {
         indexFontSize = (Self.baseIndexFontSize * textScale).rounded()
         indexCandidateGap = (Self.baseIndexCandidateGap * textScale).rounded()
         stackedLineGap = (Self.baseStackedLineGap * textScale).rounded()
-        horizontalPadding = (Self.baseHorizontalPadding * chromeScale).rounded()
+        // Side air keeps upstream's full ratio: the capsule highlight's end
+        // curves eat into the cell's edge, so the tightened chrome ratio left
+        // the text touching or crossing the rounded corners at Standard and
+        // smaller. Only the vertical padding keeps the tighter ratio.
+        horizontalPadding = (Self.baseHorizontalPadding * textScale).rounded()
         verticalPadding = (Self.baseVerticalPadding * chromeScale).rounded()
         tahoeSeparatorInset = (Self.baseTahoeSeparatorInset * chromeScale).rounded()
         self.cellArrangement = cellArrangement
