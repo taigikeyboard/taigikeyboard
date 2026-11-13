@@ -224,6 +224,12 @@ impl Session {
         self.inner.viewport_scrolled(offset);
     }
 
+    /// Taigi to English or back, as a Shift tap does.
+    #[wasm_bindgen(js_name = toggleLanguageMode)]
+    pub fn toggle_language_mode(&mut self) -> String {
+        self.inner.toggle_language_mode()
+    }
+
     #[wasm_bindgen(js_name = commitComposition)]
     pub fn commit_composition(&mut self) -> String {
         self.inner.commit_composition()

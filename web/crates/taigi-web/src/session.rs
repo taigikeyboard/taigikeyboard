@@ -267,6 +267,12 @@ impl WebSession {
         if !is_tap {
             return self.reply(false, &[], None);
         }
+        self.toggle_language_mode()
+    }
+
+    /// Taigi to English or back, as a Shift tap does. The browser extension
+    /// calls it to put a reloaded tab back in the mode it was in.
+    pub(crate) fn toggle_language_mode(&mut self) -> String {
         let emits = toggle_language_mode(&self.runtime, CONTEXT, &mut self.state);
         let label = self
             .runtime
@@ -637,6 +643,26 @@ mod tests {
         assert_eq!(
             parsed(session.mode_line()),
             json!({ "isEnglish": true, "mode": "English", "script": "Phonetic Symbols", "other": "Taigi" })
+        );
+    }
+
+    #[test]
+    fn toggle_language_mode_flips_between_taigi_and_english() {
+        let mut session = session();
+        let to_english = parsed(session.toggle_language_mode());
+        assert_eq!(to_english["handled"], true);
+        assert_eq!(parsed(session.mode_line())["isEnglish"], true);
+        assert_eq!(
+            parsed(session.key_down(&press("a", "KeyA")))["handled"],
+            false
+        );
+
+        let to_taigi = parsed(session.toggle_language_mode());
+        assert_eq!(to_taigi["handled"], true);
+        assert_eq!(parsed(session.mode_line())["isEnglish"], false);
+        assert_eq!(
+            parsed(session.key_down(&press("a", "KeyA")))["handled"],
+            true
         );
     }
 
