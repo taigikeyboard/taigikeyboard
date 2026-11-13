@@ -51,6 +51,7 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 | `architecture/maintainability-roadmap-2026-10.md` | 2026-10-09 audit follow-up — H, A1a, A1b, A2, D1, D2 merged; paused by the maintainer | Active |
 | `architecture/web-roadmap.md` | Web version — Rust engine in WASM behind a browser shell; phases 0–8, decisions D1–D6 | Active |
 | `architecture/chromeos-roadmap.md` | ChromeOS input method — MV3 `chrome.input.ime` extension over the web wasm engine; VM test environments (issue #759) | Active |
+| `architecture/browser-extension.md` | Browser extension — the web wasm engine in a content script, typing into websites' own fields; per-site access, per-tab mode, shared learning (issue #864) | Active |
 | `architecture/custom-layouts-roadmap.md` | Mobile custom romanization layouts — phases 1–4 merged, iOS + Android | Done |
 | `architecture/e2e-testing-roadmap.md` | End-to-end test system — Linux automated, other platforms manual | Active |
 | `architecture/macos-roadmap.md` | macOS IME design decisions D1–D11 | Done |
