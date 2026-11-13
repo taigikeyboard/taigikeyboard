@@ -140,7 +140,7 @@ def test_sheet_and_header_changes_are_explicit():
     }
     result = watch.compare(old, new)
     assert all(watch.changed(sheet) for sheet in result)
-    assert "@@ Column headers (null means sheet absent) @@" in watch.render(result, brief=True)
+    assert "@@ 欄位名（null 是無這个資料表）@@" in watch.render(result, brief=True)
 
 
 @pytest.mark.parametrize("content", [b"bad xml", b"<!DOCTYPE x><x/>", b"<x/>"])
@@ -159,7 +159,7 @@ def test_reports_are_bounded_escaped_and_lossless():
     )
     summary = watch.render([sheet], brief=True)
     assert len(summary) < 24050
-    assert "Summary truncated" in summary
+    assert "摘要傷長" in summary
     assert value not in summary
     assert "字" * 30000 in watch.render([sheet], brief=False)
 
@@ -194,8 +194,8 @@ def test_approved_layout_shows_all_modifications_and_changed_fields_only():
     ]
     sheet = watch.SheetDiff("詞目", columns, columns, 29592, 29592, [], [], modifications)
     summary = watch.render([sheet], brief=True)
-    assert "**0 added · 0 removed · 10 modified**" in summary
-    assert "<summary>All 1 sheets</summary>" in summary
+    assert "**增加 0 · 刪掉 0 · 改 10**" in summary
+    assert "<summary>全部 1 个資料表</summary>" in summary
     assert "29,592" in summary
     assert summary.count("@@ 詞目id=") == 10
     assert "- 羅馬字: suí-tshìn\n+ 羅馬字: tsuí-tshìn" in summary
@@ -211,10 +211,10 @@ def test_duplicate_blank_and_overflow_column_values_keep_positions():
     )
     summary = watch.render([sheet], brief=True)
     for line in (
-        "+ 漢字 [column 1]: 九",
-        "+ 漢字 [column 2]: 八",
-        "+ Column 3: 七",
-        "+ Column 4: 六",
+        "+ 漢字 [第 1 欄]: 九",
+        "+ 漢字 [第 2 欄]: 八",
+        "+ 第 3 欄: 七",
+        "+ 第 4 欄: 六",
     ):
         assert line in summary
     assert "×2" in summary
@@ -257,11 +257,11 @@ def test_oversized_metadata_and_missing_name_are_bounded():
         [],
         [watch.Modification(("1", "九"), ("1",))],
     )
-    assert "+ 漢字: (empty)" in watch.render([sheet], brief=True)
+    assert "+ 漢字: （空的）" in watch.render([sheet], brief=True)
     summary = watch.render([sheet] * 1000, brief=True)
     assert len(summary) <= 24000
     assert summary.count("<details>") == summary.count("</details>")
-    assert "Summary truncated" in summary
+    assert "摘要傷長" in summary
 
 
 def test_replace_only_generated_section_and_reject_bad_markers():
@@ -325,7 +325,7 @@ def test_publish_create_existing_update_and_no_duplicate(report, monkeypatch):
     body = api.call_args.kwargs["payload"]["body"]
     assert body.startswith("human refresh instructions\n")
     assert watch.FORMAT_MARKER in body
-    assert "<summary>Comparison details</summary>" in body
+    assert "<summary>比對資料</summary>" in body
     assert "--paginate" in api.call_args_list[0].args
     api.reset_mock(side_effect=True)
     api.side_effect = [[[issue(body=body)]], issue(body=body)]
@@ -375,7 +375,7 @@ def test_reading_sheets_match_dictionary_config():
     options = yaml.safe_load(config.read_text(encoding="utf-8"))["stage_options"]
     select = options["select"]
     sheets = {name.removesuffix(".csv"): spec["columns"] for name, spec in select["sheets"].items()}
-    # 異用字 is dropped at merge, so it lists under "No effect on typing".
+    # 異用字 is dropped at merge, so it lists under 袂影響拍字.
     assert "異用字.csv" in options["merge"]["exclude"] and "異用字" in watch.SHEET_TOPICS
     del sheets["異用字"]
     assert sheets == {
@@ -439,15 +439,15 @@ def test_typing_summary_lists_pairs_moves_and_side_effects():
     summary = summarize(before, after)
     # trace: "kiànn-jîn/kiànn-lîn" splits on "/" → two (鏡仁, tl) pairs; 古/kóo
     # leaves 詞目 but stays in 又唸作 → moved, neither new nor removed.
-    assert "**New in 教典 (2)**" in summary
+    assert "**增加（2）**" in summary
     assert "| 鏡仁 | kiànn&#45;jîn | 詞目 |" in summary
     assert "| 鏡仁 | kiànn&#45;lîn | 詞目 |" in summary
-    assert "No longer in 教典" not in summary
-    assert "**Moved (1)**" in summary
+    assert "**刪掉" not in summary
+    assert "**徙位（1）**" in summary
     assert "| 古 | kóo | 詞目 → 又唸作 |" in summary
-    assert "- 詞目: 分類 edited ×1" in summary
-    assert "**Synonym links (1)**" in summary and "| 甲 | 乙 | removed |" in summary
-    assert "- variant spellings (frozen variants.csv used): 1 added" in summary
+    assert "- 詞目：分類改 1 項" in summary
+    assert "**近義（1）**" in summary and "| 甲 | 乙 | 刪掉 |" in summary
+    assert "- 異用字（拍字用固定的 variants.csv）：增加 1" in summary
     assert "⚠" not in summary
 
 
@@ -456,24 +456,24 @@ def test_typing_summary_warns_on_reading_sheet_header_change():
     new = watch.Sheet(("漢字", "台羅"), Counter({("甲", "kah"): 1}))
     before, after = {"詞目": old}, {"詞目": new}
     summary = summarize(before, after)
-    assert "⚠ Column headers changed: 詞目." in summary
+    assert "⚠ 欄位名有改：詞目。" in summary
 
 
 def test_typing_summary_without_reading_changes_and_bounded():
     columns = ("漢字", "羅馬字")
     sheet = watch.Sheet(columns, Counter({("甲", "kah"): 1}))
-    assert "No typing changes." in summarize({"名": sheet}, {"名": sheet})
+    assert "拍字無改變。" in summarize({"名": sheet}, {"名": sheet})
     many = watch.Sheet(columns, Counter({(f"字{i}", "lī" * 50): 1 for i in range(2000)}))
     summary = summarize({}, {"名": many}, brief=True)
     assert len(summary) < 2 * watch.SUMMARY_TABLE_CHARS
-    assert "more in the full report." in summary
+    assert "請看完整報告。" in summary
     assert summarize({}, {"名": many}, brief=False).count("| 字") == 2000
     columns = tuple(f"欄{i}" for i in range(500))
     edit = watch.Modification(tuple("a" * 500), tuple("b" * 500))
     sheet = watch.SheetDiff("詞目", columns, columns, 1, 1, [], [], [edit])
     effects = watch.side_effects([sheet], brief=True)
     assert len("\n".join(effects)) < watch.SUMMARY_TABLE_CHARS + 100
-    assert "more in the full report." in effects[-1]
+    assert "請看完整報告。" in effects[-1]
 
 
 def test_link_changes_pair_headword_and_sense_sheets():
@@ -495,8 +495,8 @@ def test_link_changes_pair_headword_and_sense_sheets():
     }
     tables = watch.link_changes(watch.compare(before, after), brief=True)
     # trace: 目鏡仁→鏡仁 leaves 詞目tuì詞目近義 and appears in 義項tuì詞目近義 → one moved row.
-    assert "| 目鏡仁 | 鏡仁 | whole word → 「眼鏡的鏡片。」 |" in tables[1]
-    assert "| 水濺仔 | 漩桶 | removed |" in tables[1]
-    assert "**Antonym links (1)**" in tables[0]
-    assert "| 好 | 䆀 | added: 「優良。」 |" in tables[0]
-    assert "synonym" not in "\n".join(watch.side_effects(watch.compare(before, after), brief=True))
+    assert "| 目鏡仁 | 鏡仁 | 規个詞目 → 釋義「眼鏡的鏡片。」 |" in tables[1]
+    assert "| 水濺仔 | 漩桶 | 刪掉 |" in tables[1]
+    assert "**反義（1）**" in tables[0]
+    assert "| 好 | 䆀 | 增加：釋義「優良。」 |" in tables[0]
+    assert "近義" not in "\n".join(watch.side_effects(watch.compare(before, after), brief=True))
