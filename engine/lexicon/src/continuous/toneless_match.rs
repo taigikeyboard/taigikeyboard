@@ -246,7 +246,7 @@ fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> boo
 /// The sibling guards in this file read the same two predicates but act on them
 /// the OPPOSITE way: `matches_continuous_toneless_prefix_key` and friends
 /// fail-open on a tone-bearing body (numeric-tone keys are reserved for the
-/// non-continuous paths), while [`SyllableReach`](super::SyllableReach) must measure on the toned
+/// non-continuous paths), while [`SyllableReach`](super::reach::SyllableReach) must measure on the toned
 /// face or `tai5` mis-drops. Deliberate divergence, not drift.
 ///
 /// `None` for a family with no romanization face at all (`hanzi:`), and for any
