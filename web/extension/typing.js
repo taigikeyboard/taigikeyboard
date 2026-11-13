@@ -277,10 +277,11 @@ function caretElement() {
   return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
 }
 
-/// A write the field refused: its text is in the console, and the field's
-/// keys are the site's from here on.
+/// A write the field refused: its length is in the console, and the field's
+/// keys are the site's from here on. Never the text: the console is the
+/// site's, and the text is the user's.
 function refuse(text) {
-  console.error("taigi.commit.refused", text);
+  console.error("taigi.commit.refused", [...text].length);
   field = { kind: "unsupported", element: field.element };
 }
 
