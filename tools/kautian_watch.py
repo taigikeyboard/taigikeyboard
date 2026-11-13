@@ -693,12 +693,7 @@ def publish(arguments: argparse.Namespace) -> None:
         )
         print(f"Updated issue #{current['number']}")
     else:
-        body = (
-            "教育部公佈新版的教典資料："
-            "https://sutian.moe.edu.tw/media/senn/ods/kautian.ods\n\n"
-            "自動產生的資料 PR 合併了後，這个 issue 會家己關。"
-            "語料的詞若有改，愛先重做 `build.corpus_bigrams` 才閣試。"
-        )
+        body = "教育部公佈新版的教典資料：https://sutian.moe.edu.tw/media/senn/ods/kautian.ods"
         issue = github(
             endpoint,
             "--method",
