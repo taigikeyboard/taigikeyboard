@@ -338,8 +338,9 @@ impl CandidateSortKey {
             0 => self.tier.cmp(&other.tier),
             1 => self.abbreviation.cmp(&other.abbreviation),
             2 => self.preference_class.cmp(&other.preference_class),
-            3 => coverage_kind_rank(self.coverage_kind)
-                .cmp(&coverage_kind_rank(other.coverage_kind)),
+            3 => {
+                coverage_kind_rank(self.coverage_kind).cmp(&coverage_kind_rank(other.coverage_kind))
+            }
             4 => self.neg_user_weight.cmp(&other.neg_user_weight),
             5 => self.context_rank.cmp(&other.context_rank),
             6 => self.walker_cost.cmp(&other.walker_cost),
