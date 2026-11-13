@@ -110,7 +110,7 @@ pub(crate) fn tps_slice_display(tps_slice: &str) -> String {
 /// holding that byte.
 ///
 /// The "never adds a base letter" premise is pinned where it can break, in
-/// `phonetics::api` (`normalize_tone_never_adds_a_base_letter`).
+/// `phonetics::tone_render` (`normalize_tone_never_adds_a_base_letter`).
 pub(crate) fn display_caret_utf16(
     raw: &str,
     display: &str,
