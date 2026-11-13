@@ -21,7 +21,7 @@ Fully toned TL `kau3siu7` puts the walker composition 到受 at slot 0; the dict
   1. single characters — `char_freq_merged.txt`, counting every occurrence of the character, **including inside other words** (到/*kàu* 17,333; 受/*siū* 8,975 in `output/dictionary.csv`);
   2. multi-syllable words — `khiin_frequency.csv` word counts (教授 *kàu-siū* 10);
   3. everything else — `get_default_frequency` = `50 // syllables` (25 for two syllables, 16 for three; 75,057 / 39,992 rows carry exactly 25 / 16, most but not all of them from this default).
-- Edge `frequency` = `EdgeBest::span_frequency`, the max over the key's homophones that pass the source / tone-pin / barrier filters (`engine/lexicon/src/continuous/mod.rs:1085-1121`; `engine/composing/src/continuous/walk.rs` (`walk_buffer`)).
+- Edge `frequency` = `EdgeBest::span_frequency`, the max over the key's homophones that pass the source / tone-pin / barrier filters (`engine/lexicon/src/continuous/edge.rs` `best_candidate_for_key_with_barriers`; `engine/composing/src/continuous/walk.rs` (`walk_buffer`)).
 - Numbers (old frequencies): 到 5.3177 + 受 5.8460 = 11.1636 < 教授 11.2279.
 - Slot 0 is the walker path (`continuous/assemble.rs`, `assemble_candidates` Step 4); the §22 promotion fires only when the walker's hanji already equals a full-span dictionary word of the same reading (`continuous/assemble.rs`, the §22 promote branch), so it cannot rescue 教授.
 - Control: `tai5gi2` → 台語 (freq 394, cost 8.66) — a word whose khiin count happens to be large enough.
@@ -72,7 +72,7 @@ The custom entry, the learned-phrase floor and the user-selected floor become on
 - Custom and learned (`continuous/walk.rs`, `walk_buffer`) and selected (`cost.rs:350`) share this one cap. Single-syllable edges keep `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE = 0.0` (no selection lift in segmentation).
 - Behaviour pinned by tests: zero δ, fresh selection, decay, saturation, single-syllable, learned-only, custom-only, and a learned row whose dictionary source is toggled off. Today's decay test (`cost.rs:766`) is rewritten from the new formula, its invariant kept.
 
-**D3 — which homophone prices the edge: (c) min `walker_cost` over the filtered homophones.** Today's "is this span a word" / "which word" decoupling (`continuous/mod.rs:1085`, `continuous-input-ranking.md` §3.2) re-expressed in the new scale; the per-edge pick (`pick_edge_word`, `CandidateSortKey` order) is unchanged. The min runs over exactly the rows that pass the source, tone-pin and barrier filters (filtering happens before aggregation, `continuous/mod.rs:704`).
+**D3 — which homophone prices the edge: (c) min `walker_cost` over the filtered homophones.** Today's "is this span a word" / "which word" decoupling (`lexicon/src/continuous/edge.rs` `best_candidate_for_key_with_barriers`, `continuous-input-ranking.md` §3.2) re-expressed in the new scale; the per-edge pick (`pick_edge_word`, `CandidateSortKey` order) is unchanged. The min runs over exactly the rows that pass the source, tone-pin and barrier filters (filtering happens before aggregation, `lexicon/src/continuous/exact.rs` `exact_candidates_for_key`).
 
 Why not (a) "price on the pick's own value": the pick follows the old order, not the corpus. Runtime example: `kap` — with no user history 甲 and 洽 tie on frequency and 甲 wins on source rank (`continuous-input-ranking.md:144`); 甲 has corpus count 11, 佮 22,637 — pricing on the pick would price the commonest conjunction as rare. CSV-level screen (first-row tie-break, default sources): 5,111 full-tone keys where the old-frequency winner ≠ the corpus winner, 2,403 with a corpus winner ≥ 10. P1 replaces this screen with the runtime `CandidateSortKey` winner under default and all-enabled sources.
 
@@ -82,7 +82,7 @@ What (c) does not promise: each edge's word is unchanged, but a different winnin
 
 **Toneless / partial-tone caveat**: (c) over a toneless key takes the cheapest admissible reading across tones, so a rare reading can borrow a common reading's segmentation strength. P1 measures it as its own stratum.
 
-**D4 — context.** Unchanged invariant (§56, `continuous/mod.rs:1129`): a previous-word context may change an edge's WORD, never its COST; the contextual winner is chosen among homophones of the context-free winner's syllable count. Gold runs use an empty context; separate mobile context cases check the invariant.
+**D4 — context.** Unchanged invariant (§56, `lexicon/src/continuous/edge.rs` `best_candidate_for_key_with_barriers`): a previous-word context may change an edge's WORD, never its COST; the contextual winner is chosen among homophones of the context-free winner's syllable count. Gold runs use an empty context; separate mobile context cases check the invariant.
 
 ## 5. Gold set and measurement (before any A2 code)
 
