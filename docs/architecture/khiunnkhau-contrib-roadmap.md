@@ -67,7 +67,7 @@ The intake workflow runs the same script before it commits, so a duplicate or ma
 
 ### Phase 2 — intake
 
-**Token (maintainer, 2026-11-12: shared App)** — the release-automation App `taigikeyboard-release` (`architecture/release-automation-roadmap.md` Phase 3), with **issues write** and **pull requests write** added to its contents write. `RELEASE_APP_ID` (variable) and `RELEASE_APP_PRIVATE_KEY` (secret) live in the `release` environment, whose deployment branches are `main` + release tags; an `issues` event runs on the default branch, so the job may use it. A PR opened with `GITHUB_TOKEN` would not trigger `pull_request` workflows, so Phase 1's check would never run.
+**Token (maintainer, 2026-11-12: shared App)** — the release-automation App `taigikeyboard-app`, which carries issues + pull requests write for this (setup: `architecture/desktop-release.md` § One-time: the release App). Its key lives in the `release` environment, whose deployment branches are `main` + release tags; an `issues` event runs on the default branch, so the job may use it. A PR opened with `GITHUB_TOKEN` would not trigger `pull_request` workflows, so Phase 1's check would never run.
 
 **Isolation** — the App is on the `main` ruleset's bypass list, so a job holding its token can push to `main`. Untrusted issue text never reaches that job:
 
