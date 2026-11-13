@@ -29,4 +29,5 @@
 - [ ] Engine or dictionary change: native artifacts regenerated before platform tests (docs/BUILDING.md § 5)
 - [ ] Shared behaviour change: every platform that has it matches, or the divergence is recorded in `docs/architecture/behavioral-invariants.md`
 - [ ] `i18n/` change: `make i18n` output committed
+- [ ] Desktop-visible change: fragment in `changelog/unreleased/` (or label `no-changelog`)
 - [ ] No personal data (addresses, account IDs) in the diff, commit messages or this description

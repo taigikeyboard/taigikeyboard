@@ -26,7 +26,7 @@ A diff with numeric / geometry fidelity risk (unit conversion, wide caller surfa
 
 ## Skip
 
-Generated files — regenerated, never hand-edited (`.gitattributes` lists them as `linguist-generated`): `*/Engine/Generated/**`, `*/Strings/Generated/**`, `*/DesktopCore/Generated/**`, Android `engine/proto/**` and `i18n/generated/**`, `strings_i18n.xml`, `ios/Localizable.xcstrings`, `InfoPlist.strings`, `desktop/crates/taigi-desktop-core/src/strings/generated.rs`, `windows/build-support/product_name_strings.rs`, `windows/installer/Messages.iss`, `web/src/generated/**`. Binary artifacts: `assets/dictionaries/*.bin`, `*.fst` (they differ every build). `changelog/` outside a release. `references/` (cloned external repos). Dated snapshots under `docs/reports/` and `docs/releases/`.
+Generated files — regenerated, never hand-edited (`.gitattributes` lists them as `linguist-generated`): `*/Engine/Generated/**`, `*/Strings/Generated/**`, `*/DesktopCore/Generated/**`, Android `engine/proto/**` and `i18n/generated/**`, `strings_i18n.xml`, `ios/Localizable.xcstrings`, `InfoPlist.strings`, `desktop/crates/taigi-desktop-core/src/strings/generated.rs`, `windows/build-support/product_name_strings.rs`, `windows/installer/Messages.iss`, `web/src/generated/**`. Binary artifacts: `assets/dictionaries/*.bin`, `*.fst` (they differ every build). `changelog/` outside a release, except `changelog/unreleased/*.md` fragments (the release note users read — review the wording). `references/` (cloned external repos). Dated snapshots under `docs/reports/` and `docs/releases/`.
 
 Check instead that a generated file changed together with its source (`make protos`, `make i18n`, `make dict`).
 

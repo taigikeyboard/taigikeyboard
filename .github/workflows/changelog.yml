@@ -1,0 +1,44 @@
+name: Changelog
+
+# A pull request that changes desktop-shipping files carries a changelog
+# fragment (changelog/unreleased/README.md): the monthly desktop release only
+# assembles them, so a missing fragment is a missing release note. Every
+# fragment present must also parse. Which paths count is decided in
+# `tools/release_notes.py` (`is_desktop_shipping_path`, unit-tested), not by a
+# `paths:` filter here, so the label events re-run it and nothing slips past a
+# filter. The `no-changelog` label, or a Dependabot author, waives the
+# requirement but not the format check.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  fragment:
+    name: changelog fragment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # HEAD is the pull request's merge commit, so HEAD^1 is exactly the main
+      # it merges into (same as python.yml's khpoo check).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Fragments parse; a desktop change carries one
+        env:
+          WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') || github.event.pull_request.user.login == 'dependabot[bot]' }}
+        run: |
+          set -euo pipefail
+          if [ "$WAIVED" = true ]; then
+            python3 tools/release_notes.py check-fragments
+          else
+            python3 tools/release_notes.py check-fragments --base HEAD^1
+          fi

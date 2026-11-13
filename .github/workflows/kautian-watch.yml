@@ -163,6 +163,17 @@ jobs:
               raise ValueError(f'Unexpected generated changes: {sorted(unexpected)}')
           subprocess.run(['git', 'add', '--', *sorted(allowed)], check=True)
           PY
+          # The refreshed data reaches desktop users, and a PR opened with
+          # github.token never runs changelog.yml, so the refresh brings its own
+          # fragment. One per release: a fragment still waiting from an earlier
+          # refresh already says it (changelog/unreleased/README.md).
+          fragment=changelog/unreleased/kautian-refresh.md
+          if [ ! -e "$fragment" ]; then
+            printf '%s\n' '---' 'platforms: [macos, windows, linux, chromeos]' 'section: Candidates' '---' \
+              "- The MOE Dictionary data is refreshed from the Ministry of Education's latest" \
+              '  release.' > "$fragment"
+            git add -- "$fragment"
+          fi
           branch="automation/kautian-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           git switch -c "$branch"
           git -c user.name='github-actions[bot]' \

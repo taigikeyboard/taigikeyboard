@@ -19,7 +19,7 @@ taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
 tools/             # Dev tooling — test selection, i18n codegen, release/, secret-scan/
 e2e/               # End-to-end typing tests — scenarios/, analyzer/, drivers/
 corpus/            # Real Taiwanese text — taigi-typing (manual-test sentences) + taigi-corpus (opt-in, future LM data); never a build input
-changelog/         # Per-release changelogs — edit only at release time
+changelog/         # Per-release changelogs; unreleased/ = desktop fragments, one per PR
 references/        # Cloned external IME repos (gitignored)
 emoji/             # Emoji data generator (own instructions file)
 ```
@@ -84,7 +84,7 @@ Canonical: `docs/BUILDING.md` §4–5; rationale and timings: `docs/architecture
 
 - Code, comments and docs in **English**. Living docs name UI labels by their i18n `en` value. CJK only for Taigi content (phonetic / Hanji examples, test data, proper names of dictionaries and fonts). Dated snapshots (`docs/reports/**`, `docs/releases/**`) are frozen.
 - Conventional Commits `type(scope): subject`; one PR per logical change; say which platforms you built and tested.
-- `changelog/` is edited only at release time.
+- `changelog/` is edited only at release time — except a PR that changes desktop-shipping code adds a fragment `changelog/unreleased/<slug>.md` (format: `changelog/unreleased/README.md`), or carries the `no-changelog` label when no desktop user can see it. CI (`changelog.yml`) enforces it.
 - No personal identifiers in tracked files, commits or PRs (`CONTRIBUTING.md` § Secrets).
 
 ## References

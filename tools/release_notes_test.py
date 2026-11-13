@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import plistlib
 import stat
+import subprocess
 import tempfile
 import unittest
 import unittest.mock
@@ -855,6 +856,309 @@ class ProjectVersionWriterTests(unittest.TestCase):
             self.assertEqual(
                 stat.S_IMODE((self.repo_root / relative_path).stat().st_mode), mode
             )
+
+
+def fragment_text(platforms: str, section: str, bullet: str) -> str:
+    return f"---\nplatforms: {platforms}\nsection: {section}\n---\n{bullet}\n"
+
+
+class FragmentParserTests(unittest.TestCase):
+    def test_reads_platforms_in_release_page_order(self) -> None:
+        fragment = release_notes.parse_fragment(
+            "x.md",
+            fragment_text("[linux, macos]", "Input", "- **Claim.** Detail\n  wrapped."),
+        )
+
+        self.assertEqual(fragment.platforms, ("macos", "linux"))
+        self.assertEqual(fragment.section, "Input")
+        self.assertEqual(fragment.bullet, "- **Claim.** Detail\n  wrapped.")
+
+    def test_rejects_malformed_fragments(self) -> None:
+        cases = {
+            "no front matter": "- **Claim.**\n",
+            "unclosed": "---\nplatforms: [macos]\nsection: Input\n- x\n",
+            "unknown platform": fragment_text("[ios]", "Input", "- x"),
+            "bare platform": fragment_text("macos", "Input", "- x"),
+            "empty list": fragment_text("[]", "Input", "- x"),
+            "duplicate platform": fragment_text("[macos, macos]", "Input", "- x"),
+            "unknown section": fragment_text("[macos]", "Fixes", "- x"),
+            "extra key": "---\nplatforms: [macos]\nsection: Input\npr: 1\n---\n- x\n",
+            "missing section": "---\nplatforms: [macos]\n---\n- x\n",
+            "no bullet": fragment_text("[macos]", "Input", "Plain text."),
+            "empty bullet": fragment_text("[macos]", "Input", "- "),
+            "two bullets": fragment_text("[macos]", "Input", "- one\n- two"),
+            "blank inside": fragment_text("[macos]", "Input", "- one\n\n  two"),
+            "unindented": fragment_text("[macos]", "Input", "- one\ntwo"),
+        }
+        for label, text in cases.items():
+            with self.subTest(label), self.assertRaises(release_notes.ReleaseNotesError):
+                release_notes.parse_fragment("x.md", text)
+
+    def test_classifies_desktop_shipping_paths(self) -> None:
+        shipping = (
+            "macos/Sources/App.swift",
+            "engine/composing/src/lib.rs",
+            "dictionary/supplementary/dev/data/dev.csv",
+            "web/chromeos/manifest.json",
+            "web/Cargo.lock",
+        )
+        not_shipping = (
+            "engine/swift-ffi/src/lib.rs",
+            "engine/android-jni/src/lib.rs",
+            "engine/composing/tests/walker.rs",
+            "engine/test-support/src/lib.rs",
+            "macos/Tests/CandidateMetricsTests.swift",
+            "linux/README.md",
+            "ios/Sources/Keyboard.swift",
+            "tools/release_notes.py",
+            "changelog/unreleased/x.md",
+        )
+        for path in shipping:
+            with self.subTest(path):
+                self.assertTrue(release_notes.is_desktop_shipping_path(path))
+        for path in not_shipping:
+            with self.subTest(path):
+                self.assertFalse(release_notes.is_desktop_shipping_path(path))
+
+
+CHANGELOG_INDEX = """# Changelog
+
+## Desktop — macOS + Windows + Linux + ChromeOS
+
+- [v3.9.0](changelog/desktop-v3.9.0.md)
+
+## Mobile — iOS + Android
+
+- [v3.9.0](changelog/mobile-v3.9.0.md)
+"""
+
+
+class GitRepositoryTestCase(unittest.TestCase):
+    """A throwaway repository whose main line merges pull requests like GitHub does."""
+
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.repo_root = Path(self.temp_dir.name)
+        self.git("init", "--quiet", "--initial-branch=main")
+        self.git("config", "user.name", "Test")
+        self.git("config", "user.email", "test@example.invalid")
+        (self.repo_root / "CHANGELOG.md").write_text(CHANGELOG_INDEX, encoding="utf-8")
+        (self.repo_root / "changelog" / "unreleased").mkdir(parents=True)
+        (self.repo_root / "changelog" / "unreleased" / "README.md").write_text("format\n")
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "initial")
+
+    def git(self, *arguments: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(self.repo_root), *arguments],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+
+    def write(self, relative_path: str, text: str) -> None:
+        path = self.repo_root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+
+    def merge_pull_request(self, number: int, files: dict[str, str]) -> None:
+        """Commit `files` on a branch and merge it with GitHub's merge-commit subject."""
+        self.git("switch", "--quiet", "-c", f"pr-{number}")
+        for relative_path, text in files.items():
+            self.write(relative_path, text)
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", f"change {number}")
+        self.git("switch", "--quiet", "main")
+        self.git(
+            "merge", "--quiet", "--no-ff", f"pr-{number}",
+            "-m", f"Merge pull request #{number} from someone/pr-{number}",
+        )
+
+    def fragment_path(self, slug: str) -> str:
+        return f"changelog/unreleased/{slug}.md"
+
+
+class FragmentRequirementTests(GitRepositoryTestCase):
+    def test_desktop_change_without_fragment_fails(self) -> None:
+        base = self.git("rev-parse", "HEAD").strip()
+        self.write("engine/composing/src/lib.rs", "fn main() {}\n")
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "engine change")
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "no-changelog"):
+            release_notes.check_fragments(self.repo_root, base)
+
+    def test_desktop_change_with_fragment_passes(self) -> None:
+        base = self.git("rev-parse", "HEAD").strip()
+        self.write("engine/composing/src/lib.rs", "fn main() {}\n")
+        self.write(self.fragment_path("x"), fragment_text("[macos]", "Input", "- **Claim.**"))
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "engine change")
+
+        release_notes.check_fragments(self.repo_root, base)
+
+    def test_readme_edit_is_not_a_fragment(self) -> None:
+        base = self.git("rev-parse", "HEAD").strip()
+        self.write("macos/Sources/App.swift", "//\n")
+        self.write("changelog/unreleased/README.md", "format, edited\n")
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "macos change")
+
+        with self.assertRaises(release_notes.ReleaseNotesError):
+            release_notes.check_fragments(self.repo_root, base)
+
+    def test_non_desktop_change_needs_none(self) -> None:
+        base = self.git("rev-parse", "HEAD").strip()
+        self.write("ios/Sources/Keyboard.swift", "//\n")
+        self.write("engine/composing/tests/walker.rs", "//\n")
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "mobile change")
+
+        release_notes.check_fragments(self.repo_root, base)
+
+    def test_invalid_fragment_fails_even_without_base(self) -> None:
+        self.write(self.fragment_path("bad"), fragment_text("[ios]", "Input", "- x"))
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "bad.md"):
+            release_notes.check_fragments(self.repo_root)
+
+
+class AssembleDesktopChangelogTests(GitRepositoryTestCase):
+    def test_full_release_orders_platforms_sections_and_pull_requests(self) -> None:
+        self.merge_pull_request(
+            20,
+            {self.fragment_path("late"): fragment_text("[linux, macos]", "Input", "- **Late.**")},
+        )
+        self.merge_pull_request(
+            10,
+            {
+                self.fragment_path("early"): fragment_text("[macos]", "Input", "- **Early.**\n  More."),
+                self.fragment_path("window"): fragment_text("[macos]", "Install", "- **Window.**"),
+            },
+        )
+        self.merge_pull_request(
+            30,
+            {self.fragment_path("explicit"): fragment_text("[macos]", "Candidates", "- **Two.** (#5, #6)")},
+        )
+
+        changes = release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0")
+
+        # trace: Input sorts by PR (10 before 20); Candidates keeps its own (#5, #6);
+        # Install comes last in DESKTOP_SECTIONS; Windows / ChromeOS have no fragment.
+        expected = """# desktop v2026.12.0
+
+Changes for macOS and Linux.
+
+### macOS
+
+#### Input
+
+- **Early.**
+  More. (#10)
+- **Late.** (#20)
+
+#### Candidates
+
+- **Two.** (#5, #6)
+
+#### Install
+
+- **Window.** (#10)
+
+### Windows
+
+No changes.
+
+### Linux
+
+#### Input
+
+- **Late.** (#20)
+
+### ChromeOS
+
+No changes.
+"""
+        self.assertEqual(
+            (self.repo_root / "changelog" / "desktop-v2026.12.0.md").read_text(encoding="utf-8"),
+            expected,
+        )
+        self.assertIn(
+            "## Desktop — macOS + Windows + Linux + ChromeOS\n\n"
+            "- [v2026.12.0](changelog/desktop-v2026.12.0.md)\n"
+            "- [v3.9.0](changelog/desktop-v3.9.0.md)\n",
+            (self.repo_root / "CHANGELOG.md").read_text(encoding="utf-8"),
+        )
+        self.assertEqual(
+            sorted(path.name for path in (self.repo_root / "changelog" / "unreleased").iterdir()),
+            ["README.md"],
+        )
+        self.assertEqual(changes[:2], ("changelog/desktop-v2026.12.0.md", "CHANGELOG.md"))
+
+    def test_squash_subject_and_direct_commit(self) -> None:
+        self.write(self.fragment_path("squashed"), fragment_text("[macos]", "Input", "- **Squashed.**"))
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "fix(macos): something (#42)")
+        self.write(self.fragment_path("direct"), fragment_text("[macos]", "Input", "- **Direct.**"))
+        self.git("add", "-A")
+        self.git("commit", "--quiet", "-m", "docs: no pull request")
+
+        release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0")
+
+        changelog = (self.repo_root / "changelog" / "desktop-v2026.12.0.md").read_text()
+        # trace: numbered entries first, the unnumbered one last (sys.maxsize).
+        self.assertIn("- **Squashed.** (#42)\n- **Direct.**\n", changelog)
+
+    def test_patch_takes_one_platform_and_keeps_the_rest(self) -> None:
+        self.merge_pull_request(
+            7,
+            {
+                self.fragment_path("shared"): fragment_text("[macos, linux]", "Input", "- **Shared.**"),
+                self.fragment_path("linux-only"): fragment_text("[linux]", "Settings", "- **Linux.**"),
+                self.fragment_path("mac-only"): fragment_text("[macos]", "Settings", "- **Mac.**"),
+            },
+        )
+
+        release_notes.assemble_desktop_changelog(self.repo_root, "2026.11.1", "linux")
+
+        self.assertEqual(
+            (self.repo_root / "changelog" / "desktop-v2026.11.1.md").read_text(),
+            "# desktop v2026.11.1\n\nA Linux-only patch. The other platforms are unchanged.\n\n"
+            "### Linux\n\n#### Input\n\n- **Shared.** (#7)\n\n"
+            "#### Settings\n\n- **Linux.** (#7)\n",
+        )
+        unreleased = self.repo_root / "changelog" / "unreleased"
+        self.assertFalse((unreleased / "linux-only.md").exists())
+        self.assertEqual(
+            (unreleased / "shared.md").read_text(),
+            fragment_text("[macos]", "Input", "- **Shared.**"),
+        )
+        self.assertTrue((unreleased / "mac-only.md").exists())
+        self.assertIn(
+            "- [v2026.11.1](changelog/desktop-v2026.11.1.md) — Linux-only patch\n",
+            (self.repo_root / "CHANGELOG.md").read_text(),
+        )
+
+    def test_refuses_without_fragments_or_over_an_existing_file(self) -> None:
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "nothing to release"):
+            release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0")
+
+        self.merge_pull_request(1, {self.fragment_path("x"): fragment_text("[macos]", "Input", "- x")})
+        self.write("changelog/desktop-v2026.12.0.md", "existing\n")
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "already exists"):
+            release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0")
+        self.assertTrue((self.repo_root / self.fragment_path("x")).exists())
+
+    def test_platform_argument_must_match_the_version_kind(self) -> None:
+        self.merge_pull_request(1, {self.fragment_path("x"): fragment_text("[macos]", "Input", "- x")})
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "patch"):
+            release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.1")
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "full release"):
+            release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0", "macos")
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "YYYY.M.P"):
+            release_notes.assemble_desktop_changelog(self.repo_root, "3.10.0")
 
 
 if __name__ == "__main__":

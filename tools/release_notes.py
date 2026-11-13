@@ -1,5 +1,5 @@
-"""Validate store release notes and check or set a release train's version
-number.
+"""Validate store release notes, check or set a release train's version
+number, and assemble the desktop changelog from per-PR fragments.
 
 Two trains, two numbers: `mobile` (iOS + Android share one) and `desktop`
 (macOS + Windows + Linux + ChromeOS share one). They move independently; within a train the
@@ -805,13 +805,347 @@ def set_project_versions(
     return changes
 
 
+# Desktop changelog fragments. Each pull request that changes what a desktop user sees carries one fragment,
+# `changelog/unreleased/<slug>.md`; a release only assembles them into
+# `changelog/desktop-v<version>.md` (docs/architecture/release-automation-roadmap.md
+# D2: no model writes release notes). Format: changelog/unreleased/README.md.
+FRAGMENTS_DIR = "changelog/unreleased"
+FRAGMENTS_README = "README.md"
+CHANGELOG_INDEX_FILE = "CHANGELOG.md"
+DESKTOP_CHANGELOG_HEADING = "## Desktop — macOS + Windows + Linux + ChromeOS"
+# Release-page order. Keys are what a fragment writes; values are the headings.
+DESKTOP_PLATFORMS = {
+    "macos": "macOS",
+    "windows": "Windows",
+    "linux": "Linux",
+    "chromeos": "ChromeOS",
+}
+# Release-page order of the `####` headings under each platform.
+DESKTOP_SECTIONS = (
+    "Input",
+    "Phonetic Symbols",
+    "Candidates",
+    "Candidate Window",
+    "Settings",
+    "Appearance",
+    "Updates",
+    "Install",
+)
+# Trees whose change reaches a desktop installer: the four shells, the crates
+# they share, the engine and the data it reads, the UI strings, and the web
+# sources and wasm crates the ChromeOS extension is built from.
+DESKTOP_SHIPPING_PREFIXES = (
+    "macos/",
+    "windows/",
+    "linux/",
+    "desktop/",
+    "engine/",
+    "dictionary/",
+    "assets/",
+    "i18n/",
+    "web/chromeos/",
+    "web/src/",
+    "web/crates/",
+    "web/Cargo.",
+)
+# Inside those trees: the mobile-only engine bridges, tests and docs ship to no
+# desktop user.
+DESKTOP_NON_SHIPPING_PREFIXES = (
+    "engine/swift-ffi/",
+    "engine/android-jni/",
+    "engine/test-support/",
+    "macos/Tests/",
+)
+FRAGMENT_PLATFORMS_PATTERN = re.compile(r"^\[(?P<items>[^\]]*)\]$")
+# A bullet that already names its pull request(s) keeps them: `(#12)`, `(#12, #15)`.
+PULL_REQUEST_REFERENCE_PATTERN = re.compile(r"\(#(?P<first>\d+)(?:, #\d+)*\)$")
+# How a pull request lands on main's first-parent line: a merge commit, or a
+# squash commit whose subject GitHub suffixes with the number.
+PULL_REQUEST_SUBJECT_PATTERNS = (
+    re.compile(r"^Merge pull request #(?P<number>\d+) "),
+    re.compile(r"\(#(?P<number>\d+)\)$"),
+)
+
+
+@dataclass(frozen=True)
+class ChangelogFragment:
+    name: str
+    platforms: tuple[str, ...]
+    section: str
+    bullet: str
+
+    def render(self) -> str:
+        return (
+            f"---\nplatforms: [{', '.join(self.platforms)}]\nsection: {self.section}\n---\n"
+            f"{self.bullet}\n"
+        )
+
+
+def parse_fragment(name: str, text: str) -> ChangelogFragment:
+    """Read one fragment, refusing anything outside the format in the README."""
+    def fail(reason: str) -> ReleaseNotesError:
+        return ReleaseNotesError(f"{FRAGMENTS_DIR}/{name}: {reason}")
+
+    lines = text.splitlines()
+    if not lines or lines[0] != "---":
+        raise fail("must start with a `---` front-matter line")
+    try:
+        closing = lines.index("---", 1)
+    except ValueError:
+        raise fail("front matter has no closing `---`") from None
+    fields: dict[str, str] = {}
+    for line in lines[1:closing]:
+        key, separator, value = line.partition(":")
+        key = key.strip()
+        if not separator or key not in ("platforms", "section") or key in fields:
+            raise fail(f"front matter takes `platforms:` and `section:` once each, got {line!r}")
+        fields[key] = value.strip()
+    if set(fields) != {"platforms", "section"}:
+        raise fail("front matter needs both `platforms:` and `section:`")
+
+    match = FRAGMENT_PLATFORMS_PATTERN.fullmatch(fields["platforms"])
+    platforms = tuple(item.strip() for item in match["items"].split(",")) if match else ()
+    if not platforms or any(platform not in DESKTOP_PLATFORMS for platform in platforms):
+        raise fail(
+            f"platforms must be a list like [macos, linux] drawn from {list(DESKTOP_PLATFORMS)}, "
+            f"got {fields['platforms']!r}",
+        )
+    if len(set(platforms)) != len(platforms):
+        raise fail(f"platforms lists one twice: {fields['platforms']!r}")
+    if fields["section"] not in DESKTOP_SECTIONS:
+        raise fail(f"section must be one of {list(DESKTOP_SECTIONS)}, got {fields['section']!r}")
+
+    body = lines[closing + 1 :]
+    while body and not body[0].strip():
+        body.pop(0)
+    while body and not body[-1].strip():
+        body.pop()
+    if not body or not body[0].startswith("- ") or not body[0][2:].strip():
+        raise fail("body must be one `- ` bullet")
+    if any(not line.startswith("  ") or not line.strip() for line in body[1:]):
+        raise fail("body is one bullet: continuation lines are indented two spaces, no blank lines")
+    return ChangelogFragment(
+        name=name,
+        platforms=tuple(sorted(platforms, key=list(DESKTOP_PLATFORMS).index)),
+        section=fields["section"],
+        bullet="\n".join(body),
+    )
+
+
+def load_fragments(repo_root: Path) -> list[ChangelogFragment]:
+    directory = repo_root / FRAGMENTS_DIR
+    if not directory.is_dir():
+        return []
+    return [
+        parse_fragment(path.name, path.read_text(encoding="utf-8"))
+        for path in sorted(directory.glob("*.md"))
+        if path.name != FRAGMENTS_README
+    ]
+
+
+def is_desktop_shipping_path(path: str) -> bool:
+    if not path.startswith(DESKTOP_SHIPPING_PREFIXES):
+        return False
+    if path.startswith(DESKTOP_NON_SHIPPING_PREFIXES) or path.endswith(".md"):
+        return False
+    return "tests" not in path.split("/")[:-1]
+
+
+def _git(repo_root: Path, *arguments: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(repo_root), *arguments],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise ReleaseNotesError(f"git {' '.join(arguments)} failed: {result.stderr.strip()}")
+    return result.stdout
+
+
+def check_fragments(repo_root: Path, base: str | None = None) -> None:
+    """Validate every fragment; with `base`, also require one when desktop code changed.
+
+    `base` is the commit the change is compared against (on a pull request,
+    the main it merges into).
+    """
+    load_fragments(repo_root)
+    if base is None:
+        return
+    changed = _git(repo_root, "diff", "--name-only", "--no-renames", base, "HEAD").splitlines()
+    shipping = [path for path in changed if is_desktop_shipping_path(path)]
+    if not shipping:
+        return
+    added = _git(
+        repo_root, "diff", "--name-only", "--no-renames", "--diff-filter=AM", base, "HEAD",
+        "--", FRAGMENTS_DIR,
+    ).splitlines()
+    if any(path.endswith(".md") and Path(path).name != FRAGMENTS_README for path in added):
+        return
+    listed = ", ".join(shipping[:5]) + (" …" if len(shipping) > 5 else "")
+    raise ReleaseNotesError(
+        f"this change touches desktop-shipping files ({listed}) but adds no "
+        f"{FRAGMENTS_DIR}/*.md fragment — add one ({FRAGMENTS_DIR}/{FRAGMENTS_README}), "
+        "or label the pull request `no-changelog` if no desktop user can see it",
+    )
+
+
+def fragment_pull_request(repo_root: Path, fragment: ChangelogFragment) -> int | None:
+    """The pull request whose landing on main's first-parent line added `fragment`."""
+    subjects = _git(
+        repo_root, "log", "--first-parent", "--no-renames", "--diff-filter=A", "--format=%s",
+        "HEAD", "--", f"{FRAGMENTS_DIR}/{fragment.name}",
+    ).splitlines()
+    if not subjects:
+        return None
+    for pattern in PULL_REQUEST_SUBJECT_PATTERNS:
+        match = pattern.search(subjects[0])
+        if match:
+            return int(match["number"])
+    return None
+
+
+def _join_names(names: list[str]) -> str:
+    return names[0] if len(names) == 1 else f"{', '.join(names[:-1])} and {names[-1]}"
+
+
+def _render_platform(platform: str, entries: list[tuple[str, str]]) -> list[str]:
+    lines = [f"### {DESKTOP_PLATFORMS[platform]}", ""]
+    if not entries:
+        return [*lines, "No changes.", ""]
+    for section in DESKTOP_SECTIONS:
+        bullets = [bullet for entry_section, bullet in entries if entry_section == section]
+        if bullets:
+            lines += [f"#### {section}", "", *bullets, ""]
+    return lines
+
+
+def _insert_changelog_link(index_source: str, version: str, note: str) -> str:
+    link = f"- [v{version}](changelog/desktop-v{version}.md)"
+    if link in index_source:
+        raise ReleaseNotesError(f"{CHANGELOG_INDEX_FILE} already links v{version}")
+    lines = index_source.split("\n")
+    try:
+        heading = lines.index(DESKTOP_CHANGELOG_HEADING)
+    except ValueError:
+        raise ReleaseNotesError(
+            f"{CHANGELOG_INDEX_FILE} has no {DESKTOP_CHANGELOG_HEADING!r} heading"
+        ) from None
+    position = next(
+        (index for index in range(heading + 1, len(lines)) if lines[index].startswith(("- ", "## "))),
+        len(lines),
+    )
+    if position == len(lines) or not lines[position].startswith("- "):
+        raise ReleaseNotesError(f"{CHANGELOG_INDEX_FILE}: the desktop list is empty")
+    lines.insert(position, link + note)
+    return "\n".join(lines)
+
+
+def assemble_desktop_changelog(
+    repo_root: Path, version: str, platform: str | None = None
+) -> tuple[str, ...]:
+    """Write `changelog/desktop-v<version>.md` from the fragments and consume them.
+
+    A full release (`YYYY.M.0`) takes every fragment and lists every platform.
+    A patch takes `platform` alone: a fragment naming only it is deleted, one
+    naming others too loses that platform and stays for the next full release,
+    so a fix that already shipped is never announced twice. Returns the paths
+    written or removed, relative to `repo_root`.
+    """
+    version = normalize_version(version)
+    require_desktop_calver(version)
+    is_patch = not version.endswith(".0")
+    if is_patch and platform is None:
+        raise ReleaseNotesError(f"{version} is a patch: pass --platform")
+    if not is_patch and platform is not None:
+        raise ReleaseNotesError(f"{version} is a full release: it ships every platform, drop --platform")
+    if platform is not None and platform not in DESKTOP_PLATFORMS:
+        raise ReleaseNotesError(f"unknown platform {platform!r}; expected one of {list(DESKTOP_PLATFORMS)}")
+    target = repo_root / "changelog" / f"desktop-v{version}.md"
+    if target.exists():
+        raise ReleaseNotesError(f"{target.relative_to(repo_root)} already exists")
+    if _git(repo_root, "rev-parse", "--is-shallow-repository").strip() == "true":
+        raise ReleaseNotesError(
+            "shallow clone: fragment pull request numbers come from history — fetch it in full"
+        )
+
+    fragments = [
+        fragment for fragment in load_fragments(repo_root)
+        if platform is None or platform in fragment.platforms
+    ]
+    if not fragments:
+        scope = f"{DESKTOP_PLATFORMS[platform]} " if platform else ""
+        raise ReleaseNotesError(f"no {scope}fragments in {FRAGMENTS_DIR}: nothing to release")
+
+    ordered: list[tuple[int, str, ChangelogFragment, str]] = []
+    for fragment in fragments:
+        bullet = fragment.bullet
+        reference = PULL_REQUEST_REFERENCE_PATTERN.search(bullet)
+        if reference:
+            number: int | None = int(reference["first"])
+        else:
+            number = fragment_pull_request(repo_root, fragment)
+            if number is None:
+                print(
+                    f"warning: {FRAGMENTS_DIR}/{fragment.name} names no pull request and "
+                    "none added it on main — the entry goes out without one",
+                    file=sys.stderr,
+                )
+            else:
+                bullet = f"{bullet} (#{number})"
+        ordered.append((number if number is not None else sys.maxsize, fragment.name, fragment, bullet))
+    ordered.sort(key=lambda item: item[:2])
+
+    platforms = [platform] if platform else list(DESKTOP_PLATFORMS)
+    entries = {
+        name: [(fragment.section, bullet) for _, _, fragment, bullet in ordered if name in fragment.platforms]
+        for name in platforms
+    }
+    if platform:
+        label = DESKTOP_PLATFORMS[platform]
+        lead = f"A {label}-only patch. The other platforms are unchanged."
+        index_note = f" — {label}-only patch"
+    else:
+        touched = [DESKTOP_PLATFORMS[name] for name in platforms if entries[name]]
+        lead = f"Changes for {_join_names(touched)}."
+        index_note = ""
+    lines = [f"# desktop v{version}", "", lead, ""]
+    for name in platforms:
+        lines += _render_platform(name, entries[name])
+    changelog = "\n".join(lines).rstrip("\n") + "\n"
+
+    index_path = repo_root / CHANGELOG_INDEX_FILE
+    index_source = _insert_changelog_link(
+        index_path.read_text(encoding="utf-8"), version, index_note
+    )
+
+    # Everything is computed and checked above; a failure from here on leaves a
+    # partial result that `git checkout -- . && git clean -f changelog` undoes.
+    changes = [str(target.relative_to(repo_root)), CHANGELOG_INDEX_FILE]
+    target.write_text(changelog, encoding="utf-8")
+    _write_atomically(index_path, index_source)
+    for fragment in fragments:
+        path = repo_root / FRAGMENTS_DIR / fragment.name
+        remaining = tuple(name for name in fragment.platforms if name != platform) if platform else ()
+        if remaining:
+            _write_atomically(
+                path,
+                ChangelogFragment(fragment.name, remaining, fragment.section, fragment.bullet).render(),
+            )
+        else:
+            path.unlink()
+        changes.append(f"{FRAGMENTS_DIR}/{fragment.name}")
+    return tuple(changes)
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    def add_command(name: str, help_text: str) -> argparse.ArgumentParser:
+    def add_command(name: str, help_text: str, takes_version: bool = True) -> argparse.ArgumentParser:
         subparser = subparsers.add_parser(name, help=help_text)
-        subparser.add_argument("--version", required=True)
+        if takes_version:
+            subparser.add_argument("--version", required=True)
         subparser.add_argument(
             "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
         )
@@ -838,6 +1172,24 @@ def _parse_args() -> argparse.Namespace:
     )
     printer = add_command("print", "Print one platform's store text")
     printer.add_argument("--platform", choices=("ios", "android"), required=True)
+    fragment_checker = add_command(
+        "check-fragments",
+        "Validate the desktop changelog fragments in changelog/unreleased/",
+        takes_version=False,
+    )
+    fragment_checker.add_argument(
+        "--base",
+        help="Also require a fragment when HEAD changes desktop-shipping files since this commit",
+    )
+    assembler = add_command(
+        "assemble", "Write changelog/desktop-v<version>.md from the fragments and consume them"
+    )
+    assembler.add_argument("--train", choices=("desktop",), required=True)
+    assembler.add_argument(
+        "--platform",
+        choices=tuple(DESKTOP_PLATFORMS),
+        help="The one platform a patch (YYYY.M.P, P > 0) ships; omit for YYYY.M.0",
+    )
 
     return parser.parse_args()
 
@@ -861,8 +1213,15 @@ def refresh_desktop_lockfiles(repo_root: Path) -> None:
 def main() -> int:
     args = _parse_args()
     try:
-        version = normalize_version(args.version)
         repo_root = args.repo_root.resolve()
+        if args.command == "check-fragments":
+            check_fragments(repo_root, args.base)
+            return 0
+        if args.command == "assemble":
+            for change in assemble_desktop_changelog(repo_root, args.version, args.platform):
+                print(change)
+            return 0
+        version = normalize_version(args.version)
         if args.command == "check":
             check_notes(repo_root, version)
         elif args.command == "check-versions":
@@ -874,8 +1233,10 @@ def main() -> int:
                 print(change)
             if args.train == "desktop":
                 refresh_desktop_lockfiles(repo_root)
-        else:
+        elif args.command == "print":
             print(load_notes(repo_root, version, args.platform).store_text)
+        else:
+            raise ReleaseNotesError(f"unhandled command {args.command!r}")
     except ReleaseNotesError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1

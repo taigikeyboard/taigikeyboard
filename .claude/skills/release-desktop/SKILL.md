@@ -26,7 +26,7 @@ patch (`YYYY.M.P`, P > 0) ships only the platform it fixes. Policy:
 `docs/architecture/desktop-release.md` § Version numbers.
 
 This skill takes a release as far as it can go without a person: it rebuilds,
-writes the changelog, commits, and stages **every** platform's installers on a draft release
+assembles the changelog from fragments, commits, and stages **every** platform's installers on a draft release
 nobody can reach (staging also dispatches the beta run for the unlisted /beta
 page). It stops there. Publishing that draft is the maintainer's,
 because it is the decision the draft exists to protect — and publishing
@@ -96,7 +96,13 @@ For a patch, the changelog covers only what reaches that platform: its own tree
 Trace user-visible behavior by platform. Do not infer release scope from commit
 subjects alone.
 
-Sort every user-visible change before writing anything:
+The release notes are assembled from `changelog/unreleased/*.md` fragments
+(§ 4), one per pull request. This step checks that coverage: every
+user-visible change in the range has a fragment, under the right platforms and
+section. A missing one (a PR merged with `no-changelog` that users do see, a
+direct commit) → write the fragment now, ending its bullet with the PR's
+`(#NNN)`, and commit it before § 4. Format:
+`changelog/unreleased/README.md`. Sort by these rules:
 
 - **macOS-only** → the `### macOS` section.
 - **Windows-only** → the `### Windows` section.
@@ -165,54 +171,40 @@ tree.
 
 ## 4. Update release content
 
-| File | Purpose |
-| --- | --- |
-| `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS`, `### Windows`, `### Linux` and `### ChromeOS` |
-| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux + ChromeOS` list (newest first) |
+Assemble the notes from the fragments — never write the file by hand:
 
-Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
-body, so it is what users read on the release page:
-
-```markdown
-# desktop v<target>
-
-<One paragraph: what this release is, in a sentence or three.>
-
-### macOS
-
-#### <Input | Candidates | Settings | Appearance | Updates | Install>
-
-- **<Short claim.>** <What a user sees, and why it changed.> (#PR)
-
-### Windows
-
-#### <same shape>
-
-### Linux
-
-#### <same shape>
-
-### ChromeOS
-
-#### <same shape>
+```bash
+python3 tools/release_notes.py assemble --train desktop --version <target>                        # YYYY.M.0
+python3 tools/release_notes.py assemble --train desktop --version <target> --platform <platform>  # patch
 ```
+
+| File | What `assemble` does |
+| --- | --- |
+| `changelog/desktop-v<target>.md` | Writes the desktop record: `# desktop v<target>`, a one-line lead naming the platforms with changes, then `### macOS`, `### Windows`, `### Linux`, `### ChromeOS`, each with its `####` sections (`No changes.` when none) |
+| `CHANGELOG.md` | Links it at the top of the `## Desktop — macOS + Windows + Linux + ChromeOS` list (patch: `— <Platform>-only patch`) |
+| `changelog/unreleased/*.md` | Deletes the fragments it used. A patch takes only fragments naming its platform; one naming other platforms too loses the patched platform and stays for the next full release |
+
+It appends each entry's `(#NNN)` from the merge commit that added the
+fragment (a bullet that already ends in `(#NNN)` keeps it), so it needs full
+history and a committed fragment; it warns on any entry left without a number.
+It refuses when the target file already exists or there is no fragment for the
+scope.
 
 Rules:
 
-- A patch's file has the lead paragraph and ONLY its platform's `###` section;
-  the release page shows what this version ships, and the other platforms ship
-  nothing in it.
+- A patch's file has the lead line and ONLY its platform's `###` section; the
+  release page shows what this version ships.
 - The file must be **committed** before staging: the release body is read out
   of the staged commit (the one the tag will name), not the working tree, and a
   commit with no changelog fails staging outright.
-- English only: UI labels by their i18n `en` value (look up `"hanji": "<label>"` in `i18n/*.json`), quotes translated; CJK / TL / POJ / TPS only for Taigi example words and readings.
-- This is the GitHub release body users read: concrete user-visible behavior,
-  with the PR number in `(#NNN)`. No refactors, tests, tooling, or dependency
-  bumps unless a user feels them.
-- A subsection per surface, not one flat list — these bodies run long and the
-  headings are what make them readable.
-- Idempotent: re-running on an existing target file merges by topic. Refine the
-  line for a behavior; never add a second line for it.
+- Fragment wording rules (they become the release body users read): English
+  only — UI labels by their i18n `en` value (look up `"hanji": "<label>"` in
+  `i18n/*.json`), quotes translated; CJK / TL / POJ / TPS only for Taigi
+  example words and readings. Concrete user-visible behavior; no refactors,
+  tests, tooling, or dependency bumps unless a user feels them.
+- Re-running after staging failed: `changelog/desktop-v<target>.md` is already
+  committed, so skip `assemble` and go straight to § 7. A fragment merged after
+  the assemble waits for the next release.
 - There are **no store notes on this train.** Do not create
   `changelog/store/<target>/`, do not run `release_notes.py check` or
   `print` — those validate the mobile surface only and will fail or mislead here.
