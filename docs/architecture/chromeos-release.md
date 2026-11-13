@@ -41,7 +41,7 @@ After the release is published, download `TaigiKeyboard-<v>-chromeos.zip` from i
 
 | Field | Value |
 |---|---|
-| Name | 台語齒盤 (from the manifest) |
+| Name | 台語齒盤 ChromeOS (manifest `name`), set apart from a possible browser extension, which would be its own store item. The input method list entry (`input_components[].name`) stays 台語齒盤 |
 | Category | Tools |
 | Language | Chinese (Traditional) |
 | Icon | `icons/128.png` in the zip (the iOS app icon) |

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "台語齒盤",
+  "name": "台語齒盤 ChromeOS",
   "short_name": "Taigi Keyboard",
   "version": "3.9.0",
   "description": "Taigi (Taiwanese Hokkien) input method: POJ, TL, TPS, Hanji.",
