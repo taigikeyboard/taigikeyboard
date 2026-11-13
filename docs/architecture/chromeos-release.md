@@ -41,7 +41,8 @@ After the release is published, download `TaigiKeyboard-<v>-chromeos.zip` from i
 
 | Field | Value |
 |---|---|
-| Name | 台語齒盤 ChromeOS (manifest `name`), set apart from a possible browser extension, which would be its own store item. The input method list entry (`input_components[].name`) stays 台語齒盤 |
+| Name | 台語齒盤 ChromeOS：台語輸入法、台文輸入 (manifest `name`); "ChromeOS" sets it apart from a possible browser extension, which would be its own store item. The options page `<title>` keeps the short 台語齒盤 ChromeOS, and the input method list entry (`input_components[].name`) stays 台語齒盤 |
+| Summary | 免費、開源、跨裝置 ê 台灣話拍字家私 (manifest `description`, which the store shows as the summary) |
 | Category | Tools |
 | Language | Chinese (Traditional) |
 | Icon | `icons/128.png` in the zip (the iOS app icon) |
