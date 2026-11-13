@@ -386,13 +386,24 @@ def test_reading_sheets_match_dictionary_config():
     assert tuple(select["dialect_columns"]) == watch.READING_SHEETS["語音差異"]
 
 
+def summarize(before, after, *, brief=True):
+    differences = watch.compare(before, after)
+    return watch.typing_summary(
+        watch.readings(before), watch.readings(after), differences, brief=brief
+    )
+
+
 def test_split_pairs_matches_expand_padding():
-    assert watch.split_pairs("甲/乙", "a/b") == [("甲", "a"), ("乙", "b")]
-    assert watch.split_pairs("甲", "a/b") == [("甲", "a"), ("甲", "b")]
+    assert watch.split_pairs(watch.parts("甲/乙"), "a/b") == [("甲", "a"), ("乙", "b")]
+    assert watch.split_pairs(watch.parts("甲"), "a/b") == [("甲", "a"), ("甲", "b")]
     # trace: expand_dataframe pads the shorter multi-value side with its first entry.
-    assert watch.split_pairs("甲/乙/丙", "a/b") == [("甲", "a"), ("乙", "b"), ("丙", "a")]
-    assert watch.split_pairs("", "a") == [("", "a")]
-    assert watch.split_pairs("甲", "") == []
+    assert watch.split_pairs(watch.parts("甲/乙/丙"), "a/b") == [
+        ("甲", "a"),
+        ("乙", "b"),
+        ("丙", "a"),
+    ]
+    assert watch.split_pairs(watch.parts(""), "a") == [("", "a")]
+    assert watch.split_pairs(watch.parts("甲"), "") == []
 
 
 def test_typing_summary_lists_pairs_moves_and_side_effects():
@@ -425,7 +436,7 @@ def test_typing_summary_lists_pairs_moves_and_side_effects():
         "異用字": watch.Sheet(variant, Counter({("4", "這", "即"): 1})),
         "詞目tuì詞目近義": watch.Sheet(synonym, Counter()),
     }
-    summary = watch.typing_summary(before, after, watch.compare(before, after), brief=True)
+    summary = summarize(before, after)
     # trace: "kiànn-jîn/kiànn-lîn" splits on "/" → two (鏡仁, tl) pairs; 古/kóo
     # leaves 詞目 but stays in 又唸作 → moved, neither new nor removed.
     assert "**New in 教典 (2)**" in summary
@@ -444,21 +455,19 @@ def test_typing_summary_warns_on_reading_sheet_header_change():
     old = watch.Sheet(("漢字", "羅馬字"), Counter({("甲", "kah"): 1}))
     new = watch.Sheet(("漢字", "台羅"), Counter({("甲", "kah"): 1}))
     before, after = {"詞目": old}, {"詞目": new}
-    summary = watch.typing_summary(before, after, watch.compare(before, after), brief=True)
+    summary = summarize(before, after)
     assert "⚠ Column headers changed: 詞目." in summary
 
 
 def test_typing_summary_without_reading_changes_and_bounded():
     columns = ("漢字", "羅馬字")
     sheet = watch.Sheet(columns, Counter({("甲", "kah"): 1}))
-    assert "No typing changes." in watch.typing_summary(
-        {"名": sheet}, {"名": sheet}, [], brief=True
-    )
+    assert "No typing changes." in summarize({"名": sheet}, {"名": sheet})
     many = watch.Sheet(columns, Counter({(f"字{i}", "lī" * 50): 1 for i in range(2000)}))
-    summary = watch.typing_summary({}, {"名": many}, [], brief=True)
+    summary = summarize({}, {"名": many}, brief=True)
     assert len(summary) < 2 * watch.SUMMARY_TABLE_CHARS
     assert "more in the full report." in summary
-    assert watch.typing_summary({}, {"名": many}, [], brief=False).count("| 字") == 2000
+    assert summarize({}, {"名": many}, brief=False).count("| 字") == 2000
     columns = tuple(f"欄{i}" for i in range(500))
     edit = watch.Modification(tuple("a" * 500), tuple("b" * 500))
     sheet = watch.SheetDiff("詞目", columns, columns, 1, 1, [], [], [edit])

@@ -13,8 +13,10 @@ import subprocess
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from decimal import Decimal
+from itertools import zip_longest
 from pathlib import Path
 
 TABLE = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
@@ -406,22 +408,21 @@ def render(differences: list[SheetDiff], *, brief: bool) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
-def cell(row: Row, columns: Row, name: str) -> str:
-    index = columns.index(name)
-    return row[index].strip() if index < len(row) else ""
+def parts(value: str) -> list[str]:
+    return [part.strip() for part in SEPARATORS.split(value) if part.strip()]
 
 
-def split_pairs(hanji: str, reading: str) -> list[tuple[str, str]]:
+def split_pairs(hanjis: list[str], reading: str) -> list[tuple[str, str]]:
     # Mirrors dictionary/common/expand.py expand_dataframe pairing and padding.
-    readings = [part.strip() for part in SEPARATORS.split(reading) if part.strip()]
-    hanjis = [part.strip() for part in SEPARATORS.split(hanji) if part.strip()]
-    width = max(len(readings), len(hanjis))
+    readings = parts(reading)
+    if not readings:
+        return []
     return [
         (
             hanjis[index] if index < len(hanjis) else (hanjis[0] if hanjis else ""),
             readings[index] if index < len(readings) else readings[0],
         )
-        for index in range(width if readings else 0)
+        for index in range(max(len(readings), len(hanjis)))
     ]
 
 
@@ -432,12 +433,17 @@ def readings(sheets: dict[str, Sheet]) -> dict[tuple[str, str], set[str]]:
         sheet = sheets.get(name)
         if not sheet or "漢字" not in sheet.columns:
             continue
-        present = [column for column in reading_columns if column in sheet.columns]
+        hanji_index = sheet.columns.index("漢字")
+        # 語音差異 holds one reading per dialect column; other sheets have one 羅馬字.
+        holders = [
+            (sheet.columns.index(column), column if len(reading_columns) > 1 else name)
+            for column in reading_columns
+            if column in sheet.columns
+        ]
         for row in sheet.rows:
-            hanji = cell(row, sheet.columns, "漢字")
-            for column in present:
-                holder = column if len(reading_columns) > 1 else name
-                for pair in split_pairs(hanji, cell(row, sheet.columns, column)):
+            hanjis = parts(row[hanji_index]) if hanji_index < len(row) else []
+            for index, holder in holders:
+                for pair in split_pairs(hanjis, row[index] if index < len(row) else ""):
                     found.setdefault(pair, set()).add(holder)
     return found
 
@@ -450,28 +456,33 @@ def sheet_topic(name: str) -> str:
     return SHEET_TOPICS.get(name) or safe(name, 80)
 
 
-def bounded(lines: list[str], *, brief: bool) -> list[str]:
+def bounded(lines: Iterable[str], total: int, *, brief: bool) -> list[str]:
     shown, length = [], 0
     for line in lines:
         length += len(line) + 1
         if brief and length > SUMMARY_TABLE_CHARS:
-            return shown + ["", f"…and {len(lines) - len(shown)} more in the full report."]
+            return shown + ["", f"…and {total - len(shown)} more in the full report."]
         shown.append(line)
     return shown
 
 
-def pair_table(title: str, header: Row, rows: list[Row], *, brief: bool) -> str:
-    body = [
+def pair_table(title: str, rows: list[Row], *, brief: bool) -> str:
+    body = (
         f"| {' | '.join(safe(value, 80 if brief else None) for value in row)} |" for row in rows
+    )
+    head = [
+        f"**{title} ({len(rows)})**",
+        "",
+        "| Hanji | Romanization | Sheet |",
+        "| --- | --- | --- |",
     ]
-    head = [f"**{title} ({len(rows)})**", "", f"| {' | '.join(header)} |", "| --- | --- | --- |"]
-    return "\n".join(head + bounded(body, brief=brief))
+    return "\n".join(head + bounded(body, len(rows), brief=brief))
 
 
 def side_effects(differences: list[SheetDiff], *, brief: bool) -> list[str]:
     """Changed source rows that alter no (Hanji, romanization) pair."""
     edits: dict[str, Counter[str]] = {}
-    topics: dict[str, list[int]] = {}
+    topics: dict[str, Counter[str]] = {}
     for sheet in differences:
         if not changed(sheet):
             continue
@@ -479,64 +490,63 @@ def side_effects(differences: list[SheetDiff], *, brief: bool) -> list[str]:
             columns = sheet.columns_before or ()
             typing_columns = {"漢字", *READING_SHEETS[sheet.name]}
             for modification in sheet.modified:
-                width = max(len(modification.before), len(modification.after))
-                touched = [
+                touched = {
                     column_label(columns, index)
-                    for index in range(width)
-                    if modification.before[index : index + 1]
-                    != modification.after[index : index + 1]
-                ]
-                if not typing_columns & set(touched):
+                    for index, (old, new) in enumerate(
+                        zip_longest(modification.before, modification.after)
+                    )
+                    if old != new
+                }
+                if not typing_columns & touched:
                     edits.setdefault(sheet.name, Counter()).update(touched)
             continue
-        totals = topics.setdefault(sheet_topic(sheet.name), [0, 0, 0])
-        for index, number in enumerate(counts(sheet)):
-            totals[index] += number
+        totals = topics.setdefault(sheet_topic(sheet.name), Counter())
+        totals.update(dict(zip(("added", "removed", "edited"), counts(sheet))))
     lines = [
         f"- {safe(name)}: {safe(column, 80)} edited ×{number}"
         for name, fields in edits.items()
-        for column, number in fields.items()
+        for column, number in sorted(fields.items())
     ]
     for topic, totals in topics.items():
-        labels = ", ".join(
-            f"{number} {label}"
-            for number, label in zip(totals, ("added", "removed", "edited"))
-            if number
-        )
+        labels = ", ".join(f"{number} {label}" for label, number in totals.items() if number)
         lines.append(f"- {topic}: {labels or 'column headers changed'}")
-    return bounded(lines, brief=brief)
+    return bounded(lines, len(lines), brief=brief)
 
 
 def typing_summary(
-    before: dict[str, Sheet], after: dict[str, Sheet], differences: list[SheetDiff], *, brief: bool
+    old: dict[tuple[str, str], set[str]],
+    new: dict[tuple[str, str], set[str]],
+    differences: list[SheetDiff],
+    *,
+    brief: bool,
 ) -> str:
-    old, new = readings(before), readings(after)
-    added = sorted((*pair, ", ".join(sorted(new[pair]))) for pair in new.keys() - old.keys())
-    removed = sorted((*pair, ", ".join(sorted(old[pair]))) for pair in old.keys() - new.keys())
-    # Sheet / dialect membership feeds the Kautian subtag and accent mask.
-    moved = sorted(
-        (*pair, f"{', '.join(sorted(old[pair]))} → {', '.join(sorted(new[pair]))}")
-        for pair in old.keys() & new.keys()
-        if old[pair] != new[pair]
-    )
+    """Takes readings() of the committed and upstream exports."""
+
+    def holders(pair: tuple[str, str], side: dict[tuple[str, str], set[str]]) -> str:
+        return ", ".join(sorted(side[pair]))
+
+    tables = [
+        ("New in 教典", [(*pair, holders(pair, new)) for pair in new.keys() - old.keys()]),
+        ("No longer in 教典", [(*pair, holders(pair, old)) for pair in old.keys() - new.keys()]),
+        # Sheet / dialect membership feeds the Kautian subtag and accent mask.
+        (
+            "Moved",
+            [
+                (*pair, f"{holders(pair, old)} → {holders(pair, new)}")
+                for pair in old.keys() & new.keys()
+                if old[pair] != new[pair]
+            ],
+        ),
+    ]
     blocks = ["## What changes for typing"]
     if headers := [
-        sheet.name
+        safe(sheet.name, 80)
         for sheet in differences
         if sheet.name in READING_SHEETS and sheet.columns_before != sheet.columns_after
     ]:
-        blocks.append(
-            f"⚠ Column headers changed: {', '.join(safe(name, 80) for name in headers)}. "
-            "List unreliable; dictionary build will likely fail."
-        )
-    header = ("Hanji", "Romanization", "Sheet")
-    if added:
-        blocks.append(pair_table("New in 教典", header, added, brief=brief))
-    if removed:
-        blocks.append(pair_table("No longer in 教典", header, removed, brief=brief))
-    if moved:
-        blocks.append(pair_table("Moved", header, moved, brief=brief))
-    if not (added or removed or moved):
+        blocks.append(f"⚠ Column headers changed: {', '.join(headers)}. List unreliable.")
+    blocks += [pair_table(title, sorted(rows), brief=brief) for title, rows in tables if rows]
+    if not any(rows for _, rows in tables):
         blocks.append("No typing changes.")
     if others := side_effects(differences, brief=brief):
         blocks.append("**No effect on typing**\n\n" + "\n".join(others))
@@ -546,6 +556,7 @@ def typing_summary(
 def generate(arguments: argparse.Namespace) -> None:
     before, after = read_ods(arguments.committed), read_ods(arguments.upstream)
     differences = compare(before, after)
+    old_readings, new_readings = readings(before), readings(after)
     data = {
         "baseline_commit": arguments.baseline_commit,
         "baseline_data_sha256": fingerprint(before),
@@ -564,7 +575,7 @@ def generate(arguments: argparse.Namespace) -> None:
     for filename, brief in (("summary.md", True), ("diff.md", False)):
         (arguments.output / filename).write_text(
             ("" if brief else f"Baseline commit: `{arguments.baseline_commit}`\n\n")
-            + typing_summary(before, after, differences, brief=brief)
+            + typing_summary(old_readings, new_readings, differences, brief=brief)
             + render(differences, brief=brief),
             encoding="utf-8",
         )
