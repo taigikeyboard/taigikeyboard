@@ -1,0 +1,61 @@
+/* The overlay's own rules. `scripts/stage-extension.mjs` writes the staged
+   overlay.css: the page's style.css with `:root` turned into `:host`, so the
+   panel draws from the page's own rules, then this file. */
+
+/* The viewport. Nothing of the site's inherits past it, and only what the
+   extension draws takes the pointer. */
+#box {
+  all: initial;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  color: var(--text);
+  font: 16px / 1.4 var(--system-font);
+  pointer-events: none;
+}
+
+#preedit,
+#panel {
+  pointer-events: auto;
+}
+
+#preedit {
+  color: var(--text);
+}
+
+/* The page's mode chip (`#mode-line`): outlined in Taigi mode, solid in
+   English mode. Black, white and grey only. */
+#chip {
+  position: absolute;
+  width: max-content;
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--secondary);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+#chip[hidden] {
+  display: none;
+}
+
+#chip[data-state="english"] {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+}
+
+#chip:is([data-state="unsupported"], [data-state="failed"]) {
+  border-style: dashed;
+}
+
+#mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  border-color: transparent;
+}
