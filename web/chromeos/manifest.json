@@ -22,7 +22,7 @@
       "type": "ime",
       "id": "taigi",
       "indicator": "台",
-      "description": "Taigi Keyboard",
+      "description": "TaigiKeyboard",
       "language": "zh-TW",
       "options_page": "options.html",
       "layouts": ["us"]
