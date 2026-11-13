@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `release`, `release train`, `CalVer`, `generate-notes`, `GitHub App`, `schedule`
-> **Status**: Accepted 2026-11-12 — Phase 2 next
+> **Status**: Accepted 2026-11-12 — Phase 3 next (needs maintainer credentials)
 
 ## Goal
 
@@ -47,7 +47,7 @@ One phase = one PR unless marked admin.
 |---|---|---|---|---|
 | 0 | Plan | This doc + project memory (admin lane) | — | Merged (direct to main 2026-11-12) |
 | 1 | CalVer | `set-versions --train desktop` accepts `YYYY.M.P` (month 1–12, no leading zero, year ≥ 2026) and keeps the downgrade guard; `check-versions` and the macOS build number follow; `desktop-release.md` § Version numbers rewritten (full release `YYYY.M.0`, patch `YYYY.M.P`). CalVer only from 3.9.0 on — a patch before the first train is `2026.11.P` (maintainer, 2026-11-13) | — | Merged #895 |
-| 2 | Generated release notes | Staging (`tools/release/lib/desktop-release.sh` `_write_release_notes`) asks the Release Notes API (`POST /repos/{owner}/{repo}/releases/generate-notes`) for the body, from the previous published `desktop-*` release to the staged commit, and appends the Code signing policy link. No `changelog/desktop-v*.md` after 3.9.0; `CHANGELOG.md` points at the release pages. `/release-desktop` stops writing a changelog | — | Pending |
+| 2 | Generated release notes | Staging (`tools/release/lib/desktop-release.sh` `_write_release_notes`) asks the Release Notes API (`POST /repos/{owner}/{repo}/releases/generate-notes`) for the body, from the previous published `desktop-*` release to the staged commit, and appends the Code signing policy link. No `changelog/desktop-v*.md` after 3.9.0; `CHANGELOG.md` points at the release pages. `/release-desktop` stops writing a changelog | — | Merged #899 |
 | 3 | Release identity + hold | GitHub App `taigikeyboard-release` (contents + actions write on this repo, plus issues + pull requests write for the accent-contribution intake — `khiunnkhau-contrib-roadmap.md` Phase 2; contents write on `homebrew-tap`); on the bypass list of the `main` and release-tag rulesets; `RELEASE_APP_ID` (variable) + `RELEASE_APP_PRIVATE_KEY` (secret) in the `release` environment; tokens minted with `actions/create-github-app-token`. Repository variable `RELEASE_HOLD` documented | Create the App, install it, add it to both rulesets' bypass lists, store the two secrets | Pending |
 | 4 | macOS on a hosted runner | `macos-build.yml` (dispatch, `source_sha` like the Linux / ChromeOS builds): imports both Developer ID `.p12` into a temporary keychain, notarizes with an App Store Connect API key, attaches the `.pkg` to the draft. `stage-desktop.sh` dispatches it like the other three halves, so staging needs no Mac. `macos/scripts/release-app.sh` takes the API key in place of the keychain profile when it is set | Export both `.p12` (+ password) and an App Store Connect Team API key into the `release` environment: secrets `MACOS_DEVELOPER_ID_APPLICATION_P12`, `MACOS_DEVELOPER_ID_INSTALLER_P12` (base64), `MACOS_P12_PASSWORD`, `APPLE_API_KEY_P8`; variables `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID` | Pending |
 | 5 | Cut on the 1st | `desktop-train.yml`, `schedule: '0 1 1 * *'` + `workflow_dispatch`: stop if `RELEASE_HOLD` is set; stop with a Discord note if no pull request merged since the previous desktop release (empty month, no release); `set-versions` to `YYYY.M.0`, commit + push with the App token, then `stage-desktop.sh` | — | Pending |
