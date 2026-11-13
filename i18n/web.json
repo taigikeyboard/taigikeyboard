@@ -1033,14 +1033,14 @@
       }
     },
     "inspectorDetailCoverage": {
-      "comment": "Stage 4: full syllable, then prefix, then abbreviation.",
+      "comment": "Stage 4: a partial prefix sorts after a full syllable or an abbreviation, which tie.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
-        "hanji": "完整音節排頭前，閣來是拍一半的前綴，閣來是縮寫。",
-        "tailo": "Uân-tsíng im-tsiat pâi thâu-tsîng, koh-lâi sī phah tsi̍t puànn ê tsiân-tzuì, koh-lâi sī sok-siá.",
-        "poj": "Oân-chéng im-chiat pâi thâu-chêng, koh-lâi sī phah chi̍t pòaⁿ ê chiân-chuì, koh-lâi sī sok-siá.",
-        "en": "A full syllable comes first, then a prefix of a longer reading, then an abbreviation.",
-        "ja": "完全な音節が先、次に読みの途中までの接頭、その次が略称です。"
+        "hanji": "部分前綴排後壁。完整音節佮縮寫佇這關平手，攏排頭前。",
+        "tailo": "Pōo-hūn tsiân-tzuì pâi āu-piah. Uân-tsíng im-tsiat kah sok-siá tī tsit kuan pênn-tshiú, lóng pâi thâu-tsîng.",
+        "poj": "Pō͘-hūn chiân-chuì pâi āu-piah. Oân-chéng im-chiat kah sok-siá tī chit koan pêⁿ-chhiú, lóng pâi thâu-chêng.",
+        "en": "A partial prefix comes after. A full syllable and an abbreviation tie on this stage, and both come first.",
+        "ja": "部分的な接頭は後です。完全な音節と略称はこの段階では同列で、どちらも先に来ます。"
       }
     },
     "inspectorDetailUserWeight": {

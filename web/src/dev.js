@@ -1,6 +1,7 @@
 // The segmentation and ranking page. Same session as the writing page, and the
 // same docked sidebar. `explain` is drawn on every key (`inspector.js`).
 
+import { Editor } from "./editor.js";
 import { setDisplayLanguage, translate } from "./i18n.js";
 import {
   defaultSortFields,
@@ -16,7 +17,9 @@ import { TpsKeyboard } from "./tps_keyboard.js";
 
 const NOTHING = { handled: true, emits: [] };
 
-const textarea = document.getElementById("text");
+const editorBox = document.getElementById("editor");
+const editor = new Editor(document.getElementById("text"));
+const text = editor.root;
 const preedit = document.getElementById("preedit");
 const candidates = document.getElementById("candidates");
 const pageUp = document.getElementById("page-up");
@@ -28,17 +31,18 @@ const retryButton = document.getElementById("retry");
 const loadSlot = document.getElementById("load-slot");
 const form = document.getElementById("settings");
 
-const surface = new Surface(textarea);
+const surface = new Surface(editor, editorBox);
 const SORT_KEY = "taigi.devSortOrder";
 const RANK_ONE_WORD_KEY = "taigi.devRankOneWord";
 const PRESET_KEY = "taigi.devSortPreset";
-/// Preference, selection weight, and syllable match ahead of abbreviation.
+/// Preference, then a partial prefix behind a full syllable or an
+/// abbreviation, then selection weight, then abbreviation.
 /// The rest stay in the engine's order.
 const PROPOSAL = [
   "tier",
   "preference_class",
-  "user_weight",
   "coverage_kind",
+  "user_weight",
   "abbreviation",
   "context_rank",
   "walker_cost",
@@ -87,7 +91,7 @@ const customList = document.getElementById("custom-list");
 const tpsKeyboard = new TpsKeyboard(
   document.getElementById("tps-keyboard"),
   (glyph) => {
-    textarea.focus();
+    editor.focus();
     apply(call((current) => current.tpsKeyPress(glyph)));
   },
 );
@@ -337,7 +341,7 @@ function failLoading(error, starting) {
   }
   say("web.loadFailed", "failed");
   loadSlot.dataset.show = "retry";
-  textarea.disabled = session === null;
+  editor.setEditable(session !== null);
 }
 
 async function loadDictionaries(starting) {
@@ -409,8 +413,8 @@ async function start() {
     restoreSettings(starting);
     learning.attach(starting);
     tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
-    textarea.disabled = false;
-    textarea.focus();
+    editor.setEditable(true);
+    editor.focus();
   } catch (error) {
     failLoading(error, starting);
     return;
@@ -573,31 +577,37 @@ function isForeignComposition(event) {
   return event.isComposing || event.keyCode === 229;
 }
 
-textarea.addEventListener("keydown", (event) => {
-  if (isForeignComposition(event)) {
-    return;
-  }
-  if (surface.takeForeignChange()) {
-    call((current) => current.caretMoved());
-  }
-  const reply = call((current) => current.keyDown(keyJson(event)));
-  if (reply.handled) {
-    event.preventDefault();
-  }
-  apply(reply);
-});
+// Capture on `#editor`: the engine has the key before Lexical, whose handlers
+// on the root skip a key the engine took (`Editor`, KEY_DOWN_COMMAND).
+editorBox.addEventListener(
+  "keydown",
+  (event) => {
+    if (!text.contains(event.target) || isForeignComposition(event)) {
+      return;
+    }
+    if (surface.takeForeignChange()) {
+      call((current) => current.caretMoved());
+    }
+    const reply = call((current) => current.keyDown(keyJson(event)));
+    if (reply.handled) {
+      event.preventDefault();
+    }
+    apply(reply);
+  },
+  { capture: true },
+);
 
-textarea.addEventListener("keyup", (event) => {
+text.addEventListener("keyup", (event) => {
   if (!isForeignComposition(event)) {
     apply(call((current) => current.keyUp(keyJson(event))));
   }
 });
 
-textarea.addEventListener("compositionstart", () => {
+text.addEventListener("compositionstart", () => {
   notice.toggleAttribute("data-active", true);
 });
 
-textarea.addEventListener("compositionend", () => {
+text.addEventListener("compositionend", () => {
   notice.toggleAttribute("data-active", false);
 });
 
@@ -649,7 +659,7 @@ document.getElementById("clear-learning").addEventListener("click", () => {
   } catch (error) {
     console.error(error);
   }
-  textarea.focus();
+  editor.focus();
 });
 
 function setCustomFormEnabled(enabled) {
@@ -730,7 +740,7 @@ document
 
 rankOneWord.addEventListener("change", () => {
   installRankOneWord(rankOneWord.checked);
-  textarea.focus();
+  editor.focus();
 });
 
 for (const input of presetInputs) {
@@ -743,7 +753,7 @@ for (const input of presetInputs) {
     } else {
       applyPreset(input.value);
     }
-    textarea.focus();
+    editor.focus();
   });
 }
 

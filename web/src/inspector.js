@@ -208,7 +208,7 @@ function sortRank(row, id) {
     case "preference_class":
       return { picked: 0, custom: 1, rest: 2 }[row.preference] ?? 2;
     case "coverage_kind":
-      return { full: 0, prefix: 1, abbreviation: 2 }[row.coverage] ?? 0;
+      return row.coverage === "prefix" ? 1 : 0;
     case "user_weight":
       return -row.weight;
     case "context_rank":
