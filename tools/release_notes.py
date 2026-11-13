@@ -832,22 +832,31 @@ DESKTOP_SECTIONS = (
     "Updates",
     "Install",
 )
-# Trees whose change reaches a desktop installer: the four shells, the crates
-# they share, the engine and the data it reads, the UI strings, and the web
-# sources and wasm crates the ChromeOS extension is built from.
+# Paths whose change reaches a desktop installer: the four shells, the crates
+# they share, the engine, the shipped data (`assets/` — a `dictionary/` source
+# edit ships only through the artifacts it regenerates there), the UI strings,
+# and what `web/Makefile`'s `chromeos` target packs: the extension, the wasm
+# crates, and the few `web/src/` files it copies (the web editor stays out).
 DESKTOP_SHIPPING_PREFIXES = (
     "macos/",
     "windows/",
     "linux/",
     "desktop/",
     "engine/",
-    "dictionary/",
     "assets/",
     "i18n/",
     "web/chromeos/",
-    "web/src/",
     "web/crates/",
     "web/Cargo.",
+    "web/Makefile",
+    "web/scripts/stage-chromeos.mjs",
+    "web/src/settings.js",
+    "web/src/i18n.js",
+    "web/src/learning.js",
+    "web/src/style.css",
+    "web/src/chevron.svg",
+    "web/src/index.html",
+    "web/src/generated/",
 )
 # Inside those trees: the mobile-only engine bridges, tests and docs ship to no
 # desktop user.

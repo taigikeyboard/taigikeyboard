@@ -898,9 +898,11 @@ class FragmentParserTests(unittest.TestCase):
         shipping = (
             "macos/Sources/App.swift",
             "engine/composing/src/lib.rs",
-            "dictionary/supplementary/dev/data/dev.csv",
+            "assets/dictionaries/dictionary.bin",
             "web/chromeos/manifest.json",
             "web/Cargo.lock",
+            "web/Makefile",
+            "web/src/settings.js",
         )
         not_shipping = (
             "engine/swift-ffi/src/lib.rs",
@@ -912,6 +914,9 @@ class FragmentParserTests(unittest.TestCase):
             "ios/Sources/Keyboard.swift",
             "tools/release_notes.py",
             "changelog/unreleased/x.md",
+            "dictionary/supplementary/dev/data/dev.csv",
+            "dictionary/tools/verify_khpoo_append.py",
+            "web/src/editor/lexical.js",
         )
         for path in shipping:
             with self.subTest(path):
@@ -943,6 +948,7 @@ class GitRepositoryTestCase(unittest.TestCase):
         self.git("init", "--quiet", "--initial-branch=main")
         self.git("config", "user.name", "Test")
         self.git("config", "user.email", "test@example.invalid")
+        self.git("config", "commit.gpgsign", "false")
         (self.repo_root / "CHANGELOG.md").write_text(CHANGELOG_INDEX, encoding="utf-8")
         (self.repo_root / "changelog" / "unreleased").mkdir(parents=True)
         (self.repo_root / "changelog" / "unreleased" / "README.md").write_text("format\n")
@@ -1169,6 +1175,38 @@ No changes.
             release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0", "macos")
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, "YYYY.M.P"):
             release_notes.assemble_desktop_changelog(self.repo_root, "3.10.0")
+
+    def test_slug_added_again_after_a_release_takes_the_new_pull_request(self) -> None:
+        # kautian-watch reuses one slug every month.
+        self.merge_pull_request(1, {fragment_path("same"): fragment_text("[macos]", "Input", "- **Old.**")})
+        release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0")
+        self.commit({}, "desktop v2026.12.0: release")
+        self.merge_pull_request(2, {fragment_path("same"): fragment_text("[macos]", "Input", "- **New.**")})
+
+        release_notes.assemble_desktop_changelog(self.repo_root, "2027.1.0")
+
+        self.assertIn(
+            "- **New.** (#2)\n",
+            (self.repo_root / "changelog" / "desktop-v2027.1.0.md").read_text(),
+        )
+
+    def test_refuses_a_version_already_linked(self) -> None:
+        self.merge_pull_request(1, {fragment_path("x"): fragment_text("[macos]", "Input", "- x")})
+        self.write("CHANGELOG.md", CHANGELOG_INDEX.replace("v3.9.0", "v2026.12.0"))
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "already links"):
+            release_notes.assemble_desktop_changelog(self.repo_root, "2026.12.0")
+
+    def test_refuses_a_shallow_clone(self) -> None:
+        self.merge_pull_request(1, {fragment_path("x"): fragment_text("[macos]", "Input", "- x")})
+        shallow = self.repo_root / "shallow"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--depth", "1", f"file://{self.repo_root}", str(shallow)],
+            check=True,
+        )
+
+        with self.assertRaisesRegex(release_notes.ReleaseNotesError, "shallow"):
+            release_notes.assemble_desktop_changelog(shallow, "2026.12.0")
 
 
 if __name__ == "__main__":

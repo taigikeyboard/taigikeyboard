@@ -1,6 +1,6 @@
 ---
-platforms: [macos, windows, linux, chromeos]
+platforms: [macos, windows, linux]
 section: Candidates
 ---
-- The MOE Dictionary data is refreshed from the Ministry of Education's latest
+- **MOE Dictionary data refreshed** from the Ministry of Education's latest
   release. (#888)

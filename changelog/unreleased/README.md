@@ -47,3 +47,5 @@ desktop-shipping files (`DESKTOP_SHIPPING_PREFIXES` in
 `tools/release_notes.py`) without a fragment. Label it `no-changelog` when no
 desktop user can see the change: a refactor, a test, a mobile-only engine
 change. Dependabot pull requests carry the label (`.github/dependabot.yml`).
+Editing a fragment that is still waiting also passes: a follow-up that changes
+the same unreleased behavior rewords its bullet rather than adding a second.
