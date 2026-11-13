@@ -446,7 +446,7 @@ def test_typing_summary_lists_pairs_moves_and_side_effects():
     assert "**Moved (1)**" in summary
     assert "| 古 | kóo | 詞目 → 又唸作 |" in summary
     assert "- 詞目: 分類 edited ×1" in summary
-    assert "- synonym links: 1 removed" in summary
+    assert "**Synonym links (1)**" in summary and "| 甲 | 乙 | removed |" in summary
     assert "- variant spellings (frozen variants.csv used): 1 added" in summary
     assert "⚠" not in summary
 
@@ -474,3 +474,29 @@ def test_typing_summary_without_reading_changes_and_bounded():
     effects = watch.side_effects([sheet], brief=True)
     assert len("\n".join(effects)) < watch.SUMMARY_TABLE_CHARS + 100
     assert "more in the full report." in effects[-1]
+
+
+def test_link_changes_pair_headword_and_sense_sheets():
+    word = ("詞目id", "詞目漢字", "對應詞目id", "對應詞目漢字")
+    sense = ("義項id", "詞目漢字", "解說", "對應詞目id", "對應詞目漢字")
+    before = {
+        "詞目tuì詞目近義": watch.Sheet(
+            word, Counter({("1", "目鏡仁", "2", "鏡仁"): 1, ("3", "水濺仔", "4", "漩桶"): 1})
+        ),
+        "義項tuì詞目近義": watch.Sheet(sense, Counter()),
+        "義項tuì詞目反義": watch.Sheet(sense, Counter()),
+    }
+    after = {
+        "詞目tuì詞目近義": watch.Sheet(word, Counter()),
+        "義項tuì詞目近義": watch.Sheet(
+            sense, Counter({("9", "目鏡仁", "眼鏡的鏡片。", "2", "鏡仁"): 1})
+        ),
+        "義項tuì詞目反義": watch.Sheet(sense, Counter({("8", "好", "優良。", "5", "䆀"): 1})),
+    }
+    tables = watch.link_changes(watch.compare(before, after), brief=True)
+    # trace: 目鏡仁→鏡仁 leaves 詞目tuì詞目近義 and appears in 義項tuì詞目近義 → one moved row.
+    assert "| 目鏡仁 | 鏡仁 | whole word → 「眼鏡的鏡片。」 |" in tables[1]
+    assert "| 水濺仔 | 漩桶 | removed |" in tables[1]
+    assert "**Antonym links (1)**" in tables[0]
+    assert "| 好 | 䆀 | added: 「優良。」 |" in tables[0]
+    assert "synonym" not in "\n".join(watch.side_effects(watch.compare(before, after), brief=True))

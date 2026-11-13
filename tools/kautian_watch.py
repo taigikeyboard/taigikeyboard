@@ -24,7 +24,7 @@ OFFICE = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
 TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 TITLE = "chore(dictionary): MoE kautian.ods has new data"
 START, END = "<!-- kautian-watch:start -->", "<!-- kautian-watch:end -->"
-FORMAT_MARKER = "<!-- kautian-watch:format:3 -->"
+FORMAT_MARKER = "<!-- kautian-watch:format:4 -->"
 # Sheets the dictionary build reads, with their reading columns
 # (dictionary/sources/official/kautian/config.yaml select.sheets + dialect_sheet;
 # kautian_watch_test keeps the two in sync).
@@ -466,17 +466,54 @@ def bounded(lines: Iterable[str], total: int, *, brief: bool) -> list[str]:
     return shown
 
 
-def pair_table(title: str, rows: list[Row], *, brief: bool) -> str:
+def pair_table(
+    title: str, rows: list[Row], *, header: Row = ("Hanji", "Romanization", "Sheet"), brief: bool
+) -> str:
     body = (
         f"| {' | '.join(safe(value, 80 if brief else None) for value in row)} |" for row in rows
     )
-    head = [
-        f"**{title} ({len(rows)})**",
-        "",
-        "| Hanji | Romanization | Sheet |",
-        "| --- | --- | --- |",
-    ]
+    head = [f"**{title} ({len(rows)})**", "", f"| {' | '.join(header)} |", "| --- | --- | --- |"]
     return "\n".join(head + bounded(body, len(rows), brief=brief))
+
+
+def link_kind(sheet: SheetDiff) -> str | None:
+    """Synonym / antonym link sheets with a stable layout; None for any other sheet."""
+    columns = sheet.columns_before or ()
+    if sheet.columns_before != sheet.columns_after or not {"詞目漢字", "對應詞目漢字"} <= set(
+        columns
+    ):
+        return None
+    return "Synonym" if "近義" in sheet.name else "Antonym" if "反義" in sheet.name else None
+
+
+def link_changes(differences: list[SheetDiff], *, brief: bool) -> list[str]:
+    """Synonym / antonym links per (word, linked word), across headword and sense sheets."""
+    links: dict[tuple[str, str, str], dict[str, list[str]]] = {}
+    for sheet in differences:
+        if not (kind := link_kind(sheet)):
+            continue
+        for side, rows in (("removed", sheet.removed), ("added", sheet.added)):
+            for row in rows:
+                fields = dict(zip(sheet.columns_before or (), row.values))
+                # 義項 sheets link one sense of the word; 詞目 sheets the whole word.
+                scope = f"「{fields['解說']}」" if fields.get("解說") else "whole word"
+                key = (kind, fields.get("詞目漢字", ""), fields.get("對應詞目漢字", ""))
+                links.setdefault(key, {}).setdefault(side, []).append(scope)
+    tables: dict[str, list[Row]] = {}
+    for (kind, word, target), sides in sorted(links.items()):
+        removed, added = "; ".join(sides.get("removed", [])), "; ".join(sides.get("added", []))
+        change = (
+            f"{removed} → {added}"
+            if removed and added
+            else f"added: {added}"
+            if added
+            else "removed"
+        )
+        tables.setdefault(kind, []).append((word, target, change))
+    return [
+        pair_table(f"{kind} links", rows, header=("Word", kind, "Change"), brief=brief)
+        for kind, rows in tables.items()
+    ]
 
 
 def side_effects(differences: list[SheetDiff], *, brief: bool) -> list[str]:
@@ -499,6 +536,8 @@ def side_effects(differences: list[SheetDiff], *, brief: bool) -> list[str]:
                 }
                 if not typing_columns & touched:
                     edits.setdefault(sheet.name, Counter()).update(touched)
+            continue
+        if link_kind(sheet):
             continue
         totals = topics.setdefault(sheet_topic(sheet.name), Counter())
         totals.update(dict(zip(("added", "removed", "edited"), counts(sheet))))
@@ -548,8 +587,10 @@ def typing_summary(
     blocks += [pair_table(title, sorted(rows), brief=brief) for title, rows in tables if rows]
     if not any(rows for _, rows in tables):
         blocks.append("No typing changes.")
-    if others := side_effects(differences, brief=brief):
-        blocks.append("**No effect on typing**\n\n" + "\n".join(others))
+    others = side_effects(differences, brief=brief)
+    parts = (["\n".join(others)] if others else []) + link_changes(differences, brief=brief)
+    if parts:
+        blocks.append("\n\n".join(["**No effect on typing**", *parts]))
     return "\n\n".join(blocks) + "\n\n"
 
 
