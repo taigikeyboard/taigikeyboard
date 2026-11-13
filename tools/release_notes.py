@@ -8,6 +8,7 @@ platforms cannot drift apart."""
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import os
 import plistlib
@@ -854,7 +855,6 @@ DESKTOP_NON_SHIPPING_PREFIXES = (
     "engine/swift-ffi/",
     "engine/android-jni/",
     "engine/test-support/",
-    "macos/Tests/",
 )
 FRAGMENT_PLATFORMS_PATTERN = re.compile(r"^\[(?P<items>[^\]]*)\]$")
 # A bullet that already names its pull request(s) keeps them: `(#12)`, `(#12, #15)`.
@@ -915,18 +915,14 @@ def parse_fragment(name: str, text: str) -> ChangelogFragment:
     if fields["section"] not in DESKTOP_SECTIONS:
         raise fail(f"section must be one of {list(DESKTOP_SECTIONS)}, got {fields['section']!r}")
 
-    body = lines[closing + 1 :]
-    while body and not body[0].strip():
-        body.pop(0)
-    while body and not body[-1].strip():
-        body.pop()
+    body = "\n".join(lines[closing + 1 :]).strip("\n").split("\n")
     if not body or not body[0].startswith("- ") or not body[0][2:].strip():
         raise fail("body must be one `- ` bullet")
     if any(not line.startswith("  ") or not line.strip() for line in body[1:]):
         raise fail("body is one bullet: continuation lines are indented two spaces, no blank lines")
     return ChangelogFragment(
         name=name,
-        platforms=tuple(sorted(platforms, key=list(DESKTOP_PLATFORMS).index)),
+        platforms=tuple(platform for platform in DESKTOP_PLATFORMS if platform in platforms),
         section=fields["section"],
         bullet="\n".join(body),
     )
@@ -948,12 +944,14 @@ def is_desktop_shipping_path(path: str) -> bool:
         return False
     if path.startswith(DESKTOP_NON_SHIPPING_PREFIXES) or path.endswith(".md"):
         return False
-    return "tests" not in path.split("/")[:-1]
+    # `tests/` in Rust, `Tests/` in Swift.
+    return "tests" not in (directory.lower() for directory in path.split("/")[:-1])
 
 
 def _git(repo_root: Path, *arguments: str) -> str:
     result = subprocess.run(
-        ["git", "-C", str(repo_root), *arguments],
+        # quotepath off: a non-ASCII path comes back as itself, not octal-escaped.
+        ["git", "-C", str(repo_root), "-c", "core.quotepath=false", *arguments],
         capture_output=True,
         text=True,
         check=False,
@@ -1041,6 +1039,54 @@ def _insert_changelog_link(index_source: str, version: str, note: str) -> str:
     return "\n".join(lines)
 
 
+def _numbered_bullets(
+    repo_root: Path, fragments: list[ChangelogFragment]
+) -> list[tuple[ChangelogFragment, str]]:
+    """Each fragment with its bullet ending in `(#N)`, in pull-request order.
+
+    A bullet that already names its pull request keeps it; otherwise the number
+    comes from git. Entries with no number go last, by file name.
+    """
+    numbered: list[tuple[int, ChangelogFragment, str]] = []
+    for fragment in fragments:
+        reference = PULL_REQUEST_REFERENCE_PATTERN.search(fragment.bullet)
+        if reference:
+            numbered.append((int(reference["first"]), fragment, fragment.bullet))
+            continue
+        number = fragment_pull_request(repo_root, fragment)
+        if number is None:
+            print(
+                f"warning: {FRAGMENTS_DIR}/{fragment.name} names no pull request and "
+                "none added it on main — the entry goes out without one",
+                file=sys.stderr,
+            )
+            numbered.append((sys.maxsize, fragment, fragment.bullet))
+        else:
+            numbered.append((number, fragment, f"{fragment.bullet} (#{number})"))
+    numbered.sort(key=lambda entry: (entry[0], entry[1].name))
+    return [(fragment, bullet) for _, fragment, bullet in numbered]
+
+
+def render_desktop_changelog(
+    version: str, platform: str | None, bullets: list[tuple[ChangelogFragment, str]]
+) -> str:
+    """The release page: a lead line, then each shipped platform's sections."""
+    platforms = [platform] if platform else list(DESKTOP_PLATFORMS)
+    entries = {
+        name: [(fragment.section, bullet) for fragment, bullet in bullets if name in fragment.platforms]
+        for name in platforms
+    }
+    if platform:
+        lead = f"A {DESKTOP_PLATFORMS[platform]}-only patch. The other platforms are unchanged."
+    else:
+        touched = [DESKTOP_PLATFORMS[name] for name in platforms if entries[name]]
+        lead = f"Changes for {_join_names(touched)}."
+    lines = [f"# desktop v{version}", "", lead, ""]
+    for name in platforms:
+        lines += _render_platform(name, entries[name])
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
 def assemble_desktop_changelog(
     repo_root: Path, version: str, platform: str | None = None
 ) -> tuple[str, ...]:
@@ -1059,8 +1105,6 @@ def assemble_desktop_changelog(
         raise ReleaseNotesError(f"{version} is a patch: pass --platform")
     if not is_patch and platform is not None:
         raise ReleaseNotesError(f"{version} is a full release: it ships every platform, drop --platform")
-    if platform is not None and platform not in DESKTOP_PLATFORMS:
-        raise ReleaseNotesError(f"unknown platform {platform!r}; expected one of {list(DESKTOP_PLATFORMS)}")
     target = repo_root / "changelog" / f"desktop-v{version}.md"
     if target.exists():
         raise ReleaseNotesError(f"{target.relative_to(repo_root)} already exists")
@@ -1076,45 +1120,9 @@ def assemble_desktop_changelog(
     if not fragments:
         scope = f"{DESKTOP_PLATFORMS[platform]} " if platform else ""
         raise ReleaseNotesError(f"no {scope}fragments in {FRAGMENTS_DIR}: nothing to release")
-
-    ordered: list[tuple[int, str, ChangelogFragment, str]] = []
-    for fragment in fragments:
-        bullet = fragment.bullet
-        reference = PULL_REQUEST_REFERENCE_PATTERN.search(bullet)
-        if reference:
-            number: int | None = int(reference["first"])
-        else:
-            number = fragment_pull_request(repo_root, fragment)
-            if number is None:
-                print(
-                    f"warning: {FRAGMENTS_DIR}/{fragment.name} names no pull request and "
-                    "none added it on main — the entry goes out without one",
-                    file=sys.stderr,
-                )
-            else:
-                bullet = f"{bullet} (#{number})"
-        ordered.append((number if number is not None else sys.maxsize, fragment.name, fragment, bullet))
-    ordered.sort(key=lambda item: item[:2])
-
-    platforms = [platform] if platform else list(DESKTOP_PLATFORMS)
-    entries = {
-        name: [(fragment.section, bullet) for _, _, fragment, bullet in ordered if name in fragment.platforms]
-        for name in platforms
-    }
-    if platform:
-        label = DESKTOP_PLATFORMS[platform]
-        lead = f"A {label}-only patch. The other platforms are unchanged."
-        index_note = f" — {label}-only patch"
-    else:
-        touched = [DESKTOP_PLATFORMS[name] for name in platforms if entries[name]]
-        lead = f"Changes for {_join_names(touched)}."
-        index_note = ""
-    lines = [f"# desktop v{version}", "", lead, ""]
-    for name in platforms:
-        lines += _render_platform(name, entries[name])
-    changelog = "\n".join(lines).rstrip("\n") + "\n"
-
+    changelog = render_desktop_changelog(version, platform, _numbered_bullets(repo_root, fragments))
     index_path = repo_root / CHANGELOG_INDEX_FILE
+    index_note = f" — {DESKTOP_PLATFORMS[platform]}-only patch" if platform else ""
     index_source = _insert_changelog_link(
         index_path.read_text(encoding="utf-8"), version, index_note
     )
@@ -1126,12 +1134,9 @@ def assemble_desktop_changelog(
     _write_atomically(index_path, index_source)
     for fragment in fragments:
         path = repo_root / FRAGMENTS_DIR / fragment.name
-        remaining = tuple(name for name in fragment.platforms if name != platform) if platform else ()
+        remaining = tuple(name for name in fragment.platforms if platform and name != platform)
         if remaining:
-            _write_atomically(
-                path,
-                ChangelogFragment(fragment.name, remaining, fragment.section, fragment.bullet).render(),
-            )
+            _write_atomically(path, dataclasses.replace(fragment, platforms=remaining).render())
         else:
             path.unlink()
         changes.append(f"{FRAGMENTS_DIR}/{fragment.name}")

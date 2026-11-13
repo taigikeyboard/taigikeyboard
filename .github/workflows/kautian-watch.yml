@@ -172,6 +172,8 @@ jobs:
             printf '%s\n' '---' 'platforms: [macos, windows, linux, chromeos]' 'section: Candidates' '---' \
               "- The MOE Dictionary data is refreshed from the Ministry of Education's latest" \
               '  release.' > "$fragment"
+            # changelog.yml never sees this PR, so the format is checked here.
+            python3 tools/release_notes.py check-fragments
             git add -- "$fragment"
           fi
           branch="automation/kautian-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"

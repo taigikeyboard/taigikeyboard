@@ -9,6 +9,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
     labels:
+      - no-changelog
       - dependencies
       - rust
     groups:
@@ -28,6 +29,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
     labels:
+      - no-changelog
       - dependencies
       - rust
     groups:
@@ -73,6 +75,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
     labels:
+      - no-changelog
       - dependencies
       - rust
     groups:
@@ -92,6 +95,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
     labels:
+      - no-changelog
       - dependencies
       - rust
     ignore:
@@ -119,6 +123,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 3
     labels:
+      - no-changelog
       - dependencies
     groups:
       npm-minor-and-patch:
@@ -137,6 +142,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
     labels:
+      - no-changelog
       - dependencies
       - rust
       - linux
@@ -157,6 +163,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 5
     labels:
+      - no-changelog
       - dependencies
       - android
     groups:
@@ -176,6 +183,7 @@ updates:
       timezone: Asia/Taipei
     open-pull-requests-limit: 3
     labels:
+      - no-changelog
       - dependencies
       - github-actions
     groups:

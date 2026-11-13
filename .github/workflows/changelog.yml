@@ -6,7 +6,7 @@ name: Changelog
 # fragment present must also parse. Which paths count is decided in
 # `tools/release_notes.py` (`is_desktop_shipping_path`, unit-tested), not by a
 # `paths:` filter here, so the label events re-run it and nothing slips past a
-# filter. The `no-changelog` label, or a Dependabot author, waives the
+# filter. The `no-changelog` label (Dependabot sets it, .github/dependabot.yml) waives the
 # requirement but not the format check.
 on:
   pull_request:
@@ -34,7 +34,7 @@ jobs:
 
       - name: Fragments parse; a desktop change carries one
         env:
-          WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') || github.event.pull_request.user.login == 'dependabot[bot]' }}
+          WAIVED: ${{ contains(github.event.pull_request.labels.*.name, 'no-changelog') }}
         run: |
           set -euo pipefail
           if [ "$WAIVED" = true ]; then

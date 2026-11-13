@@ -46,4 +46,4 @@ CI (`.github/workflows/changelog.yml`) fails a pull request that changes
 desktop-shipping files (`DESKTOP_SHIPPING_PREFIXES` in
 `tools/release_notes.py`) without a fragment. Label it `no-changelog` when no
 desktop user can see the change: a refactor, a test, a mobile-only engine
-change. Dependabot pull requests are exempt.
+change. Dependabot pull requests carry the label (`.github/dependabot.yml`).
