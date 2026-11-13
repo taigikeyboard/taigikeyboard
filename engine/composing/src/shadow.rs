@@ -1611,7 +1611,7 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 /// precisely because the syllabifier returned no valid ending — TL `g`,
 /// TPS `ㄉ`, etc.). Emits the `tl:` / `poj:` / `tps:` family prefix
 /// matching `mode` via [`KeyFamily::for_input_mode`] so the byte-range scan in
-/// [`crate::continuous::fetch_via_lexicon_partial_inner`] hits the right
+/// `continuous::partial_prefix::fetch_via_lexicon_partial_inner` hits the right
 /// FST family. Returns `None` when the resulting toneless key is empty
 /// (raw was hyphen-only / digit-only for TL/POJ, bare tone mark for TPS)
 /// so the caller can short-circuit without firing an unbounded prefix

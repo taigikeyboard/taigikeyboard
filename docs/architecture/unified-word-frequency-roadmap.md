@@ -21,9 +21,9 @@ Fully toned TL `kau3siu7` puts the walker composition 到受 at slot 0; the dict
   1. single characters — `char_freq_merged.txt`, counting every occurrence of the character, **including inside other words** (到/*kàu* 17,333; 受/*siū* 8,975 in `output/dictionary.csv`);
   2. multi-syllable words — `khiin_frequency.csv` word counts (教授 *kàu-siū* 10);
   3. everything else — `get_default_frequency` = `50 // syllables` (25 for two syllables, 16 for three; 75,057 / 39,992 rows carry exactly 25 / 16, most but not all of them from this default).
-- Edge `frequency` = `EdgeBest::span_frequency`, the max over the key's homophones that pass the source / tone-pin / barrier filters (`engine/lexicon/src/continuous/mod.rs:1085-1121`; `engine/composing/src/continuous.rs:843-866`).
+- Edge `frequency` = `EdgeBest::span_frequency`, the max over the key's homophones that pass the source / tone-pin / barrier filters (`engine/lexicon/src/continuous/mod.rs:1085-1121`; `engine/composing/src/continuous/walk.rs` (`walk_buffer`)).
 - Numbers (old frequencies): 到 5.3177 + 受 5.8460 = 11.1636 < 教授 11.2279.
-- Slot 0 is the walker path (`continuous.rs:1310-1446`); the §22 promotion fires only when the walker's hanji already equals a full-span dictionary word of the same reading (`continuous.rs:1418`), so it cannot rescue 教授.
+- Slot 0 is the walker path (`continuous/assemble.rs`, `assemble_candidates` Step 4); the §22 promotion fires only when the walker's hanji already equals a full-span dictionary word of the same reading (`continuous/assemble.rs`, the §22 promote branch), so it cannot rescue 教授.
 - Control: `tai5gi2` → 台語 (freq 394, cost 8.66) — a word whose khiin count happens to be large enough.
 
 **Same-corpus recompute** (`dictionary/shared/data/word_unigrams.tsv`, N = 3,629,550 tokens, the current `+1` smoothing): 教授 246, 到/*kàu* 18,902, 受/*siū* 5,574 → 教授 7.7025 vs 到+受 9.4211 — 教授 wins. (The Lidstone model of §3 is measured in P1 / P2, not assumed.)
@@ -69,7 +69,7 @@ The custom entry, the learned-phrase floor and the user-selected floor become on
 
 - Exact translation of today's floor (`cost.rs:347-353`, `F = CUSTOM_EFFECTIVE_FREQ`, `s = clamp(δ / BOOST_ALPHA, 0, 1)`): `cap(s) = CUSTOM_EDGE_COST + ln((1 + F) / (1 + F·s))`, with `CUSTOM_EDGE_COST = ln(N / (1 + F))`. At `s = 0` the cap is `ln N` — no lift, finite.
 - Re-anchoring `CUSTOM_EDGE_COST` to the new distribution is a calibration decision, made in P3 by the rule used for 2,000 (a custom entry beats a top single-character split, never a top single character) and checked on dev before merge.
-- Custom (`continuous.rs:807`), learned (`continuous.rs:845-848`) and selected (`cost.rs:350`) share this one cap. Single-syllable edges keep `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE = 0.0` (no selection lift in segmentation).
+- Custom and learned (`continuous/walk.rs`, `walk_buffer`) and selected (`cost.rs:350`) share this one cap. Single-syllable edges keep `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE = 0.0` (no selection lift in segmentation).
 - Behaviour pinned by tests: zero δ, fresh selection, decay, saturation, single-syllable, learned-only, custom-only, and a learned row whose dictionary source is toggled off. Today's decay test (`cost.rs:766`) is rewritten from the new formula, its invariant kept.
 
 **D3 — which homophone prices the edge: (c) min `walker_cost` over the filtered homophones.** Today's "is this span a word" / "which word" decoupling (`continuous/mod.rs:1085`, `continuous-input-ranking.md` §3.2) re-expressed in the new scale; the per-edge pick (`pick_edge_word`, `CandidateSortKey` order) is unchanged. The min runs over exactly the rows that pass the source, tone-pin and barrier filters (filtering happens before aggregation, `continuous/mod.rs:704`).
