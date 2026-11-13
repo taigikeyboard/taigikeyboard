@@ -1,7 +1,7 @@
 //! §10.2 — `compound_hanji_exists` hermetic regression.
 //!
 //! Locks the dictionary-compound oracle the composing render/commit join
-//! (`composing::api::nailed_prefix`) uses to decide whether a contiguous
+//! (`composing::nailed::nailed_prefix`) uses to decide whether a contiguous
 //! run of manually-nailed single-syllable segments reconstructs a known
 //! n-syllable compound (查某 → `tsa-bóo`, 紅尾冬 → `Âng-bóe-tang`) and
 //! therefore renders its internal boundaries as hyphens. Synthetic FST +

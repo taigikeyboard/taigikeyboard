@@ -23,6 +23,7 @@ mod derived;
 mod external_insert;
 mod f_hyphen;
 mod lattice;
+mod nailed;
 mod shadow;
 pub mod telex;
 mod transition;

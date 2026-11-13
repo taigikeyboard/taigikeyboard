@@ -658,7 +658,7 @@ fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
 ///
 /// Consequence, deliberate: a single-syllable literal that inherits a
 /// dictionary word joins a compound run with the nailed prefix
-/// (`api::nailed_prefix`, `台` + literal `gí` → `tâi-gí`), exactly as the
+/// (`nailed::nailed_prefix`, `台` + literal `gí` → `tâi-gí`), exactly as the
 /// absorbed dictionary cell would have.
 fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCandidate]) {
     let Some(absorbed) = candidates

@@ -239,7 +239,7 @@ pub(super) fn record_to_candidate(
 ///   `dict.bin`-comparable frequency. `syllable_count` is read off the
 ///   canonical TL's separators, as for a learned phrase (陳建中
 ///   `Tân Kiàn-tiong` → 3, a Latin `iPhone` → 1): a nailed custom pick echoes
-///   it back, and the commit's compound run (`composing::api::longest_compound_run`)
+///   it back, and the commit's compound run (`composing::nailed::longest_compound_run`)
 ///   must not take a multi-syllable word for a single syllable. `is_custom = true`
 ///   gives `source_tier_rank` rank `0`, which is what governs the
 ///   `(canonical_tl, hanji)` dedupe winner. Its place in the list is

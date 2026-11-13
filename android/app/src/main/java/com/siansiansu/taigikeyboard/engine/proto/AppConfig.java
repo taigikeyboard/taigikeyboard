@@ -22,7 +22,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * only — `phonetics::api::hyphenless_display` is applied to the candidate
  * `roman` (`composing::requests`), the prediction `text`
  * (`nextword::filter`) and the engine-synthesised compound joiner
- * (`composing::api::nailed_prefix`); identity fields (`display_text`,
+ * (`composing::nailed::nailed_prefix`); identity fields (`display_text`,
  * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
  * applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
  * platform re-splits `roman` on `-` for bopomofo.
@@ -511,7 +511,7 @@ public  final class AppConfig extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
@@ -526,7 +526,7 @@ public  final class AppConfig extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
@@ -541,7 +541,7 @@ public  final class AppConfig extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
@@ -557,7 +557,7 @@ public  final class AppConfig extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
@@ -580,7 +580,7 @@ public  final class AppConfig extends
    * The user's dictionary switches — the one carrier of the composing source
    * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
    * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-   * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+   * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
    * read it. Absent = un-wired sender (test fixtures): every source on.
    * </pre>
    *
@@ -841,7 +841,7 @@ public  final class AppConfig extends
    * only — `phonetics::api::hyphenless_display` is applied to the candidate
    * `roman` (`composing::requests`), the prediction `text`
    * (`nextword::filter`) and the engine-synthesised compound joiner
-   * (`composing::api::nailed_prefix`); identity fields (`display_text`,
+   * (`composing::nailed::nailed_prefix`); identity fields (`display_text`,
    * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
    * applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
    * platform re-splits `roman` on `-` for bopomofo.
@@ -1358,7 +1358,7 @@ public  final class AppConfig extends
      * The user's dictionary switches — the one carrier of the composing source
      * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
      * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-     * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+     * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
      * read it. Absent = un-wired sender (test fixtures): every source on.
      * </pre>
      *
@@ -1373,7 +1373,7 @@ public  final class AppConfig extends
      * The user's dictionary switches — the one carrier of the composing source
      * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
      * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-     * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+     * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
      * read it. Absent = un-wired sender (test fixtures): every source on.
      * </pre>
      *
@@ -1388,7 +1388,7 @@ public  final class AppConfig extends
      * The user's dictionary switches — the one carrier of the composing source
      * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
      * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-     * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+     * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
      * read it. Absent = un-wired sender (test fixtures): every source on.
      * </pre>
      *
@@ -1404,7 +1404,7 @@ public  final class AppConfig extends
      * The user's dictionary switches — the one carrier of the composing source
      * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
      * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-     * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+     * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
      * read it. Absent = un-wired sender (test fixtures): every source on.
      * </pre>
      *
@@ -1421,7 +1421,7 @@ public  final class AppConfig extends
      * The user's dictionary switches — the one carrier of the composing source
      * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
      * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-     * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+     * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
      * read it. Absent = un-wired sender (test fixtures): every source on.
      * </pre>
      *
@@ -1437,7 +1437,7 @@ public  final class AppConfig extends
      * The user's dictionary switches — the one carrier of the composing source
      * filter (`engine/composing/src/requests.rs` `source_filter_bitmask`): the
      * `FetchAtPos` candidates, the TPS Hanji conversion walk and the nailed-join
-     * compound oracle (`engine/composing/src/api.rs` `nailed_join`, #772) all
+     * compound oracle (`engine/composing/src/nailed.rs` `nailed_join`, #772) all
      * read it. Absent = un-wired sender (test fixtures): every source on.
      * </pre>
      *

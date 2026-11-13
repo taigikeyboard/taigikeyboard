@@ -28,7 +28,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * and A1b retires that validation).
  *
  * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
- * composing-buffer join (`composing::api::nailed_prefix` /
+ * composing-buffer join (`composing::nailed::nailed_prefix` /
  * `combined_display`) inserts a word-boundary space between nailed
  * segments only when the rendered script is roman-ish. `is_hanji_first`
  * alone cannot distinguish "hanji-first" (no space) from "both-scripts"
