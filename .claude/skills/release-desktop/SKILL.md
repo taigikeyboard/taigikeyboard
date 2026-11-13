@@ -7,11 +7,11 @@ disable-model-invocation: true
 # Release Desktop
 
 The desktop train is macOS + Windows + Linux + ChromeOS, sharing one version, moved by
-`make version-desktop x.y.z`, unrelated to the mobile number. The mobile train
+`make version-desktop YYYY.M.P` (CalVer), unrelated to the mobile number. The mobile train
 has its own skill (`release-mobile`); a release never mixes the two.
 
 Run from `main`. Takes no version: **`<target>` is whatever version the tree
-already carries** — the maintainer sets it with `make version-desktop x.y.z`
+already carries** — the maintainer sets it with `make version-desktop YYYY.M.P`
 before invoking. Example: `/release-desktop`
 
 Optional arguments, in any order:
@@ -21,8 +21,8 @@ Optional arguments, in any order:
 - `<base-ref>` — overrides the derived release base.
   Example: `/release-desktop desktop-3.6.7`
 
-**Full release vs patch**: a full release (`x.y.0`) ships every platform; a
-patch (`x.y.z`, z > 0) ships only the platform it fixes. Policy:
+**Full release vs patch**: a full release (`YYYY.M.0`) ships every platform; a
+patch (`YYYY.M.P`, P > 0) ships only the platform it fixes. Policy:
 `docs/architecture/desktop-release.md` § Version numbers.
 
 This skill takes a release as far as it can go without a person: it rebuilds,
@@ -63,7 +63,7 @@ No `desktop-*` tag reachable from `HEAD` → stop and ask for `<base-ref>`.
 
 Then, before any edit:
 
-- Require `<target>` to match `MAJOR.MINOR.PATCH`, and
+- Require `<target>` to match `YYYY.M.P`, and
   `changelog/desktop-v<target>.md` to be absent or not yet published.
 - Kind check: a `<platform>` argument with a `.0` target, or no `<platform>`
   with a non-`.0` target, breaks the numbering convention — name the mismatch

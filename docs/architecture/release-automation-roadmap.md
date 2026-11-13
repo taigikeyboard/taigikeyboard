@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `release`, `release train`, `CalVer`, `changelog fragments`, `GitHub App`, `schedule`
-> **Status**: Accepted 2026-11-12 — Phase 0
+> **Status**: Accepted 2026-11-12 — Phase 1
 
 ## Goal
 
@@ -45,8 +45,8 @@ One phase = one PR unless marked admin.
 
 | # | Phase | Change | Needs from the maintainer | Status |
 |---|---|---|---|---|
-| 0 | Plan | This doc + project memory (admin lane) | — | In progress |
-| 1 | CalVer | `set-versions --train desktop` accepts `YYYY.M.P` (month 1–12, no leading zero, year ≥ 2026) and keeps the downgrade guard; `check-versions` and the macOS build number follow; `desktop-release.md` § Version numbers rewritten (full release `YYYY.M.0`, patch `YYYY.M.P`) | — | Pending |
+| 0 | Plan | This doc + project memory (admin lane) | — | Merged (direct to main 2026-11-12) |
+| 1 | CalVer | `set-versions --train desktop` accepts `YYYY.M.P` (month 1–12, no leading zero, year ≥ 2026) and keeps the downgrade guard; `check-versions` and the macOS build number follow; `desktop-release.md` § Version numbers rewritten (full release `YYYY.M.0`, patch `YYYY.M.P`). CalVer only from 3.9.0 on — a patch before the first train is `2026.11.P` (maintainer, 2026-11-13) | — | In progress |
 | 2 | Changelog fragments | `changelog/unreleased/<slug>.md` — front matter `platforms:` (macos / windows / linux / chromeos) + `section:` (Input / Candidates / Settings / Appearance / Updates / Install), body one bullet with `(#PR)`. `release_notes.py assemble --train desktop --version V` writes `changelog/desktop-vV.md` in today's shape (lead paragraph listing the platforms touched, `###` per platform, `####` per section, "No changes." for an empty platform) + the `CHANGELOG.md` link, then deletes the fragments. `checks.yml` fails a PR that changes desktop-shipping paths without a fragment, unless labelled `no-changelog`. `/release-desktop` assembles instead of writing; AGENTS.md § Conventions names the rule | — | Pending |
 | 3 | Release identity + hold | GitHub App `taigikeyboard-release` (contents + actions write on this repo, plus issues + pull requests write for the accent-contribution intake — `khiunnkhau-contrib-roadmap.md` Phase 2; contents write on `homebrew-tap`); on the bypass list of the `main` and release-tag rulesets; `RELEASE_APP_ID` (variable) + `RELEASE_APP_PRIVATE_KEY` (secret) in the `release` environment; tokens minted with `actions/create-github-app-token`. Repository variable `RELEASE_HOLD` documented | Create the App, install it, add it to both rulesets' bypass lists, store the two secrets | Pending |
 | 4 | macOS on a hosted runner | `macos-build.yml` (dispatch, `source_sha` like the Linux / ChromeOS builds): imports both Developer ID `.p12` into a temporary keychain, notarizes with an App Store Connect API key, attaches the `.pkg` to the draft. `stage-desktop.sh` dispatches it like the other three halves, so staging needs no Mac. `macos/scripts/release-app.sh` takes the API key in place of the keychain profile when it is set | Export both `.p12` (+ password) and an App Store Connect Team API key into the `release` environment: secrets `MACOS_DEVELOPER_ID_APPLICATION_P12`, `MACOS_DEVELOPER_ID_INSTALLER_P12` (base64), `MACOS_P12_PASSWORD`, `APPLE_API_KEY_P8`; variables `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID` | Pending |
@@ -65,7 +65,9 @@ Order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Phases 1 and 2 need nothing 
 | Resume | `gh variable delete RELEASE_HOLD`, then fix on `main` and re-run the cut (`gh workflow run desktop-train.yml`) — it re-stages the draft from the new commit — or let the next month's cut pick it up | Publishing follows on the next scheduled 5th, or `gh workflow run desktop-publish.yml` |
 | A published release needs a fix | Fix on `main`, `make version-desktop YYYY.M.P`, `/release-desktop <platform>`, publish by hand | One-platform patch as today; the train is untouched |
 
-Open for phase 1 / 5: a patch while the month's draft is staged (between the 1st and the 5th) would number below the tree's `YYYY.M.0`, which the downgrade guard refuses. Proposed: in that window the fix goes onto `main` and the train draft is re-cut instead of a separate patch.
+Between releases the tree carries the last **published** version; only the cut's release commit moves it to `YYYY.M.0` (maintainer, 2026-11-13). No pre-bump: a hold or an empty month would leave a wrong month in the tree, and a mid-month hotfix `YYYY.M.P` stays above the tree's number.
+
+Open for phase 5: a patch while the month's draft is staged (between the 1st and the 5th) would number below the tree's `YYYY.M.0`, which the downgrade guard refuses. Proposed: in that window the fix goes onto `main` and the train draft is re-cut instead of a separate patch.
 
 ## Best practices alignment
 

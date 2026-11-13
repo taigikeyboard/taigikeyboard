@@ -166,6 +166,15 @@ class MacOSVersionGateTests(unittest.TestCase):
                 ):
                     release_notes.macos_build_version(version)
 
+    def test_derives_a_calver_build_version_above_every_semver_one(self) -> None:
+        # trace: 2026*10_000 + 12*100 + 0 = 20_261_200 > 30_900 (3.9.0), so
+        # Installer upgrades 3.9.0 to the first CalVer release.
+        self.assertEqual(release_notes.macos_build_version("2026.12.0"), "20261200")
+        self.assertGreater(
+            int(release_notes.macos_build_version("2026.1.0")),
+            int(release_notes.macos_build_version("3.9.0")),
+        )
+
     def test_rejects_a_version_that_is_not_three_components(self) -> None:
         with self.assertRaisesRegex(
             release_notes.ReleaseNotesError, "MAJOR.MINOR.PATCH"
@@ -364,6 +373,12 @@ CHROMEOS_MANIFEST_FIXTURE = """{
 """
 
 
+# The version each train's writer tests move to: the desktop train is CalVer.
+NEXT_VERSION = {"mobile": "3.6.7", "desktop": "2026.12.0"}
+# A version below NEXT_VERSION on the same train.
+LOWER_VERSION = {"mobile": "3.6.5", "desktop": "2026.11.3"}
+
+
 PROJECT_FILES = (
     release_notes.ANDROID_GRADLE_FILE,
     release_notes.IOS_PROJECT_FILE,
@@ -479,26 +494,28 @@ class ProjectVersionWriterTests(unittest.TestCase):
         )
 
     def test_writes_the_desktop_trains_version_to_every_desktop_platform(self) -> None:
-        changes = release_notes.set_project_versions(self.repo_root, "3.7.0", "desktop")
+        # The fixture tree carries a SemVer desktop version, as the tree did
+        # before the first CalVer train: moving to CalVer is an upgrade.
+        changes = release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
 
-        release_notes.check_project_versions(self.repo_root, "3.7.0", "desktop")
+        release_notes.check_project_versions(self.repo_root, "2026.12.0", "desktop")
         self.assertEqual(
             changes,
             (
-                "macOS: CFBundleShortVersionString 3.6.6 -> 3.7.0, "
-                "CFBundleVersion 30606 -> 30700",
-                "windows/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
-                "desktop/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
-                "linux/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
-                "macos/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
-                "web/chromeos/manifest.json: version 3.6.6 -> 3.7.0",
+                "macOS: CFBundleShortVersionString 3.6.6 -> 2026.12.0, "
+                "CFBundleVersion 30606 -> 20261200",
+                "windows/Cargo.toml: workspace version 3.6.6 -> 2026.12.0",
+                "desktop/Cargo.toml: workspace version 3.6.6 -> 2026.12.0",
+                "linux/Cargo.toml: workspace version 3.6.6 -> 2026.12.0",
+                "macos/Cargo.toml: workspace version 3.6.6 -> 2026.12.0",
+                "web/chromeos/manifest.json: version 3.6.6 -> 2026.12.0",
             ),
         )
         # Only the version moved: the other keys, including the two that end
         # in "version", keep their values and the file keeps its layout.
         self.assertEqual(
             self.read(release_notes.CHROMEOS_MANIFEST_FILE),
-            CHROMEOS_MANIFEST_FIXTURE.replace('"version": "3.6.6"', '"version": "3.7.0"'),
+            CHROMEOS_MANIFEST_FIXTURE.replace('"version": "3.6.6"', '"version": "2026.12.0"'),
         )
 
     def test_check_refuses_a_chromeos_manifest_on_another_version(self) -> None:
@@ -516,10 +533,10 @@ class ProjectVersionWriterTests(unittest.TestCase):
     def test_refuses_to_move_a_chromeos_manifest_backwards(self) -> None:
         # The store refuses a version that is not higher than the last it took.
         self.write_tree(
-            chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE.replace('"3.6.6"', '"3.8.0"')
+            chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE.replace('"3.6.6"', '"2026.12.0"')
         )
 
-        self.assert_rejected("3.8.0", "3.7.0", "desktop")
+        self.assert_rejected("2026.12.0", "2026.11.0", "desktop")
 
     def test_check_refuses_a_chromeos_manifest_that_is_not_json(self) -> None:
         self.write_tree(chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE + "}")
@@ -569,7 +586,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
         mobile_before = {
             path: self.read(path) for path in release_notes.TRAIN_FILES["mobile"]
         }
-        release_notes.set_project_versions(self.repo_root, "4.0.0", "desktop")
+        release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
         self.assertEqual(
             {path: self.read(path) for path in release_notes.TRAIN_FILES["mobile"]},
             mobile_before,
@@ -586,9 +603,9 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 for relative_path in release_notes.TRAIN_FILES[other]:
                     (self.repo_root / relative_path).unlink()
 
-                release_notes.set_project_versions(self.repo_root, "3.6.7", train)
+                release_notes.set_project_versions(self.repo_root, NEXT_VERSION[train], train)
 
-                release_notes.check_project_versions(self.repo_root, "3.6.7", train)
+                release_notes.check_project_versions(self.repo_root, NEXT_VERSION[train], train)
 
     def test_rejects_an_unknown_train(self) -> None:
         self.assert_rejected("unknown release train", "3.6.7", "tablet")
@@ -599,7 +616,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
         self.write_tree(cargo=CARGO_FIXTURE.replace('version = "3.6.6"\n', ""))
 
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, "found 0"):
-            release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
+            release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
 
     def test_refuses_a_cargo_manifest_with_two_workspace_package_tables(self) -> None:
         # A duplicate key inside one table is TOML-invalid (Cargo refuses it);
@@ -609,15 +626,15 @@ class ProjectVersionWriterTests(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(release_notes.ReleaseNotesError, "found 2"):
-            release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
+            release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
 
     def test_moves_only_the_windows_workspace_version(self) -> None:
-        release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
+        release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
 
         cargo_source = self.read(release_notes.WINDOWS_CARGO_FILE)
         self.assertEqual(
             cargo_source,
-            CARGO_FIXTURE.replace('version = "3.6.6"', 'version = "3.6.7"'),
+            CARGO_FIXTURE.replace('version = "3.6.6"', 'version = "2026.12.0"'),
         )
         # The pinned dependency versions are not the release train's.
         self.assertIn('windows = { version = "0.62" }', cargo_source)
@@ -641,13 +658,13 @@ class ProjectVersionWriterTests(unittest.TestCase):
         )
 
     def test_keeps_the_plists_hand_written_comments(self) -> None:
-        release_notes.set_project_versions(self.repo_root, "3.6.7", "desktop")
+        release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
 
         plist_source = self.read(release_notes.MACOS_INFO_PLIST_FILE)
         self.assertIn("MAJOR*10000 + MINOR*100 + PATCH", plist_source)
         self.assertEqual(
             plist_source,
-            PLIST_FIXTURE.replace("3.6.6", "3.6.7").replace("30606", "30607"),
+            PLIST_FIXTURE.replace("3.6.6", "2026.12.0").replace("30606", "20261200"),
         )
 
     def test_pins_the_ios_build_number_to_one(self) -> None:
@@ -672,27 +689,67 @@ class ProjectVersionWriterTests(unittest.TestCase):
         self.assertIn("CURRENT_PROJECT_VERSION 9 -> 1", changes[1])
 
     def test_rerunning_the_current_version_changes_nothing(self) -> None:
+        for train in release_notes.TRAIN_CHOICES:
+            release_notes.set_project_versions(self.repo_root, NEXT_VERSION[train], train)
         before = self.snapshot()
 
         for train in release_notes.TRAIN_CHOICES:
-            release_notes.set_project_versions(self.repo_root, "3.6.6", train)
+            release_notes.set_project_versions(self.repo_root, NEXT_VERSION[train], train)
 
         self.assertEqual(self.snapshot(), before)
 
     def test_rejects_a_version_that_goes_backwards(self) -> None:
         for train in release_notes.TRAIN_CHOICES:
             with self.subTest(train=train):
-                self.assert_rejected("lower than", "3.6.5", train)
+                release_notes.set_project_versions(self.repo_root, NEXT_VERSION[train], train)
+                self.assert_rejected("lower than", LOWER_VERSION[train], train)
+
+    def test_the_desktop_train_takes_only_calver(self) -> None:
+        for version in (
+            "3.9.1",  # SemVer: the desktop train left it after 3.9.0
+            "2025.12.0",  # before the first CalVer year
+            "2026.13.0",
+            "2026.0.0",
+            "2026.01.0",  # leading zero: Cargo's SemVer parser refuses it
+            "2026.12.01",
+            "02026.12.0",
+        ):
+            with self.subTest(version=version):
+                self.assert_rejected("YYYY.M.P", version, "desktop")
+        # Allowing a downgrade relaxes the order, never the format.
+        self.assert_rejected("YYYY.M.P", "3.9.1", "desktop", allow_downgrade=True)
+
+    def test_the_desktop_train_takes_a_v_prefix_like_the_mobile_train(self) -> None:
+        release_notes.set_project_versions(self.repo_root, "v2026.12.0", "desktop")
+
+        release_notes.check_project_versions(self.repo_root, "2026.12.0", "desktop")
+
+    def test_the_desktop_train_takes_a_monthly_patch_and_the_next_months_cut(self) -> None:
+        for version in ("2026.11.1", "2026.12.0", "2026.12.1", "2027.1.0"):
+            with self.subTest(version=version):
+                release_notes.set_project_versions(self.repo_root, version, "desktop")
+                release_notes.check_project_versions(self.repo_root, version, "desktop")
+
+    def test_a_patch_counter_past_99_is_refused(self) -> None:
+        # trace: 2026.11.100 -> 2026*10_000 + 11*100 + 100 = 20_261_200, the
+        # build version of 2026.12.0 — Installer would refuse that upgrade.
+        release_notes.set_project_versions(self.repo_root, "2026.11.0", "desktop")
+        self.assert_rejected("would collide", "2026.11.100", "desktop")
+
+    def test_the_mobile_train_keeps_semver(self) -> None:
+        release_notes.set_project_versions(self.repo_root, "3.10.0", "mobile")
+
+        release_notes.check_project_versions(self.repo_root, "3.10.0", "mobile")
 
     def test_judges_a_downgrade_against_its_own_train_only(self) -> None:
         # Desktop moved ahead; mobile going to a number below desktop's is
         # not a downgrade of anything mobile has shipped.
-        release_notes.set_project_versions(self.repo_root, "4.0.0", "desktop")
+        release_notes.set_project_versions(self.repo_root, "2026.12.0", "desktop")
 
         release_notes.set_project_versions(self.repo_root, "3.6.7", "mobile")
 
         release_notes.check_project_versions(self.repo_root, "3.6.7", "mobile")
-        release_notes.check_project_versions(self.repo_root, "4.0.0", "desktop")
+        release_notes.check_project_versions(self.repo_root, "2026.12.0", "desktop")
 
     def test_allows_a_downgrade_when_asked_for_one(self) -> None:
         release_notes.set_project_versions(
@@ -737,17 +794,17 @@ class ProjectVersionWriterTests(unittest.TestCase):
             )
         )
 
-        self.assert_rejected("cannot read", "3.6.7", "desktop")
+        self.assert_rejected("cannot read", "2026.12.0", "desktop")
 
     def test_rejects_an_xml_plist_that_is_not_a_plist(self) -> None:
         self.write_tree(plist="{ not a plist }\n")
 
-        self.assert_rejected("is not XML text", "3.6.7", "desktop")
+        self.assert_rejected("is not XML text", "2026.12.0", "desktop")
 
     def test_reports_a_missing_project_file_without_touching_the_others(self) -> None:
         (self.repo_root / release_notes.MACOS_INFO_PLIST_FILE).unlink()
 
-        self.assert_rejected("missing macos/", "3.6.7", "desktop")
+        self.assert_rejected("missing macos/", "2026.12.0", "desktop")
 
     def test_restores_the_tree_when_a_later_write_fails(self) -> None:
         before = self.snapshot()
@@ -792,7 +849,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
             modes[relative_path] = stat.S_IMODE(path.stat().st_mode)
 
         for train in release_notes.TRAIN_CHOICES:
-            release_notes.set_project_versions(self.repo_root, "3.6.7", train)
+            release_notes.set_project_versions(self.repo_root, NEXT_VERSION[train], train)
 
         for relative_path, mode in modes.items():
             self.assertEqual(

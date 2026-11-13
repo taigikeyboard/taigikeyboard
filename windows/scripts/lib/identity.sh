@@ -1,7 +1,7 @@
 # Shared by the Windows release scripts: where things are and what version
 # this checkout is. The version's single source of truth is
 # `windows/Cargo.toml` `[workspace.package] version` (roadmap W8), which the
-# repo-root `make version-desktop x.y.z` writes alongside macOS (the desktop
+# repo-root `make version-desktop YYYY.M.P` writes alongside macOS (the desktop
 # train; iOS + Android are numbered separately).
 
 fail() {

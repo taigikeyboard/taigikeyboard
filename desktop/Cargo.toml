@@ -7,7 +7,7 @@
 # would then own crates the other links).
 #
 # Version = the desktop release train's (macOS + Windows + Linux share one
-# number); `make version-desktop x.y.z` at the repo root writes it here
+# number); `make version-desktop YYYY.M.P` at the repo root writes it here
 # alongside `windows/Cargo.toml`, the source of truth.
 # Design record: docs/architecture/linux-roadmap.md L2 (the move),
 # docs/architecture/windows-roadmap.md W1 (the split by dependency class).

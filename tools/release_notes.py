@@ -50,6 +50,13 @@ PLATFORM_FORBIDDEN_TERMS = {
     "android": ("App Store", "TestFlight", *MACOS_TERMS),
 }
 VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
+# The desktop train is CalVer `YYYY.M.P` after 3.9.0 (docs/architecture/desktop-release.md
+# § Version numbers). No leading zeros: Cargo reads the workspace version as
+# SemVer, which refuses them.
+DESKTOP_VERSION_PATTERN = re.compile(
+    r"^(?P<year>[1-9]\d{3})\.(?:[1-9]|1[0-2])\.(?:0|[1-9]\d*)$"
+)
+FIRST_DESKTOP_CALVER_YEAR = 2026
 # `MAJOR*10000 + MINOR*100 + PATCH` only stays collision-free while each of the
 # lower two components fits its own decimal field: 3.1.100 and 3.2.0 both derive
 # to 30200, and two releases sharing a build version is an Installer that
@@ -147,6 +154,16 @@ def normalize_version(raw_version: str) -> str:
             f"version must use vMAJOR.MINOR.PATCH or MAJOR.MINOR.PATCH: {raw_version!r}",
         )
     return match.group(1)
+
+
+def require_desktop_calver(version: str) -> None:
+    """Refuse a desktop version that is not `YYYY.M.P`; takes a normalized version."""
+    match = DESKTOP_VERSION_PATTERN.fullmatch(version)
+    if match is None or int(match["year"]) < FIRST_DESKTOP_CALVER_YEAR:
+        raise ReleaseNotesError(
+            f"desktop version must be YYYY.M.P — year {FIRST_DESKTOP_CALVER_YEAR} or later, "
+            f"month 1-12, no leading zeros (e.g. 2026.12.0, patch 2026.12.1): {version!r}",
+        )
 
 
 def notes_path(repo_root: Path, version: str, platform: str) -> Path:
@@ -664,7 +681,8 @@ def set_project_versions(
 ) -> tuple[str, ...]:
     """Write `version` into one train's two project files, or into neither.
 
-    Accepts `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH`. The rewritten contents
+    Accepts `vMAJOR.MINOR.PATCH` or `MAJOR.MINOR.PATCH`; the desktop train
+    takes only `YYYY.M.P` (`require_desktop_calver`). The rewritten contents
     are held to the same gate the release flow runs, before any real file is
     touched, so a version that gate would reject never reaches the tree. The
     other train's files are never read, let alone written.
@@ -678,6 +696,8 @@ def set_project_versions(
         raise ReleaseNotesError(
             f"unknown release train {train!r}; expected one of {TRAIN_CHOICES}"
         )
+    if train == "desktop":
+        require_desktop_calver(version)
 
     sources = {
         relative_path: read_text_file(repo_root, relative_path)
