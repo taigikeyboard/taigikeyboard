@@ -53,7 +53,7 @@ fn pick((hanji, tl, consumed_bytes, syllable_count): Pick<'_>) -> Intent {
         consumed_bytes,
         syllable_count,
         script: Some(CommitScript::Roman),
-        roman: hanji.unwrap_or(tl).to_string(),
+        roman: tl.to_string(),
     }
 }
 
@@ -137,7 +137,7 @@ fn confirm_composition_then_insert_learns_the_same_phrase_without_the_literal() 
     assert_eq!(applied.usage.unwrap().canonical_tl, "khí-lâi");
     assert_eq!(
         crate::common::commit_text(&applied.response).as_deref(),
-        Some("記 khí-lâi? ")
+        Some("kì khí-lâi? ")
     );
 }
 
@@ -459,11 +459,7 @@ fn commit_picks(
     let mut e = engine_in_continuous(raw);
     let mut last = None;
     for p in picks {
-        let mut intent = pick(*p);
-        if let Intent::CommitContinuous { roman, .. } = &mut intent {
-            p.1.clone_into(roman);
-        }
-        last = Some(e.apply_learning(intent, config));
+        last = Some(e.apply_learning(pick(*p), config));
     }
     let applied = last.expect("at least one pick");
     (applied.learned, commit_text(&applied.response))
@@ -520,6 +516,28 @@ fn a_compound_needs_the_reading_the_user_picked() {
             "tsa1boo2",
             &[(Some("查"), "tsa", 4, 1), (Some("某"), "bóo", 4, 1)],
             &config
+        ),
+        (phrase("查某", "tsa-bóo"), Some("tsa-bóo".into()))
+    );
+    // #853: romanization picks under Hanji-first (`is_hanji_first = true`)
+    // follow the same compound and word-spacing join (`tsa-bóo` / `tshâ bóo`).
+    let hanji_first = AppConfig {
+        is_hanji_first: true,
+        ..config
+    };
+    assert_eq!(
+        commit_picks(
+            "tsha5boo2",
+            &[(Some("查"), "tshâ", 5, 1), (Some("某"), "bóo", 4, 1)],
+            &hanji_first
+        ),
+        (phrase("查某", "tshâ bóo"), Some("tshâ bóo".into()))
+    );
+    assert_eq!(
+        commit_picks(
+            "tsa1boo2",
+            &[(Some("查"), "tsa", 4, 1), (Some("某"), "bóo", 4, 1)],
+            &hanji_first
         ),
         (phrase("查某", "tsa-bóo"), Some("tsa-bóo".into()))
     );
@@ -1023,4 +1041,38 @@ fn a_custom_word_keeps_its_syllables_in_the_compound_run() {
     assert_eq!(custom.syllable_count, 2, "kì-khí is two syllables");
     let fin = engine.apply_learning(commit(&custom), &cfg);
     assert_eq!(fin.learned, phrase("來記", "lâi kì-khí"));
+}
+
+#[test]
+fn roman_first_hanji_pick_then_insert_preserves_learning() {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let mut engine = engine_in_continuous("kikhilai");
+    let mut first = pick((Some("記"), "kì", 2, 1));
+    if let Intent::CommitContinuous { script, .. } = &mut first {
+        *script = Some(CommitScript::Hanji);
+    }
+    engine.apply(first, &config_tl());
+    let request = req(Method::ConfirmCompositionThenInsert(
+        protos::engine::ConfirmCompositionThenInsert {
+            candidate: Some(CommitContinuous {
+                consumed_bytes: 6,
+                syllable_count: 2,
+                canonical_text: "起來".into(),
+                association_tl: "khí-lâi".into(),
+                hanji: Some("起來".into()),
+                script: protos::engine::CommitScript::Lead as i32,
+                roman: "khí-lâi".into(),
+            }),
+            text: "?".into(),
+            auto_space_enabled: true,
+        },
+    ));
+    let applied = engine.apply_learning(requests::decode_intent(&request).unwrap(), &config_tl());
+    assert_eq!(applied.learned, phrase("記起來", "kì khí-lâi"));
+    assert_eq!(applied.usage.unwrap().canonical_tl, "khí-lâi");
+    assert_eq!(
+        crate::common::commit_text(&applied.response).as_deref(),
+        Some("記khí-lâi? ")
+    );
 }

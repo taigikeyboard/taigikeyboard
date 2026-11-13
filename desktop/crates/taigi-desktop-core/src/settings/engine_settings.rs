@@ -276,12 +276,13 @@ impl SettingChoice for SyllableSeparator {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineSettings {
     pub input_mode: InputMode,
-    /// Word-boundary spacing input for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-commit-and-display.md` §10.2). The
-    /// EFFECTIVE value: the stored toggle AND-ed with `candidate_display_mode
-    /// != RomanOnly`, and forced true under `Combined`
-    /// (`SettingsDocument::engine_settings`), never the raw document bool —
-    /// the raw one stays untouched so leaving either mode restores it.
+    /// Lead-script selector for candidate display, commit resolution, and
+    /// NextWord shaping (`docs/engine/continuous-commit-and-display.md` §10.2–§10.3;
+    /// internal word boundaries read the rendered edges via
+    /// `has_word_space_boundary`). The EFFECTIVE value: the stored toggle
+    /// AND-ed with `candidate_display_mode != RomanOnly`, and forced true under
+    /// `Combined` (`SettingsDocument::engine_settings`), never the raw document
+    /// bool — the raw one stays untouched so leaving either mode restores it.
     pub is_hanji_first: bool,
     /// `CandidateDisplayMode::effective_full_width_punctuation(stored)` —
     /// read by the composing intent executor's `document_punctuation`.

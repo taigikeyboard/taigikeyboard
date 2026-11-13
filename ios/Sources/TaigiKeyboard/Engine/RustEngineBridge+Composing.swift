@@ -455,15 +455,16 @@ public extension RustEngineBridge {
     // MARK: - Private dispatch (composing envelope)
 
     /// The composing `AppConfig`: the live settings through `appConfig`,
-    /// including the two v3.5.8 §10.2 word-boundary-spacing flags the
-    /// engine's `continuous_word_space` predicate consumes.
+    /// including `is_hanji_first` (commit-script resolution) and
+    /// `output_both_scripts` (consumed by `has_word_space_boundary`,
+    /// `docs/engine/continuous-commit-and-display.md` §10.2).
     ///
     /// The swap is the Candidate-Display-projected setting; a TPS layout is
     /// sent as `"tps"` and the engine reads it as Hanji-first itself
     /// (`AppConfig::renders_hanji_first`). `outputBothScripts`
-    /// distinguishes hanji-first (no inter-segment space) from
-    /// both-scripts (`hit (彼)` — space wanted); `is_hanji_first`
-    /// is `true` for both, so the second flag is required.
+    /// distinguishes single-script Hanji (`彼隻`) from bracketed both-scripts
+    /// (`彼 (hit) 隻 (tui)` — space wanted); `is_hanji_first` is `true` for
+    /// both, so the second flag is required.
     ///
     /// Every composing op that renders the composition sends it — under
     /// Model B that is every mutation and every snapshot, not only the

@@ -95,12 +95,12 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
     // Model B: effect[0] is UpdatePreedit carrying the whole composition —
     // the just-nailed "珠" + derived pending "a" = "珠a".
     let preedit = resp.preedit.as_ref().expect("preedit");
-    assert_eq!(preedit.display_text, "珠 a");
+    assert_eq!(preedit.display_text, "珠a");
     assert_eq!(preedit.raw_input, "a");
     let Kind::UpdatePreedit(up) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
     };
-    assert_eq!(up.display, "珠 a");
+    assert_eq!(up.display, "珠a");
     let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[1].kind.as_ref().unwrap() else {
         unreachable!();
     };
@@ -417,7 +417,7 @@ fn append_under_continuous_extends_pending_only() {
     // pending tail only.
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "aguah");
-    assert_eq!(preedit.display_text, "珠 aguah");
+    assert_eq!(preedit.display_text, "珠aguah");
 }
 
 #[test]
@@ -462,7 +462,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
     // Model B: combined preedit = 珠 + derived("agui") = "珠agui".
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "agui");
-    assert_eq!(preedit.display_text, "珠 agui");
+    assert_eq!(preedit.display_text, "珠agui");
 }
 
 // ---- DeleteBackward (folded backspace) under Continuous -----------
@@ -590,7 +590,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
     // Combined = 珠 + derived("a") = "珠a".
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "a");
-    assert_eq!(preedit.display_text, "珠 a");
+    assert_eq!(preedit.display_text, "珠a");
 }
 
 #[test]
@@ -681,7 +681,7 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
     // pending), but display_text is the whole composition: nailed "珠" +
     // derived("agua").
     assert_eq!(preedit.raw_input, "agua");
-    assert_eq!(preedit.display_text, "珠 agua");
+    assert_eq!(preedit.display_text, "珠agua");
     assert!(resp.is_composing);
 }
 
@@ -920,7 +920,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
         unreachable!();
     };
     // Model B: whole composition — nailed "紙" + pending tail "li2" → "lí".
-    assert_eq!(commit.text, "紙 lí");
+    assert_eq!(commit.text, "紙lí");
     // Terminal NextWordWordSelected is for the pending tail "word"; the
     // nailed 紙 precedes it (raw slice — no association TL was sent).
     let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
@@ -1135,7 +1135,7 @@ fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {
     };
     // Model B: Σ nailed.display_text ("珠") + derived(pending "a" → "a")
     // + external ("!") = "珠a!".
-    assert_eq!(commit.text, "珠 a!");
+    assert_eq!(commit.text, "珠a!");
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 

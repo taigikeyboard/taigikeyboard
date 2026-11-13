@@ -266,6 +266,103 @@ fn a_mixed_han_lo_candidate_appends_a_space_only_with_auto_space_on() {
 }
 
 #[test]
+fn hanji_led_multi_segment_selections_preserve_internal_and_trailing_roman_spacing() {
+    // #853: `siannmihtaitsi` → pick `啥mih` → pick romanization `tāi-tsì` via
+    // CommitAlternateScript commits `"啥mih tāi-tsì"` (and trailing space when
+    // Auto-Space is on). Selecting Hanji `代誌` instead commits `"啥mih代誌"`
+    // with neither internal nor trailing space.
+    for enabled in [false, true] {
+        let mut rig = configured_rig(enabled, |settings| {
+            settings.set_bool(&keys::IS_HANJI_FIRST, true);
+            settings.set_bool(&keys::IS_LKK_ENABLED, true);
+        });
+        rig.type_word("siannmihtaitsi");
+        rig.surface.selected = Some(
+            rig.list
+                .cells()
+                .iter()
+                .position(|cell| cell.text == "啥mih")
+                .expect("production dictionary offers 啥mih"),
+        );
+        assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+        rig.surface.calls.clear();
+
+        rig.surface.selected = Some(
+            rig.list
+                .cells()
+                .iter()
+                .position(|cell| {
+                    cell.text == "代誌" && cell.annotation.as_deref() == Some("tāi-tsì")
+                })
+                .expect("production dictionary offers 代誌 / tāi-tsì"),
+        );
+        assert!(rig.run(ComposingKeyIntent::CommitAlternateScript, &no_key()));
+        let expected = if enabled {
+            vec!["commit 啥mih tāi-tsì", "list closed", "insert \" \"", "arm"]
+        } else {
+            vec!["commit 啥mih tāi-tsì", "list closed"]
+        };
+        assert_eq!(rig.calls(), expected);
+    }
+
+    // Same `啥mih` prefix followed by Hanji `頭路`: no internal or trailing space.
+    let mut rig = configured_rig(true, |settings| {
+        settings.set_bool(&keys::IS_HANJI_FIRST, true);
+        settings.set_bool(&keys::IS_LKK_ENABLED, true);
+    });
+    rig.type_word("siannmihthauloo");
+    rig.surface.selected = Some(
+        rig.list
+            .cells()
+            .iter()
+            .position(|cell| cell.text == "啥mih")
+            .expect("production dictionary offers 啥mih"),
+    );
+    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+    rig.surface.calls.clear();
+
+    rig.surface.selected = Some(
+        rig.list
+            .cells()
+            .iter()
+            .position(|cell| cell.text == "頭路")
+            .expect("production dictionary offers 頭路"),
+    );
+    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+    assert_eq!(rig.calls(), ["commit 啥mih頭路", "list closed"]);
+    drop(rig);
+
+    // Pure romanization picks under Hanji-first (`iauleh` → `iáu` → `leh`):
+    // spaced internally (`"iáu leh"`) and followed by auto-space when enabled.
+    let mut rig = configured_rig(true, |settings| {
+        settings.set_bool(&keys::IS_HANJI_FIRST, true);
+    });
+    rig.type_word("iauleh");
+    rig.surface.selected = Some(
+        rig.list
+            .cells()
+            .iter()
+            .position(|cell| cell.text == "猶" && cell.annotation.as_deref() == Some("iáu"))
+            .expect("production dictionary offers 猶 / iáu"),
+    );
+    assert!(rig.run(ComposingKeyIntent::CommitAlternateScript, &no_key()));
+    rig.surface.calls.clear();
+
+    rig.surface.selected = Some(
+        rig.list
+            .cells()
+            .iter()
+            .position(|cell| cell.text == "咧" && cell.annotation.as_deref() == Some("leh"))
+            .expect("production dictionary offers 咧 / leh"),
+    );
+    assert!(rig.run(ComposingKeyIntent::CommitAlternateScript, &no_key()));
+    assert_eq!(
+        rig.calls(),
+        ["commit iáu leh", "list closed", "insert \" \"", "arm"]
+    );
+}
+
+#[test]
 fn a_slot_past_the_list_or_no_highlight_is_consumed_and_commits_nothing() {
     let mut rig = new_rig(true);
     rig.type_word("ho");

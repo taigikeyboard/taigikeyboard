@@ -225,34 +225,34 @@ fn continuous_resets_the_caret_on_nail_and_never_enters_a_segment() {
     assert_eq!(caret_of(&engine), 3);
     assert_eq!(preedit(&resp).caret_utf16, 3);
 
-    // Nail 珠 over "tsu" (3 bytes): pending "a", caret at its end (1).
-    // Display under TL (roman spacing): "珠 a" — prefix 2 units, so the
-    // caret is 3.
+    // Nail "tsu" (珠) over "tsu" (3 bytes): pending "a", caret at its end (1).
+    // Display under TL (roman spacing): "tsu a" — prefix "tsu " is 4 units, so
+    // the caret is 5.
     let resp = engine.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),
-            association_tl: String::new(),
-            hanji: None,
+            association_tl: "tsu".to_string(),
+            hanji: Some("珠".to_string()),
             consumed_bytes: 3,
             syllable_count: 1,
             script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
+            roman: "tsu".to_string(),
         },
         &config_tl(),
     );
     let p = preedit(&resp);
     assert_eq!(
         (p.raw_input.as_str(), p.display_text.as_str()),
-        ("a", "珠 a")
+        ("a", "tsu a")
     );
-    assert_eq!(p.caret_utf16, 3);
+    assert_eq!(p.caret_utf16, 5);
     assert_eq!(caret_of(&engine), 1);
 
-    // ← puts the caret before the a (display 2, after "珠 "); ← again does
+    // ← puts the caret before the a (display 4, after "tsu "); ← again does
     // not enter the nailed segment.
     assert_eq!(
         preedit(&move_caret(&mut engine, CaretDirection::Left)).caret_utf16,
-        2
+        4
     );
     let resp = move_caret(&mut engine, CaretDirection::Left);
     assert!(resp.effect.is_empty());
@@ -268,7 +268,7 @@ fn continuous_resets_the_caret_on_nail_and_never_enters_a_segment() {
     ));
 
     // → then backspace empties the pending tail (still Continuous, as
-    // before this round); the next backspace unnails 珠 — its raw text comes
+    // before this round); the next backspace unnails "tsu" — its raw text comes
     // back as the tail with the caret at its end. One segment popped leaves
     // none, so NextWord is cleared rather than re-pointed.
     move_caret(&mut engine, CaretDirection::Right);
@@ -304,19 +304,19 @@ fn start_puts_the_caret_at_the_end() {
 
 #[test]
 fn continuous_mid_tail_append_keeps_the_nailed_prefix_and_projects_the_caret() {
-    // "tsua" → nail 珠 over "tsu" → pending "a" (caret 1). Type "i" then ←
+    // "tsua" → nail "tsu" over "tsu" → pending "a" (caret 1). Type "i" then ←
     // then "h": "ai" caret 2 → ← caret 1 → insert h at 1 → "ahi" caret 2.
-    // Display "珠 ahi": prefix "珠 " is 2 units, a→1, h→2; caret 4.
+    // Display "tsu ahi": prefix "tsu " is 4 units, a→1, h→2; caret 6.
     let mut engine = start("tsua");
     engine.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),
-            association_tl: String::new(),
-            hanji: None,
+            association_tl: "tsu".to_string(),
+            hanji: Some("珠".to_string()),
             consumed_bytes: 3,
             syllable_count: 1,
             script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
+            roman: "tsu".to_string(),
         },
         &config_tl(),
     );
@@ -337,16 +337,16 @@ fn continuous_mid_tail_append_keeps_the_nailed_prefix_and_projects_the_caret() {
     let p = preedit(&resp);
     assert_eq!(
         (p.raw_input.as_str(), p.display_text.as_str()),
-        ("ahi", "珠 ahi")
+        ("ahi", "tsu ahi")
     );
-    assert_eq!(p.caret_utf16, 4);
+    assert_eq!(p.caret_utf16, 6);
     assert_eq!(caret_of(&engine), 2);
 }
 
 #[test]
 fn hanji_first_prefix_has_no_space_before_the_tail() {
-    // Same nail under hanji-first (swapped, single script): "珠a", no
-    // separator, so the caret after the a is 2 and before it 1.
+    // Hanji nail under hanji-first: "珠a", no separator, so the caret after
+    // the a is 2 and before it 1.
     let mut config = config("tl");
     config.is_hanji_first = true;
     let mut engine = Engine::new();
@@ -359,12 +359,12 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
     let resp = engine.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),
-            association_tl: String::new(),
-            hanji: None,
+            association_tl: "tsu".to_string(),
+            hanji: Some("珠".to_string()),
             consumed_bytes: 3,
             syllable_count: 1,
-            script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
+            script: Some(CommitScript::Lead),
+            roman: "tsu".to_string(),
         },
         &config,
     );
@@ -380,35 +380,75 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
 }
 
 #[test]
+fn hanji_first_mixed_han_lo_prefix_projects_caret_past_the_boundary_space() {
+    // #853: under hanji-first, nailing `啥mih` over "siannmih" (8 bytes) out of
+    // "siannmihtaitsi" renders `"啥mih taitsi"` — prefix `"啥mih "` is 5 UTF-16
+    // units (`啥` + `m` + `i` + `h` + ` `), so Start lands at 5 and End at 11.
+    let mut config = config("tl");
+    config.is_hanji_first = true;
+    let mut engine = Engine::new();
+    engine.apply(
+        Intent::Start {
+            text: "siannmihtaitsi".to_string(),
+        },
+        &config,
+    );
+    let resp = engine.apply(
+        Intent::CommitContinuous {
+            canonical_text: "啥mih".to_string(),
+            association_tl: "siánn-mih".to_string(),
+            hanji: Some("啥mih".to_string()),
+            consumed_bytes: 8,
+            syllable_count: 2,
+            script: Some(CommitScript::Lead),
+            roman: "siánn-mih".to_string(),
+        },
+        &config,
+    );
+    let p = preedit(&resp);
+    assert_eq!(
+        (p.display_text.as_str(), p.caret_utf16),
+        ("啥mih taitsi", 11)
+    );
+    let resp = engine.apply(
+        Intent::MoveCaret {
+            direction: Some(CaretDirection::Start),
+        },
+        &config,
+    );
+    assert_eq!(preedit(&resp).caret_utf16, 5);
+}
+
+#[test]
 fn start_stops_at_the_tail_after_a_nailed_segment() {
-    // trace: "tsua", nail 珠 over "tsu" → pending "a", display "珠 a"
-    // (prefix 2 units). Start → raw caret 0 = display 2, right after the
+    // trace: "tsua", nail "tsu" over "tsu" → pending "a", display "tsu a"
+    // (prefix 4 units). Start → raw caret 0 = display 4, right after the
     // prefix; Start again: no effect, still one segment nailed (Start never
-    // re-opens). End → back to 1 (display 3).
+    // re-opens). End → back to 1 (display 5).
     let mut engine = start("tsua");
     engine.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),
-            association_tl: String::new(),
-            hanji: None,
+            association_tl: "tsu".to_string(),
+            hanji: Some("珠".to_string()),
             consumed_bytes: 3,
             syllable_count: 1,
             script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
+            roman: "tsu".to_string(),
         },
         &config_tl(),
     );
     let resp = move_caret(&mut engine, CaretDirection::Start);
     assert_eq!(kinds(&resp), vec!["UpdatePreedit"]);
     assert_eq!(caret_of(&engine), 0);
-    assert_eq!(preedit(&resp).caret_utf16, 2);
+    assert_eq!(preedit(&resp).caret_utf16, 4);
     let resp = move_caret(&mut engine, CaretDirection::Start);
     assert!(resp.effect.is_empty());
-    assert_eq!(preedit(&resp).display_text, "珠 a");
+    assert_eq!(preedit(&resp).display_text, "tsu a");
 
     let resp = move_caret(&mut engine, CaretDirection::End);
     assert_eq!(caret_of(&engine), 1);
-    assert_eq!(preedit(&resp).caret_utf16, 3);
+    assert_eq!(preedit(&resp).caret_utf16, 5);
 }
 
 #[test]
@@ -455,4 +495,55 @@ fn move_caret_on_the_wire_decodes_left_right_and_treats_unspecified_as_a_no_op()
     }
     assert_eq!(kinds(&apply(&mut engine, right)), vec!["UpdatePreedit"]);
     assert_eq!(caret_of(&engine), 3);
+}
+
+#[test]
+fn backspace_across_mixed_boundary_restores_the_raw_pick() {
+    // #853: under hanji-first, nailing `啥mih` over "siannmih" (8 bytes) out of
+    // "siannmihtaitsi" renders `"啥mih taitsi"` — prefix `"啥mih "` is 5 UTF-16
+    // units (`啥` + `m` + `i` + `h` + ` `), so Start lands at 5 and End at 11.
+    let mut config = config("tl");
+    config.is_hanji_first = true;
+    let mut engine = Engine::new();
+    engine.apply(
+        Intent::Start {
+            text: "siannmihtaitsi".to_string(),
+        },
+        &config,
+    );
+    let resp = engine.apply(
+        Intent::CommitContinuous {
+            canonical_text: "啥mih".to_string(),
+            association_tl: "siánn-mih".to_string(),
+            hanji: Some("啥mih".to_string()),
+            consumed_bytes: 8,
+            syllable_count: 2,
+            script: Some(CommitScript::Lead),
+            roman: "siánn-mih".to_string(),
+        },
+        &config,
+    );
+    let p = preedit(&resp);
+    assert_eq!(
+        (p.display_text.as_str(), p.caret_utf16),
+        ("啥mih taitsi", 11)
+    );
+    for remaining in (0..6).rev() {
+        let resp = engine.apply(Intent::DeleteBackward, &config);
+        let expected = if remaining == 0 {
+            "啥mih".to_string()
+        } else {
+            format!("啥mih {}", &"taitsi"[..remaining])
+        };
+        assert_eq!(preedit(&resp).display_text, expected);
+        assert_eq!(
+            preedit(&resp).caret_utf16 as usize,
+            expected.encode_utf16().count()
+        );
+    }
+    let resp = engine.apply(Intent::DeleteBackward, &config);
+    assert_eq!(preedit(&resp).raw_input, "siannmih");
+    assert_eq!(preedit(&resp).display_text, "siannmih");
+    assert_eq!(preedit(&resp).caret_utf16, 8);
+    assert_eq!(caret_of(&engine), 8);
 }
