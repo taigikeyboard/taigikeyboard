@@ -1,7 +1,7 @@
 # Browser Extension
 
 > **Type**: Design record
-> **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `wasm`, `content security policy`, `learning`
+> **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `lexical`, `wasm`, `wasm2js`, `content security policy`, `learning`
 > **Status**: Chrome first cut 2026-11-13 (issue #864): typing, per-site access, per-tab mode, status and shared learning pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started. Not published.
 > **Siblings**: `web-roadmap.md` (the page and the wasm engine this reuses), `chromeos-roadmap.md` (the ChromeOS system input method, a separate product).
 
@@ -11,7 +11,7 @@
 
 - **Goal**: type Taigi into the fields of existing websites, with the composition and the candidates beside the caret, from a browser extension alone: no native install, no server, no download after install (issue #864).
 - **Approach**: a Manifest V3 extension in `web/extension/`. A content script runs the web version's wasm engine in the tab, draws the page's own candidate panel in a shadow tree, and writes commits into the site's field with `execCommand`.
-- **Scope of the first cut**: desktop Chrome. Text inputs, textareas, and `contenteditable` editors, held to Quill's Snow editor. The top frame only.
+- **Scope of the first cut**: desktop Chrome. Text inputs, textareas, and `contenteditable` editors, held to Quill's Snow editor and Lexical's rich-text editor. The top frame only.
 
 ## Decisions
 
@@ -27,7 +27,7 @@ As on the page, the composition draws in an overlay and the text reaches the fie
 
 ### D3 — One write: `execCommand`
 
-`document.execCommand("insertText")` is the one call that keeps an input's own undo history and that an editor hears as typing (`beforeinput` / `input`, `insertText`). `web-roadmap.md` § Text surface chose it for the page's first textarea for the same reason. The auto-space swap's delete selects backwards and lets the commit replace the selection, so one engine reply is one undo step; a delete with no commit is `execCommand("delete")`.
+`document.execCommand("insertText")` is the one call that keeps an input's own undo history and that an editor hears as typing (`beforeinput` / `input`, `insertText`). `web-roadmap.md` § Text surface chose it for the page's first textarea for the same reason. Commits within one reply (such as a romanized word and its auto space) are joined before `execCommand`, and the auto-space swap's delete selects backwards and lets the commit replace the selection, so one engine reply is one undo step and one `beforeinput`; a delete with no commit is `execCommand("delete")`. Because `beforeinput`-driven editors like Lexical reconcile the DOM in a microtask after `execCommand`, `EditableWrites` adopts the selection after that microtask so its own write is not mistaken for a foreign caret move.
 
 A write the field refuses (the call answers false, or an input's value did not change) makes that field unsupported until the focus leaves it: its keys are the site's again, and the refused text goes to the console.
 
@@ -123,7 +123,7 @@ The browser's permission question is a native dialog no harness can answer. The 
 | Issue #864 criterion | Where |
 |---|---|
 | Real key events through the extension, inputs and textareas | `typing.spec.mjs` |
-| Pinned local Quill: document state, formatting, undo / redo | `quill.spec.mjs` |
+| Pinned local Quill and Lexical: document state, formatting, auto-space swap, undo / redo | `quill.spec.mjs`, `lexical.spec.mjs` |
 | Candidates, selection, committed text | `typing.spec.mjs` |
 | Caret, selection replacement, switching fields, composition boundaries | `typing.spec.mjs`, `boundaries.spec.mjs` |
 | Public Quill smoke | `quill-public.spec.mjs` |
@@ -132,6 +132,7 @@ The browser's permission question is a native dialog no harness can answer. The 
 | Toolbar and field status | `status.spec.mjs` |
 | Shared learning across tabs and sites, persistence, separate profiles, private-tab client isolation | `learning.spec.mjs`, `tests/extension-learning.test.mjs` |
 | Password exclusion, unsupported and disabled fields | `boundaries.spec.mjs` |
+| Strict CSP + Trusted Types (`wasm2js` fallback, Lexical, expandable layout, cross-tab learning, mode retention) | `strict.spec.mjs`, `tests/wasm2js.test.mjs` |
 
 Not automated in the browser: the native permission grant dialog and its removal, the keyboard shortcut, an actual incognito window (the extension must be allowed in incognito by hand; `SharedLearning`'s `isPrivate` path is unit-tested in Node), and a modal dialog.
 

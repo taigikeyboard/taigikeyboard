@@ -164,6 +164,7 @@ function pointBefore(host, container, offset, count) {
 class EditableWrites {
   #host;
   #isDeletePending = false;
+  #didWrite = false;
   /// The caret and its text as last seen, and the token that stands for them.
   #seen = [];
   #token = 0;
@@ -173,10 +174,18 @@ class EditableWrites {
   }
 
   batch(writes) {
+    this.#didWrite = false;
     writes();
     if (this.#isDeletePending) {
       this.#isDeletePending = false;
-      document.execCommand("delete");
+      this.#didWrite = document.execCommand("delete") || this.#didWrite;
+    }
+    if (this.#didWrite) {
+      // Editors like Lexical cancel `beforeinput` and reconcile the DOM in a
+      // microtask; adopt the selection their own reconciliation lands on.
+      queueMicrotask(() => {
+        this.#seen = this.#currentSeen();
+      });
     }
   }
 
@@ -195,7 +204,9 @@ class EditableWrites {
     if (this.#range() === null) {
       return false;
     }
-    return document.execCommand("insertText", false, text);
+    const isDone = document.execCommand("insertText", false, text);
+    this.#didWrite ||= isDone;
+    return isDone;
   }
 
   deleteBefore(count) {
@@ -224,19 +235,26 @@ class EditableWrites {
     return {};
   }
 
-  /// The caret's points and the text it stands in. A change elsewhere in the
-  /// document is no concern of the engine's, and reading a whole document on
-  /// every key would be.
-  snapshot() {
+  #currentSeen() {
     const selection = getSelection();
+    if (selection === null) {
+      return [null, 0, null, 0, undefined];
+    }
     const { anchorNode, anchorOffset, focusNode, focusOffset } = selection;
-    const seen = [
+    return [
       anchorNode,
       anchorOffset,
       focusNode,
       focusOffset,
       anchorNode?.nodeValue,
     ];
+  }
+
+  /// The caret's points and the text it stands in. A change elsewhere in the
+  /// document is no concern of the engine's, and reading a whole document on
+  /// every key would be.
+  snapshot() {
+    const seen = this.#currentSeen();
     if (seen.some((part, index) => part !== this.#seen[index])) {
       this.#seen = seen;
       this.#token += 1;

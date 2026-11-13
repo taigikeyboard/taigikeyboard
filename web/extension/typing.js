@@ -315,18 +315,46 @@ function applyEmit(emit) {
   }
 }
 
+/// Joins commits in one reply that no `deleteSurrounding` separates, so one
+/// reply executes one `insertText` (one undo step, and one `beforeinput` for
+/// editors that reconcile the DOM in a microtask after `execCommand`).
+function coalesceCommits(emits) {
+  const joined = [];
+  let lastCommit = null;
+  for (const emit of emits) {
+    if (emit.type === "commit") {
+      if (lastCommit) {
+        lastCommit.text += emit.text;
+        continue;
+      }
+      lastCommit = { ...emit };
+      joined.push(lastCommit);
+      continue;
+    }
+    if (emit.type === "deleteSurrounding") {
+      lastCommit = null;
+    }
+    joined.push(emit);
+  }
+  return joined;
+}
+
 function apply(reply) {
   if (reply.settings) {
     saveSettings(reply.settings);
   }
   if (reply.emits.length > 0) {
+    const emits = coalesceCommits(reply.emits);
     if (field?.surface) {
-      field.surface.batch(() => reply.emits.forEach(applyEmit));
+      field.surface.batch(() => emits.forEach(applyEmit));
     } else {
-      reply.emits.forEach(applyEmit);
+      emits.forEach(applyEmit);
     }
     watchField();
     place();
+    if (panel.isShown) {
+      queueMicrotask(place);
+    }
     redraw();
     restartIfIdle();
   }
