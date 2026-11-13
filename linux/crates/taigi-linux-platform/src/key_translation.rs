@@ -13,9 +13,9 @@
 //! modifiers; here the keysym is the answer to both questions, because X
 //! keeps a Control chord's keysym as the letter.
 //!
-//! Only presses reach the classifier: a release (`IBUS_RELEASE_MASK`) and a
-//! bare modifier press answer `None`, which the engine turns into "not
-//! handled" so the client processes the key itself.
+//! Character classification accepts presses; the Linux session also consumes
+//! bare Shift press/release pairs to recognize the Windows-aligned language
+//! toggle. Other bare modifiers and releases pass through untouched.
 
 use taigi_desktop_core::keys::{KeyEventSnapshot, KeyModifiers, LineEdgeKey, NavigationKey};
 use xkeysym::{key, Keysym};
@@ -29,6 +29,10 @@ pub mod state {
     pub const MOD1: u32 = 1 << 3;
     /// Mod4 — the Super / Windows key on every common layout.
     pub const MOD4: u32 = 1 << 6;
+    /// Mod5 — commonly AltGr, which must not qualify as a bare Shift tap.
+    pub const MOD5: u32 = 1 << 7;
+    pub const HYPER: u32 = 1 << 27;
+    pub const META: u32 = 1 << 28;
     pub const SUPER: u32 = 1 << 26;
     pub const RELEASE: u32 = 1 << 30;
 }

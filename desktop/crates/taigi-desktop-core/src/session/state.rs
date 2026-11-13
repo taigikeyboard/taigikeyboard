@@ -1,6 +1,8 @@
 //! What one input context remembers between keys, and what a key answers.
 
+use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
 use super::{Emit, ListLayout, ListSelection};
 use crate::composing::CandidateSource;
@@ -94,10 +96,18 @@ pub struct EngineState {
     pub latched_chord: Option<ShortcutAction>,
     /// The symbol picker is up; every key is its first.
     pub symbol_picker: Option<SymbolPicker>,
-    /// Taigi or English. A shell opts in by calling
-    /// [`super::toggle_language_mode`]; Linux never does, its desktop switches
-    /// engines itself (`taigi_linux_core::chrome::mode_indicator`).
+    /// Taigi or English. Windows and IBus opt in through their native key
+    /// event paths; Fcitx5 and macOS keep their input source selection outside
+    /// this state.
     pub language_mode: LanguageMode,
+    /// IBus's bare-Shift recognizer. Windows owns this in its TSF key sink;
+    /// Fcitx5 keeps its existing panel-based engine switching.
+    pub shift_tap: crate::keys::ShiftTapTracker,
+    /// Monotonic origin for the tracker timestamps.
+    pub shift_tap_clock: Instant,
+    /// Held keycodes let Linux distinguish a fresh press from an auto-repeat,
+    /// which IBus does not mark separately.
+    pub pressed_keycodes: HashSet<u32>,
 }
 
 impl Default for EngineState {
@@ -115,6 +125,9 @@ impl Default for EngineState {
             latched_chord: None,
             symbol_picker: None,
             language_mode: LanguageMode::default(),
+            shift_tap: crate::keys::ShiftTapTracker::default(),
+            shift_tap_clock: Instant::now(),
+            pressed_keycodes: HashSet::new(),
         }
     }
 }

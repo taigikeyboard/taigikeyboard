@@ -66,10 +66,17 @@ fn menu_id(command: MenuCommand) -> Option<&'static str> {
 
 /// The tray / panel indicator: its symbol is the IBus `InputMode` text and
 /// the Fcitx5 label, its icon name the Fcitx5 sub-mode icon and the IBus
-/// property icon. Linux has no English mode — switching engines is the
-/// desktop's (roadmap L6).
+/// property icon. Linux's shared indicator follows the Taigi mode.
 pub fn mode_indicator(settings: &SettingsDocument) -> ModeIndicator {
-    ModeIndicator::of(&settings.engine_settings(), LanguageMode::Taigi)
+    mode_indicator_for_language(settings, LanguageMode::Taigi)
+}
+
+/// IBus indicator variant for the engine's explicit Taigi / English mode.
+pub fn mode_indicator_for_language(
+    settings: &SettingsDocument,
+    language: LanguageMode,
+) -> ModeIndicator {
+    ModeIndicator::of(&settings.engine_settings(), language)
 }
 
 /// A menu row was activated (`PropertyActivate` / `SimpleAction::Activated`).
