@@ -24,7 +24,7 @@ FONTS := target/fonts
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site chromeos extension serve test smoke e2e check-live lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site chromeos extension extension-fixtures extension-e2e serve test smoke e2e check-live lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -36,6 +36,7 @@ help:
 	@echo "  make site    - Stage the page, bindings, dictionaries, fonts and manifest into $(SITE)/"
 	@echo "  make chromeos - Stage the ChromeOS input method into $(CHROMEOS)/ and zip it"
 	@echo "  make extension - Stage the browser extension into $(EXTENSION)/ and zip it"
+	@echo "  make extension-e2e - Load the staged extension in Chromium and type through it"
 	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
@@ -127,6 +128,19 @@ extension: build
 	cp ../assets/dictionaries/* $(EXTENSION)/dictionaries/
 	cp $(ICONS)/16.png $(ICONS)/32.png $(ICONS)/48.png $(ICONS)/128.png $(EXTENSION)/icons/
 	cd $(EXTENSION) && zip -qrX ../taigi-keyboard-extension.zip .
+
+# The extension's browser gate: Playwright loads the staged extension into its
+# own Chromium (EXTENSION_BROWSER names another Chromium's executable).
+# The fixtures are served from one directory with the pinned Quill beside them.
+EXTENSION_FIXTURES := target/extension-fixtures
+extension-fixtures: node_modules/.package-lock.json
+	rm -rf $(EXTENSION_FIXTURES)
+	mkdir -p $(EXTENSION_FIXTURES)
+	cp extension/fixtures/* node_modules/quill/dist/quill.js node_modules/quill/dist/quill.snow.css $(EXTENSION_FIXTURES)/
+
+extension-e2e: extension extension-fixtures
+	npx playwright install $(if $(CI),--with-deps) chromium
+	npx playwright test --config extension/playwright.config.mjs
 
 serve: site
 	node scripts/serve.mjs $(SITE) 8000

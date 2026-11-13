@@ -135,6 +135,9 @@ jobs:
       - name: Stage the site
         run: make -C web site
 
+      - name: Stage the browser extension
+        run: make -C web extension extension-fixtures
+
       # The image includes system libraries, avoiding apt and Ubuntu mirror DNS
       # outages at test time. Match the installed
       # package exactly, since each Playwright version needs its own browsers.
@@ -147,6 +150,15 @@ jobs:
             --volume "$PWD/web:/work" --workdir /work \
             "mcr.microsoft.com/playwright:v${version}-noble" \
             npx --no-install playwright test --project=chromium
+
+      - name: Playwright browser extension (Chromium)
+        run: |
+          version=$(node --print 'require("./web/node_modules/@playwright/test/package.json").version')
+          docker run --rm --init --ipc=host \
+            --env CI=true \
+            --volume "$PWD/web:/work" --workdir /work \
+            "mcr.microsoft.com/playwright:v${version}-noble" \
+            npx --no-install playwright test --config extension/playwright.config.mjs
 
   # `make -C web lint`: clippy over the wasm target compiles a dev build of its
   # own (~45 s), which `check`'s release build cannot share, so it runs beside it.
