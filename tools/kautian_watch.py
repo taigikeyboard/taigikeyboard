@@ -25,7 +25,7 @@ TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 TITLE = "chore(dictionary): MoE kautian.ods has new data"
 START, END = "<!-- kautian-watch:start -->", "<!-- kautian-watch:end -->"
 # Issue text is Taigi Hanji, worded after sutian.moe.edu.tw/und-hani (maintainer request).
-FORMAT_MARKER = "<!-- kautian-watch:format:6 -->"
+FORMAT_MARKER = "<!-- kautian-watch:format:7 -->"
 # Sheets the dictionary build reads, with their reading columns
 # (dictionary/sources/official/kautian/config.yaml select.sheets + dialect_sheet;
 # kautian_watch_test keeps the two in sync).
@@ -569,7 +569,7 @@ def typing_summary(
             ],
         ),
     ]
-    blocks = ["## 這擺教典的改變"]
+    blocks = ["## 教典資料修正"]
     if headers := [
         safe(sheet.name, 80)
         for sheet in differences
