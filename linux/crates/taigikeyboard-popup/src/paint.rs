@@ -70,10 +70,17 @@ pub fn capped_radius(requested: f32, frame: Rect, highlight: Option<Rect>) -> f3
 /// window radius minus the nearest gap, so the curves share a center and the
 /// gap stays the same into the corner.
 pub fn highlight_radii(frame: Rect, radius: f32, inner: Rect) -> [f32; 4] {
+    let limit = (inner.w.min(inner.h) * 0.5).max(0.0);
     let gap = inset(frame, inner).into_iter().fold(f32::MAX, f32::min);
     let gap = if gap.is_finite() { gap.max(0.0) } else { 0.0 };
-    let limit = (inner.w.min(inner.h) * 0.5).max(0.0);
-    let radius = (radius - gap).max(0.0).min(limit);
+    // Close to the window, the curve shares the window's center. Far from
+    // every edge — a cell in the middle of an expanded grid — that
+    // subtraction would flatten the corner, so the cell keeps its own curve.
+    let radius = if gap < radius {
+        (radius - gap).max(0.0).min(limit)
+    } else {
+        radius.max(0.0).min(limit)
+    };
     [radius; 4]
 }
 
@@ -311,6 +318,13 @@ mod tests {
             h: 40.0,
         };
         assert_eq!(highlight_radii(frame, 8.0, flush), [8.0; 4]);
+        let interior = Rect {
+            x: 30.0,
+            y: 12.0,
+            w: 20.0,
+            h: 16.0,
+        };
+        assert_eq!(highlight_radii(frame, 8.0, interior), [8.0; 4]);
     }
 
     #[test]

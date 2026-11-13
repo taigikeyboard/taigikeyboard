@@ -14,9 +14,12 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
-use taigi_linux_core::popup::{self, Caret};
 use taigi_linux_core::Emit;
 use taigi_linux_core::{chrome, MenuItem, Runtime};
+use taigi_linux_core::{
+    new_engine_state,
+    popup::{self, Caret},
+};
 use taigi_linux_core::{session, EngineState};
 use taigi_linux_platform::RawKeyEvent;
 use zbus::object_server::SignalEmitter;
@@ -56,7 +59,7 @@ impl Engine {
             runtime,
             token,
             path,
-            state: EngineState::default(),
+            state: new_engine_state(),
             caret: Mutex::new(Caret {
                 x: 0,
                 y: 0,
@@ -130,7 +133,7 @@ impl Engine {
                         .lock()
                         .unwrap_or_else(|poisoned| poisoned.into_inner());
                     set_popup_target(self.path.clone());
-                    popup::present(&content, style, caret);
+                    popup::present(&content, &self.state, style, caret);
                     Self::update_lookup_table(emitter, empty_table_value(), false).await
                 }
                 Emit::HideLookupTable => {

@@ -18,6 +18,9 @@ pub struct LookupSelection {
     count: usize,
     page_size: usize,
     selected: usize,
+    /// Start index of each page when pages are not equal runs of `page_size`.
+    /// Empty means the uniform pages.
+    page_starts: Vec<usize>,
     /// The list begins with the §34 literal, which takes no key — as on
     /// macOS and Windows (`CandidateIndexLabel`).
     lead_cell_is_unkeyed: bool,
@@ -29,8 +32,44 @@ impl LookupSelection {
             count,
             page_size: page_size.max(1),
             selected: 0,
+            page_starts: Vec::new(),
             lead_cell_is_unkeyed: false,
         }
+    }
+
+    /// Pages begin at these absolute indexes. A list that does not start at 0,
+    /// or that is not strictly increasing, is ignored and pages stay uniform.
+    pub fn set_page_starts(&mut self, starts: Vec<usize>) {
+        let ok = starts.first() == Some(&0)
+            && starts.windows(2).all(|pair| pair[0] < pair[1])
+            && starts
+                .last()
+                .is_some_and(|start| *start < self.count.max(1));
+        self.page_starts = if ok { starts } else { Vec::new() };
+    }
+
+    pub fn clear_page_starts(&mut self) {
+        self.page_starts.clear();
+    }
+
+    /// The current page, `start..end` over the absolute list.
+    pub fn page_bounds(&self) -> (usize, usize) {
+        self.bounds_at(self.selected)
+    }
+
+    fn bounds_at(&self, index: usize) -> (usize, usize) {
+        if self.page_starts.is_empty() {
+            let start = index / self.page_size * self.page_size;
+            return (start, (start + self.page_size).min(self.count));
+        }
+        let mut start = 0;
+        for &next in self.page_starts.iter().skip(1) {
+            if index < next {
+                return (start, next.min(self.count));
+            }
+            start = next;
+        }
+        (start, self.count)
     }
 
     /// Pages of `page_size` from now on, the highlight kept — the slot key
@@ -52,11 +91,13 @@ impl LookupSelection {
     }
 
     pub fn current_page(&self) -> usize {
-        self.selected / self.page_size
-    }
-
-    fn page_count(&self) -> usize {
-        self.count.div_ceil(self.page_size)
+        if self.page_starts.is_empty() {
+            return self.selected / self.page_size;
+        }
+        self.page_starts
+            .iter()
+            .rposition(|start| *start <= self.selected)
+            .unwrap_or(0)
     }
 
     /// The absolute index the `slot`-th key on the current page addresses,
@@ -83,10 +124,11 @@ impl LookupSelection {
     /// The absolute index of the `position`-th cell on the current page —
     /// what the panel reports for a click.
     pub fn candidate_index_on_page(&self, position: usize) -> Option<usize> {
-        if position >= self.page_size {
+        let (start, end) = self.page_bounds();
+        if position >= end - start || position >= self.page_size {
             return None;
         }
-        let index = self.current_page() * self.page_size + position;
+        let index = start + position;
         (index < self.count).then_some(index)
     }
 
@@ -135,14 +177,21 @@ impl LookupSelection {
                 self.selected.checked_sub(1)
             }
             CandidateNavigation::Down | CandidateNavigation::PageDown => {
-                let next_page = self.current_page() + 1;
-                (next_page < self.page_count())
-                    .then(|| (self.selected + self.page_size).min(self.count - 1))
+                let (start, end) = self.page_bounds();
+                (end < self.count).then(|| {
+                    let offset = self.selected - start;
+                    let (_, next_end) = self.bounds_at(end);
+                    end + offset.min(next_end.saturating_sub(end).saturating_sub(1))
+                })
             }
-            CandidateNavigation::Up | CandidateNavigation::PageUp => self
-                .current_page()
-                .checked_sub(1)
-                .map(|_| self.selected - self.page_size),
+            CandidateNavigation::Up | CandidateNavigation::PageUp => {
+                let (start, _) = self.page_bounds();
+                (start > 0).then(|| {
+                    let offset = self.selected - start;
+                    let (prev, prev_end) = self.bounds_at(start - 1);
+                    prev + offset.min(prev_end.saturating_sub(prev).saturating_sub(1))
+                })
+            }
         }
     }
 }

@@ -10,6 +10,8 @@
 //! COM.
 
 pub mod chrome;
+pub mod engine_state;
+pub mod list_layout;
 pub mod popup;
 pub mod runtime;
 pub mod session;
@@ -19,6 +21,7 @@ mod trace;
 pub use chrome::{
     activate_menu, menu_items, mode_indicator, mode_label, MenuItem, MENU_ABOUT, MENU_SETTINGS,
 };
+pub use engine_state::new_engine_state;
 pub use runtime::{dictionary_version, FirstKeySetup, Runtime};
 pub use session::{
     begin_session, click_from_panel, end_session, navigate_from_panel, process_raw_key,

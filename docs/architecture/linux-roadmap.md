@@ -298,8 +298,11 @@ introspection XML and the `serialize` functions were read, not remembered).
   named per input method). The bundled typefaces install as system fonts (L7), so they are available to it,
   and a user adds a typeface the system way (`~/.local/share/fonts`). A stored / launched
   `fontManagement` pane lands on General.
-  `Candidate Window Layout` offers only
-  Horizontal / Vertical (a stored expandable reads as Vertical, the key is never rewritten) and
+  `Candidate Window Layout` offers Horizontal, Vertical, Horizontal Expandable and
+  Vertical Expandable — the popup measures and draws expandable grids through
+  `taigi-linux-core` `list_layout.rs`, with collapsed-row width stability from
+  desktop-core `ExpandableListModel` (PR #894). IBus framework lists stay
+  cleared; and
   `Candidate Display Mode` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
   The §34 literal cell is keyless as on macOS / Windows (the window draws the label the

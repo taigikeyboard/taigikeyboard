@@ -92,6 +92,8 @@ pub struct ExpandableGeometryInput<'a> {
     /// How many candidates the collapsed list shows and an unfolded column
     /// stacks — one per slot key (`CandidateSlotKeySet::page_size`).
     pub page_size: usize,
+    /// Columns in an unfolded row. `0` keeps [`ExpandableListModel::EXPANDED_COLUMN_COUNT`].
+    pub row_columns: usize,
 }
 
 /// The expanded window's size:
@@ -301,16 +303,17 @@ impl ExpandableListModel {
             .collapsed
         {
             CollapsedLayout::Row => {
-                let column_width = Self::resolved_column_width(measured_widths, &geometry);
+                let columns = if geometry.row_columns == 0 {
+                    Self::EXPANDED_COLUMN_COUNT
+                } else {
+                    geometry.row_columns.max(1)
+                };
+                let column_width = Self::resolved_column_width(measured_widths, &geometry, columns);
                 (
                     ExpandableAxis::Row,
                     Self::collapsed_row(measured_widths, &geometry),
                     column_width,
-                    ExpandedGridLayout::compute(
-                        measured_widths,
-                        column_width,
-                        Self::EXPANDED_COLUMN_COUNT,
-                    ),
+                    ExpandedGridLayout::compute(measured_widths, column_width, columns),
                     None,
                 )
             }
@@ -372,17 +375,16 @@ impl ExpandableListModel {
     /// The collapsed row: the first page of the horizontal packer, its cells
     /// end to end.
     fn collapsed_row(widths: &[f32], geometry: &ExpandableGeometryInput<'_>) -> CollapsedFrames {
-        let page = HorizontalPageLayout::pack_with_chrome(
+        let layout = HorizontalPageLayout::pack_with_chrome(
             widths,
             geometry.base_width,
             geometry.maximum_window_width,
             geometry.chrome_width,
             geometry.page_size,
-        )
-        .pages
-        .into_iter()
-        .next()
-        .unwrap_or_default();
+        );
+        let page = layout.pages.first().cloned().unwrap_or_default();
+        let overflows = page.len() < widths.len();
+        let page_budget = layout.page_budget;
         let mut x = 0.0;
         let cells = page
             .iter()
@@ -395,9 +397,16 @@ impl ExpandableListModel {
                 }
             })
             .collect();
+        // A row that overflows pads to the packing budget, so the window keeps
+        // one width from page to page instead of tracking the first page's text
+        // (the horizontal layout's rule, `HorizontalListModel::content_width`).
+        // A single candidate wider than the budget keeps its own width; a row
+        // that fits stays short. Twin of macOS `ExpandableCandidatePanel`
+        // `packedCollapsedRow` / `collapsedPageBudget` (PR #894).
+        let content_width = if overflows { x.max(page_budget) } else { x };
         CollapsedFrames {
             cells,
-            content_width: x,
+            content_width,
             content_height: geometry.item_height,
             primary_column_width: None,
         }
@@ -525,13 +534,18 @@ impl ExpandableListModel {
     /// screen leaves once the scroller has its share. Widening the columns
     /// rather than letting a cell span more of them keeps the grid a grid
     /// (columns widen, spans stay whole).
-    fn resolved_column_width(widths: &[f32], geometry: &ExpandableGeometryInput<'_>) -> f32 {
+    fn resolved_column_width(
+        widths: &[f32],
+        geometry: &ExpandableGeometryInput<'_>,
+        columns: usize,
+    ) -> f32 {
+        let columns = columns.max(1);
         let baseline = HorizontalPageLayout::row_budget(geometry.base_width, geometry.page_size);
         let budget = geometry.maximum_window_width - geometry.scroller_width;
         let widest = widths.iter().copied().fold(0.0, f32::max);
-        let narrowest = geometry.base_width * Self::EXPANDED_COLUMN_COUNT as f32;
+        let narrowest = geometry.base_width * columns as f32;
         let width = baseline.max(widest).min(narrowest.max(budget));
-        width / Self::EXPANDED_COLUMN_COUNT as f32
+        width / columns as f32
     }
 
     pub fn count(&self) -> usize {
@@ -1260,6 +1274,7 @@ mod tests {
             scroller_width: 15.0,
             item_height: 30.0,
             page_size: HorizontalPageLayout::PAGE_SIZE,
+            row_columns: 0,
         }
     }
 
@@ -1365,6 +1380,27 @@ mod tests {
             MAX_DISPLAY_CANDIDATES,
             "capped here"
         );
+    }
+
+    #[test]
+    fn an_overflowing_collapsed_row_pads_to_the_budget_not_its_first_page() {
+        // trace: the first page is 10 + 10 + 10 = 30 (the 80 breaks it), but
+        // the row budget is 90, so an overflowing row pads to 90 — one width
+        // whichever list the page came from (PR #894's rule, twin of macOS).
+        let mut widths = vec![5.0, 5.0, 5.0, 80.0];
+        widths.extend([5.0; 16]);
+        let m = model(&widths);
+        assert_eq!(m.collapsed_cells().len(), 3);
+        assert!(m.has_overflow());
+        assert_eq!(m.collapsed_content_width(), 90.0);
+        assert_eq!(m.collapsed_window_width(), 90.0 + 20.0);
+        // A single candidate wider than the budget keeps its own width.
+        let mut wide = vec![300.0];
+        wide.extend([5.0; 19]);
+        assert_eq!(model(&wide).collapsed_content_width(), 300.0);
+        // A row that fits stays short.
+        assert_eq!(model(&[5.0, 30.0]).collapsed_content_width(), 40.0);
+        assert_eq!(model(&[5.0; 3]).collapsed_content_width(), 30.0);
     }
 
     #[test]

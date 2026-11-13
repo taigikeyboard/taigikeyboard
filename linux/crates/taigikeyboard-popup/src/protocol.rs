@@ -92,6 +92,43 @@ impl Default for Chrome {
     }
 }
 
+/// Extra geometry for horizontal / vertical expandable modes. The parent
+/// still sends one `Show`; the window lays it out from these hints.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct ExpandableView {
+    /// Absolute candidate index per `Show::cells` entry — what clicks report.
+    pub absolute_indices: Vec<u32>,
+    /// `0` = collapsed, `1` = expanded.
+    pub mode: u8,
+    /// `0` = horizontal expandable, `1` = vertical expandable.
+    pub axis: u8,
+    /// Expanded grid: one column's width in px before scale.
+    #[serde(default)]
+    pub column_width: u32,
+    /// Expanded grid: how many columns across.
+    #[serde(default)]
+    pub grid_columns: u32,
+    /// Expanded viewport scroll offset in px before scale.
+    #[serde(default)]
+    pub scroll_y: u32,
+    /// One entry per cell: which visual row it sits on.
+    #[serde(default)]
+    pub row_indexes: Vec<u32>,
+    /// One entry per cell: the column it starts at.
+    #[serde(default)]
+    pub column_starts: Vec<u32>,
+    /// One entry per cell: how many columns it spans.
+    #[serde(default)]
+    pub column_spans: Vec<u32>,
+    /// How many rows the expanded window shows at once.
+    #[serde(default)]
+    pub visible_rows: u32,
+    /// One grid row's pitch in the model's units, for turning `scroll_y`
+    /// into a whole number of rows.
+    #[serde(default)]
+    pub row_height: u32,
+}
+
 /// One page, already sliced by the parent. `cursor` is the index on this
 /// page, or absent when nothing is highlighted (the Telex guide).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -113,6 +150,12 @@ pub struct Show {
     pub roman_px: u32,
     /// The leading script of a two-script cell is Hanji.
     pub hanji_leads: bool,
+    /// Collapsed expandable row: pad the cells to this width (px, before
+    /// scale) so the window does not jump list to list (PR #894).
+    #[serde(default)]
+    pub min_content_width: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expandable: Option<ExpandableView>,
     #[serde(flatten)]
     pub chrome: Chrome,
     #[serde(flatten)]
@@ -126,7 +169,7 @@ pub struct Show {
 pub enum Command {
     Show {
         #[serde(flatten)]
-        body: Show,
+        body: Box<Show>,
     },
     Hide,
     Move {
@@ -151,7 +194,7 @@ mod tests {
     #[test]
     fn a_show_round_trips_as_one_line() {
         let command = Command::Show {
-            body: Show {
+            body: Box::new(Show {
                 cells: vec![Cell {
                     text: "好".into(),
                     annotation: Some("hó".into()),
@@ -171,7 +214,9 @@ mod tests {
                     w: 4,
                     h: 16,
                 },
-            },
+                min_content_width: 0,
+                expandable: None,
+            }),
         };
         let line = serde_json::to_string(&command).expect("serialize");
         assert!(!line.contains('\n'));

@@ -17,7 +17,9 @@ use std::sync::{Arc, OnceLock};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
 use taigi_linux_core::popup::{self, Caret, Event};
-use taigi_linux_core::{chrome, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime};
+use taigi_linux_core::{
+    chrome, new_engine_state, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime,
+};
 use taigi_linux_platform::{open_settings, RawKeyEvent};
 
 /// One process-wide runtime (settings, the user-data directory, lexicon,
@@ -363,7 +365,7 @@ pub unsafe extern "C" fn taigi_engine_new(runtime: *const TaigiRuntime) -> *mut 
         Box::into_raw(Box::new(TaigiEngine {
             runtime: inner,
             token,
-            state: EngineState::default(),
+            state: new_engine_state(),
         }))
     })
 }
@@ -657,6 +659,7 @@ fn popup_style() -> popup::PopupStyle {
 /// shared window, under the caret rect `(x, y, w, h)` in screen pixels.
 #[no_mangle]
 pub unsafe extern "C" fn taigi_popup_show(
+    engine: *mut TaigiEngine,
     reply: *const TaigiReply,
     index: usize,
     x: i32,
@@ -664,16 +667,17 @@ pub unsafe extern "C" fn taigi_popup_show(
     w: i32,
     h: i32,
 ) {
-    if reply.is_null() {
+    if reply.is_null() || engine.is_null() {
         return;
     }
     guarded("taigi_popup_show", (), || {
-        // SAFETY: non-null and, by contract, a live reply the caller owns.
-        let Some(table) = (unsafe { emit_at(reply, index) }).and_then(|emit| emit.table.as_ref())
-        else {
+        // SAFETY: non-null and, by contract, live pointers the caller owns.
+        let table = (unsafe { emit_at(reply, index) }).and_then(|emit| emit.table.as_ref());
+        let engine = unsafe { &*engine };
+        let Some(table) = table else {
             return;
         };
-        popup::present(table, popup_style(), Caret { x, y, w, h });
+        popup::present(table, &engine.state, popup_style(), Caret { x, y, w, h });
     });
 }
 

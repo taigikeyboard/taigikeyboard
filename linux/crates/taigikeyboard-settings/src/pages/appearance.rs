@@ -4,8 +4,8 @@
 //! the candidate window that opens there is the real one. Default follows the
 //! desktop's color scheme and accent inside that window. Light / dark mode
 //! and the single Candidate Text Size stay hidden. The layout picker offers
-//! only Horizontal / Vertical. The four color rows show when the theme is
-//! Custom.
+//! Horizontal, Vertical, Horizontal Expandable and Vertical Expandable. The
+//! four color rows show when the theme is Custom.
 
 use super::PageContext;
 use adw::prelude::*;
@@ -15,19 +15,10 @@ use taigi_desktop_core::settings::{
 };
 use taigi_desktop_core::strings::StringKey;
 
-/// The layouts a panel can take: neither expandable grid exists there, and
-/// the panel draws both vertical (`taigi-desktop-core` `session/table.rs`).
-const PANEL_LAYOUTS: &[CandidateLayout] = &[CandidateLayout::Horizontal, CandidateLayout::Vertical];
+const PANEL_LAYOUTS: &[CandidateLayout] = CandidateLayout::ALL;
 
-/// The stored layout as the panel draws it: either expandable reads as
-/// vertical. The key itself is never rewritten.
 fn panel_layout(document: &SettingsDocument) -> CandidateLayout {
-    match document.choice(&keys::CANDIDATE_LAYOUT) {
-        CandidateLayout::Horizontal => CandidateLayout::Horizontal,
-        CandidateLayout::Vertical
-        | CandidateLayout::Expandable
-        | CandidateLayout::VerticalExpandable => CandidateLayout::Vertical,
-    }
+    document.choice(&keys::CANDIDATE_LAYOUT)
 }
 
 pub fn build<'a>(
