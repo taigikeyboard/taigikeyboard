@@ -1,7 +1,8 @@
 //! The highlight over a list: paged by [`LookupSelection`] when the shell's
 //! framework pages it, or held by an [`ExpandableListModel`] when the shell
 //! draws its own window and can measure it ([`ListLayout`]). The session reads
-//! one type either way; Linux supplies no layout, so its lists stay paged.
+//! one type either way; Linux installs `PopupListLayout` on every engine when
+//! the popup can measure (`taigi-linux-core` `list_layout.rs`).
 
 use std::fmt::Debug;
 
@@ -22,6 +23,20 @@ pub trait ListLayout: Debug + Send + Sync {
         settings: &SettingsDocument,
         page_size: usize,
     ) -> Option<ExpandableListModel>;
+
+    /// Start index of each horizontal page when a row holds as many cells as
+    /// fit in the width of one full row, and fewer when the words are longer.
+    /// `None` keeps equal pages of one cell per slot key.
+    /// Page starts, and the content width a later page keeps so the window
+    /// does not change width. `None` keeps equal pages and no floor.
+    fn horizontal_page_starts(
+        &self,
+        _cells: &[CandidateCellContent],
+        _settings: &SettingsDocument,
+        _page_size: usize,
+    ) -> Option<(Vec<usize>, u32)> {
+        None
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +56,9 @@ pub struct ListSelection {
     /// A new list, or cells changed in place: a shell with a [`ListLayout`] has
     /// not seen these.
     needs_layout: bool,
+    /// Width the horizontal window keeps once the list fills more than one
+    /// row, in the same units as the popup's `min_content_width`.
+    content_floor: u32,
 }
 
 impl ListSelection {
@@ -50,7 +68,18 @@ impl ListSelection {
             lead_cell_is_unkeyed: false,
             page_size: PAGE_SIZE,
             needs_layout: true,
+            content_floor: 0,
         }
+    }
+
+    /// The horizontal window's stable content width, or 0 when the list still
+    /// fits on one row.
+    pub fn content_floor(&self) -> u32 {
+        self.content_floor
+    }
+
+    pub fn set_content_floor(&mut self, width: u32) {
+        self.content_floor = width;
     }
 
     /// The model, when this list has one.
@@ -70,6 +99,33 @@ impl ListSelection {
 
     pub fn lead_cell_is_unkeyed(&self) -> bool {
         self.lead_cell_is_unkeyed
+    }
+
+    /// Cells per uniform page. A measured horizontal row may instead break
+    /// where the width fills ([`Self::page_bounds`]).
+    pub fn page_size(&self) -> usize {
+        self.page_size
+    }
+
+    /// The current page as `start..end` over the absolute list. Equal pages
+    /// when the shell did not install width breaks.
+    pub fn page_bounds(&self) -> (usize, usize) {
+        match &self.highlight {
+            Highlight::Paged(selection) => selection.page_bounds(),
+            Highlight::Expandable(_) => (0, self.page_size),
+        }
+    }
+
+    pub fn set_page_starts(&mut self, starts: Vec<usize>) {
+        if let Highlight::Paged(selection) = &mut self.highlight {
+            selection.set_page_starts(starts);
+        }
+    }
+
+    pub fn clear_page_starts(&mut self) {
+        if let Highlight::Paged(selection) = &mut self.highlight {
+            selection.clear_page_starts();
+        }
     }
 
     pub fn set_unkeyed_lead(&mut self, lead_cell_is_unkeyed: bool) {

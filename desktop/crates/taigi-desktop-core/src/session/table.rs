@@ -70,11 +70,34 @@ fn lay_out_table(state: &mut EngineState, settings: &SettingsDocument, page_size
         None if state.selection.needs_layout() && !state.candidates.is_empty() => {
             (&mut state.selection, state.candidates.cells())
         }
-        _ => return,
+        _ => {
+            apply_horizontal_pages(state, settings, page_size);
+            return;
+        }
     };
     let count = cells.len();
     cells.truncate(MAX_DISPLAY_CANDIDATES);
     selection.adopt(layout.layout(&cells, settings, page_size), count);
+    apply_horizontal_pages(state, settings, page_size);
+}
+
+/// A horizontal row uses the same packing budget as a collapsed horizontal
+/// expandable row. Once the list fills a second page, every page keeps that
+/// budget as its width.
+fn apply_horizontal_pages(state: &mut EngineState, settings: &SettingsDocument, page_size: usize) {
+    let Some(layout) = &state.list_layout else {
+        return;
+    };
+    match layout.horizontal_page_starts(&state.candidates.cells(), settings, page_size) {
+        Some((starts, floor)) => {
+            state.selection.set_page_starts(starts);
+            state.selection.set_content_floor(floor);
+        }
+        None => {
+            state.selection.clear_page_starts();
+            state.selection.set_content_floor(0);
+        }
+    }
 }
 
 /// The cells as the panel draws them; labels = the slot keys, one per position of the

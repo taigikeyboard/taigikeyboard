@@ -56,6 +56,7 @@ pub(crate) mod test_support {
                 scroller_width: 0.0,
                 item_height: 30.0,
                 page_size: super::PAGE_SIZE,
+                row_columns: 0,
             },
         )
     }

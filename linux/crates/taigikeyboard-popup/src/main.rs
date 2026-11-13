@@ -214,7 +214,7 @@ impl App {
             }
             Command::Show { body } => {
                 self.caret = body.caret;
-                self.page = Some(body);
+                self.page = Some(*body);
                 self.relayout(event_loop);
                 if let Some(window) = &self.window {
                     window.set_visible(true);

@@ -14,12 +14,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 
+use taigi_desktop_core::candidates::{ExpandableAxis, ExpandableDisplayMode};
 use taigi_desktop_core::composing::CandidateCellContent;
-use taigi_desktop_core::session::LookupTableContent;
+use taigi_desktop_core::session::{EngineState, LookupTableContent};
 use taigi_desktop_core::settings::{keys, SettingsDocument};
 use taigi_linux_platform::{paths::POPUP_BINARY_NAME, InstallLayout};
 pub use taigikeyboard_popup::{Caret, Event};
-use taigikeyboard_popup::{Cell, Chrome, Command, Show};
+use taigikeyboard_popup::{Cell, Chrome, Command, ExpandableView, Show};
 
 /// Primary and secondary sizes, typefaces and colors for one page. The
 /// primary size is `hanji_px` (settings key `hanjiFontSize`).
@@ -98,11 +99,11 @@ fn clamp_px(value: i64, range: std::ops::RangeInclusive<i64>) -> u32 {
 }
 
 /// Shows `content`'s current page. An empty list hides the window.
-pub fn present(content: &LookupTableContent, style: PopupStyle, caret: Caret) {
+pub fn present(content: &LookupTableContent, state: &EngineState, style: PopupStyle, caret: Caret) {
     let Some(client) = client() else {
         return;
     };
-    let Some(command) = page_command(content, style, caret) else {
+    let Some(command) = show_command(content, state, style, caret) else {
         hide();
         return;
     };
@@ -182,6 +183,189 @@ pub fn wait() -> Vec<Event> {
     events.drain(..).collect()
 }
 
+/// The command for what is on screen. `None` when there is nothing to show.
+pub fn show_command(
+    content: &LookupTableContent,
+    state: &EngineState,
+    style: PopupStyle,
+    caret: Caret,
+) -> Option<Command> {
+    if content.cells.is_empty() {
+        return None;
+    }
+    let expandable = state
+        .symbol_picker
+        .as_ref()
+        .and_then(|picker| picker.selection.expandable())
+        .or_else(|| state.selection.expandable());
+    if let Some(model) = expandable {
+        return Some(Command::Show {
+            body: Box::new(build_expandable_show(content, model, style, caret)),
+        });
+    }
+    let bounds = state.selection.page_bounds();
+    let mut command = page_command_in(content, style, caret, Some(bounds))?;
+    if let Command::Show { body } = &mut command {
+        if !body.vertical {
+            body.min_content_width = state.selection.content_floor();
+        }
+    }
+    Some(command)
+}
+
+fn build_expandable_show(
+    content: &LookupTableContent,
+    model: &taigi_desktop_core::candidates::ExpandableListModel,
+    style: PopupStyle,
+    caret: Caret,
+) -> Show {
+    let base = show_chrome(style, caret);
+    // A row's measured widths each carry the gap after the cell; the window
+    // wants the cells' own extent.
+    let gap = taigikeyboard_popup::pads(base.chrome.padding, 1.0).gap;
+    let cells_extent = |width: f32| (width - gap).max(0.0).ceil() as u32;
+    match model.mode() {
+        ExpandableDisplayMode::Collapsed => {
+            let collapsed = model.collapsed_cells();
+            let cells: Vec<Cell> = collapsed
+                .iter()
+                .map(|slot| cell_of(&content.cells[slot.candidate_index]))
+                .collect();
+            let absolute_indices: Vec<u32> = collapsed
+                .iter()
+                .map(|slot| slot.candidate_index as u32)
+                .collect();
+            let cursor = collapsed
+                .iter()
+                .position(|slot| slot.candidate_index == model.selected_index())
+                .map(|index| index as u32);
+            Show {
+                cells,
+                labels: content
+                    .labels
+                    .iter()
+                    .take(collapsed.len())
+                    .cloned()
+                    .collect(),
+                cursor,
+                vertical: model.axis() == ExpandableAxis::Column,
+                has_prev: false,
+                has_next: model.has_overflow(),
+                min_content_width: match model.axis() {
+                    ExpandableAxis::Row => cells_extent(model.collapsed_content_width()),
+                    ExpandableAxis::Column => model.collapsed_content_width().ceil() as u32,
+                },
+                expandable: Some(ExpandableView {
+                    absolute_indices,
+                    mode: 0,
+                    axis: axis_tag(model.axis()),
+                    ..ExpandableView::default()
+                }),
+                ..base
+            }
+        }
+        ExpandableDisplayMode::Expanded => {
+            let grid = model.grid();
+            let mut cells = Vec::new();
+            let mut absolute_indices = Vec::new();
+            for row in &grid.rows {
+                for cell in row {
+                    cells.push(cell_of(&content.cells[cell.candidate_index]));
+                    absolute_indices.push(cell.candidate_index as u32);
+                }
+            }
+            let cursor = absolute_indices
+                .iter()
+                .position(|&index| index == model.selected_index() as u32)
+                .map(|index| index as u32);
+            let mut row_indexes = Vec::new();
+            let mut column_starts = Vec::new();
+            let mut column_spans = Vec::new();
+            let mut labels = Vec::new();
+            let mut slot = 0usize;
+            let band = model.keyed_band_rect();
+            for (row_index, row) in grid.rows.iter().enumerate() {
+                for cell in row {
+                    row_indexes.push(row_index as u32);
+                    column_starts.push(cell.column_start as u32);
+                    column_spans.push(cell.column_span.max(1) as u32);
+                    let in_band = band.is_some_and(|band| {
+                        model
+                            .grid_cell_rect(cell.candidate_index)
+                            .is_some_and(|rect| {
+                                rect.x >= band.x - 0.5
+                                    && rect.y >= band.y - 0.5
+                                    && rect.x < band.x + band.width - 0.5
+                                    && rect.y < band.y + band.height - 0.5
+                            })
+                    });
+                    if in_band {
+                        labels.push(content.labels.get(slot).cloned().unwrap_or_default());
+                        slot += 1;
+                    } else {
+                        labels.push(String::new());
+                    }
+                }
+            }
+            Show {
+                cells,
+                labels,
+                cursor,
+                vertical: false,
+                has_prev: false,
+                has_next: model.is_paged() && model.has_next_page(),
+                min_content_width: match model.axis() {
+                    ExpandableAxis::Row => cells_extent(model.grid_width()),
+                    ExpandableAxis::Column => 0,
+                },
+                expandable: Some(ExpandableView {
+                    absolute_indices,
+                    mode: 1,
+                    axis: axis_tag(model.axis()),
+                    column_width: model.column_width().ceil() as u32,
+                    grid_columns: grid.column_count as u32,
+                    scroll_y: model.scroll_y().ceil() as u32,
+                    row_indexes,
+                    column_starts,
+                    column_spans,
+                    visible_rows: model.visible_rows() as u32,
+                    row_height: model.row_height().ceil() as u32,
+                }),
+                hanji_px: base.hanji_px,
+                roman_px: base.roman_px,
+                hanji_leads: base.hanji_leads,
+                chrome: base.chrome,
+                caret: base.caret,
+            }
+        }
+    }
+}
+
+fn show_chrome(style: PopupStyle, caret: Caret) -> Show {
+    Show {
+        cells: Vec::new(),
+        labels: Vec::new(),
+        cursor: None,
+        vertical: false,
+        has_prev: false,
+        has_next: false,
+        hanji_px: style.hanji_px,
+        roman_px: style.roman_px,
+        hanji_leads: style.hanji_leads,
+        chrome: style.chrome,
+        caret,
+        min_content_width: 0,
+        expandable: None,
+    }
+}
+
+fn axis_tag(axis: ExpandableAxis) -> u8 {
+    match axis {
+        ExpandableAxis::Row => 0,
+        ExpandableAxis::Column => 1,
+    }
+}
+
 /// The command for the page `content.cursor` is on. `None` when there is
 /// nothing to show. Labels are already the current page's.
 pub fn page_command(
@@ -189,21 +373,34 @@ pub fn page_command(
     style: PopupStyle,
     caret: Caret,
 ) -> Option<Command> {
+    page_command_in(content, style, caret, None)
+}
+
+fn page_command_in(
+    content: &LookupTableContent,
+    style: PopupStyle,
+    caret: Caret,
+    bounds: Option<(usize, usize)>,
+) -> Option<Command> {
     if content.cells.is_empty() {
         return None;
     }
     let page_size = content.page_size.max(1) as usize;
     let last = content.cells.len() - 1;
     let cursor = (content.cursor as usize).min(last);
-    let start = (cursor / page_size) * page_size;
-    let end = (start + page_size).min(content.cells.len());
+    let (start, end) = bounds.unwrap_or_else(|| {
+        let start = (cursor / page_size) * page_size;
+        (start, (start + page_size).min(content.cells.len()))
+    });
+    let start = start.min(last);
+    let end = end.clamp(start + 1, content.cells.len());
     let cells = content.cells[start..end]
         .iter()
         .map(cell_of)
         .collect::<Vec<_>>();
     let count = cells.len();
     Some(Command::Show {
-        body: Show {
+        body: Box::new(Show {
             cells,
             labels: content.labels.iter().take(count).cloned().collect(),
             cursor: content
@@ -219,7 +416,9 @@ pub fn page_command(
             hanji_leads: style.hanji_leads,
             chrome: style.chrome,
             caret,
-        },
+            min_content_width: 0,
+            expandable: None,
+        }),
     })
 }
 

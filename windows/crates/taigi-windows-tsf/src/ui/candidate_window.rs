@@ -538,6 +538,7 @@ impl CandidateWindow {
                         scroller_width: SCROLLER_WIDTH,
                         item_height: metrics.item_height(),
                         page_size,
+                        row_columns: 0,
                     },
                 ))
             }

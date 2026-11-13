@@ -16,7 +16,7 @@ log.workspace = true
 serde_json.workspace = true
 # The candidate window's protocol and layout. No windowing crate: the
 # binary is a separate process (`default-features = false`).
-taigikeyboard-popup.workspace = true
+taigikeyboard-popup = { workspace = true, features = ["text"] }
 os_pipe = "1"
 # `F_SETFL` / `O_NONBLOCK` for the notify pipe. A safe wrapper; the crate
 # forbids `unsafe`.

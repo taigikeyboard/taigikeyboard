@@ -179,6 +179,7 @@ impl ListLayout for PageListLayout {
                 scroller_width: 0.0,
                 item_height: metrics.item_height(),
                 page_size,
+                row_columns: 0,
             },
         ))
     }

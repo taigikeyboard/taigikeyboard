@@ -115,6 +115,56 @@ pub fn px(value: f32) -> u32 {
     value.round().clamp(1.0, 16_000.0) as u32
 }
 
+/// Width of a select-key label at `scale`.
+pub fn key_label_width(label: &str, measure: &impl Measure, scale: f32) -> f32 {
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
+    measure.size(label, LABEL_PX * scale, false).0
+}
+
+/// The page settings a cell's width depends on, in px before scale.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CellStyle {
+    pub hanji_px: u32,
+    pub roman_px: u32,
+    pub hanji_leads: bool,
+    pub padding: u32,
+}
+
+/// Width of one stacked (horizontal) cell, including its own key.
+pub fn horizontal_cell_extent(
+    cell: &crate::protocol::Cell,
+    label: &str,
+    cell_style: CellStyle,
+    measure: &impl Measure,
+    scale: f32,
+) -> f32 {
+    let scale = if scale.is_finite() && scale > 0.0 {
+        scale
+    } else {
+        1.0
+    };
+    let Pads {
+        cell: cell_pad,
+        gap,
+        script: script_gap,
+        ..
+    } = pads(cell_style.padding, scale);
+    let style = Scale {
+        primary: cell_style.hanji_px.max(1) as f32 * scale,
+        secondary: cell_style.roman_px.max(1) as f32 * scale,
+        hanji_leads: cell_style.hanji_leads,
+        label_px: LABEL_PX * scale,
+        cell_pad,
+        gap,
+        script_gap,
+    };
+    layout_cell(cell, label, 0, false, None, &style, measure).w
+}
+
 /// Lays `page` out at `scale`. Sizes on the page are px before scale.
 pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     let scale = if scale.is_finite() && scale > 0.0 {
@@ -122,6 +172,9 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     } else {
         1.0
     };
+    if page.expandable.as_ref().is_some_and(|view| view.mode == 1) {
+        return arrange_expandable(page, measure, scale);
+    }
     let Pads {
         window: pad,
         cell: cell_pad,
@@ -168,18 +221,26 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     let row_h = content_h;
 
     if !page.vertical {
-        if page.has_prev {
-            place_arrow(
-                &mut glyphs,
-                &mut hits,
-                false,
-                (x, y),
-                row_h.max(label_px + cell_pad * 2.0),
-                &style,
-                measure,
-            );
+        let min_w = page.min_content_width as f32 * scale;
+        // A paged plain row keeps both arrow slots on every page, so the
+        // first and last pages are as wide as the middle ones.
+        let reserve_arrows = min_w > 0.0 && page.expandable.is_none();
+        let arrow_h = row_h.max(label_px + cell_pad * 2.0);
+        if page.has_prev || reserve_arrows {
+            if page.has_prev {
+                place_arrow(
+                    &mut glyphs,
+                    &mut hits,
+                    false,
+                    (x, y),
+                    arrow_h,
+                    &style,
+                    measure,
+                );
+            }
             x += arrow_span(label_px, measure) + gap;
         }
+        let cells_left = x;
         for cell in &cells {
             let top = y + (row_h - cell.h).max(0.0) / 2.0;
             shift_cell(cell, x, top, &mut glyphs, &mut hits);
@@ -193,23 +254,31 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }
             x += cell.w + gap;
         }
-        if page.has_next {
-            place_arrow(
-                &mut glyphs,
-                &mut hits,
-                true,
-                (x, y),
-                row_h.max(label_px + cell_pad * 2.0),
-                &style,
-                measure,
-            );
-            x += arrow_span(label_px, measure);
-        } else if x > pad {
+        if x > cells_left {
             x -= gap;
+        }
+        // `min_content_width` is the cells' own extent; the arrows sit after.
+        if x - cells_left < min_w {
+            x = cells_left + min_w;
+        }
+        if page.has_next || reserve_arrows {
+            x += gap;
+            if page.has_next {
+                place_arrow(
+                    &mut glyphs,
+                    &mut hits,
+                    true,
+                    (x, y),
+                    arrow_h,
+                    &style,
+                    measure,
+                );
+            }
+            x += arrow_span(label_px, measure);
         }
         let width = x + pad;
         let height = y + row_h.max(label_px) + pad;
-        Arrangement {
+        let mut arrangement = Arrangement {
             width,
             height,
             highlight: highlight.map(|cell| {
@@ -221,7 +290,9 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }),
             glyphs,
             hits,
-        }
+        };
+        remap_expandable_hits(page, &mut arrangement.hits);
+        arrangement
     } else {
         // Twice the stacked-script line gap, so vertical rows are not flush.
         let row_gap = line_gap * 2.0;
@@ -271,7 +342,7 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         }
         let window_w = x + width + pad;
         let window_h = y + pad;
-        Arrangement {
+        let mut arrangement = Arrangement {
             width: window_w,
             height: window_h,
             highlight: highlight.map(|cell| {
@@ -283,8 +354,308 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }),
             glyphs,
             hits,
+        };
+        remap_expandable_hits(page, &mut arrangement.hits);
+        arrangement
+    }
+}
+
+fn remap_expandable_hits(page: &Show, hits: &mut [Hit]) {
+    let Some(view) = &page.expandable else {
+        return;
+    };
+    for hit in hits {
+        if let Target::Cell(index) = hit.target {
+            if let Some(&absolute) = view.absolute_indices.get(index as usize) {
+                hit.target = Target::Cell(absolute);
+            }
         }
     }
+}
+
+fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
+    let view = page.expandable.as_ref().expect("expanded");
+    let Pads {
+        window: pad,
+        cell: cell_pad,
+        gap,
+        script: script_gap,
+        ..
+    } = pads(page.chrome.padding, scale);
+    let label_px = LABEL_PX * scale;
+    let primary = page.hanji_px.max(1) as f32 * scale;
+    let secondary = page.roman_px.max(1) as f32 * scale;
+    let style = Scale {
+        primary,
+        secondary,
+        hanji_leads: page.hanji_leads,
+        label_px,
+        cell_pad,
+        gap,
+        script_gap,
+    };
+    // A column keeps the two scripts on one line. A row stacks them.
+    let inline = view.axis == 1;
+    let columns = view.grid_columns.max(1) as usize;
+    if !inline {
+        return arrange_expanded_row(page, &style, measure, scale);
+    }
+    // Every vertical-expandable cell reserves the key column, including rows
+    // that are not numbered yet, so a column does not jump when its numbers
+    // appear.
+    let label_slot = Some(label_column(page, label_px, measure));
+    let mut cells = Vec::new();
+    for (index, cell) in page.cells.iter().enumerate() {
+        let label = page.labels.get(index).map(String::as_str).unwrap_or("");
+        cells.push(layout_cell(
+            cell,
+            label,
+            index as u32,
+            inline,
+            label_slot,
+            &style,
+            measure,
+        ));
+    }
+    let span_of = |index: usize| view.column_spans.get(index).copied().unwrap_or(1).max(1) as usize;
+    let start_of = |index: usize| {
+        view.column_starts
+            .get(index)
+            .copied()
+            .unwrap_or((index % columns) as u32) as usize
+    };
+    // Each vertical-expandable column is as wide as its own widest cell.
+    let mut column_widths = vec![0.0_f32; columns];
+    for (index, cell) in cells.iter().enumerate() {
+        let start = start_of(index).min(columns.saturating_sub(1));
+        let span = span_of(index).min(columns - start).max(1);
+        if span == 1 {
+            column_widths[start] = column_widths[start].max(cell.w);
+        }
+    }
+    for (index, cell) in cells.iter().enumerate() {
+        let start = start_of(index).min(columns.saturating_sub(1));
+        let span = span_of(index).min(columns - start).max(1);
+        if span == 1 {
+            continue;
+        }
+        let covered: f32 = column_widths[start..start + span].iter().sum();
+        if cell.w > covered {
+            let extra = (cell.w - covered) / span as f32;
+            for width in &mut column_widths[start..start + span] {
+                *width += extra;
+            }
+        }
+    }
+    for width in &mut column_widths {
+        *width = width.max(1.0);
+    }
+    let mut column_x = Vec::with_capacity(columns + 1);
+    column_x.push(0.0);
+    for width in &column_widths {
+        column_x.push(column_x.last().copied().unwrap_or(0.0) + width);
+    }
+    let row_body = cells.iter().map(|cell| cell.h).fold(primary, f32::max);
+    let separator = scale;
+    let pitch = row_body + separator;
+    let row_count = cells
+        .iter()
+        .enumerate()
+        .map(|(index, _)| {
+            view.row_indexes
+                .get(index)
+                .copied()
+                .unwrap_or((index / columns) as u32)
+        })
+        .max()
+        .map(|row| row as usize + 1)
+        .unwrap_or(0)
+        .max(1);
+    let visible = if view.visible_rows == 0 {
+        row_count
+    } else {
+        (view.visible_rows as usize).clamp(1, row_count)
+    };
+    let scroll_rows = if view.row_height > 0 {
+        (view.scroll_y as f32 / view.row_height as f32).round() as usize
+    } else {
+        0
+    };
+    let scroll = scroll_rows as f32 * pitch;
+    // A row peeks the next line so the list reads as scrollable. A column
+    // keeps the height it had before it unfolded.
+    let peek = if view.axis == 0 && row_count > visible {
+        row_body * 0.5
+    } else {
+        0.0
+    };
+    let mut glyphs = Vec::new();
+    let mut hits = Vec::new();
+    let mut highlight = None;
+    let grid_bottom =
+        pad + visible as f32 * row_body + visible.saturating_sub(1) as f32 * separator + peek;
+    for (index, cell) in cells.iter().enumerate() {
+        let start = start_of(index).min(columns.saturating_sub(1));
+        let span = span_of(index).min(columns - start).max(1);
+        let row = view
+            .row_indexes
+            .get(index)
+            .copied()
+            .unwrap_or((index / columns) as u32) as f32;
+        let x = pad + column_x[start];
+        let slot_w = column_x[start + span] - column_x[start];
+        let top = pad + row * pitch - scroll + (row_body - cell.h).max(0.0) / 2.0;
+        if top + cell.h < pad || top > grid_bottom {
+            continue;
+        }
+        shift_cell(cell, x, top, &mut glyphs, &mut hits);
+        let band = Rect {
+            x,
+            y: top,
+            w: slot_w.max(cell.w),
+            h: cell.h,
+        };
+        if let Some(hit) = hits.last_mut() {
+            if hit.target == Target::Cell(index as u32) {
+                *hit = Hit {
+                    x: band.x,
+                    y: band.y,
+                    w: band.w,
+                    h: band.h,
+                    target: hit.target,
+                };
+            }
+        }
+        if page.cursor == Some(index as u32) {
+            highlight = Some(band);
+        }
+    }
+    let height = grid_bottom + pad;
+    let mut width = pad * 2.0 + column_x[columns];
+    if page.has_next {
+        let arrow_w = arrow_span(label_px, measure);
+        place_arrow(
+            &mut glyphs,
+            &mut hits,
+            true,
+            (width - pad + gap, pad),
+            (height - pad * 2.0).max(label_px),
+            &style,
+            measure,
+        );
+        width += gap + arrow_w;
+    }
+    let mut arrangement = Arrangement {
+        width,
+        height,
+        highlight: highlight.map(|cell| {
+            // Stay on this cell's own box. The grid limits used to be the
+            // whole window, which stretched the fill across every row.
+            grow_highlight(cell, cell, page.chrome.highlight_fill)
+        }),
+        glyphs,
+        hits,
+    };
+    remap_expandable_hits(page, &mut arrangement.hits);
+    arrangement
+}
+
+/// An unfolded row keeps each cell's own width and wraps left. Stretching to
+/// a column grid is what made some candidates look twice as wide as they are.
+fn arrange_expanded_row(
+    page: &Show,
+    style: &Scale,
+    measure: &impl Measure,
+    scale: f32,
+) -> Arrangement {
+    let view = page.expandable.as_ref().expect("expanded");
+    let Pads {
+        window: pad, gap, ..
+    } = pads(page.chrome.padding, scale);
+    // Every cell reserves the key column, numbered or not, so a row does not
+    // shift right when the keys move onto it.
+    let label_slot = Some(label_column(page, style.label_px, measure));
+    let mut cells = Vec::new();
+    for (index, cell) in page.cells.iter().enumerate() {
+        let label = page.labels.get(index).map(String::as_str).unwrap_or("");
+        cells.push(layout_cell(
+            cell,
+            label,
+            index as u32,
+            false,
+            label_slot,
+            style,
+            measure,
+        ));
+    }
+    let row_body = cells
+        .iter()
+        .map(|cell| cell.h)
+        .fold(style.primary, f32::max);
+    let separator = scale;
+    let pitch = row_body + separator;
+    // The model decides the rows (navigation and keys read them); each row
+    // here only lays its cells end to end from the left.
+    let row_of = |index: usize| view.row_indexes.get(index).copied().unwrap_or(0) as usize;
+    let scroll_rows = if view.row_height > 0 {
+        (view.scroll_y as f32 / view.row_height as f32).round() as usize
+    } else {
+        0
+    };
+    let scroll = scroll_rows as f32 * pitch;
+    let mut glyphs = Vec::new();
+    let mut hits = Vec::new();
+    let mut highlight = None;
+    let mut widest_row = 0.0_f32;
+    let mut x = pad;
+    let mut row = usize::MAX;
+    for (index, cell) in cells.iter().enumerate() {
+        if row_of(index) != row {
+            row = row_of(index);
+            x = pad;
+        }
+        let top = pad + row as f32 * pitch - scroll + (row_body - cell.h).max(0.0) / 2.0;
+        shift_cell(cell, x, top, &mut glyphs, &mut hits);
+        if page.cursor == Some(index as u32) {
+            highlight = Some(Rect {
+                x,
+                y: top,
+                w: cell.w,
+                h: cell.h,
+            });
+        }
+        widest_row = widest_row.max(x + cell.w - pad);
+        x += cell.w + gap;
+    }
+    let wrap = widest_row.max(page.min_content_width as f32 * scale);
+    let row_count = cells
+        .iter()
+        .enumerate()
+        .map(|(index, _)| row_of(index) + 1)
+        .max()
+        .unwrap_or(1);
+    let visible = if view.visible_rows == 0 {
+        row_count
+    } else {
+        (view.visible_rows as usize).clamp(1, row_count)
+    };
+    let peek = if row_count > visible {
+        row_body * 0.5
+    } else {
+        0.0
+    };
+    let height =
+        pad + visible as f32 * row_body + visible.saturating_sub(1) as f32 * separator + peek + pad;
+    let width = pad * 2.0 + wrap;
+    let mut arrangement = Arrangement {
+        width,
+        height,
+        highlight: highlight.map(|cell| grow_highlight(cell, cell, page.chrome.highlight_fill)),
+        glyphs,
+        hits,
+    };
+    remap_expandable_hits(page, &mut arrangement.hits);
+    arrangement
 }
 
 /// `fill` is 0–100. `0` leaves `cell`. `100` is `limits`, which meets the
@@ -659,6 +1030,8 @@ mod tests {
                 w: 0,
                 h: 0,
             },
+            min_content_width: 0,
+            expandable: None,
         }
     }
 
@@ -892,6 +1265,94 @@ mod tests {
             .nth(1)
             .expect("second");
         assert!(second.x + second.w / 2.0 > highlight.x + highlight.w);
+    }
+
+    #[test]
+    fn an_expanded_row_keeps_natural_widths_on_the_models_rows_from_the_left() {
+        use crate::protocol::ExpandableView;
+        let mut shown = page(
+            false,
+            true,
+            vec![
+                Cell {
+                    text: "好".into(),
+                    annotation: Some("hó".into()),
+                },
+                Cell {
+                    text: "台灣".into(),
+                    annotation: Some("tâi-uân".into()),
+                },
+                Cell {
+                    text: "人".into(),
+                    annotation: Some("lâng".into()),
+                },
+            ],
+        );
+        shown.labels = vec![String::new(), String::new(), "1".into()];
+        shown.min_content_width = 200;
+        shown.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1, 2],
+            mode: 1,
+            axis: 0,
+            column_width: 80,
+            grid_columns: 2,
+            scroll_y: 0,
+            row_indexes: vec![0, 0, 1],
+            column_starts: vec![0, 1, 0],
+            column_spans: vec![1, 1, 2],
+            visible_rows: 2,
+            row_height: 40,
+        });
+        let layout = arrange(&shown, &Mono, 1.0);
+        let texts: Vec<_> = layout
+            .glyphs
+            .iter()
+            .filter(|glyph| glyph.role == Role::Text)
+            .collect();
+        assert_eq!(texts.len(), 3);
+        assert!(texts[0].y + texts[0].h <= texts[2].y);
+        assert!(texts[0].x + texts[0].w <= texts[1].x + 1.0);
+        // Both rows start at the left edge whatever the model's column grid,
+        // and neither row's cells are stretched to it.
+        let starts: Vec<_> = layout
+            .hits
+            .iter()
+            .filter(|hit| matches!(hit.target, Target::Cell(_)))
+            .map(|hit| (hit.x, hit.w))
+            .collect();
+        assert_eq!(starts[0].0, starts[2].0);
+        assert!(starts[0].1 < 80.0);
+        let pad = pads(shown.chrome.padding, 1.0).window;
+        assert!((layout.width - (pad * 2.0 + 200.0)).abs() < 1.0);
+    }
+
+    #[test]
+    fn a_paged_plain_row_keeps_one_width_on_every_page() {
+        let cells = |text: &str| {
+            vec![
+                Cell {
+                    text: text.into(),
+                    annotation: Some("lí".into()),
+                };
+                3
+            ]
+        };
+        let mut first = page(false, true, cells("你"));
+        first.has_next = true;
+        first.min_content_width = 300;
+        let mut middle = page(false, true, cells("離"));
+        middle.has_prev = true;
+        middle.has_next = true;
+        middle.min_content_width = 300;
+        let mut last = page(false, true, cells("里"));
+        last.has_prev = true;
+        last.min_content_width = 300;
+        let widths: Vec<f32> = [first, middle, last]
+            .iter()
+            .map(|shown| arrange(shown, &Mono, 1.0).width)
+            .collect();
+        assert_eq!(widths[0], widths[1]);
+        assert_eq!(widths[1], widths[2]);
     }
 
     #[test]

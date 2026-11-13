@@ -228,7 +228,7 @@ void State::replay(TaigiReply *reply) {
 void State::showCandidates(const TaigiReply *reply, size_t index) {
     ic_.inputPanel().setCandidateList(nullptr);
     const auto &rect = ic_.cursorRect();
-    taigi_popup_show(reply, index, rect.left(), rect.top(), rect.width(), rect.height());
+    taigi_popup_show(handle_, reply, index, rect.left(), rect.top(), rect.width(), rect.height());
 }
 
 // ---------------------------------------------------------------------------

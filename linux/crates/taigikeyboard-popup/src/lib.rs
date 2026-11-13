@@ -14,11 +14,14 @@ mod system_color;
 #[cfg(feature = "text")]
 pub mod text;
 
-pub use layout::{arrange, pads, px, Arrangement, Glyph, Hit, Measure, Pads, Rect, Role, Target};
+pub use layout::{
+    arrange, horizontal_cell_extent, key_label_width, pads, px, Arrangement, CellStyle, Glyph, Hit,
+    Measure, Pads, Rect, Role, Target,
+};
 pub use paint::{
     capped_radius, fill_clipped, fill_round, highlight_radii, mix, pack, stroke_round,
 };
 #[cfg(feature = "window")]
 pub use portal::watch_appearance;
-pub use protocol::{Caret, Cell, Chrome, Command, Event, Show};
+pub use protocol::{Caret, Cell, Chrome, Command, Event, ExpandableView, Show};
 pub use system_color::{paint_chrome, SystemAppearance};

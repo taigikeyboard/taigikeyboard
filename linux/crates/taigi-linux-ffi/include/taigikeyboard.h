@@ -148,7 +148,8 @@ enum {
 /* Shows the candidate window for this lookup-table entry. `(x, y, w, h)` is
  * the caret in screen pixels; the window sits under it. A null reply and an
  * entry that is not a lookup table do nothing. */
-void taigi_popup_show(const TaigiReply *reply, size_t index, int32_t x, int32_t y, int32_t w, int32_t h);
+void taigi_popup_show(TaigiEngine *engine, const TaigiReply *reply, size_t index, int32_t x,
+                      int32_t y, int32_t w, int32_t h);
 void taigi_popup_hide(void);
 /* The fd that becomes readable when the window reports a click or a page
  * turn. Valid for the process lifetime; do not close it. -1 if the pipe
