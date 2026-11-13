@@ -13,8 +13,10 @@ import subprocess
 import xml.etree.ElementTree as ET
 import zipfile
 from collections import Counter
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from decimal import Decimal
+from itertools import zip_longest
 from pathlib import Path
 
 TABLE = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
@@ -22,7 +24,39 @@ OFFICE = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
 TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 TITLE = "chore(dictionary): MoE kautian.ods has new data"
 START, END = "<!-- kautian-watch:start -->", "<!-- kautian-watch:end -->"
-FORMAT_MARKER = "<!-- kautian-watch:format:2 -->"
+# Issue text is Taigi Hanji, worded after sutian.moe.edu.tw/und-hani (maintainer request).
+FORMAT_MARKER = "<!-- kautian-watch:format:7 -->"
+# Sheets the dictionary build reads, with their reading columns
+# (dictionary/sources/official/kautian/config.yaml select.sheets + dialect_sheet;
+# kautian_watch_test keeps the two in sync).
+READING_SHEETS = {
+    **dict.fromkeys(("詞目", "又唸作", "合音唸作", "俗唸作", "詞彙比較", "名", "姓"), ("羅馬字",)),
+    "語音差異": (
+        "鹿港偏泉腔",
+        "三峽偏泉腔",
+        "臺北偏泉腔",
+        "宜蘭偏漳腔",
+        "臺南混合腔",
+        "高雄混合腔",
+        "金門偏泉腔",
+        "馬公偏泉腔",
+        "新竹偏泉腔",
+        "臺中偏漳腔",
+    ),
+}
+# Same separators as dictionary/common/expand.py DEFAULT_SEPARATORS.
+SEPARATORS = re.compile(r"[/,]")
+# Keeps the issue body (summary tables + 24,000-char diff) under GitHub's limit.
+SUMMARY_TABLE_CHARS = 4000
+# Plain-language names for sheets that do not reach the dictionary.
+SHEET_TOPICS = {
+    # Dropped at merge; the variants stage reads the frozen variants.csv instead.
+    "異用字": "異用字",
+    "義項": "釋義",
+    "例句": "例句",
+    "羅馬字清單": "羅馬字清單",
+    "漢字羅馬字對應": "漢字羅馬字對應",
+}
 # These are source-record identifiers, not dictionary word/deduplication keys.
 SOURCE_KEYS = {
     "詞目": ("詞目id",),
@@ -231,7 +265,7 @@ def counts(sheet: SheetDiff) -> tuple[int, int, int]:
 
 def summary_table(sheets: list[SheetDiff], *, brief: bool) -> str:
     lines = [
-        "| Sheet | Before | After | Added | Removed | Modified |",
+        "| 資料表 | 進前 | 了後 | 增加 | 刪掉 | 改 |",
         "| --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     for sheet in sheets:
@@ -252,9 +286,9 @@ def code_text(value: str) -> str:
 
 def column_label(columns: Row, index: int) -> str:
     if index >= len(columns) or not columns[index]:
-        return f"Column {index + 1}"
+        return f"第 {index + 1} 欄"
     name = columns[index]
-    return name if columns.count(name) == 1 else f"{name} [column {index + 1}]"
+    return name if columns.count(name) == 1 else f"{name} [第 {index + 1} 欄]"
 
 
 def row_context(columns: Row, row: Row) -> str:
@@ -272,7 +306,7 @@ def diff_hunks(sheet: SheetDiff, *, brief: bool):
     if not brief or sheet.columns_before != sheet.columns_after:
         yield "\n".join(
             [
-                "@@ Column headers (null means sheet absent) @@",
+                "@@ 欄位名（null 是無這个資料表）@@",
                 "- " + json.dumps(sheet.columns_before, ensure_ascii=False).replace("<", "\\u003c"),
                 "+ " + json.dumps(sheet.columns_after, ensure_ascii=False).replace("<", "\\u003c"),
             ]
@@ -297,10 +331,10 @@ def diff_hunks(sheet: SheetDiff, *, brief: bool):
             label = code_text(column_label(columns, index))
             if before != after:
                 for sign, value in (("-", before), ("+", after)):
-                    display = code_text(value) if value else "(empty)"
+                    display = code_text(value) if value else "（空的）"
                     lines.append(f"{sign} {label}: {display}")
             elif not brief:
-                lines.append(f"  {label}: {code_text(before) if before else '(empty)'}")
+                lines.append(f"  {label}: {code_text(before) if before else '（空的）'}")
         yield "\n".join(lines)
     for sign, rows, columns in (
         ("+", sheet.added, sheet.columns_after),
@@ -314,7 +348,7 @@ def diff_hunks(sheet: SheetDiff, *, brief: bool):
             for index, value in enumerate(row.values):
                 lines.append(
                     f"{sign} {code_text(column_label(columns, index))}: "
-                    + (code_text(value) or "(empty)")
+                    + (code_text(value) or "（空的）")
                 )
             yield "\n".join(lines)
 
@@ -323,22 +357,19 @@ def render(differences: list[SheetDiff], *, brief: bool) -> str:
     active = [sheet for sheet in differences if changed(sheet)]
     totals = [sum(counts(sheet)[index] for sheet in active) for index in range(3)]
     blocks = [
-        "## Data diff",
-        (
-            f"**{totals[0]} added · {totals[1]} removed · {totals[2]} modified** "
-            f"across {len(active)} sheets."
-        ),
-        "Counts refer to source rows; modified rows are counted separately.",
+        "## 原始資料差異",
+        (f"**增加 {totals[0]} · 刪掉 {totals[1]} · 改 {totals[2]}**，佇 {len(active)} 个資料表。"),
+        "數量算原始資料的列；改的列另外算。",
     ]
     if not active:
-        blocks.append("No data differences from the committed capture.")
+        blocks.append("佮已經存的版本無差異。")
     tables = [summary_table(active, brief=brief)] if active else []
     tables.append(
-        f"<details>\n<summary>All {len(differences)} sheets</summary>\n\n"
+        f"<details>\n<summary>全部 {len(differences)} 个資料表</summary>\n\n"
         + summary_table(differences, brief=brief)
         + "\n\n</details>"
     )
-    omitted = "Summary truncated; see full report for remaining changes."
+    omitted = "摘要傷長，賰的請看完整報告。"
     limit = 24000 if brief else None
     for table in tables:
         if limit and len("\n\n".join([*blocks, table, omitted])) > limit:
@@ -346,13 +377,11 @@ def render(differences: list[SheetDiff], *, brief: bool) -> str:
         blocks.append(table)
     for sheet in active:
         labels = ", ".join(
-            f"{number} {label}"
-            for number, label in zip(counts(sheet), ("added", "removed", "modified"))
+            f"{label} {number}"
+            for number, label in zip(counts(sheet), ("增加", "刪掉", "改"))
             if number
         )
-        title = f"### {safe(sheet.name, 80 if brief else None)} — " + (
-            labels or "column headers changed"
-        )
+        title = f"### {safe(sheet.name, 80 if brief else None)} — " + (labels or "欄位名有改")
         hunks, fence_length, body_length = [], 3, 0
         truncated = False
         remaining = limit - len("\n\n".join([*blocks, title, omitted])) - 24 if limit else None
@@ -375,9 +404,192 @@ def render(differences: list[SheetDiff], *, brief: bool) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
+def parts(value: str) -> list[str]:
+    return [part.strip() for part in SEPARATORS.split(value) if part.strip()]
+
+
+def split_pairs(hanjis: list[str], reading: str) -> list[tuple[str, str]]:
+    # Mirrors dictionary/common/expand.py expand_dataframe pairing and padding.
+    readings = parts(reading)
+    if not readings:
+        return []
+    return [
+        (
+            hanjis[index] if index < len(hanjis) else (hanjis[0] if hanjis else ""),
+            readings[index] if index < len(readings) else readings[0],
+        )
+        for index in range(max(len(readings), len(hanjis)))
+    ]
+
+
+def readings(sheets: dict[str, Sheet]) -> dict[tuple[str, str], set[str]]:
+    """(Hanji, romanization) pairs the dictionary build sees → sheets / dialects holding them."""
+    found: dict[tuple[str, str], set[str]] = {}
+    for name, reading_columns in READING_SHEETS.items():
+        sheet = sheets.get(name)
+        if not sheet or "漢字" not in sheet.columns:
+            continue
+        hanji_index = sheet.columns.index("漢字")
+        # 語音差異 holds one reading per dialect column; other sheets have one 羅馬字.
+        holders = [
+            (sheet.columns.index(column), column if len(reading_columns) > 1 else name)
+            for column in reading_columns
+            if column in sheet.columns
+        ]
+        for row in sheet.rows:
+            hanjis = parts(row[hanji_index]) if hanji_index < len(row) else []
+            for index, holder in holders:
+                for pair in split_pairs(hanjis, row[index] if index < len(row) else ""):
+                    found.setdefault(pair, set()).add(holder)
+    return found
+
+
+def sheet_topic(name: str) -> str:
+    if "近義" in name:
+        return "近義"
+    if "反義" in name:
+        return "反義"
+    return SHEET_TOPICS.get(name) or safe(name, 80)
+
+
+def bounded(lines: Iterable[str], total: int, *, brief: bool) -> list[str]:
+    shown, length = [], 0
+    for line in lines:
+        length += len(line) + 1
+        if brief and length > SUMMARY_TABLE_CHARS:
+            return shown + ["", f"…猶有 {total - len(shown)} 項，請看完整報告。"]
+        shown.append(line)
+    return shown
+
+
+def pair_table(
+    title: str, rows: list[Row], *, header: Row = ("漢字", "音讀", "資料表"), brief: bool
+) -> str:
+    body = (
+        f"| {' | '.join(safe(value, 80 if brief else None) for value in row)} |" for row in rows
+    )
+    head = [f"**{title}（{len(rows)}）**", "", f"| {' | '.join(header)} |", "| --- | --- | --- |"]
+    return "\n".join(head + bounded(body, len(rows), brief=brief))
+
+
+def link_kind(sheet: SheetDiff) -> str | None:
+    """Synonym / antonym link sheets with a stable layout; None for any other sheet."""
+    columns = sheet.columns_before or ()
+    if sheet.columns_before != sheet.columns_after or not {"詞目漢字", "對應詞目漢字"} <= set(
+        columns
+    ):
+        return None
+    return "近義" if "近義" in sheet.name else "反義" if "反義" in sheet.name else None
+
+
+def link_changes(differences: list[SheetDiff], *, brief: bool) -> list[str]:
+    """Synonym / antonym links per (word, linked word), across headword and sense sheets."""
+    links: dict[tuple[str, str, str], dict[str, list[str]]] = {}
+    for sheet in differences:
+        if not (kind := link_kind(sheet)):
+            continue
+        for side, rows in (("removed", sheet.removed), ("added", sheet.added)):
+            for row in rows:
+                fields = dict(zip(sheet.columns_before or (), row.values))
+                # 義項 sheets link one sense of the word; 詞目 sheets the whole word.
+                scope = f"釋義「{fields['解說']}」" if fields.get("解說") else "規个詞目"
+                key = (kind, fields.get("詞目漢字", ""), fields.get("對應詞目漢字", ""))
+                links.setdefault(key, {}).setdefault(side, []).append(scope)
+    tables: dict[str, list[Row]] = {}
+    for (kind, word, target), sides in sorted(links.items()):
+        removed, added = "; ".join(sides.get("removed", [])), "; ".join(sides.get("added", []))
+        change = (
+            f"{removed} → {added}" if removed and added else f"增加：{added}" if added else "刪掉"
+        )
+        tables.setdefault(kind, []).append((word, target, change))
+    return [
+        pair_table(kind, rows, header=("詞目", kind, "改變"), brief=brief)
+        for kind, rows in tables.items()
+    ]
+
+
+def side_effects(differences: list[SheetDiff], *, brief: bool) -> list[str]:
+    """Changed source rows that alter no (Hanji, romanization) pair."""
+    edits: dict[str, Counter[str]] = {}
+    topics: dict[str, Counter[str]] = {}
+    for sheet in differences:
+        if not changed(sheet):
+            continue
+        if sheet.name in READING_SHEETS:
+            columns = sheet.columns_before or ()
+            typing_columns = {"漢字", *READING_SHEETS[sheet.name]}
+            for modification in sheet.modified:
+                touched = {
+                    column_label(columns, index)
+                    for index, (old, new) in enumerate(
+                        zip_longest(modification.before, modification.after)
+                    )
+                    if old != new
+                }
+                if not typing_columns & touched:
+                    edits.setdefault(sheet.name, Counter()).update(touched)
+            continue
+        if link_kind(sheet):
+            continue
+        totals = topics.setdefault(sheet_topic(sheet.name), Counter())
+        totals.update(dict(zip(("增加", "刪掉", "改"), counts(sheet))))
+    lines = [
+        f"- {safe(name)}：{safe(column, 80)}改 {number} 項"
+        for name, fields in edits.items()
+        for column, number in sorted(fields.items())
+    ]
+    for topic, totals in topics.items():
+        labels = "、".join(f"{label} {number}" for label, number in totals.items() if number)
+        lines.append(f"- {topic}：{labels or '欄位名有改'}")
+    return bounded(lines, len(lines), brief=brief)
+
+
+def typing_summary(
+    old: dict[tuple[str, str], set[str]],
+    new: dict[tuple[str, str], set[str]],
+    differences: list[SheetDiff],
+    *,
+    brief: bool,
+) -> str:
+    """Takes readings() of the committed and upstream exports."""
+
+    def holders(pair: tuple[str, str], side: dict[tuple[str, str], set[str]]) -> str:
+        return ", ".join(sorted(side[pair]))
+
+    tables = [
+        ("增加的音讀", [(*pair, holders(pair, new)) for pair in new.keys() - old.keys()]),
+        ("刪掉的音讀", [(*pair, holders(pair, old)) for pair in old.keys() - new.keys()]),
+        # Sheet / dialect membership feeds the Kautian subtag and accent mask.
+        (
+            "徙位的音讀",
+            [
+                (*pair, f"{holders(pair, old)} → {holders(pair, new)}")
+                for pair in old.keys() & new.keys()
+                if old[pair] != new[pair]
+            ],
+        ),
+    ]
+    blocks = ["## 教典資料修正"]
+    if headers := [
+        safe(sheet.name, 80)
+        for sheet in differences
+        if sheet.name in READING_SHEETS and sheet.columns_before != sheet.columns_after
+    ]:
+        blocks.append(f"⚠ 欄位名有改：{'、'.join(headers)}。下面的清單無準。")
+    blocks += [pair_table(title, sorted(rows), brief=brief) for title, rows in tables if rows]
+    if not any(rows for _, rows in tables):
+        blocks.append("音讀無改變。")
+    others = side_effects(differences, brief=brief)
+    parts = (["\n".join(others)] if others else []) + link_changes(differences, brief=brief)
+    if parts:
+        blocks.append("\n\n".join(["**其他改變**", *parts]))
+    return "\n\n".join(blocks) + "\n\n"
+
+
 def generate(arguments: argparse.Namespace) -> None:
     before, after = read_ods(arguments.committed), read_ods(arguments.upstream)
     differences = compare(before, after)
+    old_readings, new_readings = readings(before), readings(after)
     data = {
         "baseline_commit": arguments.baseline_commit,
         "baseline_data_sha256": fingerprint(before),
@@ -395,7 +607,8 @@ def generate(arguments: argparse.Namespace) -> None:
     )
     for filename, brief in (("summary.md", True), ("diff.md", False)):
         (arguments.output / filename).write_text(
-            ("" if brief else f"Baseline commit: `{arguments.baseline_commit}`\n\n")
+            ("" if brief else f"比對基準 commit：`{arguments.baseline_commit}`\n\n")
+            + typing_summary(old_readings, new_readings, differences, brief=brief)
             + render(differences, brief=brief),
             encoding="utf-8",
         )
@@ -462,14 +675,13 @@ def publish(arguments: argparse.Namespace) -> None:
     summary = (arguments.report / "summary.md").read_text(encoding="utf-8")
     section = (
         f"{START}\n{marker}\n{FORMAT_MARKER}\n{summary}\n"
-        f"[Full report (Markdown + JSON)]({arguments.artifact_url}) · [Detection run]({arguments.run_url})\n\n"
-        "<details>\n<summary>Comparison details</summary>\n\n"
-        f"- Baseline commit: `{report['baseline_commit']}`\n"
-        f"- Upstream Last-Modified: {safe(arguments.last_modified, 200)}\n"
-        f"- Upstream file SHA-256: `{report['upstream_file_sha256']}`\n"
-        "- Full report retained for 90 days; GitHub sign-in required.\n"
-        "- Modified rows pair unique source IDs in both complete sheets. "
-        "Other changes appear as additions/removals.\n\n</details>\n"
+        f"[完整報告（Markdown + JSON）]({arguments.artifact_url}) · [檢查記錄]({arguments.run_url})\n\n"
+        "<details>\n<summary>比對資料</summary>\n\n"
+        f"- 比對基準 commit：`{report['baseline_commit']}`\n"
+        f"- 教典檔案上尾改的時間：{safe(arguments.last_modified, 200)}\n"
+        f"- 教典檔案 SHA-256：`{report['upstream_file_sha256']}`\n"
+        "- 完整報告保留 90 工，愛登入 GitHub。\n"
+        "- 改的列是用兩爿攏有、無重複的 id 配對；其他的算增加抑是刪掉。\n\n</details>\n"
         f"{END}"
     )
     if current:
@@ -481,14 +693,7 @@ def publish(arguments: argparse.Namespace) -> None:
         )
         print(f"Updated issue #{current['number']}")
     else:
-        body = (
-            "MoE published data differing from the committed capture.\n\n"
-            "Source: https://sutian.moe.edu.tw/media/senn/ods/kautian.ods\n\n"
-            "Daily automation rebuilds dictionary data and opens a PR for manual merge "
-            "after Python and Engine verification. Merging that PR closes this issue. "
-            "If verification fails, inspect the linked run; corpus membership changes "
-            "require complete `build.corpus_bigrams` regeneration before retrying."
-        )
+        body = "教育部公佈新版的教典資料：https://sutian.moe.edu.tw/media/senn/ods/kautian.ods"
         issue = github(
             endpoint,
             "--method",
