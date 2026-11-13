@@ -4,6 +4,8 @@ Two release trains, two version numbers (`docs/architecture/manual-release-notes
 
 ## Desktop — macOS + Windows + Linux + ChromeOS
 
+After v3.9.0, each desktop release's notes are on its [GitHub release](https://github.com/taigikeyboard/taigikeyboard/releases) page.
+
 - [v3.9.0](changelog/desktop-v3.9.0.md)
 - [v3.8.0](changelog/desktop-v3.8.0.md)
 - [v3.7.0](changelog/desktop-v3.7.0.md)

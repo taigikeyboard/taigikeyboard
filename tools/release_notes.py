@@ -34,11 +34,9 @@ FORBIDDEN_MARKETING_PHRASES = (
     "coming soon",
     "free for a limited time",
 )
-# The desktop train ships its own release notes: `macos/scripts/publish-release.sh`
-# and `windows/scripts/publish-release.sh` hand their platform's section of
-# `changelog/desktop-v<version>.md` to `gh release create`. The store notes are
-# the mobile surface only, so desktop-only work belongs in that desktop file and
-# never in either What's New.
+# The desktop train's release body is GitHub's generated notes
+# (`tools/release/lib/desktop-release.sh`). The store notes are the mobile
+# surface only, so desktop-only work never enters either What's New.
 MACOS_TERMS = ("macOS", "Mac", "Macs", "MacBook")
 # "Mac" opens ordinary English words — machine, macro, macron — so it is the one
 # term matched as a whole word. Every other term takes an open tail, which keeps

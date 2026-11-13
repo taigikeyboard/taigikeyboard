@@ -1,6 +1,6 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows + Linux + ChromeOS, one shared version) of the version already in the tree - changelog, rebuild, commit, and stage the installers on an unpublished draft; stops before publishing. Optional args: a patch platform (`macos` / `windows` / `linux` / `chromeos`) or a release base. Mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows + Linux + ChromeOS, one shared version) of the version already in the tree - upgrade check, rebuild, commit, and stage the installers on an unpublished draft; stops before publishing. Optional args: a patch platform (`macos` / `windows` / `linux` / `chromeos`) or a release base. Mobile train (iOS + Android) is `release-mobile`.
 disable-model-invocation: true
 ---
 
@@ -26,7 +26,7 @@ patch (`YYYY.M.P`, P > 0) ships only the platform it fixes. Policy:
 `docs/architecture/desktop-release.md` § Version numbers.
 
 This skill takes a release as far as it can go without a person: it rebuilds,
-writes the changelog, commits, and stages **every** platform's installers on a draft release
+commits, and stages **every** platform's installers on a draft release
 nobody can reach (staging also dispatches the beta run for the unlisted /beta
 page). It stops there. Publishing that draft is the maintainer's,
 because it is the decision the draft exists to protect — and publishing
@@ -63,8 +63,8 @@ No `desktop-*` tag reachable from `HEAD` → stop and ask for `<base-ref>`.
 
 Then, before any edit:
 
-- Require `<target>` to match `YYYY.M.P`, and
-  `changelog/desktop-v<target>.md` to be absent or not yet published.
+- Require `<target>` to match `YYYY.M.P`, and no published `desktop-<target>`
+  release.
 - Kind check: a `<platform>` argument with a `.0` target, or no `<platform>`
   with a non-`.0` target, breaks the numbering convention — name the mismatch
   and ask before continuing (the version is the maintainer's call).
@@ -79,47 +79,19 @@ Then, before any edit:
 `check-versions --train mobile` is not this skill's gate — an iOS/Android
 version differing from `<target>` is expected, not a finding.
 
-## 2. Analyze the release
+## 2. Upgrade check
 
-Read the complete release range:
+Read the release range:
 
 ```bash
-git log <base-ref>..HEAD --oneline
+git log --first-parent <base-ref>..HEAD --oneline
 git diff <base-ref>..HEAD --stat --name-status
-git log <base-ref>..HEAD --format="%s%n%b%n---"
 ```
-
-For a patch, the changelog covers only what reaches that platform: its own tree
-(`macos/`, `windows/`, `linux/`, `web/chromeos/`) plus the shared `desktop/`, `engine/` and
-`dictionary/` changes its build picks up.
-
-Trace user-visible behavior by platform. Do not infer release scope from commit
-subjects alone.
-
-Sort every user-visible change before writing anything:
-
-- **macOS-only** → the `### macOS` section.
-- **Windows-only** → the `### Windows` section.
-- **Linux-only** → the `### Linux` section.
-- **ChromeOS-only** → the `### ChromeOS` section (it shares `web/src/` and the
-  wasm engine with the web version, which has no release of its own).
-- **Shared** (engine, dictionary, a behavior landing on several desktop
-  platforms) → describe it in **each affected platform's** section, in that
-  platform's own terms (its own shortcut spelling: `⌃⌘H` on macOS,
-  `Ctrl+Alt+H` on Windows and Linux). A change that touches `desktop/` or
-  `windows/` shared code but not Linux's shell path (or the reverse) goes only
-  where a user can see it. All platforms share one release page carrying the
-  whole file, so a reader on any platform should find their own wording of the
-  change under their own heading. A Linux section with nothing new says so in
-  one line rather than being left out.
-- **iOS-only / Android-only** → NOT this release. Mobile work belongs to
-  `changelog/mobile-v<version>.md` and the store notes, written by `release-mobile`.
 
 Run the `upgrade-check` procedure for `<base-ref> → HEAD`:
 
 - `BLOCKED` → stop before rebuild or edits.
-- `CLEAN WITH BEHAVIOR CHANGES` → record each behavior change in the affected
-  platform's section.
+- `CLEAN WITH BEHAVIOR CHANGES` → list each behavior change in the final report.
 - `CLEAN` → continue.
 
 Two desktop-specific upgrade checks on top of it:
@@ -163,59 +135,17 @@ RELEASE_VERSION=v<target> make dict   # only if dictionary/ sources moved; takes
 Commit whatever the rebuild changed before staging: staging refuses a dirty
 tree.
 
-## 4. Update release content
+## 4. Release notes — nothing to write
 
-| File | Purpose |
-| --- | --- |
-| `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS`, `### Windows`, `### Linux` and `### ChromeOS` |
-| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux + ChromeOS` list (newest first) |
-
-Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
-body, so it is what users read on the release page:
-
-```markdown
-# desktop v<target>
-
-<One paragraph: what this release is, in a sentence or three.>
-
-### macOS
-
-#### <Input | Candidates | Settings | Appearance | Updates | Install>
-
-- **<Short claim.>** <What a user sees, and why it changed.> (#PR)
-
-### Windows
-
-#### <same shape>
-
-### Linux
-
-#### <same shape>
-
-### ChromeOS
-
-#### <same shape>
-```
-
-Rules:
-
-- A patch's file has the lead paragraph and ONLY its platform's `###` section;
-  the release page shows what this version ships, and the other platforms ship
-  nothing in it.
-- The file must be **committed** before staging: the release body is read out
-  of the staged commit (the one the tag will name), not the working tree, and a
-  commit with no changelog fails staging outright.
-- English only: UI labels by their i18n `en` value (look up `"hanji": "<label>"` in `i18n/*.json`), quotes translated; CJK / TL / POJ / TPS only for Taigi example words and readings.
-- This is the GitHub release body users read: concrete user-visible behavior,
-  with the PR number in `(#NNN)`. No refactors, tests, tooling, or dependency
-  bumps unless a user feels them.
-- A subsection per surface, not one flat list — these bodies run long and the
-  headings are what make them readable.
-- Idempotent: re-running on an existing target file merges by topic. Refine the
-  line for a behavior; never add a second line for it.
-- There are **no store notes on this train.** Do not create
-  `changelog/store/<target>/`, do not run `release_notes.py check` or
-  `print` — those validate the mobile surface only and will fail or mislead here.
+Staging fills the draft's body with GitHub's generated notes: every pull
+request merged since the previous published `desktop-*` release, with its
+author, plus new contributors and a compare link
+(`tools/release/lib/desktop-release.sh` `_write_release_notes`;
+`docs/architecture/release-automation-roadmap.md` D2). Do not create
+`changelog/desktop-v<target>.md` or add to the desktop list in `CHANGELOG.md` —
+that list ends at v3.9.0. There are **no store notes on this train**: do not
+create `changelog/store/<target>/`, do not run `release_notes.py check` or
+`print`.
 
 ## 5. Validate
 
@@ -225,22 +155,18 @@ python3 tools/release_notes_test.py
 git diff --check
 ```
 
-Then read every section back against the release range: every PR in the range
-that changed user-visible desktop behavior appears in at least one section, and
-every claim in a section is traceable to a commit in the range.
-
 ## 6. Commit
+
+Only when § 1 or § 3 changed files (a version bump, regenerated artifacts):
 
 ```bash
 git add -A
-git commit -m "desktop v<target>: release prep + changelog"
+git commit -m "desktop v<target>: release prep"
 git push origin main
 ```
 
-Report the commit SHA, the release range, and every rendered section, then go
-straight to staging: the maintainer reads the changelog on the draft page before
-publishing, since deterministic validation cannot tell whether a sentence
-describes the behavior that shipped.
+Report the commit SHA, the release range and any behavior changes from § 2,
+then go straight to staging.
 
 ## 7. Stage every platform
 
@@ -299,7 +225,7 @@ to bump the Homebrew cask (or do it when asked) — steps in
 
 ## Guardrails
 
-- Never edit another version's changelog.
+- Never write a desktop changelog file — the notes are generated (§ 4).
 - Never touch `changelog/mobile-v<version>.md` or `changelog/store/**` — that is
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
 - Never bump the Homebrew cask before the release is published.
