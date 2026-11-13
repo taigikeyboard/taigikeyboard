@@ -1,8 +1,8 @@
 # Browser Extension
 
-> **Type**: Design record
+> **Type**: Design record + roadmap
 > **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `lexical`, `wasm`, `wasm2js`, `content security policy`, `learning`
-> **Status**: Chrome first cut 2026-11-13 (issue #864): typing, per-site access, per-tab mode, status and shared learning pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started. Not published.
+> **Status**: Chrome first cut 2026-11-13 (issue #864): typing, per-site access, per-tab mode, status and shared learning pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Not published.
 > **Siblings**: `web-roadmap.md` (the page and the wasm engine this reuses), `chromeos-roadmap.md` (the ChromeOS system input method, a separate product).
 
 ---
@@ -29,7 +29,7 @@ As on the page, the composition draws in an overlay and the text reaches the fie
 
 `document.execCommand("insertText")` is the one call that keeps an input's own undo history and that an editor hears as typing (`beforeinput` / `input`, `insertText`). `web-roadmap.md` § Text surface chose it for the page's first textarea for the same reason. Commits within one reply (such as a romanized word and its auto space) are joined before `execCommand`, and the auto-space swap's delete selects backwards and lets the commit replace the selection, so one engine reply is one undo step and one `beforeinput`; a delete with no commit is `execCommand("delete")`. Because `beforeinput`-driven editors like Lexical reconcile the DOM in a microtask after `execCommand`, `EditableWrites` adopts the selection after that microtask so its own write is not mistaken for a foreign caret move.
 
-A write the field refuses (the call answers false, or an input's value did not change) makes that field unsupported until the focus leaves it: its keys are the site's again, and the refused text goes to the console.
+A write the field refuses (the call answers false, or an input's value did not change) makes that field unsupported until the focus leaves it: its keys are the site's again, and the refused text's length goes to the console. Never the text itself: the console belongs to the site's page, and the text is the user's (`security-rules.md`).
 
 ### D4 — Per-site access, asked from the popup
 
@@ -50,6 +50,8 @@ A private window's content script (`chrome.extension.inIncognitoContext`) neithe
 Chromium applies the page's Content Security Policy to `WebAssembly.compile` in a content script: a `script-src` without `'wasm-unsafe-eval'` blocks it (measured 2026-11-13 on GitHub, Reddit and Calmly Writer; X, Facebook, Threads, Wikipedia, Gmail, YouTube, Notion, Dcard and PTT allow it). Dynamic `import()`, `fetch` of the package's files, `DOMParser` under Trusted Types and constructed stylesheets all pass a `default-src 'self'; require-trusted-types-for 'script'` page (`strict.html`).
 
 When `WebAssembly.compileStreaming` throws `WebAssembly.CompileError`, `engine.js` imports `pkg/taigi_web_asm.js` once for the tab and instantiates each session through `pkg/taigi_web_js.js` (`scripts/build-wasm2js.mjs`). The build clears `+multivalue` and `+reference-types` in `taigi_web.wasm`'s `target_features` custom section so `wasm-bindgen` emits one function table and stack out-pointers, lowers bulk-memory copies with `wasm-opt --llvm-memory-copy-fill-lowering`, translates with Binaryen's `wasm2js`, and minifies with `esbuild` — no second `cargo build`.
+
+This is a capability fallback, not a redundant one (`AGENTS.md` § Design principles): on such a site the WebAssembly path cannot run at all, so there is no "A" to push the capability into. The two paths run the same compiled engine, built from one `taigi_web.wasm`, so they cannot drift. The switch is one `instanceof WebAssembly.CompileError` check in `engine.js`. Any other error, such as a missing file or a failed read, still fails as **Could not load**. A damaged `.wasm` also throws `CompileError`, so it falls back too, and the fallback then types from its own intact copy. The fallback stays as long as sites can set a `script-src` without `'wasm-unsafe-eval'`.
 
 Measured cost (Apple Silicon, V8, real dictionaries and four SQLite stores):
 
@@ -107,7 +109,7 @@ The tooltip is the extension's name and the same words. The popup shows them too
 - **Modal dialogs**: the overlay is a fixed element with the highest `z-index`, not in the top layer. A field inside `<dialog>.showModal()` composes, but the panel draws under the dialog and takes no clicks there.
 - **Fonts**: the panel uses the system's fonts; the page's Taigi fonts are not in the package, and the Font row is hidden in the options page.
 - **Not drawn**: the TPS key panel and the Telex guide. Their chords change nothing visible.
-- **`web_accessible_resources`**: the engine, the dictionaries and the modules are readable by any site, which can therefore tell that the extension is installed.
+- **`web_accessible_resources`**: the engine, the dictionaries and the modules are readable by any site, which can therefore tell that the extension is installed. Fix tracked in #902 (`use_dynamic_url`).
 - **The extension's shortcut** (Alt+Shift+T) toggles typing on an enabled site and opens the popup on one that is not.
 
 ## Package
@@ -136,7 +138,20 @@ The browser's permission question is a native dialog no harness can answer. The 
 
 Not automated in the browser: the native permission grant dialog and its removal, the keyboard shortcut, an actual incognito window (the extension must be allowed in incognito by hand; `SharedLearning`'s `isPrivate` path is unit-tested in Node), and a modal dialog.
 
-## Open
+## Phases
 
-- Firefox: the same sources should load with a Firefox manifest (`browser_specific_settings`, a background script in place of the service worker); it needs its own harness (Selenium / geckodriver or `web-ext`) and its own pass of every row above.
-- Store listing, privacy fields, and the release step.
+One PR per phase. Issue #864 makes Chrome and Firefox one release: neither ships until both pass every row of § Tests. No version is assigned.
+
+| # | Phase | Content | Status |
+|---|---|---|---|
+| 0 | Design | Issue #864: decisions and acceptance criteria | Done |
+| 1 | Chrome | This document's D1–D7; `make -C web extension`, `extension-e2e` in `web.yml` | PR #901 open |
+| 2 | Canvas and hidden-field editors | Editors that draw their text themselves and take keys through a hidden field. Examples are Google Docs (a hidden `contenteditable` in an `<iframe>`, text drawn on a `<canvas>`) and code editors with a hidden `<textarea>` such as Monaco and CodeMirror 5. Today they get no special handling: depending on where the hidden field sits, `classify` sees an `<iframe>` (**Field not supported**), or an `input` that the extension writes into while the panel sits over a field nobody sees. Each such editor ends in one of two states, never in a broken one: **detected and unsupported** (a field that is zero-size, off screen, transparent or in a cross-origin frame; keys untouched, chip and toolbar say **Field not supported**), or **supported** (an adapter that writes the way the editor reads its hidden field and places the panel at the editor's own caret, with its own row in § Tests). First step: record what Google Docs, Google Sheets, Monaco and CodeMirror 5 / 6 do with the extension today, then choose per editor | Not started |
+| 3 | Firefox | A Firefox manifest from the same sources: `browser_specific_settings`, `background.scripts` in place of the service worker. Its own harness, because Playwright cannot load a Firefox extension (`web-ext` or geckodriver), and its own pass of every row of § Tests. Check in Firefox, not by analogy with Chromium, whether a page's CSP blocks `WebAssembly.compile` in a content script (D7). Firefox keeps its own learned history (#864) | Not started; blocks the release |
+| 4 | Other Chromium browsers | Edge, Brave, Vivaldi, Opera, Arc: the hand-checked rows (permission grant, shortcut, private window) once per browser. Whether to list in the Edge Add-ons store is the maintainer's call | Not started |
+| 5 | Packaging + store | A release doc in the shape of `chromeos-release.md`: version on the desktop train, the zip built in CI, store listing, privacy fields, screenshots. Developer accounts and submission are the maintainer's | Not started |
+
+### Open questions for the maintainer
+
+- **Safari**: not in #864. A Safari web extension ships inside a Mac / iOS app made in Xcode, and only the maintainer edits Xcode projects (`AGENTS.md` Core Principle 1). Whether to start it, and when, is the maintainer's call.
+- **Detection by sites**: issue #902, `"use_dynamic_url": true` (§ Known limits, `web_accessible_resources`). Needs a higher `minimum_chrome_version` and a full extension e2e pass.
