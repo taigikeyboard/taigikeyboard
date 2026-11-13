@@ -17,13 +17,14 @@ PKG := target/pkg
 WASM := target/$(TARGET)/release/taigi_web.wasm
 SITE := target/site
 CHROMEOS := target/chromeos
+EXTENSION := target/extension
 FONT_SOURCES := ../assets/fonts/font
 FONTS := target/fonts
 # Lexical in one module (vendor/lexical.js), its licence beside it.
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site chromeos serve test smoke e2e check-live lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site chromeos extension serve test smoke e2e check-live lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -34,6 +35,7 @@ help:
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
 	@echo "  make site    - Stage the page, bindings, dictionaries, fonts and manifest into $(SITE)/"
 	@echo "  make chromeos - Stage the ChromeOS input method into $(CHROMEOS)/ and zip it"
+	@echo "  make extension - Stage the browser extension into $(EXTENSION)/ and zip it"
 	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
@@ -108,6 +110,23 @@ chromeos: build
 	cp ../assets/dictionaries/* $(CHROMEOS)/dictionaries/
 	cp $(ICONS)/16.png $(ICONS)/48.png $(ICONS)/128.png $(CHROMEOS)/icons/
 	cd $(CHROMEOS) && zip -qrX ../taigi-keyboard-chromeos.zip .
+
+# The browser extension (docs/architecture/browser-extension.md): the engine
+# and the dictionaries in the package, as ChromeOS has them, and the page's
+# panel, stylesheet and settings form cut by stage-extension.mjs.
+EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js
+extension: build
+	rm -rf $(EXTENSION) target/taigi-keyboard-extension.zip
+	mkdir -p $(EXTENSION)/pkg $(EXTENSION)/dictionaries $(EXTENSION)/icons $(EXTENSION)/generated
+	cp extension/manifest.json extension/*.js extension/popup.html extension/popup.css $(EXTENSION)/
+	cp -R extension/_locales $(EXTENSION)/
+	cp $(addprefix src/,$(EXTENSION_PAGE_MODULES)) src/style.css src/chevron.svg chromeos/options.js $(EXTENSION)/
+	cp src/generated/strings.js $(EXTENSION)/generated/
+	node scripts/stage-extension.mjs src extension $(EXTENSION)
+	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(EXTENSION)/pkg/
+	cp ../assets/dictionaries/* $(EXTENSION)/dictionaries/
+	cp $(ICONS)/16.png $(ICONS)/32.png $(ICONS)/48.png $(ICONS)/128.png $(EXTENSION)/icons/
+	cd $(EXTENSION) && zip -qrX ../taigi-keyboard-extension.zip .
 
 serve: site
 	node scripts/serve.mjs $(SITE) 8000

@@ -1,0 +1,8 @@
+{
+  "name": { "message": "台語齒盤：佇網頁拍台語、台文輸入" },
+  "description": { "message": "免費、開源、跨裝置 ê 台灣話拍字家私" },
+  "title": { "message": "台語齒盤：這頁猶未啟用" },
+  "toggle": { "message": "佇這个分頁開始抑是停止拍台語" },
+  "off": { "message": "關掉" },
+  "failed": { "message": "載入失敗" }
+}

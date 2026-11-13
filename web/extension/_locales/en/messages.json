@@ -1,0 +1,10 @@
+{
+  "name": { "message": "TaigiKeyboard: Type Taiwanese on any website" },
+  "description": {
+    "message": "A free, open-source Taiwanese input method across devices."
+  },
+  "title": { "message": "TaigiKeyboard: not enabled on this page" },
+  "toggle": { "message": "Start or stop typing Taigi in this tab" },
+  "off": { "message": "Off" },
+  "failed": { "message": "Could not load" }
+}
