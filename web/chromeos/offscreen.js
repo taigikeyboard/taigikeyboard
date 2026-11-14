@@ -3,5 +3,10 @@
 setInterval(() => {
   chrome.runtime
     .sendMessage({ keepAlive: true })
-    .catch((error) => console.warn("keepAlive.failed", error.message));
+    .catch((/** @type {unknown} */ error) =>
+      console.warn(
+        "keepAlive.failed",
+        error instanceof Error ? error.message : String(error),
+      ),
+    );
 }, 20_000);

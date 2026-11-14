@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "WebWorker"],
+    "types": ["chrome"],
+    "rootDirs": ["chromeos", "types/chromeos-worker", "src", "types/site"]
+  },
+  "include": [
+    "chromeos/worker.js",
+    "chromeos/calls.js",
+    "src/learning.js",
+    "types/shared.d.ts",
+    "types/globals.d.ts",
+    "types/site/**/*.d.ts",
+    "types/chromeos-worker/**/*.d.ts"
+  ]
+}
