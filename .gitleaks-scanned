@@ -4,7 +4,8 @@
 #
 # Read by tools/secret-scan/gitleaks-scan.sh, which `make scan-secrets`, the pre-commit hook
 # and .github/workflows/secrets.yml all go through. An incremental scan is
-# `--all --not <commit>`: every commit on every ref that this one does not already
+# `--all --not <commit>`, excluding local refs/jj/*, refs/t3/* and refs/codex/*
+# snapshots: every commit on the remaining refs that this one does not already
 # cover. That is also the net for anything a per-pull-request range scan could not
 # reach — within the limit that it can only read refs that still exist.
 #
@@ -36,6 +37,9 @@
 # Refreshed 2026-09-24: .gitleaks.toml gained the personal-email rule. Full-history
 # rescan, 1706 commits, 1.05 GB; its 13 historical findings were reviewed and
 # dismissed in .gitleaksignore. Watermark = main's tip at scan time.
-commit=9b06586c887f3ef43192a103dec3a597e0437a5d
-date=2026-09-24
+# Refreshed 2026-11-14: exclude local Jujutsu, T3 Code and Codex snapshot refs.
+# Full-history rescan, 3523 commits, 1.21 GB, no leaks. Watermark = main's tip
+# at scan time; all other ref namespaces and worktree HEADs remain in scope.
+commit=b6de4fda0ca40d870eec79eae43124b6b05dcb2b
+date=2026-11-14
 gitleaks=8.30.1
