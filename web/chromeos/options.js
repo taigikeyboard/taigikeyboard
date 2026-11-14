@@ -2,6 +2,13 @@
 // document in chrome.storage.sync, which the worker reads too.
 
 import { STORAGE_KEY as KEY, parseStored, Settings } from "./settings.js";
+import { drawShortcuts } from "./shortcuts.js";
+
+/** @typedef {import("../types/shared.d.ts").WireShortcuts} WireShortcuts */
+
+// The ChromeOS worker's session writes its shortcut list here (the same key
+// in `worker.js`); the browser extension's cut hides the section.
+const SHORTCUTS_KEY = "taigi.shortcuts";
 
 const { [KEY]: stored } = await chrome.storage.sync.get(KEY);
 // The last document this page wrote or adopted: an equal one is no change.
@@ -54,3 +61,34 @@ chrome.storage.onChanged.addListener((changes, area) => {
     settings.adopt(change.newValue);
   }
 });
+
+const shortcuts = document.getElementById("shortcuts");
+
+/**
+ * Draws the worker's shortcut list; none yet (the input method has not run)
+ * leaves the section empty.
+ * @param {HTMLElement} root
+ * @param {unknown} json
+ * @returns {void}
+ */
+function showShortcuts(root, json) {
+  if (typeof json !== "string") {
+    return;
+  }
+  const { groups } = /** @type {WireShortcuts} */ (JSON.parse(json));
+  if (groups) {
+    drawShortcuts(root, groups);
+  }
+}
+
+if (shortcuts !== null && shortcuts.closest("[hidden]") === null) {
+  const { [SHORTCUTS_KEY]: published } =
+    await chrome.storage.local.get(SHORTCUTS_KEY);
+  showShortcuts(shortcuts, published);
+  // Tone Keys, the input script and the language change the list.
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "local") {
+      showShortcuts(shortcuts, changes[SHORTCUTS_KEY]?.newValue);
+    }
+  });
+}

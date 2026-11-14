@@ -8,6 +8,8 @@
  * @typedef {object} OptionsCut
  * @property {string[]} hiddenControls
  * @property {string[]} removedOptions
+ * @property {boolean} shortcutsShown
+ * @property {boolean} sectionsOpen
  */
 
 /**
@@ -31,10 +33,15 @@ const CHROMEOS = {
    * expandable layout (chromeos-roadmap.md D4).
    */
   removedOptions: ["expandable", "verticalExpandable"],
+  /** The worker publishes its session's shortcut list (`options.js`). */
+  shortcutsShown: true,
+  /** A full-width page with room for every section at once. */
+  sectionsOpen: true,
 };
 
-/** The page fills this section from the session; the options page has none. */
-const HIDDEN_SECTION_MARK = '<div id="shortcuts"></div>';
+/** The page fills this section from its session. */
+const SHORTCUTS_MARK = '<div id="shortcuts"></div>';
+const SECTION_OPENING = '<details class="sidebar-section">';
 
 /**
  * @param {string[]} lines
@@ -76,7 +83,9 @@ function hideEnclosing(lines, from, opening) {
 
 /**
  * `<form id="settings">…</form>` of `indexHtml`, without what `cut` names:
- * `hiddenControls`, rows to hide, and `removedOptions`, options to drop.
+ * `hiddenControls`, rows to hide, `removedOptions`, options to drop,
+ * `shortcutsShown`, whether the Shortcuts section stays, and `sectionsOpen`,
+ * whether every section starts unfolded.
  *
  * @param {string} indexHtml
  * @param {OptionsCut} [cut]
@@ -94,15 +103,16 @@ export function optionsForm(indexHtml, cut = CHROMEOS) {
       '<label class="setting">',
     );
   }
-  hideEnclosing(
-    form,
-    onlyIndex(form, HIDDEN_SECTION_MARK),
-    '<details class="sidebar-section">',
-  );
+  if (!cut.shortcutsShown) {
+    hideEnclosing(form, onlyIndex(form, SHORTCUTS_MARK), SECTION_OPENING);
+  }
   for (const option of cut.removedOptions) {
     form.splice(onlyIndex(form, `<option value="${option}"`), 1);
   }
-  return form.join("\n");
+  const joined = form.join("\n");
+  return cut.sectionsOpen
+    ? joined.replaceAll(SECTION_OPENING, SECTION_OPENING.replace(">", " open>"))
+    : joined;
 }
 
 const FORM_MARK = /^\s*<!-- form:.*-->$/m;

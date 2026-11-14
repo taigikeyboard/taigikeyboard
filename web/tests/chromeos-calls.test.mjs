@@ -7,6 +7,7 @@ import {
   imeCalls,
   isResetStorm,
   keyJson,
+  modeMenuItem,
   utf16Caret,
 } from "../chromeos/calls.js";
 
@@ -168,6 +169,27 @@ test("emits with no ChromeOS surface make no call", () => {
     ],
   };
   assert.deepEqual(imeCalls(reply, ids), []);
+});
+
+test("the tray row reads as the page's mode chip", () => {
+  assert.deepEqual(
+    modeMenuItem({
+      isEnglish: false,
+      mode: "台語",
+      script: "Tâi-lô",
+      other: "",
+    }),
+    { id: "mode", label: "台語 · Tâi-lô" },
+  );
+  assert.deepEqual(
+    modeMenuItem({
+      isEnglish: true,
+      mode: "English",
+      script: "",
+      other: "台語",
+    }),
+    { id: "mode", label: "English · ⇧ 台語" },
+  );
 });
 
 test("Google Docs and X fields are told apart from a plain field", () => {

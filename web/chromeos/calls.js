@@ -5,6 +5,7 @@
 /** @typedef {import("../types/shared.d.ts").BrowserKey} BrowserKey */
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
 /** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
 /**
  * @typedef {{
@@ -131,8 +132,9 @@ export function imeCalls(reply, { engineID, contextID }) {
         ]);
         break;
       default:
-        // modeChanged, announceMode, openSettings and the TPS key panel have
-        // no ChromeOS surface yet (chromeos-roadmap.md § Phases).
+        // modeChanged (the tray menu row), announceMode (a notification) and
+        // openSettings are the worker's; the TPS key panel has no ChromeOS
+        // surface.
         break;
     }
   }
@@ -185,6 +187,19 @@ function candidateCalls(table, { engineID, contextID }) {
     ]);
   }
   return calls;
+}
+
+/**
+ * The tray menu's one row: the page's mode chip (`ime.js` `redrawModeLine`)
+ * as text, the mode and the input script, or English and the Shift tap back.
+ * @param {WireModeLine} line
+ * @returns {chrome.input.ime.MenuItem}
+ */
+export function modeMenuItem({ isEnglish, mode, script, other }) {
+  return {
+    id: "mode",
+    label: isEnglish ? `${mode} · ⇧ ${other}` : `${mode} · ${script}`,
+  };
 }
 
 /**

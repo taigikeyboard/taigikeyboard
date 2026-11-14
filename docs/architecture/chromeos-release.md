@@ -57,6 +57,7 @@ The listing says plainly that the item is for ChromeOS: on Chrome for Windows, m
 |---|---|
 | Single purpose | A Taiwanese (Taigi) input method for ChromeOS |
 | `input` | Registers the input method and receives its keys |
+| `notifications` | Shows the input mode (Taigi / English, Hanji / Romanization) for 2 s at the bottom right when it switches |
 | `offscreen` | Keeps the input method's worker running between keystrokes; a key does not wake a stopped worker (`chromeos-roadmap.md` § Spike result) |
 | `storage` | Keeps the settings, synced through the user's Google account (`chrome.storage.sync`) |
 | Remote code | None: the wasm is in the package |
