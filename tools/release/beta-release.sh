@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offer an unpublished desktop draft to internal testers on Discord.
+# Offer an unpublished desktop draft to beta testers on Discord.
 #
 # Usage: beta-release.sh fetch <dir> <release id> <source sha>
 #        beta-release.sh publish <dir> <source sha> <run id>
@@ -21,8 +21,8 @@
 #            commit builds different bytes), lists the links in the job
 #            summary, then deletes every older `beta/` prefix.
 #   announce DISCORD_BETA_WEBHOOK only. Posts each installer's R2 link to the
-#            internal Discord channel the webhook belongs to. The beta is not
-#            on the website (USER 2026-11-14: internal Discord testing only).
+#            Discord channel the webhook belongs to (#announcements). The beta
+#            is not on the website (USER 2026-11-14).
 #
 # Nothing here touches the published releases: not `desktop/` in the bucket,
 # not the website, not the appcasts.

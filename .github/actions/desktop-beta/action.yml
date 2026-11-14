@@ -1,7 +1,7 @@
-name: Mirror the desktop draft for internal testers
+name: Mirror the desktop draft for beta testers
 description: >-
   Fetches a staged desktop draft's installers, mirrors them to R2 and posts the
-  links to the internal Discord channel (tools/release/beta-release.sh). Used by desktop-beta.yml (hotfix path, or a
+  links to the DISCORD_BETA_WEBHOOK channel (tools/release/beta-release.sh). Used by desktop-beta.yml (hotfix path, or a
   re-run by hand) and the `sign-and-beta` job of desktop-train.yml.
 
 # Composite actions cannot read `secrets`; the caller passes them in, and each

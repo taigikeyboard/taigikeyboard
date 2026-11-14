@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   beta:
-    name: mirror draft for internal testers
+    name: mirror draft for beta testers
     if: >-
       github.repository == 'taigikeyboard/taigikeyboard' &&
       github.ref == 'refs/heads/main'
