@@ -214,7 +214,8 @@ export function classify(element) {
     if (host.getRootNode() !== document || !visibleBox(host)) {
       return unsupported(host);
     }
-    return { kind: "editable", element: host, anchor: host, fontElement: host };
+    const anchor = host.closest(".cm-editor") ?? host;
+    return { kind: "editable", element: host, anchor, fontElement: host };
   }
   return null;
 }
@@ -380,6 +381,11 @@ class EditableWrites {
       range.endContainer,
       range.endOffset,
     );
+    // `selectionchange` is otherwise queued as a task after `execCommand`:
+    // editors that sync their model selection from it (CodeMirror 6's
+    // `DOMObserver`, which otherwise mistakes a Mac `. ` swap for double-space
+    // autocorrect) need to see the backward selection first.
+    document.dispatchEvent(new Event("selectionchange"));
     this.#isDeletePending = true;
   }
 
