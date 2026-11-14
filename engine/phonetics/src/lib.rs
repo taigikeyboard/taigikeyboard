@@ -18,6 +18,7 @@ mod display_rewrite;
 mod external_lookup;
 mod hanji;
 mod key_family;
+mod khinsiann;
 mod normalization;
 mod permissive_tone;
 mod poj;
