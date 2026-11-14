@@ -44,7 +44,10 @@ fn rust_aligner_matches_pipeline_alignment_report() {
     };
     let report_path = repo_root().join("dictionary/output/alignment_report.txt");
     if !report_path.exists() {
-        eprintln!("skipping alignment_report parity: {} absent", report_path.display());
+        eprintln!(
+            "skipping alignment_report parity: {} absent",
+            report_path.display()
+        );
         return;
     }
     let report_text = std::fs::read_to_string(&report_path).expect("read alignment_report.txt");
@@ -69,7 +72,10 @@ fn rust_aligner_matches_pipeline_alignment_report() {
             actual.insert((hanzi.to_owned(), tl.to_owned()));
         }
     }
-    assert_eq!(actual, expected, "Rust aligner drifted from Python alignment_report.txt");
+    assert_eq!(
+        actual, expected,
+        "Rust aligner drifted from Python alignment_report.txt"
+    );
 }
 
 #[test]
@@ -113,7 +119,10 @@ fn khinsiann_opening_readings_remain_reachable_after_typed_double_dash_and_plain
             opening_rows.push((hanzi.to_owned(), tl.to_owned(), tl_notone.to_owned()));
         }
     }
-    assert!(!opening_rows.is_empty(), "expected `--`-opening rows in dictionary.csv");
+    assert!(
+        !opening_rows.is_empty(),
+        "expected `--`-opening rows in dictionary.csv"
+    );
 
     // 1. Every pure-Hanji word with a `--`-opening reading (`一下`, `落來`, `起來`,
     //    plus `矣`) also has a standalone non-`--` reading so it stays reachable from Idle.

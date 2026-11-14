@@ -120,7 +120,8 @@ pub(crate) fn explain_segmentation(
                         .hanji
                         .clone()
                         .unwrap_or_else(|| choice.canonical_tl.clone());
-                    let picks = freq_map.get(&display, &choice.canonical_tl);
+                    let lookup_key = phonetics::api::learning_hanji_key(&display);
+                    let picks = freq_map.get(&lookup_key, &choice.canonical_tl);
                     let hanji = choice.hanji.as_deref().map(|h| {
                         phonetics::api::render_hanji_khinsiann(
                             h,

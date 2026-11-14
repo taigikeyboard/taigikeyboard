@@ -26,9 +26,7 @@
 use crate::api::{
     CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent, Phase, UserRows,
 };
-use crate::continuous::{
-    assemble_candidates, retain_first_by_key, ListShape,
-};
+use crate::continuous::{assemble_candidates, retain_first_by_key, ListShape};
 use crate::derived::buffer_input_mode;
 use crate::WordListStart;
 use lexicon::dictionary_reader::NO_ROWID;
@@ -534,7 +532,8 @@ fn explain_mechanism(
             }
             let (start, end) = candidate.consumed_span;
             let raw_len = listed.raw.len() as u32;
-            let picks = frequency.get(&candidate.display_text, &candidate.canonical_tl);
+            let lookup_key = phonetics::api::learning_hanji_key(&candidate.display_text);
+            let picks = frequency.get(&lookup_key, &candidate.canonical_tl);
             CandidatePiece {
                 hanji: candidate.hanji.clone(),
                 roman: candidate.roman.clone(),

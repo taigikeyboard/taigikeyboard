@@ -470,7 +470,9 @@ pub(super) fn fetch_walker_slot0_inner(
                 path.edges.iter().zip(&path.choices).zip(&parts).enumerate()
             {
                 let piece = match &choice.hanji {
-                    Some(h) => phonetics::api::render_hanji_khinsiann(h, &choice.canonical_tl, true),
+                    Some(h) => {
+                        phonetics::api::render_hanji_khinsiann(h, &choice.canonical_tl, true)
+                    }
                     None => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
                 };
                 let khinsiann_before = edge_idx > 0
@@ -515,9 +517,10 @@ pub(super) fn fetch_walker_slot0_inner(
     let display_text = raw_hanji.unwrap_or_else(|| canonical_tl.clone());
     // R5 pair-key (#7): walker synth keyed by (display_text,
     // canonical_tl); `get` returns the neutral default on a miss.
-    let user_weight = freq_map
-        .get(&display_text, &canonical_tl)
-        .user_weight(now_ms);
+    // Normalize `--` on pure-Hanji words so custom `--` entries share
+    // frequency counts with plain Hanji rows.
+    let lookup_key = phonetics::api::learning_hanji_key(&display_text);
+    let user_weight = freq_map.get(&lookup_key, &canonical_tl).user_weight(now_ms);
     Some(WalkerSlot0 {
         consumed_span,
         syllable_count,

@@ -194,10 +194,11 @@ pub(super) fn record_to_candidate(
     // exact miss; absent entries fall through to `FrequencyData::default()`
     // (count = 0, last_used_ms = 0) → `user_weight = 0.0`, the cold-start
     // neutral path.
+    let lookup_key = phonetics::api::learning_hanji_key(&display_text);
     let user_weight = freq_map
-        .get(&display_text, &canonical_tl)
+        .get(lookup_key.as_ref(), &canonical_tl)
         .user_weight(now_ms);
-    let context_rank = context.rank(&display_text, &canonical_tl);
+    let context_rank = context.rank(lookup_key.as_ref(), &canonical_tl);
     let score = calculate_continuous_score(frequency, syllable_count);
     RawCandidate {
         rowid,
@@ -296,10 +297,11 @@ pub(super) fn custom_entry_to_candidate(
     // `record_to_candidate`. For a hanji-absent custom/OOV entry
     // `display_text == canonical_tl`; the tolerant `get` still falls back
     // to the legacy `tl == ""` bucket on an exact miss.
+    let lookup_key = phonetics::api::learning_hanji_key(&display_text);
     let user_weight = freq_map
-        .get(&display_text, &canonical_tl)
+        .get(lookup_key.as_ref(), &canonical_tl)
         .user_weight(now_ms);
-    let context_rank = context.rank(&display_text, &canonical_tl);
+    let context_rank = context.rank(lookup_key.as_ref(), &canonical_tl);
     let syllable_count = tl_syllable_count(&canonical_tl);
     // `frequency = 0` (D4) → score 0; the candidate floats on
     // `user_weight` / `source_rank` / dedupe, not raw freq.
