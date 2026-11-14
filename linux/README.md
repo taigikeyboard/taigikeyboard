@@ -78,6 +78,11 @@ Packaged installs, per-distribution paths and where user data lives:
 [`../docs/INSTALL.md`](../docs/INSTALL.md) § Linux and
 [`../docs/architecture/linux-release.md`](../docs/architecture/linux-release.md).
 
+In IBus, tap either Shift key by itself (release within 500 ms) to switch
+between Taigi composition and direct English typing. Shift chords and Shift
+held past the tap window do not switch modes. Fcitx5 keeps its existing
+framework-managed input-method switching.
+
 For a development tree, `TAIGIKEYBOARD_DATA_DIR=<repo root>/assets` points the
 engine at the repository's own `assets/dictionaries/` without installing them;
 `RUST_LOG=debug` on the engine process logs every key's intent.

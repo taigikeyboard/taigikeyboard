@@ -142,7 +142,11 @@ impl Engine {
                     Self::update_lookup_table(emitter, empty_table_value(), false).await
                 }
                 Emit::ModeChanged => {
-                    Self::update_property(emitter, menu_values(&self.runtime).root).await
+                    Self::update_property(
+                        emitter,
+                        menu_values(&self.runtime, self.state.language_mode).root,
+                    )
+                    .await
                 }
                 // NAMED DIVERGENCE (roadmap L4): the daemon has no HUD; the
                 // indicator's symbol is the only notice.
@@ -187,7 +191,7 @@ impl Engine {
     /// update. Panels that do take a re-registration (ibus-ui-gtk3) receive
     /// the same values twice.
     async fn register_menu(&self, emitter: &SignalEmitter<'_>) {
-        let menu = menu_values(&self.runtime);
+        let menu = menu_values(&self.runtime, self.state.language_mode);
         let props = wire::prop_list(vec![menu.root.clone()]);
         if let Err(error) = Self::register_properties(emitter, props).await {
             log::error!("engine.register_properties_failed error={error}");
@@ -290,10 +294,17 @@ struct MenuValues {
     rows: Vec<Value<'static>>,
 }
 
-fn menu_values(runtime: &Runtime) -> MenuValues {
+fn menu_values(runtime: &Runtime, language: taigi_desktop_core::keys::LanguageMode) -> MenuValues {
     let settings = runtime.settings.current();
-    let label = chrome::mode_label(runtime, &settings);
-    let indicator = chrome::mode_indicator(&settings);
+    let label = if language.is_english() {
+        runtime
+            .strings()
+            .resolve(taigi_desktop_core::strings::StringKey::SettingsEnglishMode)
+            .to_owned()
+    } else {
+        chrome::mode_label(runtime, &settings)
+    };
+    let indicator = chrome::mode_indicator_for_language(&settings, language);
     let items = chrome::menu_items(runtime);
     let rows: Vec<Value<'static>> = items
         .iter()
@@ -359,7 +370,7 @@ impl Engine {
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
     ) -> bool {
         let reply = self.guarded("ProcessKeyEvent", None, |engine| {
-            Some(session::process_raw_key(
+            Some(session::process_ibus_raw_key(
                 &engine.runtime,
                 engine.token,
                 &mut engine.state,

@@ -1,6 +1,6 @@
 //! Whether the keys reaching this input method compose Taigi or go straight
-//! to the document as English — the Windows CJK Chinese/English mode, toggled by a
-//! Shift tap (`ShiftTapTracker`).
+//! to the document as English — the CJK Chinese/English mode on Windows and
+//! IBus, toggled by a Shift tap (`ShiftTapTracker`).
 
 use crate::strings::StringKey;
 

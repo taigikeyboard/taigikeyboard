@@ -36,8 +36,9 @@ record: `docs/architecture/linux-roadmap.md`.
   the snake_case Rust names — do not rename a handler without checking the interface
   introspection in `src/ibusengine.c`.
 - Key releases (`IBUS_RELEASE_MASK`, bit 30) and bare modifier presses answer `false`
-  untouched. Auto-repeat is invisible on the wire: a toggle chord is latched until another key
-  arrives.
+  untouched, except a bare Shift release completing a Shift tap toggles Taigi / English.
+  Auto-repeat is invisible on the wire: Shift taps retain their original press time, and a
+  toggle chord is latched until another key arrives.
 - Engine state lives behind one `Mutex`; never `.await` while holding it, never call back into
   the daemon (signal emission) with it held — emit after the lock is dropped, the way Windows
   touches the candidate window only after the edit session returned.
@@ -51,8 +52,10 @@ record: `docs/architecture/linux-roadmap.md`.
   `catch_unwind` at every exported function. The Fcitx5 addon itself (`linux/fcitx5/`, C++) is
   built only in the VM and on the Ubuntu CI job; it composes nothing — every effect comes back
   from the FFI as the same `Emit` list the IBus shell replays.
-- Two shells, one contract: a behaviour that differs between the Fcitx5 and IBus shells is a shell
-  bug. Fix it in `taigi-desktop-core::session` or `taigi-linux-core`, never in one shell.
+- Two shells share the composing contract, with one intentional input-mode exception: bare-Shift
+  taps toggle Taigi / English only in the IBus shell. Fcitx5 retains its existing
+  framework-managed input-method switching. Keep the tap recognizer opt-in at the shell boundary
+  so `taigi-linux-core`'s Fcitx5 path retains its existing behavior.
 
 ## Settings window (GTK 4 + libadwaita)
 
