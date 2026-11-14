@@ -8,6 +8,7 @@ import {
   C,
   chip,
   clickPopup,
+  clickToolbar,
   commitWord,
   expect,
   expectToolbar,
@@ -16,6 +17,8 @@ import {
   preedit,
   test,
   toolbar,
+  toolbarPopup,
+  triggerRemoveSiteMenu,
   turnOn,
 } from "./helpers.mjs";
 
@@ -133,9 +136,11 @@ test("a site that is not enabled gets nothing", async ({
   const [badge, title] = await toolbar(worker, page);
   expect(badge).toBe("");
   expect(title).toBe("TaigiKeyboard: not enabled on this page");
+  expect(await toolbarPopup(worker, page)).toMatch(/\/popup\.html$/);
   // And the way back to the enabled site starts off.
   await page.goto(FIELDS);
   await expectOff(page);
+  expect(await toolbarPopup(worker, page)).toBe("");
 });
 
 test("turning typing off ends the composition and frees the keys", async ({
@@ -167,4 +172,47 @@ test("turning typing off ends the composition and frees the keys", async ({
   await expect(chip(page)).toHaveAttribute("data-state", "taigi");
   await commitWord(page);
   await expect(field).toHaveValue("台灣");
+});
+
+test("clicking the toolbar button toggles typing while keeping focus in the field", async ({
+  worker,
+  page,
+}) => {
+  await page.goto(FIELDS);
+  const field = page.locator("#text");
+  await field.click();
+  await expect(field).toBeFocused();
+  await expect.poll(() => toolbarPopup(worker, page)).toBe("");
+
+  await clickToolbar(worker, page);
+  await expectToolbar(worker, page, "台");
+  await expect(chip(page)).toHaveAttribute("data-state", "taigi");
+  expect(await page.evaluate(() => document.activeElement?.id)).toBe("text");
+  await commitWord(page);
+  await expect(field).toHaveValue("台灣");
+
+  await clickToolbar(worker, page);
+  await expectToolbar(worker, page, "");
+  await expect(chip(page)).toBeHidden();
+  expect(await page.evaluate(() => document.activeElement?.id)).toBe("text");
+  await page.keyboard.press("Space");
+  await commitWord(page);
+  await expect(field).toHaveValue("台灣 taiuan");
+});
+
+test("stopping site access from the action menu stops typing on the tab", async ({
+  context,
+  worker,
+  page,
+}) => {
+  const field = await openTyping(context, worker, page, FIELDS, "#text");
+  const error = await triggerRemoveSiteMenu(worker, page);
+  // Test manifests grant a.test via required host_permissions, which Chrome
+  // refuses to remove after stop-typing runs.
+  expect(error).toMatch(/required|permission/i);
+  await expectToolbar(worker, page, "");
+  await expect(chip(page)).toBeHidden();
+  await field.click();
+  await commitWord(page);
+  await expect(field).toHaveValue("taiuan");
 });

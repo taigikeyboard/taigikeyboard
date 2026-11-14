@@ -6,5 +6,6 @@
   "title": { "message": "台語齒盤：このページでは有効になっていません" },
   "toggle": { "message": "このタブで台湾語の入力を開始または停止" },
   "off": { "message": "オフ" },
-  "failed": { "message": "読み込めませんでした" }
+  "failed": { "message": "読み込めませんでした" },
+  "removeSite": { "message": "このサイトでの使用をやめる" }
 }

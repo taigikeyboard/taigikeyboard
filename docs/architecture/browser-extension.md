@@ -33,7 +33,7 @@ A write the field refuses (the call answers false, or an input's value did not c
 
 ### D4 — Per-site access, asked from the popup
 
-The manifest holds no host permission, only `optional_host_permissions`. The popup's **Use on This Site** asks the browser for `*://<host>/*`; the browser remembers the answer. The service worker registers one content script whose `matches` are the granted sites (`chrome.scripting.registerContentScripts`, kept across sessions) and follows `permissions.onAdded` / `onRemoved`. A page already open when its site is enabled gets the script by `executeScript`.
+The manifest holds no host permission, only `optional_host_permissions`. Ungranted sites and restricted pages keep the manifest's `default_popup` (`popup.html`), whose **Use on This Site** asks the browser for `*://<host>/*`; the browser remembers the answer. Once granted, the service worker clears that tab's popup (`popup: ""`) so left-clicking the toolbar icon toggles typing directly without leaving the page's focused field, and enables **Stop Using on This Site** in the toolbar icon's right-click context menu. The service worker registers one content script whose `matches` are the granted sites (`chrome.scripting.registerContentScripts`, kept across sessions) and follows `permissions.onAdded` / `onRemoved`. A page already open when its site is enabled gets the script by `executeScript` and receives the enabled toolbar state.
 
 ### D5 — The typing mode belongs to the tab
 
@@ -114,7 +114,7 @@ The composition ends with its field:
 | Field not supported | `×` | Field not supported, dashed |
 | Could not load | `!` | Could not load, dashed |
 
-The tooltip is the extension's name and the same words. The popup shows them too, with the buttons for the state: Use on This Site, Start Typing, Stop Typing, Stop Using on This Site, and the settings. The chip takes no pointer events.
+The tooltip on an enabled tab is the extension's name, the same words, and the active shortcut (`chrome.commands`) when assigned; on an unenabled or restricted page it keeps the manifest's title. The popup shows them too, with the buttons for the state (Use on This Site, Start Typing, Stop Typing, Stop Using on This Site, with the live shortcut on the toggle/enable buttons) and the settings. Stop Using on This Site is also on the toolbar button's right-click context menu when the active tab's site is enabled. The chip takes no pointer events.
 
 ## Known limits
 
@@ -124,7 +124,7 @@ The tooltip is the extension's name and the same words. The popup shows them too
 - **Fonts**: the panel uses the system's fonts; the page's Taigi fonts are not in the package, and the Font row is hidden in the options page.
 - **Not drawn**: the TPS key panel and the Telex guide. Their chords change nothing visible.
 - **`web_accessible_resources`**: the engine, the dictionaries and the modules are readable by any site, which can therefore tell that the extension is installed. Fix tracked in #902 (`use_dynamic_url`).
-- **The extension's shortcut** (Alt+Shift+T) toggles typing on an enabled site and opens the popup on one that is not.
+- **The extension's shortcut** (Alt+Shift+T) toggles typing on an enabled site (matching a left-click on the toolbar button) and opens the popup on one that is not.
 
 ## Package
 
@@ -145,13 +145,13 @@ The browser's permission question is a native dialog no harness can answer. The 
 | Caret, selection replacement, switching fields, composition boundaries | `typing.spec.mjs`, `boundaries.spec.mjs` |
 | Public Quill smoke | `quill-public.spec.mjs` |
 | No network but the fixture | `offline.spec.mjs` |
-| Initially off, per-tab mode, reload and same-site retention, cross-site reset, a site not enabled | `tabs.spec.mjs` |
-| Toolbar and field status | `status.spec.mjs` |
+| Initially off, per-tab mode, 1-click toolbar toggle preserving field focus, reload and same-site retention, cross-site reset, a site not enabled, `removeSiteAccess` | `tabs.spec.mjs` |
+| Toolbar and field status, shortcut tooltip and popup badge, per-tab `getPopup`, action context menu state | `status.spec.mjs` |
 | Shared learning across tabs and sites, persistence, separate profiles, private-tab client isolation | `learning.spec.mjs`, `tests/extension-learning.test.mjs` |
 | Password exclusion, unsupported and disabled fields | `boundaries.spec.mjs` |
 | Strict CSP + Trusted Types (`wasm2js` fallback, Lexical, expandable layout, cross-tab learning, mode retention) | `strict.spec.mjs`, `tests/wasm2js.test.mjs` |
 
-Not automated in the browser: the native permission grant dialog and its removal, the keyboard shortcut, an actual incognito window (the extension must be allowed in incognito by hand; `SharedLearning`'s `isPrivate` path is unit-tested in Node), and a modal dialog.
+Not automated in the browser: the native permission grant dialog and its removal (E2E verifies `removeSiteAccess` stops typing before `permissions.remove`), the keyboard shortcut, an actual incognito window (the extension must be allowed in incognito by hand; `SharedLearning`'s `isPrivate` path is unit-tested in Node), and a modal dialog.
 
 ## Phases
 

@@ -4,5 +4,6 @@
   "title": { "message": "台語齒盤：這頁猶未啟用" },
   "toggle": { "message": "佇這个分頁開始抑是停止拍台語" },
   "off": { "message": "關掉" },
-  "failed": { "message": "載入失敗" }
+  "failed": { "message": "載入失敗" },
+  "removeSite": { "message": "莫佇這个網站使用" }
 }

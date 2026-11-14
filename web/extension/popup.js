@@ -136,6 +136,28 @@ document.getElementById("settings")?.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
+/**
+ * Displays the active `toggle-typing` keyboard shortcut inside the popup's
+ * toggle buttons when the browser has one assigned.
+ * @returns {Promise<void>}
+ */
+async function drawShortcut() {
+  let shortcut = "";
+  try {
+    const commands = await chrome.commands.getAll();
+    const toggle = commands.find((command) => command.name === "toggle-typing");
+    shortcut = toggle?.shortcut?.trim() ?? "";
+  } catch {
+    shortcut = "";
+  }
+  for (const element of document.querySelectorAll(".popup-shortcut")) {
+    if (element instanceof HTMLElement) {
+      element.textContent = shortcut;
+      element.hidden = shortcut === "";
+    }
+  }
+}
+
 // The tab says a new state while the popup is open (loading, then the mode).
 chrome.storage.session.onChanged.addListener(() => {
   draw();
@@ -146,4 +168,4 @@ const displayLanguage = parseStored(stored).values.displayLanguage;
 setDisplayLanguage(
   typeof displayLanguage === "string" ? displayLanguage : "system",
 );
-await draw();
+await Promise.all([draw(), drawShortcut()]);

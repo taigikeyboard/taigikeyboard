@@ -280,6 +280,29 @@ export async function turnOn(context, worker, page) {
 }
 
 /**
+ * The browser's active shortcut for `toggle-typing`, or `""` when unset.
+ * @param {Worker} worker
+ * @returns {Promise<string>}
+ */
+export function toggleShortcut(worker) {
+  return worker.evaluate(async () => {
+    const commands = await chrome.commands.getAll();
+    const toggle = commands.find((command) => command.name === "toggle-typing");
+    return toggle?.shortcut?.trim() ?? "";
+  });
+}
+
+/**
+ * Formats an expected enabled-tab toolbar tooltip with `shortcut` when set.
+ * @param {string} base
+ * @param {string} shortcut
+ * @returns {string}
+ */
+export function toolbarTitle(base, shortcut) {
+  return shortcut ? `${base} (${shortcut})` : base;
+}
+
+/**
  * The toolbar button of `page`'s tab: `[badge, title]`.
  * @param {Worker} worker
  * @param {Page} page
@@ -294,6 +317,83 @@ export async function toolbar(worker, page) {
     ],
     tabId,
   );
+}
+
+/**
+ * The per-tab popup URL (`""` on enabled tabs, ending in `/popup.html`
+ * on ungranted or restricted tabs).
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<string>}
+ */
+export async function toolbarPopup(worker, page) {
+  const tabId = await tabIdOf(worker, page);
+  return worker.evaluate((tabId) => chrome.action.getPopup({ tabId }), tabId);
+}
+
+/**
+ * Runs the service worker's toolbar click handler (`toggleTab`) on `page`'s
+ * active tab without changing page focus.
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
+export async function clickToolbar(worker, page) {
+  const tabId = await tabIdOf(worker, page);
+  if (tabId === undefined) {
+    throw new Error("no active tab");
+  }
+  await worker.evaluate(async (tabId) => {
+    const { toggleTab } =
+      /** @type {{ toggleTab: (tab: chrome.tabs.Tab) => Promise<void> }} */ (
+        /** @type {unknown} */ (globalThis)
+      );
+    await toggleTab(await chrome.tabs.get(tabId));
+  }, tabId);
+}
+
+/**
+ * Whether the "Stop Using on This Site" action context menu item is enabled
+ * while `page` is the active tab.
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<boolean>}
+ */
+export async function removeSiteMenuEnabled(worker, page) {
+  await page.bringToFront();
+  return worker.evaluate(async () => {
+    const { removeSiteMenuEnabled } =
+      /** @type {{ removeSiteMenuEnabled: () => Promise<boolean> }} */ (
+        /** @type {unknown} */ (globalThis)
+      );
+    return removeSiteMenuEnabled();
+  });
+}
+
+/**
+ * Invokes `removeSiteAccess` on `page`'s tab and returns any error message
+ * (e.g., when a test manifest puts the host in required `host_permissions`).
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<string | null>}
+ */
+export async function triggerRemoveSiteMenu(worker, page) {
+  const tabId = await tabIdOf(worker, page);
+  if (tabId === undefined) {
+    throw new Error("no active tab");
+  }
+  return worker.evaluate(async (tabId) => {
+    const { removeSiteAccess } =
+      /** @type {{ removeSiteAccess: (tab: chrome.tabs.Tab) => Promise<void> }} */ (
+        /** @type {unknown} */ (globalThis)
+      );
+    try {
+      await removeSiteAccess(await chrome.tabs.get(tabId));
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : String(error);
+    }
+  }, tabId);
 }
 
 /**

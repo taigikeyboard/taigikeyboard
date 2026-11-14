@@ -6,5 +6,6 @@
   "title": { "message": "TaigiKeyboard: not enabled on this page" },
   "toggle": { "message": "Start or stop typing Taigi in this tab" },
   "off": { "message": "Off" },
-  "failed": { "message": "Could not load" }
+  "failed": { "message": "Could not load" },
+  "removeSite": { "message": "Stop Using on This Site" }
 }
