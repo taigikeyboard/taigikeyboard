@@ -30,7 +30,7 @@ import polars as pl
 
 from build.common import BASE_DIR, LOG_DIR
 from common.abbrev import extract_abbrev, extract_tps_abbrev
-from common.cleanup import blank_roman_only_hanzi
+from common.cleanup import blank_roman_only_hanzi, strip_pure_hanji_khinsiann
 from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
 from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
@@ -87,6 +87,10 @@ def _dedup_sources(merged: pl.DataFrame) -> pd.DataFrame:
     ordered first. Returns pandas for the supplement loaders that follow.
     """
     merged = merged.with_columns(
+        pl.col("hanzi")
+        .fill_null("")
+        .map_elements(strip_pure_hanji_khinsiann, return_dtype=pl.String)
+        .alias("hanzi"),
         pl.col("tl").str.replace_all(" ", "-", literal=True).alias("_tl_key"),
         pl.any_horizontal(c for c in OFFICIAL_SOURCES if c in merged.columns)
         .fill_null(False)
@@ -439,6 +443,7 @@ def _load_khiin_new_entries(
             continue
 
         for hanzi in hanzi_set:
+            hanzi = strip_pure_hanji_khinsiann(hanzi)
             if (hanzi, tl) in existing_keys:
                 continue
 
@@ -502,7 +507,7 @@ def _load_dev_supplement(
         if not hanzi or not tl_raw:
             continue
 
-        hanzi = blank_roman_only_hanzi(hanzi)
+        hanzi = strip_pure_hanji_khinsiann(blank_roman_only_hanzi(hanzi))
         tl_key = tl_raw.replace(" ", "-")
         if (hanzi, tl_key) in existing_key_index:
             idx = existing_key_index[(hanzi, tl_key)]
@@ -590,7 +595,7 @@ def _load_lkk_entries(
         if not hanzi or not tl_raw:
             continue
 
-        hanzi = blank_roman_only_hanzi(hanzi)
+        hanzi = strip_pure_hanji_khinsiann(blank_roman_only_hanzi(hanzi))
         tl_key = tl_raw.replace(" ", "-")
         if (hanzi, tl_key) in existing_key_index:
             idx = existing_key_index[(hanzi, tl_key)]
