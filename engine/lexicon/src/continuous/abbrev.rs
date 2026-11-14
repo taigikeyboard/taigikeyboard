@@ -53,9 +53,6 @@ pub fn fetch_abbrev_candidates(
         if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
             continue;
         }
-        if phonetics::reading_opens_khinsiann(&record.tl) {
-            continue;
-        }
         let effective = DictionaryReader::effective_source_bitmask(
             record.bitmask,
             record.kautian_subtag,
