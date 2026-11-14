@@ -6,19 +6,33 @@
 // in a content script. When a site's `script-src` omits `'wasm-unsafe-eval'`,
 // `createSession` falls back to the `wasm2js` translation in `pkg/taigi_web_asm.js`.
 
+/** @typedef {import("./pkg/taigi_web.js").Session} Session */
+/** @typedef {import("../types/shared.d.ts").Platform} Platform */
+
+/** @type {WebAssembly.Module | undefined} */
 let compiled;
+/** @type {typeof import("./pkg/taigi_web_asm.js") | undefined} */
 let asmModule;
 let useJsFallback = false;
 let instanceCount = 0;
 
-/// Whether `error` is the browser refusing to compile WebAssembly under the
-/// page's Content Security Policy.
+/**
+ * Whether `error` is the browser refusing to compile WebAssembly under the
+ * page's Content Security Policy.
+ * @param {unknown} error
+ * @returns {boolean}
+ */
 function isWasmBlocked(error) {
   return error instanceof WebAssembly.CompileError;
 }
 
-/// A session on a new instance. As on the page, each instance gets its own
-/// copy of the glue module, which keeps the instance it has.
+/**
+ * A session on a new instance. As on the page, each instance gets its own
+ * copy of the glue module, which keeps the instance it has.
+ * @param {Platform} platform
+ * @param {string} locale
+ * @returns {Promise<Session>}
+ */
 export async function createSession(platform, locale) {
   if (!useJsFallback && compiled === undefined) {
     try {
@@ -34,22 +48,33 @@ export async function createSession(platform, locale) {
   }
   instanceCount += 1;
   if (useJsFallback) {
-    asmModule ??= await import(chrome.runtime.getURL("pkg/taigi_web_asm.js"));
-    const glue = await import(
-      chrome.runtime.getURL(`pkg/taigi_web_js.js?instance=${instanceCount}`)
+    asmModule ??= /** @type {typeof import("./pkg/taigi_web_asm.js")} */ (
+      await import(chrome.runtime.getURL("pkg/taigi_web_asm.js"))
+    );
+    const glue = /** @type {typeof import("./pkg/taigi_web_js.js")} */ (
+      await import(
+        chrome.runtime.getURL(`pkg/taigi_web_js.js?instance=${instanceCount}`)
+      )
     );
     glue.initAsm(asmModule.asmFunc);
     return new glue.Session("{}", platform, locale);
   }
-  const glue = await import(
-    chrome.runtime.getURL(`pkg/taigi_web.js?instance=${instanceCount}`)
+  const glue = /** @type {typeof import("./pkg/taigi_web.js")} */ (
+    await import(
+      chrome.runtime.getURL(`pkg/taigi_web.js?instance=${instanceCount}`)
+    )
   );
   await glue.default({ module_or_path: compiled });
   return new glue.Session("{}", platform, locale);
 }
 
-/// Hands `session` its dictionaries and installs them. `isCurrent()`: whether
-/// `session` is still the one in use; a replaced one is left as it is.
+/**
+ * Hands `session` its dictionaries and installs them. `isCurrent()`: whether
+ * `session` is still the one in use; a replaced one is left as it is.
+ * @param {Session} session
+ * @param {() => boolean} isCurrent
+ * @returns {Promise<boolean>}
+ */
 export async function installDictionaries(session, isCurrent) {
   for (const name of session.dictionaryFiles()) {
     const response = await fetch(chrome.runtime.getURL(`dictionaries/${name}`));
