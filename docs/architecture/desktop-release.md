@@ -7,6 +7,7 @@ installer, the box), `linux-release.md` (the `.deb` / `.rpm` / Arch packages)
 and `chromeos-release.md` (the Chrome Web Store zip); everything below is
 shared by all four, and is the single
 description of the flow — the platform documents link here rather than repeat it.
+Nightly test builds of `main` are outside this flow: `nightly-builds.md`.
 
 ## The flow
 

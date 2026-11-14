@@ -35,7 +35,8 @@ on:
         description: The commit stage-desktop.sh staged; attach runs only when it is set
         required: false
         type: string
-  # The monthly train (desktop-train.yml) calls this with its release commit.
+  # The monthly train (desktop-train.yml) calls this with its release commit;
+  # the nightly channel (desktop-nightly.yml) with `main`, `build_only`.
   workflow_call:
     inputs:
       source_sha:

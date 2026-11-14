@@ -75,6 +75,12 @@ triggered automatically — not by a push, not by a tag, not by a
 scheduled job, and not by a successful build. A build that completes produces
 an unsigned artifact and waits.
 
+Nightly test builds are the one scheduled upload, and they are not releases:
+`.github/workflows/desktop-nightly.yml` builds `main` with no signing step and
+no access to any signing credential, and uploads the unsigned installers to a
+separate download host (`nightly.taigikeyboard.tw`). Nothing installed is ever
+offered a nightly build as an update.
+
 Multi-factor authentication is required on the GitHub account and on every
 account that can publish a release.
 

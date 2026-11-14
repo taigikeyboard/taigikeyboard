@@ -94,9 +94,12 @@ anonymous_download_retrying() {
 # installer's bytes: it is mirrored as-is, never regenerated, so the mirror
 # carries the staged digest.
 #
-#   mirror_asset <file> <receipt file> <asset name> <sha256 of file> <bucket prefix>
+#   mirror_asset <file> <receipt file> <asset name> <sha256 of file> <bucket prefix> [cache-control]
+#
+# The optional Cache-Control header goes on both objects (the nightly channel
+# overwrites fixed names and needs `no-cache`; releases leave it unset).
 mirror_asset() {
-    local file="$1" receipt="$2" name="$3" sha256="$4" prefix="$5" receipt_sha256
+    local file="$1" receipt="$2" name="$3" sha256="$4" prefix="$5" cache_control="${6:-}" receipt_sha256
     [[ -n "$prefix" ]] || fail "mirror_asset needs a bucket prefix"
     receipt_sha256="$(cut -d' ' -f1 "$receipt")"
     [[ "$receipt_sha256" == "$sha256" ]] ||
@@ -105,8 +108,8 @@ mirror_asset() {
     local mirrored="$RELEASE_TEMP_DIR/mirror-$name"
 
     echo "  mirroring to $url"
-    r2 s3 cp --only-show-errors "$file" "$key" || fail "cannot upload $name to R2 bucket $R2_BUCKET"
-    r2 s3 cp --only-show-errors --content-type text/plain "$receipt" "$key.sha256" ||
+    r2 s3 cp --only-show-errors ${cache_control:+--cache-control "$cache_control"} "$file" "$key" || fail "cannot upload $name to R2 bucket $R2_BUCKET"
+    r2 s3 cp --only-show-errors ${cache_control:+--cache-control "$cache_control"} --content-type text/plain "$receipt" "$key.sha256" ||
         fail "cannot upload $name.sha256 to R2 bucket $R2_BUCKET"
     anonymous_download_retrying "$url" "$mirrored" || fail "$url is not anonymously reachable after the upload"
     [[ "$(release_sha256 "$mirrored")" == "$sha256" ]] || fail "$url does not serve the bytes that were uploaded"

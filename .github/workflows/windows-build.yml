@@ -12,6 +12,8 @@ name: Windows build
 #
 # It does NOT publish. A run dispatched on `main` attaches the installer to the draft, a
 # person publishes that draft, and `tools/release/announce-release.sh` announces it.
+# The nightly channel (desktop-nightly.yml) uploads the unsigned build artifact
+# of `main` to its own bucket — a test build, not a release.
 on:
   # How a release stages the Windows installer: `tools/release/stage-desktop.sh`
   # dispatches this beside the other halves with the staged commit, and the run
@@ -25,7 +27,8 @@ on:
         description: The commit stage-desktop.sh staged; attach runs only when it is set
         required: false
         type: string
-  # The monthly train (desktop-train.yml) calls this with its release commit.
+  # The monthly train (desktop-train.yml) calls this with its release commit;
+  # the nightly channel (desktop-nightly.yml) with `main`, `build_only`.
   workflow_call:
     inputs:
       source_sha:
@@ -89,7 +92,8 @@ jobs:
     # on GitHub's schedule, and a release build should not change underneath a
     # release because a label was repointed.
     runs-on: windows-2025
-    # Only this repository builds, and only for the desktop train. A Windows
+    # Only this repository builds, and only for the desktop train (and its
+    # nightly test builds, desktop-nightly.yml). A Windows
     # runner is the most expensive gate this project has: a fork has nothing to
     # sign with, and a mobile release — should one ever be published here — has
     # no Windows installer in it. Any ref may be dispatched, so a branch that

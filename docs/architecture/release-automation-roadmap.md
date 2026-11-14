@@ -31,7 +31,7 @@ Decisions (maintainer, 2026-11-12):
 | Version | `make version-desktop X.Y.Z` → `release_notes.py set-versions --train desktop`; refuses a downgrade | `Makefile:271`, `tools/release_notes.py:614` |
 | macOS build number | `MAJOR*10000 + MINOR*100 + PATCH`; minor / patch ≤ 99. CalVer `2026.12.0` → `20261200` > `30900` (3.9.0), so the upgrade order holds | `tools/release_notes.py:468` |
 | Changelog | Written by an agent from `git log <base>..HEAD` during `/release-desktop` (up to 3.9.0) | `.claude/skills/release-desktop/SKILL.md` § 2, § 4 |
-| Stage | `make desktop-release` on the maintainer's Mac: `make macos-release` locally (Developer ID identities from the login keychain, `notarytool` keychain profile), Windows / Linux / ChromeOS dispatched to hosted runners | `tools/release/stage-desktop.sh:93-165`, `macos/scripts/release-app.sh:179-192` |
+| Stage | `make desktop-release` on the maintainer's Mac: `make macos-release` locally (Developer ID identities from the login keychain, `notarytool` keychain profile), Windows / Linux / ChromeOS dispatched to hosted runners | `tools/release/stage-desktop.sh:93-165`, `macos/scripts/release-app.sh:174-187` |
 | Beta | `desktop-beta.yml` dispatched at the end of a stage | `tools/release/stage-desktop.sh:203` |
 | Publish | The maintainer presses **Publish release** | `docs/architecture/desktop-release.md` § The flow |
 | Announce | `release: published` → `announce-release.yml` | `.github/workflows/announce-release.yml:15-17` |
