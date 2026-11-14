@@ -1658,7 +1658,7 @@ fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<Learne
         if seg.association_tl.is_empty() {
             return None;
         }
-        hanji.push_str(h);
+        hanji.push_str(&phonetics::api::strip_khinsiann_hanji(h));
     }
     let canonical_tl = canonical_separators(&crate::nailed::learned_reading(nailed, config));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();

@@ -312,6 +312,11 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   /// `f` is an ordinary letter.
   public var fTypesHyphen: Bool = false
 
+  /// Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+  /// entries and continuous compositions display neutral-tone markers aligned
+  /// with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+  public var khinsiannInHanji: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -530,7 +535,7 @@ nonisolated extension Taigi_Engine_SyllableSeparator: SwiftProtobuf._ProtoNamePr
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{3}dictionary_sources\0\u{3}custom_dictionary_disabled\0\u{3}c_types_affricate\0\u{3}f_types_hyphen\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{4}\u{2}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{3}hanji_conversion\0\u{3}syllable_separator\0\u{3}dictionary_sources\0\u{3}custom_dictionary_disabled\0\u{3}c_types_affricate\0\u{3}f_types_hyphen\0\u{3}khinsiann_in_hanji\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{b}platform_id\0\u{b}hyphenless_roman\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{a}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -552,6 +557,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 16: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryDisabled) }()
       case 17: try { try decoder.decodeSingularBoolField(value: &self.cTypesAffricate) }()
       case 18: try { try decoder.decodeSingularBoolField(value: &self.fTypesHyphen) }()
+      case 19: try { try decoder.decodeSingularBoolField(value: &self.khinsiannInHanji) }()
       default: break
       }
     }
@@ -604,6 +610,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.fTypesHyphen != false {
       try visitor.visitSingularBoolField(value: self.fTypesHyphen, fieldNumber: 18)
     }
+    if self.khinsiannInHanji != false {
+      try visitor.visitSingularBoolField(value: self.khinsiannInHanji, fieldNumber: 19)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -622,6 +631,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.customDictionaryDisabled != rhs.customDictionaryDisabled {return false}
     if lhs.cTypesAffricate != rhs.cTypesAffricate {return false}
     if lhs.fTypesHyphen != rhs.fTypesHyphen {return false}
+    if lhs.khinsiannInHanji != rhs.khinsiannInHanji {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

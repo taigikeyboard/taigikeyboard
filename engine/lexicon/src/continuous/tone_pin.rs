@@ -104,9 +104,10 @@ impl TonePin {
     /// a custom entry has no key at all.
     pub fn admits(&self, matched_key: Option<&str>, reading: &str) -> bool {
         match self {
-            TonePin::None => true,
+            TonePin::None => !phonetics::reading_opens_khinsiann(reading),
             TonePin::TpsTyped { body, closes } => {
-                reading_passes_tps_closes(matched_key.unwrap_or(body), closes, reading)
+                !phonetics::reading_opens_khinsiann(reading)
+                    && reading_passes_tps_closes(matched_key.unwrap_or(body), closes, reading)
             }
             TonePin::TypedTones {
                 mode,
@@ -131,11 +132,11 @@ impl TonePin {
     /// Latin roman as stored, so there the pin reads the same
     /// [`phonetics::api::custom_search_reading`] the TPS search keys and
     /// [`custom_reach`] are derived from. The fold is skipped when nothing
-    /// is pinned, the common toneless-buffer case.
+    /// is pinned and the stored roman carries no leading separator.
     ///
     /// [`custom_reach`]: super::reach::custom_reach
     pub fn admits_custom(&self, roman: &str, mode: phonetics::InputMode) -> bool {
-        if matches!(self, TonePin::None) {
+        if matches!(self, TonePin::None) && !roman.starts_with(['-', ' ', '·', '\u{00B7}']) {
             return true;
         }
         let reading = match mode {
@@ -154,9 +155,9 @@ impl TonePin {
 /// as plain). The last syllable's end carries no kind: a trailing typed
 /// `--` constrains the NEXT word, not this one. A boundary at 0 is the
 /// run typed right before the span: only a reading that itself opens with
-/// `--` (a custom `--ah`) reads it, and then the run must be `--` too.
-/// No syllable of the reading may end strictly inside a one-syllable
-/// stretch.
+/// `--` (`--tńg-khì`, `--ah`) requires a `--` boundary at 0, and a span
+/// without one rejects `--`-opening readings. No syllable of the reading
+/// may end strictly inside a one-syllable stretch.
 fn reading_passes_typed_tones(
     mode: phonetics::InputMode,
     typed: &str,
@@ -164,6 +165,11 @@ fn reading_passes_typed_tones(
     one_syllable_stretches: &[(usize, usize)],
     reading: &str,
 ) -> bool {
+    let has_leading_khinsiann = boundaries.iter().any(|b| b.at == 0 && b.khinsiann);
+    let opens_khinsiann = phonetics::reading_opens_khinsiann(reading);
+    if opens_khinsiann && !has_leading_khinsiann {
+        return false;
+    }
     let Some(walk) =
         phonetics::typed_syllable_walk(mode, typed, reading).filter(|w| w.typed_consumed)
     else {
@@ -174,7 +180,6 @@ fn reading_passes_typed_tones(
     } else {
         phonetics::tl_syllable_khinsiann_flags(reading)
     };
-    let opens_khinsiann = khinsiann_before.first().copied().unwrap_or(false);
     boundaries.iter().all(|b| {
         if b.at == 0 {
             return !opens_khinsiann || b.khinsiann;

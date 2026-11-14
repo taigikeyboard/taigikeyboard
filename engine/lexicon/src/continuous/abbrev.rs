@@ -53,6 +53,9 @@ pub fn fetch_abbrev_candidates(
         if !DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, &filter) {
             continue;
         }
+        if phonetics::reading_opens_khinsiann(&record.tl) {
+            continue;
+        }
         let effective = DictionaryReader::effective_source_bitmask(
             record.bitmask,
             record.kautian_subtag,
@@ -69,6 +72,6 @@ pub fn fetch_abbrev_candidates(
         ));
     }
     merge_custom_abbreviations(&mut out, fst_key, raw_len, ctx);
-    dedupe_by_roman_hanji_span(&mut out);
+    dedupe_by_roman_hanji_span(&mut out, ctx.khinsiann_in_hanji);
     sort_by_candidate_key(out, raw_len, RawCandidate::rank_facts)
 }

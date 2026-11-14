@@ -374,6 +374,10 @@ pub struct ContinuousFetchCtx<'a> {
     /// ([`custom_reach`]). `None` admits no custom entry there: there is
     /// nothing typed to match it to.
     pub whole_buffer_key: Option<String>,
+    /// Whether opt-in neutral-tone markers (`--` / `-`) are rendered in Hanji
+    /// output (`AppConfig.khinsiann_in_hanji`). Used for custom-vs-builtin
+    /// displayed-Hanji collision checks.
+    pub khinsiann_in_hanji: bool,
 }
 
 /// Span aliases for [`fetch_candidates_for_keys_with_barriers`]: `(start_byte, end_byte)`

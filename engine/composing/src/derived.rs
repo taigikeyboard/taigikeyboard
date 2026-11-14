@@ -219,6 +219,7 @@ mod tests {
             custom_dictionary_disabled: false,
             c_types_affricate: false,
             f_types_hyphen: false,
+            khinsiann_in_hanji: false,
         }
     }
 
