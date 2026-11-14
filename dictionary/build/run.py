@@ -17,6 +17,7 @@ import argparse
 import sys
 
 from build import (
+    alignment_report,
     create_association_bin,
     create_dictionary_bin,
     create_fst,
@@ -29,8 +30,8 @@ from tools import verify_known_keys
 
 GREEN = "\033[0;32m"
 NC = "\033[0m"
-# build.sh runs step 9 (deploy) itself after this module returns.
-TOTAL_STEPS = 9
+# build.sh runs step 10 (deploy) itself after this module returns.
+TOTAL_STEPS = 10
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,6 +53,7 @@ def main(argv: list[str] | None = None) -> int:
         ("Verifying POJ integrity (fatal gate)...", verify_poj_integrity.main),
         ("Drop summary + vs-previous-release-tag diff...", lambda: version_snapshot.main(snapshot_argv)),
         ("Verifying known fst keys...", lambda: verify_known_keys.main([])),
+        ("Writing Hanji/TL alignment report...", alignment_report.main),
     ]
     # Step logs go to stderr and step reports to stdout; line buffering keeps
     # them in order when the output is piped.

@@ -50,7 +50,7 @@ else
     python3 -m build.run
 fi
 
-step "Step 9/9: Deploying to assets/dictionaries/..."
+step "Step 10/10: Deploying to assets/dictionaries/..."
 bash "$BUILD_DIR/deploy.sh"
 
 echo ""
