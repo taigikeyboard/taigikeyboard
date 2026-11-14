@@ -20,7 +20,7 @@ Secret:
 
 | Where | Name | What |
 |---|---|---|
-| this repository | `WEB_DEPLOY_TOKEN` | Fine-grained token, `taigikeyboard/web` only, Actions: write. It expires: a deploy job that fails on `gh workflow run` usually means this |
+| this repository, environment `web-deploy` (deploys from `main` only, no reviewer) | `WEB_DEPLOY_TOKEN` | Fine-grained token, `taigikeyboard/web` only, Actions: write. It expires: a deploy job that fails on `gh workflow run` usually means this |
 
 Create `taigikeyboard/web` and the token before this workflow reaches `main`, or every deploy job fails.
 
