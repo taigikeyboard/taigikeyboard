@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Offer an unpublished desktop draft to internal testers on the unlisted
-# https://taigikeyboard.tw/beta page.
+# Offer an unpublished desktop draft to internal testers on Discord.
 #
 # Usage: beta-release.sh fetch <dir> <release id> <source sha>
 #        beta-release.sh publish <dir> <source sha> <run id>
@@ -9,26 +8,24 @@
 # Run through `.github/actions/desktop-beta`: by `desktop-beta.yml`, which
 # `stage-desktop.sh` dispatches once a draft is fully staged, and by the
 # monthly train's `sign-and-beta` job. Both wait for the `release`
-# environment's reviewer (roadmap D5). Three steps, two tokens:
+# environment's reviewer (roadmap D5). Three steps, each with its own secret:
 #
 #   fetch    GH_TOKEN = the workflow token (contents: write — GitHub lists a
 #            draft only to push access). Downloads the installers of THE draft
 #            the staging run made, by release id: a later staging run deletes
 #            and re-creates the draft under the same tag and commit, and an
 #            older beta run must not read the new, half-built one.
-#   publish  GH_TOKEN = SITE_CONTENTS_TOKEN, plus the three R2_* credentials.
-#            Mirrors each installer to R2 `beta/<version>-<sha7>-<run id>/` (a
-#            fresh prefix per run: the download host caches for 30 days, and a
-#            re-stage at the same commit builds different bytes), writes
-#            `_data/beta_release.json` to the website, then deletes every older
-#            `beta/` prefix. The page hides a beta once its version is published.
-#   announce DISCORD_BETA_WEBHOOK only. Waits until the live /beta page lists
-#            this run's build, then posts the page link and each installer's
-#            R2 link to the Discord channel the webhook belongs to
-#            (#announcements).
+#   publish  The three R2_* credentials. Mirrors each installer to R2
+#            `beta/<version>-<sha7>-<run id>/` (a fresh prefix per run: the
+#            download host caches for 30 days, and a re-stage at the same
+#            commit builds different bytes), lists the links in the job
+#            summary, then deletes every older `beta/` prefix.
+#   announce DISCORD_BETA_WEBHOOK only. Posts each installer's R2 link to the
+#            internal Discord channel the webhook belongs to. The beta is not
+#            on the website (USER 2026-11-14: internal Discord testing only).
 #
 # Nothing here touches the published releases: not `desktop/` in the bucket,
-# not the `_data/*_release.json` files, not the appcasts.
+# not the website, not the appcasts.
 
 set -euo pipefail
 
@@ -117,34 +114,26 @@ publish() {
     RELEASE_TEMP_DIR="$(mktemp -d)"
     trap 'rm -rf "$RELEASE_TEMP_DIR"' EXIT
 
-    local prefix="beta/$run_name" row asset details sha256
-    local -a entries=()
+    # The job summary keeps the links even when the Discord post fails: the
+    # post is the only other place they appear.
+    local summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
+    echo "### Desktop beta $SHORT_VERSION (${source_sha:0:7})" >> "$summary"
+    local prefix="beta/$run_name" row asset label sha256 mirrored=0
     for row in "${DESKTOP_ASSET_ROWS[@]}"; do
-        asset="${row%%|*}" details="${row#*|}"
+        IFS='|' read -r asset label <<< "$row"
         [[ -f "$assets_dir/$asset" ]] || continue
         echo "==> $asset"
         sha256="$(release_sha256 "$assets_dir/$asset")"
         mirror_asset "$assets_dir/$asset" "$assets_dir/$asset.sha256" "$asset" "$sha256" "$prefix"
-        # One "<name>|<url>|<sha256>|<label>|<requires>" argument per asset.
-        entries+=("$asset|$DOWNLOAD_HOST_URL/$prefix/$asset|$sha256|$details")
+        echo "- $label: $DOWNLOAD_HOST_URL/$prefix/$asset" >> "$summary"
+        mirrored=$((mirrored + 1))
     done
-    [[ ${#entries[@]} -gt 0 ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
-
-    local data
-    data="$(python3 -c '
-import json, sys
-version, commit, *rest = sys.argv[1:]
-keys = ("name", "url", "sha256", "label", "requires")
-assets = [dict(zip(keys, entry.split("|"), strict=True)) for entry in rest]
-print(json.dumps({"version": version, "commit": commit, "assets": assets}, indent=2))
-' "$SHORT_VERSION" "$source_sha" "${entries[@]}")"
-    echo "==> writing $BETA_SITE_PATH"
-    commit_site_files "chore: desktop beta -> $run_name" "$BETA_SITE_PATH" "$data"
+    [[ $mirrored -gt 0 ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
 
     prune_older_betas "$run_name"
 
     echo ""
-    echo "✓ beta $run_name — https://taigikeyboard.tw/beta once Pages deploys"
+    echo "✓ beta $run_name mirrored to $DOWNLOAD_HOST_URL/$prefix/"
 }
 
 # Delete every beta/<name>/ but the one just written. The path is the literal
@@ -169,10 +158,8 @@ prune_older_betas() {
     done < <(awk '$1 == "PRE" { sub("/$", "", $2); print $2 }' <<< "$listing")
 }
 
-BETA_PAGE_URL="https://taigikeyboard.tw/beta"
-
 announce() {
-    local source_sha="$1" run_id="$2" message attempt page
+    local source_sha="$1" run_id="$2" message
     [[ -n "${DISCORD_BETA_WEBHOOK:-}" ]] || fail "DISCORD_BETA_WEBHOOK is not set"
     [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]] || fail "source sha '$source_sha' is not 40 hex characters"
     local prefix_url="$DOWNLOAD_HOST_URL/beta/$(beta_run_name "$source_sha" "$run_id")"
@@ -180,24 +167,15 @@ announce() {
     local downloads=""
     local row asset label
     for row in "${DESKTOP_ASSET_ROWS[@]}"; do
-        IFS='|' read -r asset label _ <<< "$row"
+        IFS='|' read -r asset label <<< "$row"
         [[ -f "$assets_dir/$asset" ]] || continue
         downloads+="- $label: $prefix_url/$asset"$'\n'
     done
     [[ -n "$downloads" ]] || fail "$assets_dir holds none of ${DESKTOP_ASSETS[*]}"
-    # The page lists this run's mirror URLs once Pages has deployed it; a post
-    # before that would link testers to the previous build. The query string
-    # skips the Pages CDN's 10-minute cache.
-    for attempt in $(seq 1 80); do
-        page="$(anonymous_curl --fail "$BETA_PAGE_URL?run=$run_id" 2> /dev/null)" || page=""
-        [[ "$page" == *"-$run_id/"* ]] && break
-        [[ $attempt -eq 80 ]] && fail "$BETA_PAGE_URL still does not list run $run_id after 20 minutes — not posting"
-        sleep 15
-    done
 
     message="$(python3 -c '
 import datetime, json, sys, zoneinfo
-version, sha7, url, downloads = sys.argv[1:5]
+version, sha7, downloads = sys.argv[1:4]
 # The train releases on the 5th: this month'"'"'s if it is still ahead (Taiwan
 # time), otherwise next month'"'"'s.
 today = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Taipei")).date()
@@ -207,7 +185,6 @@ if today.day >= 5:
 print(json.dumps({
     "content": (
         f"**Desktop beta {version} ({sha7}) is ready for testing**\n"
-        f"Beta page (share this link with other testers): {url}\n"
         "If no major issues turn up (crashes, unable to type), "
         f"this build is released to all users on {release:%B} {release.day}.\n\n"
         f"{downloads}"
@@ -216,7 +193,7 @@ print(json.dumps({
     # SUPPRESS_EMBEDS: no link preview cards (maintainer preference).
     "flags": 4,
 }))
-' "$SHORT_VERSION" "${source_sha:0:7}" "$BETA_PAGE_URL" "$downloads")"
+' "$SHORT_VERSION" "${source_sha:0:7}" "$downloads")"
     curl -q --silent --show-error --fail -H "Content-Type: application/json" \
         --data "$message" "$DISCORD_BETA_WEBHOOK" > /dev/null ||
         fail "the Discord webhook refused the post"

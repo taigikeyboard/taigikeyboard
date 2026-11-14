@@ -2,14 +2,14 @@ name: Desktop train
 
 # The monthly desktop cut (docs/architecture/release-automation-roadmap.md,
 # Phase 5): 09:00 Asia/Taipei on the 1st, version YYYY.M.0, every platform
-# staged on the draft, the draft mirrored to /beta. desktop-publish.yml
+# staged on the draft, the draft mirrored for internal Discord testers. desktop-publish.yml
 # publishes the draft on the 5th (Phase 6).
 #
 # Two jobs read release secrets, so a cut asks for two approvals of the
 # `release` environment (D5):
 #   cut            moves `main` to the release commit with the App token
 #   sign-and-beta  signs + notarizes the macOS package, checks every platform
-#                  is staged, mirrors the draft to /beta and posts it
+#                  is staged, mirrors the draft to R2 and posts it to Discord
 # Everything else holds GITHUB_TOKEN at most. A re-cut (the tree already
 # carries this month's version) needs only the second.
 #
@@ -197,11 +197,11 @@ jobs:
       build_only: ${{ needs.plan.outputs.stage != 'true' }}
 
   # Approval 2, once every half is built: one macOS machine that compiles
-  # nothing signs the package, then mirrors the complete draft to /beta. If
+  # nothing signs the package, then mirrors the complete draft for testers. If
   # beta fails after the package is staged, re-running this job would re-sign
   # different bytes (refused): dispatch desktop-beta.yml instead.
   sign-and-beta:
-    name: sign macOS, check the draft, mirror /beta
+    name: sign macOS, check the draft, mirror beta
     needs: [plan, draft, macos, windows, linux, chromeos]
     if: >-
       !cancelled() && needs.plan.outputs.stage == 'true' &&
@@ -234,11 +234,11 @@ jobs:
           persist-credentials: false
 
       # What the beta half needs on this image (beta-release.sh: the AWS CLI
-      # for R2, Python 3.10+), checked before anything is signed.
+      # for R2, Python 3.9+ for zoneinfo), checked before anything is signed.
       - name: Check the beta tools
         run: |
           aws --version
-          python3 -c 'import sys; assert sys.version_info >= (3, 10), sys.version'
+          python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
 
       - uses: ./.github/actions/macos-sign-attach
         with:
@@ -262,7 +262,6 @@ jobs:
           release-id: ${{ needs.draft.outputs.release_id }}
           source-sha: ${{ needs.plan.outputs.source_sha }}
           github-token: ${{ github.token }}
-          site-token: ${{ secrets.SITE_CONTENTS_TOKEN }}
           r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
           r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}

@@ -154,7 +154,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `windows-build.yml` onto the **draft** `desktop-<version>` release; `make windows-release` (a Windows
   host, Git Bash) is the by-hand path (`docs/architecture/windows-release.md`). Nothing reaches a user
   until the draft is published — `desktop-publish.yml` on the 5th after the maintainer's approval, or
-  by hand for a patch (apart from the unlisted `/beta` page for internal testers) — and the publish
+  by hand for a patch (apart from the beta links posted to the internal Discord channel) — and the publish
   runs the announcement itself (`docs/architecture/desktop-release.md`). Never dispatch any of it
   without the maintainer's explicit release instruction.
 - Releases currently ship unsigned — policy and the package admission rule: `docs/architecture/windows-release.md` § Signing status (the single source; do not restate it).
