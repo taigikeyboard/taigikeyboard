@@ -233,11 +233,13 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             let top = y + (row_h - cell.h).max(0.0) / 2.0;
             shift_cell(cell, x, top, &mut glyphs, &mut hits);
             if page.cursor == Some(cell.index) {
+                // The full row height, so a romanization-only cell lights
+                // up as tall as its two-line neighbours.
                 highlight = Some(Rect {
                     x,
-                    y: top,
+                    y,
                     w: cell.w,
-                    h: cell.h,
+                    h: row_h,
                 });
             }
             x += cell.w + gap;
@@ -603,11 +605,12 @@ fn arrange_expanded_row(
         let top = pad + row as f32 * pitch - scroll + (row_body - cell.h).max(0.0) / 2.0;
         shift_cell(cell, x, top, &mut glyphs, &mut hits);
         if page.cursor == Some(index as u32) {
+            // The row's full body, as in the collapsed row.
             highlight = Some(Rect {
                 x,
-                y: top,
+                y: pad + row as f32 * pitch - scroll,
                 w: cell.w,
-                h: cell.h,
+                h: row_body,
             });
         }
         widest_row = widest_row.max(x + cell.w - pad);
@@ -1380,6 +1383,25 @@ mod tests {
             .collect();
         assert_eq!(widths[0], widths[1]);
         assert_eq!(widths[1], widths[2]);
+    }
+
+    #[test]
+    fn a_romanization_only_cell_highlights_the_full_row_height() {
+        let two_line = Cell {
+            text: "是".into(),
+            annotation: Some("sī".into()),
+        };
+        let roman_only = Cell {
+            text: "siáng".into(),
+            annotation: None,
+        };
+        let mut shown = page(false, true, vec![two_line, roman_only]);
+        shown.chrome.highlight_fill = 0;
+        let tall = arrange(&shown, &Mono, 1.0).highlight.expect("cursor");
+        shown.cursor = Some(1);
+        let short = arrange(&shown, &Mono, 1.0).highlight.expect("cursor");
+        assert_eq!(short.y, tall.y);
+        assert_eq!(short.h, tall.h);
     }
 
     #[test]
