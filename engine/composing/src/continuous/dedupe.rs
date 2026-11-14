@@ -88,35 +88,45 @@ pub(super) fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawC
     });
 }
 
-/// TPS-mode visual dedupe: collapse candidates sharing `(hanji,
-/// consumed_span)` because the TPS candidate strip hides romanization
-/// (TPS = hanji-first input mode per `docs/contributing/phonetics.md`).
-/// Two `dict.bin` rows like `灣 / uan` (tone 1) and `灣 / uân` (tone 5)
-/// both index under `tps:ㄨㄢ`, so the build pipeline legitimately
-/// emits both rowids at the same FST key. The pre-sort
-/// `lexicon::dedupe_by_roman_hanji_span` keys on `(hanji, span)` + (`roman`
-/// or `canonical_tl`) and preserves tone variants; that is correct for TL/POJ
-/// (the UI shows distinct `uan / 灣` vs `uân / 灣` rows) but produces
-/// a visible duplicate in TPS mode where only `灣` is rendered.
+/// Collapse candidates that commit identical Hanji text: drop duplicate rows
+/// sharing `(hanji, consumed_span)` whenever every cell commits the same plain
+/// Hanji text (TPS layout with brackets off, OR Hanji-first Side-by-Side/DualRow
+/// with Annotate in Brackets off).
 ///
-/// Runs AFTER the sort + walker slot-0 prepend + (no-op for TPS) POJ
-/// render pass so first-seen = highest-ranked. `consumed_span` stays
-/// in the key so the same hanji at different spans survives — e.g. a
-/// 1-syllable `灣` covering only the first syllable `(0, n1)` and a
-/// 1-syllable `灣` re-emitted by the walker at the full-buffer span
-/// `(0, raw_len)` are distinct commit surfaces; the rationale matches
-/// `lexicon::dedupe_by_roman_hanji_span`. `hanji = None` or empty
-/// hanji passes through (roman-only rows are unique by roman); upstream
-/// `lexicon::dedupe_by_roman_hanji_span` already collapses exact
-/// `(hanji, span)` + (`roman` or `canonical_tl`) duplicates so this branch
-/// never reaches a truly identical pair.
-pub(super) fn dedupe_display_hanji_for_tps(candidates: &mut Vec<RawCandidate>) {
+/// In those modes two rows sharing `(hanji, consumed_span)` with different
+/// readings (e.g. `轉去 / tńg--khì` and `轉去 / tńg-khì`, or TPS tone variants
+/// `灣 / uan` and `灣 / uân` under `tps:ㄨㄢ`) render the exact same primary
+/// Hanji text and commit the exact same string. Keeping only the highest-ranked
+/// (first-seen) candidate avoids duplicate Hanji cells.
+///
+/// Excluded when:
+/// - `output_both_scripts` is true (`轉去 (tńg-khì)` vs `轉去 (tńg--khì)` commit
+///   different strings);
+/// - Output Script is Romanization (`!renders_hanji_first()`) or
+///   `RomanOnly` / `Combined` (`is_single_script_display()`; Combined already
+///   dedupes Hanji cells and needs each distinct Roman cell).
+///
+/// Runs AFTER sort + walker slot-0 prepend + presentation passes so
+/// first-seen = highest-ranked. `consumed_span` stays in the key so a partial
+/// prefix candidate vs full-buffer candidate with the same Hanji remains
+/// reachable. `hanji = None` or empty Hanji passes through untouched.
+pub(super) fn dedupe_same_commit_hanji(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         c.hanji
             .as_deref()
             .filter(|h| !h.is_empty())
             .map(|h| (h.to_owned(), c.consumed_span))
     });
+}
+
+/// Whether `config` (in active buffer `mode`) displays and commits Hanji alone
+/// per candidate cell, making duplicate `(hanji, consumed_span)` rows commit the
+/// exact same text.
+pub(crate) fn should_dedupe_commit_hanji(
+    config: &protos::engine::AppConfig,
+    mode: phonetics::InputMode,
+) -> bool {
+    config.commits_plain_hanji(mode == phonetics::InputMode::Tps)
 }
 
 #[cfg(test)]
@@ -175,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    fn dedupe_display_hanji_for_tps_collapses_same_hanji_same_span() {
+    fn dedupe_same_commit_hanji_collapses_same_hanji_same_span() {
         fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
             RawCandidate {
                 rowid: NO_ROWID,
@@ -195,17 +205,16 @@ mod tests {
                 is_custom: false,
             }
         }
-        // The reported bug: TPS `ㄨㄢ` → dict has 灣/uan (tone 1) + 灣/uân
-        // (tone 5) at the same `tps:ㄨㄢ` toneless key; same hanji, same
-        // span, different roman. TPS UI shows hanji only ⇒ duplicate.
+        // TPS `ㄨㄢ` (灣/uan + 灣/uân) or TL Hanji-first (轉去/tńg--khì +
+        // 轉去/tńg-khì): same hanji, same span, different roman ⇒ first-wins.
         let mut visible_dup = vec![mk("uan", Some("灣"), (0, 6)), mk("uân", Some("灣"), (0, 6))];
-        dedupe_display_hanji_for_tps(&mut visible_dup);
+        dedupe_same_commit_hanji(&mut visible_dup);
         assert_eq!(visible_dup.len(), 1);
         assert_eq!(visible_dup[0].roman, "uan", "first-wins keeps top-ranked");
     }
 
     #[test]
-    fn dedupe_display_hanji_for_tps_keeps_distinct_spans() {
+    fn dedupe_same_commit_hanji_keeps_distinct_spans() {
         fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
             RawCandidate {
                 rowid: NO_ROWID,
@@ -230,7 +239,7 @@ mod tests {
         // invariant pinned by `lexicon::dedupe_by_roman_hanji_span`).
         let mut spans = vec![mk("uan", Some("灣"), (0, 3)), mk("uan", Some("灣"), (0, 6))];
         let before = spans.len();
-        dedupe_display_hanji_for_tps(&mut spans);
+        dedupe_same_commit_hanji(&mut spans);
         assert_eq!(
             spans.len(),
             before,
@@ -239,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    fn dedupe_display_hanji_for_tps_passes_through_none_and_empty_hanji() {
+    fn dedupe_same_commit_hanji_passes_through_none_and_empty_hanji() {
         fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
             RawCandidate {
                 rowid: NO_ROWID,
@@ -268,7 +277,53 @@ mod tests {
             mk("ㄨㄢ", Some(""), (0, 3)), // empty hanji also passes
         ];
         let before = roman_only.len();
-        dedupe_display_hanji_for_tps(&mut roman_only);
+        dedupe_same_commit_hanji(&mut roman_only);
         assert_eq!(roman_only.len(), before, "None / empty hanji all pass");
+    }
+
+    #[test]
+    fn should_dedupe_commit_hanji_gates_on_output_script_and_brackets() {
+        use phonetics::InputMode;
+        use protos::engine::{AppConfig, CandidateDisplayMode};
+
+        let mk_cfg =
+            |input_mode: &str, is_hanji_first: bool, brackets: bool, mode: CandidateDisplayMode| {
+                AppConfig {
+                    input_mode: input_mode.to_owned(),
+                    is_hanji_first,
+                    output_both_scripts: brackets,
+                    candidate_display_mode: mode as i32,
+                    ..AppConfig::default()
+                }
+            };
+
+        assert!(should_dedupe_commit_hanji(
+            &mk_cfg("tl", true, false, CandidateDisplayMode::SideBySide),
+            InputMode::Tl
+        ));
+        assert!(!should_dedupe_commit_hanji(
+            &mk_cfg("tl", true, true, CandidateDisplayMode::SideBySide),
+            InputMode::Tl
+        ));
+        assert!(!should_dedupe_commit_hanji(
+            &mk_cfg("tl", false, false, CandidateDisplayMode::SideBySide),
+            InputMode::Tl
+        ));
+        assert!(!should_dedupe_commit_hanji(
+            &mk_cfg("tl", true, false, CandidateDisplayMode::Combined),
+            InputMode::Tl
+        ));
+        assert!(!should_dedupe_commit_hanji(
+            &mk_cfg("tl", true, false, CandidateDisplayMode::RomanOnly),
+            InputMode::Tl
+        ));
+        assert!(should_dedupe_commit_hanji(
+            &mk_cfg("tps", false, false, CandidateDisplayMode::SideBySide),
+            InputMode::Tps
+        ));
+        assert!(!should_dedupe_commit_hanji(
+            &mk_cfg("tps", false, true, CandidateDisplayMode::SideBySide),
+            InputMode::Tps
+        ));
     }
 }

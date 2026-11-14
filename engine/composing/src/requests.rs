@@ -26,7 +26,9 @@
 use crate::api::{
     CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent, Phase, UserRows,
 };
-use crate::continuous::{assemble_candidates, retain_first_by_key, ListShape};
+use crate::continuous::{
+    assemble_candidates, retain_first_by_key, should_dedupe_commit_hanji, ListShape,
+};
 use crate::derived::buffer_input_mode;
 use crate::WordListStart;
 use lexicon::dictionary_reader::NO_ROWID;
@@ -407,6 +409,7 @@ fn listed_candidates(
         context,
         config.rendered_syllable_joiner(),
         config.force_lowercase_nasal_marker,
+        should_dedupe_commit_hanji(config, mode),
         shape,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
