@@ -10,7 +10,11 @@ import { test } from "node:test";
 import { initSync, Session } from "../target/pkg/taigi_web.js";
 import { cancel, lastOf, press, topCell, type } from "./keys.mjs";
 
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
+
 const dictionaries = new URL("../../assets/dictionaries/", import.meta.url);
+/** @type {Array<[string, string]>} */
 const TOP_CANDIDATES = [
   ["kau3siu7", "教授"],
   ["kausiu", "教授"],
@@ -42,7 +46,7 @@ test("an install with a dictionary missing is refused", () => {
 test("keys before the install type romanization", () => {
   const [reply] = type(session, "a");
   assert.equal(reply.handled, true);
-  assert.equal(lastOf(reply, "preedit").text, "a");
+  assert.equal(lastOf(reply, "preedit")?.text, "a");
   assert.equal(lastOf(reply, "lookupTable"), undefined);
   cancel(session);
 });
@@ -57,7 +61,10 @@ test("installs the dictionaries", () => {
 for (const [raw, hanji] of TOP_CANDIDATES) {
   test(`${raw} → ${hanji}`, () => {
     const replies = type(session, raw);
-    assert.equal(topCell(lastOf(replies.at(-1), "lookupTable")), hanji);
+    const last = replies.at(-1);
+    const table = last && lastOf(last, "lookupTable");
+    assert.ok(table);
+    assert.equal(topCell(table), hanji);
     cancel(session);
   });
 }
@@ -65,15 +72,17 @@ for (const [raw, hanji] of TOP_CANDIDATES) {
 test("Enter commits the highlighted candidate", () => {
   type(session, "taiuan");
   const reply = press(session, "Enter", "Enter");
-  assert.equal(lastOf(reply, "commit").text, "台灣");
+  assert.equal(lastOf(reply, "commit")?.text, "台灣");
 });
 
 test("a click selects and writes nothing", () => {
   const replies = type(session, "taiuan");
-  const table = lastOf(replies.at(-1), "lookupTable");
+  const last = replies.at(-1);
+  const table = last && lastOf(last, "lookupTable");
+  assert.ok(table);
   const position = table.cursor + 1;
   const clicked = JSON.parse(session.clickCandidate(position));
-  assert.equal(lastOf(clicked, "lookupTable").cursor, position);
+  assert.equal(lastOf(clicked, "lookupTable")?.cursor, position);
   assert.equal(lastOf(clicked, "commit"), undefined);
   cancel(session);
 });
@@ -81,7 +90,7 @@ test("a click selects and writes nothing", () => {
 test("commitComposition writes the composition once", () => {
   type(session, "taiuan");
   const reply = JSON.parse(session.commitComposition());
-  assert.ok(lastOf(reply, "commit").text.length > 0);
+  assert.ok((lastOf(reply, "commit")?.text.length ?? 0) > 0);
   assert.notEqual(lastOf(reply, "hideLookupTable"), undefined);
   assert.deepEqual(JSON.parse(session.commitComposition()).emits, []);
 });
@@ -93,20 +102,20 @@ test("a Shift tap hands the keys to the page and back", () => {
     const up = { key: "Shift", code: "ShiftLeft" };
     return JSON.parse(session.keyUp(JSON.stringify(up)));
   };
-  assert.equal(lastOf(tap(), "modeChanged").symbol, "英");
+  assert.equal(lastOf(tap(), "modeChanged")?.symbol, "英");
   assert.equal(type(session, "a")[0].handled, false);
-  assert.equal(lastOf(tap(), "modeChanged").symbol, "台");
+  assert.equal(lastOf(tap(), "modeChanged")?.symbol, "台");
   assert.equal(type(session, "a")[0].handled, true);
   cancel(session);
 
   assert.equal(
-    lastOf(JSON.parse(session.toggleLanguageMode()), "modeChanged").symbol,
+    lastOf(JSON.parse(session.toggleLanguageMode()), "modeChanged")?.symbol,
     "英",
   );
   assert.equal(JSON.parse(session.modeLine()).isEnglish, true);
   assert.equal(type(session, "a")[0].handled, false);
   assert.equal(
-    lastOf(JSON.parse(session.toggleLanguageMode()), "modeChanged").symbol,
+    lastOf(JSON.parse(session.toggleLanguageMode()), "modeChanged")?.symbol,
     "台",
   );
   assert.equal(JSON.parse(session.modeLine()).isEnglish, false);
@@ -115,29 +124,33 @@ test("a Shift tap hands the keys to the page and back", () => {
 test("the symbol picker chord opens the picker", () => {
   const chord = { ctrl: true, alt: true };
   const reply = press(session, ",", "Comma", chord);
-  assert.ok(lastOf(reply, "lookupTable").cells.length > 0);
+  assert.ok((lastOf(reply, "lookupTable")?.cells.length ?? 0) > 0);
   session.keyUp(JSON.stringify({ key: ",", code: "Comma" }));
   cancel(session);
 });
 
 test("a switch that writes hands the settings back", () => {
   const chord = { ctrl: true, alt: true };
-  assert.match(press(session, "c", "KeyC", chord).settings, /poj/);
+  assert.match(press(session, "c", "KeyC", chord).settings ?? "", /poj/);
   press(session, "c", "KeyC", chord);
 });
 
-// The list `body` typed "ti" gets, under Horizontal Expandable.
+/**
+ * The list `body` typed "ti" gets, under Horizontal Expandable.
+ * @param {(table: LookupTableEmit) => void} body
+ * @returns {void}
+ */
 function underExpandable(body) {
   session.setSettings(
     JSON.stringify({ values: { candidateLayout: "expandable" } }),
   );
   try {
-    body(
-      lastOf(
-        { emits: type(session, "ti").flatMap((r) => r.emits) },
-        "lookupTable",
-      ),
+    const table = lastOf(
+      { emits: type(session, "ti").flatMap((r) => r.emits) },
+      "lookupTable",
     );
+    assert.ok(table);
+    body(table);
     cancel(session);
   } finally {
     session.setSettings("{}");
@@ -150,14 +163,17 @@ test("an expandable layout measures through the page and keys go by it", () => {
   globalThis.taigiMeasureCells = (runs) =>
     Float32Array.of(
       600,
-      ...JSON.parse(runs).map(([text, size]) => [...text].length * size),
+      .../** @type {Array<[string, number]>} */ (JSON.parse(runs)).map(
+        ([text, size]) => [...text].length * size,
+      ),
     );
   underExpandable((table) => {
+    assert.ok(table.layout);
     assert.equal(table.layout.isExpanded, false);
     assert.equal(table.layout.hasOverflow, true);
     assert.ok(table.layout.collapsed.length < table.cells.length);
     const down = press(session, "ArrowDown", "ArrowDown");
-    assert.equal(lastOf(down, "lookupTable").layout.isExpanded, true);
+    assert.equal(lastOf(down, "lookupTable")?.layout?.isExpanded, true);
   });
 });
 

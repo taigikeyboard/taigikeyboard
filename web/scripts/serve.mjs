@@ -8,6 +8,7 @@ import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 
+/** @type {Record<string, string>} */
 const MEDIA_TYPES = {
   ".css": "text/css",
   ".gz": "application/gzip",
@@ -24,8 +25,16 @@ const MEDIA_TYPES = {
 const [directory, port] = process.argv.slice(2);
 const root = resolve(directory);
 
-/// `null` for a URL that does not parse.
+/**
+ * `null` for a URL that does not parse.
+ *
+ * @param {string | undefined} url
+ * @returns {string | null}
+ */
 function fileOf(url) {
+  if (!url) {
+    return null;
+  }
   try {
     const { pathname } = new URL(url, "http://localhost");
     const path = join(root, decodeURIComponent(pathname));
@@ -37,13 +46,13 @@ function fileOf(url) {
 
 createServer(async (request, response) => {
   const file = fileOf(request.url);
-  const isFile =
-    file?.startsWith(root + sep) &&
-    (await stat(file).then(
+  if (
+    !file?.startsWith(root + sep) ||
+    !(await stat(file).then(
       (info) => info.isFile(),
       () => false,
-    ));
-  if (!isFile) {
+    ))
+  ) {
     response.writeHead(404).end();
     return;
   }

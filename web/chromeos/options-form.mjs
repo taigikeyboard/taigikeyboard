@@ -4,24 +4,43 @@
 // markup fails the build rather than shipping a wrong form. The browser
 // extension cuts its own with another list (`scripts/stage-extension.mjs`).
 
-/// What ChromeOS takes out of the form.
+/**
+ * @typedef {object} OptionsCut
+ * @property {string[]} hiddenControls
+ * @property {string[]} removedOptions
+ */
+
+/**
+ * What ChromeOS takes out of the form.
+ *
+ * @type {OptionsCut}
+ */
 const CHROMEOS = {
-  /// Rows with no effect on ChromeOS: it draws the candidate window itself
-  /// and has no key panel.
+  /**
+   * Rows with no effect on ChromeOS: it draws the candidate window itself
+   * and has no key panel.
+   */
   hiddenControls: [
     "tpsKeyboardShown",
     "candidateAppearanceMode",
     "fontType",
     "candidateTextSize",
   ],
-  /// The worker cannot measure cells, and the system window has no
-  /// expandable layout (chromeos-roadmap.md D4).
+  /**
+   * The worker cannot measure cells, and the system window has no
+   * expandable layout (chromeos-roadmap.md D4).
+   */
   removedOptions: ["expandable", "verticalExpandable"],
 };
 
-/// The page fills this section from the session; the options page has none.
+/** The page fills this section from the session; the options page has none. */
 const HIDDEN_SECTION_MARK = '<div id="shortcuts"></div>';
 
+/**
+ * @param {string[]} lines
+ * @param {string} needle
+ * @returns {number}
+ */
 function onlyIndex(lines, needle) {
   const found = lines.flatMap((line, index) =>
     line.includes(needle) ? [index] : [],
@@ -34,7 +53,14 @@ function onlyIndex(lines, needle) {
   return found[0];
 }
 
-/// Adds `hidden` to the nearest line above `from` that opens with `opening`.
+/**
+ * Adds `hidden` to the nearest line above `from` that opens with `opening`.
+ *
+ * @param {string[]} lines
+ * @param {number} from
+ * @param {string} opening
+ * @returns {void}
+ */
 function hideEnclosing(lines, from, opening) {
   for (let index = from; index >= 0; index -= 1) {
     if (lines[index].includes(opening)) {
@@ -48,8 +74,14 @@ function hideEnclosing(lines, from, opening) {
   throw new Error(`options form: no ${opening} above line ${from}`);
 }
 
-/// `<form id="settings">…</form>` of `indexHtml`, without what `cut` names:
-/// `hiddenControls`, rows to hide, and `removedOptions`, options to drop.
+/**
+ * `<form id="settings">…</form>` of `indexHtml`, without what `cut` names:
+ * `hiddenControls`, rows to hide, and `removedOptions`, options to drop.
+ *
+ * @param {string} indexHtml
+ * @param {OptionsCut} [cut]
+ * @returns {string}
+ */
 export function optionsForm(indexHtml, cut = CHROMEOS) {
   const lines = indexHtml.split("\n");
   const start = onlyIndex(lines, '<form id="settings">');
@@ -75,8 +107,15 @@ export function optionsForm(indexHtml, cut = CHROMEOS) {
 
 const FORM_MARK = /^\s*<!-- form:.*-->$/m;
 
-/// `shell` (web/chromeos/options.html) with its `<!-- form: … -->` line
-/// replaced by the form of `indexHtml`, cut as `optionsForm` does.
+/**
+ * `shell` (web/chromeos/options.html) with its `<!-- form: … -->` line
+ * replaced by the form of `indexHtml`, cut as `optionsForm` does.
+ *
+ * @param {string} shell
+ * @param {string} indexHtml
+ * @param {OptionsCut} [cut]
+ * @returns {string}
+ */
 export function optionsPage(shell, indexHtml, cut = CHROMEOS) {
   if (!FORM_MARK.test(shell)) {
     throw new Error("options page: no <!-- form: … --> line to replace");

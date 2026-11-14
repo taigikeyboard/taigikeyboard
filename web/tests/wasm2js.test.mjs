@@ -20,6 +20,7 @@ const wasm = readFileSync(
 test("disableWasm2jsUnsupportedFeatures flips multivalue and reference-types only", () => {
   const patched = disableWasm2jsUnsupportedFeatures(wasm);
   assert.equal(patched.length, wasm.length);
+  /** @type {Array<[number, number, number]>} */
   const changed = [];
   for (let i = 0; i < wasm.length; i += 1) {
     if (patched[i] !== wasm[i]) {

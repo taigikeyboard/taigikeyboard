@@ -6,7 +6,18 @@ import { test } from "node:test";
 
 import { SharedLearning } from "../extension/learning-client.js";
 
+/** @typedef {import("../types/site/pkg/taigi_web.js").Session} Session */
+/** @typedef {import("../extension/learning-store.js").EncodedFiles} EncodedFiles */
+/** @typedef {{ type: "taigi.learning.read" }} ReadRequest */
+/** @typedef {{ type: "taigi.learning.generation" }} GenerationRequest */
+/** @typedef {{ type: "taigi.learning.write", base: number, files: EncodedFiles }} WriteRequest */
+/** @typedef {ReadRequest | GenerationRequest | WriteRequest} LearningRequest */
+
+/**
+ * @param {Record<string, Uint8Array>} [files]
+ */
 function fakeSession(files = { "a.db": new Uint8Array([1, 2]) }) {
+  /** @type {Record<string, Uint8Array>} */
   const imported = {};
   let opened = false;
   return {
@@ -15,6 +26,10 @@ function fakeSession(files = { "a.db": new Uint8Array([1, 2]) }) {
       return opened;
     },
     userDataFiles: () => Object.keys(files),
+    /**
+     * @param {string} name
+     * @param {Uint8Array} bytes
+     */
     importUserData(name, bytes) {
       imported[name] = bytes;
     },
@@ -22,6 +37,10 @@ function fakeSession(files = { "a.db": new Uint8Array([1, 2]) }) {
       opened = true;
       return true;
     },
+    /**
+     * @param {string} name
+     * @returns {Uint8Array}
+     */
     exportUserData(name) {
       return files[name];
     },
@@ -29,8 +48,12 @@ function fakeSession(files = { "a.db": new Uint8Array([1, 2]) }) {
 }
 
 test("a private tab opens its own stores and never asks the service worker", async () => {
+  /** @type {unknown[]} */
   const asked = [];
-  const session = fakeSession();
+  const fake = fakeSession();
+  const session = /** @type {Session & typeof fake} */ (
+    /** @type {unknown} */ (fake)
+  );
   const learning = new SharedLearning({
     current: () => session,
     run: (action) => action(session),
@@ -53,11 +76,16 @@ test("a private tab opens its own stores and never asks the service worker", asy
 });
 
 test("a normal tab sends only changed files and restarts on a conflict", async () => {
+  /** @type {Record<string, Uint8Array>} */
   const files = {
     "a.db": new Uint8Array([1]),
     "b.db": new Uint8Array([2]),
   };
-  const session = fakeSession(files);
+  const fake = fakeSession(files);
+  const session = /** @type {Session & typeof fake} */ (
+    /** @type {unknown} */ (fake)
+  );
+  /** @type {WriteRequest[]} */
   const writes = [];
   let generation = 3;
   let staleCount = 0;
@@ -66,7 +94,8 @@ test("a normal tab sends only changed files and restarts on a conflict", async (
   const learning = new SharedLearning({
     current: () => session,
     run: (action) => action(session),
-    ask: async (message) => {
+    ask: async (rawMessage) => {
+      const message = /** @type {LearningRequest} */ (rawMessage);
       if (message.type === "taigi.learning.read") {
         return {
           generation,
@@ -84,7 +113,9 @@ test("a normal tab sends only changed files and restarts on a conflict", async (
         generation = message.base + 1;
         return { isTaken: true, generation };
       }
-      throw new Error(`unexpected ${message.type}`);
+      throw new Error(
+        `unexpected ${/** @type {{ type: string }} */ (message).type}`,
+      );
     },
     isPrivate: false,
     onStale: () => {

@@ -14,15 +14,24 @@ const wasm = readFileSync(
   new URL("../target/pkg/taigi_web_bg.wasm", import.meta.url),
 );
 
+/** @typedef {import("../types/site/pkg/taigi_web.js").Session} Session */
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
+
 let instanceCount = 0;
 
-/// A session on a new instance with the dictionaries in, its own copy of the
-/// glue as `loader.js` makes one; `files` are handed
-/// in before the stores open.
+/**
+ * A session on a new instance with the dictionaries in, its own copy of the
+ * glue as `loader.js` makes one; `files` are handed
+ * in before the stores open.
+ * @param {Map<string, Uint8Array>} [files]
+ * @returns {Promise<Session>}
+ */
 async function startSession(files = new Map()) {
   instanceCount += 1;
-  const glue = await import(
-    `../target/pkg/taigi_web.js?instance=${instanceCount}`
+  const glue = /** @type {typeof import("../types/site/pkg/taigi_web.js")} */ (
+    await import(`../target/pkg/taigi_web.js?instance=${instanceCount}`)
   );
   glue.initSync({ module: wasm });
   const session = new glue.Session("{}", "linux", "en");
@@ -37,22 +46,41 @@ async function startSession(files = new Map()) {
   return session;
 }
 
+/**
+ * @param {Reply[]} replies
+ * @returns {LookupTableEmit}
+ */
 function lastTable(replies) {
-  return lastOf(
+  const table = lastOf(
     { emits: replies.flatMap((reply) => reply.emits) },
     "lookupTable",
   );
+  assert.ok(table);
+  return table;
 }
 
-/// Types `raw`, clicks the cell showing `hanji` and commits it with Enter.
+/**
+ * Types `raw`, clicks the cell showing `hanji` and commits it with Enter.
+ * @param {Session} session
+ * @param {string} raw
+ * @param {string} hanji
+ * @returns {void}
+ */
 function pick(session, raw, hanji) {
   const table = lastTable(type(session, raw));
   const position = table.cells.findIndex((cell) => cell.text === hanji);
   assert.ok(position >= 0, `${hanji} is on the first page for ${raw}`);
   session.clickCandidate(position);
-  assert.equal(lastOf(press(session, "Enter", "Enter"), "commit").text, hanji);
+  const commit = lastOf(press(session, "Enter", "Enter"), "commit");
+  assert.ok(commit);
+  assert.equal(commit.text, hanji);
 }
 
+/**
+ * @param {Session} session
+ * @param {string} raw
+ * @returns {string}
+ */
 function top(session, raw) {
   const cell = topCell(lastTable(type(session, raw)));
   cancel(session);
@@ -65,6 +93,7 @@ function top(session, raw) {
 const RAW = "kausiu";
 const PICKED = "狗岫";
 
+/** @type {Map<string, Uint8Array>} */
 let kept;
 
 test("picks are learned and come out as the four files", async () => {
@@ -100,6 +129,8 @@ test("an instance with nothing handed in starts from the dictionaries", async ()
 test("an open file and an unknown name are refused", async () => {
   const session = await startSession();
   const [name] = session.userDataFiles();
-  assert.throws(() => session.importUserData(name, kept.get(name)));
+  assert.throws(() =>
+    session.importUserData(name, kept.get(name) ?? new Uint8Array()),
+  );
   assert.throws(() => session.exportUserData("settings.json"));
 });

@@ -10,18 +10,24 @@ import {
   utf16Caret,
 } from "../chromeos/calls.js";
 
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
+
 const ids = { engineID: "taigi", contextID: 7 };
 
 test("a ChromeOS key becomes the session's browser key", () => {
-  const json = keyJson({
-    type: "keydown",
-    key: "A",
-    code: "KeyA",
-    shiftKey: true,
-    ctrlKey: false,
-    altKey: false,
-    capsLock: true,
-  });
+  const json = keyJson(
+    /** @type {chrome.input.ime.KeyboardEvent} */ ({
+      type: "keydown",
+      key: "A",
+      code: "KeyA",
+      shiftKey: true,
+      ctrlKey: false,
+      altKey: false,
+      capsLock: true,
+    }),
+  );
   assert.deepEqual(JSON.parse(json), {
     key: "A",
     code: "KeyA",
@@ -35,6 +41,7 @@ test("a ChromeOS key becomes the session's browser key", () => {
 
 test("ChromeOS key names become the DOM's", () => {
   // Pairs as linux-chromeos r1738485 reported them.
+  /** @type {Array<[string, string, string]>} */
   const reported = [
     ["Down", "ArrowDown", "ArrowDown"],
     ["Esc", "Escape", "Escape"],
@@ -45,7 +52,13 @@ test("ChromeOS key names become the DOM's", () => {
     ["1", "Numpad1", "1"],
   ];
   for (const [key, code, expected] of reported) {
-    assert.equal(JSON.parse(keyJson({ key, code })).key, expected, code);
+    assert.equal(
+      JSON.parse(
+        keyJson(/** @type {chrome.input.ime.KeyboardEvent} */ ({ key, code })),
+      ).key,
+      expected,
+      code,
+    );
   }
 });
 
@@ -53,13 +66,20 @@ test("the preedit caret is counted in UTF-16 units", () => {
   // 𧉟 is U+2725F, two UTF-16 units: caret 2 (after 𧉟, a) is 3 there.
   assert.equal(utf16Caret("𧉟ab", 2), 3);
   assert.deepEqual(
-    imeCalls({ emits: [{ type: "preedit", text: "𧉟ab", caret: 2 }] }, ids),
+    imeCalls(
+      /** @type {Reply} */ ({
+        emits: [{ type: "preedit", text: "𧉟ab", caret: 2 }],
+      }),
+      ids,
+    ),
     [["setComposition", { contextID: 7, text: "𧉟ab", cursor: 3 }]],
   );
 });
 
 test("commit, clear and the auto-space swap map one to one", () => {
+  /** @type {Reply} */
   const reply = {
+    handled: true,
     emits: [
       { type: "clearPreedit" },
       { type: "commit", text: "台語" },
@@ -86,6 +106,7 @@ test("only the cursor's page of candidates is sent, with page-relative IDs", () 
     text,
     annotation: "x",
   }));
+  /** @type {LookupTableEmit} */
   const table = {
     type: "lookupTable",
     cells,
@@ -95,7 +116,10 @@ test("only the cursor's page of candidates is sent, with page-relative IDs", () 
     pageSize: 2,
     vertical: true,
   };
-  const [candidates, properties, cursor] = imeCalls({ emits: [table] }, ids);
+  const [candidates, properties, cursor] = imeCalls(
+    { handled: true, emits: [table] },
+    ids,
+  );
   assert.deepEqual(candidates, [
     "setCandidates",
     {
@@ -107,8 +131,12 @@ test("only the cursor's page of candidates is sent, with page-relative IDs", () 
     },
   ]);
   assert.equal(properties[0], "setCandidateWindowProperties");
-  assert.equal(properties[1].properties.pageSize, 2);
-  assert.equal(properties[1].properties.totalCandidates, 5);
+  const propsCall =
+    /** @type {Extract<import("../chromeos/calls.js").ImeCall, ["setCandidateWindowProperties", unknown]>} */ (
+      properties
+    );
+  assert.equal(propsCall[1].properties.pageSize, 2);
+  assert.equal(propsCall[1].properties.totalCandidates, 5);
   assert.deepEqual(cursor, [
     "setCursorPosition",
     { contextID: 7, candidateID: 1 },
@@ -116,6 +144,7 @@ test("only the cursor's page of candidates is sent, with page-relative IDs", () 
 });
 
 test("a hidden cursor sets no candidate position", () => {
+  /** @type {LookupTableEmit} */
   const table = {
     type: "lookupTable",
     cells: [{ text: "一" }],
@@ -125,12 +154,14 @@ test("a hidden cursor sets no candidate position", () => {
     pageSize: 9,
     vertical: false,
   };
-  const calls = imeCalls({ emits: [table] }, ids);
+  const calls = imeCalls({ handled: true, emits: [table] }, ids);
   assert.equal(calls.length, 2);
 });
 
 test("emits with no ChromeOS surface make no call", () => {
+  /** @type {Reply} */
   const reply = {
+    handled: true,
     emits: [
       { type: "modeChanged", symbol: "A" },
       { type: "announceMode", label: "x" },
@@ -140,19 +171,43 @@ test("emits with no ChromeOS surface make no call", () => {
 });
 
 test("Google Docs and X fields are told apart from a plain field", () => {
-  const plain = { type: "text", autoCapitalize: "sentences", spellCheck: true };
-  const docs = { type: "text", autoCapitalize: "off", spellCheck: false };
-  const x = {
-    type: "text",
-    autoCapitalize: "sentences",
-    autoComplete: true,
-    autoCorrect: true,
-    shouldDoLearning: true,
-    spellCheck: true,
-  };
+  const plain = /** @type {chrome.input.ime.InputContext} */ (
+    /** @type {unknown} */ ({
+      type: "text",
+      autoCapitalize: "sentences",
+      spellCheck: true,
+    })
+  );
+  const docs = /** @type {chrome.input.ime.InputContext} */ (
+    /** @type {unknown} */ ({
+      type: "text",
+      autoCapitalize: "off",
+      spellCheck: false,
+    })
+  );
+  const x = /** @type {chrome.input.ime.InputContext} */ (
+    /** @type {unknown} */ ({
+      type: "text",
+      autoCapitalize: "sentences",
+      autoComplete: true,
+      autoCorrect: true,
+      shouldDoLearning: true,
+      spellCheck: true,
+    })
+  );
   assert.equal(isResetStorm(plain), false);
   assert.equal(isResetStorm(docs), true);
   assert.equal(isResetStorm(x), true);
-  assert.equal(isResetStorm({ type: "url", spellCheck: false }), false);
+  assert.equal(
+    isResetStorm(
+      /** @type {chrome.input.ime.InputContext} */ (
+        /** @type {unknown} */ ({
+          type: "url",
+          spellCheck: false,
+        })
+      ),
+    ),
+    false,
+  );
   assert.equal(isResetStorm(null), false);
 });

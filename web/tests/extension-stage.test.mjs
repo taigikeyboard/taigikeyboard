@@ -20,12 +20,19 @@ const style = readFileSync(
   "utf8",
 );
 
+/**
+ * @param {string} form
+ * @param {string} name
+ * @returns {string}
+ */
 function rowOf(form, name) {
   const lines = form.split("\n");
   const at = lines.findIndex((line) => line.includes(`name="${name}"`));
-  return lines
-    .slice(0, at + 1)
-    .findLast((line) => line.includes('<label class="setting"'));
+  return (
+    lines
+      .slice(0, at + 1)
+      .findLast((line) => line.includes('<label class="setting"')) ?? ""
+  );
 }
 
 test("the extension options form hides only the key panel and font rows", () => {

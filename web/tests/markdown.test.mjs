@@ -14,6 +14,15 @@ import {
 } from "../src/markdown.js";
 import { toHtml } from "../src/save.js";
 
+/** @typedef {import("../types/shared.d.ts").RunSpan} RunSpan */
+/** @typedef {import("../types/shared.d.ts").MarkdownBlock} MarkdownBlock */
+/** @typedef {import("../types/shared.d.ts").MarkdownParagraphBlock} MarkdownParagraphBlock */
+
+/**
+ * @param {string} text
+ * @param {Partial<Omit<RunSpan, "text">>} [format]
+ * @returns {RunSpan}
+ */
 const run = (text, format = {}) => ({
   text,
   bold: false,
@@ -23,9 +32,17 @@ const run = (text, format = {}) => ({
   ...format,
 });
 
+/**
+ * @param {...RunSpan} runs
+ * @returns {MarkdownParagraphBlock}
+ */
 const paragraph = (...runs) => ({ type: "paragraph", runs });
 
-/// `markdown` reads as blocks that write back as the same text.
+/**
+ * `markdown` reads as blocks that write back as the same text.
+ * @param {string} markdown
+ * @returns {void}
+ */
 function roundTrip(markdown) {
   assert.equal(serialize(parse(markdown)), markdown);
 }
@@ -71,13 +88,16 @@ test("blocks read with their kinds, levels and list numbers", () => {
 });
 
 test("spans nest: a link's text keeps its formats", () => {
-  assert.deepEqual(parse("[**教**典](https://a.tw)")[0].runs, [
+  const [first] = parse("[**教**典](https://a.tw)");
+  assert.notEqual(first.type, "list");
+  assert.deepEqual(/** @type {MarkdownParagraphBlock} */ (first).runs, [
     run("教", { bold: true, url: "https://a.tw" }),
     run("典", { url: "https://a.tw" }),
   ]);
 });
 
 test("plain text that looks like Markdown writes back with a backslash", () => {
+  /** @type {MarkdownBlock[]} */
   const blocks = [
     paragraph(run("a*b*c # x")),
     paragraph(run("# hi\n- x\n1. y\n> z")),
@@ -128,6 +148,10 @@ test("a URL gets a scheme and loses what would end the link", () => {
   assert.equal(normalizeUrl("a　b"), "https://a%E3%80%80b");
 });
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 const body = (text) =>
   toHtml("", text).split("<body>\n")[1].split("\n</body>")[0];
 
