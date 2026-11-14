@@ -46,20 +46,41 @@ import {
   registerRichText,
 } from "./vendor/lexical.js";
 
-/// Updates that bring a whole text in (a stored draft, another tab's save, the
-/// intro): no user edit, so Draft does not save them back.
+/** @typedef {import("../types/shared.d.ts").RunSpan} RunSpan */
+/** @typedef {import("../types/shared.d.ts").MarkdownBlock} MarkdownBlock */
+/** @typedef {import("lexical").BaseSelection} BaseSelection */
+/** @typedef {import("lexical").ElementNode} ElementNode */
+/** @typedef {import("lexical").LexicalEditor} LexicalEditor */
+/** @typedef {import("lexical").LexicalNode} LexicalNode */
+/** @typedef {import("lexical").RangeSelection} RangeSelection */
+/** @typedef {import("lexical").TextFormatType} TextFormatType */
+/** @typedef {import("@lexical/rich-text").HeadingTagType} HeadingTagType */
+/** @typedef {import("@lexical/list").ListType} ListType */
+/** @typedef {import("@lexical/history").HistoryState} HistoryState */
+
+/**
+ * Updates that bring a whole text in (a stored draft, another tab's save, the
+ * intro): no user edit, so Draft does not save them back.
+ */
 export const LOAD_TAG = "taigi-load";
 
-/// The classes style.css draws formatting with.
+/** The classes style.css draws formatting with. */
 const THEME = {
   text: { bold: "is-bold", italic: "is-italic", underline: "is-underline" },
   link: "is-link",
 };
 
+/** @type {Array<"bold" | "italic" | "underline">} */
 const FORMATS = ["bold", "italic", "underline"];
 
-/// A run's text as nodes: `\n` is a line break.
+/**
+ * A run's text as nodes: `\n` is a line break.
+ *
+ * @param {RunSpan} run
+ * @returns {LexicalNode[]}
+ */
 function textNodes(run) {
+  /** @type {LexicalNode[]} */
   const nodes = [];
   run.text.split("\n").forEach((part, index) => {
     if (index > 0) {
@@ -78,8 +99,14 @@ function textNodes(run) {
   return nodes;
 }
 
-/// Runs as inline nodes, a link's runs inside one link node.
+/**
+ * Runs as inline nodes, a link's runs inside one link node.
+ *
+ * @param {RunSpan[]} runs
+ * @returns {LexicalNode[]}
+ */
 function inlineNodes(runs) {
+  /** @type {LexicalNode[]} */
   const nodes = [];
   for (let index = 0; index < runs.length; ) {
     const { url } = runs[index];
@@ -98,12 +125,16 @@ function inlineNodes(runs) {
   return nodes;
 }
 
+/**
+ * @param {MarkdownBlock} block
+ * @returns {ElementNode}
+ */
 function blockNode(block) {
   switch (block.type) {
-    case "heading":
-      return $createHeadingNode(`h${block.level}`).append(
-        ...inlineNodes(block.runs),
-      );
+    case "heading": {
+      const tag = /** @type {HeadingTagType} */ (`h${block.level}`);
+      return $createHeadingNode(tag).append(...inlineNodes(block.runs));
+    }
     case "quote":
       return $createQuoteNode().append(...inlineNodes(block.runs));
     case "list":
@@ -120,16 +151,24 @@ function blockNode(block) {
   }
 }
 
-/// An element's inline content as runs. A nested list (pasted, or indented)
-/// is left out: `listItems` takes its items. A pasted link's URL is encoded as
-/// the URL field's is, so the Markdown link holds.
+/**
+ * An element's inline content as runs. A nested list (pasted, or indented)
+ * is left out: `listItems` takes its items. A pasted link's URL is encoded as
+ * the URL field's is, so the Markdown link holds.
+ *
+ * @param {ElementNode} element
+ * @param {string | null} [url]
+ * @returns {RunSpan[]}
+ */
 function runsOf(element, url = null) {
+  /** @type {RunSpan[]} */
   const runs = [];
   for (const child of element.getChildren()) {
     if ($isListNode(child)) {
       continue;
     }
     if ($isTextNode(child) || $isLineBreakNode(child)) {
+      /** @param {TextFormatType} format */
       const has = (format) => $isTextNode(child) && child.hasFormat(format);
       runs.push({
         text: child.getTextContent(),
@@ -147,8 +186,13 @@ function runsOf(element, url = null) {
   return runs;
 }
 
-/// A list's items, a nested list's items after the item holding them: the
-/// Markdown has one level.
+/**
+ * A list's items, a nested list's items after the item holding them: the
+ * Markdown has one level.
+ *
+ * @param {ListNode} list
+ * @returns {RunSpan[][]}
+ */
 function listItems(list) {
   return list
     .getChildren()
@@ -160,8 +204,12 @@ function listItems(list) {
     });
 }
 
-/// The document as blocks. A pasted h4–h6 reads as h3; any block the page has
-/// no Markdown for reads as a paragraph.
+/**
+ * The document as blocks. A pasted h4–h6 reads as h3; any block the page has
+ * no Markdown for reads as a paragraph.
+ *
+ * @returns {MarkdownBlock[]}
+ */
 function $blocks() {
   return $getRoot()
     .getChildren()
@@ -188,6 +236,10 @@ function $blocks() {
     });
 }
 
+/**
+ * @param {string} text
+ * @returns {boolean}
+ */
 function $insertText(text) {
   const selection = $getSelection();
   if (!$isRangeSelection(selection)) {
@@ -197,8 +249,14 @@ function $insertText(text) {
   return true;
 }
 
-/// The last text node at or before `node`, inside an inline element (a link)
-/// or out of one.
+/**
+ * The last text node at or before `node`, inside an inline element (a link)
+ * or out of one.
+ *
+ * @param {LexicalNode | null} node
+ * @param {ElementNode | null} parent
+ * @returns {LexicalNode | null}
+ */
 function $textBefore(node, parent) {
   let current = node;
   let holder = parent;
@@ -212,9 +270,14 @@ function $textBefore(node, parent) {
   return current;
 }
 
-/// Deletes `count` Unicode scalars before the caret, in its paragraph. Not
-/// Lexical's character deletion, which goes by grapheme: a combining tone mark
-/// is a scalar of its own.
+/**
+ * Deletes `count` Unicode scalars before the caret, in its paragraph. Not
+ * Lexical's character deletion, which goes by grapheme: a combining tone mark
+ * is a scalar of its own.
+ *
+ * @param {number} count
+ * @returns {void}
+ */
 function $deleteBefore(count) {
   const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) {
@@ -227,6 +290,7 @@ function $deleteBefore(count) {
     $isTextNode(anchorNode) && selection.format !== anchorNode.getFormat()
       ? selection.format
       : null;
+  /** @type {LexicalNode | null} */
   let node = anchorNode;
   let offset = selection.anchor.offset;
   if ($isElementNode(node)) {
@@ -264,12 +328,16 @@ function $deleteBefore(count) {
   // A caret the page placed takes no format of its own.
   const caret = $getSelection();
   const anchor = $isRangeSelection(caret) ? caret.anchor.getNode() : null;
-  if ($isTextNode(anchor)) {
+  if ($isRangeSelection(caret) && $isTextNode(anchor)) {
     caret.format = armed ?? anchor.getFormat();
     caret.style = anchor.getStyle();
   }
 }
 
+/**
+ * @param {string} markdown
+ * @returns {void}
+ */
 function $setMarkdown(markdown) {
   const root = $getRoot();
   root.clear();
@@ -279,7 +347,12 @@ function $setMarkdown(markdown) {
   );
 }
 
-/// The top-level blocks a selection touches.
+/**
+ * The top-level blocks a selection touches.
+ *
+ * @param {RangeSelection} selection
+ * @returns {LexicalNode[]}
+ */
 function $selectedBlocks(selection) {
   return [
     ...new Set(
@@ -288,18 +361,27 @@ function $selectedBlocks(selection) {
   ];
 }
 
-/// The link the caret or selection is in.
+/**
+ * The link the caret or selection is in.
+ *
+ * @param {RangeSelection} selection
+ * @returns {LinkNode | null}
+ */
 function $selectedLink(selection) {
   return $findMatchingParent(selection.anchor.getNode(), $isLinkNode);
 }
 
 export class Editor {
+  /** @type {LexicalEditor} */
   #lexical;
+  /** @type {HTMLElement} */
   #root;
+  /** @type {HistoryState} */
   #history = createEmptyHistoryState();
-  /// Inside `batch`: writes join its update.
+  /** Inside `batch`: writes join its update. */
   #isBatching = false;
 
+  /** @param {HTMLElement} root */
   constructor(root) {
     this.#root = root;
     this.#lexical = createEditor({
@@ -313,7 +395,8 @@ export class Editor {
     });
     this.#lexical.setRootElement(root);
     // For tests and devtools, as Lexical keeps `__lexicalEditor` on the root.
-    root.taigiEditor = this;
+    /** @type {HTMLElement & { taigiEditor?: Editor }} */ (root).taigiEditor =
+      this;
     registerRichText(this.#lexical);
     registerList(this.#lexical);
     registerHistory(this.#lexical, this.#history, 300);
@@ -326,34 +409,54 @@ export class Editor {
     );
   }
 
+  /** @returns {HTMLElement} */
   get root() {
     return this.#root;
   }
 
-  /// `contenteditable` follows: Lexical only stops its own handlers.
+  /**
+   * `contenteditable` follows: Lexical only stops its own handlers.
+   *
+   * @param {boolean} isEditable
+   * @returns {void}
+   */
   setEditable(isEditable) {
     this.#lexical.setEditable(isEditable);
     this.#root.contentEditable = String(isEditable);
   }
 
-  /// The caret where Lexical last had it, the text's end the first time.
+  /**
+   * The caret where Lexical last had it, the text's end the first time.
+   *
+   * @returns {void}
+   */
   focus() {
     this.#lexical.focus(undefined, { defaultSelection: "rootEnd" });
   }
 
+  /** @returns {string} */
   markdown() {
     return this.#lexical.getEditorState().read(() => serialize($blocks()));
   }
 
-  /// A whole text from outside the page's editing: the undo history starts
-  /// over and the caret goes to the end. `alignLastRight` draws the last
-  /// paragraph against the right edge (the intro's signature).
+  /**
+   * A whole text from outside the page's editing: the undo history starts
+   * over and the caret goes to the end. `alignLastRight` draws the last
+   * paragraph against the right edge (the intro's signature).
+   *
+   * @param {string} markdown
+   * @param {{ alignLastRight?: boolean }} [options]
+   * @returns {void}
+   */
   setMarkdown(markdown, { alignLastRight = false } = {}) {
     this.#lexical.update(
       () => {
         $setMarkdown(markdown);
         if (alignLastRight) {
-          $getRoot().getLastChild()?.setFormat("right");
+          const last = $getRoot().getLastChild();
+          if ($isElementNode(last)) {
+            last.setFormat("right");
+          }
         }
         $getRoot().selectEnd();
       },
@@ -362,9 +465,13 @@ export class Editor {
     this.#resetHistory();
   }
 
-  /// The history starts over at the current state. Not CLEAR_HISTORY_COMMAND:
-  /// it leaves no current state, so the first edit after a load could not be
-  /// undone.
+  /**
+   * The history starts over at the current state. Not CLEAR_HISTORY_COMMAND:
+   * it leaves no current state, so the first edit after a load could not be
+   * undone.
+   *
+   * @returns {void}
+   */
   #resetHistory() {
     const history = this.#history;
     history.undoStack.length = 0;
@@ -375,8 +482,13 @@ export class Editor {
     };
   }
 
-  /// One undo step for everything `edit` writes (one engine reply). The writes
-  /// inside run in this update at once: a nested update would only be queued.
+  /**
+   * One undo step for everything `edit` writes (one engine reply). The writes
+   * inside run in this update at once: a nested update would only be queued.
+   *
+   * @param {() => void} edit
+   * @returns {void}
+   */
   batch(edit) {
     this.#lexical.update(
       () => {
@@ -391,11 +503,18 @@ export class Editor {
     );
   }
 
-  /// `write` inside the running batch, or in an update of its own.
+  /**
+   * `write` inside the running batch, or in an update of its own.
+   *
+   * @template T
+   * @param {() => T} write
+   * @returns {T}
+   */
   #write(write) {
     if (this.#isBatching) {
       return write();
     }
+    /** @type {T | undefined} */
     let result;
     this.#lexical.update(
       () => {
@@ -403,22 +522,36 @@ export class Editor {
       },
       { discrete: true },
     );
-    return result;
+    return /** @type {T} */ (result);
   }
 
-  /// Replaces the selection, or inserts at the caret, in the caret's format.
-  /// Answers whether there was a caret to write at.
+  /**
+   * Replaces the selection, or inserts at the caret, in the caret's format.
+   * Answers whether there was a caret to write at.
+   *
+   * @param {string} text
+   * @returns {boolean}
+   */
   insertText(text) {
     return this.#write(() => $insertText(text));
   }
 
-  /// Deletes `count` Unicode scalars before the caret, in its paragraph.
+  /**
+   * Deletes `count` Unicode scalars before the caret, in its paragraph.
+   *
+   * @param {number} count
+   * @returns {void}
+   */
   deleteBefore(count) {
     this.#write(() => $deleteBefore(count));
   }
 
-  /// The text and the selection's points, to tell a change the page did not
-  /// make: Lexical may make a new state for a selection it only normalizes.
+  /**
+   * The text and the selection's points, to tell a change the page did not
+   * make: Lexical may make a new state for a selection it only normalizes.
+   *
+   * @returns {string}
+   */
   snapshot() {
     return this.#lexical.getEditorState().read(() => {
       const selection = $getSelection();
@@ -434,7 +567,11 @@ export class Editor {
     });
   }
 
-  /// Whether some text is selected.
+  /**
+   * Whether some text is selected.
+   *
+   * @returns {boolean}
+   */
   hasSelection() {
     return this.#lexical.getEditorState().read(() => {
       const selection = $getSelection();
@@ -442,13 +579,23 @@ export class Editor {
     });
   }
 
-  /// Bold, italic or underline on the selection.
+  /**
+   * Bold, italic or underline on the selection.
+   *
+   * @param {TextFormatType} format
+   * @returns {void}
+   */
   toggleFormat(format) {
     this.#lexical.dispatchCommand(FORMAT_TEXT_COMMAND, format);
   }
 
-  /// `h1`–`h3` or `quote` on the blocks the selection touches; off, back to
-  /// paragraphs, when every one of them already is.
+  /**
+   * `h1`–`h3` or `quote` on the blocks the selection touches; off, back to
+   * paragraphs, when every one of them already is.
+   *
+   * @param {"h1" | "h2" | "h3" | "quote"} kind
+   * @returns {void}
+   */
   toggleBlock(kind) {
     this.#lexical.update(() => {
       const selection = $getSelection();
@@ -469,8 +616,13 @@ export class Editor {
     });
   }
 
-  /// A bulleted (`bullet`) or numbered (`number`) list over the blocks the
-  /// selection touches; off when they all are that list.
+  /**
+   * A bulleted (`bullet`) or numbered (`number`) list over the blocks the
+   * selection touches; off when they all are that list.
+   *
+   * @param {ListType} type
+   * @returns {void}
+   */
   toggleList(type) {
     const isOn = this.#lexical.getEditorState().read(() => {
       const selection = $getSelection();
@@ -493,14 +645,23 @@ export class Editor {
     }
   }
 
-  /// The selection as it is, to come back to after the URL field had focus.
+  /**
+   * The selection as it is, to come back to after the URL field had focus.
+   *
+   * @returns {BaseSelection | null}
+   */
   saveSelection() {
     return this.#lexical
       .getEditorState()
       .read(() => $getSelection()?.clone() ?? null);
   }
 
-  /// The URL of the link `selection` is in, or `null`.
+  /**
+   * The URL of the link `selection` is in, or `null`.
+   *
+   * @param {BaseSelection | null} selection
+   * @returns {string | null}
+   */
   linkAt(selection) {
     return this.#lexical.getEditorState().read(() => {
       if (!$isRangeSelection(selection)) {
@@ -510,7 +671,13 @@ export class Editor {
     });
   }
 
-  /// `selection` back, focused; with `url`, made a link (`null` takes one off).
+  /**
+   * `selection` back, focused; with `url`, made a link (`null` takes one off).
+   *
+   * @param {BaseSelection | null} selection
+   * @param {string | null} [url]
+   * @returns {void}
+   */
   restoreSelection(selection, url) {
     this.#lexical.update(
       () => {
@@ -526,8 +693,13 @@ export class Editor {
     this.#root.focus({ preventScroll: true });
   }
 
-  /// `listener(tags)` after each update that changed the text, not only the
-  /// selection.
+  /**
+   * `listener(tags)` after each update that changed the text, not only the
+   * selection.
+   *
+   * @param {(tags: Set<string>) => void} listener
+   * @returns {() => void}
+   */
   onTextChange(listener) {
     return this.#lexical.registerUpdateListener(
       ({ dirtyElements, dirtyLeaves, tags }) => {
@@ -538,7 +710,12 @@ export class Editor {
     );
   }
 
-  /// `listener()` after an update that moved or changed the selection.
+  /**
+   * `listener()` after an update that moved or changed the selection.
+   *
+   * @param {() => void} listener
+   * @returns {() => void}
+   */
   onSelectionChange(listener) {
     return this.#lexical.registerUpdateListener(
       ({ editorState, prevEditorState }) => {
@@ -551,8 +728,12 @@ export class Editor {
     );
   }
 
-  /// The state object: a new one after any update, so an unchanged one means
-  /// nothing happened.
+  /**
+   * The state object: a new one after any update, so an unchanged one means
+   * nothing happened.
+   *
+   * @returns {import("lexical").EditorState}
+   */
   state() {
     return this.#lexical.getEditorState();
   }

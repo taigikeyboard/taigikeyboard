@@ -8,7 +8,10 @@
 // run is `{ text, bold, italic, underline, url }`; `\n` in a run's text is a
 // line break inside its block.
 
-/// An empty line, as the textarea's text always had: paragraphs apart.
+/** @typedef {import("../types/shared.d.ts").RunSpan} RunSpan */
+/** @typedef {import("../types/shared.d.ts").MarkdownBlock} MarkdownBlock */
+
+/** An empty line, as the textarea's text always had: paragraphs apart. */
 const PARAGRAPH_BREAK = /\n{2,}/;
 
 const QUOTE = /^> ?/;
@@ -16,12 +19,25 @@ const HEADING = /^(#{1,3}) /;
 const BULLET = /^- /;
 const NUMBERED = /^(\d+)\. /;
 
-/// `[text](url)`, one level of balanced parentheses in the URL, not across a
-/// line.
+/**
+ * `[text](url)`, one level of balanced parentheses in the URL, not across a
+ * line.
+ */
 const LINK = /\[([^[\]\n]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/;
 
-/// Inline spans, the first that matches earliest wins: a star touching no space
-/// on its inner side, as CommonMark's flanking rule asks.
+/**
+ * @typedef {object} SpanRule
+ * @property {RegExp} pattern
+ * @property {(match: RegExpMatchArray) => Partial<RunSpan>} apply
+ * @property {number} inner
+ */
+
+/**
+ * Inline spans, the first that matches earliest wins: a star touching no space
+ * on its inner side, as CommonMark's flanking rule asks.
+ *
+ * @type {SpanRule[]}
+ */
 const SPANS = [
   { pattern: LINK, apply: (match) => ({ url: match[2] }), inner: 1 },
   {
@@ -42,10 +58,15 @@ const SPANS = [
   { pattern: /<u>(.+?)<\/u>/, apply: () => ({ underline: true }), inner: 1 },
 ];
 
+/** @type {Omit<RunSpan, "text">} */
 const PLAIN = { bold: false, italic: false, underline: false, url: null };
 
-/// A backslash keeps a marker character as text; while spans are read it stands
-/// in as a private-use character, which no span pattern matches.
+/**
+ * A backslash keeps a marker character as text; while spans are read it stands
+ * in as a private-use character, which no span pattern matches.
+ *
+ * @type {Array<[string, string, string]>}
+ */
 const ESCAPES = [
   ["\\\\", "\u{E004}", "\\"],
   ["\\*", "\u{E000}", "*"],
@@ -54,6 +75,10 @@ const ESCAPES = [
   ["\\[", "\u{E003}", "["],
 ];
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function hideEscapes(text) {
   return ESCAPES.reduce(
     (out, [escaped, stand]) => out.replaceAll(escaped, stand),
@@ -61,6 +86,10 @@ function hideEscapes(text) {
   );
 }
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function restoreEscapes(text) {
   return ESCAPES.reduce(
     (out, [, stand, plain]) => out.replaceAll(stand, plain),
@@ -68,16 +97,25 @@ function restoreEscapes(text) {
   );
 }
 
-/// Plain text as Markdown that reads back as the same text, for text that would
-/// otherwise read as a span: stars, a `<u>` tag and link brackets get a backslash.
+/**
+ * Plain text as Markdown that reads back as the same text, for text that would
+ * otherwise read as a span: stars, a `<u>` tag and link brackets get a backslash.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
 function escapeInline(text) {
   return text.replace(/[\\*[\]]/g, "\\$&").replace(/<(?=\/?u>)/g, "\\<");
 }
 
-/// A line of a paragraph that would read as a heading, an item or a quote.
+/** A line of a paragraph that would read as a heading, an item or a quote. */
 const BLOCK_PREFIX = /^(?:#{1,3} |- |> ?)/;
 const NUMBER_PREFIX = /^(\d+)\. /;
 
+/**
+ * @param {string} line
+ * @returns {string}
+ */
 function escapeLine(line) {
   // A backslash of the text's own before a prefix, which reading would take
   // for an escape.
@@ -91,22 +129,37 @@ function escapeLine(line) {
   return line.replace(NUMBER_PREFIX, "$1\\. ");
 }
 
+/**
+ * @param {string} line
+ * @returns {string}
+ */
 function unescapeLine(line) {
   return line.replace(/^\\(?=#{1,3} |- |>)/, "").replace(/^(\d+)\\\. /, "$1. ");
 }
 
+/**
+ * @param {string} text
+ * @param {Omit<RunSpan, "text">} [format]
+ * @returns {RunSpan[]}
+ */
 function parseInline(text, format = PLAIN) {
+  /** @type {RunSpan[]} */
   const runs = [];
   let rest = text;
   while (rest !== "") {
+    /** @type {{ span: SpanRule, match: RegExpMatchArray & { index: number } } | null} */
     let first = null;
     for (const span of SPANS) {
       const match = rest.match(span.pattern);
       if (
         match !== null &&
+        match.index !== undefined &&
         (first === null || match.index < first.match.index)
       ) {
-        first = { span, match };
+        first = {
+          span,
+          match: /** @type {RegExpMatchArray & { index: number }} */ (match),
+        };
       }
     }
     if (first === null) {
@@ -125,7 +178,12 @@ function parseInline(text, format = PLAIN) {
   return runs;
 }
 
-/// A line's spans, its escaped characters back as text.
+/**
+ * A line's spans, its escaped characters back as text.
+ *
+ * @param {string} text
+ * @returns {RunSpan[]}
+ */
 function inline(text) {
   return parseInline(hideEscapes(text)).map((run) => ({
     ...run,
@@ -134,6 +192,12 @@ function inline(text) {
   }));
 }
 
+/** @typedef {"heading" | "bullet" | "numbered" | "paragraph"} LineKind */
+
+/**
+ * @param {string} line
+ * @returns {LineKind}
+ */
 function lineKind(line) {
   if (HEADING.test(line)) {
     return "heading";
@@ -144,21 +208,27 @@ function lineKind(line) {
   return NUMBERED.test(line) ? "numbered" : "paragraph";
 }
 
-/// One paragraph's lines in runs of one kind; a heading is always its own.
+/**
+ * One paragraph's lines in runs of one kind; a heading is always its own.
+ *
+ * @param {string[]} lines
+ * @returns {MarkdownBlock[]}
+ */
 function parseLines(lines) {
+  /** @type {Array<{ kind: LineKind, lines: string[] }>} */
   const groups = [];
   for (const line of lines) {
     const kind = lineKind(line);
+    const last = groups.at(-1);
     // A line of spaces between a list and a paragraph is no paragraph.
     if (
       kind === "paragraph" &&
       line.trim() === "" &&
-      groups.length > 0 &&
-      groups.at(-1).kind !== "paragraph"
+      last !== undefined &&
+      last.kind !== "paragraph"
     ) {
       continue;
     }
-    const last = groups.at(-1);
     if (last?.kind === kind && kind !== "heading") {
       last.lines.push(line);
     } else {
@@ -167,7 +237,7 @@ function parseLines(lines) {
   }
   return groups.map(({ kind, lines: group }) => {
     if (kind === "heading") {
-      const [prefix, hashes] = group[0].match(HEADING);
+      const [prefix, hashes] = group[0].match(HEADING) ?? ["", "#"];
       return {
         type: "heading",
         level: hashes.length,
@@ -184,14 +254,20 @@ function parseLines(lines) {
     return {
       type: "list",
       ordered: kind === "numbered",
-      start: kind === "numbered" ? Number(group[0].match(NUMBERED)[1]) : 1,
+      start:
+        kind === "numbered" ? Number((group[0].match(NUMBERED) ?? [])[1]) : 1,
       items: group.map((line) => inline(line.replace(marker, ""))),
     };
   });
 }
 
-/// The stored text as blocks. Text with no markers is one paragraph per
-/// blank-line block, its single line breaks kept.
+/**
+ * The stored text as blocks. Text with no markers is one paragraph per
+ * blank-line block, its single line breaks kept.
+ *
+ * @param {string} markdown
+ * @returns {MarkdownBlock[]}
+ */
 export function parse(markdown) {
   return markdown
     .split(PARAGRAPH_BREAK)
@@ -206,14 +282,25 @@ export function parse(markdown) {
     });
 }
 
+/**
+ * @param {Omit<RunSpan, "text">} a
+ * @param {Omit<RunSpan, "text">} b
+ * @returns {boolean}
+ */
 const sameFormat = (a, b) =>
   a.bold === b.bold &&
   a.italic === b.italic &&
   a.underline === b.underline &&
   a.url === b.url;
 
-/// Neighbouring runs with the same format are one.
+/**
+ * Neighbouring runs with the same format are one.
+ *
+ * @param {RunSpan[]} runs
+ * @returns {RunSpan[]}
+ */
 function merged(runs) {
+  /** @type {RunSpan[]} */
   const out = [];
   for (const run of runs) {
     const last = out.at(-1);
@@ -226,16 +313,32 @@ function merged(runs) {
   return out;
 }
 
-/// One run's markers around its text, spaces at either end kept outside so the
-/// markers stay flanking.
-/// Whether `text` reads back as itself, so it needs no backslash.
+/**
+ * One run's markers around its text, spaces at either end kept outside so the
+ * markers stay flanking.
+ * Whether `text` reads back as itself, so it needs no backslash.
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
 function readsAsText(text) {
   const [only, ...more] = inline(text);
-  return more.length === 0 && only.text === text && sameFormat(only, PLAIN);
+  return (
+    more.length === 0 &&
+    only !== undefined &&
+    only.text === text &&
+    sameFormat(only, PLAIN)
+  );
 }
 
+/**
+ * @param {RunSpan} run
+ * @param {boolean} isStrict
+ * @returns {string}
+ */
 function markRun(run, isStrict) {
-  const [, lead, core, trail] = run.text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+  const [, lead = "", core = "", trail = ""] =
+    run.text.match(/^(\s*)([\s\S]*?)(\s*)$/) ?? [];
   if (core === "") {
     return run.text;
   }
@@ -248,6 +351,11 @@ function markRun(run, isStrict) {
   return `${lead}${text}${trail}`;
 }
 
+/**
+ * @param {RunSpan[]} list
+ * @param {boolean} isStrict
+ * @returns {string}
+ */
 function serializeRuns(list, isStrict) {
   let out = "";
   for (let index = 0; index < list.length; ) {
@@ -267,9 +375,14 @@ function serializeRuns(list, isStrict) {
   return out;
 }
 
-/// Runs as Markdown, a backslash only where text would read as a span. Runs
-/// that read as text alone may still meet across a boundary (`\<u>` then
-/// `</u>`): when the whole does not read back, every marker character gets one.
+/**
+ * Runs as Markdown, a backslash only where text would read as a span. Runs
+ * that read as text alone may still meet across a boundary (`\<u>` then
+ * `</u>`): when the whole does not read back, every marker character gets one.
+ *
+ * @param {RunSpan[]} runs
+ * @returns {string}
+ */
 function writeRuns(runs) {
   const list = merged(runs);
   const out = serializeRuns(list, false);
@@ -278,11 +391,21 @@ function writeRuns(runs) {
   return isFaithful ? out : serializeRuns(list, true);
 }
 
-/// A heading's or an item's runs on one line: neither has a line break.
+/**
+ * A heading's or an item's runs on one line: neither has a line break.
+ *
+ * @param {RunSpan[]} runs
+ * @returns {RunSpan[]}
+ */
 const oneLine = (runs) =>
   runs.map((run) => ({ ...run, text: run.text.replaceAll("\n", " ") }));
 
-/// The blocks as the stored text, one empty line between blocks.
+/**
+ * The blocks as the stored text, one empty line between blocks.
+ *
+ * @param {MarkdownBlock[]} blocks
+ * @returns {string}
+ */
 export function serialize(blocks) {
   return blocks
     .map((block) => {
@@ -308,9 +431,14 @@ export function serialize(blocks) {
     .join("\n\n");
 }
 
-/// What the URL field holds, ready for a link: `https://` when no scheme is
-/// named (`localhost:3000` names none), and the characters that would end a
-/// Markdown link percent-encoded. `null` when empty.
+/**
+ * What the URL field holds, ready for a link: `https://` when no scheme is
+ * named (`localhost:3000` names none), and the characters that would end a
+ * Markdown link percent-encoded. `null` when empty.
+ *
+ * @param {string} input
+ * @returns {string | null}
+ */
 export function normalizeUrl(input) {
   const url = input.trim();
   if (url === "") {
@@ -320,7 +448,12 @@ export function normalizeUrl(input) {
   return encodeUrl(hasScheme ? url : `https://${url}`);
 }
 
-/// `url` with the characters that would end a Markdown link percent-encoded.
+/**
+ * `url` with the characters that would end a Markdown link percent-encoded.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
 export function encodeUrl(url) {
   return url.replace(/[()<>\s]/gu, (character) => {
     if (character === "(") {
@@ -330,9 +463,18 @@ export function encodeUrl(url) {
   });
 }
 
-/// The blocks as plain text, for `.txt`: no markers, a list item keeps its
-/// bullet or number so the list still reads as one.
+/**
+ * The blocks as plain text, for `.txt`: no markers, a list item keeps its
+ * bullet or number so the list still reads as one.
+ *
+ * @param {MarkdownBlock[]} blocks
+ * @returns {string}
+ */
 export function plainText(blocks) {
+  /**
+   * @param {RunSpan[]} runs
+   * @returns {string}
+   */
   const text = (runs) => runs.map((run) => run.text).join("");
   return blocks
     .map((block) => {
@@ -349,8 +491,13 @@ export function plainText(blocks) {
     .join("\n\n");
 }
 
-/// A text from before the editor, kept as plain text: its paragraphs as they
-/// were, nothing read as Markdown.
+/**
+ * A text from before the editor, kept as plain text: its paragraphs as they
+ * were, nothing read as Markdown.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
 export function fromPlainText(text) {
   return serialize(
     text
