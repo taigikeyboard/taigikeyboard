@@ -4,11 +4,12 @@
 #
 # Usage: announce-release.sh [--version <x.y.z>]
 #
-# This is the second half of the desktop release. The first half
-# (`make desktop-release` → the hosted `*-build.yml` runs, via
-# `tools/release/lib/desktop-release.sh`) stages each platform's installer on a DRAFT
-# release, which no user can reach. Between the two halves the maintainer
-# downloads what was staged, tests it, and publishes the release by hand.
+# This is the second half of the desktop release. The first half (the monthly
+# cut, `.github/workflows/desktop-train.yml`, or a hotfix `make desktop-patch` →
+# the hosted `*-build.yml` runs, via `tools/release/lib/desktop-release.sh`)
+# stages each platform's installer on a DRAFT release, which no user can reach.
+# Between the two halves beta testers use the build; `desktop-publish.yml`
+# publishes the month's draft on the 5th (a patch is published by hand).
 # Publishing is what fires `.github/workflows/announce-release.yml`, which runs
 # this; `make desktop-announce` is the same thing by hand.
 #

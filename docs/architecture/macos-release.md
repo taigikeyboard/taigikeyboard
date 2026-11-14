@@ -116,8 +116,11 @@ described above cannot happen there.
 
 ## Cutting a release
 
-`make desktop-release` (or `make desktop-patch PLATFORM=macos`) on any machine
-dispatches `.github/workflows/macos-build.yml` with the staged commit
+The monthly cut (`desktop-train.yml`) calls `macos-build.yml`'s build for the
+staged commit and signs the package in its own `sign-and-beta` job (composite `macos-sign-attach`, shared
+with `macos-build.yml`); a hotfix (`make desktop-patch PLATFORM=macos`) or a
+manual full stage (`make desktop-release`) on any machine dispatches
+`.github/workflows/macos-build.yml` with the staged commit
 (`desktop-release.md`). Two jobs on two `macos-26` runners, Xcode pinned
 through `DEVELOPER_DIR` (an image update cannot change the SDK a release links):
 

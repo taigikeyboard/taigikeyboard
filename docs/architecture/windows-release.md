@@ -245,8 +245,9 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
 
 ## Cutting a release
 
-A release does not build here at all: `make desktop-release` (any machine with `gh`)
-dispatches `.github/workflows/windows-build.yml`, which builds the installer on
+A release does not build here at all: the monthly cut (`desktop-train.yml`)
+calls `.github/workflows/windows-build.yml`, and a hotfix (`make desktop-patch
+PLATFORM=windows`, any machine with `gh`) dispatches it; it builds the installer on
 a GitHub-hosted runner and attaches it to the same draft the macOS package is
 staged on (`desktop-release.md`). `make windows-release` remains what a person
 runs on a Windows machine to produce an installer by hand — for a dev loop, or
