@@ -2,8 +2,9 @@
 
 `data/lkk.csv` is the manually curated source of truth for this supplement.
 Its spelling/reading pairs are informed by the recommendations of
-李江却台語文教基金會. It holds the foundation's mixed-script and fully romanized recommendations and
-is not a complete or official release of the foundation's word list.
+李江却台語文教基金會. It holds the foundation's mixed-script recommendations,
+fully romanized recommendations, and neutral-tone (`--`) pieces, and is not a
+complete or official release of the foundation's word list.
 
 Reference: <https://tsbp.tgb.org.tw/p/bong_8.html>. The page embeds the LKK
 spreadsheet titled as updated on 2024-05-10; the reference was checked on
@@ -12,26 +13,25 @@ spreadsheet titled as updated on 2024-05-10; the reference was checked on
 ## Maintaining the list
 
 Edit `data/lkk.csv` directly, with one explicit `(hanzi, canonical-TL)` pair
-per row. Review each spelling and reading against its reference before
-adding it; expand optional forms and alternate readings into separate pairs
-rather than storing shorthand or usage notes in the CSV.
+per row, sorted by `(hanzi, tl)`. Review each spelling and reading against its
+reference before adding it; expand optional forms and alternate readings into
+separate pairs rather than storing shorthand or usage notes in the CSV.
 
-- Include spellings that contain both Hanji and Latin letters, and fully
-  romanized recommendations stored as `spelling == tl` (one row per reading,
-  the word's alternate readings included); the merge stores those without
-  hanzi. All-Hanji spellings do not belong in this supplement.
+- Include mixed-script spellings (containing both Hanji and Latin letters),
+  fully romanized recommendations stored as `spelling == tl` (one row per
+  reading, alternate readings included; the merge stores those without
+  hanzi), and neutral-tone (`--`) pieces such as `--ah`, `--起-來`, and
+  `--tńg-來` (where leading `--` must appear on both spelling and reading).
+  Plain all-Hanji spellings do not belong in this supplement.
 - Deduplicate by the complete spelling/reading pair. Different readings of
   the same Hanji remain distinct entries.
 - Exclude exact pairs already present among the MoE dictionary's non-variant
   entries. Sharing only the Hanji is not grounds for exclusion; generated
   variant spellings do not count as MoE recommendations for this rule.
-- Exclude forms whose spelling or reading starts with `--`. The engine
-  inserts typed leading hyphens literally, so such candidates would duplicate
-  the marker on selection. Keep internal neutral-tone markers in words such
-  as the original `邊--a` and `tso̍h--日`.
 
-The curated list currently contains **468 unique pairs**. Tests check
-spelling shape, canonical readings, pair uniqueness, and both exclusions. Run them from `dictionary/`:
+The curated list currently contains **499 unique pairs**. Tests check
+spelling shape, canonical readings, pair uniqueness, exact MoE-pair exclusion,
+paired leading `--`, and sorted order. Run them from `dictionary/`:
 
 ```sh
 python3 -m pytest tests/test_lkk_supplement.py -q

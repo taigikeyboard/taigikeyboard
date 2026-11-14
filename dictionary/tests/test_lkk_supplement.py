@@ -6,7 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from common.cleanup import blank_roman_only_hanzi, normalize_roman
+from common.cleanup import (
+    blank_roman_only_hanzi,
+    count_syllables,
+    normalize_roman,
+    spelled_syllable_count,
+)
 from common.cjk import is_cjk
 from common.taigi_bridge import (
     convert_poj_to_tl_strict,
@@ -57,10 +62,16 @@ def test_curated_spellings_mix_scripts_or_equal_their_reading(curated_rows):
         if spelling == row["tl"]:
             continue
         assert any(is_cjk(char) for char in spelling), row
-        assert any(
+        has_latin = any(
             char.isalpha() and "LATIN" in unicodedata.name(char, "")
             for char in spelling
-        ), row
+        )
+        is_neutral_tone_hanji_suffix = (
+            spelling.startswith("--")
+            and all(is_cjk(char) or char == "-" for char in spelling)
+            and spelled_syllable_count(spelling) == count_syllables(row["tl"])
+        )
+        assert has_latin or is_neutral_tone_hanji_suffix, row
 
 
 def test_curated_pairs_exclude_exact_moe_recommendations(curated_rows):
@@ -75,9 +86,14 @@ def test_curated_pairs_exclude_exact_moe_recommendations(curated_rows):
     assert not overlap, f"LKK pairs duplicate MoE recommendations: {sorted(overlap)}"
 
 
-def test_curated_pairs_exclude_leading_neutral_tone_markers(curated_rows):
-    excluded = [
+def test_curated_pairs_pair_leading_neutral_tone_markers(curated_rows):
+    mismatched = [
         key(row) for row in curated_rows
-        if row["hanzi"].startswith("--") or row["tl"].startswith("--")
+        if row["hanzi"].startswith("--") != row["tl"].startswith("--")
     ]
-    assert not excluded, f"Standalone neutral-tone suffixes: {excluded}"
+    assert not mismatched, f"Unpaired leading neutral-tone marker: {mismatched}"
+
+
+def test_curated_pairs_are_sorted(curated_rows):
+    pairs = [(row["hanzi"], row["tl"]) for row in curated_rows]
+    assert pairs == sorted(pairs), "lkk.csv must be sorted by (hanzi, tl)"

@@ -13,7 +13,7 @@ publisher, origin URL, capture date, and pipeline notes per source.
 
 ## Status
 
-Row counts are from `dictionary/output/dictionary.csv` (169,435 rows total).
+Row counts are from `dictionary/output/dictionary.csv` (169,841 rows total).
 "Exclusive" counts rows that no other source also supplies.
 
 | Source | Rows | Exclusive | Licence | Verified |
@@ -29,9 +29,9 @@ Row counts are from `dictionary/output/dictionary.csv` (169,435 rows total).
 | `kungge` 台語工藝詞庫 | 994 | 668 | no data licence published; images-only CC BY-NC-ND | ✅ 2026-09-07, publisher's 圖像授權 page |
 | `khiin` frequency data | 8,086 | 8,086 | **Unverified** | Khiin project (<https://github.com/khiin-pjh/khiin>); the specific file's terms not confirmed |
 | `khpoo` 齒盤補充辭典 | 4,198 | 3,579 | **Unverified**; rows added through the contribution site: Apache-2.0 | original rows: origin and rights holder not established. Contributed rows (commits carrying an `Accent:` trailer, `docs/architecture/khiunnkhau-contrib-roadmap.md`): Apache-2.0, the contributor agrees on the submission form (maintainer 2026-11-12) |
-| `lkk` 漢羅合用建議用字 | 468 | 468 | CC BY | stated by the maintainer 2026-11-06, version not recorded; publisher verified 2026-10-17 via [the publisher's word-list page](https://tsbp.tgb.org.tw/p/bong_8.html) |
+| `lkk` 漢羅合用建議用字 | 499 | 498 | CC BY | stated by the maintainer 2026-11-06, version not recorded; publisher verified 2026-10-17 via [the publisher's word-list page](https://tsbp.tgb.org.tw/p/bong_8.html) |
 | `char_freq_merged.txt` | — | — | **Unverified** | corpus provenance not established |
-| `dev` 開發者補充辭典 | 3,449 | 2,563 | Apache-2.0 | written by this project's maintainers |
+| `dev` 開發者補充辭典 | 3,451 | 2,564 | Apache-2.0 | written by this project's maintainers |
 
 The in-app credits screen (Home tab → 著作權) was the more accurate record for
 `kautian`, `itaigi`, and `taijit`, where this pipeline's own notes had drifted.
@@ -50,9 +50,9 @@ foundation homepage, and
 [publication masthead](https://tsbp.tgb.org.tw/p/bong_15.html), checked on
 2026-10-17, carry no licence statement of their own.
 
-This project maintains a selected mixed-script and romanized spelling supplement
-informed by that reference, excluding exact MoE matches and standalone neutral-tone suffix
-notation. That is a description of the maintenance model, not a claim of
+This project maintains a selected mixed-script, romanized, and neutral-tone
+(`--`) spelling supplement informed by that reference, excluding exact MoE
+matches. That is a description of the maintenance model, not a claim of
 independent authorship or a new licence for the source data. Publisher
 attribution, which CC BY requires, remains in the source inventory.
 The curated CSV is maintained directly; no source TSV snapshot or automatic
