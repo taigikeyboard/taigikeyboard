@@ -125,6 +125,7 @@ pub fn build_episode_settings(persona: PersonaKind, rng: &mut Rng) -> SettingsDo
             doc.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, !rng.chance(1, 10));
         }
     }
+    doc.set_bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED, rng.chance(1, 2));
     doc
 }
 
