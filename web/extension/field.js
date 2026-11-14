@@ -160,10 +160,25 @@ function isAriaReadOnly(element) {
   );
 }
 
+/// CodeMirror 5's `TextareaInput` parks its `<textarea>` inside a zero-height
+/// wrapper directly under `.CodeMirror`; a visible `<textarea>` in a line
+/// widget stays an ordinary `"input"`.
+function codeMirror5Of(textarea) {
+  const root = textarea.parentElement?.parentElement;
+  if (
+    !root?.classList.contains("CodeMirror") ||
+    visibleBox(textarea) !== null ||
+    !visibleBox(root)
+  ) {
+    return null;
+  }
+  return root;
+}
+
 /// What `element`, the focused one, is to the extension:
 /// `{ kind, element, anchor, fontElement }`, or `null` for one that takes no
-/// text. `kind`: `"input"`, `"editable"` (`element` is the editing host) or
-/// `"unsupported"`, whose keys stay the page's.
+/// text. `kind`: `"input"`, `"codemirror5"`, `"editable"` (`element` is the
+/// editing host) or `"unsupported"`, whose keys stay the page's.
 export function classify(element) {
   if (!element) {
     return null;
@@ -188,6 +203,15 @@ export function classify(element) {
   if (element instanceof HTMLTextAreaElement) {
     if (element.readOnly || element.disabled) {
       return null;
+    }
+    const cm5 = codeMirror5Of(element);
+    if (cm5) {
+      return {
+        kind: "codemirror5",
+        element,
+        anchor: cm5,
+        fontElement: cm5.querySelector(".CodeMirror-code") ?? cm5,
+      };
     }
     return visibleBox(element)
       ? { kind: "input", element, anchor: element, fontElement: element }
@@ -214,7 +238,7 @@ export function classify(element) {
     if (host.getRootNode() !== document || !visibleBox(host)) {
       return unsupported(host);
     }
-    const anchor = host.closest(".cm-editor") ?? host;
+    const anchor = host.closest(".cm-editor, .CodeMirror") ?? host;
     return { kind: "editable", element: host, anchor, fontElement: host };
   }
   return null;
@@ -498,10 +522,88 @@ class InputSurface extends Surface {
   }
 }
 
-/// The surface of what `classify` answered `"input"` or `"editable"`. `box`:
-/// the overlay's box, which covers the viewport, so a caret's point in it is
-/// its point on screen.
-export function surfaceOf({ kind, element }, box, mirror) {
+class CodeMirror5Writes extends InputWrites {
+  #root;
+
+  constructor(element, root) {
+    super(element);
+    this.#root = root;
+  }
+
+  snapshot() {
+    const cursor = this.#root.querySelector(
+      ".CodeMirror-cursors > .CodeMirror-cursor:not(.CodeMirror-secondarycursor)",
+    );
+    return `${super.snapshot()}\n${cursor?.style.cssText ?? ""}`;
+  }
+}
+
+/// CodeMirror 5 (`inputStyle: "textarea"`): `TextareaInput` diffs the hidden
+/// `<textarea>`'s value against its `prevInput` on `input`, while the visible
+/// caret is `.CodeMirror-cursor` inside `.CodeMirror`.
+class CodeMirror5Surface extends Surface {
+  #textarea;
+  #root;
+  #box;
+
+  constructor(textarea, root, box) {
+    super(new CodeMirror5Writes(textarea, root), box);
+    this.#textarea = textarea;
+    this.#root = root;
+    this.#box = box;
+  }
+
+  caretPoint(atStart = false) {
+    const root = this.#root;
+    const code = root.querySelector(".CodeMirror-code") ?? root;
+    const scroll = root.querySelector(".CodeMirror-scroll") ?? root;
+    const cursor = root.querySelector(
+      ".CodeMirror-cursors > .CodeMirror-cursor:not(.CodeMirror-secondarycursor)",
+    );
+    const selected = cursor
+      ? []
+      : root.querySelectorAll(".CodeMirror-selected");
+    let x;
+    let y;
+    let height = 0;
+    if (cursor) {
+      const rect = cursor.getBoundingClientRect();
+      x = rect.left;
+      y = rect.top;
+      height = rect.height;
+    } else if (selected.length > 0) {
+      const pick = atStart ? selected[0] : selected[selected.length - 1];
+      const rect = pick.getBoundingClientRect();
+      x = atStart ? rect.left : rect.right;
+      y = rect.top;
+      height = rect.height;
+    } else {
+      const rect = this.#textarea.parentElement.getBoundingClientRect();
+      x = rect.left;
+      y = rect.top;
+    }
+    const lineHeight =
+      Number.parseFloat(getComputedStyle(code).lineHeight) || height || 0;
+    const leading = height > 0 ? (lineHeight - height) / 2 : 0;
+    const box = this.#box.getBoundingClientRect();
+    const field = visibleBox(scroll) ?? scroll.getBoundingClientRect();
+    return {
+      left: Math.max(field.left, Math.min(x, field.right)) - box.left,
+      top:
+        Math.max(field.top, Math.min(y - leading, field.bottom - lineHeight)) -
+        box.top,
+      lineHeight,
+    };
+  }
+}
+
+/// The surface of what `classify` answered `"input"`, `"codemirror5"` or
+/// `"editable"`. `box`: the overlay's box, which covers the viewport, so a
+/// caret's point in it is its point on screen.
+export function surfaceOf({ kind, element, anchor }, box, mirror) {
+  if (kind === "codemirror5") {
+    return new CodeMirror5Surface(element, anchor, box);
+  }
   return kind === "input"
     ? new InputSurface(element, box, mirror)
     : new Surface(new EditableWrites(element), box);
