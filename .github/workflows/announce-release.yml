@@ -2,9 +2,10 @@ name: Announce desktop release
 
 # The second half of a desktop release, run for you.
 #
-# `make desktop-release` (the hosted `*-build.yml` runs) stages each platform's installer
-# on a DRAFT release that no user can reach. You download it, test it, and press
-# Publish. That publish fires this: it proves each installer downloads
+# The monthly cut (desktop-train.yml) or a hotfix (`make desktop-patch`) stages each
+# platform's installer on a DRAFT release that no user can reach. desktop-publish.yml
+# publishes the month's draft on the 5th with the App token (a patch is published by
+# hand). That publish fires this: it proves each installer downloads
 # anonymously, mirrors it to dl.taigikeyboard.tw (Cloudflare R2), then
 # writes the website data `appcast/{macos,windows}.json` and
 # the download buttons (Linux included) are rendered from, and waits until the

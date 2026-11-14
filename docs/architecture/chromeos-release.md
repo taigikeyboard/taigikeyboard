@@ -13,7 +13,7 @@ ChromeOS is a desktop platform like macOS, Windows and Linux (USER 2026-11-12): 
 | Step | What happens to ChromeOS |
 |---|---|
 | `make version-desktop <v>` | Writes `version` in `web/chromeos/manifest.json` with the rest of the train; `check-versions --train desktop` holds it there. The store refuses a version that is not higher than the last one it took, which the train's downgrade guard already enforces |
-| `make desktop-release` | Dispatches `.github/workflows/chromeos-build.yml`, which runs `make -C web chromeos` on a hosted runner and attaches `TaigiKeyboard-<v>-chromeos.zip` + `.sha256` to the draft |
+| The monthly cut (`desktop-train.yml`, or `make desktop-release` by hand) | Runs `.github/workflows/chromeos-build.yml`, which runs `make -C web chromeos` on a hosted runner and attaches `TaigiKeyboard-<v>-chromeos.zip` + `.sha256` to the draft |
 | `make desktop-patch PLATFORM=chromeos` | A ChromeOS-only patch: its own version, only the zip on the draft |
 | Beta | The zip is on `https://taigikeyboard.tw/beta` with the other installers. Testers unpack it and use **Load unpacked** in `chrome://extensions` (Developer mode). An unpacked copy has its own extension ID, separate from the store item, so its settings and learned words are separate too, and it never updates itself |
 | Publish → announce | Mirrors the zip to `dl.taigikeyboard.tw/desktop/` and writes `_data/chromeos_release.json`, which hides the beta; prints the upload reminder |

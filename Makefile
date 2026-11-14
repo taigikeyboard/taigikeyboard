@@ -191,8 +191,9 @@ web-e2e:
 # this drives the others rather than pretending they are one build. All or
 # none: a draft holding installers from two commits is not something a tag
 # can describe (a patch is a smaller release, not a half: desktop-patch).
-# Nothing it does reaches a user — publishing the draft stays a person's, and
-# that publish announces the release itself.
+# The monthly train (desktop-train.yml) stages full releases on its own; this is
+# a manual re-stage. Nothing it does reaches a user — publishing the draft does,
+# and that publish announces the release itself.
 desktop-release:
 	bash tools/release/stage-desktop.sh
 

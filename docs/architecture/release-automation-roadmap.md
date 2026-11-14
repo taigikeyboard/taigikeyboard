@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `release`, `release train`, `CalVer`, `generate-notes`, `GitHub App`, `schedule`
-> **Status**: Accepted 2026-11-12 — Phase 8 next
+> **Status**: Accepted 2026-11-12 — all phases merged; first hosted runs 2026-12-01 (cut) and 2026-12-05 (publish)
 
 ## Goal
 
@@ -54,19 +54,13 @@ One phase = one PR unless marked admin.
 | 5 | Cut on the 1st | `desktop-train.yml`, `schedule: '0 1 1 * *'` + `workflow_dispatch` (`dry_run`: plan + every build from a scratch branch, nothing pushed, staged or signed, no approval). `plan` (no secret): stop if `RELEASE_HOLD` is set; stop with a Discord note (repository webhook `DISCORD_PR_WEBHOOK`, no approval) if the generated notes list no pull request (empty month); `set-versions` to `YYYY.M.0`, commit as `github-actions[bot]`, push a scratch branch with `GITHUB_TOKEN`. **Approval 1** `cut`: App token fast-forwards `main` to that one commit. `draft` (`reset_desktop_draft`, shared with `stage-desktop.sh`), then the four build workflows as `workflow_call` (each checks out the staged commit). **Approval 2** `sign-and-beta` on one macOS VM: signs + notarizes the `.pkg` (composite `macos-sign-attach`, shared with `macos-build.yml`), checks every asset, mirrors `/beta` (composite `desktop-beta`). A month whose release commit is already on `main` re-stages from `main` (one approval). Failures post to Discord. Script: `tools/release/desktop-train.sh` | — | Merged #914 (no hosted run yet) |
 | 6 | Publish on the 5th | `desktop-publish.yml`, `schedule: '0 1 5 * *'` + `workflow_dispatch`; gate rules in `desktop-release.md` § The flow (Publish row). `check` (no secret, `desktop-train.sh check-publish`) emits the draft's fingerprint (tag, target, draft flag, asset ids); **approval** `publish` (no checkout) re-reads it and publishes with the App token, which fires `announce-release.yml` — two approvals on the 5th (maintainer 2026-11-14). No concurrency group shared with the cut: a publish waiting on approval must not block a re-stage, which replaces the draft anyway. A failure posts to Discord | — | Merged #917 |
 | 7 | Homebrew | `announce-release.yml`: once the announcement succeeded for a release carrying a macOS `.pkg`, the same (already approved) job runs `tools/release/bump-cask.sh` (cask `version` + `sha256` through the contents API) with an App token limited to `homebrew-tap` contents, minted as the job's first step so the App key never shares a job with repository code; then `cask-audit` (no secret, `macos-26`) runs `brew audit --cask --strict --online`. Push first, audit after: a separate approved job would be a third approval on the 5th (maintainer 2026-11-14). An announce or audit failure posts to Discord. The Chrome Web Store upload stays manual (D1, maintainer 2026-11-14) | — (the App already reaches `homebrew-tap`, phase 3) | Merged #921 + fix #922; verified 2026-11-14 (cask 3.9.0, audit green, run 43591499881) |
-| 8 | Hand-off docs | `desktop-release.md` § The flow rewritten around the schedule; `/release-desktop` narrowed to a hotfix patch; memory `feedback_release_manual_by_user` replaced | — | Pending |
+| 8 | Hand-off docs | `desktop-release.md` § The flow rewritten around the schedule (phases 5–7) + § Hold, hotfix, re-stage; `/release-desktop` narrowed to a hotfix patch; platform docs and announcement comments name the schedule; memory `feedback_release_manual_by_user` replaced | — | In progress |
 
 Order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Phases 1 and 2 need nothing from the maintainer and come first; 3 and 4 wait on credentials. Until phase 4 merges, the cut cannot run unattended (the macOS half needs the Mac); until phase 6 merges, publishing stays a button press.
 
 ## Hold and hotfix (D4)
 
-| Situation | What the maintainer does | Effect |
-|---|---|---|
-| Something is wrong with this month's build | `gh variable set RELEASE_HOLD --body "<reason>"` | The 5th publishes nothing; the 1st cuts nothing while it is set |
-| Resume | `gh variable delete RELEASE_HOLD`, then fix on `main` and dispatch the cut again (`gh workflow run desktop-train.yml`) — when the month's release commit is already on `main` it re-stages the draft from `main`'s tip — or let the next month's cut pick it up | Publishing follows on the 5th, or `gh workflow run desktop-publish.yml` in the same month. The publish looks for the current month's version only: a draft held past month's end is published by hand or superseded by the next cut |
-| A published release needs a fix | Fix on `main`, `make version-desktop YYYY.M.P`, `/release-desktop <platform>`, publish by hand | One-platform patch as today; the train is untouched |
-
-Between releases the tree carries the last **published** version; only the cut's release commit moves it to `YYYY.M.0` (maintainer, 2026-11-13). No pre-bump: a hold or an empty month would leave a wrong month in the tree, and a mid-month hotfix `YYYY.M.P` stays above the tree's number.
+The procedure (hold, resume, re-stage, hotfix) and the tree-version rule live in [`desktop-release.md` § Hold, hotfix, re-stage](desktop-release.md#hold-hotfix-re-stage) since phase 8; `/release-desktop` stages only the hotfix patch.
 
 A fix while the month's draft is staged (between the 1st and the 5th) goes onto `main`, then `gh workflow run desktop-train.yml` re-stages the draft from `main`'s tip (the tree already carries `YYYY.M.0`, so no version commit and only the signing approval). A separate patch would number below the tree's `YYYY.M.0`, which the downgrade guard refuses (phase 5, 2026-11-14).
 

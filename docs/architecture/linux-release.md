@@ -134,7 +134,8 @@ the way `windows-build.yml` is the Windows half:
   that the addon file is the one the `.conf` names, and the desktop entry
   (`desktop-file-validate`). Nothing reaches a draft; the build job can only
   read.
-- `tools/release/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
+- The monthly cut (`desktop-train.yml`) calls it, and `tools/release/stage-desktop.sh`
+  (`make desktop-patch PLATFORM=linux`, `make desktop-release`) dispatches it on `main`
   beside the Windows run, with the staged commit as `source_sha`, and waits;
   every job checks out that commit; the `attach` job (the only one that can
   write) runs only with a `source_sha`, refuses a published release
