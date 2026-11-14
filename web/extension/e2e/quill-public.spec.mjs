@@ -23,7 +23,9 @@ test("a word commits into the editor on quilljs.com", async ({
   // The page stacks three demo editors and shows the Snow one; part of it
   // lies under the page's header, so the focus is given, not clicked.
   const editor = page.locator(".ql-snow .ql-editor").first();
-  await editor.evaluate((element) => element.focus());
+  await editor.evaluate((element) =>
+    /** @type {HTMLElement} */ (element).focus(),
+  );
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("taiuan");
   await expect(preedit(page)).toContainText("taiuan");

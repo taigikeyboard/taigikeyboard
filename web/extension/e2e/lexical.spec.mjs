@@ -13,10 +13,14 @@ import {
   test,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
 const LEXICAL = `${A}/lexical.html`;
 const EDITOR = "#editor";
 
+/** @param {Page} page */
 const blocks = (page) => page.evaluate(() => window.lexicalFixture.blocks());
+/** @param {Page} page */
 const text = (page) => page.evaluate(() => window.lexicalFixture.text());
 
 test("a word composes beside the caret and commits into the document", async ({

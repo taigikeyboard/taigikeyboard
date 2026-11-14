@@ -12,16 +12,28 @@ import {
   test,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Locator} Locator */
+/** @typedef {import("@playwright/test").Page} Page */
+/** @typedef {import("@playwright/test").Worker} Worker */
+
 const RAW = "kausiu";
 const PICKED = "狗岫";
 
-/// The first cell a slot key picks, past the literal roman row.
+/**
+ * The first cell a slot key picks, past the literal roman row.
+ * @param {Page} page
+ */
 const topCell = (page) =>
   candidates(page)
     .filter({ has: page.locator(".index", { hasText: /^.+$/ }) })
     .first()
     .locator(".text");
 
+/**
+ * @param {Page} page
+ * @param {string} hanji
+ * @returns {Promise<void>}
+ */
 async function expectTop(page, hanji) {
   await expect(async () => {
     await page.keyboard.type(RAW);
@@ -33,7 +45,12 @@ async function expectTop(page, hanji) {
   }).toPass();
 }
 
-/// Clicks `PICKED` and commits it, three times: enough to rank it first.
+/**
+ * Clicks `PICKED` and commits it, three times: enough to rank it first.
+ * @param {Page} page
+ * @param {Locator} field
+ * @returns {Promise<void>}
+ */
 async function pickThrice(page, field) {
   for (let round = 0; round < 3; round += 1) {
     await page.keyboard.type(RAW);
@@ -43,7 +60,11 @@ async function pickThrice(page, field) {
   await expect(field).toHaveValue(PICKED.repeat(3));
 }
 
-/// The number of the profile's copy, as the service worker keeps it.
+/**
+ * The number of the profile's copy, as the service worker keeps it.
+ * @param {Worker} worker
+ * @returns {Promise<number>}
+ */
 function generation(worker) {
   return worker.evaluate(
     () =>

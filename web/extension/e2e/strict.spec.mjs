@@ -40,9 +40,17 @@ const SELF_STYLE_CSP = NUCLEAR_CSP.replace(
   "style-src 'self'",
 );
 
-/// Serves `urlPattern` with an HTTP `Content-Security-Policy` response header.
-/// `route.fetch` runs in Node rather than Chromium's `--host-resolver-rules`,
-/// so `*.test` origins are fetched from the local loopback server directly.
+/** @typedef {import("@playwright/test").Page} Page */
+
+/**
+ * Serves `urlPattern` with an HTTP `Content-Security-Policy` response header.
+ * `route.fetch` runs in Node rather than Chromium's `--host-resolver-rules`,
+ * so `*.test` origins are fetched from the local loopback server directly.
+ * @param {Page} page
+ * @param {string} urlPattern
+ * @param {string} [policy]
+ * @returns {Promise<void>}
+ */
 async function withStrictHeader(page, urlPattern, policy = NUCLEAR_CSP) {
   await page.route(urlPattern, async (route) => {
     const loopbackUrl = route
@@ -65,13 +73,14 @@ test("strict HTTP CSP and Trusted Types block WebAssembly, and the JS fallback t
   worker,
   page,
 }) => {
+  /** @type {string[]} */
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   await withStrictHeader(page, `${A}/**`);
   await page.addInitScript(() => {
     window.cspViolations = [];
     document.addEventListener("securitypolicyviolation", (event) => {
-      window.cspViolations.push({
+      window.cspViolations?.push({
         directive: event.effectiveDirective,
         blockedURI: event.blockedURI,
       });
@@ -88,7 +97,7 @@ test("strict HTTP CSP and Trusted Types block WebAssembly, and the JS fallback t
 
   // Only the initial WASM compile probe may trip `script-src`; styles, shadow
   // stylesheets, `DOMParser` and dictionary fetches trip nothing.
-  const violations = await page.evaluate(() => window.cspViolations);
+  const violations = (await page.evaluate(() => window.cspViolations)) ?? [];
   for (const violation of violations) {
     expect(violation.blockedURI).toBe("wasm-eval");
   }

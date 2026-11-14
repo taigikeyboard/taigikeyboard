@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node", "chrome"],
+    "rootDirs": ["e2e", "src", "target", "types/site"],
+    "paths": {
+      "./target/pkg/taigi_web.js": ["./types/site/pkg/taigi_web.d.ts"]
+    }
+  },
+  "include": [
+    "playwright.config.mjs",
+    "extension/playwright.config.mjs",
+    "chromeos/options-form.mjs",
+    "scripts/**/*.mjs",
+    "tests/**/*.mjs",
+    "e2e/**/*.mjs",
+    "extension/e2e/**/*.mjs",
+    "types/shared.d.ts",
+    "types/globals.d.ts",
+    "types/fixtures.d.ts",
+    "types/site/**/*.d.ts"
+  ]
+}
