@@ -23,23 +23,20 @@ jobs:
           NUMBER: ${{ github.event.pull_request.number }}
           TITLE: ${{ github.event.pull_request.title }}
           URL: ${{ github.event.pull_request.html_url }}
-          AUTHOR: ${{ github.event.pull_request.user.login }}
-          ACTOR: ${{ github.actor }}
         run: |
           if [ -z "$WEBHOOK" ]; then
             echo "::warning::DISCORD_PR_WEBHOOK not set; skipping"
             exit 0
           fi
+          # Embed color is the only state cue: green opened, purple merged, red closed.
           if [ "$ACTION" = opened ]; then
-            status="Opened by $AUTHOR"; color=3066993      # green
+            color=3066993
           elif [ "$MERGED" = true ]; then
-            status="Merged by $ACTOR"; color=10181046      # purple
+            color=10181046
           else
-            status="Closed by $ACTOR"; color=15158332      # red
+            color=15158332
           fi
-          jq -n --arg title "#$NUMBER $TITLE" --arg url "$URL" \
-                --arg desc "$status" --argjson color "$color" \
+          jq -n --arg title "#$NUMBER $TITLE" --arg url "$URL" --argjson color "$color" \
             '{username: "GitHub", allowed_mentions: {parse: []},
-              embeds: [{title: ($title | .[0:256]), url: $url,
-                        description: $desc, color: $color}]}' \
+              embeds: [{title: ($title | .[0:256]), url: $url, color: $color}]}' \
           | curl -fsS -H 'Content-Type: application/json' -d @- "$WEBHOOK"
