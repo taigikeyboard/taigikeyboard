@@ -185,9 +185,8 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
 fi
 
 # No manifest to wait for: nothing installed polls for a Linux package, and the
-# Chrome Web Store updates the ChromeOS input method. The ChromeOS data records
-# the published version; since the /beta page went (2026-11-14) nothing on the
-# site reads it.
+# Chrome Web Store updates the ChromeOS input method. The ChromeOS data still
+# matters: the landing page's ChromeOS row shows its version.
 # One triple per format: platform label, asset name, site data path.
 for unpolled_format in \
     "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
