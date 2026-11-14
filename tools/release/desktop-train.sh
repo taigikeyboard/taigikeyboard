@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The monthly desktop train's steps, run by `.github/workflows/desktop-train.yml`
-# (docs/architecture/release-automation-roadmap.md, Phase 5).
+# (the cut on the 1st) and `.github/workflows/desktop-publish.yml` (the publish on
+# the 5th) — docs/architecture/release-automation-roadmap.md, Phases 5 and 6.
 #
 # Usage: desktop-train.sh plan           decide stop / cut / recut; for a cut, make
 #                                        the release commit and push it to a
@@ -8,6 +9,8 @@
 #        desktop-train.sh draft          start this version's draft afresh on the
 #                                        checked-out commit
 #        desktop-train.sh check-assets   fail unless every platform is on the draft
+#        desktop-train.sh check-publish  decide stop / publish for this month's
+#                                        draft; fail unless it is complete and on main
 #        desktop-train.sh notify <text>  post to Discord (DISCORD_PR_WEBHOOK)
 #
 # `plan` holds no release secret: it runs `cargo update` (inside set-versions)
@@ -15,7 +18,7 @@
 # `main` lives in the workflow's `cut` job, behind the `release` environment's
 # reviewer (roadmap D5).
 #
-# Environment: GH_TOKEN; plan also reads RELEASE_HOLD (the repository
+# Environment: GH_TOKEN; plan and check-publish also read RELEASE_HOLD (the repository
 # variable, D4), DRY_RUN (true | false), GITHUB_RUN_ID / GITHUB_RUN_ATTEMPT,
 # DISCORD_PR_WEBHOOK. Outputs go to $GITHUB_OUTPUT, notes for the person who
 # approves the cut to $GITHUB_STEP_SUMMARY (stdout when run by hand).
@@ -137,19 +140,92 @@ draft() {
     # An earlier month's draft — held, never published — is not removed here;
     # it is the maintainer's to delete.
     local stale
-    stale="$(gh release list --repo "$RELEASE_REPOSITORY" --limit 100 --json tagName,isDraft \
-        --jq "[.[] | select(.isDraft and (.tagName | startswith(\"desktop-\")) and .tagName != \"$DESKTOP_TAG\") | .tagName] | join(\" \")")"
+    stale="$(other_desktop_drafts)"
     [[ -z "$stale" ]] || summary "Older unpublished desktop drafts: $stale — delete them once this one supersedes them."
+}
+
+# What `publish` re-reads before publishing, from the REST release object:
+# "<tag> <target> <draft> <asset ids>". A re-uploaded asset gets a new id, so a
+# build re-attached while the approval waited is not published unchecked. The
+# same expression is in desktop-publish.yml (its job has no checkout).
+RELEASE_FINGERPRINT_JQ='"\(.tag_name) \(.target_commitish) \(.draft) \([.assets[].id] | sort | map(tostring) | join(","))"'
+
+stop_publish() {
+    summary "$1"
+    output action stop
+    exit 0
+}
+
+# Every unpublished desktop draft other than DESKTOP_TAG, space-separated.
+other_desktop_drafts() {
+    gh release list --repo "$RELEASE_REPOSITORY" --limit 100 --json tagName,isDraft \
+        --jq "[.[] | select(.isDraft and (.tagName | startswith(\"desktop-\")) and .tagName != \"$DESKTOP_TAG\") | .tagName] | join(\" \")"
 }
 
 check_assets() {
     require_staged_assets macos windows linux chromeos
 }
 
-# The release object's names: `plan` names this month's version; the other
+# The 5th: publish this month's draft only when it is complete and staged from
+# a commit main has. Holds no secret; the workflow's `publish` job re-reads the
+# draft and publishes it with the App token after the approval.
+check_publish() {
+    output version "$SHORT_VERSION"
+    [[ -z "${RELEASE_HOLD:-}" ]] ||
+        stop_publish "RELEASE_HOLD is set (\"$RELEASE_HOLD\") — not publishing $DESKTOP_TAG. \`gh variable delete RELEASE_HOLD\`, then \`gh workflow run desktop-publish.yml\` this month."
+
+    local state others release_id url fingerprint tag target status tagged
+    state="$(desktop_release_state)" || exit 1
+    case "$state" in
+        absent)
+            # An empty month or a failed cut — both already posted to Discord.
+            others="$(other_desktop_drafts)"
+            [[ -z "$others" ]] || summary "Unpublished desktop drafts from other months: $others — publish one by hand or delete it."
+            stop_publish "No $DESKTOP_TAG draft — nothing to publish (an empty month, or the cut did not stage)."
+            ;;
+        published) stop_publish "$DESKTOP_TAG is already published." ;;
+    esac
+
+    # The asset names embed the version, and each build only joins a draft
+    # targeting the commit it built, so a complete set proves the draft was
+    # built from a tree at $SHORT_VERSION.
+    require_staged_assets macos windows linux chromeos
+
+    read -r release_id url < <(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
+        --json databaseId,url --jq '"\(.databaseId) \(.url)"') ||
+        fail "cannot read the draft $DESKTOP_TAG"
+    fingerprint="$(gh api "repos/$RELEASE_REPOSITORY/releases/$release_id" --jq "$RELEASE_FINGERPRINT_JQ")" ||
+        fail "cannot read the draft $DESKTOP_TAG"
+    read -r tag target _ <<< "$fingerprint"
+    [[ "$target" =~ ^[0-9a-f]{40}$ ]] ||
+        fail "the $DESKTOP_TAG draft targets '$target', not a commit — the tag would name whatever that is on publish; re-stage with gh workflow run desktop-train.yml"
+    # The commit the cut (or a re-stage) staged is on main; main may have moved
+    # on since.
+    status="$(gh api "repos/$RELEASE_REPOSITORY/compare/main...$target" --jq .status)" ||
+        fail "cannot compare ${target:0:7} with main"
+    case "$status" in
+        identical | behind) ;;
+        *) fail "the $DESKTOP_TAG draft targets ${target:0:7}, which is not on main (compare: $status) — only a reviewed commit is published" ;;
+    esac
+    # Publishing reuses an existing tag and ignores the target; published
+    # releases are immutable, so a stray tag must stop it here.
+    tagged="$(desktop_tag_commit)"
+    [[ -z "$tagged" || "$tagged" == "$target" ]] ||
+        fail "the tag $tag names ${tagged:0:7}, not the draft's ${target:0:7} — publishing would ship the tag's commit; re-stage with gh workflow run desktop-train.yml"
+
+    output action publish
+    output release_id "$release_id"
+    output fingerprint "$fingerprint"
+    summary "### Publish $SHORT_VERSION" "" \
+        "Approving the \`publish\` job publishes the $DESKTOP_TAG draft on ${target:0:7} (every installer staged): $url" "" \
+        "Publishing fires announce-release.yml, which asks for its own approval. Check \`RELEASE_HOLD\` is still unset before approving."
+}
+
+# The release object's names: `plan` and `check-publish` name this month's
+# version (a mid-month patch moves the tree past it); the other
 # steps read the version from the checkout (the release commit).
 SHORT_VERSION=""
-[[ "${1:-}" != plan ]] || SHORT_VERSION="$(train_version)"
+case "${1:-}" in plan | check-publish) SHORT_VERSION="$(train_version)" ;; esac
 # shellcheck source=lib/desktop-release.sh
 source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 
@@ -157,9 +233,10 @@ case "${1:-}:$#" in
     plan:1) plan ;;
     draft:1) draft ;;
     check-assets:1) check_assets ;;
+    check-publish:1) check_publish ;;
     notify:2) notify "$2" ;;
     *)
-        echo "usage: desktop-train.sh plan | draft | check-assets | notify <text>" >&2
+        echo "usage: desktop-train.sh plan | draft | check-assets | check-publish | notify <text>" >&2
         exit 2
         ;;
 esac

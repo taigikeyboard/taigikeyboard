@@ -1,0 +1,119 @@
+name: Desktop publish
+
+# The monthly desktop publish (release-automation-roadmap.md, Phase 6): 09:00
+# Asia/Taipei on the 5th, the draft desktop-train.yml staged on the 1st is
+# published. Gate rules: desktop-release.md § The flow. Two approvals of the
+# `release` environment (D5): `publish` here, then announce-release.yml, which
+# publishing fires — the App token publishes because GitHub starts no workflow
+# for an event GITHUB_TOKEN caused (announcement, provenance rebuilds).
+#
+# A hold set after `check` ran is not seen — reject the approval instead.
+# No concurrency group shared with the cut: this run may wait days for its
+# approval and a re-stage must not queue behind it; a re-stage replaces the
+# draft, so a waiting publish fails its re-read rather than publishing it.
+on:
+  schedule:
+    - cron: '0 1 5 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    name: check the draft
+    if: github.repository == 'taigikeyboard/taigikeyboard' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      # A draft is visible only with write access.
+      contents: write
+    outputs:
+      action: ${{ steps.check.outputs.action }}
+      version: ${{ steps.check.outputs.version }}
+      release_id: ${{ steps.check.outputs.release_id }}
+      fingerprint: ${{ steps.check.outputs.fingerprint }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the draft
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_HOLD: ${{ vars.RELEASE_HOLD }}
+        run: bash tools/release/desktop-train.sh check-publish
+
+  # Approval 1. No checkout: nothing from the repository runs while the App
+  # token exists.
+  publish:
+    name: publish the draft
+    needs: check
+    if: needs.check.outputs.action == 'publish' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    permissions: {}
+    env:
+      RELEASE_ID: ${{ needs.check.outputs.release_id }}
+      FINGERPRINT: ${{ needs.check.outputs.fingerprint }}
+    steps:
+      # Before the token exists: the id goes into an API path.
+      - name: Check the outputs
+        run: |
+          [[ "$RELEASE_ID" =~ ^[0-9]+$ && "$FINGERPRINT" =~ ^desktop-[0-9.]+\ [0-9a-f]{40}\ true\ [0-9]+(,[0-9]+)*$ ]] || {
+            echo "::error::unexpected check outputs: release '$RELEASE_ID', fingerprint '$FINGERPRINT'"
+            exit 1
+          }
+
+      - name: Mint the App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: taigikeyboard
+          repositories: taigikeyboard
+          permission-contents: write
+
+      # Publish only the draft `check` passed: same tag, commit, assets (a
+      # re-upload changes an id), still a draft. The jq is desktop-train.sh
+      # RELEASE_FINGERPRINT_JQ. Publishing creates the tag on the target.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: |
+          set -euo pipefail
+          seen="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            --jq '"\(.tag_name) \(.target_commitish) \(.draft) \([.assets[].id] | sort | map(tostring) | join(","))"')" || {
+            echo "::error::release $RELEASE_ID is gone — a re-stage replaced the draft; dispatch desktop-publish.yml again"
+            exit 1
+          }
+          [ "$seen" = "$FINGERPRINT" ] || {
+            echo "::error::release $RELEASE_ID is now '$seen', not '$FINGERPRINT' as checked; dispatch desktop-publish.yml again"
+            exit 1
+          }
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -X PATCH -F draft=false \
+            --jq '"published \(.tag_name): \(.html_url)"'
+
+  finish:
+    name: report a failure
+    needs: [check, publish]
+    if: always() && github.repository == 'taigikeyboard/taigikeyboard' && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/release
+
+      - name: Report a failure
+        env:
+          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          bash tools/release/desktop-train.sh notify "Desktop publish ${VERSION:-} failed: $RUN_URL"
