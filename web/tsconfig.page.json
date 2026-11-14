@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": [],
+    "rootDirs": ["src", "types/site", "."]
+  },
+  "include": [
+    "src/**/*.js",
+    "vendor/lexical.js",
+    "types/shared.d.ts",
+    "types/globals.d.ts",
+    "types/site/**/*.d.ts"
+  ],
+  "exclude": ["src/sw.js"]
+}

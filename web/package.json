@@ -12,9 +12,12 @@
     "@lexical/rich-text": "0.53.0",
     "@lexical/selection": "0.53.0",
     "@playwright/test": "1.65.0",
+    "@types/chrome": "0.3.7",
+    "@types/node": "26.6.6",
     "codemirror": "5.65.21",
     "esbuild": "0.28.2",
     "lexical": "0.53.0",
-    "quill": "2.0.3"
+    "quill": "2.0.3",
+    "typescript": "7.0.2"
   }
 }

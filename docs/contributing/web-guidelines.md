@@ -5,12 +5,19 @@ Rules for the web version (`web/`: the `taigi-web` crate compiled to `wasm32-unk
 ## Build
 
 - Run `cargo` from `web/` (`make -C web …`). Rustup reads `web/rust-toolchain.toml` from the working directory, and that file is what supplies the target.
-- `make web-check` is the gate: release build, `wasm-bindgen`, `wasm-opt`, Node smoke test, clippy, biome, fmt. It builds from source, so it has no stale-artifact step. `make web-e2e` is the browser gate, separate because it downloads three browsers; on CI it runs Chromium only. `make web-serve` runs the page on `http://127.0.0.1:8000`.
+- `make web-check` is the gate: release build, `wasm-bindgen`, `wasm-opt`, Node smoke test (including `tests/types.test.mjs`), clippy, `typecheck`, biome, fmt. It builds from source, so it has no stale-artifact step. `make -C web typecheck` runs `tsc --noEmit` without Rust. `make web-e2e` is the browser gate, separate because it downloads three browsers; on CI it runs Chromium only. `make web-serve` runs the page on `http://127.0.0.1:8000`.
 - `make -C web site` stages `web/src/`, the bindings, the dictionaries, the fonts and the icons (the iOS app icon's 180, 196 and 512) into `web/target/site/`, the tree the browser sees. `scripts/stage-assets.mjs` runs last: it gzips the dictionaries under content-hashed names, writes `generated/dictionaries.js` and `assets-manifest.json`, and stamps `sw.js` with the build. `scripts/subset-fonts.sh` cuts the fonts to `web/target/fonts/`, and reruns only when a font or `fonts.css` changes. It needs `pyftsubset` (`mise install`). The output is 19 MB, so it is never committed.
 - Deploy: `docs/architecture/web-release.md`. Every path in a page is relative, because the site lives under `/web/` and tests serve it from the root.
 - `wasm-bindgen` is pinned twice, exactly: the crate in `web/Cargo.toml`, the CLI in `mise.toml`. Move both in one change; `make -C web bindgen-version` compares them. `biome.json`'s `$schema` follows the `biome` pin.
 - SQLite's C is archived for this target with `zig ar` (`AR_wasm32_unknown_unknown` in `web/Makefile`): Apple's `ar` cannot index wasm objects, and the link then misses every `sqlite3_*`. Any workflow that builds the page installs zig from `mise.toml`.
 - The release profile keeps `strip` off. `strip = true` removes the `target_features` section that `wasm-bindgen` and `wasm-opt` read; `wasm-opt` drops the debug names instead. `wasm-opt --all-features` emits an encoding Node 26 rejects (`unknown import kind 0x7f`).
+
+## JavaScript
+
+- Handwritten web modules are raw `.js` and `.mjs` with JSDoc type annotations (`/** ... */`), checked in place by `tsc --noEmit` (`strict: true`, `checkJs: true` in `web/tsconfig.base.json`; `make -C web typecheck`, wired into `make -C web lint` and `.github/workflows/web.yml`). Application modules ship without a compile step, so browser stack traces and staged files match source byte for byte.
+- `web/tsconfig.json` splits `web/` into one project reference per runtime global scope (window, service worker, extension, fixtures, Node) and maps staged relative imports with `compilerOptions.rootDirs` over `web/types/`, so `make -C web typecheck` runs cleanly before `make -C web build`.
+- Shared wire contracts (`reply.rs`, `bindings.rs`), global augmentations, and staged virtual module declarations live in `web/types/`. `web/tests/types.test.mjs` (`make -C web smoke`) checks that `types/site/pkg/taigi_web.d.ts` matches `wasm-bindgen`'s `target/pkg/taigi_web.d.ts`, `web/Makefile`'s `TSCONFIGS` matches `tsconfig.json`, and every handwritten `.js` and `.mjs` file under `web/` belongs to a project reference.
+- `web/package.json` pins exact versions (`save-exact`).
 
 ## Rust
 

@@ -7,23 +7,42 @@
 import { LOAD_TAG } from "./editor.js";
 import { fromPlainText } from "./markdown.js";
 
-/// The Markdown. `taigi.text`, the textarea's plain text before it, is read once
-/// when this is missing and left as it was.
+/** @typedef {import("./editor.js").Editor} Editor */
+
+/**
+ * The Markdown. `taigi.text`, the textarea's plain text before it, is read once
+ * when this is missing and left as it was.
+ */
 const STORAGE_KEY = "taigi.document";
 const PLAIN_TEXT_KEY = "taigi.text";
 // A burst of keys is one write.
 const SAVE_DELAY = 300;
 
 export class Draft {
+  /** @type {Editor} */
   #editor;
-  /// The pending save; `null` when storage holds this tab's text.
+  /**
+   * The pending save; `null` when storage holds this tab's text.
+   *
+   * @type {ReturnType<typeof setTimeout> | null}
+   */
   #timer = null;
-  /// The intro's Markdown while it is untouched; then `null`.
+  /**
+   * The intro's Markdown while it is untouched; then `null`.
+   *
+   * @type {string | null}
+   */
   #intro = null;
 
-  /// Runs after `Settings` has set the display language `intro` is in.
+  /**
+   * Runs after `Settings` has set the display language `intro` is in.
+   *
+   * @param {Editor} editor
+   * @param {string} intro
+   */
   constructor(editor, intro) {
     this.#editor = editor;
+    /** @type {string | null} */
     let stored = null;
     try {
       stored = localStorage.getItem(STORAGE_KEY);
@@ -46,7 +65,9 @@ export class Draft {
         return;
       }
       this.#intro = null;
-      clearTimeout(this.#timer);
+      if (this.#timer !== null) {
+        clearTimeout(this.#timer);
+      }
       this.#timer = setTimeout(() => this.#flush(), SAVE_DELAY);
     });
     // `localStorage` is synchronous, so a write on the way out completes. A
@@ -64,7 +85,9 @@ export class Draft {
         return;
       }
       if (event.newValue !== editor.markdown()) {
-        clearTimeout(this.#timer);
+        if (this.#timer !== null) {
+          clearTimeout(this.#timer);
+        }
         this.#timer = null;
         this.#intro = null;
         editor.setMarkdown(event.newValue);
@@ -72,18 +95,28 @@ export class Draft {
     });
   }
 
-  /// Display Language changed: an untouched intro follows it.
+  /**
+   * Display Language changed: an untouched intro follows it.
+   *
+   * @param {string} intro
+   * @returns {void}
+   */
   translateIntro(intro) {
     if (this.#intro !== null && this.#editor.markdown() === this.#intro) {
       this.#showIntro(intro);
     }
   }
 
+  /**
+   * @param {string} intro
+   * @returns {void}
+   */
   #showIntro(intro) {
     this.#editor.setMarkdown(intro, { alignLastRight: true });
     this.#intro = this.#editor.markdown();
   }
 
+  /** @returns {void} */
   #flush() {
     if (this.#timer === null) {
       return;

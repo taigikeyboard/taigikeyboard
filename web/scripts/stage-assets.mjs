@@ -9,17 +9,32 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { gzipSync } from "node:zlib";
 
+/** @typedef {import("../types/shared.d.ts").DictionaryAsset} DictionaryAsset */
+
 const [site, dictionarySources] = process.argv.slice(2);
 
 // The file of `data-font` on `<html>` in src/index.html.
 const DEFAULT_FONT = "fonts/iansui_regular.woff2";
 
+/**
+ * @param {Uint8Array | string} bytes
+ * @returns {string}
+ */
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("base64");
 
-/// Base64 without the characters a file name cannot carry.
+/**
+ * Base64 without the characters a file name cannot carry.
+ *
+ * @param {string} digest
+ * @returns {string}
+ */
 const nameHash = (digest) =>
   digest.replaceAll("+", "-").replaceAll("/", "_").slice(0, 16);
 
+/**
+ * @param {string} name
+ * @returns {DictionaryAsset}
+ */
 function stageDictionary(name) {
   const compressed = gzipSync(readFileSync(join(dictionarySources, name)), {
     level: 9,
@@ -30,17 +45,28 @@ function stageDictionary(name) {
   return { name, file, sha256: digest, size: compressed.length };
 }
 
-/// `sw.js` is the browser's own to fetch.
+/**
+ * `sw.js` is the browser's own to fetch.
+ *
+ * @param {string} path
+ * @returns {boolean}
+ */
 function isHashed(path) {
   return !/^dictionaries\/|^sw\.js$/.test(path);
 }
 
-/// The default font works offline from the first visit. The others stay off the
-/// first load until selected, so the service worker takes each one when it is used.
+/**
+ * The default font works offline from the first visit. The others stay off the
+ * first load until selected, so the service worker takes each one when it is used.
+ *
+ * @param {{ path: string }} entry
+ * @returns {boolean}
+ */
 function isShell({ path }) {
   return !path.endsWith(".woff2") || path === DEFAULT_FONT;
 }
 
+/** @returns {string[]} */
 function stagedFiles() {
   return readdirSync(site, { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile())

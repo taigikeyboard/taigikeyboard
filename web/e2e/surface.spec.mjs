@@ -15,9 +15,15 @@ import {
   textOf,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Locator} Locator */
+
 const AUTO_SPACE = { autoSpaceEnabled: true };
 
-/// Under the Hanji/romanization swap, the output that earns an auto space.
+/**
+ * Under the Hanji/romanization swap, the output that earns an auto space.
+ * @param {Locator} editor
+ * @returns {Promise<void>}
+ */
 async function commitRomanization(editor) {
   await editor.press("`");
   await commitWord(editor);
@@ -55,7 +61,11 @@ test("the auto-space swap survives the page's own write", async ({ page }) => {
   await expectText(editor, "tâi-uân. ");
 });
 
-// The swap would delete the character before the caret, unseen.
+/**
+ * The swap would delete the character before the caret, unseen.
+ * @param {Locator} editor
+ * @returns {Promise<void>}
+ */
 async function expectNothingLost(editor) {
   const typed = await textOf(editor);
   expect(typed.replace(/[.。]/, "")).toBe("tâi-uân ");
@@ -94,8 +104,12 @@ test("a text change under a still caret, then punctuation: no swap", async ({
   await commitRomanization(editor);
   // A write the engine did not make: the editor's own, past `Surface`.
   await editor.evaluate((element) => {
-    element.taigiEditor.deleteBefore(1);
-    element.taigiEditor.insertText("x");
+    const host =
+      /** @type {HTMLElement & { taigiEditor: { deleteBefore(n: number): void, insertText(s: string): boolean } }} */ (
+        element
+      );
+    host.taigiEditor.deleteBefore(1);
+    host.taigiEditor.insertText("x");
   });
   await editor.press(".");
   await expectText(editor, /^tâi-uânx[.。]/);
@@ -143,17 +157,25 @@ test("the panel follows the caret and the scroll", async ({ page }) => {
   await editor.fill("\n".repeat(60));
   await caretTo(editor, 30);
   await editor.pressSequentially("tai");
+  /** @param {number} position */
   const scrollTo = (position) =>
     editor.evaluate(async (element, top) => {
       element.scrollTop = top;
       await new Promise(requestAnimationFrame);
       await new Promise(requestAnimationFrame);
     }, position);
-  const panelTop = () => panel(page).evaluate((element) => element.offsetTop);
+  const panelTop = () =>
+    panel(page).evaluate(
+      (element) => /** @type {HTMLElement} */ (element).offsetTop,
+    );
   // The caret's line 60px, then 110px, down the box.
   const line = await editor.evaluate((element) => {
     // The character before the caret: a collapsed range there has no box.
-    const { anchorNode, anchorOffset } = getSelection();
+    const selection = getSelection();
+    if (!selection?.anchorNode) {
+      throw new Error("no selection anchor");
+    }
+    const { anchorNode, anchorOffset } = selection;
     const probe = document.createRange();
     probe.setStart(anchorNode, anchorOffset - 1);
     probe.setEnd(anchorNode, anchorOffset);
@@ -171,7 +193,10 @@ test("the panel moves along the line as text is committed", async ({
 }) => {
   const editor = await open(page);
   await editor.pressSequentially("tai");
-  const left = () => panel(page).evaluate((element) => element.offsetLeft);
+  const left = () =>
+    panel(page).evaluate(
+      (element) => /** @type {HTMLElement} */ (element).offsetLeft,
+    );
   const start = await left();
   await editor.press("Enter");
   await editor.pressSequentially("tai");
@@ -181,7 +206,9 @@ test("the panel moves along the line as text is committed", async ({
 test("a refused write says what it could not write", async ({ page }) => {
   const editor = await open(page);
   await editor.evaluate((element) => {
-    element.taigiEditor.insertText = () => false;
+    /** @type {HTMLElement & { taigiEditor: { insertText(s: string): boolean } }} */ (
+      element
+    ).taigiEditor.insertText = () => false;
   });
   await commitWord(editor);
   await expect(page.locator("#message")).toContainText("台灣");

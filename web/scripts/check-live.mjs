@@ -6,12 +6,24 @@
 
 import { createHash } from "node:crypto";
 
+/** @typedef {import("../types/shared.d.ts").AssetsManifest} AssetsManifest */
+
 const [site, expectedBuild] = process.argv.slice(2);
 const base = new URL(site.replace(/\/?$/, "/"));
+/** @type {string[]} */
 const problems = [];
 
+/**
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("base64");
 
+/**
+ * @param {string} path
+ * @param {string} expected
+ * @returns {Promise<void>}
+ */
 async function check(path, expected) {
   const response = await fetch(new URL(path, base));
   const bytes = new Uint8Array(await response.arrayBuffer());
@@ -38,7 +50,9 @@ if (!response.ok) {
   console.error(`assets-manifest.json: HTTP ${response.status}`);
   process.exit(1);
 }
-const { build, shell, dictionaries } = await response.json();
+const { build, shell, dictionaries } = /** @type {AssetsManifest} */ (
+  await response.json()
+);
 
 if (expectedBuild !== undefined && build !== expectedBuild) {
   problems.push(`assets-manifest.json: build ${build}, not ${expectedBuild}`);

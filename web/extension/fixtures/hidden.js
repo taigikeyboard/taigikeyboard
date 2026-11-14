@@ -2,14 +2,16 @@
 // transitions so `hidden.spec.mjs` can assert keys stay untouched and chips
 // anchor cleanly.
 
-const log = document.getElementById("log");
-for (const type of ["keydown", "keyup"]) {
+const log = /** @type {HTMLElement} */ (document.getElementById("log"));
+for (const type of /** @type {const} */ (["keydown", "keyup"])) {
   document.addEventListener(type, (event) => {
     log.textContent += `${type}:${event.key}\n`;
   });
 }
 
-const editContextTarget = document.getElementById("editcontext-target");
+const editContextTarget = /** @type {HTMLElement} */ (
+  document.getElementById("editcontext-target")
+);
 editContextTarget.tabIndex = 0;
 editContextTarget.setAttribute("role", "textbox");
 let editContextText = "";
@@ -24,8 +26,12 @@ if (typeof window.EditContext === "function") {
   });
 }
 
-const sheetsBox = document.getElementById("sheets-input-box");
-const sheetsEditor = document.getElementById("waffle-rich-text-editor");
+const sheetsBox = /** @type {HTMLElement} */ (
+  document.getElementById("sheets-input-box")
+);
+const sheetsEditor = /** @type {HTMLElement} */ (
+  document.getElementById("waffle-rich-text-editor")
+);
 sheetsEditor.tabIndex = 0;
 let sheetsCellText = "";
 
@@ -36,7 +42,7 @@ sheetsEditor.addEventListener("keydown", (event) => {
       sheetsBox.classList.add("editing");
       sheetsEditor.setAttribute("contenteditable", "true");
       sheetsEditor.textContent = event.key;
-      getSelection().collapse(sheetsEditor, 1);
+      getSelection()?.collapse(sheetsEditor, 1);
     }
     return;
   }
@@ -56,11 +62,14 @@ window.hiddenFixture = {
   editContextText() {
     return editContextText;
   },
+  /** @param {boolean} value */
   setEditContextReadOnly(value) {
     editContextTarget.setAttribute("aria-readonly", value ? "true" : "false");
   },
   focusDocsIframe() {
-    const frame = document.getElementById("docs-iframe");
+    const frame = /** @type {HTMLIFrameElement} */ (
+      document.getElementById("docs-iframe")
+    );
     frame.focus();
   },
   focusSheetsGrid() {

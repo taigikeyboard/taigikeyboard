@@ -12,10 +12,14 @@ import {
   test,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
 const QUILL = `${A}/quill.html`;
 const EDITOR = ".ql-editor";
 
+/** @param {Page} page */
 const contents = (page) => page.evaluate(() => window.quill.getContents().ops);
+/** @param {Page} page */
 const text = (page) => page.evaluate(() => window.quill.getText());
 
 test("a word composes beside the caret and commits into the document", async ({

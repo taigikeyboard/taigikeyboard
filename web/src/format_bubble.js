@@ -4,10 +4,18 @@
 
 import { normalizeUrl } from "./markdown.js";
 
-/// Between the bubble and the line it sits over.
+/** @typedef {import("./editor.js").Editor} Editor */
+/** @typedef {import("./surface.js").Surface} Surface */
+/** @typedef {import("lexical").BaseSelection} BaseSelection */
+
+/** Between the bubble and the line it sits over. */
 const GAP = 6;
 
-/// A button's `data-markup` → what it does to the editor.
+/**
+ * A button's `data-markup` → what it does to the editor.
+ *
+ * @type {Record<string, (editor: Editor) => void>}
+ */
 const ACTIONS = {
   h1: (editor) => editor.toggleBlock("h1"),
   h2: (editor) => editor.toggleBlock("h2"),
@@ -21,22 +29,42 @@ const ACTIONS = {
 };
 
 export class FormatBubble {
+  /** @type {HTMLElement} */
   #root;
+  /** @type {HTMLInputElement} */
   #url;
+  /** @type {Editor} */
   #editor;
+  /** @type {Surface} */
   #surface;
+  /** @type {() => boolean} */
   #isEngineComposing;
-  /// Another input method holds a composition in the editor.
+  /** Another input method holds a composition in the editor. */
   #isForeignComposing = false;
-  /// The selection the URL field links and the text it was taken from; `null`
-  /// while the buttons show.
+  /**
+   * The selection the URL field links and the text it was taken from; `null`
+   * while the buttons show.
+   *
+   * @type {{ selection: BaseSelection | null, markdown: string } | null}
+   */
   #linkTarget = null;
 
-  /// `isEngineComposing` answers whether the engine's composition is on screen;
-  /// the bubble shows over no composition, its own or another input method's.
+  /**
+   * `isEngineComposing` answers whether the engine's composition is on screen;
+   * the bubble shows over no composition, its own or another input method's.
+   *
+   * @param {HTMLElement} root
+   * @param {Editor} editor
+   * @param {Surface} surface
+   * @param {() => boolean} isEngineComposing
+   */
   constructor(root, editor, surface, isEngineComposing) {
     this.#root = root;
-    this.#url = root.querySelector("input");
+    const urlInput = root.querySelector("input");
+    if (!urlInput) {
+      throw new Error("missing URL input in format bubble");
+    }
+    this.#url = urlInput;
     this.#editor = editor;
     this.#surface = surface;
     this.#isEngineComposing = isEngineComposing;
@@ -51,8 +79,11 @@ export class FormatBubble {
       }
     });
     root.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-markup]");
-      if (button !== null) {
+      const target = /** @type {Element | null} */ (event.target);
+      const button = /** @type {HTMLButtonElement | null} */ (
+        target?.closest("button[data-markup]") ?? null
+      );
+      if (button?.dataset.markup) {
         this.format(button.dataset.markup);
       }
     });
@@ -78,7 +109,8 @@ export class FormatBubble {
       this.#isForeignComposing = false;
     });
     text.addEventListener("blur", (event) => {
-      if (!root.contains(event.relatedTarget)) {
+      const related = /** @type {Node | null} */ (event.relatedTarget);
+      if (!root.contains(related)) {
         this.hide();
       }
     });
@@ -96,14 +128,19 @@ export class FormatBubble {
       }
     });
     this.#url.addEventListener("blur", (event) => {
+      const related = /** @type {Node | null} */ (event.relatedTarget);
       // Elsewhere on the page: the focus stays where the user put it.
-      if (!root.contains(event.relatedTarget) && this.#linkTarget !== null) {
+      if (!root.contains(related) && this.#linkTarget !== null) {
         this.hide();
       }
     });
   }
 
-  /// Over the selection, when there is one to format.
+  /**
+   * Over the selection, when there is one to format.
+   *
+   * @returns {void}
+   */
   show() {
     if (
       document.activeElement !== this.#editor.root ||
@@ -118,6 +155,7 @@ export class FormatBubble {
     this.#place();
   }
 
+  /** @returns {void} */
   hide() {
     if (this.#root.hidden && this.#linkTarget === null) {
       return;
@@ -126,11 +164,16 @@ export class FormatBubble {
     this.#root.hidden = true;
   }
 
-  /// A button or its shortcut: a key of `ACTIONS`, or `link`. The link button
-  /// again closes the URL field.
+  /**
+   * A button or its shortcut: a key of `ACTIONS`, or `link`. The link button
+   * again closes the URL field.
+   *
+   * @param {string} kind
+   * @returns {void}
+   */
   format(kind) {
     if (kind !== "link") {
-      ACTIONS[kind](this.#editor);
+      ACTIONS[kind]?.(this.#editor);
       this.show();
     } else if (this.#linkTarget === null) {
       this.#openLink();
@@ -139,12 +182,19 @@ export class FormatBubble {
     }
   }
 
-  /// Above the selection's first line, below it when the editor's top is in the
-  /// way, inside the editor either way.
+  /**
+   * Above the selection's first line, below it when the editor's top is in the
+   * way, inside the editor either way.
+   *
+   * @returns {void}
+   */
   #place() {
     const root = this.#root;
     const box = root.offsetParent;
     const point = this.#surface.caretPoint(true);
+    if (!box || !point) {
+      return;
+    }
     let top = point.top - root.offsetHeight - GAP;
     if (top < 0) {
       top = point.top + point.lineHeight + GAP;
@@ -155,8 +205,12 @@ export class FormatBubble {
     root.style.left = `${Math.min(Math.max(0, point.left), rightmost)}px`;
   }
 
-  /// The bubble turns into the URL field in place, holding the link's URL when
-  /// the selection is in one.
+  /**
+   * The bubble turns into the URL field in place, holding the link's URL when
+   * the selection is in one.
+   *
+   * @returns {void}
+   */
   #openLink() {
     const selection = this.#editor.saveSelection();
     this.#linkTarget = { selection, markdown: this.#editor.markdown() };
@@ -167,17 +221,22 @@ export class FormatBubble {
     this.#url.focus();
   }
 
+  /** @returns {void} */
   #leaveLink() {
     this.#linkTarget = null;
     delete this.#root.dataset.mode;
   }
 
-  /// An empty field takes a link off. Nothing is written when the text changed
-  /// meanwhile, as another tab's save does.
+  /**
+   * An empty field takes a link off. Nothing is written when the text changed
+   * meanwhile, as another tab's save does.
+   *
+   * @returns {void}
+   */
   #writeLink() {
     const target = this.#linkTarget;
     this.#leaveLink();
-    if (target.markdown !== this.#editor.markdown()) {
+    if (target === null || target.markdown !== this.#editor.markdown()) {
       this.#editor.focus();
       return;
     }
@@ -188,7 +247,11 @@ export class FormatBubble {
     this.show();
   }
 
-  /// The editor again, its selection as the link field found it.
+  /**
+   * The editor again, its selection as the link field found it.
+   *
+   * @returns {void}
+   */
   #backToText() {
     const target = this.#linkTarget;
     this.#leaveLink();

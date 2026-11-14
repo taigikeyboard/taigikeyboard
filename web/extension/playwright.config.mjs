@@ -3,6 +3,7 @@
 
 import { defineConfig } from "@playwright/test";
 
+/** @type {number} */
 export const PORT = 4174;
 
 export default defineConfig({

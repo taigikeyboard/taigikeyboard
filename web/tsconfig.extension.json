@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["chrome"],
+    "rootDirs": [
+      "extension",
+      "src",
+      "chromeos",
+      "types/site",
+      "types/extension"
+    ]
+  },
+  "include": [
+    "extension/*.js",
+    "src/panel.js",
+    "src/surface.js",
+    "src/i18n.js",
+    "src/settings.js",
+    "chromeos/options.js",
+    "types/shared.d.ts",
+    "types/globals.d.ts",
+    "types/site/**/*.d.ts",
+    "types/extension/**/*.d.ts"
+  ],
+  "exclude": ["extension/background.js", "extension/learning-store.js"]
+}

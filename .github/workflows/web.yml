@@ -1,8 +1,9 @@
 name: Web
 
 # The web version's gates: `make web-check`'s steps (the wasm build and the Node
-# smoke test over the real dictionaries in `check`; clippy, biome and fmt in the
-# parallel `lint` job, so neither waits on the other) and Playwright in Chromium
+# smoke test over the real dictionaries in `check`; clippy, typecheck, biome and
+# fmt in `lint`; and the fast standalone TypeScript `checkJs` job in `typecheck`,
+# so JS type errors fail without waiting for Rust) and Playwright in Chromium
 # over the staged site, using the official image's browsers and system libraries.
 # An engine, desktop-shared or dictionary change triggers it too, because
 # `taigi-web` links those crates and
@@ -163,13 +164,19 @@ jobs:
   # `make -C web lint`: clippy over the wasm target compiles a dev build of its
   # own (~45 s), which `check`'s release build cannot share, so it runs beside it.
   lint:
-    name: clippy + biome + fmt
+    name: clippy + typecheck + biome + fmt
     needs: changed
     if: ${{ !cancelled() && (needs.changed.result == 'skipped' || needs.changed.outputs.moved == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
       # protoc for engine/protos/build.rs, zig for SQLite's C, biome for the
       # page's JS; the same install as `check`, so both share mise's cache.
@@ -192,15 +199,33 @@ jobs:
       - name: make -C web lint
         run: make -C web lint
 
+  typecheck:
+    name: tsc --noEmit (checkJs)
+    needs: changed
+    if: ${{ !cancelled() && (needs.changed.result == 'skipped' || needs.changed.outputs.moved == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: make -C web typecheck
+        run: make -C web typecheck
+
   deploy:
     name: Deploy
-    needs: [check, lint]
+    needs: [check, lint, typecheck]
     # Results named, not the implicit success(): that also looks at `changed`,
     # which a dispatch skips, so a dispatch never deployed. A scheduled run
-    # whose head did not move skips check and lint, and so this job.
+    # whose head did not move skips check, lint and typecheck, and so this job.
     if: >-
       ${{ !cancelled() &&
-      needs.check.result == 'success' && needs.lint.result == 'success' &&
+      needs.check.result == 'success' && needs.lint.result == 'success' && needs.typecheck.result == 'success' &&
       (github.event_name == 'schedule' ||
        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-24.04

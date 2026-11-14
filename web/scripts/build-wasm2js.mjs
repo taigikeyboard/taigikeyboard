@@ -11,6 +11,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const WASM_HEADER = [0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
 const DISABLED_FEATURES = new Set(["multivalue", "reference-types"]);
 
+/**
+ * @param {Uint8Array} bytes
+ * @param {number} start
+ * @returns {[number, number]}
+ */
 function readUleb128(bytes, start) {
   let value = 0;
   let factor = 1;
@@ -27,6 +32,13 @@ function readUleb128(bytes, start) {
   throw new Error("wasm target_features: truncated LEB128");
 }
 
+/**
+ * @param {string} source
+ * @param {string} needle
+ * @param {string} replacement
+ * @param {string} label
+ * @returns {string}
+ */
 function replaceOnce(source, needle, replacement, label) {
   const index = source.indexOf(needle);
   if (index < 0 || source.indexOf(needle, index + needle.length) >= 0) {
@@ -37,9 +49,14 @@ function replaceOnce(source, needle, replacement, label) {
   );
 }
 
-/// Marks `multivalue` and `reference-types` disabled in the module's
-/// `target_features` custom section so `wasm-bindgen` emits one function table
-/// and stack out-pointers, the subset `wasm2js` accepts.
+/**
+ * Marks `multivalue` and `reference-types` disabled in the module's
+ * `target_features` custom section so `wasm-bindgen` emits one function table
+ * and stack out-pointers, the subset `wasm2js` accepts.
+ *
+ * @param {Uint8Array} wasmBytes
+ * @returns {Uint8Array}
+ */
 export function disableWasm2jsUnsupportedFeatures(wasmBytes) {
   if (
     wasmBytes.length < WASM_HEADER.length ||
@@ -49,6 +66,7 @@ export function disableWasm2jsUnsupportedFeatures(wasmBytes) {
   }
   const patched = new Uint8Array(wasmBytes);
   const decoder = new TextDecoder();
+  /** @type {Set<string>} */
   const seen = new Set();
   let foundSection = false;
   let offset = WASM_HEADER.length;
@@ -99,9 +117,14 @@ export function disableWasm2jsUnsupportedFeatures(wasmBytes) {
   return patched;
 }
 
-/// Turns `wasm2js` output into a reusable module exporting `asmFunc` with no
-/// eager instantiation, `WebAssembly.RuntimeError` traps, and no retained
-/// reference to a grown `ArrayBuffer` across instances.
+/**
+ * Turns `wasm2js` output into a reusable module exporting `asmFunc` with no
+ * eager instantiation, `WebAssembly.RuntimeError` traps, and no retained
+ * reference to a grown `ArrayBuffer` across instances.
+ *
+ * @param {string} source
+ * @returns {string}
+ */
 export function rewriteAsmModule(source) {
   if (!source.startsWith("import * as ")) {
     throw new Error("wasm2js rewrite: expected leading import lines");
@@ -132,9 +155,14 @@ export function rewriteAsmModule(source) {
   return `${rewritten.slice(0, footer)}\nexport { asmFunc };\n`;
 }
 
-/// Adapts `wasm-bindgen`'s classic glue to instantiate through `asmFunc` and
-/// refresh cached typed views when `__wasm_memory_grow` swaps `ArrayBuffer`s
-/// without detaching the old one.
+/**
+ * Adapts `wasm-bindgen`'s classic glue to instantiate through `asmFunc` and
+ * refresh cached typed views when `__wasm_memory_grow` swaps `ArrayBuffer`s
+ * without detaching the old one.
+ *
+ * @param {string} source
+ * @returns {string}
+ */
 export function rewriteGlueModule(source) {
   const boundary = source.match(
     /function dropObject\(idx\) \{\s*if \(idx < (\d+)\) return;/,
@@ -254,8 +282,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   rmSync(work, { recursive: true, force: true });
 
   // Smoke-check the emitted pair, including a linear-memory grow before a key.
-  const { asmFunc } = await import(pathToFileURL(asmPath).href);
-  const { initAsm, Session } = await import(pathToFileURL(gluePath).href);
+  const { asmFunc } =
+    /** @type {{ asmFunc: (imports: unknown) => unknown }} */ (
+      await import(pathToFileURL(asmPath).href)
+    );
+  const { initAsm, Session } =
+    /** @type {typeof import("../types/site/pkg/taigi_web.js") & { initAsm: (fn: (imports: unknown) => unknown) => unknown }} */ (
+      await import(pathToFileURL(gluePath).href)
+    );
   initAsm(asmFunc);
   const session = new Session("{}", "linux", "en");
   session.addDictionary(

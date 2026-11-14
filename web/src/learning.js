@@ -6,12 +6,22 @@
 // stores once and an open file cannot be handed in again, so a tab never saves
 // over a newer copy with what it learned from an older one.
 
+/** @typedef {import("./pkg/taigi_web.js").Session} Session */
+/** @typedef {import("../types/shared.d.ts").SessionRunner} SessionRunner */
+/** @typedef {Record<string, Uint8Array>} SnapshotFiles */
+
 const LOCK = "taigi-user-data";
 const DATABASE = "taigi-web-user-data";
 const STORE = "files";
-/// One record holding all four files, so a save is one write.
+/** One record holding all four files, so a save is one write. */
 const SNAPSHOT = "snapshot";
 
+/**
+ * Wraps an IndexedDB request as a Promise.
+ * @template T
+ * @param {IDBRequest<T>} idbRequest
+ * @returns {Promise<T>}
+ */
 function request(idbRequest) {
   return new Promise((resolve, reject) => {
     idbRequest.onsuccess = () => resolve(idbRequest.result);
@@ -19,14 +29,21 @@ function request(idbRequest) {
   });
 }
 
+/**
+ * Opens the user-data IndexedDB database, creating the object store on first run.
+ * @returns {Promise<IDBDatabase>}
+ */
 function openDatabase() {
   const opening = indexedDB.open(DATABASE, 1);
   opening.onupgradeneeded = () => opening.result.createObjectStore(STORE);
   return request(opening);
 }
 
-/// The four files as last saved, `{ [file name]: Uint8Array }`, or `undefined`
-/// before the first save. For tests; a learning tab keeps its connection.
+/**
+ * The four files as last saved, `{ [file name]: Uint8Array }`, or `undefined`
+ * before the first save. For tests; a learning tab keeps its connection.
+ * @returns {Promise<SnapshotFiles | undefined>}
+ */
 export async function readSnapshot() {
   const database = await openDatabase();
   try {
@@ -38,31 +55,63 @@ export async function readSnapshot() {
 }
 
 export class Learning {
-  /// The session `ime.js` calls now, `null` between instances.
+  /**
+   * The session `ime.js` calls now, `null` between instances.
+   * @type {() => Session | null}
+   */
   #current;
-  /// The host's `run` (`ime.js`, the ChromeOS worker): an engine call,
-  /// `undefined` after a trap, which the host recovers from in its own way.
+  /**
+   * The host's `run` (`ime.js`, the ChromeOS worker): an engine call,
+   * `undefined` after a trap, which the host recovers from in its own way.
+   * @type {SessionRunner}
+   */
   #run;
-  /// After this tab's stores are open. The dev page lists custom words then.
+  /**
+   * After this tab's stores are open. The dev page lists custom words then.
+   * @type {(() => void) | undefined}
+   */
   #onOpen;
   #holdsLock = false;
-  /// The session being opened, so a second `attach` does not hand files in
-  /// twice.
+  /**
+   * The session being opened, so a second `attach` does not hand files in
+   * twice.
+   * @type {Session | null}
+   */
   #attaching = null;
-  /// The session whose stores are open.
+  /**
+   * The session whose stores are open.
+   * @type {Session | null}
+   */
   #opened = null;
-  /// Kept open while this tab learns, so a save starts its write at once.
+  /**
+   * Kept open while this tab learns, so a save starts its write at once.
+   * @type {IDBDatabase | null}
+   */
   #database = null;
-  /// `userDataFiles`, which no instance changes.
+  /**
+   * `userDataFiles`, which no instance changes.
+   * @type {string[]}
+   */
   #names = [];
-  /// The copy last read or written, by file name. A file that cannot be taken
-  /// out keeps its bytes here, so the others still save.
+  /**
+   * The copy last read or written, by file name. A file that cannot be taken
+   * out keeps its bytes here, so the others still save.
+   * @type {SnapshotFiles}
+   */
   #files = {};
-  /// A trap while handing the copy in: it would trap again on the next
-  /// instance, so this tab stops learning and the copy stays as it is.
+  /**
+   * A trap while handing the copy in: it would trap again on the next
+   * instance, so this tab stops learning and the copy stays as it is.
+   */
   #stopped = false;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   #saveTimer;
 
+  /**
+   * @param {() => Session | null} current
+   * @param {SessionRunner} run
+   * @param {() => void} [onOpen]
+   */
   constructor(current, run, onOpen) {
     this.#current = current;
     this.#run = run;
@@ -79,8 +128,12 @@ export class Learning {
       .catch(console.error);
   }
 
-  /// A new instance: it learns once this tab holds the lock, from the latest
-  /// copy. Failures go to the console; the tab still types.
+  /**
+   * A new instance: it learns once this tab holds the lock, from the latest
+   * copy. Failures go to the console; the tab still types.
+   * @param {Session | null} session
+   * @returns {Promise<void>}
+   */
   async attach(session) {
     if (
       !this.#holdsLock ||
@@ -124,15 +177,19 @@ export class Learning {
     }
   }
 
-  /// After a commit, which is what the engine learns from: at once, once per
-  /// key, after the key's handler. Not on the way out: every engine tested
-  /// aborts an IndexedDB write still running when the page unloads, Firefox
-  /// with a warning, so a save on `pagehide` or a hidden tab never landed.
+  /**
+   * After a commit, which is what the engine learns from: at once, once per
+   * key, after the key's handler. Not on the way out: every engine tested
+   * aborts an IndexedDB write still running when the page unloads, Firefox
+   * with a warning, so a save on `pagehide` or a hidden tab never landed.
+   * @returns {void}
+   */
   scheduleSave() {
     clearTimeout(this.#saveTimer);
     this.#saveTimer = setTimeout(() => this.#save(), 0);
   }
 
+  /** @returns {void} */
   #save() {
     const session = this.#opened;
     if (session === null || this.#current() !== session || !this.#database) {
@@ -156,9 +213,14 @@ export class Learning {
     }
   }
 
-  /// `#run`, with an error the engine raises on purpose (a damaged file, a
-  /// file that is not there) logged and answered `null`. A trap still answers
-  /// `undefined`.
+  /**
+   * `#run`, with an error the engine raises on purpose (a damaged file, a
+   * file that is not there) logged and answered `null`. A trap still answers
+   * `undefined`.
+   * @template T
+   * @param {(session: Session) => T | null | undefined} action
+   * @returns {T | null | undefined}
+   */
   #runLogged(action) {
     return this.#run((current) => {
       try {

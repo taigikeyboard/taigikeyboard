@@ -11,9 +11,18 @@
   }
   globalThis.taigiKeyboard = true;
 
-  /// `typing.js`, once asked for.
+  /** @typedef {import("./background.js").TabMode} TabMode */
+  /** @typedef {typeof import("./typing.js")} TypingModule */
+
+  /**
+   * `typing.js`, once asked for.
+   * @type {Promise<TypingModule> | null}
+   */
   let typing = null;
-  /// Its key handlers, once it has loaded.
+  /**
+   * Its key handlers, once it has loaded.
+   * @type {TypingModule | null}
+   */
   let handlers = null;
 
   // Now, so that these are the window's first key listeners: a key the engine
@@ -25,16 +34,28 @@
     capture: true,
   });
 
+  /**
+   * Sends a message to the extension service worker and returns `undefined` if unavailable.
+   * @param {unknown} message
+   * @returns {Promise<unknown>}
+   */
   function tell(message) {
     return chrome.runtime.sendMessage(message).catch(() => undefined);
   }
 
+  /**
+   * Applies a mode transition, lazily importing `typing.js` on first activation.
+   * @param {TabMode} mode
+   * @returns {void}
+   */
   function setMode(mode) {
     // A tab that never typed loads nothing to hear that it is off.
     if (mode === "off" && typing === null) {
       return;
     }
-    typing ??= import(chrome.runtime.getURL("typing.js"));
+    typing ??= /** @type {Promise<TypingModule>} */ (
+      import(chrome.runtime.getURL("typing.js"))
+    );
     typing.then(
       (module) => {
         handlers = module;
@@ -50,19 +71,25 @@
     );
   }
 
-  chrome.runtime.onMessage.addListener((message, _sender, respond) => {
-    if (message.type === "taigi.setMode") {
+  chrome.runtime.onMessage.addListener((rawMessage, _sender, respond) => {
+    const message =
+      /** @type {{ type?: string, mode?: TabMode } | undefined} */ (rawMessage);
+    if (message?.type === "taigi.setMode" && message.mode) {
       setMode(message.mode);
       respond(true);
     }
   });
 
-  // The permission and the mode are per site: the host, as the browser's
-  // site access is.
+  /**
+   * The permission and the mode are per site: the host, as the browser's
+   * site access is.
+   * @returns {void}
+   */
   function hello() {
     tell({ type: "taigi.hello", site: location.hostname }).then((answer) => {
-      if (answer) {
-        setMode(answer.mode);
+      const reply = /** @type {{ mode?: TabMode } | undefined} */ (answer);
+      if (reply?.mode) {
+        setMode(reply.mode);
       }
     });
   }

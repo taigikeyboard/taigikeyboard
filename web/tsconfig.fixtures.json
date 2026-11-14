@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": [],
+    "moduleDetection": "force",
+    "rootDirs": ["extension/fixtures", "vendor"]
+  },
+  "include": [
+    "extension/fixtures/*.js",
+    "vendor/lexical.js",
+    "types/fixtures.d.ts",
+    "types/globals.d.ts"
+  ]
+}

@@ -14,10 +14,14 @@ import {
   test,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
 const CM6 = `${A}/codemirror6.html`;
 const EDITOR = ".cm-content";
 
+/** @param {Page} page */
 const text = (page) => page.evaluate(() => window.cm6Fixture.text());
+/** @param {Page} page */
 const selection = (page) => page.evaluate(() => window.cm6Fixture.selection());
 
 test("a word composes beside the caret and commits into CodeMirror 6's EditorState", async ({
@@ -42,13 +46,14 @@ test("the chip sits under .cm-editor whether .cm-content is short or overflows .
 }) => {
   await openTyping(context, worker, page, CM6, EDITOR);
   const cmBox = await page.locator(".cm-editor").boundingBox();
-
   const shortChip = await chip(page).boundingBox();
-  expect(shortChip.y).toBeGreaterThanOrEqual(cmBox.y + cmBox.height);
-  expect(shortChip.y).toBeLessThan(cmBox.y + cmBox.height + 12);
-  expect(
-    Math.abs(shortChip.x + shortChip.width - (cmBox.x + cmBox.width)),
-  ).toBeLessThan(2);
+  expect(cmBox).not.toBeNull();
+  expect(shortChip).not.toBeNull();
+  const cm = /** @type {NonNullable<typeof cmBox>} */ (cmBox);
+  const sc = /** @type {NonNullable<typeof shortChip>} */ (shortChip);
+  expect(sc.y).toBeGreaterThanOrEqual(cm.y + cm.height);
+  expect(sc.y).toBeLessThan(cm.y + cm.height + 12);
+  expect(Math.abs(sc.x + sc.width - (cm.x + cm.width))).toBeLessThan(2);
 
   // Forty lines make `.cm-content` much taller than `.cm-scroller`: the chip
   // stays anchored to the visible `.cm-editor` box rather than running off
@@ -63,8 +68,10 @@ test("the chip sits under .cm-editor whether .cm-content is short or overflows .
   );
   await page.keyboard.type("tai");
   const tallChip = await chip(page).boundingBox();
-  expect(tallChip.y).toBeGreaterThanOrEqual(cmBox.y + cmBox.height);
-  expect(tallChip.y).toBeLessThan(cmBox.y + cmBox.height + 12);
+  expect(tallChip).not.toBeNull();
+  const tc = /** @type {NonNullable<typeof tallChip>} */ (tallChip);
+  expect(tc.y).toBeGreaterThanOrEqual(cm.y + cm.height);
+  expect(tc.y).toBeLessThan(cm.y + cm.height + 12);
 });
 
 test("a commit replaces the selection", async ({ context, worker, page }) => {

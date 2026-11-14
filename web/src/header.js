@@ -4,6 +4,11 @@
 
 const STORAGE_KEY = "taigi.title";
 
+/**
+ * @param {HTMLElement} title
+ * @param {() => void} focusText
+ * @returns {void}
+ */
 export function keepTitle(title, focusText) {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);

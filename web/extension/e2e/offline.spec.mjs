@@ -8,6 +8,7 @@ test("nothing is fetched from anywhere but the site and the package", async ({
   worker,
   page,
 }) => {
+  /** @type {string[]} */
   const requested = [];
   context.on("request", (request) => requested.push(request.url()));
   // Anything else would fail here rather than quietly succeed.

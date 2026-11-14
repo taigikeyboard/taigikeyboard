@@ -5,6 +5,10 @@ const STORAGE_KEY = "taigi.sidebar";
 // The breakpoint of the docked `@media` block in style.css.
 const wideScreen = window.matchMedia("(min-width: 50rem)");
 
+/**
+ * @param {string} state
+ * @returns {void}
+ */
 function remember(state) {
   try {
     localStorage.setItem(STORAGE_KEY, state);
@@ -14,9 +18,15 @@ function remember(state) {
 }
 
 export class Sidebar {
+  /** @type {HTMLElement} */
   #toggle;
+  /** @type {HTMLElement} */
   #root;
 
+  /**
+   * @param {HTMLElement} toggle
+   * @param {HTMLElement} root
+   */
   constructor(toggle, root) {
     this.#toggle = toggle;
     this.#root = root;
@@ -39,16 +49,22 @@ export class Sidebar {
     );
   }
 
+  /** @returns {void} */
   toggle() {
     this.#setOpen(!this.#isOpen());
   }
 
+  /** @returns {boolean} */
   #isOpen() {
     return wideScreen.matches
       ? document.documentElement.dataset.sidebar === "open"
       : this.#root.matches(":popover-open");
   }
 
+  /**
+   * @param {boolean} isOpen
+   * @returns {void}
+   */
   #setOpen(isOpen) {
     if (!wideScreen.matches) {
       this.#root.togglePopover(isOpen);
@@ -63,6 +79,7 @@ export class Sidebar {
     this.#syncExpanded();
   }
 
+  /** @returns {void} */
   #syncExpanded() {
     this.#toggle.setAttribute("aria-expanded", String(this.#isOpen()));
   }

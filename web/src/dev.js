@@ -15,29 +15,59 @@ import { Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
 import { TpsKeyboard } from "./tps_keyboard.js";
 
+/** @typedef {import("./pkg/taigi_web.js").Session} Session */
+/** @typedef {import("./i18n.js").StringKey} StringKey */
+/** @typedef {import("../types/shared.d.ts").CustomEntriesReply} CustomEntriesReply */
+/** @typedef {import("../types/shared.d.ts").ExplainView} ExplainView */
+/** @typedef {import("../types/shared.d.ts").Platform} Platform */
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").SettingsDocument} SettingsDocument */
+/** @typedef {import("../types/shared.d.ts").SettingsValue} SettingsValue */
+/** @typedef {import("../types/shared.d.ts").WireCell} WireCell */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {import("../types/shared.d.ts").WireTpsRow} WireTpsRow */
+
+/**
+ * @template {HTMLElement} [T=HTMLElement]
+ * @param {string} id
+ * @returns {T}
+ */
+function requireElement(id) {
+  const element = document.getElementById(id);
+  if (!element) {
+    throw new Error(`missing #${id}`);
+  }
+  return /** @type {T} */ (element);
+}
+
+/** @type {Reply} */
 const NOTHING = { handled: true, emits: [] };
 
-const editorBox = document.getElementById("editor");
-const editor = new Editor(document.getElementById("text"));
+const editorBox = requireElement("editor");
+const editor = new Editor(requireElement("text"));
 const text = editor.root;
-const preedit = document.getElementById("preedit");
-const candidates = document.getElementById("candidates");
-const pageUp = document.getElementById("page-up");
-const pageDown = document.getElementById("page-down");
-const notice = document.getElementById("notice");
-const messageSlot = document.getElementById("message");
-const progress = document.getElementById("progress");
-const retryButton = document.getElementById("retry");
-const loadSlot = document.getElementById("load-slot");
-const form = document.getElementById("settings");
+const preedit = requireElement("preedit");
+const candidates = requireElement("candidates");
+const pageUp = /** @type {HTMLButtonElement} */ (requireElement("page-up"));
+const pageDown = /** @type {HTMLButtonElement} */ (requireElement("page-down"));
+const notice = requireElement("notice");
+const messageSlot = requireElement("message");
+const progress = /** @type {HTMLProgressElement} */ (
+  requireElement("progress")
+);
+const retryButton = requireElement("retry");
+const loadSlot = requireElement("load-slot");
+const form = /** @type {HTMLFormElement} */ (requireElement("settings"));
 
 const surface = new Surface(editor, editorBox);
 const SORT_KEY = "taigi.devSortOrder";
 const RANK_ONE_WORD_KEY = "taigi.devRankOneWord";
 const PRESET_KEY = "taigi.devSortPreset";
-/// Preference, then a partial prefix behind a full syllable or an
-/// abbreviation, then selection weight, then abbreviation.
-/// The rest stay in the engine's order.
+/**
+ * Preference, then a partial prefix behind a full syllable or an
+ * abbreviation, then selection weight, then abbreviation.
+ * The rest stay in the engine's order.
+ */
 const PROPOSAL = [
   "tier",
   "preference_class",
@@ -52,24 +82,33 @@ const PROPOSAL = [
   "source_rank",
   "stable_idx",
 ];
-const rankOneWord = document.getElementById("rank-one-word-input");
-const presetInputs = document.querySelectorAll("[name=sortPreset]");
+const rankOneWord = /** @type {HTMLInputElement} */ (
+  requireElement("rank-one-word-input")
+);
+const presetInputs = /** @type {NodeListOf<HTMLInputElement>} */ (
+  document.querySelectorAll("[name=sortPreset]")
+);
 let applyingPreset = false;
 
 const inspector = new Inspector(
-  document.getElementById("inspector-body"),
-  document.getElementById("mechanism"),
-  () => call((current) => current.explain()),
+  requireElement("inspector-body"),
+  requireElement("mechanism"),
+  () => {
+    const raw = run((current) => current.explain());
+    return raw === undefined
+      ? null
+      : /** @type {ExplainView | null} */ (JSON.parse(raw));
+  },
   (fields) => installSort(fields),
 );
 
-new Sidebar(
-  document.getElementById("sidebar-toggle"),
-  document.getElementById("sidebar"),
-);
+new Sidebar(requireElement("sidebar-toggle"), requireElement("sidebar"));
 
+/** @type {SettingsDocument} */
 let state = readDocument();
+/** @type {Session | null} */
 let session = null;
+/** @type {[StringKey, Record<string, string> | undefined] | null} */
 let said = null;
 
 let customOpen = false;
@@ -82,24 +121,30 @@ const learning = new Learning(
     refreshCustomWords();
   },
 );
-const customForm = document.getElementById("custom-form");
-const customRoman = document.getElementById("custom-roman");
-const customHanji = document.getElementById("custom-hanji");
-const customSave = document.getElementById("custom-save");
-const customStatus = document.getElementById("custom-status");
-const customList = document.getElementById("custom-list");
-const tpsKeyboard = new TpsKeyboard(
-  document.getElementById("tps-keyboard"),
-  (glyph) => {
-    editor.focus();
-    apply(call((current) => current.tpsKeyPress(glyph)));
-  },
+const customForm = /** @type {HTMLFormElement} */ (
+  requireElement("custom-form")
 );
+const customRoman = /** @type {HTMLInputElement} */ (
+  requireElement("custom-roman")
+);
+const customHanji = /** @type {HTMLInputElement} */ (
+  requireElement("custom-hanji")
+);
+const customSave = /** @type {HTMLButtonElement} */ (
+  requireElement("custom-save")
+);
+const customStatus = requireElement("custom-status");
+const customList = requireElement("custom-list");
+const tpsKeyboard = new TpsKeyboard(requireElement("tps-keyboard"), (glyph) => {
+  editor.focus();
+  apply(call((current) => current.tpsKeyPress(glyph)));
+});
 
 showControls();
 rememberedPreset();
 inspector.sync();
 
+/** @returns {string[] | null} */
 function rememberedSort() {
   try {
     const parsed = JSON.parse(sessionStorage.getItem(SORT_KEY) ?? "null");
@@ -109,7 +154,7 @@ function rememberedSort() {
       parsed.length === canonical.length &&
       canonical.every((field) => parsed.includes(field))
     ) {
-      return parsed;
+      return /** @type {string[]} */ (parsed);
     }
   } catch {
     // A damaged note is the default order.
@@ -117,10 +162,16 @@ function rememberedSort() {
   return null;
 }
 
+/** @returns {boolean} */
 function rememberedRankOneWord() {
   return sessionStorage.getItem(RANK_ONE_WORD_KEY) === "1";
 }
 
+/**
+ * @param {string[]} left
+ * @param {string[]} right
+ * @returns {boolean}
+ */
 function sameOrder(left, right) {
   return (
     left.length === right.length &&
@@ -128,6 +179,10 @@ function sameOrder(left, right) {
   );
 }
 
+/**
+ * @param {string} name
+ * @returns {void}
+ */
 function showPreset(name) {
   for (const input of presetInputs) {
     input.checked = input.value === name;
@@ -139,8 +194,12 @@ function showPreset(name) {
   }
 }
 
-/// A saved choice, or one inferred from an older note that only stored the
-/// order and the switch.
+/**
+ * A saved choice, or one inferred from an older note that only stored the
+ * order and the switch.
+ *
+ * @returns {void}
+ */
 function rememberedPreset() {
   const stored = sessionStorage.getItem(PRESET_KEY);
   if (stored === "original" || stored === "proposal" || stored === "test") {
@@ -173,6 +232,10 @@ function rememberedPreset() {
   }
 }
 
+/**
+ * @param {string} name
+ * @returns {void}
+ */
 function applyPreset(name) {
   applyingPreset = true;
   if (name === "proposal") {
@@ -186,6 +249,10 @@ function applyPreset(name) {
   showPreset(name);
 }
 
+/**
+ * @param {boolean} enabled
+ * @returns {void}
+ */
 function installRankOneWord(enabled) {
   rankOneWord.checked = enabled;
   try {
@@ -202,6 +269,10 @@ function installRankOneWord(enabled) {
   apply(call((current) => current.setRankOneWord(enabled)));
 }
 
+/**
+ * @param {string[]} fields
+ * @returns {void}
+ */
 function installSort(fields) {
   setSortFieldOrder(fields);
   try {
@@ -219,6 +290,7 @@ function installSort(fields) {
   apply(call((current) => current.setSortOrder(JSON.stringify(fields))));
 }
 
+/** @returns {SettingsDocument} */
 function readDocument() {
   try {
     return parseStored(localStorage.getItem(STORAGE_KEY));
@@ -227,8 +299,12 @@ function readDocument() {
   }
 }
 
+/**
+ * @param {HTMLInputElement | HTMLSelectElement} control
+ * @returns {SettingsValue}
+ */
 function controlValue(control) {
-  if (control.type === "checkbox") {
+  if (control instanceof HTMLInputElement && control.type === "checkbox") {
     return control.checked;
   }
   return "boolean" in control.dataset
@@ -236,20 +312,37 @@ function controlValue(control) {
     : control.value;
 }
 
-/// The lab keeps Automatic, Hanji, English and Japanese. A Tâi-lô or
-/// Pe̍h-ōe-jī tag from the writing page stays in the shared document and
-/// draws here as Hanji.
+/**
+ * The lab keeps Automatic, Hanji, English and Japanese. A Tâi-lô or
+ * Pe̍h-ōe-jī tag from the writing page stays in the shared document and
+ * draws here as Hanji.
+ *
+ * @param {SettingsValue | undefined} tag
+ * @returns {string}
+ */
 function pageLanguage(tag) {
-  return tag === "tailo" || tag === "poj" ? "hanji" : (tag ?? "system");
+  return tag === "tailo" || tag === "poj" ? "hanji" : String(tag ?? "system");
 }
 
+/** @returns {void} */
 function showControls() {
   const { values } = state;
   for (const control of form.querySelectorAll("[name]")) {
+    if (
+      !(
+        control instanceof HTMLInputElement ||
+        control instanceof HTMLSelectElement
+      )
+    ) {
+      continue;
+    }
     const value = values[control.name];
-    if (control.type === "checkbox") {
+    if (control instanceof HTMLInputElement && control.type === "checkbox") {
       control.checked =
         typeof value === "boolean" ? value : control.defaultChecked;
+      continue;
+    }
+    if (!(control instanceof HTMLSelectElement)) {
       continue;
     }
     const shownValue =
@@ -264,11 +357,19 @@ function showControls() {
       shown.selected = true;
     }
   }
-  const mode = form.elements.inputMode.value;
-  form.elements.tpsKeyboardShown.disabled = mode !== "tps";
+  const inputModeControl = /** @type {HTMLSelectElement | null} */ (
+    form.elements.namedItem("inputMode")
+  );
+  const tpsShownControl = /** @type {HTMLInputElement | null} */ (
+    form.elements.namedItem("tpsKeyboardShown")
+  );
+  const mode = inputModeControl?.value;
+  if (tpsShownControl) {
+    tpsShownControl.disabled = mode !== "tps";
+  }
   document.documentElement.toggleAttribute(
     "data-tps-keyboard",
-    mode === "tps" && form.elements.tpsKeyboardShown.checked,
+    mode === "tps" && Boolean(tpsShownControl?.checked),
   );
   setDisplayLanguage(pageLanguage(values.displayLanguage));
   customRoman.placeholder = translate("dictionary.romanPlaceholder");
@@ -277,9 +378,14 @@ function showControls() {
   refreshCustomWords();
 }
 
+/**
+ * @param {string} name
+ * @param {SettingsValue} value
+ * @returns {void}
+ */
 function writeSetting(name, value) {
   state.values[name] = value;
-  state.revision += 1;
+  state.revision = (state.revision ?? 0) + 1;
   const json = JSON.stringify(state);
   try {
     localStorage.setItem(STORAGE_KEY, json);
@@ -288,16 +394,21 @@ function writeSetting(name, value) {
   }
   showControls();
   apply(call((current) => current.commitComposition()));
-  call((current) => current.setSettings(json));
+  run((current) => current.setSettings(json));
   inspector.sync();
 }
 
 form.addEventListener("change", ({ target }) => {
-  if (target.name) {
+  if (
+    (target instanceof HTMLInputElement ||
+      target instanceof HTMLSelectElement) &&
+    target.name
+  ) {
     writeSetting(target.name, controlValue(target));
   }
 });
 
+/** @returns {Platform} */
 function platform() {
   const name = navigator.userAgentData?.platform ?? navigator.platform;
   if (/mac|iphone|ipad/i.test(name)) {
@@ -306,30 +417,50 @@ function platform() {
   return /win/i.test(name) ? "windows" : "linux";
 }
 
+/**
+ * @param {StringKey} key
+ * @param {string} status
+ * @param {Record<string, string>} [placeholders]
+ * @returns {void}
+ */
 function say(key, status, placeholders) {
   said = [key, placeholders];
   messageSlot.textContent = translate(key, placeholders);
   messageSlot.dataset.state = status;
 }
 
-/// A mode announcement arrives already translated, so `said` stays empty and
-/// the line is left as the session wrote it.
+/**
+ * A mode announcement arrives already translated, so `said` stays empty and
+ * the line is left as the session wrote it.
+ *
+ * @returns {void}
+ */
 function redrawMessage() {
   if (said !== null) {
     messageSlot.textContent = translate(...said);
   }
 }
 
+/** @returns {void} */
 function showLoading() {
   say("web.loading", "loading");
   loadSlot.dataset.show = "";
 }
 
+/**
+ * @param {number} fraction
+ * @returns {void}
+ */
 function showProgress(fraction) {
   progress.value = fraction;
   loadSlot.dataset.show = "progress";
 }
 
+/**
+ * @param {unknown} error
+ * @param {Session | null} starting
+ * @returns {void}
+ */
 function failLoading(error, starting) {
   console.error(error);
   if (session !== starting) {
@@ -344,6 +475,10 @@ function failLoading(error, starting) {
   editor.setEditable(session !== null);
 }
 
+/**
+ * @param {Session} starting
+ * @returns {Promise<void>}
+ */
 async function loadDictionaries(starting) {
   try {
     const files = dictionaries(starting.dictionaryFiles(), (fraction) => {
@@ -371,6 +506,10 @@ async function loadDictionaries(starting) {
   inspector.sync();
 }
 
+/**
+ * @param {Session} target
+ * @returns {void}
+ */
 function restoreSettings(target) {
   try {
     target.setSettings(JSON.stringify(state));
@@ -389,7 +528,9 @@ function restoreSettings(target) {
   }
 }
 
+/** @returns {Promise<void>} */
 async function start() {
+  /** @type {Session | null} */
   let starting = null;
   showLoading();
   try {
@@ -412,7 +553,9 @@ async function start() {
     }
     restoreSettings(starting);
     learning.attach(starting);
-    tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
+    tpsKeyboard.draw(
+      /** @type {WireTpsRow[]} */ (JSON.parse(starting.tpsKeyboardRows())),
+    );
     editor.setEditable(true);
     editor.focus();
   } catch (error) {
@@ -422,6 +565,11 @@ async function start() {
   await loadDictionaries(starting);
 }
 
+/**
+ * @template T
+ * @param {(session: Session) => T} action
+ * @returns {T | undefined}
+ */
 function run(action) {
   if (session === null) {
     return undefined;
@@ -440,11 +588,22 @@ function run(action) {
   }
 }
 
+/**
+ * @param {(session: Session) => string} action
+ * @returns {Reply}
+ */
 function call(action) {
   const reply = run(action);
-  return reply === undefined ? NOTHING : JSON.parse(reply);
+  return reply === undefined
+    ? NOTHING
+    : /** @type {Reply} */ (JSON.parse(reply));
 }
 
+/**
+ * @param {string} text
+ * @param {number} caret
+ * @returns {void}
+ */
 function showPreedit(text, caret) {
   const characters = Array.from(text);
   const mark = document.createElement("span");
@@ -457,11 +616,16 @@ function showPreedit(text, caret) {
   preedit.hidden = text.length === 0;
 }
 
+/** @returns {void} */
 function clearPreedit() {
   preedit.replaceChildren();
   preedit.hidden = true;
 }
 
+/**
+ * @param {{ cells: WireCell[], labels: string[], cursor: number, cursorVisible: boolean, pageSize: number }} table
+ * @returns {void}
+ */
 function showTable(table) {
   const { cells, labels, cursor, cursorVisible, pageSize } = table;
   const start = Math.floor(cursor / pageSize) * pageSize;
@@ -493,6 +657,11 @@ function showTable(table) {
   pageDown.hidden = start + pageSize >= cells.length;
 }
 
+/**
+ * @param {string} text
+ * @param {string} className
+ * @returns {HTMLSpanElement}
+ */
 function span(text, className) {
   const node = document.createElement("span");
   node.className = className;
@@ -500,6 +669,7 @@ function span(text, className) {
   return node;
 }
 
+/** @returns {void} */
 function clearComposition() {
   clearPreedit();
   candidates.replaceChildren();
@@ -507,6 +677,10 @@ function clearComposition() {
   pageDown.hidden = true;
 }
 
+/**
+ * @param {WireEmit} emit
+ * @returns {void}
+ */
 function applyEmit(emit) {
   switch (emit.type) {
     case "preedit":
@@ -543,9 +717,13 @@ function applyEmit(emit) {
   }
 }
 
+/**
+ * @param {Reply} reply
+ * @returns {void}
+ */
 function apply(reply) {
   if (typeof reply.settings === "string") {
-    state = JSON.parse(reply.settings);
+    state = /** @type {SettingsDocument} */ (JSON.parse(reply.settings));
     try {
       localStorage.setItem(STORAGE_KEY, reply.settings);
     } catch {
@@ -561,6 +739,10 @@ function apply(reply) {
   inspector.sync();
 }
 
+/**
+ * @param {KeyboardEvent} event
+ * @returns {string}
+ */
 function keyJson(event) {
   return JSON.stringify({
     key: event.key,
@@ -573,6 +755,10 @@ function keyJson(event) {
   });
 }
 
+/**
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
+ */
 function isForeignComposition(event) {
   return event.isComposing || event.keyCode === 229;
 }
@@ -582,11 +768,12 @@ function isForeignComposition(event) {
 editorBox.addEventListener(
   "keydown",
   (event) => {
-    if (!text.contains(event.target) || isForeignComposition(event)) {
+    const target = /** @type {Node | null} */ (event.target);
+    if (!text.contains(target) || isForeignComposition(event)) {
       return;
     }
     if (surface.takeForeignChange()) {
-      call((current) => current.caretMoved());
+      run((current) => current.caretMoved());
     }
     const reply = call((current) => current.keyDown(keyJson(event)));
     if (reply.handled) {
@@ -622,11 +809,12 @@ pageDown.addEventListener("click", () => {
 document.addEventListener(
   "pointerdown",
   (event) => {
-    const keeps = event.target.closest(
+    const target = /** @type {Element | null} */ (event.target);
+    const keeps = target?.closest(
       "#text, #candidates, #tps-keyboard, #inspector-body, #page-up, #page-down, #sidebar, #sidebar-toggle, #rank-one-word, #clear-learning, #custom-words",
     );
-    if (event.target.closest("#text")) {
-      call((current) => current.caretMoved());
+    if (target?.closest("#text")) {
+      run((current) => current.caretMoved());
     }
     if (!keeps) {
       apply(call((current) => current.commitComposition()));
@@ -636,7 +824,7 @@ document.addEventListener(
 );
 
 window.addEventListener("blur", () => {
-  call((current) => current.focusLost());
+  run((current) => current.focusLost());
 });
 
 for (const button of document.querySelectorAll("button")) {
@@ -652,7 +840,7 @@ retryButton.addEventListener("click", () => {
   loadDictionaries(session);
 });
 
-document.getElementById("clear-learning").addEventListener("click", () => {
+requireElement("clear-learning").addEventListener("click", () => {
   try {
     apply(call((current) => current.clearLearningRecords()));
     learning.scheduleSave();
@@ -662,19 +850,29 @@ document.getElementById("clear-learning").addEventListener("click", () => {
   editor.focus();
 });
 
+/**
+ * @param {boolean} enabled
+ * @returns {void}
+ */
 function setCustomFormEnabled(enabled) {
   customRoman.disabled = !enabled;
   customHanji.disabled = !enabled;
   customSave.disabled = !enabled;
 }
 
+/** @returns {void} */
 function refreshCustomWords() {
   if (!customOpen || session === null) {
     return;
   }
+  /** @type {CustomEntriesReply} */
   let listing;
   try {
-    listing = call((current) => current.listCustomEntries());
+    const raw = run((current) => current.listCustomEntries());
+    if (raw === undefined) {
+      return;
+    }
+    listing = /** @type {CustomEntriesReply} */ (JSON.parse(raw));
   } catch (error) {
     customStatus.textContent = String(error);
     return;
@@ -716,13 +914,18 @@ customForm.addEventListener("submit", (event) => {
 });
 
 customList.addEventListener("click", (event) => {
-  const button = event.target.closest("button");
+  const target = /** @type {Element | null} */ (event.target);
+  const button = /** @type {HTMLButtonElement | null} */ (
+    target?.closest("button") ?? null
+  );
   if (!button) {
     return;
   }
   customStatus.textContent = "";
   try {
-    apply(call((current) => current.deleteCustomEntry(button.dataset.id)));
+    apply(
+      call((current) => current.deleteCustomEntry(button.dataset.id ?? "")),
+    );
     learning.scheduleSave();
     refreshCustomWords();
   } catch (error) {
@@ -730,13 +933,12 @@ customList.addEventListener("click", (event) => {
   }
 });
 
-document
-  .getElementById("custom-words")
-  .addEventListener("mousedown", (event) => {
-    if (event.target.closest("button")) {
-      event.preventDefault();
-    }
-  });
+requireElement("custom-words").addEventListener("mousedown", (event) => {
+  const target = /** @type {Element | null} */ (event.target);
+  if (target?.closest("button")) {
+    event.preventDefault();
+  }
+});
 
 rankOneWord.addEventListener("change", () => {
   installRankOneWord(rankOneWord.checked);

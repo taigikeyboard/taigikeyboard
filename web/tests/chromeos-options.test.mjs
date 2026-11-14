@@ -12,12 +12,18 @@ const index = readFileSync(
 );
 const form = optionsForm(index);
 
+/**
+ * @param {string} name
+ * @returns {string}
+ */
 function rowOf(name) {
   const lines = form.split("\n");
   const at = lines.findIndex((line) => line.includes(`name="${name}"`));
-  return lines
-    .slice(0, at + 1)
-    .findLast((line) => line.includes('<label class="setting"'));
+  return (
+    lines
+      .slice(0, at + 1)
+      .findLast((line) => line.includes('<label class="setting"')) ?? ""
+  );
 }
 
 test("the form is the page's whole settings form", () => {
@@ -47,9 +53,8 @@ test("rows ChromeOS cannot honour are hidden, kept for Settings to read", () => 
 test("the Shortcuts section is hidden", () => {
   const lines = form.split("\n");
   const at = lines.findIndex((line) => line.includes('<div id="shortcuts">'));
-  const section = lines
-    .slice(0, at)
-    .findLast((line) => line.includes("<details"));
+  const section =
+    lines.slice(0, at).findLast((line) => line.includes("<details")) ?? "";
   assert.match(section, /<details class="sidebar-section" hidden>/);
 });
 

@@ -12,14 +12,26 @@ import {
   selected,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Locator} Locator */
+/** @typedef {import("@playwright/test").Page} Page */
+
 const TEXT = "我欲去台北揣朋友";
 
+/** @param {Page} page */
 const bubble = (page) => page.locator("#format-bubble");
+/**
+ * @param {Page} page
+ * @param {string} kind
+ */
 const button = (page, kind) =>
   page.locator(`#format-bubble button[data-markup="${kind}"]`);
 
-/// The page with `TEXT` stored by a past visit, its undo history empty (WebKit
-/// folds consecutive edits into one undo step).
+/**
+ * The page with `TEXT` stored by a past visit, its undo history empty (WebKit
+ * folds consecutive edits into one undo step).
+ * @param {Page} page
+ * @returns {Promise<Locator>}
+ */
 async function openWithText(page) {
   await seedText(page, TEXT);
   const editor = await open(page, { intro: true });
@@ -36,9 +48,13 @@ test("a selection shows the bubble inside the editor, and bold toggles", async (
   await expect(bubble(page)).toBeVisible();
   const box = await bubble(page).boundingBox();
   const area = await page.locator("#editor").boundingBox();
-  expect(box.x).toBeGreaterThanOrEqual(area.x);
-  expect(box.y).toBeGreaterThanOrEqual(area.y);
-  expect(box.x + box.width).toBeLessThanOrEqual(area.x + area.width + 1);
+  expect(box).not.toBeNull();
+  expect(area).not.toBeNull();
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  const a = /** @type {NonNullable<typeof area>} */ (area);
+  expect(b.x).toBeGreaterThanOrEqual(a.x);
+  expect(b.y).toBeGreaterThanOrEqual(a.y);
+  expect(b.x + b.width).toBeLessThanOrEqual(a.x + a.width + 1);
 
   await button(page, "bold").click();
   await expectText(editor, "我欲去**台北**揣朋友");

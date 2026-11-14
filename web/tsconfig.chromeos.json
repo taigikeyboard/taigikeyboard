@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["chrome"],
+    "rootDirs": ["chromeos", "src", "types/site"]
+  },
+  "include": [
+    "chromeos/options.js",
+    "chromeos/offscreen.js",
+    "chromeos/calls.js",
+    "src/settings.js",
+    "src/i18n.js",
+    "types/shared.d.ts",
+    "types/globals.d.ts"
+  ]
+}

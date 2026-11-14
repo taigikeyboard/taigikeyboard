@@ -2,10 +2,35 @@
 // key as the session's browser key, a session reply as chrome.input.ime calls.
 // Pure, so Node tests it (web/tests/chromeos-calls.test.mjs).
 
-/// ChromeOS names some keys its own way (`Down`, `Esc`, `Ctrl`, and `""` for
-/// Delete; recorded in linux-chromeos r1738485), so these are read by
-/// position and given the DOM name `key.rs` expects. Printable keys keep
-/// `key`, which follows the layout.
+/** @typedef {import("../types/shared.d.ts").BrowserKey} BrowserKey */
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
+/**
+ * @typedef {{
+ *   engineID: string,
+ *   contextID: number,
+ * }} ImeTarget
+ */
+/**
+ * @typedef {(
+ *   | ["setComposition", { contextID: number, text: string, cursor: number }]
+ *   | ["clearComposition", { contextID: number }]
+ *   | ["commitText", { contextID: number, text: string }]
+ *   | ["deleteSurroundingText", { engineID: string, contextID: number, offset: number, length: number }]
+ *   | ["setCandidates", { contextID: number, candidates: Array<{ candidate: string, id: number, label: string, annotation: string | undefined }> }]
+ *   | ["setCandidateWindowProperties", { engineID: string, properties: { visible: boolean, vertical?: boolean, pageSize?: number, cursorVisible?: boolean, currentCandidateIndex?: number, totalCandidates?: number } }]
+ *   | ["setCursorPosition", { contextID: number, candidateID: number }]
+ * )} ImeCall
+ */
+
+/**
+ * ChromeOS names some keys its own way (`Down`, `Esc`, `Ctrl`, and `""` for
+ * Delete; recorded in linux-chromeos r1738485), so these are read by
+ * position and given the DOM name `key.rs` expects. Printable keys keep
+ * `key`, which follows the layout.
+ * @type {Record<string, string>}
+ */
 const DOM_KEY_BY_CODE = {
   ArrowDown: "ArrowDown",
   ArrowUp: "ArrowUp",
@@ -29,31 +54,48 @@ const DOM_KEY_BY_CODE = {
   CapsLock: "CapsLock",
 };
 
-/// `web/crates/taigi-web/src/key.rs` `BrowserKey`. A ChromeOS key event has
-/// no Meta (Search) and no repeat flag. Caps Lock is ignored, as on the page.
+/**
+ * `web/crates/taigi-web/src/key.rs` `BrowserKey`. A ChromeOS key event has
+ * no Meta (Search) and no repeat flag. Caps Lock is ignored, as on the page.
+ * @param {chrome.input.ime.KeyboardEvent} keyData
+ * @returns {string}
+ */
 export function keyJson(keyData) {
-  return JSON.stringify({
+  /** @type {BrowserKey} */
+  const browserKey = {
     key: DOM_KEY_BY_CODE[keyData.code] ?? keyData.key,
     code: keyData.code,
-    shift: keyData.shiftKey,
-    ctrl: keyData.ctrlKey,
-    alt: keyData.altKey,
+    shift: Boolean(keyData.shiftKey),
+    ctrl: Boolean(keyData.ctrlKey),
+    alt: Boolean(keyData.altKey),
     meta: false,
     repeat: false,
-  });
+  };
+  return JSON.stringify(browserKey);
 }
 
-/// The session counts the caret in characters, Chrome in UTF-16 units: a
-/// supplementary-plane Hanji counts once there and twice here.
+/**
+ * The session counts the caret in characters, Chrome in UTF-16 units: a
+ * supplementary-plane Hanji counts once there and twice here.
+ * @param {string} text
+ * @param {number} caret
+ * @returns {number}
+ */
 export function utf16Caret(text, caret) {
   return Array.from(text).slice(0, caret).join("").length;
 }
 
-/// `[method, details]` pairs for `chrome.input.ime[method](details)`, in
-/// order. The reply carries the whole candidate list with an absolute cursor;
-/// ChromeOS draws one page, and `onCandidateClicked` answers with an ID that
-/// counts from that page, which is what `clickCandidate` takes.
+/**
+ * `[method, details]` pairs for `chrome.input.ime[method](details)`, in
+ * order. The reply carries the whole candidate list with an absolute cursor;
+ * ChromeOS draws one page, and `onCandidateClicked` answers with an ID that
+ * counts from that page, which is what `clickCandidate` takes.
+ * @param {Reply} reply
+ * @param {ImeTarget} target
+ * @returns {ImeCall[]}
+ */
 export function imeCalls(reply, { engineID, contextID }) {
+  /** @type {ImeCall[]} */
   const calls = [];
   for (const emit of reply.emits) {
     switch (emit.type) {
@@ -97,10 +139,17 @@ export function imeCalls(reply, { engineID, contextID }) {
   return calls;
 }
 
+/**
+ * Converts a `lookupTable` emit into paged candidate window calls.
+ * @param {LookupTableEmit} table
+ * @param {ImeTarget} target
+ * @returns {ImeCall[]}
+ */
 function candidateCalls(table, { engineID, contextID }) {
   const pageSize = Math.max(1, table.pageSize);
   const start = Math.floor(table.cursor / pageSize) * pageSize;
   const page = table.cells.slice(start, start + pageSize);
+  /** @type {ImeCall[]} */
   const calls = [
     [
       "setCandidates",
@@ -138,16 +187,21 @@ function candidateCalls(table, { engineID, contextID }) {
   return calls;
 }
 
-/// Google Docs and X send `onReset` while the user types (McBopomofoWeb
-/// `src/chromeos_ime.ts`, which skips its reset in these fields; not verified
-/// here, both need a signed-in account). Recognised by the field's flags.
+/**
+ * Google Docs and X send `onReset` while the user types (McBopomofoWeb
+ * `src/chromeos_ime.ts`, which skips its reset in these fields; not verified
+ * here, both need a signed-in account). Recognised by the field's flags.
+ * @param {chrome.input.ime.InputContext | null | undefined} context
+ * @returns {boolean}
+ */
 export function isResetStorm(context) {
   if (context?.type !== "text") {
     return false;
   }
   const isGoogleDocs =
-    !["characters", "words", "sentences"].includes(context.autoCapitalize) &&
-    context.spellCheck === false;
+    !["characters", "words", "sentences"].includes(
+      context.autoCapitalize ?? "",
+    ) && context.spellCheck === false;
   const isX =
     context.autoCapitalize === "sentences" &&
     context.autoComplete === true &&

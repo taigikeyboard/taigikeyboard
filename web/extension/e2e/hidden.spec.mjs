@@ -19,21 +19,40 @@ import {
   turnOn,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
 const HIDDEN = `${A}/hidden.html`;
 
+/**
+ * @param {Page} page
+ * @param {string} selector
+ * @returns {Promise<void>}
+ */
 async function expectChipUnder(page, selector) {
   const box = await page.locator(selector).boundingBox();
   const drawn = await chip(page).boundingBox();
-  expect(drawn.y).toBeGreaterThanOrEqual(box.y + box.height);
-  expect(drawn.y).toBeLessThan(box.y + box.height + 12);
-  expect(Math.abs(drawn.x + drawn.width - (box.x + box.width))).toBeLessThan(2);
+  expect(box).not.toBeNull();
+  expect(drawn).not.toBeNull();
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  const d = /** @type {NonNullable<typeof drawn>} */ (drawn);
+  expect(d.y).toBeGreaterThanOrEqual(b.y + b.height);
+  expect(d.y).toBeLessThan(b.y + b.height + 12);
+  expect(Math.abs(d.x + d.width - (b.x + b.width))).toBeLessThan(2);
 }
 
+/**
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 async function expectChipInCorner(page) {
   const viewport = page.viewportSize();
   const drawn = await chip(page).boundingBox();
-  expect(drawn.x).toBeGreaterThan(viewport.width - drawn.width - 16);
-  expect(drawn.y).toBeGreaterThan(viewport.height - drawn.height - 16);
+  expect(viewport).not.toBeNull();
+  expect(drawn).not.toBeNull();
+  const v = /** @type {NonNullable<typeof viewport>} */ (viewport);
+  const d = /** @type {NonNullable<typeof drawn>} */ (drawn);
+  expect(d.x).toBeGreaterThan(v.width - d.width - 16);
+  expect(d.y).toBeGreaterThan(v.height - d.height - 16);
 }
 
 test("an EditContext editor (Monaco in Chromium) is unsupported, keeps its keys, and anchors its chip to the editor", async ({
@@ -44,7 +63,7 @@ test("an EditContext editor (Monaco in Chromium) is unsupported, keeps its keys,
   await openTyping(context, worker, page, HIDDEN, "#docs-title");
   await page.evaluate(() => {
     window.hiddenFixture.clearLog();
-    document.getElementById("editcontext-target").focus();
+    document.getElementById("editcontext-target")?.focus();
   });
 
   await expect(chip(page)).toHaveAttribute("data-state", "unsupported");
@@ -67,7 +86,7 @@ test("an EditContext editor (Monaco in Chromium) is unsupported, keeps its keys,
   // A read-only EditContext viewer draws no chip at all.
   await page.evaluate(() => {
     window.hiddenFixture.setEditContextReadOnly(true);
-    document.getElementById("editcontext-target").focus();
+    document.getElementById("editcontext-target")?.focus();
   });
   await expect(chip(page)).toBeHidden();
 });
@@ -87,7 +106,9 @@ test("hidden textareas (1px transparent, zero-opacity, zero-height clip) are uns
   ]) {
     await page.evaluate((selector) => {
       window.hiddenFixture.clearLog();
-      document.querySelector(selector).focus();
+      /** @type {HTMLElement | null} */ (
+        document.querySelector(selector)
+      )?.focus();
     }, target);
     await expect(chip(page)).toHaveAttribute("data-state", "unsupported");
     await expectToolbar(worker, page, "×");
@@ -161,10 +182,10 @@ test("a focused field reflects dynamic visibility changes, while visible fixed a
   // Focused while off-screen -> unsupported; moved on-screen -> composes on
   // the next key; moved off-screen mid-composition -> drops composition.
   const dynamic = page.locator("#dynamic-input");
-  await page.evaluate(() => document.getElementById("dynamic-input").focus());
+  await page.evaluate(() => document.getElementById("dynamic-input")?.focus());
   await expect(chip(page)).toHaveAttribute("data-state", "unsupported");
   await page.evaluate(() =>
-    document.getElementById("dynamic-input").classList.remove("offscreen"),
+    document.getElementById("dynamic-input")?.classList.remove("offscreen"),
   );
   await commitWord(page);
   await expect(dynamic).toHaveValue("台灣");
@@ -173,7 +194,7 @@ test("a focused field reflects dynamic visibility changes, while visible fixed a
   await page.keyboard.type("tai");
   await expect(preedit(page)).toContainText("tai");
   await page.evaluate(() =>
-    document.getElementById("dynamic-input").classList.add("offscreen"),
+    document.getElementById("dynamic-input")?.classList.add("offscreen"),
   );
   await expect(preedit(page)).toBeEmpty();
   await expect(chip(page)).toHaveAttribute("data-state", "unsupported");

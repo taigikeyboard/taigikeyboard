@@ -42,7 +42,7 @@ test("a composition never follows the focus to another field", async ({
   await page.keyboard.type("tai");
   await expect(preedit(page)).toContainText("tai");
   // The site moves the focus itself: no pointer, no key.
-  await page.evaluate(() => document.getElementById("second").focus());
+  await page.evaluate(() => document.getElementById("second")?.focus());
   await expect(preedit(page)).toBeEmpty();
   const second = page.locator("#second");
   await expect(second).toHaveValue("");
@@ -62,7 +62,7 @@ test("a composition ends when the site removes its field", async ({
   await openTyping(context, worker, page, FIELDS, "#text");
   await page.keyboard.type("tai");
   await expect(preedit(page)).toContainText("tai");
-  await page.evaluate(() => document.getElementById("text").remove());
+  await page.evaluate(() => document.getElementById("text")?.remove());
   await expect(preedit(page)).toBeEmpty();
   await expect(chip(page)).toBeHidden();
 });
@@ -109,7 +109,12 @@ test("a field that takes no text an input method writes is left alone", async ({
   await page.keyboard.type("tai");
   await expect(preedit(page)).toContainText("tai");
   await page.evaluate(() => {
-    document.getElementById("text").disabled = true;
+    const input = /** @type {HTMLInputElement | null} */ (
+      document.getElementById("text")
+    );
+    if (input) {
+      input.disabled = true;
+    }
   });
   await expect(preedit(page)).toBeEmpty();
   await expect(chip(page)).toBeHidden();

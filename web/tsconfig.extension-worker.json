@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "WebWorker"],
+    "types": ["chrome"],
+    "rootDirs": ["extension", "src", "types/site"]
+  },
+  "include": [
+    "extension/background.js",
+    "extension/learning-store.js",
+    "types/shared.d.ts"
+  ]
+}

@@ -68,9 +68,13 @@ test("the chip sits beside the focused field", async ({
   const field = await openTyping(context, worker, page, FIELDS, "#area");
   const box = await field.boundingBox();
   const drawn = await chip(page).boundingBox();
-  expect(drawn.y).toBeGreaterThanOrEqual(box.y + box.height);
-  expect(drawn.y).toBeLessThan(box.y + box.height + 12);
-  expect(Math.abs(drawn.x + drawn.width - (box.x + box.width))).toBeLessThan(2);
+  expect(box).not.toBeNull();
+  expect(drawn).not.toBeNull();
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  const d = /** @type {NonNullable<typeof drawn>} */ (drawn);
+  expect(d.y).toBeGreaterThanOrEqual(b.y + b.height);
+  expect(d.y).toBeLessThan(b.y + b.height + 12);
+  expect(Math.abs(d.x + d.width - (b.x + b.width))).toBeLessThan(2);
   // It never takes a click meant for the site.
   expect(
     await chip(page).evaluate(

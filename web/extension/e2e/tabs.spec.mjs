@@ -19,9 +19,15 @@ import {
   turnOn,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
 const FIELDS = `${A}/fields.html`;
 
-/// Typing is off on `page`: the keys of the test word reach its field.
+/**
+ * Typing is off on `page`: the keys of the test word reach its field.
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 async function expectOff(page) {
   const field = page.locator("#text");
   await field.click();

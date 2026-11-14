@@ -56,11 +56,17 @@ test("the panel sits under the caret's line", async ({
   const box = await field.boundingBox();
   const drawn = await preedit(page).boundingBox();
   const list = await page.locator("taigi-keyboard #panel").boundingBox();
+  expect(box).not.toBeNull();
+  expect(drawn).not.toBeNull();
+  expect(list).not.toBeNull();
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  const d = /** @type {NonNullable<typeof drawn>} */ (drawn);
+  const l = /** @type {NonNullable<typeof list>} */ (list);
   // The composition lies on the field's own line, the list right under it.
-  expect(drawn.y).toBeGreaterThanOrEqual(box.y - 1);
-  expect(drawn.y + drawn.height).toBeLessThanOrEqual(box.y + box.height + 1);
-  expect(drawn.x).toBeGreaterThanOrEqual(box.x);
-  expect(list.y).toBeGreaterThanOrEqual(drawn.y + drawn.height - 1);
+  expect(d.y).toBeGreaterThanOrEqual(b.y - 1);
+  expect(d.y + d.height).toBeLessThanOrEqual(b.y + b.height + 1);
+  expect(d.x).toBeGreaterThanOrEqual(b.x);
+  expect(l.y).toBeGreaterThanOrEqual(d.y + d.height - 1);
 });
 
 test("a slot key and a click each pick their candidate", async ({
@@ -71,8 +77,8 @@ test("a slot key and a click each pick their candidate", async ({
   const field = await openTyping(context, worker, page, FIELDS, "#text");
   await page.keyboard.type("taiuan");
   const second = candidates(page).nth(1);
-  const label = await second.locator(".index").textContent();
-  const hanji = await second.locator(".text").textContent();
+  const label = (await second.locator(".index").textContent()) ?? "";
+  const hanji = (await second.locator(".text").textContent()) ?? "";
   await page.keyboard.press(label);
   await expect(field).toHaveValue(hanji);
 
@@ -109,13 +115,21 @@ test("a commit goes in at the caret and replaces a selection", async ({
 }) => {
   const field = await openTyping(context, worker, page, FIELDS, "#area");
   await field.fill("ab");
-  await field.evaluate((element) => element.setSelectionRange(1, 1));
+  await field.evaluate((element) =>
+    /** @type {HTMLTextAreaElement} */ (element).setSelectionRange(1, 1),
+  );
   await commitWord(page);
   await expect(field).toHaveValue("a台灣b");
   // The caret follows the commit.
-  expect(await field.evaluate((element) => element.selectionStart)).toBe(3);
+  expect(
+    await field.evaluate(
+      (element) => /** @type {HTMLTextAreaElement} */ (element).selectionStart,
+    ),
+  ).toBe(3);
 
-  await field.evaluate((element) => element.setSelectionRange(0, 3));
+  await field.evaluate((element) =>
+    /** @type {HTMLTextAreaElement} */ (element).setSelectionRange(0, 3),
+  );
   await commitWord(page);
   await expect(field).toHaveValue("台灣b");
 });
@@ -169,8 +183,9 @@ test("the site's own input handlers hear a commit", async ({
   const field = await openTyping(context, worker, page, FIELDS, "#text");
   await page.evaluate(() => {
     window.inputs = [];
-    document.getElementById("text").addEventListener("input", (event) => {
-      window.inputs.push([event.inputType, event.data]);
+    document.getElementById("text")?.addEventListener("input", (event) => {
+      const inputEvent = /** @type {InputEvent} */ (event);
+      window.inputs?.push([inputEvent.inputType, inputEvent.data]);
     });
   });
   await commitWord(page);

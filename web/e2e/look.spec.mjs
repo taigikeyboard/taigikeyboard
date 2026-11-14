@@ -18,13 +18,21 @@ import {
   toggle,
 } from "./helpers.mjs";
 
-/// The reset button of the section holding the `row` selector.
+/** @typedef {import("@playwright/test").Page} Page */
+
+/**
+ * The reset button of the section holding the `row` selector.
+ * @param {Page} page
+ * @param {string} row
+ */
 const resetSectionOf = (page, row) =>
   page
     .locator(".sidebar-section", { has: page.locator(row) })
     .getByRole("button", { name: "Reset to Defaults" });
+/** @param {Page} page */
 const theme = (page) =>
   page.evaluate(() => document.documentElement.dataset.theme);
+/** @param {Page} page */
 const pageColour = (page) =>
   page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
@@ -79,6 +87,7 @@ test("every section starts folded and unfolds on a click", async ({ page }) => {
 test("Shortcuts lists the keys and follows the settings", async ({ page }) => {
   await open(page);
   const rows = page.locator("#shortcuts .setting");
+  /** @param {string} name */
   const row = (name) => rows.filter({ hasText: name });
   // trace: `shipped_chord` ConfirmHighlighted = Enter + Space, `display`.
   await expect(row("Confirm Key").locator(".setting-keys")).toHaveText(
@@ -174,7 +183,11 @@ test("the panel stays inside the editor at its foot", async ({ page }) => {
   await expect(candidates(page).first()).toBeVisible();
   const box = await panel(page).boundingBox();
   const area = await editor.boundingBox();
-  expect(box.y + box.height).toBeLessThanOrEqual(area.y + area.height);
+  expect(box).not.toBeNull();
+  expect(area).not.toBeNull();
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  const a = /** @type {NonNullable<typeof area>} */ (area);
+  expect(b.y + b.height).toBeLessThanOrEqual(a.y + a.height);
 });
 
 test("a short window keeps the panel inside the editor", async ({ page }) => {
@@ -183,7 +196,9 @@ test("a short window keeps the panel inside the editor", async ({ page }) => {
   await editor.fill("\n");
   await editor.pressSequentially("taiuan");
   await expect(candidates(page).first()).toBeVisible();
-  const top = await panel(page).evaluate((element) => element.offsetTop);
+  const top = await panel(page).evaluate(
+    (element) => /** @type {HTMLElement} */ (element).offsetTop,
+  );
   expect(top).toBeGreaterThanOrEqual(0);
 });
 
@@ -196,7 +211,7 @@ test("the panel follows a window that only got shorter", async ({ page }) => {
   await expect
     .poll(async () => {
       const box = await panel(page).boundingBox();
-      return box.y + box.height;
+      return box ? box.y + box.height : Infinity;
     })
     .toBeLessThanOrEqual(460);
 });
@@ -301,11 +316,14 @@ test("a window that fits the page does not scroll", async ({ page }) => {
 test("the editor takes the window's room left over", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const editor = await open(page);
-  const short = (await editor.boundingBox()).height;
+  const initialBox = await editor.boundingBox();
+  expect(initialBox).not.toBeNull();
+  const short = /** @type {NonNullable<typeof initialBox>} */ (initialBox)
+    .height;
   await page.setViewportSize({ width: 1280, height: 1200 });
   // Every pixel the window gains goes to the editor.
   await expect
-    .poll(async () => (await editor.boundingBox()).height)
+    .poll(async () => (await editor.boundingBox())?.height)
     .toBeCloseTo(short + 400, 0);
 });
 
@@ -327,17 +345,23 @@ test("the footer rests at the sidebar's foot, then below its sections", async ({
   const footer = page.locator("footer");
   // trace: `#sidebar` padding-bottom 1.5rem at the 16px root.
   const box = await footer.boundingBox();
-  expect(box.y + box.height).toBeCloseTo(1200 - 24, 0);
+  expect(box).not.toBeNull();
+  const f = /** @type {NonNullable<typeof box>} */ (box);
+  expect(f.y + f.height).toBeCloseTo(1200 - 24, 0);
   // Every section open: the footer follows the last one, out of view.
   for (const section of await page.locator(".sidebar-section").all()) {
     await section.evaluate((element) => {
-      element.open = true;
+      /** @type {HTMLDetailsElement} */ (element).open = true;
     });
   }
   const last = await page.locator(".sidebar-section").last().boundingBox();
-  expect((await footer.boundingBox()).y).toBeGreaterThanOrEqual(
-    last.y + last.height,
-  );
+  const footerBox = await footer.boundingBox();
+  expect(last).not.toBeNull();
+  expect(footerBox).not.toBeNull();
+  const l = /** @type {NonNullable<typeof last>} */ (last);
+  expect(
+    /** @type {NonNullable<typeof footerBox>} */ (footerBox).y,
+  ).toBeGreaterThanOrEqual(l.y + l.height);
 });
 
 test("the footer closes with the sidebar", async ({ page }) => {
@@ -400,7 +424,7 @@ test("Output Script stores a boolean and writes romanization", async ({
     .poll(() =>
       page.evaluate(
         () =>
-          JSON.parse(localStorage.getItem("taigi.settings")).values
+          JSON.parse(localStorage.getItem("taigi.settings") ?? "{}").values
             .isTranslateSwapped,
       ),
     )
@@ -467,7 +491,7 @@ test("a section's reset takes back its own rows and keeps the language", async (
     page.locator('select[name="candidateAppearanceMode"]'),
   ).toHaveValue("dark");
   const stored = await page.evaluate(
-    () => JSON.parse(localStorage.getItem("taigi.settings")).values,
+    () => JSON.parse(localStorage.getItem("taigi.settings") ?? "{}").values,
   );
   expect(stored).toEqual({
     displayLanguage: "en",
@@ -514,7 +538,7 @@ test("a horizontal list keeps its scripts apart and turns pages", async ({
   const first = page.locator("#candidates li").first();
   await expect(first).toBeVisible();
   await expect(page.locator("#page-up")).toBeDisabled();
-  const before = await first.textContent();
+  const before = (await first.textContent()) ?? "";
   await page.locator("#page-down").click();
   await expect(page.locator("#page-up")).toBeEnabled();
   await expect(first).not.toHaveText(before);
@@ -525,6 +549,9 @@ test("the composition sits on the caret's line, clear of the list", async ({
   page,
 }) => {
   const editor = await open(page);
+  /**
+   * @param {Element} element
+   */
   const rect = (element) => {
     const { x, y, right, bottom } = element.getBoundingClientRect();
     return { x, y, right, bottom };

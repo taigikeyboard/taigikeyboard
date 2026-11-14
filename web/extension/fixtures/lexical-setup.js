@@ -38,12 +38,16 @@ registerHistory(editor, createEmptyHistoryState(), 300);
 editor.setRootElement(document.getElementById("editor"));
 
 // Toolbar buttons keep the focus inside the editor, as rich-text toolbars do.
-const boldButton = document.getElementById("bold");
+const boldButton = /** @type {HTMLElement} */ (document.getElementById("bold"));
 boldButton.addEventListener("mousedown", (event) => event.preventDefault());
 boldButton.addEventListener("click", () => {
   editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
 });
 
+/**
+ * Waits one animation frame and macrotask so Lexical selection updates settle.
+ * @returns {Promise<void>}
+ */
 const settleSelection = () =>
   new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
 
@@ -109,6 +113,11 @@ window.lexicalFixture = {
     return settleSelection();
   },
 
+  /**
+   * @param {string} value
+   * @param {number} start
+   * @param {number} end
+   */
   setSelectedText(value, start, end) {
     editor.update(
       () => {

@@ -21,12 +21,19 @@ import { test as base, chromium, expect } from "@playwright/test";
 
 import { PORT } from "../playwright.config.mjs";
 
+/** @typedef {import("@playwright/test").BrowserContext} BrowserContext */
+/** @typedef {import("@playwright/test").Locator} Locator */
+/** @typedef {import("@playwright/test").Page} Page */
+/** @typedef {import("@playwright/test").Worker} Worker */
+
 const STAGED = fileURLToPath(
   new URL("../../target/extension", import.meta.url),
 );
 
-/// Sites the copy under test may type on. Quill's own page is for the smoke
-/// test against the public editor (`quill-public.spec.mjs`).
+/**
+ * Sites the copy under test may type on. Quill's own page is for the smoke
+ * test against the public editor (`quill-public.spec.mjs`).
+ */
 const ENABLED_SITES = ["*://a.test/*", "*://b.test/*", "*://quilljs.com/*"];
 
 export const A = `http://a.test:${PORT}`;
@@ -34,11 +41,19 @@ export const B = `http://b.test:${PORT}`;
 export const C = `http://c.test:${PORT}`;
 export const STORE = `http://chromewebstore.google.com:${PORT}`;
 
-/// Waits for any force-installed MV2 background page (such as Helium's bundled
-/// uBlock Origin, which reloads tabs opened before its filter lists finish
-/// compiling) to settle before tests navigate. Stock Chromium has none.
+/**
+ * Waits for any force-installed MV2 background page (such as Helium's bundled
+ * uBlock Origin, which reloads tabs opened before its filter lists finish
+ * compiling) to settle before tests navigate. Stock Chromium has none.
+ * @param {BrowserContext} context
+ * @returns {Promise<void>}
+ */
 async function settleBackgroundPages(context) {
-  const cdp = await context.browser().newBrowserCDPSession();
+  const browser = context.browser();
+  if (!browser) {
+    return;
+  }
+  const cdp = await browser.newBrowserCDPSession();
   try {
     const { targetInfos } = await cdp.send("Target.getTargets");
     const pages = targetInfos.filter((info) => info.type === "background_page");
@@ -48,9 +63,16 @@ async function settleBackgroundPages(context) {
         flatten: false,
       });
       let nextId = 1;
+      /**
+       * @param {string} expression
+       * @returns {Promise<unknown>}
+       */
       const evaluate = (expression) =>
         new Promise((resolve, reject) => {
           const id = nextId++;
+          /**
+           * @param {{ sessionId: string, message: string }} event
+           */
           const onMessage = (event) => {
             if (event.sessionId !== sessionId) {
               return;
@@ -97,9 +119,14 @@ async function settleBackgroundPages(context) {
   }
 }
 
-/// Opens the profile at `profile` with the extension at `extension` loaded.
-/// `EXTENSION_BROWSER`: another Chromium's executable, instead of
-/// Playwright's own.
+/**
+ * Opens the profile at `profile` with the extension at `extension` loaded.
+ * `EXTENSION_BROWSER`: another Chromium's executable, instead of
+ * Playwright's own.
+ * @param {string} extension
+ * @param {string} profile
+ * @returns {Promise<{ context: BrowserContext, worker: Worker }>}
+ */
 export async function launch(extension, profile) {
   const context = await chromium.launchPersistentContext(profile, {
     channel: "chromium",
@@ -126,55 +153,76 @@ export async function launch(extension, profile) {
   return { context, worker };
 }
 
-export const test = base.extend({
-  extension: [
+/**
+ * @typedef {{
+ *   profile: string,
+ *   launched: { context: BrowserContext, worker: Worker },
+ *   worker: Worker,
+ * }} ExtensionTestFixtures
+ */
+/**
+ * @typedef {{ extension: string }} ExtensionWorkerFixtures
+ */
+
+export const test =
+  /** @type {import("@playwright/test").TestType<import("@playwright/test").PlaywrightTestArgs & import("@playwright/test").PlaywrightTestOptions & ExtensionTestFixtures, import("@playwright/test").PlaywrightWorkerArgs & import("@playwright/test").PlaywrightWorkerOptions & ExtensionWorkerFixtures>} */ (
+    base
+  ).extend({
+    extension: [
+      // biome-ignore lint/correctness/noEmptyPattern: Playwright reads the pattern.
+      async ({}, use) => {
+        const directory = mkdtempSync(join(tmpdir(), "taigi-extension-"));
+        cpSync(STAGED, directory, { recursive: true });
+        const path = join(directory, "manifest.json");
+        const manifest = JSON.parse(readFileSync(path, "utf8"));
+        manifest.host_permissions = ENABLED_SITES;
+        writeFileSync(path, JSON.stringify(manifest));
+        await use(directory);
+        rmSync(directory, { recursive: true, force: true });
+      },
+      { scope: "worker" },
+    ],
+
+    /**
+     * A directory for the test's profile, kept for the whole test so that a
+     * test can close the browser and open the same profile again.
+     */
     // biome-ignore lint/correctness/noEmptyPattern: Playwright reads the pattern.
-    async ({}, use) => {
-      const directory = mkdtempSync(join(tmpdir(), "taigi-extension-"));
-      cpSync(STAGED, directory, { recursive: true });
-      const path = join(directory, "manifest.json");
-      const manifest = JSON.parse(readFileSync(path, "utf8"));
-      manifest.host_permissions = ENABLED_SITES;
-      writeFileSync(path, JSON.stringify(manifest));
+    profile: async ({}, use) => {
+      const directory = mkdtempSync(join(tmpdir(), "taigi-profile-"));
       await use(directory);
       rmSync(directory, { recursive: true, force: true });
     },
-    { scope: "worker" },
-  ],
 
-  /// A directory for the test's profile, kept for the whole test so that a
-  /// test can close the browser and open the same profile again.
-  // biome-ignore lint/correctness/noEmptyPattern: Playwright reads the pattern.
-  profile: async ({}, use) => {
-    const directory = mkdtempSync(join(tmpdir(), "taigi-profile-"));
-    await use(directory);
-    rmSync(directory, { recursive: true, force: true });
-  },
+    launched: async ({ extension, profile }, use) => {
+      const launched = await launch(extension, profile);
+      await use(launched);
+      await launched.context.close();
+    },
 
-  launched: async ({ extension, profile }, use) => {
-    const launched = await launch(extension, profile);
-    await use(launched);
-    await launched.context.close();
-  },
+    context: async ({ launched }, use) => {
+      await use(launched.context);
+    },
 
-  context: async ({ launched }, use) => {
-    await use(launched.context);
-  },
+    worker: async ({ launched }, use) => {
+      await use(launched.worker);
+    },
 
-  worker: async ({ launched }, use) => {
-    await use(launched.worker);
-  },
-
-  page: async ({ context }, use) => {
-    await use(await context.newPage());
-  },
-});
+    page: async ({ context }, use) => {
+      await use(await context.newPage());
+    },
+  });
 
 export { expect };
 
-/// The id the browser gave `page`'s tab. A tab's URL is no name for it: two
-/// tabs can share one, and a site that is not enabled hides its own. The
-/// profile has one window, so the tab in front is `page`'s.
+/**
+ * The id the browser gave `page`'s tab. A tab's URL is no name for it: two
+ * tabs can share one, and a site that is not enabled hides its own. The
+ * profile has one window, so the tab in front is `page`'s.
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<number | undefined>}
+ */
 export async function tabIdOf(worker, page) {
   await page.bringToFront();
   return worker.evaluate(async () => {
@@ -183,7 +231,13 @@ export async function tabIdOf(worker, page) {
   });
 }
 
-/// The toolbar popup, opened as a page about `page`'s tab.
+/**
+ * The toolbar popup, opened as a page about `page`'s tab.
+ * @param {BrowserContext} context
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<Page>}
+ */
 export async function openPopup(context, worker, page) {
   const tabId = await tabIdOf(worker, page);
   const popup = await context.newPage();
@@ -193,8 +247,15 @@ export async function openPopup(context, worker, page) {
   return popup;
 }
 
-/// Clicks the popup's button `name` (`turn-on`, `turn-off`) for `page`'s tab,
-/// and brings `page` back to the front.
+/**
+ * Clicks the popup's button `name` (`turn-on`, `turn-off`) for `page`'s tab,
+ * and brings `page` back to the front.
+ * @param {BrowserContext} context
+ * @param {Worker} worker
+ * @param {Page} page
+ * @param {string} name
+ * @returns {Promise<void>}
+ */
 export async function clickPopup(context, worker, page, name) {
   const popup = await openPopup(context, worker, page);
   // The popup closes itself once the service worker has answered.
@@ -205,14 +266,25 @@ export async function clickPopup(context, worker, page, name) {
   await page.bringToFront();
 }
 
-/// Starts typing in `page`'s tab, as the popup's button does, and waits for
-/// the dictionaries.
+/**
+ * Starts typing in `page`'s tab, as the popup's button does, and waits for
+ * the dictionaries.
+ * @param {BrowserContext} context
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 export async function turnOn(context, worker, page) {
   await clickPopup(context, worker, page, "turn-on");
   await expectToolbar(worker, page, "台");
 }
 
-/// The toolbar button of `page`'s tab: `[badge, title]`.
+/**
+ * The toolbar button of `page`'s tab: `[badge, title]`.
+ * @param {Worker} worker
+ * @param {Page} page
+ * @returns {Promise<[string, string]>}
+ */
 export async function toolbar(worker, page) {
   const tabId = await tabIdOf(worker, page);
   return worker.evaluate(
@@ -224,18 +296,38 @@ export async function toolbar(worker, page) {
   );
 }
 
+/**
+ * @param {Worker} worker
+ * @param {Page} page
+ * @param {string} badge
+ * @returns {Promise<void>}
+ */
 export function expectToolbar(worker, page, badge) {
   return expect.poll(async () => (await toolbar(worker, page))[0]).toBe(badge);
 }
 
-/// What the extension draws on `page`. Playwright's locators see into its
-/// open shadow tree.
+/**
+ * What the extension draws on `page`. Playwright's locators see into its
+ * open shadow tree.
+ * @param {Page} page
+ */
 export const overlay = (page) => page.locator("taigi-keyboard");
+/** @param {Page} page */
 export const preedit = (page) => overlay(page).locator("#preedit");
+/** @param {Page} page */
 export const candidates = (page) => overlay(page).locator("#candidates li");
+/** @param {Page} page */
 export const chip = (page) => overlay(page).locator("#chip");
 
-/// `page` on `url`, typing on, its field `selector` focused.
+/**
+ * `page` on `url`, typing on, its field `selector` focused.
+ * @param {BrowserContext} context
+ * @param {Worker} worker
+ * @param {Page} page
+ * @param {string} url
+ * @param {string} selector
+ * @returns {Promise<Locator>}
+ */
 export async function openTyping(context, worker, page, url, selector) {
   await page.goto(url);
   await turnOn(context, worker, page);
@@ -245,11 +337,18 @@ export async function openTyping(context, worker, page, url, selector) {
   return field;
 }
 
-/// What the page's own listeners heard (`fixtures/fields.js`).
+/**
+ * What the page's own listeners heard (`fixtures/fields.js`).
+ * @param {Page} page
+ */
 export const heard = (page) => page.locator("#log").textContent();
 
-/// Types the web page's test word and takes its first candidate, 台灣
-/// (`web/e2e/helpers.mjs` `commitWord`).
+/**
+ * Types the web page's test word and takes its first candidate, 台灣
+ * (`web/e2e/helpers.mjs` `commitWord`).
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 export async function commitWord(page) {
   await page.keyboard.type("taiuan");
   await page.keyboard.press("Enter");

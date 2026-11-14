@@ -14,10 +14,14 @@ import {
   test,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
 const CM5 = `${A}/codemirror5.html`;
 const EDITOR = ".CodeMirror";
 
+/** @param {Page} page */
 const text = (page) => page.evaluate(() => window.cm5Fixture.text());
+/** @param {Page} page */
 const cursor = (page) => page.evaluate(() => window.cm5Fixture.cursor());
 
 test("a word composes at CodeMirror 5's cursor and the chip sits under .CodeMirror", async ({
@@ -34,11 +38,13 @@ test("a word composes at CodeMirror 5's cursor and the chip sits under .CodeMirr
   // hidden `<textarea>`.
   const editorBox = await editor.boundingBox();
   const chipBox = await chip(page).boundingBox();
-  expect(chipBox.y).toBeGreaterThanOrEqual(editorBox.y + editorBox.height);
-  expect(chipBox.y).toBeLessThan(editorBox.y + editorBox.height + 12);
-  expect(
-    Math.abs(chipBox.x + chipBox.width - (editorBox.x + editorBox.width)),
-  ).toBeLessThan(2);
+  expect(editorBox).not.toBeNull();
+  expect(chipBox).not.toBeNull();
+  const eb = /** @type {NonNullable<typeof editorBox>} */ (editorBox);
+  const cb = /** @type {NonNullable<typeof chipBox>} */ (chipBox);
+  expect(cb.y).toBeGreaterThanOrEqual(eb.y + eb.height);
+  expect(cb.y).toBeLessThan(eb.y + eb.height + 12);
+  expect(Math.abs(cb.x + cb.width - (eb.x + eb.width))).toBeLessThan(2);
 
   const cmCursor = await page
     .locator(".CodeMirror-cursors > .CodeMirror-cursor")
@@ -50,8 +56,12 @@ test("a word composes at CodeMirror 5's cursor and the chip sits under .CodeMirr
   expect(await text(page)).toBe("function f() {\n  const x = ;\n}");
 
   const drawn = await preedit(page).boundingBox();
-  expect(Math.abs(drawn.x - cmCursor.x)).toBeLessThan(4);
-  expect(Math.abs(drawn.y - cmCursor.y)).toBeLessThan(6);
+  expect(cmCursor).not.toBeNull();
+  expect(drawn).not.toBeNull();
+  const cm = /** @type {NonNullable<typeof cmCursor>} */ (cmCursor);
+  const dr = /** @type {NonNullable<typeof drawn>} */ (drawn);
+  expect(Math.abs(dr.x - cm.x)).toBeLessThan(4);
+  expect(Math.abs(dr.y - cm.y)).toBeLessThan(6);
 
   // The composition takes `.CodeMirror-code`'s monospace font, not the browser
   // default on the hidden `<textarea>`.
@@ -89,9 +99,11 @@ test("a commit replaces a selection in CodeMirror 5", async ({
     .first()
     .boundingBox();
   const drawn = await preedit(page).boundingBox();
-  expect(Math.abs(drawn.x - (selectedBox.x + selectedBox.width))).toBeLessThan(
-    4,
-  );
+  expect(selectedBox).not.toBeNull();
+  expect(drawn).not.toBeNull();
+  const sb = /** @type {NonNullable<typeof selectedBox>} */ (selectedBox);
+  const dr = /** @type {NonNullable<typeof drawn>} */ (drawn);
+  expect(Math.abs(dr.x - (sb.x + sb.width))).toBeLessThan(4);
   await page.keyboard.type("uan");
   await page.keyboard.press("Enter");
   await expect.poll(() => text(page)).toBe("const s = 'a台灣d';");

@@ -4,9 +4,16 @@
 
 import { parse, plainText } from "./markdown.js";
 
-/// Links that open a page or a mail; any other scheme stays text.
+/** @typedef {import("../types/shared.d.ts").RunSpan} RunSpan */
+/** @typedef {import("../types/shared.d.ts").MarkdownBlock} MarkdownBlock */
+
+/** Links that open a page or a mail; any other scheme stays text. */
 const SAFE_URL = /^(https?|mailto):/i;
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function escapeHtml(text) {
   return text
     .replaceAll("&", "&amp;")
@@ -14,7 +21,12 @@ function escapeHtml(text) {
     .replaceAll(">", "&gt;");
 }
 
-/// One run: underline innermost, then italic, then bold.
+/**
+ * One run: underline innermost, then italic, then bold.
+ *
+ * @param {RunSpan} run
+ * @returns {string}
+ */
 function runHtml(run) {
   let html = escapeHtml(run.text).replaceAll("\n", "<br>\n");
   if (run.underline) {
@@ -26,7 +38,12 @@ function runHtml(run) {
   return run.bold ? `<strong>${html}</strong>` : html;
 }
 
-/// Runs, those of one link inside one `<a>`; an unsafe link stays its text.
+/**
+ * Runs, those of one link inside one `<a>`; an unsafe link stays its text.
+ *
+ * @param {RunSpan[]} runs
+ * @returns {string}
+ */
 function runsHtml(runs) {
   let html = "";
   for (let index = 0; index < runs.length; ) {
@@ -45,6 +62,10 @@ function runsHtml(runs) {
   return html;
 }
 
+/**
+ * @param {MarkdownBlock} block
+ * @returns {string}
+ */
 function blockHtml(block) {
   switch (block.type) {
     case "heading":
@@ -63,7 +84,13 @@ function blockHtml(block) {
   }
 }
 
-/// The title as `<h1>`, then each block of the text.
+/**
+ * The title as `<h1>`, then each block of the text.
+ *
+ * @param {string} title
+ * @param {string} text
+ * @returns {string}
+ */
 export function toHtml(title, text) {
   const blocks = parse(text).map(blockHtml);
 
@@ -81,30 +108,53 @@ ${[...heading, ...blocks].join("\n")}
 `;
 }
 
-/// ZenPen writes `#title#`, which CommonMark does not read as a heading.
+/**
+ * ZenPen writes `#title#`, which CommonMark does not read as a heading.
+ *
+ * @param {string} title
+ * @param {string} text
+ * @returns {string}
+ */
 function toMarkdown(title, text) {
   return title === "" ? text : `# ${title}\n\n${text}`;
 }
 
+/**
+ * @param {string} title
+ * @param {string} text
+ * @returns {string}
+ */
 function toPlainText(title, text) {
   const body = plainText(parse(text));
   return title === "" ? body : `${title}\n\n${body}`;
 }
 
+/** @type {Record<string, { extension: string, type: string, render: (title: string, text: string) => string }>} */
 const FORMATS = {
   markdown: { extension: "md", type: "text/markdown", render: toMarkdown },
   html: { extension: "html", type: "text/html", render: toHtml },
   text: { extension: "txt", type: "text/plain", render: toPlainText },
 };
 
-/// The title, as ZenPen names a file by its header; an empty one leaves the
-/// app's name, as ZenPen's leaves "ZenPen".
+/**
+ * The title, as ZenPen names a file by its header; an empty one leaves the
+ * app's name, as ZenPen's leaves "ZenPen".
+ *
+ * @param {string} title
+ * @returns {string}
+ */
 function fileName(title) {
   // Characters no file system takes.
   const safe = title.replace(/[\\/:*?"<>|]/g, "").trim();
   return safe === "" ? "台語齒盤" : safe;
 }
 
+/**
+ * @param {string} name
+ * @param {string} type
+ * @param {string} content
+ * @returns {void}
+ */
 function download(name, type, content) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const link = document.createElement("a");
@@ -115,15 +165,29 @@ function download(name, type, content) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/// `root` holds one button per format, `data-format` naming it; `markdown()`
-/// answers the text; `title` is the editable page title.
+/**
+ * `root` holds one button per format, `data-format` naming it; `markdown()`
+ * answers the text; `title` is the editable page title.
+ *
+ * @param {HTMLElement} root
+ * @param {() => string} markdown
+ * @param {HTMLElement} title
+ * @returns {void}
+ */
 export function wireSave(root, markdown, title) {
   root.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-format]");
+    const target = /** @type {Element | null} */ (event.target);
+    const button = /** @type {HTMLButtonElement | null} */ (
+      target?.closest("button[data-format]") ?? null
+    );
     if (button === null) {
       return;
     }
-    const { extension, type, render } = FORMATS[button.dataset.format];
+    const format = FORMATS[button.dataset.format ?? ""];
+    if (!format) {
+      return;
+    }
+    const { extension, type, render } = format;
     // One line, as ZenPen strips the header's line breaks.
     const heading = title.textContent.replace(/[\t\r\n]/g, "").trim();
     download(

@@ -6,6 +6,9 @@ import { Learning } from "./learning.js";
 import init, { Session } from "./pkg/taigi_web.js";
 import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
 
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("./calls.js").ImeCall} ImeCall */
+
 // The expandable layouts measure through the page's DOM, which a worker has
 // none of; the session's `catch` import then keeps the list paged.
 globalThis.taigiMeasureCells = () => {
@@ -18,27 +21,50 @@ const ENGINE_ID = "taigi";
 
 const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
 
+/** @type {Session | null} */
 let session = null;
+/** @type {chrome.input.ime.InputContext | null} */
 let context = null;
 // A trapped session is never kept: this worker waits to be stopped.
 let trapped = false;
 // The settings document the session holds.
 let settingsJson = DEFAULT_SETTINGS;
 
-/// A document's revision, which only grows: -1 for one that cannot say.
+/**
+ * Formats an unknown caught value for warning logs.
+ * @param {unknown} error
+ * @returns {string}
+ */
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * A document's revision, which only grows: -1 for one that cannot say.
+ * @param {string} json
+ * @returns {number}
+ */
 function revisionOf(json) {
   try {
-    return JSON.parse(json).revision ?? -1;
+    const parsed = /** @type {{ revision?: unknown }} */ (JSON.parse(json));
+    return typeof parsed.revision === "number" ? parsed.revision : -1;
   } catch {
     return -1;
   }
 }
 
+/**
+ * Saves the serialized settings document to `chrome.storage.sync`.
+ * @param {string} json
+ * @returns {void}
+ */
 function saveSettings(json) {
   settingsJson = json;
   chrome.storage.sync
     .set({ [SETTINGS_KEY]: json })
-    .catch((error) => console.warn("settings.save.failed", error.message));
+    .catch((/** @type {unknown} */ error) =>
+      console.warn("settings.save.failed", errorMessage(error)),
+    );
 }
 
 // ChromeOS keyboards are PC keyboards: "linux" and "windows" read keys the
@@ -46,23 +72,31 @@ function saveSettings(json) {
 // preedit on blur, as IBus does).
 const PLATFORM = "linux";
 
-/// A stored document the session refuses gives way to the defaults for good,
-/// as on the page (`ime.js` `restoreSettings`), so the options page does not
-/// show it either.
+/**
+ * A stored document the session refuses gives way to the defaults for good,
+ * as on the page (`ime.js` `restoreSettings`), so the options page does not
+ * show it either.
+ * @param {unknown} stored
+ * @returns {Session}
+ */
 function newSession(stored) {
-  if (stored !== undefined) {
+  if (typeof stored === "string") {
     try {
       const restored = new Session(stored, PLATFORM, navigator.language);
       settingsJson = stored;
       return restored;
     } catch (error) {
-      console.warn("settings.refused", error.message);
+      console.warn("settings.refused", errorMessage(error));
       saveSettings(DEFAULT_SETTINGS);
     }
   }
   return new Session(DEFAULT_SETTINGS, PLATFORM, navigator.language);
 }
 
+/**
+ * Initializes the WASM engine, loads bundled dictionaries, and attaches learning.
+ * @returns {Promise<void>}
+ */
 async function start() {
   const reading = chrome.storage.sync.get(SETTINGS_KEY);
   const module = await WebAssembly.compileStreaming(
@@ -81,10 +115,15 @@ async function start() {
   learning.attach(starting);
 }
 
-/// One engine call, its answer as given; `undefined` with no session. A trap
-/// ends the session for this worker: the glue keeps the instance it has and a
-/// service worker cannot import a fresh copy, so the worker is let go and the
-/// next focus starts a new one with a new session.
+/**
+ * One engine call, its answer as given; `undefined` with no session. A trap
+ * ends the session for this worker: the glue keeps the instance it has and a
+ * service worker cannot import a fresh copy, so the worker is let go and the
+ * next focus starts a new one with a new session.
+ * @template T
+ * @param {(current: Session) => T} action
+ * @returns {T | undefined}
+ */
 function run(action) {
   if (session === null) {
     return undefined;
@@ -111,26 +150,61 @@ const started = start().catch((error) =>
   console.error("session.start.failed", error),
 );
 
-/// One engine call that answers a reply, applied; whether it took the key.
+/**
+ * Dispatches one translated call against `chrome.input.ime`.
+ * @param {ImeCall} imeCall
+ * @returns {Promise<unknown>}
+ */
+function invokeImeCall(imeCall) {
+  switch (imeCall[0]) {
+    case "setComposition":
+      return chrome.input.ime.setComposition(imeCall[1]);
+    case "clearComposition":
+      return chrome.input.ime.clearComposition(imeCall[1]);
+    case "commitText":
+      return chrome.input.ime.commitText(imeCall[1]);
+    case "deleteSurroundingText":
+      return chrome.input.ime.deleteSurroundingText(imeCall[1]);
+    case "setCandidates":
+      return chrome.input.ime.setCandidates(imeCall[1]);
+    case "setCandidateWindowProperties":
+      return chrome.input.ime.setCandidateWindowProperties(imeCall[1]);
+    case "setCursorPosition":
+      return chrome.input.ime.setCursorPosition(imeCall[1]);
+  }
+}
+
+/**
+ * One engine call that answers a reply, applied; whether it took the key.
+ * @param {(current: Session) => string} action
+ * @returns {boolean}
+ */
 function call(action) {
   const reply = run(action);
   return reply === undefined ? false : apply(reply);
 }
 
+/**
+ * Applies a serialized session reply to ChromeOS IME APIs and storage.
+ * @param {string} replyJson
+ * @returns {boolean}
+ */
 function apply(replyJson) {
-  const reply = JSON.parse(replyJson);
-  for (const [method, details] of imeCalls(reply, {
+  const reply = /** @type {Reply} */ (JSON.parse(replyJson));
+  for (const imeCall of imeCalls(reply, {
     engineID: ENGINE_ID,
-    contextID: context?.contextID,
+    contextID: context?.contextID ?? 0,
   })) {
-    chrome.input.ime[method](details).catch((error) =>
-      console.warn("ime.call.failed", method, error.message),
+    invokeImeCall(imeCall).catch((/** @type {unknown} */ error) =>
+      console.warn("ime.call.failed", imeCall[0], errorMessage(error)),
     );
   }
   if (reply.emits.some((emit) => emit.type === "openSettings")) {
     chrome.runtime
       .openOptionsPage()
-      .catch((error) => console.warn("settings.open.failed", error.message));
+      .catch((/** @type {unknown} */ error) =>
+        console.warn("settings.open.failed", errorMessage(error)),
+      );
   }
   // A chord wrote the document: the options page and the next worker read it.
   if (reply.settings) {
@@ -143,7 +217,10 @@ function apply(replyJson) {
   return reply.handled;
 }
 
-/// The field lost the keyboard: the composition it confirmed ends with it.
+/**
+ * The field lost the keyboard: the composition it confirmed ends with it.
+ * @returns {void}
+ */
 function leaveField() {
   call((current) => current.endSession());
   run((current) => current.focusLost());
@@ -235,7 +312,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
         settingsJson = json;
       }
     } catch (error) {
-      console.warn("settings.refused", error.message);
+      console.warn("settings.refused", errorMessage(error));
     }
   });
 });
@@ -245,8 +322,13 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.runtime.onMessage.addListener(() => {});
 
 // onActivate and onFocus arrive together; one creation at a time.
+/** @type {Promise<void> | null} */
 let keeping = null;
 
+/**
+ * Ensures the keep-alive offscreen document is open while the IME is active.
+ * @returns {void}
+ */
 function keepAlive() {
   if (trapped) {
     return;
@@ -256,14 +338,23 @@ function keepAlive() {
   });
 }
 
-/// Stops keeping the worker: about 30 s later ChromeOS stops it, and the next
-/// event starts a new one.
+/**
+ * Stops keeping the worker: about 30 s later ChromeOS stops it, and the next
+ * event starts a new one.
+ * @returns {void}
+ */
 function letGo() {
   chrome.offscreen
     .closeDocument()
-    .catch((error) => console.warn("keepAlive.close.failed", error.message));
+    .catch((/** @type {unknown} */ error) =>
+      console.warn("keepAlive.close.failed", errorMessage(error)),
+    );
 }
 
+/**
+ * Creates the keep-alive offscreen document if it is not already present.
+ * @returns {Promise<void>}
+ */
 async function openKeepAlive() {
   try {
     if (await chrome.offscreen.hasDocument()) {
@@ -275,6 +366,6 @@ async function openKeepAlive() {
       justification: "Keeps the input method running between keystrokes.",
     });
   } catch (error) {
-    console.warn("keepAlive.create.failed", error.message);
+    console.warn("keepAlive.create.failed", errorMessage(error));
   }
 }

@@ -9,17 +9,32 @@ import { fileURLToPath } from "node:url";
 
 import { optionsPage } from "../chromeos/options-form.mjs";
 
-/// Rows with no effect in the extension: it has no key panel, and it draws
-/// in the site's own fonts.
+/** @typedef {import("../chromeos/options-form.mjs").OptionsCut} OptionsCut */
+
+/**
+ * Rows with no effect in the extension: it has no key panel, and it draws
+ * in the site's own fonts.
+ *
+ * @type {OptionsCut}
+ */
 export const EXTENSION_CUT = {
   hiddenControls: ["tpsKeyboardShown", "fontType"],
   removedOptions: [],
 };
 
-/// The page's composition, candidate panel, ruler and live region, as they
-/// stand in `index.html`: the elements `Panel` and the stylesheet name.
+/**
+ * The page's composition, candidate panel, ruler and live region, as they
+ * stand in `index.html`: the elements `Panel` and the stylesheet name.
+ *
+ * @param {string} index
+ * @returns {string}
+ */
 export function panelMarkup(index) {
   const lines = index.split("\n");
+  /**
+   * @param {string} needle
+   * @returns {number}
+   */
   const only = (needle) => {
     const found = lines.flatMap((line, at) =>
       line.includes(needle) ? [at] : [],
@@ -42,8 +57,13 @@ export function panelMarkup(index) {
     .join("\n");
 }
 
-/// The page's stylesheet for a shadow tree: what the page sets on `:root`,
-/// the overlay's host carries.
+/**
+ * The page's stylesheet for a shadow tree: what the page sets on `:root`,
+ * the overlay's host carries.
+ *
+ * @param {string} css
+ * @returns {string}
+ */
 export function forShadowTree(css) {
   const rooted = /:root((?:\[[^\]]*\]|:not\([^)]*\))*)/g;
   if (!rooted.test(css)) {
@@ -56,6 +76,10 @@ export function forShadowTree(css) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const [source, extension, out] = process.argv.slice(2);
+  /**
+   * @param {...string} path
+   * @returns {string}
+   */
   const read = (...path) => readFileSync(join(...path), "utf8");
   const index = read(source, "index.html");
 
