@@ -223,11 +223,15 @@ check_publish() {
 
 # The release object's names: `plan` and `check-publish` name this month's
 # version (a mid-month patch moves the tree past it); the other
-# steps read the version from the checkout (the release commit).
-SHORT_VERSION=""
-case "${1:-}" in plan | check-publish) SHORT_VERSION="$(train_version)" ;; esac
-# shellcheck source=lib/desktop-release.sh
-source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
+# steps read the version from the checkout (the release commit). `notify`
+# needs none: the workflows' failure reporters run it from a sparse checkout of
+# tools/release, which lacks the version files the library reads.
+if [[ "${1:-}" != notify ]]; then
+    SHORT_VERSION=""
+    case "${1:-}" in plan | check-publish) SHORT_VERSION="$(train_version)" ;; esac
+    # shellcheck source=lib/desktop-release.sh
+    source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
+fi
 
 case "${1:-}:$#" in
     plan:1) plan ;;
