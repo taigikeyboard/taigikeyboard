@@ -1,8 +1,8 @@
 # Browser Extension
 
 > **Type**: Design record + roadmap
-> **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `lexical`, `wasm`, `wasm2js`, `content security policy`, `learning`
-> **Status**: Chrome first cut 2026-11-13 (issue #864): typing, per-site access, per-tab mode, status and shared learning pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Not published.
+> **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `lexical`, `codemirror`, `editcontext`, `hidden field`, `wasm`, `wasm2js`, `content security policy`, `learning`
+> **Status**: Chrome Phases 1–2 done 2026-11-14 (issue #864): typing, per-site access, per-tab mode, status, shared learning, CodeMirror 5 / 6 support and canvas / hidden-field detection pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Not published.
 > **Siblings**: `web-roadmap.md` (the page and the wasm engine this reuses), `chromeos-roadmap.md` (the ChromeOS system input method, a separate product).
 
 ---
@@ -11,7 +11,7 @@
 
 - **Goal**: type Taigi into the fields of existing websites, with the composition and the candidates beside the caret, from a browser extension alone: no native install, no server, no download after install (issue #864).
 - **Approach**: a Manifest V3 extension in `web/extension/`. A content script runs the web version's wasm engine in the tab, draws the page's own candidate panel in a shadow tree, and writes commits into the site's field with `execCommand`.
-- **Scope of the first cut**: desktop Chrome. Text inputs, textareas, and `contenteditable` editors, held to Quill's Snow editor and Lexical's rich-text editor. The top frame only.
+- **Scope**: desktop Chrome (Firefox in Phase 3). Visible text inputs, textareas, CodeMirror 5 (`inputStyle: "textarea"`), and `contenteditable` editors, held to Quill's Snow editor, Lexical's rich-text editor and CodeMirror 6. Canvas and hidden-field editors that draw their own text (Google Docs, Google Sheets, Monaco) are detected as unsupported with their keys untouched. The top frame only.
 
 ## Decisions
 
@@ -67,16 +67,29 @@ Measured cost (Apple Silicon, V8, real dictionaries and four SQLite stores):
 
 ## Fields
 
-`field.js` `classify` decides per focused element:
+`field.js` `classify` decides per focused element, using `visibleBox` (non-empty after ancestor overflow clipping, `visibility: visible`, `opacity > 0`, unclipped `clip` / `clip-path`, visible text or caret on inputs, and intersecting the viewport):
 
 | Element | Kind |
 |---|---|
-| `<textarea>`, `<input type="text">`, `<input type="search">`, neither read-only nor disabled | `input` |
-| a `contenteditable` host in the document | `editable` |
-| `<input type="password">`, `email`, `number`, `tel`, `url`; an `<iframe>`; a `contenteditable` host inside a shadow tree | `unsupported` |
-| anything else | none |
+| visible `<textarea>` outside CodeMirror 5, visible `<input type="text">`, visible `<input type="search">`, neither read-only nor disabled | `input` |
+| CodeMirror 5's zero-height-clipped `<textarea>` inside a visible `.CodeMirror`, neither read-only nor disabled | `codemirror5` |
+| visible `contenteditable` host in the document (outside Google Sheets' grid / formula singleton) | `editable` |
+| `<input type="password">`, `email`, `number`, `tel`, `url`; an `<iframe>`; an `EditContext` host (`element.editContext`); Google Sheets' `#waffle-rich-text-editor` / `[docs-unhandledkeys]`; a `contenteditable` host inside a shadow tree; any `<input>`, `<textarea>` or `contenteditable` host whose `visibleBox` is `null` | `unsupported` |
+| anything else (including read-only and disabled fields, or `aria-readonly="true"` on `EditContext` / Sheets hosts) | none |
 
-An unsupported field's keys never reach the engine, a Shift tap included, and the chip and the toolbar say **Field not supported**. A password field is in this list so that its keys are never read.
+An unsupported field's keys never reach the engine, a Shift tap included, and the chip and the toolbar say **Field not supported**. A password field is in this list so that its keys are never read. When an unsupported field has no visible box of its own, `Overlay.placeChip` walks out to its nearest visible container (such as `.monaco-editor`) or places the chip in the viewport's bottom-right corner when none exists before `<body>` (such as an off-screen `<iframe>`), so the chip never clamps to `(0, 0)`.
+
+### Canvas and hidden-field editors
+
+Measured against the Phase 1 extension (2026-11-14), then resolved per editor:
+
+| Editor | Phase 1 behaviour before Phase 2 | Phase 2 choice |
+|---|---|---|
+| **CodeMirror 6** (`@codemirror/view`) | `.cm-content` is a visible `contenteditable="true"` host on desktop (`EditContext` in CM6 is Android-only). Commits, selection replacement and `history()` undo / redo already worked via `EditableWrites`. **Bugs**: `.cm-content` shrinks or grows to document height inside `.cm-scroller`, misplacing `#chip` when short or overflowing; and on macOS `DOMObserver` rewrote a `. ` auto-space swap into two spaces (`"tâi-uân  "`) because `selectionchange` had not fired before `execCommand` | **Supported** (`editable`, `codemirror6.spec.mjs`). `EditableWrites.deleteBefore` dispatches `selectionchange` so `DOMObserver` sees a selection replacement, `classify` anchors `#chip` to `.cm-editor`, and `Overlay.placeChip` clips by `visibleBox` |
+| **CodeMirror 5** (`codemirror` 5, default `inputStyle: "textarea"`) | Focuses a `1000 px × 1 em` `<textarea>` clipped inside a `3 px × 0 px` `overflow: hidden` wrapper under `.CodeMirror`. `TextareaInput.poll()` diffs `textarea.value` against `prevInput`, so `execCommand("insertText")`, selection replacement, auto-space swap and CM5 undo / redo all worked. **Bugs**: `InputSurface` measured the hidden `<textarea>` in its browser-default font, and `#chip` anchored at `x = 1200` off `.CodeMirror`'s right | **Supported** (`codemirror5` / `CodeMirror5Surface`, `codemirror5.spec.mjs`). Reads `.CodeMirror-cursor` / `.CodeMirror-selected` clamped to `.CodeMirror-scroll`, takes `.CodeMirror-code`'s font, includes cursor style in `snapshot()`, and anchors `#chip` to `.CodeMirror`. Visible `<input>`s inside `.CodeMirror` (such as `addon/dialog`) stay `"input"` |
+| **Monaco** (`monaco-editor`) | In Chromium's default `editContext: true` mode, focuses a `0 px`-wide `div.native-edit-context` (`element.editContext` set, `isContentEditable === false`): `classify` answered `null`, leaving the toolbar on `台` with no chip while keys bypassed the engine. With `editContext: false` (and in Firefox), focuses a `1 px` transparent `textarea.inputarea`: `classify` answered `"input"`, drawing the panel at the parked `.inputarea` while `.inputarea` resets `value = ""` on Windows / Linux so `deleteBefore` has no text | **Detected and unsupported** (`hidden.spec.mjs`). `EditContext` violates D3, splits auto-space swap undo steps in Monaco's `NativeEditContext`, and does not exist in Firefox (§ Phases). Both `element.editContext` and `visibleBox === null` mark Monaco **Field not supported** (`×`), anchoring `#chip` under `.monaco-editor` |
+| **Google Docs** (`docs.google.com/document/`) | Body renders on `<canvas class="kix-canvas-tile-content">` and focuses `iframe.docs-texteventtarget-iframe` parked at `top: -10000px` under `<body>` (its inner `contenteditable` rejects `execCommand("insertText")` and holds no preceding text). `classify` marked the `<iframe>` unsupported, **but** `placeChip` clamped `top: -10000px` to `(0, 0)` over the menu bar | **Detected and unsupported** for the canvas body (`hidden.spec.mjs`): keys untouched, `#chip` placed in the viewport's bottom-right corner. Top-frame fields (document title, Find & Replace, comment `contenteditable`) remain supported |
+| **Google Sheets** (`docs.google.com/spreadsheets/`) | Cells render on `<canvas>`; focus rests on singleton `div#waffle-rich-text-editor` (`[docs-unhandledkeys]`) inside `.input-box` parked at `top: -10000px` with `contenteditable="false"` while navigating. Phase 1 answered `null` when `"false"` (toolbar `台`; typing on a cell sent key 1 raw to open edit mode and intercepted key 2+, corrupting `"taiuan"` into `"t"` + `"aiuan"`) and clamped `#chip` to `(0, 0)` when `"true"` off screen | **Detected and unsupported** (`hidden.spec.mjs`): `#waffle-rich-text-editor` / `[docs-unhandledkeys]` is unsupported in both navigation and cell-edit states, anchoring `#chip` beside the cell while editing and returning it to the viewport corner on `Enter`. Top-frame `<input>`s remain supported |
 
 The composition ends with its field:
 
@@ -84,7 +97,7 @@ The composition ends with its field:
 |---|---|
 | `pointerdown` outside the panel | `commitComposition`, then the click moves the caret or the focus |
 | Focus moved by the site or by a key the engine did not take | The composition is dropped (`endSession`): the old field can no longer be written to, and it never follows to the new one |
-| The site removes or disables the focused field | Found on blur or by a 500 ms check that runs only while a composition is open; dropped |
+| The site removes, disables or hides the focused field | Found on the next key, on blur, or by a 500 ms check that runs only while a composition is open; dropped |
 | The window loses focus | Nothing is written; the composition continues on return |
 | Typing turned off | `commitComposition` |
 | Navigation | The instance goes with the page |
@@ -106,6 +119,7 @@ The tooltip is the extension's name and the same words. The popup shows them too
 ## Known limits
 
 - **Frames**: the content script runs in the top frame. A field inside an `<iframe>` shows as unsupported.
+- **Canvas and custom-input editors**: Google Docs' document canvas, Google Sheets' grid and formula bar, Monaco (`EditContext` and hidden `<textarea>`), Ace and xterm.js show **Field not supported** and keep their keys (§ Fields).
 - **Modal dialogs**: the overlay is a fixed element with the highest `z-index`, not in the top layer. A field inside `<dialog>.showModal()` composes, but the panel draws under the dialog and takes no clicks there.
 - **Fonts**: the panel uses the system's fonts; the page's Taigi fonts are not in the package, and the Font row is hidden in the options page.
 - **Not drawn**: the TPS key panel and the Telex guide. Their chords change nothing visible.
@@ -125,7 +139,8 @@ The browser's permission question is a native dialog no harness can answer. The 
 | Issue #864 criterion | Where |
 |---|---|
 | Real key events through the extension, inputs and textareas | `typing.spec.mjs` |
-| Pinned local Quill and Lexical: document state, formatting, auto-space swap, undo / redo | `quill.spec.mjs`, `lexical.spec.mjs` |
+| Pinned local Quill, Lexical, CodeMirror 5 and CodeMirror 6: document state, caret / chip placement, selection replacement, auto-space swap, undo / redo | `quill.spec.mjs`, `lexical.spec.mjs`, `codemirror5.spec.mjs`, `codemirror6.spec.mjs` |
+| Canvas and hidden-field editors (`EditContext`, 1 px transparent / zero-opacity / clipped `<textarea>`, off-screen `<iframe>`, Google Sheets singleton, dynamic visibility) | `hidden.spec.mjs` |
 | Candidates, selection, committed text | `typing.spec.mjs` |
 | Caret, selection replacement, switching fields, composition boundaries | `typing.spec.mjs`, `boundaries.spec.mjs` |
 | Public Quill smoke | `quill-public.spec.mjs` |
@@ -145,8 +160,8 @@ One PR per phase. Issue #864 makes Chrome and Firefox one release: neither ships
 | # | Phase | Content | Status |
 |---|---|---|---|
 | 0 | Design | Issue #864: decisions and acceptance criteria | Done |
-| 1 | Chrome | This document's D1–D7; `make -C web extension`, `extension-e2e` in `web.yml` | PR #901 open |
-| 2 | Canvas and hidden-field editors | Editors that draw their text themselves and take keys through a hidden field. Examples are Google Docs (a hidden `contenteditable` in an `<iframe>`, text drawn on a `<canvas>`) and code editors with a hidden `<textarea>` such as Monaco and CodeMirror 5. Today they get no special handling: depending on where the hidden field sits, `classify` sees an `<iframe>` (**Field not supported**), or an `input` that the extension writes into while the panel sits over a field nobody sees. Each such editor ends in one of two states, never in a broken one: **detected and unsupported** (a field that is zero-size, off screen, transparent or in a cross-origin frame; keys untouched, chip and toolbar say **Field not supported**), or **supported** (an adapter that writes the way the editor reads its hidden field and places the panel at the editor's own caret, with its own row in § Tests). First step: record what Google Docs, Google Sheets, Monaco and CodeMirror 5 / 6 do with the extension today, then choose per editor | Not started |
+| 1 | Chrome | This document's D1–D7; `make -C web extension`, `extension-e2e` in `web.yml` | Merged (#901) |
+| 2 | Canvas and hidden-field editors | Recorded Google Docs, Google Sheets, Monaco and CodeMirror 5 / 6 (§ Fields): CodeMirror 5 (`CodeMirror5Surface`) and CodeMirror 6 supported with E2E rows in § Tests; `EditContext`, zero-size / clipped / transparent / off-screen fields, Google Docs' body `<iframe>` and Google Sheets' grid singleton detected as unsupported with container or corner chip placement (`hidden.spec.mjs`) | Done |
 | 3 | Firefox | A Firefox manifest from the same sources: `browser_specific_settings`, `background.scripts` in place of the service worker. Its own harness, because Playwright cannot load a Firefox extension (`web-ext` or geckodriver), and its own pass of every row of § Tests. Check in Firefox, not by analogy with Chromium, whether a page's CSP blocks `WebAssembly.compile` in a content script (D7). Firefox keeps its own learned history (#864) | Not started; blocks the release |
 | 4 | Other Chromium browsers | Edge, Brave, Vivaldi, Opera, Arc: the hand-checked rows (permission grant, shortcut, private window) once per browser. Whether to list in the Edge Add-ons store is the maintainer's call | Not started |
 | 5 | Packaging + store | A release doc in the shape of `chromeos-release.md`: version on the desktop train, the zip built in CI, store listing, privacy fields, screenshots. Developer accounts and submission are the maintainer's | Not started |
