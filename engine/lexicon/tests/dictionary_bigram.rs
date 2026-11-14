@@ -155,8 +155,8 @@ fn production_dictionary_bin_carries_the_ue5_pairs() {
     };
     let (u, e, shoe) = (rowid("有", "ū"), rowid("的", "ê"), rowid("鞋", "ê"));
     // trace: walker_lm.load_bigrams over word_bigrams.tsv minus taigi_typing —
-    // C(有/u7) = 48 740, N = 3 368, c(有, 的/e5) = 411, c(有, 鞋/e5) = 0.
-    let after_u = |pair| (pair, 48_740, 3_368);
+    // C(有/u7) = 48 806, N = 3 381, c(有, 的/e5) = 411, c(有, 鞋/e5) = 0.
+    let after_u = |pair| (pair, 48_806, 3_381);
     assert_eq!(reader.walker_model().bigram_discount(), 0.75);
     assert_eq!(counts(&reader, u, e), Some(after_u(411)));
     assert_eq!(counts(&reader, u, shoe), Some(after_u(0)));
