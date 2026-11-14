@@ -218,10 +218,10 @@ hides the button, not the packages, which are public once published.
 maintainer to upload it to the Chrome Web Store (the announcement prints the
 same reminder; `docs/architecture/chromeos-release.md` § Upload).
 
-**After a release carrying a macOS `.pkg` is published**, remind the maintainer
-to bump the Homebrew cask (or do it when asked) — steps in
-`docs/architecture/desktop-release.md` § The flow; also run
-`brew style taigikeyboard/tap` before pushing.
+**After a release carrying a macOS `.pkg` is published**, the announcement
+bumps and audits the Homebrew cask (`docs/architecture/desktop-release.md`
+§ The flow). After a local `make desktop-announce`, bump it only when asked:
+`bash tools/release/bump-cask.sh <macos_version> <macos_sha256>`.
 
 ## Guardrails
 
