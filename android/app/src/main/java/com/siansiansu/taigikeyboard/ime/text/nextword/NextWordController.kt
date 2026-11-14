@@ -358,6 +358,7 @@ class NextWordController(
                         generation = generation,
                         candidateDisplayMode = settings.candidateDisplayMode,
                         syllableSeparator = settings.syllableSeparator,
+                        isKhinsiannInHanjiEnabled = settings.isKhinsiannInHanjiEnabled,
                     )
                 }
             // A context change meanwhile makes this answer another context's.

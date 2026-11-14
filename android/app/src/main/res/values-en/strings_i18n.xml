@@ -230,6 +230,8 @@
     <string name="i18n_settings_nasalMarkerUppercase">Nasal mark in POJ capitals</string>
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ (SIÂᴺ)</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ (SIÂⁿ)</string>
+    <string name="i18n_settings_khinsiannInHanji">Neutral Tone in Hanji (--)</string>
+    <string name="i18n_settings_khinsiannInHanjiInfo">When on, Hanji output includes neutral-tone markers matching Tâi-lô words (e.g. 會記--得, --轉-去).</string>
     <string name="i18n_settings_tpsOrMapsToER">Map or → ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">When on, \'or\' appears as ㄜ; when off, as ㄛ. Search results are unaffected.</string>
     <string name="i18n_settings_resetSettings">Reset to Defaults</string>

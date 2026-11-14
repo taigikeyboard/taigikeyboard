@@ -226,6 +226,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercase: "白話字大本字的鼻音符號輸出",
         .settingsNasalMarkerUppercaseCapital: "ᴺ（SIÂᴺ）",
         .settingsNasalMarkerUppercaseSmall: "ⁿ（SIÂⁿ）",
+        .settingsKhinsiannInHanji: "漢字顯示輕聲（--）",
         .themeCustomFont: "字型設定",
         .themeEditorResetAll: "恢復預設設定",
     ]
@@ -452,6 +453,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercase: "Nasal mark in POJ capitals",
         .settingsNasalMarkerUppercaseCapital: "ᴺ (SIÂᴺ)",
         .settingsNasalMarkerUppercaseSmall: "ⁿ (SIÂⁿ)",
+        .settingsKhinsiannInHanji: "Neutral Tone in Hanji (--)",
         .themeCustomFont: "Font",
         .themeEditorResetAll: "Reset to Defaults",
     ]
@@ -678,6 +680,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercase: "白話字の大文字での鼻音記号",
         .settingsNasalMarkerUppercaseCapital: "ᴺ（SIÂᴺ）",
         .settingsNasalMarkerUppercaseSmall: "ⁿ（SIÂⁿ）",
+        .settingsKhinsiannInHanji: "漢字に軽声（--）を表示",
         .themeCustomFont: "フォント",
         .themeEditorResetAll: "既定値に戻す",
     ]
@@ -904,6 +907,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercase: "Pe̍h-uē-jī tuā-pún-jī ê phīnn-im hû-hō su-tshut",
         .settingsNasalMarkerUppercaseCapital: "ᴺ (SIÂᴺ)",
         .settingsNasalMarkerUppercaseSmall: "ⁿ (SIÂⁿ)",
+        .settingsKhinsiannInHanji: "Hàn-jī hián-sī khin-siann (--)",
         .themeCustomFont: "Jī-hîng siat-tīng",
         .themeEditorResetAll: "Hue-ho̍k ī-siat siat-tīng",
     ]
@@ -1130,6 +1134,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercase: "Pe̍h-ōe-jī tōa-pún-jī ê phīⁿ-im hû-hō su-chhut",
         .settingsNasalMarkerUppercaseCapital: "ᴺ (SIÂᴺ)",
         .settingsNasalMarkerUppercaseSmall: "ⁿ (SIÂⁿ)",
+        .settingsKhinsiannInHanji: "Hàn-jī hián-sī khin-siaⁿ (--)",
         .themeCustomFont: "Jī-hêng siat-tēng",
         .themeEditorResetAll: "Hoe-ho̍k ī-siat siat-tēng",
     ]

@@ -99,6 +99,15 @@ class EngineAppConfigTest {
         assertEquals(ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE, config.candidateDisplayMode)
         assertEquals(ProtoSyllableSeparator.SYLLABLE_SEPARATOR_HYPHEN, config.syllableSeparator)
         assertFalse(config.tpsOrMapsToEr)
+        assertFalse(config.khinsiannInHanji)
+    }
+
+    @Test
+    fun continuousAppConfig_forwardsKhinsiannInHanji() {
+        val backing = StubEngineSettings()
+        assertFalse(continuousAppConfig(backing).khinsiannInHanji)
+        backing.isKhinsiannInHanjiEnabled = true
+        assertTrue(continuousAppConfig(backing).khinsiannInHanji)
     }
 
     // An unknown stored mode keeps each path's historical reading: composing TL, nextword POJ.

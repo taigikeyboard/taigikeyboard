@@ -134,7 +134,8 @@ final class DesktopCoreRuntimeTests: XCTestCase {
     func testWhitelist_matchesSettingsStoreDefaults() throws {
         let booleans = [
             Keys.isHanjiFirst, Keys.isAutoSpaceEnabled, Keys.isCandidateWindowEnabled,
-            Keys.isLiteralRomanCandidateEnabled, Keys.isNasalMarkerUppercaseEnabled, Keys.isCustomDictEnabled,
+            Keys.isLiteralRomanCandidateEnabled, Keys.isNasalMarkerUppercaseEnabled,
+            Keys.isKhinsiannInHanjiEnabled, Keys.isCustomDictEnabled,
             Keys.isCAffricateEnabled, Keys.isFHyphenEnabled,
             Keys.isKautianEnabled, Keys.isTaigitvEnabled, Keys.isItaigiEnabled, Keys.isSitbutEnabled,
             Keys.isTaihoaEnabled, Keys.isTaijitEnabled, Keys.isKunggeEnabled, Keys.isSttiEnabled,

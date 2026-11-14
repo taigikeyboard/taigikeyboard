@@ -121,6 +121,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isLiteralRomanCandidateEnabled, "§34/S22 Show Typed Text First ships OFF")
         XCTAssertEqual(settings.syllableSeparator, .hyphen, "音節分隔 ships as the hyphen")
         XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled, "ⁿ大本字 ships ON")
+        XCTAssertFalse(settings.isKhinsiannInHanjiEnabled)
     }
 
     /// The retired No Hyphens switch: a stored `true` becomes `.noSeparator`, a stored separator
@@ -231,6 +232,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isToolbarAutoCollapse = false
         settings.isTpsOrMappedToER = false
         settings.isLiteralRomanCandidateEnabled = true
+        settings.isKhinsiannInHanjiEnabled = true
         settings.syllableSeparator = .space
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
         settings.isCustomDictEnabled = false
@@ -256,6 +258,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertFalse(settings.isAutoSpaceEnabled)
         XCTAssertFalse(settings.isLiteralRomanCandidateEnabled)
+        XCTAssertFalse(settings.isKhinsiannInHanjiEnabled)
         XCTAssertEqual(settings.syllableSeparator, .hyphen)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertTrue(settings.isNewwordDictEnabled)
@@ -369,6 +372,7 @@ final class SettingsKeyTests: XCTestCase {
         defaults.set(false, forKey: "lkkDictEnabled")
         defaults.set(false, forKey: "toolbarAutoCollapse")
         defaults.set(false, forKey: "tpsOrMapsToER")
+        defaults.set(true, forKey: "khinsiannInHanjiEnabled")
         defaults.set(true, forKey: "fullAccessEnabled")
         defaults.set(true, forKey: "isGlobeKeyEnabled")
 
@@ -402,6 +406,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isLkkDictEnabled)
         XCTAssertFalse(settings.isToolbarAutoCollapse)
         XCTAssertFalse(settings.isTpsOrMappedToER)
+        XCTAssertTrue(settings.isKhinsiannInHanjiEnabled)
         XCTAssertTrue(settings.isFullAccessEnabled)
         XCTAssertTrue(settings.isGlobeKeyEnabled)
         XCTAssertEqual(settings.inputMode, .poj)
