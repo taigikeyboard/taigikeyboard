@@ -1,7 +1,7 @@
 name: Desktop nightly
 
 # Unsigned desktop + ChromeOS builds of `main`, every night, overwritten under
-# fixed names at https://nightly.taigikeyboard.tw/latest/. A test channel, not a
+# fixed names at the root of https://nightly.taigikeyboard.tw/. A test channel, not a
 # release: what runs, why and the one-time setup are in
 # docs/architecture/nightly-builds.md. `dry_run` (forced off `main`) uploads
 # nothing; `force` rebuilds an unchanged `main`.

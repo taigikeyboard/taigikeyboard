@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The nightly channel: unsigned desktop + ChromeOS builds of `main`, overwritten
-# under fixed names at https://nightly.taigikeyboard.tw/latest/ every night
+# under fixed names at the root of https://nightly.taigikeyboard.tw/ every night
 # (.github/workflows/desktop-nightly.yml, docs/architecture/nightly-builds.md).
 #
 # Usage: nightly-release.sh check <source sha>
@@ -37,8 +37,8 @@ source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 # After the sources, which set the release bucket and host unconditionally.
 R2_BUCKET="taigikeyboard-nightly"
 DOWNLOAD_HOST_URL="https://nightly.taigikeyboard.tw"
-NIGHTLY_PREFIX="latest"
-NIGHTLY_URL="$DOWNLOAD_HOST_URL/$NIGHTLY_PREFIX"
+# The bucket is the channel's own, so its files sit at the root.
+NIGHTLY_URL="$DOWNLOAD_HOST_URL"
 # Fixed names overwritten every night: the CDN must revalidate, not serve
 # yesterday's bytes.
 NIGHTLY_CACHE_CONTROL="no-cache"
@@ -108,7 +108,7 @@ publish() {
         sha256="$(release_sha256 "$RELEASE_TEMP_DIR/$name")"
         echo "$sha256  $name" > "$RELEASE_TEMP_DIR/$name.sha256"
         mirror_asset "$RELEASE_TEMP_DIR/$name" "$RELEASE_TEMP_DIR/$name.sha256" \
-            "$name" "$sha256" "$NIGHTLY_PREFIX" "$NIGHTLY_CACHE_CONTROL"
+            "$name" "$sha256" "" "$NIGHTLY_CACHE_CONTROL"
     done
 
     local manifest="$RELEASE_TEMP_DIR/build.json"
@@ -117,7 +117,7 @@ publish() {
         "$source_sha" "$SHORT_VERSION" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$manifest"
     echo "==> build.json"
     r2 s3 cp --only-show-errors --cache-control "$NIGHTLY_CACHE_CONTROL" \
-        --content-type application/json "$manifest" "s3://$R2_BUCKET/$NIGHTLY_PREFIX/build.json" ||
+        --content-type application/json "$manifest" "s3://$R2_BUCKET/build.json" ||
         fail "cannot upload build.json to R2 bucket $R2_BUCKET"
     local attempt
     for attempt in 1 2 3 4 5; do
