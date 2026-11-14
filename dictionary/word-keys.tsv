@@ -1059,12 +1059,12 @@ tín動	tín-tāng
 㔂	lân
 㔂甘蔗	lân kam-tsià
 㔃	hiat
-㔃--去	hiat--khì
 㔃㔃	hiat-hiat
 㔃下	hiat-hē
 㔃丟	hiat-tiu
 㔃丟	hiat-tiāu
 㔃仔	hiat-á
+㔃去	hiat--khì
 㔃捒	hiat-sak
 㔃擱	hiat-ka̍k
 㔃燕	hiat-kiàn
@@ -1378,10 +1378,6 @@ tín動	tín-tāng
 一	i̍t
 一	tsi̍k
 一	tsi̍t
-一--來	it--lâi
-一--字	it--jī
-一--字眉	it--jī-bâi
-一-六	it-lio̍k
 一一	it-it
 一一如一	it-it-jû-it
 一七如七	it-tshit-jû-tshit
@@ -1476,6 +1472,7 @@ tín動	tín-tāng
 一兩日	tsi̍t-nn̄g-ji̍t
 一八五租	it-pat-ngóo-tsoo
 一八如八	it-pat-jû-pat
+一六	it-lio̍k
 一六如六	it-lio̍k-jû-lio̍k
 一兼二顧	it-kiam-jī-kòo
 一再	it-tsài
@@ -1604,12 +1601,14 @@ tín動	tín-tāng
 一子	tsi̍t-kánn
 一孔一窟	tsi̍t-khang-tsi̍t-khut
 一孔一隙	tsi̍t-khang-tsi̍t-khiah
+一字	it--jī
 一字	it-jī
 一字平	it-jī-pênn
 一字平	it-jī-pînn
 一字平	it-lī-pînn
 一字平	it-lǐ-pînn
 一字派	tsi̍t-jī-phài
+一字眉	it--jī-bâi
 一宗	it-tsong
 一定	it-tīng
 一家	it-ka
@@ -2138,7 +2137,7 @@ tín動	tín-tāng
 一霎仔久	tsi̍t-tia̍p-á-kú
 一面	tsi̍t-bīn
 一面倒	tsi̍t-bīn-tó
-一頂--的	it-tíng--ê
+一頂的	it-tíng--ê
 一頂眠床	tsi̍t-tíng-bîn-tshn̂g
 一項	tsi̍t-hāng
 一領	tsi̍t-niá
@@ -3916,7 +3915,6 @@ tín動	tín-tāng
 下	kē
 下	ē
 下	ēe
-下--落去	hē--lo̍h-khì
 下hng暗	ē-hng-àm
 下一个	ē-tsi̍t-ê
 下一勻	ē-tsi̍t-ûn
@@ -4250,6 +4248,7 @@ tín動	tín-tāng
 下茨仔	kē-tshù-á
 下落	hē-lo̍h
 下落	ē-lo̍h
+下落去	hē--lo̍h-khì
 下葉	ē-hio̍h
 下葬	hā-tsòng
 下藥	hā-io̍h
@@ -4344,7 +4343,6 @@ tín動	tín-tāng
 不	puh
 不	put
 不	tun
-不--得	put--tik
 不sám時	put-sám-sî
 不一	put-it
 不一而足	put-it-jî-tsiok
@@ -4519,6 +4517,7 @@ tín動	tín-tāng
 不待言	put-thāi-giân
 不得	m̄-thih
 不得	m̄-tit
+不得	put--tik
 不得	put-tik
 不得不	put-tik-put
 不得不	put-tit-put
@@ -5540,7 +5539,6 @@ tín動	tín-tāng
 串	tshuìnn
 串	tshǹg
 串	tsuàn
-串--過	tshuàn--kè
 串串	tshuàn-tshuàn
 串串	tshuìnn-tshuìnn
 串串	tshǹg-tshǹg
@@ -5573,6 +5571,7 @@ tín動	tín-tāng
 串透	kuàn-thàu
 串透	tshuàn-thàu
 串通	tshuàn-thong
+串過	tshuàn--kè
 串過	tshǹg--kuè
 串過	tshǹg-kuè
 串過	tshǹg-kè
@@ -6720,7 +6719,6 @@ tín動	tín-tāng
 了	liauh
 了	lia̍uh
 了	liáu
-了--去	liáu--khì
 了不得	liáu-put--tik
 了不得	liáu-put-tik
 了不起	liáu-put-khí
@@ -6923,8 +6921,6 @@ tín動	tín-tāng
 二	lī
 二	nn̄g
 二	nōo
-二--來	jī--lâi
-二--者	jī--tsiá
 二七仔	jī-tshit-á
 二七仔	lī-tshit-á
 二七八	jī-tshit-pueh
@@ -7401,6 +7397,7 @@ tín動	tín-tāng
 二絃	jī-hiân
 二結	jī-kiat
 二緣妻	jī-iân-tshe
+二者	jī--tsiá
 二者	jī-tsiá
 二聖一賢	jī-sìng-it-hiân
 二胡	jī-ôo
@@ -8035,8 +8032,8 @@ tín動	tín-tāng
 五金	ngóo-kim
 五金行	ngóo-kim-hâng
 五銖錢	ngóo-tsu-tsînn
-五錢--的	gōo-sián--ê
 五錢仔	gōo-sián-á
+五錢的	gōo-sián--ê
 五間	gōo-king
 五間厝	gōo-king-tshù
 五間厝	gǒo-king-tshù
@@ -8245,10 +8242,10 @@ tín動	tín-tāng
 交	ka
 交	kau
 交	kiau
-交--人	kau--lâng
 交丈	kau-tiāng
 交丈	kau-tiōng
 交互	kau-hōo
+交人	kau--lâng
 交人	kau-lâng
 交仗	kau-tiāng
 交仗	kau-tiōng
@@ -9176,10 +9173,10 @@ tín動	tín-tāng
 付錢	hù-tsînn
 仙	sian
 仙	sián
-仙--人	sian--lâng
 仙丹	sian-tan
 仙丹花	sian-tan-hue
 仙乩	sian-ki
+仙人	sian--lâng
 仙人	sian-jîn
 仙人	sian-lâng
 仙人	sian-lîn
@@ -9736,13 +9733,13 @@ tín動	tín-tāng
 伐過	hua̍h-kuè
 休	hiu
 休	hiù
-休--去	hiu--khì
 休休	hiu-hiu
 休假	hiu-kà
 休假	hiu-ká
 休克	hiu-khik
 休兵	hiu-ping
 休刊	hiu-khan
+休去	hiu--khì
 休士頓	hiu-sū-tùn
 休字	hiu-jī
 休學	hiu-ha̍k
@@ -10750,7 +10747,6 @@ tín動	tín-tāng
 使	sír
 使	sù
 使	sú
-使--去	sài--khì
 使仙公	sái-sian-kong
 使倒拖刀	sái-tò-thua-to
 使倒頭槌	sái-tò-thâu-thuî
@@ -10762,6 +10758,7 @@ tín動	tín-tāng
 使勢	sái-sì
 使勢頭	sái-sè-thâu
 使勢頭	sái-sì-thâu
+使去	sài--khì
 使君子	sù-kun-tsú
 使君子	sú-kun-tsú
 使命	sù-bīng
@@ -10779,7 +10776,7 @@ tín動	tín-tāng
 使姦撟	sái-kàn-kiāu
 使姦肏	sái-kàn-tshoh
 使官	sài-kuann
-使少--去	sài-tsió--khì
+使少去	sài-tsió--khì
 使尻川	sái-kha-tshng
 使弄	sái-lāng
 使弄	sái-lōng
@@ -10833,7 +10830,7 @@ tín動	tín-tāng
 使激條	sái-kik-tiâu
 使激法	sái-kik-huat
 使烏暗下	sái-oo-àm-hē
-使無--去	sài-bô--khì
+使無去	sài-bô--khì
 使然	sú-jiân
 使犁	sái-luê
 使犁歌	sái-luê-kua
@@ -11893,8 +11890,8 @@ tín動	tín-tāng
 俾	phi
 俾	pi
 俾	pī
-俾--人	hōo--lâng
-俾--伊	hōo--i
+俾人	hōo--lâng
+俾伊	hōo--i
 俾伊	hōo-i
 俾彼	hōo--he
 倀	tiông
@@ -12379,12 +12376,11 @@ tín動	tín-tāng
 候駕	hāu-kà
 倚	uá
 倚	í
-倚--人	uá--lâng
-倚--來	uá--lâi
-倚--過-來	uá--kuè-lâi
 倚並	uá-phīng
+倚人	uá--lâng
 倚仗	í-tiōng
 倚伙食	uá-hué-si̍t
+倚來	uá--lâi
 倚倚	uá-uá
 倚偏邊	uá-phian-pinn
 倚傍	uá-pn̄g
@@ -12443,6 +12439,7 @@ tín動	tín-tāng
 倚近	uá-kīn
 倚近	uá-kīrn
 倚近	uá-kūn
+倚過來	uá--kuè-lâi
 倚邊	uá-pinn
 倚重	uá-tiōng
 倚重	í-tiōng
@@ -12576,7 +12573,7 @@ tín動	tín-tāng
 倩的	tshiànn--ê
 倩的	tshiànn-ê
 倩船	tshiànn-tsûn
-倩賊顧更	tshiànn--tsha̍t---kòo-kenn
+倩賊顧更	tshiànn--tsha̍t--kòo-kenn
 倩車	tshiànn-tshia
 倩鎗	tshiànn-tshiunn
 倩馬	tshiànn-bé
@@ -12670,7 +12667,6 @@ tín動	tín-tāng
 假	kèe
 假	ké
 假	kée
-假--的	ké--ê
 假khia̋n-sé	ké-khia̋n-sé
 假上諓	ké-tsiūnn-tsînn
 假上錢	ké-tsiūnn-tsînn
@@ -13046,7 +13042,6 @@ tín動	tín-tāng
 做	tsò
 做	tsòo
 做	tsòr
-做--人	tsuè--lâng
 做プ	tsò-pû
 做㾪氣	tsuè-sán-khuì
 做㾪氣	tsò-sán-khuì
@@ -13243,8 +13238,8 @@ tín動	tín-tāng
 做園	tsò-huînn
 做園的	tsò-huînn-ê
 做土	tsò-thôo
-做土--的	tsuè-thôo--ê
 做土公	tsuè-thóo-kong
+做土的	tsuè-thôo--ê
 做土的	tsò-thôo-ê
 做堆	tsuè-tui
 做堆	tsò-tui
@@ -13577,7 +13572,7 @@ tín動	tín-tāng
 做節	tsuè-tsueh
 做節	tsò-tseh
 做篾貨	tsuè-bi̍h-hè
-做米--的	tsuè-bí--ê
+做米的	tsuè-bí--ê
 做粿	tsuè-ké
 做紙	tsuè-tsuá
 做縈纏	tsuè-inn-tînn
@@ -14159,8 +14154,8 @@ tín動	tín-tāng
 傖	tshng
 傖	tshong
 傖	tsong
-傖-傖	sòng-sòng
 傖傖	suâinn-suâinn
+傖傖	sòng-sòng
 傖傖	sông-sông
 傖壁壁	sông-piah-piah
 傖盼	sòng-phàn
@@ -15581,7 +15576,6 @@ tín動	tín-tāng
 兌錢	tuī-tsînn
 兌齊	luí-tsê
 免	bián
-免--得	bián--tit
 免不了	bián-put-liáu
 免仔	bián-á
 免你管	bián-lí-kuán
@@ -15592,6 +15586,7 @@ tín動	tín-tāng
 免問嘛知	bián-muī-mā-tsai
 免官	bián-kuann
 免客氣	bián-kheh-khì
+免得	bián--tit
 免得	bián-tit
 免想	bián-siūnn
 免戰牌	bián-tsiàn-pâi
@@ -15714,9 +15709,6 @@ tín動	tín-tāng
 兢心	kin-sim
 入	ji̍p
 入	li̍p
-入--來	ji̍p--lâi
-入--去	ji̍p--khì
-入--落去	ji̍p--lo̍h-khì
 入世	ji̍p-sè
 入主	ji̍p-tsú
 入主	li̍p-tsú
@@ -15724,6 +15716,7 @@ tín動	tín-tāng
 入伍	ji̍p-ngóo
 入伍	li̍p-ngóo
 入伙	li̍p-hué
+入來	ji̍p--lâi
 入來	ji̍p-lâi
 入來	li̍p-lâi
 入來去	ji̍p-lâi-khì
@@ -15744,6 +15737,7 @@ tín動	tín-tāng
 入厝	ji̍p-tshù
 入厝	li̍p-tshù
 入厝酒	ji̍p-tshù-tsiú
+入去	ji̍p--khì
 入去	ji̍p-khì
 入去	ji̍p-khìr
 入去	ji̍p-khù
@@ -15890,6 +15884,7 @@ tín動	tín-tāng
 入茶	ji̍p-tê
 入茸	ji̍p-jiông
 入萬出萬	ji̍p-bān-tshut-bān
+入落去	ji̍p--lo̍h-khì
 入螺鈿	ji̍p-lê-tiān
 入衙	ji̍p-gê
 入被	li̍p-phuē
@@ -19418,7 +19413,6 @@ tín動	tín-tāng
 分	hun
 分	hūn
 分	pun
-分--的	pun--ê
 分上鞋	pun-tsiūnn-uê
 分享	hun-hiáng
 分享	hun-hióng
@@ -19962,7 +19956,6 @@ tín動	tín-tāng
 別	pa̍t
 別	piat
 別	pia̍t
-別--的	pa̍t--ê
 別世	pia̍t-sè
 別个	pa̍t-ê
 別人	pa̍t-lâng
@@ -20002,6 +19995,7 @@ tín動	tín-tāng
 別款	pa̍t-khuán
 別派	pa̍t-phài
 別物	pa̍t-mi̍h
+別的	pa̍t--ê
 別的人	pa̍t-ê-lâng
 別種	pa̍t-tsióng
 別種	pa̍t-tsíng
@@ -20600,7 +20594,6 @@ tín動	tín-tāng
 前	tsâinn
 前	tsîng
 前	tsûn
-前--年	tsûn--nî
 前一工	tsîng-tsi̍t-kang
 前一日	tsîng-tsi̍t-ji̍t
 前一暗	tsîng-tsi̍t-àm
@@ -21433,11 +21426,11 @@ tín動	tín-tāng
 加	kà
 加	ká
 加	kā
-加--之	ka--tsi
 加一	ka-it
 加一倍	ka-it-pē
 加上	ka-siāng
 加上	ka-siōng
+加之	ka--tsi
 加也	ka-ia̍h
 加了工	ke-liáu-kang
 加以	ka-í
@@ -21655,7 +21648,7 @@ tín動	tín-tāng
 加蚌	ka-bāng
 加蚤	ka-tsáu
 加蚤蚊	ka-tsáu-báng
-加衰ê	ke-sue--ê
+加衰--ê	ke-sue--ê
 加補	ke-póo
 加註	ke-tsù
 加話	ke-uē
@@ -21895,7 +21888,6 @@ tín動	tín-tāng
 動	tāng
 動	tōng
 動	tǎng
-動--著	tāng--tio̍h
 動不動	tāng-put-tāng
 動不動	tōng-put-tōng
 動亂	tōng-luān
@@ -25144,7 +25136,6 @@ tín動	tín-tāng
 參	song
 參	tsham
 參	tshām
-參--落	tsham--lo̍h
 參一腳	tsham-tsi̍t-kha
 參事	tsham-sū
 參仔	sam-á
@@ -25255,6 +25246,7 @@ tín動	tín-tāng
 參茸	sim-liông
 參茸	som-jiông
 參茸	som-liông
+參落	tsham--lo̍h
 參衒	sann-hīng
 參見	tsham-kiàn
 參見	tsham-kìnn
@@ -26201,7 +26193,7 @@ tín動	tín-tāng
 叨撚	lo-lián
 叨撚批	lo-lián-phue
 叨甪	lo-lut
-叨甪--人	lo-lut--lâng
+叨甪人	lo-lut--lâng
 叨落	tá-lo̍h
 叨落	tó-lo̍h
 叨語場	tho-gú-tiûnn
@@ -26266,9 +26258,9 @@ tín動	tín-tāng
 叫	kioh
 叫	kiàu
 叫	kiò
-叫--來	kiò--lâi
 叫不敢	kiò-m̄-kánn
 叫伊	kiò-i
+叫來	kiò--lâi
 叫倚	kiò-uá
 叫做	kiò-tserè
 叫做	kiò-tsuè
@@ -26986,7 +26978,6 @@ tín動	tín-tāng
 合	hoo
 合	kah
 合	kap
-合--字難寫	kap--jī-lân-siá
 合久長	kah-kú-tn̂g
 合人	kah-lâng
 合人個	kah-lâng-ê
@@ -27058,6 +27049,7 @@ tín動	tín-tāng
 合婚	ha̍p-hun
 合婚桌	ha̍p-hun-toh
 合孔	ha̍h-khang
+合字難寫	kap--jī-lân-siá
 合定	kah-tiānn
 合定著	kah-tiānn-tio̍h
 合宜	ha̍p-gî
@@ -29780,7 +29772,6 @@ tín動	tín-tāng
 哽	kê
 哽	kíng
 哽	kínn
-哽-月	kínn-kui
 哽胿	kénn-kui
 哽胿	kínn-kui
 哽著	kénn--tio̍h
@@ -29974,13 +29965,13 @@ tín動	tín-tāng
 唯	uí
 唯	uî
 唯	î
-唯--哉	ui̍h-tsài
-唯--啊	hânn--ah
-唯--喲	hānn--ioh
 唯一	uî-it
 唯一	î-it
 唯仔	ui̍h-á
 唯利是圖	uî-lī-sī-tôo
+唯哉	ui̍h-tsài
+唯啊	hânn--ah
+唯喲	hānn--ioh
 唯嘮	hānn-loh
 唯嘮	hēnn-loh
 唯心論	î-sim-lūn
@@ -30591,7 +30582,6 @@ tín動	tín-tāng
 喊	hiàm
 喊	hám
 喊	hán
-喊--起來	hán--khí-lâi
 喊予伊走	hiàm-hōo-i-tsáu
 喊來喊去	hán-lâi-hán-khì
 喊冤	hiàm-uan
@@ -30606,12 +30596,13 @@ tín動	tín-tāng
 喊嗽	khām-sàu
 喊救	hiàm-kiù
 喊煞	hiàm-suah
-喊牛--的	hiàm-gû--ê
+喊牛的	hiàm-gû--ê
 喊班	hán-pan
 喊苦	hiàm-khóo
 喊角	hiàm-kak
 喊譁	hán-huā
 喊賊	hiàm-tsha̍t
+喊起來	hán--khí-lâi
 喊車	hiàm-tshia
 喊雞	hiàm-ke
 喊魂	hiàm-hûn
@@ -31344,8 +31335,7 @@ tín動	tín-tāng
 嘈	tshāu
 嘈	tsô
 嘈	tsō
-嘈--人	tshô--lâng
-嘈--死	tsô--sí
+嘈人	tshô--lâng
 嘈促	tso-tsak
 嘈促	tsô-tsak
 嘈嘈	tshāu-tshāu
@@ -31354,6 +31344,7 @@ tín動	tín-tāng
 嘈嘈念	tshāu-tshāu-liām
 嘈嘈滴	tsha̍uh-tsha̍uh-tih
 嘈嘈滾	tshā-tshā-kún
+嘈死	tsô--sí
 嘈死	tsō--sí
 嘈耳	tsô-hīnn
 嘈齪	tsô-tsak
@@ -32053,7 +32044,7 @@ tín動	tín-tāng
 嚇	hiannh
 嚇	hik
 嚇	hánn
-嚇--一下	hiannh--tsi̍t-ē
+嚇一下	hiannh--tsi̍t-ē
 嚇價	hiannh-kè
 嚇半死	heh-puànn-sí
 嚇呢	hann--nih
@@ -33505,7 +33496,6 @@ tín動	tín-tāng
 國鱉	kok-pih
 圍	uî
 圍	û
-圍-布-城	uî-pòo-siânn
 圍仔內	uî-á-lāi
 圍住	uî-tiâu
 圍住	uî-tsū
@@ -33523,6 +33513,7 @@ tín動	tín-tāng
 圍巾	uî-kin
 圍巾	uî-kirn
 圍巾	uî-kun
+圍布城	uî-pòo-siânn
 圍懸	uî-thâm
 圍截	uî-tsa̍h
 圍捕	uî-póo
@@ -33586,7 +33577,7 @@ tín動	tín-tāng
 園限	hn̂g-hān
 圓	uân
 圓	înn
-圓--人會扁	în--lâng-uē-pínn
+圓人會扁	în--lâng-uē-pínn
 圓仔	înn-á
 圓仔湯	înn-á-thng
 圓仔粞	înn-á-tshuè
@@ -35233,8 +35224,6 @@ tín動	tín-tāng
 垂	suē
 垂	sê
 垂	sêr
-垂--落	sê--lo̍h
-垂--落去	sê--lo̍h-khì
 垂危	suî-guî
 垂垂	suê-suê
 垂垂	sê-sê
@@ -35253,9 +35242,11 @@ tín動	tín-tāng
 垂肩	suê-king
 垂肩	suē-king
 垂落	suî-lo̍h
+垂落	sê--lo̍h
 垂落	sē--lo̍h
 垂落來	suē--lo̍h-lâi
 垂落去	suê--lo̍h-khì
+垂落去	sê--lo̍h-khì
 垂裾	sē-ku
 垂角	sē-kak
 垂詢	suî-sûn
@@ -36560,7 +36551,7 @@ tín動	tín-tāng
 墘	khiân
 墘	kinn
 墘	kînn
-墘--仔	kinn--á
+墘仔	kinn--á
 墘仔	kinn-á
 墘仔	kînn-á
 墘角	kînn-kak
@@ -36814,7 +36805,6 @@ tín動	tín-tāng
 壓	teh
 壓	tshi̍h
 壓	ūn
-壓--落	ji̍h--lo̍h
 壓佃	teh-tiān
 壓佃銀	teh-tiān-gûn
 壓低	a̍h-kē
@@ -36916,6 +36906,7 @@ tín動	tín-tāng
 壓花會	teh-hue-hē
 壓茶甌	teh-tê-au
 壓茶鐘	teh-tê-tsing
+壓落	ji̍h--lo̍h
 壓落	teh--lo̍h
 壓落底	ah-lo̍h-teré
 壓落底	ah-lo̍h-tué
@@ -37671,7 +37662,6 @@ tín動	tín-tāng
 夠額	kàu-gia̍h
 夢	bāng
 夢	bōng
-夢--見	bāng--kìnn
 夢中	bāng-ting
 夢中	bāng-tiong
 夢境	bāng-kíng
@@ -37684,6 +37674,7 @@ tín動	tín-tāng
 夢泄	bōng-siat
 夢洩	bōng-siat
 夢著	bāng--tio̍h
+夢見	bāng--kìnn
 夢見	bāng-kìnn
 夢遊病	bāng-iû-pēnn
 夢遺	bōng-uî
@@ -37706,9 +37697,8 @@ tín動	tín-tāng
 大	ta
 大	tuā
 大	tāi
-大-片	tuā-pue
+大--ê	tuā--ê
 大gí仔	tuā-gí-á
-大ê	tuā--ê
 大㘛	tuā-khâm
 大一	tāi-it
 大一統	tuā-it-thóng
@@ -38908,7 +38898,6 @@ tín動	tín-tāng
 大肆機	tāi-sù-ki
 大肚	tuā-tōo
 大肚	tuā-tǒo
-大肚-月	tuā-tóo-kui
 大肚仔	tuā-tōo-á
 大肚仔魚	tuā-tōo-á-hî
 大肚仔魚	tuā-tōo-á-hîr
@@ -40174,7 +40163,6 @@ tín動	tín-tāng
 夯	ngiâ
 夯	pūn
 夯	pǔn
-夯--起來	giâ--khí-lâi
 夯人命	giâ-jîn-miā
 夯刀	giâ-to
 夯勢故	giâ-sè-kòo
@@ -40229,7 +40217,6 @@ tín動	tín-tāng
 夰	kó
 失	sit
 失 眠	sit-bîn
-失--去	sit--khì
 失主	sit-tsú
 失主意	sit-tsú-ì
 失事	sit-sīr
@@ -41265,11 +41252,9 @@ tín動	tín-tāng
 好	hó
 好	hónn
 好	hór
-好--不	hó--m̄
-好--喇	hó--lah
-好--處	hó--tshù
 好上元	hó-siōng-guân
 好下	hó-ē
+好不	hó--m̄
 好不好	hó-m̄-hó
 好世	hó-sè
 好中球	hònn-tiong-kiû
@@ -41352,6 +41337,7 @@ tín動	tín-tāng
 好啉	hó-lim
 好啊啦	hó--ah--lah
 好啦	hó-là
+好喇	hó--lah
 好喙	hó-tshuì
 好喙	hór-tshuì
 好喙斗	hó-tshuì-táu
@@ -41626,6 +41612,7 @@ tín動	tín-tāng
 好草唅	hó-tsháu-hâm
 好萊塢	hó-lâi-ù
 好藥	hó-io̍h
+好處	hó--tshù
 好處	hó-tshìr
 好處	hó-tshù
 好處	hór-tshù
@@ -41927,7 +41914,7 @@ tín動	tín-tāng
 妘	ûn
 妙	biāu
 妙	miāu
-妙--哉	biāu--tsai
+妙哉	biāu--tsai
 妙年	biāu-liân
 妙方	biāu-hng
 妙方	biāu-hong
@@ -42056,7 +42043,6 @@ tín動	tín-tāng
 姅	puàn
 姆	bóo
 姆	ḿ
-姆--仔	ḿ--á
 姆仔	ḿ--á
 姆仔	ḿ-ah
 姆仔	ḿ-á
@@ -42076,7 +42062,6 @@ tín動	tín-tāng
 姉妹	tsí-muē
 姊	tsé
 姊	tsí
-姊--仔	tsé--á
 姊丈	tsí-tiūnn
 姊仔	tsé--á
 姊仔	tsí--á
@@ -42294,7 +42279,6 @@ tín動	tín-tāng
 姦瘡	kan-tshng
 姦通	kan-thong
 姨	î
-姨--仔	î--á
 姨丈	î-tiōnn
 姨丈	î-tiūnn
 姨丈	î-tiǔnn
@@ -43151,7 +43135,7 @@ tín動	tín-tāng
 嬴面	iânn-bīn
 嬸	sím
 嬸	tsím
-嬸--仔	tsím--á
+嬸仔	tsím--á
 嬸姆	tsím-ḿ
 嬸婆	tsím-pô
 嬸婆	tsím-pôr
@@ -44032,7 +44016,7 @@ tín動	tín-tāng
 孻	nâi
 孽	giat
 孽	gia̍t
-孽--人撇--人	gia̍t--lâng-phiat--lâng
+孽人撇人	gia̍t--lâng-phiat--lâng
 孽仔話	gia̍t-á-uē
 孽兆	gia̍t-tiāu
 孽削	gia̍t-siat
@@ -44841,7 +44825,6 @@ tín動	tín-tāng
 客𠫊	kheh-thiann
 宣	suan
 宣	suān
-宣-木	suan-tsi
 宣于	suan-u
 宣仔	suān-á
 宣佈	suan-pòo
@@ -45422,7 +45405,6 @@ tín動	tín-tāng
 密	ba̍t
 密	bi̍t
 密	bā
-密--落去	bi̍t--lo̍h-khì
 密事	bi̍t-sū
 密佈	bi̍t-pòo
 密偵	bi̍t-tsing
@@ -45548,8 +45530,6 @@ tín動	tín-tāng
 寒	gân
 寒	hân
 寒	kuânn
-寒---人	kuânn--lâng
-寒--死	kuânn--sí
 寒人	kuânn--lâng
 寒人	kuânn-lâng
 寒人个時	kuânn--lâng-ê-sî
@@ -45585,6 +45565,7 @@ tín動	tín-tāng
 寒暖	hân-luán
 寒暖計	hân-luán-kè
 寒村	hân-tshuan
+寒死	kuânn--sí
 寒死	kuânn-sí
 寒氣	hân-khì
 寒氣	kuânn-khì
@@ -45843,7 +45824,6 @@ tín動	tín-tāng
 寪	guî
 寪	uí
 寫	siá
-寫--落去	siá--lak-khì
 寫作	siá-tsok
 寫作班	siá-tsok-pan
 寫出	siá-tshut
@@ -45883,6 +45863,7 @@ tín動	tín-tāng
 寫稿	siá-kó
 寫落	siá-làu
 寫落來	siá--lo̍h-lâi
+寫落去	siá--lak-khì
 寫許	siá-khóo
 寫錯	siá-tshò
 寬	khuan
@@ -46128,8 +46109,6 @@ tín動	tín-tāng
 射	i̍k
 射	siā
 射	tso̍h
-射--死	tso̍h--sí
-射--著	siā--tio̍h
 射佛	tso̍h-pu̍t
 射出	siā-tshut
 射前射後	tso̍h-tsîng-tso̍h-āu
@@ -46146,6 +46125,7 @@ tín動	tín-tāng
 射正	siā-tsiànn
 射歪	siā-uai
 射死	siā-sí
+射死	tso̍h--sí
 射殺	siā-sat
 射法	siā-huat
 射石	sia̍h-tsio̍h
@@ -46158,6 +46138,7 @@ tín動	tín-tāng
 射箭	tso̍h-tsìnn
 射精	siā-tsing
 射線	siā-suànn
+射著	siā--tio̍h
 射著	siā-tio̍h
 射術	siā-su̍t
 射銃	siā-tshìng
@@ -46686,7 +46667,6 @@ tín動	tín-tāng
 小	siáu
 小	sió
 小	siór
-小--來	sió--lâi
 小䉪咧	sió-luí--leh
 小七	siáu-tshit
 小七仔	siáu-tshit-á
@@ -46728,6 +46708,7 @@ tín動	tín-tāng
 小使	siáu-sír
 小使	siáu-sú
 小使仔	siáu-sú-á
+小來	sió--lâi
 小便	siáu-piān
 小便	sió-piān
 小便球	sió-piān-kiû
@@ -47320,12 +47301,12 @@ tín動	tín-tāng
 尖喙的	tsiam-tshuì--ê
 尖喙鳥	tsiam-tshuì-tsiáu
 尖嘴	tsiam-tshuì
-尖嘴--的	tsiam-tshuì--ê
 尖嘴仔	tsiam-tshuì-á
 尖嘴個	tsiam-tshuì-ê
 尖嘴夾仔	tsiam-tshuì-ngeh-á
 尖嘴掘仔	tsiam-tshuì-ku̍t-á
 尖嘴椒	tsiam-tshuì-tsio
+尖嘴的	tsiam-tshuì--ê
 尖嘴薄舌	tsiam-tshuì-po̍h-tsi̍h
 尖尖	tsiam-tsiam
 尖尾	tsiam-bué
@@ -47656,7 +47637,6 @@ tín動	tín-tāng
 尾	bí
 尾--à	bué--à
 尾--à	bé--à
-尾--來	bé--lâi
 尾二名	bué-jī-miâ
 尾二指	bué-jī-tsáinn
 尾二指	bué-lī-tsáinn
@@ -48019,8 +47999,6 @@ tín動	tín-tāng
 屈	khut
 屈	khu̍t
 屈	ut
-屈--落	khut--lo̍h
-屈--著	ut--tio̍h
 屈下	khut-hā
 屈低	khut-kē
 屈傷	ut-siong
@@ -48068,6 +48046,8 @@ tín動	tín-tāng
 屈臣	khut-sîn
 屈苞	ut-pôo
 屈莢	ut-gueh
+屈落	khut--lo̍h
+屈著	ut--tio̍h
 屈螺腳	khut-lê-kha
 屈角	khut-kak
 屈辱	khut-jio̍k
@@ -48339,8 +48319,8 @@ tín動	tín-tāng
 層	tsàn
 層	tsân
 層	tsîng
-層--去-來	tsân--khì-lâi
 層出不窮	tsân-tshut-put-kîng
+層去來	tsân--khì-lâi
 層次	tsân-tshìr
 層次	tsân-tshù
 層箱	tsân-siunn
@@ -48409,7 +48389,6 @@ tín動	tín-tāng
 屰	gi̍k
 山	san
 山	suann
-山--仔	san--á
 山上	san-siōng
 山上區	san-siōng-khu
 山下	san-hā
@@ -48424,6 +48403,7 @@ tín動	tín-tāng
 山主	suann-tsú
 山人	san-jîn
 山介	suann-kài
+山仔	san--á
 山仔	suann-á
 山仔港	suann-á-káng
 山仔跤	suann-á-kha
@@ -49224,7 +49204,6 @@ tín動	tín-tāng
 崩	pang
 崩	phing
 崩	ping
-崩--去	pang--khì
 崩去	pang--khì
 崩去	pang--khìr
 崩去	pang--khù
@@ -49810,7 +49789,6 @@ tín動	tín-tāng
 差	tshir
 差	tshu
 差	tsua̍h
-差--來	tshe--lâi
 差一天地	tsha-tsi̍t-thinn-tē
 差一氣	tsha-tsi̍t-khuì
 差不多	tsha-put-to
@@ -49819,6 +49797,7 @@ tín動	tín-tāng
 差事	tshe-sū
 差使	tshe-kah
 差使	tshe-sái
+差來	tshe--lâi
 差價	tsha-kè
 差別	tsha-piat
 差別	tsha-pia̍t
@@ -52160,7 +52139,6 @@ tín動	tín-tāng
 廡	bû
 廢	huè
 廢	huì
-廢--去	huè--khì
 廢人	huè-jîn
 廢人	huè-lîn
 廢人	huì-lîn
@@ -52573,8 +52551,6 @@ tín動	tín-tāng
 弓	king
 弓	kiong
 弓	kirn
-弓--起來	king--khí-lâi
-弓--開	king--khui
 弓中錘	king-tiong-tshuê
 弓仔	king-á
 弓仔秤	king-á-tshìn
@@ -52619,6 +52595,7 @@ tín動	tín-tāng
 弓衫	king-sann
 弓袋	king-tē
 弓豬	king-ti
+弓起來	king--khí-lâi
 弓開	king--khui
 弓開	king-khui
 弓鞋	king-uê
@@ -53322,7 +53299,6 @@ tín動	tín-tāng
 影	iánn
 影	íng
 影	ńg
-影一--下	iánn-tsi̍t-ē
 影一下	iánn--tsi̍t-ē
 影一下	iánn-tsi̍t-ē
 影像	iánn-siōng
@@ -53387,7 +53363,6 @@ tín動	tín-tāng
 彼	hióng
 彼	hé
 彼	pí
-彼--的	hia-ê
 彼一日	hit-tsi̍t-ji̍t
 彼一日	hit-tsi̍t-li̍t
 彼下	hit-ē
@@ -53474,6 +53449,7 @@ tín動	tín-tāng
 彼當時	pí-tong-sî
 彼當陣	hit-tang-tsūn
 彼當陣仔	hit-tang-tsūn-á
+彼的	hia-ê
 彼的	hiah-ê
 彼的	hí-ê
 彼瞬	hit-tsūn
@@ -53611,8 +53587,6 @@ tín動	tín-tāng
 後	hāu
 後	hōo
 後	āu
-後--年	āu--nî
-後--日	āu--ji̍t
 後一个	āu-tsit-ê
 後一个	āu-tsi̍t-ê
 後一位	āu--tsi̍t--uī
@@ -54388,7 +54362,6 @@ tín動	tín-tāng
 復	hiū
 復	hok
 復	ho̍k
-復--起來	ho̍k--khí-lâi
 復什	ho̍k-tsa̍p
 復仇	ho̍k-siû
 復倒轉	ho̍k-tò-tńg
@@ -54433,6 +54406,7 @@ tín動	tín-tāng
 復興崗	ho̍k-hing-kong
 復舊	ho̍k-kū
 復賬	hok-siàu
+復起來	ho̍k--khí-lâi
 復辟	ho̍k-phik
 復雜	ho̍k-tsa̍p
 循	sûn
@@ -54675,7 +54649,7 @@ tín動	tín-tāng
 心火著	sim-hué-to̍h
 心火著	sim-hé-to̍h
 心灰意冷	sim-hue-ì-líng
-心焦--去	sim-tâ--khì
+心焦去	sim-tâ--khì
 心煩	sim-huân
 心煩意亂	sim-huân-ì-luān
 心燈	sim-ting
@@ -54887,7 +54861,7 @@ tín動	tín-tāng
 忌日	kī-ji̍t
 忌日	kī-li̍t
 忌毒	khī-to̍k
-忌水--的病	khī-tsuí--ê-pēnn
+忌水的病	khī-tsuí--ê-pēnn
 忌舖	khī-phoo
 忌茸	khī-jiông
 忌蓆	kī-tshio̍h
@@ -54900,7 +54874,6 @@ tín動	tín-tāng
 忍	jím
 忍	lím
 忍	lún
-忍--得	jím--tik
 忍一下	lún--tsi̍t-ē
 忍倒	lún-táu
 忍冬	jím-tang
@@ -54915,6 +54888,7 @@ tín動	tín-tāng
 忍寒	lún-kuânn
 忍尿	lún-jiō
 忍尿	lún-liō
+忍得	jím--tik
 忍心	jím-sim
 忍心	lím-sim
 忍忍	lún-lún
@@ -55547,8 +55521,8 @@ tín動	tín-tāng
 怭	pi̍t
 怮	iu
 怯	khiap
-怯--去	khiap--khì
 怯勢	khiap-sì
+怯去	khiap--khì
 怯命	khiap-miā
 怯屎	khiap-sái
 怯意	khiap-ì
@@ -55688,7 +55662,7 @@ tín動	tín-tāng
 恨	hīn
 恨	hīrn
 恨	hūn
-恨--人	gīn--lâng
+恨人	gīn--lâng
 恨命	hūn-miā
 恨天怨地	hūn-thinn-uàn-tē
 恨心	hūn-sim
@@ -56215,7 +56189,7 @@ tín動	tín-tāng
 惡	ok
 惡	ònn
 惡	òo
-惡--人	ok--lâng
+惡人	ok--lâng
 惡人	ok-jîn
 惡人	ok-lâng
 惡人先投	ok-lâng-sing-tâu
@@ -56330,8 +56304,6 @@ tín動	tín-tāng
 想	siōnn
 想	siūnn
 想	siǔnn
-想--著	siūnn--tio̍h
-想--見	siūnn--kìnn
 想你	siūnn-lí
 想來	siūnn-lâi
 想來去到	siūnn-lâi-khì-tò
@@ -56416,6 +56388,7 @@ tín動	tín-tāng
 想袂到	siǔnn-bē-kàu
 想袂開	siūnn-buē-khui
 想袂開	siūnn-bē-khui
+想見	siūnn--kìnn
 想見	siūnn-kinn
 想見	siūnn-kìnn
 想計	siūnn-kè
@@ -56584,7 +56557,7 @@ tín動	tín-tāng
 愕	go̍k
 愕	khe̍h
 愕	me̍h
-愕--一下	me̍h--tsi̍t-ē
+愕一下	me̍h--tsi̍t-ē
 愕愕	khauh-khauh
 愕愕	khe̍h-khe̍h
 愕愕戰	ge̍h-ge̍h-tsùn
@@ -56625,7 +56598,6 @@ tín動	tín-tāng
 愚躕	gû-tû
 愛	thiànn
 愛	ài
-愛--無	ài--bô
 愛丁堡	ài-ting-pó
 愛不釋手	ài-put-sik-tshiú
 愛事	ài-sū
@@ -56699,6 +56671,7 @@ tín動	tín-tāng
 愛滋病	ài-tsu-pēnn
 愛滋病	ài-tsu-pīnn
 愛炳糕	ài-píng-ko
+愛無	ài--bô
 愛爾蘭	ài-nī-lân
 愛犬	ài-khián
 愛玉仔	ài-gio̍k-á
@@ -56757,8 +56730,6 @@ tín動	tín-tāng
 愜意	kah-ì
 愞	juán
 感	kám
-感--著	kám--tio̍h
-感--著-風	kám--tio̍h-hong
 感人	kám-jîn
 感介	kám-kài
 感佩	kám-phuè
@@ -56809,6 +56780,7 @@ tín動	tín-tāng
 感狀	kám-tsn̄g
 感著	kám--tio̍h
 感著	kám--tio̍rh
+感著風	kám--tio̍h-hong
 感著風	kám-tio̍h-hong
 感覺	kám-kak
 感覺著	kám-kak-tio̍h
@@ -57251,7 +57223,6 @@ tín動	tín-tāng
 憨	gām
 憨	ham
 憨	khám
-憨--的	khám--ê
 憨人	khám-lâng
 憨仔魚	gām-á-hî
 憨先	khám-sian
@@ -57266,6 +57237,7 @@ tín動	tín-tāng
 憨拗魚	gām-áu-hî
 憨氣	khám-khì
 憨獃	khám-tai
+憨的	khám--ê
 憨的	khám-ê
 憨皮鹹餡	gām-phê-kiâm-ānn
 憨目	gām-ba̍k
@@ -57682,7 +57654,6 @@ tín動	tín-tāng
 戅神	gōng-sîn
 戇	gāng
 戇	gōng
-戇--去	gōng--khì
 戇人	gōng-lâng
 戇人節	gōng-jîn-tsiat
 戇人節	gōng-lâng-tseh
@@ -57955,7 +57926,7 @@ tín動	tín-tāng
 我嘛是人	guá-mā-sī-lâng
 我嘛欲	guá-mā-beh
 我國	ngóo-kok
-我恨你	guá-hūn---lí
+我恨你	guá-hūn--lí
 我愛你	guá-ài--lí
 我愛你	guá-ài-lí
 我愛台灣	guá-ài-tâi-uân
@@ -58525,8 +58496,8 @@ tín動	tín-tāng
 扁	pián
 扁	pínn
 扁	pún
-扁--人會圓	pínn--lâng-uē-înn
 扁之	pínn-tsi
+扁人會圓	pínn--lâng-uē-înn
 扁人能圓	pínn-lâng-uē-înn
 扁仔	pián-á
 扁仙	pián-sian
@@ -59105,8 +59076,6 @@ tín動	tín-tāng
 打	sai
 打	tá
 打	tánn
-打--人	phah--lâng
-打--著	phah--tio̍h
 打一下	phah--tsi̍t-ē
 打一結死	phah-tsi̍t-kat-sí
 打丁仔	phah-ting-á
@@ -59121,6 +59090,7 @@ tín動	tín-tāng
 打不適好	phah-m̄-tú-hó
 打中午	phah-tiong-ngóo
 打交落	phah-ka-la̍uh
+打人	phah--lâng
 打件	tánn-kiānn
 打俾伊到	phah-hōo-i-kàu
 打倒	phah-tó
@@ -59455,6 +59425,7 @@ tín動	tín-tāng
 打落	phah-làu
 打落公	phah-lo̍h-kong
 打落身	phah-lo̍h-sin
+打著	phah--tio̍h
 打著算	tánn-tio̍h-sǹg
 打蓆	phah-tshio̍h
 打蕾	phah-m̂
@@ -59746,7 +59717,7 @@ tín動	tín-tāng
 扭來	khiú--lâi
 扭倒	khiú-tó
 扭倒轉	khiú-tó-tńg
-扭倒轉--來	khiú-tó-tńg--lâi
+扭倒轉來	khiú-tó-tńg--lâi
 扭倚	giú-uá
 扭力	niú-li̍k
 扭后脚	giú-āu-kha
@@ -59868,7 +59839,6 @@ tín動	tín-tāng
 扵	oo
 扶	hû
 扶	phôo
-扶--起來	hû--khí-lâi
 扶人	phôo--lâng
 扶仙	phôo-sian
 扶助	hû-tsōo
@@ -59903,6 +59873,7 @@ tín動	tín-tāng
 扶膦脬	phôo-lān-pha
 扶落柴	hû-lo̍h-tshâ
 扶起	hû-khí
+扶起來	hû--khí-lâi
 扶起來	phôo--khí-lâi
 扶輪社	hû-lûn-siā
 扶轎	hû-kiō
@@ -60116,7 +60087,6 @@ tín動	tín-tāng
 抃	piān
 抄	tshau
 抄	tshiau
-抄--的	tshau--ê
 抄人	tshau--lâng
 抄人膎	tshiau-lâng-kê
 抄人鮭	tshiau-lâng-kê
@@ -60132,6 +60102,7 @@ tín動	tín-tāng
 抄書	tshau-tsu
 抄本	tshau-pún
 抄正	tshau-tsiànn
+抄的	tshau--ê
 抄襲	tshau-si̍p
 抄譯	tshau-i̍k
 抄賬	tshau-siàu
@@ -60400,8 +60371,6 @@ tín動	tín-tāng
 折	tsih
 折	tsik
 折	tsi̍h
-折--折	at--tsi̍h
-折--斷	at--tn̄g
 折人	tsiat--lâng
 折人	tsi̍h-lâng
 折仔戲	tsiat-á-hì
@@ -60415,6 +60384,7 @@ tín動	tín-tāng
 折手把	at-tshiú-pà
 折手霸	at-tshiú-pà
 折扣	tsiat-khàu
+折折	at--tsi̍h
 折折	at-at
 折折	at-lat
 折折	tsiat-tsiat
@@ -60423,6 +60393,7 @@ tín動	tín-tāng
 折指	at-kí
 折指	at-tsí
 折揚	tsi̍h-iāng
+折斷	at--tn̄g
 折曲	at-khiau
 折曲	tsiat-khiok
 折減	tsiat-kiám
@@ -60981,11 +60952,11 @@ tín動	tín-tāng
 拂	hut
 拂	pi̍t
 拂	put
-拂--死	hut--sí
 拂下	hut-hā
 拂倒	hut--tó
 拂塵	hu̍t-tîn
 拂拂	hut-hut
+拂死	hut--sí
 拂落去	hut--lo̍h-khì
 拂走	put-tsáu
 拄	tsú
@@ -61613,7 +61584,7 @@ tín動	tín-tāng
 拐	kuáinn
 拐	kuínn
 拐	kuāinn
-拐--人	kuài--lâng
+拐人	kuài--lâng
 拐仔	kuái-á
 拐仔	kuáinn-á
 拐來拐去	kuái-lâi-kuái-khì
@@ -61668,13 +61639,13 @@ tín動	tín-tāng
 拔	pua̍t
 拔	pue̍h
 拔	pui̍h
-拔--倒	pui̍h--tó
 拔仔	pa̍t
 拔仔	pa̍t-á
 拔仔	pua̍t-á
 拔仔票	pa̍t-á-phiò
 拔仔雞油	pua̍t-á-kue-iû
 拔倒	pua̍h-tó
+拔倒	pui̍h--tó
 拔元	pua̍t-guân
 拔出	pue̍h-tshut
 拔出	pui̍h-tshut
@@ -61938,7 +61909,6 @@ tín動	tín-tāng
 拚	piann
 拚	piànn
 拚	piān
-拚--去	piànn--khì
 拚俗	piànn-sio̍k
 拚俗貨	piànn-sio̍k-huè
 拚俗貨	piànn-sio̍k-hè
@@ -61957,6 +61927,7 @@ tín動	tín-tāng
 拚博	piànn-poh
 拚卜	piànn-poh
 拚厚薄	piànn-kāu-po̍h
+拚去	piànn--khì
 拚台	piànn-tâi
 拚命	piànn-miā
 拚孤注	piànn-koo-tù
@@ -62343,9 +62314,9 @@ tín動	tín-tāng
 拾	khioh
 拾	si̍p
 拾	tsa̍p
-拾--人-的	khioh--lâng-ê
 拾丁錢	khioh-ting-tsînn
 拾互齊	khioh-hōo-tsê
+拾人的	khioh--lâng-ê
 拾來飼	khioh-lâi-tshī
 拾倚	khioh-uá
 拾做伙	khioh-tsò-hué
@@ -62374,7 +62345,7 @@ tín動	tín-tāng
 拾恨	khioh-hūn
 拾拾	khioh-khioh
 拾拾	khioh-si̍p
-拾拾--去	khioh-si̍p--khì
+拾拾去	khioh-si̍p--khì
 拾捐	khioh-iân
 拾捔	khioh-ka̍k
 拾摺	khioh-tsih
@@ -62407,7 +62378,7 @@ tín動	tín-tāng
 拾著	khioh-tio̍h
 拾著錢	khioh-tio̍h-tsînn
 拾藏	khioh-khǹg
-拾藥--的	khioh-io̍h--ê
+拾藥的	khioh-io̍h--ê
 拾蘆	tsa̍p-lôo
 拾襉	khioh-kíng
 拾襉縫	khioh-kíng-thīnn
@@ -63076,7 +63047,6 @@ tín動	tín-tāng
 挼	lêr
 挽	buán
 挽	bán
-挽--起來	bán--khí-lâi
 挽喙齒	bán tshuì-khí
 挽嘴齒	bán-tshuì-khí
 挽回	bán-huê
@@ -63180,7 +63150,6 @@ tín動	tín-tāng
 捅鬚	thóng-tshiu
 捅鼻	thóng-phīnn
 捆	khún
-捆--起來	khún--khí-lâi
 捆工	khún-kang
 捆索	khún-soh
 捆絃	khún-hiân
@@ -63188,6 +63157,7 @@ tín動	tín-tāng
 捆縛	khún-pa̍k
 捆豬	khún-ti
 捆豬索	khún-ti-soh
+捆起來	khún--khí-lâi
 捆身	khún-sin
 捆身仔	khún-sin-á
 捆身衫	khún-sin-sann
@@ -63603,7 +63573,6 @@ tín動	tín-tāng
 捾水	kuānn-tsuí
 捾水	kuǎnn-tsuí
 掀	hian
-掀--起來	hian--khí-lâi
 掀冊	hian-tsheh
 掀手帕	hian-tshiú-phè
 掀掀	hian-hian
@@ -63614,6 +63583,7 @@ tín動	tín-tāng
 掀蓋	hian-kuà
 掀蓋車	hian-kuà-tshia
 掀起	hian-khí
+掀起來	hian--khí-lâi
 掀開	hian--khui
 掀開	hian-khui
 掀龜蓋	hian-ku-kuà
@@ -63628,7 +63598,6 @@ tín動	tín-tāng
 掃	sò
 掃	sòo
 掃	sòr
-掃--落去	sàu--lo̍h-khì
 掃倒	sàu-tó
 掃倚	sàu-uá
 掃做堆	sàu-tsò-tui
@@ -63682,6 +63651,7 @@ tín動	tín-tāng
 掃箒星	sàu-tshiú-tshenn
 掃箒星	sàu-tshiú-tshinn
 掃箒草	sàu-tshiú-tsháu
+掃落去	sàu--lo̍h-khì
 掃蕩	sàu-tōng
 掃跤兜	sàu-kha-tau
 掃路的	sàu-lōo--ê
@@ -63785,11 +63755,11 @@ tín動	tín-tāng
 掐	khap
 掐	khi̍p
 掐	khàng
-掐--起來	khàng--khí-lâi
 掐得	khi̍p-teh
 掐掐	khi̍p-khi̍p
 掐毒	khàng-ta̍k
 掐毒	khàng-to̍k
+掐起來	khàng--khí-lâi
 排	pâi
 排仔	pâi-á
 排仔頭	pâi-á-thâu
@@ -63960,7 +63930,6 @@ tín動	tín-tāng
 掛	khuà
 掛	kuà
 掛	kuì
-掛--著	kuì--tio̍h
 掛上	kuà-siāng
 掛下	khuà-hē
 掛住	kuà-tiâu
@@ -64042,6 +64011,7 @@ tín動	tín-tāng
 掛肚	kuà-tōo
 掛腳	khuè-kha
 掛膭	kuà-kuī
+掛著	kuì--tio̍h
 掛號	kuà-hō
 掛號	kuà-hōr
 掛號	kuà-hǒ
@@ -64347,7 +64317,6 @@ tín動	tín-tāng
 探馬	thàm-má
 掣	tshiat
 掣	tshuah
-掣--起來	tshuah--khí-lâi
 掣一趒	tshuah tsi̍t tiô
 掣一趒	tshuah-tsi̍t-tîo
 掣咧等	tshuah-leh-tán
@@ -64831,7 +64800,6 @@ tín動	tín-tāng
 揀	kán
 揀	kíng
 揀	liān
-揀--起來	kíng--khí-lâi
 揀也揀	kíng-ā-kíng
 揀人	kíng-lâng
 揀人撒油	kíng-lâng-suah-iû
@@ -64852,6 +64820,7 @@ tín動	tín-tāng
 揀菜	kíng-tshài
 揀赤掏餅	kíng-tsiann-tô-phiann
 揀起來	kíng--khí--lâi
+揀起來	kíng--khí-lâi
 揀選	kíng-suán
 揀食	kíng-tsia̍h
 揁	tsing
@@ -65029,9 +64998,6 @@ tín動	tín-tāng
 插	tshah
 插	tshap
 插	tshuh
-插--落去	tshah--lo̍h-khì
-插--著	tshap--tio̍h
-插--起來	tshah--khí-lâi
 插一腳	tshap-tsi̍t-kha
 插一跤	tshap-tsi̍t-kha
 插上	tshah-siāng
@@ -65099,6 +65065,7 @@ tín動	tín-tāng
 插艾	tshah-hiānn
 插花	tshah-hue
 插花仔	tshah-hue-á
+插落去	tshah--lo̍h-khì
 插著	tshap--tio̍h
 插著	tshap-tio̍h
 插袂	tshah-ńg
@@ -65108,6 +65075,7 @@ tín動	tín-tāng
 插話	tshah-uē
 插話	tshap-uē
 插走	tshap-tsáu
+插起來	tshah--khí-lâi
 插起來	tshah-khí-lâi
 插車	tshah-tshia
 插針	tshah-tsiam
@@ -65816,7 +65784,7 @@ tín動	tín-tāng
 搧	ia̍t
 搧	siàn
 搧	sàm
-搧--一-下	siàn--tsi̍t-ē
+搧一下	siàn--tsi̍t-ē
 搧人	ia̍t-lâng
 搧倒	siàn-tó
 搧口肶	siàn-tshuì-phué
@@ -66105,9 +66073,6 @@ tín動	tín-tāng
 摃	bòng
 摃	khng
 摃	kòng
-摃--折	kòng--tsi̍h
-摃--死	kòng--sí
-摃--著	kòng--tio̍h
 摃丸	kòng-uân
 摃傷	kòng-siong
 摃入	kòng-ji̍p
@@ -66116,6 +66081,7 @@ tín動	tín-tāng
 摃寇	kòng-kòo
 摃尻川	kòng-kha-tshng
 摃手指跤	kòng-tshiú-tsí-kha
+摃折	kòng--tsi̍h
 摃拍	kòng-phah
 摃摃	bòng-bòng
 摃摃	khng-khng
@@ -66127,6 +66093,7 @@ tín動	tín-tāng
 摃槌仔	kòng-thuî-á
 摃槌仔譜	kòng-thuî-á-phóo
 摃槌仔龍	kòng-thûi-á-liông
+摃死	kòng--sí
 摃死版	kòng-sí-pán
 摃球	kòng-kiû
 摃番頭	kòng-huan-thâu
@@ -66138,6 +66105,7 @@ tín動	tín-tāng
 摃糖	kòng-thn̂g
 摃肥料	kòng-puî-liāu
 摃腳目	kòng-kha-ba̍k
+摃著	kòng--tio̍h
 摃號	kòng-hō
 摃蚊	kòng-báng
 摃角	kòng-kak
@@ -66717,7 +66685,6 @@ tín動	tín-tāng
 撞	tn̄g
 撞	tsōng
 撞	tōng
-撞-著	tn̄g-tio̍h
 撞井	tōng-tsénn
 撞井	tōng-tsínn
 撞來撞去	tong--lâi-tōng-khì
@@ -66768,7 +66735,6 @@ tín動	tín-tāng
 撟開	kiāu-khui
 撠	giah
 撠	kik
-撠--起-來	ngiauh--khí-lâi
 撠刺	giah tshì
 撠去	ngiauh--khì
 撠去	ngiauh-khì
@@ -66781,6 +66747,7 @@ tín動	tín-tāng
 撠蝦	ngiauh-hê
 撠蟶	ngiauh-than
 撠起	ngiauh-khí
+撠起來	ngiauh--khí-lâi
 撠起來	ngiauh-khí-lâi
 撢	tham
 撢	thâm
@@ -66971,10 +66938,8 @@ tín動	tín-tāng
 撼	hián
 撼	hmh
 撼	hám
-撼--倒	hmh--tó
-撼--死	hmh--sí
-撼--死	hám--sí
 撼仔	hám-á
+撼倒	hmh--tó
 撼大草	hám-tuā-tsháu
 撼扁	hám-pínn
 撼掃	hám-sâm
@@ -66982,7 +66947,9 @@ tín動	tín-tāng
 撼撼	hmh-hmh
 撼撼	hám-hám
 撼撼	hḿ-hḿ
+撼死	hmh--sí
 撼死	hmh-sí
+撼死	hám--sí
 撼破	hám-phuà
 撼碎	hám-tshuì
 撼碎碎	hám-tshuì-tshuì
@@ -67142,7 +67109,6 @@ tín動	tín-tāng
 擐	suan
 擒	khîm
 擒	khînn
-擒--得	khînn--teh
 擒住	khî-tiâu
 擒住住	khî-tiâu-tiâu
 擒儉	khînn-khiām
@@ -67150,6 +67116,7 @@ tín動	tín-tāng
 擒壁龍	khînn-piah-lîng
 擒家	khînn-ke
 擒帶	khîm-tuà
+擒得	khînn--teh
 擒扱	khînn-khi̍p
 擒拿	khîm-ná
 擒捉	kîm-tshiok
@@ -67318,9 +67285,9 @@ tín動	tín-tāng
 擦	tshak
 擦	tshat
 擦	tshuah
-擦--去	tshat--khì
 擦仔	kuih-á
 擦仔	tshat-á
+擦去	tshat--khì
 擦拭	tshat-tshit
 擦捒	tshat-sak
 擦擦	kuih-kuih
@@ -67692,12 +67659,12 @@ tín動	tín-tāng
 攝	liap
 攝	siap
 攝	sia̍p
-攝----去	sia̍p---khì
-攝--人	sia̍p--lâng
+攝人	sia̍p--lâng
 攝仔客	liap-á-kheh
 攝位	liap-uī
 攝倚	liap-uá
 攝去	liap--khì
+攝去	sia̍p--khì
 攝去	sia̍p-khì
 攝取	liap-tshú
 攝名	liap-miâ
@@ -67862,9 +67829,9 @@ tín動	tín-tāng
 支頭	ki-thâu
 攰	khuì
 攲	khi
-攲--去	khi--khì
 攲一爿	khi-tsi̍t-pîng
 攲偏	khi-phîn
+攲去	khi--khì
 攲攲	khi-khi
 攲斜	khi-siâ
 攲斜	khi-tshiâ
@@ -67878,8 +67845,6 @@ tín動	tín-tāng
 攵	phok
 收	siu
 收 khoo-mí-sióng	siu khoo-mí-sióng
-收--去	siu--khì
-收--起來	siu--khí-lâi
 收事	siu-sū
 收仙	siu-sian
 收件	siu-kiānn
@@ -67893,6 +67858,7 @@ tín動	tín-tāng
 收割	siu-kuah
 收割車	siu-kuah-tshia
 收勢	siu-sì
+收去	siu--khì
 收取	siu-tshú
 收受	siu-siū
 收听	siu-thiann
@@ -68012,6 +67978,7 @@ tín動	tín-tāng
 收賄	siu-hué
 收賬	siu-siàu
 收購	siu-kòo
+收起來	siu--khí-lâi
 收跤洗手	siu-kha-seré-tshiú
 收跤洗手	siu-kha-sué-tshiú
 收跤洗手	siu-kha-sé-tshiú
@@ -69828,11 +69795,11 @@ tín動	tín-tāng
 斜	tshia̍h
 斜	tshiâ
 斜	tshua̍h
-斜--去	tshua̍h--khì
 斜仔灣	siâ-á-uan
 斜仔灣	tshiâ-á-uan
 斜体字	tshiâ-thé-jī
 斜勢	tshua̍h-sè
+斜去	tshua̍h--khì
 斜嘴	tshiâ-tshuì
 斜土	tshiâ-thóo
 斜土旁	tshiâ-thôo-pîng
@@ -70035,7 +70002,7 @@ tín動	tín-tāng
 新冊	sin-tsheh
 新冠肺炎	sin-kuan-huì-iām
 新冠肺炎	sin-kuan-hì-iām
-新出--的	sin-tshut--ê
+新出的	sin-tshut--ê
 新刊	sin-khan
 新到	sin-kàu
 新制	sin-tsè
@@ -70807,7 +70774,6 @@ tín動	tín-tāng
 日	gi̍t
 日	ji̍t
 日	li̍t
-日--時	ji̍t--sî
 日上辰	ji̍t-tsiūnn-sîn
 日中	ji̍t-tiong
 日中晝	ji̍t-ting-tàu
@@ -70907,7 +70873,7 @@ tín動	tín-tāng
 日文	ji̍t-bûn
 日文	li̍t-bûn
 日斜	ji̍t-siâ
-日斜--去	ji̍t-tshiâ--khì
+日斜去	ji̍t-tshiâ--khì
 日斜山	ji̍t-tshiâ-suann
 日斜西	ji̍t-tshiâ-sai
 日斜西	li̍t-tshiâ-sai
@@ -72316,7 +72282,6 @@ tín動	tín-tāng
 暈	n̄g
 暈	uīnn
 暈	ūn
-暈--去	hūn--khì
 暈倒	hūn--tó
 暈倒	hūn-tó
 暈去	hūn--khì
@@ -72364,7 +72329,6 @@ tín動	tín-tāng
 暖鋒	luán-hong
 暖鍋	luán-e
 暗	àm
-暗--去	àm--khì
 暗䀟	àm-phú
 暗下	àm-hē
 暗不靜	àm-put-tsīnn
@@ -72390,6 +72354,7 @@ tín動	tín-tāng
 暗刺	àm-tshì
 暗助	àm-tsōo
 暗卒卒	àm-tsut-tsut
+暗去	àm--khì
 暗參	àm-sàm
 暗号	àm-hō
 暗合	àm-ha̍p
@@ -73312,7 +73277,6 @@ tín動	tín-tāng
 會使	ē-saih
 會使	ē-sái
 會使	ě-sái
-會使--得	uē-sái--tit
 會使得	erē-sái--tit
 會使得	erē-sái-eh
 會使得	erē-sái-lit
@@ -73379,11 +73343,11 @@ tín動	tín-tāng
 會商	huē-siong
 會址	huē-tsí
 會堂	huē-tn̂g
-會堪--得	uē-kham--tit
 會堪得	erē-kham-eh
 會堪得	erē-kham-lit
 會堪得	erē-kham-tit
 會堪得	erē-kham-tsit
+會堪得	uē-kham--tit
 會堪得	uē-kham-eh
 會堪得	uē-kham-lit
 會堪得	uē-kham-tit
@@ -73453,11 +73417,10 @@ tín動	tín-tāng
 會毋著	hē-m̄-tio̍h
 會毋著	hēr-m̄-tio̍h
 會比並得	ē-pí-phīng-tit
-會渡--得	uē-tōo--tit
+會渡得	uē-tōo--tit
 會無	ē--bô
 會爛尤魚	huē-nuā-iû-hî
 會用	ē-īng
-會用--得	uē-īng--tit
 會用得	erē-īng--eh
 會用得	erē-īng-eh
 會用得	erē-īng-lit
@@ -73535,7 +73498,7 @@ tín動	tín-tāng
 會診	huē-tsín
 會試	huē-sì
 會話	huē-uē
-會認--得	uē-jīn--tit
+會認得	uē-jīn--tit
 會認得	ē-jīn-tit
 會談	huē-tâm
 會議	huē-gī
@@ -74286,7 +74249,7 @@ tín動	tín-tāng
 有路賭	ū-lōo-kiáu
 有身	ū-sin
 有身	ǔ-sin
-有身ê	ū-sin--ê
+有身--ê	ū-sin--ê
 有身人	ū-sin-lâng
 有身孕	ū-sin-hūn
 有身孕	ū-sin-īn
@@ -75255,7 +75218,6 @@ tín動	tín-tāng
 束	kháinn
 束	sak
 束	sok
-束-示	sok-ńg
 束仔	sok-á
 束信	sok-sìn
 束倚	sok-uá
@@ -75604,7 +75566,7 @@ tín動	tín-tāng
 板膋	pán-lâ
 板膋油	pán-lâ-iû
 板車	pán-tshia
-板透--來	pán-thàu--lâi
+板透來	pán-thàu--lâi
 板金	pán-kim
 板鋤	pán-tî
 板面	pán-bīn
@@ -76007,7 +75969,7 @@ tín動	tín-tāng
 枷	ké
 枷	kê
 枷	kêe
-枷--住	kê--tiâu
+枷住	kê--tiâu
 枷大將	kê-tāi-tsiòng
 枷手	kê-tshiú
 枷擔	ka-tann
@@ -76127,8 +76089,7 @@ tín動	tín-tāng
 染	jiám
 染	liám
 染	ní
-染--人	jiám--lâng
-染--著	jiám--tio̍h
+染人	jiám--lâng
 染住	jiám-tiâu
 染印法	ní-ìn-huat
 染工	ní-kang
@@ -76181,7 +76142,7 @@ tín動	tín-tāng
 染顏	jiám-gân
 柔	jiû
 柔	liû
-柔--一-步	jiû--tsi̍t-pōo
+柔一步	jiû--tsi̍t-pōo
 柔伊	jiû-i
 柔佛	jiû-hu̍t
 柔和	jiû-hô
@@ -80024,7 +79985,7 @@ tín動	tín-tāng
 權威	kuân-ui
 權威性	kuân-ui-sìng
 權學	kuân-o̍h
-權學--的	kuân-o̍h--ê
+權學的	kuân-o̍h--ê
 權宜	kuân-gî
 權宜之計	kuân-gî-tsi-kè
 權柄	khuân-pìng
@@ -80882,7 +80843,7 @@ tín動	tín-tāng
 正統	tsiànn-thóng
 正統	tsìng-thóng
 正經	tsìng-king
-正經ê	tsìng-king--ê
+正經--ê	tsìng-king--ê
 正經代	tsìng-king-tāi
 正經路	tsìng-king-lōo
 正綢	tsiànn-tiû
@@ -81116,7 +81077,6 @@ tín動	tín-tāng
 步頻	pǒo-pîn
 步驟	pōo-tsōo
 武	bú
-武--的	bú--ê
 武仲	bú-tiōng
 武俠	bú-kiap
 武俠小說	bú-kiap-siáu-suat
@@ -81194,6 +81154,7 @@ tín動	tín-tāng
 武田	bú-tiân
 武略	bú-lio̍k
 武當山	bú-tong-san
+武的	bú--ê
 武神	bú-sîn
 武秀才	bú-siù-tsâi
 武童	bú-tông
@@ -81363,7 +81324,6 @@ tín動	tín-tāng
 歷險	li̍k-hiám
 歸	ka
 歸	kui
-歸--去	kui--khì
 歸一	kui-it
 歸世人	kui-sì-lâng
 歸世儂	kui-sì-lâng
@@ -81401,6 +81361,7 @@ tín動	tín-tāng
 歸半日	kui-puànn-ji̍t
 歸半晡	kui-puànn-poo
 歸厝間	kui-tshù-king
+歸去	kui--khì
 歸咎	kui-kiū
 歸因於	kui-in-î
 歸國	kui-kok
@@ -82534,8 +82495,6 @@ tín動	tín-tāng
 母	bó
 母	bóo
 母	bú
-母--仔	bú--á
-母--的	bú--ê
 母さん	khà-sàng
 母ちゃん	khà-tsiàng
 母交藤	bó-kau-tîn
@@ -83191,7 +83150,7 @@ tín動	tín-tāng
 氡	tong
 氣	khuì
 氣	khì
-氣--一下	khì--tsi̍t-ē
+氣一下	khì--tsi̍t-ē
 氣人	khì-jîn
 氣候	khì-hāu
 氣候型態	khì-hāu-hîng-thài
@@ -85385,7 +85344,6 @@ tín動	tín-tāng
 泄精	siap-tsing
 泄青屎	tshuah-tshinn-sái
 泅	siû
-泅--過	siû--kè
 泅來泅去	siû-lâi-siû-khì
 泅水	siû-tsuí
 泅水	tshiû-tsuí
@@ -85395,6 +85353,7 @@ tín動	tín-tāng
 泅水衫	siû-tsuí-sann
 泅水鏡	siû-tsuí-kiànn
 泅浴仔	siû-i̍k-á
+泅過	siû--kè
 泅雨	siû-hōo
 泆	i̍k
 泆	tia̍t
@@ -85437,9 +85396,9 @@ tín動	tín-tāng
 泏	tsuat
 泏	tsuh
 泏	tut
-泏--出來	tsuat--tshut-lâi
 泏出來	tsuah--tshut-lâi
 泏出來	tsuah-tshut-lâi
+泏出來	tsuat--tshut-lâi
 泏振動	tsuah-tín-tāng
 泏沫	tsuat-phue̍h
 泏泏	tsuah-tsuah
@@ -86063,10 +86022,10 @@ tín動	tín-tāng
 洗身軀	sé-siang-khu
 洗身軀	sé-sin-khu
 洗身軀	sé-sing-khu
-洗身軀--的	sé-sin-khu--ê
 洗身軀桶	seré-sing-khu-tháng
 洗身軀桶	sué-sing-khu-tháng
 洗身軀桶	sé-sing-khu-tháng
+洗身軀的	sé-sin-khu--ê
 洗身軀精	sé-sin-khu-tsing
 洗身軀間	seré-sin-khu-king
 洗身軀間	sué-sin-khu-king
@@ -87218,7 +87177,6 @@ tín動	tín-tāng
 涇	king
 涇陽	king-iông
 消	siau
-消--去	siau--khì
 消㾪落肉	siau-sán-lo̍h-bah
 消仔	siau-á
 消化	siau-huà
@@ -87226,6 +87184,7 @@ tín動	tín-tāng
 消化器	siau-huà-khì
 消化器官	siau-huà-khì-kuan
 消印	siau-ìn
+消去	siau--khì
 消售	siau-siû
 消基會	siau-ki-huē
 消夜	siau-iā
@@ -87485,7 +87444,6 @@ tín動	tín-tāng
 淀流	tīnn-lâu
 淀流流	tīnn-lâu-lâu
 淀淀	tīnn-tīnn
-淀滂-滂	tīnn-phóng-phóng
 淀滂滂	tīnn-phóng-phóng
 淀滿流	tīnn-muá-lâu
 淀滿滿	tīnn-buán-buán
@@ -87579,7 +87537,7 @@ tín動	tín-tāng
 淘淘	tiû-tiû
 淘淘	tsuâ-tsuâ
 淘淘	tuâ-tuâ
-淘生-理	tô-sing-lí
+淘生理	tô-sing-lí
 淘米	tsuâ-bí
 淘米	tuâ-bí
 淘粟	tuâ-tshik
@@ -88662,8 +88620,8 @@ tín動	tín-tāng
 湔	tsiân
 湖	hôo
 湖	ôo
-湖--來	ôo--lâi
 湖仔內	ôo-á-lāi
+湖來	ôo--lâi
 湖內	ôo-lāi
 湖內區	ôo-lāi-khu
 湖北	ôo-pak
@@ -90282,7 +90240,7 @@ tín動	tín-tāng
 潰	huì
 潰	huē
 潰	khuì
-潰--死	huê--sí
+潰死	huê--sí
 潰潰	huê-huê
 潰瘍	khuì-iông
 潲	siâu
@@ -90477,7 +90435,6 @@ tín動	tín-tāng
 澽	kīr
 澽	kū
 激	kik
-激--死	kik--sí
 激一支嘴	kik-tsi̍t-ki-tshuì
 激上諓	kik-tsiūnn-tsînn
 激丹田	kik-tan-tiân
@@ -90853,7 +90810,7 @@ tín動	tín-tāng
 濺	tsiàn
 濺	tsiān
 濺	tsuānn
-濺--人	tsuānn--lâng
+濺人	tsuānn--lâng
 濺出	tsuānn-tshut
 濺出來	tsuānn-tshut-lâi
 濺尿	tsuānn-jiō
@@ -91848,7 +91805,6 @@ tín動	tín-tāng
 炎黃子孫	iām-hông-tsú-sun
 炒	tshá
 炒	tsháu
-炒--的	tshá--ê
 炒下水	tshá-hā-suí
 炒作	tshá-tsok
 炒八寶菜	tshá-pat-pó-tshài
@@ -91860,6 +91816,7 @@ tín動	tín-tāng
 炒水雞	tshá-tsuí-kue
 炒白鴿崧	tshá-pe̍h-kap-siông
 炒白鴿片	tshá-pe̍h-kap-phìnn
+炒的	tshá--ê
 炒米粉	tshá-bí-hún
 炒紅醋蟳	tshá-âng-tshòo-tsîm
 炒羊肉片	tshá-iûnn-bah-phìnn
@@ -93001,7 +92958,6 @@ tín動	tín-tāng
 無	bôr
 無	bû
 無	môo
-無--去	bô--khì
 無khah-tsua̍h	bô-khah-tsua̍h
 無一下仔	bô-tsi̍t-ē-á
 無一下著	bô-tsi̍t-ē-tio̍h
@@ -93340,10 +93296,10 @@ tín動	tín-tāng
 無奈何	bû-tā-uâ
 無奈得何	bô-tāi-tit-uâ
 無好	bô-hó
-無好--的	bô-hó--ê
 無好勢	bô-hó-sì
 無好心	bô-hó-sim
 無好死	bô-hó-sí
+無好的	bô-hó--ê
 無好聲嗽	bô-hó-siann-sàu
 無好聲頭	bô-hó-siann-thâu
 無妄之災	bû-bōng-tsi-tsai
@@ -93701,8 +93657,6 @@ tín動	tín-tāng
 無治事	bô-tī-tāi
 無治代	bô-tī-tāi
 無法	bô-huat
-無法--伊	bô-huat--i
-無法--得	bô-huat--tit
 無法伊	bô-huat--i
 無法伊	bô-huat-i
 無法伊	bôr-huat--i
@@ -94991,9 +94945,6 @@ tín動	tín-tāng
 熱	jua̍h
 熱	lia̍t
 熱	lua̍h
-熱--人	jua̍h--lâng
-熱--去	jua̍h--khì
-熱--著	jua̍h--tio̍h
 熱中	jia̍t-tiong
 熱人	jua̍h--lâng
 熱人	jua̍h-lâng
@@ -95010,6 +94961,7 @@ tín動	tín-tāng
 熱力	jia̍t-li̍k
 熱力學	jia̍t-li̍k-ha̍k
 熱勃勃	jia̍t-pu̍t-phu̍t
+熱去	jua̍h--khì
 熱去	jua̍h-khì
 熱和和	jia̍t-ho-ho
 熱喉	jia̍t-âu
@@ -95324,7 +95276,6 @@ tín動	tín-tāng
 燒	sior
 燒	sio̍h
 燒	siô
-燒--去	sio--khì
 燒一下	sio--tsi̍t-ē
 燒了了	sio-liáu-liáu
 燒仙草	sio-sian-tsháu
@@ -95337,6 +95288,7 @@ tín動	tín-tāng
 燒包	sio-pau
 燒包仔	sio-pau-á
 燒半青熟	sio-puànn-tshinn-si̍k
+燒去	sio--khì
 燒去	sio-khì
 燒唿唿	sio-hut-hut
 燒埔	sio-poo
@@ -95369,7 +95321,7 @@ tín動	tín-tāng
 燒滾滾	sio-kún-kún
 燒火	sio-hué
 燒火	sio-hé
-燒火ê	sio-hué--ê
+燒火--ê	sio-hué--ê
 燒火灰	sio-hé-hu
 燒火袋	sio-tsuí-tē
 燒灰	sio-he
@@ -95692,8 +95644,6 @@ tín動	tín-tāng
 爆	piak
 爆	pia̍k
 爆	po̍k
-爆--破	piak--phuà
-爆--開	piak--khui
 爆一下	pia̍k--tsi̍t-ē
 爆冷門	po̍k-líng-mn̂g
 爆出	po̍k-tshut
@@ -95715,6 +95665,7 @@ tín動	tín-tāng
 爆發	po̍k-huat
 爆發力	po̍k-huat-li̍k
 爆破	pho̍k-phuà
+爆破	piak--phuà
 爆破	piak-phuà
 爆破	po̍k-phuà
 爆穎	pok-ínn
@@ -95724,6 +95675,7 @@ tín動	tín-tāng
 爆米芳	po̍k-bí-phang
 爆裂	piak-li̍h
 爆裂彈	pho̍k-lia̍t-tân
+爆開	piak--khui
 爆開	po̍k-khui
 爆風	pho̍k-hong
 爆鼓	piak-kóo
@@ -96028,7 +95980,6 @@ tín動	tín-tāng
 爹爹	tia-tia
 爹親	tia-tshin
 爺	iâ
-爺--哥舍--哥	iâ-ko-sià-ko
 爺哥舍哥	iâ-ko-sià-ko
 爺舍	iâ-sià
 爺舍囝	iâ-sià-kiánn
@@ -96807,7 +96758,6 @@ tín動	tín-tāng
 牼	king
 牽	khan
 牽	khian
-牽--的	khan--ê
 牽亡	khan-bông
 牽人	khan-lâng
 牽仔	khan-á
@@ -97549,7 +97499,6 @@ tín動	tín-tāng
 猛醒	mé-tshínn
 猛鍥鍥	bíng-khiat-khiat
 猜	tshai
-猜--著	tshai--tio̍h
 猜出出	tshai-tshut-tshut
 猜字旁	tshai-jī-pîng
 猜想	tshai-sióng
@@ -97632,7 +97581,6 @@ tín動	tín-tāng
 猴姜	kâu-kiunn
 猴子	kâu-kiánn
 猴山	kâu-san
-猴山--仔	kâu-san--á
 猴山仔	kâu san--á
 猴山仔	kâu-san-ah
 猴山仔	kâu-san-á
@@ -99140,7 +99088,6 @@ tín動	tín-tāng
 璫璫哮	tiang-tiang-háu
 環	huân
 環	khuân
-環--起來	khuân--khí-lâi
 環保	huân-pó
 環保	huân-pór
 環保	khuân-pó
@@ -99175,6 +99122,7 @@ tín動	tín-tāng
 環箍	khuân-khoo
 環節	khuân-tsiat
 環繞	khuân-jiáu
+環起來	khuân--khí-lâi
 環身蛇	khuân-sin-tsuâ
 環輪轉	khuân-lìn-tńg
 環道	huân-tō
@@ -99274,7 +99222,7 @@ tín動	tín-tāng
 瓟	pâu
 瓠	hia
 瓠	hôo
-瓠--人	hia--lâng
+瓠人	hia--lâng
 瓠仔	hia-á
 瓠仔	pû-á
 瓠仔干	pû-á-kuann
@@ -99538,7 +99486,7 @@ tín動	tín-tāng
 甚麼伯	sím-mi̍h-peh
 甚麼兄	sím-mi̍h-hiann
 甚麼叔	sím-mi̍h-tsik
-甚麼大--的	sím-mi̍h-tuā--ê
+甚麼大的	sím-mi̍h-tuā--ê
 甚麼姆	sím-mi̍h-ḿ
 甚麼姊	sím-mi̍h-tsí
 甚麼嫂	sím-mi̍h-só
@@ -99621,8 +99569,6 @@ tín動	tín-tāng
 生	sinn
 生	tshenn
 生	tshinn
-生--出來	sinn--tshut-lâi
-生--者必死	sing--tsiá-pit-sú
 生䟽	tshenn-soo
 生不帶來	sing-put-tài-lâi
 生不認魂	sing-put-jīn-hûn
@@ -99681,6 +99627,7 @@ tín動	tín-tāng
 生出世	senn-tshut-sì
 生出世	sinn-tshut-sì
 生出來	senn--tshut-lâi
+生出來	sinn--tshut-lâi
 生刀草	tshenn-to-tsháu
 生刀草	tshinn-to-tsháu
 生刀藥	tshenn-to-io̍h
@@ -99797,7 +99744,7 @@ tín動	tín-tāng
 生成式	sing-sîng-sik
 生手	tshenn-tshiú
 生手	tshinn-tshiú
-生推ê	tshenn-thui--ê
+生推--ê	tshenn-thui--ê
 生擒	tshinn-khîm
 生擦	tshinn-tshuah
 生支香	sing-ki-hiong
@@ -100061,6 +100008,7 @@ tín動	tín-tāng
 生絲	tshinn-si
 生老病死	senn-lāu-pēnn-sí
 生老病死	sinn-lāu-pīnn-sí
+生者必死	sing--tsiá-pit-sú
 生耳塞	sinn-hī-that
 生耳甕仔	sinn-hī-àng-á
 生肉	senn-bah
@@ -101761,7 +101709,6 @@ tín動	tín-tāng
 疏鬖	se-sàm
 疏齒	se-khí
 疑	gî
-疑--著	gî--tio̍h
 疑似	gî-sū
 疑問	gî-būn
 疑問句	gî-būn-kù
@@ -101779,6 +101726,7 @@ tín動	tín-tāng
 疑神疑鬼	gî-sîn-gî-kuí
 疑竇	gî-tōo
 疑義	gî-gī
+疑著	gî--tio̍h
 疑處	gî-tshù
 疑訝	gî-gā
 疑訝	gî-ngái
@@ -102178,7 +102126,6 @@ tín動	tín-tāng
 痞	phí
 痟	siau
 痟	siáu
-痟--的	siáu--ê
 痟丁當	siáu-ting-tang
 痟亂	siáu-luān
 痟人	siáu-lâng
@@ -105639,8 +105586,6 @@ tín動	tín-tāng
 看	khan
 看	khuànn
 看	khàn
-看--人	khuànn--lâng
-看--見	khuànn--kìnn
 看māi	khuànn-māi
 看一見	khuànn-tsi̍t-kìnn
 看三孔	khuànn-sann-khang
@@ -105655,6 +105600,7 @@ tín動	tín-tāng
 看中意	khuànn-tìng-ì
 看了看	khuànn-liáu-khuànn
 看事辦事	khuànn-sū-pān-sū
+看人	khuànn--lâng
 看人	khuànn-lâng
 看人有	khuànn-lâng-ū
 看人殕殕	khuànn-lâng-phú-phú
@@ -105708,10 +105654,10 @@ tín動	tín-tāng
 看守	khàn-siú
 看守所	khàn-siú-sóo
 看山	khuànn-suann
-看山--的	khuànn-suann--ê
 看山先	khuànn-suann-sian
 看山扮	khuànn-suann-pān
-看山龍--的	khuànn-suann-lîng--ê
+看山的	khuànn-suann--ê
+看山龍的	khuànn-suann-lîng--ê
 看店口	khuànn-tiàm-kháu
 看待	khuànn-thāi
 看情形	khuànn-tsîng-hîng
@@ -105777,7 +105723,7 @@ tín動	tín-tāng
 看無點	khuànn-bô-tiám
 看燈	khuànn-ting
 看牛	khuànn-gû
-看牛--的	khuànn-gû--ê
+看牛的	khuànn-gû--ê
 看牲	khuànn-sing
 看現場	khuànn-hiān-tiûnn
 看現現	khuànn-hiān-hiān
@@ -105824,6 +105770,7 @@ tín動	tín-tāng
 看袂開	khuànn-bē-khui
 看西	khuànn-sai
 看見	khuàinn
+看見	khuànn--kìnn
 看見	khuànn-kìnn
 看見見	khuànn-kìnn-kìnn
 看覓	khuànn-bāi
@@ -106072,7 +106019,6 @@ tín動	tín-tāng
 眠	biân
 眠	bîn
 眠	mn̂g
-眠--一下	bîn--tsi̍t-ē
 眠一下	bîn--tsi̍t-ē
 眠一下	bîn-tsi̍t-ē
 眠一醒	bîn-tsi̍t-tshínn
@@ -106337,9 +106283,6 @@ tín動	tín-tāng
 睍	hiǎn
 睎	hi
 睏	khùn
-睏--去	khùn--khì
-睏--起	khùn--khí
-睏--起來	khùn--khí-lâi
 睏一醒	khùn-tsi̍t-tshénn
 睏一醒	khùn-tsi̍t-tshínn
 睏中午	khùn-tiong-ngóo
@@ -106401,6 +106344,8 @@ tín動	tín-tāng
 睏袋	khùn-tē
 睏袒笑	khùn-thán-tshiò
 睏褲	khùn-khòo
+睏起	khùn--khí
+睏起來	khùn--khí-lâi
 睏足眠	khùn-tsiok-bîn
 睏過眠	khùn-kuè-bîn
 睏過頭	khùn-kuè-thâu
@@ -106474,9 +106419,8 @@ tín動	tín-tāng
 睨	gîrn
 睨	gûn
 睨	tàng
-睨--人	gê--lâng
-睨--著	gê--tio̍h
 睨人	giân--lâng
+睨人	gê--lâng
 睨人膦	gê-lâng-lān
 睨佮恨	gê-kah-gīn
 睨合恨	gê-kah-gīn
@@ -106490,6 +106434,7 @@ tín動	tín-tāng
 睨精	gê-siâu
 睨膦	gê-lān
 睨膦	gē-lān
+睨著	gê--tio̍h
 睨視	gé-sē
 睪	i̍k
 睫	tsiah
@@ -106786,7 +106731,6 @@ tín動	tín-tāng
 短	tuán
 短	té
 短	tér
-短-示	té-ńg
 短䘼	té-uínn
 短䘼	té-ńg
 短䘼	tér-ńg
@@ -108645,7 +108589,7 @@ tín動	tín-tāng
 磨	bōr
 磨	huah
 磨	môo
-磨--人	buâ--lâng
+磨人	buâ--lâng
 磨仔	buâ-á
 磨仔	bō-á
 磨仔心	bō-á-sim
@@ -109105,7 +109049,6 @@ tín動	tín-tāng
 祝電	tsiok-tiān
 祝願	tsiok-guān
 神	sîn
-神--去	sîn--khì
 神不久停	sîn-put-kiú-thîng
 神不知	sîn-put-ti
 神主	sîn-tsú
@@ -110061,7 +110004,7 @@ tín動	tín-tāng
 秝	li̍k
 秞	tiū
 租	tsoo
-租--人	tsoo--lâng
+租人	tsoo--lâng
 租借	tsoo-tsioh
 租厝	tsoo-tshù
 租單	tsoo-tuann
@@ -110479,7 +110422,7 @@ tín動	tín-tāng
 種稻	tsìng-tiū
 種芋仔	tsiòng-ōo-á
 種花	tsìng-hue
-種花ê	tsìng-hue--ê
+種花--ê	tsìng-hue--ê
 種菜	tsìng-tshài
 種著	tsíng-tio̍h
 種薰	tsìng-hun
@@ -110705,8 +110648,6 @@ tín動	tín-tāng
 穢	uè
 穢	è
 穢	èr
-穢--人	è--lâng
-穢--著	uè--tio̍h
 穢世	uè-sè
 穢人	uè--lâng
 穢人	uè-lâng
@@ -112649,8 +112590,6 @@ tín動	tín-tāng
 管	kóng
 管	kún
 管	kńg
-管--你	kuán--lí
-管--待	kuán--thāi
 管下	kuán-hā
 管事	kuán-sū
 管事租	kuán-sū-tsoo
@@ -112668,6 +112607,7 @@ tín動	tín-tāng
 管他	kuán-tha
 管伊	kuán--i
 管伊	kuán-i
+管你	kuán--lí
 管內	kuán-lāi
 管制	kuán-tsè
 管區	kuán-khu
@@ -112685,6 +112625,7 @@ tín動	tín-tāng
 管弦	kuán-hiân
 管弦樂器	kuán-hiân-ga̍k-khì
 管弦樂團	kuán-hiân-ga̍k-thuân
+管待	kuán--thāi
 管待	kuán-thāi
 管待伊	kuán-thāi--i
 管教	kuán-kà
@@ -112979,10 +112920,10 @@ tín動	tín-tāng
 篠	siáu
 篠	siāu
 篡	tshuàn
-篡--過	tshuàn--kè
 篡位	tshuàn-uī
 篡權	tshuàn-kuân
 篡篡	tshuàn-tshuàn
+篡過	tshuàn--kè
 篢	kám
 篤	tak
 篤	tauh
@@ -114706,8 +114647,8 @@ tín動	tín-tāng
 紅娶烏	âng-tshuā-oo
 紅嬰	âng-enn
 紅嬰	âng-inn
-紅嬰--仔	âng-inn--á
 紅嬰仔	âng-enn-á
+紅嬰仔	âng-inn--á
 紅嬰仔	âng-inn-á
 紅子仁	âng-tsú-jîn
 紅子仔	âng-tsí-á
@@ -115156,8 +115097,8 @@ tín動	tín-tāng
 紅頭仔船	âng-thâu-á-tsûn
 紅頭司	âng-thâu-sai
 紅頭司公	âng-thâu-sai-kong
-紅頭嬰--仔	âng-thâu-inn--á
 紅頭嬰仔	âng-thâu-enn-á
+紅頭嬰仔	âng-thâu-inn--á
 紅頭嬰仔	âng-thâu-inn-á
 紅頭山	âng-thâu-suann
 紅頭嶼	âng-thâu-sī
@@ -116424,8 +116365,8 @@ tín動	tín-tāng
 給	kip
 給	kā
 給	kāng
-給--人	hōo--lâng
 給下	kip-hā
+給人	hōo--lâng
 給仕	kip-sū
 給付	kip-hù
 給伊	kā-i
@@ -116630,7 +116571,6 @@ tín動	tín-tāng
 經	king
 經	kinn
 經	kînn
-經--倒	kinn--tó
 經世	king-sè
 經了有卵	kinn-liáu-ū-nn̄g
 經仔笠	kinn-á-lue̍h
@@ -116638,6 +116578,7 @@ tín動	tín-tāng
 經体	king-thé
 經倒	kenn--tó
 經倒	kenn-tó
+經倒	kinn--tó
 經傳	king-tuān
 經典	king-tián
 經冊	king-tsheh
@@ -116903,7 +116844,6 @@ tín動	tín-tāng
 網	bóng
 網	bāng
 網	bǎng
-網--去	bāng--khì
 網仔	bāng-á
 網仔孔	bāng-á-khang
 網仔瓜	bāng-á-kue
@@ -116919,6 +116859,7 @@ tín動	tín-tāng
 網仔鬚	bāng-á-tshiu
 網仔鬚彩	bāng-á-tshiu-tshái
 網仔鬚綵	bāng-á-tshiu-tshái
+網去	bāng--khì
 網友	bāng-iú
 網址	bāng-tsí
 網址鏈	bāng-tsí-liān
@@ -117491,7 +117432,7 @@ tín動	tín-tāng
 緩	uān
 緩	uǎn
 緩	ûn
-緩--一刻	bān--tsi̍t-khik
+緩一刻	bān--tsi̍t-khik
 緩不濟急	uān-put-tsè-kip
 緩且	bān-tshiánn
 緩且是	bān-tshiánn-sī
@@ -117780,7 +117721,7 @@ tín動	tín-tāng
 縮	kiù
 縮	siok
 縮	sok
-縮--去	kiu--khì
+縮去	kiu--khì
 縮圖	kiù-tôo
 縮圖	siok-tôo
 縮圖	sok-tôo
@@ -117961,8 +117902,8 @@ tín動	tín-tāng
 總縛戶	tsóng-pa̍k-hōo
 總總	tsáng-tsáng
 總署	tsóng-sú
-總而言--之	tsóng-jî-giân--tsi
 總而言之	tsóng--lî-giân--tsi
+總而言之	tsóng-jî-giân--tsi
 總舖	tsóng-phoo
 總舖	tsóng-phòo
 總舖師	tsóng-phòo-sai
@@ -118429,7 +118370,7 @@ tín動	tín-tāng
 缺点	khuat-tiám
 缺用	kheh-īng
 缺痕	khih-hûn
-缺磨--你	kheh-buâ--lí
+缺磨你	kheh-buâ--lí
 缺糧	khuat-niû
 缺缺	kheh-kheh
 缺缺裂裂	khih-khih-li̍h-li̍h
@@ -118702,7 +118643,7 @@ tín動	tín-tāng
 罶	liú
 罷	pā
 罷	pǎ
-罷--了	pā--liauh
+罷了	pā--liauh
 罷休	pā-hiu
 罷免	pā-bián
 罷兵	pā-ping
@@ -118719,7 +118660,7 @@ tín動	tín-tāng
 罷氣	pā-khì
 罷演	pā-ián
 罷罷	pā-pā
-罷罷--了	pā-pā--liauh
+罷罷了	pā-pā--liauh
 罷考	pā-khó
 罷職	pā-tsit
 罷課	pā-khò
@@ -118952,9 +118893,6 @@ tín動	tín-tāng
 美	bér
 美	bí
 美	suí
-美-妍-妍	suí-giang-giang
-美-璫-璫	suí-tang-tang
-美-篤-篤	suí-tak-tak
 美不勝收	bí-put-sìng-siu
 美事	bí-sū
 美人	bí-jîn
@@ -118997,6 +118935,7 @@ tín動	tín-tāng
 美女瓜	bí-lí-kue
 美好	bí-hó
 美好	bí-hór
+美妍妍	suí-giang-giang
 美妙	bí-biāu
 美妙	bí-miāu
 美妝卵	bí-tsong-nn̄g
@@ -119044,6 +118983,7 @@ tín動	tín-tāng
 美璫璫	suí-tang-tang
 美男子	bí-lâm-tsú
 美白	bí-pe̍h
+美篤篤	suí-tak-tak
 美籍	bí-tsi̍k
 美編	bí-pian
 美美	suí-suí
@@ -119599,7 +119539,7 @@ tín動	tín-tāng
 老	lāu
 老	lǎu
 老	nóo
-老ê	lāu--ê
+老--ê	lāu--ê
 老一輩	lāu-tsi̍t-puè
 老不修	lāu-put-siu
 老主顧	lāu-tsú-kòo
@@ -120849,7 +120789,6 @@ tín動	tín-tāng
 聽	thiann
 聽	thing
 聽	thìng
-聽--見	thiann--kìnn
 聽主意	thìng-tsú-ì
 聽人	thiann--lâng
 聽人	thìng--lâng
@@ -123667,7 +123606,6 @@ tín動	tín-tāng
 臭	hiù
 臭	tshiù
 臭	tshàu
-臭--去	tshàu--khì
 臭七仔	tshàu-tshit-á
 臭丸	tshàu-uân
 臭乳代	tshàu-ling-tai
@@ -124262,7 +124200,7 @@ tín動	tín-tāng
 舅	kiū
 舅	kiǔ
 舅	kū
-舅--仔	kū--ā
+舅仔	kū--ā
 舅仔	kū-á
 舅仔	kǔ-á
 舅仔姊夫	kū-á-tsí-hu
@@ -124457,7 +124395,7 @@ tín動	tín-tāng
 舊城	kū-siânn
 舊套	kū-thò
 舊套頭	kū-thò-thâu
-舊存--年	kū-tsûn--nî
+舊存年	kū-tsûn--nî
 舊存年	kū-tsûn-nî
 舊屬	kū-sio̍k
 舊岫	kū-siū
@@ -125988,7 +125926,6 @@ tín動	tín-tāng
 若親像	ná-tshin-tshiūnn
 苦	khóo
 苦	ku
-苦--死	khóo--sí
 苦不堪言	khóo-put-kham-giân
 苦主	khóo-tsú
 苦仔草	khóo-á-tsháu
@@ -126071,6 +126008,7 @@ tín動	tín-tāng
 苦樹	khóo-tshiū
 苦檻藍	khóo-lām-lâm
 苦歎	khóo-thàn
+苦死	khóo--sí
 苦死	khóo-sí
 苦毋	khóo-m̄
 苦毒	khóo-to̍k
@@ -126706,12 +126644,12 @@ tín動	tín-tāng
 茹	lu
 茹	lîr
 茹	lû
-茹--去	jû--khì
 茹亂	jû-luān
 茹促促	jû-tshak-tshak
 茹倨	lû-kù
 茹冗	jû-jióng
 茹冗冗	jî-tsháng-tsháng
+茹去	jû--khì
 茹唸	jû-liām
 茹四夢	jû-sù-bāng
 茹念	jû-liām
@@ -127086,10 +127024,10 @@ tín動	tín-tāng
 荒	hng
 荒	hong
 荒	huinn
-荒--去	hng--khì
 荒公廢事	hong-kong-huè-sīr
 荒公廢事	hong-kong-huè-sū
 荒公廢事	hong-kong-huì-sū
+荒去	hng--khì
 荒唐	hong-tông
 荒地	hng-tē
 荒地	hn̂g-tē
@@ -127368,7 +127306,6 @@ tín動	tín-tāng
 莫	bo̍k
 莫	bàng
 莫	mài
-莫--得	bo̍h--tit
 莫亂吼	mài-luān-háu
 莫假	mài-ké
 莫假𠢕	mài-ké-gâu
@@ -127387,6 +127324,7 @@ tín動	tín-tāng
 莫大	bo̍k-tāi
 莫如	bo̍k-jû
 莫幹	bo̍h-kàn
+莫得	bo̍h--tit
 莫得	bo̍h-tit
 莫德納	moo-té-nah
 莫怪	bo̍k-kuài
@@ -128130,8 +128068,6 @@ tín動	tín-tāng
 落	lo̍h
 落	lo̍k
 落	làu
-落--去	lak--khì
-落--去	lo̍h--khì
 落䈄	làu-ham
 落一邊	lak-tsi̍t-pinn
 落三落四	lak-sann-lak-sì
@@ -128182,6 +128118,8 @@ tín動	tín-tāng
 落半旗	lo̍h-puànn-kî
 落南	lo̍h-lâm
 落南米	lo̍h-lâm-bí
+落去	lak--khì
+落去	lo̍h--khì
 落去	lo̍h-khì
 落去	lo̍h-khìr
 落去	lo̍h-khù
@@ -128189,7 +128127,7 @@ tín動	tín-tāng
 落去	lue̋
 落去	luè
 落去樓腳	loh-khì-lâu-kha
-落去矣	lak-khì---ah
+落去矣	lak-khì--ah
 落口	làu-kháu
 落句	lo̍h-kù
 落句	làu-kù
@@ -128317,9 +128255,9 @@ tín動	tín-tāng
 落教	lo̍h-kàu
 落斷	lo̍h-tn̄g
 落日	lo̍h-ji̍t
-落昨--日	lo̍h-tso̍h--ji̍t
 落昨日	loh-tso̍h--ji̍t
 落昨日	loh-tso̍h--li̍t
+落昨日	lo̍h-tso̍h--ji̍t
 落昨日	lo̍h-tso̍h--li̍t
 落昨日	lo̍h-tso̍h-ji̍t
 落時日	lo̍h-sî-ji̍t
@@ -129103,7 +129041,7 @@ tín動	tín-tāng
 蒸氣	tsing-khì
 蒸氣機	tsing-khì-ki
 蒸湖	tshìng-ôo
-蒸烏--去	tshìng-oo--khì
+蒸烏去	tshìng-oo--khì
 蒸發	tsing-huat
 蒸管	tshìng-kuán
 蒸粉	tshìng-hún
@@ -129192,12 +129130,11 @@ tín動	tín-tāng
 蓋	khìng
 蓋	kuà
 蓋	kài
-蓋--著	khàm--tio̍h
 蓋一	kài-it
 蓋一大	kài-it-tuā
 蓋上	kài-siōng
 蓋下	khàm-hē
-蓋下--得	khàm-hē--teh
+蓋下得	khàm-hē--teh
 蓋世	kài-sè
 蓋世間	kài-sè-kan
 蓋仔	kap-pa
@@ -129235,7 +129172,7 @@ tín動	tín-tāng
 蓋濟	kài-tsuē
 蓋濟	kài-tsē
 蓋牌	khap-pî
-蓋瓦--的	khàm-hiā--ê
+蓋瓦的	khàm-hiā--ê
 蓋甌	khàm-au
 蓋眉	khàm-bâi
 蓋章	kài-tsiong
@@ -129247,7 +129184,8 @@ tín動	tín-tāng
 蓋耳仔帽	khàm-hī-á-bō
 蓋色	kài-sik
 蓋草	khàm-tsháu
-蓋草--的	khàm-tsháu--ê
+蓋草的	khàm-tsháu--ê
+蓋著	khàm--tio̍h
 蓋蓋	kah-kah
 蓋蓋	khap-khap
 蓋蓋	khàm-khàm
@@ -129274,8 +129212,8 @@ tín動	tín-tāng
 蓐	jio̍k
 蓑	sue
 蓑	sui
-蓑--去	sui--khì
 蓑出來	sui--tshut--lâi
+蓑去	sui--khì
 蓑蓑	sui-sui
 蓑靪	sui-tinn
 蓒	hian
@@ -130044,7 +129982,7 @@ tín動	tín-tāng
 薧	khó
 薧	kó
 薨	ing
-薨--去	ing--khì
+薨去	ing--khì
 薩	sat
 薩埵	sat-to
 薩埵	sat-tóo
@@ -130210,7 +130148,6 @@ tín動	tín-tāng
 藏	tsn̄g
 藏	tsông
 藏	tsōng
-藏--落	khǹg--lo̍h
 藏下	khǹg-hē
 藏人	tsòng-jîn
 藏名	tshàng-miâ
@@ -130237,6 +130174,7 @@ tín動	tín-tāng
 藏版	tsông-pán
 藏獒	tsōng-ngôo
 藏空	tshàng-khang
+藏落	khǹg--lo̍h
 藏薯	khǹg-tsû
 藏藏	khǹg-khǹg
 藏藏	tsông-tsông
@@ -130680,7 +130618,6 @@ tín動	tín-tāng
 虎	hió
 虎	hu
 虎	hóo
-虎--人	hóo--lâng
 虎井蜜	hóo-tsénn-bi̍t
 虎井蜜	hóo-tsínn-bi̍t
 虎人	hóo--lâng
@@ -131983,7 +131920,7 @@ tín動	tín-tāng
 蝸	ua
 蝸牛	o-giû
 蝹	un
-蝹--先--生	un--sian--sinn
+蝹先生	un--sian--sinn
 蝹先生	un-sian-senn
 蝹囷	un-khûn
 蝹碖蜷	un-lún-khûn
@@ -132281,7 +132218,6 @@ tín動	tín-tāng
 蟯	ngiau
 蟯	ngiauh
 蟯	ngia̍uh
-蟯--的	giô--ê
 蟯仔	giô-á
 蟯仔肉	giô-á-bah
 蟯仔街	giô-á-ke
@@ -133156,7 +133092,6 @@ tín動	tín-tāng
 衝	tshiāng
 衝	tshìng
 衝	tshóng
-衝--著	tsing--tio̍h
 衝動	tshiong-tōng
 衝喜	tshiong-hí
 衝壅	tshìng-ìng
@@ -133180,6 +133115,7 @@ tín動	tín-tāng
 衝突	tshiong-tu̍t
 衝紅燈	tshiong-âng-ting
 衝線	tshiong-suànn
+衝著	tsing--tio̍h
 衝著鬼	tshiong-tio̍h-kuí
 衝衝	tsing-tsing
 衝鋒銃	tshiong-hong-tshìng
@@ -133230,7 +133166,6 @@ tín動	tín-tāng
 衤	i
 表	piáu
 表	pió
-表--的	piáu--ê
 表仔	pió-á
 表伯	piáu-peh
 表兄	piáu-hiann
@@ -133812,9 +133747,9 @@ tín動	tín-tāng
 被	phǐ
 被	pī
 被	pǐ
-被--人	hōo--lâng
-被--伊	hōo--i
 被乘數	pī-sîng-sòo
+被人	hōo--lâng
+被伊	hōo--i
 被伊	hōo-i
 被俘	pī-hû
 被偝	phuē-iāng
@@ -136098,7 +136033,7 @@ tín動	tín-tāng
 記上	kì-tsiūnn
 記上賬	kì-tsiūnn-siàu
 記下	kì-hā
-記下--得	kì-hē--teh
+記下得	kì-hē--teh
 記事	kì-sīr
 記事	kì-sū
 記事	kì-sǐr
@@ -137727,7 +137662,7 @@ tín動	tín-tāng
 講瘦話	kóng-sán-uē
 講白賊	kóng-pe̍h-tsha̍t
 講白賊話	kóng-pe̍h-tsha̍t-uē
-講真ê	kóng-tsin--ê
+講真--ê	kóng-tsin--ê
 講知	kóng-tsai
 講破	kóng-phuà
 講硬話	kóng-ngē-uē
@@ -137748,7 +137683,7 @@ tín動	tín-tāng
 講義所	káng-gī-sóo
 講習	káng-si̍p
 講習會	káng-si̍p-huē
-講耍ê	kóng-sńg--ê
+講耍--ê	kóng-sńg--ê
 講耍笑	kóng-sńg-tshiò
 講聖諭	kóng-sìng-jû
 講聖諭	kóng-sìng-jū
@@ -137918,13 +137853,13 @@ tín動	tín-tāng
 譀鏡	hàm-kiànn
 譁	hua
 譁	huā
-譁--起來	huā--khí-lâi
 譁譁	huā-huā
 譁譁	kā-kā
 譁譁哮	huā-huā-háu
 譁譁滾	huā-huā-kún
 譁譁落	huā-huā-lak
 譁譁震	huā-huā-tiō
+譁起來	huā--khí-lâi
 譂	tshián
 譃	hiok
 譃	hu
@@ -138045,7 +137980,7 @@ tín動	tín-tāng
 警察	kìng-tshat
 警察	kíng-tshat
 警察仔	kíng-tshat-á
-警察大--的	kíng-tshat-tuā--ê
+警察大的	kíng-tshat-tuā--ê
 警察局	kìng-tshat-kio̍k
 警察局	kíng-tshat-kio̍k
 警局	kìng-kio̍k
@@ -138481,7 +138416,7 @@ tín動	tín-tāng
 讖	tshàm
 讖	tshèrm
 讖	tshìm
-讖--著	tshàm--tio̍h
+讖著	tshàm--tio̍h
 讖語	tshàm-gí
 讖語	tshàm-gú
 讖講	tshàm-kóng
@@ -139405,7 +139340,7 @@ tín動	tín-tāng
 貓霧捒	bâ-bū-sak
 貓面	bâ-bīn
 貓面	niau-bīn
-貓面ê	niau-bīn--ê
+貓面--ê	niau-bīn--ê
 貓面個	bâ-bīn-ê
 貓頭姑	niau-thâu-koo
 貓頭鳥	niau-thâu-tsiáu
@@ -140117,9 +140052,9 @@ tín動	tín-tāng
 貿	biō
 貿	bāu
 貿	bōo
-貿--來	ba̍uh--lâi
 貿人	ba̍uh--lâng
 貿件	bāu-kiānn
+貿來	ba̍uh--lâi
 貿到底	bāu-kàu-té
 貿土頭	ba̍uh-thôo-thâu
 貿堆	ba̍uh-tui
@@ -140330,7 +140265,7 @@ tín動	tín-tāng
 賑濟	tsín-tsè
 賑災	tsín-tsai
 賒	sia
-賒--人	sia--lâng
+賒人	sia--lâng
 賒借	sia-tsioh
 賒數	sia-siàu
 賒杉起厝	sia-sam-khí-tshù
@@ -140464,7 +140399,6 @@ tín動	tín-tāng
 賡	king
 賢	gâu
 賢	hiân
-賢--者	hiân--tsiá
 賢人	gâu-lâng
 賢人	hiân-jîn
 賢做	gâu-tsuè
@@ -140496,6 +140430,7 @@ tín動	tín-tāng
 賢明	hiân-bîng
 賢會	hiân-huē
 賢淑	hiân-siok
+賢者	hiân--tsiá
 賢者	hiân-tsiá
 賢能	hiân-lîng
 賢臣	hiân-sîn
@@ -140508,7 +140443,6 @@ tín動	tín-tāng
 賣	buē
 賣	bē
 賣	māi
-賣--過	buē--kè
 賣主	buē-tsú
 賣主	bē-tsú
 賣了	bē-liáu
@@ -140573,6 +140507,7 @@ tín動	tín-tāng
 賣賣	buē-buē
 賣身	buē-sin
 賣身	bē-sin
+賣過	buē--kè
 賣銅鑼	bē-tâng-lô
 賣錢	bē-tsînn
 賣雜細ê	bē-tsa̍p-sè-ê
@@ -141137,8 +141072,6 @@ tín動	tín-tāng
 走	tsió
 走	tsáu
 走	tsóo
-走--來	tsáu--lâi
-走--去	tsáu--khì
 走tsing	tsáu-tsing
 走一輾	tsáu-tsi̍t-liàn
 走三關	tsáu-sam-kuan
@@ -141235,7 +141168,7 @@ tín動	tín-tāng
 走瀉	tsáu-sià
 走火	tsáu-hué
 走火入魔	tsâu-hué-ji̍p-mô͘
-走無--去	tsáu-bô--khì
+走無去	tsáu-bô--khì
 走無路	tsáu-bô-lōo
 走無路	tsáu-bôr-lōo
 走爭	tsáu-tsing
@@ -141388,8 +141321,6 @@ tín動	tín-tāng
 赶	kán
 赶緊	kuánn-kín
 起	khí
-起--來	khí--lâi
-起-手	khí-kô
 起䆀毛	khí-bái-moo
 起乩	khí-ki
 起亂	khí-luān
@@ -141410,6 +141341,7 @@ tín動	tín-tāng
 起作	khí-tsoh
 起來	khit-lâi
 起來	khiài
+起來	khí--lâi
 起來	khí-lâi
 起來	khí-âi
 起價	khí-kè
@@ -142011,14 +141943,14 @@ tín動	tín-tāng
 趕	khàn
 趕	kuánn
 趕	kán
-趕--出	kuánn--tshut
-趕--去	kuánn--khì
 趕人	kuánn-lâng
 趕來	kuánn-lâi
+趕出	kuánn--tshut
 趕出	kuánn-tshut
 趕出去	kuann--tshut-khì
 趕出去	kán--tshut-khì
 趕到	kuánn-kàu
+趕去	kuánn--khì
 趕去	kuánn-khì
 趕圩	kuánn-hi
 趕圩	kuánn-hu
@@ -142262,7 +142194,6 @@ tín動	tín-tāng
 跈	thián
 跋	pua̍h
 跋	pua̍t
-跋-片	pua̍h-pue
 跋一倒	pua̍h-tsi̍t-tó
 跋伊會落	pua̍h-i-ē-lak
 跋倒	pua̍h--tó
@@ -142401,8 +142332,8 @@ tín動	tín-tāng
 跟	kin
 跟	kirn
 跟	kun
-跟--人	kun--lâng
 跟丁	kun-ting
+跟人	kun--lâng
 跟人	kun-lâng
 跟从	kin-tuè
 跟从	kun-tuè
@@ -142835,8 +142766,8 @@ tín動	tín-tāng
 跳腳頓蹄	tiô-kha-tǹg-tê
 跳舌音	thiô-tsi̍h-im
 跳舞	thiàu-bú
-跳舞--的	thiàu-bú--ê
 跳舞會	thiàu-bú-huē
+跳舞的	thiàu-bú--ê
 跳落	thiàu-lo̍h
 跳落去	thiàu--lo̍h-khì
 跳豬舞	thiàu-ti-bú
@@ -143005,7 +142936,7 @@ tín動	tín-tāng
 踏溜	ta̍h-liu
 踏溜去	ta̍h-liu--khì
 踏滑	ta̍h-ku̍t
-踏滑--去	ta̍h-kut--khì
+踏滑去	ta̍h-kut--khì
 踏火	ta̍h-hé
 踏界	ta̍h-kài
 踏看	ta̍h-khuànn
@@ -143286,7 +143217,7 @@ tín動	tín-tāng
 蹣撋	puânn-nuá
 蹤	tsong
 蹤	tsông
-蹤--去	tsông--khì
+蹤去	tsông--khì
 蹤射	tsông-tso̍h
 蹤東蹤西	tsông-tang-tsông-sai
 蹤跡	tsong-liah
@@ -143313,10 +143244,10 @@ tín動	tín-tāng
 蹱	tsiong
 蹲	khû
 蹲	tsun
-蹲--落	khû--lo̍h
 蹲得	khû-teh
 蹲桶	khû-tháng
 蹲腳	khû-kha
+蹲落	khû--lo̍h
 蹴	tshiok
 蹵	tshiok
 蹶	khuat
@@ -143478,7 +143409,6 @@ tín動	tín-tāng
 躪	līn
 身	sian
 身	sin
-身--裡	sin--ni̍h
 身上	sin--siōng
 身上	sin-tsiūnn
 身不由己	sin-put-iû-kí
@@ -143542,6 +143472,7 @@ tín動	tín-tāng
 身腰	sin-io
 身苦病疼	sin-khóo-pēnn-thiànn
 身處	sin-tshù
+身裡	sin--ni̍h
 身身	hin-sin
 身軀	hin-su
 身軀	hun-su
@@ -143584,7 +143515,6 @@ tín動	tín-tāng
 躼	liò
 躼	lò
 躼	lòr
-躼--的	lò--ê
 躼后日	lò-āu-ji̍t
 躼尾仔	lò-bué-á
 躼尾仔	lò-bé-á
@@ -143592,6 +143522,7 @@ tín動	tín-tāng
 躼昨日	lò-tso̍h-ji̍t
 躼爺	lò-iâ
 躼爺矮爺	lò-iâ-é-iâ
+躼的	lò--ê
 躼脚	lò-kha
 躼脚仔	lò-kha-á
 躼腳仔	lò-kha-á
@@ -143988,7 +143919,6 @@ tín動	tín-tāng
 軟	luán
 軟	nuí
 軟	nńg
-軟-手豪	nńg-kô-kô
 軟㽎㽎	nuí-sìm-sìm
 軟㽎㽎	nńg-sìm-sìm
 軟主	nńg-tsú
@@ -144269,7 +144199,7 @@ tín動	tín-tāng
 較講	khah-kóng
 較贏	khah-iânn
 較贏面	khah-iânn-bīn
-較走--來	khah-tsáu--lâi
+較走來	khah-tsáu--lâi
 較趕緊	khah-kuánn-kín
 較足	khah-tsiok
 較車	kah-tshia
@@ -144288,7 +144218,6 @@ tín動	tín-tāng
 載	tsái
 載	tsáinn
 載	tsāi
-載--落	tsài--lo̍h
 載倒轉	tsài-tò-tńg
 載入	tsài-ji̍p
 載入	tsài-li̍p
@@ -144303,6 +144232,7 @@ tín動	tín-tāng
 載明	tsài-bîng
 載滿	tsài-muá
 載物臺	tsài-bu̍t-tâi
+載落	tsài--lo̍h
 載貨	tsài-huè
 載貨單	tsài-hè-tuann
 載貨車	tsài-huè-tshia
@@ -145578,12 +145508,12 @@ tín動	tín-tāng
 迵過	thàng-kèr
 迷	bê
 迷	bî
-迷--去	bê--khì
 迷亂	bê-luān
 迷人	bê--lâng
 迷人	bê-lâng
 迷信	bê-sìn
 迷力	bê-li̍k
+迷去	bê--khì
 迷因	bê-in
 迷失	bê-sit
 迷客夏	bê-kheh-hā
@@ -146578,7 +146508,6 @@ tín動	tín-tāng
 造	tsō
 造	tsōo
 造	tsǒ
-造--日	tso̍h--ji̍t
 造作	tsō-tsok
 造假	tsō-ké
 造假數	tsō-ké-siàu
@@ -146608,6 +146537,7 @@ tín動	tín-tāng
 造成	tsō-sîng
 造戶口	tsō-hōo-kháu
 造數	tsō-siàu
+造日	tso̍h--ji̍t
 造林	tsō-lîm
 造業	tsō-gia̍p
 造橋	tsō-kiô
@@ -146986,7 +146916,6 @@ tín動	tín-tāng
 遇	gī
 遇	gū
 遇	tú
-遇--著	gū--tio̍h
 遇上	gū-siāng
 遇害	gū-hāi
 遇無著	tú-bô-tio̍h
@@ -147978,7 +147907,7 @@ tín動	tín-tāng
 遥	iâu
 遨	gô
 遨	ngôo
-遨--一輪	gô--tsi̍t-lìn
+遨一輪	gô--tsi̍t-lìn
 遨佚	gô-thit
 遨街	gô-ke
 適	sik
@@ -148175,11 +148104,10 @@ tín動	tín-tāng
 遷都	tshian-too
 遷鋪	tshian-phoo
 選	suán
-選--出來	suán--tshut--lâi
-選--起--來	suán--khí--lâi
 選任	suán-jīm
 選修	suán-siu
 選出	suán-tshut
+選出來	suán--tshut--lâi
 選務	suán-bū
 選區	suán-khu
 選取	suán-tshú
@@ -148222,6 +148150,7 @@ tín動	tín-tāng
 選賢納士	suán-hiân-la̍p-sū
 選購	suán-kòo
 選贏	suán-iânn
+選起來	suán--khí--lâi
 選選	suán-suán
 選集	suán-tsi̍p
 選項	suán-hāng
@@ -148399,7 +148328,6 @@ tín動	tín-tāng
 邊	pian
 邊	pinn
 邊--a	pinn--a
-邊--頭	pinn--thâu
 邊仔	pinn--á
 邊仔	pinn-a
 邊仔	pinn-ah
@@ -148557,7 +148485,6 @@ tín動	tín-tāng
 邨	tshuan
 邨	tshun
 邪	siâ
-邪--著	siâ--tio̍h
 邪事	siâ-sū
 邪口	siâ-kháu
 邪巧	siâ-kháu
@@ -148576,6 +148503,7 @@ tín動	tín-tāng
 邪症	siâ-tsìng
 邪神	siâ-sîn
 邪祟	siâ-suī
+邪著	siâ--tio̍h
 邪著	siâ-tio̍h
 邪術	siâ-su̍t
 邪說	siâ-suat
@@ -149531,7 +149459,6 @@ tín動	tín-tāng
 醧	ù
 醨	lî
 醪	lô
-醪-手	lô-kô
 醪極極	luâ-ki̍k-ki̍k
 醪汁汁	lô-tsiap-tsiap
 醪膏	lô-ko
@@ -150160,7 +150087,7 @@ tín動	tín-tāng
 釐金	lî-kim
 釐金局	lî-kim-kio̍k
 金	kim
-金ê	kim--ê
+金--ê	kim--ê
 金七娘	kim-tshit-niû
 金不換	kim-put-huàn
 金世界	kim-sè-kài
@@ -151111,7 +151038,6 @@ tín動	tín-tāng
 鉤	kau
 鉤	kio
 鉤	koo
-鉤--破	kau--phuà
 鉤乃耳	kau-nái-hī
 鉤仔	kau-á
 鉤倚	kau-uá
@@ -151124,6 +151050,7 @@ tín動	tín-tāng
 鉤椅漆桌	kau-í-tshat-toh
 鉤消	kau-siau
 鉤痕	kau-hûn
+鉤破	kau--phuà
 鉤破	kau-phuà
 鉤破字	kau-phuà-jī
 鉤籃	kau-nâ
@@ -153163,7 +153090,6 @@ tín動	tín-tāng
 鑿	iann
 鑿	tsha̍k
 鑿	tsho̍k
-鑿--破	tsha̍k--phuà
 鑿井	tsha̍k-tsénn
 鑿人字甲	tsha̍k-jîn-jī-kah
 鑿仔	tsha̍k-á
@@ -153174,6 +153100,7 @@ tín動	tín-tāng
 鑿死	tsha̍k-sí
 鑿犁	tsha̍k-luê
 鑿目	tsha̍k-ba̍k
+鑿破	tsha̍k--phuà
 鑿破	tsha̍k-phuà
 鑿空	tsha̍k-khang
 鑿耳	tsha̍k-hīnn
@@ -153199,12 +153126,12 @@ tín動	tín-tāng
 長	tshiâng
 長	tsiáng
 長	tsióng
-長--來	tn̂g--lâi
 長䘼	tn̂g-uínn
 長䘼	tn̂g-ńg
 長上	tióng-siāng
 長久	tiông-kiú
 長久	tn̂g-kú
+長來	tn̂g--lâi
 長倩的	tn̂g-tshiànn-ê
 長價	tióng-kè
 長冬	tn̂g-tang
@@ -153722,7 +153649,6 @@ tín動	tín-tāng
 閃盆	siám-phûn
 閃示	siám-sih
 閃者	sínn--tsé
-閃著	siám---tio̍h
 閃著	siám--tio̍h
 閃著	siám-tio̍h
 閃薛	siám-sih
@@ -154553,7 +154479,7 @@ tín動	tín-tāng
 闇弱	ám-jio̍k
 闇憨	am-khám
 闇戇	am-gōng
-闇戇ê	am-gōng--ê
+闇戇--ê	am-gōng--ê
 闇昧	ám-muī
 闇耽	am-tam
 闇聾	áng-láng
@@ -157443,7 +157369,6 @@ tín動	tín-tāng
 難	lân
 難	lān
 難	oh
-難--得	oh--tit
 難上加難	lân-siāng-ka-lân
 難事	lân-sû
 難事	lân-sīr
@@ -157461,6 +157386,7 @@ tín動	tín-tāng
 難度	lân-tōo
 難度	lân-tǒo
 難得	lân-tit
+難得	oh--tit
 難忍	lân-jím
 難忘	lân-bông
 難忘	lân-bōng
@@ -158613,7 +158539,7 @@ tín動	tín-tāng
 青盲	tshenn-mî
 青盲	tshinn-mê
 青盲	tshinn-mî
-青盲ê	tshenn-mê--ê
+青盲--ê	tshenn-mê--ê
 青盲人	tshenn-mê-lâng
 青盲人	tshinn-mî-lâng
 青盲仔	tshenn-mê-á
@@ -158894,9 +158820,8 @@ tín動	tín-tāng
 靠	khò
 靠	khòo
 靠	khòr
-靠--人	khò--lâng
-靠--著	khò--tio̍h
 靠下	khuà-hē
+靠人	khò--lâng
 靠住	khuà-tiâu
 靠俗	khò-sio̍k
 靠俗	khòr-sio̍k
@@ -158935,6 +158860,7 @@ tín動	tín-tāng
 靠礁	khò-ta
 靠線	khuà-suànn
 靠腳	khuà-kha
+靠著	khò--tio̍h
 靠著	khò-tio̍h
 靠近	khò-kīn
 靡	bí
@@ -159096,7 +159022,6 @@ tín動	tín-tāng
 靨	iap
 靨	iám
 革	kik
-革--去	kik--khì
 革任	kik-jīm
 革出	kik-tshut
 革去	kik--khì
@@ -161505,7 +161430,7 @@ tín動	tín-tāng
 食五捧	tsia̍h-gōo-phâng
 食人	tsia̍h--lâng
 食人	tsia̍h-lâng
-食人--之祿	si̍t-jîn--tsi-lo̍k
+食人之祿	si̍t-jîn--tsi-lo̍k
 食人傖	tsia̍h-lâng-sông
 食人命	tsia̍h-jîn-miā
 食人夠夠	tsia̍h-lâng-kàu-kàu
@@ -162438,7 +162363,6 @@ tín動	tín-tāng
 餓	gǒ
 餓	iau
 餓	ngōo
-餓--死	gō--sí
 餓死	gō--sí
 餓死	gō-sí
 餓死	gōr--sí
@@ -162458,7 +162382,6 @@ tín動	tín-tāng
 餘	î
 餘	îr
 餘	û
-餘--者	û--tsiá
 餘丁	û-ting
 餘剩	û-sīn
 餘力	î-li̍k
@@ -162478,6 +162401,7 @@ tín動	tín-tāng
 餘生	î-sing
 餘眾	î-tsiòng
 餘眾	û-tsiòng
+餘者	û--tsiá
 餘興	û-hìng
 餘言	û-giân
 餘言不盡	û-giân-put-tsīn
@@ -164395,7 +164319,7 @@ tín動	tín-tāng
 鬍鬍	hôo-hôo
 鬍鬍屑屑	hôo-hôo-sap-sap
 鬍鬚	hôo-tshiu
-鬍鬚ê	hôo-tshiu--ê
+鬍鬚--ê	hôo-tshiu--ê
 鬍鬚面	hôo-tshiu-bīn
 鬐	kî
 鬒	tsin

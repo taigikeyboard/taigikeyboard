@@ -34,6 +34,7 @@ def run(ctx: PipelineContext) -> None:
         preserve_spaces=opts.get("preserve_spaces", False),
         hanlo_exempt=ctx.get_meta(HANLO_EXEMPT_META_KEY, frozenset()),
         keep_non_hanzi_words=opts.get("keep_non_hanzi_words", False),
+        drop_hyphen_in_pure_hanzi=opts.get("drop_hyphen_in_pure_hanzi", False),
     )
 
     drop_path = ctx.dict_dir / "data" / "cleaned" / "drop.csv"
