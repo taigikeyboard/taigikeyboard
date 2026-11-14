@@ -15,40 +15,74 @@ import { SharedLearning } from "./learning-client.js";
 import { Overlay } from "./overlay.js";
 import { emptyDocument, parseStored, STORAGE_KEY } from "./settings.js";
 
-/// A call with no instance to answer it: the key stays the site's.
+/** @typedef {import("./background.js").BadgeState} BadgeState */
+/** @typedef {import("./background.js").TabMode} TabMode */
+/** @typedef {import("./field.js").ClassifiedField} ClassifiedField */
+/** @typedef {import("./panel.js").Panel} Panel */
+/** @typedef {import("./pkg/taigi_web.js").Session} Session */
+/** @typedef {import("./surface.js").Surface} Surface */
+/** @typedef {import("../types/shared.d.ts").BrowserKey} BrowserKey */
+/** @typedef {import("../types/shared.d.ts").Platform} Platform */
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
+/** @typedef {ClassifiedField & { surface?: Surface, refused?: boolean }} ActiveField */
+
+/**
+ * A call with no instance to answer it: the key stays the site's.
+ * @type {Reply}
+ */
 const NOTHING = { handled: false, emits: [] };
 
 const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
 
-/// How often a running composition checks that its field is still there: a
-/// site can take a focused field out of the document, which fires no event.
+/**
+ * How often a running composition checks that its field is still there: a
+ * site can take a focused field out of the document, which fires no event.
+ */
 const FIELD_WATCH_MILLISECONDS = 500;
 
-/// `null` between instances.
+/**
+ * `null` between instances.
+ * @type {Session | null}
+ */
 let session = null;
-/// The dictionaries are in.
+/** The dictionaries are in. */
 let isReady = false;
 let hasFailed = false;
-/// Typing is on in this tab (`"taigi"` or `"english"` to the service worker).
+/** Typing is on in this tab (`"taigi"` or `"english"` to the service worker). */
 let isOn = false;
-/// The mode a reloaded tab comes back in, taken once by the first instance.
+/** The mode a reloaded tab comes back in, taken once by the first instance. */
 let isEnglishWanted = false;
-/// The focused field, as `classify` answers, with its `surface` when the
-/// extension types into it; `null` when nothing that takes text has the focus.
+/**
+ * The focused field, as `classify` answers, with its `surface` when the
+ * extension types into it; `null` when nothing that takes text has the focus.
+ * @type {ActiveField | null}
+ */
 let field = null;
-/// The keys the engine took, by `code`: their releases are not the site's.
+/**
+ * The keys the engine took, by `code`: their releases are not the site's.
+ * @type {Set<string>}
+ */
 const heldKeys = new Set();
-/// The settings document the session holds.
+/** The settings document the session holds. */
 let settingsJson = DEFAULT_SETTINGS;
+/** @type {ReturnType<typeof setInterval> | undefined} */
 let fieldWatch;
-/// The last state told to the service worker.
+/** The last state told to the service worker. */
 let told = "";
 
+/** @type {Overlay} */
 let overlay;
+/** @type {Panel} */
 let panel;
 
-/// A message to the service worker; `undefined` when it does not answer. An
-/// extension reloaded or removed leaves this script without one: it stops.
+/**
+ * A message to the service worker; `undefined` when it does not answer. An
+ * extension reloaded or removed leaves this script without one: it stops.
+ * @param {unknown} message
+ * @returns {Promise<unknown>}
+ */
 async function ask(message) {
   try {
     return await chrome.runtime.sendMessage(message);
@@ -71,6 +105,10 @@ const learning = new SharedLearning({
   onStale: restartWhenIdle,
 });
 
+/**
+ * Detects the host OS platform for engine key mapping.
+ * @returns {Platform}
+ */
 function platform() {
   const name = navigator.userAgentData?.platform ?? navigator.platform;
   if (/mac|iphone|ipad/i.test(name)) {
@@ -79,19 +117,35 @@ function platform() {
   return /win/i.test(name) ? "windows" : "linux";
 }
 
+/**
+ * Reads the revision counter from a serialized settings document.
+ * @param {string} json
+ * @returns {number}
+ */
 function revisionOf(json) {
-  return parseStored(json).revision;
+  return parseStored(json).revision ?? 0;
 }
 
-/// The settings the overlay draws by; the rest are the session's.
+/**
+ * The settings the overlay draws by; the rest are the session's.
+ * @returns {void}
+ */
 function drawSettings() {
   const { values } = parseStored(settingsJson);
-  chooseLanguage(values.displayLanguage ?? "system");
+  chooseLanguage(
+    typeof values.displayLanguage === "string"
+      ? values.displayLanguage
+      : "system",
+  );
   overlay.setLook(values.candidateAppearanceMode, values.candidateTextSize);
 }
 
-/// The session is the judge of the stored document: one it refuses gives way
-/// to the defaults for good, as on the page.
+/**
+ * The session is the judge of the stored document: one it refuses gives way
+ * to the defaults for good, as on the page.
+ * @param {Session} target
+ * @returns {void}
+ */
 function restoreSettings(target) {
   try {
     target.setSettings(settingsJson);
@@ -104,12 +158,23 @@ function restoreSettings(target) {
   }
 }
 
+/**
+ * Persists updated settings from a session reply and refreshes overlay styling.
+ * @param {string} json
+ * @returns {void}
+ */
 function saveSettings(json) {
   settingsJson = json;
   drawSettings();
   chrome.storage.sync.set({ [STORAGE_KEY]: json }).catch(console.error);
 }
 
+/**
+ * Records a session startup/load failure and updates the status chip.
+ * @param {unknown} error
+ * @param {Session | null} starting
+ * @returns {void}
+ */
 function fail(error, starting) {
   console.error(error);
   if (session !== starting) {
@@ -124,9 +189,13 @@ function fail(error, starting) {
   redraw();
 }
 
-/// Starts an instance. Until the dictionaries are in, keys type romanization
-/// (`runtime.rs` `install_lexicon`).
+/**
+ * Starts an instance. Until the dictionaries are in, keys type romanization
+ * (`runtime.rs` `install_lexicon`).
+ * @returns {Promise<void>}
+ */
 async function start() {
+  /** @type {Session | null} */
   let starting = null;
   isReady = false;
   hasFailed = false;
@@ -151,9 +220,14 @@ async function start() {
   }
 }
 
-/// One engine call, its answer as given; `undefined` with no instance. A trap
-/// ends the instance: the composition goes with it, the field's text stays,
-/// and a new instance starts.
+/**
+ * One engine call, its answer as given; `undefined` with no instance. A trap
+ * ends the instance: the composition goes with it, the field's text stays,
+ * and a new instance starts.
+ * @template T
+ * @param {(current: Session) => T} action
+ * @returns {T | undefined}
+ */
 function run(action) {
   if (session === null) {
     return undefined;
@@ -170,13 +244,22 @@ function run(action) {
   }
 }
 
-/// One engine call that answers a reply.
+/**
+ * One engine call that answers a reply.
+ * @param {(current: Session) => string | void} action
+ * @returns {Reply}
+ */
 function call(action) {
   const reply = run(action);
-  return reply === undefined ? NOTHING : JSON.parse(reply);
+  return typeof reply === "string"
+    ? /** @type {Reply} */ (JSON.parse(reply))
+    : NOTHING;
 }
 
-/// A new instance in the mode this one is in.
+/**
+ * A new instance in the mode this one is in.
+ * @returns {void}
+ */
 function restart() {
   isEnglishWanted = isEnglish();
   session = null;
@@ -186,11 +269,13 @@ function restart() {
 
 let isRestartWanted = false;
 
+/** @returns {void} */
 function restartWhenIdle() {
   isRestartWanted = true;
   restartIfIdle();
 }
 
+/** @returns {void} */
 function restartIfIdle() {
   if (isRestartWanted && !panel.isShown) {
     isRestartWanted = false;
@@ -198,25 +283,36 @@ function restartIfIdle() {
   }
 }
 
-/// Another tab may have learned while this one was behind it.
+/**
+ * Another tab may have learned while this one was behind it.
+ * @returns {Promise<void>}
+ */
 async function catchUp() {
   if (isOn && (await learning.isStale())) {
     restartWhenIdle();
   }
 }
 
+/** @returns {WireModeLine | null} */
 function modeLine() {
   const line = run((current) => current.modeLine());
-  return line === undefined ? null : JSON.parse(line);
+  return line === undefined
+    ? null
+    : /** @type {WireModeLine} */ (JSON.parse(line));
 }
 
+/** @returns {boolean} */
 function isEnglish() {
   return modeLine()?.isEnglish ?? false;
 }
 
-/// The tab's state under `line`, the session's mode line, and the words for
-/// it: `"off"`, `"failed"`, `"loading"`, `"unsupported"`, `"english"` or
-/// `"taigi"`.
+/**
+ * The tab's state under `line`, the session's mode line, and the words for
+ * it: `"off"`, `"failed"`, `"loading"`, `"unsupported"`, `"english"` or
+ * `"taigi"`.
+ * @param {WireModeLine | null} line
+ * @returns {{ state: BadgeState, label: string }}
+ */
 function stateOf(line) {
   if (!isOn) {
     return { state: "off", label: translate("web.extensionOff") };
@@ -238,7 +334,10 @@ function stateOf(line) {
     : { state: "taigi", label: `${line.mode} · ${line.script}` };
 }
 
-/// The chip beside the field and the toolbar button say the same thing.
+/**
+ * The chip beside the field and the toolbar button say the same thing.
+ * @returns {void}
+ */
 function redraw() {
   const line = modeLine();
   const { state, label } = stateOf(line);
@@ -257,6 +356,10 @@ function redraw() {
   }
 }
 
+/**
+ * Updates panel and mode-chip coordinates against the active surface caret.
+ * @returns {void}
+ */
 function place() {
   if (panel.isShown && field?.surface) {
     overlay.setPreeditFont(caretElement());
@@ -265,8 +368,14 @@ function place() {
   overlay.placeChip();
 }
 
-/// The element whose font the composition takes.
+/**
+ * The element whose font the composition takes.
+ * @returns {Element}
+ */
 function caretElement() {
+  if (!field || field.kind === "unsupported") {
+    return document.documentElement;
+  }
   if (field.kind !== "editable") {
     return field.fontElement;
   }
@@ -274,14 +383,21 @@ function caretElement() {
   if (!node || !field.element.contains(node)) {
     return field.element;
   }
-  return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+  return node instanceof Element ? node : (node.parentElement ?? field.element);
 }
 
-/// A write the field refused: its length is in the console, and the field's
-/// keys are the site's from here on. Never the text: the console is the
-/// site's, and the text is the user's.
+/**
+ * A write the field refused: its length is in the console, and the field's
+ * keys are the site's from here on. Never the text: the console is the
+ * site's, and the text is the user's.
+ * @param {string} text
+ * @returns {void}
+ */
 function refuse(text) {
   console.error("taigi.commit.refused", [...text].length);
+  if (!field) {
+    return;
+  }
   field = {
     kind: "unsupported",
     element: field.element,
@@ -290,6 +406,11 @@ function refuse(text) {
   };
 }
 
+/**
+ * Applies a single wire emit from the session reply to overlay or field.
+ * @param {WireEmit} emit
+ * @returns {void}
+ */
 function applyEmit(emit) {
   switch (emit.type) {
     case "preedit":
@@ -321,11 +442,17 @@ function applyEmit(emit) {
   }
 }
 
-/// Joins commits in one reply that no `deleteSurrounding` separates, so one
-/// reply executes one `insertText` (one undo step, and one `beforeinput` for
-/// editors that reconcile the DOM in a microtask after `execCommand`).
+/**
+ * Joins commits in one reply that no `deleteSurrounding` separates, so one
+ * reply executes one `insertText` (one undo step, and one `beforeinput` for
+ * editors that reconcile the DOM in a microtask after `execCommand`).
+ * @param {WireEmit[]} emits
+ * @returns {WireEmit[]}
+ */
 function coalesceCommits(emits) {
+  /** @type {WireEmit[]} */
   const joined = [];
+  /** @type {Extract<WireEmit, { type: "commit" }> | null} */
   let lastCommit = null;
   for (const emit of emits) {
     if (emit.type === "commit") {
@@ -345,6 +472,11 @@ function coalesceCommits(emits) {
   return joined;
 }
 
+/**
+ * Applies a full session reply to settings, DOM surface, panel, and chip.
+ * @param {Reply} reply
+ * @returns {void}
+ */
 function apply(reply) {
   if (reply.settings) {
     saveSettings(reply.settings);
@@ -366,8 +498,11 @@ function apply(reply) {
   }
 }
 
-/// A composition with no field to write to is dropped, never carried to the
-/// next one.
+/**
+ * A composition with no field to write to is dropped, never carried to the
+ * next one.
+ * @returns {void}
+ */
 function dropComposition() {
   if (panel.isShown) {
     call((current) => current.endSession());
@@ -378,6 +513,7 @@ function dropComposition() {
   restartIfIdle();
 }
 
+/** @returns {void} */
 function watchField() {
   if (!panel.isShown) {
     clearInterval(fieldWatch);
@@ -387,9 +523,12 @@ function watchField() {
   }
 }
 
-/// Follows the focus. The field that had it is done: its composition ends
-/// there. Focus that left with the whole window (another tab, another
-/// application) is still this field's.
+/**
+ * Follows the focus. The field that had it is done: its composition ends
+ * there. Focus that left with the whole window (another tab, another
+ * application) is still this field's.
+ * @returns {void}
+ */
 function syncField() {
   const next = classify(focusedElement());
   // A refused write stays refused while the field keeps the focus.
@@ -397,7 +536,7 @@ function syncField() {
     return;
   }
   if (next?.element === field?.element && next?.kind === field?.kind) {
-    if (next && next.anchor !== field.anchor) {
+    if (next && field && next.anchor !== field.anchor) {
       field.anchor = next.anchor;
       redraw();
     }
@@ -414,8 +553,14 @@ function syncField() {
   redraw();
 }
 
+/**
+ * Encodes a DOM `KeyboardEvent` as JSON for the session `BrowserKey` input.
+ * @param {KeyboardEvent} event
+ * @returns {string}
+ */
 function keyJson(event) {
-  return JSON.stringify({
+  /** @type {BrowserKey} */
+  const key = {
     key: event.key,
     code: event.code,
     shift: event.shiftKey,
@@ -423,16 +568,25 @@ function keyJson(event) {
     alt: event.altKey,
     meta: event.metaKey,
     repeat: event.repeat,
-  });
+  };
+  return JSON.stringify(key);
 }
 
-/// A key another input method holds is its own.
+/**
+ * A key another input method holds is its own.
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
+ */
 function isForeignComposition(event) {
   return event.isComposing || event.keyCode === 229;
 }
 
-/// Whether the engine is asked about `event`: typing is on, the key is the
-/// user's, and it goes to a field the extension types into.
+/**
+ * Whether the engine is asked about `event`: typing is on, the key is the
+ * user's, and it goes to a field the extension types into.
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
+ */
 function isOurs(event) {
   if (!isOn || !event.isTrusted || isForeignComposition(event)) {
     return false;
@@ -441,10 +595,14 @@ function isOurs(event) {
   return Boolean(field?.surface);
 }
 
-/// The window's first `keydown` listener (`content.js` adds it at
-/// `document_start`): a key the engine took never reaches the site.
+/**
+ * The window's first `keydown` listener (`content.js` adds it at
+ * `document_start`): a key the engine took never reaches the site.
+ * @param {KeyboardEvent} event
+ * @returns {void}
+ */
 export function onKeyDown(event) {
-  if (!isOurs(event)) {
+  if (!isOurs(event) || !field?.surface) {
     return;
   }
   // The auto-space swap deletes the character before the caret unseen, so its
@@ -461,6 +619,11 @@ export function onKeyDown(event) {
   apply(reply);
 }
 
+/**
+ * Handles key releases and suppresses `keyup` events whose `keydown` was taken.
+ * @param {KeyboardEvent} event
+ * @returns {void}
+ */
 export function onKeyUp(event) {
   // A site that acts on a release (a search on Enter) must not act on the key
   // that picked a candidate.
@@ -472,7 +635,11 @@ export function onKeyUp(event) {
   }
 }
 
-/// Aligns the session's language mode with `wantEnglish`.
+/**
+ * Aligns the session's language mode with `wantEnglish`.
+ * @param {boolean} wantEnglish
+ * @returns {void}
+ */
 function syncLanguageMode(wantEnglish) {
   if (session === null) {
     isEnglishWanted = wantEnglish;
@@ -483,8 +650,12 @@ function syncLanguageMode(wantEnglish) {
   }
 }
 
-/// `mode`: `"off"`, `"taigi"` or `"english"`, from the toolbar, the shortcut
-/// or the tab's own state after a reload or back-forward restore.
+/**
+ * `mode`: `"off"`, `"taigi"` or `"english"`, from the toolbar, the shortcut
+ * or the tab's own state after a reload or back-forward restore.
+ * @param {TabMode} mode
+ * @returns {void}
+ */
 export function setMode(mode) {
   if (mode === "off") {
     if (!isOn) {
@@ -514,7 +685,10 @@ export function setMode(mode) {
   catchUp();
 }
 
-/// The extension was reloaded or removed: this script can reach nothing of it.
+/**
+ * The extension was reloaded or removed: this script can reach nothing of it.
+ * @returns {void}
+ */
 function retire() {
   isOn = false;
   session = null;
@@ -522,6 +696,10 @@ function retire() {
   overlay.hideChip();
 }
 
+/**
+ * Loads overlay styles and settings, builds the shadow overlay, and hooks listeners.
+ * @returns {Promise<void>}
+ */
 async function prepare() {
   const [styles, stored] = await Promise.all([
     fetch(chrome.runtime.getURL("overlay.css")).then((response) =>

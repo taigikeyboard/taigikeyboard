@@ -17,6 +17,11 @@ window.cm5Fixture = {
     return { line, ch };
   },
 
+  /**
+   * @param {string} value
+   * @param {number} line
+   * @param {number} ch
+   */
   setDocument(value, line, ch) {
     cm.setValue(value);
     cm.clearHistory();
@@ -24,6 +29,11 @@ window.cm5Fixture = {
     cm.focus();
   },
 
+  /**
+   * @param {string} value
+   * @param {CodeMirror5Position} from
+   * @param {CodeMirror5Position} to
+   */
   setSelection(value, from, to) {
     cm.setValue(value);
     cm.clearHistory();
@@ -31,6 +41,7 @@ window.cm5Fixture = {
     cm.focus();
   },
 
+  /** @param {boolean | string} value */
   setReadOnly(value) {
     cm.setOption("readOnly", value);
     if (value !== "nocursor") {
