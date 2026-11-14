@@ -90,7 +90,7 @@ mod segmentation;
 mod walk;
 
 pub(crate) use assemble::{assemble_candidates, ListShape};
-pub(crate) use dedupe::retain_first_by_key;
+pub(crate) use dedupe::{retain_first_by_key, should_dedupe_commit_hanji};
 pub(crate) use edge::{edge_homophone_words, edge_toneless_bodies};
 pub(crate) use segmentation::{explain_segmentation, BufferCut, Segmentation, WordCut};
 pub(crate) use walk::{synth_consumed_span, walk_buffer};

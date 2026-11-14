@@ -697,12 +697,30 @@ mod regression_tests {
     fn reachability_distinguishes_same_hanji_with_different_readings() {
         let env = super::super::acquire_process_env();
         super::super::reset_all_persistent_state();
-        let mut sim = HostSimulator::new(
-            env.user_data_dir,
-            env.dictionaries_dir,
-            &standard_tl_settings(),
-            true,
-        );
+        let mut settings = standard_tl_settings();
+        // Under Hanji-first (#911), candidates committing identical Hanji text (`代`) merge into one row.
+        let mut hanji_first_sim =
+            HostSimulator::new(env.user_data_dir, env.dictionaries_dir, &settings, true);
+        for ch in "tai".chars() {
+            hanji_first_sim
+                .step(&SimStep::KeyChar { ch, shift: false })
+                .expect("type reading");
+        }
+        let hanji_count = (0..hanji_first_sim.state.candidates.len())
+            .filter(|&index| {
+                hanji_first_sim
+                    .state
+                    .candidates
+                    .resolve(index, false)
+                    .is_some_and(|(c, _)| c.hanji.as_deref() == Some("代"))
+            })
+            .count();
+        assert_eq!(hanji_count, 1, "Hanji-first merges same-Hanji candidates");
+        drop(hanji_first_sim);
+
+        // Under Roman-first, `代/tāi` and `代/tài` commit distinct text so both stay separate.
+        settings.set_bool(&keys::IS_HANJI_FIRST, false);
+        let mut sim = HostSimulator::new(env.user_data_dir, env.dictionaries_dir, &settings, true);
         for ch in "tai".chars() {
             sim.step(&SimStep::KeyChar { ch, shift: false })
                 .expect("type reading");

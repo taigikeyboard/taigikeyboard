@@ -55,6 +55,18 @@ impl engine::AppConfig {
         self.is_hanji_first || self.is_tps_layout()
     }
 
+    /// Whether each candidate cell commits plain Hanji alone (without bracketed
+    /// phonetic annotation): TPS layout or TPS-typed buffer with brackets off,
+    /// or Hanji-first paired display (`SideBySide`) with brackets off.
+    /// `RomanOnly` and `Combined` (`is_single_script_display()`) answer `false`
+    /// on roman layouts because `RomanOnly` commits romanization and `Combined`
+    /// splits Hanji and romanization into separate cells.
+    pub fn commits_plain_hanji(&self, is_tps_buffer: bool) -> bool {
+        !self.output_both_scripts
+            && ((is_tps_buffer || self.is_tps_layout())
+                || (self.renders_hanji_first() && !self.is_single_script_display()))
+    }
+
     /// What replaces the dictionary's syllable hyphen in the rendered
     /// romanization (Syllable Separator, §49): `None` keeps the romanization
     /// as it is — Hyphen, the proto default, an unknown value, and always the
@@ -142,5 +154,25 @@ mod tests {
         for separator in [SyllableSeparator::None, SyllableSeparator::Space] {
             assert_eq!(separated("tps", separator).rendered_syllable_joiner(), None);
         }
+    }
+
+    #[test]
+    fn commits_plain_hanji_requires_brackets_off_and_paired_hanji_or_tps() {
+        use super::engine::CandidateDisplayMode;
+        let mk = |mode: &str, swapped: bool, brackets: bool, disp: CandidateDisplayMode| AppConfig {
+            input_mode: mode.to_owned(),
+            is_hanji_first: swapped,
+            output_both_scripts: brackets,
+            candidate_display_mode: disp as i32,
+            ..AppConfig::default()
+        };
+        assert!(mk("tl", true, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(false));
+        assert!(!mk("tl", true, true, CandidateDisplayMode::SideBySide).commits_plain_hanji(false));
+        assert!(!mk("tl", false, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(false));
+        assert!(!mk("tl", true, false, CandidateDisplayMode::Combined).commits_plain_hanji(false));
+        assert!(!mk("tl", true, false, CandidateDisplayMode::RomanOnly).commits_plain_hanji(false));
+        assert!(mk("tps", false, false, CandidateDisplayMode::Combined).commits_plain_hanji(false));
+        assert!(mk("tl", false, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(true));
+        assert!(!mk("tps", false, true, CandidateDisplayMode::SideBySide).commits_plain_hanji(true));
     }
 }

@@ -171,3 +171,46 @@ fn tps_typed_marks_and_spaces_pin_the_reading() {
         );
     }
 }
+
+#[test]
+fn hanji_first_merges_same_commit_hanji_candidates() {
+    if !production_lexicon_ready() {
+        eprintln!("production artifacts absent — run `make dict`; skipping.");
+        return;
+    }
+
+    let count_hanji = |is_hanji_first: bool, output_both_scripts: bool, raw: &str, target: &str| {
+        let mut cfg = fresh_install_config("tl");
+        cfg.is_hanji_first = is_hanji_first;
+        cfg.output_both_scripts = output_both_scripts;
+        let cells = fetch_cells(&cfg, raw, fresh_install_fetch());
+        let matches: Vec<_> = cells
+            .iter()
+            .filter(|(h, ..)| h.as_deref() == Some(target))
+            .collect();
+        (matches.len(), cells)
+    };
+
+    // Output Script = Hanji, Brackets = off: multiple plain `轉去` readings
+    // merge into 1 cell.
+    let (merged_count, merged_cells) = count_hanji(true, false, "tngkhi", "轉去");
+    assert_eq!(merged_count, 1, "tngkhi Hanji-first: {merged_cells:?}");
+
+    // Annotate in Brackets = on: distinct readings stay separate.
+    let (bracket_count, bracket_cells) = count_hanji(true, true, "tngkhi", "轉去");
+    assert!(
+        bracket_count > 1,
+        "tngkhi brackets on should preserve readings: {bracket_cells:?}"
+    );
+
+    // Output Script = Romanization: distinct readings stay separate.
+    let (roman_count, roman_cells) = count_hanji(false, false, "tngkhi", "轉去");
+    assert!(
+        roman_count > 1,
+        "tngkhi roman-first should preserve readings: {roman_cells:?}"
+    );
+
+    // `ekilit` still surfaces `會記得`.
+    let (ekilit_count, ekilit_cells) = count_hanji(true, false, "ekilit", "會記得");
+    assert_eq!(ekilit_count, 1, "ekilit Hanji-first: {ekilit_cells:?}");
+}
