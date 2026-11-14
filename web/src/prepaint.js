@@ -10,7 +10,13 @@ try {
   if (localStorage.getItem("taigi.sidebar") === "open") {
     root.dataset.sidebar = "open";
   }
-  const stored = JSON.parse(localStorage.getItem("taigi.settings"));
+  const raw = localStorage.getItem("taigi.settings");
+  const stored =
+    raw === null
+      ? null
+      : /** @type {{ values?: Record<string, unknown> } | null} */ (
+          JSON.parse(raw)
+        );
   const theme = stored?.values?.candidateAppearanceMode;
   if (typeof theme === "string") {
     root.dataset.theme = theme;

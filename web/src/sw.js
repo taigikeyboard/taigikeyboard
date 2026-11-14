@@ -7,12 +7,24 @@
 // For the same reason there is no `clients.claim()`. The origin is shared with
 // other sites, so only caches named here are ever deleted.
 
+/** @typedef {import("../types/shared.d.ts").AssetsManifest} AssetsManifest */
+
 const BUILD = "dev"; // `scripts/stage-assets.mjs` writes the real one.
 const SHELL_PREFIX = "taigi-web-shell-";
 const SHELL_CACHE = `${SHELL_PREFIX}${BUILD}`;
 const DICTIONARY_CACHE = "taigi-web-dictionaries"; // Also in `loader.js`.
 const MANIFEST = "assets-manifest.json";
+const sw = /** @type {ServiceWorkerGlobalScope} */ (
+  /** @type {unknown} */ (self)
+);
 
+/**
+ * Fetches an asset with SRI verification and rejects non-OK HTTP responses.
+ * @param {string} path
+ * @param {string} sha256
+ * @param {RequestCache} cacheMode
+ * @returns {Promise<Response>}
+ */
 async function fetchVerified(path, sha256, cacheMode) {
   const response = await fetch(path, {
     cache: cacheMode,
@@ -24,11 +36,16 @@ async function fetchVerified(path, sha256, cacheMode) {
   return response;
 }
 
-/// All or nothing: a failure rejects the install, the page keeps what it has, and
-/// the browser tries again on the next visit.
+/**
+ * All or nothing: a failure rejects the install, the page keeps what it has, and
+ * the browser tries again on the next visit.
+ * @returns {Promise<void>}
+ */
 async function install() {
   const response = await fetch(MANIFEST, { cache: "no-cache" });
-  const manifest = await response.clone().json();
+  const manifest = /** @type {AssetsManifest} */ (
+    await response.clone().json()
+  );
   // An edge still holding the last deploy.
   if (manifest.build !== BUILD) {
     throw new Error(`manifest ${manifest.build}, worker ${BUILD}`);
@@ -49,6 +66,11 @@ async function install() {
   }
 }
 
+/**
+ * Removes superseded shell caches and dictionary entries no longer listed in the
+ * active manifest.
+ * @returns {Promise<void>}
+ */
 async function activate() {
   const names = await caches.keys();
   await Promise.all(
@@ -58,9 +80,17 @@ async function activate() {
   );
 
   const shell = await caches.open(SHELL_CACHE);
-  const manifest = await (await shell.match(MANIFEST)).json();
+  const manifestResponse = await shell.match(MANIFEST);
+  if (!manifestResponse) {
+    throw new Error(`${MANIFEST}: missing from ${SHELL_CACHE}`);
+  }
+  const manifest = /** @type {AssetsManifest} */ (
+    await manifestResponse.json()
+  );
   const current = new Set(
-    manifest.dictionaries.map(({ file }) => new URL(file, self.location).href),
+    manifest.dictionaries.map(
+      ({ file }) => new URL(file, sw.location.href).href,
+    ),
   );
   const dictionaries = await caches.open(DICTIONARY_CACHE);
   for (const request of await dictionaries.keys()) {
@@ -70,6 +100,11 @@ async function activate() {
   }
 }
 
+/**
+ * Serves precached shell entries and caches runtime-selected woff2 fonts.
+ * @param {Request} request
+ * @returns {Promise<Response>}
+ */
 async function respond(request) {
   const url = new URL(request.url);
   const key = url.pathname.endsWith("/")
@@ -89,14 +124,14 @@ async function respond(request) {
   return response;
 }
 
-self.addEventListener("install", (event) => {
+sw.addEventListener("install", (event) => {
   event.waitUntil(install());
 });
 
-self.addEventListener("activate", (event) => {
+sw.addEventListener("activate", (event) => {
   event.waitUntil(activate());
 });
 
-self.addEventListener("fetch", (event) => {
+sw.addEventListener("fetch", (event) => {
   event.respondWith(respond(event.request));
 });

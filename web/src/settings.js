@@ -9,16 +9,31 @@
 
 import { setDisplayLanguage } from "./i18n.js";
 
-/// Also the ChromeOS input method's key in chrome.storage.sync.
+/** @typedef {import("../types/shared.d.ts").SettingsDocument} SettingsDocument */
+/** @typedef {import("../types/shared.d.ts").SettingsStore} SettingsStore */
+/** @typedef {import("../types/shared.d.ts").SettingsValue} SettingsValue */
+
+/** Also the ChromeOS input method's key in chrome.storage.sync. */
 export const STORAGE_KEY = "taigi.settings";
 
+/**
+ * Returns a fresh empty settings document at revision 0.
+ * @returns {SettingsDocument & { revision: number }}
+ */
 export function emptyDocument() {
   return { revision: 0, values: {} };
 }
 
-/// A stored document, or the empty one when `text` is missing or damaged.
-/// Whether the session accepts it is the session's call (`reset`).
+/**
+ * A stored document, or the empty one when `text` is missing or damaged.
+ * Whether the session accepts it is the session's call (`reset`).
+ * @param {unknown} text
+ * @returns {SettingsDocument}
+ */
 export function parseStored(text) {
+  if (typeof text !== "string") {
+    return emptyDocument();
+  }
   try {
     const stored = JSON.parse(text);
     if (stored?.values?.constructor === Object) {
@@ -30,8 +45,11 @@ export function parseStored(text) {
   return emptyDocument();
 }
 
-/// The page's store. The ChromeOS options page passes its own
-/// (`web/chromeos/options.js`).
+/**
+ * The page's store. The ChromeOS options page passes its own
+ * (`web/chromeos/options.js`).
+ * @type {SettingsStore}
+ */
 const LOCAL_STORE = {
   read() {
     try {
@@ -50,8 +68,13 @@ const LOCAL_STORE = {
   },
 };
 
+/**
+ * Reads the persisted value represented by a form control.
+ * @param {HTMLInputElement | HTMLSelectElement} control
+ * @returns {SettingsValue}
+ */
 function storedValue(control) {
-  if (control.type === "checkbox") {
+  if (control instanceof HTMLInputElement && control.type === "checkbox") {
     return control.checked;
   }
   return "boolean" in control.dataset
@@ -60,70 +83,109 @@ function storedValue(control) {
 }
 
 export class Settings {
+  /** @type {HTMLFormElement} */
   #form;
+  /** @type {SettingsStore} */
   #store;
+  /** @type {SettingsDocument} */
   #document;
 
-  /// `onChange(json)`: the form changed the document. `store`: `read()` the
-  /// stored document, `write(json)` a new one.
+  /**
+   * `onChange(json)`: the form changed the document. `store`: `read()` the
+   * stored document, `write(json)` a new one.
+   * @param {HTMLFormElement} form
+   * @param {(json: string) => void} onChange
+   * @param {SettingsStore} [store]
+   */
   constructor(form, onChange, store = LOCAL_STORE) {
     this.#form = form;
     this.#store = store;
     this.#document = store.read();
     this.#show();
     form.addEventListener("change", ({ target }) => {
-      this.#write(target.name, storedValue(target));
-      onChange(this.json);
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        this.#write(target.name, storedValue(target));
+        onChange(this.json);
+      }
     });
     form.addEventListener("click", ({ target }) => {
-      if (target.matches(".setting-reset")) {
+      if (target instanceof HTMLElement && target.matches(".setting-reset")) {
         this.#resetSection(target);
         onChange(this.json);
       }
     });
   }
 
+  /** @returns {string} */
   get json() {
     return JSON.stringify(this.#document);
   }
 
-  /// The key panel's chord. Not a form change: the panel is looked at, so the
-  /// composition stays.
+  /**
+   * The key panel's chord. Not a form change: the panel is looked at, so the
+   * composition stays.
+   * @returns {void}
+   */
   toggleTpsKeyboard() {
-    const { tpsKeyboardShown } = this.#form.elements;
+    const tpsKeyboardShown = /** @type {HTMLInputElement} */ (
+      this.#form.elements.namedItem("tpsKeyboardShown")
+    );
     this.#write("tpsKeyboardShown", !tpsKeyboardShown.checked);
   }
 
-  /// The document as the session wrote it.
+  /**
+   * The document as the session wrote it.
+   * @param {string} json
+   * @returns {void}
+   */
   adopt(json) {
-    this.#document = JSON.parse(json);
+    this.#document = /** @type {SettingsDocument} */ (JSON.parse(json));
     this.#show();
     this.#persist();
   }
 
-  /// The session refused the document: the defaults, for good, so that
-  /// `prepaint.js` does not paint from it again.
+  /**
+   * The session refused the document: the defaults, for good, so that
+   * `prepaint.js` does not paint from it again.
+   * @returns {void}
+   */
   reset() {
     this.#document = emptyDocument();
     this.#show();
     this.#persist();
   }
 
+  /** @returns {void} */
   #show() {
     const { values } = this.#document;
-    for (const control of this.#form.querySelectorAll("[name]")) {
+    const controls =
+      /** @type {NodeListOf<HTMLInputElement | HTMLSelectElement>} */ (
+        this.#form.querySelectorAll("[name]")
+      );
+    for (const control of controls) {
       const value = values[control.name];
-      if (control.type === "checkbox") {
+      if (control instanceof HTMLInputElement && control.type === "checkbox") {
         control.checked =
           typeof value === "boolean" ? value : control.defaultChecked;
         continue;
       }
-      const options = Array.from(control.options);
-      const shown =
-        options.find((option) => option.value === String(value)) ??
-        options.find((option) => option.defaultSelected);
-      shown.selected = true;
+      if (control instanceof HTMLSelectElement) {
+        const options = Array.from(control.options);
+        const shown =
+          options.find((option) => option.value === String(value)) ??
+          options.find((option) => option.defaultSelected);
+        if (shown) {
+          shown.selected = true;
+        }
+      }
     }
+    const elements =
+      /** @type {Record<string, HTMLInputElement | HTMLSelectElement>} */ (
+        /** @type {unknown} */ (this.#form.elements)
+      );
     const {
       candidateAppearanceMode,
       candidateDisplayMode,
@@ -132,9 +194,19 @@ export class Settings {
       inputMode,
       isTranslateSwapped,
       tpsKeyboardShown,
-    } = this.#form.elements;
-    for (const control of this.#form.querySelectorAll("[data-requires]")) {
-      control.disabled = !this.#form.elements[control.dataset.requires].checked;
+    } = elements;
+    const dependentControls =
+      /** @type {NodeListOf<HTMLInputElement | HTMLSelectElement>} */ (
+        this.#form.querySelectorAll("[data-requires]")
+      );
+    for (const control of dependentControls) {
+      const requiredKey = control.dataset.requires;
+      if (requiredKey) {
+        const required = /** @type {HTMLInputElement} */ (
+          elements[requiredKey]
+        );
+        control.disabled = !required.checked;
+      }
     }
     // The row stays in its place outside TPS: the choice waits for the way back.
     const isTyping = inputMode.value === "tps";
@@ -147,7 +219,7 @@ export class Settings {
     root.style.setProperty("--candidate-size", `${candidateTextSize.value}px`);
     root.toggleAttribute(
       "data-tps-keyboard",
-      isTyping && tpsKeyboardShown.checked,
+      isTyping && /** @type {HTMLInputElement} */ (tpsKeyboardShown).checked,
     );
     // No form row: only its chord flips it, and TPS types no Telex keys
     // (`is_telex_guide_wanted`).
@@ -156,32 +228,53 @@ export class Settings {
       !isTyping && values.telexGuideShown === true,
     );
     // The stored tag, not the control's: the session reads an unknown one too.
-    setDisplayLanguage(values.displayLanguage ?? "system");
+    setDisplayLanguage(
+      typeof values.displayLanguage === "string"
+        ? values.displayLanguage
+        : "system",
+    );
   }
 
+  /**
+   * @param {string} name
+   * @param {SettingsValue} value
+   * @returns {void}
+   */
   #write(name, value) {
     this.#document.values[name] = value;
     this.#changed();
   }
 
+  /**
+   * @param {HTMLElement} button
+   * @returns {void}
+   */
   #resetSection(button) {
     const { values } = this.#document;
     const section = button.closest("details");
-    for (const { name } of section.querySelectorAll(
-      "[name]:not([data-keep])",
-    )) {
-      delete values[name];
+    if (section) {
+      const resettable =
+        /** @type {NodeListOf<HTMLInputElement | HTMLSelectElement>} */ (
+          section.querySelectorAll("[name]:not([data-keep])")
+        );
+      for (const { name } of resettable) {
+        delete values[name];
+      }
     }
-    delete values[button.dataset.also];
+    if (button.dataset.also) {
+      delete values[button.dataset.also];
+    }
     this.#changed();
   }
 
+  /** @returns {void} */
   #changed() {
-    this.#document.revision += 1;
+    this.#document.revision = (this.#document.revision ?? 0) + 1;
     this.#show();
     this.#persist();
   }
 
+  /** @returns {void} */
   #persist() {
     this.#store.write(this.json);
   }
