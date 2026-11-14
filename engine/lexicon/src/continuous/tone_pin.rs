@@ -104,10 +104,9 @@ impl TonePin {
     /// a custom entry has no key at all.
     pub fn admits(&self, matched_key: Option<&str>, reading: &str) -> bool {
         match self {
-            TonePin::None => !phonetics::reading_opens_khinsiann(reading),
+            TonePin::None => true,
             TonePin::TpsTyped { body, closes } => {
-                !phonetics::reading_opens_khinsiann(reading)
-                    && reading_passes_tps_closes(matched_key.unwrap_or(body), closes, reading)
+                reading_passes_tps_closes(matched_key.unwrap_or(body), closes, reading)
             }
             TonePin::TypedTones {
                 mode,
@@ -132,11 +131,11 @@ impl TonePin {
     /// Latin roman as stored, so there the pin reads the same
     /// [`phonetics::api::custom_search_reading`] the TPS search keys and
     /// [`custom_reach`] are derived from. The fold is skipped when nothing
-    /// is pinned and the stored roman carries no leading separator.
+    /// is pinned, including for a stored roman opening with `--`.
     ///
     /// [`custom_reach`]: super::reach::custom_reach
     pub fn admits_custom(&self, roman: &str, mode: phonetics::InputMode) -> bool {
-        if matches!(self, TonePin::None) && !roman.starts_with(['-', ' ', '·', '\u{00B7}']) {
+        if matches!(self, TonePin::None) {
             return true;
         }
         let reading = match mode {
@@ -154,10 +153,12 @@ impl TonePin {
 /// (`phonetics::tl_syllable_khinsiann_flags`; a dictionary space counts
 /// as plain). The last syllable's end carries no kind: a trailing typed
 /// `--` constrains the NEXT word, not this one. A boundary at 0 is the
-/// run typed right before the span: only a reading that itself opens with
-/// `--` (`--tńg-khì`, `--ah`) requires a `--` boundary at 0, and a span
-/// without one rejects `--`-opening readings. No syllable of the reading
-/// may end strictly inside a one-syllable stretch.
+/// run typed right before the span: when present, a plain `-` rejects a
+/// reading opening with `--`. Without that explicit boundary, the reading's
+/// leading marker is optional for lookup (`tngkhi` can match `--tńg-khì`);
+/// its canonical spelling and internal separator kinds stay intact. Idle
+/// hyphens commit literally, so requiring them would hide these readings.
+/// No syllable may end strictly inside a one-syllable stretch.
 fn reading_passes_typed_tones(
     mode: phonetics::InputMode,
     typed: &str,
@@ -165,11 +166,7 @@ fn reading_passes_typed_tones(
     one_syllable_stretches: &[(usize, usize)],
     reading: &str,
 ) -> bool {
-    let has_leading_khinsiann = boundaries.iter().any(|b| b.at == 0 && b.khinsiann);
     let opens_khinsiann = phonetics::reading_opens_khinsiann(reading);
-    if opens_khinsiann && !has_leading_khinsiann {
-        return false;
-    }
     let Some(walk) =
         phonetics::typed_syllable_walk(mode, typed, reading).filter(|w| w.typed_consumed)
     else {
@@ -270,6 +267,35 @@ mod typed_tone_pin_tests {
 
     fn passes(mode: InputMode, typed: &str, reading: &str) -> bool {
         reading_passes_typed_tones(mode, typed, &[], &[], reading)
+    }
+
+    #[test]
+    fn leading_khinsiann_is_optional_and_keeps_tones_and_internal_boundaries() {
+        assert!(TonePin::None.admits(Some("tl:tngkhi"), "--tńg-khì"));
+        assert!(TonePin::None.admits_custom("--tńg-khì", Tl));
+        for mode in [Tl, Poj] {
+            assert!(passes(mode, "tng2khi3", "--tńg-khì"));
+            assert!(!passes(mode, "tng5khi3", "--tńg-khì"));
+            assert!(passes_kinds(mode, "tngkhi", &[(3, false)], "--tńg-khì"));
+            assert!(!passes_kinds(mode, "tngkhi", &[(3, true)], "--tńg-khì"));
+            assert!(passes_kinds(mode, "tngkhi", &[(3, true)], "tńg--khì"));
+            // An explicitly typed boundary before the word still has a kind.
+            assert!(!passes_kinds(mode, "tngkhi", &[(0, false)], "--tńg-khì"));
+            assert!(passes_kinds(mode, "tngkhi", &[(0, true)], "--tńg-khì"));
+        }
+    }
+
+    #[test]
+    fn leading_khinsiann_is_optional_for_tps_but_typed_tones_still_pin() {
+        let pin = |tone| TonePin::TpsTyped {
+            body: "ㆣㄨㄚ".into(),
+            closes: vec![TpsClose {
+                body_end: "ㆣㄨㄚ".len(),
+                kind: TpsCloseKind::Marked(tone),
+            }],
+        };
+        assert!(pin('2').admits(Some("tps:ㆣㄨㄚ"), "--guá"));
+        assert!(!pin('7').admits(Some("tps:ㆣㄨㄚ"), "--guá"));
     }
 
     // §17 case 3 — the reported shape. Faces via `poj_num_syllable_ends_from_tl`:

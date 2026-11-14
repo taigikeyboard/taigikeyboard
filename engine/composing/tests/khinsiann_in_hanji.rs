@@ -9,8 +9,8 @@ use crate::common::{
 };
 use composing::api::{CommitScript, Engine};
 use composing::{requests, Intent, Phase};
-use lexicon::CustomEntry;
-use protos::engine::{AppConfig, CandidateDisplayMode, CandidateMessage};
+use lexicon::{CustomEntry, LearnedEntry};
+use protos::engine::{AppConfig, CandidateDisplayMode, CandidateMessage, SyllableSeparator};
 use test_support::{engine_install_lock, write_temp};
 
 fn fixture_rows() -> Vec<Row> {
@@ -149,17 +149,116 @@ fn pick_candidate(
 }
 
 #[test]
+fn leading_khinsiann_matches_without_a_typed_marker_and_commits_its_identity() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    for mode in ["tl", "poj"] {
+        let mut cfg = hanji_config(true, false);
+        cfg.input_mode = mode.into();
+        for (raw, expected) in [
+            ("tngkhi", vec!["--tńg-khì", "tńg--khì", "tńg-khì"]),
+            ("tng-khi", vec!["--tńg-khì", "tńg-khì"]),
+            ("tng--khi", vec!["tńg--khì"]),
+            ("tkh", vec!["--tńg-khì", "tńg--khì", "tńg-khì"]),
+        ] {
+            let cands = fetch_candidates(&cfg, raw, vec![]);
+            let mut actual: Vec<_> = cands.iter().map(|c| c.canonical_tl.as_str()).collect();
+            actual.sort_unstable();
+            assert_eq!(actual, expected, "{mode} {raw}: {cands:?}");
+        }
+        let cand = fetch_candidates(&cfg, "tngkhi", vec![])
+            .into_iter()
+            .find(|c| c.canonical_tl == "--tńg-khì")
+            .expect("leading neutral reading reachable without typing --");
+        assert_eq!(cand.hanji.as_deref(), Some("--轉-去"));
+        assert_eq!(cand.roman, "--tńg-khì");
+        assert_eq!(cand.display_text, "轉去");
+        for (separator, expected_roman) in [
+            (SyllableSeparator::None, "·tńgkhì"),
+            (SyllableSeparator::Space, "·tńg khì"),
+        ] {
+            cfg.syllable_separator = separator as i32;
+            let rendered = fetch_candidates(&cfg, "tngkhi", vec![])
+                .into_iter()
+                .find(|c| c.canonical_tl == "--tńg-khì")
+                .expect("leading neutral reading survives separator rendering");
+            assert_eq!(rendered.roman, expected_roman);
+            assert_eq!(rendered.hanji.as_deref(), Some("--轉-去"));
+        }
+        cfg.syllable_separator = SyllableSeparator::Hyphen as i32;
+        for (script, expected) in [
+            (CommitScript::Hanji, "--轉-去"),
+            (CommitScript::Roman, "--tńg-khì"),
+        ] {
+            let mut engine = Engine::new();
+            engine.apply(
+                Intent::Start {
+                    text: "tngkhi".into(),
+                },
+                &cfg,
+            );
+            let committed = pick_candidate(&mut engine, &cand, &cfg, script);
+            assert_eq!(commit_text(&committed.response).as_deref(), Some(expected));
+        }
+        cfg.khinsiann_in_hanji = false;
+        cfg.is_hanji_first = false;
+        let roman_first = fetch_candidates(&cfg, "tngkhi", vec![]);
+        assert_eq!(roman_first.len(), 3, "{mode}: {roman_first:?}");
+        assert!(roman_first.iter().any(|c| {
+            c.canonical_tl == "--tńg-khì"
+                && c.roman == "--tńg-khì"
+                && c.hanji.as_deref() == Some("轉去")
+        }));
+    }
+}
+
+#[test]
+fn leading_khinsiann_matches_custom_and_learned_entries_without_a_plain_counterpart() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let cfg = hanji_config(true, false);
+    // The fixture has 轉去 but no 返去: only the supplied user row can answer.
+    for user_rows in [
+        Fetch {
+            custom: vec![CustomEntry {
+                roman: "--tńg-khì".into(),
+                hanji: Some("返去".into()),
+            }],
+            ..Default::default()
+        },
+        Fetch {
+            learned: vec![LearnedEntry {
+                hanji: "返去".into(),
+                canonical_tl: "--tńg-khì".into(),
+            }],
+            ..Default::default()
+        },
+    ] {
+        let cands = fetch_at_pos_response(&cfg, "tngkhi", user_rows)
+            .continuous
+            .expect("continuous response")
+            .candidates;
+        let cand = cands
+            .iter()
+            .find(|c| c.hanji.as_deref() == Some("--返-去"))
+            .expect("user row reachable without typing --");
+        assert_eq!(cand.canonical_tl, "--tńg-khì");
+        assert_eq!(cand.display_text, "返去");
+    }
+}
+
+#[test]
 fn khinsiann_in_hanji_renders_merges_and_commits_with_plain_identity() {
     let _lock = engine_install_lock();
     install_fixture();
 
     // khinsiann_in_hanji = true, brackets off:
-    // - `tngkhi`: `轉--去` (tńg--khì) and `轉去` (tńg-khì) have distinct displayed Hanji -> 2 cells!
-    //   `--tńg-khì` is rejected because no leading `--` was typed!
+    // - `tngkhi`: all three readings, including `--tńg-khì`, have distinct
+    //   displayed Hanji. No leading `--` needs to be typed.
     let on = hanji_config(true, false);
     let tng_on = fetch_candidates(&on, "tngkhi", vec![]);
     let tng_hanjis: Vec<&str> = tng_on.iter().filter_map(|c| c.hanji.as_deref()).collect();
-    assert_eq!(tng_hanjis, vec!["轉--去", "轉去"]);
+    assert_eq!(tng_hanjis, vec!["--轉-去", "轉--去", "轉去"]);
     assert_eq!(
         tng_on[0].display_text, "轉去",
         "display_text learning identity stays plain Hanji"
@@ -172,7 +271,7 @@ fn khinsiann_in_hanji_renders_merges_and_commits_with_plain_identity() {
     assert_eq!(eki_on[0].display_text, "會記得");
 
     // khinsiann_in_hanji = false, brackets off:
-    // - `tngkhi`: `轉--去` and `轉去` both display `轉去` -> merged into 1 cell!
+    // - `tngkhi`: all three readings display `轉去` -> merged into one cell.
     let off = hanji_config(false, false);
     let tng_off = fetch_candidates(&off, "tngkhi", vec![]);
     let tng_off_hanjis: Vec<&str> = tng_off.iter().filter_map(|c| c.hanji.as_deref()).collect();
@@ -242,7 +341,7 @@ fn custom_khinsiann_collision_respects_toggle() {
 }
 
 #[test]
-fn typed_leading_double_dash_from_idle_commits_and_blocks_khinsiann_opening() {
+fn typed_leading_double_dash_from_idle_still_commits_literally() {
     let _lock = engine_install_lock();
     install_fixture();
     let on = hanji_config(true, false);
@@ -256,8 +355,8 @@ fn typed_leading_double_dash_from_idle_commits_and_blocks_khinsiann_opening() {
     assert_eq!(commit_text(&second).as_deref(), Some("-"));
     assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
 
-    // Subsequent `tngkhi` enters Continuous with raw "tngkhi" (no leading `--` in buffer),
-    // so `--tńg-khì` is rejected and only `轉--去` and `轉去` are surfaced.
+    // Subsequent `tngkhi` composes without the already committed hyphens.
+    // The dictionary's leading `--` remains optional for matching.
     engine.apply(
         Intent::Start {
             text: "tngkhi".into(),
@@ -277,7 +376,7 @@ fn typed_leading_double_dash_from_idle_commits_and_blocks_khinsiann_opening() {
     .unwrap()
     .candidates;
     let hanjis: Vec<&str> = cands.iter().filter_map(|c| c.hanji.as_deref()).collect();
-    assert_eq!(hanjis, vec!["轉--去", "轉去"]);
+    assert_eq!(hanjis, vec!["--轉-去", "轉--去", "轉去"]);
 }
 
 #[test]

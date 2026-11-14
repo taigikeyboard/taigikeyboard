@@ -2,7 +2,7 @@
 //! and `dictionary/common/cleanup.py` (`tokenize_hanji_syllables`, `format_khinsiann_hanji`),
 //! plus reachability checks for `--`-opening readings in the shipped dictionary.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use lexicon::{TonePin, TypedBoundary};
@@ -102,19 +102,12 @@ fn rust_display_transform_reproduces_curated_lkk_entries() {
 }
 
 #[test]
-fn khinsiann_opening_readings_remain_reachable_after_typed_double_dash_and_plain_hanji_exists() {
+fn khinsiann_opening_readings_match_with_or_without_typed_double_dash() {
     let Some(csv) = dictionary_csv_or_skip("khinsiann_reach") else {
         return;
     };
-    let mut by_hanzi: HashMap<String, Vec<String>> = HashMap::new();
     let mut opening_rows: Vec<(String, String, String)> = Vec::new();
     for [hanzi, tl, tl_notone] in csv.select(["hanzi", "tl", "tl_notone"]) {
-        if !hanzi.is_empty() {
-            by_hanzi
-                .entry(hanzi.to_owned())
-                .or_default()
-                .push(tl.to_owned());
-        }
         if tl.starts_with("--") {
             opening_rows.push((hanzi.to_owned(), tl.to_owned(), tl_notone.to_owned()));
         }
@@ -124,26 +117,8 @@ fn khinsiann_opening_readings_remain_reachable_after_typed_double_dash_and_plain
         "expected `--`-opening rows in dictionary.csv"
     );
 
-    // 1. Every pure-Hanji word with a `--`-opening reading (`一下`, `落來`, `起來`,
-    //    plus `矣`) also has a standalone non-`--` reading so it stays reachable from Idle.
-    for (hanzi, tl, _) in &opening_rows {
-        if !hanzi.is_empty() && !hanzi.contains('-') {
-            let tls = by_hanzi.get(hanzi).expect("hanzi present");
-            assert!(
-                tls.iter().any(|r| !r.starts_with("--")),
-                "pure-Hanji word {hanzi:?} ({tl:?}) has no non-`--` reading: {tls:?}"
-            );
-        }
-    }
-    assert!(
-        by_hanzi
-            .get("矣")
-            .is_some_and(|tls| tls.iter().any(|r| !r.starts_with("--"))),
-        "矣 must remain reachable via non-`--` reading"
-    );
-
-    // 2. Every `--`-opening reading (all 31 curated LKK suffixes/particles) passes
-    //    `TonePin::TypedTones` when preceded by a typed `--` boundary (`at == 0, khinsiann == true`).
+    // Every curated `--`-opening reading matches without typing its leading
+    //    marker, and still matches after an explicit neutral boundary.
     for (hanzi, tl, tl_notone) in &opening_rows {
         let pin = TonePin::TypedTones {
             mode: phonetics::InputMode::Tl,
@@ -159,8 +134,8 @@ fn khinsiann_opening_readings_remain_reachable_after_typed_double_dash_and_plain
             "`--`-opening row ({hanzi:?}, {tl:?}) rejected after typed `--` on {tl_notone:?}"
         );
         assert!(
-            !TonePin::None.admits(Some(&format!("tl:{tl_notone}")), tl),
-            "`--`-opening row ({hanzi:?}, {tl:?}) must not match without typed `--`"
+            TonePin::None.admits(Some(&format!("tl:{tl_notone}")), tl),
+            "`--`-opening row ({hanzi:?}, {tl:?}) rejected without typed `--`"
         );
     }
 }
