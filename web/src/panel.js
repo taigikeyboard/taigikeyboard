@@ -2,6 +2,19 @@
 // reaches the editor until a commit, so its undo stack holds only committed
 // words (docs/architecture/web-roadmap.md § Text surface).
 
+/** @typedef {import("../types/shared.d.ts").CaretPoint} CaretPoint */
+/** @typedef {import("../types/shared.d.ts").WireCell} WireCell */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {import("../types/shared.d.ts").WireLayout} WireLayout */
+/** @typedef {import("../types/shared.d.ts").WireRect} WireRect */
+/** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
+
+/**
+ * Builds a `<span>` element with the given class name and text content.
+ * @param {string} className
+ * @param {string} text
+ * @returns {HTMLSpanElement}
+ */
 function span(className, text) {
   const element = document.createElement("span");
   element.className = className;
@@ -9,14 +22,21 @@ function span(className, text) {
   return element;
 }
 
-/// One candidate: its key, its script, and the other script when it has one.
-/// `isLiteral`: the §34 literal, which takes no key and is centred across its
-/// cell (`CandidateItemView.isLiteralCell` on macOS). The Telex guide's rows have
-/// no label at all.
+/**
+ * One candidate: its key, its script, and the other script when it has one.
+ * `isLiteral`: the §34 literal, which takes no key and is centred across its
+ * cell (`CandidateItemView.isLiteralCell` on macOS). The Telex guide's rows have
+ * no label at all.
+ * @param {WireCell} cellData
+ * @param {string | undefined} label
+ * @param {number} position
+ * @param {{ isCurrent: boolean, isLiteral: boolean }} flags
+ * @returns {HTMLLIElement}
+ */
 function drawCell({ text, annotation }, label, position, flags) {
   const { isCurrent, isLiteral } = flags;
   const cell = document.createElement("li");
-  cell.dataset.position = position;
+  cell.dataset.position = String(position);
   cell.setAttribute("aria-current", String(isCurrent));
   cell.toggleAttribute("data-literal", isLiteral);
   cell.append(span("index", label ?? ""), span("text", text));
@@ -26,49 +46,93 @@ function drawCell({ text, annotation }, label, position, flags) {
   return cell;
 }
 
-/// Between the composition and a list beside it.
+/** Between the composition and a list beside it. */
 const LIST_GAP = 8;
 
 export class Panel {
+  /** @type {HTMLElement} */
   #root;
+  /** @type {HTMLElement} */
   #editor;
+  /** @type {HTMLElement} */
   #preedit;
+  /** @type {HTMLElement} */
   #list;
+  /** @type {HTMLElement} */
   #candidates;
+  /** @type {HTMLElement} */
   #arrows;
+  /** @type {HTMLButtonElement} */
   #pageUp;
+  /** @type {HTMLButtonElement} */
   #pageDown;
+  /** @type {HTMLButtonElement} */
   #unfold;
+  /** @type {HTMLElement} */
   #ruler;
+  /** @type {HTMLElement} */
   #spoken;
-  /// The `layout` on screen, `null` for a paged list.
+  /**
+   * The `layout` on screen, `null` for a paged list.
+   * @type {WireLayout | null}
+   */
   #shownLayout = null;
-  /// The cells on screen, to tell a fold from a new list.
+  /**
+   * The cells on screen, to tell a fold from a new list.
+   * @type {string | null}
+   */
   #shownCells = null;
-  /// The mode being left, for the next `place` (`#startUnfold`): the window's
-  /// size and a copy of the list as drawn.
+  /**
+   * The mode being left, for the next `place` (`#startUnfold`): the window's
+   * size and a copy of the list as drawn.
+   * @type {{ width: number, height: number, ghost: HTMLElement } | null}
+   */
   #unfoldFrom = null;
+  /** @type {Animation[]} */
   #unfolding = [];
-  /// That copy while the change plays: the drawings the new mode does not have.
+  /**
+   * That copy while the change plays: the drawings the new mode does not have.
+   * @type {HTMLElement | null}
+   */
   #ghost = null;
 
-  /// `onPick(position)`: a click on a cell, `data-position` as drawn.
-  /// `onTurnPage(isForward)`: a click on a page arrow.
-  /// `onScrolled(offset)`: the wheel moved the unfolded grid.
-  /// `ruler`: outside `root`, which `hidden` would stop laying out.
-  /// `spoken`: a live region outside `root`, which `hidden` would silence.
+  /**
+   * `onPick(position)`: a click on a cell, `data-position` as drawn.
+   * `onTurnPage(isForward)`: a click on a page arrow.
+   * `onScrolled(offset)`: the wheel moved the unfolded grid.
+   * `ruler`: outside `root`, which `hidden` would stop laying out.
+   * `spoken`: a live region outside `root`, which `hidden` would silence.
+   * @param {HTMLElement} root
+   * @param {HTMLElement} ruler
+   * @param {HTMLElement} spoken
+   * @param {(position: number) => void} onPick
+   * @param {(isForward: boolean) => void} onTurnPage
+   * @param {(offset: number) => void} onScrolled
+   */
   constructor(root, ruler, spoken, onPick, onTurnPage, onScrolled) {
     this.#root = root;
     this.#ruler = ruler;
     this.#spoken = spoken;
-    this.#editor = root.parentElement;
-    this.#preedit = this.#editor.querySelector("#preedit");
-    this.#list = root.querySelector("#list");
-    this.#candidates = root.querySelector("#candidates");
-    this.#arrows = root.querySelector("#page-arrows");
-    this.#pageUp = root.querySelector("#page-up");
-    this.#pageDown = root.querySelector("#page-down");
-    this.#unfold = root.querySelector("#unfold");
+    this.#editor = /** @type {HTMLElement} */ (root.parentElement);
+    this.#preedit = /** @type {HTMLElement} */ (
+      this.#editor.querySelector("#preedit")
+    );
+    this.#list = /** @type {HTMLElement} */ (root.querySelector("#list"));
+    this.#candidates = /** @type {HTMLElement} */ (
+      root.querySelector("#candidates")
+    );
+    this.#arrows = /** @type {HTMLElement} */ (
+      root.querySelector("#page-arrows")
+    );
+    this.#pageUp = /** @type {HTMLButtonElement} */ (
+      root.querySelector("#page-up")
+    );
+    this.#pageDown = /** @type {HTMLButtonElement} */ (
+      root.querySelector("#page-down")
+    );
+    this.#unfold = /** @type {HTMLButtonElement} */ (
+      root.querySelector("#unfold")
+    );
     this.#pageUp.addEventListener("click", () => onTurnPage(false));
     this.#pageDown.addEventListener("click", () => onTurnPage(true));
     // A collapsed list's page down is its unfolding (`navigate_collapsed`).
@@ -81,22 +145,34 @@ export class Panel {
       part.addEventListener("mousedown", (event) => event.preventDefault());
     }
     this.#candidates.addEventListener("click", (event) => {
-      const cell = event.target.closest("li");
+      const cell =
+        event.target instanceof Element ? event.target.closest("li") : null;
       if (cell) {
         onPick(Number(cell.dataset.position));
       }
     });
   }
 
+  /** @returns {boolean} */
   get isShown() {
     return !this.#root.hidden || this.#preedit.hasChildNodes();
   }
 
+  /**
+   * Reports whether `node` lies inside the candidate panel or preedit overlay.
+   * @param {Node | null} node
+   * @returns {boolean}
+   */
   contains(node) {
     return this.#root.contains(node) || this.#preedit.contains(node);
   }
 
-  /// `caret` counts Unicode scalars.
+  /**
+   * `caret` counts Unicode scalars.
+   * @param {string} text
+   * @param {number} caret
+   * @returns {void}
+   */
   showPreedit(text, caret) {
     const characters = Array.from(text);
     const mark = document.createElement("span");
@@ -108,38 +184,54 @@ export class Panel {
     );
   }
 
+  /** @returns {void} */
   clearPreedit() {
     this.#preedit.replaceChildren();
   }
 
-  /// `[maximumWindowWidth, ...widths]` of `[text, fontSize]` runs, as drawn: the
-  /// DOM rather than a canvas, whose widths fall short in WebKit under the
-  /// default font (web-guidelines.md). One write and one read.
+  /**
+   * `[maximumWindowWidth, ...widths]` of `[text, fontSize]` runs, as drawn: the
+   * DOM rather than a canvas, whose widths fall short in WebKit under the
+   * default font (web-guidelines.md). One write and one read.
+   * @param {string} runsJson
+   * @returns {Float32Array}
+   */
   measure(runsJson) {
-    const spans = JSON.parse(runsJson).map(([text, fontSize]) => {
+    const runs = /** @type {Array<[string, number]>} */ (JSON.parse(runsJson));
+    const spans = runs.map(([text, fontSize]) => {
       const run = span("", text);
       run.style.fontSize = `${fontSize}px`;
       return run;
     });
-    const windowWidth = this.#ruler.parentElement.clientWidth;
+    const windowWidth = this.#ruler.parentElement?.clientWidth ?? 0;
     this.#ruler.replaceChildren(...spans);
     const widths = spans.map((run) => run.getBoundingClientRect().width);
     this.#ruler.replaceChildren();
     return Float32Array.of(windowWidth, ...widths);
   }
 
+  /**
+   * Renders a `lookupTable` emit in either expandable layout or paged mode.
+   * @param {LookupTableEmit} table
+   * @returns {void}
+   */
   showTable(table) {
     this.#endUnfold();
     if (table.layout) {
-      this.#showLaidOut(table);
+      this.#showLaidOut(table, table.layout);
     } else {
       this.#showPage(table);
     }
     this.#syncVisibility();
   }
 
-  /// A list `ExpandableListModel` holds: a packed row or a column, or the grid.
-  #showLaidOut({ cells, labels, cursor, layout }) {
+  /**
+   * A list `ExpandableListModel` holds: a packed row or a column, or the grid.
+   * @param {LookupTableEmit} table
+   * @param {WireLayout} layout
+   * @returns {void}
+   */
+  #showLaidOut({ cells, labels, cursor }, layout) {
     const list = this.#candidates;
     const { collapsed, rows, isColumn, isExpanded } = layout;
     // A new list arrives collapsed too; only the same cells fold.
@@ -156,6 +248,10 @@ export class Panel {
     const labelOf = new Map(
       layout.keyed.map((index, at) => [index, labels[at]]),
     );
+    /**
+     * @param {number} index
+     * @returns {HTMLLIElement}
+     */
     const draw = (index) =>
       drawCell(cells[index], labelOf.get(index), index, {
         isCurrent: index === cursor,
@@ -215,7 +311,11 @@ export class Panel {
     this.#unfold.toggleAttribute("data-column", isColumn);
   }
 
-  /// The reply carries the whole list; the page in view is the cursor's.
+  /**
+   * The reply carries the whole list; the page in view is the cursor's.
+   * @param {LookupTableEmit} table
+   * @returns {void}
+   */
   #showPage({ cells, labels, cursor, cursorVisible, pageSize, vertical }) {
     this.#forgetLayout();
     this.#setShape({ vertical, inline: vertical });
@@ -241,7 +341,11 @@ export class Panel {
     this.#unfold.hidden = true;
   }
 
-  /// `inline`: a cell holds its scripts side by side.
+  /**
+   * `inline`: a cell holds its scripts side by side.
+   * @param {{ row?: boolean, grid?: boolean, vertical?: boolean, inline?: boolean }} shape
+   * @returns {void}
+   */
   #setShape({ row, grid, vertical, inline }) {
     const list = this.#candidates;
     list.toggleAttribute("data-row", Boolean(row));
@@ -250,27 +354,36 @@ export class Panel {
     list.toggleAttribute("data-inline", Boolean(inline));
   }
 
+  /** @returns {void} */
   #forgetLayout() {
     this.#shownLayout = null;
     this.#shownCells = null;
     this.#unfoldFrom = null;
   }
 
-  /// Focus stays in the editor, so a screen reader hears the list only here:
-  /// the one cell Enter would take, not the page on every key.
+  /**
+   * Focus stays in the editor, so a screen reader hears the list only here:
+   * the one cell Enter would take, not the page on every key.
+   * @param {string | undefined} label
+   * @param {WireCell | undefined} cell
+   * @returns {void}
+   */
   #speak(label, cell) {
     this.#spoken.textContent = [label, cell?.text, cell?.annotation]
       .filter(Boolean)
       .join(" ");
   }
 
-  /// The window's size and a still copy of the list where it is drawn, ids
-  /// dropped, taken before the new mode replaces it. Classes, not ids, style
-  /// the list, so the copy draws as the original did.
+  /**
+   * The window's size and a still copy of the list where it is drawn, ids
+   * dropped, taken before the new mode replaces it. Classes, not ids, style
+   * the list, so the copy draws as the original did.
+   * @returns {{ width: number, height: number, ghost: HTMLElement }}
+   */
   #snapshot() {
     const window = this.#root.getBoundingClientRect();
     const list = this.#list.getBoundingClientRect();
-    const ghost = this.#list.cloneNode(true);
+    const ghost = /** @type {HTMLElement} */ (this.#list.cloneNode(true));
     for (const element of [ghost, ...ghost.querySelectorAll("[id]")]) {
       element.removeAttribute("id");
     }
@@ -290,22 +403,29 @@ export class Panel {
     return { width: window.width, height: window.height, ghost };
   }
 
-  /// Plays the model's `ModeTransition` as macOS does: the window eases to
-  /// its new size while every drawing moves and fades from its old frame to
-  /// its new one — the new mode's cells on the list, the old mode's on the
-  /// still copy laid over it — the chevron with them, and the keyed band
-  /// fading in on the grid or out with it. Tracks carry frames; only their
-  /// differences are used, so every drawing moves relative to where the
-  /// page drew it. After `place`: an animation changes what `offsetHeight`
-  /// reads.
+  /**
+   * Plays the model's `ModeTransition` as macOS does: the window eases to
+   * its new size while every drawing moves and fades from its old frame to
+   * its new one — the new mode's cells on the list, the old mode's on the
+   * still copy laid over it — the chevron with them, and the keyed band
+   * fading in on the grid or out with it. Tracks carry frames; only their
+   * differences are used, so every drawing moves relative to where the
+   * page drew it. After `place`: an animation changes what `offsetHeight`
+   * reads.
+   * @returns {void}
+   */
   #startUnfold() {
     const from = this.#unfoldFrom;
     this.#unfoldFrom = null;
-    if (!from || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const transition = this.#shownLayout?.transition;
+    if (
+      !from ||
+      !this.#shownLayout ||
+      !transition ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       return;
     }
-    // Set whenever `from` is: `#showLaidOut` copies only for a transition.
-    const { transition } = this.#shownLayout;
     const timing = {
       duration: this.#shownLayout.animationMilliseconds,
       easing: "ease-in-out",
@@ -335,16 +455,37 @@ export class Panel {
       }
     };
     this.#unfolding = [window];
+    /**
+     * @param {Element} element
+     * @param {PropertyIndexedKeyframes} keyframes
+     * @param {string} [pseudoElement]
+     */
     const play = (element, keyframes, pseudoElement) => {
       this.#unfolding.push(
         element.animate(keyframes, { ...timing, pseudoElement }),
       );
     };
+    /**
+     * @param {WireRect} a
+     * @param {WireRect} b
+     * @returns {string}
+     */
     const offset = (a, b) => `${a.x - b.x}px ${a.y - b.y}px`;
     const still = "0px 0px";
-    const byPosition = (list) =>
-      new Map([...list.children].map((cell) => [cell.dataset.position, cell]));
-    const ghostList = ghost.querySelector(".candidates");
+    /**
+     * @param {Element} container
+     * @returns {Map<string | undefined, HTMLElement>}
+     */
+    const byPosition = (container) =>
+      new Map(
+        Array.from(container.children, (child) => {
+          const cell = /** @type {HTMLElement} */ (child);
+          return [cell.dataset.position, cell];
+        }),
+      );
+    const ghostList = /** @type {HTMLElement} */ (
+      ghost.querySelector(".candidates")
+    );
     const drawn = byPosition(this.#candidates);
     const left = byPosition(ghostList);
     const incoming = transition.isExpanding ? "expanded" : "collapsed";
@@ -367,6 +508,7 @@ export class Panel {
     const moved = new Set();
     for (const { cell, isIncoming, track, width } of moves) {
       const { from: start, to: end } = track;
+      /** @type {PropertyIndexedKeyframes} */
       const keyframes = {
         translate: isIncoming
           ? [offset(start, end), still]
@@ -395,7 +537,9 @@ export class Panel {
     }
     const { chevron } = transition;
     const chevronOpacity = [chevron.fromAlpha, chevron.toAlpha];
-    const ghostArrows = ghost.querySelector(".page-arrows");
+    const ghostArrows = /** @type {HTMLElement} */ (
+      ghost.querySelector(".page-arrows")
+    );
     if (this.#arrows.hidden) {
       play(ghostArrows, {
         translate: [still, offset(chevron.to, chevron.from)],
@@ -415,8 +559,11 @@ export class Panel {
     );
   }
 
-  /// Stops a mode change mid-way or once played: every drawing back to where
-  /// the page put it, the copy gone.
+  /**
+   * Stops a mode change mid-way or once played: every drawing back to where
+   * the page put it, the copy gone.
+   * @returns {void}
+   */
   #endUnfold() {
     for (const animation of this.#unfolding) {
       animation.cancel();
@@ -428,6 +575,7 @@ export class Panel {
     this.#list.style.removeProperty("height");
   }
 
+  /** @returns {void} */
   hideTable() {
     this.#endUnfold();
     this.#forgetLayout();
@@ -438,15 +586,20 @@ export class Panel {
     this.#syncVisibility();
   }
 
+  /** @returns {void} */
   clear() {
     this.clearPreedit();
     this.hideTable();
   }
 
-  /// The composition on the caret's own line, over the text there, and the list
-  /// under that line, or above it, or beside it where neither has the room: it
-  /// never covers the composition, Copy or Clear. A caret scrolled out of view
-  /// leaves both at the editor's edge.
+  /**
+   * The composition on the caret's own line, over the text there, and the list
+   * under that line, or above it, or beside it where neither has the room: it
+   * never covers the composition, Copy or Clear. A caret scrolled out of view
+   * leaves both at the editor's edge.
+   * @param {CaretPoint} point
+   * @returns {void}
+   */
   place({ left, top, lineHeight }) {
     const editor = this.#editor;
     const preedit = this.#preedit;
@@ -485,8 +638,12 @@ export class Panel {
     this.#startUnfold();
   }
 
-  /// The model's five rows and a half can pass a short editor, which would
-  /// cover Copy and Clear: the grid takes what there is and scrolls.
+  /**
+   * The model's five rows and a half can pass a short editor, which would
+   * cover Copy and Clear: the grid takes what there is and scrolls.
+   * @param {number} room
+   * @returns {void}
+   */
   #fitGrid(room) {
     const list = this.#candidates;
     if (!list.hasAttribute("data-grid")) {
@@ -502,6 +659,7 @@ export class Panel {
     }
   }
 
+  /** @returns {void} */
   #syncVisibility() {
     this.#root.hidden = !this.#candidates.hasChildNodes();
   }

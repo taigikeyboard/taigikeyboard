@@ -18,34 +18,59 @@ import { Surface } from "./surface.js";
 import { TelexGuide } from "./telex_guide.js";
 import { TpsKeyboard } from "./tps_keyboard.js";
 
-/// A call with no instance to answer it: the key is spent.
+/** @typedef {import("./pkg/taigi_web.js").Session} Session */
+/** @typedef {import("../types/shared.d.ts").Platform} Platform */
+/** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
+/** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
+/** @typedef {import("../types/shared.d.ts").WireShortcuts} WireShortcuts */
+/** @typedef {import("../types/shared.d.ts").WireTelexGuide} WireTelexGuide */
+/** @typedef {import("../types/shared.d.ts").WireTpsRow} WireTpsRow */
+
+/**
+ * @template {HTMLElement} [T=HTMLElement]
+ * @param {string} id
+ * @returns {T}
+ */
+function requireElement(id) {
+  const element = document.getElementById(id);
+  if (!element) {
+    throw new Error(`missing #${id}`);
+  }
+  return /** @type {T} */ (element);
+}
+
+/**
+ * A call with no instance to answer it: the key is spent.
+ *
+ * @type {Reply}
+ */
 const NOTHING = { handled: true, emits: [] };
 
-const editorBox = document.getElementById("editor");
-const editor = new Editor(document.getElementById("text"));
+const editorBox = requireElement("editor");
+const editor = new Editor(requireElement("text"));
 const text = editor.root;
-const notice = document.getElementById("notice");
-const messageSlot = document.getElementById("message");
-const modeFlash = document.getElementById("mode-flash");
-const modeLine = document.getElementById("mode-line");
-const modeName = document.getElementById("mode-name");
-const modeDetail = document.getElementById("mode-detail");
-const progress = document.getElementById("progress");
-const retryButton = document.getElementById("retry");
-const loadSlot = document.getElementById("load-slot");
+const notice = requireElement("notice");
+const messageSlot = requireElement("message");
+const modeFlash = requireElement("mode-flash");
+const modeLine = requireElement("mode-line");
+const modeName = requireElement("mode-name");
+const modeDetail = requireElement("mode-detail");
+const progress = /** @type {HTMLProgressElement} */ (
+  requireElement("progress")
+);
+const retryButton = requireElement("retry");
+const loadSlot = requireElement("load-slot");
 
 const surface = new Surface(editor, editorBox);
-wireSave(
-  document.getElementById("save-formats"),
-  () => editor.markdown(),
-  document.getElementById("title"),
-);
+const titleElement = requireElement("title");
+wireSave(requireElement("save-formats"), () => editor.markdown(), titleElement);
 // Before `Settings`, which translates the page.
-keepTitle(document.getElementById("title"), () => editor.focus());
+keepTitle(titleElement, () => editor.focus());
 const panel = new Panel(
-  document.getElementById("panel"),
-  document.getElementById("ruler"),
-  document.getElementById("spoken"),
+  requireElement("panel"),
+  requireElement("ruler"),
+  requireElement("spoken"),
   (position) => {
     apply(call((session) => session.clickCandidate(position)));
   },
@@ -53,46 +78,56 @@ const panel = new Panel(
     apply(call((session) => session.turnPage(isForward)));
   },
   (offset) => {
-    call((session) => session.viewportScrolled(offset));
+    run((session) => session.viewportScrolled(offset));
   },
 );
 // The session measures during a key: it needs the widths for that key's labels.
 globalThis.taigiMeasureCells = (runs) => panel.measure(runs);
-const tpsKeyboard = new TpsKeyboard(
-  document.getElementById("tps-keyboard"),
-  (glyph) => {
-    // The next physical key belongs here too, not to a sidebar control.
-    editor.focus();
-    apply(call((session) => session.tpsKeyPress(glyph)));
-  },
-);
-const telexGuide = new TelexGuide(document.getElementById("telex-guide"));
+const tpsKeyboard = new TpsKeyboard(requireElement("tps-keyboard"), (glyph) => {
+  // The next physical key belongs here too, not to a sidebar control.
+  editor.focus();
+  apply(call((session) => session.tpsKeyPress(glyph)));
+});
+const telexGuide = new TelexGuide(requireElement("telex-guide"));
 const sidebar = new Sidebar(
-  document.getElementById("sidebar-toggle"),
-  document.getElementById("sidebar"),
+  requireElement("sidebar-toggle"),
+  requireElement("sidebar"),
 );
 const settings = new Settings(
-  document.getElementById("settings"),
+  /** @type {HTMLFormElement} */ (requireElement("settings")),
   changeSettings,
 );
 const draft = new Draft(editor, translate("web.intro"));
 const formatBubble = new FormatBubble(
-  document.getElementById("format-bubble"),
+  requireElement("format-bubble"),
   editor,
   surface,
   () => panel.isShown,
 );
-/// Apple Notes' link chord, on Command on a Mac and Control elsewhere. Lexical
-/// takes B, I and U itself.
+/**
+ * Apple Notes' link chord, on Command on a Mac and Control elsewhere. Lexical
+ * takes B, I and U itself.
+ *
+ * @type {Record<string, string>}
+ */
 const FORMAT_KEYS = { k: "link" };
 
-/// `null` between instances.
+/**
+ * `null` between instances.
+ *
+ * @type {Session | null}
+ */
 let session = null;
 
 const learning = new Learning(() => session, run);
 
-/// The session is the judge of the stored document: one it refuses leaves the
-/// defaults.
+/**
+ * The session is the judge of the stored document: one it refuses leaves the
+ * defaults.
+ *
+ * @param {Session} target
+ * @returns {void}
+ */
 function restoreSettings(target) {
   try {
     target.setSettings(settings.json);
@@ -105,6 +140,7 @@ function restoreSettings(target) {
   }
 }
 
+/** @returns {Platform} */
 function platform() {
   const name = navigator.userAgentData?.platform ?? navigator.platform;
   if (/mac|iphone|ipad/i.test(name)) {
@@ -113,16 +149,30 @@ function platform() {
   return /win/i.test(name) ? "windows" : "linux";
 }
 
-/// `[key, placeholders]` of what the message slot says, so a language change can
-/// redraw it. `null` for the session's own text, which arrives translated.
+/**
+ * `[key, placeholders]` of what the message slot says, so a language change can
+ * redraw it. `null` for the session's own text, which arrives translated.
+ *
+ * @type {[string, Record<string, string> | undefined] | null}
+ */
 let said = null;
 
+/**
+ * @param {string} key
+ * @param {string} state
+ * @param {Record<string, string>} [placeholders]
+ * @returns {void}
+ */
 function say(key, state, placeholders) {
   said = [key, placeholders];
   messageSlot.textContent = translate(key, placeholders);
   messageSlot.dataset.state = state;
 }
 
+/**
+ * @param {string} label
+ * @returns {void}
+ */
 function announce(label) {
   said = null;
   messageSlot.textContent = label;
@@ -130,12 +180,18 @@ function announce(label) {
   flashMode(label);
 }
 
-/// As long as the desktops hold theirs (`ModeFlashPanel.swift`).
+/** As long as the desktops hold theirs (`ModeFlashPanel.swift`). */
 const MODE_FLASH_HOLD = 800;
 
+/** @type {ReturnType<typeof setTimeout> | undefined} */
 let modeFlashTimer;
 
-/// Replaces a flash still up: a quick double switch reads as two states.
+/**
+ * Replaces a flash still up: a quick double switch reads as two states.
+ *
+ * @param {string} label
+ * @returns {void}
+ */
 function flashMode(label) {
   clearTimeout(modeFlashTimer);
   modeFlash.textContent = label;
@@ -145,21 +201,35 @@ function flashMode(label) {
   }, MODE_FLASH_HOLD);
 }
 
-/// The session's text describes the settings just replaced, so it goes.
+/**
+ * The session's text describes the settings just replaced, so it goes.
+ *
+ * @returns {void}
+ */
 function redrawMessage() {
   messageSlot.textContent = said === null ? "" : translate(...said);
 }
 
+/** @returns {void} */
 function showLoading() {
   say("web.loading", "loading");
   loadSlot.dataset.show = "";
 }
 
+/**
+ * @param {number} fraction
+ * @returns {void}
+ */
 function showProgress(fraction) {
   progress.value = fraction;
   loadSlot.dataset.show = "progress";
 }
 
+/**
+ * @param {unknown} error
+ * @param {Session | null} starting
+ * @returns {void}
+ */
 function failLoading(error, starting) {
   console.error(error);
   if (session !== starting) {
@@ -176,7 +246,12 @@ function failLoading(error, starting) {
   editor.setEditable(session !== null);
 }
 
-/// A trap may replace the instance during any of these awaits.
+/**
+ * A trap may replace the instance during any of these awaits.
+ *
+ * @param {Session} starting
+ * @returns {Promise<void>}
+ */
 async function loadDictionaries(starting) {
   try {
     const files = dictionaries(starting.dictionaryFiles(), (fraction) => {
@@ -203,9 +278,14 @@ async function loadDictionaries(starting) {
   keepForOffline();
 }
 
-/// Starts an instance. Until the dictionaries are in, keys type romanization
-/// (`runtime.rs` `install_lexicon`).
+/**
+ * Starts an instance. Until the dictionaries are in, keys type romanization
+ * (`runtime.rs` `install_lexicon`).
+ *
+ * @returns {Promise<void>}
+ */
 async function start() {
+  /** @type {Session | null} */
   let starting = null;
   showLoading();
   try {
@@ -215,7 +295,9 @@ async function start() {
     // Off the first key: opening the stores takes tens of milliseconds.
     learning.attach(starting);
     redrawShortcuts();
-    tpsKeyboard.draw(JSON.parse(starting.tpsKeyboardRows()));
+    tpsKeyboard.draw(
+      /** @type {WireTpsRow[]} */ (JSON.parse(starting.tpsKeyboardRows())),
+    );
     redrawTelexGuide();
     redrawModeLine();
     editor.setEditable(true);
@@ -227,9 +309,15 @@ async function start() {
   await loadDictionaries(starting);
 }
 
-/// One engine call, its answer as given; `undefined` with no instance. A trap
-/// ends the instance: the composition goes with it, the text in the editor
-/// stays, and the key that hit it is spent.
+/**
+ * One engine call, its answer as given; `undefined` with no instance. A trap
+ * ends the instance: the composition goes with it, the text in the editor
+ * stays, and the key that hit it is spent.
+ *
+ * @template T
+ * @param {(session: Session) => T} action
+ * @returns {T | undefined}
+ */
 function run(action) {
   if (session === null) {
     return undefined;
@@ -248,12 +336,23 @@ function run(action) {
   }
 }
 
-/// One engine call that answers a reply.
+/**
+ * One engine call that answers a reply.
+ *
+ * @param {(session: Session) => string} action
+ * @returns {Reply}
+ */
 function call(action) {
   const reply = run(action);
-  return reply === undefined ? NOTHING : JSON.parse(reply);
+  return reply === undefined
+    ? NOTHING
+    : /** @type {Reply} */ (JSON.parse(reply));
 }
 
+/**
+ * @param {WireEmit} emit
+ * @returns {void}
+ */
 function applyEmit(emit) {
   switch (emit.type) {
     case "preedit":
@@ -291,7 +390,7 @@ function applyEmit(emit) {
       break;
     case "toggleTpsKeyboard":
       settings.toggleTpsKeyboard();
-      call((current) => current.setSettings(settings.json));
+      run((current) => current.setSettings(settings.json));
       break;
     case "tpsKeyboardCapTyped":
       tpsKeyboard.flash(emit.row, emit.cap);
@@ -299,11 +398,16 @@ function applyEmit(emit) {
   }
 }
 
-/// The form's change. A running composition ends under the settings it began
-/// with: TPS has another alphabet, so its raw buffer cannot carry over.
+/**
+ * The form's change. A running composition ends under the settings it began
+ * with: TPS has another alphabet, so its raw buffer cannot carry over.
+ *
+ * @param {string} json
+ * @returns {void}
+ */
 function changeSettings(json) {
   apply(call((current) => current.commitComposition()));
-  call((current) => current.setSettings(json));
+  run((current) => current.setSettings(json));
   redrawMessage();
   redrawShortcuts();
   redrawTelexGuide();
@@ -311,30 +415,48 @@ function changeSettings(json) {
   draft.translateIntro(translate("web.intro"));
 }
 
-/// Keys and labels follow Tone Keys, the input mode and the language.
+/**
+ * Keys and labels follow Tone Keys, the input mode and the language.
+ *
+ * @returns {void}
+ */
 function redrawShortcuts() {
-  const { groups } = call((current) => current.shortcuts());
+  const raw = run((current) => current.shortcuts());
+  if (raw === undefined) {
+    return;
+  }
+  const { groups } = /** @type {WireShortcuts} */ (JSON.parse(raw));
   if (groups) {
-    drawShortcuts(document.getElementById("shortcuts"), groups);
+    drawShortcuts(requireElement("shortcuts"), groups);
   }
 }
 
-/// The guide is spelled in the display language.
+/**
+ * The guide is spelled in the display language.
+ *
+ * @returns {void}
+ */
 function redrawTelexGuide() {
   const guide = run((current) => current.telexGuide());
   if (guide !== undefined) {
-    telexGuide.draw(JSON.parse(guide));
+    telexGuide.draw(/** @type {WireTelexGuide} */ (JSON.parse(guide)));
   }
 }
 
-/// Taigi: the mode and the input script. English: the mode and the Shift tap
-/// back to Taigi.
+/**
+ * Taigi: the mode and the input script. English: the mode and the Shift tap
+ * back to Taigi.
+ *
+ * @returns {void}
+ */
 function redrawModeLine() {
   const line = run((current) => current.modeLine());
   if (line === undefined) {
     return;
   }
-  const { isEnglish, mode, script, other } = JSON.parse(line);
+  const { isEnglish, mode, script, other } = /** @type {WireModeLine} */ (
+    JSON.parse(line)
+  );
   modeName.textContent = mode;
   if (isEnglish) {
     const shift = document.createElement("kbd");
@@ -347,12 +469,17 @@ function redrawModeLine() {
   modeLine.toggleAttribute("data-drawn", true);
 }
 
+/** @returns {void} */
 function placePanel() {
   if (panel.isShown) {
     panel.place(surface.caretPoint());
   }
 }
 
+/**
+ * @param {Reply} reply
+ * @returns {void}
+ */
 function apply(reply) {
   if (reply.settings) {
     settings.adopt(reply.settings);
@@ -364,6 +491,10 @@ function apply(reply) {
   }
 }
 
+/**
+ * @param {KeyboardEvent} event
+ * @returns {string}
+ */
 function keyJson(event) {
   return JSON.stringify({
     key: event.key,
@@ -376,8 +507,13 @@ function keyJson(event) {
   });
 }
 
-/// `link` for Command+K on a Mac (Control+K elsewhere), with no other
-/// modifier; otherwise `undefined`.
+/**
+ * `link` for Command+K on a Mac (Control+K elsewhere), with no other
+ * modifier; otherwise `undefined`.
+ *
+ * @param {KeyboardEvent} event
+ * @returns {string | undefined}
+ */
 function formatKind(event) {
   const isMac = platform() === "macos";
   const command = isMac ? event.metaKey : event.ctrlKey;
@@ -388,7 +524,12 @@ function formatKind(event) {
   return FORMAT_KEYS[event.key.toLowerCase()];
 }
 
-/// A key another input method holds is its own.
+/**
+ * A key another input method holds is its own.
+ *
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
+ */
 function isForeignComposition(event) {
   return event.isComposing || event.keyCode === 229;
 }
@@ -399,7 +540,8 @@ function isForeignComposition(event) {
 editorBox.addEventListener(
   "keydown",
   (event) => {
-    if (!text.contains(event.target) || isForeignComposition(event)) {
+    const target = /** @type {Node | null} */ (event.target);
+    if (!text.contains(target) || isForeignComposition(event)) {
       return;
     }
     onKeyDown(event);
@@ -407,11 +549,15 @@ editorBox.addEventListener(
   { capture: true },
 );
 
+/**
+ * @param {KeyboardEvent} event
+ * @returns {void}
+ */
 function onKeyDown(event) {
   // The auto-space swap deletes the character before the caret unseen, so its
   // arm cannot outlive the caret it was set at.
   if (surface.takeForeignChange()) {
-    call((current) => current.caretMoved());
+    run((current) => current.caretMoved());
   }
   const reply = call((current) => current.keyDown(keyJson(event)));
   if (reply.handled) {
@@ -453,8 +599,9 @@ window.addEventListener("resize", placePanel);
 document.addEventListener(
   "pointerdown",
   (event) => {
-    call((current) => current.caretMoved());
-    if (!panel.contains(event.target) && !tpsKeyboard.contains(event.target)) {
+    const target = /** @type {Node | null} */ (event.target);
+    run((current) => current.caretMoved());
+    if (!panel.contains(target) && !tpsKeyboard.contains(target)) {
       apply(call((current) => current.commitComposition()));
     }
   },
@@ -463,7 +610,7 @@ document.addEventListener(
 
 // Nothing is written: the composition stays and continues on return.
 window.addEventListener("blur", () => {
-  call((current) => current.focusLost());
+  run((current) => current.focusLost());
 });
 
 for (const button of document.querySelectorAll("button")) {
@@ -475,8 +622,9 @@ for (const button of document.querySelectorAll("button")) {
 // of an address in the format bubble's URL field. A checkbox just clicked gives way. No
 // select-all: the next key would replace the document.
 document.addEventListener("keydown", (event) => {
-  const { key, metaKey, ctrlKey, altKey, isComposing, target } = event;
-  if (key !== "/" || metaKey || ctrlKey || altKey || isComposing) {
+  const { key, metaKey, ctrlKey, altKey, isComposing } = event;
+  const target = /** @type {HTMLElement | null} */ (event.target);
+  if (key !== "/" || metaKey || ctrlKey || altKey || isComposing || !target) {
     return;
   }
   if (
