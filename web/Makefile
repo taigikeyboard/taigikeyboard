@@ -25,7 +25,7 @@ FONTS := target/fonts
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site chromeos extension extension-fixtures extension-e2e serve test smoke e2e check-live typecheck lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site site-stage chromeos extension extension-stage extension-fixtures extension-e2e serve test smoke e2e check-live typecheck lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -93,7 +93,8 @@ $(FONTS)/.stamp: scripts/subset-fonts.sh src/fonts.css $(wildcard $(FONT_SOURCES
 	scripts/subset-fonts.sh $(FONT_SOURCES) $(FONTS)
 	touch $@
 
-site: build $(FONTS)/.stamp $(VENDOR)/lexical.js
+site: build site-stage
+site-stage: $(FONTS)/.stamp $(VENDOR)/lexical.js
 	rm -rf $(SITE)
 	mkdir -p $(SITE)
 	cp -R src/. $(SITE)/
@@ -124,7 +125,8 @@ chromeos: build
 # and the dictionaries in the package, as ChromeOS has them, and the page's
 # panel, stylesheet and settings form cut by stage-extension.mjs.
 EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js
-extension: build node_modules/.package-lock.json
+extension: build extension-stage
+extension-stage: node_modules/.package-lock.json
 	@$(MAKE) --no-print-directory $(PKG_JS)/.stamp
 	rm -rf $(EXTENSION) target/taigi-keyboard-extension.zip
 	mkdir -p $(EXTENSION)/pkg $(EXTENSION)/dictionaries $(EXTENSION)/icons $(EXTENSION)/generated

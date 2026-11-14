@@ -1,17 +1,20 @@
 name: Web
 
-# The web version's gates: `make web-check`'s steps (the wasm build and the Node
-# smoke test over the real dictionaries in `check`; clippy, typecheck, biome and
-# fmt in `lint`; and the fast standalone TypeScript `checkJs` job in `typecheck`,
-# so JS type errors fail without waiting for Rust) and Playwright in Chromium
-# over the staged site, using the official image's browsers and system libraries.
-# An engine, desktop-shared or dictionary change triggers it too, because
-# `taigi-web` links those crates and
-# asserts top candidates against that data; a font or string change, because the
-# page ships them; the iOS app icon too. A push to main runs the gates only; the
-# site deploys hourly, from main's head, when that head passes the gates and
-# differs from the last scheduled run's. A manual run on main gates and deploys
-# main's head unconditionally (docs/architecture/web-release.md).
+# The web version's gates: `make web-check`'s steps (`test` + `smoke` + `chromeos`
+# in `build`; clippy, typecheck, biome and fmt in `lint`; and the fast standalone
+# TypeScript `checkJs` job in `typecheck`, so JS type errors fail without waiting
+# for Rust) and Playwright in Chromium over both the staged site (`e2e-site`)
+# and the staged browser extension (`e2e-extension`), running in parallel from
+# `build`'s wasm artifact. On pull requests, `build` inspects the diff so
+# site-only or extension-only changes skip the unrelated Playwright job; shared
+# engine/dictionary/UI changes, pushes to main, schedules, and dispatches run
+# both. An engine, desktop-shared or dictionary change triggers it too, because
+# `taigi-web` links those crates and asserts top candidates against that data; a
+# font or string change, because the page ships them; the iOS app icon too. A
+# push to main runs the gates only; the site deploys hourly, from main's head,
+# when that head passes the gates and differs from the last scheduled run's. A
+# manual run on main gates and deploys main's head unconditionally
+# (docs/architecture/web-release.md).
 on:
   schedule:
     # Not minute 0. GitHub's scheduler is busiest at the top of the hour, when
@@ -77,27 +80,84 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  check:
-    name: wasm build + smoke + Playwright
+  build:
+    name: wasm build + smoke + chromeos
     needs: changed
     if: ${{ !cancelled() && (needs.changed.result == 'skipped' || needs.changed.outputs.moved == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      site: ${{ steps.scope.outputs.site }}
+      extension: ${{ steps.scope.outputs.extension }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
+
+      - name: Determine affected E2E suites
+        id: scope
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ] || ! git rev-parse --verify -q HEAD^1 >/dev/null; then
+            echo "site=true" >> "$GITHUB_OUTPUT"
+            echo "extension=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          site=false
+          extension=false
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+            case "$file" in
+              # Extension-only paths
+              web/extension/*|web/scripts/build-wasm2js.mjs|web/scripts/stage-extension.mjs|web/tests/extension-*.test.mjs|web/tests/wasm2js.test.mjs|web/types/extension/*|web/types/fixtures.d.ts|web/tsconfig.extension.json|web/tsconfig.extension-worker.json|web/tsconfig.fixtures.json)
+                extension=true
+                ;;
+              # Website-only paths
+              web/e2e/*|assets/fonts/*|web/scripts/subset-fonts.sh|web/scripts/stage-assets.mjs|web/scripts/check-live.mjs|web/playwright.config.mjs|web/tests/learning.test.mjs|web/tests/markdown.test.mjs|web/tsconfig.page.json|web/tsconfig.sw.json|web/types/site/*)
+                site=true
+                ;;
+              # Shared page files copied or cut by `make -C web extension` (Makefile + stage-extension.mjs)
+              web/src/panel.js|web/src/surface.js|web/src/i18n.js|web/src/settings.js|web/src/style.css|web/src/chevron.svg|web/src/index.html|web/src/generated/*)
+                site=true
+                extension=true
+                ;;
+              # Other files under web/src/ are website-only
+              web/src/*)
+                site=true
+                ;;
+              # ChromeOS options files are shared with the extension
+              web/chromeos/options.js|web/chromeos/options-form.mjs)
+                extension=true
+                ;;
+              # Other ChromeOS paths are tested here (`make chromeos`, smoke) and in lint/typecheck
+              web/chromeos/*|web/scripts/stage-chromeos.mjs|web/tests/chromeos-*.test.mjs|web/tsconfig.chromeos.json|web/tsconfig.chromeos-worker.json|web/types/chromeos-worker/*)
+                ;;
+              # Shared web, engine, dictionary, symbol, icon, i18n, and toolchain/workflow files
+              web/*|desktop/*|engine/*|assets/dictionaries/*|assets/symbols/*|ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset/*|i18n/*|mise.toml|.github/workflows/web.yml)
+                site=true
+                extension=true
+                ;;
+              # Files outside web.yml's trigger paths (docs, other platforms) affect neither
+              *)
+                ;;
+            esac
+          done < <(git -c core.quotePath=false diff --name-only HEAD^1 HEAD)
+          echo "site=$site" >> "$GITHUB_OUTPUT"
+          echo "extension=$extension" >> "$GITHUB_OUTPUT"
+          echo "E2E scope: site=$site extension=$extension"
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
 
-      # Only what the gate runs. The versions are mise.toml's, the same pins a
-      # contributor installs; protoc is there because engine/protos/build.rs
-      # shells out to it; uv is what mise installs fonttools with; zig compiles
-      # and archives SQLite's wasm objects (web/Makefile).
+      # Only what `test smoke` and `chromeos` run: protoc for engine/protos/build.rs,
+      # wasm-bindgen + binaryen for target/pkg, zig for SQLite's wasm objects.
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: 2026.11.2
-          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome uv pipx:fonttools zig
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen zig
           cache_save: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install the toolchain (web/rust-toolchain.toml)
@@ -109,10 +169,49 @@ jobs:
           workspaces: web
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make -C web site`
+      # `make web-check` minus `lint`, which the `lint` job runs.
+      - name: make -C web test smoke
+        run: make -C web test smoke
+
+      # The ChromeOS input method's store zip, over the wasm `smoke` just
+      # built; the release builds it in chromeos-build.yml.
+      - name: make -C web chromeos
+        run: make -C web chromeos
+
+      - name: Upload built wasm and pkg
+        if: steps.scope.outputs.site == 'true' || steps.scope.outputs.extension == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-pkg
+          path: |
+            web/target/pkg
+            web/target/wasm32-unknown-unknown/release/taigi_web.wasm
+          retention-days: 1
+          if-no-files-found: error
+
+  e2e-site:
+    name: Playwright (site)
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.site == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-pkg
+          path: web/target
+
+      # The subset fonts (19 MB) take ~50 s of pyftsubset in `make -C web site-stage`
       # and change only with their inputs (web/Makefile's
-      # `$(FONTS)/.stamp` rule; fonttools' pin is in mise.toml). After
-      # rust-cache, which owns the rest of web/target.
+      # `$(FONTS)/.stamp` rule; fonttools' pin is in mise.toml).
       - id: fonts
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -124,25 +223,20 @@ jobs:
         if: steps.fonts.outputs.cache-hit == 'true'
         run: touch web/target/fonts/.stamp
 
-      # `make web-check` minus `lint`, which the `lint` job runs.
-      - name: make -C web test smoke
-        run: make -C web test smoke
-
-      # The ChromeOS input method's store zip, over the wasm `smoke` just
-      # built; the release builds it in chromeos-build.yml.
-      - name: make -C web chromeos
-        run: make -C web chromeos
+      # fonttools is only needed when the font cache misses.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        if: steps.fonts.outputs.cache-hit != 'true'
+        with:
+          version: 2026.11.2
+          install_args: uv pipx:fonttools
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Stage the site
-        run: make -C web site
-
-      - name: Stage the browser extension
-        run: make -C web extension extension-fixtures
+        run: make -C web site-stage
 
       # The image includes system libraries, avoiding apt and Ubuntu mirror DNS
       # outages at test time. Match the installed
       # package exactly, since each Playwright version needs its own browsers.
-      # Rust and mise stay on the host; only the browser tests use the image.
       - name: Playwright (Chromium)
         run: |
           version=$(node --print 'require("./web/node_modules/@playwright/test/package.json").version')
@@ -151,6 +245,37 @@ jobs:
             --volume "$PWD/web:/work" --workdir /work \
             "mcr.microsoft.com/playwright:v${version}-noble" \
             npx --no-install playwright test --project=chromium
+
+  e2e-extension:
+    name: Playwright (browser extension)
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.build.outputs.extension == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-pkg
+          path: web/target
+
+      # wasm-bindgen and binaryen (wasm-opt, wasm2js) build the pure-JS fallback
+      # in `scripts/build-wasm2js.mjs` from the downloaded taigi_web.wasm.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.2
+          install_args: github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Stage the browser extension
+        run: make -C web extension-stage extension-fixtures
 
       - name: Playwright browser extension (Chromium)
         run: |
@@ -162,7 +287,7 @@ jobs:
             npx --no-install playwright test --config extension/playwright.config.mjs
 
   # `make -C web lint`: clippy over the wasm target compiles a dev build of its
-  # own (~45 s), which `check`'s release build cannot share, so it runs beside it.
+  # own (~45 s), which `build`'s release build cannot share, so it runs beside it.
   lint:
     name: clippy + typecheck + biome + fmt
     needs: changed
@@ -179,7 +304,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       # protoc for engine/protos/build.rs, zig for SQLite's C, biome for the
-      # page's JS; the same install as `check`, so both share mise's cache.
+      # page's JS; shares mise's cache on main.
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: 2026.11.2
@@ -219,13 +344,18 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [check, lint, typecheck]
+    needs: [build, e2e-site, e2e-extension, lint, typecheck]
     # Results named, not the implicit success(): that also looks at `changed`,
     # which a dispatch skips, so a dispatch never deployed. A scheduled run
-    # whose head did not move skips check, lint and typecheck, and so this job.
+    # whose head did not move skips `build` (and thus E2E), `lint` and
+    # `typecheck`, and so this job.
     if: >-
       ${{ !cancelled() &&
-      needs.check.result == 'success' && needs.lint.result == 'success' && needs.typecheck.result == 'success' &&
+      needs.build.result == 'success' &&
+      needs.e2e-site.result == 'success' &&
+      needs.e2e-extension.result == 'success' &&
+      needs.lint.result == 'success' &&
+      needs.typecheck.result == 'success' &&
       (github.event_name == 'schedule' ||
        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-24.04
