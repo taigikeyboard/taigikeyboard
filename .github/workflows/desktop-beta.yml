@@ -1,8 +1,10 @@
 name: Desktop beta
 
 # Puts a staged desktop draft on the unlisted https://taigikeyboard.tw/beta page
-# for internal testers. Dispatched by tools/release/stage-desktop.sh; runs at
-# once (the `release` environment has no reviewer since 2026-11-12). What and
+# for internal testers. Dispatched by tools/release/stage-desktop.sh (a hotfix
+# patch), or by hand to retry a failed beta; the monthly train
+# (desktop-train.yml) runs the same composite action in its `sign-and-beta`
+# job. Waits for the `release` environment's reviewer (roadmap D5). What and
 # why: tools/release/beta-release.sh.
 on:
   workflow_dispatch:
@@ -43,31 +45,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Fetch the draft's installers
-        env:
-          GH_TOKEN: ${{ github.token }}
-          # Through env, never expanded into the script: dispatch inputs are free text.
-          SHORT_VERSION: ${{ inputs.version }}
-          RELEASE_ID: ${{ inputs.release_id }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
-        run: bash tools/release/beta-release.sh fetch "$RUNNER_TEMP/beta" "$RELEASE_ID" "$SOURCE_SHA"
-
-      - name: Mirror to R2 and write the beta page
-        env:
-          # Contents: read here, write on the website repository; cannot see drafts.
-          GH_TOKEN: ${{ secrets.SITE_CONTENTS_TOKEN }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          SHORT_VERSION: ${{ inputs.version }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
-        run: bash tools/release/beta-release.sh publish "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"
-
-      # The beta is already live; a failed post only warns.
-      - name: Post the beta to Discord
-        continue-on-error: true
-        env:
-          DISCORD_BETA_WEBHOOK: ${{ secrets.DISCORD_BETA_WEBHOOK }}
-          SHORT_VERSION: ${{ inputs.version }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
-        run: bash tools/release/beta-release.sh announce "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"
+      - uses: ./.github/actions/desktop-beta
+        with:
+          # Through the action's env, never expanded into a script: dispatch
+          # inputs are free text.
+          version: ${{ inputs.version }}
+          release-id: ${{ inputs.release_id }}
+          source-sha: ${{ inputs.source_sha }}
+          github-token: ${{ github.token }}
+          site-token: ${{ secrets.SITE_CONTENTS_TOKEN }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          discord-webhook: ${{ secrets.DISCORD_BETA_WEBHOOK }}

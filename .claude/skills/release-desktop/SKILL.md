@@ -178,8 +178,8 @@ It creates the draft and dispatches the hosted macOS (signed + notarized on the
 runner), Windows, Linux and ChromeOS builds from the same commit onto the **draft** `desktop-<target>` (what each
 step does and checks: `docs/architecture/desktop-release.md` § The flow,
 § What staging checks). A full release is every platform or none; an existing draft
-for this version is deleted first, so if a half fails or `main` moved while it
-was waited on, fix that and run the whole thing again.
+for this version is deleted first, so if a half fails, fix that and run the
+whole thing again.
 
 For a **patch**, stage only its platform:
 

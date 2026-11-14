@@ -71,25 +71,6 @@ source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 
 echo "==> Staging $DESKTOP_TAG (${PLATFORMS[*]}) from ${SOURCE_COMMIT:0:7}"
 
-# A draft for this version is the previous attempt; it goes, so this run builds
-# both halves from one commit. A PUBLISHED release cannot be re-cut — its
-# installers are downloadable and its tag is what people already have.
-existing_state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || existing_state=""
-case "$existing_state" in
-    true)
-        echo "  removing the previous draft — every run stages every half afresh"
-        gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
-            fail "cannot remove the existing draft $DESKTOP_TAG"
-        ;;
-    false)
-        fail "$DESKTOP_TAG is already published — it cannot be re-cut. Bump to the next version (make version-desktop) and stage that"
-        ;;
-    *)
-        [[ "$existing_state" == *"release not found"* || "$existing_state" == *"HTTP 404"* || -z "$existing_state" ]] ||
-            fail "cannot read $DESKTOP_TAG in $RELEASE_REPOSITORY: $existing_state"
-        ;;
-esac
-
 # The package, the installer and the packages are built by
 # `.github/workflows/macos-build.yml`, `windows-build.yml`, `linux-build.yml`
 # and `chromeos-build.yml` on clean GitHub-hosted runners, never on the
@@ -98,11 +79,10 @@ esac
 # notarizes with the API key held in the `release` environment —
 # `macos-release.md`).
 #
-# workflow_dispatch takes a branch or tag, never a bare SHA, so the commit being
-# staged has to be what `main` points at — which it is, since the release prep
-# was just pushed there. Every hosted half is dispatched together, right after
-# that check, so main has no wait to move in; the macOS, Linux and ChromeOS runs
-# still refuse any commit but the one they were handed.
+# workflow_dispatch takes a branch or tag, never a bare SHA, so the runs are
+# dispatched on `main` and handed the commit as `source_sha`, which every job
+# checks out. It has to be main's tip here: `dispatch` finds each run by its
+# head commit.
 git -C "$REPOSITORY_DIR" fetch --quiet origin main
 [[ "$SOURCE_COMMIT" == "$(git -C "$REPOSITORY_DIR" rev-parse FETCH_HEAD)" ]] ||
     fail "HEAD (${SOURCE_COMMIT:0:7}) is not origin/main's tip — the hosted builds run from main, so push this commit first"
@@ -138,10 +118,10 @@ wait_for() {
 }
 
 # The hosted attach steps join a draft and never create one, so the draft is
-# made here, on this commit, before they run.
+# made here, on this commit, before they run — a previous draft for this
+# version goes first, so this run builds every half from one commit.
 echo ""
-desktop_release_preflight
-ensure_desktop_draft
+reset_desktop_draft
 
 macos_run=""
 windows_run=""
@@ -149,10 +129,9 @@ linux_run=""
 chromeos_run=""
 echo ""
 echo "==> Hosted runners — dispatched together, waited on in turn"
-# The commit travels with the dispatch: the macOS, Linux and ChromeOS runs
-# refuse any other.
+# The commit travels with the dispatch: every run checks it out.
 stages macos && macos_run="$(dispatch macos-build.yml macOS -f "source_sha=$SOURCE_COMMIT")"
-stages windows && windows_run="$(dispatch windows-build.yml Windows)"
+stages windows && windows_run="$(dispatch windows-build.yml Windows -f "source_sha=$SOURCE_COMMIT")"
 stages linux && linux_run="$(dispatch linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT")"
 stages chromeos && chromeos_run="$(dispatch chromeos-build.yml ChromeOS -f "source_sha=$SOURCE_COMMIT")"
 [[ -z "$macos_run" ]] || wait_for "$macos_run" macOS
@@ -166,24 +145,8 @@ stages chromeos && chromeos_run="$(dispatch chromeos-build.yml ChromeOS -f "sour
 read -r DRAFT_ID DRAFT_URL < <(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
     --json databaseId,url --jq '"\(.databaseId) \(.url)"') && [[ -n "${DRAFT_URL:-}" ]] ||
     fail "cannot read the draft $DESKTOP_TAG back"
-# Every installer and its digest. Checked at the end, because a run that
-# reports success and attaches nothing is exactly what happened the first time
-# this script drove a second machine.
-_read_staged_asset_names || fail "the draft $DESKTOP_TAG is gone — run this again"
-expected_assets=()
-stages macos && expected_assets+=("$MACOS_ASSET")
-stages windows && expected_assets+=("$WINDOWS_ASSET")
-stages linux && expected_assets+=("$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET")
-stages chromeos && expected_assets+=("$CHROMEOS_ASSET")
-for asset in "${expected_assets[@]}"; do
-    for name in "$asset" "$asset.sha256"; do
-        grep -qxF "$name" <<< "$STAGED_ASSET_NAMES" ||
-            fail "every half reported success but $name is not on the draft — read the logs above, then run this again"
-    done
-done
-
-echo ""
-echo "✓ ${expected_assets[*]} staged on the draft for ${SOURCE_COMMIT:0:7}"
+require_staged_assets "${PLATFORMS[@]}"
+echo "  from ${SOURCE_COMMIT:0:7}"
 echo ""
 echo "  Open the draft, download the assets, install and test them:"
 echo "    $DRAFT_URL"

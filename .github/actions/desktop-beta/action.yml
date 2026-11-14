@@ -1,0 +1,71 @@
+name: Mirror the desktop draft to /beta
+description: >-
+  Fetches a staged desktop draft's installers, mirrors them to R2, writes the
+  unlisted https://taigikeyboard.tw/beta page and posts it to Discord
+  (tools/release/beta-release.sh). Used by desktop-beta.yml (hotfix path, or a
+  re-run by hand) and the `sign-and-beta` job of desktop-train.yml.
+
+# Composite actions cannot read `secrets`; the caller passes them in, and each
+# reaches only the step that needs it, through `env`.
+inputs:
+  version:
+    description: Desktop version of the draft
+    required: true
+  release-id:
+    description: The draft's release id
+    required: true
+  source-sha:
+    description: The commit the draft was staged from
+    required: true
+  github-token:
+    description: contents:write token — GitHub lists a draft only to push access
+    required: true
+  site-token:
+    description: SITE_CONTENTS_TOKEN
+    required: true
+  r2-access-key-id:
+    description: R2_ACCESS_KEY_ID
+    required: true
+  r2-secret-access-key:
+    description: R2_SECRET_ACCESS_KEY
+    required: true
+  r2-account-id:
+    description: R2_ACCOUNT_ID
+    required: true
+  discord-webhook:
+    description: DISCORD_BETA_WEBHOOK
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch the draft's installers
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        SHORT_VERSION: ${{ inputs.version }}
+        RELEASE_ID: ${{ inputs.release-id }}
+        SOURCE_SHA: ${{ inputs.source-sha }}
+      run: bash tools/release/beta-release.sh fetch "$RUNNER_TEMP/beta" "$RELEASE_ID" "$SOURCE_SHA"
+
+    - name: Mirror to R2 and write the beta page
+      shell: bash
+      env:
+        # Contents: read here, write on the website repository; cannot see drafts.
+        GH_TOKEN: ${{ inputs.site-token }}
+        R2_ACCESS_KEY_ID: ${{ inputs.r2-access-key-id }}
+        R2_SECRET_ACCESS_KEY: ${{ inputs.r2-secret-access-key }}
+        R2_ACCOUNT_ID: ${{ inputs.r2-account-id }}
+        SHORT_VERSION: ${{ inputs.version }}
+        SOURCE_SHA: ${{ inputs.source-sha }}
+      run: bash tools/release/beta-release.sh publish "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"
+
+    # The beta is already live; a failed post only warns.
+    - name: Post the beta to Discord
+      continue-on-error: true
+      shell: bash
+      env:
+        DISCORD_BETA_WEBHOOK: ${{ inputs.discord-webhook }}
+        SHORT_VERSION: ${{ inputs.version }}
+        SOURCE_SHA: ${{ inputs.source-sha }}
+      run: bash tools/release/beta-release.sh announce "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"

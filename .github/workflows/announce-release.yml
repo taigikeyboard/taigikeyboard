@@ -39,8 +39,8 @@ jobs:
     # The R2 keys and SITE_CONTENTS_TOKEN live in the `release` environment,
     # not at repository level: only `main` (code-owner review) and `*-*.*.*`
     # tags (creation limited by the `release tags` ruleset) may deploy to it, so
-    # a pushed branch with an edited workflow cannot read them. No reviewer
-    # (maintainer 2026-11-12): publishing the release is the human step.
+    # a pushed branch with an edited workflow cannot read them. The run waits
+    # for the environment's reviewer (release-automation-roadmap.md D5).
     environment: release
     # Desktop releases only. A mobile release published here — the mobile train
     # ships through the stores, so there should never be one — carries no

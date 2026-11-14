@@ -1,0 +1,302 @@
+name: Desktop train
+
+# The monthly desktop cut (docs/architecture/release-automation-roadmap.md,
+# Phase 5): 09:00 Asia/Taipei on the 1st, version YYYY.M.0, every platform
+# staged on the draft, the draft mirrored to /beta. Publishing stays a separate
+# step (Phase 6).
+#
+# Two jobs read release secrets, so a cut asks for two approvals of the
+# `release` environment (D5):
+#   cut            moves `main` to the release commit with the App token
+#   sign-and-beta  signs + notarizes the macOS package, checks every platform
+#                  is staged, mirrors the draft to /beta and posts it
+# Everything else holds GITHUB_TOKEN at most. A re-cut (the tree already
+# carries this month's version) needs only the second.
+#
+# `RELEASE_HOLD` (repository variable, D4) stops the cut. `dry_run` runs the
+# plan and every build from a scratch branch: no push to main, no draft, no
+# signing, no beta, no approval.
+on:
+  schedule:
+    - cron: '0 1 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Plan and build only — push, stage and sign nothing
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+# One train at a time, never cancelled half-way: a cancelled cut can leave main
+# moved with no draft.
+concurrency:
+  group: desktop-train
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan (hold, empty month, release commit)
+    if: github.repository == 'taigikeyboard/taigikeyboard'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      # The release notes API and one scratch-branch push.
+      contents: write
+    outputs:
+      action: ${{ steps.plan.outputs.action }}
+      version: ${{ steps.plan.outputs.version }}
+      source_sha: ${{ steps.plan.outputs.source_sha }}
+      # 'true' on a real run from main: move main, draft, sign, beta.
+      stage: ${{ steps.plan.outputs.stage }}
+      scratch_branch: ${{ steps.plan.outputs.scratch_branch }}
+    steps:
+      # The branch's tip now, not the commit the run was queued on: a retry
+      # after "main moved" plans on top of what moved it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Plan
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_HOLD: ${{ vars.RELEASE_HOLD }}
+          # A dispatch off main stages nothing, so it posts nothing either.
+          DRY_RUN: ${{ inputs.dry_run == true || github.ref != 'refs/heads/main' }}
+          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
+        run: bash tools/release/desktop-train.sh plan
+
+  # Approval 1. No checkout: nothing from the repository runs while the App
+  # token exists.
+  cut:
+    name: move main to the release commit
+    needs: plan
+    if: >-
+      needs.plan.outputs.action == 'cut' && needs.plan.outputs.stage == 'true' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: release
+    permissions: {}
+    steps:
+      - name: Mint the App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: taigikeyboard
+          repositories: taigikeyboard
+          permission-contents: write
+
+      # Exactly one commit on top of main, touching only version and lock
+      # files (release_notes.py TRAIN_FILES + the lockfiles set-versions
+      # refreshes — keep the pattern below in step), then a fast-forward (force=false). A pull request merged while
+      # the approval waited makes it a non-fast-forward: dispatch the train
+      # again, which plans on the new tip.
+      - name: Fast-forward main
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          read -r status ahead behind < <(gh api "repos/$GITHUB_REPOSITORY/compare/main...$SOURCE_SHA" \
+            --jq '"\(.status) \(.ahead_by) \(.behind_by)"')
+          [ "$status $ahead $behind" = "ahead 1 0" ] || {
+            echo "::error::$SOURCE_SHA is not one commit on top of main (status $status, ahead $ahead, behind $behind) — main moved; dispatch the train again"
+            exit 1
+          }
+          unexpected="$(gh api "repos/$GITHUB_REPOSITORY/commits/$SOURCE_SHA" --jq '.files[].filename' |
+            grep -vE '(^|/)(Cargo\.toml|Cargo\.lock|Info\.plist|manifest\.json)$' || true)"
+          [ -z "$unexpected" ] || {
+            echo "::error::the release commit touches more than version files: $unexpected"
+            exit 1
+          }
+          gh api "repos/$GITHUB_REPOSITORY/git/refs/heads/main" -X PATCH \
+            -f "sha=$SOURCE_SHA" -F force=false --jq .object.sha
+
+  draft:
+    name: start the draft
+    needs: [plan, cut]
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.stage == 'true' &&
+      (needs.plan.outputs.action == 'recut' ||
+       (needs.plan.outputs.action == 'cut' && needs.cut.result == 'success'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.draft.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.plan.outputs.source_sha }}
+          persist-credentials: false
+
+      - name: Start the draft
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/release/desktop-train.sh draft
+
+  # The four halves, built from the release commit. A real run waits for the
+  # draft they attach to; a dry run builds the scratch branch's commit and
+  # attaches nothing. `contents: write` is the most a called job asks for
+  # (attach); GitHub checks it even for the jobs that are skipped.
+  macos:
+    needs: [plan, draft]
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.action != 'stop' &&
+      (needs.draft.result == 'success' || needs.plan.outputs.stage != 'true')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/macos-build.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      # Signed in sign-and-beta, so the two approvals stay two.
+      build_only: true
+
+  windows:
+    needs: [plan, draft]
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.action != 'stop' &&
+      (needs.draft.result == 'success' || needs.plan.outputs.stage != 'true')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/windows-build.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      build_only: ${{ needs.plan.outputs.stage != 'true' }}
+
+  linux:
+    needs: [plan, draft]
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.action != 'stop' &&
+      (needs.draft.result == 'success' || needs.plan.outputs.stage != 'true')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/linux-build.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      build_only: ${{ needs.plan.outputs.stage != 'true' }}
+
+  chromeos:
+    needs: [plan, draft]
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.action != 'stop' &&
+      (needs.draft.result == 'success' || needs.plan.outputs.stage != 'true')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/chromeos-build.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      build_only: ${{ needs.plan.outputs.stage != 'true' }}
+
+  # Approval 2, once every half is built: one macOS machine that compiles
+  # nothing signs the package, then mirrors the complete draft to /beta. If
+  # beta fails after the package is staged, re-running this job would re-sign
+  # different bytes (refused): dispatch desktop-beta.yml instead.
+  sign-and-beta:
+    name: sign macOS, check the draft, mirror /beta
+    needs: [plan, draft, macos, windows, linux, chromeos]
+    if: >-
+      !cancelled() && needs.plan.outputs.stage == 'true' &&
+      github.ref == 'refs/heads/main' &&
+      needs.draft.result == 'success' && needs.macos.result == 'success' &&
+      needs.windows.result == 'success' && needs.linux.result == 'success' &&
+      needs.chromeos.result == 'success'
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      # Before the checkout: the scripts that will hold the Developer ID keys
+      # come from this commit, so it must be one main has.
+      - name: Check the commit is on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+        run: |
+          status="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$SOURCE_SHA" --jq .status)"
+          case "$status" in
+            identical | behind) ;;
+            *) echo "::error::$SOURCE_SHA is not on main (compare: $status) — only a reviewed commit is signed"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.plan.outputs.source_sha }}
+          persist-credentials: false
+
+      # What the beta half needs on this image (beta-release.sh: the AWS CLI
+      # for R2, Python 3.10+), checked before anything is signed.
+      - name: Check the beta tools
+        run: |
+          aws --version
+          python3 -c 'import sys; assert sys.version_info >= (3, 10), sys.version'
+
+      - uses: ./.github/actions/macos-sign-attach
+        with:
+          source-sha: ${{ needs.plan.outputs.source_sha }}
+          github-token: ${{ github.token }}
+          application-p12: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_P12 }}
+          installer-p12: ${{ secrets.MACOS_DEVELOPER_ID_INSTALLER_P12 }}
+          p12-password: ${{ secrets.MACOS_P12_PASSWORD }}
+          api-key-p8: ${{ secrets.APPLE_API_KEY_P8 }}
+          api-key-id: ${{ vars.APPLE_API_KEY_ID }}
+          api-issuer-id: ${{ vars.APPLE_API_ISSUER_ID }}
+
+      - name: Check every platform is on the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/release/desktop-train.sh check-assets
+
+      - uses: ./.github/actions/desktop-beta
+        with:
+          version: ${{ needs.plan.outputs.version }}
+          release-id: ${{ needs.draft.outputs.release_id }}
+          source-sha: ${{ needs.plan.outputs.source_sha }}
+          github-token: ${{ github.token }}
+          site-token: ${{ secrets.SITE_CONTENTS_TOKEN }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          discord-webhook: ${{ secrets.DISCORD_BETA_WEBHOOK }}
+
+  finish:
+    name: clean up, report a failure
+    needs: [plan, cut, draft, macos, windows, linux, chromeos, sign-and-beta]
+    if: always() && github.repository == 'taigikeyboard/taigikeyboard'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      # Deleting the scratch branch.
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/release
+
+      - name: Delete the scratch branch
+        if: needs.plan.outputs.scratch_branch != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ needs.plan.outputs.scratch_branch }}
+        # Gone already when a re-run of failed jobs repeats this one.
+        continue-on-error: true
+        run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH"
+
+      - name: Report a failure
+        if: always() && contains(needs.*.result, 'failure')
+        env:
+          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          bash tools/release/desktop-train.sh notify "Desktop train ${VERSION:-cut} failed: $RUN_URL"

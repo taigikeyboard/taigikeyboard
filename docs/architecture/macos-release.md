@@ -123,8 +123,14 @@ through `DEVELOPER_DIR` (an image update cannot change the SDK a release links):
 
 | Job | Has | Runs |
 |---|---|---|
-| `build` | no secret, no environment, a read-only token, none on disk | refuses a commit other than the staged one; `make macos-libs` (the universal engine xcframework — generated and gitignored, so always built from the commit, [`build-artifacts.md` § A release rebuilds first](build-artifacts.md#a-release-rebuilds-first)); `bundle-app.sh release` (ad-hoc signed); checks the tree is unchanged; hands the bundle on as a one-day artifact |
-| `release` | the `release` environment: both `.p12`, the `.p8`, a write token | on a fresh VM, compiles nothing: joins the draft (`join_desktop_draft`); imports both `.p12` (non-exportable) into a temporary keychain with Apple's two Developer ID intermediates and writes the `.p8`; `release-app.sh` with no GitHub token; removes the keychain and the key; then `publish-release.sh` with the token, which joins the draft again — refusing one a newer staging run re-created on another commit, never moving it — and attaches the package |
+| `build` | no secret, no environment, a read-only token, none on disk | checks out the staged commit; `make macos-libs` (the universal engine xcframework — generated and gitignored, so always built from the commit, [`build-artifacts.md` § A release rebuilds first](build-artifacts.md#a-release-rebuilds-first)); `bundle-app.sh release` (ad-hoc signed); checks the tree is unchanged; hands the bundle on as an artifact kept 30 days (as long as an approval may wait) |
+| `release` | the `release` environment: both `.p12`, the `.p8`, a write token | on a fresh VM, compiles nothing: before the checkout, refuses a staged commit that is not on `main` (its scripts will hold the keys); joins the draft (`join_desktop_draft`); imports both `.p12` (non-exportable) into a temporary keychain with Apple's two Developer ID intermediates and writes the `.p8`; `release-app.sh` with no GitHub token; removes the keychain and the key; then `publish-release.sh` with the token, which joins the draft again — refusing one a newer staging run re-created on another commit, never moving it — and attaches the package |
+
+The `release` job's steps are the composite action
+`.github/actions/macos-sign-attach`. The monthly train (`desktop-train.yml`)
+calls this workflow with `build_only` and runs the same action in its
+`sign-and-beta` job, so a cut asks for one approval for signing and the beta
+together.
 
 **Why two jobs:** the build executes third-party code — every crate's build
 script and proc macro, every SwiftPM package. In one job, such code could leave
