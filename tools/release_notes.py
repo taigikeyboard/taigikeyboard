@@ -95,6 +95,8 @@ CHROMEOS_MANIFEST_VERSION_PATTERN = re.compile(
 # Off the train, with its own version, but its lockfile pins the desktop crates.
 DESKTOP_LINKED_CARGO_FILES = ("web/Cargo.toml",)
 # Which files a train owns. A version write touches exactly one train's files
+# (desktop: plus the lockfiles refresh_desktop_lockfiles rewrites — the file
+# pattern desktop-train.yml's `cut` job admits must cover both)
 # and leaves the other train's alone (USER 2026-08-29: mobile and desktop are
 # numbered separately so each can ship on its own cadence).
 TRAIN_FILES = {

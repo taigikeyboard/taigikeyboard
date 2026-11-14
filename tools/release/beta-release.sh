@@ -6,9 +6,10 @@
 #        beta-release.sh publish <dir> <source sha> <run id>
 #        beta-release.sh announce <dir> <source sha> <run id>
 #
-# Run by `.github/workflows/desktop-beta.yml`, which `stage-desktop.sh`
-# dispatches once a draft is fully staged; it runs at once in the `release`
-# environment (no reviewer since 2026-11-12). Two halves, two tokens:
+# Run through `.github/actions/desktop-beta`: by `desktop-beta.yml`, which
+# `stage-desktop.sh` dispatches once a draft is fully staged, and by the
+# monthly train's `sign-and-beta` job. Both wait for the `release`
+# environment's reviewer (roadmap D5). Three steps, two tokens:
 #
 #   fetch    GH_TOKEN = the workflow token (contents: write — GitHub lists a
 #            draft only to push access). Downloads the installers of THE draft

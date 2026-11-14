@@ -14,12 +14,29 @@ name: Windows build
 # person publishes that draft, and `tools/release/announce-release.sh` announces it.
 on:
   # How a release stages the Windows installer: `tools/release/stage-desktop.sh`
-  # dispatches this after staging the macOS package, and the run attaches its
-  # installer to the same draft. The maintainer's own box is not in the release
+  # dispatches this beside the other halves with the staged commit, and the run
+  # attaches its installer to the same draft. The maintainer's own box is not in the release
   # path — it is a development machine, with a dev install registered in its
   # build tree and an App Control policy that blocks freshly built binaries,
   # and fighting both over ssh is what this replaces.
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: The commit stage-desktop.sh staged; attach runs only when it is set
+        required: false
+        type: string
+  # The monthly train (desktop-train.yml) calls this with its release commit.
+  workflow_call:
+    inputs:
+      source_sha:
+        description: The commit to build (the train's release commit)
+        required: true
+        type: string
+      build_only:
+        description: Build and test; attach nothing
+        required: false
+        type: boolean
+        default: false
   # Release-only. A desktop release is staged as a draft and published by hand;
   # publishing is what creates the `desktop-<version>` tag, and this fires on
   # that publish rather than on the tag push — a release published from a draft
@@ -42,7 +59,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-build-${{ github.ref }}
+  group: windows-build-${{ inputs.source_sha || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -96,6 +113,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
 
       # rc.exe (Windows SDK) and dumpbin (MSVC) are what the release script uses
@@ -248,7 +266,7 @@ jobs:
           status="$(git status --porcelain --ignore-submodules=none)"
           if [ -n "$status" ]; then
             echo "$status" >&2
-            echo "::error::the build modified tracked files — the artifact no longer matches ${{ github.sha }}"
+            echo "::error::the build modified tracked files — the artifact no longer matches ${{ inputs.source_sha || github.sha }}"
             exit 1
           fi
 
@@ -287,6 +305,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
           sparse-checkout: windows/scripts/smoke-installer.ps1
           sparse-checkout-cone-mode: false
@@ -352,6 +371,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
           sparse-checkout: |
             windows/scripts/smoke-installer.ps1
@@ -395,15 +415,19 @@ jobs:
         shell: powershell
         run: '& windows/scripts/smoke-installer.ps1 -Action Uninstall'
 
-  # Only a dispatched run on `main` stages a release, and only once both
-  # installer smoke tests passed. A run triggered by `release: published` is the
-  # provenance rebuild — the release it would attach to is already public, and
-  # its installer is the one people are downloading. A dispatched branch run
-  # builds and tests, and attaches nothing.
+  # Only a run on `main` handed a staged commit (stage-desktop.sh's dispatch,
+  # the train's call) stages a release, and only once both installer smoke
+  # tests passed. A run triggered by `release: published` is the provenance
+  # rebuild — the release it would attach to is already public, and its
+  # installer is the one people are downloading. A branch run builds and
+  # tests, and attaches nothing.
   attach:
     name: Attach the installer to the draft release
     needs: [build, installer-x64, installer-arm64]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    if: >-
+      inputs.source_sha != '' && !inputs.build_only &&
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -413,6 +437,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
           sparse-checkout: windows/Cargo.toml
           sparse-checkout-cone-mode: false
@@ -426,6 +451,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
           version="$(awk '
@@ -435,16 +461,24 @@ jobs:
           ' windows/Cargo.toml)"
           tag="desktop-$version"
 
-          # The draft is stage-desktop.sh's; this run joins it. A published release means
-          # the staging order was broken — an asset added to it would be public
-          # with no test — and no release at all means nothing staged yet.
-          state="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
+          # The draft is the staging run's, created on the staged commit; this
+          # run joins it. A published release means the staging order was
+          # broken — an asset added to it would be public with no test — no
+          # release at all means nothing staged yet, and a draft on another
+          # commit is another staging run's.
+          state="$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,targetCommitish \
+              --jq '"\(.isDraft) \(.targetCommitish)"' 2>&1)" || {
               echo "no release $tag: $state" >&2
-              echo "stage-desktop.sh creates the draft before dispatching this run." >&2
+              echo "The staging run creates the draft before this build attaches." >&2
               exit 1
           }
-          [ "$state" = true ] || {
+          read -r is_draft target <<< "$state"
+          [ "$is_draft" = true ] || {
               echo "$tag is already published — an asset added now would be public with no test" >&2
+              exit 1
+          }
+          [ "$target" = "$SOURCE_SHA" ] || {
+              echo "::error::the $tag draft targets $target, not $SOURCE_SHA — another staging run owns it"
               exit 1
           }
 
@@ -459,4 +493,4 @@ jobs:
           rm -f "$installer.sha256.tmp"
 
           gh release upload "$tag" "$installer" "$installer.sha256" --repo "$GITHUB_REPOSITORY"
-          echo "attached $installer to $tag (built from $GITHUB_SHA)"
+          echo "attached $installer to $tag (built from $SOURCE_SHA)"

@@ -136,13 +136,14 @@ the way `windows-build.yml` is the Windows half:
   read.
 - `tools/release/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
   beside the Windows run, with the staged commit as `source_sha`, and waits;
-  the `attach` job (the only one that can write) runs only with a
-  `source_sha`, refuses any commit but that one, refuses a published release
+  every job checks out that commit; the `attach` job (the only one that can
+  write) runs only with a `source_sha`, refuses a published release
   or a draft targeting another commit, and uploads the `.deb`, the `.rpm`
   and the Arch `.pkg.tar.zst`, each with its `.sha256`, to the
   `desktop-<version>` draft `stage-desktop.sh` created — never
   over an asset already there. A dispatch from any other ref, or without
-  `source_sha`, only builds. The build job also checks the package's control
+  `source_sha`, only builds. The monthly train (`desktop-train.yml`) calls the
+  workflow the same way, with `build_only` on a dry run. The build job also checks the package's control
   `Version` / `Architecture` and that the build rewrote nothing tracked
   (`Cargo.lock` included — `make version-desktop` refreshes the members'
   versions in it).

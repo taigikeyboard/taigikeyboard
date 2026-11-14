@@ -176,13 +176,15 @@ GitHub-hosted `windows-2025` runner — `bash windows/scripts/release-app.sh
 Runtime packages taken from version- and digest-pinned downloads, the compiler
 from the version `windows/rust-toolchain.toml` names, and the MSVC developer
 environment applied.
-`make desktop-release` dispatches it on `main`, and that run attaches its
-installer to the draft — in a separate `attach` job, the only one holding a
+`make desktop-release` dispatches it on `main` with the staged commit as
+`source_sha` (the monthly `desktop-train.yml` calls it the same way), every job
+checks that commit out, and the run attaches its installer to the draft — in a separate `attach` job, the only one holding a
 write token, after the installer smoke jobs passed: a fresh install on a
 `windows-11-arm` runner, activated from an Arm64 and an x64 process, and an
 upgrade from the last release on `windows-2025`, each uninstalled clean
-(`windows/scripts/smoke-installer.ps1`, `smoke-activation.ps1`). A run
-dispatched on any other branch
+(`windows/scripts/smoke-installer.ps1`, `smoke-activation.ps1`) — refusing a
+published release or a draft on another commit. A run without `source_sha`, or
+dispatched on any other branch,
 builds and smoke-tests and attaches nothing; a run fired by `release:
 published` rebuilds for provenance and publishes nothing.
 

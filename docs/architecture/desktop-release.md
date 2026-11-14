@@ -16,7 +16,8 @@ unlisted beta page, which the stage fills on its own:
 
 | | Runs | Does |
 |---|---|---|
-| Stage all | `make desktop-release` (any machine with `gh`) | Creates the empty draft on this commit, then dispatches `macos-build.yml`, `windows-build.yml`, `linux-build.yml` and `chromeos-build.yml` together and waits for each: GitHub-hosted runners build the signed, notarized `.pkg`, the `.exe`, the Linux `.deb` / `.rpm` / Arch packages and the ChromeOS Web Store zip from the same commit and attach them to the same draft. Every platform or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the macOS half: `macos-release.md`; the Linux half: `linux-release.md`; the ChromeOS half: `chromeos-release.md`) |
+| Cut (monthly) | **automatic** — `.github/workflows/desktop-train.yml`, 09:00 Asia/Taipei on the 1st (or `gh workflow run desktop-train.yml`; `-f dry_run=true` plans and builds only) | Stops while `RELEASE_HOLD` is set, or with a Discord note when no pull request merged since the last desktop release. Otherwise writes the `YYYY.M.0` release commit, then two `release`-environment approvals: **cut** fast-forwards `main` to it with the App token; after every platform built and attached, **sign-and-beta** signs and notarizes the `.pkg`, checks the draft carries every installer and mirrors it to `/beta`. A re-run in a month whose release commit is already on `main` re-stages the draft from `main` (one approval). Failures post to Discord (`tools/release/desktop-train.sh`) |
+| Stage all | `make desktop-release` (any machine with `gh`) — what the train's builds replace; kept for a re-stage by hand | Creates the empty draft on this commit, then dispatches `macos-build.yml`, `windows-build.yml`, `linux-build.yml` and `chromeos-build.yml` together and waits for each: GitHub-hosted runners build the signed, notarized `.pkg`, the `.exe`, the Linux `.deb` / `.rpm` / Arch packages and the ChromeOS Web Store zip from the same commit and attach them to the same draft. Every platform or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the macOS half: `macos-release.md`; the Linux half: `linux-release.md`; the ChromeOS half: `chromeos-release.md`) |
 | Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux\|chromeos` | The same run for ONE platform: its installers only, on a draft of their own version |
 | Beta | **automatic** dispatch of `desktop-beta.yml` at the end of a successful stage; the run waits for the maintainer's approval like every job using the `release` environment (required reviewer since 2026-11-14; only `main` and ruleset-protected `*-*.*.*` tags may use its secrets) | Copies the draft's installers to R2 `beta/<version>-<sha7>-<run id>/` and lists them on the unlisted `https://taigikeyboard.tw/beta` (`noindex`, not in the sitemap, linked from nowhere) for internal testers, who cannot open a draft. Only the newest beta is kept; the page hides a beta once its version is published (`tools/release/beta-release.sh`). Once the live page lists the build, the run posts the page link, each installer's R2 link and the release-on-the-5th note to Discord #announcements, with link previews suppressed through the `DISCORD_BETA_WEBHOOK` secret (`release` environment); a failed post only warns. A failed run leaves the page with what it had. A beta and an announcement committing to the website at once: the loser fails loudly, and re-running it is the fix |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the assets, install, use them |
@@ -182,10 +183,13 @@ place its setup is written down.
 - Stored in the `release` environment: variable `RELEASE_APP_CLIENT_ID` (the
   client id, not the deprecated numeric app id) and secret `RELEASE_APP_PRIVATE_KEY` (the
   `.pem`).
-- Commits it makes carry the bot identity `taigikeyboard-app[bot]`,
-  `356315920+taigikeyboard-app[bot]@users.noreply.github.com`. A job that
-  pushes checks out with `persist-credentials: false` and pushes with the App
-  token, never `GITHUB_TOKEN`.
+- The train's release commit is written without it: the `plan` job (no
+  secret) commits as `github-actions[bot]` and pushes a scratch branch with
+  `GITHUB_TOKEN`; the `cut` job checks out nothing and uses the App token only
+  to fast-forward `main` to that commit, after checking it is one commit on
+  top of `main` touching only version and lock files. Commits the App makes
+  itself carry `taigikeyboard-app[bot]`,
+  `356315920+taigikeyboard-app[bot]@users.noreply.github.com`.
 
 Rotating the key: new private key on the App's settings page → replace
 `RELEASE_APP_PRIVATE_KEY` → delete the old key → `gh workflow run

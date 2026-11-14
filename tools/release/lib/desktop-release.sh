@@ -140,23 +140,100 @@ _resolve_source_commit() {
 # body on every machine that stages a platform.
 _write_release_notes() {
     DESKTOP_NOTES_FILE="$RELEASE_TEMP_DIR/release-notes.md"
+    generated_release_notes "$DESKTOP_SOURCE_COMMIT" > "$DESKTOP_NOTES_FILE"
+    # The release page is the download page the update manifest links to, and
+    # SignPath asks for the term "Code signing policy" on it.
+    printf '\n[Code signing policy](https://taigikeyboard.tw/codesigning.html)\n' >> "$DESKTOP_NOTES_FILE"
+}
+
+# The newest PUBLISHED desktop-* release's tag — where the generated notes and
+# the train's empty-month check start. Named explicitly because the
+# repository's latest release may be a `mobile-*` one.
+previous_desktop_tag() {
     local previous_tag
     previous_tag="$(gh release list --repo "$RELEASE_REPOSITORY" --exclude-drafts --limit 100 \
         --json tagName --jq '[.[] | select(.tagName | startswith("desktop-"))][0].tagName // empty')" ||
         fail "cannot list $RELEASE_REPOSITORY's releases to find the previous desktop release"
     [[ -n "$previous_tag" ]] ||
         fail "no published desktop-* release to start the generated notes from"
-    gh api --method POST "repos/$RELEASE_REPOSITORY/releases/generate-notes" \
+    printf '%s\n' "$previous_tag"
+}
+
+# GitHub's generated body for DESKTOP_TAG at commit $1, since the previous
+# published desktop release ($2 when the caller already looked it up). Called
+# directly by its users' redirections, never in a command substitution, so
+# `fail` stops the script.
+generated_release_notes() {
+    local commit="$1" previous_tag="${2:-}" body
+    [[ -n "$previous_tag" ]] || previous_tag="$(previous_desktop_tag)" || exit 1
+    body="$(gh api --method POST "repos/$RELEASE_REPOSITORY/releases/generate-notes" \
         -f tag_name="$DESKTOP_TAG" \
-        -f target_commitish="$DESKTOP_SOURCE_COMMIT" \
+        -f target_commitish="$commit" \
         -f previous_tag_name="$previous_tag" \
-        --jq .body > "$DESKTOP_NOTES_FILE" ||
+        --jq .body)" ||
         fail "GitHub could not generate release notes for $DESKTOP_TAG since $previous_tag"
-    [[ -s "$DESKTOP_NOTES_FILE" ]] ||
+    [[ -n "$body" ]] ||
         fail "GitHub generated empty release notes for $DESKTOP_TAG since $previous_tag"
-    # The release page is the download page the update manifest links to, and
-    # SignPath asks for the term "Code signing policy" on it.
-    printf '\n[Code signing policy](https://taigikeyboard.tw/codesigning.html)\n' >> "$DESKTOP_NOTES_FILE"
+    printf '%s\n' "$body"
+}
+
+# Start this version's draft afresh on the checked-out commit: a previous draft
+# for it goes (every staging run builds every half from one commit — USER
+# 2026-09-10), a PUBLISHED release is refused, then the draft is created. What
+# `stage-desktop.sh` and `desktop-train.yml` both do before any half attaches.
+reset_desktop_draft() {
+    case "$(desktop_release_state)" in
+        draft)
+            echo "  removing the previous draft — every run stages every half afresh"
+            gh release delete "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --yes ||
+                fail "cannot remove the existing draft $DESKTOP_TAG"
+            ;;
+        published)
+            fail "$DESKTOP_TAG is already published — it cannot be re-cut. Bump to the next version (make version-desktop) and stage that"
+            ;;
+        absent) ;;
+        *) exit 1 ;;
+    esac
+    desktop_release_preflight
+    ensure_desktop_draft
+}
+
+# draft | published | absent for DESKTOP_TAG. A read GitHub did not answer with
+# "not found" fails rather than reading as absent.
+desktop_release_state() {
+    local state
+    if state="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json isDraft --jq '.isDraft|tostring' 2>&1)"; then
+        [[ "$state" == true ]] && echo draft || echo published
+    else
+        _require_absent "$state" "release $DESKTOP_TAG in $RELEASE_REPOSITORY"
+        echo absent
+    fi
+}
+
+# Fails unless the draft carries every installer of the named platforms
+# (macos | windows | linux | chromeos) and each one's `.sha256`. Run after every
+# half reported success: a run that reports success and attaches nothing is
+# exactly what happened the first time staging drove a second machine.
+require_staged_assets() {
+    local platform asset name
+    local -a expected=()
+    for platform in "$@"; do
+        case "$platform" in
+            macos) expected+=("$MACOS_ASSET") ;;
+            windows) expected+=("$WINDOWS_ASSET") ;;
+            linux) expected+=("$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET") ;;
+            chromeos) expected+=("$CHROMEOS_ASSET") ;;
+            *) fail "unknown platform '$platform'" ;;
+        esac
+    done
+    _read_staged_asset_names || fail "the draft $DESKTOP_TAG is gone"
+    for asset in "${expected[@]}"; do
+        for name in "$asset" "$asset.sha256"; do
+            grep -qxF "$name" <<< "$STAGED_ASSET_NAMES" ||
+                fail "every half reported success but $name is not on the draft $DESKTOP_TAG — read the build logs"
+        done
+    done
+    echo "✓ ${expected[*]} staged on the draft $DESKTOP_TAG"
 }
 
 # Put one platform's installer on this version's DRAFT release, creating the

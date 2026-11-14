@@ -105,8 +105,9 @@ print((reference.get("version") or "") if reference is not None else "")
 [[ "$PACKAGE_VERSION" == "$BUILD_VERSION" ]] ||
     fail "$PKG_NAME is build $PACKAGE_VERSION, but this checkout is $BUILD_VERSION ($SHORT_VERSION) — it would be announced as the wrong version"
 
-# Run by the release workflow (macos-build.yml): it joins the draft
-# stage-desktop.sh created on this commit, never creates or moves one.
+# Run by the signing action (.github/actions/macos-sign-attach — macos-build.yml
+# or desktop-train.yml): it joins the draft the staging run (stage-desktop.sh,
+# or the train's `draft` job) created on this commit, never creates or moves one.
 join_desktop_draft
 stage_desktop_asset "$pkg_path"
 desktop_draft_summary macOS
