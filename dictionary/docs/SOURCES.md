@@ -146,13 +146,10 @@ current-at-release values when cutting a dictionary refresh.
 ### dev — 開發者補充辭典 (supplementary/dev/)
 - **Publisher**: TaigiKeyboard maintainers
 - **Origin URL**: internal (repo-native)
-- **Format**: CSV (`data/dev.csv`, `data/khinsiann.csv`)
+- **Format**: CSV (`data/dev.csv`)
 - **Captured**: repo-native; maintained by hand
 - **Licence**: same as repo
-- **Notes**: `dev.csv` — targeted coverage gaps uncovered during dogfooding.
-  `khinsiann.csv` — neutral-tone pieces that open with `--` (`--ah`, 起來
-  `--khí-lâi`), imported from the maintainer's Han-Lo lexicon; Hanji
-  spellings drop the leading `--`, fully romanized ones are stored without hanzi.
+- **Notes**: Targeted coverage gaps uncovered during dogfooding.
 
 ### lkk — LKK-derived spelling supplement (supplementary/lkk/)
 - **Maintainer**: This project maintains the selected spelling/reading pairs.
@@ -170,13 +167,14 @@ current-at-release values when cutting a dictionary refresh.
   spreadsheet, foundation homepage, and publication masthead, checked on
   2026-10-17, carry no licence statement of their own.
 - **Notes**: A project-maintained supplement informed by LKK recommendations,
-  not a complete or official LKK dataset. Each row stores an explicit
-  `(hanzi, canonical-TL)` pair whose spelling mixes Hanji and Latin letters or,
-  fully romanized, equals its reading. All-Hanji spellings are excluded. Current
-  total: 468 unique pairs. Tests enforce spelling shape, pair uniqueness and
-  exact MoE-pair and leading-`--` exclusions. The source pipeline does not
-  regenerate this CSV. The aggregate build adds source bit 11 to matching
-  entries in other dictionaries or inserts new pairs.
+  not a complete or official LKK dataset. `data/lkk.csv` holds LKK
+  mixed-script recommendations, fully romanized recommendations, and
+  neutral-tone (`--`) pieces (`--ah`, `--起-來`, `--tńg-來`, ...). Plain
+  all-Hanji spellings are excluded. Current total: 499 unique pairs. Tests
+  enforce spelling shape, pair uniqueness, exact MoE-pair exclusion, paired
+  leading `--`, and sorted order. The source pipeline does not regenerate
+  this CSV. The aggregate build adds source bit 11 to matching entries in
+  other dictionaries or inserts new pairs.
 
 ## Shared reference data (shared/data/)
 

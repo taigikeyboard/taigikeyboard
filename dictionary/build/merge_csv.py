@@ -13,7 +13,7 @@ Inputs (listed in INPUT_FILES merge order):
 - sources/official/kungge/data/kungge.csv
 - sources/official/stti/data/stti.csv
 - sources/supplementary/khpoo/data/khpoo.csv
-- supplementary/dev/data/{dev,khinsiann}.csv, supplementary/lkk/data/lkk.csv
+- supplementary/dev/data/dev.csv, supplementary/lkk/data/lkk.csv
 - Khiin frequency data (entries missing from the other dictionaries)
 
 Output:
@@ -60,9 +60,6 @@ INPUT_FILES = [
     ("sources/official/stti/data/stti.csv", "stti"),
     ("sources/supplementary/khpoo/data/khpoo.csv", "khpoo"),
 ]
-# supplementary/dev/data/ files, read in order: hand-picked coverage gaps, then
-# the khinsiann pieces (`--ah`, 起來 `--khí-lâi`) imported from the Han-Lo lexicon.
-DEV_SUPPLEMENT_FILES = ("dev.csv", "khinsiann.csv")
 OUTPUT_DIR_NAME = "output"
 OUTPUT_FILE = "dictionary.csv"
 SCRIPT_NAME = "merge_csv"
@@ -474,24 +471,21 @@ def _load_dev_supplement(
     """
     Load developer supplement dictionary entries.
 
-    Reads the minimal CSVs (hanzi, tl) in DEV_SUPPLEMENT_FILES and auto-generates
-    all romanization columns. No cleanup is applied — trusts user input — except
-    that a fully romanized spelling is stored without hanzi, as LKK does.
+    Reads a minimal CSV (hanzi, tl) and auto-generates all romanization columns.
+    No cleanup is applied — trusts user input — except that a fully romanized
+    spelling is stored without hanzi, as LKK does.
     If a (hanzi, tl) pair already exists, marks it dev=True (always included).
     New pairs are added with dev=True and all source columns set to False.
     """
-    data_dir = base_dir / "supplementary" / "dev" / "data"
-    frames = []
-    for name in DEV_SUPPLEMENT_FILES:
-        path = data_dir / name
-        if not path.exists():
-            logger.warning(f"  [skip] dev supplement {name} not found")
-            continue
-        frames.append(read_dictionary_csv(path))
+    dev_path = base_dir / "supplementary" / "dev" / "data" / "dev.csv"
 
-    dev_df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if not dev_path.exists():
+        logger.warning("  [skip] dev supplement CSV not found")
+        return None
+
+    dev_df = read_dictionary_csv(dev_path)
     if dev_df.empty:
-        logger.info("  [dev] dev supplement is empty, skipping")
+        logger.info("  [dev] dev.csv is empty, skipping")
         return None
 
     existing_key_index = _build_existing_key_index(existing_df)
