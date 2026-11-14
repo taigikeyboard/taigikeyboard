@@ -13,7 +13,7 @@
 #
 # Nothing here reaches a user: every half stages on a DRAFT release
 # (`docs/architecture/desktop-release.md`). Publishing stays a person's. The
-# beta run dispatched at the end copies the draft to the unlisted /beta page.
+# beta run dispatched at the end mirrors the draft for internal Discord testers.
 #
 # Every run stages ALL installers from one commit, and starts from a clean
 # draft: an existing one for this version is deleted first (USER 2026-09-10 —
@@ -154,16 +154,16 @@ echo ""
 echo "  When they pass, press \"Publish release\" on that page. That is the whole"
 echo "  remaining step: it tags the commit and announces the release itself."
 
-# The /beta page for internal testers (tools/release/beta-release.sh). Not
+# The internal Discord beta (tools/release/beta-release.sh). Not
 # waited on, and not through `dispatch`, which finds its run by main's tip —
 # main may have moved during the builds. Staging already succeeded, so a failed
 # dispatch only warns.
 echo ""
 if gh workflow run desktop-beta.yml --repo "$RELEASE_REPOSITORY" --ref main \
     -f "version=$SHORT_VERSION" -f "release_id=$DRAFT_ID" -f "source_sha=$SOURCE_COMMIT" > /dev/null; then
-    echo "  Beta page for internal testers: the Desktop beta run starts now, and"
-    echo "  https://taigikeyboard.tw/beta shows this draft once Pages deploys:"
+    echo "  Beta for internal testers: the Desktop beta run starts now and posts the"
+    echo "  links to the internal Discord channel once approved:"
     echo "    https://github.com/$RELEASE_REPOSITORY/actions/workflows/desktop-beta.yml"
 else
-    echo "warning: could not dispatch desktop-beta.yml — the draft is staged, but /beta still shows the previous build" >&2
+    echo "warning: could not dispatch desktop-beta.yml — the draft is staged, but testers have no links to it" >&2
 fi
