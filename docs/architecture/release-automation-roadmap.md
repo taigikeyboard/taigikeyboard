@@ -6,13 +6,13 @@
 
 ## Goal
 
-The desktop train (macOS + Windows + Linux + ChromeOS) releases itself every month with no person in the loop (maintainer, 2026-11-12: "release notes are no longer reviewed by hand in the AI era; auto-cut, auto-publish on the 5th; everything automated unless I hold it for a hotfix"):
+The desktop train (macOS + Windows + Linux + ChromeOS) releases itself every month; the only person in the loop approves the jobs that read release secrets (D5) (maintainer, 2026-11-12: "release notes are no longer reviewed by hand in the AI era; auto-cut, auto-publish on the 5th; everything automated unless I hold it for a hotfix"):
 
 | Day (Asia/Taipei 09:00) | What runs | Person |
 |---|---|---|
-| 1st | Cut: version `YYYY.M.0`, release commit on `main`, every platform staged on the draft, beta page + Discord | none |
+| 1st | Cut: version `YYYY.M.0`, release commit on `main`, every platform staged on the draft, beta page + Discord | approves each `release`-environment job (D5) |
 | 1st–5th | Beta testers use the build from `/beta` | optional |
-| 5th | Publish the draft → announcement (R2, website, appcasts) → Chrome Web Store upload → Homebrew cask bump | none |
+| 5th | Publish the draft → announcement (R2, website, appcasts) → Chrome Web Store upload → Homebrew cask bump | approves each `release`-environment job (D5) |
 | any day | Hold the train, or ship a hotfix patch | maintainer |
 
 Decisions (maintainer, 2026-11-12):
@@ -22,6 +22,7 @@ Decisions (maintainer, 2026-11-12):
 - **D3 Writing to `main`** — a GitHub App on the `main` ruleset's bypass list pushes the release commit. Its token also publishes the draft, which matters: a release published with `GITHUB_TOKEN` does not fire `announce-release.yml` (GitHub suppresses workflow events caused by `GITHUB_TOKEN`).
 - **D4 Hold + hotfix** — a repository variable `RELEASE_HOLD` stops the train; a hotfix is a patch staged by hand with `/release-desktop <platform>` as today.
 - Version scheme: CalVer `YYYY.M.P`, no zero-padded month (decided earlier, memory `project_release_train`).
+- **D5 Approval gate** (maintainer, 2026-11-14: "I'd rather approve; at least the build no longer has to run on my machine") — the `release` environment has the maintainer as required reviewer again, so every job that reads release secrets (cut push, macOS signing, beta, publish, announcement) waits for one click. Reason: maintainers may merge their own pull requests without approval (ruleset bypass, kept on purpose), so the branch gate alone would let a merged workflow read the secrets. Schedules still start the train; phases 5–6 should group the secret-using jobs into as few runs as possible to keep the clicks few.
 
 ## Today (grounded in code)
 
