@@ -1,8 +1,7 @@
-name: Mirror the desktop draft to /beta
+name: Mirror the desktop draft for beta testers
 description: >-
-  Fetches a staged desktop draft's installers, mirrors them to R2, writes the
-  unlisted https://taigikeyboard.tw/beta page and posts it to Discord
-  (tools/release/beta-release.sh). Used by desktop-beta.yml (hotfix path, or a
+  Fetches a staged desktop draft's installers, mirrors them to R2 and posts the
+  links to the DISCORD_BETA_WEBHOOK channel (tools/release/beta-release.sh). Used by desktop-beta.yml (hotfix path, or a
   re-run by hand) and the `sign-and-beta` job of desktop-train.yml.
 
 # Composite actions cannot read `secrets`; the caller passes them in, and each
@@ -19,9 +18,6 @@ inputs:
     required: true
   github-token:
     description: contents:write token — GitHub lists a draft only to push access
-    required: true
-  site-token:
-    description: SITE_CONTENTS_TOKEN
     required: true
   r2-access-key-id:
     description: R2_ACCESS_KEY_ID
@@ -48,11 +44,9 @@ runs:
         SOURCE_SHA: ${{ inputs.source-sha }}
       run: bash tools/release/beta-release.sh fetch "$RUNNER_TEMP/beta" "$RELEASE_ID" "$SOURCE_SHA"
 
-    - name: Mirror to R2 and write the beta page
+    - name: Mirror to R2
       shell: bash
       env:
-        # Contents: read here, write on the website repository; cannot see drafts.
-        GH_TOKEN: ${{ inputs.site-token }}
         R2_ACCESS_KEY_ID: ${{ inputs.r2-access-key-id }}
         R2_SECRET_ACCESS_KEY: ${{ inputs.r2-secret-access-key }}
         R2_ACCOUNT_ID: ${{ inputs.r2-account-id }}
@@ -60,7 +54,8 @@ runs:
         SOURCE_SHA: ${{ inputs.source-sha }}
       run: bash tools/release/beta-release.sh publish "$RUNNER_TEMP/beta" "$SOURCE_SHA" "$GITHUB_RUN_ID"
 
-    # The beta is already live; a failed post only warns.
+    # The mirror is already done and the job summary lists its links; a failed
+    # post only warns.
     - name: Post the beta to Discord
       continue-on-error: true
       shell: bash

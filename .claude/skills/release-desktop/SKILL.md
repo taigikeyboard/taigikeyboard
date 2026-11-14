@@ -35,7 +35,7 @@ Not this skill — say so and stop:
 
 This skill takes the patch as far as it can go without a person: it rebuilds,
 commits, and stages the platform's installers on a draft release nobody can
-reach (staging also dispatches the beta run for the unlisted /beta page). It
+reach (staging also dispatches the beta run that posts it to Discord (`DISCORD_BETA_WEBHOOK`)). It
 stops there. The publish schedule only picks up the month's `.0` draft, so a
 patch is published by hand — that is the maintainer's, because it is the
 decision the draft exists to protect, and publishing announces the release.

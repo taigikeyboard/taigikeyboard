@@ -290,12 +290,12 @@ Borrowed deliberately:
 
 | Practice | Source | Where |
 |---|---|---|
-| `pkgbuild --analyze`, then flip `BundleIsRelocatable` off | `MacishType/macos/Makefile:188-190` | `release-app.sh` component plist |
-| `<domains enable_currentUserHome>` for a no-password install | `vChewing-macOS/BuildPKG.sh` distribution, `MacishType/macos/Makefile:208` | `release-app.sh` distribution |
-| `auth="none"` on the `pkg-ref` | `vChewing-macOS/BuildPKG.sh` distribution | `release-app.sh` distribution |
-| `postinstall` that kills the running input method | `MacishType/macos/Makefile:177` | `release-app.sh` postinstall |
+| `pkgbuild --analyze`, then flip `BundleIsRelocatable` off | `MacishType/macos/Makefile:188-190` | `lib/installer-package.sh` component plist |
+| `<domains enable_currentUserHome>` for a no-password install | `vChewing-macOS/BuildPKG.sh` distribution, `MacishType/macos/Makefile:208` | `lib/installer-package.sh` distribution |
+| `auth="none"` on the `pkg-ref` | `vChewing-macOS/BuildPKG.sh` distribution | `lib/installer-package.sh` distribution |
+| `postinstall` that kills the running input method | `MacishType/macos/Makefile:177` | `lib/installer-package.sh` postinstall |
 | `notarytool submit --wait` then `stapler staple` | `azooKey-Desktop/pkgbuild.sh`, `vChewing-macOS/BuildPKG.sh` | `release-app.sh` notarization |
-| `<volume-check>` against the bundle's minimum OS | `vChewing-macOS/BuildPKG.sh` distribution | `release-app.sh` distribution |
+| `<volume-check>` against the bundle's minimum OS | `vChewing-macOS/BuildPKG.sh` distribution | `lib/installer-package.sh` distribution |
 
 Deliberately not adopted:
 

@@ -21,16 +21,14 @@ LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
 LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
 # ChromeOS has site data but no manifest: the Chrome Web Store updates it.
 CHROMEOS_SITE_PATH="_data/chromeos_release.json"
-# The unlisted /beta page (`tools/release/beta-release.sh` writes it; the page
-# hides a beta whose version a `_data/*_release.json` already names).
-BETA_SITE_PATH="_data/beta_release.json"
 MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 
 # Where users download installers from: GitHub's asset host is slow on some
 # ISPs, so the website and both appcasts name this R2 mirror instead
 # (docs/architecture/desktop-release.md § One-time: the R2 mirror).
-R2_BUCKET="taigikeyboard-downloads"
+RELEASE_R2_BUCKET="taigikeyboard-downloads"
+R2_BUCKET="$RELEASE_R2_BUCKET"
 DOWNLOAD_HOST_URL="https://dl.taigikeyboard.tw"
 # Published releases. Every appcast and the Homebrew cask name objects here.
 R2_PREFIX="desktop"
@@ -94,19 +92,27 @@ anonymous_download_retrying() {
 # installer's bytes: it is mirrored as-is, never regenerated, so the mirror
 # carries the staged digest.
 #
-#   mirror_asset <file> <receipt file> <asset name> <sha256 of file> <bucket prefix>
+#   mirror_asset <file> <receipt file> <asset name> <sha256 of file> <bucket prefix> [cache-control]
+#
+# The release bucket always takes a prefix (it holds `desktop/` and `beta/`
+# side by side); a bucket of its own, like the nightly one, may use "" for its root.
+#
+# The optional Cache-Control header goes on both objects (the nightly channel
+# overwrites fixed names and needs `no-cache`; releases leave it unset).
 mirror_asset() {
-    local file="$1" receipt="$2" name="$3" sha256="$4" prefix="$5" receipt_sha256
-    [[ -n "$prefix" ]] || fail "mirror_asset needs a bucket prefix"
+    local file="$1" receipt="$2" name="$3" sha256="$4" prefix="$5" cache_control="${6:-}" receipt_sha256
+    [[ -n "$prefix" || "$R2_BUCKET" != "$RELEASE_R2_BUCKET" ]] ||
+        fail "mirror_asset needs a bucket prefix in $RELEASE_R2_BUCKET"
     receipt_sha256="$(cut -d' ' -f1 "$receipt")"
     [[ "$receipt_sha256" == "$sha256" ]] ||
         fail "$name.sha256 says $receipt_sha256, but the installer hashes to $sha256"
-    local key="s3://$R2_BUCKET/$prefix/$name" url="$DOWNLOAD_HOST_URL/$prefix/$name"
+    local path="${prefix:+$prefix/}$name"
+    local key="s3://$R2_BUCKET/$path" url="$DOWNLOAD_HOST_URL/$path"
     local mirrored="$RELEASE_TEMP_DIR/mirror-$name"
 
     echo "  mirroring to $url"
-    r2 s3 cp --only-show-errors "$file" "$key" || fail "cannot upload $name to R2 bucket $R2_BUCKET"
-    r2 s3 cp --only-show-errors --content-type text/plain "$receipt" "$key.sha256" ||
+    r2 s3 cp --only-show-errors ${cache_control:+--cache-control "$cache_control"} "$file" "$key" || fail "cannot upload $name to R2 bucket $R2_BUCKET"
+    r2 s3 cp --only-show-errors ${cache_control:+--cache-control "$cache_control"} --content-type text/plain "$receipt" "$key.sha256" ||
         fail "cannot upload $name.sha256 to R2 bucket $R2_BUCKET"
     anonymous_download_retrying "$url" "$mirrored" || fail "$url is not anonymously reachable after the upload"
     [[ "$(release_sha256 "$mirrored")" == "$sha256" ]] || fail "$url does not serve the bytes that were uploaded"

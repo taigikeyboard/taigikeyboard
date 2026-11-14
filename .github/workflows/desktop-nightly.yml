@@ -1,0 +1,173 @@
+name: Desktop nightly
+
+# Unsigned desktop + ChromeOS builds of `main`, every night, overwritten under
+# fixed names at the root of https://nightly.taigikeyboard.tw/. A test channel, not a
+# release: what runs, why and the one-time setup are in
+# docs/architecture/nightly-builds.md. `dry_run` (forced off `main`) uploads
+# nothing; `force` rebuilds an unchanged `main`.
+on:
+  schedule:
+    # 00:41 Asia/Taipei. Not a minute on a multiple of 5 (web.yml says why) and
+    # nowhere near the train's 09:00 on the 1st: windows-build.yml cancels an
+    # in-progress run of the same commit, so a hotfix staged at this hour can
+    # collide with tonight's build.
+    - cron: '41 16 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Build even when main is what is already live
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: Build and package only — upload nothing
+        required: false
+        type: boolean
+        default: false
+
+permissions: {}
+
+# One night at a time, never cancelled half-way: two runs overwriting the same
+# fixed names would interleave.
+concurrency:
+  group: desktop-nightly
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan (skip an unchanged main)
+    if: github.repository == 'taigikeyboard/taigikeyboard'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      build: ${{ steps.plan.outputs.build }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Plan
+        id: plan
+        env:
+          FORCE: ${{ inputs.force == true }}
+          # A dispatch off main publishes nothing.
+          DRY_RUN: ${{ inputs.dry_run == true || github.ref != 'refs/heads/main' }}
+        run: |
+          state="$(bash tools/release/nightly-release.sh check "$GITHUB_SHA")"
+          if [ "$state" = skip ] && [ "$FORCE" != true ] && [ "$DRY_RUN" != true ]; then
+            echo "main ($GITHUB_SHA) is already the live nightly — nothing to build"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+          [ "$DRY_RUN" = true ] && publish=false || publish=true
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+  # The four halves, as the train builds them. `contents: write` is the most a
+  # called job asks for (attach, skipped under build_only); GitHub checks it
+  # even for skipped jobs. The jobs that run hold `contents: read`.
+  macos:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/macos-build.yml
+    with:
+      source_sha: ${{ github.sha }}
+      build_only: true
+
+  windows:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/windows-build.yml
+    with:
+      source_sha: ${{ github.sha }}
+      build_only: true
+
+  linux:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/linux-build.yml
+    with:
+      source_sha: ${{ github.sha }}
+      build_only: true
+
+  chromeos:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/chromeos-build.yml
+    with:
+      source_sha: ${{ github.sha }}
+      build_only: true
+
+  # No credentials: the ad-hoc bundle in an unsigned installer package.
+  macos-package:
+    name: package macOS (unsigned)
+    needs: macos
+    runs-on: macos-26
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-bundle
+          path: ${{ runner.temp }}/macos-bundle
+
+      - name: Package
+        run: |
+          mkdir -p macos/.build/bundle
+          tar -C macos/.build/bundle -xf "$RUNNER_TEMP/macos-bundle/bundle.tar"
+          bash macos/scripts/package-nightly.sh "$RUNNER_TEMP/nightly/TaigiKeyboard-nightly.pkg"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-pkg-nightly
+          path: ${{ runner.temp }}/nightly/TaigiKeyboard-nightly.pkg
+          if-no-files-found: error
+          retention-days: 7
+
+  # Every platform or none: a night with one failed build leaves the live
+  # channel as it was. A failed upload can leave the fixed names serving two
+  # commits; build.json, written last, still names the old one, so the next
+  # night rebuilds and replaces them all.
+  publish:
+    name: upload to the nightly channel
+    needs: [plan, macos-package, windows, linux, chromeos]
+    # The implicit success() of every need is the every-platform gate.
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: nightly
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Every artifact of the run, each in a directory of its own name (two
+      # carry a file called SHA256SUMS, so never merged).
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: ${{ runner.temp }}/artifacts
+
+      - name: Upload
+        env:
+          R2_ACCESS_KEY_ID: ${{ secrets.NIGHTLY_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.NIGHTLY_R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        run: bash tools/release/nightly-release.sh publish "$RUNNER_TEMP/artifacts" "$GITHUB_SHA"

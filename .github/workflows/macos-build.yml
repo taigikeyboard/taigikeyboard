@@ -5,7 +5,9 @@ name: macOS build
 # § Cutting a release). Dispatched from `main` by `tools/release/stage-desktop.sh`
 # with the commit it staged (a hotfix patch). The monthly train
 # (desktop-train.yml) calls it with `build_only` and signs in its own
-# `sign-and-beta` job, through the same composite action. A pull request
+# `sign-and-beta` job, through the same composite action. The nightly channel
+# (desktop-nightly.yml) calls it with `build_only` too and packages the bundle
+# unsigned (macos/scripts/package-nightly.sh). A pull request
 # touching this workflow or the release scripts runs the `build` job alone.
 #
 # Two jobs on two machines, so no credential is ever on a machine that ran

@@ -14,7 +14,7 @@ import Foundation
 /// automatic check to a notification. So arrival never launches anything: it
 /// only turns the pane's button into Install, and the second press is the user
 /// saying now is a good time. Nothing here is silent, and nothing needs a
-/// password only because the package is home-domain (`release-app.sh`:
+/// password only because the package is home-domain (`lib/installer-package.sh`:
 /// `enable_currentUserHome`, `auth="none"`) — it installs into
 /// `~/Library/Input Methods`, which the user already owns.
 ///

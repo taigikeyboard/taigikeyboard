@@ -55,19 +55,15 @@ LINUX_ARCH_ASSET="taigikeyboard-${SHORT_VERSION}-1-x86_64.pkg.tar.zst"
 # not this release, is how users install it (docs/architecture/chromeos-release.md).
 CHROMEOS_ASSET="TaigiKeyboard-$SHORT_VERSION-chromeos.zip"
 # Every installer a full release carries (a patch carries a subset), one
-# "<asset>|<label>|<requires>" row each: what the /beta page and its Discord
-# post call it, and the oldest system it runs on. The floors come from each
-# platform's own source: LSMinimumSystemVersion (macos/App/Info.plist),
-# MinVersion (windows/installer/TaigiKeyboard.iss) and windows-release.md
-# § Architectures, the targeted distributions in linux-release.md,
-# minimum_chrome_version (web/chromeos/manifest.json).
+# "<asset>|<label>" row each: the label is what the beta's Discord post and job
+# summary call it.
 DESKTOP_ASSET_ROWS=(
-    "$MACOS_ASSET|macOS|macOS 14 or later"
-    "$WINDOWS_ASSET|Windows|Windows 10 1809 or later; Arm64 needs Windows 11"
-    "$LINUX_ASSET|Linux (.deb)|Ubuntu 24.04+ / Debian 13+"
-    "$LINUX_RPM_ASSET|Fedora (.rpm)|Fedora 44 or later"
-    "$LINUX_ARCH_ASSET|Arch|current Arch Linux"
-    "$CHROMEOS_ASSET|ChromeOS|ChromeOS 116 or later"
+    "$MACOS_ASSET|macOS"
+    "$WINDOWS_ASSET|Windows"
+    "$LINUX_ASSET|Linux (.deb)"
+    "$LINUX_RPM_ASSET|Fedora (.rpm)"
+    "$LINUX_ARCH_ASSET|Arch"
+    "$CHROMEOS_ASSET|ChromeOS"
 )
 DESKTOP_ASSETS=("${DESKTOP_ASSET_ROWS[@]%%|*}")
 
