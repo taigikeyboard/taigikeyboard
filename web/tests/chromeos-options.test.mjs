@@ -50,12 +50,20 @@ test("rows ChromeOS cannot honour are hidden, kept for Settings to read", () => 
   }
 });
 
-test("the Shortcuts section is hidden", () => {
+test("the Shortcuts section is shown, for the worker's list", () => {
   const lines = form.split("\n");
   const at = lines.findIndex((line) => line.includes('<div id="shortcuts">'));
   const section =
     lines.slice(0, at).findLast((line) => line.includes("<details")) ?? "";
-  assert.match(section, /<details class="sidebar-section" hidden>/);
+  assert.match(section, /<details class="sidebar-section" open>/);
+});
+
+test("every section starts unfolded", () => {
+  assert.doesNotMatch(form, /<details class="sidebar-section">/);
+  assert.equal(
+    form.match(/<details class="sidebar-section" open>/g)?.length,
+    4,
+  );
 });
 
 test("the options page puts the form where its shell marks", () => {

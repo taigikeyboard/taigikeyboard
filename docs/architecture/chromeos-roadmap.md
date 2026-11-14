@@ -57,7 +57,7 @@ Options page (extension page): the web sidebar's settings form
 | `commit { text }` | `commitText` | |
 | `deleteSurrounding { offset, count }` | `deleteSurroundingText({ engineID, contextID, offset, length })` | Auto-space swap. Verify offset units (UTF-16) in Phase 2 |
 | `lookupTable` / `hideLookupTable` | `setCandidates` + `setCandidateWindowProperties({ visible, vertical, pageSize, cursorVisible, currentCandidateIndex, … })` | The system draws the window: vertical or horizontal list only (D4) |
-| `announceMode` | `setCandidateWindowProperties` auxiliary text, or the `indicator` | Spike decides |
+| `announceMode` | `setCandidateWindowProperties` auxiliary text in an empty window, hidden after 800 ms (the page's mode flash); the tray menu row (`setMenuItems`) names the mode after `modeChanged` | The manifest `indicator` is fixed |
 | `openSettings` | `chrome.runtime.openOptionsPage()` | |
 | `toggleTpsKeyboard`, `tpsKeyboardCapTyped` | none at first | No extension surface for a key panel beside a system text field |
 

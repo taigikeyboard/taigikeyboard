@@ -11,10 +11,72 @@
       .options [hidden] {
         display: none;
       }
+
+      /* A full-width page: one centered column of cards, every section open. */
+      body.options {
+        align-items: stretch;
+        padding: 3rem 1.5rem 4rem;
+      }
+
+      .options-page {
+        width: 100%;
+        max-width: 52rem;
+        margin: 0 auto;
+      }
+
+      .options-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .options-header img {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+      }
+
+      .options-header h1 {
+        font-size: 1.75rem;
+      }
+
+      .options #settings {
+        display: grid;
+        gap: 1.25rem;
+      }
+
+      .options .sidebar-section {
+        padding: 0.25rem 1.5rem 0.5rem;
+        border: 1px solid var(--hairline);
+        border-radius: 16px;
+        background: var(--card);
+      }
+
+      .options .sidebar-section summary {
+        min-height: 3.5rem;
+        font-size: 1.125rem;
+      }
+
+      .options .setting select {
+        max-width: 50%;
+      }
+
+      .options .setting-reset {
+        width: auto;
+        margin: 0.75rem 0 0.75rem auto;
+        padding: 0 1.25rem;
+      }
     </style>
     <script type="module" src="options.js"></script>
   </head>
   <body class="options">
-    <!-- form: web/scripts/stage-chromeos.mjs puts the settings form here -->
+    <main class="options-page">
+      <header class="options-header">
+        <img src="icons/48.png" alt="">
+        <h1>台語齒盤</h1>
+      </header>
+      <!-- form: web/scripts/stage-chromeos.mjs puts the settings form here -->
+    </main>
   </body>
 </html>

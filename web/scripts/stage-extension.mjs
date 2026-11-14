@@ -20,6 +20,8 @@ import { optionsPage } from "../chromeos/options-form.mjs";
 export const EXTENSION_CUT = {
   hiddenControls: ["tpsKeyboardShown", "fontType"],
   removedOptions: [],
+  shortcutsShown: false,
+  sectionsOpen: false,
 };
 
 /**

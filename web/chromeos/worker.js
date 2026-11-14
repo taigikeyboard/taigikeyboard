@@ -1,12 +1,20 @@
 // The ChromeOS input method's service worker: chrome.input.ime events in, the
 // taigi-web session's replies out (docs/architecture/chromeos-roadmap.md).
 
-import { imeCalls, isResetStorm, keyJson } from "./calls.js";
+import {
+  endModeFlash,
+  imeCalls,
+  isResetStorm,
+  keyJson,
+  listShownAfter,
+  modeMenuItem,
+} from "./calls.js";
 import { Learning } from "./learning.js";
 import init, { Session } from "./pkg/taigi_web.js";
 import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
 
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
+/** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
 /** @typedef {import("./calls.js").ImeCall} ImeCall */
 
 // The expandable layouts measure through the page's DOM, which a worker has
@@ -21,6 +29,13 @@ const ENGINE_ID = "taigi";
 
 const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
 
+// The session's shortcut list, in chrome.storage.local for the options page to
+// draw (the same key in `options.js`).
+const SHORTCUTS_KEY = "taigi.shortcuts";
+
+/** As long as the page holds its mode flash (`ime.js` `MODE_FLASH_HOLD`). */
+const MODE_FLASH_HOLD = 800;
+
 /** @type {Session | null} */
 let session = null;
 /** @type {chrome.input.ime.InputContext | null} */
@@ -29,6 +44,14 @@ let context = null;
 let trapped = false;
 // The settings document the session holds.
 let settingsJson = DEFAULT_SETTINGS;
+// Whether this input method is the active one: the tray menu is its own.
+let active = false;
+// The shortcut list last written for the options page.
+let publishedShortcuts = "";
+// Whether the system window holds a candidate list: a mode flash leaves it.
+let listShown = false;
+/** @type {ReturnType<typeof setTimeout> | undefined} */
+let modeFlashTimer;
 
 /**
  * Formats an unknown caught value for warning logs.
@@ -113,6 +136,67 @@ async function start() {
   session = starting;
   // Off the first key: opening the stores takes tens of milliseconds.
   learning.attach(starting);
+  publishState();
+}
+
+/**
+ * What follows the session's settings outside the field: the options page's
+ * shortcut list and the tray menu's mode row. The page redraws the same on a
+ * new instance and a settings change; `modeChanged` redraws only the mode.
+ * @returns {void}
+ */
+function publishState() {
+  const shortcuts = run((current) => current.shortcuts());
+  if (shortcuts !== undefined && shortcuts !== publishedShortcuts) {
+    publishedShortcuts = shortcuts;
+    chrome.storage.local
+      .set({ [SHORTCUTS_KEY]: shortcuts })
+      .catch((/** @type {unknown} */ error) =>
+        console.warn("shortcuts.save.failed", errorMessage(error)),
+      );
+  }
+  showModeInTray();
+}
+
+/**
+ * The tray's input method menu names the mode, as the page's chip does.
+ * Only the active input method has a menu to set.
+ * @returns {void}
+ */
+function showModeInTray() {
+  if (!active) {
+    return;
+  }
+  const line = run((current) => current.modeLine());
+  if (line === undefined) {
+    return;
+  }
+  chrome.input.ime
+    .setMenuItems({
+      engineID: ENGINE_ID,
+      items: [modeMenuItem(/** @type {WireModeLine} */ (JSON.parse(line)))],
+    })
+    .catch((/** @type {unknown} */ error) =>
+      console.warn("tray.menu.failed", errorMessage(error)),
+    );
+}
+
+/**
+ * A flash replaces one still up, as the page's `flashMode` does.
+ * @param {Reply} reply
+ * @returns {void}
+ */
+function timeModeFlash(reply) {
+  if (!reply.emits.some((emit) => emit.type === "announceMode")) {
+    return;
+  }
+  clearTimeout(modeFlashTimer);
+  modeFlashTimer = setTimeout(() => {
+    invokeImeCall(endModeFlash(ENGINE_ID, listShown)).catch(
+      (/** @type {unknown} */ error) =>
+        console.warn("modeFlash.hide.failed", errorMessage(error)),
+    );
+  }, MODE_FLASH_HOLD);
 }
 
 /**
@@ -191,14 +275,17 @@ function call(action) {
  */
 function apply(replyJson) {
   const reply = /** @type {Reply} */ (JSON.parse(replyJson));
+  listShown = listShownAfter(reply, listShown);
   for (const imeCall of imeCalls(reply, {
     engineID: ENGINE_ID,
     contextID: context?.contextID ?? 0,
+    listShown,
   })) {
     invokeImeCall(imeCall).catch((/** @type {unknown} */ error) =>
       console.warn("ime.call.failed", imeCall[0], errorMessage(error)),
     );
   }
+  timeModeFlash(reply);
   if (reply.emits.some((emit) => emit.type === "openSettings")) {
     chrome.runtime
       .openOptionsPage()
@@ -209,6 +296,11 @@ function apply(replyJson) {
   // A chord wrote the document: the options page and the next worker read it.
   if (reply.settings) {
     saveSettings(reply.settings);
+  }
+  if (reply.settings) {
+    publishState();
+  } else if (reply.emits.some((emit) => emit.type === "modeChanged")) {
+    showModeInTray();
   }
   // A commit is what the engine learns from.
   if (reply.emits.some((emit) => emit.type === "commit")) {
@@ -225,13 +317,29 @@ function leaveField() {
   call((current) => current.endSession());
   run((current) => current.focusLost());
   context = null;
+  listShown = false;
+  clearTimeout(modeFlashTimer);
 }
 
-chrome.input.ime.onActivate.addListener(() => keepAlive());
+/**
+ * This input method is the active one (onActivate, or onFocus for a worker
+ * started since): the tray menu shows its mode.
+ * @returns {void}
+ */
+function activate() {
+  keepAlive();
+  if (!active) {
+    active = true;
+    started.then(showModeInTray);
+  }
+}
+
+chrome.input.ime.onActivate.addListener(activate);
 
 // Another input method took over: let the worker, the engine and its
 // dictionaries go. onActivate wakes a stopped worker, which keeps it again.
 chrome.input.ime.onDeactivated.addListener(() => {
+  active = false;
   leaveField();
   // A trap already let it go.
   if (!trapped) {
@@ -241,7 +349,7 @@ chrome.input.ime.onDeactivated.addListener(() => {
 
 chrome.input.ime.onFocus.addListener((focused) => {
   context = focused;
-  keepAlive();
+  activate();
   started.then(() => call((current) => current.beginSession()));
 });
 
@@ -310,6 +418,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
       run((current) => current.setSettings(json));
       if (!trapped) {
         settingsJson = json;
+        publishState();
       }
     } catch (error) {
       console.warn("settings.refused", errorMessage(error));
