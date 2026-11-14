@@ -27,6 +27,8 @@
 #   5. when the release carries a macOS package, output `macos_version` and
 #      `macos_sha256` ($GITHUB_OUTPUT, else stdout) — the arguments of
 #      `bump-cask.sh`, which the workflow runs next
+#   6. in Actions, output `version`, `platforms` and `release_url` for the
+#      workflow's success note on Discord
 #
 # It runs anywhere with `gh`, `curl`, `python3`, the AWS CLI and the three R2_*
 # credentials (`require_r2`) — everything it needs is on the release.
@@ -217,6 +219,11 @@ commit_site_files "chore: desktop release -> $SHORT_VERSION (${announced_platfor
 # macOS package.
 if [[ -n "${macos_sha256:-}" ]]; then
     printf 'macos_version=%s\nmacos_sha256=%s\n' "$SHORT_VERSION" "$macos_sha256" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+fi
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    platform_list="${announced_platforms[*]}"   # labels hold no space
+    printf 'version=%s\nplatforms=%s\nrelease_url=%s\n' \
+        "$SHORT_VERSION" "${platform_list// /, }" "$RELEASE_PAGE_URL" >> "$GITHUB_OUTPUT"
 fi
 
 echo ""

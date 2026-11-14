@@ -10,8 +10,8 @@ name: Announce desktop release
 # writes the website data `appcast/{macos,windows}.json` and
 # the download buttons (Linux included) are rendered from, and waits until the
 # live appcasts serve it. A release carrying a macOS `.pkg` then bumps the
-# Homebrew cask (tools/release/bump-cask.sh) and audits it. A failure posts to
-# Discord.
+# Homebrew cask (tools/release/bump-cask.sh) and audits it. The outcome posts to
+# Discord: the platforms announced and the cask audited, or the failing run.
 #
 # `make desktop-announce` runs the identical script locally — for a re-run after
 # a failure here, or when the token below has expired; it prints the
@@ -59,6 +59,9 @@ jobs:
     timeout-minutes: 60
     outputs:
       macos_version: ${{ steps.announce.outputs.macos_version }}
+      version: ${{ steps.announce.outputs.version }}
+      platforms: ${{ steps.announce.outputs.platforms }}
+      release_url: ${{ steps.announce.outputs.release_url }}
     steps:
       # For the cask bump. Minted before the checkout, so the App's key never
       # shares a job with repository code; only this homebrew-tap-contents
@@ -141,14 +144,21 @@ jobs:
           }
           brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard
 
+  # Silent when `announce` never ran (a non-desktop release) or the run was
+  # cancelled by hand.
   finish:
-    name: report a failure
+    name: report to Discord
     needs: [announce, cask-audit]
-    if: always() && github.repository == 'taigikeyboard/taigikeyboard' && contains(needs.*.result, 'failure')
+    if: ${{ !cancelled() && github.repository == 'taigikeyboard/taigikeyboard' && needs.announce.result != 'skipped' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
+    env:
+      DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
+      # The audit is skipped for a release without a macOS `.pkg`; a cancelled
+      # audit is not a pass.
+      PUBLISHED: ${{ needs.announce.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.cask-audit.result) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -156,9 +166,23 @@ jobs:
           sparse-checkout: tools/release
 
       - name: Report a failure
+        if: env.PUBLISHED != 'true'
         env:
-          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           VERSION: ${{ inputs.version || github.event.release.tag_name }}
         run: |
           bash tools/release/desktop-train.sh notify "Desktop announce ${VERSION:-(checkout version)} failed: $RUN_URL"
+
+      - name: Report the release
+        if: env.PUBLISHED == 'true'
+        env:
+          ANNOUNCED_VERSION: ${{ needs.announce.outputs.version }}
+          PLATFORMS: ${{ needs.announce.outputs.platforms }}
+          RELEASE_URL: ${{ needs.announce.outputs.release_url }}
+          MACOS_VERSION: ${{ needs.announce.outputs.macos_version }}
+        run: |
+          message="Desktop $ANNOUNCED_VERSION published: $PLATFORMS"
+          if [ -n "$MACOS_VERSION" ]; then
+            message="$message · Homebrew cask $MACOS_VERSION (audit passed)"
+          fi
+          bash tools/release/desktop-train.sh notify "$message — $RELEASE_URL"
