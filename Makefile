@@ -173,7 +173,7 @@ linux-check:
 	$(MAKE) -C linux check
 
 # The web version's gate: the wasm build, a Node smoke test over the real
-# dictionaries, clippy, biome, fmt. Any host; tools from `mise install`.
+# dictionaries, clippy, tsc (typecheck), biome, fmt. Any host; tools from `mise install`.
 web-check:
 	$(MAKE) -C web check
 
@@ -266,7 +266,8 @@ version-mobile version-desktop:
 #   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml)
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
 #           (spotlessCheck doubles as ktlint).
-#   JS      Biome — config: web/biome.json (version: mise.toml)
+#   JS      Biome — config: web/biome.json (version: mise.toml); TypeScript
+#           (`tsc --noEmit` checkJs) — configs: web/tsconfig.*.json (`web/types/`).
 #   PS      every tracked .ps1 is ASCII (lint-ps1): Windows PowerShell 5.1 reads a
 #           BOM-less script in the ANSI code page, where a UTF-8 em dash decodes
 #           to a curly quote that ends the string it sits in.
@@ -348,7 +349,7 @@ help:
 	@echo "  make macos-rust-check   Native gate for the macOS Cargo workspace (macos/)"
 	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
-	@echo "  make web-check          Wasm build + Node smoke test + lint for the web version"
+	@echo "  make web-check          Wasm build + Node smoke test + typecheck + lint for the web version"
 	@echo ""
 	@echo "Data and content"
 	@echo "  make dict               Full dictionary regeneration into assets/dictionaries/ (needs taigi-converter)"
@@ -361,7 +362,7 @@ help:
 	@echo ""
 	@echo "Quality and hooks"
 	@echo "  make fmt                Apply formatting: rustfmt (5 workspaces) + SwiftFormat + Spotless"
-	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos) + SwiftFormat + Spotless"
+	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos, web) + web typecheck/biome + SwiftFormat + Spotless"
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"

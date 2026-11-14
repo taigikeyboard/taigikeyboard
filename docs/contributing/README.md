@@ -19,4 +19,4 @@ Per-platform style guides and cross-cutting rules. Read the one that covers the 
 | [`android-guidelines.md`](android-guidelines.md) | Shared-core marker, DI + lifecycle, IME host facts, DataStore settings, user-data SQLite, Gradle |
 | [`windows-guidelines.md`](windows-guidelines.md) | Windows TSF |
 | [`linux-guidelines.md`](linux-guidelines.md) | Linux Fcitx5 / IBus and `desktop/` |
-| [`web-guidelines.md`](web-guidelines.md) | Web version: build, pins, what `wasm32` cannot do |
+| [`web-guidelines.md`](web-guidelines.md) | Web version: build, pins, raw-JS JSDoc + `tsc` `checkJs`, what `wasm32` cannot do |

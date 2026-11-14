@@ -25,12 +25,12 @@ FONTS := target/fonts
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site chromeos extension extension-fixtures extension-e2e serve test smoke e2e check-live lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site chromeos extension extension-fixtures extension-e2e serve test smoke e2e check-live typecheck lint fmt check clean
 
 help:
 	@echo "Web version — dev loop"
 	@echo ""
-	@echo "  make check   - The gate: native tests + build + Node smoke test + clippy + biome + fmt --check"
+	@echo "  make check   - The gate: native tests + build + Node smoke test + clippy + typecheck + biome + fmt --check"
 	@echo "  make test    - Native tests of the session and the key translation"
 	@echo "  make build   - Release wasm, bindings and wasm-opt into $(PKG)/"
 	@echo "  make smoke   - Build, then install the real dictionaries and assert top candidates"
@@ -39,7 +39,8 @@ help:
 	@echo "  make extension - Stage the browser extension into $(EXTENSION)/ and zip it"
 	@echo "  make extension-e2e - Load the staged extension in Chromium and type through it"
 	@echo "  make check-live - Hash the live files against their manifest"
-	@echo "  make lint    - clippy -D warnings, biome, fmt --check"
+	@echo "  make typecheck - TypeScript checkJs (--noEmit) over all handwritten JS"
+	@echo "  make lint    - clippy -D warnings, typecheck, biome, fmt --check"
 	@echo "  make fmt     - cargo fmt, biome format"
 
 # The CLI refuses a module built against another crate version, with an error
@@ -179,9 +180,15 @@ LIVE_URL := https://taigikeyboard.tw/web/
 check-live:
 	node scripts/check-live.mjs $(LIVE_URL)
 
+# Every JS runtime environment (`tsconfig.json` project references) is checked
+# without emitting files (`checkJs` + JSDoc).
+TSCONFIGS := tsconfig.page.json tsconfig.sw.json tsconfig.chromeos-worker.json tsconfig.chromeos.json tsconfig.extension-worker.json tsconfig.extension.json tsconfig.fixtures.json tsconfig.node.json
+typecheck: node_modules/.package-lock.json
+	for cfg in $(TSCONFIGS); do ./node_modules/.bin/tsc --noEmit -p $$cfg || exit 1; done
+
 # `mmap-host` by name: its wasm backend compiles only for this target, so the
 # engine workspace's clippy never reads it.
-lint:
+lint: typecheck
 	cargo clippy --workspace --target $(TARGET) --locked -- -D warnings
 	cargo clippy -p mmap-host --target $(TARGET) --locked -- -D warnings
 	biome check .
