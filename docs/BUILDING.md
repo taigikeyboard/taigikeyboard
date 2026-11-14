@@ -40,11 +40,11 @@ picks the channel, components and cross targets on first use.
 first `cargo` run there downloads all of them. For engine-only work on Linux or
 Windows, skip that with `RUSTUP_TOOLCHAIN=stable` — which is what CI does.
 
-Everything else that has a version the build checks is pinned in
+Build tools and the Node major used by CI are pinned in
 [`mise.toml`](../mise.toml):
 
 ```sh
-mise install        # protoc, protoc-gen-swift (macOS), gitleaks, swiftformat, zig, cargo-zigbuild, cargo-ndk, uv, wasm-bindgen, wasm-opt, pyftsubset, biome
+mise install        # protoc, protoc-gen-swift (macOS), gitleaks, swiftformat, zig, cargo-zigbuild, cargo-ndk, uv, wasm-bindgen, wasm-opt, pyftsubset, biome, Node 22 (npm + npx)
 ```
 
 Run it after installing Rust: `cargo-ndk` compiles with it. On macOS
@@ -57,6 +57,10 @@ put these tools first on `PATH` through `tools/mise-path-prefix.sh`. It names ea
 tool, so your global mise tools stay out: a global `rust` under `mise exec` would
 override `rust-toolchain.toml`. mise stops reading `mise.toml` when the file changes,
 so run `mise trust` if `make` warns about it.
+
+Node 22 supplies `node`, `npm` and `npx` for web builds and `taigi-converter/`.
+Python stays unpinned so mise does not shadow the interpreter holding your
+dictionary pipeline packages.
 
 Without [mise](https://mise.jdx.dev), install the same versions by hand. Each
 entry point then uses what `PATH` finds. The
@@ -77,7 +81,7 @@ Per platform, on top of that:
 | Windows gate on macOS | `brew install mingw-w64` — see [`windows/README.md`](../windows/README.md) |
 | Windows DLL | Windows 10 1809+ x64 with MSVC — see [`architecture/windows-release.md`](architecture/windows-release.md) |
 | Linux | the packages in [`linux/README.md`](../linux/README.md) § System packages |
-| Dictionary | Python 3.13+ with `python3 -m pip install -r dictionary/requirements.txt pytest`; Node 22+ for `taigi-converter/` |
+| Dictionary | Python 3.13+ with `python3 -m pip install -r dictionary/requirements.txt pytest`; Node 22+ for `taigi-converter/` (provided by `mise install`) |
 
 ## 3. One-time setup
 
@@ -100,7 +104,7 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 | macOS | `make macos-libs`, then `make -C macos build` | `make -C macos test` |
 | Windows | on Windows: [`architecture/windows-release.md`](architecture/windows-release.md); elsewhere: `make windows-check` — its `check-box` step runs on the maintainer's Windows box over ssh and fails without it; run the box-free steps in [`windows/README.md`](../windows/README.md) instead | included in `make windows-check` |
 | Linux | on Linux: `make -C linux build` (packages: `make -C linux deb`); on macOS: `make linux-check` | included in `make linux-check` |
-| Web | `make web-check` (`mise install` first: `wasm-bindgen`, `wasm-opt`, `biome`) · `make web-serve` (`pyftsubset` too) | `make web-e2e` (`pyftsubset` too; downloads Playwright's browsers on first run) |
+| Web | `make web-check` (`mise install` first: `wasm-bindgen`, `wasm-opt`, `biome`, Node 22) · `make web-serve` (`pyftsubset` too) | `make web-e2e` (`pyftsubset` too; downloads Playwright's browsers on first run) |
 | Desktop-shared crates | `make desktop-check` | included |
 | macOS Rust workspace (`macos/crates`, the archive the app links) | `make macos-rust-check` | included |
 | Dictionary | `make dict` | `python3 -m pytest tests`, run inside `dictionary/` (needs the `taigi-converter` submodule) |

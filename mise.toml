@@ -39,7 +39,8 @@ uv = "0.11.32"
 "pipx:fonttools" = { version = "4.63.0", extras = "woff" }
 # JavaScript format + lint for web/.
 biome = "2.6.5"
+# Match CI's Node major; makes node, npm and npx available without shell activation.
+node = "22"
 
-# Deliberately not pinned: python (>= 3.13) and node (>= 22). Nothing checks an
-# exact version, and a pin here would shadow the interpreter a contributor
-# already installed the dictionary pipeline's packages into.
+# Deliberately not pinned: python (>= 3.13). A pin here would shadow the
+# interpreter a contributor already installed the dictionary pipeline's packages into.
