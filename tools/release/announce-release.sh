@@ -23,6 +23,9 @@
 #      in one commit
 #   4. wait until each live appcast serves what was written (macOS, Windows —
 #      Linux has no appcast)
+#   5. when the release carries a macOS package, output `macos_version` and
+#      `macos_sha256` ($GITHUB_OUTPUT, else stdout) — the arguments of
+#      `bump-cask.sh`, which the workflow runs next
 #
 # It runs anywhere with `gh`, `curl`, `python3`, the AWS CLI and the three R2_*
 # credentials (`require_r2`) — everything it needs is on the release.
@@ -165,6 +168,7 @@ declare -a macos_manifest_fields=() windows_manifest_fields=()
 # reports through globals, and two calls sharing them must not depend on order.
 if fetch_platform_asset macOS "$MACOS_ASSET"; then
     macos_url="$ASSET_URL"
+    macos_sha256="$ASSET_SHA256"
     site_files+=("$MACOS_SITE_PATH" "$(site_release_json "$macos_url")")
     macos_manifest_fields=("version=$SHORT_VERSION" "packageURL=$macos_url")
 fi
@@ -207,6 +211,12 @@ commit_site_files "chore: desktop release -> $SHORT_VERSION (${announced_platfor
     wait_for_manifest "$MACOS_MANIFEST_URL" "${macos_manifest_fields[@]}"
 [[ ${#windows_manifest_fields[@]} -eq 0 ]] ||
     wait_for_manifest "$WINDOWS_MANIFEST_URL" "${windows_manifest_fields[@]}"
+
+# Written last: only once the whole announcement succeeded, and only with a
+# macOS package.
+if [[ -n "${macos_sha256:-}" ]]; then
+    printf 'macos_version=%s\nmacos_sha256=%s\n' "$SHORT_VERSION" "$macos_sha256" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+fi
 
 echo ""
 echo "✓ announced $SHORT_VERSION for ${announced_platforms[*]}"

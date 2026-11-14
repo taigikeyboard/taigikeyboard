@@ -8,10 +8,13 @@ name: Announce desktop release
 # anonymously, mirrors it to dl.taigikeyboard.tw (Cloudflare R2), then
 # writes the website data `appcast/{macos,windows}.json` and
 # the download buttons (Linux included) are rendered from, and waits until the
-# live appcasts serve it. Nothing else is left to do by hand.
+# live appcasts serve it. A release carrying a macOS `.pkg` then bumps the
+# Homebrew cask (tools/release/bump-cask.sh) and audits it. A failure posts to
+# Discord.
 #
 # `make desktop-announce` runs the identical script locally — for a re-run after
-# a failure here, or when the token below has expired.
+# a failure here, or when the token below has expired; it prints the
+# `bump-cask.sh` arguments.
 on:
   release:
     types: [published]
@@ -36,11 +39,12 @@ jobs:
   announce:
     name: website + appcasts
     runs-on: ubuntu-latest
-    # The R2 keys and SITE_CONTENTS_TOKEN live in the `release` environment,
-    # not at repository level: only `main` (code-owner review) and `*-*.*.*`
-    # tags (creation limited by the `release tags` ruleset) may deploy to it, so
-    # a pushed branch with an edited workflow cannot read them. The run waits
-    # for the environment's reviewer (release-automation-roadmap.md D5).
+    # The R2 keys, SITE_CONTENTS_TOKEN and the release App's key live in the
+    # `release` environment, not at repository level: only `main` (code-owner
+    # review) and `*-*.*.*` tags (creation limited by the `release tags`
+    # ruleset) may deploy to it, so a pushed branch with an edited workflow
+    # cannot read them. The run waits for the environment's reviewer
+    # (release-automation-roadmap.md D5).
     environment: release
     # Desktop releases only. A mobile release published here — the mobile train
     # ships through the stores, so there should never be one — carries no
@@ -52,9 +56,29 @@ jobs:
     # Up to 25 min per appcast wait (release-site.sh MANIFEST_WAIT_SECONDS:
     # two 10-min caches) plus the downloads and the R2 mirror.
     timeout-minutes: 60
+    outputs:
+      macos_version: ${{ steps.announce.outputs.macos_version }}
     steps:
+      # For the cask bump. Minted before the checkout, so the App's key never
+      # shares a job with repository code; only this homebrew-tap-contents
+      # token does (release-automation-roadmap.md Phase 7). Valid one hour: a
+      # 401 after a slow announcement is fixed by a re-run.
+      - name: Mint the App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: taigikeyboard
+          repositories: homebrew-tap
+          permission-contents: write
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Announce
+        id: announce
         env:
           # The script reads this repository's release and commits to the
           # WEBSITE repository, which the workflow's own GITHUB_TOKEN cannot
@@ -78,3 +102,60 @@ jobs:
           else
             bash tools/release/announce-release.sh
           fi
+
+      - name: Bump the cask
+        if: steps.announce.outputs.macos_version != ''
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          MACOS_VERSION: ${{ steps.announce.outputs.macos_version }}
+          MACOS_SHA256: ${{ steps.announce.outputs.macos_sha256 }}
+        run: bash tools/release/bump-cask.sh "$MACOS_VERSION" "$MACOS_SHA256"
+
+  # After the push, so a failure means the live cask is wrong: fix or revert
+  # the tap commit by hand. No secret — brew runs code it downloads; the
+  # read-only token is for the livecheck's GitHub API calls.
+  cask-audit:
+    name: audit the cask
+    needs: announce
+    if: needs.announce.outputs.macos_version != ''
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+      MACOS_VERSION: ${{ needs.announce.outputs.macos_version }}
+    steps:
+      - name: Audit
+        run: |
+          set -euo pipefail
+          brew tap taigikeyboard/tap
+          tapped="$(brew info --cask --json=v2 taigikeyboard/tap/taigikeyboard | jq -r '.casks[0].version')"
+          [ "$tapped" = "$MACOS_VERSION" ] || {
+            echo "::error::the tap's cask names $tapped, not $MACOS_VERSION"
+            exit 1
+          }
+          brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard
+
+  finish:
+    name: report a failure
+    needs: [announce, cask-audit]
+    if: always() && github.repository == 'taigikeyboard/taigikeyboard' && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tools/release
+
+      - name: Report a failure
+        env:
+          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERSION: ${{ inputs.version || github.event.release.tag_name }}
+        run: |
+          bash tools/release/desktop-train.sh notify "Desktop announce ${VERSION:-(checkout version)} failed: $RUN_URL"
