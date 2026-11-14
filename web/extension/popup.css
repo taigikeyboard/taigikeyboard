@@ -30,12 +30,32 @@ body.popup {
   font-weight: 600;
 }
 
+.popup .setting-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0 0.75rem;
+}
+
+.popup .setting-reset:not([hidden]):has(.popup-shortcut:not([hidden])) {
+  justify-content: space-between;
+}
+
+.popup .popup-shortcut {
+  padding: 0 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--secondary);
+  font-family: var(--system-font);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 /* style.css gives every button a display, which outranks `hidden`. */
 .popup [hidden] {
   display: none;
-}
-
-.popup .setting-reset {
-  width: 100%;
-  margin: 0;
 }

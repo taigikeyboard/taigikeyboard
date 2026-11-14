@@ -19,6 +19,7 @@ import { readCopy, writeCopy } from "./learning-store.js";
 
 /** The registered content script's id. */
 const SCRIPT_ID = "taigi";
+const REMOVE_SITE_MENU_ID = "remove-site";
 
 /**
  * The toolbar button per state the content script tells. A tab the script
@@ -37,6 +38,20 @@ const BADGES = {
 const ICON_SIZES = [16, 32];
 
 const NAME = chrome.runtime.getManifest().short_name ?? "";
+
+/**
+ * Returns the active keyboard shortcut for `toggle-typing`, or `""` when unset.
+ * @returns {Promise<string>}
+ */
+async function toggleShortcut() {
+  try {
+    const commands = await chrome.commands.getAll();
+    const toggle = commands.find((command) => command.name === "toggle-typing");
+    return toggle?.shortcut?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
 
 /**
  * The pattern the browser's site access takes for `hostname`.
@@ -81,6 +96,19 @@ function siteOf(url) {
   } catch {
     return null;
   }
+}
+
+/**
+ * Checks whether `tab` currently has granted host permission for its site.
+ * @param {chrome.tabs.Tab | undefined} tab
+ * @returns {Promise<boolean>}
+ */
+async function tabHasAccess(tab) {
+  const site = siteOf(tab?.url);
+  if (site === null) {
+    return false;
+  }
+  return chrome.permissions.contains({ origins: [patternOf(site)] });
 }
 
 // A tab's state, `{ site, mode, state, label }`, in session storage: it lasts
@@ -184,6 +212,7 @@ async function resetToolbar(tabId) {
   try {
     const imageData = await defaultIconData();
     await Promise.all([
+      chrome.action.setPopup({ tabId, popup: "popup.html" }),
       chrome.action.setIcon({ tabId, imageData }),
       chrome.action.setBadgeText({ tabId, text: "" }),
       chrome.action.setTitle({
@@ -211,14 +240,17 @@ const COLOUR_ICON = Object.fromEntries(
  */
 async function draw(tabId, state, label) {
   const badge = BADGES[state] ?? BADGES.off;
+  const shortcut = await toggleShortcut();
+  const suffix = shortcut ? ` (${shortcut})` : "";
   try {
     await Promise.all([
+      chrome.action.setPopup({ tabId, popup: "" }),
       chrome.action.setIcon({ tabId, path: COLOUR_ICON }),
       chrome.action.setBadgeText({ tabId, text: badge.text }),
       chrome.action.setTitle({
         tabId,
         // A tab that never typed has loaded no strings to name its state in.
-        title: `${NAME}: ${label || chrome.i18n.getMessage(state)}`,
+        title: `${NAME}: ${label || chrome.i18n.getMessage(state)}${suffix}`,
       }),
       badge.color &&
         chrome.action.setBadgeBackgroundColor({ tabId, color: badge.color }),
@@ -320,6 +352,39 @@ async function setTyping(tab, isOn) {
 }
 
 /**
+ * Draws the enabled toolbar state (`popup: ""`, colour icon, shortcut title)
+ * on every already-open tab whose site has granted host access.
+ * @returns {Promise<void>}
+ */
+async function syncGrantedTabs() {
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (tab.id === undefined) {
+        return;
+      }
+      const site = siteOf(tab.url);
+      if (site === null) {
+        return;
+      }
+      const hasAccess = await chrome.permissions.contains({
+        origins: [patternOf(site)],
+      });
+      if (!hasAccess) {
+        return;
+      }
+      const stored = await readTab(tab.id);
+      const sameSite = stored?.site === site;
+      await draw(
+        tab.id,
+        sameSite ? stored.state : "off",
+        sameSite ? stored.label : "",
+      );
+    }),
+  );
+}
+
+/**
  * Stops typing and clears the toolbar button in any open tab whose site no
  * longer has access.
  * @returns {Promise<void>}
@@ -344,6 +409,130 @@ async function revokeRemovedTabs() {
       .catch(() => {});
     await resetToolbar(tabId);
   }
+}
+
+/**
+ * Wraps a callback-based `chrome.contextMenus` call in a Promise while reading
+ * `chrome.runtime.lastError` so Chrome 120+ and `@types/chrome` agree.
+ * @param {(done: () => void) => void} invoke
+ * @returns {Promise<void>}
+ */
+function contextMenuCall(invoke) {
+  return new Promise((resolve) => {
+    invoke(() => {
+      void chrome.runtime.lastError;
+      resolve();
+    });
+  });
+}
+
+let menuQueue = Promise.resolve();
+let menuCreated = false;
+let removeSiteEnabled = false;
+
+/**
+ * Ensures the action context menu exists once per worker lifetime and sets its
+ * `enabled` state through a serialized queue.
+ * @param {boolean} enabled
+ * @returns {Promise<void>}
+ */
+function enqueueRemoveSiteMenu(enabled) {
+  menuQueue = menuQueue
+    .then(async () => {
+      if (!menuCreated) {
+        await contextMenuCall((done) => chrome.contextMenus.removeAll(done));
+        await contextMenuCall((done) => {
+          chrome.contextMenus.create(
+            {
+              id: REMOVE_SITE_MENU_ID,
+              title: chrome.i18n.getMessage("removeSite"),
+              contexts: ["action"],
+              enabled,
+            },
+            done,
+          );
+        });
+        menuCreated = true;
+        removeSiteEnabled = enabled;
+        return;
+      }
+      await contextMenuCall((done) => {
+        chrome.contextMenus.update(REMOVE_SITE_MENU_ID, { enabled }, done);
+      });
+      removeSiteEnabled = enabled;
+    })
+    .catch((error) => console.error("menu.failed", error));
+  return menuQueue;
+}
+
+/**
+ * Updates the "Stop Using on This Site" action context menu item to match
+ * whether the active tab in `windowId` (or the focused window) has access.
+ * @param {number} [windowId]
+ * @returns {Promise<void>}
+ */
+async function syncRemoveSiteMenu(windowId) {
+  const [tab] = await chrome.tabs.query(
+    windowId === undefined
+      ? { active: true, lastFocusedWindow: true }
+      : { active: true, windowId },
+  );
+  await enqueueRemoveSiteMenu(await tabHasAccess(tab));
+}
+
+/**
+ * Returns the current `enabled` state of the "Stop Using on This Site" action
+ * context menu item after any queued update finishes.
+ * @returns {Promise<boolean>}
+ */
+export async function removeSiteMenuEnabled() {
+  await menuQueue;
+  return removeSiteEnabled;
+}
+
+/**
+ * Toggles typing on an enabled tab (preserving page focus) or opens the popup
+ * on a tab without host access so the user can grant permission.
+ * @param {chrome.tabs.Tab | undefined} tab
+ * @returns {Promise<void>}
+ */
+export async function toggleTab(tab) {
+  if (!tab || tab.id === undefined) {
+    return;
+  }
+  const site = siteOf(tab.url);
+  const hasAccess =
+    site !== null &&
+    (await chrome.permissions.contains({ origins: [patternOf(site)] }));
+  if (!hasAccess) {
+    await chrome.action
+      .setPopup({ tabId: tab.id, popup: "popup.html" })
+      .catch(() => {});
+    await chrome.action.openPopup().catch(console.error);
+    return;
+  }
+  const stored = await readTab(tab.id);
+  const isOn = stored?.site === site && stored.mode !== "off";
+  await setTyping(tab, !isOn);
+}
+
+/**
+ * Stops typing on `tab` if active and revokes host permission for its site.
+ * @param {chrome.tabs.Tab | undefined} tab
+ * @returns {Promise<void>}
+ */
+export async function removeSiteAccess(tab) {
+  const site = siteOf(tab?.url);
+  if (site === null) {
+    return;
+  }
+  if (tab?.id !== undefined) {
+    const stored = await readTab(tab.id);
+    if (stored?.site === site && stored.mode !== "off") {
+      await setTyping(tab, false);
+    }
+  }
+  await chrome.permissions.remove({ origins: [patternOf(site)] });
 }
 
 /**
@@ -380,6 +569,9 @@ async function dispatchMessage(message, sender) {
       if (!hasAccess) {
         await forgetTab(tabId);
         await resetToolbar(tabId);
+        if (sender.tab?.active) {
+          await syncRemoveSiteMenu();
+        }
         return { mode: "off" };
       }
       const stored = await readTab(tabId);
@@ -391,6 +583,9 @@ async function dispatchMessage(message, sender) {
         label: "",
       });
       await draw(tabId, "off", "");
+      if (sender.tab?.active) {
+        await syncRemoveSiteMenu();
+      }
       return { mode };
     }
 
@@ -489,13 +684,21 @@ chrome.runtime.onMessage.addListener((rawMessage, sender, respond) => {
   return true;
 });
 
-chrome.permissions.onAdded.addListener(syncRegistration);
+chrome.permissions.onAdded.addListener(() => {
+  syncRegistration();
+  syncGrantedTabs().catch((error) => console.error("tabs.failed", error));
+  syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
+});
 chrome.permissions.onRemoved.addListener(() => {
   syncRegistration();
   revokeRemovedTabs().catch((error) => console.error("revoke.failed", error));
+  syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
 });
 
 chrome.tabs.onRemoved.addListener(forgetTab);
+chrome.tabs.onActivated.addListener(() => {
+  syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
+});
 
 // A tab that leaves its site starts off wherever it lands, a site the
 // extension cannot see (no `url`) included.
@@ -506,29 +709,64 @@ chrome.tabs.onUpdated.addListener(async (tabId, change, tab) => {
   const stored = await readTab(tabId);
   if (stored !== null && siteOf(tab.url) !== stored.site) {
     await forgetTab(tabId);
+    if (!(await tabHasAccess(tab))) {
+      await resetToolbar(tabId);
+    }
   }
+  if (tab.active) {
+    await syncRemoveSiteMenu();
+  }
+});
+
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    return;
+  }
+  syncRemoveSiteMenu(windowId).catch((error) =>
+    console.error("menu.failed", error),
+  );
+});
+
+// Left-click on an enabled tab (whose per-tab popup is "") toggles typing
+// directly without stealing focus from the field; ungranted tabs open popup.html.
+chrome.action.onClicked.addListener((tab) => {
+  toggleTab(tab).catch(console.error);
 });
 
 // The shortcut: on or off in the tab in front. A site not yet enabled needs
 // the user's yes, which the popup asks for.
-chrome.commands.onCommand.addListener(async (command, tab) => {
-  if (command !== "toggle-typing" || !tab || tab.id === undefined) {
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command !== "toggle-typing") {
     return;
   }
-  const site = siteOf(tab.url);
-  const hasAccess =
-    site !== null &&
-    (await chrome.permissions.contains({ origins: [patternOf(site)] }));
-  if (!hasAccess) {
-    await chrome.action.openPopup().catch(console.error);
-    return;
-  }
-  const stored = await readTab(tab.id);
-  const isOn = stored?.site === site && stored.mode !== "off";
-  await setTyping(tab, !isOn).catch(console.error);
+  toggleTab(tab).catch(console.error);
 });
 
-chrome.runtime.onInstalled.addListener(syncRegistration);
-chrome.runtime.onStartup.addListener(syncRegistration);
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === REMOVE_SITE_MENU_ID && tab) {
+    removeSiteAccess(tab).catch(console.error);
+  }
+});
+
+/**
+ * Synchronizes content script registration, already-open granted tabs, and the
+ * toolbar action context menu when the worker installs or starts up.
+ * @returns {void}
+ */
+function onWorkerStart() {
+  syncRegistration();
+  syncGrantedTabs().catch((error) => console.error("tabs.failed", error));
+  syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
+}
+
+chrome.runtime.onInstalled.addListener(onWorkerStart);
+chrome.runtime.onStartup.addListener(onWorkerStart);
 
 drawDefaultIcon().catch((error) => console.error("icon.failed", error));
+syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
+
+Object.assign(globalThis, {
+  toggleTab,
+  removeSiteAccess,
+  removeSiteMenuEnabled,
+});

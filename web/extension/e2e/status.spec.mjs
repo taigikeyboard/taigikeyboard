@@ -8,6 +8,7 @@ import { join } from "node:path";
 
 import {
   A,
+  C,
   chip,
   commitWord,
   expect,
@@ -16,9 +17,13 @@ import {
   openPopup,
   openTyping,
   preedit,
+  removeSiteMenuEnabled,
   STORE,
   test,
+  toggleShortcut,
   toolbar,
+  toolbarPopup,
+  toolbarTitle,
   turnOn,
 } from "./helpers.mjs";
 
@@ -29,17 +34,19 @@ test("the toolbar button and the chip name the same state", async ({
   worker,
   page,
 }) => {
+  const shortcut = await toggleShortcut(worker);
   await page.goto(FIELDS);
   await expect
     .poll(() => toolbar(worker, page))
-    .toEqual(["", "TaigiKeyboard: Off"]);
+    .toEqual(["", toolbarTitle("TaigiKeyboard: Off", shortcut)]);
+  await expect.poll(() => toolbarPopup(worker, page)).toBe("");
 
   await turnOn(context, worker, page);
   // No field has the focus yet: the mode shows on the button alone.
   await expect(chip(page)).toBeHidden();
   expect(await toolbar(worker, page)).toEqual([
     "台",
-    "TaigiKeyboard: Taigi · Tâi-lô",
+    toolbarTitle("TaigiKeyboard: Taigi · Tâi-lô", shortcut),
   ]);
 
   await page.locator("#text").click();
@@ -51,13 +58,16 @@ test("the toolbar button and the chip name the same state", async ({
   await expect(chip(page)).toHaveAttribute("data-state", "english");
   await expect
     .poll(() => toolbar(worker, page))
-    .toEqual(["A", "TaigiKeyboard: English"]);
+    .toEqual(["A", toolbarTitle("TaigiKeyboard: English", shortcut)]);
 
   await page.locator("#password").click();
   await expect(chip(page)).toHaveText("Field not supported");
   await expect
     .poll(() => toolbar(worker, page))
-    .toEqual(["×", "TaigiKeyboard: Field not supported"]);
+    .toEqual([
+      "×",
+      toolbarTitle("TaigiKeyboard: Field not supported", shortcut),
+    ]);
 });
 
 test("the chip sits beside the focused field", async ({
@@ -88,6 +98,7 @@ test("the popup names the tab's state and offers the way out of it", async ({
   worker,
   page,
 }) => {
+  const shortcut = await toggleShortcut(worker);
   await page.goto(FIELDS);
   const off = await openPopup(context, worker, page);
   await expect(off.locator("#site")).toHaveText("a.test");
@@ -95,6 +106,12 @@ test("the popup names the tab's state and offers the way out of it", async ({
   await expect(off.locator("#turn-on")).toBeVisible();
   await expect(off.locator("#turn-off")).toBeHidden();
   await expect(off.locator("#enable")).toBeHidden();
+  if (shortcut) {
+    await expect(off.locator("#turn-on .popup-shortcut")).toBeVisible();
+    await expect(off.locator("#turn-on .popup-shortcut")).toHaveText(shortcut);
+  } else {
+    await expect(off.locator("#turn-on .popup-shortcut")).toBeHidden();
+  }
   await off.close();
 
   await turnOn(context, worker, page);
@@ -103,6 +120,70 @@ test("the popup names the tab's state and offers the way out of it", async ({
   await expect(on.locator("#turn-off")).toBeVisible();
   await expect(on.locator("#turn-on")).toBeHidden();
   await expect(on.locator("#remove")).toBeVisible();
+  if (shortcut) {
+    await expect(on.locator("#turn-off .popup-shortcut")).toBeVisible();
+    await expect(on.locator("#turn-off .popup-shortcut")).toHaveText(shortcut);
+  } else {
+    await expect(on.locator("#turn-off .popup-shortcut")).toBeHidden();
+  }
+  await on.close();
+
+  const ungranted = await context.newPage();
+  await ungranted.goto(`${C}/fields.html`);
+  await expect
+    .poll(() => toolbarPopup(worker, ungranted))
+    .toMatch(/\/popup\.html$/);
+  const ungrantedTabId = await worker.evaluate(async () => {
+    const [tab] = await chrome.tabs.query({ active: true });
+    return tab.id;
+  });
+  // Opening popup.html in a tab does not trigger activeTab, so without this
+  // stub Chrome withholds the ungranted tab's URL from chrome.tabs.get().
+  const enablePopup = await context.newPage();
+  await enablePopup.addInitScript(() => {
+    const send = chrome.runtime.sendMessage.bind(chrome.runtime);
+    Object.assign(chrome.runtime, {
+      /**
+       * @param {unknown} message
+       * @param {...unknown} rest
+       */
+      sendMessage(message, ...rest) {
+        if (
+          message &&
+          typeof message === "object" &&
+          "type" in message &&
+          message.type === "taigi.popup.read"
+        ) {
+          return Promise.resolve({
+            site: "c.test",
+            pattern: "*://c.test/*",
+            hasAccess: false,
+            mode: "off",
+            state: "off",
+            label: "",
+          });
+        }
+        return Reflect.apply(send, chrome.runtime, [message, ...rest]);
+      },
+    });
+  });
+  const id = new URL(worker.url()).host;
+  await enablePopup.goto(
+    `chrome-extension://${id}/popup.html?tab=${ungrantedTabId}`,
+  );
+  await expect(enablePopup.locator("#status")).toHaveText(
+    "Not enabled on this site",
+  );
+  await expect(enablePopup.locator("#enable")).toBeVisible();
+  if (shortcut) {
+    await expect(enablePopup.locator("#enable .popup-shortcut")).toBeVisible();
+    await expect(enablePopup.locator("#enable .popup-shortcut")).toHaveText(
+      shortcut,
+    );
+  } else {
+    await expect(enablePopup.locator("#enable .popup-shortcut")).toBeHidden();
+  }
+  await enablePopup.close();
 });
 
 test("the popup says so on a page no extension may enter", async ({
@@ -113,6 +194,7 @@ test("the popup says so on a page no extension may enter", async ({
   const id = new URL(worker.url()).host;
   const page = await context.newPage();
   await page.goto(`chrome-extension://${id}/options.html`);
+  await expect.poll(() => toolbarPopup(worker, page)).toMatch(/\/popup\.html$/);
   const popup = await openPopup(context, worker, page);
   await expect(popup.locator("#status")).toHaveText(
     "TaigiKeyboard cannot run on this page",
@@ -128,11 +210,40 @@ test("the popup says so on a page no extension may enter", async ({
   // web store host crashes Chrome for Testing.
   const storePage = await context.newPage();
   await storePage.goto(`${STORE}/fields.html`);
+  await expect
+    .poll(() => toolbarPopup(worker, storePage))
+    .toMatch(/\/popup\.html$/);
   const storePopup = await openPopup(context, worker, storePage);
   await expect(storePopup.locator("#status")).toHaveText(
     "TaigiKeyboard cannot run on this page",
   );
   await expect(storePopup.locator("#enable")).toBeHidden();
+});
+
+test("the action context menu tracks whether the active tab's site is enabled", async ({
+  context,
+  worker,
+  page,
+}) => {
+  const id = new URL(worker.url()).host;
+  await page.goto(FIELDS);
+  await expect.poll(() => removeSiteMenuEnabled(worker, page)).toBe(true);
+
+  const ungranted = await context.newPage();
+  await ungranted.goto(`${C}/fields.html`);
+  await expect.poll(() => removeSiteMenuEnabled(worker, ungranted)).toBe(false);
+
+  const storePage = await context.newPage();
+  await storePage.goto(`${STORE}/fields.html`);
+  await expect.poll(() => removeSiteMenuEnabled(worker, storePage)).toBe(false);
+
+  const optionsPage = await context.newPage();
+  await optionsPage.goto(`chrome-extension://${id}/options.html`);
+  await expect
+    .poll(() => removeSiteMenuEnabled(worker, optionsPage))
+    .toBe(false);
+
+  await expect.poll(() => removeSiteMenuEnabled(worker, page)).toBe(true);
 });
 
 test("a broken package keeps the site's keys, and says why not", async ({

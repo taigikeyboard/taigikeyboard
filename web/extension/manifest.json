@@ -7,7 +7,7 @@
   "default_locale": "zh_TW",
   "minimum_chrome_version": "120",
   "background": { "service_worker": "background.js", "type": "module" },
-  "permissions": ["activeTab", "scripting", "storage"],
+  "permissions": ["activeTab", "contextMenus", "scripting", "storage"],
   "optional_host_permissions": ["*://*/*"],
   "action": {
     "default_title": "__MSG_title__",
