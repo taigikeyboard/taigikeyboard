@@ -244,7 +244,7 @@ function redraw() {
   const { state, label } = stateOf(line);
   if (isOn && field) {
     overlay.keep();
-    overlay.showChip(field.element, state, label);
+    overlay.showChip(field.anchor, state, label);
   } else {
     overlay.hideChip();
   }
@@ -267,8 +267,8 @@ function place() {
 
 /// The element whose font the composition takes.
 function caretElement() {
-  if (field.kind === "input") {
-    return field.element;
+  if (field.kind !== "editable") {
+    return field.fontElement;
   }
   const node = getSelection()?.focusNode;
   if (!node || !field.element.contains(node)) {
@@ -282,7 +282,12 @@ function caretElement() {
 /// site's, and the text is the user's.
 function refuse(text) {
   console.error("taigi.commit.refused", [...text].length);
-  field = { kind: "unsupported", element: field.element };
+  field = {
+    kind: "unsupported",
+    element: field.element,
+    anchor: field.anchor,
+    refused: true,
+  };
 }
 
 function applyEmit(emit) {
@@ -387,11 +392,15 @@ function watchField() {
 /// application) is still this field's.
 function syncField() {
   const next = classify(focusedElement());
-  if (next?.element === field?.element && next?.kind === field?.kind) {
+  // A refused write stays refused while the field keeps the focus.
+  if (next?.element === field?.element && field?.refused) {
     return;
   }
-  // A refused write stays refused while the field keeps the focus.
-  if (next?.element === field?.element && field?.kind === "unsupported") {
+  if (next?.element === field?.element && next?.kind === field?.kind) {
+    if (next && next.anchor !== field.anchor) {
+      field.anchor = next.anchor;
+      redraw();
+    }
     return;
   }
   dropComposition();

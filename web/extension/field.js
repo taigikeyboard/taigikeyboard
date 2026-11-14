@@ -27,42 +27,219 @@ export function focusedElement() {
   return element;
 }
 
-/// What `element`, the focused one, is to the extension: `{ kind, element }`,
-/// or `null` for one that takes no text. `kind`: `"input"` (a text input or a
-/// textarea), `"editable"` (`element` is the editing host) or `"unsupported"`,
-/// whose keys stay the page's.
+function isTransparent(color) {
+  return (
+    color === "transparent" ||
+    /^rgba\([^)]*,\s*0(?:\.0+)?\)$/.test(color) ||
+    /\/\s*0(?:\.0+)?\)$/.test(color)
+  );
+}
+
+function createsContainingBlock(style, position) {
+  if (position !== "fixed" && position !== "absolute") {
+    return true;
+  }
+  if (position === "absolute" && style.position !== "static") {
+    return true;
+  }
+  return (
+    style.transform !== "none" ||
+    style.perspective !== "none" ||
+    style.filter !== "none" ||
+    /layout|paint|strict|content/.test(style.contain)
+  );
+}
+
+function parentOf(element) {
+  return element.parentElement ?? element.getRootNode()?.host ?? null;
+}
+
+/// The part of `element` that is visible on screen, clipped by its scrolling
+/// and overflow containers; `null` when it is zero-size, clipped away,
+/// transparent or outside the viewport.
+export function visibleBox(element) {
+  if (!(element instanceof Element) || !element.isConnected) {
+    return null;
+  }
+  const style = getComputedStyle(element);
+  if (
+    style.visibility !== "visible" ||
+    Number.parseFloat(style.opacity) <= 0 ||
+    style.clip === "rect(0px, 0px, 0px, 0px)" ||
+    /^inset\((?:50|[5-9]\d|\d{3,})%/.test(style.clipPath) ||
+    /^circle\(0(?:px|%)?[\s)]/.test(style.clipPath)
+  ) {
+    return null;
+  }
+  if (
+    (element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement) &&
+    isTransparent(style.color) &&
+    isTransparent(style.caretColor)
+  ) {
+    return null;
+  }
+  const rect = element.getBoundingClientRect();
+  let { left, top, right, bottom } = rect;
+  if (right - left <= 1 || bottom - top <= 1) {
+    return null;
+  }
+  let position = style.position;
+  for (let parent = parentOf(element); parent; parent = parentOf(parent)) {
+    const parentStyle = getComputedStyle(parent);
+    if (Number.parseFloat(parentStyle.opacity) <= 0) {
+      return null;
+    }
+    if (
+      parent !== document.body &&
+      parent !== document.documentElement &&
+      parentStyle.display !== "contents" &&
+      createsContainingBlock(parentStyle, position)
+    ) {
+      if (parentStyle.overflowX !== "visible") {
+        const clip = parent.getBoundingClientRect();
+        left = Math.max(left, clip.left);
+        right = Math.min(right, clip.right);
+      }
+      if (parentStyle.overflowY !== "visible") {
+        const clip = parent.getBoundingClientRect();
+        top = Math.max(top, clip.top);
+        bottom = Math.min(bottom, clip.bottom);
+      }
+      if (right - left <= 1 || bottom - top <= 1) {
+        return null;
+      }
+      position = parentStyle.position;
+    }
+  }
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  if (
+    vw > 0 &&
+    vh > 0 &&
+    (right <= 0 || bottom <= 0 || left >= vw || top >= vh)
+  ) {
+    return null;
+  }
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+/// The visible element a chip can sit beside for `element`, walking out to a
+/// surrounding editor when `element` itself is hidden; `null` when only the
+/// viewport is left.
+export function chipAnchor(element) {
+  for (
+    let current = element;
+    current &&
+    current !== document.body &&
+    current !== document.documentElement;
+    current = parentOf(current)
+  ) {
+    if (visibleBox(current)) {
+      return current;
+    }
+  }
+  return null;
+}
+
+function unsupported(element) {
+  return { kind: "unsupported", element, anchor: chipAnchor(element) };
+}
+
+function isAriaReadOnly(element) {
+  return (
+    element.getAttribute("aria-readonly") === "true" ||
+    element.getAttribute("aria-disabled") === "true"
+  );
+}
+
+/// CodeMirror 5's `TextareaInput` parks its `<textarea>` inside a zero-height
+/// wrapper directly under `.CodeMirror`; a visible `<textarea>` in a line
+/// widget stays an ordinary `"input"`.
+function codeMirror5Of(textarea) {
+  const root = textarea.parentElement?.parentElement;
+  if (
+    !root?.classList.contains("CodeMirror") ||
+    visibleBox(textarea) !== null ||
+    !visibleBox(root)
+  ) {
+    return null;
+  }
+  return root;
+}
+
+/// What `element`, the focused one, is to the extension:
+/// `{ kind, element, anchor, fontElement }`, or `null` for one that takes no
+/// text. `kind`: `"input"`, `"codemirror5"`, `"editable"` (`element` is the
+/// editing host) or `"unsupported"`, whose keys stay the page's.
 export function classify(element) {
   if (!element) {
     return null;
   }
+  // A frame's keys never reach this document.
+  if (element instanceof HTMLIFrameElement) {
+    return unsupported(element);
+  }
+  // `EditContext` bypasses DOM text mutations and `execCommand` (Monaco in
+  // Chromium, canvas editors).
+  if (element.editContext) {
+    return isAriaReadOnly(element) ? null : unsupported(element);
+  }
+  // Google Sheets keeps focus on a singleton cell / formula editor driven by
+  // Closure key handlers (`contenteditable="false"` while navigating cells).
+  const sheetsEditor = element.closest?.(
+    "#waffle-rich-text-editor, [docs-unhandledkeys]",
+  );
+  if (sheetsEditor) {
+    return isAriaReadOnly(sheetsEditor) ? null : unsupported(sheetsEditor);
+  }
   if (element instanceof HTMLTextAreaElement) {
-    return element.readOnly || element.disabled
-      ? null
-      : { kind: "input", element };
+    if (element.readOnly || element.disabled) {
+      return null;
+    }
+    const cm5 = codeMirror5Of(element);
+    if (cm5) {
+      return {
+        kind: "codemirror5",
+        element,
+        anchor: cm5,
+        fontElement: cm5.querySelector(".CodeMirror-code") ?? cm5,
+      };
+    }
+    return visibleBox(element)
+      ? { kind: "input", element, anchor: element, fontElement: element }
+      : unsupported(element);
   }
   if (element instanceof HTMLInputElement) {
     if (element.readOnly || element.disabled) {
       return null;
     }
     if (TEXT_TYPES.has(element.type)) {
-      return { kind: "input", element };
+      return visibleBox(element)
+        ? { kind: "input", element, anchor: element, fontElement: element }
+        : unsupported(element);
     }
-    return OTHER_TYPING_TYPES.has(element.type)
-      ? { kind: "unsupported", element }
-      : null;
-  }
-  // A frame's keys never reach this document.
-  if (element instanceof HTMLIFrameElement) {
-    return { kind: "unsupported", element };
+    return OTHER_TYPING_TYPES.has(element.type) ? unsupported(element) : null;
   }
   if (element.isContentEditable) {
     let host = element;
     while (host.parentElement?.isContentEditable) {
       host = host.parentElement;
     }
-    // `getSelection` does not see into a shadow tree.
-    const kind = host.getRootNode() === document ? "editable" : "unsupported";
-    return { kind, element: host };
+    // `getSelection` does not see into a shadow tree, and an off-screen or
+    // zero-size `contenteditable` draws its text elsewhere.
+    if (host.getRootNode() !== document || !visibleBox(host)) {
+      return unsupported(host);
+    }
+    const anchor = host.closest(".cm-editor, .CodeMirror") ?? host;
+    return { kind: "editable", element: host, anchor, fontElement: host };
   }
   return null;
 }
@@ -228,6 +405,11 @@ class EditableWrites {
       range.endContainer,
       range.endOffset,
     );
+    // `selectionchange` is otherwise queued as a task after `execCommand`:
+    // editors that sync their model selection from it (CodeMirror 6's
+    // `DOMObserver`, which otherwise mistakes a Mac `. ` swap for double-space
+    // autocorrect) need to see the backward selection first.
+    document.dispatchEvent(new Event("selectionchange"));
     this.#isDeletePending = true;
   }
 
@@ -340,10 +522,88 @@ class InputSurface extends Surface {
   }
 }
 
-/// The surface of what `classify` answered `"input"` or `"editable"`. `box`:
-/// the overlay's box, which covers the viewport, so a caret's point in it is
-/// its point on screen.
-export function surfaceOf({ kind, element }, box, mirror) {
+class CodeMirror5Writes extends InputWrites {
+  #root;
+
+  constructor(element, root) {
+    super(element);
+    this.#root = root;
+  }
+
+  snapshot() {
+    const cursor = this.#root.querySelector(
+      ".CodeMirror-cursors > .CodeMirror-cursor:not(.CodeMirror-secondarycursor)",
+    );
+    return `${super.snapshot()}\n${cursor?.style.cssText ?? ""}`;
+  }
+}
+
+/// CodeMirror 5 (`inputStyle: "textarea"`): `TextareaInput` diffs the hidden
+/// `<textarea>`'s value against its `prevInput` on `input`, while the visible
+/// caret is `.CodeMirror-cursor` inside `.CodeMirror`.
+class CodeMirror5Surface extends Surface {
+  #textarea;
+  #root;
+  #box;
+
+  constructor(textarea, root, box) {
+    super(new CodeMirror5Writes(textarea, root), box);
+    this.#textarea = textarea;
+    this.#root = root;
+    this.#box = box;
+  }
+
+  caretPoint(atStart = false) {
+    const root = this.#root;
+    const code = root.querySelector(".CodeMirror-code") ?? root;
+    const scroll = root.querySelector(".CodeMirror-scroll") ?? root;
+    const cursor = root.querySelector(
+      ".CodeMirror-cursors > .CodeMirror-cursor:not(.CodeMirror-secondarycursor)",
+    );
+    const selected = cursor
+      ? []
+      : root.querySelectorAll(".CodeMirror-selected");
+    let x;
+    let y;
+    let height = 0;
+    if (cursor) {
+      const rect = cursor.getBoundingClientRect();
+      x = rect.left;
+      y = rect.top;
+      height = rect.height;
+    } else if (selected.length > 0) {
+      const pick = atStart ? selected[0] : selected[selected.length - 1];
+      const rect = pick.getBoundingClientRect();
+      x = atStart ? rect.left : rect.right;
+      y = rect.top;
+      height = rect.height;
+    } else {
+      const rect = this.#textarea.parentElement.getBoundingClientRect();
+      x = rect.left;
+      y = rect.top;
+    }
+    const lineHeight =
+      Number.parseFloat(getComputedStyle(code).lineHeight) || height || 0;
+    const leading = height > 0 ? (lineHeight - height) / 2 : 0;
+    const box = this.#box.getBoundingClientRect();
+    const field = visibleBox(scroll) ?? scroll.getBoundingClientRect();
+    return {
+      left: Math.max(field.left, Math.min(x, field.right)) - box.left,
+      top:
+        Math.max(field.top, Math.min(y - leading, field.bottom - lineHeight)) -
+        box.top,
+      lineHeight,
+    };
+  }
+}
+
+/// The surface of what `classify` answered `"input"`, `"codemirror5"` or
+/// `"editable"`. `box`: the overlay's box, which covers the viewport, so a
+/// caret's point in it is its point on screen.
+export function surfaceOf({ kind, element, anchor }, box, mirror) {
+  if (kind === "codemirror5") {
+    return new CodeMirror5Surface(element, anchor, box);
+  }
   return kind === "input"
     ? new InputSurface(element, box, mirror)
     : new Surface(new EditableWrites(element), box);

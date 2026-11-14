@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>CodeMirror 5</title>
+    <!-- CodeMirror 5 from the pinned package (web/package.json), served beside
+         this page with its default `inputStyle: "textarea"` hidden field. -->
+    <link rel="stylesheet" href="codemirror.css">
+    <style>
+      body { margin: 2rem; font: 16px/1.5 sans-serif; }
+      #wrap { width: 36rem; }
+      .CodeMirror { height: 14rem; border: 1px solid #ccc; font: 14px/1.4 monospace; }
+      .CodeMirror-dialog { padding: 4px 8px; border-bottom: 1px solid #ddd; font: 14px/1.4 sans-serif; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <div id="editor"></div>
+    </div>
+    <script src="codemirror.js"></script>
+    <script src="javascript.js"></script>
+    <script src="codemirror5-setup.js"></script>
+  </body>
+</html>
