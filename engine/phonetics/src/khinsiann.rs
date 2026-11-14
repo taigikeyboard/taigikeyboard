@@ -197,12 +197,12 @@ pub fn khinsiann_hanji_display(hanji: &str, canonical_tl: &str) -> String {
 /// Append `segment` to an assembled Hanji sentence buffer `out`, inserting `"--"`
 /// between words when `khinsiann_before` is true and neither side already has a
 /// boundary hyphen.
-pub fn push_hanji_with_interword_khinsiann(out: &mut String, segment: &str, khinsiann_before: bool) {
-    if !out.is_empty()
-        && khinsiann_before
-        && !out.ends_with('-')
-        && !segment.starts_with('-')
-    {
+pub fn push_hanji_with_interword_khinsiann(
+    out: &mut String,
+    segment: &str,
+    khinsiann_before: bool,
+) {
+    if !out.is_empty() && khinsiann_before && !out.ends_with('-') && !segment.starts_with('-') {
         out.push_str("--");
     }
     out.push_str(segment);
@@ -331,7 +331,10 @@ mod tests {
         assert_eq!(strip_khinsiann_hanji("九--月 重-陽"), "九月 重-陽");
         // Lone single hyphens without `--` are preserved (matches SQLite `LIKE '%--%'`).
         assert_eq!(strip_khinsiann_hanji("一-六"), "一-六");
-        assert!(matches!(learning_hanji_key("一-六"), Cow::Borrowed("一-六")));
+        assert!(matches!(
+            learning_hanji_key("一-六"),
+            Cow::Borrowed("一-六")
+        ));
         // Han-Lo and roman-only entries are preserved.
         assert_eq!(strip_khinsiann_hanji("大--ê"), "大--ê");
         assert_eq!(strip_khinsiann_hanji("矮--ê"), "矮--ê");

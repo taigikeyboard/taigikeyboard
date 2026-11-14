@@ -382,11 +382,7 @@ impl SegmentText {
 
 /// The compound oracle reads the user's dictionary switches from
 /// `config.dictionary_sources` (absent = every source, an un-wired sender).
-fn nailed_join(
-    nailed: &[NailedSegment],
-    text: SegmentText,
-    config: &AppConfig,
-) -> String {
+fn nailed_join(nailed: &[NailedSegment], text: SegmentText, config: &AppConfig) -> String {
     let (output_both_scripts, khinsiann_in_hanji, syllable_joiner) = match text {
         SegmentText::Display => (
             config.output_both_scripts,

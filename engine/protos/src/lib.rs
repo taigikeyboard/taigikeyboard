@@ -159,16 +159,19 @@ mod tests {
     #[test]
     fn commits_plain_hanji_requires_brackets_off_and_paired_hanji_or_tps() {
         use super::engine::CandidateDisplayMode;
-        let mk = |mode: &str, swapped: bool, brackets: bool, disp: CandidateDisplayMode| AppConfig {
-            input_mode: mode.to_owned(),
-            is_hanji_first: swapped,
-            output_both_scripts: brackets,
-            candidate_display_mode: disp as i32,
-            ..AppConfig::default()
-        };
+        let mk =
+            |mode: &str, swapped: bool, brackets: bool, disp: CandidateDisplayMode| AppConfig {
+                input_mode: mode.to_owned(),
+                is_hanji_first: swapped,
+                output_both_scripts: brackets,
+                candidate_display_mode: disp as i32,
+                ..AppConfig::default()
+            };
         assert!(mk("tl", true, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(false));
         assert!(!mk("tl", true, true, CandidateDisplayMode::SideBySide).commits_plain_hanji(false));
-        assert!(!mk("tl", false, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(false));
+        assert!(
+            !mk("tl", false, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(false)
+        );
         assert!(!mk("tl", true, false, CandidateDisplayMode::Combined).commits_plain_hanji(false));
         assert!(!mk("tl", true, false, CandidateDisplayMode::RomanOnly).commits_plain_hanji(false));
         assert!(mk("tps", false, false, CandidateDisplayMode::Combined).commits_plain_hanji(false));

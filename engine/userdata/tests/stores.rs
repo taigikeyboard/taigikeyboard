@@ -1432,3 +1432,181 @@ fn custom_rows_tied_on_their_edit_time_page_in_id_order() {
     assert_eq!(ids(store.rows("", 2, 0).unwrap()), ["a", "b"]);
     assert_eq!(ids(store.rows("", 2, 2).unwrap()), ["c"]);
 }
+
+#[test]
+fn learning_stores_normalize_pure_hanji_neutral_tones_and_keep_hanlo_and_custom_untouched() {
+    let directory = scratch();
+    let stores = UserDataStores::new(directory.path().to_path_buf());
+    stores.frequency.open_blocking();
+    stores.learned_phrases.open_blocking();
+    stores.association.open_blocking();
+    stores.custom_dictionary.open_blocking();
+
+    // Frequency: write/read normalize pure-Hanji neutral tones, keep Han-Lo `--`.
+    stores.frequency.record("會記--得", "ē-kì--tit");
+    stores.frequency.record("記--起-來", "kì--khí-lâi");
+    stores.frequency.record("邊--a", "pinn--á");
+    let freq_rows = stores.frequency.all_rows().unwrap();
+    assert_eq!(freq_rows.len(), 3);
+    assert!(freq_rows
+        .iter()
+        .any(|r| r.word == "會記得" && r.tl == "ē-kì--tit" && r.count == 1));
+    assert!(freq_rows
+        .iter()
+        .any(|r| r.word == "記起來" && r.tl == "kì--khí-lâi" && r.count == 1));
+    assert!(freq_rows
+        .iter()
+        .any(|r| r.word == "邊--a" && r.tl == "pinn--á" && r.count == 1));
+
+    let queried = stores
+        .frequency
+        .rows_for_words(&[
+            "會記--得".to_owned(),
+            "會記得".to_owned(),
+            "邊--a".to_owned(),
+        ])
+        .unwrap();
+    assert_eq!(
+        queried.len(),
+        2,
+        "會記--得 & 會記得 dedupe to one query key"
+    );
+    assert!(queried.iter().any(|r| r.word == "會記得"));
+    assert!(queried.iter().any(|r| r.word == "邊--a"));
+
+    // Learned phrases: learn_phrase and touch_phrase normalize pure Hanji, keep Han-Lo.
+    stores
+        .learned_phrases
+        .learn_phrase("記--起-來", "kì--khí-lâi");
+    stores.learned_phrases.touch_phrase("記起來", "kì--khí-lâi");
+    stores.learned_phrases.learn_phrase("邊--a", "pinn--á");
+    let learned_rows = stores.learned_phrases.all_rows().unwrap();
+    assert_eq!(learned_rows.len(), 2);
+    assert!(learned_rows
+        .iter()
+        .any(|r| r.hanji == "記起來" && r.canonical_tl == "kì--khí-lâi" && r.learn_count == 2));
+    assert!(learned_rows
+        .iter()
+        .any(|r| r.hanji == "邊--a" && r.canonical_tl == "pinn--á" && r.learn_count == 1));
+
+    // Association: record and rows_following normalize pure Hanji, keep Han-Lo.
+    stores.association.record(&[
+        pair("會記--得", "ē-kì--tit", "記--起-來", "kì--khí-lâi"),
+        pair("邊--a", "pinn--á", "尾--à", "bué--à"),
+    ]);
+    let assoc_rows = stores.association.all_rows().unwrap();
+    assert_eq!(assoc_rows.len(), 2);
+    assert!(assoc_rows.iter().any(|r| {
+        r.pair.previous == "會記得"
+            && r.pair.previous_tl == "ē-kì--tit"
+            && r.pair.next == "記起來"
+            && r.pair.next_tl == "kì--khí-lâi"
+    }));
+    assert!(assoc_rows.iter().any(|r| {
+        r.pair.previous == "邊--a"
+            && r.pair.previous_tl == "pinn--á"
+            && r.pair.next == "尾--à"
+            && r.pair.next_tl == "bué--à"
+    }));
+    let following = stores
+        .association
+        .rows_following("會記--得", "ē-kì--tit", 10)
+        .unwrap();
+    assert_eq!(following.len(), 1);
+    assert_eq!(following[0].next, "記起來");
+
+    // Backup import merges normalized pure Hanji and leaves custom_dictionary `--` intact.
+    let backup_json = r#"{
+      "version": 2,
+      "exportedAt": "2026-11-14T00:00:00Z",
+      "platform": "macos",
+      "appVersion": "3.9.0",
+      "customDictionary": [
+        { "roman": "ē-kì--tit", "hanzi": "會記--得" }
+      ],
+      "userFrequency": [
+        { "word": "會記--得", "tl": "ē-kì--tit", "count": 4, "lastUsed": "" }
+      ],
+      "userAssociation": [
+        { "prevWord": "會記--得", "prevTl": "ē-kì--tit", "nextWord": "記--起-來", "nextTl": "kì--khí-lâi", "count": 3, "lastUsed": "" }
+      ]
+    }"#;
+    userdata::import_backup(&stores, backup_json.as_bytes()).unwrap();
+
+    let merged_freq = stores
+        .frequency
+        .rows_for_words(&["會記得".to_owned()])
+        .unwrap();
+    assert_eq!(merged_freq.len(), 1);
+    assert_eq!(merged_freq[0].word, "會記得");
+    assert_eq!(
+        merged_freq[0].count, 4,
+        "existing 1 and imported 4 merged on stripped key (larger count wins)"
+    );
+
+    let merged_assoc = stores
+        .association
+        .rows_following("會記得", "ē-kì--tit", 10)
+        .unwrap();
+    assert_eq!(merged_assoc.len(), 1);
+    assert_eq!(merged_assoc[0].next, "記起來");
+    assert_eq!(
+        merged_assoc[0].count, 3,
+        "existing 1 and imported 3 merged on stripped key (larger count wins)"
+    );
+
+    let custom_rows = stores.custom_dictionary.all_rows().unwrap();
+    assert!(
+        custom_rows
+            .iter()
+            .any(|r| r.roman == "ē-kì--tit" && r.hanji == "會記--得"),
+        "custom_dictionary must preserve user-entered `--`: {custom_rows:?}"
+    );
+}
+
+#[test]
+fn lone_single_hyphen_custom_words_stay_intact_across_learning_stores() {
+    let directory = scratch();
+    let stores = UserDataStores::new(directory.path().to_path_buf());
+    stores.frequency.open_blocking();
+    stores.learned_phrases.open_blocking();
+    stores.association.open_blocking();
+
+    // A user custom entry `一-六` (`it-lio̍k`) has no `--` neutral-tone boundary;
+    // recording and querying must keep the literal `-` so runtime writes, reads,
+    // and SQLite `LIKE '%--%'` migrations agree on the exact key.
+    stores.frequency.record("一-六", "it-lio̍k");
+    stores
+        .frequency
+        .record("九--月 重-陽", "káu--gue̍h tiông-iông");
+    assert_eq!(stores.frequency.all_rows().unwrap().len(), 2);
+    let freq_rows = stores
+        .frequency
+        .rows_for_words(&["一-六".to_owned(), "九--月 重-陽".to_owned()])
+        .unwrap();
+    assert_eq!(freq_rows.len(), 2);
+    assert!(freq_rows
+        .iter()
+        .any(|r| r.word == "一-六" && r.tl == "it-lio̍k" && r.count == 1));
+    assert!(freq_rows
+        .iter()
+        .any(|r| r.word == "九月 重-陽" && r.tl == "káu--gue̍h tiông-iông" && r.count == 1));
+
+    stores.learned_phrases.learn_phrase("一-六", "it-lio̍k");
+    stores.learned_phrases.touch_phrase("一-六", "it-lio̍k");
+    let learned = stores.learned_phrases.all_rows().unwrap();
+    assert_eq!(learned.len(), 1);
+    assert_eq!(learned[0].hanji, "一-六");
+    assert_eq!(learned[0].learn_count, 2);
+
+    stores
+        .association
+        .record(&[pair("一-六", "it-lio̍k", "轉--去", "tńg--khì")]);
+    assert_eq!(stores.association.all_rows().unwrap().len(), 1);
+    let following = stores
+        .association
+        .rows_following("一-六", "it-lio̍k", 10)
+        .unwrap();
+    assert_eq!(following.len(), 1);
+    assert_eq!(following[0].next, "轉去");
+}

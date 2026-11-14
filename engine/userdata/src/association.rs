@@ -3,16 +3,17 @@
 
 use crate::capacity::LearningCapacity;
 use crate::database::{
-    has_column, immediate_transaction, table_exists, user_version, JournalMode, StoreSchema,
-    UserDataDatabase, UserDataDatabaseError,
+    has_column, immediate_transaction, normalize_khinsiann_rows, strip_khinsiann_if_changed,
+    table_exists, user_version, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
+use rusqlite::types::Value;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
 const TABLE_NAME: &str = "user_association";
 /// Ported from iOS `NextWordSchema.schemaVersion` and
 /// Android `NextWordService.DATABASE_VERSION`.
-const SCHEMA_VERSION: i64 = 6;
+const SCHEMA_VERSION: i64 = 7;
 const ROW_COLUMNS: &str = "prev_word, prev_tl, next_word, next_tl, count";
 const LIST_ORDER: &str = "count DESC, last_used DESC, prev_word ASC, next_word ASC";
 
@@ -95,8 +96,16 @@ impl UserAssociationStore {
     pub fn record(&self, pairs: &[AssociationPair]) {
         let recordable: Vec<AssociationPair> = pairs
             .iter()
-            .filter(|pair| !pair.previous.is_empty() && !pair.next.is_empty())
-            .cloned()
+            .filter_map(|pair| {
+                let previous = phonetics::api::strip_khinsiann_hanji(&pair.previous);
+                let next = phonetics::api::strip_khinsiann_hanji(&pair.next);
+                (!previous.is_empty() && !next.is_empty()).then(|| AssociationPair {
+                    previous,
+                    previous_tl: pair.previous_tl.clone(),
+                    next,
+                    next_tl: pair.next_tl.clone(),
+                })
+            })
             .collect();
         if recordable.is_empty() {
             return;
@@ -136,14 +145,16 @@ impl UserAssociationStore {
                     "INSERT INTO {TABLE_NAME}\n    (prev_word, prev_tl, next_word, next_tl, count, last_used)\nVALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)\nON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = CURRENT_TIMESTAMP;"
                 ))?;
                 let mut merged = 0;
-                for AssociationRow { pair, count } in rows
-                    .iter()
-                    .filter(|row| !row.pair.previous.is_empty() && !row.pair.next.is_empty())
-                {
+                for AssociationRow { pair, count } in rows {
+                    let previous = phonetics::api::strip_khinsiann_hanji(&pair.previous);
+                    let next = phonetics::api::strip_khinsiann_hanji(&pair.next);
+                    if previous.is_empty() || next.is_empty() {
+                        continue;
+                    }
                     statement.execute(params![
-                        pair.previous,
+                        previous,
                         pair.previous_tl,
-                        pair.next,
+                        next,
                         pair.next_tl,
                         count
                     ])?;
@@ -171,12 +182,13 @@ impl UserAssociationStore {
         previous_tl: &str,
         limit: usize,
     ) -> Option<Vec<FollowingRow>> {
+        let previous = phonetics::api::learning_hanji_key(previous);
         let limit = i64::try_from(limit).unwrap_or(i64::MAX);
         self.database.read(|connection| {
             let mut statement = connection.prepare(&format!(
                 "SELECT next_word, next_tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000\nFROM {TABLE_NAME}\nWHERE prev_word = ?1\nORDER BY\n    CASE WHEN prev_tl = ?2 THEN 0 WHEN prev_tl = '' THEN 1 ELSE 2 END,\n    count DESC, last_used DESC, id ASC\nLIMIT ?3;"
             ))?;
-            let rows = statement.query_map(params![previous, previous_tl, limit], |row| {
+            let rows = statement.query_map(params![previous.as_ref(), previous_tl, limit], |row| {
                 Ok(FollowingRow {
                     next: row.get(0)?,
                     next_tl: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
@@ -222,11 +234,10 @@ impl UserAssociationStore {
     }
 }
 
-/// Converges any known shape to v6. A v6 file (this engine, macOS, the
-/// phones since v6) only re-asserts the `IF NOT EXISTS` DDL; an older one is
-/// migrated, re-created and stamped in ONE immediate transaction, so a file
-/// that says v6 always has the v6 table. Ported from iOS
-/// `ensureTables` and Android `ensureUserAssocSchema` (both removed).
+/// Converges any known shape to v7. A v7 file (this engine) only re-asserts
+/// the `IF NOT EXISTS` DDL; an older one is migrated (<6 drop/rebuild first,
+/// then neutral-tone Hanji normalization), re-created and stamped in ONE
+/// immediate transaction, so a file that says v7 always has normalized v7 rows.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     if user_version(connection)? >= SCHEMA_VERSION {
         return create_current(connection);
@@ -234,14 +245,91 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
         // Another process may have migrated it between the check and the lock.
         let version = user_version(connection)?;
-        if version < SCHEMA_VERSION {
+        if version < 6 {
             migrate(connection, version)?;
+        }
+        connection.execute_batch(&table_ddl(TABLE_NAME))?;
+        if version < SCHEMA_VERSION {
+            migrate_khinsiann_hanji(connection)?;
         }
         create_current(connection)
     })?;
     // Refresh the planner's statistics once, after the DDL; best-effort.
     connection.execute_batch("PRAGMA optimize;").ok();
     Ok(())
+}
+
+/// Normalizes pure-Hanji neutral-tone `prev_word` / `next_word` values inside
+/// the caller's `immediate_transaction`, merging collisions on the
+/// `(prev_word, prev_tl, next_word, next_tl)` unique key.
+fn migrate_khinsiann_hanji(connection: &Connection) -> rusqlite::Result<()> {
+    struct DirtyAssociationRow {
+        prev_word: String,
+        prev_tl: Value,
+        next_word: String,
+        next_tl: Value,
+        count: Option<i64>,
+        last_used: Value,
+    }
+
+    let select_sql = format!(
+        "SELECT id, prev_word, prev_tl, next_word, next_tl, count, last_used\nFROM {TABLE_NAME}\nWHERE prev_word LIKE '%--%' OR next_word LIKE '%--%'\nORDER BY id ASC;"
+    );
+    let update_sql =
+        format!("UPDATE OR IGNORE {TABLE_NAME} SET prev_word = ?1, next_word = ?2 WHERE id = ?3;");
+    let merge_sql = format!(
+        "UPDATE {TABLE_NAME}\nSET count = COALESCE(count, 0) + ?1,\n    last_used = CASE WHEN last_used IS NULL THEN ?2 WHEN ?2 IS NULL THEN last_used ELSE MAX(last_used, ?2) END\nWHERE prev_word = ?3 AND prev_tl IS ?4 AND next_word = ?5 AND next_tl IS ?6;"
+    );
+    normalize_khinsiann_rows(
+        connection,
+        TABLE_NAME,
+        &select_sql,
+        |row| {
+            Ok((
+                row.get(0)?,
+                DirtyAssociationRow {
+                    prev_word: row.get(1)?,
+                    prev_tl: row.get(2)?,
+                    next_word: row.get(3)?,
+                    next_tl: row.get(4)?,
+                    count: row.get(5)?,
+                    last_used: row.get(6)?,
+                },
+            ))
+        },
+        |row| {
+            let prev = strip_khinsiann_if_changed(&row.prev_word);
+            let next = strip_khinsiann_if_changed(&row.next_word);
+            if prev.is_none() && next.is_none() {
+                None
+            } else {
+                Some((
+                    prev.unwrap_or_else(|| row.prev_word.clone()),
+                    next.unwrap_or_else(|| row.next_word.clone()),
+                ))
+            }
+        },
+        |connection, id, (stripped_prev, stripped_next)| {
+            connection
+                .execute(&update_sql, params![stripped_prev, stripped_next, id])
+                .map(|_| ())
+        },
+        |connection, _id, row, (stripped_prev, stripped_next)| {
+            connection
+                .execute(
+                    &merge_sql,
+                    params![
+                        row.count.unwrap_or(0),
+                        row.last_used,
+                        stripped_prev,
+                        row.prev_tl,
+                        stripped_next,
+                        row.next_tl
+                    ],
+                )
+                .map(|_| ())
+        },
+    )
 }
 
 /// The unique key carries `prev_tl` because a word is the `(Hanji, canonical
