@@ -24,9 +24,12 @@ readonly BASELINE_FILE=.gitleaks-scanned
 # that exists in neither parent — is otherwise invisible. Not --first-parent,
 # which would also stop the walk from entering the merged branch.
 readonly LOG_OPTS_COMMON="--diff-filter=tuxdb --diff-merges=first-parent"
-# gitleaks' other two defaults. They belong to a whole-repository scan and must
-# stay off a range scan, where --all would widen A..B back to everything.
-readonly LOG_OPTS_ALL_REFS="--full-history --all"
+# Whole-repository scans retain all refs (including CI pull-request refs and
+# worktree HEADs), except local Jujutsu, T3 Code and Codex snapshot refs. Those
+# keep abandoned edits alive; published history remains covered through its refs.
+# --exclude must precede --all. Keep these options off range scans, where --all
+# would widen A..B back to everything.
+readonly LOG_OPTS_ALL_REFS="--full-history --exclude=refs/jj/* --exclude=refs/t3/* --exclude=refs/codex/* --all"
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
