@@ -39,7 +39,7 @@ jobs:
           fi
           jq -n --arg title "#$NUMBER $TITLE" --arg url "$URL" \
                 --arg desc "$status" --argjson color "$color" \
-            '{username: "肉包助理", allowed_mentions: {parse: []},
+            '{allowed_mentions: {parse: []},
               embeds: [{title: ($title | .[0:256]), url: $url,
                         description: $desc, color: $color}]}' \
           | curl -fsS -H 'Content-Type: application/json' -d @- "$WEBHOOK"
