@@ -2,8 +2,8 @@ name: Desktop train
 
 # The monthly desktop cut (docs/architecture/release-automation-roadmap.md,
 # Phase 5): 09:00 Asia/Taipei on the 1st, version YYYY.M.0, every platform
-# staged on the draft, the draft mirrored to /beta. Publishing stays a separate
-# step (Phase 6).
+# staged on the draft, the draft mirrored to /beta. desktop-publish.yml
+# publishes the draft on the 5th (Phase 6).
 #
 # Two jobs read release secrets, so a cut asks for two approvals of the
 # `release` environment (D5):

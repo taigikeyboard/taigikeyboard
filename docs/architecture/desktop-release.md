@@ -1,4 +1,4 @@
-# Desktop release — one draft, every desktop build, published by hand
+# Desktop release — one draft, every desktop build, published on the 5th
 
 How a desktop version (macOS + Windows + Linux + ChromeOS, one shared number) gets from a commit to
 a user. The platform-specific halves are `macos-release.md` (certificates,
@@ -10,9 +10,10 @@ description of the flow — the platform documents link here rather than repeat 
 
 ## The flow
 
-A desktop release happens in two halves with a manual test between them, and
-**nothing reaches a user until a person publishes it** — apart from the
-unlisted beta page, which the stage fills on its own:
+A desktop release happens in two halves with a beta window between them, and
+**nothing reaches a user until the draft is published** — on the 5th, after the
+maintainer approves the publish job — apart from the unlisted beta page, which
+the stage fills on its own:
 
 | | Runs | Does |
 |---|---|---|
@@ -21,7 +22,7 @@ unlisted beta page, which the stage fills on its own:
 | Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux\|chromeos` | The same run for ONE platform: its installers only, on a draft of their own version |
 | Beta | **automatic** dispatch of `desktop-beta.yml` at the end of a successful stage; the run waits for the maintainer's approval like every job using the `release` environment (required reviewer since 2026-11-14; only `main` and ruleset-protected `*-*.*.*` tags may use its secrets) | Copies the draft's installers to R2 `beta/<version>-<sha7>-<run id>/` and lists them on the unlisted `https://taigikeyboard.tw/beta` (`noindex`, not in the sitemap, linked from nowhere) for internal testers, who cannot open a draft. Only the newest beta is kept; the page hides a beta once its version is published (`tools/release/beta-release.sh`). Once the live page lists the build, the run posts the page link, each installer's R2 link and the release-on-the-5th note to Discord #announcements, with link previews suppressed through the `DISCORD_BETA_WEBHOOK` secret (`release` environment); a failed post only warns. A failed run leaves the page with what it had. A beta and an announcement committing to the website at once: the loser fails loudly, and re-running it is the fix |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the assets, install, use them |
-| **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
+| Publish (monthly) | **automatic** — `.github/workflows/desktop-publish.yml`, 09:00 Asia/Taipei on the 5th (or `gh workflow run desktop-publish.yml`); a patch is still published by hand (**Publish release** on the draft's page, or `gh release edit desktop-<version> --draft=false`) | Stops while `RELEASE_HOLD` is set, when the month has no `desktop-YYYY.M.0` draft, or when it is already published. Fails (Discord) unless the draft carries every installer and `.sha256`, targets a commit `main` has, and no tag names another commit. Then one `release`-environment approval: **publish** publishes the draft with the App token, which creates the tag. To hold, reject that approval (it posts a failure note to Discord) or set `RELEASE_HOLD` before the 5th |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux and ChromeOS have none). `make desktop-announce` is the same script, for a re-run |
 | Upload to the Chrome Web Store | the maintainer, by hand — only after a release carrying the ChromeOS zip is published (the announcement prints the reminder) | Uploads `TaigiKeyboard-<version>-chromeos.zip` from the release in the Developer Dashboard and submits it for review; the store, not the release, is how users install and update it (`chromeos-release.md` § Upload) |
 | Bump the Homebrew cask | the maintainer, by hand — only after a release carrying a macOS `.pkg` is published | Sets `version` and `sha256` (from the release's `TaigiKeyboard-<version>.pkg.sha256`) in `Casks/taigikeyboard.rb` of `taigikeyboard/homebrew-tap`, then `brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard`. A Windows-, Linux- or ChromeOS-only patch leaves the cask alone |
