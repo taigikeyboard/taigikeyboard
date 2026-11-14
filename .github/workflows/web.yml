@@ -195,7 +195,14 @@ jobs:
   deploy:
     name: Deploy
     needs: [check, lint]
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    # Results named, not the implicit success(): that also looks at `changed`,
+    # which a dispatch skips, so a dispatch never deployed. A scheduled run
+    # whose head did not move skips check and lint, and so this job.
+    if: >-
+      ${{ !cancelled() &&
+      needs.check.result == 'success' && needs.lint.result == 'success' &&
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     # Secret in an environment that only `main` may use: a pushed branch

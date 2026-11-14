@@ -135,8 +135,16 @@ test("undo and redo are the field's own, one commit a step", async ({
   await expect(field).toHaveValue("");
   await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(field).toHaveValue("台灣");
+});
 
-  // A romanized commit and its auto space join into one undo step too.
+test("a romanized commit and its auto space are one undo step", async ({
+  context,
+  worker,
+  page,
+}) => {
+  // Stored before the tab opens: a write into an open tab reaches it through
+  // `chrome.storage.onChanged` some time after `set` resolves, and a commit
+  // typed in between still sees auto space off.
   await worker.evaluate(() =>
     chrome.storage.sync.set({
       "taigi.settings": JSON.stringify({
@@ -145,11 +153,12 @@ test("undo and redo are the field's own, one commit a step", async ({
       }),
     }),
   );
+  const field = await openTyping(context, worker, page, FIELDS, "#area");
   await page.keyboard.press("`");
   await commitWord(page);
-  await expect(field).toHaveValue("台灣tâi-uân ");
+  await expect(field).toHaveValue("tâi-uân ");
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(field).toHaveValue("台灣");
+  await expect(field).toHaveValue("");
 });
 
 test("the site's own input handlers hear a commit", async ({
