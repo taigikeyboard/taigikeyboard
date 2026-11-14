@@ -1,14 +1,7 @@
 // The ChromeOS input method's service worker: chrome.input.ime events in, the
 // taigi-web session's replies out (docs/architecture/chromeos-roadmap.md).
 
-import {
-  endModeFlash,
-  imeCalls,
-  isResetStorm,
-  keyJson,
-  listShownAfter,
-  modeMenuItem,
-} from "./calls.js";
+import { imeCalls, isResetStorm, keyJson, modeMenuItem } from "./calls.js";
 import { Learning } from "./learning.js";
 import init, { Session } from "./pkg/taigi_web.js";
 import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
@@ -33,8 +26,10 @@ const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
 // draw (the same key in `options.js`).
 const SHORTCUTS_KEY = "taigi.shortcuts";
 
-/** As long as the page holds its mode flash (`ime.js` `MODE_FLASH_HOLD`). */
-const MODE_FLASH_HOLD = 800;
+// One notification for every mode switch: the next replaces it.
+const MODE_NOTICE_ID = "mode";
+/** Long enough to read, then out of the notification centre too. */
+const MODE_NOTICE_HOLD = 2000;
 
 /** @type {Session | null} */
 let session = null;
@@ -48,10 +43,8 @@ let settingsJson = DEFAULT_SETTINGS;
 let active = false;
 // The shortcut list last written for the options page.
 let publishedShortcuts = "";
-// Whether the system window holds a candidate list: a mode flash leaves it.
-let listShown = false;
 /** @type {ReturnType<typeof setTimeout> | undefined} */
-let modeFlashTimer;
+let modeNoticeTimer;
 
 /**
  * Formats an unknown caught value for warning logs.
@@ -182,21 +175,35 @@ function showModeInTray() {
 }
 
 /**
- * A flash replaces one still up, as the page's `flashMode` does.
- * @param {Reply} reply
+ * The page's mode flash (`ime.js` `flashMode`) as a notification at the
+ * screen's bottom right, as McBopomofo's ChromeOS input method announces its
+ * mode (`src/chromeos_ime.ts` `toggleAlphabetMode`). A switch replaces the
+ * one still up.
+ * @param {string} label
  * @returns {void}
  */
-function timeModeFlash(reply) {
-  if (!reply.emits.some((emit) => emit.type === "announceMode")) {
-    return;
-  }
-  clearTimeout(modeFlashTimer);
-  modeFlashTimer = setTimeout(() => {
-    invokeImeCall(endModeFlash(ENGINE_ID, listShown)).catch(
-      (/** @type {unknown} */ error) =>
-        console.warn("modeFlash.hide.failed", errorMessage(error)),
+function announceMode(label) {
+  clearTimeout(modeNoticeTimer);
+  chrome.notifications
+    .clear(MODE_NOTICE_ID)
+    .then(() =>
+      chrome.notifications.create(MODE_NOTICE_ID, {
+        type: "basic",
+        iconUrl: "icons/48.png",
+        title: label,
+        message: "",
+      }),
+    )
+    .catch((/** @type {unknown} */ error) =>
+      console.warn("modeNotice.failed", errorMessage(error)),
     );
-  }, MODE_FLASH_HOLD);
+  modeNoticeTimer = setTimeout(() => {
+    chrome.notifications
+      .clear(MODE_NOTICE_ID)
+      .catch((/** @type {unknown} */ error) =>
+        console.warn("modeNotice.clear.failed", errorMessage(error)),
+      );
+  }, MODE_NOTICE_HOLD);
 }
 
 /**
@@ -275,17 +282,19 @@ function call(action) {
  */
 function apply(replyJson) {
   const reply = /** @type {Reply} */ (JSON.parse(replyJson));
-  listShown = listShownAfter(reply, listShown);
   for (const imeCall of imeCalls(reply, {
     engineID: ENGINE_ID,
     contextID: context?.contextID ?? 0,
-    listShown,
   })) {
     invokeImeCall(imeCall).catch((/** @type {unknown} */ error) =>
       console.warn("ime.call.failed", imeCall[0], errorMessage(error)),
     );
   }
-  timeModeFlash(reply);
+  for (const emit of reply.emits) {
+    if (emit.type === "announceMode") {
+      announceMode(emit.label);
+    }
+  }
   if (reply.emits.some((emit) => emit.type === "openSettings")) {
     chrome.runtime
       .openOptionsPage()
@@ -317,8 +326,6 @@ function leaveField() {
   call((current) => current.endSession());
   run((current) => current.focusLost());
   context = null;
-  listShown = false;
-  clearTimeout(modeFlashTimer);
 }
 
 /**

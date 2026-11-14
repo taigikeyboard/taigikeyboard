@@ -57,7 +57,7 @@ Options page (extension page): the web sidebar's settings form
 | `commit { text }` | `commitText` | |
 | `deleteSurrounding { offset, count }` | `deleteSurroundingText({ engineID, contextID, offset, length })` | Auto-space swap. Verify offset units (UTF-16) in Phase 2 |
 | `lookupTable` / `hideLookupTable` | `setCandidates` + `setCandidateWindowProperties({ visible, vertical, pageSize, cursorVisible, currentCandidateIndex, … })` | The system draws the window: vertical or horizontal list only (D4) |
-| `announceMode` | `setCandidateWindowProperties` auxiliary text in an empty window, hidden after 800 ms (the page's mode flash); the tray menu row (`setMenuItems`) names the mode after `modeChanged` | The manifest `indicator` is fixed |
+| `announceMode` | `chrome.notifications` at the bottom right, cleared after 2 s (McBopomofoWeb's choice, `src/chromeos_ime.ts` `toggleAlphabetMode`); the tray menu row (`setMenuItems`) names the mode after `modeChanged` | The manifest `indicator` is fixed; the candidate window's auxiliary text was tried and dropped (maintainer 2026-11-14: wanted it at the bottom right, as on the page) |
 | `openSettings` | `chrome.runtime.openOptionsPage()` | |
 | `toggleTpsKeyboard`, `tpsKeyboardCapTyped` | none at first | No extension surface for a key panel beside a system text field |
 

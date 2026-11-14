@@ -11,7 +11,6 @@
  * @typedef {{
  *   engineID: string,
  *   contextID: number,
- *   listShown: boolean,
  * }} ImeTarget
  */
 /**
@@ -21,7 +20,7 @@
  *   | ["commitText", { contextID: number, text: string }]
  *   | ["deleteSurroundingText", { engineID: string, contextID: number, offset: number, length: number }]
  *   | ["setCandidates", { contextID: number, candidates: Array<{ candidate: string, id: number, label: string, annotation: string | undefined }> }]
- *   | ["setCandidateWindowProperties", { engineID: string, properties: { visible?: boolean, vertical?: boolean, pageSize?: number, cursorVisible?: boolean, currentCandidateIndex?: number, totalCandidates?: number, auxiliaryText?: string, auxiliaryTextVisible: boolean } }]
+ *   | ["setCandidateWindowProperties", { engineID: string, properties: { visible: boolean, vertical?: boolean, pageSize?: number, cursorVisible?: boolean, currentCandidateIndex?: number, totalCandidates?: number } }]
  *   | ["setCursorPosition", { contextID: number, candidateID: number }]
  * )} ImeCall
  */
@@ -91,14 +90,12 @@ export function utf16Caret(text, caret) {
  * `[method, details]` pairs for `chrome.input.ime[method](details)`, in
  * order. The reply carries the whole candidate list with an absolute cursor;
  * ChromeOS draws one page, and `onCandidateClicked` answers with an ID that
- * counts from that page, which is what `clickCandidate` takes. `listShown`
- * says whether the reply leaves a candidate list up (`announceMode`, which
- * reads it, is always a reply's last emit).
+ * counts from that page, which is what `clickCandidate` takes.
  * @param {Reply} reply
  * @param {ImeTarget} target
  * @returns {ImeCall[]}
  */
-export function imeCalls(reply, { engineID, contextID, listShown }) {
+export function imeCalls(reply, { engineID, contextID }) {
   /** @type {ImeCall[]} */
   const calls = [];
   for (const emit of reply.emits) {
@@ -129,46 +126,15 @@ export function imeCalls(reply, { engineID, contextID, listShown }) {
         calls.push(...candidateCalls(emit, { engineID, contextID }));
         break;
       case "hideLookupTable":
-        calls.push(hideCandidateWindow(engineID));
-        break;
-      case "announceMode":
-        // The page's mode flash (`ime.js` `flashMode`): the mode as the system
-        // window's auxiliary text, which the worker hides after
-        // `MODE_FLASH_HOLD`. A chord while composing keeps its list; with
-        // none, the window shows the label alone.
-        if (listShown) {
-          calls.push([
-            "setCandidateWindowProperties",
-            {
-              engineID,
-              properties: {
-                auxiliaryText: emit.label,
-                auxiliaryTextVisible: true,
-              },
-            },
-          ]);
-          break;
-        }
-        calls.push(
-          ["setCandidates", { contextID, candidates: [] }],
-          [
-            "setCandidateWindowProperties",
-            {
-              engineID,
-              properties: {
-                visible: true,
-                // A vertical window keeps a column of empty rows.
-                vertical: false,
-                auxiliaryText: emit.label,
-                auxiliaryTextVisible: true,
-              },
-            },
-          ],
-        );
+        calls.push([
+          "setCandidateWindowProperties",
+          { engineID, properties: { visible: false } },
+        ]);
         break;
       default:
-        // modeChanged (the worker redraws the tray menu), openSettings (the
-        // worker) and the TPS key panel (no ChromeOS surface).
+        // modeChanged (the tray menu row), announceMode (a notification) and
+        // openSettings are the worker's; the TPS key panel has no ChromeOS
+        // surface.
         break;
     }
   }
@@ -178,7 +144,7 @@ export function imeCalls(reply, { engineID, contextID, listShown }) {
 /**
  * Converts a `lookupTable` emit into paged candidate window calls.
  * @param {LookupTableEmit} table
- * @param {Omit<ImeTarget, "listShown">} target
+ * @param {ImeTarget} target
  * @returns {ImeCall[]}
  */
 function candidateCalls(table, { engineID, contextID }) {
@@ -210,8 +176,6 @@ function candidateCalls(table, { engineID, contextID }) {
           cursorVisible: table.cursorVisible,
           currentCandidateIndex: table.cursor,
           totalCandidates: table.cells.length,
-          // A mode flash still up gives way to the list.
-          auxiliaryTextVisible: false,
         },
       },
     ],
@@ -223,49 +187,6 @@ function candidateCalls(table, { engineID, contextID }) {
     ]);
   }
   return calls;
-}
-
-/**
- * Whether a candidate list is up after `reply`, given whether one was before.
- * @param {Reply} reply
- * @param {boolean} listShown
- * @returns {boolean}
- */
-export function listShownAfter(reply, listShown) {
-  return reply.emits.reduce((shown, emit) => {
-    if (emit.type === "lookupTable") {
-      return true;
-    }
-    return emit.type === "hideLookupTable" ? false : shown;
-  }, listShown);
-}
-
-/**
- * Hides the system candidate window and any mode flash in it.
- * @param {string} engineID
- * @returns {ImeCall}
- */
-function hideCandidateWindow(engineID) {
-  return [
-    "setCandidateWindowProperties",
-    { engineID, properties: { visible: false, auxiliaryTextVisible: false } },
-  ];
-}
-
-/**
- * Ends a mode flash: the label goes, and the window with it unless it holds
- * a candidate list.
- * @param {string} engineID
- * @param {boolean} listShown
- * @returns {ImeCall}
- */
-export function endModeFlash(engineID, listShown) {
-  return listShown
-    ? [
-        "setCandidateWindowProperties",
-        { engineID, properties: { auxiliaryTextVisible: false } },
-      ]
-    : hideCandidateWindow(engineID);
 }
 
 /**

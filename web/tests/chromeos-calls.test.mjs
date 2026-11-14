@@ -4,11 +4,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
-  endModeFlash,
   imeCalls,
   isResetStorm,
   keyJson,
-  listShownAfter,
   modeMenuItem,
   utf16Caret,
 } from "../chromeos/calls.js";
@@ -17,7 +15,7 @@ import {
 /** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
 /** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
 
-const ids = { engineID: "taigi", contextID: 7, listShown: false };
+const ids = { engineID: "taigi", contextID: 7 };
 
 test("a ChromeOS key becomes the session's browser key", () => {
   const json = keyJson(
@@ -99,10 +97,7 @@ test("commit, clear and the auto-space swap map one to one", () => {
     ],
     [
       "setCandidateWindowProperties",
-      {
-        engineID: "taigi",
-        properties: { visible: false, auxiliaryTextVisible: false },
-      },
+      { engineID: "taigi", properties: { visible: false } },
     ],
   ]);
 });
@@ -143,7 +138,6 @@ test("only the cursor's page of candidates is sent, with page-relative IDs", () 
     );
   assert.equal(propsCall[1].properties.pageSize, 2);
   assert.equal(propsCall[1].properties.totalCandidates, 5);
-  assert.equal(propsCall[1].properties.auxiliaryTextVisible, false);
   assert.deepEqual(cursor, [
     "setCursorPosition",
     { contextID: 7, candidateID: 1 },
@@ -165,89 +159,16 @@ test("a hidden cursor sets no candidate position", () => {
   assert.equal(calls.length, 2);
 });
 
-test("modeChanged makes no call: the worker redraws the tray menu", () => {
-  assert.deepEqual(
-    imeCalls(
-      { handled: true, emits: [{ type: "modeChanged", symbol: "A" }] },
-      ids,
-    ),
-    [],
-  );
-});
-
-test("announceMode flashes the mode as the empty window's auxiliary text", () => {
-  assert.deepEqual(
-    imeCalls(
-      { handled: true, emits: [{ type: "announceMode", label: "English" }] },
-      ids,
-    ),
-    [
-      ["setCandidates", { contextID: 7, candidates: [] }],
-      [
-        "setCandidateWindowProperties",
-        {
-          engineID: "taigi",
-          properties: {
-            visible: true,
-            vertical: false,
-            auxiliaryText: "English",
-            auxiliaryTextVisible: true,
-          },
-        },
-      ],
+test("emits with no ChromeOS surface make no call", () => {
+  /** @type {Reply} */
+  const reply = {
+    handled: true,
+    emits: [
+      { type: "modeChanged", symbol: "A" },
+      { type: "announceMode", label: "x" },
     ],
-  );
-});
-
-test("a chord while composing flashes over the list it keeps", () => {
-  /** @type {LookupTableEmit} */
-  const table = {
-    type: "lookupTable",
-    cells: [{ text: "一" }],
-    labels: ["1"],
-    cursor: 0,
-    cursorVisible: false,
-    pageSize: 9,
-    vertical: true,
   };
-  const calls = imeCalls(
-    {
-      handled: true,
-      emits: [
-        table,
-        { type: "modeChanged", symbol: "A" },
-        { type: "announceMode", label: "漢字" },
-      ],
-    },
-    { ...ids, listShown: true },
-  );
-  assert.equal(calls.length, 3);
-  assert.deepEqual(calls[2], [
-    "setCandidateWindowProperties",
-    {
-      engineID: "taigi",
-      properties: { auxiliaryText: "漢字", auxiliaryTextVisible: true },
-    },
-  ]);
-  // The list's own candidates only: no empty set over them.
-  assert.equal(
-    calls.filter(([method]) => method === "setCandidates").length,
-    1,
-  );
-});
-
-test("a flash over a list ends with its label; alone, with the window", () => {
-  assert.deepEqual(endModeFlash("taigi", true), [
-    "setCandidateWindowProperties",
-    { engineID: "taigi", properties: { auxiliaryTextVisible: false } },
-  ]);
-  assert.deepEqual(endModeFlash("taigi", false), [
-    "setCandidateWindowProperties",
-    {
-      engineID: "taigi",
-      properties: { visible: false, auxiliaryTextVisible: false },
-    },
-  ]);
+  assert.deepEqual(imeCalls(reply, ids), []);
 });
 
 test("the tray row reads as the page's mode chip", () => {
@@ -311,32 +232,4 @@ test("Google Docs and X fields are told apart from a plain field", () => {
     false,
   );
   assert.equal(isResetStorm(null), false);
-});
-
-test("a reply's last table emit decides whether a list is up", () => {
-  /** @type {LookupTableEmit} */
-  const table = {
-    type: "lookupTable",
-    cells: [{ text: "一" }],
-    labels: ["1"],
-    cursor: 0,
-    cursorVisible: false,
-    pageSize: 9,
-    vertical: true,
-  };
-  assert.equal(listShownAfter({ handled: true, emits: [table] }, false), true);
-  assert.equal(
-    listShownAfter(
-      { handled: true, emits: [table, { type: "hideLookupTable" }] },
-      false,
-    ),
-    false,
-  );
-  assert.equal(
-    listShownAfter(
-      { handled: true, emits: [{ type: "commit", text: "x" }] },
-      true,
-    ),
-    true,
-  );
 });
