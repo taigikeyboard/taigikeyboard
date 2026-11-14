@@ -222,24 +222,12 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
 
     if !page.vertical {
         let min_w = page.min_content_width as f32 * scale;
-        // A paged plain row keeps both arrow slots on every page, so the
-        // first and last pages are as wide as the middle ones.
+        // A paged plain row keeps its arrow column on every page, so the
+        // first and last pages are as wide as the middle ones. Like the macOS
+        // window, the only paging chrome is one trailing up/down column —
+        // the Up / Down keys turn the page.
         let reserve_arrows = min_w > 0.0 && page.expandable.is_none();
         let arrow_h = row_h.max(label_px + cell_pad * 2.0);
-        if page.has_prev || reserve_arrows {
-            if page.has_prev {
-                place_arrow(
-                    &mut glyphs,
-                    &mut hits,
-                    false,
-                    (x, y),
-                    arrow_h,
-                    &style,
-                    measure,
-                );
-            }
-            x += arrow_span(label_px, measure) + gap;
-        }
         let cells_left = x;
         for cell in &cells {
             let top = y + (row_h - cell.h).max(0.0) / 2.0;
@@ -261,19 +249,17 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         if x - cells_left < min_w {
             x = cells_left + min_w;
         }
-        if page.has_next || reserve_arrows {
+        if page.has_prev || page.has_next || reserve_arrows {
             x += gap;
-            if page.has_next {
-                place_arrow(
-                    &mut glyphs,
-                    &mut hits,
-                    true,
-                    (x, y),
-                    arrow_h,
-                    &style,
-                    measure,
-                );
-            }
+            place_page_column(
+                &mut glyphs,
+                &mut hits,
+                (page.has_prev, page.has_next),
+                (x, y),
+                arrow_h,
+                &style,
+                measure,
+            );
             x += arrow_span(label_px, measure);
         }
         let width = x + pad;
@@ -963,6 +949,47 @@ fn shift_cell(cell: &LaidCell, x: f32, y: f32, glyphs: &mut Vec<Glyph>, hits: &m
 fn arrow_span(label_px: f32, measure: &impl Measure) -> f32 {
     let (w, _) = measure.size("‹", label_px, false);
     w + label_px
+}
+
+/// The horizontal row's paging edge: ▲ over ▼ in one column, each half a
+/// hit target. A direction with no page left draws nothing but keeps its slot.
+fn place_page_column(
+    glyphs: &mut Vec<Glyph>,
+    hits: &mut Vec<Hit>,
+    (has_prev, has_next): (bool, bool),
+    at: (f32, f32),
+    row_h: f32,
+    style: &Scale,
+    measure: &impl Measure,
+) {
+    let (x, y) = at;
+    let px = style.label_px * 0.7;
+    let span = arrow_span(style.label_px, measure);
+    let half = row_h / 2.0;
+    for (forward, shown, top, text) in [(false, has_prev, y, "▲"), (true, has_next, y + half, "▼")]
+    {
+        if !shown {
+            continue;
+        }
+        let (w, h) = measure.size(text, px, false);
+        glyphs.push(Glyph {
+            text: text.to_owned(),
+            x: x + (span - w) / 2.0,
+            y: top + (half - h) / 2.0,
+            w,
+            h,
+            px,
+            role: Role::Arrow,
+            hanji: false,
+        });
+        hits.push(Hit {
+            x,
+            y: top,
+            w: span,
+            h: half,
+            target: Target::Page { forward },
+        });
+    }
 }
 
 fn place_arrow(
