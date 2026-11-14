@@ -175,7 +175,7 @@ print(json.dumps({"path": path, "mode": "100644", "type": "blob", "content": con
 #
 #   wait_for_manifest <url> <field>=<expected>...
 #
-# GitHub Pages has to build and the CDN has to expire what it holds. Polling the
+# GitHub Pages has to build and the caches have to expire what they hold. Polling the
 # real URL is the only thing that proves the release is actually announced;
 # everything before it only proves the site data was committed. It also proves
 # the site rendered the manifest from what was committed, which is the one step
@@ -187,6 +187,15 @@ print(json.dumps({"path": path, "mode": "100644", "type": "blob", "content": con
 # update: the user is sent to a browser instead. A render that dropped one would
 # satisfy a version-only poll and quietly cost every install the in-app
 # download, with no later signal that it happened.
+#
+# Two caches sit in front of the site, each holding the manifest for
+# `max-age=600`: GitHub Pages' Fastly, then Cloudflare in front of it. A request
+# header cannot purge either, so the wait covers the Pages deploy (~1 min) plus
+# both expiring one after the other (2 x 10 min). Five minutes timed out on
+# 3.8.0 and 3.9.0 with the deploy long finished. The poll sends no
+# `Cache-Control: no-cache`: an installed copy sends none either, and what it
+# is served is what has to change.
+MANIFEST_WAIT_SECONDS=1500
 wait_for_manifest() {
     local manifest_url="$1"
     shift
@@ -200,9 +209,9 @@ wait_for_manifest() {
     local expected="${values[*]}"
 
     echo "==> Waiting for $manifest_url to serve $expected"
-    local attempt live
-    for attempt in $(seq 1 30); do
-        live="$(anonymous_curl --header 'Cache-Control: no-cache' "$manifest_url" 2>/dev/null |
+    local live deadline=$((SECONDS + MANIFEST_WAIT_SECONDS))
+    while true; do
+        live="$(anonymous_curl --max-time 30 "$manifest_url" 2>/dev/null |
             python3 -c 'import json,sys
 try:
     manifest = json.load(sys.stdin)
@@ -210,8 +219,8 @@ try:
 except Exception:
     print("-")' "${fields[@]}" || true)"
         [[ "$live" == "$expected" ]] && return
-        [[ $attempt -eq 30 ]] &&
-            fail "manifest still serving '$live' after 5 minutes, wanted '$expected' — check the Pages deployment"
-        sleep 10
+        [[ $SECONDS -lt $deadline ]] ||
+            fail "manifest still serving '$live' after $((MANIFEST_WAIT_SECONDS / 60)) minutes, wanted '$expected' — check the Pages deployment and the fields the site rendered"
+        sleep 30
     done
 }

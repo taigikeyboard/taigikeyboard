@@ -49,7 +49,9 @@ jobs:
       github.repository == 'taigikeyboard/taigikeyboard' &&
       (github.event_name != 'release' ||
        startsWith(github.event.release.tag_name, 'desktop-'))
-    timeout-minutes: 15
+    # Up to 25 min per appcast wait (release-site.sh MANIFEST_WAIT_SECONDS:
+    # two 10-min caches) plus the downloads and the R2 mirror.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Announce
