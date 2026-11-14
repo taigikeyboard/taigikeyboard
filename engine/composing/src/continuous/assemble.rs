@@ -53,6 +53,21 @@ fn picked_extension_outranks_sentence(candidates: &[RawCandidate], raw_len: u32)
         && top_ranked.user_weight > sentence.user_weight
 }
 
+fn apply_khinsiann_in_hanji(candidates: &mut [RawCandidate], enabled: bool) {
+    if !enabled {
+        return;
+    }
+    for cand in candidates {
+        if let Some(hanji) = cand.hanji.as_mut() {
+            if let std::borrow::Cow::Owned(rendered) =
+                phonetics::api::render_hanji_khinsiann(hanji, &cand.canonical_tl, true)
+            {
+                *hanji = rendered;
+            }
+        }
+    }
+}
+
 /// v3.5.9 A2 seam — the 6-step `assemble_candidates` contract.
 ///
 /// Replaces the inline `let mut candidates = if keys.is_empty() {...} else
@@ -87,14 +102,16 @@ pub(crate) fn assemble_candidates(
     custom: &[CustomEntry],
     learned: &[LearnedEntry],
     mode: phonetics::InputMode,
-    enabled_sources_bitmask: u32,
     context: &ranking::ContextRanks,
-    syllable_joiner: Option<&str>,
-    force_lowercase_nasal_marker: bool,
-    dedupe_commit_hanji: bool,
+    config: &protos::engine::AppConfig,
     shape: ListShape,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
+    let enabled_sources_bitmask = crate::requests::source_filter_bitmask(config);
+    let syllable_joiner = config.rendered_syllable_joiner();
+    let force_lowercase_nasal_marker = config.force_lowercase_nasal_marker;
+    let dedupe_commit_hanji = super::dedupe::should_dedupe_commit_hanji(config, mode);
+    let khinsiann_in_hanji = config.khinsiann_in_hanji;
     LexiconHandle::with_state(|state| {
         let inv = state.syllable_inventory.as_ref();
         let prefix = state.prefix_index.as_ref();
@@ -145,6 +162,7 @@ pub(crate) fn assemble_candidates(
                 whole_buffer_key: (!custom.is_empty())
                     .then(|| build_partial_prefix_key(raw, mode).map(|(_, key)| key))
                     .flatten(),
+                khinsiann_in_hanji,
             });
 
         // ---- Step 1: build keys + shadow/lattice (D1 fold).
@@ -203,13 +221,15 @@ pub(crate) fn assemble_candidates(
             // returns `None` for empty-after-tone-strip input (bare tone
             // mark / hyphen-only / digit-only), so no unbounded scan.
             if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_via_lexicon_partial_inner(
+                let mut partial = fetch_via_lexicon_partial_inner(
                     raw,
                     raw_len,
                     mode,
                     ctx,
                     fetch_partial_prefix_candidates,
-                )
+                );
+                apply_khinsiann_in_hanji(&mut partial, khinsiann_in_hanji);
+                partial
             } else {
                 Vec::new()
             }
@@ -268,6 +288,7 @@ pub(crate) fn assemble_candidates(
                     cand.roman = recase_roman(&cand.roman, seg, mode);
                 }
             }
+            apply_khinsiann_in_hanji(&mut c, khinsiann_in_hanji);
             // ---- Step 4: walker slot-0 prepend (all modes).
             // v3.5.8 S2 — whole-sentence walker. The synthesized
             // full-buffer best path is explicitly prepended at slot 0
@@ -527,6 +548,7 @@ pub(crate) fn assemble_candidates(
                         ctx,
                         fetch_partial_prefix_candidates_unbounded,
                     );
+                    apply_khinsiann_in_hanji(&mut ext, khinsiann_in_hanji);
                     // Borrowed key shape — `c` is not mutated during the
                     // retain on `ext`, so HashSet entries can hold &str
                     // slices into `c` and avoid per-keystroke String allocs.
@@ -580,6 +602,7 @@ pub(crate) fn assemble_candidates(
             if let Some(key) = crate::shadow::abbrev_query_key(raw, mode) {
                 let mut abbrev = lexicon::fetch_abbrev_candidates(&key, raw_len, ctx);
                 recase_all(&mut abbrev, raw, mode);
+                apply_khinsiann_in_hanji(&mut abbrev, khinsiann_in_hanji);
                 retain_absent_from(&candidates, &mut abbrev);
                 abbrev.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
                 appended_blocks |= !abbrev.is_empty();
@@ -692,9 +715,9 @@ pub(crate) fn assemble_candidates(
         {
             dedupe_rendered_continuous(&mut candidates);
         }
-        // Same-commit-Hanji visual dedupe (Feature B / #911) — when every
-        // cell displays and commits plain Hanji alone (TPS layout or
-        // Hanji-first Side-by-Side/DualRow with Annotate in Brackets off),
+        // Same-commit-Hanji visual dedupe — when every cell displays and
+        // commits plain Hanji alone (TPS layout/buffer or Hanji-first paired
+        // display with Annotate in Brackets off),
         // collapse duplicate `(hanji, consumed_span)` rows keeping the
         // highest-ranked first-seen row.
         if dedupe_commit_hanji {

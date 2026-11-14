@@ -71,6 +71,7 @@ fn ctx<'a>(
         context: ranking::ContextRanks::empty(),
         tone_pin: lexicon::TonePin::None,
         whole_buffer_key: None,
+        khinsiann_in_hanji: false,
     }
 }
 

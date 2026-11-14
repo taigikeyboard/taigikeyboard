@@ -108,7 +108,8 @@ pub(crate) fn filter(
     //     next word (continuous raw `taigi` vs normal canonical `tâi-gí`)
     //     so 台語 does not surface twice. Runs on MergedRow before shaping
     //     so the key is the raw `tl`, not the POJ-shaped display text.
-    let collapsed = collapse_reading_variants(merged.into_values().collect());
+    let collapsed =
+        collapse_reading_variants(merged.into_values().collect(), config.khinsiann_in_hanji);
 
     // 2. shape via display rules + drop empty-roman rows in non-Hanji mode.
     let mut shaped: Vec<EnginePrediction> = collapsed
@@ -160,7 +161,9 @@ pub(crate) fn filter(
 /// only be a fused raw keystroke slice. Within a `(hanji, toneless_key)`
 /// group the canonical is the unique separator-bearing rendering; every
 /// no-separator row folds into it, and separator-bearing rows that are the
-/// SAME reading (`hōo-guá` vs `hōo--guá`, `-` vs `--`) fold together too.
+/// SAME reading (`hōo-guá` vs `hōo--guá`, `-` vs `--`) fold together too
+/// (except when `khinsiann_in_hanji` is enabled and their displayed Hanji
+/// forms differ, such as `轉--去` vs `轉去`).
 ///
 /// The group is left untouched when:
 ///   - NO row has a separator — a bare toneless single syllable may be a
@@ -170,13 +173,14 @@ pub(crate) fn filter(
 ///     a single-syllable raw-vs-toned duplicate persists until the R2
 ///     write-side fix; never a wrong merge.
 ///   - ≥2 separator-bearing rows are genuinely distinct readings
-///     (`tāng-bīn` vs `tàng-bīn`) — ambiguous, so nothing folds.
+///     (`tāng-bīn` vs `tàng-bīn`, or `轉--去` vs `轉去` when
+///     `khinsiann_in_hanji` is enabled) — ambiguous, so nothing folds.
 ///
 /// Grouping key is `phonetics::toneless_reading_key` (separator- AND
 /// tone-insensitive). Survivor insertion order is preserved so the
 /// downstream score sort sees the same equal-score tie order as before
 /// (Android parity).
-fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
+fn collapse_reading_variants(rows: Vec<MergedRow>, khinsiann_in_hanji: bool) -> Vec<MergedRow> {
     use std::collections::HashMap;
 
     // group key (hanji, reading-key) -> indices into `rows`.
@@ -192,7 +196,7 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
         if indices.len() < 2 {
             continue;
         }
-        let Some(canonical) = select_canonical_row(&rows, indices) else {
+        let Some(canonical) = select_canonical_row(&rows, indices, khinsiann_in_hanji) else {
             continue;
         };
         for &i in indices {
@@ -220,7 +224,11 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
 // Canonical row = the unique separator-bearing (multi-syllable) rendering; a no-separator row can
 // only be a fused raw. None when no row has a separator (a bare single syllable may be a genuine
 // tone-1 reading) or when the separator-bearing rows are different readings.
-fn select_canonical_row(rows: &[MergedRow], indices: &[usize]) -> Option<usize> {
+fn select_canonical_row(
+    rows: &[MergedRow],
+    indices: &[usize],
+    khinsiann_in_hanji: bool,
+) -> Option<usize> {
     let mut separator_rows = indices
         .iter()
         .copied()
@@ -229,8 +237,21 @@ fn select_canonical_row(rows: &[MergedRow], indices: &[usize]) -> Option<usize> 
     // All separator-bearing rows must be the same reading (separators
     // stripped, tones kept). Two distinct multi-syllable readings sharing
     // the toneless key (`tāng-bīn` vs `tàng-bīn`) make the group ambiguous.
+    // When `khinsiann_in_hanji` is on, `--` vs `-` also produces distinct
+    // Hanji outputs (`轉--去` vs `轉去`), so treat differing displayed
+    // Hanji as distinct.
     let canonical_tl = &rows[canonical].tl;
-    if separator_rows.any(|i| !phonetics::api::roman_reading_eq(&rows[i].tl, canonical_tl)) {
+    let canonical_hanji = phonetics::api::render_hanji_khinsiann(
+        &rows[canonical].hanji,
+        canonical_tl,
+        khinsiann_in_hanji,
+    );
+    if separator_rows.any(|i| {
+        !phonetics::api::roman_reading_eq(&rows[i].tl, canonical_tl)
+            || (khinsiann_in_hanji
+                && phonetics::api::render_hanji_khinsiann(&rows[i].hanji, &rows[i].tl, true)
+                    != canonical_hanji)
+    }) {
         return None;
     }
     Some(canonical)
@@ -256,20 +277,25 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     if !config.is_hanji_first && roman.is_empty() {
         return None;
     }
+    let hanji =
+        match phonetics::api::render_hanji_khinsiann(&m.hanji, &m.tl, config.khinsiann_in_hanji) {
+            std::borrow::Cow::Borrowed(_) => m.hanji,
+            std::borrow::Cow::Owned(rendered) => rendered,
+        };
     let text = if roman.is_empty() {
-        m.hanji.clone()
+        hanji.clone()
     } else {
         roman.clone()
     };
     let subtitle = if roman.is_empty() {
         String::new()
     } else {
-        m.hanji.clone()
+        hanji.clone()
     };
     Some(EnginePrediction {
         text,
         subtitle,
-        hanji: m.hanji,
+        hanji,
         tl: m.tl,
         score: scorer::combined_score(m.dict_score, m.user_score),
     })
@@ -296,6 +322,7 @@ mod tests {
             custom_dictionary_disabled: false,
             c_types_affricate: false,
             f_types_hyphen: false,
+            khinsiann_in_hanji: false,
         }
     }
 
@@ -315,6 +342,7 @@ mod tests {
             custom_dictionary_disabled: false,
             c_types_affricate: false,
             f_types_hyphen: false,
+            khinsiann_in_hanji: false,
         }
     }
 
@@ -1155,5 +1183,84 @@ mod tests {
         let result = filter(&state, rows, 0, 0, 2, &config_roman_only_display()).unwrap();
         let texts: Vec<&str> = result.predictions.iter().map(|p| p.text.as_str()).collect();
         assert_eq!(texts, vec!["tsia̍h", "hó"]);
+    }
+
+    #[test]
+    fn khinsiann_in_hanji_transforms_prediction_hanji_and_subtitle() {
+        let state = PersistedState::default();
+        let rows = vec![
+            dict_row("會記得", "ē-kì--tit", 9),
+            dict_row("轉去", "--tńg-khì", 5),
+            dict_row("邊--a", "pinn--a", 3),
+        ];
+        let mut cfg = config_tl_mode_hanji_first(true);
+        cfg.khinsiann_in_hanji = true;
+        let res = filter(&state, rows, 0, 0, 10, &cfg).unwrap();
+        let got: Vec<(&str, &str, &str)> = res
+            .predictions
+            .iter()
+            .map(|p| (p.hanji.as_str(), p.subtitle.as_str(), p.tl.as_str()))
+            .collect();
+        assert_eq!(
+            got,
+            vec![
+                ("會記--得", "會記--得", "ē-kì--tit"),
+                ("--轉-去", "--轉-去", "--tńg-khì"),
+                ("邊--a", "邊--a", "pinn--a"),
+            ]
+        );
+    }
+
+    #[test]
+    fn khinsiann_in_hanji_controls_reading_variant_collapse_without_merging_homographs() {
+        let state = PersistedState::default();
+        let rows = || {
+            vec![
+                dict_row("轉去", "tńg--khì", 9),
+                dict_row("轉去", "tńg-khì", 5),
+                dict_row("重", "tîng", 4),
+                dict_row("重", "tāng", 3),
+                dict_row("好", "hó", 1),
+            ]
+        };
+
+        // khinsiann_in_hanji = false: `轉去/tńg--khì` and `轉去/tńg-khì` share the
+        // same reading and rendered Hanji so `collapse_reading_variants` folds them,
+        // while distinct `(漢字, TL)` homographs `重/tîng` and `重/tāng` stay distinct.
+        let plain = filter(&state, rows(), 0, 0, 10, &config_tl_mode_hanji_first(true)).unwrap();
+        let pairs_plain: Vec<(&str, &str)> = plain
+            .predictions
+            .iter()
+            .map(|p| (p.hanji.as_str(), p.tl.as_str()))
+            .collect();
+        assert_eq!(
+            pairs_plain,
+            vec![
+                ("轉去", "tńg--khì"),
+                ("重", "tîng"),
+                ("重", "tāng"),
+                ("好", "hó"),
+            ]
+        );
+
+        // khinsiann_in_hanji = true: `轉--去` vs `轉去` render distinct Hanji, so both survive.
+        let mut khinsiann = config_tl_mode_hanji_first(true);
+        khinsiann.khinsiann_in_hanji = true;
+        let shown = filter(&state, rows(), 0, 0, 10, &khinsiann).unwrap();
+        let pairs_shown: Vec<(&str, &str)> = shown
+            .predictions
+            .iter()
+            .map(|p| (p.hanji.as_str(), p.tl.as_str()))
+            .collect();
+        assert_eq!(
+            pairs_shown,
+            vec![
+                ("轉--去", "tńg--khì"),
+                ("轉去", "tńg-khì"),
+                ("重", "tîng"),
+                ("重", "tāng"),
+                ("好", "hó"),
+            ]
+        );
     }
 }

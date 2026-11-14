@@ -197,7 +197,8 @@ pub fn lookup_associations(
     enabled_sources_bitmask: u32,
     reader: &AssociationReader,
 ) -> Result<Vec<AssociationHit>, LexiconError> {
-    let Some(last_character) = previous_word.chars().last() else {
+    let plain_previous = phonetics::api::learning_hanji_key(previous_word);
+    let Some(last_character) = plain_previous.chars().last() else {
         return Ok(Vec::new());
     };
     let filter = AssociationFilter::from_sources_bitmask(enabled_sources_bitmask);
@@ -205,7 +206,7 @@ pub fn lookup_associations(
     let mut entries = if previous_tl.is_empty() {
         Vec::new()
     } else {
-        reader.lookup(&word_key(previous_word, previous_tl), limit, &filter)
+        reader.lookup(&word_key(&plain_previous, previous_tl), limit, &filter)
     };
     if entries.is_empty() {
         entries = reader.lookup(&last_character.to_string(), limit, &filter);

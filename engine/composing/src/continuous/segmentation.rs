@@ -27,6 +27,7 @@ pub(crate) struct WordCut {
     pub user_row: bool,
     pub picks: i32,
     pub weight: f64,
+    pub khinsiann_before: bool,
 }
 
 /// How the pending buffer is read and cut. `cut_by` is `walker` (a dictionary
@@ -63,9 +64,11 @@ pub(crate) fn explain_segmentation(
     custom: &[CustomEntry],
     learned: &[LearnedEntry],
     mode: phonetics::InputMode,
-    enabled_sources_bitmask: u32,
     context: &ranking::ContextRanks,
+    config: &protos::engine::AppConfig,
 ) -> Segmentation {
+    let enabled_sources_bitmask = crate::requests::source_filter_bitmask(config);
+    let khinsiann_in_hanji = config.khinsiann_in_hanji;
     LexiconHandle::with_state(|state| {
         let Some(inv) = state.syllable_inventory.as_ref() else {
             return Ok(Segmentation::default());
@@ -96,6 +99,7 @@ pub(crate) fn explain_segmentation(
             mode,
             tone_pin: crate::shadow::whole_buffer_tone_pin(raw, mode, Some(inv)),
             whole_buffer_key: None,
+            khinsiann_in_hanji,
         };
         let Some(path) = walk_buffer(&keys, inv, &ctx) else {
             return Ok(Segmentation {
@@ -117,9 +121,21 @@ pub(crate) fn explain_segmentation(
                         .clone()
                         .unwrap_or_else(|| choice.canonical_tl.clone());
                     let picks = freq_map.get(&display, &choice.canonical_tl);
+                    let hanji = choice.hanji.as_deref().map(|h| {
+                        phonetics::api::render_hanji_khinsiann(
+                            h,
+                            &choice.canonical_tl,
+                            khinsiann_in_hanji,
+                        )
+                        .into_owned()
+                    });
+                    let khinsiann_before = keys
+                        .hyphen_runs
+                        .iter()
+                        .any(|&(b, run)| b == start && run >= 2);
                     Some(WordCut {
                         text,
-                        hanji: choice.hanji.clone(),
+                        hanji,
                         roman,
                         kind: if choice.is_custom {
                             "custom"
@@ -131,6 +147,7 @@ pub(crate) fn explain_segmentation(
                         user_row: choice.user_row,
                         picks: picks.count,
                         weight: choice.user_weight_delta,
+                        khinsiann_before,
                     })
                 })
                 .collect();
@@ -162,6 +179,7 @@ pub(crate) fn explain_segmentation(
                     user_row: false,
                     picks: 0,
                     weight: 0.0,
+                    khinsiann_before: false,
                 })
             })
             .collect();

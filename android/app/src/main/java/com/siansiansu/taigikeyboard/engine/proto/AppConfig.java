@@ -741,6 +741,50 @@ public  final class AppConfig extends
     fTypesHyphen_ = false;
   }
 
+  public static final int KHINSIANN_IN_HANJI_FIELD_NUMBER = 19;
+  private boolean khinsiannInHanji_;
+  /**
+   * <pre>
+   * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+   * entries and continuous compositions display neutral-tone markers aligned
+   * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+   * </pre>
+   *
+   * <code>bool khinsiann_in_hanji = 19;</code>
+   * @return The khinsiannInHanji.
+   */
+  @java.lang.Override
+  public boolean getKhinsiannInHanji() {
+    return khinsiannInHanji_;
+  }
+  /**
+   * <pre>
+   * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+   * entries and continuous compositions display neutral-tone markers aligned
+   * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+   * </pre>
+   *
+   * <code>bool khinsiann_in_hanji = 19;</code>
+   * @param value The khinsiannInHanji to set.
+   */
+  private void setKhinsiannInHanji(boolean value) {
+
+    khinsiannInHanji_ = value;
+  }
+  /**
+   * <pre>
+   * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+   * entries and continuous compositions display neutral-tone markers aligned
+   * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+   * </pre>
+   *
+   * <code>bool khinsiann_in_hanji = 19;</code>
+   */
+  private void clearKhinsiannInHanji() {
+
+    khinsiannInHanji_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1604,6 +1648,52 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+     * entries and continuous compositions display neutral-tone markers aligned
+     * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+     * </pre>
+     *
+     * <code>bool khinsiann_in_hanji = 19;</code>
+     * @return The khinsiannInHanji.
+     */
+    @java.lang.Override
+    public boolean getKhinsiannInHanji() {
+      return instance.getKhinsiannInHanji();
+    }
+    /**
+     * <pre>
+     * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+     * entries and continuous compositions display neutral-tone markers aligned
+     * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+     * </pre>
+     *
+     * <code>bool khinsiann_in_hanji = 19;</code>
+     * @param value The khinsiannInHanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setKhinsiannInHanji(boolean value) {
+      copyOnWrite();
+      instance.setKhinsiannInHanji(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+     * entries and continuous compositions display neutral-tone markers aligned
+     * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+     * </pre>
+     *
+     * <code>bool khinsiann_in_hanji = 19;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearKhinsiannInHanji() {
+      copyOnWrite();
+      instance.clearKhinsiannInHanji();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -1635,11 +1725,12 @@ public  final class AppConfig extends
             "customDictionaryDisabled_",
             "cTypesAffricate_",
             "fTypesHyphen_",
+            "khinsiannInHanji_",
           };
           java.lang.String info =
-              "\u0000\u000e\u0000\u0001\u0002\u0012\u000e\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
+              "\u0000\u000f\u0000\u0001\u0002\u0013\u000f\u0000\u0000\u0000\u0002\u0208\u0003\u0007" +
               "\u0004\u0007\u0005\u0007\b\u0007\t\f\u000b\u0007\f\u0007\r\u1009\u0000\u000e\f\u000f" +
-              "\u1009\u0001\u0010\u0007\u0011\u0007\u0012\u0007";
+              "\u1009\u0001\u0010\u0007\u0011\u0007\u0012\u0007\u0013\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

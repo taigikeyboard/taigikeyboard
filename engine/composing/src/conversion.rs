@@ -67,6 +67,8 @@ pub struct Conversion {
     /// (`AppConfig.custom_dictionary_disabled`); a request with the other
     /// setting neither shows nor re-uses this conversion.
     pub custom_dictionary_disabled: bool,
+    /// Whether the walk rendered Hanji segments with `khinsiann_in_hanji`.
+    pub khinsiann_in_hanji: bool,
 }
 
 /// One word of the walker's path over the closed part.
@@ -134,6 +136,7 @@ impl Conversion {
     pub(crate) fn is_for(&self, config: &AppConfig) -> bool {
         requested_sources(config) == Some(self.enabled_sources_bitmask)
             && config.custom_dictionary_disabled == self.custom_dictionary_disabled
+            && config.khinsiann_in_hanji == self.khinsiann_in_hanji
     }
 
     /// The pending tail as the preedit shows it — each word as its display
@@ -388,6 +391,7 @@ pub(crate) fn convert(
                 // TPS has no one-syllable `-` stretches (§52 is TL / POJ).
                 tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps, None),
                 whole_buffer_key: None,
+                khinsiann_in_hanji: config.khinsiann_in_hanji,
             };
             // The user's counts for every word an edge could take, the
             // custom and learned ones included: user weight both picks an
@@ -459,6 +463,7 @@ pub(crate) fn convert(
             segments,
             enabled_sources_bitmask,
             custom_dictionary_disabled: config.custom_dictionary_disabled,
+            khinsiann_in_hanji: config.khinsiann_in_hanji,
         });
         Ok((conversion, caret))
     })
@@ -620,14 +625,23 @@ fn walk_closed_part(
             .map(|(&(_, end), choice)| {
                 let raw_span = (start, with_separator_run(closed, shadow_to_raw_end[end]));
                 start = raw_span.1;
-                let display_text = choice
-                    .hanji
+                let hanji = choice.hanji.map(|h| {
+                    match phonetics::api::render_hanji_khinsiann(
+                        &h,
+                        &choice.canonical_tl,
+                        ctx.khinsiann_in_hanji,
+                    ) {
+                        std::borrow::Cow::Borrowed(_) => h,
+                        std::borrow::Cow::Owned(rendered) => rendered,
+                    }
+                });
+                let display_text = hanji
                     .clone()
                     .unwrap_or_else(|| tps_slice_display(&closed[raw_span.0..raw_span.1]));
                 ConvertedSegment {
                     raw_span,
                     display_text,
-                    hanji: choice.hanji,
+                    hanji,
                     canonical_tl: choice.canonical_tl,
                     syllable_count: choice.syllable_count,
                 }

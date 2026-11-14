@@ -122,7 +122,7 @@ pub(super) fn dedupe_same_commit_hanji(candidates: &mut Vec<RawCandidate>) {
 /// Whether `config` (in active buffer `mode`) displays and commits Hanji alone
 /// per candidate cell, making duplicate `(hanji, consumed_span)` rows commit the
 /// exact same text.
-pub(crate) fn should_dedupe_commit_hanji(
+pub(super) fn should_dedupe_commit_hanji(
     config: &protos::engine::AppConfig,
     mode: phonetics::InputMode,
 ) -> bool {
