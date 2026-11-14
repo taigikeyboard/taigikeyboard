@@ -12,22 +12,36 @@ import {
   toggle,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Page} Page */
+
+/** @param {Page} page */
 const rootLang = (page) => page.evaluate(() => document.documentElement.lang);
+/** @param {Page} page */
 const stored = (page) =>
   page.evaluate(
-    () => JSON.parse(localStorage.getItem("taigi.settings")).values,
+    () => JSON.parse(localStorage.getItem("taigi.settings") ?? "{}").values,
   );
 
-/// The control of the setting `name`, whatever the language of its label.
+/**
+ * The control of the setting `name`, whatever the language of its label.
+ * @param {Page} page
+ * @param {string} name
+ */
 const setting = (page, name) => page.locator(`select[name="${name}"]`);
 
-/// How many faces of `family` the browser takes for `text`: none when its
-/// `unicode-range` leaves the text out.
+/**
+ * How many faces of `family` the browser takes for `text`: none when its
+ * `unicode-range` leaves the text out.
+ * @param {Page} page
+ * @param {string} family
+ * @param {string} text
+ * @returns {Promise<number>}
+ */
 const facesFor = (page, family, text) =>
   page.evaluate(
     async ([name, sample]) =>
       (await document.fonts.load(`16px "${name}"`, sample)).length,
-    [family, text],
+    /** @type {const} */ ([family, text]),
   );
 
 for (const [locale, title, lang] of [
@@ -114,6 +128,7 @@ test("the markup's English stays unseen until it is translated", async ({
 });
 
 test("the default font is the only one fetched", async ({ page }) => {
+  /** @type {string[]} */
   const fonts = [];
   page.on("request", (request) => {
     if (request.url().includes("/fonts/")) {

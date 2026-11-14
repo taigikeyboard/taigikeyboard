@@ -5,16 +5,28 @@ import { expect, test } from "@playwright/test";
 
 import { candidates, expectText, open } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Locator} Locator */
+/** @typedef {import("@playwright/test").Page} Page */
+
 const RAW = "kausiu";
 const PICKED = "狗岫";
 
-/// The first cell a slot key picks, past the literal roman row.
+/**
+ * The first cell a slot key picks, past the literal roman row.
+ * @param {Page} page
+ */
 const topCell = (page) =>
   candidates(page)
     .filter({ has: page.locator(".index", { hasText: /^.+$/ }) })
     .first()
     .locator(".text");
 
+/**
+ * @param {Page} page
+ * @param {Locator} editor
+ * @param {string} hanji
+ * @returns {Promise<void>}
+ */
 async function expectTop(page, editor, hanji) {
   await expect(async () => {
     await editor.pressSequentially(RAW);
@@ -26,7 +38,12 @@ async function expectTop(page, editor, hanji) {
   }).toPass();
 }
 
-/// Clicks `PICKED` and commits it, three times: enough to rank it first.
+/**
+ * Clicks `PICKED` and commits it, three times: enough to rank it first.
+ * @param {Page} page
+ * @param {Locator} editor
+ * @returns {Promise<void>}
+ */
 async function pickThrice(page, editor) {
   for (let round = 0; round < 3; round += 1) {
     await editor.pressSequentially(RAW);
@@ -36,7 +53,10 @@ async function pickThrice(page, editor) {
   await expectText(editor, PICKED.repeat(3));
 }
 
-/// Waits for the page's copy in IndexedDB, written after the commits.
+/**
+ * Waits for the page's copy in IndexedDB, written after the commits.
+ * @param {Page} page
+ */
 function expectSaved(page) {
   return expect
     .poll(() =>
@@ -102,7 +122,11 @@ test("a new instance after a trap learns from the saved copy", async ({
 
   // What a panic reaches the page as (`typing.spec.mjs`).
   await page.evaluate(async () => {
-    const { Session } = await import("./pkg/taigi_web.js?instance=1");
+    const moduleUrl = "./pkg/taigi_web.js?instance=1";
+    const { Session } =
+      /** @type {typeof import("../types/site/pkg/taigi_web.js")} */ (
+        await import(moduleUrl)
+      );
     Session.prototype.keyDown = () => {
       throw new WebAssembly.RuntimeError("unreachable");
     };

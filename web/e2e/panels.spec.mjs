@@ -14,13 +14,24 @@ import {
   textOf,
 } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Locator} Locator */
+/** @typedef {import("@playwright/test").Page} Page */
+
+/** @param {Page} page */
 const keyPanel = (page) => page.locator("#tps-keyboard");
+/**
+ * @param {Page} page
+ * @param {string} glyph
+ */
 const cap = (page, glyph) =>
   page.locator(`#tps-keyboard button[data-glyph="${glyph}"]`);
+/** @param {Page} page */
 const shownSetting = (page) =>
   page.getByRole("checkbox", { name: "Show Phonetic Symbols Mini Keyboard" });
 const typingTps = { inputMode: "tps", tpsKeyboardShown: true };
-/// The bottom half of a cap, its bare layer.
+/**
+ * The bottom half of a cap, its bare layer.
+ */
 const bareLayer = { position: { x: 10, y: 35 } };
 
 test("the chord shows and hides the key panel, and a reload keeps it", async ({
@@ -73,6 +84,7 @@ test("the panel leaves the text on screen", async ({ page }) => {
   await expect(cap(page, "ㄅ")).toBeInViewport();
 });
 
+/** @param {Page} page */
 const guide = (page) => page.locator("#telex-guide");
 
 test("the guide's chord shows and hides its card, and a reload keeps it", async ({
@@ -104,7 +116,11 @@ test("the guide floats over the editor and moves nothing", async ({ page }) => {
   await expect(guide(page).locator("h2")).toHaveText("Telex");
   expect(await editor.boundingBox()).toEqual(before);
   const card = await guide(page).boundingBox();
-  expect(card.y + card.height).toBeLessThanOrEqual(before.y + before.height);
+  expect(before).not.toBeNull();
+  expect(card).not.toBeNull();
+  const b = /** @type {NonNullable<typeof before>} */ (before);
+  const c = /** @type {NonNullable<typeof card>} */ (card);
+  expect(c.y + c.height).toBeLessThanOrEqual(b.y + b.height);
 });
 
 test("the guide stays up beside the candidate list", async ({ page }) => {
@@ -170,7 +186,7 @@ test("the caps are out of the tab order", async ({ page, browserName }) => {
   const editor = await open(page, { settings: typingTps });
   await editor.press("Tab");
   const isOnCap = await page.evaluate(
-    () => document.activeElement.closest("#tps-keyboard") !== null,
+    () => document.activeElement?.closest("#tps-keyboard") !== null,
   );
   expect(isOnCap).toBe(false);
 });
@@ -181,7 +197,7 @@ test("a slot key writes a symbol, and it leads the next picker", async ({
   const editor = await open(page);
   await editor.press(`${TIER}+,`);
   await editor.press("ArrowDown");
-  const second = await candidates(page).nth(1).textContent();
+  const second = (await candidates(page).nth(1).textContent()) ?? "";
   await editor.press("Enter");
   await expect(panel(page)).toBeHidden();
   const symbol = await textOf(editor);
@@ -204,7 +220,11 @@ test("a click on a symbol selects it and Enter writes it", async ({ page }) => {
   await expectNotText(editor, "");
 });
 
-/// What a cell says aloud: its drawn parts, apart.
+/**
+ * What a cell says aloud: its drawn parts, apart.
+ * @param {Locator} cell
+ * @returns {Promise<string>}
+ */
 const readCell = (cell) =>
   cell.evaluate((element) =>
     Array.from(element.children, ({ textContent }) => textContent)
@@ -232,9 +252,9 @@ test("the live region says one cell and goes quiet with the list", async ({
 test("reduced motion stops the sidebar sliding", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await open(page);
-  const duration = await page.evaluate(
-    () =>
-      getComputedStyle(document.getElementById("sidebar")).transitionDuration,
-  );
+  const duration = await page.evaluate(() => {
+    const sidebar = document.getElementById("sidebar");
+    return sidebar ? getComputedStyle(sidebar).transitionDuration : null;
+  });
   expect(duration).toBe("0s");
 });

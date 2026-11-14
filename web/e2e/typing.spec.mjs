@@ -28,7 +28,13 @@ test("Enter commits the highlighted candidate", async ({ page }) => {
   await expectState(page, "ready");
 });
 
-/// The cell the slot key `key` picks.
+/** @typedef {import("@playwright/test").Page} Page */
+
+/**
+ * The cell the slot key `key` picks.
+ * @param {Page} page
+ * @param {string} key
+ */
 const keyedCell = (page, key) =>
   candidates(page).filter({
     has: page.locator(".index", { hasText: new RegExp(`^${key}$`) }),
@@ -38,7 +44,7 @@ test("a slot key picks its candidate", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("taiuan");
   const labelled = keyedCell(page, "w");
-  const word = await labelled.locator(".text").textContent();
+  const word = (await labelled.locator(".text").textContent()) ?? "";
   await editor.press("w");
   await expectText(editor, word);
 });
@@ -47,7 +53,7 @@ test("a click selects, Enter commits", async ({ page }) => {
   const editor = await open(page);
   await editor.pressSequentially("taiuan");
   const cell = keyedCell(page, "w");
-  const word = await cell.locator(".text").textContent();
+  const word = (await cell.locator(".text").textContent()) ?? "";
   await cell.click();
   await expect(editor).toBeFocused();
   await expect(cell).toHaveAttribute("aria-current", "true");
@@ -135,11 +141,19 @@ test("every default chord reaches the page", async ({ page }) => {
   // trace: shortcut_actions.rs `default_chord`.
   const editor = await open(page);
   await page.evaluate(() => {
-    window.addEventListener("keydown", (event) => {
-      window.lastPrevented = event.defaultPrevented;
+    const testWindow = /** @type {Window & { lastPrevented?: boolean }} */ (
+      window
+    );
+    testWindow.addEventListener("keydown", (event) => {
+      testWindow.lastPrevented = event.defaultPrevented;
     });
   });
-  const prevented = () => page.evaluate(() => window.lastPrevented);
+  const prevented = () =>
+    page.evaluate(
+      () =>
+        /** @type {Window & { lastPrevented?: boolean }} */ (window)
+          .lastPrevented,
+    );
 
   for (const chord of ["s", "c", "p", "h", ",", "/", "j"]) {
     await editor.press(`${TIER}+${chord}`);
@@ -168,14 +182,18 @@ test("a switch names the new mode, then gets out of the way", async ({
   const flash = page.locator("#mode-flash");
   const editor = await open(page);
   await flash.evaluate((card) => {
-    window.flashed = [];
+    const testWindow = /** @type {Window & { flashed?: string[] }} */ (window);
+    testWindow.flashed = [];
     new MutationObserver(() => {
-      if (!card.hidden) {
-        window.flashed.push(card.textContent);
+      if (!(/** @type {HTMLElement} */ (card).hidden)) {
+        testWindow.flashed?.push(card.textContent ?? "");
       }
     }).observe(card, { attributes: true, childList: true });
   });
-  const flashed = () => page.evaluate(() => window.flashed.at(-1));
+  const flashed = () =>
+    page.evaluate(() =>
+      /** @type {Window & { flashed?: string[] }} */ (window).flashed?.at(-1),
+    );
 
   await expect(flash).toBeHidden();
   await editor.press(`${TIER}+c`);
@@ -198,9 +216,10 @@ test("the picker opens and closes at the caret", async ({ page }) => {
 });
 
 test("keys before the install type romanization", async ({ page }) => {
-  let release;
+  /** @type {() => void} */
+  let release = () => {};
   const held = new Promise((resolve) => {
-    release = resolve;
+    release = () => resolve(undefined);
   });
   await page.route("**/dictionaries/**", async (route) => {
     await held;
@@ -249,7 +268,11 @@ test("a trap loses the composition, not the text", async ({ page }) => {
   // What a panic reaches the page as. Wrecking the instance's memory for a real
   // trap also crashed Chromium's renderer on Linux, through the allocator.
   await page.evaluate(async () => {
-    const { Session } = await import("./pkg/taigi_web.js?instance=1");
+    const moduleUrl = "./pkg/taigi_web.js?instance=1";
+    const { Session } =
+      /** @type {typeof import("../types/site/pkg/taigi_web.js")} */ (
+        await import(moduleUrl)
+      );
     Session.prototype.keyDown = () => {
       throw new WebAssembly.RuntimeError("unreachable");
     };
@@ -281,7 +304,7 @@ test("another input method's keys stay its own", async ({ page }) => {
       isComposing: true,
       bubbles: true,
     });
-    document.getElementById("text").dispatchEvent(event);
+    document.getElementById("text")?.dispatchEvent(event);
   });
   await expect(panel(page)).toBeHidden();
   await editor.dispatchEvent("compositionend");

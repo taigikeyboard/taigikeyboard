@@ -30,12 +30,24 @@ const SERVE = fileURLToPath(new URL("../scripts/serve.mjs", import.meta.url));
 const DICTIONARY_CACHE = "taigi-web-dictionaries";
 const NEXT_MARK = "<!-- next -->";
 
+/** @typedef {import("node:child_process").ChildProcess} ChildProcess */
+/** @typedef {import("@playwright/test").Page} Page */
+/** @typedef {import("../types/shared.d.ts").AssetsManifest} AssetsManifest */
+
+/**
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 function workerReady(page) {
   return page.evaluate(async () => {
     await navigator.serviceWorker.ready;
   });
 }
 
+/**
+ * @param {Page} page
+ * @returns {Promise<number>}
+ */
 function downloads(page) {
   return page.evaluate(
     () =>
@@ -45,6 +57,10 @@ function downloads(page) {
   );
 }
 
+/**
+ * @param {Page} page
+ * @returns {Promise<string[]>}
+ */
 function storedDictionaries(page) {
   return page.evaluate(async (name) => {
     const cache = await caches.open(name);
@@ -52,6 +68,10 @@ function storedDictionaries(page) {
   }, DICTIONARY_CACHE);
 }
 
+/**
+ * @param {Page} page
+ * @returns {Promise<string>}
+ */
 async function storedDictionaryText(page) {
   return (await storedDictionaries(page)).join();
 }
@@ -80,9 +100,10 @@ test("a second visit downloads nothing", async ({ page }) => {
 });
 
 test("progress shows only during a download", async ({ page }) => {
-  let release;
+  /** @type {() => void} */
+  let release = () => {};
   const held = new Promise((resolve) => {
-    release = resolve;
+    release = () => resolve(undefined);
   });
   await page.route("**/dictionaries/dictionary.fst.*", async (route) => {
     await held;
@@ -147,9 +168,13 @@ test("the policy blocks an inline script and nothing the page uses", async ({
   page,
 }) => {
   await page.addInitScript(() => {
-    window.violations = [];
+    const testWindow =
+      /** @type {Window & { violations?: string[], inlineRan?: boolean }} */ (
+        window
+      );
+    testWindow.violations = [];
     document.addEventListener("securitypolicyviolation", (event) => {
-      window.violations.push(
+      testWindow.violations?.push(
         `${event.violatedDirective} ${event.sourceFile}:${event.lineNumber} ${event.sample}`,
       );
     });
@@ -160,14 +185,22 @@ test("the policy blocks an inline script and nothing the page uses", async ({
     "background-image",
     /chevron\.svg/,
   );
-  expect(await page.evaluate(() => window.violations)).toEqual([]);
+  expect(
+    await page.evaluate(
+      () =>
+        /** @type {Window & { violations?: string[] }} */ (window).violations,
+    ),
+  ).toEqual([]);
 
   const ran = await page.evaluate(async () => {
     const script = document.createElement("script");
     script.textContent = "window.inlineRan = true;";
     document.head.append(script);
     await new Promise((resolve) => setTimeout(resolve, 50));
-    return window.inlineRan === true;
+    return (
+      /** @type {Window & { inlineRan?: boolean }} */ (window).inlineRan ===
+      true
+    );
   });
   expect(ran).toBe(false);
 });
@@ -182,24 +215,40 @@ test("the page installs from its manifest", async ({ page, request }) => {
 });
 
 test.describe("a new version", () => {
+  /** @type {string} */
   let directory;
+  /** @type {ChildProcess} */
   let server;
+  /** @type {string} */
   let url;
 
+  /**
+   * @param {string} path
+   * @returns {string}
+   */
   const sha256 = (path) =>
     createHash("sha256").update(readFileSync(path)).digest("base64");
 
-  /// What a deploy changes: the page, one dictionary's name and the build.
+  /**
+   * What a deploy changes: the page, one dictionary's name and the build.
+   * @param {string} root
+   * @returns {{ old: string, renamed: string }}
+   */
   function deployNextVersion(root) {
     const manifestPath = join(root, "assets-manifest.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    const manifest = /** @type {AssetsManifest} */ (
+      JSON.parse(readFileSync(manifestPath, "utf8"))
+    );
     const html = join(root, "index.html");
     writeFileSync(
       html,
       readFileSync(html, "utf8").replace("<head>", `<head>${NEXT_MARK}`),
     );
-    manifest.shell.find(({ path }) => path === "index.html").sha256 =
-      sha256(html);
+    const htmlEntry = manifest.shell.find(({ path }) => path === "index.html");
+    if (!htmlEntry) {
+      throw new Error("missing index.html manifest entry");
+    }
+    htmlEntry.sha256 = sha256(html);
 
     const entry = manifest.dictionaries[0];
     const renamed = entry.file.replace(/\.gz$/, ".next.gz");
@@ -209,9 +258,13 @@ test.describe("a new version", () => {
       module,
       readFileSync(module, "utf8").replace(entry.file, renamed),
     );
-    manifest.shell.find(
+    const dictionariesEntry = manifest.shell.find(
       ({ path }) => path === "generated/dictionaries.js",
-    ).sha256 = sha256(module);
+    );
+    if (!dictionariesEntry) {
+      throw new Error("missing generated/dictionaries.js manifest entry");
+    }
+    dictionariesEntry.sha256 = sha256(module);
     entry.file = renamed;
 
     const worker = join(root, "sw.js");
@@ -237,7 +290,7 @@ test.describe("a new version", () => {
     server = spawn("node", [SERVE, directory, String(port)], {
       stdio: ["ignore", "pipe", "inherit"],
     });
-    await new Promise((resolve) => server.stdout.once("data", resolve));
+    await new Promise((resolve) => server.stdout?.once("data", resolve));
     url = `http://127.0.0.1:${port}/web/`;
   });
 

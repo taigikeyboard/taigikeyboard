@@ -6,27 +6,48 @@ import { expect, test } from "@playwright/test";
 
 import { candidates, expectText, open, panel, TIER } from "./helpers.mjs";
 
+/** @typedef {import("@playwright/test").Locator} Locator */
+/** @typedef {import("@playwright/test").Page} Page */
+/** @typedef {{ ids: number, hidden: string | null, pointer: string, removed: boolean }} GhostCopy */
+
 const ROW = { candidateLayout: "expandable" };
 const COLUMN = { candidateLayout: "verticalExpandable" };
-/// A prefix with a long list. Its top cell comes from no fixture: tests compare
-/// the page with itself.
+/**
+ * A prefix with a long list. Its top cell comes from no fixture: tests compare
+ * the page with itself.
+ */
 const LONG_LIST = "ti";
 
+/** @param {Page} page */
 const list = (page) => page.locator("#candidates");
+/** @param {Page} page */
 const unfold = (page) => page.locator("#unfold");
+/** @param {Page} page */
 const current = (page) => page.locator('#candidates li[aria-current="true"]');
 
+/**
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 async function expectExpanded(page) {
   await expect(list(page)).toHaveAttribute("data-grid");
 }
 
+/**
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 async function expectCollapsed(page) {
   await expect(list(page)).not.toHaveAttribute("data-grid");
 }
 
+/** @param {Locator} locator */
 const position = (locator) => locator.getAttribute("data-position");
 
-/// The unfold has finished, so boxes read their final size.
+/**
+ * The unfold has finished, so boxes read their final size.
+ * @param {Page} page
+ */
 const settled = (page) =>
   expect
     .poll(() => panel(page).evaluate((root) => root.getAnimations().length))
@@ -37,8 +58,11 @@ test("the first key of a word packs from real widths", async ({ page }) => {
   await editor.press("t");
   await expect(candidates(page).first()).toBeVisible();
   const box = await candidates(page).first().boundingBox();
+  expect(box).not.toBeNull();
   // Zero widths would floor every cell at the same slot and pack nine.
-  expect(box.width).toBeGreaterThan(20);
+  expect(/** @type {NonNullable<typeof box>} */ (box).width).toBeGreaterThan(
+    20,
+  );
   await editor.press("Escape");
   await editor.pressSequentially("tsiahpng");
   const widths = await candidates(page).evaluateAll((cells) =>
@@ -81,14 +105,20 @@ test("a column unfolds into columns with Right and walks back with Left", async 
   await expect(list(page)).toHaveAttribute("data-vertical");
   await expect(candidates(page)).toHaveCount(9);
   await settled(page);
-  const { height } = await list(page).boundingBox();
+  const listBox = await list(page).boundingBox();
+  expect(listBox).not.toBeNull();
+  const { height } = /** @type {NonNullable<typeof listBox>} */ (listBox);
   // `→` unfolds and steps into the next column, same row.
   await editor.press("ArrowRight");
   await expectExpanded(page);
   await expect(list(page)).toHaveAttribute("data-inline");
   expect(await position(current(page))).toBe("9");
   await settled(page);
-  expect((await list(page).boundingBox()).height).toBeCloseTo(height, 0);
+  const unfoldedBox = await list(page).boundingBox();
+  expect(unfoldedBox).not.toBeNull();
+  expect(
+    /** @type {NonNullable<typeof unfoldedBox>} */ (unfoldedBox).height,
+  ).toBeCloseTo(height, 0);
   await editor.press("ArrowDown");
   expect(await position(current(page))).toBe("10");
   // `←` walks back a column; only the first column folds.
@@ -108,15 +138,15 @@ test("the keys number the column the highlight is in", async ({ page }) => {
   await expectExpanded(page);
   const column = await current(page).evaluate((cell) => {
     const left = cell.getBoundingClientRect().left;
-    return [...cell.parentElement.children]
+    return [...(cell.parentElement?.children ?? [])]
       .filter((other) => other.getBoundingClientRect().left === left)
-      .map((other) => other.querySelector(".index").textContent);
+      .map((other) => other.querySelector(".index")?.textContent ?? "");
   });
   expect(column).toHaveLength(9);
   expect(column.every(Boolean)).toBe(true);
   const labelled = page.locator("#candidates li:has(.index:not(:empty))");
   await expect(labelled).toHaveCount(9);
-  const picked = await labelled.nth(8).locator(".text").textContent();
+  const picked = (await labelled.nth(8).locator(".text").textContent()) ?? "";
   await editor.press(column[8]);
   await expectText(editor, picked);
 });
@@ -151,14 +181,14 @@ test("the keys number the row the highlight is on", async ({ page }) => {
   await expectExpanded(page);
   const row = await current(page).evaluate((cell) => {
     const top = cell.getBoundingClientRect().top;
-    return [...cell.parentElement.children]
+    return [...(cell.parentElement?.children ?? [])]
       .filter((other) => other.getBoundingClientRect().top === top)
-      .map((other) => other.querySelector(".index").textContent);
+      .map((other) => other.querySelector(".index")?.textContent ?? "");
   });
   expect(row.every(Boolean)).toBe(true);
   const labelled = page.locator("#candidates li:has(.index:not(:empty))");
   await expect(labelled).toHaveCount(row.length);
-  const picked = await labelled.nth(1).locator(".text").textContent();
+  const picked = (await labelled.nth(1).locator(".text").textContent()) ?? "";
   await editor.press(row[1]);
   await expectText(editor, picked);
 });
@@ -193,7 +223,10 @@ test("Page Down after the wheel starts from what the wheel left", async ({
   await page.waitForTimeout(50);
   await editor.press("PageDown");
   const visible = await current(page).evaluate((cell) => {
-    const grid = cell.parentElement.getBoundingClientRect();
+    const grid = cell.parentElement?.getBoundingClientRect();
+    if (!grid) {
+      return false;
+    }
     const box = cell.getBoundingClientRect();
     return box.top >= grid.top - 1 && box.bottom <= grid.bottom + 1;
   });
@@ -211,6 +244,7 @@ test("the symbol picker lays out as a list does", async ({ page }) => {
 });
 
 test("a guide and a list in one reply draw the list", async ({ page }) => {
+  /** @type {Error[]} */
   const errors = [];
   page.on("pageerror", (error) => errors.push(error));
   const editor = await open(page, {
@@ -232,7 +266,11 @@ test("the grid stays inside the editor", async ({ page }) => {
   await settled(page);
   const grid = await panel(page).boundingBox();
   const box = await editor.boundingBox();
-  expect(grid.y + grid.height).toBeLessThanOrEqual(box.y + box.height);
+  expect(grid).not.toBeNull();
+  expect(box).not.toBeNull();
+  const g = /** @type {NonNullable<typeof grid>} */ (grid);
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  expect(g.y + g.height).toBeLessThanOrEqual(b.y + b.height);
 });
 
 test("a key during the unfold is not lost", async ({ page }) => {
@@ -262,7 +300,7 @@ test("the unfold animates, unless motion is reduced", async ({ page }) => {
 test("a short editor keeps the grid inside it", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 480 });
   const editor = await open(page, {
-    settings: { ...ROW, candidateTextSize: 23 },
+    settings: { ...ROW, candidateTextSize: "23" },
   });
   await editor.pressSequentially(LONG_LIST);
   await editor.press("ArrowDown");
@@ -270,13 +308,20 @@ test("a short editor keeps the grid inside it", async ({ page }) => {
   await settled(page);
   const box = await editor.boundingBox();
   const grid = await panel(page).boundingBox();
-  expect(grid.y + grid.height).toBeLessThanOrEqual(box.y + box.height);
+  expect(box).not.toBeNull();
+  expect(grid).not.toBeNull();
+  const b = /** @type {NonNullable<typeof box>} */ (box);
+  const g = /** @type {NonNullable<typeof grid>} */ (grid);
+  expect(g.y + g.height).toBeLessThanOrEqual(b.y + b.height);
   await editor.press("ArrowDown");
   await editor.press("ArrowDown");
   await editor.press("ArrowDown");
   await editor.press("ArrowDown");
   const inView = await current(page).evaluate((cell) => {
-    const frame = cell.parentElement.getBoundingClientRect();
+    const frame = cell.parentElement?.getBoundingClientRect();
+    if (!frame) {
+      return false;
+    }
     const box = cell.getBoundingClientRect();
     return box.top >= frame.top - 1 && box.bottom <= frame.bottom + 1;
   });
@@ -307,16 +352,23 @@ test("typing in the grid starts a new list with no fold", async ({ page }) => {
   ).toBe(0);
 });
 
-/// Records every still copy the panel lays over a mode change: whether it is
-/// out of reach of the pointer and screen readers, and whether it went again.
+/**
+ * Records every still copy the panel lays over a mode change: whether it is
+ * out of reach of the pointer and screen readers, and whether it went again.
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
 function watchCopies(page) {
   return panel(page).evaluate((root) => {
-    window.copies = [];
+    const testWindow = /** @type {Window & { copies?: GhostCopy[] }} */ (
+      window
+    );
+    testWindow.copies = [];
     new MutationObserver((changes) => {
       for (const change of changes) {
         for (const node of change.addedNodes) {
-          if (node.dataset?.ghost !== undefined) {
-            window.copies.push({
+          if (node instanceof HTMLElement && node.dataset.ghost !== undefined) {
+            testWindow.copies?.push({
               ids: node.querySelectorAll("[id]").length + (node.id ? 1 : 0),
               hidden: node.getAttribute("aria-hidden"),
               pointer: node.style.pointerEvents,
@@ -325,8 +377,11 @@ function watchCopies(page) {
           }
         }
         for (const node of change.removedNodes) {
-          if (node.dataset?.ghost !== undefined) {
-            window.copies.at(-1).removed = true;
+          if (node instanceof HTMLElement && node.dataset.ghost !== undefined) {
+            const last = testWindow.copies?.at(-1);
+            if (last) {
+              last.removed = true;
+            }
           }
         }
       }
@@ -334,7 +389,11 @@ function watchCopies(page) {
   });
 }
 
-const copies = (page) => page.evaluate(() => window.copies);
+/** @param {Page} page */
+const copies = (page) =>
+  page.evaluate(
+    () => /** @type {Window & { copies?: GhostCopy[] }} */ (window).copies,
+  );
 
 test("a mode change plays over a still copy that leaves no trace", async ({
   page,
