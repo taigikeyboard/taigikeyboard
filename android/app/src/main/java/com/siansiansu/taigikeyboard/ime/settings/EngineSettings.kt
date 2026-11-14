@@ -84,6 +84,13 @@ interface EngineSettings {
      */
     val syllableSeparator: SyllableSeparator
 
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isKhinsiannInHanjiEnabled.
+
+    /**
+     * Opt-in neutral-tone (khinsiann) markers (`--` / `-`) in Hanji output.
+     */
+    val isKhinsiannInHanjiEnabled: Boolean
+
     /**
      * The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a
      * live-read value so `ComposingState` / `ToneConverter` can stay

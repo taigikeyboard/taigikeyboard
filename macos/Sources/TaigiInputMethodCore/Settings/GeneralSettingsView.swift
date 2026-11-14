@@ -68,6 +68,8 @@ struct GeneralSettingsView: View {
     private var syllableSeparator = SettingsStore.Keys.syllableSeparator.defaultValue
     @AppStorage(SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
     private var isNasalMarkerUppercaseEnabled = SettingsStore.Keys.isNasalMarkerUppercaseEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.isKhinsiannInHanjiEnabled.name)
+    private var isKhinsiannInHanjiEnabled = SettingsStore.Keys.isKhinsiannInHanjiEnabled.defaultValue
 
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
@@ -155,6 +157,11 @@ struct GeneralSettingsView: View {
                     Text(language.string(.settingsOutputScriptRoman)).tag(false)
                 }
                 .disabled(!candidateDisplayMode.allowsSwapToggle)
+
+                // Side-by-Side with Romanization output still displays Hanji candidates,
+                // so only Romanization Only (`!showsHanji`) disables this toggle.
+                Toggle(language.string(.settingsKhinsiannInHanji), isOn: $isKhinsiannInHanjiEnabled)
+                    .disabled(!candidateDisplayMode.showsHanji)
 
                 // Syllable Separator (§49), directly under Output Script — it describes
                 // that output's shape.

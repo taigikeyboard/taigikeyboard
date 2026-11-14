@@ -43,6 +43,7 @@ internal fun appConfig(
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isTpsOrMappedToER: Boolean = false,
+    isKhinsiannInHanjiEnabled: Boolean = false,
     dictionarySources: ProtoDictionarySourceToggles? = null,
     // Invert of the Enable Custom Dictionary setting: the engine reads the
     // user's dictionary only with it on. Default `false` = read it.
@@ -63,6 +64,7 @@ internal fun appConfig(
         .setCandidateDisplayMode(candidateDisplayMode.toProto())
         .setSyllableSeparator(syllableSeparator.toProto())
         .setTpsOrMapsToEr(isTpsOrMappedToER)
+        .setKhinsiannInHanji(isKhinsiannInHanjiEnabled)
         .apply { if (dictionarySources != null) setDictionarySources(dictionarySources) }
         .setCustomDictionaryDisabled(isCustomDictionaryDisabled)
         .build()
@@ -102,6 +104,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
         candidateDisplayMode = settings.candidateDisplayMode,
         syllableSeparator = settings.syllableSeparator,
         isTpsOrMappedToER = settings.isTpsOrMappedToER,
+        isKhinsiannInHanjiEnabled = settings.isKhinsiannInHanjiEnabled,
         dictionarySources = dictionaryTogglesProto(DictionaryToggles.from(settings)),
         isCustomDictionaryDisabled = !settings.isCustomDictEnabled,
     )

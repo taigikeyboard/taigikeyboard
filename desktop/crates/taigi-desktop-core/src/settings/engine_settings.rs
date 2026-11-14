@@ -337,6 +337,11 @@ pub struct EngineSettings {
     /// under TPS. macOS keeps a Swift twin of the default:
     /// `EngineSettings.swift` `isFHyphenEnabled`.
     pub is_f_hyphen_enabled: bool,
+    /// Opt-in neutral-tone (khinsiann) markers (-- / -) in Hanji output
+    /// (`AppConfig.khinsiann_in_hanji`). Off by default. macOS keeps a
+    /// Swift twin of the default: `EngineSettings.swift`
+    /// `isKhinsiannInHanjiEnabled`.
+    pub is_khinsiann_in_hanji_enabled: bool,
 }
 
 impl EngineSettings {
@@ -366,6 +371,7 @@ impl EngineSettings {
             is_hanji_conversion_enabled: false,
             is_c_affricate_enabled: false,
             is_f_hyphen_enabled: false,
+            is_khinsiann_in_hanji_enabled: false,
         }
     };
 }

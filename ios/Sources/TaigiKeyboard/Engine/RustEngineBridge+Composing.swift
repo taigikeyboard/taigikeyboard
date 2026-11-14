@@ -488,6 +488,7 @@ public extension RustEngineBridge {
             candidateDisplayMode: settings.candidateDisplayMode,
             syllableSeparator: settings.syllableSeparator,
             isTpsOrMappedToER: settings.isTpsOrMappedToER,
+            isKhinsiannInHanjiEnabled: settings.isKhinsiannInHanjiEnabled,
             dictionarySources: dictionaryTogglesProto(DictionaryToggles(from: settings)),
             isCustomDictionaryDisabled: !settings.isCustomDictEnabled,
         )

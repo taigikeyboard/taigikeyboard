@@ -125,6 +125,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,
         c_types_affricate: settings.is_c_affricate_enabled,
         f_types_hyphen: settings.is_f_hyphen_enabled,
+        khinsiann_in_hanji: settings.is_khinsiann_in_hanji_enabled,
         ..Default::default()
     }
 }
@@ -289,6 +290,18 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&off).custom_dictionary_disabled);
+    }
+
+    #[test]
+    fn app_config_forwards_khinsiann_in_hanji() {
+        let off = EngineSettings::default();
+        assert!(!off.is_khinsiann_in_hanji_enabled);
+        assert!(!app_config(&off).khinsiann_in_hanji);
+        let on = EngineSettings {
+            is_khinsiann_in_hanji_enabled: true,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&on).khinsiann_in_hanji);
     }
 
     #[test]

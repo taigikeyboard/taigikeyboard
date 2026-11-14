@@ -54,6 +54,7 @@ final class SharedSettings {
     private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: false)
     // Raw string key shared by every platform; unknown / malformed → `.hyphen`.
     private static let syllableSeparatorKey: SettingsKey<SyllableSeparator> = .rawRep("syllableSeparator", default: .hyphen)
+    private static let isKhinsiannInHanjiEnabledKey: SettingsKey<Bool> = .bool("khinsiannInHanjiEnabled", default: false)
     // Retired 2026-10-06: the No Hyphens switch, carried over by `carryOverHyphenlessRoman()`.
     private static let retiredHyphenlessRomanEnabledKey: SettingsKey<Bool> = .bool("hyphenlessRomanEnabled", default: false)
     private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
@@ -226,6 +227,11 @@ final class SharedSettings {
     var isAutoSpaceEnabled: Bool {
         get { userDefaults.value(for: Self.isAutoSpaceEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isAutoSpaceEnabledKey) }
+    }
+
+    var isKhinsiannInHanjiEnabled: Bool {
+        get { userDefaults.value(for: Self.isKhinsiannInHanjiEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isKhinsiannInHanjiEnabledKey) }
     }
 
     // The setter forwards to setKeyboardLayoutType(_:) so the input mode stays in sync.
@@ -828,6 +834,7 @@ final class SharedSettings {
         candidateDisplayMode = .sideBySide
         isLiteralRomanCandidateEnabled = false
         syllableSeparator = .hyphen
+        isKhinsiannInHanjiEnabled = false
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi

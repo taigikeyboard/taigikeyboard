@@ -186,6 +186,10 @@ struct EngineSettings: Sendable {
     /// `EngineSettings::is_f_hyphen_enabled`, OFF.
     let isFHyphenEnabled: Bool
 
+    /// Opt-in neutral-tone (khinsiann) markers (-- / -) in Hanji output.
+    /// Mirrors desktop-core `EngineSettings::is_khinsiann_in_hanji_enabled`, OFF.
+    let isKhinsiannInHanjiEnabled: Bool
+
     /// What a fresh install types with. Every value matches the iOS and Android
     /// default for the same setting, so someone using two of the four platforms
     /// gets the same composition and the same candidate order out of the box.
@@ -203,5 +207,6 @@ struct EngineSettings: Sendable {
         dictionarySources: .defaults,
         isCAffricateEnabled: false,
         isFHyphenEnabled: false,
+        isKhinsiannInHanjiEnabled: false,
     )
 }
