@@ -1,7 +1,7 @@
 name: Web
 
-# The web version's gates: `make web-check`'s steps (`test` + `smoke` + `chromeos`
-# in `build`; clippy, typecheck, biome and fmt in `lint`; and the fast standalone
+# The web version's gates: `make web-check`'s steps (`test` + `smoke`, plus
+# `chromeos`, in `build`; clippy, typecheck, biome and fmt in `lint`; and the fast standalone
 # TypeScript `checkJs` job in `typecheck`, so JS type errors fail without waiting
 # for Rust) and Playwright in Chromium over both the staged site (`e2e-site`)
 # and the staged browser extension (`e2e-extension`), running in parallel from
@@ -141,7 +141,9 @@ jobs:
               *)
                 ;;
             esac
-          done < <(git -c core.quotePath=false diff --name-only HEAD^1 HEAD)
+          # --no-renames lists a renamed file under both paths, so the old
+          # path's suite runs too (a renamed web/src/panel.js breaks the extension).
+          done < <(git -c core.quotePath=false diff --name-only --no-renames HEAD^1 HEAD)
           echo "site=$site" >> "$GITHUB_OUTPUT"
           echo "extension=$extension" >> "$GITHUB_OUTPUT"
           echo "E2E scope: site=$site extension=$extension"
@@ -304,7 +306,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       # protoc for engine/protos/build.rs, zig for SQLite's C, biome for the
-      # page's JS; shares mise's cache on main.
+      # page's JS. mise-action keys its cache on install_args, so this list
+      # caches apart from `build`'s.
       - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           version: 2026.11.2

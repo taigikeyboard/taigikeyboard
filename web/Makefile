@@ -94,6 +94,7 @@ $(FONTS)/.stamp: scripts/subset-fonts.sh src/fonts.css $(wildcard $(FONT_SOURCES
 	touch $@
 
 site: build site-stage
+# Over an existing $(PKG) (CI's `e2e-site` downloads it): run `build` first on a clean tree.
 site-stage: $(FONTS)/.stamp $(VENDOR)/lexical.js
 	rm -rf $(SITE)
 	mkdir -p $(SITE)
@@ -126,6 +127,7 @@ chromeos: build
 # panel, stylesheet and settings form cut by stage-extension.mjs.
 EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js
 extension: build extension-stage
+# Over an existing $(PKG) and $(WASM) (CI's `e2e-extension` downloads them): run `build` first on a clean tree.
 extension-stage: node_modules/.package-lock.json
 	@$(MAKE) --no-print-directory $(PKG_JS)/.stamp
 	rm -rf $(EXTENSION) target/taigi-keyboard-extension.zip
