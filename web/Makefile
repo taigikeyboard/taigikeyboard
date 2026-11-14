@@ -163,7 +163,7 @@ serve: site
 test: i18n-check
 	cargo test --locked
 
-smoke: build
+smoke: build node_modules/.package-lock.json
 	node --test 'tests/*.test.mjs'
 
 # Separate from `check`: it needs browsers downloaded. `install` is a no-op for
