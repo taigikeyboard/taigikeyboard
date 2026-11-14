@@ -3,6 +3,7 @@
 // naming the mode beside the focused field. All of it lives in one shadow tree
 // over the viewport, so the site's styles and the panel's never meet.
 
+import { chipAnchor, visibleBox } from "./field.js";
 import { PANEL_MARKUP } from "./generated/panel-markup.js";
 import { Panel } from "./panel.js";
 
@@ -14,7 +15,8 @@ export class Overlay {
   #box;
   #preedit;
   #chip;
-  /// The field the chip sits beside, `null` while it is hidden.
+  /// The field or editor box the chip sits beside, `null` when only the
+  /// viewport is left or while the chip is hidden.
   #chipAnchor = null;
   panel;
   /// Out of sight but laid out: `InputSurface` measures a caret on it.
@@ -119,8 +121,9 @@ export class Overlay {
     });
   }
 
-  /// The chip beside `anchor`, the focused field: `text`, drawn as `state`
-  /// (`"taigi"`, `"english"`, `"loading"`, `"unsupported"` or `"failed"`).
+  /// The chip beside `anchor` (or in the viewport's corner when `anchor` is
+  /// `null`): `text`, drawn as `state` (`"taigi"`, `"english"`, `"loading"`,
+  /// `"unsupported"` or `"failed"`).
   showChip(anchor, state, text) {
     this.#chipAnchor = anchor;
     this.#chip.dataset.state = state;
@@ -137,21 +140,34 @@ export class Overlay {
   /// Under the field's right end; above it where the window ends first, and
   /// inside its corner where neither has the room.
   placeChip() {
-    const anchor = this.#chipAnchor;
-    if (anchor === null) {
+    const chip = this.#chip;
+    if (chip.hidden) {
       return;
     }
-    const chip = this.#chip;
-    const field = anchor.getBoundingClientRect();
+    const anchor = this.#chipAnchor;
+    let field = anchor ? visibleBox(anchor) : null;
+    if (field === null) {
+      if (chip.dataset.state === "unsupported") {
+        const fallback = anchor ? chipAnchor(anchor) : null;
+        field = fallback
+          ? visibleBox(fallback)
+          : this.#box.getBoundingClientRect();
+      } else if (anchor) {
+        field = anchor.getBoundingClientRect();
+      } else {
+        return;
+      }
+    }
     const { clientWidth, clientHeight } = this.#box;
     const width = chip.offsetWidth;
     const height = chip.offsetHeight;
-    const left = Math.min(field.right, clientWidth) - width;
+    let left = Math.min(field.right, clientWidth) - width;
     let top = field.bottom + CHIP_GAP;
     if (top + height > clientHeight) {
       top = field.top - height - CHIP_GAP;
       if (top < 0) {
         top = Math.min(field.bottom, clientHeight) - height - CHIP_GAP;
+        left = Math.min(field.right, clientWidth) - width - CHIP_GAP;
       }
     }
     chip.style.left = `${Math.max(0, left)}px`;

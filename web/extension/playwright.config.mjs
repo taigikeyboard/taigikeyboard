@@ -10,6 +10,7 @@ export default defineConfig({
   outputDir: "../test-results/extension",
   forbidOnly: true,
   fullyParallel: true,
+  timeout: process.env.EXTENSION_BROWSER ? 60_000 : 30_000,
   workers: process.env.CI ? 2 : undefined,
   webServer: {
     command: `node ../scripts/serve.mjs ../target/extension-fixtures ${PORT}`,

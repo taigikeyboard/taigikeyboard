@@ -27,42 +27,194 @@ export function focusedElement() {
   return element;
 }
 
-/// What `element`, the focused one, is to the extension: `{ kind, element }`,
-/// or `null` for one that takes no text. `kind`: `"input"` (a text input or a
-/// textarea), `"editable"` (`element` is the editing host) or `"unsupported"`,
-/// whose keys stay the page's.
+function isTransparent(color) {
+  return (
+    color === "transparent" ||
+    /^rgba\([^)]*,\s*0(?:\.0+)?\)$/.test(color) ||
+    /\/\s*0(?:\.0+)?\)$/.test(color)
+  );
+}
+
+function createsContainingBlock(style, position) {
+  if (position !== "fixed" && position !== "absolute") {
+    return true;
+  }
+  if (position === "absolute" && style.position !== "static") {
+    return true;
+  }
+  return (
+    style.transform !== "none" ||
+    style.perspective !== "none" ||
+    style.filter !== "none" ||
+    /layout|paint|strict|content/.test(style.contain)
+  );
+}
+
+function parentOf(element) {
+  return element.parentElement ?? element.getRootNode()?.host ?? null;
+}
+
+/// The part of `element` that is visible on screen, clipped by its scrolling
+/// and overflow containers; `null` when it is zero-size, clipped away,
+/// transparent or outside the viewport.
+export function visibleBox(element) {
+  if (!(element instanceof Element) || !element.isConnected) {
+    return null;
+  }
+  const style = getComputedStyle(element);
+  if (
+    style.visibility !== "visible" ||
+    Number.parseFloat(style.opacity) <= 0 ||
+    style.clip === "rect(0px, 0px, 0px, 0px)" ||
+    /^inset\((?:50|[5-9]\d|\d{3,})%/.test(style.clipPath) ||
+    /^circle\(0(?:px|%)?[\s)]/.test(style.clipPath)
+  ) {
+    return null;
+  }
+  if (
+    (element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement) &&
+    isTransparent(style.color) &&
+    isTransparent(style.caretColor)
+  ) {
+    return null;
+  }
+  const rect = element.getBoundingClientRect();
+  let { left, top, right, bottom } = rect;
+  if (right - left <= 1 || bottom - top <= 1) {
+    return null;
+  }
+  let position = style.position;
+  for (let parent = parentOf(element); parent; parent = parentOf(parent)) {
+    const parentStyle = getComputedStyle(parent);
+    if (Number.parseFloat(parentStyle.opacity) <= 0) {
+      return null;
+    }
+    if (
+      parent !== document.body &&
+      parent !== document.documentElement &&
+      parentStyle.display !== "contents" &&
+      createsContainingBlock(parentStyle, position)
+    ) {
+      if (parentStyle.overflowX !== "visible") {
+        const clip = parent.getBoundingClientRect();
+        left = Math.max(left, clip.left);
+        right = Math.min(right, clip.right);
+      }
+      if (parentStyle.overflowY !== "visible") {
+        const clip = parent.getBoundingClientRect();
+        top = Math.max(top, clip.top);
+        bottom = Math.min(bottom, clip.bottom);
+      }
+      if (right - left <= 1 || bottom - top <= 1) {
+        return null;
+      }
+      position = parentStyle.position;
+    }
+  }
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+  if (
+    vw > 0 &&
+    vh > 0 &&
+    (right <= 0 || bottom <= 0 || left >= vw || top >= vh)
+  ) {
+    return null;
+  }
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
+}
+
+/// The visible element a chip can sit beside for `element`, walking out to a
+/// surrounding editor when `element` itself is hidden; `null` when only the
+/// viewport is left.
+export function chipAnchor(element) {
+  for (
+    let current = element;
+    current &&
+    current !== document.body &&
+    current !== document.documentElement;
+    current = parentOf(current)
+  ) {
+    if (visibleBox(current)) {
+      return current;
+    }
+  }
+  return null;
+}
+
+function unsupported(element) {
+  return { kind: "unsupported", element, anchor: chipAnchor(element) };
+}
+
+function isAriaReadOnly(element) {
+  return (
+    element.getAttribute("aria-readonly") === "true" ||
+    element.getAttribute("aria-disabled") === "true"
+  );
+}
+
+/// What `element`, the focused one, is to the extension:
+/// `{ kind, element, anchor, fontElement }`, or `null` for one that takes no
+/// text. `kind`: `"input"`, `"editable"` (`element` is the editing host) or
+/// `"unsupported"`, whose keys stay the page's.
 export function classify(element) {
   if (!element) {
     return null;
   }
+  // A frame's keys never reach this document.
+  if (element instanceof HTMLIFrameElement) {
+    return unsupported(element);
+  }
+  // `EditContext` bypasses DOM text mutations and `execCommand` (Monaco in
+  // Chromium, canvas editors).
+  if (element.editContext) {
+    return isAriaReadOnly(element) ? null : unsupported(element);
+  }
+  // Google Sheets keeps focus on a singleton cell / formula editor driven by
+  // Closure key handlers (`contenteditable="false"` while navigating cells).
+  const sheetsEditor = element.closest?.(
+    "#waffle-rich-text-editor, [docs-unhandledkeys]",
+  );
+  if (sheetsEditor) {
+    return isAriaReadOnly(sheetsEditor) ? null : unsupported(sheetsEditor);
+  }
   if (element instanceof HTMLTextAreaElement) {
-    return element.readOnly || element.disabled
-      ? null
-      : { kind: "input", element };
+    if (element.readOnly || element.disabled) {
+      return null;
+    }
+    return visibleBox(element)
+      ? { kind: "input", element, anchor: element, fontElement: element }
+      : unsupported(element);
   }
   if (element instanceof HTMLInputElement) {
     if (element.readOnly || element.disabled) {
       return null;
     }
     if (TEXT_TYPES.has(element.type)) {
-      return { kind: "input", element };
+      return visibleBox(element)
+        ? { kind: "input", element, anchor: element, fontElement: element }
+        : unsupported(element);
     }
-    return OTHER_TYPING_TYPES.has(element.type)
-      ? { kind: "unsupported", element }
-      : null;
-  }
-  // A frame's keys never reach this document.
-  if (element instanceof HTMLIFrameElement) {
-    return { kind: "unsupported", element };
+    return OTHER_TYPING_TYPES.has(element.type) ? unsupported(element) : null;
   }
   if (element.isContentEditable) {
     let host = element;
     while (host.parentElement?.isContentEditable) {
       host = host.parentElement;
     }
-    // `getSelection` does not see into a shadow tree.
-    const kind = host.getRootNode() === document ? "editable" : "unsupported";
-    return { kind, element: host };
+    // `getSelection` does not see into a shadow tree, and an off-screen or
+    // zero-size `contenteditable` draws its text elsewhere.
+    if (host.getRootNode() !== document || !visibleBox(host)) {
+      return unsupported(host);
+    }
+    return { kind: "editable", element: host, anchor: host, fontElement: host };
   }
   return null;
 }
