@@ -25,6 +25,7 @@ stage_options:
 
   cleanup:
     check_roman_in_hanzi: true
+    drop_hyphen_in_pure_hanzi: true
 
   source:
     no_hanzi: drop

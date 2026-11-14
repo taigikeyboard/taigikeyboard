@@ -95,7 +95,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Format**: CSV
 - **Captured**: `data/raw/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv` — capture date TBD
 - **Licence**: CC BY-SA 4.0 (per ChhoeTaigi)
-- **Notes**: Broadest community Taigi↔Mandarin crossreference; ~57k rows.
+- **Notes**: Broadest community Taigi↔Mandarin crossreference; ~57k rows. `cleanup` normalizes 15 Han-Lo `<Hanzi>ê` rows with `<tl>--ê` (e.g. `大ê,tuā--ê` → `大--ê`) to match Han-Lo neutral-tone spelling across sources (`矮--ê`, `邊--a`), and drops 10 truncated missing-glyph IDS `-` rows (`大-片,tuā-pue`, `短-示,té-ńg`, `軟-手豪,nńg-kô-kô`, etc.) via `drop_hyphen_in_pure_hanzi: true`.
 
 ### taijit — 台日大辭典
 - **Publisher**: ChhoeTaigi (digitisation of 小川尚義《台日大辭典》 1931–32)
@@ -103,7 +103,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Format**: CSV
 - **Captured**: `data/raw/ChhoeTaigi_TaijitToaSutian.csv` — capture date TBD
 - **Licence**: primary source public domain; **digitisation CC BY-NC-SA 3.0 TW** (per the ChhoeTaigi database README; verified 2026-09-05) — **non-commercial**
-- **Notes**: Largest community source (~64k rows); historic Taigi-Japanese dictionary.
+- **Notes**: Largest community source (~64k rows); historic Taigi-Japanese dictionary. All hyphens in pure-Hanji `hanzi` rows (`--`/`---`/`----` neutral-tone markers and single `-` separators) are stripped in `cleanup` so pure-Hanji spellings outside `lkk.csv` carry no hyphens.
 
 ### kungge — 臺灣台語工藝詞庫
 - **Publisher**: 國立臺灣工藝研究發展中心 (NTCRI)
