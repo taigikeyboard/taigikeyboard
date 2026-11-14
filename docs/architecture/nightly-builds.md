@@ -2,9 +2,9 @@
 
 Every night `.github/workflows/desktop-nightly.yml` builds `main` for macOS,
 Windows, Linux and ChromeOS and overwrites the files at
-the root of `https://nightly.taigikeyboard.tw/`. The Beta group of the website's
-download center (`https://taigikeyboard.tw/#download`) links them under fixed
-URLs, after the train's beta builds. A nightly build is a test build, not a release: it has no draft, no
+the root of `https://nightly.taigikeyboard.tw/`. The Nightly group of the
+website's download center (`https://taigikeyboard.tw/#download`) links them
+under those fixed URLs. A nightly build is a test build, not a release: it has no draft, no
 tag, no signature and no appcast entry, and nothing installed is ever offered one
 as an update. The release flow (`desktop-release.md`) is unchanged by it.
 
