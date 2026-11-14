@@ -4,8 +4,16 @@
 
 import { translate } from "./i18n.js";
 
-/// How many comparison cards to draw before the next click.
+/** @typedef {import("../types/shared.d.ts").ExplainBufferPiece} ExplainBufferPiece */
+/** @typedef {import("../types/shared.d.ts").ExplainCandidatePiece} ExplainCandidatePiece */
+/** @typedef {import("../types/shared.d.ts").ExplainView} ExplainView */
+/** @typedef {import("../types/shared.d.ts").ExplainWordPiece} ExplainWordPiece */
+/** @typedef {import("./i18n.js").StringKey} StringKey */
+
+/** How many comparison cards to draw before the next click. */
 const PAGE = 8;
+
+/** @type {Array<[string, StringKey, StringKey]>} */
 const CANONICAL = [
   ["tier", "web.inspectorStageTier", "web.inspectorDetailTier"],
   [
@@ -45,23 +53,34 @@ const CANONICAL = [
   ["stable_idx", "web.inspectorStageStable", "web.inspectorDetailStable"],
 ];
 
-/// The order the cards and the mechanism list draw. The engine compares in
-/// this same order after the page installs it.
+/**
+ * The order the cards and the mechanism list draw. The engine compares in
+ * this same order after the page installs it.
+ */
 let stages = CANONICAL.map((stage) => stage);
 
+/** @returns {string[]} */
 export function defaultSortFields() {
   return CANONICAL.map(([id]) => id);
 }
 
+/**
+ * @param {string[]} ids
+ * @returns {void}
+ */
 export function setSortFieldOrder(ids) {
   const next = ids
     .map((id) => CANONICAL.find(([field]) => field === id))
-    .filter((stage) => stage);
+    .filter(
+      /** @returns {stage is [string, StringKey, StringKey]} */ (stage) =>
+        Boolean(stage),
+    );
   if (next.length === CANONICAL.length) {
     stages = next;
   }
 }
 
+/** @type {Record<string, StringKey>} */
 const SOURCE_KEYS = {
   kautian: "common.moeDict",
   taigitv: "common.newwordDict",
@@ -79,18 +98,21 @@ const SOURCE_KEYS = {
   other: "web.inspectorSourceOther",
 };
 
+/** @type {Record<string, StringKey>} */
 const PREFERENCE = {
   picked: "web.inspectorPrefPicked",
   custom: "web.inspectorPrefCustom",
   rest: "web.inspectorPrefRest",
 };
 
+/** @type {Record<string, StringKey>} */
 const COVERAGE = {
   full: "web.inspectorCovFull",
   prefix: "web.inspectorCovPrefix",
   abbreviation: "web.inspectorAbbreviation",
 };
 
+/** @type {Record<string, StringKey>} */
 const CONTEXT = {
   learned: "web.inspectorContextLearned",
   bundled: "web.inspectorContextBundled",
@@ -99,6 +121,13 @@ const CONTEXT = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * @template {keyof HTMLElementTagNameMap} K
+ * @param {K} tag
+ * @param {string | null} [className]
+ * @param {string | null} [text]
+ * @returns {HTMLElementTagNameMap[K]}
+ */
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) {
@@ -110,11 +139,20 @@ function element(tag, className, text) {
   return node;
 }
 
+/**
+ * @param {string} id
+ * @returns {string}
+ */
 function sourceLabel(id) {
   const key = SOURCE_KEYS[id];
   return key ? translate(key) : id;
 }
 
+/**
+ * @param {number} value
+ * @param {number} digits
+ * @returns {string}
+ */
 function formatNumber(value, digits) {
   if (!Number.isFinite(value)) {
     return "—";
@@ -122,6 +160,11 @@ function formatNumber(value, digits) {
   return String(Number(value.toFixed(digits)));
 }
 
+/**
+ * @param {number} picks
+ * @param {number} lastUsedMs
+ * @returns {string}
+ */
 function picksText(picks, lastUsedMs) {
   if (!(picks > 0)) {
     return translate("web.inspectorNever");
@@ -138,6 +181,11 @@ function picksText(picks, lastUsedMs) {
   return translate("web.inspectorPicks", { count: String(picks) });
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @param {string} id
+ * @returns {string}
+ */
 function stageText(row, id) {
   switch (id) {
     case "tier":
@@ -179,6 +227,11 @@ function stageText(row, id) {
   }
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @param {string} id
+ * @returns {string}
+ */
 function stageTitle(row, id) {
   switch (id) {
     case "user_weight":
@@ -198,7 +251,13 @@ function stageTitle(row, id) {
   }
 }
 
-/// Lower means the row sorts earlier. Matches `CandidateSortKey`.
+/**
+ * Lower means the row sorts earlier. Matches `CandidateSortKey`.
+ *
+ * @param {ExplainCandidatePiece} row
+ * @param {string} id
+ * @returns {number}
+ */
 function sortRank(row, id) {
   switch (id) {
     case "tier":
@@ -228,10 +287,24 @@ function sortRank(row, id) {
   }
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @param {ExplainCandidatePiece} previous
+ * @param {string} id
+ * @returns {boolean}
+ */
 function currentBeats(row, previous, id) {
   return sortRank(row, id) < sortRank(previous, id);
 }
 
+/** @typedef {{ row: ExplainCandidatePiece, index: number }} IndexedCandidate */
+
+/**
+ * @param {IndexedCandidate} entry
+ * @param {IndexedCandidate | null} previous
+ * @param {IndexedCandidate | null} next
+ * @returns {string}
+ */
 function whyScored(entry, previous, next) {
   const { row } = entry;
   if (row.placedBy === "picked_over_sentence") {
@@ -239,7 +312,7 @@ function whyScored(entry, previous, next) {
   }
   if (!previous || row.placedBy === "lead") {
     const stage = next && CANONICAL.find(([id]) => id === next.row.placedBy);
-    if (stage && currentBeats(next.row, row, stage[0])) {
+    if (stage && next && currentBeats(next.row, row, stage[0])) {
       return translate("web.inspectorPinnedAhead", {
         index: String(next.index + 1),
         reason: translate(stage[1]),
@@ -259,6 +332,10 @@ function whyScored(entry, previous, next) {
   });
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @returns {string}
+ */
 function whyPinned(row) {
   switch (row.placedBy) {
     case "sentence_after":
@@ -270,6 +347,10 @@ function whyPinned(row) {
   }
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @returns {HTMLParagraphElement}
+ */
 function coverageBar(row) {
   const bar = element("p", "coverage");
   if (row.before) {
@@ -287,6 +368,10 @@ function coverageBar(row) {
   return bar;
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @returns {HTMLDivElement}
+ */
 function sourceBlock(row) {
   const block = element("div", "sources");
   block.append(
@@ -319,6 +404,12 @@ function sourceBlock(row) {
   return block;
 }
 
+/**
+ * @param {HTMLDListElement} line
+ * @param {StringKey} labelKey
+ * @param {string} value
+ * @returns {void}
+ */
 function fact(line, labelKey, value) {
   const item = element("div");
   item.append(element("dt", null, translate(labelKey)));
@@ -326,6 +417,10 @@ function fact(line, labelKey, value) {
   line.append(item);
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @returns {HTMLDListElement}
+ */
 function facts(row) {
   const line = element("dl", "facts");
   fact(
@@ -346,6 +441,11 @@ function facts(row) {
   return line;
 }
 
+/**
+ * @param {string} existing
+ * @param {"win" | "lose"} mark
+ * @returns {string}
+ */
 function paint(existing, mark) {
   const kept = existing
     .split(" ")
@@ -356,8 +456,13 @@ function paint(existing, mark) {
   return kept.join(" ");
 }
 
-/// Stages before `placedBy` tied. That stage is `win` on the row whose value
-/// sorts earlier and `lose` on the other. Later stages were not compared.
+/**
+ * Stages before `placedBy` tied. That stage is `win` on the row whose value
+ * sorts earlier and `lose` on the other. Later stages were not compared.
+ *
+ * @param {IndexedCandidate[]} scored
+ * @returns {string[][]}
+ */
 function marksFor(scored) {
   const marks = scored.map(() => stages.map(() => "base"));
   for (const [index, { row }] of scored.entries()) {
@@ -381,6 +486,11 @@ function marksFor(scored) {
   return marks;
 }
 
+/**
+ * @param {ExplainCandidatePiece} row
+ * @param {string[]} marks
+ * @returns {HTMLOListElement}
+ */
 function pipeline(row, marks) {
   const list = element("ol", "pipeline");
   for (const [stage, [id, label]] of stages.entries()) {
@@ -401,6 +511,12 @@ function pipeline(row, marks) {
   return list;
 }
 
+/**
+ * @param {IndexedCandidate} entry
+ * @param {IndexedCandidate} previous
+ * @param {string} stageId
+ * @returns {HTMLParagraphElement}
+ */
 function versus(entry, previous, stageId) {
   const currentWon = currentBeats(entry.row, previous.row, stageId);
   const winnerEntry = currentWon ? entry : previous;
@@ -429,17 +545,25 @@ function versus(entry, previous, stageId) {
   );
   loser.append(element("b", null, stageText(loserEntry.row, stageId)));
   line.append(winner);
+  const stageEntry = stages.find(([id]) => id === stageId);
   line.append(
     element(
       "span",
       "versus-stage",
-      translate(stages.find(([id]) => id === stageId)[1]),
+      stageEntry ? translate(stageEntry[1]) : stageId,
     ),
   );
   line.append(loser);
   return line;
 }
 
+/**
+ * @param {IndexedCandidate} entry
+ * @param {IndexedCandidate | null} previous
+ * @param {IndexedCandidate | null} next
+ * @param {string[]} marks
+ * @returns {HTMLElement}
+ */
 function scoredCard(entry, previous, next, marks) {
   const { row, index } = entry;
   const card = element("article", "candidate");
@@ -470,16 +594,36 @@ function scoredCard(entry, previous, next, marks) {
   return card;
 }
 
+/**
+ * @param {ExplainView} view
+ * @returns {number}
+ */
 function sentenceWordCount(view) {
   return (view.words ?? []).filter(
     (piece) => !piece.gap && piece.kind !== "gap",
   ).length;
 }
 
-/// Checks that fill slot 0 before the twelve stages. The first check the
-/// next row fails keeps the sentence; the rest are not compared. Every
-/// check passing is the one case that replaces the sentence.
+/**
+ * @typedef {object} FrontStep
+ * @property {StringKey} label
+ * @property {string} text
+ * @property {string} [title]
+ * @property {boolean} hold
+ */
+
+/**
+ * Checks that fill slot 0 before the twelve stages. The first check the
+ * next row fails keeps the sentence; the rest are not compared. Every
+ * check passing is the one case that replaces the sentence.
+ *
+ * @param {ExplainCandidatePiece} sentence
+ * @param {ExplainCandidatePiece | undefined} rival
+ * @param {number} wordCount
+ * @returns {{ steps: FrontStep[], decided: number }}
+ */
 function frontSteps(sentence, rival, wordCount) {
+  /** @type {FrontStep[]} */
   const steps = [
     {
       label: "web.inspectorFrontWords",
@@ -530,6 +674,12 @@ function frontSteps(sentence, rival, wordCount) {
   return { steps, decided };
 }
 
+/**
+ * @param {IndexedCandidate | null} rival
+ * @param {FrontStep[]} steps
+ * @param {number} decided
+ * @returns {string}
+ */
 function frontWhy(rival, steps, decided) {
   if (!rival || decided === 0) {
     return translate("web.inspectorFrontHeldWords");
@@ -545,6 +695,12 @@ function frontWhy(rival, steps, decided) {
   });
 }
 
+/**
+ * @param {ExplainCandidatePiece} sentence
+ * @param {IndexedCandidate | null} rival
+ * @param {number} wordCount
+ * @returns {{ list: HTMLOListElement, steps: FrontStep[], decided: number }}
+ */
 function frontPipeline(sentence, rival, wordCount) {
   const { steps, decided } = frontSteps(sentence, rival?.row, wordCount);
   const list = element("ol", "pipeline front");
@@ -574,6 +730,12 @@ function frontPipeline(sentence, rival, wordCount) {
   return { list, steps, decided };
 }
 
+/**
+ * @param {IndexedCandidate} entry
+ * @param {IndexedCandidate | null} rival
+ * @param {number} wordCount
+ * @returns {HTMLElement}
+ */
 function pinnedCard(entry, rival, wordCount) {
   const { row, index } = entry;
   const card = element(
@@ -617,6 +779,10 @@ function pinnedCard(entry, rival, wordCount) {
   return card;
 }
 
+/**
+ * @param {(fields: string[], focus?: string) => void} move
+ * @returns {HTMLElement}
+ */
 function mechanism(move) {
   const section = element("section", "board mechanism");
   section.append(
@@ -632,21 +798,25 @@ function mechanism(move) {
     item.append(element("b", null, translate(label)));
     item.append(element("p", null, translate(detail)));
     item.addEventListener("dragstart", (event) => {
-      event.dataTransfer.setData("text/plain", id);
-      event.dataTransfer.effectAllowed = "move";
+      if (event.dataTransfer) {
+        event.dataTransfer.setData("text/plain", id);
+        event.dataTransfer.effectAllowed = "move";
+      }
       item.classList.add("dragging");
     });
     item.addEventListener("dragend", () => item.classList.remove("dragging"));
     item.addEventListener("dragover", (event) => {
       event.preventDefault();
-      event.dataTransfer.dropEffect = "move";
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+      }
       item.classList.add("over");
     });
     item.addEventListener("dragleave", () => item.classList.remove("over"));
     item.addEventListener("drop", (event) => {
       event.preventDefault();
       item.classList.remove("over");
-      move(movedFields(event.dataTransfer.getData("text/plain"), id));
+      move(movedFields(event.dataTransfer?.getData("text/plain") ?? "", id));
     });
     item.addEventListener("keydown", (event) => {
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
@@ -673,6 +843,11 @@ function mechanism(move) {
   return section;
 }
 
+/**
+ * @param {string} fromId
+ * @param {string} toId
+ * @returns {string[]}
+ */
 function movedFields(fromId, toId) {
   const ids = stages.map(([field]) => field);
   const from = ids.indexOf(fromId);
@@ -685,15 +860,18 @@ function movedFields(fromId, toId) {
   return ids;
 }
 
+/** @returns {HTMLUListElement} */
 function legend() {
   const list = element("ul", "legend");
-  for (const [className, key] of [
+  /** @type {Array<[string, StringKey]>} */
+  const entries = [
     ["win", "web.inspectorLegendWin"],
     ["lose", "web.inspectorLegendLose"],
     ["tie", "web.inspectorLegendTie"],
     ["skip", "web.inspectorLegendSkip"],
     ["base", "web.inspectorLegendBase"],
-  ]) {
+  ];
+  for (const [className, key] of entries) {
     const item = element("li", className);
     item.append(element("i"));
     item.append(element("span", null, translate(key)));
@@ -702,6 +880,21 @@ function legend() {
   return list;
 }
 
+/**
+ * @typedef {ExplainWordPiece | (ExplainBufferPiece & {
+ *   hanji?: null,
+ *   roman?: undefined,
+ *   kind?: undefined,
+ *   userRow?: undefined,
+ *   picks?: undefined,
+ * })} TrackPiece
+ */
+
+/**
+ * @param {TrackPiece[]} pieces
+ * @param {boolean} labeled
+ * @returns {HTMLDivElement}
+ */
 function track(pieces, labeled) {
   const row = element("div", "cuts");
   for (const [index, piece] of pieces.entries()) {
@@ -727,8 +920,8 @@ function track(pieces, labeled) {
             ? "web.inspectorKindReading"
             : "web.inspectorKindDictionary";
       block.append(element("small", "kind", translate(kind)));
-      if (piece.picks > 0) {
-        block.append(element("small", null, picksText(piece.picks, 0)));
+      if ((piece.picks ?? 0) > 0) {
+        block.append(element("small", null, picksText(piece.picks ?? 0, 0)));
       }
     }
     row.append(block);
@@ -736,6 +929,10 @@ function track(pieces, labeled) {
   return row;
 }
 
+/**
+ * @param {ExplainView} view
+ * @returns {HTMLElement}
+ */
 function cutSection(view) {
   const section = element("section", "board");
   const syllables = view.syllables ?? [];
@@ -766,6 +963,12 @@ function cutSection(view) {
   return section;
 }
 
+/**
+ * @param {IndexedCandidate[]} scored
+ * @param {number} shown
+ * @param {() => void} expand
+ * @returns {HTMLElement}
+ */
 function ladder(scored, shown, expand) {
   const section = element("section", "board");
   section.append(element("h2", null, translate("web.inspectorCandidates")));
@@ -806,19 +1009,32 @@ function ladder(scored, shown, expand) {
 }
 
 export class Inspector {
-  /// `read` asks the session for the mechanism JSON, already parsed.
-  /// `onSort` receives the field names in the order the user dropped.
-  /// The second argument is the field to focus again, for a keyboard move.
+  /**
+   * `read` asks the session for the mechanism JSON, already parsed.
+   * `onSort` receives the field names in the order the user dropped.
+   * The second argument is the field to focus again, for a keyboard move.
+   *
+   * @param {HTMLElement} body
+   * @param {HTMLElement} mechanismHost
+   * @param {() => ExplainView | null} read
+   * @param {(fields: string[]) => void} onSort
+   */
   constructor(body, mechanismHost, read, onSort) {
+    /** @type {HTMLElement} */
     this.body = body;
+    /** @type {HTMLElement} */
     this.mechanismHost = mechanismHost;
+    /** @type {() => ExplainView | null} */
     this.read = read;
+    /** @type {(fields: string[]) => void} */
     this.onSort = onSort;
     this.raw = "";
     this.shown = PAGE;
+    /** @type {string | null} */
     this.focusField = null;
   }
 
+  /** @returns {void} */
   sync() {
     const view = this.read();
     const raw = view?.raw ?? "";
@@ -861,6 +1077,7 @@ export class Inspector {
     );
   }
 
+  /** @returns {void} */
   mountMechanism() {
     const section = mechanism((fields, focus) => {
       this.focusField = focus ?? null;
@@ -868,7 +1085,10 @@ export class Inspector {
     });
     this.mechanismHost.replaceChildren(section);
     if (this.focusField) {
-      section.querySelector(`[data-field="${this.focusField}"]`)?.focus();
+      const target = /** @type {HTMLElement | null} */ (
+        section.querySelector(`[data-field="${this.focusField}"]`)
+      );
+      target?.focus();
       this.focusField = null;
     }
   }
