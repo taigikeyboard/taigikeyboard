@@ -131,6 +131,8 @@ jobs:
         run: |
           set -euo pipefail
           brew tap taigikeyboard/tap
+          # Homebrew loads a non-official tap's cask only once trusted.
+          brew trust --cask taigikeyboard/tap/taigikeyboard
           tapped="$(brew info --cask --json=v2 taigikeyboard/tap/taigikeyboard | jq -r '.casks[0].version')"
           [ "$tapped" = "$MACOS_VERSION" ] || {
             echo "::error::the tap's cask names $tapped, not $MACOS_VERSION"
