@@ -8,7 +8,8 @@
 use protos::engine::AppConfig;
 
 use crate::common::{
-    config_with_sources, default_source_toggles, fetch_cells, production_lexicon_ready, Fetch,
+    config, config_with_sources, default_source_toggles, fetch_cells, production_lexicon_ready,
+    Fetch,
 };
 
 /// `input_mode` with a fresh install's sources.
@@ -213,4 +214,61 @@ fn hanji_first_merges_same_commit_hanji_candidates() {
     // `ekilit` still surfaces `會記得`.
     let (ekilit_count, ekilit_cells) = count_hanji(true, false, "ekilit", "會記得");
     assert_eq!(ekilit_count, 1, "ekilit Hanji-first: {ekilit_cells:?}");
+}
+
+#[test]
+fn tshutkhi_typed_separators_filter_readings_independently_of_hanji_markers() {
+    if !production_lexicon_ready() {
+        eprintln!("production artifacts absent — run `make dict`; skipping.");
+        return;
+    }
+
+    // Enable every source so both 出去/tshut-khì (Kautian/Taihoa) and
+    // 出去/tshut--khì (Taijit) participate. A typed separator selects its own
+    // reading; the Hanji marker setting controls rendering and subsequent
+    // same-commit merging only.
+    // Filter by exact rendered reading so prefix completions such as
+    // tshut-khìr cannot add a spurious duplicate. A walker composition of
+    // 出 + 去 may supply a cell with the same visible reading as a dict word.
+    for khinsiann_in_hanji in [false, true] {
+        for (is_hanji_first, output_both_scripts) in [(true, false), (true, true), (false, false)] {
+            let cfg = AppConfig {
+                is_hanji_first,
+                output_both_scripts,
+                khinsiann_in_hanji,
+                ..config("tl")
+            };
+            for raw in ["tshutkhi", "tshut-khi", "tshut--khi"] {
+                let cells = fetch_cells(&cfg, raw, fresh_install_fetch());
+                let mut actual: Vec<_> = cells
+                    .iter()
+                    .filter(|(_, roman, _, _)| matches!(roman.as_str(), "tshut-khì" | "tshut--khì"))
+                    .filter(|(hanji, ..)| matches!(hanji.as_deref(), Some("出去" | "出--去")))
+                    .map(|(hanji, roman, identity, _)| {
+                        assert_eq!(identity, "出去", "learning identity: {raw}, {cfg:?}");
+                        (hanji.as_deref().expect("出去 Hanji"), roman.as_str())
+                    })
+                    .collect();
+                let mut expected = Vec::new();
+                if raw != "tshut--khi" {
+                    expected.push(("出去", "tshut-khì"));
+                }
+                let merges_plain_hanji =
+                    is_hanji_first && !output_both_scripts && !khinsiann_in_hanji;
+                if raw == "tshut--khi" || (raw == "tshutkhi" && !merges_plain_hanji) {
+                    expected.push((
+                        if khinsiann_in_hanji {
+                            "出--去"
+                        } else {
+                            "出去"
+                        },
+                        "tshut--khì",
+                    ));
+                }
+                actual.sort_unstable();
+                expected.sort_unstable();
+                assert_eq!(actual, expected, "{raw}, {cfg:?}: {cells:?}");
+            }
+        }
+    }
 }
