@@ -479,7 +479,11 @@ impl LearningRecordsPage {
         let can_add = record.can_add_to_custom_dictionary;
         let body = format!("{}  {}", record.text, record.tl);
         let dialog = adw::AlertDialog::new(
-            Some(strings.resolve(StringKey::DictionaryLearningRecordsEditCount)),
+            Some(strings.resolve(if can_add {
+                StringKey::CommonEdit
+            } else {
+                StringKey::DictionaryLearningRecordsEditCount
+            })),
             Some(body.trim()),
         );
 
@@ -523,7 +527,7 @@ impl LearningRecordsPage {
                 .build();
             word_list.append(&roman);
             word_list.append(&hanji);
-            let stack = adw::ViewStack::new();
+            let stack = gtk::Stack::new();
             stack.add_titled(
                 &count_page,
                 Some(COUNT_TAB),
@@ -538,10 +542,9 @@ impl LearningRecordsPage {
         });
         match &add {
             Some((roman, _, stack)) => {
-                let switcher = adw::ViewSwitcher::builder()
-                    .stack(stack)
-                    .policy(adw::ViewSwitcherPolicy::Wide)
-                    .build();
+                // Text-only tabs: `adw::ViewSwitcher` always draws an icon,
+                // and these tabs have none.
+                let switcher = gtk::StackSwitcher::builder().stack(stack).build();
                 let page = gtk::Box::new(gtk::Orientation::Vertical, 12);
                 page.append(&switcher);
                 page.append(stack);

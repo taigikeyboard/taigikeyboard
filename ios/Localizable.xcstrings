@@ -110,7 +110,7 @@
       }
     },
     "i18n_common_edit": {
-      "comment": "Generic Edit: custom-theme card action-menu item (mobile), menu-bar Edit menu title (macOS). Merged 2026-09-20 from theme.cardMenuEdit / desktop.menuEdit.",
+      "comment": "Generic Edit: custom-theme card action-menu item (mobile), menu-bar Edit menu title (macOS), Learning Records record dialog title when it offers both the count and Add to Custom Dictionary (desktop). Merged 2026-09-20 from theme.cardMenuEdit / desktop.menuEdit.",
       "extractionState": "manual",
       "localizations": {
         "en": {

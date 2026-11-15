@@ -459,8 +459,10 @@ struct LearningRecordCountSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(language.string(.dictionaryLearningRecordsEditCount))
-                    .font(.headline)
+                Text(language.string(
+                    record.canAddToCustomDictionary ? .commonEdit : .dictionaryLearningRecordsEditCount,
+                ))
+                .font(.headline)
                 Text(verbatim: "\(record.text)  \(record.tl)")
                     .foregroundStyle(.secondary)
             }
@@ -505,6 +507,9 @@ struct LearningRecordCountSheet: View {
                 }
             }
             .formStyle(.grouped)
+            // The sheet grows to the tab's rows rather than scrolling them.
+            .scrollDisabled(true)
+            .fixedSize(horizontal: false, vertical: true)
             HStack {
                 Spacer()
                 Button(language.string(.commonCancel), role: .cancel) { dismiss() }

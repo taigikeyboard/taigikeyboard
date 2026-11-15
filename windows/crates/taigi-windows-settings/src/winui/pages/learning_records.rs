@@ -760,7 +760,11 @@ fn count_dialog(
         ),
     };
     ContentDialog::new()
-        .title(count_label)
+        .title(if editing.word.is_some() {
+            strings.resolve(StringKey::CommonEdit)
+        } else {
+            count_label
+        })
         .primary_button_text(primary_text)
         .close_button_text(strings.resolve(StringKey::CommonCancel))
         .is_primary_button_enabled(is_primary_enabled)
