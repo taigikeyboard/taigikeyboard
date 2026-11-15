@@ -1,13 +1,13 @@
 # TaigiKeyboard 台語齒盤
 
-A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, ChromeOS, and Chrome.
+A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, and ChromeOS.
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
 ![Windows 10+](https://img.shields.io/badge/Windows-10%2B-blue)
 ![Linux Fcitx5 | IBus](https://img.shields.io/badge/Linux-Fcitx5%20%7C%20IBus-orange)
-![ChromeOS | Chrome](https://img.shields.io/badge/ChromeOS-Chrome-4285F4)
+![ChromeOS](https://img.shields.io/badge/ChromeOS-Web_Store-4285F4)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join_chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/UFn9RdynPu)
 
@@ -19,7 +19,7 @@ A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, ChromeOS, and 
 | Android | [Google Play](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard) |
 | macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
 | Linux | [GitHub Releases](https://github.com/taigikeyboard/taigikeyboard/releases) (`.deb`, `.rpm`, Arch; Fcitx5 or IBus) |
-| ChromeOS / Chrome | [Chrome Web Store](https://chromewebstore.google.com/detail/alkppnijpfcahccbkcgpacejljlnidgc) |
+| ChromeOS | [Chrome Web Store](https://chromewebstore.google.com/detail/alkppnijpfcahccbkcgpacejljlnidgc) |
 
 See the [installation guide](docs/INSTALL.md) for setup instructions.
 
