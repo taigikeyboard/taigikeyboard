@@ -2,12 +2,12 @@
 
 A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, and ChromeOS.
 
-[![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)](https://taigikeyboard.tw/#download)
-[![Android 9+](https://img.shields.io/badge/Android-9%2B-green)](https://taigikeyboard.tw/#download)
+[![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)](https://apps.apple.com/app/id6751871806)
+[![Android 9+](https://img.shields.io/badge/Android-9%2B-green)](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard)
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)](https://taigikeyboard.tw/#download)
 [![Windows 10+](https://img.shields.io/badge/Windows-10%2B-blue)](https://taigikeyboard.tw/#download)
 [![Linux Fcitx5 | IBus](https://img.shields.io/badge/Linux-Fcitx5%20%7C%20IBus-orange)](https://taigikeyboard.tw/#download)
-[![ChromeOS](https://img.shields.io/badge/ChromeOS-Web_Store-4285F4)](https://taigikeyboard.tw/#download)
+[![ChromeOS](https://img.shields.io/badge/ChromeOS-Web_Store-4285F4)](https://chromewebstore.google.com/detail/alkppnijpfcahccbkcgpacejljlnidgc)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join_chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/UFn9RdynPu)
 
