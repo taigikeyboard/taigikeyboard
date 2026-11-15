@@ -27,7 +27,7 @@ serde_json.workspace = true
 winit = { version = "0.30", optional = true }
 softbuffer = { version = "0.4", optional = true }
 cosmic-text = { version = "0.14", optional = true }
-fontdb = { version = "0.16", optional = true }
+fontdb = { version = "0.24", optional = true }
 # Desktop portal, so the Default theme can follow color-scheme and the accent.
 # The engine links this crate without `window`, and does not pull zbus in.
 zbus = { workspace = true, optional = true, features = ["blocking-api"] }
