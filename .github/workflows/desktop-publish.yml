@@ -95,25 +95,3 @@ jobs:
           }
           gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -X PATCH -F draft=false \
             --jq '"published \(.tag_name): \(.html_url)"'
-
-  finish:
-    name: report a failure
-    needs: [check, publish]
-    if: always() && github.repository == 'taigikeyboard/taigikeyboard' && contains(needs.*.result, 'failure')
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          sparse-checkout: tools/release
-
-      - name: Report a failure
-        env:
-          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          VERSION: ${{ needs.check.outputs.version }}
-        run: |
-          bash tools/release/desktop-train.sh notify "Desktop publish ${VERSION:-} failed: $RUN_URL"
