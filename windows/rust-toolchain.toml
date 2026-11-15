@@ -1,7 +1,7 @@
 [toolchain]
-# A version, not `stable`: the release build must not change compiler underneath
-# a commit. `.github/workflows/windows-build.yml` builds from this file.
-channel = "1.99.1"
+# The root rust-toolchain.toml's version (`tools/rust-toolchain.sh check`).
+# `.github/workflows/windows-build.yml` builds from this file.
+channel = "1.100.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
 # JUSTIFICATION: shipped ABIs + the host check target.

@@ -1,5 +1,6 @@
 [toolchain]
-channel = "stable"
+# The root rust-toolchain.toml's version (`tools/rust-toolchain.sh check`).
+channel = "1.100.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
 # Both macOS architectures are shipped ABIs: the input method is one universal

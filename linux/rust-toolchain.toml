@@ -1,5 +1,6 @@
 [toolchain]
-channel = "stable"
+# The root rust-toolchain.toml's version (`tools/rust-toolchain.sh check`).
+channel = "1.100.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
 # x86_64-unknown-linux-gnu — the shipping target; `make linux-check` on the

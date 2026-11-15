@@ -2,8 +2,9 @@ name: Generated files + lint
 
 # The gates that need no compiler: generated i18n artifacts are current, the
 # i18n codegen's own tests pass, the protobuf bindings are current, Swift
-# formatting matches .swiftformat, and every PowerShell script is ASCII
-# (`make lint-ps1`).
+# formatting matches .swiftformat, every PowerShell script is ASCII
+# (`make lint-ps1`), and every rust-toolchain.toml names the one pinned Rust
+# (`make lint-rust-toolchain`).
 # Everything here reads files; the whole job is well under a minute.
 #
 # Swift is linted here on Linux rather than on a macOS runner because
@@ -26,6 +27,8 @@ on:
       - '**/*.ps1'
       - '.github/actions/setup-protoc/**'
       - 'mise.toml'
+      - '**/rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - '.github/workflows/codegen-lint.yml'
   push:
     branches: [main]
@@ -44,6 +47,8 @@ on:
       - '**/*.ps1'
       - '.github/actions/setup-protoc/**'
       - 'mise.toml'
+      - '**/rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - '.github/workflows/codegen-lint.yml'
 
 permissions:
@@ -60,6 +65,23 @@ env:
   SWIFTFORMAT_SHA256: b4a3cbb8c852a0baaf9adf853e221ff1dabf921a3d8957a602e0bda3af8470f1
 
 jobs:
+  rust-toolchain:
+    name: one pinned Rust version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # From the root, rustc resolves the root rust-toolchain.toml, so rustup
+      # installs the pinned version first; `check` then compares every file.
+      - name: Install the pinned version
+        run: rustup toolchain install "$(bash tools/rust-toolchain.sh)" --profile minimal --no-self-update
+
+      - name: make lint-rust-toolchain
+        run: make lint-rust-toolchain
+
   ps1-ascii:
     name: PowerShell scripts ASCII
     runs-on: ubuntu-24.04
