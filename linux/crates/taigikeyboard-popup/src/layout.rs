@@ -297,7 +297,10 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }
             y += cell.h + row_gap;
         }
-        if page.has_prev || page.has_next {
+        // A collapsed vertical-expandable list has no arrow row, so the
+        // window keeps its height when it unfolds.
+        let collapsed_expandable = page.expandable.is_some();
+        if (page.has_prev || page.has_next) && !collapsed_expandable {
             let mut ax = x;
             if page.has_prev {
                 place_arrow(
@@ -384,7 +387,20 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
     };
     // A column keeps the two scripts on one line. A row stacks them.
     let inline = view.axis == 1;
-    let columns = view.grid_columns.max(1) as usize;
+    // Only the columns a cell reaches: a trailing empty column (the last
+    // columns of the list) would leave a strip past the highlight's reach.
+    let columns = (0..page.cells.len())
+        .map(|index| {
+            let start = view
+                .column_starts
+                .get(index)
+                .copied()
+                .unwrap_or(index as u32 % view.grid_columns.max(1));
+            start + view.column_spans.get(index).copied().unwrap_or(1).max(1)
+        })
+        .max()
+        .unwrap_or(1)
+        .clamp(1, view.grid_columns.max(1)) as usize;
     if !inline {
         return arrange_expanded_row(page, &style, measure, scale);
     }
@@ -1469,6 +1485,48 @@ mod tests {
                 assert!((pitch(&unfolded) - pitch(&folded)).abs() < 0.5);
             }
         }
+    }
+
+    #[test]
+    fn a_vertical_expandable_list_keeps_its_height_and_fills_to_the_right_edge() {
+        use crate::protocol::ExpandableView;
+        let cells: Vec<Cell> = ["好", "人"]
+            .iter()
+            .map(|text| Cell {
+                text: (*text).into(),
+                annotation: Some("hó".into()),
+            })
+            .collect();
+        let mut folded = page(true, true, cells.clone());
+        folded.has_next = true;
+        folded.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            mode: 0,
+            axis: 1,
+            ..ExpandableView::default()
+        });
+        let mut unfolded = page(false, true, cells);
+        unfolded.cursor = Some(1);
+        unfolded.chrome.highlight_fill = 100;
+        // A three-column grid whose last view holds one column.
+        unfolded.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            mode: 1,
+            axis: 1,
+            column_width: 80,
+            grid_columns: 3,
+            scroll_y: 0,
+            row_indexes: vec![0, 1],
+            column_starts: vec![0, 0],
+            column_spans: vec![1, 1],
+            visible_rows: 2,
+            row_height: 40,
+        });
+        let before = arrange(&folded, &Mono, 1.0);
+        let after = arrange(&unfolded, &Mono, 1.0);
+        assert!((before.height - after.height).abs() < 0.5);
+        let full = after.highlight.expect("highlight");
+        assert!((full.x + full.w - after.width).abs() < 0.01);
     }
 
     #[test]
