@@ -283,6 +283,7 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
     // above): a Hanji-less pick of its reading counts the romanization and
     // touches nothing; a pick of the phrase itself touches it.
     let touched_before = learn_count(reader, "做進出口").expect("seeded phrase");
+    let counted_before = frequency_row(reader, "做進出口").map_or(0, |(_, count)| count);
     let reading = "tsò tsìn-tshut-kháu";
     compose_resolved(
         "tsotsintshutkhau",
@@ -295,6 +296,12 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
     assert!(eventually(
         || learn_count(reader, "做進出口") == Some(touched_before + 1)
     ));
+    // Each store drains its own queue, so the touch landing says nothing of
+    // the counts: the phrase pick's count landing proves the frequency queue
+    // drained past the Hanji-less pick.
+    assert!(eventually(|| frequency_row(reader, "做進出口")
+        .map(|(_, count)| count)
+        == Some(counted_before + 1)));
     assert_eq!(
         frequency_row(reader, reading),
         Some((reading.to_owned(), 1))
