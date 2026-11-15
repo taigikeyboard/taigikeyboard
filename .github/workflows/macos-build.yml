@@ -39,6 +39,8 @@ on:
         default: false
   pull_request:
     paths:
+      - '.github/actions/setup-protoc/**'
+      - 'mise.toml'
       - '.github/workflows/macos-build.yml'
       - 'macos/scripts/bundle-app.sh'
       - 'macos/scripts/release-app.sh'
@@ -63,10 +65,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-    env:
-      # Same protoc as macos.yml (engine/protos/build.rs shells out to it).
-      PROTOC_VERSION: 36.1
-      PROTOC_SHA256: de56d57afe30c5d191b11d24ff93dd4025728d7fb43b773886b2d3613e0bdbb2
     steps:
       # The staged commit, not whatever the run's ref points at by now.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -74,14 +72,8 @@ jobs:
           ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          set -euo pipefail
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
-          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
-          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       # Both macOS targets, from macos/rust-toolchain.toml.
       - name: Install the toolchain (macos/rust-toolchain.toml)

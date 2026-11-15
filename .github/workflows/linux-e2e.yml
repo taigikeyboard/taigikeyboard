@@ -24,9 +24,6 @@ permissions:
 concurrency:
   group: linux-e2e-${{ github.event_name }}-${{ github.sha }}
 
-env:
-  PROTOC_VERSION: "36.1"
-
 jobs:
   e2e:
     name: scenarios through Fcitx5 + IBus (${{ matrix.distro }})
@@ -48,11 +45,8 @@ jobs:
       - name: Install build + e2e dependencies
         run: bash e2e/drivers/linux/ci-deps.sh ${{ matrix.distro }}
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o /tmp/protoc.zip \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       # Arch ships rustup as a package; everywhere else it comes from rustup.rs.
       - name: Install Rust toolchain

@@ -53,7 +53,7 @@ When adding a new `.proto` file under `engine/protos/proto/`, update ALL THREE:
 
 `engine/scripts/gen-macos-protos.sh` globs `proto/*.proto` and runs as part of `make protos`, so the macOS tree needs neither an edit nor a separate command — only the commit of its regenerated output.
 
-**`protoc` upgrades are a coupled change.** The pinned protoc and the skip-on-drift behaviour: `docs/BUILDING.md` §2 — a changed `.proto` on a drifted machine leaves the bindings **silently stale**. To move the pin, set `TAIGI_ALLOW_PROTOC_DRIFT=1`, bump the javalite pin in `android/app/build.gradle.kts` + `mise.toml` and commit the full regeneration in the same PR, then re-run the Android debug / unit-test / release-R8 gates.
+**`protoc` upgrades are a coupled change.** The pinned protoc and the skip-on-drift behaviour: `docs/BUILDING.md` §2 — a changed `.proto` on a drifted machine leaves the bindings **silently stale**. To move the pin, set `TAIGI_ALLOW_PROTOC_DRIFT=1`, bump the javalite pin in `android/app/build.gradle.kts` + `mise.toml` + the digests in `.github/actions/setup-protoc/action.yml` and commit the full regeneration in the same PR, then re-run the Android debug / unit-test / release-R8 gates.
 
 Without this, bridge code references generated types that don't exist; the build silently breaks until next ad-hoc regen.
 
