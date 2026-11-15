@@ -2,7 +2,9 @@
 //
 // The Custom Dictionary page's shape (`CustomDictionaryPage.swift`) over the
 // engine's learning stores: a kind and an order picker over a filter, a paged
-// table, a count sheet and `−`, then Delete Learning Records, which empties
+// table, a record sheet (the count, and for a row that can be added, its word
+// filed in the custom dictionary in the same sheet) and `−`, then Delete
+// Learning Records, which empties
 // every learning store whichever kind is on screen. Nothing is added here by
 // hand — a word the user wants is a custom word, so a listed row's word can be
 // filed there (Add to Custom Dictionary, through Custom Dictionary's Add Word
@@ -253,9 +255,15 @@ struct LearningRecordsPage: View {
         .onChange(of: model.kind) { showFromFirstPage() }
         .onChange(of: model.order) { showFromFirstPage() }
         .sheet(item: $editing) { record in
-            LearningRecordCountSheet(record: record) { count in
-                Task { await model.setCount(of: record, to: count) }
-            }
+            LearningRecordCountSheet(
+                record: record,
+                onSave: { count in
+                    Task { await model.setCount(of: record, to: count) }
+                },
+                onAdd: { roman, hanji in
+                    Task { await model.addToCustomDictionary(record, roman: roman, hanji: hanji) }
+                },
+            )
         }
         // Add to Custom Dictionary: Custom Dictionary's Add Word sheet over
         // the row's typed form and word, for the user to tweak (hyphens,
@@ -379,9 +387,12 @@ struct LearningRecordsPage: View {
     }
 }
 
-/// Edit one row's count: the word and its reading, the count as a field with
-/// a stepper beside it, and — for word frequency — the note that counts past
-/// 40 rank the same. A sheet, as `CustomDictionaryEntrySheet` is.
+/// One record's sheet: the word and its reading, the count as a field with a
+/// stepper beside it, and — for word frequency — the note that counts past
+/// 40 rank the same; for a row the engine says can be added, the Add Word
+/// fields too (typed form and word, for the user to tweak hyphens and
+/// capitals) with their own Add to Custom Dictionary button. Save writes the
+/// count; Add files the word. A sheet, as `CustomDictionaryEntrySheet` is.
 struct LearningRecordCountSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(DisplayLanguageStore.self) private var language
@@ -390,15 +401,30 @@ struct LearningRecordCountSheet: View {
     /// commits only when it ends editing, and a click on Save does not end
     /// it — the count typed last would be lost.
     @State private var countText: String
+    @State private var roman: String
+    @State private var hanji: String
     private let record: Taigi_Engine_LearningRecord
     private let onSave: (Int) -> Void
+    private let onAdd: (String, String) -> Void
 
     private static let countRange = 1 ... LearningRecordsPageModel.maxCount
 
-    init(record: Taigi_Engine_LearningRecord, onSave: @escaping (Int) -> Void) {
+    init(
+        record: Taigi_Engine_LearningRecord,
+        onSave: @escaping (Int) -> Void,
+        onAdd: @escaping (String, String) -> Void,
+    ) {
         self.record = record
         self.onSave = onSave
+        self.onAdd = onAdd
         _countText = State(initialValue: String(max(1, record.count)))
+        _roman = State(initialValue: record.tl)
+        _hanji = State(initialValue: record.text)
+    }
+
+    /// A romanization is what the word is found by; without one Add is off.
+    private var canAdd: Bool {
+        !roman.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     /// The count typed, pulled into range; nil while the field holds no whole
@@ -447,11 +473,25 @@ struct LearningRecordCountSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                if record.canAddToCustomDictionary {
+                    Section(language.string(.dictionaryLearningRecordsAddToCustomDictionary)) {
+                        TextField(language.string(.dictionaryRomanLabel), text: $roman)
+                        TextField(language.string(.dictionaryHanziLabel), text: $hanji)
+                    }
+                }
             }
             .formStyle(.grouped)
             HStack {
                 Spacer()
                 Button(language.string(.commonCancel), role: .cancel) { dismiss() }
+                if record.canAddToCustomDictionary {
+                    Button(language.string(.dictionaryLearningRecordsAddToCustomDictionary)) {
+                        guard canAdd else { return }
+                        onAdd(roman, hanji)
+                        dismiss()
+                    }
+                    .disabled(!canAdd)
+                }
                 Button(language.string(.commonSave)) {
                     guard let count else { return }
                     onSave(count)

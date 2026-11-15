@@ -2,7 +2,9 @@
 //! Custom Dictionary page's shape (`custom_dictionary.rs`) over the engine's
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
-//! selection drives the edit-count / delete pair — plus Add to Custom
+//! selection drives the edit-count / delete pair — ✎ opens the record
+//! dialog, which edits the count and, for a row the engine says can be
+//! added, files its word in the custom dictionary in one place — — plus Add to Custom
 //! Dictionary, which opens Custom Dictionary's Add Word dialog over the
 //! row's word — and the pager under it, then Delete Learning Records under
 //! the card: it empties every learning store, whichever kind is on screen,
@@ -74,6 +76,11 @@ pub enum Message {
     AddWordDialogClosed(ContentDialogResult),
     /// The count field's value; `None` while it is cleared.
     CountChanged(Option<f64>),
+    /// The record dialog's word fields, for a row the engine says can be
+    /// added.
+    RecordWordFieldChanged(EntryField, String),
+    /// Primary (Save) writes the count; Secondary (Add to Custom
+    /// Dictionary) files the word as edited. Cancel does nothing.
     CountDialogClosed(ContentDialogResult),
     /// Delete Learning Records runs on the press, no confirmation (USER
     /// 2026-10-16).
@@ -85,11 +92,14 @@ pub enum Message {
     RowsApplied(Option<Vec<String>>),
 }
 
-/// The row whose count is being edited in the dialog.
+/// The row open in the record dialog: its count, and — for a row the
+/// engine says can be added — its word as the user has edited it so far.
 struct EditingCount {
     record: LearningRecord,
     /// What the field holds; `None` while it is cleared.
     count: Option<f64>,
+    /// `(roman, hanji)`; `None` hides the dialog's add section.
+    word: Option<(String, String)>,
 }
 
 /// The row whose word is being filed in the Add Word dialog, and the word
@@ -219,6 +229,9 @@ pub fn update(
             if let Some(row) = model.listing.selected_row() {
                 model.editing = Some(EditingCount {
                     count: Some(row.count.max(1) as f64),
+                    word: row
+                        .can_add_to_custom_dictionary
+                        .then(|| (row.tl.clone(), row.text.clone())),
                     record: row.clone(),
                 });
             }
@@ -269,19 +282,44 @@ pub fn update(
                 editing.count = count;
             }
         }
-        Message::CountDialogClosed(result) => {
-            let Some(EditingCount { record, count }) = model.editing.take() else {
-                return;
-            };
-            if result != ContentDialogResult::Primary {
-                return;
+        Message::RecordWordFieldChanged(field, text) => {
+            if let Some((roman, hanji)) = model.editing.as_mut().and_then(|e| e.word.as_mut()) {
+                match field {
+                    EntryField::Roman => *roman = text,
+                    EntryField::Hanji => *hanji = text,
+                }
             }
-            // The primary button is disabled while the field is cleared, so
-            // this is the belt.
-            let Some(count) = count.and_then(whole_count) else {
+        }
+        Message::CountDialogClosed(result) => {
+            let Some(EditingCount {
+                record,
+                count,
+                word,
+            }) = model.editing.take()
+            else {
                 return;
             };
-            begin_job(model, context, move || set_count_job(record, count));
+            match result {
+                ContentDialogResult::Primary => {
+                    // The primary button is disabled while the field is
+                    // cleared, so this is the belt.
+                    let Some(count) = count.and_then(whole_count) else {
+                        return;
+                    };
+                    begin_job(model, context, move || set_count_job(record, count));
+                }
+                ContentDialogResult::Secondary => {
+                    // Disabled without a romanization, so this is the belt.
+                    let Some((roman, hanji)) = word.filter(|(roman, _)| !roman.trim().is_empty())
+                    else {
+                        return;
+                    };
+                    begin_job(model, context, move || {
+                        add_to_custom_dictionary_job(record, &roman, &hanji)
+                    });
+                }
+                _ => {}
+            }
         }
         Message::ClearAll => begin_job(model, context, clear_all_job),
         Message::JobFinished(generation, outcome) => {
@@ -622,11 +660,51 @@ fn count_dialog(
             .into(),
         None => View::empty(),
     };
+    // The add section: the row's typed form and word, for the user to tweak
+    // (hyphens, capitals) before Add files it — on a row the engine says
+    // can be added only.
+    let word_fields = match &editing.word {
+        Some((roman, hanji)) => {
+            let field = |text: &str, field: EntryField, header: StringKey| {
+                TextBox::new()
+                    .text(text.to_owned())
+                    .width(DIALOG_FIELD_WIDTH)
+                    .on_text_changed(context.callback(move |text| {
+                        WindowMessage::LearningRecords(Message::RecordWordFieldChanged(field, text))
+                    }))
+                    .slot(TextBoxSlot::Header, strings.resolve(header))
+            };
+            StackPanel::new()
+                .spacing(CONTROL_GAP)
+                .margin(Thickness::new(0.0, CONTROL_GAP, 0.0, 0.0))
+                .children((
+                    TextBlock::new()
+                        .text(
+                            strings
+                                .resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
+                        )
+                        .font_weight(FontWeight::SEMI_BOLD),
+                    field(roman, EntryField::Roman, StringKey::DictionaryRomanLabel),
+                    field(hanji, EntryField::Hanji, StringKey::DictionaryHanziLabel),
+                ))
+        }
+        None => View::empty(),
+    };
+    let add_text = editing
+        .word
+        .as_ref()
+        .map(|_| strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary));
+    let can_add = editing
+        .word
+        .as_ref()
+        .is_some_and(|(roman, _)| !roman.trim().is_empty());
     ContentDialog::new()
         .title(strings.resolve(StringKey::DictionaryLearningRecordsEditCount))
         .primary_button_text(strings.resolve(StringKey::CommonSave))
+        .secondary_button_text_optional(add_text)
         .close_button_text(strings.resolve(StringKey::CommonCancel))
         .is_primary_button_enabled(editing.count.and_then(whole_count).is_some())
+        .is_secondary_button_enabled(can_add)
         .is_open(true)
         .on_closed(
             context.callback(|result| {
@@ -652,6 +730,7 @@ fn count_dialog(
                         strings.resolve(StringKey::DictionaryLearningRecordsCount),
                     ),
                 note,
+                word_fields,
             )),
         )
 }
