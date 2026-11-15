@@ -28,7 +28,7 @@ const USER_DATA_ROOT: &str = "/taigi";
 /// The memory VFS path of one of `userDataFiles`, or a refusal for any other
 /// name.
 fn user_data_path(name: &str) -> Result<String, JsError> {
-    if userdata::USER_DATA_FILES.contains(&name) {
+    if dispatch::USER_DATA_FILES.contains(&name) {
         Ok(format!("{USER_DATA_ROOT}/{name}"))
     } else {
         Err(JsError::new(&format!("{name} is not a user-data file")))
@@ -118,7 +118,7 @@ impl Session {
     /// Hands in one of `dictionaryFiles`.
     #[wasm_bindgen(js_name = addDictionary)]
     pub fn add_dictionary(&self, name: &str, bytes: Vec<u8>) {
-        mmap_host::register(&Path::new(DICTIONARIES_ROOT).join(name), bytes);
+        dispatch::register_dictionary_bytes(&Path::new(DICTIONARIES_ROOT).join(name), bytes);
     }
 
     /// Installs the dictionaries handed in and answers the record count.
@@ -133,7 +133,7 @@ impl Session {
     /// The files the page keeps the user's data in, by name.
     #[wasm_bindgen(js_name = userDataFiles)]
     pub fn user_data_files(&self) -> Vec<String> {
-        userdata::USER_DATA_FILES.map(str::to_owned).to_vec()
+        dispatch::USER_DATA_FILES.map(str::to_owned).to_vec()
     }
 
     /// Hands in one of `userDataFiles` as the page kept it. Before

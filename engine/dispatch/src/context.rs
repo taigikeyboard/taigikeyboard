@@ -1,13 +1,10 @@
 //! The previous-word context a continuous fetch ranks by (bigram-lm-roadmap
 //! P5, behavioral-invariants §56): the bundled `association.bin`
 //! continuations of the word the pending tail follows, as `ContextRanks`.
-//! The user-learned continuations join in `user_data::with_stores`; before
-//! the stores open, and in a build without them, the bundled ones rank alone.
+//! The user-learned continuations join in `fetch`.
 
-use composing::requests::fetch_at_pos_intent;
-use composing::{EngineHandle as ComposingHandle, ListContext, PendingSnapshot, UserRows};
+use composing::{ListContext, PendingSnapshot};
 use lexicon::search::AssociationHit;
-use protos::engine::{composing_request, AppConfig, ComposingRequest, ComposingResponse};
 use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};
 
 /// Continuations read per layer — what the next-word strip would show.
@@ -67,28 +64,4 @@ pub(crate) fn bundled_ranks(previous: Option<&(String, String)>) -> ContextRanks
         );
     }
     ranks
-}
-
-/// A composing request without the user-data stores: a `FetchAtPos` ranks
-/// by the bundled context, every other request goes straight to composing.
-pub(crate) fn handle_composing_without_stores(
-    request: &ComposingRequest,
-    config: &AppConfig,
-    generation: u64,
-) -> Result<ComposingResponse, composing::ComposingError> {
-    let composing = ComposingHandle::instance();
-    let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
-        return composing.handle(request, config, generation);
-    };
-    // One copy of the engine reads the context and answers the fetch.
-    let Some(engine) = composing.engine_at(generation) else {
-        return Ok(composing::Engine::idle_snapshot(config));
-    };
-    let snapshot = engine.pending_snapshot(config);
-    let context = bundled_ranks(context_word(&snapshot, sent.now_ms).as_ref());
-    Ok(composing::requests::query(
-        &fetch_at_pos_intent(sent, UserRows::default(), context),
-        &engine,
-        config,
-    ))
 }

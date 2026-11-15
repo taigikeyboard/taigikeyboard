@@ -103,7 +103,7 @@ impl FrequencyData {
 /// map: the outer level lets [`get`](Self::get) borrow `&str` and the
 /// inner level expresses the tolerant fallback directly. The engine builds
 /// this once per fetch from its `user_frequency.db` rows (`dispatch` crate,
-/// `user_data::with_stores::frequency_map`) and reuses it across the whole batch.
+/// `fetch::candidate_frequency`) and reuses it across the whole batch.
 ///
 /// **The `canonical_tl == ""` bucket** holds two kinds of row: legacy ones
 /// (pre-R5 rows / old-backup imports that could not be re-keyed) and
@@ -135,6 +135,11 @@ impl FrequencyMap {
         Self {
             by_display: std::collections::HashMap::with_capacity(capacity),
         }
+    }
+
+    /// No bucket — nothing to re-rank with.
+    pub fn is_empty(&self) -> bool {
+        self.by_display.is_empty()
     }
 
     /// Insert one `(display_text, canonical_tl)` bucket. Last-write-wins

@@ -20,6 +20,7 @@ use protos::engine::{request, response, AppConfig, ErrorCode, Request, Response}
 
 mod case;
 mod context;
+mod fetch;
 mod predict;
 #[cfg(feature = "e2e-trace")]
 pub mod trace;
@@ -30,6 +31,18 @@ mod user_data;
 /// reading it, as the engine refuses the bytes; `user_data/with_stores.rs`
 /// asserts it equals the `userdata` crate's own limit.
 pub const CUSTOM_CSV_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
+
+/// The files the user's stores live in, by name — for a platform that moves
+/// them itself (the web).
+#[cfg(feature = "user-data")]
+pub use userdata::USER_DATA_FILES;
+
+/// Hands in the bytes of the dictionary file at `path`, for a target with no
+/// file system to map (the browser); the lexicon install reads them there.
+#[cfg(target_family = "wasm")]
+pub fn register_dictionary_bytes(path: &std::path::Path, bytes: Vec<u8>) {
+    mmap_host::register(path, bytes);
+}
 
 /// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
 /// from the IME are kilobytes at worst; 2 MB is generous slack for proto

@@ -3,7 +3,7 @@
 //!
 //! The session and the key translation are plain Rust, tested natively. Only
 //! `bindings` names the browser: `wasm-bindgen` imports panic off this target
-//! and `mmap_host::register` exists only on it, so it is the one module built
+//! and `dispatch::register_dictionary_bytes` exists only on it, so it is the one module built
 //! for wasm alone.
 
 // The plain modules have no caller on a native non-test build, only their tests.

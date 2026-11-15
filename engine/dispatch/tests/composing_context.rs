@@ -145,6 +145,18 @@ fn the_previous_word_reranks_the_candidates() {
         vec!["姊", "濟"],
         "{ranked:?}"
     );
+    // The developer view ranks with the same stored rows.
+    let explained: serde_json::Value = serde_json::from_str(
+        &dispatch::explain_composition(&tl_config(true), generation, NOW_MS + 1_000, false)
+            .expect("a composition is open"),
+    )
+    .unwrap();
+    let first_hanji = explained["candidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find_map(|row| row["hanji"].as_str());
+    assert_eq!(first_hanji, Some("姊"), "{explained}");
 
     // Outside the association window the committed word is no context.
     commit("真", "tsin", NOW_MS - 10_000);

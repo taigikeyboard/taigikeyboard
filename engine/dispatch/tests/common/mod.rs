@@ -41,6 +41,7 @@ pub fn user_data(method: user_data_request::Method) -> Response {
 
 /// Opens the engine's user data in `directory`, rollback-journaled as on
 /// iOS, and asserts it answered.
+#[allow(dead_code)]
 pub fn open_user_data(directory: &std::path::Path) {
     let opened = user_data(user_data_request::Method::Open(OpenUserData {
         directory: directory.display().to_string(),

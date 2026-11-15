@@ -5,22 +5,22 @@
 //! answer to the wire's error code and joins the stores to `composing` /
 //! `nextword`, which only `dispatch` sees together.
 
-use std::collections::HashSet;
-
 use composing::api::ComposingError;
-use composing::{ConversionFrequency, PendingSnapshot, UserRows};
+use composing::{ConversionFrequency, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
     composing_request, next_word_request, response, AppConfig, ComposingRequest, ComposingResponse,
-    ErrorCode, FetchAtPos, NextWordRequest, NextWordResponse, RawNextWordPrediction, Response,
-    Source, UserDataRequest,
+    ErrorCode, NextWordRequest, NextWordResponse, RawNextWordPrediction, Response, Source,
+    UserDataRequest,
 };
-use ranking::{ContextRanks, FrequencyData, FrequencyMap, CONTEXT_RANK_USER};
+use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
     AssociationPair, CustomDictionaryCSV, CustomDictionaryRow, CustomDictionaryStore, FollowingRow,
     FrequencyRow, LearnedPhraseRow, LearnedPhraseStore, RequestError, UserDataHandle,
     UserDataStores,
 };
+
+use crate::fetch::UserRowSource;
 
 // The limit a platform may check before the read is the codec's own.
 const _: () = assert!(crate::CUSTOM_CSV_MAX_FILE_BYTES == CustomDictionaryCSV::MAX_FILE_SIZE_BYTES);
@@ -45,15 +45,11 @@ pub(crate) fn respond(id: u32, request: &UserDataRequest) -> Response {
     }
 }
 
-/// A composing request, answered with the open stores. `FetchAtPos` runs
-/// two passes in-process (roadmap P3b, brainstorm R5): the custom and
-/// learned rows for the listed buffer, a neutral fetch that discovers the
-/// candidates, their frequency rows, and a re-ranked fetch — both passes
-/// answered by one copy of the engine as of the request, so the rows read
-/// for its buffer and list start rank that buffer and list. Every other
+/// A composing request, answered with the open stores. `FetchAtPos` takes
+/// the one fetch path (`crate::fetch`) over the stores' rows. Every other
 /// request goes to composing, a Hanji conversion walk ranking with the
-/// user's counts ([`StoredFrequency`]); the phrase a final commit taught
-/// (§50) is written to `learned_phrases.db` here (P3c), then the pick a
+/// user's counts ([`StoredRows`]); the phrase a final commit taught (§50)
+/// is written to `learned_phrases.db` here (P3c), then the pick a
 /// `CommitContinuous` counts (R5) — after the request's own walk, so a pick
 /// ranks the walks that follow it.
 pub(super) fn handle_composing(
@@ -62,94 +58,47 @@ pub(super) fn handle_composing(
     config: &AppConfig,
     generation: u64,
 ) -> Result<ComposingResponse, ComposingError> {
-    let composing = composing::EngineHandle::instance();
-    let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
-        let frequency = StoredFrequency { stores, config };
-        let applied = composing.handle_ranked(request, config, generation, Some(&frequency))?;
-        if let Some(learned) = applied.learned {
-            stores
-                .learned_phrases
-                .learn_phrase(&learned.hanji, &learned.canonical_tl);
-        }
-        if let Some(usage) = applied.usage {
-            stores.record_usage(
-                &usage.display_text,
-                &usage.canonical_tl,
-                usage.hanji.as_deref(),
-            );
-        }
-        return Ok(applied.response);
-    };
-    // The main thread keeps typing while a worker fetches: the passes answer
-    // from one copy of the engine, so rows read for one buffer never rank
-    // another. A stale generation answers the idle snapshot.
-    let Some(engine) = composing.engine_at(generation) else {
-        return Ok(composing::Engine::idle_snapshot(config));
-    };
-    let snapshot = engine.pending_snapshot(config);
-    let mut rows = buffer_rows(stores, &snapshot.listed_raw, config);
-    let context = context_ranks(stores, &snapshot, sent.now_ms);
-    let fetch = |rows, context| {
-        composing::requests::query(
-            &composing::requests::fetch_at_pos_intent(sent, rows, context),
-            &engine,
+    let rows = StoredRows { stores, config };
+    if let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() {
+        return Ok(crate::fetch::fetch_at_pos(
+            Some(&rows),
+            sent,
             config,
-        )
-    };
-    let neutral = fetch(rows.clone(), context.clone());
-    let Some(frequency) = frequency_map(stores, &neutral) else {
-        return Ok(neutral);
-    };
-    rows.frequency = frequency;
-    Ok(fetch(rows, context))
-}
-
-/// [`handle_composing`]'s two passes, then the mechanism view ranked with
-/// the rows the second pass would have used.
-pub(super) fn explain(
-    stores: &UserDataStores,
-    config: &AppConfig,
-    generation: u64,
-    now_ms: i64,
-    literal_roman_candidate_disabled: bool,
-) -> Option<composing::explain::Mechanism> {
-    let composing = composing::EngineHandle::instance();
-    let engine = composing.engine_at(generation)?;
-    let snapshot = engine.pending_snapshot(config);
-    let mut rows = buffer_rows(stores, &snapshot.listed_raw, config);
-    let context = context_ranks(stores, &snapshot, now_ms);
-    let sent = FetchAtPos {
-        now_ms,
-        literal_roman_candidate_disabled,
-    };
-    let neutral = composing::requests::query(
-        &composing::requests::fetch_at_pos_intent(&sent, rows.clone(), context.clone()),
-        &engine,
-        config,
-    );
-    if let Some(frequency) = frequency_map(stores, &neutral) {
-        rows.frequency = frequency;
+            generation,
+        ));
     }
-    composing::requests::mechanism(
-        &engine,
-        now_ms,
-        &rows,
-        &context,
-        literal_roman_candidate_disabled,
+    let applied = composing::EngineHandle::instance().handle_ranked(
+        request,
         config,
-    )
+        generation,
+        Some(&rows),
+    )?;
+    if let Some(learned) = applied.learned {
+        stores
+            .learned_phrases
+            .learn_phrase(&learned.hanji, &learned.canonical_tl);
+    }
+    if let Some(usage) = applied.usage {
+        stores.record_usage(
+            &usage.display_text,
+            &usage.canonical_tl,
+            usage.hanji.as_deref(),
+        );
+    }
+    Ok(applied.response)
 }
 
-/// The user data a Hanji conversion walk ranks with: the open
+/// The user data a fetch and a Hanji conversion walk rank with: the open
 /// `user_frequency.db` at the wall clock (the composing engine keeps none),
-/// and the custom words (unless `config` turns the dictionary off) and
-/// learned phrases filed under the walk's edges.
-struct StoredFrequency<'a> {
-    stores: &'a UserDataStores,
-    config: &'a AppConfig,
+/// the custom words (unless `config` turns the dictionary off) and learned
+/// phrases for the listed buffer or filed under the walk's edges, and the
+/// learned continuations of the previous word.
+pub(super) struct StoredRows<'a> {
+    pub(super) stores: &'a UserDataStores,
+    pub(super) config: &'a AppConfig,
 }
 
-impl ConversionFrequency for StoredFrequency<'_> {
+impl ConversionFrequency for StoredRows<'_> {
     fn rows_for_edge_keys(&self, edge_keys: &[String]) -> UserRows {
         let query_keys: Vec<_> = edge_keys
             .iter()
@@ -194,77 +143,49 @@ impl ConversionFrequency for StoredFrequency<'_> {
     }
 }
 
-/// The continuations of the word the pending tail follows (§56): the
-/// user's learned bigrams (`user_association.db`, the §24 Hanji-keyed
-/// recall, best evidence first) over the bundled ones.
-fn context_ranks(stores: &UserDataStores, snapshot: &PendingSnapshot, now_ms: i64) -> ContextRanks {
-    let previous = crate::context::context_word(snapshot, now_ms);
-    let mut ranks = crate::context::bundled_ranks(previous.as_ref());
-    if let Some((word, word_tl)) = previous {
-        let rows = stores
-            .association
-            .rows_following(&word, &word_tl, crate::context::CONTEXT_ROWS)
-            .unwrap_or_default();
-        for row in rows {
-            ranks.insert(row.next, row.next_tl, CONTEXT_RANK_USER);
+impl UserRowSource for StoredRows<'_> {
+    /// Keyed the way the platforms keyed them.
+    fn buffer_rows(&self, raw: &str, config: &AppConfig) -> UserRows {
+        let Some(key) = (!raw.is_empty())
+            .then(|| phonetics::api::derive_custom_query_key(raw, &config.input_mode))
+            .flatten()
+        else {
+            return UserRows::default();
+        };
+        let custom = if config.custom_dictionary_disabled {
+            Vec::new()
+        } else {
+            self.stores
+                .custom_dictionary
+                .keystroke_rows(&key, CustomDictionaryStore::KEYSTROKE_LIMIT)
+                .into_iter()
+                .map(custom_entry)
+                .collect()
+        };
+        let learned = self
+            .stores
+            .learned_phrases
+            .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
+            .into_iter()
+            .map(learned_entry)
+            .collect();
+        UserRows {
+            custom,
+            learned,
+            ..UserRows::default()
         }
     }
-    ranks
-}
 
-/// The custom-dictionary rows (unless the user turned the dictionary off)
-/// and the learned phrases for `raw`, keyed the way the platforms keyed
-/// them — no frequency rows yet.
-fn buffer_rows(stores: &UserDataStores, raw: &str, config: &AppConfig) -> UserRows {
-    let Some(key) = (!raw.is_empty())
-        .then(|| phonetics::api::derive_custom_query_key(raw, &config.input_mode))
-        .flatten()
-    else {
-        return UserRows::default();
-    };
-    let custom = if config.custom_dictionary_disabled {
-        Vec::new()
-    } else {
-        stores
-            .custom_dictionary
-            .keystroke_rows(&key, CustomDictionaryStore::KEYSTROKE_LIMIT)
+    /// The §24 Hanji-keyed recall of `user_association.db`.
+    fn continuations(&self, word: &str, word_tl: &str, limit: usize) -> Vec<(String, String)> {
+        self.stores
+            .association
+            .rows_following(word, word_tl, limit)
+            .unwrap_or_default()
             .into_iter()
-            .map(custom_entry)
+            .map(|row| (row.next, row.next_tl))
             .collect()
-    };
-    let learned = stores
-        .learned_phrases
-        .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
-        .into_iter()
-        .map(learned_entry)
-        .collect();
-    UserRows {
-        custom,
-        learned,
-        ..UserRows::default()
     }
-}
-
-/// The learned counts for the candidates `neutral` offers, deduped by the
-/// key the engine ranks on; `None` when there is nothing to re-rank with.
-fn frequency_map(stores: &UserDataStores, neutral: &ComposingResponse) -> Option<FrequencyMap> {
-    let mut seen = HashSet::new();
-    let words: Vec<String> = neutral
-        .continuous
-        .iter()
-        .flat_map(|continuous| &continuous.candidates)
-        .map(|candidate| candidate.display_text.as_str())
-        .filter(|word| seen.insert(*word))
-        .map(str::to_owned)
-        .collect();
-    if words.is_empty() {
-        return None;
-    }
-    let rows = stores.frequency.rows_for_words(&words)?;
-    if rows.is_empty() {
-        return None;
-    }
-    Some(rows.into_iter().map(frequency_entry).collect())
 }
 
 /// A stored row as the `(word, canonical TL)`-keyed entry ranking reads.
@@ -368,6 +289,10 @@ mod tests {
     use super::*;
     use userdata::{CustomDictionaryRow, CustomDictionaryStore, JournalMode};
 
+    fn buffer_rows(stores: &UserDataStores, raw: &str, config: &AppConfig) -> UserRows {
+        StoredRows { stores, config }.buffer_rows(raw, config)
+    }
+
     #[test]
     fn a_stored_count_saturates_for_ranking() {
         assert_eq!(ranked_count(7), 7);
@@ -453,7 +378,7 @@ mod tests {
         };
         let rows = |config: &AppConfig, keys: &[&str]| {
             let keys: Vec<String> = keys.iter().map(|key| (*key).to_owned()).collect();
-            StoredFrequency {
+            StoredRows {
                 stores: &stores,
                 config,
             }

@@ -1,9 +1,9 @@
 //! The user-data request, and the composing / next-word requests the
 //! engine's own user data joins. Built into every adapter: with the
 //! `user-data` feature and the stores open, `with_stores` answers; before
-//! the open, or in a build without the feature, a composing request ranks by
-//! the bundled context only, a prediction has no user rows, and nothing
-//! taught or recorded is kept — nowhere to keep it. Plan:
+//! the open, or in a build without the feature, a fetch ranks by the bundled
+//! context only (`fetch`), a prediction has no user rows, and nothing taught
+//! or recorded is kept — nowhere to keep it. Plan:
 //! `docs/architecture/user-data-engine-roadmap.md`.
 
 #[cfg(feature = "user-data")]
@@ -12,7 +12,8 @@ mod with_stores;
 use composing::api::ComposingError;
 use nextword::NextWordError;
 use protos::engine::{
-    AppConfig, ComposingRequest, ComposingResponse, NextWordRequest, NextWordResponse,
+    composing_request, AppConfig, ComposingRequest, ComposingResponse, NextWordRequest,
+    NextWordResponse,
 };
 
 #[cfg(feature = "user-data")]
@@ -30,49 +31,29 @@ pub(crate) fn respond(
 }
 
 /// The open composition's cut and candidate order, or `None` when nothing
-/// is being composed. With the stores open, the same two passes a fetch
-/// uses so the weights are the ones the list sorted by.
+/// is being composed — ranked as a fetch ranks it now.
 pub(crate) fn explain_composition(
     config: &AppConfig,
     generation: u64,
     now_ms: i64,
     literal_roman_candidate_disabled: bool,
 ) -> Option<composing::explain::Mechanism> {
+    let sent = protos::engine::FetchAtPos {
+        now_ms,
+        literal_roman_candidate_disabled,
+    };
     #[cfg(feature = "user-data")]
     if let Some(stores) = userdata::UserDataHandle::instance().stores() {
-        return with_stores::explain(
-            stores,
-            config,
-            generation,
-            now_ms,
-            literal_roman_candidate_disabled,
-        );
+        let rows = with_stores::StoredRows { stores, config };
+        return crate::fetch::explain(Some(&rows), &sent, config, generation);
     }
-    explain_without_stores(config, generation, now_ms, literal_roman_candidate_disabled)
+    crate::fetch::explain(None, &sent, config, generation)
 }
 
-fn explain_without_stores(
-    config: &AppConfig,
-    generation: u64,
-    now_ms: i64,
-    literal_roman_candidate_disabled: bool,
-) -> Option<composing::explain::Mechanism> {
-    let composing = composing::EngineHandle::instance();
-    let engine = composing.engine_at(generation)?;
-    let snapshot = engine.pending_snapshot(config);
-    let context =
-        crate::context::bundled_ranks(crate::context::context_word(&snapshot, now_ms).as_ref());
-    composing::requests::mechanism(
-        &engine,
-        now_ms,
-        &composing::UserRows::default(),
-        &context,
-        literal_roman_candidate_disabled,
-        config,
-    )
-}
-
-/// A composing request — the `Composing` arm of `crate::run`.
+/// A composing request — the `Composing` arm of `crate::run`. A
+/// `FetchAtPos` takes the one fetch path, with or without the stores; every
+/// other request goes to composing — with the stores, ranked by and
+/// teaching the user's data.
 pub(crate) fn handle_composing(
     request: &ComposingRequest,
     config: &AppConfig,
@@ -82,7 +63,12 @@ pub(crate) fn handle_composing(
     if let Some(stores) = userdata::UserDataHandle::instance().stores() {
         return with_stores::handle_composing(stores, request, config, generation);
     }
-    crate::context::handle_composing_without_stores(request, config, generation)
+    match request.method.as_ref() {
+        Some(composing_request::Method::FetchAtPos(sent)) => {
+            Ok(crate::fetch::fetch_at_pos(None, sent, config, generation))
+        }
+        _ => composing::EngineHandle::instance().handle(request, config, generation),
+    }
 }
 
 /// A next-word request — the `Nextword` arm of `crate::run`.

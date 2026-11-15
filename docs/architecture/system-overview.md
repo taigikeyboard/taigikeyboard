@@ -92,6 +92,7 @@ graph TD
     dispatch --> ranking
     dispatch --> userdata
     dispatch --> phonetics
+    dispatch -. wasm only .-> mmaphost
     composing --> lexicon
     composing --> ranking
     composing --> phonetics
