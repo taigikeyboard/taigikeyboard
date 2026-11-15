@@ -29,8 +29,8 @@ use taigi_desktop_core::engine::user_data::{
 };
 use taigi_desktop_core::settings::learning_records::{
     add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
-    offers_add_to_custom_dictionary,
-    order_label, set_count_job, whole_count, Listing, KINDS, MAX_COUNT, ORDERS,
+    offers_add_to_custom_dictionary, order_label, set_count_job, whole_count, Listing, KINDS,
+    MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
