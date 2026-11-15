@@ -158,8 +158,11 @@ impl LearningRecordsPage {
             .map(|key| strings.resolve(key)),
             true,
         ));
+        // One click selects (the verbs below act on it); only a double-click
+        // or Enter activates — GTK's default activates on a single click.
         let list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
+            .activate_on_single_click(false)
             .css_classes(["boxed-list"])
             .build();
         let empty = gtk::Label::builder()
