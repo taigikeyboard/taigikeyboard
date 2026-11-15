@@ -72,7 +72,7 @@ The timer is one `Job` on `TaigiKeyboard.serviceScope` (cancelled in `onDestroy`
 
 ### 13.10 Prediction values
 
-`EnginePrediction.subtitle` is `""` on the wire when there is no romanization; both bridges map it to `nil` / `null` (`RustEngineBridge+NextWord.swift`, `RustEngineBridge.kt`).
+`EnginePrediction.subtitle` is `""` on the wire when there is no romanization; both bridges map it to `nil` / `null` (`RustEngineBridge+NextWord.swift`, `NextWordBridge.kt`).
 
 ## Cross-references
 

@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
@@ -31,8 +31,8 @@ class TaigiAutocompleteServiceTest {
         consumedSpanEnd: Int,
         displayText: String,
         syllableCount: Int = 1,
-    ): RustEngineBridge.ContinuousCandidate =
-        RustEngineBridge.ContinuousCandidate(
+    ): ContinuousCandidate =
+        ContinuousCandidate(
             consumedSpanEnd = consumedSpanEnd,
             syllableCount = syllableCount,
             displayText = displayText,

@@ -4,7 +4,9 @@
 
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ContinuousCommitOutcome
+import com.siansiansu.taigikeyboard.engine.ContinuousPick
+import com.siansiansu.taigikeyboard.engine.PredictionPick
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
@@ -243,14 +245,14 @@ class CandidateClickHandler(
             // it emits NextWordWordSelected which drives async NextWord
             // predict; a Taigi refresh would see `rawInput=null` and call
             // `clearCandidates()`, racing with / wiping the fresh predictions.
-            RustEngineBridge.ContinuousCommitOutcome.Nailed -> onRequestCandidateRefresh()
+            ContinuousCommitOutcome.Nailed -> onRequestCandidateRefresh()
             // Auto-space only on the final commit, as the engine judged what
             // the pick wrote (romanization, no trailing `-`, §23).
-            is RustEngineBridge.ContinuousCommitOutcome.Finalized ->
+            is ContinuousCommitOutcome.Finalized ->
                 appendAutoSpace(taigikeyboard, ic, taigikeyboard.prefs.isAutoSpaceEnabled && outcome.earnsAutoSpace)
             // A stale tap (the engine had silently reset to Idle) or a
             // rejected pick wrote nothing.
-            RustEngineBridge.ContinuousCommitOutcome.Ignored -> Unit
+            ContinuousCommitOutcome.Ignored -> Unit
         }
     }
 
@@ -303,12 +305,12 @@ private fun appendAutoSpace(
  * `roman` / `hanji` (the candidate's, never rewritten on Android). `null` when
  * a strict key is missing. Mirrors iOS `ActionHandler.continuousPick(for:)`.
  */
-internal fun continuousPick(word: TaigiWord): RustEngineBridge.ContinuousPick? {
+internal fun continuousPick(word: TaigiWord): ContinuousPick? {
     val info = word.additionalInfo
     val canonicalText = info[TaigiWord.MetadataKeys.DISPLAY_TEXT] ?: return null
     val consumedBytes = info[TaigiWord.MetadataKeys.CONSUMED_BYTES]?.toIntOrNull() ?: return null
     val syllableCount = info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]?.toIntOrNull() ?: return null
-    return RustEngineBridge.ContinuousPick(
+    return ContinuousPick(
         script = commitScript(word),
         roman = word.roman,
         canonicalText = canonicalText,
@@ -346,8 +348,8 @@ internal fun commitScript(word: TaigiWord): CommitScript =
  * cell whose own script is missing commits the lead, as a Continuous pick
  * does. Mirrors iOS `ActionHandler.predictionPick(for:)`.
  */
-internal fun predictionPick(word: TaigiWord): RustEngineBridge.PredictionPick =
-    RustEngineBridge.PredictionPick(
+internal fun predictionPick(word: TaigiWord): PredictionPick =
+    PredictionPick(
         script = commitScript(word),
         roman = word.roman,
         hanji = word.hanji.orEmpty(),

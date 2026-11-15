@@ -41,11 +41,11 @@ import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.candidateDisplayModeOptions
+import com.siansiansu.taigikeyboard.ime.settings.nasalMarkerStyleOptions
+import com.siansiansu.taigikeyboard.ime.settings.syllableSeparatorOptions
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeOptions
-import com.siansiansu.taigikeyboard.ui.tabs.settings.nasalMarkerStyleOptions
-import com.siansiansu.taigikeyboard.ui.tabs.settings.syllableSeparatorOptions
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

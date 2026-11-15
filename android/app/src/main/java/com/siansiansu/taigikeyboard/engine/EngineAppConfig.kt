@@ -102,7 +102,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
         candidateDisplayMode = settings.candidateDisplayMode,
         syllableSeparator = settings.syllableSeparator,
         isTpsOrMappedToER = settings.isTpsOrMappedToER,
-        dictionarySources = dictionaryTogglesProto(RustEngineBridge.DictionaryToggles.from(settings)),
+        dictionarySources = dictionaryTogglesProto(DictionaryToggles.from(settings)),
         isCustomDictionaryDisabled = !settings.isCustomDictEnabled,
     )
 

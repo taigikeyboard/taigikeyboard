@@ -1,6 +1,8 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.DictionaryFilters
+import com.siansiansu.taigikeyboard.engine.DictionaryToggles
+import com.siansiansu.taigikeyboard.engine.LexiconInputMode
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
@@ -21,13 +23,13 @@ class DictionarySearchServiceTest {
     private class FakeLexicon(
         private val rows: List<DictionarySearchResult> = emptyList(),
     ) : LexiconClient {
-        val romanCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
-        val hanjiCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
+        val romanCalls = mutableListOf<LexiconInputMode>()
+        val hanjiCalls = mutableListOf<LexiconInputMode>()
 
         override fun isHanji(text: String): Boolean = text.any { it in '一'..'鿿' }
 
-        override fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters =
-            RustEngineBridge.DictionaryFilters(
+        override fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters =
+            DictionaryFilters(
                 dictionaryFilterBitmask = 0xFFFu,
                 enabledSources =
                     if (toggles.kautian) {
@@ -39,7 +41,7 @@ class DictionarySearchServiceTest {
 
         override suspend fun searchWithSources(
             input: String,
-            inputMode: RustEngineBridge.LexiconInputMode,
+            inputMode: LexiconInputMode,
             filterBitmask: UInt,
             limit: Int,
         ): Outcome<List<DictionarySearchResult>, DictionaryError> {
@@ -49,7 +51,7 @@ class DictionarySearchServiceTest {
 
         override suspend fun searchByHanji(
             input: String,
-            inputMode: RustEngineBridge.LexiconInputMode,
+            inputMode: LexiconInputMode,
             filterBitmask: UInt,
             limit: Int,
         ): Outcome<List<DictionarySearchResult>, DictionaryError> {
@@ -136,16 +138,16 @@ class DictionarySearchServiceTest {
 
             service(StubEngineSettings(inputMode = "tps"), lexicon = lexicon).search("ㄉㄞ")
 
-            assertEquals(listOf(RustEngineBridge.LexiconInputMode.TPS), lexicon.romanCalls)
+            assertEquals(listOf(LexiconInputMode.TPS), lexicon.romanCalls)
         }
 
     @Test
     fun `lexiconMode maps every stored input mode and falls back to POJ`() {
-        assertEquals(RustEngineBridge.LexiconInputMode.POJ, DictionarySearchService.lexiconMode("poj"))
-        assertEquals(RustEngineBridge.LexiconInputMode.TL, DictionarySearchService.lexiconMode("tl"))
-        assertEquals(RustEngineBridge.LexiconInputMode.TPS, DictionarySearchService.lexiconMode("tps"))
-        assertEquals(RustEngineBridge.LexiconInputMode.TL, DictionarySearchService.lexiconMode("english"))
-        assertEquals(RustEngineBridge.LexiconInputMode.POJ, DictionarySearchService.lexiconMode("garbage"))
+        assertEquals(LexiconInputMode.POJ, DictionarySearchService.lexiconMode("poj"))
+        assertEquals(LexiconInputMode.TL, DictionarySearchService.lexiconMode("tl"))
+        assertEquals(LexiconInputMode.TPS, DictionarySearchService.lexiconMode("tps"))
+        assertEquals(LexiconInputMode.TL, DictionarySearchService.lexiconMode("english"))
+        assertEquals(LexiconInputMode.POJ, DictionarySearchService.lexiconMode("garbage"))
     }
 
     // CROSS-PLATFORM INVARIANT — mirrors iOS DictionarySearchServiceTests

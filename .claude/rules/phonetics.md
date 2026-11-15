@@ -10,7 +10,8 @@ paths:
   - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Phonetics.swift"
   - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+CaseTransform.swift"
   - "android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/ExternalLookupURLBuilder.kt"
-  - "android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt"
+  - "android/app/src/main/java/com/siansiansu/taigikeyboard/engine/PhoneticsBridge.kt"
+  - "android/app/src/main/java/com/siansiansu/taigikeyboard/engine/CaseTransformBridge.kt"
 ---
 
 # Phonetics Rules

@@ -9,6 +9,12 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.engine.ComposingTransition
+import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
+import com.siansiansu.taigikeyboard.engine.ContinuousCommitOutcome
+import com.siansiansu.taigikeyboard.engine.ContinuousPick
+import com.siansiansu.taigikeyboard.engine.PredictionCommit
+import com.siansiansu.taigikeyboard.engine.PredictionPick
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.composingAppend
 import com.siansiansu.taigikeyboard.engine.composingAppendHyphen
@@ -322,7 +328,7 @@ class ComposingManager(
      * prefs cache behind [settingsProvider], and the JNI bridge (the engine
      * serialises internally). Never touches `InputConnection`.
      */
-    suspend fun fetchContinuousCandidates(): List<RustEngineBridge.ContinuousCandidate> {
+    suspend fun fetchContinuousCandidates(): List<ContinuousCandidate> {
         val settings = settingsProvider.current
         return RustEngineBridge.composingFetchAtPos(
             // Carries the dictionary toggles the Tab3 browse path resolves too
@@ -338,7 +344,7 @@ class ComposingManager(
 
     /**
      * Commit one Continuous candidate. The pick MUST come verbatim from a
-     * [RustEngineBridge.ContinuousCandidate] returned by an immediately
+     * [ContinuousCandidate] returned by an immediately
      * preceding [fetchContinuousCandidates] call.
      *
      * The engine resolves the document text, counts the pick (R5), and
@@ -352,9 +358,9 @@ class ComposingManager(
      * rejected pick emits nothing and answers `Ignored`.
      */
     fun commitContinuous(
-        pick: RustEngineBridge.ContinuousPick,
+        pick: ContinuousPick,
         ic: InputConnection,
-    ): RustEngineBridge.ContinuousCommitOutcome {
+    ): ContinuousCommitOutcome {
         logger.tdebug(TAG) {
             "[COMPOSE] fn=commitContinuous script=${pick.script} canonicalLen=${pick.canonicalText.length} consumedBytes=${pick.consumedBytes} syllCount=${pick.syllableCount}"
         }
@@ -377,7 +383,7 @@ class ComposingManager(
      * tap writes into the document and counts the usage itself; the
      * composition is left as it is. `null` → write nothing.
      */
-    fun commitPrediction(pick: RustEngineBridge.PredictionPick): RustEngineBridge.PredictionCommit? {
+    fun commitPrediction(pick: PredictionPick): PredictionCommit? {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitPrediction script=${pick.script} romanLen=${pick.roman.length}" }
         return RustEngineBridge.composingCommitPrediction(
             pick = pick,
@@ -479,7 +485,7 @@ class ComposingManager(
     // endregion
 
     private fun applyAsSelfCommit(
-        transition: RustEngineBridge.ComposingTransition,
+        transition: ComposingTransition,
         ic: InputConnection,
     ) {
         selfCommitInProgress = true
@@ -493,7 +499,7 @@ class ComposingManager(
     // `internal` so JVM tests can feed a transition without dispatching the
     // engine (JNI); production callers are all inside this class.
     internal fun applyTransition(
-        transition: RustEngineBridge.ComposingTransition,
+        transition: ComposingTransition,
         ic: InputConnection,
     ) {
         // Write order: raw → display → isComposing
@@ -512,9 +518,9 @@ class ComposingManager(
                 "[COMMIT] fn=applyTransition effect=${effect.describeKind()}"
             }
             when (effect) {
-                is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
-                is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected,
-                RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing,
+                is ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
+                is ComposingTransition.Effect.NextWordWordSelected,
+                ComposingTransition.Effect.NextWordClearForNewComposing,
                 -> {
                     // NextWord-shaped composing effects flow through a sibling
                     // router, not the InputConnection-bound delegate. Engine
@@ -534,22 +540,22 @@ class ComposingManager(
 }
 
 /**
- * One-line debug name for a [RustEngineBridge.ComposingTransition.Effect].
+ * One-line debug name for a [ComposingTransition.Effect].
  * Centralises the per-variant pretty-printer used by [ComposingManager.applyTransition]
  * and [DefaultComposingDelegate]; keeping it here means new variants only need
  * one update site for log readability.
  */
-private fun RustEngineBridge.ComposingTransition.Effect.describeKind(): String =
+private fun ComposingTransition.Effect.describeKind(): String =
     when (this) {
-        is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> "UpdatePreedit len=${display.length}"
-        RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> "ClearPreeditWithoutCommit"
-        is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> "CommitTextReplacingPreedit len=${text.length}"
-        RustEngineBridge.ComposingTransition.Effect.ClearCandidates -> "ClearCandidates"
-        RustEngineBridge.ComposingTransition.Effect.RefreshCandidates -> "RefreshCandidates"
-        RustEngineBridge.ComposingTransition.Effect.ResetCandidateContext -> "ResetCandidateContext"
-        is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> "NextWordUpdateLastSelectedWord"
-        is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected -> "NextWordWordSelected trigger=$triggerPrediction"
-        RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing -> "NextWordClearForNewComposing"
+        is ComposingTransition.Effect.UpdatePreedit -> "UpdatePreedit len=${display.length}"
+        ComposingTransition.Effect.ClearPreeditWithoutCommit -> "ClearPreeditWithoutCommit"
+        is ComposingTransition.Effect.CommitTextReplacingPreedit -> "CommitTextReplacingPreedit len=${text.length}"
+        ComposingTransition.Effect.ClearCandidates -> "ClearCandidates"
+        ComposingTransition.Effect.RefreshCandidates -> "RefreshCandidates"
+        ComposingTransition.Effect.ResetCandidateContext -> "ResetCandidateContext"
+        is ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> "NextWordUpdateLastSelectedWord"
+        is ComposingTransition.Effect.NextWordWordSelected -> "NextWordWordSelected trigger=$triggerPrediction"
+        ComposingTransition.Effect.NextWordClearForNewComposing -> "NextWordClearForNewComposing"
     }
 
 /**

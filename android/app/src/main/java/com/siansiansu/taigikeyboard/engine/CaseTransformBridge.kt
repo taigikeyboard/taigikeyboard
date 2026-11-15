@@ -2,8 +2,8 @@
 // (including POJ/TL tone-mark case mapping) to Rust `phonetics::case_transform`; iOS counterpart is
 // `RustEngineBridge+CaseTransform.swift`. Single FFI hop per per-char or per-string case operation.
 // Mode and ⁿ-becomes-ᴺ-in-capitals (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
-// of POJ doubletap preprocessing so the fold fields are left off. The `LetterCase` indicator lives on
-// `RustEngineBridge.LetterCase`.
+// of POJ doubletap preprocessing so the fold fields are left off. The `LetterCase` indicator is defined
+// below.
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -19,6 +19,40 @@ import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 
 private const val TAG = "CaseTransformBridge"
+
+// region Case-transform DTO
+
+/**
+ * Three-state shift / case indicator. Bridge-side mirror of the proto
+ * `LetterCase` enum + the iOS `CaseTransformLetterCase`. Adapts
+ * Android's existing `(caps: Boolean, capsLock: Boolean)` pair at the
+ * call site (CapsLock=true → CapsLocked; caps=true → Uppercased;
+ * else Lowercased) — see `from()` factory.
+ */
+enum class LetterCase(
+    val protoValue: Int,
+) {
+    LOWERCASED(1),
+    UPPERCASED(2),
+    CAPS_LOCKED(3),
+    ;
+
+    companion object {
+        /** Adapter from Android's existing caps + capsLock boolean pair. */
+        @JvmStatic
+        fun from(
+            caps: Boolean,
+            capsLock: Boolean,
+        ): LetterCase =
+            when {
+                capsLock -> CAPS_LOCKED
+                caps -> UPPERCASED
+                else -> LOWERCASED
+            }
+    }
+}
+
+// endregion
 
 // region Per-char helpers
 
@@ -88,7 +122,7 @@ fun RustEngineBridge.lowercaseToneChar(
  */
 fun RustEngineBridge.transformInputCase(
     text: String,
-    letterCase: RustEngineBridge.LetterCase,
+    letterCase: LetterCase,
     mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): String {

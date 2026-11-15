@@ -4,7 +4,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ToneVariations
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.json.JSONArray
@@ -24,7 +24,7 @@ enum class LayoutScript(
     ;
 
     /** This script's half of the engine's tone-mark long-press entries, by key label. */
-    fun toneMarks(tones: RustEngineBridge.ToneVariations): Map<String, List<String>> =
+    fun toneMarks(tones: ToneVariations): Map<String, List<String>> =
         when (this) {
             TL -> tones.tl
             POJ -> tones.poj
@@ -130,7 +130,7 @@ data class CustomLayout(
             }
 
     /** The engine's tone marks this layout's keys offer: both scripts' (both tone-9 marks) when universal, else [script]'s. */
-    fun toneMarks(tones: RustEngineBridge.ToneVariations): Map<String, List<String>> = if (isUniversal) tones.universal else script.toneMarks(tones)
+    fun toneMarks(tones: ToneVariations): Map<String, List<String>> = if (isUniversal) tones.universal else script.toneMarks(tones)
 
     /** This layout under a new id and [name] — what the Duplicate card action saves. Mirrors iOS `CustomLayout.duplicated(named:)`. */
     fun duplicated(name: String): CustomLayout = copy(id = UUID.randomUUID().toString(), name = name)

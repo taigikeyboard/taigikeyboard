@@ -13,6 +13,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.engine.LetterCase
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.isAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.isJoinerPunctuation
@@ -502,7 +503,7 @@ internal class TextInputKeyHandler(
         // Per-keystroke (not per-frame) — no cache needed; direct bridge call.
         var char = RustEngineBridge.transformInputCase(
             text = baseText,
-            letterCase = RustEngineBridge.LetterCase.from(caps = caps, capsLock = capsLock),
+            letterCase = LetterCase.from(caps = caps, capsLock = capsLock),
             mode = inputMode,
             isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
         )

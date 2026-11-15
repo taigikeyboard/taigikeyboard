@@ -2,7 +2,8 @@
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.DictionaryToggles
+import com.siansiansu.taigikeyboard.engine.LexiconInputMode
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -32,11 +33,11 @@ class DictionarySearchService(
          * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Services/DictionarySearchService.swift
          * `lexiconMode(_:)`. Drift changes which index a dictionary-search query searches.
          */
-        fun lexiconMode(inputMode: String): RustEngineBridge.LexiconInputMode =
+        fun lexiconMode(inputMode: String): LexiconInputMode =
             when (inputMode) {
-                "tl", "english" -> RustEngineBridge.LexiconInputMode.TL
-                "tps" -> RustEngineBridge.LexiconInputMode.TPS
-                else -> RustEngineBridge.LexiconInputMode.POJ
+                "tl", "english" -> LexiconInputMode.TL
+                "tps" -> LexiconInputMode.TPS
+                else -> LexiconInputMode.POJ
             }
     }
 
@@ -53,7 +54,7 @@ class DictionarySearchService(
 
         // Resolve the filter bitmask + enabled-source set ONCE per query and hand both down
         // the pipeline: a toggle change mid-search must not produce a mask / badge mismatch.
-        val filters = lexicon.dictionaryFilters(RustEngineBridge.DictionaryToggles.from(settings))
+        val filters = lexicon.dictionaryFilters(DictionaryToggles.from(settings))
         val mode = lexiconMode(settings.inputMode)
         val outcome =
             if (isCJK) {
