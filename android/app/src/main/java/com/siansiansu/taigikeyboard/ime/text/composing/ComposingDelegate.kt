@@ -1,10 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ComposingTransition
 
 /**
- * Platform adapter that executes a [RustEngineBridge.ComposingTransition.Effect]
+ * Platform adapter that executes a [ComposingTransition.Effect]
  * against the host [InputConnection]. Mirrors iOS
  * `Input/Composing/ComposingDelegate.swift`.
  *
@@ -20,43 +20,43 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
  */
 fun interface ComposingDelegate {
     fun execute(
-        effect: RustEngineBridge.ComposingTransition.Effect,
+        effect: ComposingTransition.Effect,
         ic: InputConnection,
     )
 }
 
 object DefaultComposingDelegate : ComposingDelegate {
     override fun execute(
-        effect: RustEngineBridge.ComposingTransition.Effect,
+        effect: ComposingTransition.Effect,
         ic: InputConnection,
     ) {
         when (effect) {
-            is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> {
+            is ComposingTransition.Effect.UpdatePreedit -> {
                 ic.setComposingText(effect.display, 1)
             }
 
-            RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> {
+            ComposingTransition.Effect.ClearPreeditWithoutCommit -> {
                 // INVARIANT_composing_clear_preedit_does_not_commit:
                 // finishComposingText alone commits the active region; zero first.
                 ic.setComposingText("", 1)
                 ic.finishComposingText()
             }
 
-            is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> {
+            is ComposingTransition.Effect.CommitTextReplacingPreedit -> {
                 // Atomic — `commitText` replaces the composing region in one call.
                 ic.commitText(effect.text, 1)
             }
 
-            RustEngineBridge.ComposingTransition.Effect.ClearCandidates,
-            RustEngineBridge.ComposingTransition.Effect.RefreshCandidates,
-            RustEngineBridge.ComposingTransition.Effect.ResetCandidateContext,
+            ComposingTransition.Effect.ClearCandidates,
+            ComposingTransition.Effect.RefreshCandidates,
+            ComposingTransition.Effect.ResetCandidateContext,
             -> {
                 Unit
             }
 
-            is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
-            is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected,
-            RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing,
+            is ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
+            is ComposingTransition.Effect.NextWordWordSelected,
+            ComposingTransition.Effect.NextWordClearForNewComposing,
             -> {
                 // NextWord-shaped effects flow through the sibling
                 // `NextWordEffectRouter` injected into ComposingManager, not
@@ -82,11 +82,11 @@ object DefaultComposingDelegate : ComposingDelegate {
  * callers don't need to wire NextWord plumbing.
  */
 fun interface NextWordEffectRouter {
-    fun route(effect: RustEngineBridge.ComposingTransition.Effect)
+    fun route(effect: ComposingTransition.Effect)
 }
 
 object NoopNextWordEffectRouter : NextWordEffectRouter {
-    override fun route(effect: RustEngineBridge.ComposingTransition.Effect) {
+    override fun route(effect: ComposingTransition.Effect) {
         // intentional no-op — see KDoc on NextWordEffectRouter
     }
 }

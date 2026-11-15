@@ -45,8 +45,8 @@ Each PR 200–500 LOC. Pre-gates per `~/.claude/rules/round-workflow.md`; Codex 
 | F2 | Symbol-picker lifecycle in desktop-core | refactor · `refactor-reviewer` | 1 | Pending |
 | F3 | Windows `session.rs` → `surface.rs`, lang-bar impls → `lang_bar.rs`, `draw_all` by layout; macOS `TaigiInputController` → `+Menu` / `+AutoSpace` | refactor · sandwich skipped (moves) | 1–2 | Pending |
 | F4 | macOS defaults from `Configure`; ~~`FullWidthPunctuation` in `SessionReply`~~ (done 2026-11-11: the Swift twin is gone, the swap gate is the `PassThroughSwap` request); `TELEX_KEYS` once; session owner from core reply; atomic export write in `desktop-storage` | refactor · `refactor-reviewer` | 1 | Pending |
-| G1 | Android: option lists → `ime/settings`, icons neutral; screens through view models; logger injected | refactor · after #471 | 1 | Pending |
-| G2 | Android `RustEngineBridge.kt` DTOs → per-area `*Bridge.kt`; `SmartbarManager` forwarders removed | refactor · sandwich skipped (moves) | 1 | Pending |
+| G1 | Android: ~~option lists → `ime/settings`~~ (done R6, `ime/settings/SettingOptions.kt`), icons neutral; screens through view models; logger injected | refactor · after #471 | 1 | Pending |
+| G2 | Android `RustEngineBridge.kt` DTOs → per-area `*Bridge.kt` as top-level types; `SmartbarManager` forwarders: only the internal `handleNextWordPrediction` removed, the 7 caller-facing ones kept as the facade (USER 2026-11-16) | refactor · sandwich skipped (moves) | 1 | Done (R6) |
 | G3 | iOS: Platform-layer `SharedSettings.shared` consumers injected; `ActionHandler` deps injected (iOS `UsageRecorder` deleted by D2); Engine-layer purity | refactor · `refactor-reviewer` · after #471 | 1 | Pending |
 | G4 | Mobile Learning Records view models (one listing call); English current-word split, last-used date, count rule aligned | refactor + parity · maintainer confirms decisions 7–8 | 1–2 | Pending |
 

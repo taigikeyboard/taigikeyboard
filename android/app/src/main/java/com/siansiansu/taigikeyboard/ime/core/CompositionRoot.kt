@@ -8,6 +8,7 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ToneVariations
 import com.siansiansu.taigikeyboard.engine.toneVariations
 import com.siansiansu.taigikeyboard.ime.core.logging.AndroidLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -56,7 +57,7 @@ class CompositionRoot private constructor(
     val layoutAssets: LayoutAssets = LayoutAssets.forContext(appContext) { path, e -> logger.e("LayoutAssets", "[LAYOUT] Failed to load layout $path", e) }
 
     /** The engine's tone-mark long-press table, pulled on first use. */
-    val toneVariations: () -> RustEngineBridge.ToneVariations = { RustEngineBridge.toneVariations }
+    val toneVariations: () -> ToneVariations = { RustEngineBridge.toneVariations }
 
     /** The built-in tables custom layouts are made from; parsed from the layout assets on first use. */
     val customLayoutTables: CustomLayoutTables by lazy { CustomLayoutTables(layoutAssets, toneVariations) }

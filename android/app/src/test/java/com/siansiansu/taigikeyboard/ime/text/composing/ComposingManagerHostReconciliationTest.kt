@@ -5,8 +5,8 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.InputConnection
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect
+import com.siansiansu.taigikeyboard.engine.ComposingTransition
+import com.siansiansu.taigikeyboard.engine.ComposingTransition.Effect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

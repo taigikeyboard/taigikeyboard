@@ -7,7 +7,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ToneVariations
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
@@ -38,7 +38,7 @@ data class GridKey(
 /** Over the layout [assets] and the engine's tone-mark table [toneVariations] (JVM tests pass their own). */
 class CustomLayoutTables(
     private val assets: LayoutAssets,
-    private val toneVariations: () -> RustEngineBridge.ToneVariations,
+    private val toneVariations: () -> ToneVariations,
 ) {
     /** A base table's places below the digit row, in reading order. */
     class BaseTable(

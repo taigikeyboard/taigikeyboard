@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.nextword
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.NextWordEnginePrediction
+import com.siansiansu.taigikeyboard.engine.PredictionPick
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
@@ -22,7 +23,7 @@ class PredictionWordsBuilderTest {
         subtitle: String?,
         hanji: String,
         tl: String = text,
-    ) = RustEngineBridge.NextWordEnginePrediction(
+    ) = NextWordEnginePrediction(
         text = text,
         subtitle = subtitle,
         hanji = hanji,
@@ -106,11 +107,11 @@ class PredictionWordsBuilderTest {
     fun prediction_pick_reads_the_word_not_the_cell_text() {
         val unsplit = buildPredictionWords(predictions, splitCombinedCells = false)
         assertEquals(
-            RustEngineBridge.PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "tāng", "重", "tāng"),
+            PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "tāng", "重", "tāng"),
             predictionPick(unsplit[3]),
         )
         assertEquals(
-            RustEngineBridge.PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "", "去", ""),
+            PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "", "去", ""),
             predictionPick(unsplit[4]),
         )
 

@@ -37,7 +37,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `engine/PhoneticsBridge.kt` | `RustEngineBridge.toneVariations` lazy cache (`ToneVariations { tl, poj, universal }`, DTO in `RustEngineBridge.kt`); `CompositionRoot.toneVariations` hands it to the two readers below (JVM tests pass a stand-in) |
+| `engine/PhoneticsBridge.kt` | `RustEngineBridge.toneVariations` lazy cache (`ToneVariations { tl, poj, universal }`, DTO in the same file); `CompositionRoot.toneVariations` hands it to the two readers below (JVM tests pass a stand-in) |
 | `ime/text/layout/LayoutManager.kt` | Adds the input mode's tone marks (`LayoutScript.toneMarks`; the universal map for a universal custom layout) to each matching key's `keyData.popup` as fresh `KeyData.ofEntry` keys; then `CustomLayoutTables.applyCallouts` puts a custom layout's own lists in |
 | `ime/text/layout/CustomLayoutTables.kt` | The custom-layout editor's view of the same table: `defaultCallouts` (`CustomLayout.toneMarks`), tray `toneRows` (the universal map's lowercase rows, ⁿ dropped) |
 | `ime/popup/KeyPopupManager.kt` | `PopupHost` impl: preview + extended `PopupWindow`, motion hit-test, `activeKeyData()` |

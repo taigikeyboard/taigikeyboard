@@ -19,6 +19,30 @@ import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
 import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 
+// region Phonetics DTOs
+
+/**
+ * The engine's long-press tone variations by key label (`a`, `oo`, `Ng` …), per script, plus
+ * [universal]: both scripts' lists interleaved, both tone-9 marks. iOS `ToneVariationsCache`.
+ */
+data class ToneVariations(
+    val tl: Map<String, List<String>>,
+    val poj: Map<String, List<String>>,
+    val universal: Map<String, List<String>>,
+) {
+    companion object {
+        val EMPTY = ToneVariations(tl = emptyMap(), poj = emptyMap(), universal = emptyMap())
+    }
+}
+
+/** Result of `Method::TpsInputAdjust`. */
+data class TpsAdjustOutcome(
+    val adjusted: String,
+    val replaceLast: String?,
+)
+
+// endregion
+
 // region Phonetics core
 
 fun RustEngineBridge.tlToPoj(input: String): String {
@@ -31,16 +55,16 @@ fun RustEngineBridge.tlToPoj(input: String): String {
  * empty when the engine fails, as on iOS (`RustEngineBridge.toneVariations`). A synchronized lazy:
  * layouts compute on both the main thread and Dispatchers.IO.
  */
-val RustEngineBridge.toneVariations: RustEngineBridge.ToneVariations by lazy {
+val RustEngineBridge.toneVariations: ToneVariations by lazy {
     val op = "getToneVariations"
     val response = phoneticsDispatch({ it.getToneVariations = GetToneVariations.getDefaultInstance() }, op)
-        ?: return@lazy RustEngineBridge.ToneVariations.EMPTY
+        ?: return@lazy ToneVariations.EMPTY
     if (!response.hasToneVariationsResult()) {
         RustEngineBridge.recordFailure(op, "expected ToneVariationsResult")
-        return@lazy RustEngineBridge.ToneVariations.EMPTY
+        return@lazy ToneVariations.EMPTY
     }
     val result = response.toneVariationsResult
-    RustEngineBridge.ToneVariations(
+    ToneVariations(
         tl = result.tlVariationsMap.mapValues { it.value.variationsList.toList() },
         poj = result.pojVariationsMap.mapValues { it.value.variationsList.toList() },
         universal = result.universalVariationsMap.mapValues { it.value.variationsList.toList() },

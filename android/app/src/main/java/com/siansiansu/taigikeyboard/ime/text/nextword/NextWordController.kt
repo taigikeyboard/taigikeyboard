@@ -4,6 +4,10 @@
 
 package com.siansiansu.taigikeyboard.ime.text.nextword
 
+import com.siansiansu.taigikeyboard.engine.DictionaryToggles
+import com.siansiansu.taigikeyboard.engine.NextWordDecideResult
+import com.siansiansu.taigikeyboard.engine.NextWordEnginePrediction
+import com.siansiansu.taigikeyboard.engine.NextWordFilterResult
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.engineInputMode
 import com.siansiansu.taigikeyboard.engine.nextwordBackspace
@@ -283,7 +287,7 @@ class NextWordController(
     // / Mirror engine state echo, then run effects in the order the engine
     // / emitted. Runs on the IME main thread (caller invariant).
     private fun applyDecideResult(
-        result: RustEngineBridge.NextWordDecideResult,
+        result: NextWordDecideResult,
         isUiAlreadyCleared: Boolean = false,
     ) {
         cachedPredictionsVisible = result.predictionsVisible
@@ -293,19 +297,19 @@ class NextWordController(
     }
 
     private fun execute(
-        effect: RustEngineBridge.NextWordDecideResult.Effect,
+        effect: NextWordDecideResult.Effect,
         isUiAlreadyCleared: Boolean,
     ) {
         when (effect) {
-            is RustEngineBridge.NextWordDecideResult.Effect.RescheduleContextTimeout -> {
+            is NextWordDecideResult.Effect.RescheduleContextTimeout -> {
                 scheduleContextTimeout(afterMs = effect.afterMs)
             }
 
-            RustEngineBridge.NextWordDecideResult.Effect.CancelContextTimeout -> {
+            NextWordDecideResult.Effect.CancelContextTimeout -> {
                 cancelContextTimeoutJob()
             }
 
-            is RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions -> {
+            is NextWordDecideResult.Effect.QueryPredictions -> {
                 dispatchPredictionQuery(
                     word = effect.word,
                     roman = effect.roman,
@@ -314,7 +318,7 @@ class NextWordController(
                 )
             }
 
-            is RustEngineBridge.NextWordDecideResult.Effect.ClearPredictionsUI -> {
+            is NextWordDecideResult.Effect.ClearPredictionsUI -> {
                 if (!isUiAlreadyCleared) onClearCandidates()
                 cachedPredictionsVisible = false
             }
@@ -336,7 +340,7 @@ class NextWordController(
         logger.debug(TAG) { "[NEXTWORD] Query gen=$queryGeneration word='$word' roman='$roman'" }
         // Dictionary toggles snapshot at query start, before the lexicon-ready
         // suspension — the bundled lookup answers for the settings the query began under.
-        val toggles = RustEngineBridge.DictionaryToggles.from(settingsProvider.current)
+        val toggles = DictionaryToggles.from(settingsProvider.current)
         scope.launch {
             awaitLexiconReady()
             // Snapshotted on Main, where every other intent reads them.
@@ -374,7 +378,7 @@ class NextWordController(
      * `ClearPredictionsUI` correctly. On Main.
      */
     private fun handleQueryResult(
-        filterResult: RustEngineBridge.NextWordFilterResult,
+        filterResult: NextWordFilterResult,
         queryGeneration: Long,
         settings: EngineSettings,
     ) {
@@ -485,7 +489,7 @@ private fun String.toEngineInputMode(): String = engineInputMode(this, unknownAs
  * hanji alone).
  */
 internal fun buildPredictionWords(
-    predictions: List<RustEngineBridge.NextWordEnginePrediction>,
+    predictions: List<NextWordEnginePrediction>,
     splitCombinedCells: Boolean,
 ): List<TaigiWord> {
     if (!splitCombinedCells) {
@@ -505,7 +509,7 @@ internal fun buildPredictionWords(
 
 private fun predictionWord(
     id: Int,
-    prediction: RustEngineBridge.NextWordEnginePrediction,
+    prediction: NextWordEnginePrediction,
     cellScript: String?,
 ): TaigiWord {
     // R5 pair-key (#7): canonical-TL reading for the user-frequency

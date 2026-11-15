@@ -1,13 +1,264 @@
 // Composing + Continuous-input ops — extensions on RustEngineBridge mirroring
-// iOS RustEngineBridge+Composing.swift via the shared JNI roundtrip; nested types stay in RustEngineBridge.
+// iOS RustEngineBridge+Composing.swift via the shared JNI roundtrip; its DTOs are top-level types here.
 
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
+import com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
+import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
+import com.siansiansu.taigikeyboard.engine.proto.CommitPrediction
+import com.siansiansu.taigikeyboard.engine.proto.CommitResolution
+import com.siansiansu.taigikeyboard.engine.proto.CommitScript
+import com.siansiansu.taigikeyboard.engine.proto.CommittedWord
 import com.siansiansu.taigikeyboard.engine.proto.ComposingRequest
 import com.siansiansu.taigikeyboard.engine.proto.ComposingResponse
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
+
+// region Composing DTOs
+
+/**
+ * Bridge-synthesized companion to the proto `ComposingResponse`.
+ * Consumed by `ComposingManager` and its delegate.
+ */
+data class ComposingTransition(
+    val rawInput: String,
+    val displayText: String,
+    val effects: List<Effect>,
+    val isComposing: Boolean,
+) {
+    sealed class Effect {
+        data class UpdatePreedit(
+            val display: String,
+        ) : Effect()
+
+        object ClearPreeditWithoutCommit : Effect()
+
+        data class CommitTextReplacingPreedit(
+            val text: String,
+        ) : Effect()
+
+        object ClearCandidates : Effect()
+
+        object RefreshCandidates : Effect()
+
+        object ResetCandidateContext : Effect()
+
+        /**
+         * v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
+         * `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
+         * Platform delegate forwards to `NextWordController.updateLastSelectedWord`
+         * which injects `nowMs` + envelope generation.
+         */
+        data class NextWordUpdateLastSelectedWord(
+            val text: String,
+            val roman: String,
+        ) : Effect()
+
+        /**
+         * v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
+         * `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
+         * trigger_prediction, now_ms, preceding)`. Forward `triggerPrediction`
+         * and `preceding` exactly — `preceding` is the nailed segments committed
+         * before `text`, learned as one sequence (behavioral-invariants §40).
+         */
+        data class NextWordWordSelected(
+            val text: String,
+            val roman: String,
+            val triggerPrediction: Boolean,
+            val preceding: List<CommittedWord>,
+        ) : Effect()
+
+        /**
+         * v3.5.8 Phase 4 — continuous-input abort handshake. Maps to
+         * `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
+         * forwards to `NextWordController.onClearCandidates()` (Android equivalent
+         * of iOS `NextWordController.clearDisplay()`); NOT the structurally
+         * distinct `ResetAll` intent.
+         */
+        object NextWordClearForNewComposing : Effect()
+    }
+
+    companion object {
+        val NOOP = ComposingTransition(
+            rawInput = "",
+            displayText = "",
+            effects = emptyList(),
+            isComposing = false,
+        )
+    }
+}
+
+/**
+ * Single span-local continuous-input candidate. Wire mirror of
+ * `protos::engine::CandidateMessage` (Phase 6).
+ *
+ * `consumedSpanEnd` is a byte offset into the **original raw user input**
+ * stored in `Phase::Continuous { raw }` — TL/POJ users → ASCII bytes, TPS
+ * users → Bopomofo bytes. The tap path hands it back as `consumedBytes`
+ * so the engine drops that many bytes from `pending` on commit.
+ */
+data class ContinuousCandidate(
+    val consumedSpanEnd: Int,
+    val syllableCount: Int,
+    val displayText: String,
+    /**
+     * v3.5.8 Phase 9 Item 5 — display-romanization sidechannel for
+     * dual-line cell render. Always non-empty for dictionary-
+     * sourced candidates; the engine renders it for the active
+     * input mode (TL, or POJ-display in POJ mode). UI reads
+     * `displayText` for commit / `user_frequency.db` writes and
+     * `roman` only for cell-title display.
+     */
+    val roman: String,
+    /**
+     * v3.5.8 Phase 9 Item 5 — hanji display sidechannel. `null`
+     * iff the proto3 `optional string hanji` was absent on the
+     * wire (TAILO candidate). Present-empty is treated as
+     * present (engine never emits `Some("")` today; defensive).
+     */
+    val hanji: String?,
+    /**
+     * v3.6.1 R2 — canonical TL identity sidechannel
+     * (`CandidateMessage.canonical_tl`). Unlike `roman` (the
+     * POJ-rendered display form in POJ mode), this stays the canonical
+     * TL the `(hanji, canonical-TL)` word identity is keyed on. The tap
+     * path round-trips it into `commitContinuous(associationTl = …)` so
+     * the NextWord association learns the same TL a normal candidate
+     * commit records. Empty only for TPS-OOV hanji-absent candidates
+     * with no dict TL.
+     */
+    val canonicalTl: String,
+)
+
+/**
+ * One continuous-candidate pick (R5): which of its scripts the document
+ * gets, and the candidate metadata the engine resolves the text from
+ * (`engine/composing/src/commit_text.rs`). Every field but [script]
+ * round-trips verbatim from the [ContinuousCandidate] the user picked;
+ * [consumedBytes] is its `consumedSpanEnd`, an absolute offset into the
+ * pending raw buffer. Mirrors iOS `RustEngineBridge.ContinuousPick`.
+ */
+data class ContinuousPick(
+    val script: CommitScript,
+    /** The candidate's display romanization ([ContinuousCandidate.roman]). */
+    val roman: String,
+    /**
+     * Identity keys the engine counts the pick under — the canonical
+     * `hanji ?: roman` and TL (Core Principle #6), never the rendering.
+     */
+    val canonicalText: String,
+    val associationTl: String,
+    /** §50 — the pick's hanji, null for a hanji-less candidate. */
+    val hanji: String?,
+    val consumedBytes: Int,
+    val syllableCount: Int,
+) {
+    /** The wire request. */
+    fun toRequest(): CommitContinuous {
+        // A local, not the property: inside `apply` the builder's own
+        // `hanji` would shadow it.
+        val hanji = hanji
+        return CommitContinuous
+            .newBuilder()
+            .setScript(script)
+            .setRoman(roman)
+            .setCanonicalText(canonicalText)
+            // R2: canonical TL → NextWord next_tl/prev_tl. Empty → engine
+            // falls back to the raw committed slice.
+            .setAssociationTl(associationTl)
+            .apply { if (!hanji.isNullOrEmpty()) setHanji(hanji) }
+            .setConsumedBytes(consumedBytes)
+            .setSyllableCount(syllableCount)
+            .build()
+    }
+}
+
+/**
+ * What a continuous pick did, as the engine answered it
+ * (`ComposingResponse.commit`) — never read off the composing mirror: a
+ * generation mismatch resets the engine to Idle before the intent runs
+ * (`engine/composing/src/handle.rs`), so a mirror read would report a
+ * commit that never happened.
+ */
+sealed interface ContinuousCommitOutcome {
+    /** Nothing changed: a stale generation, a rejected pick, or a failed round-trip. */
+    data object Ignored : ContinuousCommitOutcome
+
+    /** The segment was nailed and the composition continues (Model B: no document write). */
+    data object Nailed : ContinuousCommitOutcome
+
+    /**
+     * The whole composition was written and the engine is Idle.
+     * [earnsAutoSpace] is the engine's §23 verdict on what the pick wrote;
+     * the live Auto-Space setting is the caller's.
+     */
+    data class Finalized(
+        val earnsAutoSpace: Boolean,
+    ) : ContinuousCommitOutcome
+
+    companion object {
+        // CROSS-PLATFORM INVARIANT — mirrors iOS `RustEngineBridge.ContinuousCommitOutcome.init(_:)`.
+        fun from(resolution: CommitResolution): ContinuousCommitOutcome =
+            when (resolution.outcome) {
+                CommitOutcome.COMMIT_OUTCOME_NAILED -> Nailed
+                CommitOutcome.COMMIT_OUTCOME_FINALIZED -> Finalized(resolution.earnsAutoSpace)
+                // UNSPECIFIED: an answer without a resolution changed
+                // nothing this side can tell.
+                else -> Ignored
+            }
+    }
+}
+
+/** Result of [composingCommitContinuous]: the transition to replay and what the pick did. */
+data class ContinuousCommitResult(
+    val transition: ComposingTransition,
+    val outcome: ContinuousCommitOutcome,
+) {
+    companion object {
+        val FAILED = ContinuousCommitResult(ComposingTransition.NOOP, ContinuousCommitOutcome.Ignored)
+    }
+}
+
+/**
+ * One NextWord prediction tap (D1): which of its scripts the document
+ * gets, and the prediction's own fields the engine resolves the text from
+ * (`engine/composing/src/commit_text.rs`) and counts the usage under.
+ * Mirrors iOS `RustEngineBridge.PredictionPick`.
+ */
+data class PredictionPick(
+    val script: CommitScript,
+    /**
+     * The prediction's display romanization (`EnginePrediction.text` of a
+     * prediction with a subtitle); empty for a Hanji-only prediction.
+     */
+    val roman: String,
+    val hanji: String,
+    /** The canonical TL the engine counts the usage under. */
+    val canonicalTl: String,
+) {
+    /** The wire request. */
+    fun toRequest(): CommitPrediction =
+        CommitPrediction
+            .newBuilder()
+            .setScript(script)
+            .setRoman(roman)
+            .setHanji(hanji)
+            .setCanonicalTl(canonicalTl)
+            .build()
+}
+
+/**
+ * What a prediction tap writes into the document, as the engine resolved
+ * it. [earnsAutoSpace] is the engine's §23 verdict; the live Auto-Space
+ * setting is the caller's.
+ */
+data class PredictionCommit(
+    val text: String,
+    val earnsAutoSpace: Boolean,
+)
+
+// endregion
 
 // region Composing slice (10 ops)
 
@@ -15,7 +266,7 @@ fun RustEngineBridge.composingStart(
     text: String,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Start
         .newBuilder()
         .setText(text)
@@ -32,7 +283,7 @@ fun RustEngineBridge.composingAppend(
     ch: String,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Append
         .newBuilder()
         .setChar(ch)
@@ -49,7 +300,7 @@ fun RustEngineBridge.composingAppend(
 fun RustEngineBridge.composingAppendHyphen(
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen
         .newBuilder()
         .build()
@@ -65,7 +316,7 @@ fun RustEngineBridge.composingReplaceLast(
     replacement: String,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast
         .newBuilder()
         .setReplacement(replacement)
@@ -82,7 +333,7 @@ fun RustEngineBridge.composingReplaceLast(
 fun RustEngineBridge.composingDeleteBackward(
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward
         .newBuilder()
         .build()
@@ -99,7 +350,7 @@ fun RustEngineBridge.composingDeleteBackward(
 fun RustEngineBridge.composingCommitRaw(
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
         .newBuilder()
         .build()
@@ -118,7 +369,7 @@ fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
     text: String,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto
         .CommitPreeditThenInsertExternal
         .newBuilder()
@@ -132,7 +383,7 @@ fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
     )
 }
 
-fun RustEngineBridge.composingReset(generation: Long): RustEngineBridge.ComposingTransition {
+fun RustEngineBridge.composingReset(generation: Long): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Reset
         .newBuilder()
         .build()
@@ -170,7 +421,7 @@ fun RustEngineBridge.composingFetchAtPos(
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
     literalRomanCandidateDisabled: Boolean = false,
-): List<RustEngineBridge.ContinuousCandidate> {
+): List<ContinuousCandidate> {
     val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
         .newBuilder()
         .setNowMs(nowMs)
@@ -186,7 +437,7 @@ fun RustEngineBridge.composingFetchAtPos(
 
 /**
  * Commit a candidate segment in `Phase::Continuous`. The pick MUST come from
- * a [RustEngineBridge.ContinuousCandidate] returned by an immediately
+ * a [ContinuousCandidate] returned by an immediately
  * preceding [composingFetchAtPos] call — mismatched values mis-align the
  * committed segment. `consumedBytes >= pending.utf8.size` makes a final
  * commit (exit to Idle); anything less nails the segment, writing nothing
@@ -195,21 +446,21 @@ fun RustEngineBridge.composingFetchAtPos(
  * `RustEngineBridge.composingCommitContinuous`.
  */
 fun RustEngineBridge.composingCommitContinuous(
-    pick: RustEngineBridge.ContinuousPick,
+    pick: ContinuousPick,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ContinuousCommitResult {
+): ContinuousCommitResult {
     val request = pick.toRequest()
     val payload = composingProtoRoundtrip(
         methodSetter = { it.commitContinuous = request },
         op = "composingCommitContinuous",
         generation = generation,
         config = continuousAppConfig(settings),
-    ) ?: return RustEngineBridge.ContinuousCommitResult.FAILED
+    ) ?: return ContinuousCommitResult.FAILED
     // Always set on this path; an absent one reads as UNSPECIFIED → ignored.
-    return RustEngineBridge.ContinuousCommitResult(
+    return ContinuousCommitResult(
         transition = synthComposing(payload),
-        outcome = RustEngineBridge.ContinuousCommitOutcome.from(payload.commit),
+        outcome = ContinuousCommitOutcome.from(payload.commit),
     )
 }
 
@@ -224,10 +475,10 @@ fun RustEngineBridge.composingCommitContinuous(
  * `RustEngineBridge.composingCommitPrediction`.
  */
 fun RustEngineBridge.composingCommitPrediction(
-    pick: RustEngineBridge.PredictionPick,
+    pick: PredictionPick,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.PredictionCommit? {
+): PredictionCommit? {
     val request = pick.toRequest()
     val payload = composingProtoRoundtrip(
         methodSetter = { it.commitPrediction = request },
@@ -235,9 +486,9 @@ fun RustEngineBridge.composingCommitPrediction(
         generation = generation,
         config = continuousAppConfig(settings),
     ) ?: return null
-    val outcome = RustEngineBridge.ContinuousCommitOutcome.from(payload.commit)
-    if (outcome !is RustEngineBridge.ContinuousCommitOutcome.Finalized) return null
-    return RustEngineBridge.PredictionCommit(text = payload.commit.documentText, earnsAutoSpace = outcome.earnsAutoSpace)
+    val outcome = ContinuousCommitOutcome.from(payload.commit)
+    if (outcome !is ContinuousCommitOutcome.Finalized) return null
+    return PredictionCommit(text = payload.commit.documentText, earnsAutoSpace = outcome.earnsAutoSpace)
 }
 
 // endregion
@@ -282,9 +533,9 @@ private inline fun composingDispatch(
     op: String,
     generation: Long,
     config: AppConfig?,
-): RustEngineBridge.ComposingTransition {
+): ComposingTransition {
     val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
-        ?: return RustEngineBridge.ComposingTransition.NOOP
+        ?: return ComposingTransition.NOOP
     val transition = synthComposing(payload)
     RustEngineBridge.backend.tdebug("RustEngineBridge") {
         "[FFI<-] fn=composingDispatch op=$op effects=${transition.effects.size} composing=${transition.isComposing}"
@@ -304,20 +555,20 @@ private inline fun composingFetchDispatch(
     op: String,
     generation: Long,
     config: AppConfig?,
-): List<RustEngineBridge.ContinuousCandidate> {
+): List<ContinuousCandidate> {
     val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
         ?: return emptyList()
     // FetchAtPos is read-only: the response carries no effects and the
     // platform mirrors nothing from it, so only the candidate carrier is
     // decoded (no `synthComposing` walk per fetch).
-    val candidates: List<RustEngineBridge.ContinuousCandidate> = if (payload.hasContinuous()) {
+    val candidates: List<ContinuousCandidate> = if (payload.hasContinuous()) {
         payload.continuous.candidatesList.map { msg ->
             // v3.5.8 Phase 9 Item 5 — `hanji` is proto3 `optional`;
             // protobuf-javalite exposes presence via `hasHanji()`.
             // Map absent → `null` (NOT empty string) so the
             // bridge data class's `hanji: String?` carries the
             // wire-absent distinction faithfully (hanji-less candidate).
-            RustEngineBridge.ContinuousCandidate(
+            ContinuousCandidate(
                 consumedSpanEnd = msg.consumedSpanEnd,
                 syllableCount = msg.syllableCount,
                 displayText = msg.displayText,
@@ -336,49 +587,49 @@ private inline fun composingFetchDispatch(
     return candidates
 }
 
-private fun synthComposing(proto: ComposingResponse): RustEngineBridge.ComposingTransition {
+private fun synthComposing(proto: ComposingResponse): ComposingTransition {
     // Effect contract is exhaustive — every emitted Effect.kind maps to a
     // Kotlin case. The InputConnection-bound effects route through
     // DefaultComposingDelegate; the 3 NextWord-shaped effects route
     // through SmartbarManager.dispatchComposingNextWordEffect via the
     // NextWordEffectRouter sibling on ComposingManager.
-    val effects: List<RustEngineBridge.ComposingTransition.Effect> = proto.effectList.mapNotNull { eff ->
+    val effects: List<ComposingTransition.Effect> = proto.effectList.mapNotNull { eff ->
         when {
             eff.hasUpdatePreedit() -> {
-                RustEngineBridge.ComposingTransition.Effect.UpdatePreedit(eff.updatePreedit.display)
+                ComposingTransition.Effect.UpdatePreedit(eff.updatePreedit.display)
             }
 
             eff.hasClearPreeditWithoutCommit() -> {
-                RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit
+                ComposingTransition.Effect.ClearPreeditWithoutCommit
             }
 
             eff.hasCommitTextReplacingPreedit() -> {
-                RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit(
+                ComposingTransition.Effect.CommitTextReplacingPreedit(
                     eff.commitTextReplacingPreedit.text,
                 )
             }
 
             eff.hasClearCandidates() -> {
-                RustEngineBridge.ComposingTransition.Effect.ClearCandidates
+                ComposingTransition.Effect.ClearCandidates
             }
 
             eff.hasRefreshCandidates() -> {
-                RustEngineBridge.ComposingTransition.Effect.RefreshCandidates
+                ComposingTransition.Effect.RefreshCandidates
             }
 
             eff.hasResetCandidateContext() -> {
-                RustEngineBridge.ComposingTransition.Effect.ResetCandidateContext
+                ComposingTransition.Effect.ResetCandidateContext
             }
 
             eff.hasNextWordUpdateLastSelectedWord() -> {
-                RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord(
+                ComposingTransition.Effect.NextWordUpdateLastSelectedWord(
                     text = eff.nextWordUpdateLastSelectedWord.text,
                     roman = eff.nextWordUpdateLastSelectedWord.roman,
                 )
             }
 
             eff.hasNextWordWordSelected() -> {
-                RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected(
+                ComposingTransition.Effect.NextWordWordSelected(
                     text = eff.nextWordWordSelected.text,
                     roman = eff.nextWordWordSelected.roman,
                     triggerPrediction = eff.nextWordWordSelected.triggerPrediction,
@@ -387,7 +638,7 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
             }
 
             eff.hasNextWordClearForNewComposing() -> {
-                RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing
+                ComposingTransition.Effect.NextWordClearForNewComposing
             }
 
             else -> {
@@ -395,7 +646,7 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
             }
         }
     }
-    return RustEngineBridge.ComposingTransition(
+    return ComposingTransition(
         rawInput = proto.preedit.rawInput,
         displayText = proto.preedit.displayText,
         effects = effects,

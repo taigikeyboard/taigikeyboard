@@ -37,7 +37,7 @@ Same concept, different names — check both columns before porting. Paths: iOS 
 
 | Concept | iOS | Android |
 |---|---|---|
-| Engine bridge | `Engine/RustEngineBridge+<Domain>.swift` | `engine/<Domain>Bridge.kt` (+ DTOs in `engine/RustEngineBridge.kt`) |
+| Engine bridge | `Engine/RustEngineBridge+<Domain>.swift` | `engine/<Domain>Bridge.kt` (DTOs top-level in the same file; Kotlin cannot nest them into `RustEngineBridge` from another file) |
 | Composing executor | `Input/Composing/ComposingManager`, `ComposingDelegate` | `ime/text/composing/ComposingManager`, `ComposingDelegate` |
 | Key events | `Actions/ActionHandler` + `+KeyActions` | `ime/text/keyboard/TextInputKeyHandler`, `ime/text/TextInputManager` |
 | Candidate taps | `Actions/ActionHandler+Suggestions` | `ime/text/candidates/CandidateClickHandler` |

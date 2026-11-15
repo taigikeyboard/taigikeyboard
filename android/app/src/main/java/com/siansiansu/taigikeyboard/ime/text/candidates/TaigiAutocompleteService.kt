@@ -5,7 +5,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -34,7 +34,7 @@ class TaigiAutocompleteService(
      * .fetchContinuousCandidates], a read-only engine query that never
      * touches InputConnection, and invokes it on `Dispatchers.Default`.
      */
-    private val continuousFetcher: suspend () -> List<RustEngineBridge.ContinuousCandidate>,
+    private val continuousFetcher: suspend () -> List<ContinuousCandidate>,
     /**
      * Live-read: `true` iff the strip renders Hanji with Romanization split cells (mode ==
      * COMBINED and the layout is not TPS — TPS ignores the picker). Read
@@ -88,7 +88,7 @@ internal fun shouldSplitCombinedCells(
 // and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label mixed cell).
 
 /**
- * Wrap a list of engine [RustEngineBridge.ContinuousCandidate] into the
+ * Wrap a list of engine [ContinuousCandidate] into the
  * platform `[TaigiWord]` shape with metadata sidechannel pre-populated for
  * [com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler]
  * tap routing.
@@ -148,7 +148,7 @@ internal fun shouldSplitCombinedCells(
  * pre-split shape — Pairing's subtitle tells 重/tîng from 重/tāng.
  */
 internal fun buildContinuousSuggestionsForCandidates(
-    candidates: List<RustEngineBridge.ContinuousCandidate>,
+    candidates: List<ContinuousCandidate>,
     splitCombinedCells: Boolean = false,
 ): List<TaigiWord> {
     if (!splitCombinedCells) {
@@ -226,7 +226,7 @@ internal fun <T> splitIntoSingleScriptCells(
  */
 private fun continuousWord(
     id: Int,
-    candidate: RustEngineBridge.ContinuousCandidate,
+    candidate: ContinuousCandidate,
     hanji: String?,
     cellScript: String?,
 ): TaigiWord =
@@ -242,7 +242,7 @@ private fun continuousWord(
             },
     )
 
-private fun continuousSidechannels(candidate: RustEngineBridge.ContinuousCandidate): Map<String, String> =
+private fun continuousSidechannels(candidate: ContinuousCandidate): Map<String, String> =
     mapOf(
         TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",
         TaigiWord.MetadataKeys.CONSUMED_BYTES to candidate.consumedSpanEnd.toString(),
