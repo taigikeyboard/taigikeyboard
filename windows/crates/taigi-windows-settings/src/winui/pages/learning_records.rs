@@ -2,9 +2,9 @@
 //! Custom Dictionary page's shape (`custom_dictionary.rs`) over the engine's
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
-//! selection drives the edit-count / delete pair — plus Add to Custom
-//! Dictionary, which opens Custom Dictionary's Add Word dialog over the
-//! row's word — and the pager under it, then Delete Learning Records under
+//! selection drives the edit-count / delete pair — plus, on learned
+//! phrases, Add to Custom Dictionary, which opens Custom Dictionary's Add
+//! Word dialog over the row's word — and the pager under it, then Delete Learning Records under
 //! the card: it empties every learning store, whichever kind is on screen,
 //! on the press. No add — a word the user wants is a custom word.
 //!
@@ -29,6 +29,7 @@ use taigi_desktop_core::engine::user_data::{
 };
 use taigi_desktop_core::settings::learning_records::{
     add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
+    offers_add_to_custom_dictionary,
     order_label, set_count_job, whole_count, Listing, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
@@ -69,8 +70,8 @@ pub enum Message {
     /// typed form and word, for the user to tweak before Save.
     AddToCustomDictionary,
     AddWordFieldChanged(EntryField, String),
-    /// Save files the word as edited: a learned phrase then leaves this
-    /// list, a frequency row stays. Cancel does nothing.
+    /// Save files the word as edited: the learned phrase then leaves this
+    /// list. Cancel does nothing.
     AddWordDialogClosed(ContentDialogResult),
     /// The count field's value; `None` while it is cleared.
     CountChanged(Option<f64>),
@@ -514,18 +515,23 @@ fn record_table(
         })
         .collect::<Vec<_>>();
     let has_selection = model.listing.selected_row().is_some();
-    // On for a selected row the engine says can be added: no Hanji greys it
-    // out on either kind.
+    // Left out on word frequency (its words are dictionary words already);
+    // on learned phrases, on for a selected row the engine says can be
+    // added — no Hanji greys it out.
     let can_add_selection = model
         .listing
         .selected_row()
         .is_some_and(|row| row.can_add_to_custom_dictionary);
-    let add_button = icon_button(
-        ADD_GLYPH,
-        strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
-        is_enabled && can_add_selection,
-        context.callback(|()| WindowMessage::LearningRecords(Message::AddToCustomDictionary)),
-    );
+    let add_button = if offers_add_to_custom_dictionary(model.kind) {
+        icon_button(
+            ADD_GLYPH,
+            strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
+            is_enabled && can_add_selection,
+            context.callback(|()| WindowMessage::LearningRecords(Message::AddToCustomDictionary)),
+        )
+    } else {
+        View::empty()
+    };
     // The list stays live while a job runs; the verbs are what a job turns
     // off (Custom Dictionary's reasoning, `list_selection`).
     let list = selectable_list(

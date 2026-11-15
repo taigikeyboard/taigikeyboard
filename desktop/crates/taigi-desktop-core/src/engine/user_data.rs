@@ -377,8 +377,8 @@ pub fn delete_learning_record(record: LearningRecord) -> Result<bool, UserDataEr
 }
 
 /// Makes `record`'s word a custom word, filed as `roman` / `hanji` (the
-/// word as the user edited it; the engine trims both) — a learned phrase is
-/// then forgotten, a frequency row stays; a word the dictionary holds
+/// word as the user edited it; the engine trims both) — the learned phrase
+/// is then forgotten (a frequency row is refused); a word the dictionary holds
 /// already is not added twice. A refusal (no romanization, no search key, a
 /// full dictionary) is `UserDataError::Refused` and keeps the row.
 pub fn add_learning_record_to_custom_dictionary(

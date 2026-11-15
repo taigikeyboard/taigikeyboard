@@ -228,7 +228,7 @@ fun RustEngineBridge.learningRecordDelete(record: LearningRecord): LearningRecor
         ?.learningRecordDeleted
 }
 
-/** Adds the listed row's word to the custom dictionary (a learned phrase is then forgotten, a frequency row kept); a refusal keeps the row. */
+/** Adds the listed learned phrase's word to the custom dictionary, then forgets the phrase (a frequency row is refused); a refusal keeps the row. */
 fun RustEngineBridge.learningRecordAddToCustomDictionary(record: LearningRecord): LearningRecordAddedToCustomDictionary? {
     val add = AddLearningRecordToCustomDictionary.newBuilder().setRecord(record).build()
     return userData("learningRecordAddToCustomDictionary") { setAddLearningRecordToCustomDictionary(add) }

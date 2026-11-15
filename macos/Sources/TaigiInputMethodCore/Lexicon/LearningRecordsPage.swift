@@ -4,9 +4,10 @@
 // engine's learning stores: a kind and an order picker over a filter, a paged
 // table, a count sheet and `−`, then Delete Learning Records, which empties
 // every learning store whichever kind is on screen. Nothing is added here by
-// hand — a word the user wants is a custom word, so a listed row's word can be
-// filed there (Add to Custom Dictionary, through Custom Dictionary's Add Word
-// sheet, pre-filled and editable).
+// hand — a word the user wants is a custom word, so a learned phrase's word can
+// be filed there (Add to Custom Dictionary, through Custom Dictionary's Add Word
+// sheet, pre-filled and editable). Word frequency offers no add: its words are
+// dictionary words already.
 // Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 import SwiftUI
@@ -130,7 +131,7 @@ final class LearningRecordsPageModel {
 
     /// Files the row's word in the custom dictionary as `roman` / `hanji` —
     /// what the user left in the Add Word sheet the action opens; the engine
-    /// then forgets a learned phrase and keeps a frequency row. The receipt
+    /// then forgets the learned phrase (a frequency row is refused). The receipt
     /// is always said — added or already stored — as desktop-core's job does.
     func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord, roman: String, hanji: String) async {
         await perform(receipt: .done(.dictionaryLearningRecordsAddedToCustomDictionary)) {
@@ -181,6 +182,15 @@ final class LearningRecordsPageModel {
             message = .failure(failure, error)
         }
         await load()
+    }
+
+    /// Whether the toolbar shows Add to Custom Dictionary on `kind`'s list at
+    /// all — desktop-core's `offers_add_to_custom_dictionary`. Word frequency
+    /// never: the engine offers no frequency row, so a button that could never
+    /// turn on is left out. Each row's `canAddToCustomDictionary` still
+    /// decides whether it is enabled for the selection.
+    nonisolated static func offersAddToCustomDictionary(for kind: Taigi_Engine_LearningRecordKind) -> Bool {
+        kind == .learnedPhrase
     }
 
     /// The note under the count field. Word frequency's ranking boost stops
@@ -364,10 +374,12 @@ struct LearningRecordsPage: View {
     }
 
     /// The button form of the context menu's Add to Custom Dictionary, so it
-    /// is found without a right-click. Off unless the selected row is one the
-    /// engine says can be added (a row with no Hanji is not).
-    private var addToCustomDictionaryControl: (labelKey: StringKey, isEnabled: Bool, action: () -> Void) {
-        (
+    /// is found without a right-click. Left out on word frequency; off unless
+    /// the selected row is one the engine says can be added (a row with no
+    /// Hanji is not).
+    private var addToCustomDictionaryControl: (labelKey: StringKey, isEnabled: Bool, action: () -> Void)? {
+        guard LearningRecordsPageModel.offersAddToCustomDictionary(for: model.kind) else { return nil }
+        return (
             .dictionaryLearningRecordsAddToCustomDictionary,
             model.list.selectedRow?.canAddToCustomDictionary == true,
             { adding = model.list.selectedRow },

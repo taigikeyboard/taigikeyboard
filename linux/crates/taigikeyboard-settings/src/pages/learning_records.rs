@@ -3,7 +3,8 @@
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / add-to-custom-dictionary / delete
-//! verbs, and the pager under it, then Delete Learning Records in its own
+//! verbs (no add on word frequency: its words are dictionary words
+//! already), and the pager under it, then Delete Learning Records in its own
 //! group: it empties every learning store, whichever kind is on screen, on
 //! the press. No add — a word the user wants is a custom word, which a
 //! listed row's word can become here.
@@ -30,7 +31,7 @@ use taigi_desktop_core::engine::user_data::{
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::learning_records::{
     add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
-    order_label, set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
+    offers_add_to_custom_dictionary, order_label, set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
@@ -589,18 +590,23 @@ impl LearningRecordsPage {
     }
 
     /// The ✎, + and − buttons: on while a row is selected and nothing runs.
-    /// The + (add to custom dictionary) also needs a row the engine says can
-    /// be added: no Hanji keeps it off on either kind.
+    /// The + (add to custom dictionary) is left out on word frequency, and
+    /// on learned phrases also needs a row the engine says can be added: no
+    /// Hanji keeps it off.
     fn render_verbs(&self) {
-        let (is_busy, has_selection, can_add_selection) = {
+        let (is_busy, has_selection, can_add_selection, offers_add) = {
             let state = self.state.borrow();
             let selected_row = state.listing.selected_row();
             (
                 state.job.is_busy_shown(),
                 selected_row.is_some(),
                 selected_row.is_some_and(|row| row.can_add_to_custom_dictionary),
+                offers_add_to_custom_dictionary(state.kind),
             )
         };
+        self.widgets
+            .add_to_custom_dictionary
+            .set_visible(offers_add);
         let is_on = !is_busy && has_selection;
         self.widgets.edit.set_sensitive(is_on);
         self.widgets

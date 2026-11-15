@@ -138,8 +138,9 @@ final class LearningRecordsViewModelTests: XCTestCase {
         }
 
         /// The engine's add: a refusal keeps the row; otherwise the word is
-        /// filed, and a learned phrase's row forgotten (one already gone is no
-        /// failure) while a frequency row stays.
+        /// filed and the learned phrase forgotten (one already gone is no
+        /// failure). The engine refuses a frequency row; the page never sends
+        /// one.
         override func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws {
             if let failure {
                 throw failure
@@ -149,9 +150,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
                     throw UserDataRefused(detail: storedAddRefusal)
                 }
                 storedAdded.append(record)
-                if record.kind == .learnedPhrase {
-                    storedRows.removeAll { $0.isSameRow(as: record) }
-                }
+                storedRows.removeAll { $0.isSameRow(as: record) }
             }
         }
 
@@ -596,21 +595,6 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(fake.added.map(\.text), ["台語"])
         XCTAssertEqual(viewModel.records.map(\.id), [2])
         XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "the add reloads the listed rows")
-    }
-
-    func testAddingAFrequencyRow_saysItLandedAndKeepsTheRow() async {
-        let fake = FakeLearningRecords(rows: [
-            record(1, "台語", tl: "tâi-gí", kind: .frequency),
-            record(2, "食飽", tl: "tsia̍h-pá", kind: .frequency),
-        ])
-        let viewModel = makeViewModel(fake, kind: .frequency)
-        _ = await viewModel.load()
-
-        let add = await landed(viewModel.addToCustomDictionary(viewModel.records[0]))
-
-        XCTAssertEqual(add.outcome, .addedToCustomDictionary)
-        XCTAssertEqual(fake.added.map(\.text), ["台語"])
-        XCTAssertEqual(viewModel.records.map(\.id), [1, 2], "a frequency row still weights its word")
     }
 
     func testARefusedAdd_isAWriteFailureAndKeepsThePhrase() async {

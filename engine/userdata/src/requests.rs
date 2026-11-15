@@ -212,11 +212,11 @@ impl UserDataHandle {
         })
     }
 
-    /// A row's word — as the user edited it in the Add Word sheet, else the
-    /// row's own — made a custom word: added unless it is stored already.
-    /// A learned phrase is then forgotten — the custom word offers it whole
-    /// from now on; a frequency row stays, still weighting its word. Two
-    /// files, so no one transaction: the add comes first and a refused or
+    /// A learned phrase's word — as the user edited it in the Add Word
+    /// sheet, else the row's own — made a custom word: added unless it is
+    /// stored already, and the phrase is then forgotten — the custom word
+    /// offers it whole from now on. A word-frequency row is refused: its
+    /// word is a dictionary word already. Two files, so no one transaction: the add comes first and a refused or
     /// failed add keeps the row; a forget that fails after it is a store
     /// error, and the retry finds the word stored and forgets the phrase.
     fn add_to_custom_dictionary(
@@ -227,9 +227,9 @@ impl UserDataHandle {
         // Decided again from the row's own text — the row that offered the
         // action, not the edited word: the request's
         // `can_add_to_custom_dictionary` is the page's copy, not a permission.
-        if !learning_records::can_add_to_custom_dictionary(&record.text) {
+        if !learning_records::can_add_to_custom_dictionary(kind, &record.text) {
             return Err(RequestError::Invalid(
-                "only a learning record with Hanji is added",
+                "only a learned phrase with Hanji is added",
             ));
         }
         let refused = |refusal: CustomDictionaryRefusal, detail: String| {
@@ -254,9 +254,7 @@ impl UserDataHandle {
         }
         // `false` — the phrase is gone already (evicted, deleted, its id
         // reused): the word is in the dictionary, which is what was asked.
-        if kind == LearningRecordKind::LearnedPhrase {
-            learning_records::delete(stores, kind, record).map_err(store_error)?;
-        }
+        learning_records::delete(stores, kind, record).map_err(store_error)?;
         Ok(LearningRecordAddedToCustomDictionary {
             refusal: CustomDictionaryRefusal::None as i32,
             detail: String::new(),
@@ -779,10 +777,20 @@ mod tests {
 
     /// An open handle whose one learned phrase is 食飯 / tsia̍h-pn̄g.
     fn handle_with_a_learned_phrase(directory: &tempfile::TempDir) -> UserDataHandle {
+        handle_with_learned_phrases(directory, &[("食飯", "tsia̍h-pn̄g")])
+    }
+
+    /// An open handle whose phrase store learned each `(word, tl)` once.
+    fn handle_with_learned_phrases(
+        directory: &tempfile::TempDir,
+        rows: &[(&str, &str)],
+    ) -> UserDataHandle {
         let handle = UserDataHandle::new();
         handle.handle(&open_request(directory.path())).unwrap();
         let stores = handle.stores().unwrap();
-        stores.learned_phrases.learn_phrase("食飯", "tsia̍h-pn̄g");
+        for (word, tl) in rows {
+            stores.learned_phrases.learn_phrase(word, tl);
+        }
         stores.learned_phrases.database.wait_for_queued_writes();
         handle
     }
@@ -900,13 +908,13 @@ mod tests {
     #[test]
     fn an_edited_word_does_not_make_a_row_without_hanji_addable() {
         let directory = tempfile::tempdir().unwrap();
-        let handle = handle_with_frequency_rows(&directory, &[("guá sī", "guá sī")]);
+        let handle = handle_with_learned_phrases(&directory, &[("guá sī", "guá sī")]);
         let seeded = list(&handle, "").total;
-        let [row] = frequency_rows(&handle).try_into().unwrap();
+        let [row] = learned_phrases(&handle).try_into().unwrap();
 
         assert_eq!(
             add_edited_to_custom_dictionary(&handle, row, Some(("guá sī", "我是"))).unwrap_err(),
-            RequestError::Invalid("only a learning record with Hanji is added")
+            RequestError::Invalid("only a learned phrase with Hanji is added")
         );
         assert_eq!(list(&handle, "").total, seeded);
     }
@@ -961,30 +969,33 @@ mod tests {
     }
 
     #[test]
-    fn an_added_frequency_row_is_a_custom_word_and_keeps_its_count_and_time() {
+    fn a_frequency_row_is_never_offered_and_refused_when_sent() {
         let directory = tempfile::tempdir().unwrap();
         let handle = handle_with_frequency_rows(&directory, &[("食飯", "tsia̍h-pn̄g")]);
         let seeded = list(&handle, "").total;
         let [row] = frequency_rows(&handle).try_into().unwrap();
-        assert!(row.can_add_to_custom_dictionary);
+        assert!(
+            !row.can_add_to_custom_dictionary,
+            "a dictionary word already"
+        );
 
-        let added = add_to_custom_dictionary(&handle, row.clone()).unwrap();
-        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
-        assert_eq!(search(&handle, "tsiahpng"), ["食飯"]);
-        assert_eq!(list(&handle, "").total, seeded + 1);
-        // Same id, word, count and last-used time: the row still weights 食飯.
-        assert_eq!(frequency_rows(&handle), std::slice::from_ref(&row));
-
-        let again = add_to_custom_dictionary(&handle, row.clone()).unwrap();
-        assert_eq!(again.refusal(), CustomDictionaryRefusal::None);
-        assert_eq!(list(&handle, "").total, seeded + 1, "not added twice");
+        // The page's copy of the flag is not a permission.
+        let forged = LearningRecord {
+            can_add_to_custom_dictionary: true,
+            ..row.clone()
+        };
+        assert_eq!(
+            add_to_custom_dictionary(&handle, forged).unwrap_err(),
+            RequestError::Invalid("only a learned phrase with Hanji is added")
+        );
+        assert_eq!(list(&handle, "").total, seeded);
         assert_eq!(frequency_rows(&handle), [row]);
     }
 
     #[test]
-    fn only_a_hanji_row_is_offered_and_added() {
+    fn only_a_hanji_phrase_is_offered_and_added() {
         let directory = tempfile::tempdir().unwrap();
-        let handle = handle_with_frequency_rows(
+        let handle = handle_with_learned_phrases(
             &directory,
             &[
                 ("是", "sī"),
@@ -995,7 +1006,7 @@ mod tests {
         );
         let seeded = list(&handle, "").total;
         let offered = |text: &str| {
-            frequency_rows(&handle)
+            learned_phrases(&handle)
                 .into_iter()
                 .find(|row| row.text == text)
                 .unwrap()
@@ -1005,7 +1016,7 @@ mod tests {
         assert!(offered("囡仔").can_add_to_custom_dictionary);
         assert!(offered("a好").can_add_to_custom_dictionary, "mixed text");
 
-        let refusal = RequestError::Invalid("only a learning record with Hanji is added");
+        let refusal = RequestError::Invalid("only a learned phrase with Hanji is added");
         // The page's copy of the flag is not a permission.
         let forged = LearningRecord {
             can_add_to_custom_dictionary: true,
@@ -1021,14 +1032,18 @@ mod tests {
         let added = add_to_custom_dictionary(&handle, offered("是")).unwrap();
         assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
         assert_eq!(list(&handle, "").total, seeded + 1);
-        assert_eq!(frequency_rows(&handle).len(), 4);
+        assert_eq!(
+            learned_phrases(&handle).len(),
+            3,
+            "the filed phrase is forgotten"
+        );
     }
 
     #[test]
     fn a_set_count_answer_carries_the_flag() {
         let directory = tempfile::tempdir().unwrap();
-        let handle = handle_with_frequency_rows(&directory, &[("食飯", "tsia̍h-pn̄g")]);
-        let [row] = frequency_rows(&handle).try_into().unwrap();
+        let handle = handle_with_a_learned_phrase(&directory);
+        let [row] = learned_phrases(&handle).try_into().unwrap();
         match call(
             &handle,
             user_data_request::Method::SetLearningRecordCount(

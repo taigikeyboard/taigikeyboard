@@ -192,21 +192,6 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertEqual(custom.map(\.hanji), ["字一"])
     }
 
-    /// A frequency row's word lands in the custom dictionary and the add is
-    /// said; the row stays listed, still weighting its word.
-    func testAddToCustomDictionary_filesTheWordAndKeepsTheFrequencyRow() async throws {
-        let (model, client) = makeModel([record(.frequency, id: 1), record(.frequency, id: 2)])
-        await model.loadFirstPage()
-
-        let listed = try XCTUnwrap(model.list.rows.first { $0.id == 1 })
-        await model.addToCustomDictionary(listed, roman: listed.tl, hanji: listed.text)
-
-        XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
-        XCTAssertEqual(model.list.rows.map(\.id), [1, 2])
-        let custom = try client.list(filter: "", limit: 10, offset: 0).rows
-        XCTAssertEqual(custom.map(\.hanji), ["字1"])
-    }
-
     /// A refusal — a full dictionary — is a write failure, and the row stays.
     func testAddToCustomDictionary_refused_isAWriteFailureAndKeepsTheRow() async throws {
         let (model, client) = makeModel([record(.learnedPhrase, id: 1)])
@@ -320,6 +305,13 @@ final class LearningRecordsPageTests: XCTestCase {
         model.selectedRowID = 1
         model.order = .mostRecent
         XCTAssertNil(model.selectedRowID)
+    }
+
+    /// Word frequency's words are dictionary words already: its toolbar has
+    /// no Add to Custom Dictionary.
+    func testAddToCustomDictionary_isOfferedOnLearnedPhrasesOnly() {
+        XCTAssertFalse(LearningRecordsPageModel.offersAddToCustomDictionary(for: .frequency))
+        XCTAssertTrue(LearningRecordsPageModel.offersAddToCustomDictionary(for: .learnedPhrase))
     }
 
     /// The "above 40 ranks the same" note belongs to word frequency alone.
