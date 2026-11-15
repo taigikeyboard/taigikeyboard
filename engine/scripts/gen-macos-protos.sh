@@ -5,7 +5,7 @@
 #
 # Output (SwiftProtobuf):
 #   macos/Sources/TaigiInputMethodCore/Engine/Generated/*.pb.swift       engine protos —
-#       kept identical to the iOS copy (.github/workflows/checks.yml `protos`)
+#       kept identical to the iOS copy (.github/workflows/codegen-lint.yml `protos`)
 #   macos/Sources/TaigiInputMethodCore/DesktopCore/Generated/*.pb.swift  desktop shell
 #
 # Separate from `gen-platform-protos.sh` because the macOS IME owns its own

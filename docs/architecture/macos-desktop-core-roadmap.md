@@ -129,7 +129,7 @@ A copyable value `{ Windows, Linux, MacOS }` — not `cfg(target_os)`: the deskt
 - **Bundle**: `bundle-app.sh` keeps its architecture, deployment-target and symbol assertions and, from P6 (the first production caller), asserts both entry points in the executable; `build-macos-xcframework.sh` asserts both in every archive slice (P2).
 - **Caller's view**: `make -C macos build / test / install` are unchanged; `macos/Makefile` still never rebuilds Rust.
 - **Stale-artifact gate** (`AGENTS.md` § Build & Test): a diff touching `desktop/` or `macos/crates/` needs `make build` before a macOS build or test.
-- **Tooling**: `macos/rust-toolchain.toml` (both darwin targets); `tools/test_select.py` maps `desktop/**` and `macos/crates/**` to **two** macOS gates — the native Rust tests and, after a rebuild, the Swift suite; `.github/workflows/macos.yml` adds the paths, caches the new workspace and runs the native tests, clippy, fmt and the MSRV check; `.github/workflows/security.yml` and the advisory checks cover the new lockfile; `make lint` and `tools/release_notes.py` (which implements `make version-desktop`) learn the workspace.
+- **Tooling**: `macos/rust-toolchain.toml` (both darwin targets); `tools/test_select.py` maps `desktop/**` and `macos/crates/**` to **two** macOS gates — the native Rust tests and, after a rebuild, the Swift suite; `.github/workflows/macos.yml` adds the paths, caches the new workspace and runs the native tests, clippy, fmt and the MSRV check; `.github/workflows/rust-audit.yml` and the advisory checks cover the new lockfile; `make lint` and `tools/release_notes.py` (which implements `make version-desktop`) learn the workspace.
 
 ### D8. The oracle rule
 

@@ -124,9 +124,9 @@ jobs:
           key: ${{ steps.spm.outputs.cache-primary-key }}
 
   # The macOS Cargo workspace (`macos/`: the `taigi-macos-ffi` archive) on its
-  # own, gated like desktop.yml gates `desktop/`: native tests, clippy, fmt —
+  # own, gated like desktop-shared.yml gates `desktop/`: native tests, clippy, fmt —
   # the steps of `make macos-rust-check` — plus the e2e-trace feature-graph
-  # guard. Ubuntu, as for engine.yml and desktop.yml: the crate has no
+  # guard. Ubuntu, as for engine.yml and desktop-shared.yml: the crate has no
   # platform code, and no step here builds the xcframework.
   native:
     name: macOS Rust (test, clippy, fmt, trace guard)
@@ -183,7 +183,7 @@ jobs:
 
   # macos/Cargo.toml's `rust-version` (the floor of the desktop crates it
   # links); `native` above runs stable and never exercises it. Read from the
-  # manifest, as engine.yml's and desktop.yml's `msrv` do.
+  # manifest, as engine.yml's and desktop-shared.yml's `msrv` do.
   msrv:
     name: macOS Rust on the declared rust-version
     runs-on: ubuntu-24.04

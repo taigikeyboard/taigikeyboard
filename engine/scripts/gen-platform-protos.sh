@@ -10,7 +10,7 @@
 # Prerequisites (install once, locally):
 #   mise install
 #
-# `--java-only` is CI's freshness check (.github/workflows/checks.yml): Java
+# `--java-only` is CI's freshness check (.github/workflows/codegen-lint.yml): Java
 # bindings only, so no protoc-gen-swift, and a protoc that does not match the
 # pinned runtime is an ERROR there, not the skip-with-warning below — a check
 # that skipped itself would report stale bindings as fresh.

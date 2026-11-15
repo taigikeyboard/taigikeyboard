@@ -8,7 +8,7 @@
 # are announce-release.sh's `macos_version` / `macos_sha256`: the sha256 of the
 # package it downloaded and checked against the staged receipt and the R2 copy
 # the cask's url names, so run this only after a successful announcement.
-# `announce-release.yml` runs it with the release App's token; after a local
+# `desktop-announce.yml` runs it with the release App's token; after a local
 # `make desktop-announce`, `gh` logged in with write access to the tap does.
 #
 # Idempotent: a re-run finds the cask already there. Refuses a downgrade and a

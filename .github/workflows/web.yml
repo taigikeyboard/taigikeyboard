@@ -355,7 +355,7 @@ jobs:
         run: make -C web typecheck
 
   deploy:
-    name: Deploy
+    name: deploy site
     needs: [build, e2e-site, e2e-extension, lint, typecheck]
     # Results named, not the implicit success(): that also looks at `changed`,
     # which a dispatch skips, so a dispatch never deployed. A scheduled run

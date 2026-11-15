@@ -218,7 +218,7 @@ check_publish() {
     output fingerprint "$fingerprint"
     summary "### Publish $SHORT_VERSION" "" \
         "Approving the \`publish\` job publishes the $DESKTOP_TAG draft on ${target:0:7} (every installer staged): $url" "" \
-        "Publishing fires announce-release.yml, which asks for its own approval. Check \`RELEASE_HOLD\` is still unset before approving."
+        "Publishing fires desktop-announce.yml, which asks for its own approval. Check \`RELEASE_HOLD\` is still unset before approving."
 }
 
 # The release object's names: `plan` and `check-publish` name this month's

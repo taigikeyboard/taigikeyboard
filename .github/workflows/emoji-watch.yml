@@ -26,6 +26,7 @@ env:
 
 jobs:
   check:
+    name: compare pinned and upstream emoji
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 10

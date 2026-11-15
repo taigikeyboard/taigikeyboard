@@ -12,6 +12,7 @@ permissions: {}
 
 jobs:
   notify:
+    name: post opened / closed PR to Discord
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

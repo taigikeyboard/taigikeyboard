@@ -33,7 +33,7 @@ Every pin carries its reason next to the version. Read these before classifying;
 | `.github/dependabot.yml` `ignore:` blocks | windows-rs sub-crate majors (`windows-core` / `windows-numerics` / `windows-sys`) — family moves together with the `windows-reactor` git rev in `windows/Cargo.toml`; `sha2` 0.10 |
 | `android/app/build.gradle.kts` comments above `dependencies` | `core-ktx`, `lifecycle` group, `compose-bom` capped by `minCompileSdk=37` while `compileSdk = 36`; `protobuf-javalite` tied to protoc |
 | `android/app/build.gradle.kts` `ktlint("…")` | ktlint frozen at 1.5.0 (USER 2026-08-18) |
-| `mise.toml` comments | `protoc` = the libprotoc matching `protobuf-javalite`; `gitleaks` = `.gitleaks-scanned`; `swiftformat` = `.github/workflows/checks.yml`; `wasm-bindgen` = `web/Cargo.toml`; `biome` = `web/biome.json` `$schema` |
+| `mise.toml` comments | `protoc` = the libprotoc matching `protobuf-javalite`; `gitleaks` = `.gitleaks-scanned`; `swiftformat` = `.github/workflows/codegen-lint.yml`; `wasm-bindgen` = `web/Cargo.toml`; `biome` = `web/biome.json` `$schema` |
 | `macos/Package.swift` | `KeyboardShortcuts` `exact:` pin |
 | project memory `project_dependency_upgrade_audit.md` | history + traps (lifecycle whole-group rule, KK binary target) |
 

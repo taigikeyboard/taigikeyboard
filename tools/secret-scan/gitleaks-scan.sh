@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The one place that decides what a credential scan covers and how its result is
 # read. `make scan-secrets`, `make scan-secrets-full` and
-# .github/workflows/secrets.yml all go through here, so the local gate and the CI
+# .github/workflows/secret-scan.yml all go through here, so the local gate and the CI
 # gate cannot drift apart — they did once already, when only one of the two
 # carried --exit-code 2.
 #

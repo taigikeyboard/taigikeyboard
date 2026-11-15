@@ -1,4 +1,4 @@
-name: Desktop
+name: Desktop shared crates
 
 # The desktop-shared crates (`desktop/`, consumed by the Windows and Linux
 # shells): native tests, clippy, then formatting for the desktop-shared and
@@ -20,7 +20,7 @@ on:
       - 'engine/**'
       - '.github/actions/setup-protoc/**'
       - 'mise.toml'
-      - '.github/workflows/desktop.yml'
+      - '.github/workflows/desktop-shared.yml'
   push:
     branches: [main]
     paths:
@@ -30,7 +30,7 @@ on:
       - 'engine/**'
       - '.github/actions/setup-protoc/**'
       - 'mise.toml'
-      - '.github/workflows/desktop.yml'
+      - '.github/workflows/desktop-shared.yml'
 
 permissions:
   contents: read

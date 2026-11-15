@@ -21,7 +21,7 @@ protoc = "36.2"
 "spm:apple/swift-protobuf" = { version = "1.39.0", os = ["macos"] }
 # Recorded in .gitleaks-scanned; an incremental scan refuses any other version.
 gitleaks = "8.30.1"
-# The version .github/workflows/checks.yml lints with.
+# The version .github/workflows/codegen-lint.yml lints with.
 swiftformat = "0.63.0"
 # make linux-check's cross build of the engine (linux/Makefile), and the web
 # build's wasm32 C compiler and archiver for SQLite (web/Makefile).

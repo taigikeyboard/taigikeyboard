@@ -3,7 +3,7 @@
 # needs scanning again — only what has been added since.
 #
 # Read by tools/secret-scan/gitleaks-scan.sh, which `make scan-secrets`, the pre-commit hook
-# and .github/workflows/secrets.yml all go through. An incremental scan is
+# and .github/workflows/secret-scan.yml all go through. An incremental scan is
 # `--all --not <commit>`, excluding local refs/jj/*, refs/t3/* and refs/codex/*
 # snapshots: every commit on the remaining refs that this one does not already
 # cover. That is also the net for anything a per-pull-request range scan could not

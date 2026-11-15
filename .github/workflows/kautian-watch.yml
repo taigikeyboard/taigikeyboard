@@ -25,6 +25,7 @@ env:
 
 jobs:
   check:
+    name: compare upstream export, open data PR
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -175,6 +176,7 @@ jobs:
           echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   python:
+    name: validate data PR (python)
     needs: check
     if: needs.check.outputs.head != ''
     uses: ./.github/workflows/python.yml
@@ -184,6 +186,7 @@ jobs:
       contents: read
 
   engine:
+    name: validate data PR (engine)
     needs: check
     if: needs.check.outputs.head != ''
     uses: ./.github/workflows/engine.yml

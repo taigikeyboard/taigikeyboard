@@ -2,7 +2,7 @@ name: Engine
 
 # The shared Rust engine, gated on every change to it: tests, clippy, then
 # formatting. The desktop-shared and Windows workspaces link the engine and are
-# gated in desktop.yml, which an engine change also triggers; Linux gates its
+# gated in desktop-shared.yml, which an engine change also triggers; Linux gates its
 # own in linux-build.yml, nightly — `make linux-check` before a Linux PR.
 # Ubuntu only — the engine has no platform code, and
 # the platform builds that link it (Xcode, Gradle, SwiftPM, the TSF DLL) stay on
@@ -45,7 +45,7 @@ concurrency:
 
 jobs:
   test:
-    name: cargo test + fmt
+    name: cargo test + clippy + fmt
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -91,7 +91,7 @@ jobs:
         working-directory: engine
         run: cargo test -p dispatch --features e2e-trace --lib --test e2e_trace
 
-      # Same gate as `make lint`, engine half; desktop.yml runs the desktop half.
+      # Same gate as `make lint`, engine half; desktop-shared.yml runs the desktop half.
       - name: cargo clippy -D warnings (engine)
         run: cargo clippy --manifest-path engine/Cargo.toml --workspace --all-targets --locked -- -D warnings
 
