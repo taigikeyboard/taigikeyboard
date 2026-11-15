@@ -14,7 +14,7 @@
     "@playwright/test": "1.65.0",
     "@types/chrome": "0.3.7",
     "@types/node": "26.6.6",
-    "codemirror": "5.65.21",
+    "codemirror": "6.0.2",
     "esbuild": "0.28.2",
     "lexical": "0.53.0",
     "quill": "2.0.3",
