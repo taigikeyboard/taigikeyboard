@@ -1,6 +1,6 @@
 # TaigiKeyboard 台語齒盤
 
-A Taiwanese input method for iOS, Android, macOS, Windows, and Linux.
+A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, ChromeOS, and Chrome.
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
