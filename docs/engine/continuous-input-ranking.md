@@ -22,7 +22,7 @@ One `FetchAtPos` is answered by `composing::continuous::assemble_candidates` ([`
 | 4d | Re-sort the merged blocks by `CandidateSortKey`, keeping slot 0 in place; a picked multi-syllable partial prefix covering the whole input then swaps above a slot 0 composed from several edges that is not itself a dictionary word (`antsua` → 按怎 over 安紙). The walker has no edge past the input. A dictionary word at slot 0 keeps it (`ko` → 哥 over a picked 講: exact before predictive), and so does a sentence against a one-syllable pick, which is keyed by reading, not by what was typed | `ranking::sort_by_candidate_key`, `picked_extension_outranks_sentence` |
 | 5 | POJ mode only: render `roman` as POJ, then dedupe the rendered list | `recase_tl_as_poj_display`, `dedupe_rendered_continuous` |
 
-The dispatch caller runs the fetch twice: a neutral pass discovers the candidates, then their `user_frequency.db` rows are read and the fetch re-runs ranked (`engine/dispatch/src/user_data/with_stores.rs` `handle_composing` / `frequency_map`). No platform sends frequency rows.
+The dispatch caller runs the fetch twice: a neutral pass discovers the candidates, then their `user_frequency.db` rows are read and the fetch re-runs ranked (`engine/dispatch/src/fetch.rs` `fetch_at_pos` / `candidate_frequency`). No platform sends frequency rows.
 
 ---
 
@@ -66,7 +66,7 @@ The cap is applied **before** the decay, so a huge stale count is not pinned hig
 | `FrequencyMap` key | the `(display_text, canonical_tl)` pair (Core Principle #6); `get` falls back to the legacy `(display_text, "")` bucket, never sums |
 | Store | `user_frequency.db`, `UNIQUE(word, tl)` — `engine/userdata` `UserFrequencyStore` (`rows_for_words`) |
 | Write | `UserDataStores::record_usage` (`engine/userdata/src/stores.rs`): count + 1 and `last_used` = now for the pair; a Hanji pick also touches its learned phrase. A `CommitContinuous` is recorded by the engine itself; a platform `RecordUsage` covers other picks |
-| Read | `with_stores.rs` `frequency_map` → `ContinuousFetchCtx.freq_map` + `now_ms` |
+| Read | `fetch.rs` `candidate_frequency` → `ContinuousFetchCtx.freq_map` + `now_ms` |
 | Sort | `ranking::sort_by_candidate_key`, called from `engine/lexicon/src/continuous/` and Step 4d |
 
 ### Walker cost (slot 0)

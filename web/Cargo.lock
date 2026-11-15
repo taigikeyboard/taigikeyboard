@@ -72,6 +72,7 @@ dependencies = [
  "composing",
  "lexicon",
  "log",
+ "mmap-host",
  "nextword",
  "phonetics",
  "prost",
@@ -674,12 +675,10 @@ name = "taigi-web"
 version = "0.1.0"
 dependencies = [
  "dispatch",
- "mmap-host",
  "serde",
  "serde_json",
  "sqlite-wasm-rs",
  "taigi-desktop-core",
- "userdata",
  "wasm-bindgen",
 ]
 

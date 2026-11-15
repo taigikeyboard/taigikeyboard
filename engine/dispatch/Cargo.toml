@@ -25,6 +25,10 @@ serde_json = { workspace = true }
 log = { workspace = true }
 userdata = { workspace = true, optional = true }
 
+# The browser hands the dictionary bytes in (`register_dictionary_bytes`).
+[target.'cfg(target_family = "wasm")'.dependencies]
+mmap-host = { workspace = true }
+
 [dev-dependencies]
 tempfile = { workspace = true }
 test-support = { workspace = true }

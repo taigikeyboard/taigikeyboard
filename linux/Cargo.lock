@@ -592,6 +592,7 @@ dependencies = [
  "composing",
  "lexicon",
  "log",
+ "mmap-host",
  "nextword",
  "phonetics",
  "prost",
