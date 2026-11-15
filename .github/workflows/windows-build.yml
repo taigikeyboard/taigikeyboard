@@ -63,10 +63,6 @@ env:
   # release script probes the "Inno Setup 6" directory.
   INNO_SETUP_VERSION: 6.7.3
   INNO_SETUP_SHA256: 9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732
-  # engine/protos/build.rs runs prost-build, which shells out to protoc. It is not
-  # on the runner image, and without it the very first engine crate fails to build.
-  PROTOC_VERSION: 36.1
-  PROTOC_SHA256: 390e515cb456e6a978553bdb57baf087b054885077fd6da7f7ff0160279c07d6
   # The packages windows-reactor-setup stages beside the settings exe. Versions
   # equal RUNTIME_VER / WEBVIEW2_VER at the windows-rs rev windows/Cargo.toml pins;
   # move them together with that pin.
@@ -145,19 +141,8 @@ jobs:
           "CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER=$linkerArm64" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $zip = "$env:RUNNER_TEMP\protoc.zip"
-          $dir = "$env:RUNNER_TEMP\protoc"
-          Invoke-WebRequest -UseBasicParsing -MaximumRetryCount 5 -RetryIntervalSec 10 -Uri `
-            "https://github.com/protocolbuffers/protobuf/releases/download/v$env:PROTOC_VERSION/protoc-$env:PROTOC_VERSION-win64.zip" `
-            -OutFile $zip
-          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLower()
-          if ($actual -ne $env:PROTOC_SHA256) { throw "protoc digest $actual, expected $env:PROTOC_SHA256" }
-          Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
-          "$dir\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       # release-app.sh resolves ISCC from PATH first and only then from $ISCC, so
       # the pinned installation has to be on PATH rather than named by variable.

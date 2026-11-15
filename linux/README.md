@@ -45,7 +45,7 @@ and an `ibus-daemon` smoke; the dogfood run-book in the roadmap owns the rest.
 
 Build dependencies, as the CI jobs in `.github/workflows/linux-build.yml`
 install them (plus Rust from rustup and protoc 36.2, the `mise.toml` pin — `mise install` at the
-repository root; CI installs 36.1 for the prost builds, which accept either):
+repository root):
 
 ```sh
 # Ubuntu / Debian

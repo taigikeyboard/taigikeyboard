@@ -18,6 +18,8 @@ on:
       - 'windows/**/*.rs'
       - 'windows/Cargo.*'
       - 'engine/**'
+      - '.github/actions/setup-protoc/**'
+      - 'mise.toml'
       - '.github/workflows/desktop.yml'
   push:
     branches: [main]
@@ -26,6 +28,8 @@ on:
       - 'windows/**/*.rs'
       - 'windows/Cargo.*'
       - 'engine/**'
+      - '.github/actions/setup-protoc/**'
+      - 'mise.toml'
       - '.github/workflows/desktop.yml'
 
 permissions:
@@ -34,12 +38,6 @@ permissions:
 concurrency:
   group: desktop-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
-env:
-  # Same pin as engine.yml: engine/protos/build.rs (linked through `protos`)
-  # shells out to protoc, and the runner image has none.
-  PROTOC_VERSION: 36.1
-  PROTOC_SHA256: c4bc672d9d49214dc8cafdceadf4df92182d6ca8e3ec65a56b2d7de5602669b4
 
 jobs:
   test:
@@ -52,14 +50,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          set -euo pipefail
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       # RUSTUP_TOOLCHAIN (job env above) overrides the rust-toolchain.toml
       # files, so only the host target is installed.
@@ -100,14 +92,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          set -euo pipefail
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       - name: Install the declared rust-version (host target only)
         run: |

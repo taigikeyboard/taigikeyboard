@@ -50,8 +50,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # Same pin as engine.yml: engine/protos/build.rs shells out to protoc.
-  PROTOC_VERSION: 36.1
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -70,12 +68,8 @@ jobs:
             ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
             fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build dpkg-dev desktop-file-utils
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o /tmp/protoc.zip \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
-          protoc --version
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       - name: Install Rust toolchain
         run: |
@@ -247,11 +241,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgtk-4-dev libadwaita-1-dev pkg-config
 
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o /tmp/protoc.zip \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       - name: Install the declared rust-version (host target only)
         run: |
@@ -287,11 +278,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o /tmp/protoc.zip \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       - name: Install Rust toolchain
         run: |
@@ -335,18 +323,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
-      - name: Install protoc ${{ env.PROTOC_VERSION }}
-        run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o /tmp/protoc.zip \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       - name: Build the package (unprivileged)
         run: |
           set -euo pipefail
           useradd -m builder
           chown -R builder "$GITHUB_WORKSPACE"
-          sudo -u builder bash -c 'set -euo pipefail; rustup default stable; make -C linux arch'
+          # sudo resets PATH, which loses setup-protoc's directory; prost-build
+          # reads PROTOC instead.
+          sudo -u builder env PROTOC="$(command -v protoc)" \
+            bash -c 'set -euo pipefail; rustup default stable; make -C linux arch'
 
       - name: Checksum
         run: cd linux/target && sha256sum taigikeyboard-*-x86_64.pkg.tar.zst | tee SHA256SUMS-arch

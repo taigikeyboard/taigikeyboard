@@ -25,6 +25,8 @@ on:
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
       - 'android/app/build.gradle.kts'
       - '**/*.ps1'
+      - '.github/actions/setup-protoc/**'
+      - 'mise.toml'
       - '.github/workflows/checks.yml'
   push:
     branches: [main]
@@ -42,6 +44,8 @@ on:
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
       - 'android/app/build.gradle.kts'
       - '**/*.ps1'
+      - '.github/actions/setup-protoc/**'
+      - 'mise.toml'
       - '.github/workflows/checks.yml'
 
 permissions:
@@ -56,11 +60,6 @@ env:
   # so an unpinned lint would disagree with `swiftformat ios macos` locally.
   SWIFTFORMAT_VERSION: 0.63.0
   SWIFTFORMAT_SHA256: b4a3cbb8c852a0baaf9adf853e221ff1dabf921a3d8957a602e0bda3af8470f1
-  # The Java bindings' compiler — must equal the protobuf-javalite pin
-  # (android/app/build.gradle.kts), which gen-platform-protos.sh --java-only
-  # enforces. Not engine.yml's 36.1: that one only feeds prost.
-  PROTOC_JAVA_VERSION: "36.2"
-  PROTOC_JAVA_SHA256: 121f6c7afe1d4d0e3ea6aab9432038599250134cbf4474cb1167d2c7decd4278
 
 jobs:
   ps1-ascii:
@@ -148,14 +147,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Install protoc ${{ env.PROTOC_JAVA_VERSION }}
-        run: |
-          set -euo pipefail
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 10 -H "Authorization: Bearer ${{ github.token }}" -o "$RUNNER_TEMP/protoc.zip" \
-            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_JAVA_VERSION}/protoc-${PROTOC_JAVA_VERSION}-linux-x86_64.zip"
-          echo "${PROTOC_JAVA_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
-          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+      - name: Install protoc
+        uses: ./.github/actions/setup-protoc
 
       # Emptied first, so a binding whose .proto was deleted shows as a deletion.
       - name: Java bindings are current

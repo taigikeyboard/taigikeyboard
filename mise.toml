@@ -10,9 +10,9 @@
 [tools]
 # Must equal the libprotoc that emits the pinned protobuf-javalite runtime
 # (android/app/build.gradle.kts: 4.36.2 <-> 36.2). engine/scripts/gen-platform-protos.sh
-# skips binding regeneration on any other version. CI installs 36.1 for the Rust
-# (prost) builds of the engine and desktops, which accept either; web.yml takes
-# this pin.
+# skips binding regeneration on any other version. CI reads this pin everywhere:
+# .github/actions/setup-protoc (which holds the per-platform digests — move them
+# with it) and web.yml / chromeos-build.yml through mise-action.
 protoc = "36.2"
 # Must equal swift-protobuf in macos/Package.resolved: its output is committed and
 # CI only checks the Swift bindings structurally. macOS only, it builds with Swift.
