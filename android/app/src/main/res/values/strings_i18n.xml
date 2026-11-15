@@ -230,6 +230,8 @@
     <string name="i18n_settings_nasalMarkerUppercase">白話字大本字的鼻音符號輸出</string>
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ（SIÂᴺ）</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
+    <string name="i18n_settings_khinsiannInHanji">漢字顯示輕聲（--）</string>
+    <string name="i18n_settings_khinsiannInHanjiInfo">開啟時，漢字輸出會照台羅詞彙加上輕聲符號（例：會記--得、--轉-去）。</string>
     <string name="i18n_settings_tpsOrMapsToER">or 對應 ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。</string>
     <string name="i18n_settings_resetSettings">恢復預設設定</string>

@@ -4,7 +4,7 @@
 //! the macOS `DispatchQueue` — while reads answer on the caller's thread
 //! through a second, read-only connection that never waits.
 
-use rusqlite::{Connection, OpenFlags};
+use rusqlite::{params, Connection, OpenFlags};
 use std::cell::Cell;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -620,6 +620,86 @@ fn transaction<T, E: From<rusqlite::Error>>(
         connection.execute_batch("ROLLBACK;").ok();
     }
     result
+}
+
+/// Runs `migrate` inside an [`immediate_transaction`] and stamps
+/// `target_version` when `PRAGMA user_version < target_version`, re-checking
+/// the version after acquiring the write lock so two processes opening the
+/// file together cannot run the migration twice.
+pub(crate) fn migrate_to_version(
+    connection: &Connection,
+    target_version: i64,
+    migrate: impl FnOnce(&Connection) -> rusqlite::Result<()>,
+) -> rusqlite::Result<()> {
+    if user_version(connection)? >= target_version {
+        return Ok(());
+    }
+    immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
+        if user_version(connection)? >= target_version {
+            return Ok(());
+        }
+        migrate(connection)?;
+        connection.pragma_update(None, "user_version", target_version)
+    })
+}
+
+/// Strips pure-Hanji neutral-tone `--` markers via
+/// [`phonetics::api::learning_hanji_key`], returning `None` when `text` is
+/// already normalized (including Han-Lo like `邊--a` and lone single-hyphen
+/// custom tokens like `一-六`).
+pub(crate) fn strip_khinsiann_if_changed(text: &str) -> Option<String> {
+    match phonetics::api::learning_hanji_key(text) {
+        std::borrow::Cow::Borrowed(_) => None,
+        std::borrow::Cow::Owned(stripped) => (stripped != text).then_some(stripped),
+    }
+}
+
+/// Normalizes `--`-bearing pure-Hanji rows in `table` inside the caller's
+/// write transaction:
+///
+/// 1. Collects candidate rows from `select_sql` (ordered by `id ASC` so the
+///    earliest row stays in place when multiple `--` spellings collide).
+/// 2. Calls `strip(&row)` — returning `None` leaves non-pure-Hanji rows such
+///    as Han-Lo `邊--a` untouched.
+/// 3. Attempts `update_in_place(connection, id, &stripped)` (`UPDATE OR IGNORE
+///    … WHERE id = ?`).
+/// 4. When `connection.changes() == 0`, a winner row already owns the
+///    normalized `UNIQUE` key: runs `merge_into_winner(connection, id, &row,
+///    &stripped)` and deletes the loser row `id` from `table`.
+///
+/// Store `merge_into_winner` callbacks keep `MAX(last_used)` /
+/// `MAX(updated_at)` for recency — because `ranking::FrequencyData::user_weight`
+/// and `nextword` decay exponentially with age since `last_used`, taking `MIN`
+/// would artificially age a recently used word back to its oldest variant —
+/// while keeping `MIN(created_at)` where tracked for first-seen creation time.
+pub(crate) fn normalize_khinsiann_rows<Row, Stripped>(
+    connection: &Connection,
+    table: &str,
+    select_sql: &str,
+    mut decode: impl FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<(i64, Row)>,
+    strip: impl Fn(&Row) -> Option<Stripped>,
+    update_in_place: impl Fn(&Connection, i64, &Stripped) -> rusqlite::Result<()>,
+    merge_into_winner: impl Fn(&Connection, i64, &Row, &Stripped) -> rusqlite::Result<()>,
+) -> rusqlite::Result<()> {
+    let dirty: Vec<(i64, Row)> = {
+        let mut stmt = connection.prepare(select_sql)?;
+        let rows = stmt
+            .query_map([], &mut decode)?
+            .collect::<Result<Vec<_>, _>>()?;
+        rows
+    };
+    let delete_sql = format!("DELETE FROM {table} WHERE id = ?1;");
+    for (id, row) in dirty {
+        let Some(stripped) = strip(&row) else {
+            continue;
+        };
+        update_in_place(connection, id, &stripped)?;
+        if connection.changes() == 0 {
+            merge_into_winner(connection, id, &row, &stripped)?;
+            connection.execute(&delete_sql, params![id])?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

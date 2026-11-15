@@ -29,7 +29,7 @@ from common.romanization import to_numeric_tone
 
 TL_BY_WORD = {
     ("講", "kong2"): "kóng",
-    ("講--的", "kong2e5"): "kóng--ê",
+    ("講的", "kong2e5"): "kóng--ê",
     ("的", "e5"): "ê",
     ("家己", "ka1ki7"): "ka-kī",
     ("新聞", "sin1bun5"): "sin-bûn",
@@ -66,9 +66,9 @@ class AlignerTests(unittest.TestCase):
         self.assertEqual([t.hanji for t in tokens if t.kind == "word"], ["紅嬰仔", "哭", "甲", "一", "身軀", "汗"])
         self.assertEqual(tokens[-1].kind, "break")
 
-    def test_khinsiann_mirrored_into_hanji(self):
+    def test_khinsiann_emits_plain_hanji(self):
         tokens = cb.align_unit("伊講的", "i kóng--ê")
-        self.assertEqual(tokens[1], Token("word", "kóng--ê", "講--的"))
+        self.assertEqual(tokens[1], Token("word", "kóng--ê", "講的"))
 
     def test_standalone_khinsiann_token_attaches_to_previous_word(self):
         self.assertEqual(cb.tl_tokens("kàu --ah"), [Token("latin", "kàu--ah")])

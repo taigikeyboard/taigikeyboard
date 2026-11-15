@@ -485,7 +485,7 @@ pub(crate) fn span_key(
     // §52 — the typed runs this span answers to: each interior / trailing
     // barrier with its kind, plus the run typed right before the span
     // (`at: 0`), which only a reading that itself opens with `--` reads.
-    let leading = (start > 0 && barriers.contains(&start)).then_some(start);
+    let leading = barriers.contains(&start).then_some(start);
     let boundaries: Vec<TypedBoundary> = leading
         .into_iter()
         .chain(span_barriers.iter().map(|b| b + start))

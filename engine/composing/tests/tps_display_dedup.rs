@@ -144,3 +144,86 @@ fn poj_input_keeps_both_oan_and_oan_diacritic_rows() {
          got {candidates:?}"
     );
 }
+
+#[test]
+fn hanji_first_tl_collapses_same_commit_hanji_when_brackets_off() {
+    use protos::engine::CandidateDisplayMode;
+
+    let _lock = engine_install_lock();
+    install_fixture();
+
+    let run = |is_hanji_first: bool, brackets: bool, mode: CandidateDisplayMode| {
+        let mut cfg = config("tl");
+        cfg.is_hanji_first = is_hanji_first;
+        cfg.output_both_scripts = brackets;
+        cfg.candidate_display_mode = mode as i32;
+        fetch_at_pos_response(
+            &cfg,
+            "uan",
+            Fetch {
+                literal_roman_candidate_disabled: true,
+                ..Default::default()
+            },
+        )
+        .continuous
+        .map(|c| {
+            c.candidates
+                .into_iter()
+                .map(|cand| (cand.hanji, cand.roman))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+    };
+
+    // Output Script = Hanji, Annotate in Brackets = OFF -> 灣/uan and 灣/uân
+    // commit the exact same plain Hanji, so only highest-ranked `uan` survives.
+    let merged = run(true, false, CandidateDisplayMode::SideBySide);
+    let wan_rows: Vec<&str> = merged
+        .iter()
+        .filter(|(h, _)| h.as_deref() == Some("灣"))
+        .map(|(_, r)| r.as_str())
+        .collect();
+    assert_eq!(wan_rows, vec!["uan"], "merged: {merged:?}");
+
+    // Brackets ON -> `灣 (uan)` vs `灣 (uân)` commit different text -> keep both.
+    let bracketed = run(true, true, CandidateDisplayMode::SideBySide);
+    assert_eq!(
+        bracketed
+            .iter()
+            .filter(|(h, _)| h.as_deref() == Some("灣"))
+            .count(),
+        2,
+        "bracketed: {bracketed:?}"
+    );
+
+    // Output Script = Romanization -> keep both.
+    let roman_first = run(false, false, CandidateDisplayMode::SideBySide);
+    assert_eq!(
+        roman_first
+            .iter()
+            .filter(|(h, _)| h.as_deref() == Some("灣"))
+            .count(),
+        2,
+        "roman_first: {roman_first:?}"
+    );
+
+    // Combined / RomanOnly -> do not collapse Hanji in engine.
+    let combined = run(true, false, CandidateDisplayMode::Combined);
+    assert_eq!(
+        combined
+            .iter()
+            .filter(|(h, _)| h.as_deref() == Some("灣"))
+            .count(),
+        2,
+        "combined: {combined:?}"
+    );
+    let roman_only = run(true, false, CandidateDisplayMode::RomanOnly);
+    assert_eq!(
+        roman_only
+            .iter()
+            .filter(|(h, _)| h.as_deref() == Some("灣"))
+            .count(),
+        2,
+        "roman_only: {roman_only:?}"
+    );
+}

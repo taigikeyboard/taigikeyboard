@@ -161,13 +161,23 @@ export class SharedLearning {
    * @returns {Promise<boolean>}
    */
   async isStale() {
-    if (this.#isPrivate || this.#opened === null) {
+    const session = this.#opened;
+    const base = this.#base;
+    if (this.#isPrivate || session === null || this.#current() !== session) {
       return false;
     }
     const generation = /** @type {number | undefined} */ (
       await this.#ask({ type: "taigi.learning.generation" })
     );
-    return generation !== undefined && generation !== this.#base;
+    // A focus check can finish after a save or an engine replacement. Its
+    // answer describes the old copy, so it must not restart the current one.
+    return (
+      this.#opened === session &&
+      this.#current() === session &&
+      this.#base === base &&
+      generation !== undefined &&
+      generation !== base
+    );
   }
 
   /**

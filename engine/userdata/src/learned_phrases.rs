@@ -5,16 +5,18 @@
 
 use crate::custom_dictionary::SearchKeyDeriver;
 use crate::database::{
-    immediate_transaction, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
+    immediate_transaction, migrate_to_version, normalize_khinsiann_rows,
+    strip_khinsiann_if_changed, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
 use phonetics::api::CustomSearchKey;
+use rusqlite::types::Value;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
 const TABLE_NAME: &str = "learned_phrases";
 const SEARCH_KEY_TABLE_NAME: &str = "learned_search_key";
 /// `user_version` — a key-derivation change bumps it and adds a backfill step.
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 
 /// The table as the Learning Records page reads it. A phrase's search keys
 /// go with it.
@@ -97,16 +99,17 @@ impl LearnedPhraseStore {
     /// keystroke path. The keys are derived before the write lock is taken
     /// (an FFI round-trip has no business holding it).
     pub fn learn_phrase(&self, hanji: &str, canonical_tl: &str) {
+        let hanji = phonetics::api::learning_hanji_key(hanji);
         if hanji.is_empty() || canonical_tl.is_empty() {
             return;
         }
+        let hanji = hanji.into_owned();
         let Some(search_keys) =
             (self.derive_search_keys)(canonical_tl).filter(|keys| !keys.is_empty())
         else {
             return;
         };
         let limit = self.limit;
-        let hanji = hanji.to_owned();
         let canonical_tl = canonical_tl.to_owned();
         self.database.write(move |connection| {
             immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
@@ -133,10 +136,11 @@ impl LearnedPhraseStore {
     /// Bumps a phrase the user just committed as one candidate, so a phrase
     /// that is used stays ahead of the eviction line. No-op for an unknown pair.
     pub fn touch_phrase(&self, hanji: &str, canonical_tl: &str) {
+        let hanji = phonetics::api::learning_hanji_key(hanji);
         if hanji.is_empty() || canonical_tl.is_empty() {
             return;
         }
-        let hanji = hanji.to_owned();
+        let hanji = hanji.into_owned();
         let canonical_tl = canonical_tl.to_owned();
         self.database.write(move |connection| {
             connection.execute(
@@ -285,12 +289,58 @@ fn evict_past_cap(connection: &Connection, cap: usize, kept_id: i64) -> rusqlite
     Ok(())
 }
 
-/// The current shape, created directly. Ported from
-/// iOS `LearnedPhraseSchema` / Android `LearnedPhraseService` DDL.
+/// The current shape, created directly, plus v1 -> v2 neutral-tone Hanji
+/// normalization. Ported from iOS `LearnedPhraseSchema` / Android
+/// `LearnedPhraseService` DDL.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     connection.execute_batch(&format!(
         "CREATE TABLE IF NOT EXISTS {TABLE_NAME} (\n    id INTEGER PRIMARY KEY,\n    roman TEXT NOT NULL,\n    hanzi TEXT NOT NULL,\n    learn_count INTEGER NOT NULL DEFAULT 1,\n    updated_at TEXT NOT NULL,\n    UNIQUE(hanzi, roman)\n);\nCREATE TABLE IF NOT EXISTS {SEARCH_KEY_TABLE_NAME} (\n    phrase_id INTEGER NOT NULL,\n    family TEXT NOT NULL,\n    form TEXT NOT NULL,\n    key TEXT NOT NULL\n);\nCREATE INDEX IF NOT EXISTS idx_lsk_lookup ON {SEARCH_KEY_TABLE_NAME}(family, form, key);\nCREATE UNIQUE INDEX IF NOT EXISTS idx_lsk_phrase ON {SEARCH_KEY_TABLE_NAME}(phrase_id, family, form, key);\nCREATE INDEX IF NOT EXISTS idx_learned_rank ON {TABLE_NAME}(learn_count, updated_at);"
     ))?;
-    connection.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+    migrate_khinsiann_hanji_if_needed(connection)?;
     Ok(())
+}
+
+/// Normalizes pure-Hanji neutral-tone keys (`走--轉-去` -> `走轉去`) inside an
+/// `immediate_transaction`, cleaning `learned_search_key` rows for deleted
+/// collision losers, and stamps `SCHEMA_VERSION` (`2`).
+fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Result<()> {
+    let select_sql = format!(
+        "SELECT id, hanzi, roman, learn_count, updated_at FROM {TABLE_NAME} WHERE hanzi LIKE '%--%' ORDER BY id ASC;"
+    );
+    let update_sql = format!("UPDATE OR IGNORE {TABLE_NAME} SET hanzi = ?1 WHERE id = ?2;");
+    let merge_sql = format!(
+        "UPDATE {TABLE_NAME}\nSET learn_count = MIN(learn_count + ?1, {}),\n    updated_at = CASE WHEN updated_at IS NULL THEN ?2 WHEN ?2 IS NULL THEN updated_at ELSE MAX(updated_at, ?2) END\nWHERE hanzi = ?3 AND roman = ?4;",
+        LearnedPhraseStore::MAX_LEARN_COUNT
+    );
+    migrate_to_version(connection, SCHEMA_VERSION, |connection| {
+        normalize_khinsiann_rows(
+            connection,
+            TABLE_NAME,
+            &select_sql,
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    (
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, i64>(3)?,
+                        row.get::<_, Value>(4)?,
+                    ),
+                ))
+            },
+            |(hanzi, ..)| strip_khinsiann_if_changed(hanzi),
+            |connection, id, stripped| {
+                connection
+                    .execute(&update_sql, params![stripped, id])
+                    .map(|_| ())
+            },
+            |connection, loser_id, (_hanzi, roman, learn_count, updated_at), stripped| {
+                connection.execute(
+                    &merge_sql,
+                    params![learn_count, updated_at, stripped, roman],
+                )?;
+                delete_search_keys(connection, loser_id)
+            },
+        )
+    })
 }

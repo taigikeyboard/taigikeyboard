@@ -105,22 +105,6 @@ def normalize_sentence(text: str) -> str:
     return HORIZONTAL_WHITESPACE.sub(" ", unicodedata.normalize("NFC", text)).strip()
 
 
-def hanji_with_khinsiann(chars: list[str], word: str) -> str:
-    """Dictionary hanzi carries `--` where the TL has it (講--的): mirror that."""
-    if "--" not in word:
-        return "".join(chars)
-    out: list[str] = []
-    taken = 0
-    for part in re.split(r"(--)", word):
-        if part == "--":
-            out.append("--")
-        else:
-            count = len(syllables_of(part))
-            out.append("".join(chars[taken : taken + count]))
-            taken += count
-    return "".join(out)
-
-
 # ------------------------------------------------------------------ alignment
 @dataclass(frozen=True)
 class Token:
@@ -236,7 +220,7 @@ def align_unit(text: str, romanization: str) -> list[Token]:
         position += len(syllables)
         kinds = {kind for kind, _ in taken}
         if kinds == {"c"}:
-            out.append(Token("word", token.word, hanji_with_khinsiann([unit for _, unit in taken], token.word)))
+            out.append(Token("word", token.word, "".join(unit for _, unit in taken)))
         elif kinds == {"r"}:
             out.append(Token("latin", token.word))
         else:

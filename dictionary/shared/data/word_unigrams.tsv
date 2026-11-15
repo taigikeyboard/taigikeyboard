@@ -33,7 +33,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一	it	2164	612	328	667	7	27	449	0	74	0
 一	i̍t	12	0	1	6	0	0	5	0	0	0
 一	tsi̍t	31362	2199	5206	11392	134	1043	7972	40	3356	20
-一--來	it--lâi	14	0	2	8	0	1	3	0	0	0
+一來	it--lâi	18	1	2	10	0	1	4	0	0	0
 一一	it-it	96	73	6	5	0	0	12	0	0	0
 一丈	tsi̍t-tn̄g	3	0	3	0	0	0	0	0	0	0
 一下	tsi̍t-ē	1605	23	158	517	4	79	439	5	379	1
@@ -54,7 +54,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 一代	it-tāi	7	3	2	1	0	0	1	0	0	0
 一件	tsi̍t-kiānn	52	36	0	0	0	0	16	0	0	0
 一份	tsi̍t-hūn	40	19	8	0	0	0	13	0	0	0
-一來	it-lâi	4	1	0	2	0	0	1	0	0	0
 一來二去	it-lâi-jī-khì	1	0	0	1	0	0	0	0	0	0
 一個	tsi̍t-ê	1344	0	182	1	0	0	961	0	200	0
 一個人	tsi̍t-ê-lâng	6	0	0	0	0	0	6	0	0	0
@@ -1673,12 +1672,11 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 亂走	luān-tsáu	2	0	0	1	0	0	1	0	0	0
 亂鐘仔	luān-tsing-á	1	0	0	0	0	1	0	0	0	0
 了	liáu	5899	1134	948	1632	1	142	1901	8	129	4
-了--去	liáu--khì	4	0	0	1	0	2	1	0	0	0
+了去	liáu--khì	8	0	1	1	0	2	3	0	1	0
 了不起	liáu-put-khí	5	1	0	0	0	0	2	0	2	0
 了了	liáu-liáu	327	41	44	116	0	16	91	1	17	1
 了事	liáu-sū	8	4	2	0	0	0	2	0	0	0
 了力	liáu-la̍t	1	0	0	0	0	1	0	0	0	0
-了去	liáu--khì	4	0	1	0	0	0	2	0	1	0
 了后	liáu-āu	7	0	0	7	0	0	0	0	0	0
 了家伙	liáu-ke-hué	1	1	0	0	0	0	0	0	0	0
 了尾	liáu-bué	6	0	0	3	0	0	3	0	0	0
@@ -1753,8 +1751,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 二	jī	1325	354	160	568	7	19	172	0	45	0
 二	lī	10	2	0	8	0	0	0	0	0	0
 二	nn̄g	1267	0	9	1140	12	0	104	0	2	0
-二--來	jī--lâi	13	0	3	6	0	1	3	0	0	0
-二--者	jī--tsiá	1	0	0	1	0	0	0	0	0	0
+二來	jī--lâi	14	0	3	6	0	1	4	0	0	0
+二者	jī--tsiá	2	0	0	2	0	0	0	0	0	0
 二不休	jī-put-hiu	2	0	0	1	0	0	1	0	0	0
 二九	jī-káu	15	0	2	11	0	0	2	0	0	0
 二九暗	jī-káu-àm	2	1	0	1	0	0	0	0	0	0
@@ -1765,7 +1763,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 二仁溪	jī-jîn-khe	2	1	0	1	0	0	0	0	0	0
 二伯	jī-peh	1	0	0	1	0	0	0	0	0	0
 二位	jī-uī	29	0	22	0	0	0	7	0	0	0
-二來	jī--lâi	1	0	0	0	0	0	1	0	0	0
 二億	jī-ik	4	4	0	0	0	0	0	0	0	0
 二元	jī-guân	4	0	0	4	0	0	0	0	0	0
 二八	jī-pat	8	0	0	8	0	0	0	0	0	0
@@ -1845,7 +1842,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 二等貨	jī-tíng-huè	6	6	0	0	0	0	0	0	0	0
 二絃	jī-hiân	2	0	0	1	0	1	0	0	0	0
 二結	jī-kiat	2	0	0	2	0	0	0	0	0	0
-二者	jī-tsiá	1	0	0	1	0	0	0	0	0	0
 二萬	jī-bān	2	0	1	1	0	0	0	0	0	0
 二萬	nn̄g-bān	9	0	0	8	0	0	1	0	0	0
 二還二	jī-huân-jī	1	0	0	1	0	0	0	0	0	0
@@ -2027,9 +2023,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 交	ka	2	0	1	1	0	0	0	0	0	0
 交	kau	879	61	94	327	2	35	159	3	198	0
 交	kiau	10	1	0	8	0	1	0	0	0	0
-交--人	kau--lâng	1	0	0	1	0	0	0	0	0	0
+交人	kau--lâng	2	0	0	2	0	0	0	0	0	0
 交互	kau-hōo	3	2	0	1	0	0	0	0	0	0
-交人	kau-lâng	1	0	0	1	0	0	0	0	0	0
 交仗	kau-tiōng	2	0	0	0	0	1	1	0	0	0
 交付	kau-hù	24	5	5	0	0	1	1	0	12	0
 交代	kau-tài	263	0	49	75	0	18	65	0	56	0
@@ -2386,10 +2381,9 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 付錢	hù-tsînn	32	29	0	1	0	0	2	0	0	0
 仙	sian	407	26	42	237	4	21	77	0	0	0
 仙	sián	28	8	1	10	0	8	0	1	0	0
-仙--人	sian--lâng	1	0	1	0	0	0	0	0	0	0
+仙人	sian--lâng	2	0	1	1	0	0	0	0	0	0
 仙丹	sian-tan	17	0	2	7	0	1	7	0	0	0
 仙人	sian-jîn	19	0	0	10	0	3	6	0	0	0
-仙人	sian-lâng	1	0	0	1	0	0	0	0	0	0
 仙人掌	sian-jîn-tsiáng	10	10	0	0	0	0	0	0	0	0
 仙人草	sian-jîn-tsháu	20	20	0	0	0	0	0	0	0	0
 仙仙	sian-sian	1	0	0	1	0	0	0	0	0	0
@@ -2584,7 +2578,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 伐過	hua̍h-kuè	5	5	0	0	0	0	0	0	0	0
 休	hiu	116	52	16	31	0	2	14	0	1	0
 休	hiù	2	0	0	2	0	0	0	0	0	0
-休--去	hiu--khì	1	0	0	0	0	1	0	0	0	0
+休去	hiu--khì	1	0	0	0	0	1	0	0	0	0
 休假	hiu-kà	13	13	0	0	0	0	0	0	0	0
 休假	hiu-ká	4	0	0	0	0	1	3	0	0	0
 休克	hiu-khik	6	6	0	0	0	0	0	0	0	0
@@ -3450,7 +3444,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 候選人	hāu-suán-jîn	45	26	0	1	0	10	8	0	0	0
 倚	uá	896	69	244	160	1	19	378	1	24	0
 倚	í	1	0	0	1	0	0	0	0	0	0
-倚--來	uá--lâi	47	0	4	13	0	8	22	0	0	0
+倚來	uá--lâi	47	0	4	13	0	8	22	0	0	0
 倚倚	uá-uá	1	0	0	0	0	0	1	0	0	0
 倚壁	uá-piah	3	0	0	0	0	3	0	0	0	0
 倚山食山	uá-suann-tsia̍h-suann	1	0	0	0	0	1	0	0	0	0
@@ -3528,7 +3522,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 假	ká	25	2	6	5	0	3	9	0	0	0
 假	kè	1	0	0	1	0	0	0	0	0	0
 假	ké	739	99	76	339	0	16	106	0	103	0
-假--的	ké--ê	8	0	3	4	0	1	0	0	0	0
+假的	ké--ê	13	5	3	4	0	1	0	0	0	0
 假人	ké-lâng	4	2	0	0	0	0	2	0	0	0
 假仙	ké-sian	44	19	0	19	0	2	4	0	0	0
 假仙假觸	ké-sian-ké-tak	3	0	0	1	0	1	0	1	0	0
@@ -3567,7 +3561,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 假死假活	ké-sí-ké-ua̍h	1	0	0	0	0	1	0	0	0	0
 假無意	ké-bô-ì	1	0	0	0	0	1	0	0	0	0
 假痟	ké-siáu	2	0	0	0	0	1	1	0	0	0
-假的	ké-ê	5	5	0	0	0	0	0	0	0	0
 假空	ké-khang	2	0	1	0	0	0	1	0	0	0
 假童	ké-tâng	1	0	0	1	0	0	0	0	0	0
 假笑	ké-tshiò	1	0	0	1	0	0	0	0	0	0
@@ -4426,9 +4419,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 兌	tuī	5	2	0	1	0	2	0	0	0	0
 兌換	tuí-uānn	4	4	0	0	0	0	0	0	0	0
 免	bián	2552	19	314	1526	9	93	517	5	67	2
-免--得	bián--tit	2	0	1	0	0	0	1	0	0	0
+免得	bián--tit	349	9	150	29	0	0	95	0	66	0
 免不了	bián-put-liáu	5	1	0	1	0	1	2	0	0	0
-免得	bián-tit	347	9	149	29	0	0	94	0	66	0
 免想	bián-siūnn	2	1	0	1	0	0	0	0	0	0
 免戰牌	bián-tsiàn-pâi	2	0	0	1	0	0	1	0	0	0
 免數想	bián siàu-siūnn	1	1	0	0	0	0	0	0	0	0
@@ -4459,18 +4451,16 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 兜梢	tau-sau	1	1	0	0	0	0	0	0	0	0
 入	ji̍p	3889	329	817	1183	4	27	1188	0	341	0
 入	li̍p	20	0	1	19	0	0	0	0	0	0
-入--來	ji̍p--lâi	106	0	4	59	0	9	34	0	0	0
-入--去	ji̍p--khì	112	0	3	69	0	7	33	0	0	0
+入來	ji̍p--lâi	424	11	50	67	1	17	189	1	88	0
+入去	ji̍p--khì	1037	14	88	85	0	36	405	3	404	2
 入世	ji̍p-sè	1	0	1	0	0	0	0	0	0	0
 入主	ji̍p-tsú	3	1	2	0	0	0	0	0	0	0
 入伍	ji̍p-ngóo	3	1	1	1	0	0	0	0	0	0
-入來	ji̍p-lâi	318	11	46	8	1	8	155	1	88	0
 入來坐	ji̍p-lâi-tsē	1	0	0	0	0	0	1	0	0	0
 入侵	ji̍p-tshim	23	21	0	0	0	0	2	0	0	0
 入內	ji̍p-lāi	11	2	1	7	0	0	1	0	0	0
 入冬	ji̍p-tang	6	5	1	0	0	0	0	0	0	0
 入厝	ji̍p-tshù	14	0	4	4	0	3	3	0	0	0
-入去	ji̍p-khì	925	14	85	16	0	29	372	3	404	2
 入口	ji̍p-kháu	14	4	1	3	0	0	6	0	0	0
 入味	ji̍p-bī	2	2	0	0	0	0	0	0	0	0
 入嘴	ji̍p-tshuì	3	0	0	1	0	0	2	0	0	0
@@ -5658,7 +5648,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 分	hun	1280	166	324	445	3	34	259	3	46	0
 分	hūn	143	2	22	76	1	0	38	0	4	0
 分	pun	746	9	144	270	0	25	209	1	88	0
-分--的	pun--ê	4	0	0	0	0	3	1	0	0	0
+分的	pun--ê	4	0	0	0	0	3	1	0	0	0
 分享	hun-hiáng	42	42	0	0	0	0	0	0	0	0
 分享	hun-hióng	86	7	0	13	0	0	12	0	54	0
 分伻	pun-phenn	4	0	0	1	0	3	0	0	0	0
@@ -6121,7 +6111,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 前	tsâinn	1	0	0	1	0	0	0	0	0	0
 前	tsîng	3259	617	850	620	2	16	915	0	236	3
 前	tsûn	2	1	0	0	0	0	1	0	0	0
-前--年	tsûn--nî	2	0	1	0	0	1	0	0	0	0
+前年	tsûn--nî	8	1	3	0	0	1	3	0	0	0
 前一工	tsîng-tsi̍t-kang	9	9	0	0	0	0	0	0	0	0
 前一日	tsîng-tsi̍t-ji̍t	2	0	0	0	0	0	2	0	0	0
 前一暝	tsîng-tsi̍t-mê	5	5	0	0	0	0	0	0	0	0
@@ -6148,7 +6138,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 前妻	tsîng-tshe	2	0	0	1	0	0	1	0	0	0
 前幫	tsîng-pang	1	0	0	0	0	0	1	0	0	0
 前年	tsîng-nî	24	0	12	6	0	0	6	0	0	0
-前年	tsûn--nî	6	1	2	0	0	0	3	0	0	0
 前廳	tsîng-thiann	2	0	0	2	0	0	0	0	0	0
 前往	tsiân-óng	199	198	0	1	0	0	0	0	0	0
 前後	tsiân-hōo	4	0	4	0	0	0	0	0	0	0
@@ -6548,7 +6537,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 勒贖	li̍k-sio̍k	14	14	0	0	0	0	0	0	0	0
 動	tāng	151	19	20	82	0	5	22	0	3	0
 動	tōng	169	33	29	65	0	1	38	0	3	0
-動--著	tāng--tio̍h	1	0	0	0	0	0	1	0	0	0
+動著	tāng--tio̍h	3	0	0	0	0	0	3	0	0	0
 動不動	tāng-put-tāng	2	0	1	0	0	0	1	0	0	0
 動不動	tōng-put-tōng	1	0	0	0	0	0	1	0	0	0
 動亂	tōng-luān	1	0	0	0	0	0	1	0	0	0
@@ -6580,7 +6569,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 動能	tōng-lîng	5	5	0	0	0	0	0	0	0	0
 動脈	tōng-me̍h	3	2	0	0	0	0	1	0	0	0
 動脈瘤	tōng-me̍h-liû	1	1	0	0	0	0	0	0	0	0
-動著	tāng-tio̍h	2	0	0	0	0	0	2	0	0	0
 動詞	tōng-sû	25	0	1	24	0	0	0	0	0	0
 動議	tōng-gī	2	0	0	2	0	0	0	0	0	0
 動起	tōng-khí	4	2	0	0	0	0	0	0	2	0
@@ -11435,7 +11423,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 夠額	kàu-gia̍h	535	13	218	42	0	2	227	0	33	0
 夢	bāng	557	22	23	379	1	1	129	0	2	0
 夢	bōng	33	8	3	8	0	0	13	0	1	0
-夢--見	bāng--kìnn	3	0	0	1	0	0	2	0	0	0
+夢見	bāng--kìnn	142	0	22	33	0	0	87	0	0	0
 夢中	bāng-tiong	106	0	1	82	0	1	22	0	0	0
 夢夢	bāng-bāng	1	0	0	0	0	0	1	0	0	0
 夢幻	bāng-huàn	4	4	0	0	0	0	0	0	0	0
@@ -11443,7 +11431,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 夢時代	bāng-sî-tāi	1	1	0	0	0	0	0	0	0	0
 夢洩	bōng-siat	1	0	0	1	0	0	0	0	0	0
 夢著	bāng--tio̍h	6	0	0	0	0	1	5	0	0	0
-夢見	bāng-kìnn	139	0	22	32	0	0	85	0	0	0
 夢遺	bōng-uî	1	0	0	1	0	0	0	0	0	0
 夢鄉	bāng-hiong	1	1	0	0	0	0	0	0	0	0
 夥	hué	39	0	9	12	0	0	18	0	0	0
@@ -12309,7 +12296,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 央請	iang-tshiánn	1	0	0	1	0	0	0	0	0	0
 夯	gia̍h	34	0	3	31	0	0	0	0	0	0
 夯	giâ	190	16	33	129	3	9	0	0	0	0
-夯--起來	giâ--khí-lâi	4	0	0	0	0	4	0	0	0	0
+夯起來	giâ--khí-lâi	4	0	0	0	0	4	0	0	0	0
 夯夯	giâ-giâ	1	1	0	0	0	0	0	0	0	0
 夯枷	giâ-kê	3	0	1	0	0	2	0	0	0	0
 夯石碾	giâ-tsio̍h-lián	3	0	0	0	0	3	0	0	0	0
@@ -12317,7 +12304,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 夯起	giâ-khí	2	2	0	0	0	0	0	0	0	0
 夯頭	giâ-thâu	8	1	1	6	0	0	0	0	0	0
 失	sit	408	100	71	148	0	5	74	1	9	0
-失--去	sit--khì	5	0	0	2	0	0	3	0	0	0
+失去	sit--khì	200	31	13	75	0	1	57	0	23	0
 失主	sit-tsú	11	9	0	2	0	0	0	0	0	0
 失主意	sit-tsú-ì	1	0	0	1	0	0	0	0	0	0
 失事	sit-sū	9	0	0	1	0	3	5	0	0	0
@@ -12328,7 +12315,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 失分	sit-hun	1	1	0	0	0	0	0	0	0	0
 失力	sit-la̍t	5	0	4	0	0	0	1	0	0	0
 失勢	sit-sè	4	0	1	1	0	1	0	0	1	0
-失去	sit--khì	195	31	13	73	0	1	54	0	23	0
 失味	sit-bī	13	0	4	0	0	0	1	0	8	0
 失學	sit-ha̍k	3	1	0	0	0	1	1	0	0	0
 失守	sit-siú	1	0	0	0	0	1	0	0	0	0
@@ -12657,8 +12643,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 好	hònn	126	3	34	19	0	0	55	0	15	0
 好	hó	12161	316	2338	4361	34	505	3860	42	699	6
 好	hónn	6	0	3	3	0	0	0	0	0	0
-好--不	hó--m̄	11	0	0	11	0	0	0	0	0	0
-好--處	hó--tshù	7	0	4	1	0	0	2	0	0	0
+好不	hó--m̄	11	0	0	11	0	0	0	0	0	0
+好處	hó--tshù	39	2	11	4	0	2	15	0	5	0
 好世	hó-sè	24	0	0	24	0	0	0	0	0	0
 好事	hònn-sū	2	0	1	0	0	0	1	0	0	0
 好事	hó-sū	220	3	52	19	0	1	46	0	99	0
@@ -12777,7 +12763,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 好色	hònn-sik	15	0	2	4	0	2	2	0	5	0
 好茶	hó-tê	2	0	0	1	0	0	1	0	0	0
 好藥	hó-io̍h	4	0	2	0	0	0	2	0	0	0
-好處	hó-tshù	32	2	7	3	0	2	13	0	5	0
 好行	hó-kiânn	4	0	0	0	0	0	4	0	0	0
 好親像	hó-tshin-tshiūnn	36	33	0	3	0	0	0	0	0	0
 好計	hó-kè	1	0	0	1	0	0	0	0	0	0
@@ -12871,7 +12856,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 妗婆	kīm-pô	2	0	0	1	0	1	0	0	0	0
 妙	biāu	67	0	8	23	0	0	29	0	7	0
 妙	miāu	5	1	0	2	0	1	1	0	0	0
-妙--哉	biāu--tsai	1	0	0	1	0	0	0	0	0	0
+妙哉	biāu--tsai	1	0	0	1	0	0	0	0	0	0
 妙方	biāu-hng	1	0	0	1	0	0	0	0	0	0
 妙步	miāu-pōo	1	1	0	0	0	0	0	0	0	0
 妙法	biāu-huat	5	0	2	1	0	0	2	0	0	0
@@ -12918,8 +12903,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 妾	tshiap	21	1	0	18	0	0	2	0	0	0
 妾身	tshiap-sin	16	0	0	15	0	1	0	0	0	0
 姆	ḿ	147	0	10	33	0	1	103	0	0	0
-姆--仔	ḿ--á	2	0	0	1	0	1	0	0	0	0
-姆仔	ḿ--á	2	0	0	2	0	0	0	0	0	0
+姆仔	ḿ--á	4	0	0	3	0	1	0	0	0	0
 姆仔	ḿ-ah	1	0	0	1	0	0	0	0	0	0
 姆婆	ḿ-pô	4	0	0	4	0	0	0	0	0	0
 姉	tsí	5	0	0	5	0	0	0	0	0	0
@@ -12928,8 +12912,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 姉妹	tsí-muē	1	0	0	1	0	0	0	0	0	0
 姊	tsé	182	2	129	10	0	3	37	0	1	0
 姊	tsí	135	4	58	34	0	1	38	0	0	0
-姊--仔	tsé--á	1	0	0	0	0	0	1	0	0	0
-姊仔	tsé--á	1	0	0	0	0	0	1	0	0	0
+姊仔	tsé--á	2	0	0	0	0	0	2	0	0	0
 姊夫	tsé-hu	10	0	2	5	0	0	3	0	0	0
 姊夫	tsí-hu	92	2	1	89	0	0	0	0	0	0
 姊妹	tsí-bē	458	4	110	39	0	0	117	0	188	0
@@ -13234,7 +13217,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 嬴	iânn	19	0	4	7	0	0	8	0	0	0
 嬴過	iânn-kuè	3	0	1	0	0	0	2	0	0	0
 嬸	tsím	135	7	26	24	0	0	78	0	0	0
-嬸--仔	tsím--á	3	0	0	0	0	3	0	0	0	0
+嬸仔	tsím--á	3	0	0	0	0	3	0	0	0	0
 嬸姆	tsím-ḿ	9	0	0	7	0	0	2	0	0	0
 嬸婆	tsím-pô	30	0	1	20	2	1	6	0	0	0
 孃	jióng	1	0	0	1	0	0	0	0	0	0
@@ -14133,7 +14116,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 寒	gân	6	3	0	0	0	3	0	0	0	0
 寒	hân	69	14	1	42	0	1	11	0	0	0
 寒	kuânn	505	17	55	227	0	28	170	2	5	1
-寒--死	kuânn--sí	1	0	0	0	0	1	0	0	0	0
+寒死	kuânn--sí	22	10	1	7	0	1	3	0	0	0
 寒人	kuânn--lâng	1	0	0	0	0	0	1	0	0	0
 寒假	hân-kà	2	0	2	0	0	0	0	0	0	0
 寒假	hân-ká	7	7	0	0	0	0	0	0	0	0
@@ -14151,7 +14134,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 寒暑	hân-sú	1	0	0	1	0	0	0	0	0	0
 寒暑針	hân-sú-tsiam	3	0	0	2	0	0	1	0	0	0
 寒暖計	hân-luán-kè	1	0	1	0	0	0	0	0	0	0
-寒死	kuânn-sí	21	10	1	7	0	0	3	0	0	0
 寒氣	kuânn-khì	3	0	0	1	0	0	2	0	0	0
 寒流	hân-liû	29	24	0	0	0	2	3	0	0	0
 寒熱	kuânn-jia̍t	60	4	19	16	0	0	21	0	0	0
@@ -14370,14 +14352,13 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 封面	hong-bīn	7	4	0	3	0	0	0	0	0	0
 封頭壁	hong-thâu-piah	1	0	0	0	0	1	0	0	0	0
 射	siā	103	17	15	33	0	2	34	0	2	0
-射--著	siā--tio̍h	1	0	0	0	0	0	1	0	0	0
+射著	siā--tio̍h	4	0	1	0	0	0	3	0	0	0
 射出	siā-tshut	16	2	3	0	0	1	9	0	1	0
 射擊	siā-kik	10	6	0	0	0	0	4	0	0	0
 射死	siā-sí	9	1	0	6	0	0	2	0	0	0
 射石	sia̍h-tsio̍h	1	0	0	1	0	0	0	0	0	0
 射筒	siā-tâng	1	0	0	0	0	1	0	0	0	0
 射箭	siā-tsìnn	9	1	0	5	0	2	1	0	0	0
-射著	siā-tio̍h	3	0	1	0	0	0	2	0	0	0
 射門	siā-mn̂g	2	2	0	0	0	0	0	0	0	0
 尅	khik	2	0	0	2	0	0	0	0	0	0
 將	tsiang	5	5	0	0	0	0	0	0	0	0
@@ -15294,8 +15275,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 崧	siông	43	0	0	4	0	0	39	0	0	0
 崩	pang	77	6	8	44	0	1	18	0	0	0
 崩	phing	5	0	1	4	0	0	0	0	0	0
-崩--去	pang--khì	12	0	0	5	0	2	5	0	0	0
-崩去	pang--khì	1	0	0	0	0	0	1	0	0	0
+崩去	pang--khì	13	0	0	5	0	2	6	0	0	0
 崩塌	pang-thap	14	14	0	0	0	0	0	0	0	0
 崩壞	phing-huāi	2	0	2	0	0	0	0	0	0	0
 崩山	pang-suann	16	11	1	1	0	1	2	0	0	0
@@ -15463,7 +15443,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 差	tshai	8	0	0	8	0	0	0	0	0	0
 差	tshe	781	0	128	90	0	2	166	0	395	0
 差	tsua̍h	4	1	0	3	0	0	0	0	0	0
-差--來	tshe--lâi	2	0	1	0	0	0	1	0	0	0
+差來	tshe--lâi	2	0	1	0	0	0	1	0	0	0
 差一氣	tsha-tsi̍t-khuì	1	1	0	0	0	0	0	0	0	0
 差不多	tsha-put-to	740	58	207	172	1	10	231	1	60	0
 差使	tshe-sái	2	0	1	1	0	0	0	0	0	0
@@ -16244,11 +16224,10 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 廠長	tshiúnn-tiúnn	15	1	0	0	0	0	14	0	0	0
 廢	huè	93	34	20	7	0	0	24	0	8	0
 廢	huì	33	0	1	24	0	1	7	0	0	0
-廢--去	huè--khì	1	0	1	0	0	0	0	0	0	0
+廢去	huè--khì	3	0	2	0	0	0	1	0	0	0
 廢人	huè-jîn	6	0	3	0	0	0	2	0	1	0
 廢兵	huè-ping	1	0	0	0	0	0	1	0	0	0
 廢刊	huè-khan	4	0	4	0	0	0	0	0	0	0
-廢去	huè--khì	2	0	1	0	0	0	1	0	0	0
 廢墜	huè-tuī	1	0	1	0	0	0	0	0	0	0
 廢墜	huì-tuī	1	0	0	0	0	0	1	0	0	0
 廢墟	huè-hi	3	3	0	0	0	0	0	0	0	0
@@ -16385,13 +16364,12 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 弒	sì	2	2	0	0	0	0	0	0	0	0
 弓	king	34	1	0	22	0	3	4	0	4	0
 弓	kiong	6	0	1	4	0	0	1	0	0	0
-弓--開	king--khui	1	0	0	0	0	1	0	0	0	0
+弓開	king--khui	2	1	0	0	0	1	0	0	0	0
 弓形	king-hîng	1	0	0	0	0	0	1	0	0	0
 弓箭	king-tsìnn	6	0	2	1	0	1	2	0	0	0
 弓箭	kiong-tsìnn	6	3	0	3	0	0	0	0	0	0
 弓蕉	kin-tsio	37	12	0	22	0	0	3	0	0	0
 弓蕉	king-tsio	89	66	1	8	0	13	1	0	0	0
-弓開	king-khui	1	1	0	0	0	0	0	0	0	0
 弓鞋	king-uê	1	0	0	1	0	0	0	0	0	0
 弓鞋	kiong-ê	1	0	0	1	0	0	0	0	0	0
 弔	tiàu	39	5	13	13	0	0	8	0	0	0
@@ -16761,7 +16739,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 後	hāu	8	0	1	4	0	0	3	0	0	0
 後	hōo	65	6	27	16	0	0	16	0	0	0
 後	āu	1885	351	326	501	3	31	582	1	89	1
-後--日	āu--ji̍t	22	0	3	8	0	6	5	0	0	0
+後日	āu--ji̍t	140	1	25	75	0	7	29	0	3	0
 後一个	āu-tsi̍t-ê	7	7	0	0	0	0	0	0	0	0
 後下	āu-ē	2	0	0	2	0	0	0	0	0	0
 後世	hōo-sè	5	0	1	2	0	0	2	0	0	0
@@ -16835,7 +16813,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 後改	āu-kái	1	0	0	0	0	1	0	0	0	0
 後斗	āu-táu	6	0	0	3	0	2	1	0	0	0
 後方	āu-hong	1	0	1	0	0	0	0	0	0	0
-後日	āu-ji̍t	118	1	22	67	0	1	24	0	3	0
 後日	āu-li̍t	2	2	0	0	0	0	0	0	0	0
 後日仔	āu-ji̍t-á	11	0	0	5	0	5	1	0	0	0
 後時	āu-sî	1	0	0	1	0	0	0	0	0	0
@@ -17706,9 +17683,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 惡	ok	239	11	46	90	0	9	70	0	13	0
 惡	ònn	47	2	13	6	0	0	14	0	12	0
 惡	òo	6	0	2	2	0	0	2	0	0	0
-惡--人	ok--lâng	1	0	0	0	0	1	0	0	0	0
+惡人	ok--lâng	19	1	0	12	0	5	0	0	1	0
 惡人	ok-jîn	5	0	1	4	0	0	0	0	0	0
-惡人	ok-lâng	18	1	0	12	0	4	0	0	1	0
 惡俗	ok-sio̍k	9	0	8	0	0	0	1	0	0	0
 惡化	ok-huà	26	12	9	2	0	1	2	0	0	0
 惡地	ok-tē	1	0	0	0	0	0	1	0	0	0
@@ -17752,7 +17728,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 想	siúnn	5	0	3	0	0	0	2	0	0	0
 想	siōnn	6	0	0	1	0	0	5	0	0	0
 想	siūnn	8429	88	1430	3399	9	68	3172	7	251	5
-想--著	siūnn--tio̍h	27	0	2	11	0	1	13	0	0	0
+想著	siūnn--tio̍h	337	36	65	11	0	12	213	0	0	0
 想來	siūnn-lâi	19	0	3	0	0	0	14	0	2	0
 想來想去	siūnn-lâi-siūnn-khì	1	0	0	0	0	0	0	0	0	1
 想倦	siūnn-siān	1	0	0	0	0	0	0	0	1	0
@@ -17779,7 +17755,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 想真	siūnn-tsin	16	0	0	15	0	0	1	0	0	0
 想短路	siūnn-té-lōo	4	4	0	0	0	0	0	0	0	0
 想空想縫	siūnn-khang-siūnn-phāng	6	0	0	1	0	5	0	0	0	0
-想著	siūnn-tio̍h	310	36	63	0	0	11	200	0	0	0
 想袂到	siūnn-bē-kàu	35	13	0	0	0	22	0	0	0	0
 想袂開	siūnn-buē-khui	1	1	0	0	0	0	0	0	0	0
 想袂開	siūnn-bē-khui	5	5	0	0	0	0	0	0	0	0
@@ -17861,7 +17836,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 愚見	gû-kiàn	22	0	13	3	0	0	6	0	0	0
 愛	thiànn	8	0	1	0	0	0	7	0	0	0
 愛	ài	13213	527	2858	4098	47	978	3850	49	799	7
-愛--無	ài--bô	1	0	0	0	0	0	1	0	0	0
+愛無	ài--bô	1	0	0	0	0	0	1	0	0	0
 愛丁堡	ài-ting-pó	8	0	5	0	0	0	3	0	0	0
 愛不釋手	ài-put-sik-tshiú	2	2	0	0	0	0	0	0	0	0
 愛人	ài-jîn	98	1	1	81	0	0	15	0	0	0
@@ -17918,7 +17893,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 愛食	ài-tsia̍h	12	9	0	0	0	1	2	0	0	0
 愜意	kah-ì	4	0	0	4	0	0	0	0	0	0
 感	kám	247	22	84	73	0	0	68	0	0	0
-感--著	kám--tio̍h	6	0	0	0	0	4	2	0	0	0
+感著	kám--tio̍h	35	0	19	0	0	4	12	0	0	0
 感人	kám-jîn	2	2	0	0	0	0	0	0	0	0
 感介	kám-kài	1	0	0	1	0	0	0	0	0	0
 感佩	kám-phuè	1	0	0	1	0	0	0	0	0	0
@@ -17948,7 +17923,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 感染	kám-liám	3	1	0	0	0	0	2	0	0	0
 感歎	kám-thàn	1	0	0	0	0	0	0	0	1	0
 感激	kám-kik	373	5	162	33	0	0	172	0	1	0
-感著	kám--tio̍h	29	0	19	0	0	0	10	0	0	0
 感覺	kám-kak	1779	214	246	386	1	45	765	2	118	2
 感覺著	kám-kak-tio̍h	91	64	20	0	0	0	7	0	0	0
 感觸	kám-tshiok	29	6	6	4	0	0	13	0	0	0
@@ -18921,7 +18895,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 扴話	ke̍h-uē	2	0	0	0	0	2	0	0	0	0
 扶	hû	148	12	22	57	0	1	32	0	24	0
 扶	phôo	8	4	0	3	0	1	0	0	0	0
-扶--起來	hû--khí-lâi	7	0	0	4	0	1	2	0	0	0
+扶起來	hû--khí-lâi	7	0	0	4	0	1	2	0	0	0
 扶助	hû-tsōo	29	1	17	1	0	1	5	0	4	0
 扶尻川	phôo-kha-tshng	1	1	0	0	0	0	0	0	0	0
 扶扶	hû-hû	1	0	0	0	0	1	0	0	0	0
@@ -19848,7 +19822,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 挼	juê	3	1	0	0	0	2	0	0	0	0
 挼	lê	1	1	0	0	0	0	0	0	0	0
 挽	bán	434	29	18	276	5	17	78	0	10	1
-挽--起來	bán--khí-lâi	3	0	0	1	0	2	0	0	0	0
+挽起來	bán--khí-lâi	6	3	0	1	0	2	0	0	0	0
 挽回	bán-huê	65	10	5	31	0	1	14	0	4	0
 挽挽	bán-bán	1	0	0	0	0	0	1	0	0	0
 挽救	bán-kiù	12	8	0	2	0	0	2	0	0	0
@@ -19863,7 +19837,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 挽菜	bán-tshài	4	0	1	1	0	0	2	0	0	0
 挽落	bán--lo̍h	6	6	0	0	0	0	0	0	0	0
 挽藥	bán-io̍h	1	0	1	0	0	0	0	0	0	0
-挽起來	bán--khí-lâi	3	3	0	0	0	0	0	0	0	0
 挽面	bán-bīn	3	0	0	2	0	1	0	0	0	0
 挾	gia̍p	15	0	0	10	0	1	3	1	0	0
 挾	hia̍p	1	0	0	0	0	0	1	0	0	0
@@ -19998,7 +19971,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 捾桶仔	kuānn-tháng-á	2	0	0	0	0	1	0	1	0	0
 捾水	kuānn-tsuí	6	3	0	2	0	1	0	0	0	0
 掀	hian	103	3	16	35	0	3	45	0	0	1
-掀--起來	hian--khí-lâi	10	0	2	4	0	2	2	0	0	0
+掀起來	hian--khí-lâi	10	0	2	4	0	2	2	0	0	0
 掀冊	hian-tsheh	3	0	0	2	0	0	1	0	0	0
 掀蓋	hian-kuà	1	0	0	0	0	0	1	0	0	0
 掀起	hian-khí	7	7	0	0	0	0	0	0	0	0
@@ -20469,8 +20442,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 提高	thê-ko	88	26	23	10	0	3	5	0	21	0
 插	tshah	215	16	22	100	0	7	62	0	8	0
 插	tshap	74	17	16	15	0	11	7	2	5	1
-插--落去	tshah--lo̍h-khì	1	0	0	1	0	0	0	0	0	0
-插--起來	tshah--khí-lâi	1	0	0	0	0	1	0	0	0	0
+插落去	tshah--lo̍h-khì	1	0	0	1	0	0	0	0	0	0
+插起來	tshah--khí-lâi	1	0	0	0	0	1	0	0	0	0
 插一跤	tshap-tsi̍t-kha	2	2	0	0	0	0	0	0	0	0
 插事	tshap-sū	2	0	1	1	0	0	0	0	0	0
 插入	tshah-ji̍p	7	5	0	0	0	0	1	0	1	0
@@ -20768,7 +20741,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 摀	óo	1	0	0	1	0	0	0	0	0	0
 摁	hmh	1	0	0	0	0	1	0	0	0	0
 摃	kòng	194	17	23	103	1	7	42	0	1	0
-摃--死	kòng--sí	4	0	1	2	0	0	1	0	0	0
+摃死	kòng--sí	4	0	1	2	0	0	1	0	0	0
 摃拍	kòng-phah	2	0	2	0	0	0	0	0	0	0
 摃摃	kòng-kòng	4	1	0	3	0	0	0	0	0	0
 摃槌仔	kòng-thuî-á	9	7	0	1	0	0	1	0	0	0
@@ -21202,8 +21175,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 攲	khi	1	0	0	1	0	0	0	0	0	0
 攲攲	khi-khi	13	0	0	12	1	0	0	0	0	0
 收	siu	886	92	84	339	0	39	243	1	81	7
-收--去	siu--khì	5	0	1	2	0	0	2	0	0	0
-收--起來	siu--khí-lâi	35	0	2	17	0	3	13	0	0	0
+收去	siu--khì	5	0	1	2	0	0	2	0	0	0
+收起來	siu--khí-lâi	35	0	2	17	0	3	13	0	0	0
 收倒轉	siu-tò-tńg	1	1	0	0	0	0	0	0	0	0
 收入	siu-ji̍p	149	83	18	13	0	7	20	0	8	0
 收兵	siu-ping	11	1	0	9	0	0	1	0	0	0
@@ -22340,7 +22313,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 既經	kì-king	1	0	0	1	0	0	0	0	0	0
 日	ji̍t	6919	84	2007	1648	2	52	2205	5	914	2
 日	li̍t	3	2	0	1	0	0	0	0	0	0
-日--時	ji̍t--sî	89	0	9	37	0	3	40	0	0	0
+日時	ji̍t--sî	256	21	33	84	0	3	83	0	32	0
 日中	ji̍t-tiong	1	0	0	0	0	0	1	0	0	0
 日中晝	ji̍t-tiong-tàu	3	0	1	0	0	0	1	0	1	0
 日仔	ji̍t-á	20	4	3	10	0	1	2	0	0	0
@@ -22368,7 +22341,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 日文	ji̍t-bûn	41	15	1	20	0	1	4	0	0	0
 日新	ji̍t-sin	1	0	0	1	0	0	0	0	0	0
 日日	ji̍t-ji̍t	304	3	102	55	0	0	116	0	28	0
-日時	ji̍t--sî	167	21	24	47	0	0	43	0	32	0
 日時頭	ji̍t-sî-thâu	6	6	0	0	0	0	0	0	0	0
 日晝	ji̍t-tàu	27	0	8	3	0	0	15	0	1	0
 日晝時	ji̍t-tàu-sî	1	0	0	1	0	0	0	0	0	0
@@ -22860,9 +22832,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 暄	suan	1	0	0	1	0	0	0	0	0	0
 暇	hā	1	1	0	0	0	0	0	0	0	0
 暈	hūn	13	3	0	3	0	0	6	0	1	0
-暈--去	hūn--khì	12	0	2	5	0	0	5	0	0	0
+暈去	hūn--khì	27	0	5	5	0	0	16	0	1	0
 暈倒	hūn-tó	21	9	0	3	0	0	7	0	2	0
-暈去	hūn-khì	15	0	3	0	0	0	11	0	1	0
 暈暈	hūn-hūn	3	0	0	2	0	0	1	0	0	0
 暈迷	hūn-bê	2	0	0	1	0	0	1	0	0	0
 暉	hui	7	3	3	0	0	0	1	0	0	0
@@ -22880,7 +22851,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 暖色系	luán-sik-hē	1	1	0	0	0	0	0	0	0	0
 暖身	luán-sin	8	8	0	0	0	0	0	0	0	0
 暗	àm	1171	34	197	452	0	12	389	2	85	0
-暗--去	àm--khì	2	0	0	1	0	1	0	0	0	0
+暗去	àm--khì	2	0	0	1	0	1	0	0	0	0
 暗中	àm-tiong	47	0	9	21	0	1	3	0	13	0
 暗事	àm-sū	1	0	0	0	0	0	0	0	1	0
 暗作期	àm-tsoh-kî	1	0	0	0	0	1	0	0	0	0
@@ -24129,7 +24100,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 染	bak	3	0	0	3	0	0	0	0	0	0
 染	jiám	55	3	10	32	0	0	10	0	0	0
 染	ní	35	6	0	10	0	4	14	1	0	0
-染--著	jiám--tio̍h	6	0	1	3	0	1	1	0	0	0
+染著	jiám--tio̍h	106	13	54	3	0	3	33	0	0	0
 染布	ní-pòo	8	0	0	7	0	1	0	0	0	0
 染房	ní-pâng	1	0	1	0	0	0	0	0	0	0
 染料	jiám-liāu	2	0	0	2	0	0	0	0	0	0
@@ -24139,7 +24110,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 染病	jiám-pīnn	6	0	0	6	0	0	0	0	0	0
 染紅	ní-âng	1	0	0	0	0	0	0	0	0	1
 染色	ní-sik	3	1	0	1	0	1	0	0	0	0
-染著	jiám--tio̍h	100	13	53	0	0	2	32	0	0	0
 柔	jiû	39	1	2	29	0	0	7	0	0	0
 柔弱	jiû-jio̍k	1	0	0	1	0	0	0	0	0	0
 柔性	jiû-sìng	2	2	0	0	0	0	0	0	0	0
@@ -26014,10 +25984,9 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 母	bó	450	83	119	125	0	0	115	0	8	0
 母	bóo	21	0	7	2	0	0	7	0	5	0
 母	bú	404	10	60	194	0	3	127	0	10	0
-母--仔	bú--á	9	0	0	6	0	3	0	0	0	0
-母--的	bú--ê	4	0	1	3	0	0	0	0	0	0
+母仔	bú--á	23	0	0	12	0	3	8	0	0	0
+母的	bú--ê	4	0	1	3	0	0	0	0	0	0
 母仔	bó--á	2	0	0	0	0	0	2	0	0	0
-母仔	bú--á	14	0	0	6	0	0	8	0	0	0
 母仔囝	bó-á-kiánn	13	11	1	1	0	0	0	0	0	0
 母仔囝	bú-á-kiánn	16	4	0	4	0	4	3	1	0	0
 母仔子	bó-á-kiánn	10	0	0	2	0	0	8	0	0	0
@@ -27474,7 +27443,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 涂	tôo	6	6	0	0	0	0	0	0	0	0
 涅	liap	4	0	0	2	0	0	2	0	0	0
 消	siau	218	49	44	58	0	0	65	0	1	1
-消--去	siau--khì	4	0	1	3	0	0	0	0	0	0
+消去	siau--khì	4	0	1	3	0	0	0	0	0	0
 消化	siau-huà	57	1	10	18	0	5	22	0	1	0
 消化器	siau-huà-khì	3	0	0	2	0	0	1	0	0	0
 消基會	siau-ki-huē	13	13	0	0	0	0	0	0	0	0
@@ -29166,7 +29135,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 焠	tshuh	3	2	0	0	0	1	0	0	0	0
 無	bô	49949	2195	9631	15759	37	1342	16088	71	4799	27
 無	bû	520	10	103	263	0	8	112	0	24	0
-無--去	bô--khì	130	0	29	48	0	4	45	0	4	0
+無去	bô--khì	218	11	41	48	0	4	78	0	36	0
 無一定	bô-it-tīng	18	9	0	0	0	5	4	0	0	0
 無上	bû-siōng	11	0	6	1	0	0	4	0	0	0
 無上目	bô-tsiūnn-ba̍k	2	2	0	0	0	0	0	0	0	0
@@ -29220,7 +29189,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 無半步	bô-puànn-pōo	9	0	0	5	0	3	1	0	0	0
 無半絲	bô-puànn-si	1	0	0	0	0	1	0	0	0	0
 無半項	bô-puànn-hāng	2	0	0	0	0	2	0	0	0	0
-無去	bô khì	88	11	12	0	0	0	33	0	32	0
 無及格	bô-ki̍p-keh	6	6	0	0	0	0	0	0	0	0
 無可奈何	bû-khó-nāi-hô	5	4	0	1	0	0	0	0	0	0
 無可能	bô-khó-lîng	27	18	0	0	0	0	9	0	0	0
@@ -29372,11 +29340,9 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 無沓無屑	bô-tap-bô-sap	1	0	0	0	0	1	0	0	0	0
 無治代	bô-tī-tāi	1	0	0	0	0	0	1	0	0	0
 無法	bô-huat	216	194	1	15	0	0	5	0	1	0
-無法--伊	bô-huat--i	2	0	0	0	0	1	1	0	0	0
-無法--得	bô-huat--tit	3	0	0	1	0	1	1	0	0	0
-無法伊	bô-huat-i	2	0	0	0	0	0	2	0	0	0
+無法伊	bô-huat--i	4	0	0	0	0	1	3	0	0	0
+無法得	bô-huat--tit	9	3	0	3	0	1	2	0	0	0
 無法度	bô-huat-tōo	85	8	0	1	0	28	46	1	0	1
-無法得	bô-huat--tit	6	3	0	2	0	0	1	0	0	0
 無注意	bô-tsù-ì	12	12	0	0	0	0	0	0	0	0
 無消	bô-siau	1	0	0	0	0	0	1	0	0	0
 無消無息	bô-siau-bô-sit	3	0	0	1	0	1	1	0	0	0
@@ -29736,8 +29702,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 熱	jua̍h	338	76	32	120	0	17	91	1	1	0
 熱	lia̍t	4	3	1	0	0	0	0	0	0	0
 熱	lua̍h	6	1	2	3	0	0	0	0	0	0
-熱--人	jua̍h--lâng	33	0	0	7	0	10	16	0	0	0
-熱--著	jua̍h--tio̍h	3	0	0	0	0	3	0	0	0	0
+熱人	jua̍h--lâng	33	0	0	7	0	10	16	0	0	0
+熱著	jua̍h--tio̍h	4	1	0	0	0	3	0	0	0	0
 熱切	jia̍t-tshiat	53	1	19	2	0	0	10	0	21	0
 熱場	jia̍t-tiûnn	6	1	0	4	0	0	1	0	0	0
 熱天	jua̍h-thinn	181	40	39	50	4	5	41	0	0	2
@@ -29772,7 +29738,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 熱翕翕	jua̍h-hip-hip	2	1	0	0	0	1	0	0	0	0
 熱能	jia̍t-lîng	1	1	0	0	0	0	0	0	0	0
 熱舞	jia̍t-bú	1	1	0	0	0	0	0	0	0	0
-熱著	jua̍h-tio̍h	1	1	0	0	0	0	0	0	0	0
 熱血	jia̍t-hiat	4	3	0	1	0	0	0	0	0	0
 熱衫	jua̍h-sann	3	0	1	0	0	0	2	0	0	0
 熱衷	jia̍t-tiong	2	2	0	0	0	0	0	0	0	0
@@ -29829,12 +29794,11 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 燒	siau	1	0	0	0	0	0	1	0	0	0
 燒	sio	1027	102	150	358	6	39	283	2	86	1
 燒	siô	2	0	0	2	0	0	0	0	0	0
-燒--去	sio--khì	12	0	2	5	0	1	4	0	0	0
+燒去	sio--khì	44	7	11	5	0	1	13	0	7	0
 燒了了	sio-liáu-liáu	8	5	0	0	0	2	1	0	0	0
 燒仙草	sio-sian-tsháu	3	3	0	0	0	0	0	0	0	0
 燒冷	sio-líng	5	1	1	1	0	0	2	0	0	0
 燒包	sio-pau	1	1	0	0	0	0	0	0	0	0
-燒去	sio-khì	32	7	9	0	0	0	9	0	7	0
 燒唿唿	sio-hut-hut	2	0	0	0	0	2	0	0	0	0
 燒山	sio-suann	5	0	1	3	0	0	1	0	0	0
 燒心	sio-sim	2	0	0	1	0	0	0	0	1	0
@@ -30304,7 +30268,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 特點	ti̍k-tiám	17	2	5	4	0	0	6	0	0	0
 牽	khan	838	11	65	361	2	31	278	0	90	0
 牽	khian	6	0	0	6	0	0	0	0	0	0
-牽--的	khan--ê	6	0	0	3	0	3	0	0	0	0
+牽的	khan--ê	6	0	0	3	0	3	0	0	0	0
 牽亡	khan-bông	7	0	1	3	0	1	2	0	0	0
 牽公	khan-kong	9	0	0	9	0	0	0	0	0	0
 牽制	khan-tsè	1	0	0	1	0	0	0	0	0	0
@@ -30509,7 +30473,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 猴囡仔	kâu-gín-á	7	0	0	3	0	2	2	0	0	0
 猴子	kâu-kiánn	3	0	0	3	0	0	0	0	0	0
 猴山	kâu-san	60	60	0	0	0	0	0	0	0	0
-猴山--仔	kâu-san--á	4	0	0	0	0	4	0	0	0	0
 猴山仔	kâu-san-á	12	0	0	11	1	0	0	0	0	0
 猴弄	kâu-lāng	4	0	0	0	0	1	3	0	0	0
 猴戲	kâu-hì	3	0	0	2	0	0	1	0	0	0
@@ -31102,7 +31065,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 生	sinn	1530	10	269	712	0	1	328	0	210	0
 生	tshenn	117	67	5	27	0	8	9	0	0	1
 生	tshinn	42	0	10	17	0	0	15	0	0	0
-生--出來	sinn--tshut-lâi	1	0	0	1	0	0	0	0	0	0
+生出來	sinn--tshut-lâi	1	0	0	1	0	0	0	0	0	0
 生事	sing-sū	1	0	0	1	0	0	0	0	0	0
 生人	senn-lâng	3	0	0	3	0	0	0	0	0	0
 生人	sinn-lâng	4	0	0	4	0	0	0	0	0	0
@@ -31892,7 +31855,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 痛苦	thòng-khóo	285	16	27	91	0	2	97	0	52	0
 痞	phí	9	7	0	2	0	0	0	0	0	0
 痟	siáu	71	17	15	10	0	9	20	0	0	0
-痟--的	siáu--ê	1	0	1	0	0	0	0	0	0	0
+痟的	siáu--ê	1	0	1	0	0	0	0	0	0	0
 痟人	siáu-lâng	15	0	4	0	0	2	8	0	1	0
 痟狂	siáu-kông	10	10	0	0	0	0	0	0	0	0
 痟狗	siáu-káu	11	0	4	1	0	4	2	0	0	0
@@ -33022,7 +32985,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 看	khan	2	0	1	0	0	0	1	0	0	0
 看	khuànn	15048	348	2728	5105	30	443	5200	40	1146	8
 看	khàn	17	2	1	12	0	0	2	0	0	0
-看--見	khuànn--kìnn	46	0	1	13	0	4	28	0	0	0
+看見	khuànn--kìnn	3914	11	621	501	1	16	1571	0	1193	0
 看上目	khuànn-tsiūnn-ba̍k	6	6	0	0	0	0	0	0	0	0
 看了看	khuànn-liáu-khuànn	1	1	0	0	0	0	0	0	0	0
 看人	khuànn-lâng	19	1	0	14	0	0	4	0	0	0
@@ -33081,7 +33044,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 看袂上目	khuànn-bē-tsiūnn-ba̍k	2	0	0	0	0	2	0	0	0	0
 看袂起	khuànn-bē-khí	3	0	0	0	0	3	0	0	0	0
 看西	khuànn-sai	12	0	10	0	0	0	2	0	0	0
-看見	khuànn-kìnn	3868	11	620	488	1	12	1543	0	1193	0
 看見見	khuànn-kìnn-kìnn	4	1	0	2	0	0	1	0	0	0
 看覓	khuànn-bāi	8	0	6	0	0	0	2	0	0	0
 看覓	khuànn-māi	251	76	7	137	2	17	8	2	0	2
@@ -33177,7 +33139,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 真驚	tsin-kiann	5	0	1	0	0	0	4	0	0	0
 眠	biân	10	0	0	9	0	0	1	0	0	0
 眠	bîn	111	28	11	41	0	3	26	0	2	0
-眠--一下	bîn--tsi̍t-ē	2	0	0	0	0	1	0	1	0	0
+眠一下	bîn--tsi̍t-ē	2	0	0	0	0	1	0	1	0	0
 眠夢	bîn-bāng	208	0	25	77	0	1	91	0	14	0
 眠床	bîn-tshn̂g	573	4	62	276	2	17	192	1	19	0
 眠床	bûn-tshn̂g	1	0	0	1	0	0	0	0	0	0
@@ -33244,11 +33206,10 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 着賊偷	tio̍h-tsha̍t-thau	1	0	0	1	0	0	0	0	0	0
 着驚	tio̍h-kiann	21	0	0	21	0	0	0	0	0	0
 睏	khùn	1574	66	173	544	1	89	596	5	99	1
-睏--去	khùn--khì	47	0	3	20	1	0	23	0	0	0
-睏--起來	khùn--khí-lâi	1	0	0	1	0	0	0	0	0	0
+睏去	khùn--khì	115	8	17	20	1	0	53	0	16	0
+睏起來	khùn--khí-lâi	1	0	0	1	0	0	0	0	0	0
 睏一醒	khùn-tsi̍t-tshénn	1	1	0	0	0	0	0	0	0	0
 睏中晝	khùn-tiong-tàu	3	0	0	2	0	0	1	0	0	0
-睏去	khùn--khì	68	8	14	0	0	0	30	0	16	0
 睏坦笑	khùn-thán-tshiò	1	0	0	0	0	1	0	0	0	0
 睏尾	khùn-bué	3	0	0	0	0	3	0	0	0	0
 睏床	khùn-tshn̂g	3	0	1	0	0	0	2	0	0	0
@@ -33986,7 +33947,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 祝賀	tsiok-hō	75	1	47	11	0	4	11	1	0	0
 祝電	tsiok-tiān	2	0	1	0	0	0	1	0	0	0
 神	sîn	2874	46	991	299	0	11	741	0	786	0
-神--去	sîn--khì	4	0	1	0	0	2	0	1	0	0
+神去	sîn--khì	5	1	1	0	0	2	0	1	0	0
 神不知	sîn-put-ti	1	1	0	0	0	0	0	0	0	0
 神主	sîn-tsú	188	0	73	38	0	0	77	0	0	0
 神主牌	sîn-tsú-pâi	2	0	0	2	0	0	0	0	0	0
@@ -34000,7 +33961,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 神劍	sîn-kiàm	1	0	0	0	0	0	1	0	0	0
 神助	sîn-tsōo	2	0	1	1	0	0	0	0	0	0
 神勇	sîn-ióng	3	0	0	0	0	0	3	0	0	0
-神去	sîn-khì	1	1	0	0	0	0	0	0	0	0
 神嘗祭	sîn-siông-tsè	2	0	0	2	0	0	0	0	0	0
 神國	sîn-kok	10	0	10	0	0	0	0	0	0	0
 神壇	sîn-tuânn	3	2	0	0	0	1	0	0	0	0
@@ -34539,11 +34499,10 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 穡路	sit-lōo	1	0	0	1	0	0	0	0	0	0
 穡頭	sit-thâu	28	1	1	10	0	10	5	1	0	0
 穢	uè	14	0	4	4	0	0	5	0	0	1
-穢--著	uè--tio̍h	2	0	0	0	0	1	0	1	0	0
+穢著	uè--tio̍h	6	1	1	0	0	2	1	1	0	0
 穢垃圾	uè-lah-sap	1	1	0	0	0	0	0	0	0	0
 穢氣	uè-khì	6	0	2	2	0	0	2	0	0	0
 穢涗	uè-suè	2	0	0	0	0	2	0	0	0	0
-穢著	uè-tio̍h	4	1	1	0	0	1	1	0	0	0
 穩	ún	103	13	17	33	1	6	31	0	2	0
 穩仔	ún-á	1	0	0	1	0	0	0	0	0	0
 穩健	ún-kiān	4	0	3	0	0	0	1	0	0	0
@@ -36275,7 +36234,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 給	hōo	238	0	0	238	0	0	0	0	0	0
 給	kip	27	0	12	4	0	0	6	0	5	0
 給	kā	142	0	0	141	1	0	0	0	0	0
-給--人	hōo--lâng	4	0	0	4	0	0	0	0	0	0
+給人	hōo--lâng	4	0	0	4	0	0	0	0	0	0
 給仕	kip-sū	2	0	2	0	0	0	0	0	0	0
 給付	kip-hù	11	11	0	0	0	0	0	0	0	0
 給伊	kā-i	1	0	0	1	0	0	0	0	0	0
@@ -37615,7 +37574,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 聽	thiann	6316	71	1348	1658	8	134	2483	8	600	6
 聽	thing	6	0	1	4	0	0	1	0	0	0
 聽	thìng	65	2	31	6	0	0	26	0	0	0
-聽--見	thiann--kìnn	16	0	1	7	0	0	8	0	0	0
+聽見	thiann--kìnn	2048	1	413	291	0	1	788	0	554	0
 聽人	thiann--lâng	2	0	0	1	0	0	1	0	0	0
 聽信	thiann-sìn	2	2	0	0	0	0	0	0	0	0
 聽候	thìng-hāu	545	20	170	39	0	12	300	1	2	1
@@ -37638,7 +37597,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 聽聲	thiann-siann	2	1	0	0	0	0	1	0	0	0
 聽聽	thiann-thiann	4	1	0	1	0	0	2	0	0	0
 聽著	thiann-tio̍h	554	89	153	0	2	34	272	4	0	0
-聽見	thiann-kìnn	2032	1	412	284	0	1	780	0	554	0
 聽覺	thiann-kak	1	1	0	0	0	0	0	0	0	0
 聽診器	thiann-tsín-khì	1	0	1	0	0	0	0	0	0	0
 聽話	thiann-uē	14	3	0	7	1	0	2	0	1	0
@@ -39722,8 +39680,8 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 落	lo̍h	3247	408	339	1438	6	62	865	2	125	2
 落	lo̍k	63	1	11	18	0	0	20	0	13	0
 落	làu	31	14	1	8	0	6	2	0	0	0
-落--去	lak--khì	1	0	0	0	0	0	1	0	0	0
-落--去	lo̍h--khì	103	0	5	58	0	13	27	0	0	0
+落去	lak--khì	1	0	0	0	0	0	1	0	0	0
+落去	lo̍h--khì	1042	58	77	65	1	46	392	0	403	0
 落䈄	làu-ham	1	0	0	0	0	1	0	0	0	0
 落下頦	làu-ē-huâi	1	0	0	1	0	0	0	0	0	0
 落下頦	làu-ē-hâi	5	0	0	2	0	2	1	0	0	0
@@ -39738,7 +39696,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 落入	lo̍h-ji̍p	2	2	0	0	0	0	0	0	0	0
 落勾	làu-kau	4	2	0	1	0	1	0	0	0	0
 落南	lo̍h-lâm	53	32	3	8	0	4	6	0	0	0
-落去	lo̍h-khì	939	58	72	7	1	33	365	0	403	0
 落去	lo̍h-khù	1	1	0	0	0	0	0	0	0	0
 落句	lo̍h-kù	2	2	0	0	0	0	0	0	0	0
 落台	lo̍h-tâi	51	7	1	38	0	2	3	0	0	0
@@ -40990,7 +40947,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 衣食住	i-si̍t-tsū	1	0	0	0	0	0	1	0	0	0
 表	piáu	117	10	40	37	0	3	21	0	6	0
 表	pió	43	6	9	14	0	1	13	0	0	0
-表--的	piáu--ê	1	0	0	1	0	0	0	0	0	0
+表的	piáu--ê	1	0	0	1	0	0	0	0	0	0
 表仔	pió-á	7	0	0	7	0	0	0	0	0	0
 表兄	piáu-hiann	59	6	0	49	0	3	0	1	0	0
 表叔	piáu-tsik	1	0	0	1	0	0	0	0	0	0
@@ -43428,7 +43385,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 賠錢	pê-tsînn	6	6	0	0	0	0	0	0	0	0
 賢	gâu	330	0	2	327	0	0	1	0	0	0
 賢	hiân	264	31	21	101	2	4	103	0	2	0
-賢--者	hiân--tsiá	1	0	0	1	0	0	0	0	0	0
+賢者	hiân--tsiá	1	0	0	1	0	0	0	0	0	0
 賢人	gâu-lâng	10	0	1	9	0	0	0	0	0	0
 賢人	hiân-jîn	16	0	9	2	0	0	5	0	0	0
 賢兄	hiân-hing	1	0	0	0	0	0	1	0	0	0
@@ -43619,18 +43576,16 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 赫赫	hik-hik	3	1	2	0	0	0	0	0	0	0
 走	tsáu	2769	200	235	1155	14	82	971	6	103	3
 走	tsóo	2	0	2	0	0	0	0	0	0	0
-走--來	tsáu--lâi	8	0	0	5	0	1	2	0	0	0
-走--去	tsáu--khì	27	0	3	13	0	0	10	1	0	0
+走來	tsáu--lâi	68	17	9	5	0	6	28	1	2	0
+走去	tsáu--khì	217	25	24	13	0	19	104	4	25	3
 走上	tsáu-tsiūnn	2	0	0	0	0	0	2	0	0	0
 走了了	tsáu-liáu-liáu	4	3	0	0	0	0	1	0	0	0
-走來	tsáu--lâi	60	17	9	0	0	5	26	1	2	0
 走倚	tsáu-uá	24	0	9	1	0	0	14	0	0	0
 走傱	tsáu-tsông	26	19	2	0	0	4	0	1	0	0
 走入	tsáu-ji̍p	32	7	1	0	0	0	23	0	1	0
 走出	tsáu-tshut	28	3	9	1	0	0	13	0	2	0
 走出來	tsáu-tshut-lâi	15	11	3	0	0	0	1	0	0	0
 走到	tsáu-kàu	67	44	0	0	0	0	23	0	0	0
-走去	tsáu--khì	190	25	21	0	0	19	94	3	25	3
 走反	tsáu-huán	4	0	0	1	0	2	1	0	0	0
 走味	tsáu-bī	7	2	0	5	0	0	0	0	0	0
 走命	tsáu-miā	1	0	0	0	0	0	1	0	0	0
@@ -43703,13 +43658,12 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 赶	kuánn	36	0	0	36	0	0	0	0	0	0
 赶緊	kuánn-kín	47	0	0	47	0	0	0	0	0	0
 起	khí	4451	562	945	1478	2	45	1139	4	273	3
-起--來	khí--lâi	285	0	26	145	0	17	95	2	0	0
+起來	khí--lâi	2484	119	308	175	2	52	939	2	887	0
 起事	khí-sū	3	0	1	1	0	1	0	0	0	0
 起人	khí-lâng	4	0	0	3	0	0	1	0	0	0
 起人起客	khí-lâng-khí-kheh	1	0	0	1	0	0	0	0	0	0
 起佃	khí-tiān	1	0	0	1	0	0	0	0	0	0
 起來	khit-lâi	25	0	0	0	0	0	25	0	0	0
-起來	khí-lâi	2199	119	282	30	2	35	844	0	887	0
 起價	khí-kè	199	183	4	5	0	3	4	0	0	0
 起先	khí-sing	36	5	4	13	0	0	14	0	0	0
 起兵	khí-ping	13	0	3	8	0	0	2	0	0	0
@@ -44136,7 +44090,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 跳索仔	thiàu-soh-á	2	0	0	1	1	0	0	0	0	0
 跳脫	thiàu-thuat	6	1	0	5	0	0	0	0	0	0
 跳舞	thiàu-bú	159	8	14	61	2	1	58	0	14	1
-跳舞--的	thiàu-bú--ê	1	0	0	1	0	0	0	0	0	0
+跳舞的	thiàu-bú--ê	1	0	0	1	0	0	0	0	0	0
 跳落	thiàu-lo̍h	33	12	8	0	0	0	13	0	0	0
 跳落去	thiàu--lo̍h-khì	1	0	0	0	0	0	1	0	0	0
 跳走	thiàu-tsáu	4	0	1	1	0	0	2	0	0	0
@@ -44262,7 +44216,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 躡跤尾	neh-kha-bué	2	0	0	0	0	2	0	0	0	0
 身	sian	21	0	6	6	0	8	0	1	0	0
 身	sin	856	108	62	503	3	7	157	0	16	0
-身--裡	sin--ni̍h	1	0	0	1	0	0	0	0	0	0
+身裡	sin--ni̍h	1	0	0	1	0	0	0	0	0	0
 身上	sin--siōng	37	2	2	19	0	0	3	0	11	0
 身上	sin-tsiūnn	104	0	16	4	0	0	54	0	30	0
 身不由己	sin-put-iû-kí	4	0	0	4	0	0	0	0	0	0
@@ -44317,7 +44271,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 身高	sin-ko	1	1	0	0	0	0	0	0	0	0
 躲	tó	3	0	0	3	0	0	0	0	0	0
 躼	lò	13	1	1	7	0	4	0	0	0	0
-躼--的	lò--ê	1	0	0	1	0	0	0	0	0	0
+躼的	lò--ê	1	0	0	1	0	0	0	0	0	0
 躼跤	lò-kha	3	0	0	0	0	2	0	1	0	0
 躼跤的	lò-kha--ê	1	1	0	0	0	0	0	0	0	0
 躼跤蠓	lò-kha-báng	2	0	0	0	0	2	0	0	0	0
@@ -44979,7 +44933,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 迵過	thàng-kuè	2	1	0	0	0	1	0	0	0	0
 迷	bê	250	19	37	121	0	1	64	0	8	0
 迷	bî	5	0	0	5	0	0	0	0	0	0
-迷--去	bê--khì	10	0	2	2	0	0	5	0	1	0
+迷去	bê--khì	10	0	2	2	0	0	5	0	1	0
 迷亂	bê-luān	4	0	2	1	0	1	0	0	0	0
 迷人	bê-lâng	64	6	0	50	1	1	6	0	0	0
 迷信	bê-sìn	106	0	61	10	0	1	34	0	0	0
@@ -45379,7 +45333,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 速食麵	sok-si̍t-mī	1	0	0	0	0	0	1	0	0	0
 造	tsō	497	13	97	151	0	2	154	0	80	0
 造	tsōo	2	0	2	0	0	0	0	0	0	0
-造--日	tso̍h--ji̍t	1	0	0	1	0	0	0	0	0	0
+造日	tso̍h--ji̍t	1	0	0	1	0	0	0	0	0	0
 造作	tsō-tsok	11	0	3	1	0	1	4	0	2	0
 造假	tsō-ké	14	14	0	0	0	0	0	0	0	0
 造價	tsō-kè	10	10	0	0	0	0	0	0	0	0
@@ -45539,10 +45493,9 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 遂	suī	4	0	2	1	0	1	0	0	0	0
 遇	gū	107	5	14	71	0	0	17	0	0	0
 遇	tú	17	0	0	15	0	0	2	0	0	0
-遇--著	gū--tio̍h	11	0	2	2	0	2	5	0	0	0
+遇著	gū--tio̍h	170	78	21	2	0	3	66	0	0	0
 遇上	gū-siāng	11	11	0	0	0	0	0	0	0	0
 遇害	gū-hāi	2	0	0	2	0	0	0	0	0	0
-遇著	gū-tio̍h	159	78	19	0	0	1	61	0	0	0
 遇難	gū-lān	3	0	0	1	0	0	2	0	0	0
 遊	iû	180	26	13	109	1	1	27	0	3	0
 遊園	iû-hn̂g	9	9	0	0	0	0	0	0	0	0
@@ -46055,7 +46008,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 邈	biáu	3	0	0	3	0	0	0	0	0	0
 邊	pian	38	0	2	27	0	2	7	0	0	0
 邊	pinn	975	35	88	403	5	12	373	1	56	2
-邊--頭	pinn--thâu	1	0	0	0	0	1	0	0	0	0
+邊頭	pinn--thâu	22	0	3	1	0	1	9	0	8	0
 邊仔	pinn--á	365	189	29	51	0	0	95	0	1	0
 邊仔	pinn-a	43	0	0	8	0	0	10	0	25	0
 邊仔	pinn-ah	3	0	0	0	0	0	3	0	0	0
@@ -46068,7 +46021,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 邊角	pinn-kak	7	1	0	0	0	0	6	0	0	0
 邊關	pian-kuan	15	0	0	15	0	0	0	0	0	0
 邊面	pinn-bīn	1	0	1	0	0	0	0	0	0	0
-邊頭	pinn--thâu	21	0	3	1	0	0	9	0	8	0
 邏輯	lô-tsip	7	4	0	3	0	0	0	0	0	0
 邕	iong	5	0	1	2	0	0	2	0	0	0
 那	na	2	0	0	0	0	0	2	0	0	0
@@ -48607,7 +48559,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 難	lân	385	40	25	255	0	7	58	0	0	0
 難	lān	52	4	10	27	1	1	9	0	0	0
 難	oh	84	0	8	20	0	0	56	0	0	0
-難--得	oh--tit	6	0	1	4	0	0	1	0	0	0
+難得	oh--tit	6	0	1	4	0	0	1	0	0	0
 難上加難	lân-siāng-ka-lân	1	1	0	0	0	0	0	0	0	0
 難事	lân-sû	1	0	0	1	0	0	0	0	0	0
 難事	lân-sū	8	0	1	5	0	0	2	0	0	0
@@ -49061,7 +49013,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 靠	khuè	1	0	0	1	0	0	0	0	0	0
 靠	khò	846	30	135	198	3	34	279	4	163	0
 靠	khòo	1	0	1	0	0	0	0	0	0	0
-靠--著	khò--tio̍h	2	0	0	0	0	2	0	0	0	0
+靠著	khò--tio̍h	95	87	1	0	0	4	3	0	0	0
 靠俗	khò-sio̍k	2	0	0	0	0	1	0	1	0	0
 靠傷	khò-siong	3	0	0	0	0	3	0	0	0	0
 靠勢	khò-sè	19	0	2	6	0	8	3	0	0	0
@@ -49070,7 +49022,6 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 靠山	khò-suann	3	1	0	1	0	1	0	0	0	0
 靠岸	khò-huānn	16	1	0	7	0	0	6	0	2	0
 靠淺	khò-tshián	2	0	0	0	0	0	0	0	2	0
-靠著	khò-tio̍h	93	87	1	0	0	2	3	0	0	0
 靠近	khò-kīn	8	6	0	1	0	0	1	0	0	0
 面	biān	55	0	10	23	0	1	6	0	15	0
 面	bīn	2552	167	547	732	1	47	953	1	104	0
@@ -50207,8 +50158,7 @@ hanji	tl	count	icorpus_hanji	khinhoan_pojbh	kipsupin_2009	kok4hau7	moe_kautian	n
 餒志	lué-tsì	87	0	34	6	0	2	41	0	4	0
 餓	gō	123	49	8	37	1	2	25	0	1	0
 餓	iau	5	0	4	1	0	0	0	0	0	0
-餓--死	gō--sí	5	0	1	0	0	0	4	0	0	0
-餓死	gō-sí	45	0	4	21	0	3	15	0	2	0
+餓死	gō--sí	50	0	5	21	0	3	19	0	2	0
 餓鬼	gō-kuí	4	0	1	2	0	0	1	0	0	0
 餕	tsùn	1	0	0	1	0	0	0	0	0	0
 餘	î	29	7	2	18	0	0	2	0	0	0

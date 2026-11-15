@@ -242,6 +242,7 @@ final class NextWordController {
                     hanjiFirst: settings.isHanjiFirst,
                     candidateDisplayMode: settings.candidateDisplayMode,
                     syllableSeparator: settings.syllableSeparator,
+                    isKhinsiannInHanjiEnabled: settings.isKhinsiannInHanjiEnabled,
                     generation: envelope,
                 )
             }.value

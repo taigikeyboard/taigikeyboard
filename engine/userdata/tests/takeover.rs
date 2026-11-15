@@ -128,8 +128,8 @@ fn a_pre_pair_key_frequency_table_keeps_its_rows_ids_and_counts() {
     assert!(columns(&path, "user_frequency").contains(&"tl".to_owned()));
     assert_eq!(
         pragma(&path, "user_version"),
-        2,
-        "iOS / Android's own number"
+        3,
+        "v3 neutral-tone Hanji migration completes after pair-key rebuild"
     );
     assert_eq!(
         pragma(&path, "application_id"),
@@ -168,7 +168,7 @@ PRAGMA user_version = 1;
 #[test]
 fn an_android_v1_frequency_table_keeps_its_rows_and_its_metadata() {
     // trace: no `tl` → rebuild; idx_count / idx_last_used go with the old
-    // table; id 3 and count 4 copied; `metadata` untouched; stamp 1 → 2.
+    // table; id 3 and count 4 copied; `metadata` untouched; stamp 1 → 3.
     let directory = scratch();
     let path = paths(&directory).frequency;
     build(&path, ANDROID_FREQUENCY_V1);
@@ -179,7 +179,7 @@ fn an_android_v1_frequency_table_keeps_its_rows_and_its_metadata() {
     let rows = store.rows_for_words(&["台灣".into()]).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].count, 4);
-    assert_eq!(pragma(&path, "user_version"), 2);
+    assert_eq!(pragma(&path, "user_version"), 3);
     let app_version: String = raw(&path)
         .query_row(
             "SELECT value FROM metadata WHERE key = 'app_version';",
@@ -214,7 +214,7 @@ fn a_pair_key_frequency_table_left_at_version_zero_is_not_rebuilt() {
     let rows = store.rows_for_words(&["重".into()]).unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].tl, "tîng");
-    assert_eq!(pragma(&path, "user_version"), 2);
+    assert_eq!(pragma(&path, "user_version"), 3);
 }
 
 #[test]
@@ -224,13 +224,13 @@ fn a_frequency_file_from_a_later_build_stays_closed_and_untouched() {
     build(
         &path,
         "CREATE TABLE user_frequency (id INTEGER PRIMARY KEY, word TEXT);
-         PRAGMA user_version = 3;",
+         PRAGMA user_version = 4;",
     );
 
     let store = frequency(&path);
 
     assert!(!store.is_ready(), "closed: neutral ranking, not a guess");
-    assert_eq!(pragma(&path, "user_version"), 3);
+    assert_eq!(pragma(&path, "user_version"), 4);
     assert_eq!(pragma(&path, "application_id"), 0);
     assert!(!snapshot(&path).exists(), "nothing copied, nothing changed");
 }
@@ -319,7 +319,7 @@ fn an_ios_v4_association_table_with_its_single_column_index_is_rebuilt_too() {
     let store = association(&path);
 
     assert_eq!(pairs(&store), vec![(pair("重", "tîng", "複", "hok"), 3)]);
-    assert_eq!(pragma(&path, "user_version"), 6);
+    assert_eq!(pragma(&path, "user_version"), 7);
     let leftover: i64 = raw(&path)
         .query_row(
             "SELECT COUNT(*) FROM sqlite_master WHERE name = 'idx_user_prev_word';",
@@ -357,7 +357,7 @@ fn a_v5_association_table_is_rebuilt_under_the_v6_key_with_its_rows() {
         )
         .unwrap();
     assert_eq!(id, 11);
-    assert_eq!(pragma(&path, "user_version"), 6);
+    assert_eq!(pragma(&path, "user_version"), 7);
     assert_eq!(
         pragma(&path, "application_id"),
         i64::from(TAIGI_APPLICATION_ID)
@@ -831,4 +831,182 @@ fn the_journal_mode_is_the_platform_s_choice() {
     };
     assert_eq!(mode(&files.frequency), "delete");
     assert_eq!(mode(&files.association), "wal");
+}
+
+#[test]
+fn frequency_v2_migration_strips_pure_hanji_merges_collisions_and_keeps_hanlo() {
+    let directory = scratch();
+    let path = paths(&directory).frequency;
+    build(
+        &path,
+        "CREATE TABLE user_frequency (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            word TEXT NOT NULL,
+            tl TEXT NOT NULL DEFAULT '',
+            count INTEGER DEFAULT 1,
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(word, tl)
+        );
+        INSERT INTO user_frequency (id, word, tl, count, last_used, created_at) VALUES
+            (1, '會記得', 'ē-kì--tit', 3, '2026-01-01 00:00:00', '2026-01-15 00:00:00'),
+            (2, '會記--得', 'ē-kì--tit', 4, '2026-02-01 00:00:00', '2026-01-01 00:00:00'),
+            (3, '--轉-去', '--tńg-khì', 2, '2026-01-10 00:00:00', '2026-01-10 00:00:00'),
+            (4, '邊--a', 'pinn--a', 5, '2026-01-05 00:00:00', '2026-01-05 00:00:00'),
+            (5, '一-六', 'it-lio̍k', 6, '2026-01-08 00:00:00', '2026-01-08 00:00:00');
+        PRAGMA user_version = 2;",
+    );
+
+    let store = frequency(&path);
+    assert_eq!(pragma(&path, "user_version"), 3);
+
+    let rows = store.all_rows().unwrap();
+    assert_eq!(rows.len(), 4);
+    let eki = rows.iter().find(|r| r.word == "會記得").unwrap();
+    assert_eq!(eki.count, 7);
+    assert!(rows.iter().any(|r| r.word == "轉去" && r.count == 2));
+    assert!(rows.iter().any(|r| r.word == "邊--a" && r.count == 5));
+    assert!(rows.iter().any(|r| r.word == "一-六" && r.count == 6));
+
+    // Winner keeps MAX(last_used) ('2026-02-01') and MIN(created_at) ('2026-01-01').
+    let (last_used, created_at): (String, String) = raw(&path)
+        .query_row(
+            "SELECT last_used, created_at FROM user_frequency WHERE word = '會記得';",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(last_used, "2026-02-01 00:00:00");
+    assert_eq!(created_at, "2026-01-01 00:00:00");
+
+    // Re-opening at v3 is an idempotent no-op.
+    drop(store);
+    let reopened = frequency(&path);
+    assert_eq!(reopened.all_rows().unwrap().len(), 4);
+    assert_eq!(pragma(&path, "user_version"), 3);
+}
+
+#[test]
+fn learned_phrases_v1_migration_strips_pure_hanji_and_cleans_loser_search_keys() {
+    let directory = scratch();
+    let path = paths(&directory).learned_phrases;
+    build(
+        &path,
+        "CREATE TABLE learned_phrases (
+            id INTEGER PRIMARY KEY,
+            roman TEXT NOT NULL,
+            hanzi TEXT NOT NULL,
+            learn_count INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL,
+            UNIQUE(hanzi, roman)
+        );
+        CREATE TABLE learned_search_key (
+            phrase_id INTEGER NOT NULL,
+            family TEXT NOT NULL,
+            form TEXT NOT NULL,
+            key TEXT NOT NULL
+        );
+        INSERT INTO learned_phrases VALUES
+            (1, 'tsáu--tńg-khì', '走轉去', 2, '2026-01-01 00:00:00'),
+            (2, 'tsáu--tńg-khì', '走--轉-去', 5, '2026-02-01 00:00:00'),
+            (3, 'ē-kì--tit', '會記--得', 3, '2026-01-05 00:00:00'),
+            (4, 'pinn--a', '邊--a', 4, '2026-01-03 00:00:00');
+        INSERT INTO learned_search_key VALUES
+            (1, 'tl', 'notone', 'tsautngkhi'),
+            (2, 'tl', 'notone', 'tsautngkhi'),
+            (3, 'tl', 'notone', 'ekitit'),
+            (4, 'tl', 'notone', 'pinna');
+        PRAGMA user_version = 1;",
+    );
+
+    let store = LearnedPhraseStore::new(
+        path.clone(),
+        JournalMode::Delete,
+        Arc::new(derive_custom_search_keys),
+        LearnedPhraseStore::MAX_ENTRIES,
+    );
+    store.open_blocking();
+    assert_eq!(pragma(&path, "user_version"), 2);
+
+    let rows = store.all_rows().unwrap();
+    assert_eq!(rows.len(), 3);
+    assert!(rows
+        .iter()
+        .any(|r| r.hanji == "走轉去" && r.learn_count == 7));
+    assert!(rows
+        .iter()
+        .any(|r| r.hanji == "會記得" && r.learn_count == 3));
+    assert!(rows
+        .iter()
+        .any(|r| r.hanji == "邊--a" && r.learn_count == 4));
+
+    // Loser id = 2 must have its learned_search_key cleaned up.
+    let loser_keys: i64 = raw(&path)
+        .query_row(
+            "SELECT COUNT(*) FROM learned_search_key WHERE phrase_id = 2;",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(loser_keys, 0);
+}
+
+#[test]
+fn association_v6_and_v5_migrations_strip_pure_hanji_and_merge_collisions() {
+    // 1. v6 -> v7
+    let directory = scratch();
+    let path = paths(&directory).association;
+    build(
+        &path,
+        "CREATE TABLE user_association (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prev_word TEXT NOT NULL,
+            prev_tl TEXT DEFAULT '',
+            next_word TEXT NOT NULL,
+            next_tl TEXT DEFAULT '',
+            count INTEGER DEFAULT 1,
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(prev_word, prev_tl, next_word, next_tl)
+        );
+        INSERT INTO user_association (id, prev_word, prev_tl, next_word, next_tl, count, last_used) VALUES
+            (1, '會記得', 'ē-kì--tit', '轉去', 'tńg--khì', 2, '2026-01-01 00:00:00'),
+            (2, '會記--得', 'ē-kì--tit', '轉--去', 'tńg--khì', 5, '2026-02-01 00:00:00'),
+            (3, '邊--a', 'pinn--a', '--轉-去', '--tńg-khì', 3, '2026-01-10 00:00:00');
+        PRAGMA user_version = 6;",
+    );
+    let store = association(&path);
+    assert_eq!(pragma(&path, "user_version"), 7);
+    assert_eq!(
+        pairs(&store),
+        vec![
+            (pair("會記得", "ē-kì--tit", "轉去", "tńg--khì"), 7),
+            (pair("邊--a", "pinn--a", "轉去", "--tńg-khì"), 3),
+        ]
+    );
+
+    // 2. v5 -> rebuild_to_v6 -> v7 normalization in one open
+    let dir_v5 = scratch();
+    let path_v5 = paths(&dir_v5).association;
+    build(
+        &path_v5,
+        "CREATE TABLE user_association (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prev_word TEXT NOT NULL,
+            prev_tl TEXT DEFAULT '',
+            next_word TEXT NOT NULL,
+            next_tl TEXT DEFAULT '',
+            count INTEGER DEFAULT 1,
+            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(prev_word, next_word, next_tl)
+        );
+        INSERT INTO user_association (id, prev_word, prev_tl, next_word, next_tl, count) VALUES
+            (10, '會記--得', 'ē-kì--tit', '轉--去', 'tńg--khì', 4);
+        PRAGMA user_version = 5;",
+    );
+    let store_v5 = association(&path_v5);
+    assert_eq!(pragma(&path_v5, "user_version"), 7);
+    assert_eq!(
+        pairs(&store_v5),
+        vec![(pair("會記得", "ē-kì--tit", "轉去", "tńg--khì"), 4)]
+    );
 }

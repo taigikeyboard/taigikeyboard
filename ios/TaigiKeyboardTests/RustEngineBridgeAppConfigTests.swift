@@ -81,5 +81,13 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         XCTAssertEqual(config.candidateDisplayMode, .sideBySide)
         XCTAssertEqual(config.syllableSeparator, .hyphen)
         XCTAssertFalse(config.tpsOrMapsToEr)
+        XCTAssertFalse(config.khinsiannInHanji)
+    }
+
+    func testContinuousAppConfig_forwardsKhinsiannInHanji() {
+        var settings = StubEngineSettings()
+        XCTAssertFalse(RustEngineBridge.continuousAppConfig(settings).khinsiannInHanji)
+        settings.isKhinsiannInHanjiEnabled = true
+        XCTAssertTrue(RustEngineBridge.continuousAppConfig(settings).khinsiannInHanji)
     }
 }

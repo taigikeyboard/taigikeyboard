@@ -152,6 +152,7 @@ pub fn fetch_candidates_for_endings(
         context: ctx.context,
         tone_pin: ctx.tone_pin.clone(),
         whole_buffer_key: ctx.whole_buffer_key.clone(),
+        khinsiann_in_hanji: ctx.khinsiann_in_hanji,
     };
     fetch_candidates_for_keys_with_barriers(&keys, &[], &[], input.len() as u32, &inner)
 }
@@ -183,6 +184,7 @@ pub fn neutral_ctx<'a>(
         context: ranking::ContextRanks::empty(),
         tone_pin: lexicon::TonePin::None,
         whole_buffer_key: None,
+        khinsiann_in_hanji: false,
     }
 }
 

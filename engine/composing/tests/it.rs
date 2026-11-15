@@ -32,6 +32,7 @@ mod golden_fetch_at_pos;
 mod han_lo_slot0;
 mod intent_coverage;
 mod invariants;
+mod khinsiann_in_hanji;
 mod nasal_marker_case;
 mod prediction_commit_resolution;
 mod proptest_sequences;

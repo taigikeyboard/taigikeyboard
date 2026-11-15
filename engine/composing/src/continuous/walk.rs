@@ -442,12 +442,9 @@ pub(super) fn fetch_walker_slot0_inner(
     let hanji_spelled = any_dict
         && path.choices.iter().any(|c| c.hanji.is_some())
         && path.choices.iter().all(|c| c.hanji.is_some() || c.dict_hit);
-    let hanji: Option<String> = hanji_spelled.then(|| {
-        path.edges
-            .iter()
-            .zip(&path.choices)
-            .zip(&parts)
-            .map(|((&(s, e), choice), part)| match (&choice.hanji, mode) {
+    let edge_piece =
+        |s: usize, e: usize, choice: &crate::lattice::EdgeChoice, part: &String| -> String {
+            match (&choice.hanji, mode) {
                 (Some(hanji), _) => hanji.clone(),
                 // The typed Bopomofo, what the layout's roman-only cell shows.
                 (None, phonetics::InputMode::Tps) => raw
@@ -456,9 +453,44 @@ pub(super) fn fetch_walker_slot0_inner(
                     .to_owned(),
                 (None, phonetics::InputMode::Poj) => recase_tl_as_poj_display(part),
                 (None, _) => part.clone(),
-            })
+            }
+        };
+    let raw_hanji: Option<String> = hanji_spelled.then(|| {
+        path.edges
+            .iter()
+            .zip(&path.choices)
+            .zip(&parts)
+            .map(|((&(s, e), choice), part)| edge_piece(s, e, choice, part))
             .collect()
     });
+    let hanji: Option<String> = if ctx.khinsiann_in_hanji {
+        hanji_spelled.then(|| {
+            let mut out = String::new();
+            for (edge_idx, ((&(s, e), choice), part)) in
+                path.edges.iter().zip(&path.choices).zip(&parts).enumerate()
+            {
+                let piece = match &choice.hanji {
+                    Some(h) => {
+                        phonetics::api::render_hanji_khinsiann(h, &choice.canonical_tl, true)
+                    }
+                    None => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
+                };
+                let khinsiann_before = edge_idx > 0
+                    && continuous_keys
+                        .hyphen_runs
+                        .iter()
+                        .any(|&(b, run)| b == s && run >= 2);
+                phonetics::api::push_hanji_with_interword_khinsiann(
+                    &mut out,
+                    &piece,
+                    khinsiann_before,
+                );
+            }
+            out
+        })
+    } else {
+        raw_hanji.clone()
+    };
     // v3.5.9 B-4 (Codex pre-impl BLOCK #2 close): the walker
     // greedy-longest OOV synth builds `roman` from the
     // mode-aware shadow — POJ mode preserves POJ ASCII per B-2,
@@ -482,12 +514,13 @@ pub(super) fn fetch_walker_slot0_inner(
     // The fold drops the per-edge recase: a pick counted under `Kóng` would
     // rank nothing typed `kong`.
     let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
-    let display_text = hanji.clone().unwrap_or_else(|| canonical_tl.clone());
+    let display_text = raw_hanji.unwrap_or_else(|| canonical_tl.clone());
     // R5 pair-key (#7): walker synth keyed by (display_text,
     // canonical_tl); `get` returns the neutral default on a miss.
-    let user_weight = freq_map
-        .get(&display_text, &canonical_tl)
-        .user_weight(now_ms);
+    // Normalize `--` on pure-Hanji words so custom `--` entries share
+    // frequency counts with plain Hanji rows.
+    let lookup_key = phonetics::api::learning_hanji_key(&display_text);
+    let user_weight = freq_map.get(&lookup_key, &canonical_tl).user_weight(now_ms);
     Some(WalkerSlot0 {
         consumed_span,
         syllable_count,

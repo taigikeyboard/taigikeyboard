@@ -108,7 +108,7 @@ pub(super) fn merge_custom_dedupe_sort(
             coverage_kind,
         ));
     }
-    dedupe_by_roman_hanji_span(&mut out);
+    dedupe_by_roman_hanji_span(&mut out, ctx.khinsiann_in_hanji);
     sort_by_candidate_key(out, raw_len, RawCandidate::rank_facts)
 }
 
@@ -194,10 +194,11 @@ pub(super) fn record_to_candidate(
     // exact miss; absent entries fall through to `FrequencyData::default()`
     // (count = 0, last_used_ms = 0) → `user_weight = 0.0`, the cold-start
     // neutral path.
+    let lookup_key = phonetics::api::learning_hanji_key(&display_text);
     let user_weight = freq_map
-        .get(&display_text, &canonical_tl)
+        .get(lookup_key.as_ref(), &canonical_tl)
         .user_weight(now_ms);
-    let context_rank = context.rank(&display_text, &canonical_tl);
+    let context_rank = context.rank(lookup_key.as_ref(), &canonical_tl);
     let score = calculate_continuous_score(frequency, syllable_count);
     RawCandidate {
         rowid,
@@ -296,10 +297,11 @@ pub(super) fn custom_entry_to_candidate(
     // `record_to_candidate`. For a hanji-absent custom/OOV entry
     // `display_text == canonical_tl`; the tolerant `get` still falls back
     // to the legacy `tl == ""` bucket on an exact miss.
+    let lookup_key = phonetics::api::learning_hanji_key(&display_text);
     let user_weight = freq_map
-        .get(&display_text, &canonical_tl)
+        .get(lookup_key.as_ref(), &canonical_tl)
         .user_weight(now_ms);
-    let context_rank = context.rank(&display_text, &canonical_tl);
+    let context_rank = context.rank(lookup_key.as_ref(), &canonical_tl);
     let syllable_count = tl_syllable_count(&canonical_tl);
     // `frequency = 0` (D4) → score 0; the candidate floats on
     // `user_weight` / `source_rank` / dedupe, not raw freq.
@@ -409,26 +411,44 @@ pub(super) fn learned_entry_to_candidate(
 ///   FST hit).
 /// - Survivor **insertion order is preserved** so the downstream
 ///   `CandidateSortKey.stable_idx` stays deterministic.
-pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
-    dedupe_by_reading(out, |c| c.roman.as_str());
+pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>, khinsiann_in_hanji: bool) {
+    dedupe_by_reading(out, khinsiann_in_hanji, |c| c.roman.as_str());
     // Only a custom row's `canonical_tl` can differ from its roman here
     // (dictionary and learned rows carry their TL as both), so without one
     // the identity pass cannot drop anything.
     if out.iter().any(|c| c.is_custom) {
-        dedupe_by_reading(out, |c| c.canonical_tl.as_str());
+        dedupe_by_reading(out, khinsiann_in_hanji, |c| c.canonical_tl.as_str());
     }
 }
 
+fn collision_hanji<'a>(
+    c: &'a RawCandidate,
+    khinsiann_in_hanji: bool,
+) -> Option<std::borrow::Cow<'a, str>> {
+    c.hanji
+        .as_deref()
+        .map(|h| phonetics::api::render_hanji_khinsiann(h, &c.canonical_tl, khinsiann_in_hanji))
+}
+
 /// One pass of [`dedupe_by_roman_hanji_span`]: collapse candidates equal on
-/// `(reading(c), hanji, consumed_span)`, lowest source rank surviving.
-fn dedupe_by_reading(out: &mut Vec<RawCandidate>, reading: fn(&RawCandidate) -> &str) {
+/// `(reading(c), displayed_hanji, consumed_span)`, lowest source rank surviving.
+fn dedupe_by_reading(
+    out: &mut Vec<RawCandidate>,
+    khinsiann_in_hanji: bool,
+    reading: fn(&RawCandidate) -> &str,
+) {
+    use std::borrow::Cow;
     use std::collections::{HashMap, HashSet};
-    // key (borrowed from `out`) → (winning source rank, index of winner).
-    let mut best: HashMap<(&str, Option<&str>, ConsumedSpan), (u8, usize)> =
-        HashMap::with_capacity(out.len());
+    type DedupeKey<'a> = (&'a str, Option<Cow<'a, str>>, ConsumedSpan);
+    // key (borrowed from `out` when !khinsiann_in_hanji) → (winning source rank, index of winner).
+    let mut best: HashMap<DedupeKey<'_>, (u8, usize)> = HashMap::with_capacity(out.len());
     for (i, c) in out.iter().enumerate() {
         let rank = source_tier_rank(c.bitmask, c.is_custom);
-        let key = (reading(c), c.hanji.as_deref(), c.consumed_span);
+        let key = (
+            reading(c),
+            collision_hanji(c, khinsiann_in_hanji),
+            c.consumed_span,
+        );
         // Strictly lower rank replaces; equal rank keeps the earlier index
         // (no replace) → deterministic tie-break.
         let slot = best.entry(key).or_insert((rank, i));
@@ -723,7 +743,7 @@ mod item12_custom_dedupe_tests {
                 phonetics::InputMode::Tl,
             ),
         ];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 1, "collision must collapse to one");
         assert!(out[0].is_custom, "custom (rank 0) must win the collision");
     }
@@ -751,7 +771,7 @@ mod item12_custom_dedupe_tests {
             dict_cand("l\u{ed}", Some("李"), 1 << 0),
             custom_cand("li\u{301}", Some("李")),
         ];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 1);
         assert!(out[0].is_custom);
     }
@@ -765,7 +785,7 @@ mod item12_custom_dedupe_tests {
         let custom = custom_cand("hùi", Some("卉"));
         assert_ne!(custom.canonical_tl, "hùi", "fixture precondition");
         let mut out = vec![dict_cand("hùi", Some("卉"), 1 << 0), custom];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 1);
         assert!(out[0].is_custom);
     }
@@ -776,7 +796,7 @@ mod item12_custom_dedupe_tests {
         // roman (`lán,lán` → `lán,`), so the custom word meets the shipped
         // hanzi-less `lán` on `(canonical_tl, None)`.
         let mut out = vec![dict_cand("lán", None, 1 << 0), custom_cand("lán", None)];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 1);
         assert!(out[0].is_custom);
     }
@@ -790,7 +810,7 @@ mod item12_custom_dedupe_tests {
             dict_cand("lán", None, 1 << 0),
             custom_cand("lán", Some("Lán")),
         ];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 2);
     }
 
@@ -803,7 +823,7 @@ mod item12_custom_dedupe_tests {
             dict_cand("tâi-gí", Some("台語"), 1 << 0),
             dict_cand("tâi-gír", Some("台語"), 1 << 0),
         ];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(
             out.len(),
             2,
@@ -822,7 +842,7 @@ mod item12_custom_dedupe_tests {
         second.frequency = 999; // later insertion, higher freq — must lose
         let other = dict_cand("b", Some("乙"), 1 << 0);
         let mut out = vec![first, other.clone(), second];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 2);
         assert_eq!(out[0].frequency, 10, "rank tie keeps earlier insertion");
         assert_eq!(out[1].roman, "b", "non-duplicate keeps its position");
@@ -834,7 +854,7 @@ mod item12_custom_dedupe_tests {
             dict_cand("a", Some("甲"), 1 << 0),
             dict_cand("b", Some("乙"), 1 << 0),
         ];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 2);
     }
 
@@ -850,7 +870,7 @@ mod item12_custom_dedupe_tests {
         let mut b = dict_cand("tâi", Some("台"), 1 << 0);
         b.consumed_span = (6, 9);
         let mut out = vec![a, b];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(
             out.len(),
             2,
@@ -880,9 +900,40 @@ mod item12_custom_dedupe_tests {
             phonetics::InputMode::Tl,
         );
         let mut out = vec![dict, custom];
-        dedupe_by_roman_hanji_span(&mut out);
+        dedupe_by_roman_hanji_span(&mut out, false);
         assert_eq!(out.len(), 1, "same-span custom/dict collision collapses");
         assert!(out[0].is_custom, "custom (rank 0) still wins the collision");
+    }
+
+    #[test]
+    fn custom_khinsiann_collides_with_builtin_only_when_khinsiann_in_hanji_enabled() {
+        let mut dict = dict_cand("ē-kì--tit", Some("會記得"), 1 << 0);
+        dict.consumed_span = (0, 6);
+        let custom = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "ē-kì--tit".to_owned(),
+                hanji: Some("會記--得".to_owned()),
+            },
+            (0, 6),
+            &FrequencyMap::new(),
+            0,
+            ContextRanks::empty(),
+            COVERAGE_KIND_FULL,
+            phonetics::InputMode::Tl,
+        );
+
+        let mut on = vec![dict.clone(), custom.clone()];
+        dedupe_by_roman_hanji_span(&mut on, true);
+        assert_eq!(on.len(), 1, "same displayed 會記--得 merges into 1 cell");
+        assert!(on[0].is_custom, "custom (rank 0) wins collision");
+
+        let mut off = vec![dict, custom];
+        dedupe_by_roman_hanji_span(&mut off, false);
+        assert_eq!(
+            off.len(),
+            2,
+            "when khinsiann_in_hanji is off, custom 會記--得 stays separate from builtin 會記得"
+        );
     }
 
     #[test]

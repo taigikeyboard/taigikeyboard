@@ -95,6 +95,10 @@ final class SettingsStore: @unchecked Sendable {
             name: "nasalMarkerUppercaseEnabled",
             defaultValue: EngineSettings.defaults.isNasalMarkerUppercaseEnabled,
         )
+        static let isKhinsiannInHanjiEnabled = SettingsKey(
+            name: "khinsiannInHanjiEnabled",
+            defaultValue: EngineSettings.defaults.isKhinsiannInHanjiEnabled,
+        )
         /// Type ts / ch with c — desktop-core `keys::IS_C_AFFRICATE_ENABLED`.
         static let isCAffricateEnabled = SettingsKey(
             name: "cAffricateEnabled",
@@ -653,6 +657,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isLiteralRomanCandidateEnabled.name,
             Keys.syllableSeparator.name,
             Keys.isNasalMarkerUppercaseEnabled.name,
+            Keys.isKhinsiannInHanjiEnabled.name,
         )
     }
 

@@ -3853,6 +3853,42 @@
         }
       }
     },
+    "i18n_settings_khinsiannInHanji": {
+      "comment": "Toggle label: opt-in neutral-tone (khinsiann) markers (-- / -) in Hanji output across all platforms.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neutral Tone in Hanji (--)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漢字に軽声（--）を表示"
+          }
+        }
+      }
+    },
+    "i18n_settings_khinsiannInHanjiInfo": {
+      "comment": "Help text for the neutral-tone in Hanji toggle.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, Hanji output includes neutral-tone markers matching Tâi-lô words (e.g. 會記--得, --轉-去)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、漢字出力に台羅の軽声記号が付きます（例：會記--得、--轉-去）。"
+          }
+        }
+      }
+    },
     "i18n_settings_literalRomanCandidate": {
       "comment": "Toggle label: show what is being typed as the first candidate in the strip (§34 literal-roman candidate). All five platforms.",
       "extractionState": "manual",

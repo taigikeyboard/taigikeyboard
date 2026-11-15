@@ -18,6 +18,7 @@ struct SettingsSelectionOverlay: View {
 
     @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
+    @State private var khinsiannInHanjiEnabled: Bool
     @State private var literalRomanCandidateEnabled: Bool
     @State private var autoCapitalizationEnabled: Bool
     @State private var autoSpaceEnabled: Bool
@@ -58,6 +59,7 @@ struct SettingsSelectionOverlay: View {
         _candidateDisplayMode = State(initialValue: s.candidateDisplayMode)
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: s.storedIsOutputBothScripts)
+        _khinsiannInHanjiEnabled = State(initialValue: s.isKhinsiannInHanjiEnabled)
         _literalRomanCandidateEnabled = State(initialValue: s.isLiteralRomanCandidateEnabled)
         _autoCapitalizationEnabled = State(
             initialValue: UserDefaults.keyboardSettings.bool(forKey: Self.autoCapKey),
@@ -102,6 +104,10 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
                     // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
+                    .disabled(!candidateDisplayMode.showsHanji)
+                    settingsToggle(lang.string(.settingsKhinsiannInHanji), isOn: $khinsiannInHanjiEnabled) {
+                        SharedSettings.shared.isKhinsiannInHanjiEnabled = $0
+                    }
                     .disabled(!candidateDisplayMode.showsHanji)
                     menuPickerRow(
                         lang.string(.settingsSyllableSeparator),
@@ -166,6 +172,7 @@ struct SettingsSelectionOverlay: View {
             let s = SharedSettings.shared
             candidateDisplayMode = s.candidateDisplayMode
             isOutputBothScripts = s.storedIsOutputBothScripts
+            khinsiannInHanjiEnabled = s.isKhinsiannInHanjiEnabled
             literalRomanCandidateEnabled = s.isLiteralRomanCandidateEnabled
             autoCapitalizationEnabled = UserDefaults.keyboardSettings.bool(forKey: Self.autoCapKey)
             autoSpaceEnabled = s.isAutoSpaceEnabled

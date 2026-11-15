@@ -62,6 +62,7 @@ object PreferenceKeys {
 
     // Raw value = SyllableSeparator.storageValue ("hyphen" / "space" / "none").
     val SYLLABLE_SEPARATOR = stringPreferencesKey("keyboard__syllable_separator")
+    val KHINSIANN_IN_HANJI = booleanPreferencesKey("keyboard__khinsiann_in_hanji")
 
     // Retired 2026-10-06: the No Hyphens switch, carried over by [carryOverHyphenlessRoman].
     val RETIRED_HYPHENLESS_ROMAN = booleanPreferencesKey("keyboard__hyphenless_roman")

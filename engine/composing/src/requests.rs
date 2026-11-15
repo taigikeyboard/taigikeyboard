@@ -270,8 +270,8 @@ pub fn mechanism(
             &user_rows.custom,
             &listed.learned,
             listed.mode,
-            source_filter_bitmask(config),
             context,
+            config,
         )
     };
     if listed.shift > 0 {
@@ -294,6 +294,7 @@ pub fn mechanism(
                         user_row: false,
                         picks: 0,
                         weight: 0.0,
+                        khinsiann_before: false,
                     },
                 );
             }
@@ -303,6 +304,7 @@ pub fn mechanism(
         &listed,
         &segmentation,
         &user_rows.frequency,
+        config,
     ))
 }
 
@@ -403,10 +405,8 @@ fn listed_candidates(
         &user_rows.custom,
         &learned,
         mode,
-        source_filter_bitmask(config),
         context,
-        config.rendered_syllable_joiner(),
-        config.force_lowercase_nasal_marker,
+        config,
         shape,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
@@ -475,9 +475,10 @@ fn explain_mechanism(
     listed: &Listed,
     segmentation: &crate::continuous::Segmentation,
     frequency: &ranking::FrequencyMap,
+    config: &AppConfig,
 ) -> crate::explain::Mechanism {
     use crate::explain::{CandidatePiece, WordPiece};
-    let sentence = sentence_hanji(&segmentation.words);
+    let sentence = sentence_hanji(&segmentation.words, config.khinsiann_in_hanji);
     // One word is still the walker's path, and it normally occupies slot 0.
     // When the developer page ranks that word with the rest, it is an
     // ordinary row: tagging it `sentence` would pull it back out of the
@@ -531,7 +532,8 @@ fn explain_mechanism(
             }
             let (start, end) = candidate.consumed_span;
             let raw_len = listed.raw.len() as u32;
-            let picks = frequency.get(&candidate.display_text, &candidate.canonical_tl);
+            let lookup_key = phonetics::api::learning_hanji_key(&candidate.display_text);
+            let picks = frequency.get(&lookup_key, &candidate.canonical_tl);
             CandidatePiece {
                 hanji: candidate.hanji.clone(),
                 roman: candidate.roman.clone(),
@@ -616,12 +618,24 @@ fn explain_mechanism(
 /// That row is inserted at slot 0 before the twelve stages, so the inspector
 /// keeps it out of the scored list. A path with a hanji-less edge has no
 /// single string to match.
-fn sentence_hanji(words: &[crate::continuous::WordCut]) -> Option<String> {
+fn sentence_hanji(
+    words: &[crate::continuous::WordCut],
+    khinsiann_in_hanji: bool,
+) -> Option<String> {
     let words: Vec<_> = words.iter().filter(|word| word.kind != "gap").collect();
     if words.is_empty() || words.iter().any(|word| word.hanji.is_none()) {
         return None;
     }
-    Some(words.iter().filter_map(|word| word.hanji.clone()).collect())
+    let mut out = String::new();
+    for (idx, word) in words.iter().enumerate() {
+        let h = word.hanji.as_deref()?;
+        phonetics::api::push_hanji_with_interword_khinsiann(
+            &mut out,
+            h,
+            idx > 0 && khinsiann_in_hanji && word.khinsiann_before,
+        );
+    }
+    Some(out)
 }
 
 fn slice_raw(raw: &str, start: u32, end: u32) -> String {
@@ -974,6 +988,7 @@ mod tests {
             custom_dictionary_disabled: false,
             c_types_affricate: false,
             f_types_hyphen: false,
+            khinsiann_in_hanji: false,
         }
     }
 

@@ -193,6 +193,7 @@ export class Settings {
       fontType,
       inputMode,
       isTranslateSwapped,
+      khinsiannInHanjiEnabled,
       tpsKeyboardShown,
     } = elements;
     const dependentControls =
@@ -211,8 +212,10 @@ export class Settings {
     // The row stays in its place outside TPS: the choice waits for the way back.
     const isTyping = inputMode.value === "tps";
     tpsKeyboardShown.disabled = !isTyping;
-    // No Hanji to lead with: `allows_swap_toggle`.
-    isTranslateSwapped.disabled = candidateDisplayMode.value === "romanOnly";
+    // No Hanji to lead with (`allows_swap_toggle`) or mark (`shows_hanji`).
+    const isRomanOnly = candidateDisplayMode.value === "romanOnly";
+    isTranslateSwapped.disabled = isRomanOnly;
+    khinsiannInHanjiEnabled.disabled = isRomanOnly;
     const root = document.documentElement;
     root.dataset.theme = candidateAppearanceMode.value;
     root.dataset.font = fontType.value;

@@ -8,7 +8,8 @@
 use protos::engine::AppConfig;
 
 use crate::common::{
-    config_with_sources, default_source_toggles, fetch_cells, production_lexicon_ready, Fetch,
+    config, config_with_sources, default_source_toggles, fetch_cells, production_lexicon_ready,
+    Fetch,
 };
 
 /// `input_mode` with a fresh install's sources.
@@ -169,5 +170,105 @@ fn tps_typed_marks_and_spaces_pin_the_reading() {
             Some(hanji),
             "{raw}: {cells:?}"
         );
+    }
+}
+
+#[test]
+fn hanji_first_merges_same_commit_hanji_candidates() {
+    if !production_lexicon_ready() {
+        eprintln!("production artifacts absent — run `make dict`; skipping.");
+        return;
+    }
+
+    let count_hanji = |is_hanji_first: bool, output_both_scripts: bool, raw: &str, target: &str| {
+        let mut cfg = fresh_install_config("tl");
+        cfg.is_hanji_first = is_hanji_first;
+        cfg.output_both_scripts = output_both_scripts;
+        let cells = fetch_cells(&cfg, raw, fresh_install_fetch());
+        let matches: Vec<_> = cells
+            .iter()
+            .filter(|(h, ..)| h.as_deref() == Some(target))
+            .collect();
+        (matches.len(), cells)
+    };
+
+    // Output Script = Hanji, Brackets = off: multiple plain `轉去` readings
+    // merge into 1 cell.
+    let (merged_count, merged_cells) = count_hanji(true, false, "tngkhi", "轉去");
+    assert_eq!(merged_count, 1, "tngkhi Hanji-first: {merged_cells:?}");
+
+    // Annotate in Brackets = on: distinct readings stay separate.
+    let (bracket_count, bracket_cells) = count_hanji(true, true, "tngkhi", "轉去");
+    assert!(
+        bracket_count > 1,
+        "tngkhi brackets on should preserve readings: {bracket_cells:?}"
+    );
+
+    // Output Script = Romanization: distinct readings stay separate.
+    let (roman_count, roman_cells) = count_hanji(false, false, "tngkhi", "轉去");
+    assert!(
+        roman_count > 1,
+        "tngkhi roman-first should preserve readings: {roman_cells:?}"
+    );
+
+    // `ekilit` still surfaces `會記得`.
+    let (ekilit_count, ekilit_cells) = count_hanji(true, false, "ekilit", "會記得");
+    assert_eq!(ekilit_count, 1, "ekilit Hanji-first: {ekilit_cells:?}");
+}
+
+#[test]
+fn tshutkhi_typed_separators_filter_readings_independently_of_hanji_markers() {
+    if !production_lexicon_ready() {
+        eprintln!("production artifacts absent — run `make dict`; skipping.");
+        return;
+    }
+
+    // Enable every source so both 出去/tshut-khì (Kautian/Taihoa) and
+    // 出去/tshut--khì (Taijit) participate. A typed separator selects its own
+    // reading; the Hanji marker setting controls rendering and subsequent
+    // same-commit merging only.
+    // Filter by exact rendered reading so prefix completions such as
+    // tshut-khìr cannot add a spurious duplicate. A walker composition of
+    // 出 + 去 may supply a cell with the same visible reading as a dict word.
+    for khinsiann_in_hanji in [false, true] {
+        for (is_hanji_first, output_both_scripts) in [(true, false), (true, true), (false, false)] {
+            let cfg = AppConfig {
+                is_hanji_first,
+                output_both_scripts,
+                khinsiann_in_hanji,
+                ..config("tl")
+            };
+            for raw in ["tshutkhi", "tshut-khi", "tshut--khi"] {
+                let cells = fetch_cells(&cfg, raw, fresh_install_fetch());
+                let mut actual: Vec<_> = cells
+                    .iter()
+                    .filter(|(_, roman, _, _)| matches!(roman.as_str(), "tshut-khì" | "tshut--khì"))
+                    .filter(|(hanji, ..)| matches!(hanji.as_deref(), Some("出去" | "出--去")))
+                    .map(|(hanji, roman, identity, _)| {
+                        assert_eq!(identity, "出去", "learning identity: {raw}, {cfg:?}");
+                        (hanji.as_deref().expect("出去 Hanji"), roman.as_str())
+                    })
+                    .collect();
+                let mut expected = Vec::new();
+                if raw != "tshut--khi" {
+                    expected.push(("出去", "tshut-khì"));
+                }
+                let merges_plain_hanji =
+                    is_hanji_first && !output_both_scripts && !khinsiann_in_hanji;
+                if raw == "tshut--khi" || (raw == "tshutkhi" && !merges_plain_hanji) {
+                    expected.push((
+                        if khinsiann_in_hanji {
+                            "出--去"
+                        } else {
+                            "出去"
+                        },
+                        "tshut--khì",
+                    ));
+                }
+                actual.sort_unstable();
+                expected.sort_unstable();
+                assert_eq!(actual, expected, "{raw}, {cfg:?}: {cells:?}");
+            }
+        }
     }
 }

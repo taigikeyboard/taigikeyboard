@@ -237,6 +237,8 @@ enum class StringKey(
     SETTINGS_NASAL_MARKER_UPPERCASE(R.string.i18n_settings_nasalMarkerUppercase),
     SETTINGS_NASAL_MARKER_UPPERCASE_CAPITAL(R.string.i18n_settings_nasalMarkerUppercaseCapital),
     SETTINGS_NASAL_MARKER_UPPERCASE_SMALL(R.string.i18n_settings_nasalMarkerUppercaseSmall),
+    SETTINGS_KHINSIANN_IN_HANJI(R.string.i18n_settings_khinsiannInHanji),
+    SETTINGS_KHINSIANN_IN_HANJI_INFO(R.string.i18n_settings_khinsiannInHanjiInfo),
     SETTINGS_TPS_OR_MAPS_TO_E_R(R.string.i18n_settings_tpsOrMapsToER),
     SETTINGS_TPS_OR_MAPS_TO_E_R_INFO(R.string.i18n_settings_tpsOrMapsToERInfo),
     SETTINGS_RESET_SETTINGS(R.string.i18n_settings_resetSettings),

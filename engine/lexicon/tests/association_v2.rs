@@ -79,3 +79,24 @@ fn v1_file_rejected_with_rebuild_hint() {
     assert!(msg.contains("v1→v2"), "marker missing: {msg}");
     assert!(msg.contains("make dict"), "rebuild guidance missing: {msg}");
 }
+
+#[test]
+fn lookup_associations_strips_khinsiann_from_previous_word() {
+    let key = word_key("會記得", "ē-kì--tit");
+    let raw = build_tkwa(
+        2,
+        &[
+            ("得", &[(0x0001, 5, "了", "liáu")]),
+            (key.as_str(), &[(0x0001, 50, "伊", "i")]),
+        ],
+    );
+    let path = write_temp("assoc-khinsiann-lookup.bin", &raw);
+    let reader = AssociationReader::open(&path).expect("v2 opens");
+
+    let hits = lexicon::search::lookup_associations("會記--得", "ē-kì--tit", 10, u32::MAX, &reader)
+        .expect("lookup");
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].candidate_word, "伊");
+    assert_eq!(hits[0].candidate_tl, "i");
+    assert_eq!(hits[0].previous_word, "會記--得");
+}
