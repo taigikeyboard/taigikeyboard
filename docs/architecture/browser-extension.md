@@ -2,7 +2,7 @@
 
 > **Type**: Design record + roadmap
 > **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `lexical`, `codemirror`, `editcontext`, `hidden field`, `wasm`, `wasm2js`, `content security policy`, `learning`
-> **Status**: Chrome Phases 1–2 done 2026-11-14 (issue #864): typing, per-site access, per-tab mode, status, shared learning, CodeMirror 5 / 6 support and canvas / hidden-field detection pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Not published.
+> **Status**: Chrome Phases 1–2 done 2026-11-14 (issue #864): typing, per-site access, per-tab mode, status, shared learning, CodeMirror 5 / 6 support and canvas / hidden-field detection pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Not in any store; the nightly channel carries an unpacked build for testers (`nightly-builds.md`).
 > **Siblings**: `web-roadmap.md` (the page and the wasm engine this reuses), `chromeos-roadmap.md` (the ChromeOS system input method, a separate product).
 
 ---

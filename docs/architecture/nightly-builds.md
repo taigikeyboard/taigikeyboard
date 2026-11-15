@@ -1,7 +1,8 @@
-# Nightly builds — unsigned desktop + ChromeOS builds of `main`
+# Nightly builds — unsigned desktop + ChromeOS builds and the browser extension of `main`
 
 Every night `.github/workflows/desktop-nightly.yml` builds `main` for macOS,
-Windows, Linux and ChromeOS and overwrites the files at
+Windows, Linux and ChromeOS, plus the browser extension
+(`browser-extension.md`), and overwrites the files at
 the root of `https://nightly.taigikeyboard.tw/`. The Nightly group of the
 website's download center (`https://taigikeyboard.tw/#download`) links them
 under those fixed URLs. A nightly build is a test build, not a release: it has no draft, no
@@ -14,6 +15,7 @@ as an update. The release flow (`desktop-release.md`) is unchanged by it.
 |---|---|---|
 | `plan` | `contents: read` | `tools/release/nightly-release.sh check` reads the live `build.json` anonymously. If it already names `main`, nothing is built (`force` overrides). A 404, a network error or an unreadable file means build |
 | `macos` / `windows` / `linux` / `chromeos` | `contents: read` in the jobs that run | The same four build workflows the train calls, with `build_only: true` and `source_sha` = `main` |
+| `extension` | `contents: read` | `.github/workflows/extension-build.yml`: `make -C web extension`, artifact `extension-zip`. Its own workflow because the extension is in no release; the train never calls it |
 | `macos-package` | no secret | `macos/scripts/package-nightly.sh` wraps the ad-hoc signed bundle in an **unsigned** `.pkg`, using the same layout as a release (`macos/scripts/lib/installer-package.sh`, shared with `release-app.sh`), and fails if the package carries a signature |
 | `publish` | `nightly` environment | Runs only when every platform succeeded and the run is on `main` without `dry_run`. Renames each installer to its fixed name, uploads it with a `.sha256` receipt and `Cache-Control: no-cache`, reads it back anonymously, then writes `build.json` (`commit`, `version`, `built`) last |
 
@@ -30,6 +32,7 @@ of the same commit, so do not stage a hotfix at that hour.
 | `taigikeyboard-nightly.x86_64.rpm` | `sudo dnf reinstall ./taigikeyboard-nightly.x86_64.rpm` (or `install` when it is not installed) |
 | `taigikeyboard-nightly-x86_64.pkg.tar.zst` | `sudo pacman -U` reads the package metadata, not the file name, and reinstalls the same version |
 | `TaigiKeyboard-nightly-chromeos.zip` | Unzip it, then use **Load unpacked** in `chrome://extensions` with Developer mode on. The manifest has no `key`, so this copy gets its own extension ID: its settings and learned words are separate from the store copy |
+| `TaigiKeyboard-nightly-extension.zip` | The browser extension, desktop Chrome only (`browser-extension.md`; not in any store yet). Unzip it, then **Load unpacked** in `chrome://extensions` with Developer mode on. Nothing updates it: to take a newer night, unzip over the same folder and press **Reload** on its card. The manifest has no `key`, so Chrome derives the ID from the folder's path; the same folder keeps the ID, and with it the sites already granted and the learned words, while a new folder starts from nothing |
 
 ## Version
 
@@ -56,7 +59,7 @@ verified.
 Everything stays inside free tiers (checked 2026-11-14):
 
 - GitHub Actions: the repository is public, so standard hosted runners and artifact storage cost nothing.
-- R2 free tier: 10 GB-month of storage, 1M Class A operations, 10M Class B operations, and free egress, counted per account. The fixed names keep about 290 MB stored. Uploads take about 60 Class A operations a night (files over 8 MB go up in multipart), which is about 1,800 a month.
+- R2 free tier: 10 GB-month of storage, 1M Class A operations, 10M Class B operations, and free egress, counted per account. The fixed names keep about 310 MB stored. Uploads take about 65 Class A operations a night (files over 8 MB go up in multipart), which is about 2,000 a month.
 - A night whose `main` has not changed builds nothing.
 
 ## Trying it
