@@ -1,4 +1,4 @@
-name: Security
+name: Rust dependency audit
 
 # cargo audit over all six Cargo workspaces, cargo deny over the engine and
 # macOS. Neither tool builds anything (both read Cargo.lock / `cargo
@@ -10,7 +10,7 @@ name: Security
 # `cargo deny` runs on the engine and macOS — `engine/deny.toml` carries the
 # licence allowlist and the wildcard-path exemption; macOS borrows it, as its
 # archive is the engine plus one shell crate. Windows' cargo deny lives in
-# security-windows.yml, gated on its own manifests. The desktop, Linux and web
+# rust-audit-windows.yml, gated on its own manifests. The desktop, Linux and web
 # workspaces have no deny.toml, so they get the advisory check alone;
 # their engine crates are path dependencies and are already covered by the
 # engine's run, but each lockfile pins its own third-party versions.
@@ -33,7 +33,7 @@ on:
       - 'macos/**/Cargo.toml'
       - 'web/Cargo.lock'
       - 'web/**/Cargo.toml'
-      - '.github/workflows/security.yml'
+      - '.github/workflows/rust-audit.yml'
   push:
     branches: [main]
     paths:
@@ -50,7 +50,7 @@ on:
       - 'macos/**/Cargo.toml'
       - 'web/Cargo.lock'
       - 'web/**/Cargo.toml'
-      - '.github/workflows/security.yml'
+      - '.github/workflows/rust-audit.yml'
 
 permissions:
   contents: read

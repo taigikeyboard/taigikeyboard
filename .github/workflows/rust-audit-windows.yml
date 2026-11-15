@@ -1,7 +1,7 @@
-name: Security (Windows)
+name: Rust dependency audit (Windows deny)
 
 # cargo deny over the Windows workspace (`windows/deny.toml`), split out of
-# security.yml because of its cost, not its rules. The workspace pins windows-rs
+# rust-audit.yml because of its cost, not its rules. The workspace pins windows-rs
 # by git rev, and `cargo metadata` must fetch that repository's whole history
 # (~1.3 GB) to resolve it: 4–5 min of a job whose other checks take seconds
 # (PR #756: 286 s of 304 s). Caching the git db would park 1.3 GB in a 10 GB
@@ -10,7 +10,7 @@ name: Security (Windows)
 # Gated on what can change its verdict: the Windows manifests and lockfile, its
 # deny.toml, and the engine / desktop manifests its path dependencies come from
 # (their licence fields and the wildcard-path exemption). Advisories are covered
-# for every workspace by security.yml's cargo audit, which keeps windows/.
+# for every workspace by rust-audit.yml's cargo audit, which keeps windows/.
 on:
   schedule:
     - cron: '0 0 * * 1'
@@ -22,7 +22,7 @@ on:
       - 'windows/**/Cargo.toml'
       - 'engine/**/Cargo.toml'
       - 'desktop/**/Cargo.toml'
-      - '.github/workflows/security-windows.yml'
+      - '.github/workflows/rust-audit-windows.yml'
   push:
     branches: [main]
     paths:
@@ -31,7 +31,7 @@ on:
       - 'windows/**/Cargo.toml'
       - 'engine/**/Cargo.toml'
       - 'desktop/**/Cargo.toml'
-      - '.github/workflows/security-windows.yml'
+      - '.github/workflows/rust-audit-windows.yml'
 
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 15
     env:
       # windows/rust-toolchain.toml lists the Windows targets; this job compiles
-      # nothing, so the runner image's stable is enough (security.yml's reason).
+      # nothing, so the runner image's stable is enough (rust-audit.yml's reason).
       RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

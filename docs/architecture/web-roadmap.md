@@ -266,7 +266,7 @@ Table rows 1–3 above, plus the plumbing a new platform needs. Row 3 adds one f
 - Pin `wasm-bindgen` and `wasm-bindgen-cli` to one exact version (`mise.toml`), plus `binaryen` for `wasm-opt`. The smoke test needs bindings, and hand-written alloc exports would need `unsafe`. Verify the current release when this phase starts.
 - `make web-check`: the wasm build plus a Node smoke test that installs the dictionaries and asserts top candidates for a fixed input list.
 - `tools/test_select.py`: a `web` platform, selected in the `DESKTOP_LINKED_CRATE` branch (line 381). `WIRE_SURFACE_CRATES` is the wrong hook: it leaves out `lexicon` and `composing`, which web links.
-- The sixth Cargo workspace everywhere the five are named: `.github/workflows/security.yml`, `build-artifacts.md` § Six Cargo workspaces, `rust-best-practices.md:81,87`.
+- The sixth Cargo workspace everywhere the five are named: `.github/workflows/rust-audit.yml`, `build-artifacts.md` § Six Cargo workspaces, `rust-best-practices.md:81,87`.
 - `.github/workflows/web.yml`. `AGENTS.md` Build & Test row and project structure. `docs/contributing/web-guidelines.md` with its `.claude/rules/` pointer. JS lint in `make lint`. `REVIEW.md` if it needs a tier.
 - A McBopomofoWeb card in `docs/references/mainstream-ime-comparison.md`, which has none today.
 

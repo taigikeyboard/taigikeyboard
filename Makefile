@@ -208,7 +208,7 @@ desktop-patch:
 # installer downloads anonymously, mirror it to dl.taigikeyboard.tw, point the
 # website at the mirror, wait for the live appcasts. Needs `aws` and the R2_*
 # credentials (docs/architecture/desktop-release.md). Publishing the release runs this automatically
-# (`.github/workflows/announce-release.yml`); this target is the same script by
+# (`.github/workflows/desktop-announce.yml`); this target is the same script by
 # hand, for a re-run after a failed job or an expired token.
 desktop-announce:
 	bash tools/release/announce-release.sh $(RELEASE_FLAGS)
@@ -272,7 +272,7 @@ version-mobile version-desktop:
 #   PS      every tracked .ps1 is ASCII (lint-ps1): Windows PowerShell 5.1 reads a
 #           BOM-less script in the ANSI code page, where a UTF-8 em dash decodes
 #           to a curly quote that ends the string it sits in.
-# CI runs the same checks: engine.yml, desktop.yml, macos.yml, web.yml, checks.yml,
+# CI runs the same checks: engine.yml, desktop-shared.yml, macos.yml, web.yml, codegen-lint.yml,
 # android.yml on pull requests; linux-build.yml nightly.
 RUST_WORKSPACES := engine desktop windows linux macos
 

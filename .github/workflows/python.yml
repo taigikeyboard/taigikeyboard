@@ -2,8 +2,9 @@ name: Python tools
 
 # The Python that builds the dictionary and cuts releases, gated on changes to
 # it: the dictionary pipeline's unit tests (several drive taigi-converter
-# through Node, so that submodule is checked out) and the release-notes and
-# Windows icon tools. Nothing is built; ~1 min.
+# through Node, so that submodule is checked out), the release-notes and
+# Windows icon tools, and the e2e analyzer over the committed scenarios.
+# Nothing is built; ~1 min.
 on:
   workflow_call:
     inputs:
@@ -24,6 +25,7 @@ on:
       - 'tools/mise-path-prefix.sh'
       - 'mise.toml'
       - 'tools/windows/**'
+      - 'e2e/**'
       - 'dictionary/sources/official/kautian/config.yaml'
       - '.github/workflows/kautian-watch.yml'
       - '.github/workflows/python.yml'
@@ -40,6 +42,7 @@ on:
       - 'tools/mise-path-prefix.sh'
       - 'mise.toml'
       - 'tools/windows/**'
+      - 'e2e/**'
       - 'dictionary/sources/official/kautian/config.yaml'
       - '.github/workflows/kautian-watch.yml'
       - '.github/workflows/python.yml'
@@ -53,7 +56,7 @@ concurrency:
 
 jobs:
   test:
-    name: dictionary + release tools
+    name: dictionary, release tools, e2e analyzer
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -100,6 +103,10 @@ jobs:
 
       - name: Kautian watch tests
         run: python -m pytest tools/kautian_watch_test.py -q
+
+      - name: e2e analyzer tests (also validate e2e/scenarios)
+        working-directory: e2e/analyzer
+        run: python -m unittest analyze_test
 
       - name: Platform test selection tests
         run: PYTHONPATH=tools python -m unittest test_select_test.PlatformSelectionTests

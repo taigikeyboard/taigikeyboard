@@ -79,7 +79,7 @@ terms as above.
 ## Rust dependencies
 
 The engine, macOS and Windows workspaces admit only OSI-approved licences,
-enforced in CI (`.github/workflows/security.yml`) by `cargo deny` against the
+enforced in CI (`.github/workflows/rust-audit.yml`) by `cargo deny` against the
 allowlist in `engine/deny.toml` and `windows/deny.toml`; the desktop and Linux
 workspaces have no `deny.toml` and get `cargo audit` (advisories) only. The one
 exception is `webpki-root-certs`, the Mozilla root certificates the updater's

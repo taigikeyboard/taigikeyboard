@@ -12,8 +12,8 @@
 # Generated files, committed so every platform builds without the generator.
 # `linguist-generated` collapses them in pull-request diffs and keeps them out of
 # the language statistics. Regenerate, never hand-edit:
-#   protobuf bindings  make protos         (checked in CI: checks.yml `protos`)
-#   i18n resources     make i18n           (checked in CI: checks.yml `i18n`)
+#   protobuf bindings  make protos         (checked in CI: codegen-lint.yml `protos`)
+#   i18n resources     make i18n           (checked in CI: codegen-lint.yml `i18n`)
 #   dictionary         make dict
 android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/** linguist-generated
 ios/Sources/TaigiKeyboard/Engine/Generated/** linguist-generated

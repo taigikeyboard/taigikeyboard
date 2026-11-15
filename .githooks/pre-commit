@@ -2,7 +2,7 @@
 # Blocks a commit that stages a credential or a personal identifier. Activated per
 # clone by `make hooks`, which sets core.hooksPath; a clone that never runs it
 # commits with no local gate, and `--no-verify` skips it. The credential scan also
-# runs in CI (.github/workflows/secrets.yml); the personal-identifier check cannot,
+# runs in CI (.github/workflows/secret-scan.yml); the personal-identifier check cannot,
 # because its list is private (tools/secret-scan/private-denylist-scan.sh).
 #
 # The credential scan is tools/secret-scan/gitleaks-scan.sh, shared with `make scan-secrets`,

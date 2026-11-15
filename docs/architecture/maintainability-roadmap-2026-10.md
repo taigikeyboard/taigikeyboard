@@ -73,7 +73,7 @@ Active PR pointer: none (paused).
 
 **Deliberately not adopted / YAGNI**
 
-- Shared Swift package for iOS + macOS — closed by the maintainer 2026-10-04: of the 19 same-named Swift files only the 7 generated `*.pb.swift` (already diffed by `checks.yml`) and ~80 lines of `DisplayLanguage` are shared; every other twin genuinely diverged and each bridge is tied to its platform's own Rust archive.
+- Shared Swift package for iOS + macOS — closed by the maintainer 2026-10-04: of the 19 same-named Swift files only the 7 generated `*.pb.swift` (already diffed by `codegen-lint.yml`) and ~80 lines of `DisplayLanguage` are shared; every other twin genuinely diverged and each bridge is tied to its platform's own Rust archive.
 - macOS candidate-window geometry over desktop-core (~910 lines) — scoped out 2026-10-02; macOS update flow over `taigi-desktop-update` — three recorded blockers (`2026-10-02-macos-desktop-core-inventory.md` §7).
 - One generated FFI header for the three desktops — consumers differ (Swift vs C vs in-process); rejected in `macos-desktop-core-roadmap.md` § Deliberately not adopted (hand-written C ABI).
 - Removing the ranker `(display, "")` bucket — it is the identity of a reading-less OOV pick, not a compat fallback; comment fix only (H).

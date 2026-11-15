@@ -10,7 +10,7 @@
 # stages each platform's installer on a DRAFT release, which no user can reach.
 # Between the two halves beta testers use the build; `desktop-publish.yml`
 # publishes the month's draft on the 5th (a patch is published by hand).
-# Publishing is what fires `.github/workflows/announce-release.yml`, which runs
+# Publishing is what fires `.github/workflows/desktop-announce.yml`, which runs
 # this; `make desktop-announce` is the same thing by hand.
 #
 #   1. refuse while the release is still a draft — a manifest naming a draft

@@ -3,7 +3,7 @@ name: Desktop publish
 # The monthly desktop publish (release-automation-roadmap.md, Phase 6): 09:00
 # Asia/Taipei on the 5th, the draft desktop-train.yml staged on the 1st is
 # published. Gate rules: desktop-release.md § The flow. Two approvals of the
-# `release` environment (D5): `publish` here, then announce-release.yml, which
+# `release` environment (D5): `publish` here, then desktop-announce.yml, which
 # publishing fires — the App token publishes because GitHub starts no workflow
 # for an event GITHUB_TOKEN caused (the announcement).
 #

@@ -217,7 +217,7 @@ def add_engine_path(path: str, graph: EngineGraph, effects: Effects) -> None:
         effects.wire_surface = True
         return
     if path == "engine/deny.toml":
-        effects.notes.append("engine/deny.toml: cargo-deny runs in CI (security.yml)")
+        effects.notes.append("engine/deny.toml: cargo-deny runs in CI (rust-audit.yml)")
         return
     crate = graph.crate_of(path)
     if crate is None:

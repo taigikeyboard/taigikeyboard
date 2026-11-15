@@ -13,7 +13,7 @@ tool generates the platform artifacts; **do not hand-edit the generated files.**
 Staleness is guarded automatically by `tools/i18n/check.py` (fails when any committed artifact differs
 from what `i18n/*.json` generates):
 
-- **CI** — the `i18n` job of `.github/workflows/checks.yml` runs `test_i18n.py` + `check.py` on every
+- **CI** — the `i18n` job of `.github/workflows/codegen-lint.yml` runs `test_i18n.py` + `check.py` on every
   PR / push that touches `i18n/**`, `tools/i18n/**` or `ios/Localizable.xcstrings`. This is the only
   gate for iOS, which has no build-time guard.
 - **Android** — the Gradle `checkI18nGenerated` task runs `check.py` on `preBuild`, so

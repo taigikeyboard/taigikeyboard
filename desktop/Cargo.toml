@@ -24,7 +24,7 @@ members = [
 version = "3.9.0"
 edition = "2021"
 # The rustc the latest Ubuntu ships, so a distribution build can use it (#283);
-# the `msrv` job in .github/workflows/desktop.yml holds it.
+# the `msrv` job in .github/workflows/desktop-shared.yml holds it.
 rust-version = "1.93"
 license = "Apache-2.0"
 repository = "https://github.com/taigikeyboard/taigikeyboard"
