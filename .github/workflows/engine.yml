@@ -24,6 +24,9 @@ on:
       - 'dictionary/output/dictionary.csv'
       - 'assets/dictionaries/**'
       - '.github/actions/setup-protoc/**'
+      - '.github/actions/setup-rust/**'
+      - 'rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - 'mise.toml'
       - '.github/workflows/engine.yml'
   push:
@@ -33,6 +36,9 @@ on:
       - 'dictionary/output/dictionary.csv'
       - 'assets/dictionaries/**'
       - '.github/actions/setup-protoc/**'
+      - '.github/actions/setup-rust/**'
+      - 'rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - 'mise.toml'
       - '.github/workflows/engine.yml'
 
@@ -48,9 +54,6 @@ jobs:
     name: cargo test + clippy + fmt
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      # Mirrors `channel` in engine/rust-toolchain.toml and windows/rust-toolchain.toml.
-      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -60,14 +63,11 @@ jobs:
         uses: ./.github/actions/setup-protoc
 
       # rust-toolchain.toml lists the iOS / macOS / Android targets as well;
-      # rustup would install them all on first use. RUSTUP_TOOLCHAIN (job env
-      # above) overrides the file, so only the host target is installed —
-      # the one a test run links.
-      - name: Install the toolchain (host target only)
-        run: |
-          set -euo pipefail
-          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
-          cargo --version && rustc --version && protoc --version
+      # setup-rust installs the pinned version for the host target only — the
+      # one a test run links.
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt,clippy
 
       # Cached across runs by Cargo.lock hash. The workspace's own crates are
       # rebuilt every time; only dependencies come from the cache. Every
@@ -136,8 +136,6 @@ jobs:
     name: e2e trace stays out of release
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -146,8 +144,7 @@ jobs:
       - name: Install protoc
         uses: ./.github/actions/setup-protoc
 
-      - name: Install the toolchain (host target only)
-        run: rustup toolchain install stable --profile minimal --no-self-update
+      - uses: ./.github/actions/setup-rust
 
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:

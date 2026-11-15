@@ -28,6 +28,9 @@ on:
       - 'assets/symbols/**'
       - 'assets/fonts/font/**'
       - '.github/actions/setup-protoc/**'
+      - '.github/actions/setup-rust/**'
+      - 'rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - 'mise.toml'
       - '.github/workflows/macos.yml'
   push:
@@ -44,6 +47,9 @@ on:
       - 'assets/symbols/**'
       - 'assets/fonts/font/**'
       - '.github/actions/setup-protoc/**'
+      - '.github/actions/setup-rust/**'
+      - 'rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - 'mise.toml'
       - '.github/workflows/macos.yml'
 
@@ -60,9 +66,8 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 40
     env:
-      # Overrides macos/rust-toolchain.toml's target list (both macOS
-      # architectures), so only the host target — the one built here — is installed.
-      RUSTUP_TOOLCHAIN: stable
+      # setup-rust installs only the host target — the one built here — not
+      # macos/rust-toolchain.toml's two macOS architectures.
       TAIGI_MACOS_TARGETS: aarch64-apple-darwin
       # Test build only: fat LTO with one codegen unit (macos/Cargo.toml's
       # release profile) spends ~45 s linking an archive `swift test` links
@@ -78,12 +83,10 @@ jobs:
       - name: Install protoc
         uses: ./.github/actions/setup-protoc
 
-      - name: Install the toolchain (host target only)
-        run: |
-          set -euo pipefail
-          rustup toolchain install stable --profile minimal --no-self-update
-          cargo --version && rustc --version && protoc --version
-          xcodebuild -version && swift --version
+      - uses: ./.github/actions/setup-rust
+
+      - name: Record Xcode
+        run: xcodebuild -version && swift --version
 
       # The archive builds in the macOS workspace (macos/target), not the engine's.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
@@ -132,20 +135,17 @@ jobs:
     name: macOS Rust (test, clippy, fmt, trace guard)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    env:
-      # Overrides macos/rust-toolchain.toml's darwin target list.
-      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install protoc
         uses: ./.github/actions/setup-protoc
 
-      - name: Install the toolchain (host target only)
-        run: |
-          set -euo pipefail
-          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
-          cargo --version && rustc --version && protoc --version
+      # The pinned version, host target only — not macos/rust-toolchain.toml's
+      # darwin targets.
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt,clippy
 
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
