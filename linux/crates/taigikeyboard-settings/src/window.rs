@@ -425,6 +425,18 @@ impl SettingsWindow {
         self.show_pane(self.current.get());
     }
 
+    /// Custom Dictionary's list, reloaded: another page (Learning Records'
+    /// add) wrote a word into the store it lists. The page loads once, when
+    /// it is built, and would otherwise keep the rows it read before.
+    pub fn reload_custom_dictionary(&self) {
+        for page in self.pages.borrow().iter() {
+            if let Some(dictionary) = page.state::<pages::custom_dictionary::CustomDictionaryPage>()
+            {
+                dictionary.reload();
+            }
+        }
+    }
+
     /// Every row follows the document (and the recorder) as it is now.
     fn refresh_pages(self: &Rc<Self>) {
         let document = self.writer.borrow().document().clone();
@@ -597,6 +609,12 @@ impl Shell {
     /// What a page has to say after a job, as a toast.
     pub fn report(&self, message: &PageMessage, strings: &StringResolver) {
         self.toast(&message.title(strings), message.detail(strings).as_deref());
+    }
+
+    pub fn reload_custom_dictionary(&self) {
+        if let Some(shell) = self.0.upgrade() {
+            shell.reload_custom_dictionary();
+        }
     }
 
     pub fn window(&self) -> Option<adw::ApplicationWindow> {

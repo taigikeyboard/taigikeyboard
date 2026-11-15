@@ -22,7 +22,7 @@ use crate::winui::list_pager::{
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::pages::choice_row;
-use crate::winui::pages::custom_dictionary::{word_dialog, EntryField};
+use crate::winui::pages::custom_dictionary::{self, word_dialog, EntryField};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
@@ -115,6 +115,9 @@ pub struct LearningRecordsModel {
     /// The page's one work slot: the job it waits on, and whether the
     /// overlay shows.
     job: JobState,
+    /// Whether the job `job` waits on files a word in the custom
+    /// dictionary, so its landing reloads that page too.
+    is_job_custom_dictionary_write: bool,
 }
 
 impl LearningRecordsModel {
@@ -131,6 +134,7 @@ impl LearningRecordsModel {
             editing: None,
             adding: None,
             job: JobState::default(),
+            is_job_custom_dictionary_write: false,
         }
     }
 }
@@ -260,7 +264,7 @@ pub fn update(
             if result != ContentDialogResult::Primary || roman.trim().is_empty() {
                 return;
             }
-            begin_job(model, context, move || {
+            begin_job_then(model, context, true, move || {
                 add_to_custom_dictionary_job(record, &roman, &hanji)
             });
         }
@@ -297,6 +301,14 @@ pub fn update(
             }
             if is_reload_wanted {
                 load(model, context);
+            }
+            // The word lands on Custom Dictionary without leaving for it:
+            // that page loads once, on its first show, and would otherwise
+            // keep the rows it read before the add.
+            if std::mem::take(&mut model.is_job_custom_dictionary_write) {
+                context.sender().send(WindowMessage::CustomDictionary(
+                    custom_dictionary::Message::Reload,
+                ));
             }
         }
         Message::ShowBusy(generation) => {
@@ -356,7 +368,19 @@ fn begin_job(
     context: &ComponentContext<SettingsWindow>,
     job: impl FnOnce() -> JobOutcome + Send + 'static,
 ) {
-    list_pager::spawn_job::<LearningRecord>(
+    begin_job_then(model, context, false, job);
+}
+
+/// `begin_job`; `writes_custom_dictionary` also reloads Custom Dictionary
+/// once the job lands. Set only for a job that started — one refused
+/// because another holds the slot never lands.
+fn begin_job_then(
+    model: &mut LearningRecordsModel,
+    context: &ComponentContext<SettingsWindow>,
+    writes_custom_dictionary: bool,
+    job: impl FnOnce() -> JobOutcome + Send + 'static,
+) {
+    let has_started = list_pager::spawn_job::<LearningRecord>(
         &mut model.job,
         context,
         job,
@@ -365,6 +389,9 @@ fn begin_job(
         },
         |generation| WindowMessage::LearningRecords(Message::ShowBusy(generation)),
     );
+    if has_started {
+        model.is_job_custom_dictionary_write = writes_custom_dictionary;
+    }
 }
 
 pub fn view(
