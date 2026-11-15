@@ -1,0 +1,61 @@
+name: CI alerts
+
+# Posts one Discord message (#ci-alerts, secret DISCORD_CI_ALERTS_WEBHOOK) when a
+# release, publish or deploy run fails — the only failure reporter for these
+# workflows. Setup: docs/architecture/desktop-release.md § One-time: the
+# failure channel.
+#
+# - `workflows:` matches each workflow's `name:`, not its file: a rename must
+#   update this list.
+# - A reusable workflow called with `uses:` fires no event of its own; its
+#   caller's run reports it.
+# - Pull-request and push runs are CI gates, not releases; cancelled runs are
+#   superseded by design. Neither alerts.
+# - `workflow_run` runs this file from the default branch only. No checkout:
+#   no repository code runs here, and run fields reach the shell only as env.
+on:
+  workflow_run:
+    workflows:
+      - Desktop train
+      - Desktop publish
+      - Desktop announce
+      - Desktop beta
+      - Desktop nightly
+      - Release identity check
+      - Web
+      - macOS build
+      - Windows build
+      - Linux build
+      - ChromeOS build
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  notify:
+    name: post a failed release run to Discord
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      contains(fromJSON('["failure", "timed_out", "startup_failure"]'), github.event.workflow_run.conclusion) &&
+      !contains(fromJSON('["pull_request", "push"]'), github.event.workflow_run.event)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_CI_ALERTS_WEBHOOK }}
+          TITLE: ${{ github.event.workflow_run.name }} ${{ github.event.workflow_run.conclusion }}
+          RUN_TITLE: ${{ github.event.workflow_run.display_title }}
+          DETAIL: ${{ github.event.workflow_run.event }} on ${{ github.event.workflow_run.head_branch }} · ${{ github.event.workflow_run.triggering_actor.login }}
+          URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::warning::DISCORD_CI_ALERTS_WEBHOOK not set; skipping"
+            exit 0
+          fi
+          jq -n --arg title "$TITLE" --arg url "$URL" \
+                --arg desc "$RUN_TITLE"$'\n'"$DETAIL" \
+            '{allowed_mentions: {parse: []},
+              embeds: [{title: ($title | .[0:256]), url: $url,
+                        description: ($desc | .[0:4096]), color: 15158332}]}' \
+          | curl -fsS --retry 3 -H 'Content-Type: application/json' -d @- "$WEBHOOK"

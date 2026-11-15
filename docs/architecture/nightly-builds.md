@@ -17,6 +17,8 @@ as an update. The release flow (`desktop-release.md`) is unchanged by it.
 | `macos-package` | no secret | `macos/scripts/package-nightly.sh` wraps the ad-hoc signed bundle in an **unsigned** `.pkg`, using the same layout as a release (`macos/scripts/lib/installer-package.sh`, shared with `release-app.sh`), and fails if the package carries a signature |
 | `publish` | `nightly` environment | Runs only when every platform succeeded and the run is on `main` without `dry_run`. Renames each installer to its fixed name, uploads it with a `.sha256` receipt and `Cache-Control: no-cache`, reads it back anonymously, then writes `build.json` (`commit`, `version`, `built`) last |
 
+A failed run posts to #ci-alerts (`.github/workflows/ci-alerts.yml`).
+
 The schedule is 00:41 Asia/Taipei. `windows-build.yml` cancels an in-progress run
 of the same commit, so do not stage a hotfix at that hour.
 

@@ -267,35 +267,23 @@ jobs:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
           discord-webhook: ${{ secrets.DISCORD_BETA_WEBHOOK }}
 
+  # A failed run is reported to Discord by ci-alerts.yml.
   finish:
-    name: clean up, report a failure
+    name: clean up
     needs: [plan, cut, draft, macos, windows, linux, chromeos, sign-and-beta]
-    if: always() && github.repository == 'taigikeyboard/taigikeyboard'
+    if: >-
+      always() && github.repository == 'taigikeyboard/taigikeyboard' &&
+      needs.plan.outputs.scratch_branch != ''
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       # Deleting the scratch branch.
       contents: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          sparse-checkout: tools/release
-
       - name: Delete the scratch branch
-        if: needs.plan.outputs.scratch_branch != ''
         env:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ needs.plan.outputs.scratch_branch }}
         # Gone already when a re-run of failed jobs repeats this one.
         continue-on-error: true
         run: gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH"
-
-      - name: Report a failure
-        if: always() && contains(needs.*.result, 'failure')
-        env:
-          DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          VERSION: ${{ needs.plan.outputs.version }}
-        run: |
-          bash tools/release/desktop-train.sh notify "Desktop train ${VERSION:-cut} failed: $RUN_URL"
