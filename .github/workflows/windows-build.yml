@@ -40,21 +40,11 @@ on:
         required: false
         type: boolean
         default: false
-  # Release-only. A desktop release is staged as a draft and published by hand;
-  # publishing is what creates the `desktop-<version>` tag, and this fires on
-  # that publish rather than on the tag push — a release published from a draft
-  # whose tag was pushed earlier creates no new tag, and a tag-push trigger
-  # would miss it. Everyday pushes to `main` and pull requests do not build
-  # Windows: `make windows-check` stays the host-side gate the maintainer runs
-  # by hand.
-  #
-  # The run rebuilds the installer on a GitHub-hosted agent for provenance and
-  # publishes nothing; the installer users download is the dispatched run's. When
-  # SignPath signing lands it goes into that dispatched run, before the attach
-  # step (docs/architecture/windows-release.md § Building on a GitHub-hosted
-  # runner).
-  release:
-    types: [published]
+  # No push / pull_request trigger: `make windows-check` stays the host-side
+  # gate the maintainer runs by hand. The installer users download is the
+  # train's (or a dispatch's) run; when SignPath signing lands it goes into that
+  # run, before the attach step (docs/architecture/windows-release.md § Building
+  # on a GitHub-hosted runner).
 
 permissions:
   # Read-only by default: the build and smoke jobs run whatever ref was
@@ -95,15 +85,11 @@ jobs:
     # Only this repository builds, and only for the desktop train (and its
     # nightly test builds, desktop-nightly.yml). A Windows
     # runner is the most expensive gate this project has: a fork has nothing to
-    # sign with, and a mobile release — should one ever be published here — has
-    # no Windows installer in it. Any ref may be dispatched, so a branch that
+    # sign with. Any ref may be dispatched, so a branch that
     # changes the release path can be built before it merges; only a `main`
     # run attaches anything (the `attach` job), and this job holds a read-only
     # token with no credential left in the checkout.
-    if: >-
-      github.repository == 'taigikeyboard/taigikeyboard' &&
-      (github.event_name != 'release' ||
-       startsWith(github.event.release.tag_name, 'desktop-'))
+    if: github.repository == 'taigikeyboard/taigikeyboard'
     timeout-minutes: 60
     steps:
       # core.autocrlf must be off BEFORE the checkout. Everything here is
@@ -320,11 +306,9 @@ jobs:
           path: distribution
 
       # The previous release is the newest published (not draft, not
-      # prerelease) `desktop-*` release carrying an installer — except, on a
-      # `release: published` run, the release being rebuilt (its own tag). A
-      # dispatched run keeps the newest even when it builds the same version
-      # (main before a bump): that is the upgrade users are on. Its digest is
-      # GitHub's own `digest` field on the asset,
+      # prerelease) `desktop-*` release carrying an installer, even when this
+      # run builds the same version (main before a bump): that is the upgrade
+      # users are on. Its digest is GitHub's own `digest` field on the asset,
       # so nothing here moves by hand at each release. One page of 100 releases
       # reaches back far further than any desktop release gap.
       - name: Install over the previous release
@@ -336,9 +320,8 @@ jobs:
           $installer = Get-ChildItem distribution\TaigiKeyboard-*.exe | Select-Object -First 1
           $releases = Invoke-RestMethod -Uri "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/releases?per_page=100" -Headers @{
             Authorization = "Bearer $env:GH_TOKEN"; Accept = 'application/vnd.github+json'; 'X-GitHub-Api-Version' = '2022-11-28' }
-          $rebuilt = if ($env:GITHUB_EVENT_NAME -eq 'release') { $env:GITHUB_REF_NAME } else { '' }
           $asset = $releases |
-            Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -like 'desktop-*' -and $_.tag_name -ne $rebuilt } |
+            Where-Object { -not $_.draft -and -not $_.prerelease -and $_.tag_name -like 'desktop-*' } |
             Sort-Object { [DateTime] $_.published_at } -Descending |
             ForEach-Object { $_.assets } |
             Where-Object { $_.name -match '^TaigiKeyboard-[0-9.]+\.exe$' } |
@@ -421,10 +404,7 @@ jobs:
 
   # Only a run on `main` handed a staged commit (stage-desktop.sh's dispatch,
   # the train's call) stages a release, and only once both installer smoke
-  # tests passed. A run triggered by `release: published` is the provenance
-  # rebuild — the release it would attach to is already public, and its
-  # installer is the one people are downloading. A branch run builds and
-  # tests, and attaches nothing.
+  # tests passed. A branch run builds and tests, and attaches nothing.
   attach:
     name: Attach the installer to the draft release
     needs: [build, installer-x64, installer-arm64]

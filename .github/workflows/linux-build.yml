@@ -17,18 +17,10 @@ name: Linux build
 #
 # Budget: ~4 min warm, ~10 min cold (dependency compile + apt).
 on:
-  # A publish rebuilds for provenance and keeps the artifact; it never
-  # touches the published assets (`desktop-release.md`: what was tested is
-  # what ships).
-  release:
-    types: [published]
-  # USER 2026-09-25: schedule, not per pull request ("make the linux build
-  # scheduled too, to cut MR wait time"), like linux-e2e.yml. Nightly at
-  # 02:30 Taiwan time (18:30 UTC), half an hour before the e2e run; a failure mails whoever last edited the
-  # cron. Before merging a Linux change, `make linux-check` locally or a manual
+  # Not per pull request (USER 2026-09-25: "to cut MR wait time"). The daily
+  # run is desktop-nightly.yml's call, which builds main whenever it moved;
+  # before merging a Linux change, `make linux-check` locally or a manual
   # dispatch of this workflow.
-  schedule:
-    - cron: '30 18 * * *'
   workflow_dispatch:
     inputs:
       source_sha:
@@ -66,10 +58,6 @@ jobs:
   build:
     name: build + test + ibus smoke
     runs-on: ubuntu-24.04
-    # Only the desktop train: a mobile publish has no Linux package in it.
-    if: >-
-      github.event_name != 'release' ||
-      startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -245,12 +233,10 @@ jobs:
 
   # linux/Cargo.toml's `rust-version` sits below stable so a distribution
   # build can use the system rustc; `build` above runs stable and never
-  # exercises it. Read from the manifest, as engine.yml's `msrv` does. Not on
-  # a release: the floor gates changes, not what ships.
+  # exercises it. Read from the manifest, as engine.yml's `msrv` does.
   msrv:
     name: cargo check on the declared rust-version
     runs-on: ubuntu-24.04
-    if: github.event_name != 'release'
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -290,9 +276,6 @@ jobs:
     name: Fedora .rpm
     runs-on: ubuntu-24.04
     container: fedora:44
-    if: >-
-      github.event_name != 'release' ||
-      startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 40
     steps:
       - name: Install build dependencies
@@ -342,9 +325,6 @@ jobs:
     name: Arch .pkg.tar.zst
     runs-on: ubuntu-24.04
     container: archlinux:latest
-    if: >-
-      github.event_name != 'release' ||
-      startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 40
     steps:
       - name: Install build dependencies

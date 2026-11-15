@@ -185,8 +185,7 @@ upgrade from the last release on `windows-2025`, each uninstalled clean
 (`windows/scripts/smoke-installer.ps1`, `smoke-activation.ps1`) — refusing a
 published release or a draft on another commit. A run without `source_sha`, or
 dispatched on any other branch,
-builds and smoke-tests and attaches nothing; a run fired by `release:
-published` rebuilds for provenance and publishes nothing.
+builds and smoke-tests and attaches nothing.
 
 It exists for provenance, not convenience. SignPath Foundation signs only "a
 valid, automated build resulting from the source code at the noted source code

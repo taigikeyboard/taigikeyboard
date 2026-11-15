@@ -25,7 +25,7 @@ FONTS := target/fonts
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site site-stage chromeos extension extension-stage extension-fixtures extension-e2e serve test smoke e2e check-live typecheck lint fmt check clean
+.PHONY: help bindgen-version i18n-check build site site-stage chromeos extension extension-stage extension-fixtures extension-e2e serve test smoke e2e check-live typecheck lint lint-rust-biome fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -41,6 +41,7 @@ help:
 	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make typecheck - TypeScript checkJs (--noEmit) over all handwritten JS"
 	@echo "  make lint    - clippy -D warnings, typecheck, biome, fmt --check"
+	@echo "  make lint-rust-biome - lint without typecheck (CI runs tsc in its own job)"
 	@echo "  make fmt     - cargo fmt, biome format"
 
 # The CLI refuses a module built against another crate version, with an error
@@ -192,7 +193,10 @@ typecheck: node_modules/.package-lock.json
 
 # `mmap-host` by name: its wasm backend compiles only for this target, so the
 # engine workspace's clippy never reads it.
-lint: typecheck
+lint: typecheck lint-rust-biome
+
+# `lint` minus `typecheck`: CI runs tsc in its own job (web.yml `typecheck`).
+lint-rust-biome:
 	cargo clippy --workspace --target $(TARGET) --locked -- -D warnings
 	cargo clippy -p mmap-host --target $(TARGET) --locked -- -D warnings
 	biome check .

@@ -126,8 +126,8 @@ That is packaging proof only; typing on a real desktop is S74.
 `.github/workflows/linux-build.yml` is the Linux half of a desktop release,
 the way `windows-build.yml` is the Windows half:
 
-- It runs on a `desktop-<version>` publish, on a nightly `schedule` and on
-  `workflow_dispatch` — never per pull request: the pre-PR gate for a Linux
+- It runs when the monthly train or the nightly channel (`desktop-nightly.yml`)
+  calls it, and on `workflow_dispatch` — never per pull request: the pre-PR gate for a Linux
   change is `make linux-check` locally (or a manual dispatch). Every run
   builds the three packages and keeps them as workflow artifacts (`linux-deb`,
   `linux-rpm`, `linux-arch`), checks the expected paths are inside the `.deb`,
@@ -148,8 +148,6 @@ the way `windows-build.yml` is the Windows half:
   `Version` / `Architecture` and that the build rewrote nothing tracked
   (`Cargo.lock` included — `make version-desktop` refreshes the members'
   versions in it).
-- A `desktop-<version>` **publish** rebuilds for provenance and keeps the
-  artifact; the published assets stay what the maintainer tested.
 
 Publishing stays a person's (`desktop-release.md`). No signing: a `.deb`
 downloaded from the project page is verified by its `.sha256`, as the unsigned
