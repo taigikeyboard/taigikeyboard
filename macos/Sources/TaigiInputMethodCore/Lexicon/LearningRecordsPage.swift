@@ -2,8 +2,8 @@
 //
 // The Custom Dictionary page's shape (`CustomDictionaryPage.swift`) over the
 // engine's learning stores: a kind and an order picker over a filter, a paged
-// table, a record sheet (the count, and for a row that can be added, its word
-// filed in the custom dictionary in the same sheet) and `−`, then Delete
+// table, a record sheet (the count, and for a row that can be added an Add to
+// Custom Dictionary tab beside it) and `−`, then Delete
 // Learning Records, which empties
 // every learning store whichever kind is on screen. Nothing is added here by
 // hand — a word the user wants is a custom word, so a listed row's word can be
@@ -387,12 +387,14 @@ struct LearningRecordsPage: View {
     }
 }
 
-/// One record's sheet: the word and its reading, the count as a field with a
-/// stepper beside it, and — for word frequency — the note that counts past
-/// 40 rank the same; for a row the engine says can be added, the Add Word
-/// fields too (typed form and word, for the user to tweak hyphens and
-/// capitals) with their own Add to Custom Dictionary button. Save writes the
-/// count; Add files the word. A sheet, as `CustomDictionaryEntrySheet` is.
+/// One record's sheet: the word and its reading, then the count as a field
+/// with a stepper beside it and — for word frequency — the note that counts
+/// past 40 rank the same. For a row the engine says can be added, a
+/// segmented control switches between that and Add to Custom Dictionary (the
+/// typed form and word, for the user to tweak hyphens and capitals) — one
+/// task on screen at a time — and the confirm button follows the tab: Save
+/// writes the count, Add files the word. A sheet, as
+/// `CustomDictionaryEntrySheet` is.
 struct LearningRecordCountSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(DisplayLanguageStore.self) private var language
@@ -401,6 +403,7 @@ struct LearningRecordCountSheet: View {
     /// commits only when it ends editing, and a click on Save does not end
     /// it — the count typed last would be lost.
     @State private var countText: String
+    @State private var tab = Tab.count
     @State private var roman: String
     @State private var hanji: String
     private let record: Taigi_Engine_LearningRecord
@@ -408,6 +411,16 @@ struct LearningRecordCountSheet: View {
     private let onAdd: (String, String) -> Void
 
     private static let countRange = 1 ... LearningRecordsPageModel.maxCount
+
+    private enum Tab: Hashable {
+        case count
+        case add
+    }
+
+    /// The add tab is on screen — only ever on a row that can be added.
+    private var isAddTab: Bool {
+        record.canAddToCustomDictionary && tab == .add
+    }
 
     init(
         record: Taigi_Engine_LearningRecord,
@@ -451,32 +464,43 @@ struct LearningRecordCountSheet: View {
                 Text(verbatim: "\(record.text)  \(record.tl)")
                     .foregroundStyle(.secondary)
             }
-            Form {
-                Section {
-                    LabeledContent(language.string(.dictionaryLearningRecordsCount)) {
-                        HStack(spacing: 4) {
-                            TextField(language.string(.dictionaryLearningRecordsCount), text: $countText)
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 96)
-                            Stepper(
-                                language.string(.dictionaryLearningRecordsCount),
-                                value: stepperValue,
-                                in: Self.countRange,
-                            )
-                            .labelsHidden()
-                        }
-                    }
-                } footer: {
-                    if let note = LearningRecordsPageModel.countNoteKey(for: record.kind) {
-                        Text(language.string(note))
-                            .foregroundStyle(.secondary)
-                    }
+            if record.canAddToCustomDictionary {
+                Picker(selection: $tab) {
+                    Text(language.string(.dictionaryLearningRecordsEditCount)).tag(Tab.count)
+                    Text(language.string(.dictionaryLearningRecordsAddToCustomDictionary)).tag(Tab.add)
+                } label: {
+                    EmptyView()
                 }
-                if record.canAddToCustomDictionary {
-                    Section(language.string(.dictionaryLearningRecordsAddToCustomDictionary)) {
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+            Form {
+                if isAddTab {
+                    Section {
                         TextField(language.string(.dictionaryRomanLabel), text: $roman)
                         TextField(language.string(.dictionaryHanziLabel), text: $hanji)
+                    }
+                } else {
+                    Section {
+                        LabeledContent(language.string(.dictionaryLearningRecordsCount)) {
+                            HStack(spacing: 4) {
+                                TextField(language.string(.dictionaryLearningRecordsCount), text: $countText)
+                                    .labelsHidden()
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 96)
+                                Stepper(
+                                    language.string(.dictionaryLearningRecordsCount),
+                                    value: stepperValue,
+                                    in: Self.countRange,
+                                )
+                                .labelsHidden()
+                            }
+                        }
+                    } footer: {
+                        if let note = LearningRecordsPageModel.countNoteKey(for: record.kind) {
+                            Text(language.string(note))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -484,21 +508,23 @@ struct LearningRecordCountSheet: View {
             HStack {
                 Spacer()
                 Button(language.string(.commonCancel), role: .cancel) { dismiss() }
-                if record.canAddToCustomDictionary {
+                if isAddTab {
                     Button(language.string(.dictionaryLearningRecordsAddToCustomDictionary)) {
                         guard canAdd else { return }
                         onAdd(roman, hanji)
                         dismiss()
                     }
+                    .keyboardShortcut(.defaultAction)
                     .disabled(!canAdd)
+                } else {
+                    Button(language.string(.commonSave)) {
+                        guard let count else { return }
+                        onSave(count)
+                        dismiss()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(count == nil)
                 }
-                Button(language.string(.commonSave)) {
-                    guard let count else { return }
-                    onSave(count)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(count == nil)
             }
         }
         .padding(20)

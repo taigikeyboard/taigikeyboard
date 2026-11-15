@@ -3,8 +3,8 @@
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / delete pair — ✎ opens the record
-//! dialog, which edits the count and, for a row the engine says can be
-//! added, files its word in the custom dictionary in one place — — plus Add to Custom
+//! dialog: the count and, for a row the engine says can be added, an Add to
+//! Custom Dictionary tab beside it — — plus Add to Custom
 //! Dictionary, which opens Custom Dictionary's Add Word dialog over the
 //! row's word — and the pager under it, then Delete Learning Records under
 //! the card: it empties every learning store, whichever kind is on screen,
@@ -79,8 +79,10 @@ pub enum Message {
     /// The record dialog's word fields, for a row the engine says can be
     /// added.
     RecordWordFieldChanged(EntryField, String),
-    /// Primary (Save) writes the count; Secondary (Add to Custom
-    /// Dictionary) files the word as edited. Cancel does nothing.
+    /// The record dialog's tab, by the selector item's text.
+    RecordTabChanged(Option<String>),
+    /// Primary follows the tab: Save writes the count, Add to Custom
+    /// Dictionary files the word as edited. Cancel does nothing.
     CountDialogClosed(ContentDialogResult),
     /// Delete Learning Records runs on the press, no confirmation (USER
     /// 2026-10-16).
@@ -98,8 +100,10 @@ struct EditingCount {
     record: LearningRecord,
     /// What the field holds; `None` while it is cleared.
     count: Option<f64>,
-    /// `(roman, hanji)`; `None` hides the dialog's add section.
+    /// `(roman, hanji)`; `None` leaves the add tab out.
     word: Option<(String, String)>,
+    /// Which tab is on screen; only a row with `word` has the add tab.
+    is_add_tab: bool,
 }
 
 /// The row whose word is being filed in the Add Word dialog, and the word
@@ -232,6 +236,7 @@ pub fn update(
                     word: row
                         .can_add_to_custom_dictionary
                         .then(|| (row.tl.clone(), row.text.clone())),
+                    is_add_tab: false,
                     record: row.clone(),
                 });
             }
@@ -290,35 +295,43 @@ pub fn update(
                 }
             }
         }
+        Message::RecordTabChanged(text) => {
+            // The selector answers with the item's text: the add tab's is
+            // the label the view resolved from the same document.
+            let add_label = crate::presentation::strings_for(settings.document())
+                .resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary);
+            if let (Some(editing), Some(text)) = (model.editing.as_mut(), text) {
+                editing.is_add_tab = editing.word.is_some() && text == add_label;
+            }
+        }
         Message::CountDialogClosed(result) => {
             let Some(EditingCount {
                 record,
                 count,
                 word,
+                is_add_tab,
             }) = model.editing.take()
             else {
                 return;
             };
-            match result {
-                ContentDialogResult::Primary => {
-                    // The primary button is disabled while the field is
-                    // cleared, so this is the belt.
-                    let Some(count) = count.and_then(whole_count) else {
-                        return;
-                    };
-                    begin_job(model, context, move || set_count_job(record, count));
-                }
-                ContentDialogResult::Secondary => {
-                    // Disabled without a romanization, so this is the belt.
-                    let Some((roman, hanji)) = word.filter(|(roman, _)| !roman.trim().is_empty())
-                    else {
-                        return;
-                    };
-                    begin_job(model, context, move || {
-                        add_to_custom_dictionary_job(record, &roman, &hanji)
-                    });
-                }
-                _ => {}
+            if result != ContentDialogResult::Primary {
+                return;
+            }
+            if is_add_tab {
+                // Disabled without a romanization, so this is the belt.
+                let Some((roman, hanji)) = word.filter(|(roman, _)| !roman.trim().is_empty())
+                else {
+                    return;
+                };
+                begin_job(model, context, move || {
+                    add_to_custom_dictionary_job(record, &roman, &hanji)
+                });
+            } else {
+                // Disabled while the field is cleared, so this is the belt.
+                let Some(count) = count.and_then(whole_count) else {
+                    return;
+                };
+                begin_job(model, context, move || set_count_job(record, count));
             }
         }
         Message::ClearAll => begin_job(model, context, clear_all_job),
@@ -660,79 +673,104 @@ fn count_dialog(
             .into(),
         None => View::empty(),
     };
-    // The add section: the row's typed form and word, for the user to tweak
-    // (hyphens, capitals) before Add files it — on a row the engine says
-    // can be added only.
-    let word_fields = match &editing.word {
+    let count_field = NumberBox::new()
+        .minimum(1.0)
+        .maximum(MAX_COUNT as f64)
+        .value(editing.count)
+        .width(DIALOG_FIELD_WIDTH)
+        .on_value_changed(
+            context.callback(|count| WindowMessage::LearningRecords(Message::CountChanged(count))),
+        )
+        .slot(
+            NumberBoxSlot::Header,
+            strings.resolve(StringKey::DictionaryLearningRecordsCount),
+        );
+    let heading = TextBlock::new()
+        .text(format!("{}  {}", record.text, record.tl).trim().to_owned())
+        .text_wrapping(TextWrapping::Wrap)
+        .width(DIALOG_FIELD_WIDTH);
+    let count_label = strings.resolve(StringKey::DictionaryLearningRecordsEditCount);
+    let add_label = strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary);
+    // A row the engine says can be added gets two tabs — the count, and its
+    // word as the user edits it (hyphens, capitals) before Add files it —
+    // one task on screen at a time; the primary button follows the tab.
+    // Any other row shows the count alone.
+    let (content, primary_text, is_primary_enabled): (View, &str, bool) = match &editing.word {
         Some((roman, hanji)) => {
-            let field = |text: &str, field: EntryField, header: StringKey| {
-                TextBox::new()
-                    .text(text.to_owned())
-                    .width(DIALOG_FIELD_WIDTH)
-                    .on_text_changed(context.callback(move |text| {
-                        WindowMessage::LearningRecords(Message::RecordWordFieldChanged(field, text))
-                    }))
-                    .slot(TextBoxSlot::Header, strings.resolve(header))
+            let tab = |text: &'static str, is_selected: bool| {
+                KeyedView::new(
+                    text,
+                    SelectorBarItem::new().text(text).is_selected(is_selected),
+                )
             };
-            StackPanel::new()
-                .spacing(CONTROL_GAP)
-                .margin(Thickness::new(0.0, CONTROL_GAP, 0.0, 0.0))
-                .children((
-                    TextBlock::new()
-                        .text(
-                            strings
-                                .resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
-                        )
-                        .font_weight(FontWeight::SEMI_BOLD),
+            let selector = SelectorBar::new()
+                .on_selected_text_changed(context.callback(|text| {
+                    WindowMessage::LearningRecords(Message::RecordTabChanged(text))
+                }))
+                .collection_slot(
+                    SelectorBarSlot::Items,
+                    [
+                        tab(count_label, !editing.is_add_tab),
+                        tab(add_label, editing.is_add_tab),
+                    ],
+                );
+            let page: View = if editing.is_add_tab {
+                let field = |text: &str, field: EntryField, header: StringKey| {
+                    TextBox::new()
+                        .text(text.to_owned())
+                        .width(DIALOG_FIELD_WIDTH)
+                        .on_text_changed(context.callback(move |text| {
+                            WindowMessage::LearningRecords(Message::RecordWordFieldChanged(
+                                field, text,
+                            ))
+                        }))
+                        .slot(TextBoxSlot::Header, strings.resolve(header))
+                };
+                StackPanel::new().spacing(CONTROL_GAP).children((
                     field(roman, EntryField::Roman, StringKey::DictionaryRomanLabel),
                     field(hanji, EntryField::Hanji, StringKey::DictionaryHanziLabel),
                 ))
+            } else {
+                StackPanel::new()
+                    .spacing(CONTROL_GAP)
+                    .children((count_field, note))
+            };
+            let (text, is_enabled) = if editing.is_add_tab {
+                (add_label, !roman.trim().is_empty())
+            } else {
+                (
+                    strings.resolve(StringKey::CommonSave),
+                    editing.count.and_then(whole_count).is_some(),
+                )
+            };
+            (
+                StackPanel::new()
+                    .spacing(CONTROL_GAP)
+                    .children((heading, selector, page)),
+                text,
+                is_enabled,
+            )
         }
-        None => View::empty(),
+        None => (
+            StackPanel::new()
+                .spacing(CONTROL_GAP)
+                .children((heading, count_field, note)),
+            strings.resolve(StringKey::CommonSave),
+            editing.count.and_then(whole_count).is_some(),
+        ),
     };
-    let add_text = editing
-        .word
-        .as_ref()
-        .map(|_| strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary));
-    let can_add = editing
-        .word
-        .as_ref()
-        .is_some_and(|(roman, _)| !roman.trim().is_empty());
     ContentDialog::new()
-        .title(strings.resolve(StringKey::DictionaryLearningRecordsEditCount))
-        .primary_button_text(strings.resolve(StringKey::CommonSave))
-        .secondary_button_text_optional(add_text)
+        .title(count_label)
+        .primary_button_text(primary_text)
         .close_button_text(strings.resolve(StringKey::CommonCancel))
-        .is_primary_button_enabled(editing.count.and_then(whole_count).is_some())
-        .is_secondary_button_enabled(can_add)
+        .is_primary_button_enabled(is_primary_enabled)
         .is_open(true)
         .on_closed(
             context.callback(|result| {
                 WindowMessage::LearningRecords(Message::CountDialogClosed(result))
             }),
         )
-        .content(
-            StackPanel::new().spacing(CONTROL_GAP).children((
-                TextBlock::new()
-                    .text(format!("{}  {}", record.text, record.tl).trim().to_owned())
-                    .text_wrapping(TextWrapping::Wrap)
-                    .width(DIALOG_FIELD_WIDTH),
-                NumberBox::new()
-                    .minimum(1.0)
-                    .maximum(MAX_COUNT as f64)
-                    .value(editing.count)
-                    .width(DIALOG_FIELD_WIDTH)
-                    .on_value_changed(context.callback(|count| {
-                        WindowMessage::LearningRecords(Message::CountChanged(count))
-                    }))
-                    .slot(
-                        NumberBoxSlot::Header,
-                        strings.resolve(StringKey::DictionaryLearningRecordsCount),
-                    ),
-                note,
-                word_fields,
-            )),
-        )
+        .content(content)
 }
 
 #[cfg(test)]

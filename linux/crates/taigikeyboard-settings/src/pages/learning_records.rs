@@ -4,8 +4,8 @@
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / add-to-custom-dictionary / delete
 //! verbs, and the pager under it — ✎ or a double-click opens the record
-//! dialog, which edits the count and, for a row the engine says can be
-//! added, files its word in the custom dictionary in one place — then Delete Learning Records in its own
+//! dialog: the count and, for a row the engine says can be added, an Add to
+//! Custom Dictionary tab beside it — then Delete Learning Records in its own
 //! group: it empties every learning store, whichever kind is on screen, on
 //! the press. No add — a word the user wants is a custom word, which a
 //! listed row's word can become here.
@@ -463,14 +463,16 @@ impl LearningRecordsPage {
         });
     }
 
-    /// One record's dialog: the word and its reading as the body, a spin
-    /// row for the count — for word frequency, the note that counts past 40
-    /// rank the same — and, for a row that can become a custom word, the
-    /// Add Word fields (typed form and word, for the user to tweak hyphens
-    /// and capitals) with their own Add to Custom Dictionary response.
-    /// Save writes the count; Add files the word (and forgets a learned
-    /// phrase).
+    /// One record's dialog. For a row the engine says can be added, two
+    /// tabs — Edit Count and Add to Custom Dictionary — one task on screen
+    /// at a time, and the dialog's one confirm button follows the tab: Save
+    /// writes the count, Add files the word as edited (typed form and word,
+    /// for the user to tweak hyphens and capitals; a learned phrase is then
+    /// forgotten). Any other row shows the count alone. The count carries,
+    /// for word frequency, the note that counts past 40 rank the same.
     fn record_dialog(self: &Rc<Self>, record: LearningRecord) {
+        const COUNT_TAB: &str = "count";
+        const ADD_TAB: &str = "add";
         let strings = self.strings;
         // The engine's flag alone: no Hanji (and, with the engine's
         // word-frequency rule, every frequency row) leaves the add out.
@@ -480,21 +482,31 @@ impl LearningRecordsPage {
             Some(strings.resolve(StringKey::DictionaryLearningRecordsEditCount)),
             Some(body.trim()),
         );
-        let fields = gtk::ListBox::builder()
+
+        // The count: a spin row and, for word frequency, its note.
+        let count_list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::None)
             .css_classes(["boxed-list"])
             .build();
         let count = adw::SpinRow::with_range(1.0, MAX_COUNT as f64, 1.0);
         count.set_title(strings.resolve(StringKey::DictionaryLearningRecordsCount));
         count.set_value(record.count.max(1) as f64);
-        fields.append(&count);
-        let extra = gtk::Box::new(gtk::Orientation::Vertical, 6);
-        extra.append(&fields);
+        count_list.append(&count);
+        let count_page = gtk::Box::new(gtk::Orientation::Vertical, 6);
+        count_page.append(&count_list);
         if let Some(note) = record.kind.try_into().ok().and_then(count_note) {
-            extra.append(&dim_note(strings.resolve(note)));
+            count_page.append(&dim_note(strings.resolve(note)));
         }
+
         dialog.add_response("cancel", strings.resolve(StringKey::CommonCancel));
-        let word_fields = can_add.then(|| {
+        dialog.add_response("apply", strings.resolve(StringKey::CommonSave));
+        dialog.set_response_appearance("apply", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("apply"));
+        dialog.set_close_response("cancel");
+
+        // The add tab: the Add Word fields, and the stack that switches
+        // between the two. `None` on a row that cannot be added.
+        let add = can_add.then(|| {
             let roman = adw::EntryRow::builder()
                 .title(strings.resolve(StringKey::DictionaryRomanLabel))
                 .text(record.tl.as_str())
@@ -508,54 +520,76 @@ impl LearningRecordsPage {
             let word_list = gtk::ListBox::builder()
                 .selection_mode(gtk::SelectionMode::None)
                 .css_classes(["boxed-list"])
-                .margin_top(12)
                 .build();
             word_list.append(&roman);
             word_list.append(&hanji);
-            extra.append(
-                &gtk::Label::builder()
-                    .label(
-                        strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
-                    )
-                    .xalign(0.0)
-                    .margin_top(12)
-                    .css_classes(["heading"])
-                    .build(),
+            let stack = adw::ViewStack::new();
+            stack.add_titled(
+                &count_page,
+                Some(COUNT_TAB),
+                strings.resolve(StringKey::DictionaryLearningRecordsEditCount),
             );
-            extra.append(&word_list);
-            dialog.add_response(
-                "add",
+            stack.add_titled(
+                &word_list,
+                Some(ADD_TAB),
                 strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
             );
-            dialog.set_response_enabled("add", !record.tl.trim().is_empty());
-            // Weak: the dialog holds the row, and a row holding the dialog
-            // back would keep both alive after it closed.
-            let dialog_weak = dialog.downgrade();
-            roman.connect_changed(move |entry| {
-                if let Some(dialog) = dialog_weak.upgrade() {
-                    dialog.set_response_enabled("add", !entry.text().trim().is_empty());
-                }
-            });
-            (roman, hanji)
+            (roman, hanji, stack)
         });
-        dialog.set_extra_child(Some(&extra));
-        dialog.add_response("save", strings.resolve(StringKey::CommonSave));
-        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
-        dialog.set_default_response(Some("save"));
-        dialog.set_close_response("cancel");
+        match &add {
+            Some((roman, _, stack)) => {
+                let switcher = adw::ViewSwitcher::builder()
+                    .stack(stack)
+                    .policy(adw::ViewSwitcherPolicy::Wide)
+                    .build();
+                let page = gtk::Box::new(gtk::Orientation::Vertical, 12);
+                page.append(&switcher);
+                page.append(stack);
+                dialog.set_extra_child(Some(&page));
+                // The confirm button follows the tab: its label, and — on
+                // the add tab — a romanization to file the word under.
+                // Weak: the dialog holds these widgets, and they holding it
+                // back would keep all alive after it closed.
+                let follow = {
+                    let dialog = dialog.downgrade();
+                    let (roman, stack) = (roman.clone(), stack.clone());
+                    move || {
+                        let Some(dialog) = dialog.upgrade() else {
+                            return;
+                        };
+                        let is_add = stack.visible_child_name().as_deref() == Some(ADD_TAB);
+                        dialog.set_response_label(
+                            "apply",
+                            strings.resolve(if is_add {
+                                StringKey::DictionaryLearningRecordsAddToCustomDictionary
+                            } else {
+                                StringKey::CommonSave
+                            }),
+                        );
+                        dialog.set_response_enabled(
+                            "apply",
+                            !is_add || !roman.text().trim().is_empty(),
+                        );
+                    }
+                };
+                let on_tab = follow.clone();
+                stack.connect_visible_child_name_notify(move |_| on_tab());
+                roman.connect_changed(move |_| follow());
+            }
+            None => dialog.set_extra_child(Some(&count_page)),
+        }
+
         let weak = Rc::downgrade(self);
         dialog.connect_response(None, move |_, response| {
+            if response != "apply" {
+                return;
+            }
             let Some(page) = weak.upgrade() else { return };
             let record = record.clone();
-            match response {
-                "save" => {
-                    let value = count.value() as i64;
-                    page.begin_job(move || set_count_job(record, value));
-                }
-                "add" => {
-                    let Some((roman, hanji)) = &word_fields else {
-                        return;
-                    };
+            match &add {
+                Some((roman, hanji, stack))
+                    if stack.visible_child_name().as_deref() == Some(ADD_TAB) =>
+                {
                     let roman = roman.text().to_string();
                     if roman.trim().is_empty() {
                         return;
@@ -563,7 +597,10 @@ impl LearningRecordsPage {
                     let hanji = hanji.text().to_string();
                     page.begin_job(move || add_to_custom_dictionary_job(record, &roman, &hanji));
                 }
-                _ => {}
+                _ => {
+                    let value = count.value() as i64;
+                    page.begin_job(move || set_count_job(record, value));
+                }
             }
         });
         dialog.present(self.shell.window().as_ref());
