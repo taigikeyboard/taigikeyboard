@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# The nightly channel: unsigned desktop + ChromeOS builds of `main`, overwritten
-# under fixed names at the root of https://nightly.taigikeyboard.tw/ every night
+# The nightly channel: unsigned desktop + ChromeOS builds and the browser
+# extension of `main`, overwritten under fixed names at the root of
+# https://nightly.taigikeyboard.tw/ every night
 # (.github/workflows/desktop-nightly.yml, docs/architecture/nightly-builds.md).
 #
 # Usage: nightly-release.sh check <source sha>
@@ -53,6 +54,7 @@ NIGHTLY_ROWS=(
     "linux-rpm|*.rpm|taigikeyboard-nightly.x86_64.rpm"
     "linux-arch|*.pkg.tar.zst|taigikeyboard-nightly-x86_64.pkg.tar.zst"
     "chromeos-zip|*.zip|TaigiKeyboard-nightly-chromeos.zip"
+    "extension-zip|*.zip|TaigiKeyboard-nightly-extension.zip"
 )
 
 require_sha() {

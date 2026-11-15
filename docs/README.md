@@ -40,7 +40,7 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 | `architecture/build-artifacts.md` | What is committed vs generated, and why; timings | Active |
 | `architecture/e2e-trace-schema.md` | Test-build-only JSONL trace contract | Active |
 | `architecture/desktop-release.md` | Desktop release flow: stage, test, publish, announce | Active |
-| `architecture/nightly-builds.md` | Nightly unsigned desktop + ChromeOS builds of `main` on nightly.taigikeyboard.tw | Active |
+| `architecture/nightly-builds.md` | Nightly unsigned desktop + ChromeOS builds and the browser extension of `main` on nightly.taigikeyboard.tw | Active |
 | `architecture/macos-release.md` | macOS signing, notarization, package | Active |
 | `architecture/windows-release.md` | Windows installer, signing status, hosted build | Active |
 | `architecture/linux-release.md` | Linux packages and how they are built and attached | Active |

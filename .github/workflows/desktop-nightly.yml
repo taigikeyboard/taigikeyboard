@@ -1,7 +1,8 @@
 name: Desktop nightly
 
-# Unsigned desktop + ChromeOS builds of `main`, every night, overwritten under
-# fixed names at the root of https://nightly.taigikeyboard.tw/. A test channel, not a
+# Unsigned desktop + ChromeOS builds and the browser extension of `main`, every
+# night, overwritten under fixed names at the root of
+# https://nightly.taigikeyboard.tw/. A test channel, not a
 # release: what runs, why and the one-time setup are in
 # docs/architecture/nightly-builds.md. `dry_run` (forced off `main`) uploads
 # nothing; `force` rebuilds an unchanged `main`.
@@ -109,6 +110,15 @@ jobs:
       source_sha: ${{ github.sha }}
       build_only: true
 
+  # Not a release half: its own workflow, which writes nothing.
+  extension:
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
+    permissions:
+      contents: read
+    # Builds the caller's commit, `main`, like the jobs above.
+    uses: ./.github/workflows/extension-build.yml
+
   # No credentials: the ad-hoc bundle in an unsigned installer package.
   macos-package:
     name: package macOS (unsigned)
@@ -146,7 +156,7 @@ jobs:
   # night rebuilds and replaces them all.
   publish:
     name: upload to the nightly channel
-    needs: [plan, macos-package, windows, linux, chromeos]
+    needs: [plan, macos-package, windows, linux, chromeos, extension]
     # The implicit success() of every need is the every-platform gate.
     if: needs.plan.outputs.publish == 'true'
     runs-on: ubuntu-24.04
