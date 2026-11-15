@@ -1,8 +1,8 @@
 name: Web
 
 # The web version's gates: `make web-check`'s steps (`test` + `smoke`, plus
-# `chromeos`, in `build`; clippy, typecheck, biome and fmt in `lint`; and the fast standalone
-# TypeScript `checkJs` job in `typecheck`, so JS type errors fail without waiting
+# `chromeos`, in `build`; clippy, biome and fmt in `lint`; and TypeScript
+# `checkJs` in its own `typecheck` job, so JS type errors fail without waiting
 # for Rust) and Playwright in Chromium over both the staged site (`e2e-site`)
 # and the staged browser extension (`e2e-extension`), running in parallel from
 # `build`'s wasm artifact. On pull requests, `build` inspects the diff so
@@ -12,8 +12,9 @@ name: Web
 # `taigi-web` links those crates and asserts top candidates against that data; a
 # font or string change, because the page ships them; the iOS app icon too. A
 # push to main runs the gates only; the site deploys hourly, from main's head,
-# when that head passes the gates and differs from the last scheduled run's. A
-# manual run on main gates and deploys main's head unconditionally
+# when that head passes the gates and a web path changed since the last
+# scheduled run's head (`changed`). A manual run on main gates and deploys
+# main's head unconditionally
 # (docs/architecture/web-release.md).
 on:
   schedule:
@@ -25,7 +26,8 @@ on:
     - cron: '17 * * * *'
   workflow_dispatch:
   pull_request:
-    paths:
+    # One list for both triggers (YAML anchor); the `changed` job reads it too.
+    paths: &web-paths
       - 'web/**'
       - 'desktop/**'
       - 'engine/**'
@@ -38,17 +40,7 @@ on:
       - '.github/workflows/web.yml'
   push:
     branches: [main]
-    paths:
-      - 'web/**'
-      - 'desktop/**'
-      - 'engine/**'
-      - 'assets/dictionaries/**'
-      - 'assets/fonts/**'
-      - 'assets/symbols/**'
-      - 'ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset/**'
-      - 'i18n/**'
-      - 'mise.toml'
-      - '.github/workflows/web.yml'
+    paths: *web-paths
 
 permissions:
   contents: read
@@ -58,24 +50,46 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # A scheduled run whose head the last successful scheduled run already had
-  # deploys nothing: that run deployed it, or skipped it for the same reason.
+  # A scheduled run deploys nothing unless a web path changed since the last
+  # successful scheduled run's head: that run deployed everything before it, or
+  # skipped it for the same reason. A docs-only commit therefore rebuilds nothing.
   changed:
-    name: main moved since last scheduled run
+    name: web paths changed since last scheduled run
     if: github.event_name == 'schedule'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       actions: read
+      contents: read
     outputs:
       moved: ${{ steps.compare.outputs.moved }}
     steps:
+      # This file alone: the path list is read from `on.push.paths` above.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/workflows/web.yml
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      # The compare API lists changed files without a clone. It returns at most
+      # 300; a longer list, or a base that left the history (404), counts as moved.
       - id: compare
         run: |
+          set -euo pipefail
+          mapfile -t web_paths < <(yq 'explode(.) | .on.push.paths[]' .github/workflows/web.yml)
           last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow web.yml --event schedule \
             --branch main --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
-          if [ "$last" = "$GITHUB_SHA" ]; then moved=false; else moved=true; fi
-          echo "last scheduled: ${last:-none}, head: $GITHUB_SHA, moved: $moved"
+          moved=true
+          if [ -n "$last" ] && files=$(gh api "repos/$GITHUB_REPOSITORY/compare/$last...$GITHUB_SHA" \
+              --jq '.files | if length >= 300 then error("too many files") else .[].filename end'); then
+            moved=false
+            while IFS= read -r file; do
+              for pattern in "${web_paths[@]}"; do
+                # shellcheck disable=SC2053 # the pattern is a glob on purpose
+                [[ $file == $pattern ]] && moved=true && break 2
+              done
+            done <<< "$files"
+          fi
+          echo "last scheduled: ${last:-none}, head: $GITHUB_SHA, web paths moved: $moved"
           echo "moved=$moved" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
@@ -288,22 +302,17 @@ jobs:
             "mcr.microsoft.com/playwright:v${version}-noble" \
             npx --no-install playwright test --config extension/playwright.config.mjs
 
-  # `make -C web lint`: clippy over the wasm target compiles a dev build of its
-  # own (~45 s), which `build`'s release build cannot share, so it runs beside it.
+  # `make -C web lint` minus tsc, which the `typecheck` job runs: clippy over the
+  # wasm target compiles a dev build of its own (~45 s), which `build`'s release
+  # build cannot share, so it runs beside it.
   lint:
-    name: clippy + typecheck + biome + fmt
+    name: clippy + biome + fmt
     needs: changed
     if: ${{ !cancelled() && (needs.changed.result == 'skipped' || needs.changed.outputs.moved == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
 
       # protoc for engine/protos/build.rs, zig for SQLite's C, biome for the
       # page's JS. mise-action keys its cache on install_args, so this list
@@ -324,8 +333,8 @@ jobs:
           key: lint
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: make -C web lint
-        run: make -C web lint
+      - name: make -C web lint-rust-biome
+        run: make -C web lint-rust-biome
 
   typecheck:
     name: tsc --noEmit (checkJs)
@@ -350,7 +359,7 @@ jobs:
     needs: [build, e2e-site, e2e-extension, lint, typecheck]
     # Results named, not the implicit success(): that also looks at `changed`,
     # which a dispatch skips, so a dispatch never deployed. A scheduled run
-    # whose head did not move skips `build` (and thus E2E), `lint` and
+    # in which no web path changed skips `build` (and thus E2E), `lint` and
     # `typecheck`, and so this job.
     if: >-
       ${{ !cancelled() &&

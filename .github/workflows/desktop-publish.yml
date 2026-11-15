@@ -5,7 +5,7 @@ name: Desktop publish
 # published. Gate rules: desktop-release.md § The flow. Two approvals of the
 # `release` environment (D5): `publish` here, then announce-release.yml, which
 # publishing fires — the App token publishes because GitHub starts no workflow
-# for an event GITHUB_TOKEN caused (announcement, provenance rebuilds).
+# for an event GITHUB_TOKEN caused (the announcement).
 #
 # A hold set after `check` ran is not seen — reject the approval instead.
 # No concurrency group shared with the cut: this run may wait days for its
