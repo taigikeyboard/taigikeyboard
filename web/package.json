@@ -14,10 +14,17 @@
     "@playwright/test": "1.65.0",
     "@types/chrome": "0.3.7",
     "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "codemirror": "5.65.21",
     "esbuild": "0.28.2",
     "lexical": "0.53.0",
     "quill": "2.0.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "slate": "0.147.4",
+    "slate-history": "0.144.0",
+    "slate-react": "0.147.6",
     "typescript": "7.0.2"
   }
 }

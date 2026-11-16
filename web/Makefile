@@ -145,7 +145,7 @@ extension-stage: node_modules/.package-lock.json
 
 # The extension's browser gate: Playwright loads the staged extension into its
 # own Chromium (EXTENSION_BROWSER names another Chromium's executable).
-# The fixtures are served from one directory with the pinned Quill, Lexical and CodeMirror 5 / 6 beside them.
+# The fixtures are served from one directory with the pinned Quill, Lexical, CodeMirror 5 / 6 and Slate beside them.
 EXTENSION_FIXTURES := target/extension-fixtures
 extension-fixtures: $(VENDOR)/lexical.js node_modules/.package-lock.json
 	rm -rf $(EXTENSION_FIXTURES)
@@ -157,6 +157,9 @@ extension-fixtures: $(VENDOR)/lexical.js node_modules/.package-lock.json
 		$(EXTENSION_FIXTURES)/
 	npx esbuild extension/fixtures/codemirror6-setup.js --bundle --format=esm --minify \
 		--legal-comments=none --outfile=$(EXTENSION_FIXTURES)/codemirror6-setup.js
+	npx esbuild extension/fixtures/slate-setup.js --bundle --format=esm --minify \
+		--legal-comments=none --define:process.env.NODE_ENV='"production"' \
+		--outfile=$(EXTENSION_FIXTURES)/slate-setup.js
 
 extension-e2e: extension extension-fixtures
 	npx playwright install $(if $(CI),--with-deps) chromium
