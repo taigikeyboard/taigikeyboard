@@ -215,17 +215,6 @@ fun DictionarySourcesScreen(
                     )
                     SettingsDivider()
                     DictionaryRowWithDescription(
-                        label = L10n.commonSttiDict,
-                        checked = sttiEnabled,
-                        description = L10n.dictionarySttiDescription,
-                        url = "https://stti.moe.edu.tw/index.html?lang=sutgi",
-                        onCheckedChange = {
-                            sttiEnabled = it
-                            prefs.sttiDictEnabled = it
-                        },
-                    )
-                    SettingsDivider()
-                    DictionaryRowWithDescription(
                         label = L10n.commonKunggeDict,
                         checked = kunggeEnabled,
                         description = L10n.dictionaryKunggeDescription,
@@ -233,6 +222,17 @@ fun DictionarySourcesScreen(
                         onCheckedChange = {
                             kunggeEnabled = it
                             prefs.kunggeDictEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    DictionaryRowWithDescription(
+                        label = L10n.commonSttiDict,
+                        checked = sttiEnabled,
+                        description = L10n.dictionarySttiDescription,
+                        url = "https://stti.moe.edu.tw/index.html?lang=sutgi",
+                        onCheckedChange = {
+                            sttiEnabled = it
+                            prefs.sttiDictEnabled = it
                         },
                     )
                 }

@@ -129,17 +129,17 @@ struct DictionarySourcesView: View {
                     description: lang.string(.dictionaryNewwordDescription),
                 ) { settings.isNewwordDictEnabled = $0 }
                 dictToggleWithDescription(
-                    title: lang.string(.commonSttiDict),
-                    url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
-                    isOn: $toggles.isSttiDictEnabled,
-                    description: lang.string(.dictionarySttiDescription),
-                ) { settings.isSttiDictEnabled = $0 }
-                dictToggleWithDescription(
                     title: lang.string(.commonKunggeDict),
                     url: "https://kanggesu.ntcri.gov.tw",
                     isOn: $toggles.isKunggeDictEnabled,
                     description: lang.string(.dictionaryKunggeDescription),
                 ) { settings.isKunggeDictEnabled = $0 }
+                dictToggleWithDescription(
+                    title: lang.string(.commonSttiDict),
+                    url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
+                    isOn: $toggles.isSttiDictEnabled,
+                    description: lang.string(.dictionarySttiDescription),
+                ) { settings.isSttiDictEnabled = $0 }
             } header: {
                 Text(lang.string(.dictionaryMoeSectionTitle))
                     .font(AppStyle.sectionHeaderFont)
