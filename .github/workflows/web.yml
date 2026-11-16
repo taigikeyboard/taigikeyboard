@@ -170,7 +170,7 @@ jobs:
 
       # Only what `test smoke` and `chromeos` run: protoc for engine/protos/build.rs,
       # wasm-bindgen + binaryen for target/pkg, zig for SQLite's wasm objects.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
           version: 2026.11.2
           install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen zig
@@ -240,7 +240,7 @@ jobs:
         run: touch web/target/fonts/.stamp
 
       # fonttools is only needed when the font cache misses.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         if: steps.fonts.outputs.cache-hit != 'true'
         with:
           version: 2026.11.2
@@ -284,7 +284,7 @@ jobs:
 
       # wasm-bindgen and binaryen (wasm-opt, wasm2js) build the pure-JS fallback
       # in `scripts/build-wasm2js.mjs` from the downloaded taigi_web.wasm.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
           version: 2026.11.2
           install_args: github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen
@@ -317,7 +317,7 @@ jobs:
       # protoc for engine/protos/build.rs, zig for SQLite's C, biome for the
       # page's JS. mise-action keys its cache on install_args, so this list
       # caches apart from `build`'s.
-      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
         with:
           version: 2026.11.2
           install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen biome uv pipx:fonttools zig
