@@ -522,6 +522,18 @@ fn a_closed_record_dialog_frees_its_widgets(
     let entry = find_first::<adw::EntryRow>(dialog.upcast_ref())
         .expect("the add tab's romanization")
         .downgrade();
+    // Closed only once open: libadwaita 1.5 (Ubuntu 24.04) opens the sheet
+    // on the dialog's second frame after map, and a `force_close` before
+    // then is a no-op the opening overrides — the dialog stays up.
+    let frames = Rc::new(std::cell::Cell::new(0));
+    dialog.add_tick_callback({
+        let frames = frames.clone();
+        move |_, _| {
+            frames.set(frames.get() + 1);
+            gtk::glib::ControlFlow::from(frames.get() < 2)
+        }
+    });
+    pump_until(|| frames.get() >= 2);
     dialog.force_close();
     drop(dialog);
     pump_until(|| stack.upgrade().is_none() && entry.upgrade().is_none());
