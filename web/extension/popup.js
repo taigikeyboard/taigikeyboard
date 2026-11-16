@@ -96,6 +96,11 @@ async function draw() {
   buttons.turnOn.hidden = !hasAccess || mode !== "off";
   buttons.turnOff.hidden = !hasAccess || mode === "off";
   buttons.remove.hidden = !hasAccess;
+  // The shortcut on a site not yet enabled opens this popup: Enter (or Space)
+  // then answers it, since only a click in the popup may ask the browser.
+  if (!hasAccess) {
+    buttons.enable.focus();
+  }
 }
 
 /**
