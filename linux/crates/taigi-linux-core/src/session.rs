@@ -120,6 +120,23 @@ fn start_launches(emits: &mut Vec<Emit>, mut open: impl FnMut(), mut toggle: imp
     });
 }
 
+/// The emits a shell replays, with each run of adjacent commits joined into
+/// one: a key that writes a word and then its auto space reaches the client as
+/// one `CommitText`. On GNOME Wayland with IBus, a client given two commits
+/// back to back kept only the second, and the word was lost (e2e `s853`,
+/// observed 2026-11-16). Both shells replay through this.
+pub fn coalesce_commits(emits: Vec<Emit>) -> Vec<Emit> {
+    let mut joined = Vec::with_capacity(emits.len());
+    for emit in emits {
+        if let (Emit::Commit(text), Some(Emit::Commit(previous))) = (&emit, joined.last_mut()) {
+            previous.push_str(text);
+            continue;
+        }
+        joined.push(emit);
+    }
+    joined
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -162,5 +179,34 @@ mod tests {
         );
         set_surrounding_text(&mut state, None);
         assert_eq!(state.text_before_caret, TextBeforeCaret::Reported(None));
+    }
+
+    #[test]
+    fn adjacent_commits_join_and_anything_between_keeps_them_apart() {
+        let commit = |text: &str| Emit::Commit(text.to_owned());
+        let emits = vec![
+            Emit::ClearPreedit,
+            commit("ho"),
+            commit(" "),
+            Emit::HideLookupTable,
+            Emit::DeleteSurrounding {
+                offset: -1,
+                count: 1,
+            },
+            commit(", "),
+        ];
+        assert_eq!(
+            coalesce_commits(emits),
+            vec![
+                Emit::ClearPreedit,
+                commit("ho "),
+                Emit::HideLookupTable,
+                Emit::DeleteSurrounding {
+                    offset: -1,
+                    count: 1,
+                },
+                commit(", "),
+            ]
+        );
     }
 }

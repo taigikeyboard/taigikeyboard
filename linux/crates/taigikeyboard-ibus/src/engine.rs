@@ -111,7 +111,7 @@ impl Engine {
     }
 
     async fn replay(&self, emitter: &SignalEmitter<'_>, emits: Vec<Emit>) {
-        for emit in emits {
+        for emit in session::coalesce_commits(emits) {
             let sent = match emit {
                 Emit::Preedit { text, caret } => {
                     Self::update_preedit_text(emitter, wire::preedit_text(&text), caret, true).await
