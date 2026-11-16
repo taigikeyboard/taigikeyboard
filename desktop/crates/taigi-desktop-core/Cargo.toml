@@ -14,6 +14,13 @@ description = "Platform-independent core shared by the desktop input methods (Wi
 [lints]
 workspace = true
 
+[features]
+# The engine-owned user-data stores (bundled SQLite), off by default so this
+# crate stays pure; a shell that ships the stores turns it on here instead of
+# taking its own `dispatch` edge, unless it calls `dispatch` directly as
+# `taigi-linux-core` does (user-data-engine-roadmap U11).
+user-data = ["dispatch/user-data"]
+
 [dependencies]
 dispatch = { workspace = true }
 protos = { workspace = true }

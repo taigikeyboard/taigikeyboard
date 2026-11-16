@@ -11,7 +11,7 @@
 
 pub mod api;
 pub mod explain;
-pub mod handle;
+mod handle;
 pub mod requests;
 pub mod syllabifier;
 

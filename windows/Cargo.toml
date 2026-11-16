@@ -29,8 +29,8 @@ publish = false
 [workspace.dependencies]
 # Engine crates, by path. `dispatch` is the one entry point the TIP calls;
 # `protos` gives the prost types the envelope is built from.
-# `default-features = false`: each member opts in; `taigi-windows-tsf` and
-# `taigi-windows-settings` enable `user-data` (the SQLite stores).
+# `default-features = false`: `taigi-windows-tsf` and `taigi-windows-settings`
+# enable the SQLite stores through `taigi-desktop-core`'s `user-data` feature.
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 prost = "0.14"

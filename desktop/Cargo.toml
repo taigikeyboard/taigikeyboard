@@ -34,7 +34,8 @@ publish = false
 # Engine crates, by path. `dispatch` is the one entry point a desktop shell
 # calls; `protos` gives the prost types the envelope is built from.
 # `default-features = false`: no user-data stores (SQLite) in `taigi-desktop-core`
-# itself; the Windows / Linux shells enable `user-data` on their own `dispatch` edge.
+# by default; the settings windows and the Windows TIP turn on its `user-data`
+# feature, `taigi-linux-core` keeps its own `dispatch` edge.
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 prost = "0.14"
