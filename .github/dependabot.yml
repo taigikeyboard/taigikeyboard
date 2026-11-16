@@ -120,6 +120,14 @@ updates:
     open-pull-requests-limit: 3
     labels:
       - dependencies
+    ignore:
+      # CodeMirror 5 is a deliberate extension E2E fixture (`codemirror5.html`,
+      # web/Makefile `extension-fixtures`); CM6 is tested through the
+      # `@codemirror/*` packages. The `codemirror` 6 meta package would drop
+      # the CM5 fixture (#962 closed).
+      - dependency-name: codemirror
+        update-types:
+          - version-update:semver-major
     groups:
       npm-minor-and-patch:
         patterns:
