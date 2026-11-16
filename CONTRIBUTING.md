@@ -52,7 +52,7 @@ against the *old* engine.
 
 Run `make hooks` once per clone. It points `core.hooksPath` at `.githooks`, whose
 `pre-commit` scans staged changes with gitleaks and refuses a commit that carries
-a credential. A clone that never ran it has no local gate at all, and
+a credential; `commit-msg` checks the message for personal data (below). A clone that never ran it has no local gate at all, and
 `git commit --no-verify` skips it in one that did — which is why the same scan
 also runs in CI on every pull request.
 
@@ -72,8 +72,10 @@ Personal data is treated like a credential. Do not put an email address, an
 account / project / server ID, or a private mailbox or chat layout into any
 tracked file, commit message or pull request — describe the person or role
 instead. gitleaks' `personal-email` rule (`.gitleaks.toml`) and the maintainer's
-private denylist (`tools/secret-scan/private-denylist-scan.sh`) gate commits;
-neither sees pull request bodies or issues, so check those by hand. Tooling bound
+private denylist (`tools/secret-scan/private-denylist-scan.sh`) gate commits; the
+denylist also reads the commit message (`.githooks/commit-msg`) and the title and
+inline body of a pull request opened through Claude Code. Neither sees an issue,
+or a pull request opened or edited any other way, so check those by hand. Tooling bound
 to a personal account belongs outside this repository, not under `.claude/`.
 
 ## Phonetics

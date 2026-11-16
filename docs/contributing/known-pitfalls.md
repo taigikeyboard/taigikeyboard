@@ -28,4 +28,4 @@ Technical rules distilled from past incidents. The dated narratives that produce
 
 ## Privacy
 
-- No personal identifier in any tracked file, commit message, PR or issue — write "a former work address", "the maintainer's author email". Commit gates cover tracked files only; check PR bodies and issues by hand. Rules and gates: `CONTRIBUTING.md` § Secrets.
+- No personal identifier in any tracked file, commit message, PR or issue — write "a former work address", "the maintainer's author email". The maintainer's private denylist gates tracked files, commit messages, and the title and inline body of a pull request opened through Claude Code; check issues, and any other pull request text, by hand. Rules and gates: `CONTRIBUTING.md` § Secrets.
