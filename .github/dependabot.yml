@@ -11,6 +11,14 @@ updates:
     labels:
       - dependencies
       - rust
+    ignore:
+      # rusqlite 0.42 requires sqlite-wasm-rs >=0.6.3 on wasm32, whose memory
+      # VFS handle is only `unsafe fn MemVfsUtil::get()`; the web workspace
+      # forbids `unsafe_code` (see /web below). Stays on 0.41 (maintainer
+      # 2026-11-16; #955 #957 #965 closed). Same entry in /windows, /web,
+      # /linux: their lockfiles carry the engine's rusqlite.
+      - dependency-name: rusqlite
+        versions: [">=0.42"]
     groups:
       cargo-minor-and-patch:
         patterns:
@@ -61,6 +69,9 @@ updates:
       - dependency-name: sha2
         update-types:
           - version-update:semver-major
+      # Stays on the engine's rusqlite 0.41 (see /engine).
+      - dependency-name: rusqlite
+        versions: [">=0.42"]
 
   # The desktop-shared crates (Windows + Linux link them) and the Linux input
   # method each keep their own Cargo.lock, so each needs its own entry.
@@ -102,6 +113,9 @@ updates:
       # rusqlite 0.41 accepts 0.5 (#813 closed).
       - dependency-name: sqlite-wasm-rs
         versions: [">=0.6"]
+      # rusqlite 0.42 needs sqlite-wasm-rs 0.6 (see /engine).
+      - dependency-name: rusqlite
+        versions: [">=0.42"]
     groups:
       cargo-minor-and-patch:
         patterns:
@@ -148,6 +162,10 @@ updates:
       - dependencies
       - rust
       - linux
+    ignore:
+      # Stays on the engine's rusqlite 0.41 (see /engine).
+      - dependency-name: rusqlite
+        versions: [">=0.42"]
     groups:
       cargo-minor-and-patch:
         patterns:
