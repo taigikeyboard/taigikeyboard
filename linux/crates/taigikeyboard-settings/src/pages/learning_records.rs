@@ -4,7 +4,9 @@
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / add-to-custom-dictionary / delete
 //! verbs (no add on word frequency: its words are dictionary words
-//! already), and the pager under it, then Delete Learning Records in its own
+//! already), and the pager under it — ✎ or a double-click opens the record
+//! dialog: the count and, for a row the engine says can be added, an Add to
+//! Custom Dictionary tab beside it — then Delete Learning Records in its own
 //! group: it empties every learning store, whichever kind is on screen, on
 //! the press. No add — a word the user wants is a custom word, which a
 //! listed row's word can become here.
@@ -288,7 +290,7 @@ impl LearningRecordsPage {
                 page.render_verbs();
             }
         });
-        // A double-click (or Enter) on a row edits its count.
+        // A double-click (or Enter) on a row opens its record dialog.
         let weak = Rc::downgrade(self);
         self.widgets.list.connect_row_activated(move |_, row| {
             let Some(page) = weak.upgrade() else { return };
@@ -296,7 +298,7 @@ impl LearningRecordsPage {
                 return;
             }
             if let Some(record) = page.row_at(row.index()) {
-                page.count_dialog(record);
+                page.record_dialog(record);
             }
         });
         let weak = Rc::downgrade(self);
@@ -304,7 +306,7 @@ impl LearningRecordsPage {
             let Some(page) = weak.upgrade() else { return };
             let row = page.state.borrow().listing.selected_row().cloned();
             if let Some(row) = row {
-                page.count_dialog(row);
+                page.record_dialog(row);
             }
         });
         let weak = Rc::downgrade(self);
@@ -479,51 +481,148 @@ impl LearningRecordsPage {
         });
     }
 
-    /// Edit one row's count: the word and its reading as the body, a spin
-    /// row for the count, and — for word frequency — the note that counts
-    /// past 40 rank the same.
-    fn count_dialog(self: &Rc<Self>, record: LearningRecord) {
+    /// One record's dialog. For a row the engine says can be added, two
+    /// tabs — Edit Count and Add to Custom Dictionary — one task on screen
+    /// at a time, and the dialog's one confirm button follows the tab: Save
+    /// writes the count, Add files the word as edited (typed form and word,
+    /// for the user to tweak hyphens and capitals; a learned phrase is then
+    /// forgotten). Any other row shows the count alone. The count carries,
+    /// for word frequency, the note that counts past 40 rank the same.
+    fn record_dialog(self: &Rc<Self>, record: LearningRecord) {
+        const COUNT_TAB: &str = "count";
+        const ADD_TAB: &str = "add";
         let strings = self.strings;
+        // The engine's flag alone: no Hanji (and, with the engine's
+        // word-frequency rule, every frequency row) leaves the add out.
+        let can_add = record.can_add_to_custom_dictionary;
         let body = format!("{}  {}", record.text, record.tl);
         let dialog = adw::AlertDialog::new(
-            Some(strings.resolve(StringKey::DictionaryLearningRecordsEditCount)),
+            Some(strings.resolve(if can_add {
+                StringKey::CommonEdit
+            } else {
+                StringKey::DictionaryLearningRecordsEditCount
+            })),
             Some(body.trim()),
         );
-        let fields = gtk::ListBox::builder()
+
+        // The count: a spin row and, for word frequency, its note.
+        let count_list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::None)
             .css_classes(["boxed-list"])
             .build();
         let count = adw::SpinRow::with_range(1.0, MAX_COUNT as f64, 1.0);
         count.set_title(strings.resolve(StringKey::DictionaryLearningRecordsCount));
         count.set_value(record.count.max(1) as f64);
-        fields.append(&count);
-        let extra = gtk::Box::new(gtk::Orientation::Vertical, 6);
-        extra.append(&fields);
+        count_list.append(&count);
+        let count_page = gtk::Box::new(gtk::Orientation::Vertical, 6);
+        count_page.append(&count_list);
         if let Some(note) = record.kind.try_into().ok().and_then(count_note) {
-            extra.append(
-                &gtk::Label::builder()
-                    .label(strings.resolve(note))
-                    .wrap(true)
-                    .xalign(0.0)
-                    .css_classes(["dim-label"])
-                    .build(),
-            );
+            count_page.append(&dim_note(strings.resolve(note)));
         }
-        dialog.set_extra_child(Some(&extra));
+
         dialog.add_response("cancel", strings.resolve(StringKey::CommonCancel));
-        dialog.add_response("save", strings.resolve(StringKey::CommonSave));
-        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
-        dialog.set_default_response(Some("save"));
+        dialog.add_response("apply", strings.resolve(StringKey::CommonSave));
+        dialog.set_response_appearance("apply", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("apply"));
         dialog.set_close_response("cancel");
+
+        // The add tab: the Add Word fields, and the stack that switches
+        // between the two. `None` on a row that cannot be added.
+        let add = can_add.then(|| {
+            let roman = adw::EntryRow::builder()
+                .title(strings.resolve(StringKey::DictionaryRomanLabel))
+                .text(record.tl.as_str())
+                .use_markup(false)
+                .build();
+            let hanji = adw::EntryRow::builder()
+                .title(strings.resolve(StringKey::DictionaryHanziLabel))
+                .text(record.text.as_str())
+                .use_markup(false)
+                .build();
+            let word_list = gtk::ListBox::builder()
+                .selection_mode(gtk::SelectionMode::None)
+                .css_classes(["boxed-list"])
+                .build();
+            word_list.append(&roman);
+            word_list.append(&hanji);
+            let stack = gtk::Stack::new();
+            stack.add_titled(
+                &count_page,
+                Some(COUNT_TAB),
+                strings.resolve(StringKey::DictionaryLearningRecordsEditCount),
+            );
+            stack.add_titled(
+                &word_list,
+                Some(ADD_TAB),
+                strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
+            );
+            (roman, hanji, stack)
+        });
+        match &add {
+            Some((roman, _, stack)) => {
+                // Text-only tabs: `adw::ViewSwitcher` always draws an icon,
+                // and these tabs have none.
+                let switcher = gtk::StackSwitcher::builder().stack(stack).build();
+                let page = gtk::Box::new(gtk::Orientation::Vertical, 12);
+                page.append(&switcher);
+                page.append(stack);
+                dialog.set_extra_child(Some(&page));
+                // The confirm button follows the tab: its label, and — on
+                // the add tab — a romanization to file the word under.
+                // Weak: the dialog holds these widgets, and they holding it
+                // back would keep all alive after it closed.
+                let follow = {
+                    let dialog = dialog.downgrade();
+                    let (roman, stack) = (roman.clone(), stack.clone());
+                    move || {
+                        let Some(dialog) = dialog.upgrade() else {
+                            return;
+                        };
+                        let is_add = stack.visible_child_name().as_deref() == Some(ADD_TAB);
+                        dialog.set_response_label(
+                            "apply",
+                            strings.resolve(if is_add {
+                                StringKey::DictionaryLearningRecordsAddToCustomDictionary
+                            } else {
+                                StringKey::CommonSave
+                            }),
+                        );
+                        dialog.set_response_enabled(
+                            "apply",
+                            !is_add || !roman.text().trim().is_empty(),
+                        );
+                    }
+                };
+                let on_tab = follow.clone();
+                stack.connect_visible_child_name_notify(move |_| on_tab());
+                roman.connect_changed(move |_| follow());
+            }
+            None => dialog.set_extra_child(Some(&count_page)),
+        }
+
         let weak = Rc::downgrade(self);
         dialog.connect_response(None, move |_, response| {
-            if response != "save" {
+            if response != "apply" {
                 return;
             }
             let Some(page) = weak.upgrade() else { return };
-            let value = count.value() as i64;
             let record = record.clone();
-            page.begin_job(move || set_count_job(record, value));
+            match &add {
+                Some((roman, hanji, stack))
+                    if stack.visible_child_name().as_deref() == Some(ADD_TAB) =>
+                {
+                    let roman = roman.text().to_string();
+                    if roman.trim().is_empty() {
+                        return;
+                    }
+                    let hanji = hanji.text().to_string();
+                    page.begin_job(move || add_to_custom_dictionary_job(record, &roman, &hanji));
+                }
+                _ => {
+                    let value = count.value() as i64;
+                    page.begin_job(move || set_count_job(record, value));
+                }
+            }
         });
         dialog.present(self.shell.window().as_ref());
     }
@@ -648,4 +747,14 @@ fn cells(record: &LearningRecord) -> [String; 4] {
         record.count.to_string(),
         last_used_label(record.last_used_ms, offset_seconds),
     ]
+}
+
+/// A dim, wrapping note under a dialog's fields.
+fn dim_note(text: &str) -> gtk::Label {
+    gtk::Label::builder()
+        .label(text)
+        .wrap(true)
+        .xalign(0.0)
+        .css_classes(["dim-label"])
+        .build()
 }
