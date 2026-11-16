@@ -17,6 +17,14 @@ import { readCopy, writeCopy } from "./learning-store.js";
  * }} TabState
  */
 
+/**
+ * The site the popup asked the browser for, in the tab it was asked from.
+ * @typedef {{ tabId: number, pattern: string }} PendingEnable
+ */
+
+/** The session-storage key of the popup's `PendingEnable` (`popup.js`). */
+const PENDING_ENABLE_KEY = "pendingEnable";
+
 /** The registered content script's id. */
 const SCRIPT_ID = "taigi";
 const REMOVE_SITE_MENU_ID = "remove-site";
@@ -352,6 +360,30 @@ async function setTyping(tab, isOn) {
 }
 
 /**
+ * Turns typing on in the tab the popup's "Use on This Site" was clicked in,
+ * once the browser grants `origins`. The popup cannot do it itself: the
+ * browser's question may close it before it answers. A tab that left the
+ * site meanwhile stays off.
+ * @param {string[]} origins
+ * @returns {Promise<void>}
+ */
+export async function finishPendingEnable(origins) {
+  const { [PENDING_ENABLE_KEY]: value } =
+    await chrome.storage.session.get(PENDING_ENABLE_KEY);
+  const pending = /** @type {PendingEnable | undefined} */ (value);
+  if (!pending || !origins.includes(pending.pattern)) {
+    return;
+  }
+  await chrome.storage.session.remove(PENDING_ENABLE_KEY);
+  const tab = await chrome.tabs.get(pending.tabId).catch(() => undefined);
+  const site = siteOf(tab?.url);
+  if (!tab || site === null || patternOf(site) !== pending.pattern) {
+    return;
+  }
+  await setTyping(tab, true);
+}
+
+/**
  * Draws the enabled toolbar state (`popup: ""`, colour icon, shortcut title)
  * on every already-open tab whose site has granted host access.
  * @returns {Promise<void>}
@@ -684,8 +716,11 @@ chrome.runtime.onMessage.addListener((rawMessage, sender, respond) => {
   return true;
 });
 
-chrome.permissions.onAdded.addListener(() => {
+chrome.permissions.onAdded.addListener(({ origins = [] }) => {
   syncRegistration();
+  finishPendingEnable(origins).catch((error) =>
+    console.error("enable.failed", error),
+  );
   syncGrantedTabs().catch((error) => console.error("tabs.failed", error));
   syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
 });
@@ -768,5 +803,6 @@ syncRemoveSiteMenu().catch((error) => console.error("menu.failed", error));
 Object.assign(globalThis, {
   toggleTab,
   removeSiteAccess,
+  finishPendingEnable,
   removeSiteMenuEnabled,
 });

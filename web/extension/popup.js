@@ -5,6 +5,9 @@
 import { setDisplayLanguage, translate } from "./i18n.js";
 import { parseStored, STORAGE_KEY } from "./settings.js";
 
+/** The session-storage key of the site the popup asked access for. */
+const PENDING_ENABLE_KEY = "pendingEnable";
+
 /** @typedef {import("./background.js").BadgeState} BadgeState */
 /** @typedef {import("./background.js").TabMode} TabMode */
 /**
@@ -117,9 +120,18 @@ buttons.enable.addEventListener("click", async () => {
   if (!shown || shown.site === null) {
     return;
   }
-  // The browser's own question. Enabling a site is asking to type there.
+  // The browser's own question. Enabling a site is asking to type there, but
+  // the question's window can close this popup before it answers, ending this
+  // script: the service worker turns typing on when the grant lands
+  // (`background.js` `finishPendingEnable`). The note goes out unawaited so
+  // the request still runs inside the click's user gesture.
+  /** @type {import("./background.js").PendingEnable} */
+  const pending = { tabId, pattern: shown.pattern };
+  chrome.storage.session.set({ [PENDING_ENABLE_KEY]: pending });
   if (await chrome.permissions.request({ origins: [shown.pattern] })) {
-    await setTyping(true);
+    window.close();
+  } else {
+    await chrome.storage.session.remove(PENDING_ENABLE_KEY);
   }
 });
 
