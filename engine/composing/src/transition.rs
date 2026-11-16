@@ -1252,6 +1252,7 @@ fn commit_continuous(
         display_text: pick.canonical_text.clone(),
         canonical_tl: pick.association_tl.clone(),
         hanji,
+        abbreviation: is_abbreviation_pick(state, &pick, config),
     };
     let word_list_start = match &state.phase {
         Phase::Continuous {
@@ -1292,6 +1293,51 @@ fn commit_continuous(
     }
     applied.response.commit = Some(commit_resolution(outcome, Some(resolved)));
     applied
+}
+
+/// Whether `pick` was reached as a whole-buffer abbreviation (§46): it
+/// consumes the whole text its list reads, that text is an abbreviation
+/// query ([`crate::shadow::abbrev_query_key`]), and the word's own
+/// abbreviation key — read off the same key bundle the custom-dictionary
+/// match uses, [`phonetics::api::derive_custom_search_keys`] — is that query.
+/// A buffer that is both a reading and an abbreviation of the word (`ai` /
+/// 阿姨 `a-î`) counts as an abbreviation pick.
+fn is_abbreviation_pick(state: &EngineState, pick: &SegmentPick, config: &AppConfig) -> bool {
+    let Phase::Continuous {
+        raw,
+        caret,
+        nailed,
+        conversion,
+    } = &state.phase
+    else {
+        return false;
+    };
+    if pick.syllable_count < 2 || pick.association_tl.is_empty() {
+        return false;
+    }
+    let listed = match crate::conversion::word_list_start(
+        nailed,
+        raw,
+        *caret,
+        conversion.as_ref(),
+        config,
+    ) {
+        Some(start) => start.listed(nailed, raw).0,
+        None => raw.clone(),
+    };
+    if pick.consumed_bytes != listed.len() {
+        return false;
+    }
+    let Some(key) = crate::shadow::abbrev_query_key(&listed, buffer_input_mode(&listed, config))
+    else {
+        return false;
+    };
+    let Some((family, body)) = phonetics::split_abbrev_family_key(&key) else {
+        return false;
+    };
+    phonetics::api::derive_custom_search_keys(&pick.association_tl)
+        .iter()
+        .any(|search| search.family == family && search.form == "abbrev" && search.key == body)
 }
 
 /// Accept a pick and finish with a literal in the same transition. Learning
@@ -1422,6 +1468,7 @@ fn commit_prediction(
         display_text: hanji,
         canonical_tl,
         hanji: None,
+        abbreviation: false,
     });
     let mut response = snapshot(state, config);
     response.commit = Some(commit_resolution(CommitOutcome::Finalized, resolved));

@@ -43,6 +43,7 @@ fn usage(display_text: &str, canonical_tl: &str, hanji: Option<&str>) -> Option<
         display_text: display_text.into(),
         canonical_tl: canonical_tl.into(),
         hanji: hanji.map(str::to_owned),
+        abbreviation: false,
     })
 }
 
@@ -526,4 +527,55 @@ fn typed_neutral_run_after_hanji_survives_only_before_roman_pick() {
             assert_eq!(commit_text(&result.response).as_deref(), Some(expected));
         }
     }
+}
+
+/// A two-syllable pick of `hanji` / `tl` consuming `bytes` of the buffer.
+fn word_pick(hanji: &str, tl: &str, bytes: u32) -> Method {
+    Method::CommitContinuous(CommitContinuous {
+        canonical_text: hanji.into(),
+        association_tl: tl.into(),
+        hanji: Some(hanji.into()),
+        consumed_bytes: bytes,
+        syllable_count: 2,
+        script: CommitScript::Lead as i32,
+        roman: tl.into(),
+    })
+}
+
+#[test]
+fn a_pick_through_its_whole_buffer_abbreviation_is_counted_as_one() {
+    // trace: 所以 `sóo-í` abbreviates to `si` (one initial per syllable,
+    // `phonetics::api::derive_custom_search_keys`); typed in full it is
+    // `sooi`, which is no abbreviation of it.
+    let config = config_tl();
+    let through_abbreviation = send(
+        &continuous("si", 1, &config),
+        1,
+        word_pick("所以", "sóo-í", 2),
+        &config,
+    );
+    assert_eq!(
+        through_abbreviation.usage.map(|usage| usage.abbreviation),
+        Some(true)
+    );
+    let in_full = send(
+        &continuous("sooi", 1, &config),
+        1,
+        word_pick("所以", "sóo-í", 4),
+        &config,
+    );
+    assert_eq!(in_full.usage.map(|usage| usage.abbreviation), Some(false));
+}
+
+#[test]
+fn a_one_syllable_reading_of_the_same_buffer_is_no_abbreviation_pick() {
+    // trace: `si` read as 是 `sī` — one syllable, never an abbreviation.
+    let config = config_tl();
+    let applied = send(
+        &continuous("si", 1, &config),
+        1,
+        pick(CommitScript::Lead, "sī", Some("是"), "sī", 2),
+        &config,
+    );
+    assert_eq!(applied.usage.map(|usage| usage.abbreviation), Some(false));
 }

@@ -330,7 +330,7 @@ impl UserDataHandle {
         if usage.display_text.is_empty() {
             return Err(RequestError::Invalid("usage without a display text"));
         }
-        stores.record_usage(&usage.display_text, &usage.canonical_tl, None);
+        stores.record_usage(&usage.display_text, &usage.canonical_tl, None, false);
         Ok(())
     }
 

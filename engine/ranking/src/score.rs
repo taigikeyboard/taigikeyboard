@@ -77,6 +77,13 @@ pub struct FrequencyData {
     /// Last selection in epoch-ms. `0` means never used; the recency
     /// helpers treat this and any non-positive value as "never".
     pub last_used_ms: i64,
+    /// Selections made through a whole-buffer abbreviation (`si` → 所以
+    /// `sóo-í`). Kept apart from [`count`](Self::count) so a word typed in
+    /// full does not lift it under an abbreviation it shares with a common
+    /// reading, and the reverse. Rows written before the split hold 0.
+    pub abbrev_count: i32,
+    /// Last abbreviation selection in epoch-ms; `0` = never.
+    pub abbrev_last_used_ms: i64,
 }
 
 impl FrequencyData {
@@ -86,6 +93,23 @@ impl FrequencyData {
     pub fn user_weight(&self, now_ms: i64) -> f64 {
         let count = u32::try_from(self.count).unwrap_or(0);
         decayed_user_weight_delta(count, now_ms, self.last_used_ms)
+    }
+
+    /// The same weight over the abbreviation selections only — what an
+    /// abbreviation hit ranks by.
+    pub fn abbreviation_weight(&self, now_ms: i64) -> f64 {
+        let count = u32::try_from(self.abbrev_count).unwrap_or(0);
+        decayed_user_weight_delta(count, now_ms, self.abbrev_last_used_ms)
+    }
+
+    /// [`abbreviation_weight`](Self::abbreviation_weight) for an
+    /// abbreviation hit, [`user_weight`](Self::user_weight) otherwise.
+    pub fn weight_for(&self, abbreviation: bool, now_ms: i64) -> f64 {
+        if abbreviation {
+            self.abbreviation_weight(now_ms)
+        } else {
+            self.user_weight(now_ms)
+        }
     }
 }
 
@@ -318,6 +342,7 @@ mod tests {
         FrequencyData {
             count,
             last_used_ms,
+            ..FrequencyData::default()
         }
     }
 

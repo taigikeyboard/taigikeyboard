@@ -17,7 +17,7 @@ const TABLE_NAME: &str = "user_frequency";
 const SCHEMA_VERSION: i64 = 3;
 /// The columns every `FrequencyRow` read selects, next to the decoder that
 /// reads them: the two agree by position.
-const ROW_COLUMNS: &str = "word, tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000";
+const ROW_COLUMNS: &str = "word, tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000, abbrev_count, COALESCE(CAST(strftime('%s', abbrev_last_used) AS INTEGER) * 1000, 0)";
 /// One order, most-used first, `(word, tl)` as the final tie-break so equal
 /// counts keep a stable order between two reads.
 const LIST_ORDER: &str = "count DESC, last_used DESC, word ASC, tl ASC";
@@ -39,8 +39,15 @@ pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learnin
 pub struct FrequencyRow {
     pub word: String,
     pub tl: String,
+    /// Every pick, abbreviation picks included.
     pub count: i64,
     pub last_used_ms: i64,
+    /// The picks of [`count`](Self::count) made through a whole-buffer
+    /// abbreviation. Rows from before the split hold 0: every earlier pick
+    /// reads as a reading pick.
+    pub abbrev_count: i64,
+    /// Last abbreviation pick; `0` = never.
+    pub abbrev_last_used_ms: i64,
 }
 
 /// Records candidate commits and answers what the ranker should boost. The
@@ -96,6 +103,16 @@ impl UserFrequencyStore {
     /// Counts one commit of `word` under reading `tl`. `tl` may be empty —
     /// a candidate with no canonical reading lands in its own row.
     pub fn record(&self, word: &str, tl: &str) {
+        self.write_pick(word, tl, false);
+    }
+
+    /// Counts one commit of `word` picked through a whole-buffer
+    /// abbreviation: one more pick in `count` and in `abbrev_count`.
+    pub fn record_abbreviation(&self, word: &str, tl: &str) {
+        self.write_pick(word, tl, true);
+    }
+
+    fn write_pick(&self, word: &str, tl: &str, abbreviation: bool) {
         let word = phonetics::api::learning_hanji_key(word);
         if word.is_empty() {
             return;
@@ -111,12 +128,16 @@ impl UserFrequencyStore {
             None
         };
         self.database.write(move |connection| {
-            connection.execute(
-                &format!(
+            let sql = if abbreviation {
+                format!(
+                    "INSERT INTO {TABLE_NAME} (word, tl, count, last_used, abbrev_count, abbrev_last_used)\nVALUES (?, ?, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)\nON CONFLICT(word, tl) DO UPDATE SET\n    count = count + 1,\n    last_used = CURRENT_TIMESTAMP,\n    abbrev_count = abbrev_count + 1,\n    abbrev_last_used = CURRENT_TIMESTAMP;"
+                )
+            } else {
+                format!(
                     "INSERT INTO {TABLE_NAME} (word, tl, count, last_used)\nVALUES (?, ?, 1, CURRENT_TIMESTAMP)\nON CONFLICT(word, tl) DO UPDATE SET\n    count = count + 1,\n    last_used = CURRENT_TIMESTAMP;"
-                ),
-                params![word, tl],
-            )?;
+                )
+            };
+            connection.execute(&sql, params![word, tl])?;
             if let Some(capacity) = capacity {
                 capacity.enforce(connection)?;
             }
@@ -221,6 +242,8 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FrequencyRow> {
         tl: row.get(1)?,
         count: row.get(2)?,
         last_used_ms: row.get::<_, Option<i64>>(3)?.unwrap_or(0),
+        abbrev_count: row.get(4)?,
+        abbrev_last_used_ms: row.get(5)?,
     })
 }
 
@@ -230,6 +253,7 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FrequencyRow> {
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     migrate_to_pair_key_if_needed(connection)?;
     connection.execute_batch(&table_ddl(TABLE_NAME))?;
+    add_abbreviation_columns_if_needed(connection)?;
     // No index on `word` alone: the UNIQUE constraint's automatic index
     // already has it as the leftmost column, so it serves `WHERE word IN`.
     connection.execute_batch(&format!(
@@ -287,7 +311,7 @@ fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Resul
 
 fn table_ddl(name: &str) -> String {
     format!(
-        "CREATE TABLE IF NOT EXISTS {name} (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    word TEXT NOT NULL,\n    tl TEXT NOT NULL DEFAULT '',\n    count INTEGER DEFAULT 1,\n    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    UNIQUE(word, tl)\n);"
+        "CREATE TABLE IF NOT EXISTS {name} (\n    id INTEGER PRIMARY KEY AUTOINCREMENT,\n    word TEXT NOT NULL,\n    tl TEXT NOT NULL DEFAULT '',\n    count INTEGER DEFAULT 1,\n    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    abbrev_count INTEGER NOT NULL DEFAULT 0,\n    abbrev_last_used TIMESTAMP,\n    UNIQUE(word, tl)\n);"
     )
 }
 
@@ -314,6 +338,25 @@ fn migrate_to_pair_key_if_needed(connection: &Connection) -> rusqlite::Result<()
         connection.execute_batch(&table_ddl(&staging))?;
         connection.execute_batch(&format!(
             "INSERT INTO {staging} (id, word, tl, count, last_used, created_at)\n    SELECT id, word, '', count, last_used, created_at FROM {TABLE_NAME};\nDROP TABLE {TABLE_NAME};\nALTER TABLE {staging} RENAME TO {TABLE_NAME};"
+        ))
+    })
+}
+
+/// Adds the abbreviation-pick columns to a table from before the split.
+/// Additive, so an older build reading the file ignores them; every
+/// existing row gets `abbrev_count = 0` — all its picks read as readings.
+/// Gated on the shape, like the pair-key rebuild, with no version bump.
+fn add_abbreviation_columns_if_needed(connection: &Connection) -> rusqlite::Result<()> {
+    if has_column(connection, TABLE_NAME, "abbrev_count")? {
+        return Ok(());
+    }
+    immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
+        // Another process may have added them between the check and the lock.
+        if has_column(connection, TABLE_NAME, "abbrev_count")? {
+            return Ok(());
+        }
+        connection.execute_batch(&format!(
+            "ALTER TABLE {TABLE_NAME} ADD COLUMN abbrev_count INTEGER NOT NULL DEFAULT 0;\nALTER TABLE {TABLE_NAME} ADD COLUMN abbrev_last_used TIMESTAMP;"
         ))
     })
 }

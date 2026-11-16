@@ -84,8 +84,10 @@ fn source_filter_applies() {
     assert!(fetch_abbrev_candidates("tl-abbrev:tp", 2, &default_only).is_empty());
 }
 
+/// 鎖匙 picked through `ss` before: its abbreviation picks lift it over
+/// the dictionary-frequent 先生.
 #[test]
-fn user_selection_outranks_dictionary_frequency() {
+fn abbreviation_selection_outranks_dictionary_frequency() {
     let idx = build_wire_index(
         "abbrev-freq.fst",
         &[("tl-abbrev:ss", 1), ("tl-abbrev:ss", 2)],
@@ -96,14 +98,42 @@ fn user_selection_outranks_dictionary_frequency() {
         "鎖匙".to_string(),
         "só-sî".to_string(),
         FrequencyData {
-            count: 3,
-            last_used_ms: 1_000,
+            abbrev_count: 3,
+            abbrev_last_used_ms: 1_000,
+            ..FrequencyData::default()
         },
     );
     let mut ctx = neutral_ctx(&idx, &dict, &freq, InputMode::Tl);
     ctx.now_ms = 2_000;
     let out = fetch_abbrev_candidates("tl-abbrev:ss", 2, &ctx);
     assert_eq!(hanji_of(&out), vec!["鎖匙", "先生"], "{out:?}");
+}
+
+/// 鎖匙 typed in full (`soo-si`) many times: those reading picks do not
+/// lift it under the abbreviation `ss`, so 先生 keeps its dictionary lead
+/// and 鎖匙 carries no user weight there.
+#[test]
+fn reading_selection_does_not_lift_an_abbreviation_hit() {
+    let idx = build_wire_index(
+        "abbrev-read.fst",
+        &[("tl-abbrev:ss", 1), ("tl-abbrev:ss", 2)],
+    );
+    let dict = open_dict("abbrev-read.dict.bin", &rows());
+    let mut freq = FrequencyMap::new();
+    freq.insert(
+        "鎖匙".to_string(),
+        "só-sî".to_string(),
+        FrequencyData {
+            count: 200,
+            last_used_ms: 1_000,
+            ..FrequencyData::default()
+        },
+    );
+    let mut ctx = neutral_ctx(&idx, &dict, &freq, InputMode::Tl);
+    ctx.now_ms = 2_000;
+    let out = fetch_abbrev_candidates("tl-abbrev:ss", 2, &ctx);
+    assert_eq!(hanji_of(&out), vec!["先生", "鎖匙"], "{out:?}");
+    assert!(out.iter().all(|c| c.user_weight == 0.0), "{out:?}");
 }
 
 #[test]
