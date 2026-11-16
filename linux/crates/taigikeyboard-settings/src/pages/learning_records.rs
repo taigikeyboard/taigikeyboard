@@ -429,6 +429,17 @@ impl LearningRecordsPage {
     /// Takes the window's one work slot for `job`, or does nothing because
     /// something else holds it — Custom Dictionary's `begin_job`.
     fn begin_job(self: &Rc<Self>, job: impl FnOnce() -> JobOutcome + Send + 'static) {
+        self.begin_job_then(false, job);
+    }
+
+    /// `begin_job`; `writes_custom_dictionary` also reloads Custom
+    /// Dictionary's list once the job lands, so the word it filed shows
+    /// there without leaving the pane.
+    fn begin_job_then(
+        self: &Rc<Self>,
+        writes_custom_dictionary: bool,
+        job: impl FnOnce() -> JobOutcome + Send + 'static,
+    ) {
         let Some(generation) = self.job_slot.take() else {
             return;
         };
@@ -442,6 +453,9 @@ impl LearningRecordsPage {
             let outcome = outcome.unwrap_or_else(JobOutcome::did_not_finish::<LearningRecord>);
             if let Some(message) = outcome.message {
                 shell.report(&message, &strings);
+            }
+            if writes_custom_dictionary {
+                shell.reload_custom_dictionary();
             }
             let Some(page) = weak.upgrade() else { return };
             let is_this_pages = page.state.borrow_mut().job.finish(generation);
@@ -528,7 +542,9 @@ impl LearningRecordsPage {
             move |roman, hanji| {
                 let Some(page) = weak.upgrade() else { return };
                 let record = record.clone();
-                page.begin_job(move || add_to_custom_dictionary_job(record, &roman, &hanji));
+                page.begin_job_then(true, move || {
+                    add_to_custom_dictionary_job(record, &roman, &hanji)
+                });
             },
         );
     }
