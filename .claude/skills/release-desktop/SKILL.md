@@ -207,9 +207,9 @@ Publishing creates the tag and runs the announcement, which writes only the
 patched platform's `_data` / appcast
 (`docs/architecture/desktop-release.md` § The flow, § What announcing checks).
 
-**A ChromeOS patch**: once published, remind the maintainer to upload the zip
-to the Chrome Web Store (the announcement prints the same reminder;
-`docs/architecture/chromeos-release.md` § Upload).
+**A ChromeOS patch**: the announcement uploads the zip to the Chrome Web Store
+and submits it for review; it fails while another version is still in review
+(`docs/architecture/chromeos-release.md` § Upload).
 
 **A macOS patch**: the announcement bumps and audits the Homebrew cask
 (`docs/architecture/desktop-release.md` § The flow).

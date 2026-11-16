@@ -206,7 +206,8 @@ desktop-patch:
 
 # Announce a desktop release a person has already published: prove each
 # installer downloads anonymously, mirror it to dl.taigikeyboard.tw, point the
-# website at the mirror, wait for the live appcasts. Needs `aws` and the R2_*
+# website at the mirror, wait for the live appcasts; print what the workflow's
+# cask bump and Chrome Web Store submit take next. Needs `aws` and the R2_*
 # credentials (docs/architecture/desktop-release.md). Publishing the release runs this automatically
 # (`.github/workflows/desktop-announce.yml`); this target is the same script by
 # hand, for a re-run after a failed job or an expired token.
