@@ -135,7 +135,10 @@ fn reply_emit(emit: Emit) -> Option<ReplyEmit> {
 fn reply_from(handled: bool, emits: Vec<Emit>) -> *mut TaigiReply {
     Box::into_raw(Box::new(TaigiReply {
         handled,
-        emits: emits.into_iter().filter_map(reply_emit).collect(),
+        emits: session::coalesce_commits(emits)
+            .into_iter()
+            .filter_map(reply_emit)
+            .collect(),
     }))
 }
 
