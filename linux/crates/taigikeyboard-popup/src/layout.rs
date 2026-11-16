@@ -297,10 +297,34 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }
             y += cell.h + row_gap;
         }
-        // A collapsed vertical-expandable list has no arrow row, so the
+        // A collapsed vertical-expandable list shows its overflow as a `›`
+        // column right of the cells — the unfolded grid's slot, and the
+        // macOS / Windows chevron column — never as a row under them, so the
         // window keeps its height when it unfolds.
         let collapsed_expandable = page.expandable.is_some();
-        if (page.has_prev || page.has_next) && !collapsed_expandable {
+        let mut fill_right = None;
+        if collapsed_expandable {
+            if y > pad {
+                y -= row_gap;
+            }
+            if page.has_next {
+                let arrow_h = (y - pad).max(label_px);
+                place_arrow(
+                    &mut glyphs,
+                    &mut hits,
+                    true,
+                    (x + width + gap, pad),
+                    arrow_h,
+                    &style,
+                    measure,
+                );
+                // Halfway across the gap, as a collapsed row stops before
+                // its arrow column.
+                fill_right = Some(x + width + gap * 0.5);
+                width += gap + arrow_span(label_px, measure);
+                y = pad + arrow_h;
+            }
+        } else if page.has_prev || page.has_next {
             let mut ax = x;
             if page.has_prev {
                 place_arrow(
@@ -339,7 +363,7 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             highlight: highlight.map(|cell| {
                 grow_highlight(
                     cell,
-                    vertical_limits(cell, window_w, window_h, pad, row_gap),
+                    vertical_limits(cell, fill_right.unwrap_or(window_w), window_h, pad, row_gap),
                     page.chrome.highlight_fill,
                 )
             }),
@@ -510,16 +534,22 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
             .unwrap_or((index / columns) as u32) as f32;
         let x = pad + column_x[start];
         let slot_w = column_x[start + span] - column_x[start];
-        let top = pad + row * pitch - scroll + (row_body - cell.h).max(0.0) / 2.0;
-        if top + cell.h < pad || top > grid_bottom {
+        let row_top = pad + row * pitch - scroll;
+        let top = row_top + (row_body - cell.h).max(0.0) / 2.0;
+        // Whole rows: at zero padding a centred-cell test would let the row
+        // just outside the viewport draw (and take clicks) at its edge.
+        if row_top + row_body <= pad || row_top >= grid_bottom {
             continue;
         }
         shift_cell(cell, x, top, &mut glyphs, &mut hits);
+        // The whole row, not the cell's own height, so a romanization-only
+        // cell lights up (and takes clicks) as tall as its Hanji neighbours —
+        // the unfolded row's rule.
         let band = Rect {
             x,
-            y: top,
+            y: row_top,
             w: slot_w.max(cell.w),
-            h: cell.h,
+            h: row_body,
         };
         if let Some(hit) = hits.last_mut() {
             if hit.target == Target::Cell(index as u32) {
@@ -762,9 +792,10 @@ fn grid_limits(cell: Rect, content: Rect, pad: f32, col_gap: f32, row_gap: f32) 
     }
 }
 
-/// A vertical row spans the window's width. The top and bottom meet the
-/// outer edge, or stop halfway across `line_gap` when another row is there.
-fn vertical_limits(cell: Rect, width: f32, height: f32, pad: f32, line_gap: f32) -> Rect {
+/// A vertical row spans from the window's left edge to `right` (the window
+/// edge, or halfway to an arrow column). The top and bottom meet the outer
+/// edge, or stop halfway across `line_gap` when another row is there.
+fn vertical_limits(cell: Rect, right: f32, height: f32, pad: f32, line_gap: f32) -> Rect {
     let bottom_edge = cell.y + cell.h;
     let top = if cell.y <= pad + 0.5 {
         0.0
@@ -779,7 +810,7 @@ fn vertical_limits(cell: Rect, width: f32, height: f32, pad: f32, line_gap: f32)
     Rect {
         x: 0.0,
         y: top,
-        w: width,
+        w: right,
         h: (bottom - top).max(0.0),
     }
 }
@@ -1527,6 +1558,122 @@ mod tests {
         assert!((before.height - after.height).abs() < 0.5);
         let full = after.highlight.expect("highlight");
         assert!((full.x + full.w - after.width).abs() < 0.01);
+    }
+
+    /// trace: folded column, two cells, overflow (`has_next`) → a `›` column
+    /// right of the cells (Page hit, x past every cell), as tall as the
+    /// cells; the full highlight stops halfway across the gap before it.
+    #[test]
+    fn a_folded_vertical_expandable_list_shows_its_arrow_column_on_the_right() {
+        use crate::protocol::ExpandableView;
+        let cells: Vec<Cell> = ["好", "人"]
+            .iter()
+            .map(|text| Cell {
+                text: (*text).into(),
+                annotation: Some("hó".into()),
+            })
+            .collect();
+        let mut folded = page(true, true, cells);
+        folded.has_next = true;
+        folded.chrome.highlight_fill = 100;
+        folded.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            mode: 0,
+            axis: 1,
+            ..ExpandableView::default()
+        });
+        let layout = arrange(&folded, &Mono, 1.0);
+        let cells_right = layout
+            .hits
+            .iter()
+            .filter(|hit| matches!(hit.target, Target::Cell(_)))
+            .map(|hit| hit.x + hit.w)
+            .fold(0.0_f32, f32::max);
+        let arrow = layout
+            .hits
+            .iter()
+            .find(|hit| hit.target == Target::Page { forward: true })
+            .expect("the folded list's arrow");
+        assert!(arrow.x > cells_right, "the arrow sits right of the cells");
+        let pad = pads(folded.chrome.padding, 1.0).window;
+        assert!((arrow.y - pad).abs() < 0.01);
+        assert!((arrow.y + arrow.h - (layout.height - pad)).abs() < 0.01);
+        let full = layout.highlight.expect("highlight");
+        assert!(full.x + full.w <= arrow.x, "the fill leaves the arrow be");
+        // Without overflow there is no arrow and the fill meets the edge.
+        folded.has_next = false;
+        let plain = arrange(&folded, &Mono, 1.0);
+        assert!(plain
+            .hits
+            .iter()
+            .all(|hit| !matches!(hit.target, Target::Page { .. })));
+        let full = plain.highlight.expect("highlight");
+        assert!((full.x + full.w - plain.width).abs() < 0.01);
+    }
+
+    /// Hanji glyphs a fifth taller than romanization, as real typefaces'
+    /// ascent + descent differ.
+    struct TallHanji;
+
+    impl Measure for TallHanji {
+        fn size(&self, text: &str, px: f32, hanji: bool) -> (f32, f32) {
+            let h = if hanji { px * 1.2 } else { px };
+            (text.chars().count() as f32 * px * 0.5, h)
+        }
+    }
+
+    /// trace: unfolded column, row 0 a romanization-only cell (h = 20 plus
+    /// 2·cell_pad), row 1 a Hanji cell (h = 24 plus 2·cell_pad) → row_body is
+    /// the Hanji height; the short cell's bare highlight and hit start at the row
+    /// top (pad) and are row_body tall, as its Hanji neighbour's.
+    #[test]
+    fn an_unfolded_column_highlights_a_short_cell_at_its_row_height() {
+        use crate::protocol::ExpandableView;
+        let cells = vec![
+            Cell {
+                text: "siáng".into(),
+                annotation: None,
+            },
+            Cell {
+                text: "是".into(),
+                annotation: Some("sī".into()),
+            },
+        ];
+        let mut shown = page(false, true, cells);
+        shown.chrome.highlight_fill = 0;
+        shown.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            mode: 1,
+            axis: 1,
+            column_width: 80,
+            grid_columns: 1,
+            scroll_y: 0,
+            row_indexes: vec![0, 1],
+            column_starts: vec![0, 0],
+            column_spans: vec![1, 1],
+            visible_rows: 2,
+            row_height: 40,
+        });
+        shown.cursor = Some(0);
+        let layout = arrange(&shown, &TallHanji, 1.0);
+        let short = layout.highlight.expect("cursor");
+        shown.cursor = Some(1);
+        let tall = arrange(&shown, &TallHanji, 1.0).highlight.expect("cursor");
+        let pad = pads(shown.chrome.padding, 1.0).window;
+        assert!(
+            (short.y - pad).abs() < 0.01,
+            "the band starts at the row top"
+        );
+        assert!(
+            (short.h - tall.h).abs() < 0.01,
+            "the band is the row's height"
+        );
+        let hit = layout
+            .hits
+            .iter()
+            .find(|hit| hit.target == Target::Cell(0))
+            .expect("the short cell's hit");
+        assert!((hit.y - short.y).abs() < 0.01 && (hit.h - short.h).abs() < 0.01);
     }
 
     #[test]
