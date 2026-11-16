@@ -396,6 +396,12 @@ impl LearningRecordsPage {
         self.load();
     }
 
+    /// Opens `record`'s dialog, as ✎ does for the selected row (for the
+    /// tests).
+    pub fn open_record_dialog(self: &Rc<Self>, record: LearningRecord) {
+        self.record_dialog(record);
+    }
+
     fn step_page(self: &Rc<Self>, delta: isize) {
         let has_stepped = self.state.borrow_mut().listing.step_page(delta);
         if has_stepped {
@@ -569,13 +575,16 @@ impl LearningRecordsPage {
                 dialog.set_extra_child(Some(&page));
                 // The confirm button follows the tab: its label, and — on
                 // the add tab — a romanization to file the word under.
-                // Weak: the dialog holds these widgets, and they holding it
-                // back would keep all alive after it closed.
+                // Weak, all three: this closure is connected on `stack` and
+                // `roman` themselves, so a strong reference to either is a
+                // widget → handler → widget cycle that outlives the dialog.
                 let follow = {
                     let dialog = dialog.downgrade();
-                    let (roman, stack) = (roman.clone(), stack.clone());
+                    let (roman, stack) = (roman.downgrade(), stack.downgrade());
                     move || {
-                        let Some(dialog) = dialog.upgrade() else {
+                        let (Some(dialog), Some(roman), Some(stack)) =
+                            (dialog.upgrade(), roman.upgrade(), stack.upgrade())
+                        else {
                             return;
                         };
                         let is_add = stack.visible_child_name().as_deref() == Some(ADD_TAB);
@@ -616,7 +625,9 @@ impl LearningRecordsPage {
                         return;
                     }
                     let hanji = hanji.text().to_string();
-                    page.begin_job(move || add_to_custom_dictionary_job(record, &roman, &hanji));
+                    page.begin_job_then(true, move || {
+                        add_to_custom_dictionary_job(record, &roman, &hanji)
+                    });
                 }
                 _ => {
                     let value = count.value() as i64;

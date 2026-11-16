@@ -492,6 +492,42 @@ fn the_learning_records_list_what_the_keyboard_learned(window: &Rc<SettingsWindo
         find_first::<adw::ComboRow>(reopened.widget.upcast_ref()).expect("the kind picker");
     assert_eq!(reopened_kind.selected(), 1);
     eprintln!("panes: learning records list the engine's rows and switch kind");
+
+    a_closed_record_dialog_frees_its_widgets(window, &records);
+}
+
+/// The record dialog of an addable row (two tabs) leaves no widget behind
+/// once closed: the handler that follows the tab and the romanization is
+/// connected on the stack and the entry, so it must hold them weakly.
+fn a_closed_record_dialog_frees_its_widgets(
+    window: &Rc<SettingsWindow>,
+    records: &Rc<taigikeyboard_settings::pages::learning_records::LearningRecordsPage>,
+) {
+    let phrase = user_data::LearningRecord {
+        kind: user_data::LearningRecordKind::LearnedPhrase as i32,
+        text: "台灣".to_owned(),
+        tl: "tâi-uân".to_owned(),
+        count: 1,
+        can_add_to_custom_dictionary: true,
+        ..Default::default()
+    };
+    records.open_record_dialog(phrase);
+    let dialog = window
+        .window()
+        .visible_dialog()
+        .expect("the record dialog is presented");
+    let stack = find_first::<gtk::Stack>(dialog.upcast_ref())
+        .expect("an addable row's dialog has the tab stack")
+        .downgrade();
+    let entry = find_first::<adw::EntryRow>(dialog.upcast_ref())
+        .expect("the add tab's romanization")
+        .downgrade();
+    dialog.force_close();
+    drop(dialog);
+    pump_until(|| stack.upgrade().is_none() && entry.upgrade().is_none());
+    assert!(stack.upgrade().is_none(), "the tab stack is freed");
+    assert!(entry.upgrade().is_none(), "the romanization entry is freed");
+    eprintln!("panes: a closed record dialog frees its widgets");
 }
 
 fn the_read_only_window_writes_nothing(application: &adw::Application) {
