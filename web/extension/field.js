@@ -1,7 +1,9 @@
 // A website's text field as the engine sees it: which focused elements the
 // extension types into, and the page's `Surface` (`surface.js`) over each kind.
 // Every write is `execCommand`, the one call that keeps a field's own undo
-// history and tells the page's editor (`input`, `beforeinput`) what happened.
+// history and fires the `input` an editor hears. In a `contenteditable` host
+// the `beforeinput` that typing fires first is dispatched by hand: Chromium's
+// `execCommand` fires none (`EditableWrites.#edit`).
 
 import { Surface } from "./surface.js";
 
@@ -473,6 +475,13 @@ class EditableWrites {
    */
   #seen = [null, 0, null, 0, undefined];
   #token = 0;
+  /** A listener cancelled a write of this batch: the DOM is the editor's. */
+  #isEditorWrite = false;
+  /**
+   * Waits for the editor's own render of a cancelled write.
+   * @type {MutationObserver | null}
+   */
+  #render = null;
 
   /** @param {HTMLElement} host */
   constructor(host) {
@@ -486,19 +495,61 @@ class EditableWrites {
    */
   batch(writes) {
     this.#didWrite = false;
+    this.#isEditorWrite = false;
+    this.#stopAwaitingRender();
     writes();
     if (this.#isDeletePending) {
       this.#isDeletePending = false;
-      this.#didWrite = document.execCommand("delete") || this.#didWrite;
+      this.#didWrite =
+        this.#edit("deleteContentBackward", "delete", null) || this.#didWrite;
     }
-    if (this.#didWrite) {
-      // Editors like Lexical cancel `beforeinput` and reconcile the DOM in a
-      // microtask; adopt the selection their own reconciliation lands on.
-      queueMicrotask(() => {
-        this.#seen = this.#currentSeen();
-      });
+    if (!this.#didWrite) {
+      return;
+    }
+    // The browser's own edit has landed by the next microtask, and so has
+    // Lexical's reconciliation of one it cancelled.
+    queueMicrotask(() => {
+      this.#seen = this.#currentSeen();
+    });
+    if (this.#isEditorWrite) {
+      this.#awaitRender();
     }
   }
+
+  /**
+   * An editor that cancelled the write may render it in a later task (Slate,
+   * through React), replacing the caret's text node: until then, the caret
+   * the microtask saw is the one before the write. The first change to the
+   * host's DOM is that render, and the caret it lands on is this write's.
+   * The next key or click ends the wait first: `Surface.takeForeignChange`
+   * and `caretMoved` see whatever those do (undo, a click) as foreign.
+   * @returns {void}
+   */
+  #awaitRender() {
+    const observer = new MutationObserver(() => {
+      this.#seen = this.#currentSeen();
+      this.#stopAwaitingRender();
+    });
+    observer.observe(this.#host, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+    this.#render = observer;
+    // After `content.js`'s listeners, which are the window's first.
+    addEventListener("keydown", this.#stopAwaitingRender, true);
+    addEventListener("pointerdown", this.#stopAwaitingRender, true);
+  }
+
+  #stopAwaitingRender = () => {
+    if (this.#render === null) {
+      return;
+    }
+    this.#render.disconnect();
+    this.#render = null;
+    removeEventListener("keydown", this.#stopAwaitingRender, true);
+    removeEventListener("pointerdown", this.#stopAwaitingRender, true);
+  };
 
   /**
    * The caret, when it is in this host.
@@ -514,16 +565,45 @@ class EditableWrites {
   }
 
   /**
+   * One edit of the selection, as typing makes it: a cancelable `beforeinput`
+   * on the host, then the browser's own edit unless a listener cancelled it.
+   * Chromium's `execCommand` fires `input` but no `beforeinput`, so an editor
+   * that edits its model from `beforeinput` alone (Slate) would never hear
+   * the write; a cancelled event is that editor's own write, and the DOM is
+   * its to change.
+   * @param {"insertText" | "deleteContentBackward"} inputType
+   * @param {"insertText" | "delete"} command
+   * @param {string | null} data
+   * @returns {boolean}
+   */
+  #edit(inputType, command, data) {
+    const range = this.#range();
+    if (range === null) {
+      return false;
+    }
+    const event = new InputEvent("beforeinput", {
+      inputType,
+      data,
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      targetRanges: [new StaticRange(range)],
+    });
+    if (!this.#host.dispatchEvent(event)) {
+      this.#isEditorWrite = true;
+      return true;
+    }
+    return document.execCommand(command, false, data ?? undefined);
+  }
+
+  /**
    * Inserts `text` into the editable host if the selection lies within it.
    * @param {string} text
    * @returns {boolean}
    */
   insertText(text) {
     this.#isDeletePending = false;
-    if (this.#range() === null) {
-      return false;
-    }
-    const isDone = document.execCommand("insertText", false, text);
+    const isDone = this.#edit("insertText", "insertText", text);
     this.#didWrite ||= isDone;
     return isDone;
   }

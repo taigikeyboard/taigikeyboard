@@ -56,6 +56,13 @@ interface LexicalFixture {
   setSelectedText(value: string, start: number, end: number): Promise<void>;
 }
 
+interface SlateFixture {
+  text(): string;
+  sent(): string[];
+  selection(): { anchor: number; focus: number } | null;
+  setSelectedText(value: string, start: number, end: number): Promise<void>;
+}
+
 interface HiddenFixture {
   clearLog(): void;
   editContextText(): string;
@@ -108,6 +115,7 @@ interface Window {
   cm5Fixture: CodeMirror5Fixture;
   cm6Fixture: CodeMirror6Fixture;
   lexicalFixture: LexicalFixture;
+  slateFixture: SlateFixture;
   hiddenFixture: HiddenFixture;
   quill: QuillInstance;
   inlineRan?: boolean;
