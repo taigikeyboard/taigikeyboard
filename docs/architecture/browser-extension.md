@@ -119,7 +119,7 @@ The composition ends with its field:
 | Field not supported | `×` | Field not supported, dashed |
 | Could not load | `!` | Could not load, dashed |
 
-The tooltip on an enabled tab is the extension's name, the same words, and the active shortcut (`chrome.commands`) when assigned; on an unenabled or restricted page it keeps the manifest's title. The popup shows them too, with the buttons for the state (Use on This Site, Start Typing, Stop Typing, Stop Using on This Site, with the live shortcut on the toggle/enable buttons) and the settings. Stop Using on This Site is also on the toolbar button's right-click context menu when the active tab's site is enabled. The chip takes no pointer events.
+The tooltip on an enabled tab is the extension's name, the same words, and the active shortcut (`chrome.commands`) when assigned; on an unenabled or restricted page it keeps the manifest's title. The popup shows them too, with the buttons for the state (Use on This Site, Start Typing, Stop Typing, Stop Using on This Site, with the live shortcut on Start Typing and Stop Typing; Use on This Site shows none, because the browser asks about a site only after a click in the popup) and the settings. Stop Using on This Site is also on the toolbar button's right-click context menu when the active tab's site is enabled. The chip takes no pointer events.
 
 ## Known limits
 
@@ -129,7 +129,7 @@ The tooltip on an enabled tab is the extension's name, the same words, and the a
 - **Fonts**: the panel uses the system's fonts; the page's Taigi fonts are not in the package, and the Font row is hidden in the options page.
 - **Not drawn**: the TPS key panel and the Telex guide. Their chords change nothing visible.
 - **`web_accessible_resources`**: the engine, the dictionaries and the modules are readable by any site, which can therefore tell that the extension is installed. Fix tracked in #902 (`use_dynamic_url`).
-- **The extension's shortcut** (Alt+Shift+T) toggles typing on an enabled site (matching a left-click on the toolbar button) and opens the popup on one that is not.
+- **The extension's shortcut** (Alt+Shift+T) toggles typing on an enabled site (matching a left-click on the toolbar button) and opens the popup on one that is not, with **Use on This Site** focused: Enter then asks the browser for the site.
 
 ## Package
 

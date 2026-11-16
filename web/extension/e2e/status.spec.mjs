@@ -175,14 +175,10 @@ test("the popup names the tab's state and offers the way out of it", async ({
     "Not enabled on this site",
   );
   await expect(enablePopup.locator("#enable")).toBeVisible();
-  if (shortcut) {
-    await expect(enablePopup.locator("#enable .popup-shortcut")).toBeVisible();
-    await expect(enablePopup.locator("#enable .popup-shortcut")).toHaveText(
-      shortcut,
-    );
-  } else {
-    await expect(enablePopup.locator("#enable .popup-shortcut")).toBeHidden();
-  }
+  // The shortcut cannot grant a site, so the button names none; it takes
+  // focus so Enter answers the popup the shortcut opened.
+  await expect(enablePopup.locator("#enable .popup-shortcut")).toHaveCount(0);
+  await expect(enablePopup.locator("#enable")).toBeFocused();
   await enablePopup.close();
 });
 
