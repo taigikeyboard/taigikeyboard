@@ -2,7 +2,8 @@ name: Generated files + lint
 
 # The gates that need no compiler: generated i18n artifacts are current, the
 # i18n codegen's own tests pass, the protobuf bindings are current, Swift
-# formatting matches .swiftformat, every PowerShell script is ASCII
+# formatting matches .swiftformat, no SwiftUI call takes a string literal as its
+# text (`make lint-swiftui-literals`), every PowerShell script is ASCII
 # (`make lint-ps1`), and every rust-toolchain.toml names the one pinned Rust
 # (`make lint-rust-toolchain`).
 # Everything here reads files; the whole job is well under a minute.
@@ -29,6 +30,7 @@ on:
       - 'mise.toml'
       - '**/rust-toolchain.toml'
       - 'tools/rust-toolchain.sh'
+      - 'tools/swiftui_literals*.py'
       - '.github/workflows/codegen-lint.yml'
   push:
     branches: [main]
@@ -49,6 +51,7 @@ on:
       - 'mise.toml'
       - '**/rust-toolchain.toml'
       - 'tools/rust-toolchain.sh'
+      - 'tools/swiftui_literals*.py'
       - '.github/workflows/codegen-lint.yml'
 
 permissions:
@@ -114,6 +117,15 @@ jobs:
       # build: the committed outputs must match what i18n/*.json generates.
       - name: Generated artifacts are current
         run: python3 tools/i18n/check.py
+
+      # Swift UI text comes from those generated strings, never from a literal
+      # (docs/contributing/i18n.md).
+      - name: SwiftUI literal gate unit tests
+        working-directory: tools
+        run: python3 -m unittest swiftui_literals_test
+
+      - name: make lint-swiftui-literals
+        run: make lint-swiftui-literals
 
   swiftformat:
     name: swiftformat --lint

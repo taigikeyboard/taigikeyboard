@@ -19,7 +19,7 @@ SHELL := /usr/bin/env sh
 .DEFAULT_GOAL := help
 
 .PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
-        fmt lint lint-ps1 lint-rust-toolchain hooks scan-secrets scan-secrets-full scan-private \
+        fmt lint lint-ps1 lint-rust-toolchain lint-swiftui-literals hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
@@ -264,7 +264,9 @@ version-mobile version-desktop:
 #           engine, desktop-shared, macOS and web crates (lint). The Windows and
 #           Linux workspaces are linted by `make windows-check` /
 #           `make linux-check`, which need their cross targets.
-#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml)
+#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml).
+#           No SwiftUI call takes a string literal as its text
+#           (lint-swiftui-literals; tools/swiftui_literals.py says why).
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
 #           (spotlessCheck doubles as ktlint).
 #   JS      Biome — config: web/biome.json (version: mise.toml); TypeScript
@@ -282,7 +284,7 @@ fmt:
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
-lint: lint-ps1 lint-rust-toolchain
+lint: lint-ps1 lint-rust-toolchain lint-swiftui-literals
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
@@ -296,6 +298,9 @@ lint: lint-ps1 lint-rust-toolchain
 # so local clippy / rustfmt are CI's (tools/rust-toolchain.sh).
 lint-rust-toolchain:
 	bash tools/rust-toolchain.sh check
+
+lint-swiftui-literals:
+	python3 tools/swiftui_literals.py
 
 lint-ps1:
 	@git ls-files -z '*.ps1' | xargs -0 perl -ne 'if (/[^\t\r\n\x20-\x7e]/) { print "$$ARGV:$$.: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } close ARGV if eof; END { exit $$bad }'
@@ -368,7 +373,7 @@ help:
 	@echo ""
 	@echo "Quality and hooks"
 	@echo "  make fmt                Apply formatting: rustfmt (5 workspaces) + SwiftFormat + Spotless"
-	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos, web) + web typecheck/biome + SwiftFormat + Spotless"
+	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos, web) + web typecheck/biome + SwiftFormat + SwiftUI literals + Spotless"
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"
