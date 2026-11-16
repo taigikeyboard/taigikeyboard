@@ -113,6 +113,5 @@ Per phase: P1 — `docs/contributing/rust-migration-policy.md` §6 (user data is
 - A suppression / blocklist dictionary (mozc `user_dictionary.cc`, `mainstream-ime-comparison.md:364`): deleting the learned row is enough to undo a mistaken pick; a "never show" list is a different feature.
 - Showing the computed boost: it changes with the clock (30-day decay); a number that drifts while the page is open reads as a bug. Count + last used are the stable inputs.
 - Adding rows by hand: that is the custom dictionary.
-- Deleting a word-frequency row once its word is added (a move, as for phrases): see What the user gets — the frequency row is the word's ranking weight.
-- A second op for frequency rows beside the phrase move: one user verb, one op; what happens to the row after the add is the engine's per-kind decision.
+- Adding a word-frequency row at all (P12): its words are dictionary words already. That includes the row left behind by a deleted custom word — re-filing it from this page was dropped with P12; the Custom Dictionary page's Add Word does it (maintainer, 2026-11-16).
 - A generic "user-data table browser" abstraction over all four stores: three row shapes, one flat message — no trait.
