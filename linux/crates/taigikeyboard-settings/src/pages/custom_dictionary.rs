@@ -357,8 +357,9 @@ impl CustomDictionaryPage {
         self.state.borrow().listing.rows.len()
     }
 
-    /// Reloads the page on screen (for the tests; the page reloads itself
-    /// after every write).
+    /// Reloads the page on screen: after another page's write to the store
+    /// (Learning Records' add, `SettingsWindow::reload_custom_dictionary`),
+    /// and in the tests. The page reloads itself after its own writes.
     pub fn reload(self: &Rc<Self>) {
         self.load();
     }

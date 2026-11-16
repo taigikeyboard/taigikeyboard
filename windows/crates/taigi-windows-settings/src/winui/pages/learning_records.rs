@@ -328,7 +328,7 @@ pub fn update(
                 else {
                     return;
                 };
-                begin_job(model, context, move || {
+                begin_job_then(model, context, true, move || {
                     add_to_custom_dictionary_job(record, &roman, &hanji)
                 });
             } else {
