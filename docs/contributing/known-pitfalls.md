@@ -24,7 +24,7 @@ Technical rules distilled from past incidents. The dated narratives that produce
 
 ## Phonetics
 
-- Never remove or infer a TL / POJ / TPS rule from dictionary or test absence (`docs/contributing/phonetics.md`). `iri` / `erk` / `eeh` are dialectal finals in `TL_FINALS` (`engine/phonetics/src/tables.rs`) that `docs/phonetics/taigi-phonetics-reference.md` §3.2.6 does not list; that absence is no licence to drop them. TPS has its own tone marks (`engine/phonetics/src/tps.rs::ZHUYIN_TONES`) — not digit tones, not bopomofo.
+- Never remove or infer a TL / POJ / TPS rule from dictionary or test absence (`docs/contributing/phonetics.md`). TPS has its own tone marks (`engine/phonetics/src/tps.rs::ZHUYIN_TONES`) — not digit tones, not bopomofo.
 
 ## Privacy
 

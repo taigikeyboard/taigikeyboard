@@ -102,3 +102,22 @@ pub(crate) fn tl_tone_mark(tone: &str) -> &'static str {
 pub(crate) fn poj_tone_mark(tone: &str) -> &'static str {
     TONE_NUM_TO_COMBINING.get(tone).copied().unwrap_or("")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::TL_FINALS;
+
+    // `docs/phonetics/taigi-phonetics-reference.md` §3.2.6 does not list these
+    // dialectal finals, and no other test uses `erk` / `eeh`. Neither absence is
+    // evidence against them (`docs/contributing/phonetics.md` § No "dead code"
+    // inference from absence): removing one is a phonetics decision, not a cleanup.
+    #[test]
+    fn dialectal_finals_outside_the_reference_stay_in_the_table() {
+        for dialectal_final in ["iri", "erk", "eeh"] {
+            assert!(
+                TL_FINALS.contains(dialectal_final),
+                "{dialectal_final} missing from TL_FINALS"
+            );
+        }
+    }
+}
