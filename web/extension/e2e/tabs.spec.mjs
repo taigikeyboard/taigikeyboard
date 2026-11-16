@@ -15,6 +15,7 @@ import {
   openTyping,
   overlay,
   preedit,
+  tabIdOf,
   test,
   toolbar,
   toolbarPopup,
@@ -215,4 +216,40 @@ test("stopping site access from the action menu stops typing on the tab", async 
   await field.click();
   await commitWord(page);
   await expect(field).toHaveValue("taiuan");
+});
+
+test("a grant the popup asked for turns typing on in its tab", async ({
+  worker,
+  page,
+}) => {
+  // The browser's dialog cannot be answered here (browser-extension.md
+  // § Tests), so this is the service worker's half: the popup's note, then
+  // the grant `permissions.onAdded` hands over.
+  await page.goto(FIELDS);
+  await expectOff(page);
+  const tabId = await tabIdOf(worker, page);
+  const pattern = `*://${new URL(A).hostname}/*`;
+  await worker.evaluate(
+    async ({ tabId, pattern }) => {
+      const { finishPendingEnable } =
+        /** @type {{ finishPendingEnable: (origins: string[]) => Promise<void> }} */ (
+          /** @type {unknown} */ (globalThis)
+        );
+      await chrome.storage.session.set({ pendingEnable: { tabId, pattern } });
+      // Another site's grant leaves the note for its own.
+      await finishPendingEnable(["*://elsewhere.test/*"]);
+      await finishPendingEnable([pattern]);
+    },
+    { tabId, pattern },
+  );
+  await expectToolbar(worker, page, "台");
+  const field = page.locator("#text");
+  await field.fill("");
+  await field.click();
+  await commitWord(page);
+  await expect(field).toHaveValue("台灣");
+  const left = await worker.evaluate(() =>
+    chrome.storage.session.get("pendingEnable"),
+  );
+  expect(left).toEqual({});
 });
