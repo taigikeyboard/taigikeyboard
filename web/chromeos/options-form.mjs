@@ -44,6 +44,21 @@ const SHORTCUTS_MARK = '<div id="shortcuts"></div>';
 const SECTION_OPENING = '<details class="sidebar-section">';
 
 /**
+ * `tag` (an opening tag such as `<details class="x">`) with `attribute`
+ * added before its closing `>`.
+ *
+ * @param {string} tag
+ * @param {string} attribute
+ * @returns {string}
+ */
+function withAttribute(tag, attribute) {
+  if (!tag.endsWith(">")) {
+    throw new Error(`options form: ${tag} is not a whole opening tag`);
+  }
+  return `${tag.slice(0, -1)} ${attribute}>`;
+}
+
+/**
  * @param {string[]} lines
  * @param {string} needle
  * @returns {number}
@@ -73,7 +88,7 @@ function hideEnclosing(lines, from, opening) {
     if (lines[index].includes(opening)) {
       lines[index] = lines[index].replace(
         opening,
-        opening.replace(">", " hidden>"),
+        withAttribute(opening, "hidden"),
       );
       return;
     }
@@ -111,7 +126,7 @@ export function optionsForm(indexHtml, cut = CHROMEOS) {
   }
   const joined = form.join("\n");
   return cut.sectionsOpen
-    ? joined.replaceAll(SECTION_OPENING, SECTION_OPENING.replace(">", " open>"))
+    ? joined.replaceAll(SECTION_OPENING, withAttribute(SECTION_OPENING, "open"))
     : joined;
 }
 
