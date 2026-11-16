@@ -86,7 +86,8 @@ public interface LearningRecordOrBuilder extends
   /**
    * <pre>
    * Whether the page offers Add to Custom Dictionary for this row: a
-   * learned phrase or word-frequency row whose text holds Hanji. Set by the
+   * learned phrase whose text holds Hanji. Never a word-frequency row: its
+   * word is a dictionary word already. Set by the
    * engine on every row it answers;
    * ignored on a request (`AddLearningRecordToCustomDictionary` decides
    * again from `text` and `tl`).

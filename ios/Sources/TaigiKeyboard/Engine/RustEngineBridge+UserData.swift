@@ -171,8 +171,8 @@ extension RustEngineBridge {
         return deleted
     }
 
-    /// Files the listed row's word as a custom word, then forgets a learned
-    /// phrase (a frequency row stays); a refusal keeps the row.
+    /// Files the listed learned phrase's word as a custom word, then forgets
+    /// the phrase (a frequency row is refused); a refusal keeps the row.
     static func learningRecordAddToCustomDictionary(
         _ record: Taigi_Engine_LearningRecord,
     ) -> Taigi_Engine_LearningRecordAddedToCustomDictionary? {

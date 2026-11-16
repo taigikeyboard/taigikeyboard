@@ -108,8 +108,8 @@ protocol UserDataClient: Sendable {
     /// Forgets the listed `record`; `false` when the row was already gone.
     func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) async throws -> Bool
     /// Files the listed row's word as a custom word (roman = its TL,
-    /// hanji = its text) unless already stored, then forgets a learned phrase
-    /// (a frequency row stays). A refusal (a full dictionary, an unsearchable
+    /// hanji = its text) unless already stored, then forgets the learned
+    /// phrase (a frequency row is never added). A refusal (a full dictionary, an unsearchable
     /// reading) keeps the row and throws.
     func addLearningRecordToCustomDictionary(_ record: Taigi_Engine_LearningRecord) async throws
 }

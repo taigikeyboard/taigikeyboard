@@ -985,7 +985,8 @@ public nonisolated struct Taigi_Engine_LearningRecord: Sendable {
   public var lastUsedMs: Int64 = 0
 
   /// Whether the page offers Add to Custom Dictionary for this row: a
-  /// learned phrase or word-frequency row whose text holds Hanji. Set by the
+  /// learned phrase whose text holds Hanji. Never a word-frequency row: its
+  /// word is a dictionary word already. Set by the
   /// engine on every row it answers;
   /// ignored on a request (`AddLearningRecordToCustomDictionary` decides
   /// again from `text` and `tl`).
@@ -1127,21 +1128,18 @@ public nonisolated struct Taigi_Engine_LearningRecordDeleted: Sendable {
   public init() {}
 }
 
-/// Adds one row's word to the custom dictionary (roman = `roman`, else
-/// `record.tl`; hanji = `hanji`, else `record.text`) unless the dictionary
-/// already holds that word —
-/// the same Hanji with the same canonical TL, however its roman is spelled.
-/// What happens to the row after depends on its kind:
-/// - a learned phrase is then forgotten as `DeleteLearningRecord` forgets it
-///   (a row already gone is not a failure): the custom word offers the whole
-///   phrase from then on, as the learned phrase did, so nothing is lost;
-/// - a word-frequency row stays as it is: it keeps weighting the word it
-///   counts.
+/// Adds one learned phrase's word to the custom dictionary (roman = `roman`,
+/// else `record.tl`; hanji = `hanji`, else `record.text`) unless the
+/// dictionary already holds that word — the same Hanji with the same
+/// canonical TL, however its roman is spelled. The phrase is then forgotten
+/// as `DeleteLearningRecord` forgets it (a row already gone is not a
+/// failure): the custom word offers the whole phrase from then on, as the
+/// learned phrase did, so nothing is lost.
 /// Refused as `SaveCustomEntry` is (EMPTY_ROMAN, FULL, or UNSEARCHABLE for
 /// a roman that derives no search key), and a refused add keeps the row. A
 /// row whose `can_add_to_custom_dictionary` the engine would answer false
-/// (an association, or no Hanji) is `FAIL_INVARIANT` — decided from the
-/// row's own text, whatever the edited word is.
+/// (a word-frequency row, or no Hanji) is `FAIL_INVARIANT` — decided from
+/// the row's own kind and text, whatever the edited word is.
 public nonisolated struct Taigi_Engine_AddLearningRecordToCustomDictionary: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
