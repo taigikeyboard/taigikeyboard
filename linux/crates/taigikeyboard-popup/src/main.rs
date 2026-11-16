@@ -123,7 +123,7 @@ impl ApplicationHandler<UserEvent> for App {
         if self.window.is_some() {
             return;
         }
-        let mut attributes = Window::default_attributes()
+        let attributes = Window::default_attributes()
             .with_title("TaigiKeyboard")
             .with_decorations(false)
             .with_resizable(false)
@@ -131,12 +131,12 @@ impl ApplicationHandler<UserEvent> for App {
             .with_transparent(true)
             .with_window_level(WindowLevel::AlwaysOnTop);
         #[cfg(target_os = "linux")]
-        {
+        let attributes = {
             use winit::platform::x11::WindowAttributesExtX11;
-            attributes = attributes
+            attributes
                 .with_override_redirect(true)
-                .with_name("taigikeyboard-popup", "taigikeyboard");
-        }
+                .with_name("taigikeyboard-popup", "taigikeyboard")
+        };
         let Ok(window) = event_loop.create_window(attributes) else {
             eprintln!("taigikeyboard-popup: the window could not be created");
             event_loop.exit();
