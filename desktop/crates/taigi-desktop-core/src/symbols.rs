@@ -1,6 +1,7 @@
 //! The symbol picker's table: three categories of insertable strings, compiled
 //! in from the shared desktop JSON. macOS keeps a Swift twin: `SymbolTable.swift`.
 
+use crate::settings::SettingsDocument;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -199,9 +200,35 @@ impl RecentSymbols {
     }
 }
 
+/// The list the picker opens with, recents first, and the one a pick indexes.
+/// `None` where the picker does not open: a password field — a pick writes
+/// into the document and learns the symbol — or a table that did not validate.
+pub fn symbol_picker_symbols(
+    settings: &SettingsDocument,
+    is_password_field: bool,
+) -> Option<Vec<String>> {
+    if is_password_field {
+        return None;
+    }
+    let table = SymbolTable::bundled()?;
+    Some(settings.recent_symbols().ordered(table.symbols()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_picker_does_not_open_in_a_password_field() {
+        let settings = SettingsDocument::default();
+        assert_eq!(symbol_picker_symbols(&settings, true), None);
+        let symbols = symbol_picker_symbols(&settings, false).expect("bundled table");
+        // trace: no recents yet → menu order, the table's own first symbol.
+        assert_eq!(
+            symbols.first().map(String::as_str),
+            bundled().symbols().next()
+        );
+    }
 
     fn bundled() -> &'static SymbolTable {
         SymbolTable::bundled().expect("the bundled symbol table validates")

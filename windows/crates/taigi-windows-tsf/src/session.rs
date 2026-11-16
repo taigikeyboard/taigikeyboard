@@ -36,16 +36,14 @@ use taigi_desktop_core::composing::{
     IntentSurface,
 };
 use taigi_desktop_core::engine::Effect;
+use taigi_desktop_core::global_action::{apply_global_action, ListEffect, ShellRequest};
 use taigi_desktop_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot,
     ShortcutAction, SymbolPickerIntent, TpsKeyCapIndex,
 };
-use taigi_desktop_core::settings::presentation::output_script_label;
-use taigi_desktop_core::settings::{
-    keys, AppearanceMode, CandidateDisplayMode, InputMode, InputModeRequest, SettingsDocument,
-};
+use taigi_desktop_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_core::symbols::SymbolTable;
+use taigi_desktop_core::symbols::symbol_picker_symbols;
 use taigi_windows_platform::tps_keyboard_click::{click_intent, TPS_KEYBOARD_CLICK_VIRTUAL_KEY};
 use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows::core::{Interface, BOOL};
@@ -138,7 +136,12 @@ impl TextService_Impl {
         // A chord recorded in the settings window takes effect at the next
         // key, whichever way the file's change was noticed.
         self.sync_preserved_keys(&settings);
-        let global_action = ShortcutAction::matching(&snapshot, &settings, DESKTOP_PLATFORM);
+        let global_action = ShortcutAction::matching_in(
+            &snapshot,
+            &settings,
+            DESKTOP_PLATFORM,
+            self.state.borrow().language_mode,
+        );
 
         if is_read_only(context) {
             return BOOL::from(false);
@@ -912,42 +915,14 @@ impl TextService_Impl {
         log::info!("language_mode.switched mode={next:?}");
     }
 
-    /// One of the two input-script switches. The candidates on screen were
-    /// fetched under the old mode; they go with the mode that produced them
-    /// — then the HUD, because the chord fires from anywhere and a mode that
-    /// changed with no notice reads as the keyboard breaking (USER
-    /// 2026-08-26). A composition across TPS stays until the next key
-    /// commits it (`commit_composition_left_by_mode_change`) — no edit
-    /// session is requested here, outside a key. The auto-space arm stays: it
-    /// names a space in the document, whatever the mode.
-    fn switch_input_mode(
-        &self,
-        request: InputModeRequest,
-        identity: usize,
-        token: Option<ContextToken>,
-    ) {
-        let runtime = Runtime::shared();
-        if !runtime.update_settings("switch_input_mode", |document| {
-            document.switch_input_mode(request);
-        }) {
-            return;
-        }
-        let settings = runtime.settings.current();
-        let mode: InputMode = settings.choice(&keys::INPUT_MODE);
-        if let Some(entry) = self.state.borrow_mut().contexts.entry_mut(identity) {
-            entry.state.candidates.clear();
-        }
-        if let Some(token) = token {
-            self.hide_candidates(token);
-        }
-        // The TPS key panel and the Telex guide come and go with TPS, their
-        // stored keys staying; the guide is respelled for a romanization.
-        self.sync_panels();
-        self.flash_mode_label(runtime, &settings, mode.label_key());
-    }
-
     /// A global shortcut fired (preserved key or the key sink's match).
     /// `identity` is 0 when the host named no context (`OnPreservedKey`).
+    /// What the action decides is the core's (`apply_global_action`); this
+    /// carries it out with the service's own windows. A composition across
+    /// TPS stays until the next key commits it
+    /// (`commit_composition_left_by_mode_change`) — no edit session is
+    /// requested here, outside a key. The auto-space arm stays: it names a
+    /// space in the document, whatever the mode.
     pub(crate) fn perform_global(&self, action: ShortcutAction, identity: usize) {
         let runtime = Runtime::shared();
         if action.is_inert_under(runtime.settings.current().choice(&keys::INPUT_MODE)) {
@@ -964,87 +939,19 @@ impl TextService_Impl {
         // switched under an open list is a list the user is no longer
         // looking at (`TaigiInputController.performShortcutAction`).
         self.hide_symbol_picker_now();
-        match action {
+        let Some(outcome) = apply_global_action(runtime, action) else {
+            return;
+        };
+        match outcome.shell {
+            Some(ShellRequest::OpenSettings) => settings_launcher::open_settings(),
             // Routed to `toggle_symbol_picker` by both doorways before this
             // is reached (`needs_key_context`).
-            ShortcutAction::ShowSymbolPicker => {}
-            ShortcutAction::OpenLastSettingsPane => settings_launcher::open_settings(),
-            ShortcutAction::ToggleRomanization => {
-                self.switch_input_mode(InputModeRequest::ToggleRomanization, identity, token);
-            }
-            ShortcutAction::ToggleTps => {
-                self.switch_input_mode(InputModeRequest::ToggleTps, identity, token);
-            }
-            ShortcutAction::ToggleTranslateSwapped => {
-                // Inert under roman-only (`allows_swap_toggle`): no write, no
-                // flash. Under combined the chord flips only the punctuation
-                // width (`is_full_width_punctuation`). Read off the same
-                // snapshot every other consumer uses.
-                let display_mode = runtime
-                    .settings
-                    .current()
-                    .engine_settings()
-                    .candidate_display_mode;
-                if !display_mode.allows_swap_toggle() {
-                    return;
-                }
-                if !runtime.update_settings("toggle_translate_swapped", |document| {
-                    let swapped = document.bool(&keys::IS_HANJI_FIRST);
-                    document.set_bool(&keys::IS_HANJI_FIRST, !swapped);
-                }) {
-                    return;
-                }
-                // The list STAYS: the swap changes how a candidate displays,
-                // never which exist — re-presented in place, selection kept
-                // (dismissing read as the window vanishing, 2026-08-21).
-                self.represent_open_list(identity, runtime, false);
-                // Flashed even over an open list, as the display-mode cycle
-                // is: the tray icon alone was easy to miss (Discord request
-                // 2026-10-19, USER 2026-10-31). Side by side only: under
-                // combined a commit still writes the Hanji, so a flash would
-                // announce a change that did not happen
-                // (`TaigiInputController.performShortcutAction`).
-                if display_mode == CandidateDisplayMode::SideBySide {
-                    let settings = runtime.settings.current();
-                    let is_hanji = settings.bool(&keys::IS_HANJI_FIRST);
-                    self.flash_mode_label(runtime, &settings, output_script_label(is_hanji));
-                }
-            }
-            ShortcutAction::CycleCandidateDisplayMode => {
-                if !runtime.update_settings("cycle_candidate_display_mode", |document| {
-                    let next = document.choice(&keys::CANDIDATE_DISPLAY_MODE).next();
-                    document.set_choice(&keys::CANDIDATE_DISPLAY_MODE, next);
-                }) {
-                    return;
-                }
-                // The mode changes which candidates exist (invariants §44),
-                // not only how they draw — so the open list is re-fetched
-                // under the new mode and re-rendered in place, the pane's own
-                // behaviour. Then the HUD with the new mode's name, as the
-                // romanization switch does — the chord fires from anywhere.
-                self.represent_open_list(identity, runtime, true);
-                let settings = runtime.settings.current();
-                let mode = settings.engine_settings().candidate_display_mode;
-                self.flash_mode_label(runtime, &settings, mode.label_key());
-            }
-            ShortcutAction::ShowTelexGuide => {
-                // The user's wish, stored — every host process reads it at
-                // its next focus — then this one's guide follows, as for the
-                // TPS key panel below. The composition and its list are not
-                // touched.
-                if !runtime.update_settings("toggle_telex_guide", |document| {
-                    let shown = document.bool(&keys::TELEX_GUIDE_SHOWN);
-                    document.set_bool(&keys::TELEX_GUIDE_SHOWN, !shown);
-                }) {
-                    return;
-                }
-                self.sync_panels();
-            }
-            ShortcutAction::ShowTpsKeyboard => {
+            Some(ShellRequest::ToggleSymbolPicker) => {}
+            Some(ShellRequest::TelexGuideChanged) => self.sync_panels(),
+            Some(ShellRequest::ToggleTpsKeyboard) => {
                 // The user's wish, stored — every host process reads it at
                 // its next focus — then this one's panel follows. The
-                // composition and its list are not touched; an open symbol
-                // picker came down above, as for every global action.
+                // composition and its list are not touched.
                 if !runtime.update_settings("toggle_tps_keyboard", |document| {
                     let shown = document.bool(&keys::TPS_KEYBOARD_SHOWN);
                     document.set_bool(&keys::TPS_KEYBOARD_SHOWN, !shown);
@@ -1052,6 +959,37 @@ impl TextService_Impl {
                     return;
                 }
                 self.sync_panels();
+            }
+            None => {}
+        }
+        match outcome.list {
+            ListEffect::Untouched => {}
+            // Fetched under the old mode: the candidates go with the mode
+            // that produced them. The TPS key panel and the Telex guide come
+            // and go with TPS, their stored keys staying; the guide is
+            // respelled for a romanization.
+            ListEffect::Clear => {
+                if let Some(entry) = self.state.borrow_mut().contexts.entry_mut(identity) {
+                    entry.state.candidates.clear();
+                }
+                if let Some(token) = token {
+                    self.hide_candidates(token);
+                }
+                self.sync_panels();
+            }
+            // Never hidden first: from mid-composition that reads as the
+            // window vanishing (2026-08-21).
+            ListEffect::Represent { refetch } => {
+                self.represent_open_list(identity, runtime, refetch);
+            }
+        }
+        // The HUD names only what changed, because the chord fires from
+        // anywhere and a mode that changed with no notice reads as the
+        // keyboard breaking (USER 2026-08-26).
+        if outcome.announces {
+            let settings = runtime.settings.current();
+            if let Some(label) = action.switched_label_key(&settings) {
+                self.flash_mode_label(runtime, &settings, label);
             }
         }
         // The script, the swap and the display mode are all on the tray
@@ -1203,26 +1141,21 @@ impl TextService_Impl {
         token: ContextToken,
         bindings: &ComposingKeyBindings,
     ) {
-        let (Some(picker), Some(table)) = (self.symbol_picker(), SymbolTable::bundled()) else {
+        let Some(picker) = self.symbol_picker() else {
             return;
         };
-        // The recents lead (`RecentSymbols`), read once: this is the list
-        // the pick will index.
-        let ordered = Runtime::shared()
-            .settings
-            .current()
-            .recent_symbols()
-            .ordered(table.symbols());
-        let cells = ordered
-            .iter()
-            .map(|symbol| CandidateCellContent::new(symbol, None))
-            .collect();
         let (client_id, focus_generation) = {
             let state = self.state.borrow();
             (state.client_id, state.focus_generation)
         };
-        let caret = edit_session::run_sync(context, client_id, TF_ES_READ, |ec| {
-            Ok(crate::ui::caret::caret(context, ec, None).rect())
+        // The field is read in the same session as the caret: the picker
+        // writes into the document and learns the pick, neither of which
+        // belongs in a password field (`symbol_picker_symbols`).
+        let read = edit_session::run_sync(context, client_id, TF_ES_READ, |ec| {
+            Ok((
+                crate::ui::caret::caret(context, ec, None).rect(),
+                is_password_field(context, ec),
+            ))
         });
         // The session can re-enter the focus callbacks, and a window that
         // has not been created yet has no HWND for their posted hide to
@@ -1230,11 +1163,23 @@ impl TextService_Impl {
         // handover's own rule in `run_key`).
         let focus_moved = self.state.borrow().focus_generation != focus_generation
             || self.token_for(context).map(|(t, _)| t) != Some(token);
-        let (Ok(Some(caret)), false) = (caret, focus_moved) else {
+        let (Ok((Some(caret), is_password)), false) = (read, focus_moved) else {
             log::debug!("symbol_picker.not_shown focus_moved={focus_moved}");
             self.hide_symbol_picker_of(token);
             return;
         };
+        // The recents lead (`RecentSymbols`), read once: this is the list
+        // the pick will index.
+        let settings = Runtime::shared().settings.current();
+        let Some(ordered) = symbol_picker_symbols(&settings, is_password) else {
+            log::debug!("symbol_picker.not_shown is_password={is_password}");
+            self.hide_symbol_picker_of(token);
+            return;
+        };
+        let cells = ordered
+            .iter()
+            .map(|symbol| CandidateCellContent::new(symbol, None))
+            .collect();
         let content = CandidateWindowContent {
             cells,
             slot_key_set: bindings.slot_key_set(),
@@ -1242,7 +1187,6 @@ impl TextService_Impl {
         };
         // No document: the picker registers no UI-less element
         // (`CandidatePresenter::attach_popup_only`).
-        let settings = Runtime::shared().settings.current();
         picker
             .borrow_mut()
             .show(content, caret, &settings, token, None);
@@ -1285,7 +1229,7 @@ impl TextService_Impl {
         let runtime = Runtime::shared();
         runtime.prepare_for_first_key();
         let settings = runtime.settings.current();
-        self.run_key(
+        let outcome = self.run_key(
             context,
             token,
             identity,
@@ -1293,6 +1237,12 @@ impl TextService_Impl {
             &KeyWork::InsertSymbol(symbol.clone()),
             &settings,
         );
+        // Not recorded when the key went to the host: a refused session, or
+        // a field that turned into a password field under the open picker
+        // (`run_key` answers ToHost for both).
+        if outcome != KeyOutcome::Consumed {
+            return;
+        }
         // Recorded AFTER the write, so the symbol does not wait on the disk;
         // a store that cannot be written still got its symbol.
         runtime.update_settings("record_recent_symbol", |document| {

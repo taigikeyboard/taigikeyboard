@@ -41,10 +41,8 @@ pub fn process_key(
     let settings = runtime.settings.current();
     let mut emits = Vec::new();
     let bindings = ComposingKeyBindings::from_document(&settings, runtime.platform());
-    // A chord with no host modifier is a character in English mode: the bare
-    // Hanji/romanization key types a backtick there.
-    let global_action = ShortcutAction::matching(snapshot, &settings, runtime.platform())
-        .filter(|_| !state.language_mode.is_english() || snapshot.modifiers.has_host_chord());
+    let global_action =
+        ShortcutAction::matching_in(snapshot, &settings, runtime.platform(), state.language_mode);
     // A held toggle chord repeats on the wire as presses with no release
     // between them; the repeats are consumed without firing again.
     if let Some(latched) = state.latched_chord {

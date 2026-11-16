@@ -40,8 +40,10 @@ pub(crate) mod test_support {
     use crate::composing::SystemClock;
     use crate::platform::test_support::TEST_PLATFORM;
     use crate::runtime::{DesktopRuntime, RuntimeParts};
-    use crate::settings::{SettingsDocument, StaticSettingsProvider};
-    use std::sync::Arc;
+    use crate::settings::{
+        SettingsDocument, SettingsProvider, SettingsStore, StaticSettingsProvider,
+    };
+    use std::sync::{Arc, Mutex};
 
     /// `count` cells 20 wide. trace: `row_budget(10)` = 90 packs four (80),
     /// the fifth would pass it: a collapsed row of four.
@@ -63,9 +65,45 @@ pub(crate) mod test_support {
 
     /// A runtime over `document` with no store, no lexicon and no learning.
     pub(crate) fn runtime(document: SettingsDocument) -> DesktopRuntime {
+        runtime_over(Arc::new(StaticSettingsProvider::new(document)), None)
+    }
+
+    /// One document the runtime both reads and writes, so a write is seen by
+    /// the next read.
+    struct SharedDocument(Mutex<Arc<SettingsDocument>>);
+
+    impl SettingsProvider for SharedDocument {
+        fn current(&self) -> Arc<SettingsDocument> {
+            Arc::clone(&self.0.lock().unwrap())
+        }
+    }
+
+    impl SettingsStore for Arc<SharedDocument> {
+        fn update_document(
+            &self,
+            mutate: &mut dyn FnMut(&mut SettingsDocument),
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+            let mut document = self.0.lock().unwrap();
+            let mut next = SettingsDocument::clone(&document);
+            mutate(&mut next);
+            *document = Arc::new(next);
+            Ok(())
+        }
+    }
+
+    /// [`runtime`] with a store whose writes the next read sees.
+    pub(crate) fn runtime_with_store(document: SettingsDocument) -> DesktopRuntime {
+        let shared = Arc::new(SharedDocument(Mutex::new(Arc::new(document))));
+        runtime_over(Arc::clone(&shared) as _, Some(Box::new(shared)))
+    }
+
+    fn runtime_over(
+        settings: Arc<dyn SettingsProvider + Send + Sync>,
+        settings_store: Option<Box<dyn SettingsStore>>,
+    ) -> DesktopRuntime {
         DesktopRuntime::new(RuntimeParts {
-            settings: Arc::new(StaticSettingsProvider::new(document)),
-            settings_store: None,
+            settings,
+            settings_store,
             data_directory: None,
             dictionaries: Box::new(|| None),
             dictionary_version: 1,
