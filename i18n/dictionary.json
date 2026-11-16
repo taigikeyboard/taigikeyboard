@@ -1883,7 +1883,7 @@
       }
     },
     "learningRecordsAddToCustomDictionary": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Action on one row (a learned phrase or word-frequency row with Hanji): adds its word to the custom dictionary; a learned phrase then leaves the list, a frequency row stays (row menu / swipe / button tooltip).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Action on one row (a learned phrase with Hanji): adds its word to the custom dictionary; the phrase then leaves the list (row menu / swipe / button tooltip).",
       "scope": {
         "platforms": [
           "android",
