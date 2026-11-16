@@ -27,7 +27,11 @@
 #   5. when the release carries a macOS package, output `macos_version` and
 #      `macos_sha256` ($GITHUB_OUTPUT, else stdout) — the arguments of
 #      `bump-cask.sh`, which the workflow runs next
-#   6. in Actions, output `version`, `platforms` and `release_url` for the
+#   6. when the release carries the ChromeOS zip, output `chromeos_version` and
+#      `chromeos_sha256` in Actions — the arguments of `chrome-web-store.sh
+#      submit`, which the workflow runs after the cask; by hand it prints that
+#      command instead
+#   7. in Actions, output `version`, `platforms` and `release_url` for the
 #      workflow's success note on Discord
 #
 # It runs anywhere with `gh`, `curl`, `python3`, the AWS CLI and the three R2_*
@@ -196,6 +200,7 @@ for unpolled_format in \
     IFS='|' read -r label asset site_path <<< "$unpolled_format"
     if fetch_platform_asset "$label" "$asset"; then
         site_files+=("$site_path" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
+        [[ "$label" != ChromeOS ]] || chromeos_sha256="$ASSET_SHA256"
     fi
 done
 
@@ -220,6 +225,9 @@ commit_site_files "chore: desktop release -> $SHORT_VERSION (${announced_platfor
 if [[ -n "${macos_sha256:-}" ]]; then
     printf 'macos_version=%s\nmacos_sha256=%s\n' "$SHORT_VERSION" "$macos_sha256" >> "${GITHUB_OUTPUT:-/dev/stdout}"
 fi
+if [[ -n "${GITHUB_OUTPUT:-}" && -n "${chromeos_sha256:-}" ]]; then
+    printf 'chromeos_version=%s\nchromeos_sha256=%s\n' "$SHORT_VERSION" "$chromeos_sha256" >> "$GITHUB_OUTPUT"
+fi
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     platform_list="${announced_platforms[*]}"   # labels hold no space
     printf 'version=%s\nplatforms=%s\nrelease_url=%s\n' \
@@ -230,8 +238,9 @@ echo ""
 echo "✓ announced $SHORT_VERSION for ${announced_platforms[*]}"
 echo "  release   $RELEASE_PAGE_URL"
 echo "  website   https://taigikeyboard.tw/#download"
-if [[ " ${announced_platforms[*]} " == *" ChromeOS "* ]]; then
+if [[ -n "${chromeos_sha256:-}" && -z "${GITHUB_OUTPUT:-}" ]]; then
     echo ""
-    echo "  ChromeOS: upload $CHROMEOS_ASSET from the release to the Chrome Web Store"
-    echo "  Developer Dashboard and submit it for review (docs/architecture/chromeos-release.md)."
+    echo "  ChromeOS: submit it to the Chrome Web Store (CWS_* variables:"
+    echo "  docs/architecture/chromeos-release.md § Upload):"
+    echo "    tools/release/chrome-web-store.sh submit $SHORT_VERSION $chromeos_sha256"
 fi

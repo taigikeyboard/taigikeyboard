@@ -2,7 +2,7 @@
 
 > **Type**: Release flow
 > **Keywords**: `chromeos`, `chrome web store`, `extension`, `input method`
-> **Status**: On the desktop train since 2026-11-12; 3.9.0 published on the store by hand (maintainer 2026-11-16). Store upload through the API: identity check only (below), the train does not submit yet. Plan and decisions: `chromeos-roadmap.md`.
+> **Status**: On the desktop train since 2026-11-12; 3.9.0 published on the store by hand (maintainer 2026-11-16). From the next release on, the announcement uploads the zip and submits it for review through the store's API (§ Upload). Plan and decisions: `chromeos-roadmap.md`.
 
 The ChromeOS input method ships as one Chrome Web Store item, an MV3 extension built from `web/chromeos/` over the web version's wasm. On a Chromebook the store's "Add to Chrome" is the installer; the store updates it.
 
@@ -16,8 +16,7 @@ ChromeOS is a desktop platform like macOS, Windows and Linux (USER 2026-11-12): 
 | The monthly cut (`desktop-train.yml`, or `make desktop-release` by hand) | Runs `.github/workflows/chromeos-build.yml`, which runs `make -C web chromeos` on a hosted runner and attaches `TaigiKeyboard-<v>-chromeos.zip` + `.sha256` to the draft |
 | `make desktop-patch PLATFORM=chromeos` | A ChromeOS-only patch: its own version, only the zip on the draft |
 | Beta | The zip's R2 link is in the Discord beta post with the other installers. Testers unpack it and use **Load unpacked** in `chrome://extensions` (Developer mode). An unpacked copy has its own extension ID, separate from the store item, so its settings and learned words are separate too, and it never updates itself |
-| Publish → announce | Mirrors the zip to `dl.taigikeyboard.tw/desktop/` and writes `_data/chromeos_release.json`; prints the upload reminder |
-| Upload | By hand, below |
+| Publish → announce | Mirrors the zip to `dl.taigikeyboard.tw/desktop/`, writes `_data/chromeos_release.json`, then uploads the zip to the Chrome Web Store and submits it for review (§ Upload) |
 
 Every pull request that runs `web.yml` also builds the zip (`make -C web chromeos` after `make -C web test smoke`); dispatching `chromeos-build.yml` without `source_sha` builds it without attaching. To build locally:
 
@@ -29,13 +28,20 @@ It builds the wasm from source, so there is no stale-artifact step. `make web-ch
 
 ## Upload
 
-After the release is published, download `TaigiKeyboard-<v>-chromeos.zip` from it, then in the Developer Dashboard: the item → Package → Upload new package → Submit for review.
+Automatic (maintainer 2026-11-16: upload the zip only; the listing text, screenshots and privacy fields stay as set in the Dashboard). When a published release carries `TaigiKeyboard-<v>-chromeos.zip` — the monthly publish or a `make desktop-patch PLATFORM=chromeos` — `desktop-announce.yml`, after the website and the Homebrew cask, mints a store token (§ One-time below) and runs `tools/release/chrome-web-store.sh submit <v> <sha256>`:
 
-Train scope (maintainer 2026-11-16): upload and submit the zip only; the listing text, screenshots and privacy fields stay as set in the Dashboard. Only the identity below exists so far; the announcement does not submit yet.
+1. reads the item's status; stops if `<v>` is already submitted or published (a re-run is safe), fails if the store holds a newer version, and fails if another version is still in review or staged — let it finish (a staged one: publish it) or cancel it in the Dashboard, then re-run the workflow (it is not cancelled for you; a re-run repeats the whole announcement, ~30 min, before the submit)
+2. downloads the zip from the release anonymously and checks it against the announcement's sha256
+3. uploads it (`…/upload/v2/publishers/<publisher>/items/<item>:upload`), waits while the upload is in progress, and checks the version the store read from the manifest when the upload response carries it
+4. submits it (`:publish`, `DEFAULT_PUBLISH`): the store reviews it and publishes it on approval
+
+The Discord success note names the state the store returned (normally `PENDING_REVIEW`). A failure posts to #ci-alerts; the website and the cask are already done by then, and the Homebrew cask audit still runs.
+
+By hand (a failed job, or with the job's token expired): `make desktop-announce` prints the `submit` command; run it with the three `CWS_*` variables of `chrome-web-store.sh`'s header. Or upload in the Developer Dashboard: the item → Package → Upload new package → Submit for review.
 
 ### One-time: the Chrome Web Store API
 
-The Chrome Web Store API v2 accepts a service account ([Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api), [service accounts](https://developer.chrome.com/docs/webstore/service-accounts)). GitHub Actions reaches it keyless: OIDC token → Workload Identity Federation → a short-lived service-account token scoped to `https://www.googleapis.com/auth/chromewebstore`. The store's docs omit federation, so `release-identity.yml`'s `chrome-web-store` job is the check that it works. The calls themselves are `tools/release/chrome-web-store.sh`.
+The Chrome Web Store API v2 accepts a service account ([Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api), [service accounts](https://developer.chrome.com/docs/webstore/service-accounts)). GitHub Actions reaches it keyless: OIDC token → Workload Identity Federation → a short-lived service-account token scoped to `https://www.googleapis.com/auth/chromewebstore`. The store's docs omit federation; `release-identity.yml`'s `chrome-web-store` job checks it. The calls themselves are `tools/release/chrome-web-store.sh`. The org's allowed-actions list names `google-github-actions/auth@*` (2026-11-16).
 
 In the Google Cloud console or `gcloud`, with `PROJECT_ID` a project of the maintainer's:
 

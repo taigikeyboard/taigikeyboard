@@ -10,12 +10,15 @@ name: Desktop announce
 # writes the website data `appcast/{macos,windows}.json` and
 # the download buttons (Linux included) are rendered from, and waits until the
 # live appcasts serve it. A release carrying a macOS `.pkg` then bumps the
-# Homebrew cask (tools/release/bump-cask.sh) and audits it. A published release
-# posts to Discord: the platforms announced and the cask audited.
+# Homebrew cask (tools/release/bump-cask.sh) and audits it; one carrying the
+# ChromeOS zip is submitted to the Chrome Web Store for review
+# (tools/release/chrome-web-store.sh submit — the package only, never the
+# listing). A published release posts to Discord: the platforms announced, the
+# cask audited, the store submission.
 #
 # `make desktop-announce` runs the identical script locally — for a re-run after
 # a failure here, or when the token below has expired; it prints the
-# `bump-cask.sh` arguments.
+# `bump-cask.sh` arguments and the `chrome-web-store.sh submit` command.
 on:
   release:
     types: [published]
@@ -55,10 +58,21 @@ jobs:
       (github.event_name != 'release' ||
        startsWith(github.event.release.tag_name, 'desktop-'))
     # Up to 25 min per appcast wait (release-site.sh MANIFEST_WAIT_SECONDS:
-    # two 10-min caches) plus the downloads and the R2 mirror.
-    timeout-minutes: 60
+    # two 10-min caches) plus the downloads and the R2 mirror, then the store
+    # upload (up to 5 min of polling).
+    timeout-minutes: 75
+    # id-token: the Chrome Web Store token below is minted from this job's OIDC
+    # token through Workload Identity Federation, whose attribute condition
+    # admits only this repository's `release` environment. Every step here can
+    # request one — the same gate as the R2 keys and SITE_CONTENTS_TOKEN this
+    # job already holds.
+    permissions:
+      contents: read
+      id-token: write
     outputs:
       macos_version: ${{ steps.announce.outputs.macos_version }}
+      cask_bump: ${{ steps.cask.outcome }}
+      chromeos_store_state: ${{ steps.store.outputs.chromeos_store_state }}
       version: ${{ steps.announce.outputs.version }}
       platforms: ${{ steps.announce.outputs.platforms }}
       release_url: ${{ steps.announce.outputs.release_url }}
@@ -108,6 +122,7 @@ jobs:
           fi
 
       - name: Bump the cask
+        id: cask
         if: steps.announce.outputs.macos_version != ''
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -115,13 +130,44 @@ jobs:
           MACOS_SHA256: ${{ steps.announce.outputs.macos_sha256 }}
         run: bash tools/release/bump-cask.sh "$MACOS_VERSION" "$MACOS_SHA256"
 
+      # Minted just before use: the announcement above can take most of an
+      # hour. Setup: docs/architecture/chromeos-release.md § One-time: the
+      # Chrome Web Store API.
+      - name: Mint the store token
+        id: google
+        if: steps.announce.outputs.chromeos_version != ''
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.CWS_WIF_PROVIDER }}
+          service_account: ${{ vars.CWS_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
+          access_token_lifetime: 900s
+          # A step output only: no credentials file, no GOOGLE_* variables.
+          create_credentials_file: false
+          export_environment_variables: false
+
+      # Last, so a store failure (another version still in review) leaves the
+      # website and the cask done; a re-run of this workflow is idempotent.
+      - name: Submit to the Chrome Web Store
+        id: store
+        if: steps.announce.outputs.chromeos_version != ''
+        env:
+          CWS_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}
+          CHROMEOS_VERSION: ${{ steps.announce.outputs.chromeos_version }}
+          CHROMEOS_SHA256: ${{ steps.announce.outputs.chromeos_sha256 }}
+        run: bash tools/release/chrome-web-store.sh submit "$CHROMEOS_VERSION" "$CHROMEOS_SHA256"
+
   # After the push, so a failure means the live cask is wrong: fix or revert
   # the tap commit by hand. No secret — brew runs code it downloads; the
-  # read-only token is for the livecheck's GitHub API calls.
+  # read-only token is for the livecheck's GitHub API calls. Gated on the bump
+  # step, not the job, so a failed store step after it still audits the cask.
   cask-audit:
     name: audit the cask
     needs: announce
-    if: needs.announce.outputs.macos_version != ''
+    if: "!cancelled() && needs.announce.outputs.cask_bump == 'success'"
     runs-on: macos-26
     timeout-minutes: 20
     permissions:
@@ -173,9 +219,13 @@ jobs:
           PLATFORMS: ${{ needs.announce.outputs.platforms }}
           RELEASE_URL: ${{ needs.announce.outputs.release_url }}
           MACOS_VERSION: ${{ needs.announce.outputs.macos_version }}
+          STORE_STATE: ${{ needs.announce.outputs.chromeos_store_state }}
         run: |
           message="Desktop $ANNOUNCED_VERSION published: $PLATFORMS"
           if [ -n "$MACOS_VERSION" ]; then
             message="$message · Homebrew cask $MACOS_VERSION (audit passed)"
+          fi
+          if [ -n "$STORE_STATE" ]; then
+            message="$message · Chrome Web Store: $STORE_STATE"
           fi
           bash tools/release/desktop-train.sh notify "$message — $RELEASE_URL"
