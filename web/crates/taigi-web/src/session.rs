@@ -16,8 +16,7 @@ use taigi_desktop_core::session::{
     process_key, refresh_composition, toggle_language_mode, tps_keyboard_press, Emit, EngineState,
     ListSelection,
 };
-use taigi_desktop_core::settings::presentation::output_script_label;
-use taigi_desktop_core::settings::{keys, InputMode, SettingsProvider};
+use taigi_desktop_core::settings::SettingsProvider;
 
 use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
@@ -230,23 +229,7 @@ impl WebSession {
     /// (`TaigiInputController.performShortcutAction`, `perform_global`), not
     /// the whole mode line Linux shows in its panel (`mode_label`).
     fn switched_label(&self, action: ShortcutAction) -> Option<String> {
-        let document = self.runtime.settings.current();
-        let key = match action {
-            ShortcutAction::ToggleRomanization | ShortcutAction::ToggleTps => {
-                document.choice::<InputMode>(&keys::INPUT_MODE).label_key()
-            }
-            ShortcutAction::ToggleTranslateSwapped => {
-                output_script_label(document.bool(&keys::IS_HANJI_FIRST))
-            }
-            ShortcutAction::CycleCandidateDisplayMode => document
-                .engine_settings()
-                .candidate_display_mode
-                .label_key(),
-            ShortcutAction::OpenLastSettingsPane
-            | ShortcutAction::ShowSymbolPicker
-            | ShortcutAction::ShowTelexGuide
-            | ShortcutAction::ShowTpsKeyboard => return None,
-        };
+        let key = action.switched_label_key(&self.runtime.settings.current())?;
         Some(self.runtime.strings().resolve(key).to_owned())
     }
 
@@ -464,6 +447,7 @@ mod tests {
     use std::sync::{Mutex, MutexGuard};
     use taigi_desktop_core::session::end_session;
     use taigi_desktop_core::settings::keys;
+    use taigi_desktop_core::settings::presentation::output_script_label;
     use taigi_desktop_core::settings::{InputMode, SettingsProvider};
 
     use crate::layout::Measured;

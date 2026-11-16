@@ -16,8 +16,10 @@
 use super::action::{ChordField, ComposingAction};
 use super::bindings::ComposingKeyBindings;
 use super::chord::{ChordRejection, ComposingKeyChord};
+use super::language_mode::LanguageMode;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 use crate::platform::DesktopPlatform;
+use crate::settings::presentation::output_script_label;
 use crate::settings::{keys, InputMode, SettingsDocument};
 use crate::strings::StringKey;
 
@@ -119,6 +121,44 @@ impl ShortcutAction {
                 .chord_in(settings, platform)
                 .is_some_and(|chord| chord.matches(snapshot, platform))
         })
+    }
+
+    /// [`Self::matching`] for a shell with an English mode: a chord with no
+    /// host modifier is a character there — the bare Hanji/romanization key
+    /// types a backtick.
+    pub fn matching_in(
+        snapshot: &KeyEventSnapshot,
+        settings: &SettingsDocument,
+        platform: DesktopPlatform,
+        language_mode: LanguageMode,
+    ) -> Option<Self> {
+        Self::matching(snapshot, settings, platform)
+            .filter(|_| !language_mode.is_english() || snapshot.modifiers.has_host_chord())
+    }
+
+    /// What this action just switched, in the words of the macOS / Windows
+    /// flash and the web page's: only that, not the whole mode line Linux
+    /// shows (`session::mode_label`). Read from `settings` after the switch.
+    /// `None` for an action that switches no mode.
+    pub fn switched_label_key(self, settings: &SettingsDocument) -> Option<StringKey> {
+        match self {
+            Self::ToggleRomanization | Self::ToggleTps => {
+                Some(settings.choice::<InputMode>(&keys::INPUT_MODE).label_key())
+            }
+            Self::ToggleTranslateSwapped => {
+                Some(output_script_label(settings.bool(&keys::IS_HANJI_FIRST)))
+            }
+            Self::CycleCandidateDisplayMode => Some(
+                settings
+                    .engine_settings()
+                    .candidate_display_mode
+                    .label_key(),
+            ),
+            Self::OpenLastSettingsPane
+            | Self::ShowSymbolPicker
+            | Self::ShowTelexGuide
+            | Self::ShowTpsKeyboard => None,
+        }
     }
 
     pub fn raw(self) -> &'static str {
@@ -1092,5 +1132,40 @@ mod tests {
         for mode in [InputMode::Tl, InputMode::Poj] {
             assert_eq!(inert(mode), [ShortcutAction::ShowTpsKeyboard], "{mode:?}");
         }
+    }
+
+    #[test]
+    fn english_mode_types_a_bare_chord_and_keeps_host_chords() {
+        // trace: defaults — bare backtick = ToggleTranslateSwapped,
+        // Ctrl+Alt+C = ToggleRomanization (`roster_defaults_and_keys`).
+        let settings = SettingsDocument::default();
+        let backtick = KeyEventSnapshot::text("`", KeyModifiers::NONE);
+        let control_alt_c =
+            KeyEventSnapshot::text("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
+        let matching =
+            |snapshot, mode| ShortcutAction::matching_in(snapshot, &settings, PLATFORM, mode);
+        assert_eq!(
+            matching(&backtick, LanguageMode::Taigi),
+            Some(ShortcutAction::ToggleTranslateSwapped)
+        );
+        assert_eq!(matching(&backtick, LanguageMode::English), None);
+        assert_eq!(
+            matching(&control_alt_c, LanguageMode::English),
+            Some(ShortcutAction::ToggleRomanization)
+        );
+    }
+
+    #[test]
+    fn a_switch_names_only_what_it_switched() {
+        let mut settings = SettingsDocument::default();
+        settings.set_choice(&keys::INPUT_MODE, InputMode::Poj);
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.switched_label_key(&settings),
+            Some(InputMode::Poj.label_key())
+        );
+        assert_eq!(
+            ShortcutAction::ShowTelexGuide.switched_label_key(&settings),
+            None
+        );
     }
 }

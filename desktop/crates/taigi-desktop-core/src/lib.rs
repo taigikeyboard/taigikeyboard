@@ -19,6 +19,7 @@ pub mod candidates;
 pub mod composing;
 pub mod dictionary_artifacts;
 pub mod engine;
+pub mod global_action;
 pub mod keys;
 pub mod mode_indicator;
 pub mod platform;
