@@ -2,7 +2,7 @@
 
 > **Type**: Release flow
 > **Keywords**: `chromeos`, `chrome web store`, `extension`, `input method`
-> **Status**: On the desktop train since 2026-11-12; nothing published to the store yet. Plan and decisions: `chromeos-roadmap.md`. Publishing is the maintainer's.
+> **Status**: On the desktop train since 2026-11-12; 3.9.0 published on the store by hand (maintainer 2026-11-16). Store upload through the API: identity check only (below), the train does not submit yet. Plan and decisions: `chromeos-roadmap.md`.
 
 The ChromeOS input method ships as one Chrome Web Store item, an MV3 extension built from `web/chromeos/` over the web version's wasm. On a Chromebook the store's "Add to Chrome" is the installer; the store updates it.
 
@@ -29,7 +29,33 @@ It builds the wasm from source, so there is no stale-artifact step. `make web-ch
 
 ## Upload
 
-After the release is published, download `TaigiKeyboard-<v>-chromeos.zip` from it, then in the Developer Dashboard: the item → Package → Upload new package → Submit for review. Automating this through the Chrome Web Store API needs a Google OAuth client and refresh token in the `release` environment; not set up.
+After the release is published, download `TaigiKeyboard-<v>-chromeos.zip` from it, then in the Developer Dashboard: the item → Package → Upload new package → Submit for review.
+
+Train scope (maintainer 2026-11-16): upload and submit the zip only; the listing text, screenshots and privacy fields stay as set in the Dashboard. Only the identity below exists so far; the announcement does not submit yet.
+
+### One-time: the Chrome Web Store API
+
+The Chrome Web Store API v2 accepts a service account ([Use the Chrome Web Store API](https://developer.chrome.com/docs/webstore/using-api), [service accounts](https://developer.chrome.com/docs/webstore/service-accounts)). GitHub Actions reaches it keyless: OIDC token → Workload Identity Federation → a short-lived service-account token scoped to `https://www.googleapis.com/auth/chromewebstore`. The store's docs omit federation, so `release-identity.yml`'s `chrome-web-store` job is the check that it works. The calls themselves are `tools/release/chrome-web-store.sh`.
+
+In the Google Cloud console or `gcloud`, with `PROJECT_ID` a project of the maintainer's:
+
+1. Enable the Chrome Web Store API, the IAM API (`iam.googleapis.com`, for the setup), the IAM Service Account Credentials API (`iamcredentials.googleapis.com`) and the Security Token Service API (`sts.googleapis.com`).
+2. Create a service account with no roles, e.g. `chrome-web-store@PROJECT_ID.iam.gserviceaccount.com`.
+3. Create a workload identity pool `github` and in it an OIDC provider `taigikeyboard`, issuer `https://token.actions.githubusercontent.com`:
+   - attribute mapping `google.subject=assertion.sub,attribute.repository_id=assertion.repository_id`
+   - attribute condition `assertion.repository_id == '1359878131' && assertion.repository_owner_id == '241070258' && assertion.environment == 'release'` — numeric ids survive a rename and cannot be reclaimed by a new repository of the same name; the `release` environment admits only `main` and release tags (`desktop-release.md` § One-time: the release App)
+4. On the service account, grant `roles/iam.workloadIdentityUser` to `principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/1359878131`.
+5. Developer Dashboard → Account: add the service account's email (one per publisher). The publishing Google account needs 2-Step Verification.
+6. Repository Settings → Environments → `release` → Variables (identifiers, not secrets):
+
+   | Variable | Value |
+   |---|---|
+   | `CWS_WIF_PROVIDER` | `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/taigikeyboard` |
+   | `CWS_SERVICE_ACCOUNT` | the service account's email |
+   | `CWS_PUBLISHER_ID` | Developer Dashboard → Publisher → Settings |
+   | `CWS_ITEM_ID` | the item's 32-letter id (its Package tab) |
+
+7. `gh workflow run release-identity.yml` and approve the `release` environment (by hand: `CWS_ACCESS_TOKEN=$(gcloud auth print-access-token --impersonate-service-account=<email> --scopes=https://www.googleapis.com/auth/chromewebstore) CWS_PUBLISHER_ID=… CWS_ITEM_ID=… tools/release/chrome-web-store.sh status`, which needs `roles/iam.serviceAccountTokenCreator` on the service account for your account). The `chrome-web-store` job prints the item's published and submitted versions; it uploads nothing. A failed token mint points at steps 1–4; a 403 from the store at the Chrome Web Store API (step 1) or step 5; a 404 at the two ids in step 6. The job prints Google's error body.
 
 ## First upload
 
@@ -74,7 +100,7 @@ The candidate window over a text field, and the settings page (Display Language 
 
 ## Timing
 
-Maintainer 2026-11-08: "no rush to release; handle it when releasing v3.9.0 together with the other desktops". The first upload goes out with the desktop v3.9.0 release, as version 3.9.0. That draft was staged before ChromeOS joined the train, so the 3.9.0 zip is built by hand (`make -C web chromeos`); later versions come from the draft.
+Maintainer 2026-11-08: "no rush to release; handle it when releasing v3.9.0 together with the other desktops". The first upload goes out with the desktop v3.9.0 release, as version 3.9.0. That draft was staged before ChromeOS joined the train, so the 3.9.0 zip is built by hand (`make -C web chromeos`); later versions come from the draft. 3.9.0 is published on the store (maintainer 2026-11-16).
 
 ## Open (maintainer)
 
