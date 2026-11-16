@@ -30,8 +30,9 @@ publish = false
 
 [workspace.dependencies]
 tempfile = "3"
-# `default-features = false`: each member opts in; `taigi-linux-core` and
-# `taigikeyboard-settings` enable `user-data` (the SQLite stores).
+# `default-features = false`: `taigi-linux-core` enables `user-data` (the
+# SQLite stores) on its own edge; `taigikeyboard-settings` through
+# `taigi-desktop-core`'s `user-data` feature.
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 # The settings tests build engine requests the pages never send (a pick).

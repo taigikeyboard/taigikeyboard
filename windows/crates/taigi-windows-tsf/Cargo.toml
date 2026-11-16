@@ -14,9 +14,8 @@ name = "TaigiKeyboard"
 crate-type = ["cdylib"]
 
 [dependencies]
-taigi-desktop-core.workspace = true
 # The engine owns the user data here (user-data-engine-roadmap U11 / P5).
-dispatch = { workspace = true, features = ["user-data"] }
+taigi-desktop-core = { workspace = true, features = ["user-data"] }
 windows-numerics.workspace = true
 taigi-desktop-storage.workspace = true
 taigi-windows-platform.workspace = true

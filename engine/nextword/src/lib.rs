@@ -4,14 +4,14 @@
 //!
 //! Owns `PersistedState` (last_selected_word/roman, last_selection_time_ms,
 //! predictions_visible, current_generation). External callers reach the engine
-//! through `requests::handle`; the engine itself is held inside a singleton
-//! `Mutex<Engine>` at the FFI boundary (see `nextword::handle::EngineHandle`).
+//! through the re-exported `EngineHandle`, which holds it in a singleton
+//! `Mutex<Engine>` and routes to the private `requests::handle`.
 //!
 //! Spec: `docs/engine/nextword.md`.
 
 pub mod api;
-pub mod handle;
-pub mod requests;
+mod handle;
+mod requests;
 
 mod decide;
 mod filter;

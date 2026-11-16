@@ -17,13 +17,11 @@ name = "taigikeyboard-settings"
 path = "src/main.rs"
 
 [dependencies]
-taigi-desktop-core.workspace = true
+# The window's pages reach the user-data stores through the engine's ops
+# (`taigi_desktop_core::engine::user_data`), with the stores compiled in.
+taigi-desktop-core = { workspace = true, features = ["user-data"] }
 taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
-# The window's pages reach the user-data stores through the engine's ops
-# (`taigi_desktop_core::engine::user_data`): the same `dispatch` edge the IME
-# core has, with the stores compiled in.
-dispatch = { workspace = true, features = ["user-data"] }
 gtk.workspace = true
 adw.workspace = true
 gio.workspace = true
@@ -33,6 +31,7 @@ tempfile.workspace = true
 
 [dev-dependencies]
 # `tests/panes.rs` records picks through the engine, as the IME would.
+dispatch.workspace = true
 protos.workspace = true
 prost.workspace = true
 
