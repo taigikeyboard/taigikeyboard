@@ -297,7 +297,10 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }
             y += cell.h + row_gap;
         }
-        if page.has_prev || page.has_next {
+        // A collapsed vertical-expandable list has no arrow row, so the
+        // window keeps its height when it unfolds.
+        let collapsed_expandable = page.expandable.is_some();
+        if (page.has_prev || page.has_next) && !collapsed_expandable {
             let mut ax = x;
             if page.has_prev {
                 place_arrow(
@@ -384,7 +387,20 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
     };
     // A column keeps the two scripts on one line. A row stacks them.
     let inline = view.axis == 1;
-    let columns = view.grid_columns.max(1) as usize;
+    // Only the columns a cell reaches: a trailing empty column (the last
+    // columns of the list) would leave a strip past the highlight's reach.
+    let columns = (0..page.cells.len())
+        .map(|index| {
+            let start = view
+                .column_starts
+                .get(index)
+                .copied()
+                .unwrap_or(index as u32 % view.grid_columns.max(1));
+            start + view.column_spans.get(index).copied().unwrap_or(1).max(1)
+        })
+        .max()
+        .unwrap_or(1)
+        .clamp(1, view.grid_columns.max(1)) as usize;
     if !inline {
         return arrange_expanded_row(page, &style, measure, scale);
     }
@@ -444,7 +460,9 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
         column_x.push(column_x.last().copied().unwrap_or(0.0) + width);
     }
     let row_body = cells.iter().map(|cell| cell.h).fold(primary, f32::max);
-    let separator = scale;
+    // The collapsed vertical list's row gap, so rows keep their spacing when
+    // the column unfolds.
+    let separator = pads(page.chrome.padding, scale).line * 2.0;
     let pitch = row_body + separator;
     let row_count = cells
         .iter()
@@ -537,9 +555,17 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
         width,
         height,
         highlight: highlight.map(|cell| {
-            // Stay on this cell's own box. The grid limits used to be the
-            // whole window, which stretched the fill across every row.
-            grow_highlight(cell, cell, page.chrome.highlight_fill)
+            let content = Rect {
+                x: pad,
+                y: pad,
+                w: column_x[columns],
+                h: grid_bottom - pad,
+            };
+            grow_highlight(
+                cell,
+                grid_limits(cell, content, pad, 0.0, separator),
+                page.chrome.highlight_fill,
+            )
         }),
         glyphs,
         hits,
@@ -639,7 +665,19 @@ fn arrange_expanded_row(
     let mut arrangement = Arrangement {
         width,
         height,
-        highlight: highlight.map(|cell| grow_highlight(cell, cell, page.chrome.highlight_fill)),
+        highlight: highlight.map(|cell| {
+            let content = Rect {
+                x: pad,
+                y: pad,
+                w: wrap,
+                h: height - pad * 2.0,
+            };
+            grow_highlight(
+                cell,
+                grid_limits(cell, content, pad, gap, separator),
+                page.chrome.highlight_fill,
+            )
+        }),
         glyphs,
         hits,
     };
@@ -685,6 +723,42 @@ fn horizontal_limits(cell: Rect, width: f32, height: f32, pad: f32, gap: f32) ->
         y: 0.0,
         w: (right - left).max(0.0),
         h: height,
+    }
+}
+
+/// An expanded cell's fill limits: a side on the edge of `content` meets the
+/// window edge (`pad` beyond it), any other side stops halfway across the gap
+/// to its neighbour (`col_gap` across, `row_gap` down) — the collapsed rules
+/// applied on both axes.
+fn grid_limits(cell: Rect, content: Rect, pad: f32, col_gap: f32, row_gap: f32) -> Rect {
+    let near = |a: f32, b: f32| (a - b).abs() <= 0.5;
+    let left = if near(cell.x, content.x) || cell.x < content.x {
+        content.x - pad
+    } else {
+        cell.x - col_gap * 0.5
+    };
+    let right_edge = cell.x + cell.w;
+    let right = if right_edge >= content.x + content.w - 0.5 {
+        content.x + content.w + pad
+    } else {
+        right_edge + col_gap * 0.5
+    };
+    let top = if cell.y <= content.y + 0.5 {
+        content.y - pad
+    } else {
+        cell.y - row_gap * 0.5
+    };
+    let bottom_edge = cell.y + cell.h;
+    let bottom = if bottom_edge >= content.y + content.h - 0.5 {
+        content.y + content.h + pad
+    } else {
+        bottom_edge + row_gap * 0.5
+    };
+    Rect {
+        x: left.max(0.0),
+        y: top.max(0.0),
+        w: (right - left.max(0.0)).max(0.0),
+        h: (bottom - top.max(0.0)).max(0.0),
     }
 }
 
@@ -1354,6 +1428,105 @@ mod tests {
         assert!(starts[0].1 < 80.0);
         let pad = pads(shown.chrome.padding, 1.0).window;
         assert!((layout.width - (pad * 2.0 + 200.0)).abs() < 1.0);
+    }
+
+    #[test]
+    fn an_expanded_highlight_honours_the_fill_and_rows_keep_their_gap() {
+        use crate::protocol::ExpandableView;
+        let cells = vec![
+            Cell {
+                text: "好".into(),
+                annotation: Some("hó".into()),
+            },
+            Cell {
+                text: "人".into(),
+                annotation: Some("lâng".into()),
+            },
+        ];
+        for axis in [0, 1] {
+            let vertical = axis == 1;
+            let mut shown = page(vertical, true, cells.clone());
+            shown.cursor = Some(0);
+            shown.expandable = Some(ExpandableView {
+                absolute_indices: vec![0, 1],
+                mode: 1,
+                axis,
+                column_width: 80,
+                grid_columns: 1,
+                scroll_y: 0,
+                row_indexes: vec![0, 1],
+                column_starts: vec![0, 0],
+                column_spans: vec![1, 1],
+                visible_rows: 2,
+                row_height: 40,
+            });
+            shown.chrome.highlight_fill = 0;
+            let bare = arrange(&shown, &Mono, 1.0).highlight.expect("highlight");
+            shown.chrome.highlight_fill = 100;
+            let layout = arrange(&shown, &Mono, 1.0);
+            let full = layout.highlight.expect("highlight");
+            // The top-left cell's fill reaches the window edge, as collapsed.
+            assert_eq!((full.x, full.y), (0.0, 0.0), "axis {axis}");
+            assert!(full.h > bare.h, "axis {axis}");
+            if vertical {
+                // Rows are spaced like the collapsed vertical list.
+                let mut collapsed = page(true, true, cells.clone());
+                collapsed.cursor = Some(0);
+                let pitch = |l: &Arrangement| {
+                    let hits: Vec<_> = l
+                        .hits
+                        .iter()
+                        .filter(|hit| matches!(hit.target, Target::Cell(_)))
+                        .collect();
+                    hits[1].y - hits[0].y
+                };
+                let unfolded = arrange(&shown, &Mono, 1.0);
+                let folded = arrange(&collapsed, &Mono, 1.0);
+                assert!((pitch(&unfolded) - pitch(&folded)).abs() < 0.5);
+            }
+        }
+    }
+
+    #[test]
+    fn a_vertical_expandable_list_keeps_its_height_and_fills_to_the_right_edge() {
+        use crate::protocol::ExpandableView;
+        let cells: Vec<Cell> = ["好", "人"]
+            .iter()
+            .map(|text| Cell {
+                text: (*text).into(),
+                annotation: Some("hó".into()),
+            })
+            .collect();
+        let mut folded = page(true, true, cells.clone());
+        folded.has_next = true;
+        folded.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            mode: 0,
+            axis: 1,
+            ..ExpandableView::default()
+        });
+        let mut unfolded = page(false, true, cells);
+        unfolded.cursor = Some(1);
+        unfolded.chrome.highlight_fill = 100;
+        // A three-column grid whose last view holds one column.
+        unfolded.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            mode: 1,
+            axis: 1,
+            column_width: 80,
+            grid_columns: 3,
+            scroll_y: 0,
+            row_indexes: vec![0, 1],
+            column_starts: vec![0, 0],
+            column_spans: vec![1, 1],
+            visible_rows: 2,
+            row_height: 40,
+        });
+        let before = arrange(&folded, &Mono, 1.0);
+        let after = arrange(&unfolded, &Mono, 1.0);
+        assert!((before.height - after.height).abs() < 0.5);
+        let full = after.highlight.expect("highlight");
+        assert!((full.x + full.w - after.width).abs() < 0.01);
     }
 
     #[test]
