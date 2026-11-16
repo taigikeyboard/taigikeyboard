@@ -5,6 +5,8 @@
 # runs in CI (.github/workflows/secret-scan.yml); the personal-identifier check cannot,
 # because its list is private (tools/secret-scan/private-denylist-scan.sh).
 #
+# The commit message is checked against the same private list by .githooks/commit-msg.
+#
 # The credential scan is tools/secret-scan/gitleaks-scan.sh, shared with `make scan-secrets`,
 # so the entry points cannot drift apart.
 set -uo pipefail

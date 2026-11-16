@@ -95,7 +95,7 @@ Per platform, on top of that:
 ## 3. One-time setup
 
 ```sh
-make hooks          # pre-commit: gitleaks + personal-data checks on staged changes
+make hooks          # gitleaks + personal-data checks on staged changes and the commit message
 ```
 
 `core.hooksPath` is shared by every worktree of a clone. See

@@ -305,7 +305,7 @@ lint-ps1:
 # same scan also runs in CI, which no clone can skip.
 hooks:
 	git config core.hooksPath .githooks
-	@echo "✓ core.hooksPath = .githooks — staged changes are now scanned before every commit"
+	@echo "✓ core.hooksPath = .githooks — staged changes and the commit message are now scanned at every commit"
 	@command -v gitleaks >/dev/null 2>&1 || echo "⚠ gitleaks not installed; the hook will pass through until you run: mise install (or: brew install gitleaks)"
 
 # Scan for credentials. Both targets are tools/secret-scan/gitleaks-scan.sh, which is also

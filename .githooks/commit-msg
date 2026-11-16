@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Blocks a commit whose message names a personal identifier from the maintainer's
+# private denylist (tools/secret-scan/private-denylist-scan.sh; .githooks/pre-commit
+# checks the staged changes against the same list). Activated by `make hooks`;
+# `--no-verify` skips it, and without the list it checks nothing.
+#
+# Everything from git's scissors line on is dropped first: under `git commit -v`
+# it is the diff, which pre-commit has already scanned and whose removed lines may
+# be the very identifier this commit deletes. The line is matched with git's
+# default `#`; under another core.commentChar the diff is scanned too. A message
+# template's `# Author:` line is scanned like any other line.
+#
+# No pipefail: the scanner exits before reading when there is no list, and a
+# long message would then fail the hook on sed's SIGPIPE.
+set -u
+
+sed '/^# -\{24\} >8 -\{24\}$/,$d' "$1" |
+  "$(git rev-parse --show-toplevel)/tools/secret-scan/private-denylist-scan.sh" --stdin 'the commit message'

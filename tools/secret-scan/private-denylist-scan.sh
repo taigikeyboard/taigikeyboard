@@ -12,12 +12,18 @@
 #   private-denylist-scan.sh --staged   lines the staged diff adds (pre-commit hook)
 #   private-denylist-scan.sh --tree     every tracked text file (`make scan-private`);
 #                                       binaries are skipped (git grep -I)
+#   private-denylist-scan.sh --stdin <name>   the text on standard input; <name> is
+#                                       what the report calls it (the commit-msg hook
+#                                       pipes the commit message, .claude/hooks/
+#                                       lint-before-pr.sh the `gh pr create` command)
 #
 # Prints offending file names only, never the matched value. Exit 0 clean, 1 hit.
 #
-# Scope: a local gate. It does not run in CI (the list is private), a clone
-# without `make hooks` or a `git commit --no-verify` skips it, and it never sees
-# commit messages, PR bodies or issues. History is not rewritten, so older
+# Scope: a local gate. It does not run in CI (the list is private), and a clone
+# without `make hooks` or a `git commit --no-verify` skips it. Of the text that
+# never enters the tree it sees commit messages and the title and inline body of
+# a pull request Claude Code opens — not a `--body-file`, a pull request opened
+# or edited any other way, or an issue. History is not rewritten, so older
 # commits keep whatever they already published.
 set -uo pipefail
 
@@ -54,8 +60,13 @@ case "${1:-}" in
       hits+=("$file")
     done < <(git grep -z -l -I -i -F -f "$PATTERNS")
     ;;
+  --stdin)
+    if grep -qiF -f "$PATTERNS"; then
+      hits+=("${2:-standard input}")
+    fi
+    ;;
   *)
-    echo "usage: $0 --staged | --tree" >&2
+    echo "usage: $0 --staged | --tree | --stdin <name>" >&2
     exit 2
     ;;
 esac
