@@ -14,6 +14,8 @@ The CI job builds and stages the site on the host, then runs the Chromium tests 
 
 The edge keeps each old file for up to 600 seconds, so for those minutes a first visit can pair a new `pkg/taigi_web.js` with an old wasm and fail until a reload. Maintainer 2026-11-07: accepted for the beta, with no purge and no Cloudflare token; revisit if it hurts. So the deploy waits 11 minutes, then runs `check-live` against the build it staged. A failed check leaves the run red in `taigikeyboard/web`, not here, and the next hourly deploy replaces the site.
 
+A failed scheduled or manual `web.yml` run posts to #ci-alerts (`.github/workflows/ci-alerts.yml`), every hour until fixed. A failed Deploy run in `taigikeyboard/web` posts there too, through that repository's own `ci-alerts.yml` and its `DISCORD_CI_ALERTS_WEBHOOK` secret.
+
 To deploy by hand, prefer the gated manual run of `web.yml` above. `taigikeyboard/web` → Actions → Deploy → Run workflow deploys ungated. The deploy takes no input and always builds `main`'s head (maintainer 2026-11-10); there is no rollback to an older commit — fix forward on `main`.
 
 Secret:

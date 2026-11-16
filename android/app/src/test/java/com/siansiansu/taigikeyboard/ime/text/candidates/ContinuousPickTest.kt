@@ -1,6 +1,8 @@
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
+import com.siansiansu.taigikeyboard.engine.ContinuousCommitOutcome
+import com.siansiansu.taigikeyboard.engine.ContinuousPick
 import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
 import com.siansiansu.taigikeyboard.engine.proto.CommitResolution
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
@@ -22,7 +24,7 @@ class ContinuousPickTest {
     private fun candidate(
         roman: String,
         hanji: String?,
-    ) = RustEngineBridge.ContinuousCandidate(
+    ) = ContinuousCandidate(
         consumedSpanEnd = 7,
         syllableCount = 2,
         displayText = hanji ?: roman,
@@ -35,7 +37,7 @@ class ContinuousPickTest {
     fun unsplitCell_commitsTheLead_withTheCandidateMetadata() {
         val word = buildContinuousSuggestionsForCandidates(listOf(candidate("tâi-gí", "台語"))).single()
         assertEquals(
-            RustEngineBridge.ContinuousPick(
+            ContinuousPick(
                 script = CommitScript.COMMIT_SCRIPT_LEAD,
                 roman = "tâi-gí",
                 canonicalText = "台語",
@@ -98,16 +100,15 @@ class ContinuousPickTest {
     @Test
     fun request_carriesScriptRomanAndIdentity_notADocumentString() {
         val request =
-            RustEngineBridge
-                .ContinuousPick(
-                    script = CommitScript.COMMIT_SCRIPT_HANJI,
-                    roman = "tâi-gí",
-                    canonicalText = "台語",
-                    associationTl = "tâi-gí",
-                    hanji = "台語",
-                    consumedBytes = 7,
-                    syllableCount = 2,
-                ).toRequest()
+            ContinuousPick(
+                script = CommitScript.COMMIT_SCRIPT_HANJI,
+                roman = "tâi-gí",
+                canonicalText = "台語",
+                associationTl = "tâi-gí",
+                hanji = "台語",
+                consumedBytes = 7,
+                syllableCount = 2,
+            ).toRequest()
         assertEquals(CommitScript.COMMIT_SCRIPT_HANJI, request.script)
         assertEquals("tâi-gí", request.roman)
         assertEquals("台語", request.canonicalText)
@@ -122,23 +123,23 @@ class ContinuousPickTest {
         fun outcome(
             outcome: CommitOutcome,
             earnsAutoSpace: Boolean = false,
-        ) = RustEngineBridge.ContinuousCommitOutcome.from(
+        ) = ContinuousCommitOutcome.from(
             CommitResolution
                 .newBuilder()
                 .setOutcome(outcome)
                 .setEarnsAutoSpace(earnsAutoSpace)
                 .build(),
         )
-        assertEquals(RustEngineBridge.ContinuousCommitOutcome.Nailed, outcome(CommitOutcome.COMMIT_OUTCOME_NAILED))
+        assertEquals(ContinuousCommitOutcome.Nailed, outcome(CommitOutcome.COMMIT_OUTCOME_NAILED))
         assertEquals(
-            RustEngineBridge.ContinuousCommitOutcome.Finalized(earnsAutoSpace = true),
+            ContinuousCommitOutcome.Finalized(earnsAutoSpace = true),
             outcome(CommitOutcome.COMMIT_OUTCOME_FINALIZED, earnsAutoSpace = true),
         )
-        assertEquals(RustEngineBridge.ContinuousCommitOutcome.Ignored, outcome(CommitOutcome.COMMIT_OUTCOME_IGNORED))
+        assertEquals(ContinuousCommitOutcome.Ignored, outcome(CommitOutcome.COMMIT_OUTCOME_IGNORED))
         assertEquals(
             "an answer without a resolution changed nothing this side can tell",
-            RustEngineBridge.ContinuousCommitOutcome.Ignored,
-            RustEngineBridge.ContinuousCommitOutcome.from(CommitResolution.getDefaultInstance()),
+            ContinuousCommitOutcome.Ignored,
+            ContinuousCommitOutcome.from(CommitResolution.getDefaultInstance()),
         )
     }
 }

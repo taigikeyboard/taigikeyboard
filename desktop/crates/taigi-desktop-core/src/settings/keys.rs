@@ -76,6 +76,10 @@ pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::ne
     "nasalMarkerUppercaseEnabled",
     ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
 );
+pub const IS_KHINSIANN_IN_HANJI_ENABLED: SettingsKey<bool> = SettingsKey::new(
+    "khinsiannInHanjiEnabled",
+    ENGINE_DEFAULTS.is_khinsiann_in_hanji_enabled,
+);
 /// Type ts / ch with c (`EngineSettings::is_c_affricate_enabled`). Desktop-only
 /// like `toneInputScheme`, and independent of it. macOS keeps a Swift twin:
 /// `SettingsStore.swift` `isCAffricateEnabled`.
@@ -447,7 +451,7 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub const GENERAL_KEYS: [&str; 14] = [
+pub const GENERAL_KEYS: [&str; 15] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
@@ -462,6 +466,7 @@ pub const GENERAL_KEYS: [&str; 14] = [
     IS_LITERAL_ROMAN_CANDIDATE_ENABLED.name,
     SYLLABLE_SEPARATOR.name,
     IS_NASAL_MARKER_UPPERCASE_ENABLED.name,
+    IS_KHINSIANN_IN_HANJI_ENABLED.name,
 ];
 
 /// The keys the Appearance pane's reset removes (`SettingsStore.swift`

@@ -1,5 +1,5 @@
 // NextWord ops — extensions on RustEngineBridge (decide intents + predict),
-// mirroring iOS RustEngineBridge+NextWord.swift over a JNI roundtrip; nested types stay in RustEngineBridge.
+// mirroring iOS RustEngineBridge+NextWord.swift over a JNI roundtrip; its DTOs are top-level types here.
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -10,6 +10,75 @@ import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
 import com.siansiansu.taigikeyboard.engine.proto.NextWordResponse
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
+
+// region NextWord DTOs
+
+/**
+ * Bridge-synthesized companion to the proto `DecideResult`. Consumed
+ * by the Android NextWord platform executor (`NextWordController`);
+ * effect list executes in order.
+ */
+data class NextWordDecideResult(
+    val effects: List<Effect>,
+    val currentGeneration: Long,
+    val predictionsVisible: Boolean,
+) {
+    sealed class Effect {
+        data class RescheduleContextTimeout(
+            val afterMs: Long,
+        ) : Effect()
+
+        object CancelContextTimeout : Effect()
+
+        /**
+         * `nowMs` is reused by the platform predict() call so the
+         * association-window clock and the user-row decay scoring see
+         * ONE consistent "now" per intent. Per
+         * `nextword-engine-boundary.md` §13.3.
+         */
+        data class QueryPredictions(
+            val word: String,
+            val roman: String,
+            val generation: Long,
+            val nowMs: Long,
+        ) : Effect()
+
+        data class ClearPredictionsUI(
+            val generation: Long,
+        ) : Effect()
+    }
+
+    companion object {
+        val NOOP = NextWordDecideResult(
+            effects = emptyList(),
+            currentGeneration = 0L,
+            predictionsVisible = false,
+        )
+    }
+}
+
+/**
+ * UI-ready prediction value. `subtitle` is `null` when the wire string
+ * is empty (filter contract — happens iff roman is empty).
+ */
+data class NextWordEnginePrediction(
+    val text: String,
+    val subtitle: String?,
+    val hanji: String,
+    val tl: String,
+)
+
+/**
+ * Filter+merge+sort+limit result. `wasStale=true` indicates the
+ * platform-supplied `queryGeneration` did not match the engine's
+ * current generation — late async result; predictions are empty.
+ */
+data class NextWordFilterResult(
+    val predictions: List<NextWordEnginePrediction>,
+    val wasStale: Boolean,
+)
+
+// endregion
 
 // region Decide intents (6)
 // UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8
@@ -28,7 +97,7 @@ fun RustEngineBridge.nextwordWordSelected(
     hanjiFirst: Boolean,
     generation: Long,
     preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> = emptyList(),
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected
         .newBuilder()
         .setText(text)
@@ -53,7 +122,7 @@ fun RustEngineBridge.nextwordBackspace(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Backspace
         .newBuilder()
         .setLastChar(lastChar)
@@ -72,7 +141,7 @@ fun RustEngineBridge.nextwordContextTimeoutFired(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired
         .newBuilder()
         .setInput(decisionInput(nowMs))
@@ -91,7 +160,7 @@ fun RustEngineBridge.nextwordClearForNewComposing(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing
         .newBuilder()
         .setInput(decisionInput(nowMs))
@@ -110,7 +179,7 @@ fun RustEngineBridge.nextwordResetAll(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ResetAll
         .newBuilder()
         .setInput(decisionInput(nowMs))
@@ -136,7 +205,7 @@ fun RustEngineBridge.nextwordSetPredictionsVisible(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible
         .newBuilder()
         .setVisible(visible)
@@ -161,7 +230,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord
         .newBuilder()
         .setText(text)
@@ -186,7 +255,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
 fun RustEngineBridge.nextwordPredictNext(
     word: String,
     roman: String,
-    toggles: RustEngineBridge.DictionaryToggles,
+    toggles: DictionaryToggles,
     queryGeneration: Long,
     nowMs: Long,
     limit: Int,
@@ -195,7 +264,8 @@ fun RustEngineBridge.nextwordPredictNext(
     generation: Long,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
-): RustEngineBridge.NextWordFilterResult {
+    isKhinsiannInHanjiEnabled: Boolean = false,
+): NextWordFilterResult {
     val builder = com.siansiansu.taigikeyboard.engine.proto.PredictNext
         .newBuilder()
         .setWord(word)
@@ -217,22 +287,23 @@ fun RustEngineBridge.nextwordPredictNext(
                 isHanjiFirst = hanjiFirst,
                 candidateDisplayMode = candidateDisplayMode,
                 syllableSeparator = syllableSeparator,
+                isKhinsiannInHanjiEnabled = isKhinsiannInHanjiEnabled,
             ),
-    ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
+    ) ?: return NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {
         RustEngineBridge.recordFailure("nextwordPredictNext", "missing filter result")
-        return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
+        return NextWordFilterResult(emptyList(), wasStale = false)
     }
     val filter = resp.filter
     val predictions = filter.predictionsList.map { p ->
-        RustEngineBridge.NextWordEnginePrediction(
+        NextWordEnginePrediction(
             text = p.text,
             subtitle = if (p.subtitle.isEmpty()) null else p.subtitle,
             hanji = p.hanji,
             tl = p.tl,
         )
     }
-    return RustEngineBridge.NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)
+    return NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)
 }
 
 // endregion
@@ -270,31 +341,31 @@ private inline fun decideDispatch(
     op: String,
     generation: Long,
     config: AppConfig,
-): RustEngineBridge.NextWordDecideResult {
+): NextWordDecideResult {
     val resp = nextwordDispatch(methodSetter, op, generation, config)
-        ?: return RustEngineBridge.NextWordDecideResult.NOOP
+        ?: return NextWordDecideResult.NOOP
     if (!resp.hasDecide()) {
         RustEngineBridge.recordFailure(op, "missing decide result")
-        return RustEngineBridge.NextWordDecideResult.NOOP
+        return NextWordDecideResult.NOOP
     }
     return synthDecideResult(resp.decide)
 }
 
-private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDecideResult {
-    val effects: List<RustEngineBridge.NextWordDecideResult.Effect> = proto.effectsList.mapNotNull { eff ->
+private fun synthDecideResult(proto: DecideResult): NextWordDecideResult {
+    val effects: List<NextWordDecideResult.Effect> = proto.effectsList.mapNotNull { eff ->
         when {
             eff.hasRescheduleContextTimeout() -> {
-                RustEngineBridge.NextWordDecideResult.Effect.RescheduleContextTimeout(
+                NextWordDecideResult.Effect.RescheduleContextTimeout(
                     eff.rescheduleContextTimeout.afterMs,
                 )
             }
 
             eff.hasCancelContextTimeout() -> {
-                RustEngineBridge.NextWordDecideResult.Effect.CancelContextTimeout
+                NextWordDecideResult.Effect.CancelContextTimeout
             }
 
             eff.hasQueryPredictions() -> {
-                RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions(
+                NextWordDecideResult.Effect.QueryPredictions(
                     word = eff.queryPredictions.word,
                     roman = eff.queryPredictions.roman,
                     generation = eff.queryPredictions.generation,
@@ -303,7 +374,7 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
             }
 
             eff.hasClearPredictionsUi() -> {
-                RustEngineBridge.NextWordDecideResult.Effect.ClearPredictionsUI(eff.clearPredictionsUi.generation)
+                NextWordDecideResult.Effect.ClearPredictionsUI(eff.clearPredictionsUi.generation)
             }
 
             else -> {
@@ -311,7 +382,7 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
             }
         }
     }
-    return RustEngineBridge.NextWordDecideResult(
+    return NextWordDecideResult(
         effects = effects,
         currentGeneration = proto.currentGeneration,
         predictionsVisible = proto.predictionsVisible,

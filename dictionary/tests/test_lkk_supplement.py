@@ -6,13 +6,15 @@ from pathlib import Path
 
 import pytest
 
+import re
 from common.cleanup import (
     blank_roman_only_hanzi,
     count_syllables,
+    format_khinsiann_hanji,
     normalize_roman,
     spelled_syllable_count,
 )
-from common.cjk import is_cjk
+from common.cjk import is_cjk, is_kana
 from common.taigi_bridge import (
     convert_poj_to_tl_strict,
     convert_tl_to_poj_strict,
@@ -97,3 +99,15 @@ def test_curated_pairs_pair_leading_neutral_tone_markers(curated_rows):
 def test_curated_pairs_are_sorted(curated_rows):
     pairs = [(row["hanzi"], row["tl"]) for row in curated_rows]
     assert pairs == sorted(pairs), "lkk.csv must be sorted by (hanzi, tl)"
+
+
+def test_curated_pairs_consistent_with_khinsiann_rule(curated_rows):
+    for row in curated_rows:
+        hanzi, tl = row["hanzi"], row["tl"]
+        assert "---" not in hanzi and "---" not in tl, row
+        if "--" in hanzi or "--" in tl:
+            if any(is_cjk(c) or is_kana(c) for c in hanzi):
+                base = re.sub(r"-+", "-", hanzi)
+                assert hanzi == format_khinsiann_hanji(base, tl), row
+            else:
+                assert hanzi == tl, row

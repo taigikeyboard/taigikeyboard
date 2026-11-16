@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.engine.ComposingTransition
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -158,7 +159,7 @@ class SmartbarManager(
             getCurrentSuggestions = { currentSuggestions },
             getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
             onClearCandidates = { clearCandidates() },
-            onNextWordPrediction = { displayText, roman -> handleNextWordPrediction(displayText, roman) },
+            onNextWordPrediction = { displayText, roman -> nextWordController.handleNextWordPrediction(displayText, roman) },
             onRequestCandidateRefresh = { taigikeyboard.textInputManager.requestTaigiCandidateRefresh() },
         )
 
@@ -172,11 +173,6 @@ class SmartbarManager(
 
     fun isShowingNextWordCandidates(): Boolean = nextWordController.isShowingNextWordCandidates()
 
-    fun handleNextWordPrediction(
-        displayText: String,
-        roman: String,
-    ) = nextWordController.handleNextWordPrediction(displayText, roman)
-
     fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordController.handleBackspaceForNextWord(textBeforeCursor)
 
     fun noteCharacterTypedOutsideComposition(char: String) = nextWordController.noteCharacterTypedOutsideComposition(char)
@@ -189,20 +185,20 @@ class SmartbarManager(
      * via the [com.siansiansu.taigikeyboard.ime.text.composing.NextWordEffectRouter]
      * constructor parameter.
      *
-     * Unrelated to [handleNextWordPrediction], the platform tap path for a
+     * Unrelated to [NextWordController.handleNextWordPrediction], the platform tap path for a
      * NextWord prediction (engine `Phase::Idle`, where the engine does NOT
      * emit `NextWordWordSelected`, so the two paths do not double-fire).
      */
-    fun dispatchComposingNextWordEffect(effect: com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect) {
+    fun dispatchComposingNextWordEffect(effect: ComposingTransition.Effect) {
         when (effect) {
-            is com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> {
+            is ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> {
                 nextWordController.updateLastSelectedWord(
                     word = effect.text,
                     roman = effect.roman.ifEmpty { effect.text },
                 )
             }
 
-            is com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected -> {
+            is ComposingTransition.Effect.NextWordWordSelected -> {
                 // Final-commit dispatch. Forward `triggerPrediction` exactly —
                 // engine's `transition.rs:644-653` emits `true` today but the
                 // bridge contract is "verbatim" so a future false must not be
@@ -215,7 +211,7 @@ class SmartbarManager(
                 )
             }
 
-            com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing -> {
+            ComposingTransition.Effect.NextWordClearForNewComposing -> {
                 // The composing crate has no nextword dep so it cannot
                 // dispatch ClearForNewComposing to the NextWord engine
                 // directly — this effect is its request to the platform.

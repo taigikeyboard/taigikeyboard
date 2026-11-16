@@ -45,6 +45,10 @@ protocol EngineSettings {
     // Drift causes silent divergence (one platform still shows hyphens).
     var syllableSeparator: SyllableSeparator { get }
 
+    /// Opt-in neutral-tone (khinsiann) markers (-- / -) in Hanji output.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:isKhinsiannInHanjiEnabled.
+    var isKhinsiannInHanjiEnabled: Bool { get }
+
     /// The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a
     /// live-read value so `ComposingState` / `ToneConverter` can stay
     /// Foundation-pure.

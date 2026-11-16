@@ -1,0 +1,37 @@
+name: Install Rust
+description: >-
+  Installs the Rust version the root rust-toolchain.toml pins, host target only,
+  and sets RUSTUP_TOOLCHAIN to it for the rest of the job.
+
+# RUSTUP_TOOLCHAIN overrides every workspace's rust-toolchain.toml, whose
+# target lists (iOS, Android, Windows, …) rustup would otherwise download on the
+# first cargo call. The version stays the files' own: tools/rust-toolchain.sh
+# reads the root file, and `make lint` holds every workspace file to it. Jobs
+# that build a shipped binary (macos-build, windows-build, web, chromeos-build)
+# install from their workspace's file instead, targets included.
+inputs:
+  components:
+    description: Comma-separated rustup components, such as rustfmt,clippy
+    required: false
+    default: ''
+outputs:
+  version:
+    description: The installed version
+    value: ${{ steps.install.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Install Rust (host target only)
+      id: install
+      shell: bash
+      env:
+        COMPONENTS: ${{ inputs.components }}
+      run: |
+        set -euo pipefail
+        version="$(bash tools/rust-toolchain.sh)"
+        rustup toolchain install "$version" --profile minimal \
+          ${COMPONENTS:+--component "$COMPONENTS"} --no-self-update
+        echo "RUSTUP_TOOLCHAIN=$version" >> "$GITHUB_ENV"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        RUSTUP_TOOLCHAIN="$version" cargo --version
+        RUSTUP_TOOLCHAIN="$version" rustc --version

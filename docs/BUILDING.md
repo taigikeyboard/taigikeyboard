@@ -32,13 +32,22 @@ git clone --recurse-submodules --filter=blob:none \
 
 ## 2. Install the tools
 
-Rust comes from [rustup](https://rustup.rs). Each Rust workspace has its own
-`rust-toolchain.toml` (`engine/`, `desktop/`, `macos/`, `windows/`, `linux/`, `web/`), so rustup
-picks the channel, components and cross targets on first use.
+Rust comes from [rustup](https://rustup.rs). One Rust version is pinned for
+every workspace, every CI job and every release build: the root
+`rust-toolchain.toml` names it, and each Rust workspace (`engine/`, `desktop/`,
+`macos/`, `windows/`, `linux/`, `web/`) repeats it in its own
+`rust-toolchain.toml` beside its cross targets, so rustup installs both on
+first use. Local clippy and rustfmt are therefore CI's. `make lint` fails when a
+file names another version, or when your shell resolves another `rustc` (a
+`RUSTUP_TOOLCHAIN` or `rustup override` of your own): `tools/rust-toolchain.sh
+check`. To move to a new Rust, change every file in one pull request, together
+with the fixes its new lints ask for.
 
 `engine/rust-toolchain.toml` lists the iOS, macOS and Android targets, so the
 first `cargo` run there downloads all of them. For engine-only work on Linux or
-Windows, skip that with `RUSTUP_TOOLCHAIN=stable` — which is what CI does.
+Windows, skip that with `RUSTUP_TOOLCHAIN=$(tools/rust-toolchain.sh)` (the
+pinned version, host target only) — which is what CI does
+(`.github/actions/setup-rust`).
 
 Build tools and the Node major used by CI are pinned in
 [`mise.toml`](../mise.toml):
@@ -194,4 +203,4 @@ by macOS, so inspect the history soon after an incident.
 | `protoc-gen-swift not found` | swift-protobuf missing | `mise install`, or install the version in `macos/Package.resolved` |
 | `cargo-ndk not found` | Android native build without cargo-ndk | `mise install`, or `cargo install cargo-ndk --locked` |
 | `gitleaks is not installed` | `make scan-secrets` / the hook without gitleaks | `mise install`, or install gitleaks 8.30.1 — the version `.gitleaks-scanned` records |
-| rustup downloads Apple / Android targets on Linux | `engine/rust-toolchain.toml` target list | `RUSTUP_TOOLCHAIN=stable` for engine-only work |
+| rustup downloads Apple / Android targets on Linux | `engine/rust-toolchain.toml` target list | `RUSTUP_TOOLCHAIN=$(tools/rust-toolchain.sh)` for engine-only work |

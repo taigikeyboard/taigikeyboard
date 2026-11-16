@@ -372,6 +372,7 @@ impl SettingsDocument {
             // The romanization hyphen: off under TPS, whose `f` key is a glyph.
             is_f_hyphen_enabled: input_mode != InputMode::Tps
                 && self.bool(&keys::IS_F_HYPHEN_ENABLED),
+            is_khinsiann_in_hanji_enabled: self.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
         }
     }
 
@@ -902,6 +903,7 @@ mod tests {
         doc.set_bool(&keys::IS_KAUTIAN_ACCENT_GILAN_ENABLED, false);
         doc.set_bool(&keys::IS_C_AFFRICATE_ENABLED, true);
         doc.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
+        doc.set_bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED, true);
 
         // trace: stored swap=false under the default SideBySide →
         // effective_hanji_first(false)=false, effective_full_width_punctuation(false)=false;
@@ -927,8 +929,12 @@ mod tests {
             is_hanji_conversion_enabled: false,
             is_c_affricate_enabled: true,
             is_f_hyphen_enabled: true,
+            is_khinsiann_in_hanji_enabled: true,
         };
         assert_eq!(doc.engine_settings(), expected);
+        doc.reset_general();
+        assert!(!doc.contains(keys::IS_KHINSIANN_IN_HANJI_ENABLED.name));
+        assert!(!doc.engine_settings().is_khinsiann_in_hanji_enabled);
     }
 
     #[test]

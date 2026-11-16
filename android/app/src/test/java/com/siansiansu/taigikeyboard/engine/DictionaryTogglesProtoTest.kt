@@ -34,7 +34,7 @@ class DictionaryTogglesProtoTest {
             isDevDictEnabled = false,
         )
 
-        val proto = dictionaryTogglesProto(RustEngineBridge.DictionaryToggles.from(settings))
+        val proto = dictionaryTogglesProto(DictionaryToggles.from(settings))
 
         val sources = listOf(
             proto.kautian,
@@ -58,7 +58,7 @@ class DictionaryTogglesProtoTest {
     fun kautianSubcollections_alwaysRideAlong() {
         val settings = StubEngineSettings(isKautianAccentGilanEnabled = false)
 
-        val proto = dictionaryTogglesProto(RustEngineBridge.DictionaryToggles.from(settings))
+        val proto = dictionaryTogglesProto(DictionaryToggles.from(settings))
 
         assertTrue("an absent message would switch the subcollection gate off", proto.hasKautianSubcollections())
         assertFalse(proto.kautianSubcollections.accentGilan)

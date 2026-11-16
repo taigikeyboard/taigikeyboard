@@ -109,7 +109,7 @@ fn decode(kind: LearningRecordKind, row: &rusqlite::Row<'_>) -> rusqlite::Result
     Ok(LearningRecord {
         kind: kind as i32,
         id: row.get(0)?,
-        can_add_to_custom_dictionary: can_add_to_custom_dictionary(&text),
+        can_add_to_custom_dictionary: can_add_to_custom_dictionary(kind, &text),
         text,
         tl: row.get(2)?,
         count: row.get(3)?,
@@ -117,12 +117,14 @@ fn decode(kind: LearningRecordKind, row: &rusqlite::Row<'_>) -> rusqlite::Result
     })
 }
 
-/// Whether Add to Custom Dictionary takes this row: one whose text holds
-/// Hanji; a romanization pick has no Hanji to file. Any syllable count: a
+/// Whether Add to Custom Dictionary takes this row: a learned phrase whose
+/// text holds Hanji. A word-frequency row never: it counts picks of words
+/// the dictionaries already offer, so filing one adds nothing. A
+/// romanization pick has no Hanji to file. Any syllable count: a
 /// one-syllable custom word (是 / sī) takes its toneless key in continuous
 /// input as any custom word does, and that is the user's choice to make.
-pub(crate) fn can_add_to_custom_dictionary(text: &str) -> bool {
-    phonetics::api::is_hanji(text)
+pub(crate) fn can_add_to_custom_dictionary(kind: LearningRecordKind, text: &str) -> bool {
+    kind == LearningRecordKind::LearnedPhrase && phonetics::api::is_hanji(text)
 }
 
 /// One page of `kind`, with the totals, read from one snapshot. `filter` is

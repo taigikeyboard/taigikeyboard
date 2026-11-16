@@ -18,6 +18,7 @@ struct SettingsTab: View {
     @State private var isNasalMarkerUppercaseEnabled: Bool
     @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
+    @State private var khinsiannInHanjiEnabled: Bool
     @State private var literalRomanCandidateEnabled: Bool
     @State private var syllableSeparator: SyllableSeparator
     @State private var isTpsOrMappedToER: Bool
@@ -58,6 +59,7 @@ struct SettingsTab: View {
         _candidateDisplayMode = State(initialValue: settings.candidateDisplayMode)
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
+        _khinsiannInHanjiEnabled = State(initialValue: settings.isKhinsiannInHanjiEnabled)
         _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
         _syllableSeparator = State(initialValue: settings.syllableSeparator)
         _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
@@ -138,6 +140,17 @@ struct SettingsTab: View {
                     .disabled(!candidateDisplayMode.showsHanji)
                     .onChange(of: isOutputBothScripts) { _, newValue in
                         settings.storedIsOutputBothScripts = newValue
+                    }
+
+                    Toggle(isOn: $khinsiannInHanjiEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsKhinsiannInHanji))
+                            SettingInfoButton(description: lang.string(.settingsKhinsiannInHanjiInfo))
+                        }
+                    }
+                    .disabled(!candidateDisplayMode.showsHanji)
+                    .onChange(of: khinsiannInHanjiEnabled) { _, newValue in
+                        settings.isKhinsiannInHanjiEnabled = newValue
                     }
 
                     // Same shape as Candidate Display: a menu picker would draw the value in the accent colour.
@@ -365,6 +378,7 @@ struct SettingsTab: View {
         isNasalMarkerUppercaseEnabled = settings.isNasalMarkerUppercaseEnabled
         candidateDisplayMode = settings.candidateDisplayMode
         isOutputBothScripts = settings.storedIsOutputBothScripts
+        khinsiannInHanjiEnabled = settings.isKhinsiannInHanjiEnabled
         literalRomanCandidateEnabled = settings.isLiteralRomanCandidateEnabled
         syllableSeparator = settings.syllableSeparator
         isTpsOrMappedToER = settings.isTpsOrMappedToER

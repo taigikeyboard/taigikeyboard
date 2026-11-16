@@ -3,7 +3,7 @@
 
 package com.siansiansu.taigikeyboard.ime.text.layout
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ToneVariations
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
@@ -17,7 +17,7 @@ internal object LayoutTestAssets {
      * (`engine/phonetics/src/tone_variations.rs` tests); `RustEngineBridgeTest` checks the decode.
      */
     val toneVariations =
-        RustEngineBridge.ToneVariations(
+        ToneVariations(
             // trace: TL tones 2 3 5 6 7 8 9 on a = á à â ǎ ā a̍ a̋ (tone 9 = U+030B).
             tl = mapOf(
                 "a" to listOf("á", "à", "â", "ǎ", "ā", "a̍", "a̋"),

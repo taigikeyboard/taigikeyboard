@@ -3,14 +3,16 @@
 
 use crate::capacity::LearningCapacity;
 use crate::database::{
-    has_column, immediate_transaction, table_exists, JournalMode, StoreSchema, UserDataDatabase,
+    has_column, immediate_transaction, migrate_to_version, normalize_khinsiann_rows,
+    strip_khinsiann_if_changed, table_exists, JournalMode, StoreSchema, UserDataDatabase,
     UserDataDatabaseError,
 };
+use rusqlite::types::Value;
 use rusqlite::{params, params_from_iter, Connection};
 use std::path::PathBuf;
 
 const TABLE_NAME: &str = "user_frequency";
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 /// The columns every `FrequencyRow` read selects, next to the decoder that
 /// reads them: the two agree by position.
 const ROW_COLUMNS: &str = "word, tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000";
@@ -92,11 +94,13 @@ impl UserFrequencyStore {
     /// Counts one commit of `word` under reading `tl`. `tl` may be empty —
     /// a candidate with no canonical reading lands in its own row.
     pub fn record(&self, word: &str, tl: &str) {
+        let word = phonetics::api::learning_hanji_key(word);
         if word.is_empty() {
             return;
         }
+        let word = word.into_owned();
         let should_check_capacity = self.capacity.should_enforce(1);
-        let (word, tl) = (word.to_owned(), tl.to_owned());
+        let tl = tl.to_owned();
         // The capacity's SQL needs no state from `self`; the check itself is
         // rebuilt on the writer thread from the same literal numbers.
         let capacity = if should_check_capacity {
@@ -134,7 +138,11 @@ impl UserFrequencyStore {
                     "INSERT INTO {TABLE_NAME} (word, tl, count, last_used)\nVALUES (?, ?, ?, CURRENT_TIMESTAMP)\nON CONFLICT(word, tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = CURRENT_TIMESTAMP;"
                 ))?;
                 let mut merged = 0;
-                for (word, tl, count) in rows.iter().filter(|(word, ..)| !word.is_empty()) {
+                for (word, tl, count) in rows {
+                    let word = phonetics::api::strip_khinsiann_hanji(&word);
+                    if word.is_empty() {
+                        continue;
+                    }
                     statement.execute(params![word, tl, count])?;
                     merged += 1;
                 }
@@ -155,14 +163,23 @@ impl UserFrequencyStore {
         if words.is_empty() {
             return Some(Vec::new());
         }
+        let mut normalized: Vec<std::borrow::Cow<'_, str>> = Vec::with_capacity(words.len());
+        let mut seen = std::collections::HashSet::with_capacity(words.len());
+        for word in words {
+            let stripped = phonetics::api::learning_hanji_key(word);
+            if seen.insert(stripped.clone()) {
+                normalized.push(stripped);
+            }
+        }
         self.database.read(|connection| {
             let mut rows = Vec::new();
-            for chunk in words.chunks(WORDS_PER_QUERY) {
+            for chunk in normalized.chunks(WORDS_PER_QUERY) {
                 let placeholders = vec!["?"; chunk.len()].join(",");
                 let mut statement = connection.prepare(&format!(
                     "SELECT {ROW_COLUMNS} FROM {TABLE_NAME}\nWHERE word IN ({placeholders});"
                 ))?;
-                for row in statement.query_map(params_from_iter(chunk.iter()), decode_row)? {
+                let bound = params_from_iter(chunk.iter().map(AsRef::as_ref));
+                for row in statement.query_map(bound, decode_row)? {
                     rows.push(row?);
                 }
             }
@@ -204,7 +221,8 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FrequencyRow> {
 }
 
 /// The current shape: a pre-pair-key table rebuilt first, then created
-/// directly when absent. Stamps 2, the number iOS and Android already use.
+/// directly when absent, then any pure-Hanji neutral-tone rows normalized
+/// and merged into v3.
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     migrate_to_pair_key_if_needed(connection)?;
     connection.execute_batch(&table_ddl(TABLE_NAME))?;
@@ -213,8 +231,54 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     connection.execute_batch(&format!(
         "CREATE INDEX IF NOT EXISTS idx_count ON {TABLE_NAME}(count DESC);\nCREATE INDEX IF NOT EXISTS idx_last_used ON {TABLE_NAME}(last_used DESC);"
     ))?;
-    connection.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+    migrate_khinsiann_hanji_if_needed(connection)?;
     Ok(())
+}
+
+/// Normalizes pure-Hanji neutral-tone keys (`會記--得` -> `會記得`, `--轉-去` -> `轉去`)
+/// inside an `immediate_transaction` and stamps `SCHEMA_VERSION` (`3`).
+/// Han-Lo entries (`邊--a`) are left unchanged by `strip_khinsiann_hanji`.
+fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Result<()> {
+    let select_sql = format!(
+        "SELECT id, word, tl, count, last_used, created_at FROM {TABLE_NAME} WHERE word LIKE '%--%' ORDER BY id ASC;"
+    );
+    let update_sql = format!("UPDATE OR IGNORE {TABLE_NAME} SET word = ?1 WHERE id = ?2;");
+    let merge_sql = format!(
+        "UPDATE {TABLE_NAME}\nSET count = COALESCE(count, 0) + ?1,\n    last_used = CASE WHEN last_used IS NULL THEN ?2 WHEN ?2 IS NULL THEN last_used ELSE MAX(last_used, ?2) END,\n    created_at = CASE WHEN created_at IS NULL THEN ?3 WHEN ?3 IS NULL THEN created_at ELSE MIN(created_at, ?3) END\nWHERE word = ?4 AND tl = ?5;"
+    );
+    migrate_to_version(connection, SCHEMA_VERSION, |connection| {
+        normalize_khinsiann_rows(
+            connection,
+            TABLE_NAME,
+            &select_sql,
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    (
+                        row.get::<_, String>(1)?,
+                        row.get::<_, String>(2)?,
+                        row.get::<_, Option<i64>>(3)?,
+                        row.get::<_, Value>(4)?,
+                        row.get::<_, Value>(5)?,
+                    ),
+                ))
+            },
+            |(word, ..)| strip_khinsiann_if_changed(word),
+            |connection, id, stripped| {
+                connection
+                    .execute(&update_sql, params![stripped, id])
+                    .map(|_| ())
+            },
+            |connection, _id, (_word, tl, count, last_used, created_at), stripped| {
+                connection
+                    .execute(
+                        &merge_sql,
+                        params![count.unwrap_or(0), last_used, created_at, stripped, tl],
+                    )
+                    .map(|_| ())
+            },
+        )
+    })
 }
 
 fn table_ddl(name: &str) -> String {

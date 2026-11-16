@@ -2,6 +2,10 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.DictionaryFilters
+import com.siansiansu.taigikeyboard.engine.DictionaryToggles
+import com.siansiansu.taigikeyboard.engine.LexiconInputMode
+import com.siansiansu.taigikeyboard.engine.LexiconRow
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.engine.isHanji
@@ -39,12 +43,12 @@ class LexiconService(
 
     override fun isHanji(text: String): Boolean = RustEngineBridge.isHanji(text)
 
-    override fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters = RustEngineBridge.dictionaryFilters(toggles)
+    override fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters = RustEngineBridge.dictionaryFilters(toggles)
 
     /** Romanization search with source metadata; `filterBitmask` comes from [dictionaryFilters]. */
     override suspend fun searchWithSources(
         input: String,
-        inputMode: RustEngineBridge.LexiconInputMode,
+        inputMode: LexiconInputMode,
         filterBitmask: UInt,
         limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
@@ -69,7 +73,7 @@ class LexiconService(
     /** Search by hanji prefix (dictionary search exploration). */
     override suspend fun searchByHanji(
         input: String,
-        inputMode: RustEngineBridge.LexiconInputMode,
+        inputMode: LexiconInputMode,
         filterBitmask: UInt,
         limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
@@ -98,11 +102,11 @@ class LexiconService(
 
     private fun bridgeSearchByHanjiOrRoman(
         input: String,
-        bridgeMode: RustEngineBridge.LexiconInputMode,
+        bridgeMode: LexiconInputMode,
         limit: Int,
         filterBitmask: UInt,
         isCJK: Boolean,
-    ): List<RustEngineBridge.LexiconRow> =
+    ): List<LexiconRow> =
         if (isCJK) {
             RustEngineBridge.searchByHanji(
                 query = input,
@@ -120,15 +124,15 @@ class LexiconService(
         }
 
     private fun rowsToSearchResults(
-        rows: List<RustEngineBridge.LexiconRow>,
-        inputMode: RustEngineBridge.LexiconInputMode,
+        rows: List<LexiconRow>,
+        inputMode: LexiconInputMode,
         limit: Int,
     ): List<DictionarySearchResult> =
         rows
             .map { row ->
                 // The engine returns raw TL; render POJ in POJ mode. TPS keeps the TL reading (as iOS).
                 val roman =
-                    if (inputMode == RustEngineBridge.LexiconInputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
+                    if (inputMode == LexiconInputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
                 DictionarySearchResult(
                     id = row.id.toInt(),
                     roman = roman,

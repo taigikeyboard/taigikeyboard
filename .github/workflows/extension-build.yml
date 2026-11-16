@@ -1,0 +1,64 @@
+name: Browser extension build
+
+# The browser extension's unpacked Chrome build: `make -C web extension` on a
+# clean runner, kept as the workflow artifact `extension-zip`. Called by the
+# nightly channel (desktop-nightly.yml) only. The extension is on no release
+# and in no store yet (docs/architecture/browser-extension.md § Phases), so
+# there is no draft to attach to and the train never calls this. Pull requests
+# build and test the same package in web.yml (`e2e-extension`).
+#
+# Budget: ~3 min warm, ~8 min cold (wasm compile), plus ~20 s for the wasm2js
+# fallback.
+#
+# No `source_sha` input: a called workflow checks out its caller's commit
+# (`main` for the nightly), and a free-form ref here would let the job run
+# code that is not `main`'s with the caches `main` saves (CodeQL
+# actions/cache-poisoning).
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: make -C web extension
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      # Only what `make -C web extension` runs: protoc for
+      # engine/protos/build.rs, wasm-bindgen, binaryen's wasm-opt and wasm2js,
+      # zig for the SQLite wasm objects. Versions are mise.toml's, as in web.yml.
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        with:
+          version: 2026.11.2
+          install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen zig
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Install the toolchain (web/rust-toolchain.toml)
+        working-directory: web
+        run: rustup toolchain install --no-self-update
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: web
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: make -C web extension
+        run: make -C web extension
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: extension-zip
+          path: web/target/taigi-keyboard-extension.zip
+          if-no-files-found: error

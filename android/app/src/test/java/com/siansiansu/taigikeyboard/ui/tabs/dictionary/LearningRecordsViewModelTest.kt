@@ -112,13 +112,11 @@ class LearningRecordsViewModelTest {
             return !isRowGone
         }
 
-        /** Like the engine: a learned phrase leaves the list once added, a frequency row stays; a refusal keeps it. */
+        /** Like the engine: a learned phrase leaves the list once added; a refusal keeps it. The engine refuses a frequency row; the page never sends one. */
         override suspend fun addLearningRecordToCustomDictionary(record: LearningRecord) {
             addCalls += record
             writeFailure?.let { throw it }
-            if (record.kind == LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE) {
-                rows = rows.filterNot { it.id == record.id }
-            }
+            rows = rows.filterNot { it.id == record.id }
         }
     }
 
@@ -504,27 +502,6 @@ class LearningRecordsViewModelTest {
             assertEquals(2, client.listCalls.size)
             assertEquals(
                 listOf(8L),
-                model.state.value.records
-                    .map { it.id },
-            )
-        }
-
-    @Test
-    fun `an added frequency row is said and stays in the reloaded list`() =
-        runTest(dispatcher) {
-            val client = FakeLearningRecords(listOf(record(7, "台灣"), record(8, "食飯")))
-            val model = viewModel(client)
-            advanceUntilIdle()
-            val listed = model.state.value.records[0]
-
-            model.addToCustomDictionary(listed)
-            advanceUntilIdle()
-
-            assertEquals(listOf(listed), client.addCalls)
-            assertEquals(LearningRecordsMessage.AddedToCustomDictionary, model.state.value.message)
-            assertEquals(2, client.listCalls.size)
-            assertEquals(
-                listOf(7L, 8L),
                 model.state.value.records
                     .map { it.id },
             )

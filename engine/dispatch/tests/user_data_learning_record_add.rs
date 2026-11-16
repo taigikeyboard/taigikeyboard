@@ -1,7 +1,8 @@
 //! Learning rows added to the custom dictionary over the wire
-//! (learning-records-page-roadmap P7 / P8 / P10): a frequency row stays, a
-//! learned phrase is forgotten, a one-syllable word is added, a word with no
-//! Hanji is refused with `FAIL_INVARIANT` and no payload.
+//! (learning-records-page-roadmap P7 / P8 / P10): a learned phrase is added
+//! and forgotten, a one-syllable phrase is added; a word-frequency row (a
+//! dictionary word already) and a phrase with no Hanji are never offered and
+//! refused with `FAIL_INVARIANT` and no payload.
 //! Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
@@ -84,50 +85,60 @@ fn custom_words(query: &str) -> Vec<String> {
     }
 }
 
+fn refused(record: LearningRecord) {
+    assert!(!record.can_add_to_custom_dictionary, "never offered");
+    let response = add_to_custom_dictionary(record);
+    assert_eq!(response.error, ErrorCode::FailInvariant as i32);
+    assert!(response.payload.is_none());
+}
+
 #[test]
-fn a_counted_word_is_added_and_stays_and_a_learned_phrase_is_added_and_goes() {
+fn a_learned_phrase_is_added_and_goes_and_a_counted_word_is_refused() {
     let directory = tempfile::tempdir().unwrap();
-    // A phrase the keyboard learned from a segment-by-segment commit.
+    // Phrases the keyboard learned from segment-by-segment commits.
     {
         let stores = UserDataStores::at(
             UserDataPaths::in_directory(directory.path()),
             JournalMode::Delete,
         );
         stores.open_blocking();
-        stores.learned_phrases.learn_phrase("台灣", "tâi-uân");
-        stores.learned_phrases.all_rows(); // flush the queued write
+        for (word, tl) in [("台灣", "tâi-uân"), ("是", "sī"), ("guá sī", "guá sī")] {
+            stores.learned_phrases.learn_phrase(word, tl);
+        }
+        stores.learned_phrases.all_rows(); // flush the queued writes
     }
     open_user_data(directory.path());
-    // Picked again: the word is counted and the phrase touched.
+    // Picked again: the word is counted.
     record_usage("台灣", "tâi-uân");
-    record_usage("是", "sī");
-    record_usage("guá", "guá");
-    let words = listed(LearningRecordKind::Frequency);
-    let word = |text: &str| words.iter().find(|row| row.text == text).unwrap().clone();
-    let [phrase] = listed(LearningRecordKind::LearnedPhrase)
-        .try_into()
-        .unwrap();
+    let [counted] = listed(LearningRecordKind::Frequency).try_into().unwrap();
+    let phrase = |text: &str| {
+        listed(LearningRecordKind::LearnedPhrase)
+            .into_iter()
+            .find(|row| row.text == text)
+            .unwrap()
+    };
+
+    // A counted word is a dictionary word already: refused, and still listed.
+    refused(counted.clone());
+    assert!(custom_words("taiuan").is_empty());
+    assert_eq!(listed(LearningRecordKind::Frequency), [counted]);
 
     // No Hanji: never offered, refused when sent anyway.
-    assert!(!word("guá").can_add_to_custom_dictionary);
-    let refused = add_to_custom_dictionary(word("guá"));
-    assert_eq!(refused.error, ErrorCode::FailInvariant as i32);
-    assert!(refused.payload.is_none());
+    refused(phrase("guá sī"));
 
     // One syllable: the user's to file, like any custom word.
-    assert!(word("是").can_add_to_custom_dictionary);
-    added(add_to_custom_dictionary(word("是")));
+    assert!(phrase("是").can_add_to_custom_dictionary);
+    added(add_to_custom_dictionary(phrase("是")));
     assert_eq!(custom_words("si"), ["是"]);
 
-    // A frequency row keeps weighting its word: added, and still listed.
-    assert!(word("台灣").can_add_to_custom_dictionary);
-    added(add_to_custom_dictionary(word("台灣")));
+    // Added, then forgotten: the custom word offers it whole from now on.
+    let taiuan = phrase("台灣");
+    assert!(taiuan.can_add_to_custom_dictionary);
+    added(add_to_custom_dictionary(taiuan));
     assert_eq!(custom_words("taiuan"), ["台灣"]);
-    assert_eq!(listed(LearningRecordKind::Frequency), words);
-
-    // The word is stored already: the phrase is forgotten, not added twice.
-    assert!(phrase.can_add_to_custom_dictionary);
-    added(add_to_custom_dictionary(phrase));
-    assert!(listed(LearningRecordKind::LearnedPhrase).is_empty());
-    assert_eq!(custom_words("taiuan"), ["台灣"]);
+    let left: Vec<String> = listed(LearningRecordKind::LearnedPhrase)
+        .into_iter()
+        .map(|row| row.text)
+        .collect();
+    assert_eq!(left, ["guá sī"]);
 }

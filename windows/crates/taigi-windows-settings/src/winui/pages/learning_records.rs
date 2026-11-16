@@ -2,11 +2,11 @@
 //! Custom Dictionary page's shape (`custom_dictionary.rs`) over the engine's
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
-//! selection drives the edit-count / delete pair — ✎ opens the record
+//! selection drives the edit-count / delete pair (✎ opens the record
 //! dialog: the count and, for a row the engine says can be added, an Add to
-//! Custom Dictionary tab beside it — — plus Add to Custom
-//! Dictionary, which opens Custom Dictionary's Add Word dialog over the
-//! row's word — and the pager under it, then Delete Learning Records under
+//! Custom Dictionary tab beside it) — plus, on learned phrases, Add to
+//! Custom Dictionary, which opens Custom Dictionary's Add Word dialog over
+//! the row's word — and the pager under it, then Delete Learning Records under
 //! the card: it empties every learning store, whichever kind is on screen,
 //! on the press. No add — a word the user wants is a custom word.
 //!
@@ -24,14 +24,15 @@ use crate::winui::list_pager::{
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::pages::choice_row;
-use crate::winui::pages::custom_dictionary::{word_dialog, EntryField};
+use crate::winui::pages::custom_dictionary::{self, word_dialog, EntryField};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
 };
 use taigi_desktop_core::settings::learning_records::{
     add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
-    order_label, set_count_job, whole_count, Listing, KINDS, MAX_COUNT, ORDERS,
+    offers_add_to_custom_dictionary, order_label, set_count_job, whole_count, Listing, KINDS,
+    MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
@@ -71,8 +72,8 @@ pub enum Message {
     /// typed form and word, for the user to tweak before Save.
     AddToCustomDictionary,
     AddWordFieldChanged(EntryField, String),
-    /// Save files the word as edited: a learned phrase then leaves this
-    /// list, a frequency row stays. Cancel does nothing.
+    /// Save files the word as edited: the learned phrase then leaves this
+    /// list. Cancel does nothing.
     AddWordDialogClosed(ContentDialogResult),
     /// The count field's value; `None` while it is cleared.
     CountChanged(Option<f64>),
@@ -129,6 +130,9 @@ pub struct LearningRecordsModel {
     /// The page's one work slot: the job it waits on, and whether the
     /// overlay shows.
     job: JobState,
+    /// Whether the job `job` waits on files a word in the custom
+    /// dictionary, so its landing reloads that page too.
+    is_job_custom_dictionary_write: bool,
 }
 
 impl LearningRecordsModel {
@@ -145,6 +149,7 @@ impl LearningRecordsModel {
             editing: None,
             adding: None,
             job: JobState::default(),
+            is_job_custom_dictionary_write: false,
         }
     }
 }
@@ -278,7 +283,7 @@ pub fn update(
             if result != ContentDialogResult::Primary || roman.trim().is_empty() {
                 return;
             }
-            begin_job(model, context, move || {
+            begin_job_then(model, context, true, move || {
                 add_to_custom_dictionary_job(record, &roman, &hanji)
             });
         }
@@ -349,6 +354,14 @@ pub fn update(
             if is_reload_wanted {
                 load(model, context);
             }
+            // The word lands on Custom Dictionary without leaving for it:
+            // that page loads once, on its first show, and would otherwise
+            // keep the rows it read before the add.
+            if std::mem::take(&mut model.is_job_custom_dictionary_write) {
+                context.sender().send(WindowMessage::CustomDictionary(
+                    custom_dictionary::Message::Reload,
+                ));
+            }
         }
         Message::ShowBusy(generation) => {
             model.job.show_busy(generation);
@@ -407,7 +420,19 @@ fn begin_job(
     context: &ComponentContext<SettingsWindow>,
     job: impl FnOnce() -> JobOutcome + Send + 'static,
 ) {
-    list_pager::spawn_job::<LearningRecord>(
+    begin_job_then(model, context, false, job);
+}
+
+/// `begin_job`; `writes_custom_dictionary` also reloads Custom Dictionary
+/// once the job lands. Set only for a job that started — one refused
+/// because another holds the slot never lands.
+fn begin_job_then(
+    model: &mut LearningRecordsModel,
+    context: &ComponentContext<SettingsWindow>,
+    writes_custom_dictionary: bool,
+    job: impl FnOnce() -> JobOutcome + Send + 'static,
+) {
+    let has_started = list_pager::spawn_job::<LearningRecord>(
         &mut model.job,
         context,
         job,
@@ -416,6 +441,9 @@ fn begin_job(
         },
         |generation| WindowMessage::LearningRecords(Message::ShowBusy(generation)),
     );
+    if has_started {
+        model.is_job_custom_dictionary_write = writes_custom_dictionary;
+    }
 }
 
 pub fn view(
@@ -565,18 +593,23 @@ fn record_table(
         })
         .collect::<Vec<_>>();
     let has_selection = model.listing.selected_row().is_some();
-    // On for a selected row the engine says can be added: no Hanji greys it
-    // out on either kind.
+    // Left out on word frequency (its words are dictionary words already);
+    // on learned phrases, on for a selected row the engine says can be
+    // added — no Hanji greys it out.
     let can_add_selection = model
         .listing
         .selected_row()
         .is_some_and(|row| row.can_add_to_custom_dictionary);
-    let add_button = icon_button(
-        ADD_GLYPH,
-        strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
-        is_enabled && can_add_selection,
-        context.callback(|()| WindowMessage::LearningRecords(Message::AddToCustomDictionary)),
-    );
+    let add_button = if offers_add_to_custom_dictionary(model.kind) {
+        icon_button(
+            ADD_GLYPH,
+            strings.resolve(StringKey::DictionaryLearningRecordsAddToCustomDictionary),
+            is_enabled && can_add_selection,
+            context.callback(|()| WindowMessage::LearningRecords(Message::AddToCustomDictionary)),
+        )
+    } else {
+        View::empty()
+    };
     // The list stays live while a job runs; the verbs are what a job turns
     // off (Custom Dictionary's reasoning, `list_selection`).
     let list = selectable_list(

@@ -19,7 +19,7 @@ SHELL := /usr/bin/env sh
 .DEFAULT_GOAL := help
 
 .PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
-        fmt lint lint-ps1 hooks scan-secrets scan-secrets-full scan-private \
+        fmt lint lint-ps1 lint-rust-toolchain hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
@@ -282,7 +282,7 @@ fmt:
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
-lint: lint-ps1
+lint: lint-ps1 lint-rust-toolchain
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
@@ -291,6 +291,11 @@ lint: lint-ps1
 	swiftformat --lint ios   # one directory per call: `--lint ios macos` reads macos as --lint's value
 	swiftformat --lint macos
 	cd android && ./gradlew spotlessCheck
+
+# Every rust-toolchain.toml names the root's version, and this shell resolves it,
+# so local clippy / rustfmt are CI's (tools/rust-toolchain.sh).
+lint-rust-toolchain:
+	bash tools/rust-toolchain.sh check
 
 lint-ps1:
 	@git ls-files -z '*.ps1' | xargs -0 perl -ne 'if (/[^\t\r\n\x20-\x7e]/) { print "$$ARGV:$$.: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } close ARGV if eof; END { exit $$bad }'

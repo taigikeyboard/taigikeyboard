@@ -127,6 +127,10 @@ test("a normal tab sends only changed files and restarts on a conflict", async (
   assert.deepEqual(session.imported["a.db"], new Uint8Array([1]));
   assert.equal(await learning.isStale(), false);
 
+  generation += 1;
+  assert.equal(await learning.isStale(), true);
+  generation -= 1;
+
   // Only `b.db` differs from what `read` handed in.
   learning.scheduleSave();
   await new Promise((resolve) => setTimeout(resolve, 10));
@@ -144,3 +148,79 @@ test("a normal tab sends only changed files and restarts on a conflict", async (
   assert.equal(writes[1].base, 4);
   assert.equal(staleCount, 1);
 });
+
+test("a generation reply from before this tab's save does not restart it", async () => {
+  const session = /** @type {Session} */ (
+    /** @type {unknown} */ (fakeSession())
+  );
+  /** @type {PromiseWithResolvers<number>} */
+  const generation = Promise.withResolvers();
+  /** @type {PromiseWithResolvers<void>} */
+  const saved = Promise.withResolvers();
+  const learning = new SharedLearning({
+    current: () => session,
+    run: (action) => action(session),
+    ask: async (rawMessage) => {
+      const message = /** @type {LearningRequest} */ (rawMessage);
+      switch (message.type) {
+        case "taigi.learning.read":
+          return { generation: 3, files: {} };
+        case "taigi.learning.generation":
+          return generation.promise;
+        case "taigi.learning.write":
+          saved.resolve();
+          return { isTaken: true, generation: message.base + 1 };
+      }
+    },
+    isPrivate: false,
+    onStale: () => assert.fail("this tab's save must not make it stale"),
+  });
+  await learning.attach(session);
+  const pending = learning.isStale();
+  learning.scheduleSave();
+  await saved.promise;
+  // Let the accepted write update the local generation before the older
+  // generation reply arrives.
+  await new Promise((resolve) => setImmediate(resolve));
+  generation.resolve(3);
+  assert.equal(await pending, false);
+});
+
+for (const isAttached of [false, true]) {
+  test(`a generation reply for an old engine is ignored ${isAttached ? "after" : "during"} its replacement`, async () => {
+    const first = /** @type {Session} */ (
+      /** @type {unknown} */ (fakeSession())
+    );
+    const second = /** @type {Session} */ (
+      /** @type {unknown} */ (fakeSession())
+    );
+    let current = first;
+    let sharedGeneration = 3;
+    /** @type {PromiseWithResolvers<number>} */
+    const generation = Promise.withResolvers();
+    const learning = new SharedLearning({
+      current: () => current,
+      run: (action) => action(current),
+      ask: async (rawMessage) => {
+        const message = /** @type {LearningRequest} */ (rawMessage);
+        if (message.type === "taigi.learning.read") {
+          return { generation: sharedGeneration, files: {} };
+        }
+        assert.equal(message.type, "taigi.learning.generation");
+        return generation.promise;
+      },
+      isPrivate: false,
+      onStale: () =>
+        assert.fail("an old engine must not restart its replacement"),
+    });
+    await learning.attach(first);
+    const pending = learning.isStale();
+    current = second;
+    sharedGeneration = 4;
+    if (isAttached) {
+      await learning.attach(second);
+    }
+    generation.resolve(isAttached ? 3 : 4);
+    assert.equal(await pending, false);
+  });
+}

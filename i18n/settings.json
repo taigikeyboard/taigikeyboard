@@ -236,6 +236,16 @@
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "ⁿ（SIÂⁿ）", "tailo": "ⁿ (SIÂⁿ)", "poj": "ⁿ (SIÂⁿ)", "en": "ⁿ (SIÂⁿ)", "ja": "ⁿ（SIÂⁿ）" }
     },
+    "khinsiannInHanji": {
+      "comment": "Toggle label: opt-in neutral-tone (khinsiann) markers (-- / -) in Hanji output across all platforms.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
+      "values": { "hanji": "漢字顯示輕聲（--）", "tailo": "Hàn-jī hián-sī khin-siann (--)", "poj": "Hàn-jī hián-sī khin-siaⁿ (--)", "en": "Neutral Tone in Hanji (--)", "ja": "漢字に軽声（--）を表示" }
+    },
+    "khinsiannInHanjiInfo": {
+      "comment": "Help text for the neutral-tone in Hanji toggle.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "開啟時，漢字輸出會照台羅詞彙加上輕聲符號（例：會記--得、--轉-去）。", "tailo": "Phah-khui sî, Hàn-jī su-tshut ē tsiàu Tâi-lô sû-luī ka-siōng khin-siann hû-hō (lē: 會記--得, --轉-去).", "poj": "Phah-khui sî, Hàn-jī su-chhut ē chiàu Tâi-lô sû-lūi ka-siōng khin-siaⁿ hû-hō (lē: 會記--得, --轉-去).", "en": "When on, Hanji output includes neutral-tone markers matching Tâi-lô words (e.g. 會記--得, --轉-去).", "ja": "オンにすると、漢字出力に台羅の軽声記号が付きます（例：會記--得、--轉-去）。" }
+    },
     "tpsOrMapsToER": {
       "comment": "Toggle label: render TL 'or' final as TPS ㄜ.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },

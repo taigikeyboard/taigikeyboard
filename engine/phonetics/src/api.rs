@@ -158,6 +158,11 @@ pub use crate::display_rewrite::{
     canonical_tl_form, poj_display_to_tl_display, tl_display_to_poj_display,
 };
 pub use crate::hanji::{is_hanji, is_roman_only_spelling, CJK_RANGES};
+pub use crate::khinsiann::{
+    align_hanji_syllables, khinsiann_hanji_display, learning_hanji_key,
+    push_hanji_with_interword_khinsiann, render_hanji_khinsiann, strip_khinsiann_hanji, HanjiToken,
+    HanjiTokenKind, TlToken,
+};
 pub use crate::reading_key::{roman_reading_eq, stored_roman_mode, toneless_reading_key};
 pub use crate::separators::{
     push_syllable_joiner_run, render_typed_separators, syllable_joiner_display,

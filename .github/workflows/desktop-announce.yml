@@ -10,8 +10,8 @@ name: Desktop announce
 # writes the website data `appcast/{macos,windows}.json` and
 # the download buttons (Linux included) are rendered from, and waits until the
 # live appcasts serve it. A release carrying a macOS `.pkg` then bumps the
-# Homebrew cask (tools/release/bump-cask.sh) and audits it. The outcome posts to
-# Discord: the platforms announced and the cask audited, or the failing run.
+# Homebrew cask (tools/release/bump-cask.sh) and audits it. A published release
+# posts to Discord: the platforms announced and the cask audited.
 #
 # `make desktop-announce` runs the identical script locally — for a re-run after
 # a failure here, or when the token below has expired; it prints the
@@ -144,37 +144,30 @@ jobs:
           }
           brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard
 
-  # Silent when `announce` never ran (a non-desktop release) or the run was
-  # cancelled by hand.
+  # Runs only when the release is out: `announce` passed and the cask audit
+  # passed or was skipped (a release without a macOS `.pkg`; a cancelled audit
+  # is not a pass). `!cancelled()` keeps a skipped audit from skipping this job.
+  # A failed run is reported by ci-alerts.yml.
   finish:
     name: report to Discord
     needs: [announce, cask-audit]
-    if: ${{ !cancelled() && github.repository == 'taigikeyboard/taigikeyboard' && needs.announce.result != 'skipped' }}
+    if: >-
+      !cancelled() && github.repository == 'taigikeyboard/taigikeyboard' &&
+      needs.announce.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.cask-audit.result)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     env:
       DISCORD_PR_WEBHOOK: ${{ secrets.DISCORD_PR_WEBHOOK }}
-      # The audit is skipped for a release without a macOS `.pkg`; a cancelled
-      # audit is not a pass.
-      PUBLISHED: ${{ needs.announce.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.cask-audit.result) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: tools/release
 
-      - name: Report a failure
-        if: env.PUBLISHED != 'true'
-        env:
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          VERSION: ${{ inputs.version || github.event.release.tag_name }}
-        run: |
-          bash tools/release/desktop-train.sh notify "Desktop announce ${VERSION:-(checkout version)} failed: $RUN_URL"
-
       - name: Report the release
-        if: env.PUBLISHED == 'true'
         env:
           ANNOUNCED_VERSION: ${{ needs.announce.outputs.version }}
           PLATFORMS: ${{ needs.announce.outputs.platforms }}

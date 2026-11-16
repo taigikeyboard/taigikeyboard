@@ -19,6 +19,9 @@ on:
       - 'windows/Cargo.*'
       - 'engine/**'
       - '.github/actions/setup-protoc/**'
+      - '.github/actions/setup-rust/**'
+      - 'rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - 'mise.toml'
       - '.github/workflows/desktop-shared.yml'
   push:
@@ -29,6 +32,9 @@ on:
       - 'windows/Cargo.*'
       - 'engine/**'
       - '.github/actions/setup-protoc/**'
+      - '.github/actions/setup-rust/**'
+      - 'rust-toolchain.toml'
+      - 'tools/rust-toolchain.sh'
       - 'mise.toml'
       - '.github/workflows/desktop-shared.yml'
 
@@ -44,22 +50,15 @@ jobs:
     name: desktop cargo test + clippy + fmt
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      # Mirrors `channel` in desktop/rust-toolchain.toml and windows/rust-toolchain.toml.
-      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install protoc
         uses: ./.github/actions/setup-protoc
 
-      # RUSTUP_TOOLCHAIN (job env above) overrides the rust-toolchain.toml
-      # files, so only the host target is installed.
-      - name: Install the toolchain (host target only)
-        run: |
-          set -euo pipefail
-          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
-          cargo --version && rustc --version && protoc --version
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: rustfmt,clippy
 
       # Cached across runs by desktop/Cargo.lock hash. The engine crates build
       # into desktop/target as path dependencies, so they are rebuilt with the

@@ -35,8 +35,8 @@ REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 output() { echo "$1=$2" >> "${GITHUB_OUTPUT:-/dev/stdout}"; }
 summary() { printf '%s\n' "$@" >> "${GITHUB_STEP_SUMMARY:-/dev/stdout}"; }
 
-# The repository-level webhook: posting needs no environment, so neither an
-# empty month nor a failure waits for an approval to be said. No mentions, no
+# The repository-level webhook, no environment: an empty-month note needs no
+# approval. Failures go to #ci-alerts through ci-alerts.yml. No mentions, no
 # link previews — the same payload beta-release.sh posts.
 notify() {
     [[ -n "${DISCORD_PR_WEBHOOK:-}" ]] || { echo "warning: DISCORD_PR_WEBHOOK is not set — not posting: $1" >&2; return 0; }
@@ -178,7 +178,7 @@ check_publish() {
     state="$(desktop_release_state)" || exit 1
     case "$state" in
         absent)
-            # An empty month or a failed cut — both already posted to Discord.
+            # An empty month (posted by `plan`) or a failed cut (posted by ci-alerts.yml).
             others="$(other_desktop_drafts)"
             [[ -z "$others" ]] || summary "Unpublished desktop drafts from other months: $others — publish one by hand or delete it."
             stop_publish "No $DESKTOP_TAG draft — nothing to publish (an empty month, or the cut did not stage)."
@@ -224,8 +224,8 @@ check_publish() {
 # The release object's names: `plan` and `check-publish` name this month's
 # version (a mid-month patch moves the tree past it); the other
 # steps read the version from the checkout (the release commit). `notify`
-# needs none: the workflows' Discord reporters run it from a sparse checkout of
-# tools/release, which lacks the version files the library reads.
+# needs none: desktop-announce.yml's success post runs it from a sparse checkout
+# of tools/release, which lacks the version files the library reads.
 if [[ "${1:-}" != notify ]]; then
     SHORT_VERSION=""
     case "${1:-}" in plan | check-publish) SHORT_VERSION="$(train_version)" ;; esac

@@ -49,6 +49,13 @@ class EngineSettingsLiveReadTest {
             provider.current.isCustomDictEnabled,
         )
 
+        backing.isKhinsiannInHanjiEnabled = true
+        assertEquals(
+            "isKhinsiannInHanjiEnabled reflects live mutation",
+            true,
+            provider.current.isKhinsiannInHanjiEnabled,
+        )
+
         // Repeated reads without mutation return the same value — the
         // reads are re-issued, not memoized at the engine boundary.
         backing.inputMode = "tps"

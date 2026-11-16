@@ -112,7 +112,7 @@ pub fn best_candidate_for_key_with_barriers(
     // unpriced, so the dictionary row wins the pick anyway — and skipping it
     // keeps the per-edge hot path allocation-free.
     if !custom.is_empty() {
-        dedupe_by_roman_hanji_span(&mut homophones);
+        dedupe_by_roman_hanji_span(&mut homophones, ctx.khinsiann_in_hanji);
     }
     let (candidate, bigram_rowid) =
         pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;

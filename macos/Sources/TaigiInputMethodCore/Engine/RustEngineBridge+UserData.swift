@@ -129,10 +129,10 @@ extension RustEngineBridge {
         return deleted.removed
     }
 
-    /// Files a row's word in the custom dictionary as `roman` / `hanji` (the
-    /// word as the user edited it), then forgets a learned phrase (a
-    /// frequency row stays); the answer's `refusal` says why it stayed. `nil`
-    /// for a row the engine does not add too — it refuses the request.
+    /// Files a learned phrase's word in the custom dictionary as `roman` /
+    /// `hanji` (the word as the user edited it), then forgets the phrase; the
+    /// answer's `refusal` says why it stayed. `nil` for a row the engine does
+    /// not add too (a frequency row, no Hanji) — it refuses the request.
     static func learningRecordAddToCustomDictionary(
         _ record: Taigi_Engine_LearningRecord,
         roman: String,

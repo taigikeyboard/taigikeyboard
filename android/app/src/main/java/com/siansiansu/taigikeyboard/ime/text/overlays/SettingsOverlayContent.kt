@@ -41,11 +41,11 @@ import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.candidateDisplayModeOptions
+import com.siansiansu.taigikeyboard.ime.settings.nasalMarkerStyleOptions
+import com.siansiansu.taigikeyboard.ime.settings.syllableSeparatorOptions
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeOptions
-import com.siansiansu.taigikeyboard.ui.tabs.settings.nasalMarkerStyleOptions
-import com.siansiansu.taigikeyboard.ui.tabs.settings.syllableSeparatorOptions
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -80,6 +80,7 @@ fun SettingsOverlayContent(
     var candidateDisplayMode by remember(refreshTrigger) { mutableStateOf(prefs.candidateDisplayMode) }
     // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.storedOutputBothScripts) }
+    var khinsiannInHanji by remember(refreshTrigger) { mutableStateOf(prefs.isKhinsiannInHanjiEnabled) }
     var literalRomanCandidate by remember(refreshTrigger) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(refreshTrigger) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(refreshTrigger) { mutableStateOf(prefs.isAutoSpaceEnabled) }
@@ -155,6 +156,19 @@ fun SettingsOverlayContent(
             onCheckedChange = {
                 outputBoth = it
                 prefs.storedOutputBothScripts = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        SwitchRow(
+            label = L10n.settingsKhinsiannInHanji,
+            checked = khinsiannInHanji,
+            enabled = candidateDisplayMode.showsHanji,
+            onCheckedChange = {
+                khinsiannInHanji = it
+                prefs.isKhinsiannInHanjiEnabled = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,

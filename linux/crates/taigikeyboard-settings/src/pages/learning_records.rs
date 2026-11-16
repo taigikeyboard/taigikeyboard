@@ -3,7 +3,8 @@
 //! learning stores: a kind picker (word frequency, phrases) and an order
 //! picker over a filter, rows fetched one PAGE at a time (10), a list whose
 //! selection drives the edit-count / add-to-custom-dictionary / delete
-//! verbs, and the pager under it — ✎ or a double-click opens the record
+//! verbs (no add on word frequency: its words are dictionary words
+//! already), and the pager under it — ✎ or a double-click opens the record
 //! dialog: the count and, for a row the engine says can be added, an Add to
 //! Custom Dictionary tab beside it — then Delete Learning Records in its own
 //! group: it empties every learning store, whichever kind is on screen, on
@@ -32,7 +33,7 @@ use taigi_desktop_core::engine::user_data::{
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::learning_records::{
     add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
-    order_label, set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
+    offers_add_to_custom_dictionary, order_label, set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
@@ -160,8 +161,11 @@ impl LearningRecordsPage {
             .map(|key| strings.resolve(key)),
             true,
         ));
+        // One click selects (the verbs below act on it); only a double-click
+        // or Enter activates — GTK's default activates on a single click.
         let list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
+            .activate_on_single_click(false)
             .css_classes(["boxed-list"])
             .build();
         let empty = gtk::Label::builder()
@@ -428,6 +432,17 @@ impl LearningRecordsPage {
     /// Takes the window's one work slot for `job`, or does nothing because
     /// something else holds it — Custom Dictionary's `begin_job`.
     fn begin_job(self: &Rc<Self>, job: impl FnOnce() -> JobOutcome + Send + 'static) {
+        self.begin_job_then(false, job);
+    }
+
+    /// `begin_job`; `writes_custom_dictionary` also reloads Custom
+    /// Dictionary's list once the job lands, so the word it filed shows
+    /// there without leaving the pane.
+    fn begin_job_then(
+        self: &Rc<Self>,
+        writes_custom_dictionary: bool,
+        job: impl FnOnce() -> JobOutcome + Send + 'static,
+    ) {
         let Some(generation) = self.job_slot.take() else {
             return;
         };
@@ -441,6 +456,9 @@ impl LearningRecordsPage {
             let outcome = outcome.unwrap_or_else(JobOutcome::did_not_finish::<LearningRecord>);
             if let Some(message) = outcome.message {
                 shell.report(&message, &strings);
+            }
+            if writes_custom_dictionary {
+                shell.reload_custom_dictionary();
             }
             let Some(page) = weak.upgrade() else { return };
             let is_this_pages = page.state.borrow_mut().job.finish(generation);
@@ -624,7 +642,9 @@ impl LearningRecordsPage {
             move |roman, hanji| {
                 let Some(page) = weak.upgrade() else { return };
                 let record = record.clone();
-                page.begin_job(move || add_to_custom_dictionary_job(record, &roman, &hanji));
+                page.begin_job_then(true, move || {
+                    add_to_custom_dictionary_job(record, &roman, &hanji)
+                });
             },
         );
     }
@@ -688,18 +708,23 @@ impl LearningRecordsPage {
     }
 
     /// The ✎, + and − buttons: on while a row is selected and nothing runs.
-    /// The + (add to custom dictionary) also needs a row the engine says can
-    /// be added: no Hanji keeps it off on either kind.
+    /// The + (add to custom dictionary) is left out on word frequency, and
+    /// on learned phrases also needs a row the engine says can be added: no
+    /// Hanji keeps it off.
     fn render_verbs(&self) {
-        let (is_busy, has_selection, can_add_selection) = {
+        let (is_busy, has_selection, can_add_selection, offers_add) = {
             let state = self.state.borrow();
             let selected_row = state.listing.selected_row();
             (
                 state.job.is_busy_shown(),
                 selected_row.is_some(),
                 selected_row.is_some_and(|row| row.can_add_to_custom_dictionary),
+                offers_add_to_custom_dictionary(state.kind),
             )
         };
+        self.widgets
+            .add_to_custom_dictionary
+            .set_visible(offers_add);
         let is_on = !is_busy && has_selection;
         self.widgets.edit.set_sensitive(is_on);
         self.widgets

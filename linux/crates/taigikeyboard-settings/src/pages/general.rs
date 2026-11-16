@@ -87,6 +87,15 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     output_row.set_sensitive(allows_swap(context.document));
     context.on_refresh(move |document| output_row.set_sensitive(allows_swap(document)));
+    let khinsiann_row = context.switch_row_in(
+        |row| group.add(row),
+        StringKey::SettingsKhinsiannInHanji,
+        keys::IS_KHINSIANN_IN_HANJI_ENABLED,
+    );
+    khinsiann_row.set_sensitive(allows_khinsiann_in_hanji(context.document));
+    context.on_refresh(move |document| {
+        khinsiann_row.set_sensitive(allows_khinsiann_in_hanji(document));
+    });
     context.choice_row(
         &group,
         StringKey::SettingsSyllableSeparator,
@@ -174,4 +183,8 @@ fn allows_swap(document: &SettingsDocument) -> bool {
     document
         .choice(&keys::CANDIDATE_DISPLAY_MODE)
         .allows_swap_toggle()
+}
+
+fn allows_khinsiann_in_hanji(document: &SettingsDocument) -> bool {
+    document.choice(&keys::CANDIDATE_DISPLAY_MODE).shows_hanji()
 }

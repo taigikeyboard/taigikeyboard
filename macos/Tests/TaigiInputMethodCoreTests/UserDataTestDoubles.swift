@@ -184,8 +184,9 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     var refusesLearningRecordAdds = false
 
     /// Files the word as edited (`roman` / `hanji`, trimmed) as a custom word
-    /// unless that word is stored already, then forgets a learned phrase and
-    /// keeps a frequency row; a refusal keeps it — as the engine does.
+    /// unless that word is stored already, then forgets the learned phrase; a
+    /// refusal keeps it — as the engine does (which refuses a frequency row;
+    /// the page never sends one).
     func addLearningRecordToCustomDictionary(
         _ record: Taigi_Engine_LearningRecord,
         roman: String,
@@ -200,9 +201,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
             if !rows.contains(where: { $0.roman == roman && $0.hanji == hanji }) {
                 rows.insert(CustomDictionaryRow(roman: roman, hanji: hanji), at: 0)
             }
-            if record.kind == .learnedPhrase {
-                learningRecords.removeAll { Self.isSameRow($0, record) }
-            }
+            learningRecords.removeAll { Self.isSameRow($0, record) }
         }
     }
 

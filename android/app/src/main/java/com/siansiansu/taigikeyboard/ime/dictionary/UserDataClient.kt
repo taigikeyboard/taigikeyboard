@@ -162,7 +162,7 @@ interface UserDataClient {
     /**
      * Adds the listed row [record]'s word to the custom dictionary (TL as
      * roman, text as Hanji; nothing added when the word is already there);
-     * the engine then forgets a learned phrase and keeps a frequency row. A refusal — a full dictionary, a reading it cannot
+     * the engine then forgets the learned phrase (a frequency row is never added). A refusal — a full dictionary, a reading it cannot
      * store — throws [UserDataException.Refused] and keeps the row.
      */
     suspend fun addLearningRecordToCustomDictionary(record: LearningRecord)

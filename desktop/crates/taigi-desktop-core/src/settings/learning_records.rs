@@ -102,6 +102,15 @@ pub fn count_note(kind: LearningRecordKind) -> Option<StringKey> {
         .then_some(StringKey::DictionaryLearningRecordsCountCapInfo)
 }
 
+/// Whether the desktop toolbar shows Add to Custom Dictionary on `kind`'s
+/// list at all. Word frequency never: the engine offers no frequency row
+/// (`LearningRecord.can_add_to_custom_dictionary`), so a button that could
+/// never turn on is left out. Each row's own flag still decides whether the
+/// button is enabled for the selection.
+pub fn offers_add_to_custom_dictionary(kind: LearningRecordKind) -> bool {
+    kind == LearningRecordKind::LearnedPhrase
+}
+
 /// The page asked for, of `kind` in `order`.
 pub fn fetch(
     request: &LoadRequest,
@@ -132,9 +141,10 @@ pub fn delete_job(record: LearningRecord) -> JobOutcome {
 
 /// Makes `record`'s word a custom word, filed as `roman` / `hanji` — what
 /// the user left in the Add Word sheet the action opens, pre-filled with the
-/// row's `tl` / `text`; the receipt says where it went — the reload takes a
-/// learned phrase off its list, a frequency row stays. The page offers this
-/// on a row whose `can_add_to_custom_dictionary` is set.
+/// row's `tl` / `text`; the receipt says where it went — the reload takes
+/// the learned phrase off its list. The page offers this on a row whose
+/// `can_add_to_custom_dictionary` is set, never on word frequency
+/// ([`offers_add_to_custom_dictionary`]).
 pub fn add_to_custom_dictionary_job(
     record: LearningRecord,
     roman: &str,
@@ -227,6 +237,16 @@ mod tests {
             count: 3,
             ..LearningRecord::default()
         }
+    }
+
+    #[test]
+    fn only_learned_phrases_offer_add_to_custom_dictionary() {
+        assert!(!offers_add_to_custom_dictionary(
+            LearningRecordKind::Frequency
+        ));
+        assert!(offers_add_to_custom_dictionary(
+            LearningRecordKind::LearnedPhrase
+        ));
     }
 
     #[test]

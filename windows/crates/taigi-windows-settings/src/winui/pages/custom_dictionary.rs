@@ -70,6 +70,10 @@ pub enum Message {
     ShowBusy(u64),
     /// What the list on screen holds, as `list_selection` reports it.
     RowsApplied(Option<Vec<String>>),
+    /// Another page wrote a word into the store (Learning Records' add):
+    /// reload the page on screen. A page never shown yet loads on its first
+    /// show anyway.
+    Reload,
 }
 
 /// The row being added or edited in the dialog.
@@ -255,6 +259,11 @@ pub fn update(
             model.job.show_busy(generation);
         }
         Message::RowsApplied(rows) => model.settled.report(rows),
+        Message::Reload => {
+            if model.is_first_load_requested {
+                load(model, context);
+            }
+        }
     }
 }
 

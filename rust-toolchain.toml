@@ -1,0 +1,15 @@
+[toolchain]
+# The one Rust every workspace and every CI job builds, lints and ships with. A
+# version, never `stable`: a new Rust release must not change the compiler or
+# clippy underneath a commit, and a cargo call made from this directory
+# (`make lint`, `cargo … --manifest-path engine/Cargo.toml`) must not fall back
+# to the contributor's default toolchain.
+#
+# rustup reads only the nearest file, so each workspace's own
+# rust-toolchain.toml repeats this `channel` beside its targets.
+# `tools/rust-toolchain.sh check` (in `make lint`) fails when one differs; CI
+# installs the version through `.github/actions/setup-rust`. Move them all in
+# one change.
+channel = "1.100.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

@@ -73,6 +73,20 @@ pub fn tl_syllable_khinsiann_flags(record_tl: &str) -> Vec<bool> {
     flags
 }
 
+/// Whether `record_tl` begins with `--` before its first syllable (`--tńg-khì`,
+/// `--ah`). Zero-allocation O(1) fast path for post-lookup filters.
+pub fn reading_opens_khinsiann(record_tl: &str) -> bool {
+    let mut hyphen_run = 0usize;
+    for ch in record_tl.chars() {
+        match ch {
+            '-' => hyphen_run += 1,
+            c if crate::tps::TL_SYLLABLE_SEPARATORS.contains(&c) => hyphen_run = 0,
+            _ => return hyphen_run >= 2,
+        }
+    }
+    false
+}
+
 /// The alignment of a reading's syllables with a typed body
 /// ([`typed_syllable_walk`]): `ends[k]` is the typed offset right after
 /// syllable `k` (its typed digit included); `typed_consumed` is whether

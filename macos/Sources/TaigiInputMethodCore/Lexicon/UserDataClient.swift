@@ -79,7 +79,7 @@ protocol UserDataClient: Sendable {
     /// Adds a row's word to the custom dictionary, filed as `roman` / `hanji`
     /// (the word as the user edited it in the Add Word sheet; the engine
     /// trims both) — unless the word is stored there already — then forgets
-    /// a learned phrase (a frequency row stays). A refusal (no romanization,
+    /// the learned phrase (a frequency row is never added). A refusal (no romanization,
     /// a full dictionary, a reading that cannot be searched) keeps the row
     /// and is thrown as `UserDataClientError.refused`.
     func addLearningRecordToCustomDictionary(

@@ -30,15 +30,18 @@ pub const CJK_RANGES: &[(u32, u32)] = &[
     (0xF900, 0xFAFF),   // Compatibility Ideographs
 ];
 
+/// Returns `true` iff `c` falls in [`CJK_RANGES`].
+pub(crate) fn is_cjk_char(c: char) -> bool {
+    let cp = u32::from(c);
+    CJK_RANGES
+        .iter()
+        .any(|&(low, high)| (low..=high).contains(&cp))
+}
+
 /// Returns `true` iff `text` contains at least one codepoint in
 /// [`CJK_RANGES`] (`INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`).
 pub fn is_hanji(text: &str) -> bool {
-    text.chars().any(|c| {
-        let cp = u32::from(c);
-        CJK_RANGES
-            .iter()
-            .any(|&(low, high)| (low..=high).contains(&cp))
-    })
+    text.chars().any(is_cjk_char)
 }
 
 /// The non-ASCII characters of the pipeline's romanization class that NFD
@@ -48,7 +51,7 @@ const ROMAN_MARKS: [char; 4] = ['\u{207F}', '\u{0300}', '\u{0304}', '\u{030C}'];
 
 /// Hiragana or Katakana block, the prolonged sound mark included — the
 /// pipeline's `cjk.py` `is_kana`.
-fn is_kana(c: char) -> bool {
+pub(crate) fn is_kana(c: char) -> bool {
     ('\u{3040}'..='\u{30FF}').contains(&c)
 }
 

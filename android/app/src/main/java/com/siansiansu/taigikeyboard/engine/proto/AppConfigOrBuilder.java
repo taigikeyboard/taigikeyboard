@@ -198,4 +198,16 @@ public interface AppConfigOrBuilder extends
    * @return The fTypesHyphen.
    */
   boolean getFTypesHyphen();
+
+  /**
+   * <pre>
+   * Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji
+   * entries and continuous compositions display neutral-tone markers aligned
+   * with their canonical TL reading (`會記得` + `ē-kì--tit` → `會記--得`).
+   * </pre>
+   *
+   * <code>bool khinsiann_in_hanji = 19;</code>
+   * @return The khinsiannInHanji.
+   */
+  boolean getKhinsiannInHanji();
 }

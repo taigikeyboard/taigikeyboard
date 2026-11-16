@@ -2,7 +2,9 @@
 
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.DictionaryFilters
+import com.siansiansu.taigikeyboard.engine.DictionaryToggles
+import com.siansiansu.taigikeyboard.engine.LexiconInputMode
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 
 /**
@@ -13,18 +15,18 @@ import com.siansiansu.taigikeyboard.ime.core.Outcome
 interface LexiconClient {
     fun isHanji(text: String): Boolean
 
-    fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters
+    fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters
 
     suspend fun searchWithSources(
         input: String,
-        inputMode: RustEngineBridge.LexiconInputMode,
+        inputMode: LexiconInputMode,
         filterBitmask: UInt,
         limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError>
 
     suspend fun searchByHanji(
         input: String,
-        inputMode: RustEngineBridge.LexiconInputMode,
+        inputMode: LexiconInputMode,
         filterBitmask: UInt,
         limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError>

@@ -90,6 +90,7 @@ fn tl_config() -> AppConfig {
         custom_dictionary_disabled: false,
         c_types_affricate: false,
         f_types_hyphen: false,
+        khinsiann_in_hanji: false,
     }
 }
 
@@ -109,6 +110,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         custom_dictionary_disabled: false,
         c_types_affricate: false,
         f_types_hyphen: false,
+        khinsiann_in_hanji: false,
     }
 }
 

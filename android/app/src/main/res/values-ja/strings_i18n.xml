@@ -230,6 +230,8 @@
     <string name="i18n_settings_nasalMarkerUppercase">白話字の大文字での鼻音記号</string>
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ（SIÂᴺ）</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
+    <string name="i18n_settings_khinsiannInHanji">漢字に軽声（--）を表示</string>
+    <string name="i18n_settings_khinsiannInHanjiInfo">オンにすると、漢字出力に台羅の軽声記号が付きます（例：會記--得、--轉-去）。</string>
     <string name="i18n_settings_tpsOrMapsToER">or を ㄜ に対応</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。</string>
     <string name="i18n_settings_resetSettings">既定値に戻す</string>

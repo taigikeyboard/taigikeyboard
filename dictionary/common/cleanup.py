@@ -71,11 +71,198 @@ def normalize_roman(text, preserve_spaces=False):
     boundaries (official dictionary); otherwise they become hyphens."""
     if pd.isna(text):
         return text
-    text = normalize_taibun(str(text))
-    text = text.replace("\u3000", " " if preserve_spaces else "-")
-    if not preserve_spaces:
-        text = text.replace(" ", "-")
+    text = normalize_taibun(str(text)).strip()
+    if preserve_spaces:
+        text = re.sub(r"[ \u3000]+", " ", text)
+        # Official sources glue `--` directly without surrounding spaces (`káu--ge̍h tiông-iông`).
+        text = re.sub(r" *-{2,} *", "--", text)
+    else:
+        # Glue spaces directly adjacent to `--` (`guá hūn --lí` -> `guá hūn--lí`) before
+        # converting remaining spaces to `-`, then clamp any 3+ hyphen run (`---`) to `--`.
+        # Two consecutive spaces (`tsí-sī  hû-hō`, `that  á`) remain `--` as before.
+        text = re.sub(r"[ \u3000]*-{2,}[ \u3000]*", "--", text)
+        text = text.replace("\u3000", "-").replace(" ", "-")
+        text = re.sub(r"-{3,}", "--", text)
     return text.lower()
+
+
+def is_pure_hanji(text) -> bool:
+    """True if text contains at least one CJK/kana char and every other char is a Hanzi separator."""
+    if pd.isna(text):
+        return False
+    s = str(text)
+    return any(is_cjk(c) or is_kana(c) for c in s) and all(
+        c in HANZI_SEPARATORS or is_cjk(c) or is_kana(c) for c in s
+    )
+
+
+def strip_pure_hanji_khinsiann(text) -> str:
+    """Strip all hyphens from shipped pure-Hanji spellings while leaving Han-Lo and roman-only intact.
+
+    Outside `lkk.csv` (and in `output/dictionary.csv` after merge), shipped pure-Hanji
+    entries carry zero hyphens in `hanzi`; neutral-tone `--`/`-` markers in Hanji
+    output are derived from `tl` at display time when `khinsiann_in_hanji` is enabled.
+    Note: the runtime engine's `phonetics::api::strip_khinsiann_hanji` intentionally
+    strips only `--`-introduced neutral-tone spans so user-defined custom words with a
+    literal single hyphen (`一-六`) keep their hyphen.
+    """
+    if pd.isna(text):
+        return ""
+    s = str(text)
+    if "-" not in s or not is_pure_hanji(s):
+        return s
+    return s.replace("-", "")
+
+
+def _is_roman_syllable_char(c: str) -> bool:
+    return (c.isalpha() or unicodedata.category(c).startswith("M")) and not is_cjk(c) and not is_kana(c)
+
+
+def tokenize_hanji_syllables(text: str) -> tuple[list[tuple[str, str, str]], str] | None:
+    """Tokenize hanji into `(leading_sep, token, kind)` where `kind` is `'ideograph_or_kana'` or
+    `'roman'`, plus trailing separator.
+
+    Returns `None` if `text` contains any non-separator character that is neither an
+    ideograph/kana nor a roman letter/mark.
+    Mirrors `engine/phonetics/src/khinsiann.rs` (`tokenize_hanji_syllables`), kept equal by
+    `khinsiann_pipeline_parity` in `engine/lexicon/tests/prod.rs`.
+    """
+    tokens: list[tuple[str, str, str]] = []
+    i = 0
+    n = len(text)
+    sep = ""
+    while i < n:
+        c = text[i]
+        if c in HANZI_SEPARATORS:
+            sep += c
+            i += 1
+        elif is_cjk(c) or is_kana(c):
+            tokens.append((sep, c, "ideograph_or_kana"))
+            sep = ""
+            i += 1
+        elif _is_roman_syllable_char(c):
+            j = i + 1
+            while j < n and _is_roman_syllable_char(text[j]):
+                j += 1
+            tokens.append((sep, text[i:j], "roman"))
+            sep = ""
+            i = j
+        else:
+            return None
+    return tokens, sep
+
+
+def tokenize_tl_syllables(text: str) -> tuple[list[tuple[str, str]], str]:
+    """Tokenize canonical TL into (leading_sep, syllable) where separators are runs of ' ' and '-'."""
+    tokens: list[tuple[str, str]] = []
+    i = 0
+    n = len(text)
+    sep = ""
+    while i < n:
+        c = text[i]
+        if c in (" ", "-"):
+            sep += c
+            i += 1
+        else:
+            j = i + 1
+            while j < n and text[j] not in (" ", "-"):
+                j += 1
+            tokens.append((sep, text[i:j]))
+            sep = ""
+            i = j
+    return tokens, sep
+
+
+def format_khinsiann_hanji(hanji: str, canonical_tl: str) -> str:
+    """Apply LKK/BONG-style neutral-tone `--`/`-` markers to `hanji` aligned with `canonical_tl`.
+
+    Mirrors `phonetics::api::khinsiann_hanji_display` in `engine/phonetics/src/khinsiann.rs`,
+    kept equal by `khinsiann_pipeline_parity` in `engine/lexicon/tests/prod.rs`.
+    """
+    if not hanji or "--" in hanji or "--" not in canonical_tl:
+        return hanji
+    if not any(is_cjk(c) or is_kana(c) for c in hanji):
+        return hanji
+    parsed_hanji = tokenize_hanji_syllables(hanji)
+    if parsed_hanji is None:
+        return hanji
+    htoks, htrail = parsed_hanji
+    ttoks, _ = tokenize_tl_syllables(canonical_tl)
+    if len(htoks) != len(ttoks):
+        return hanji
+
+    out: list[str] = []
+    in_neutral = False
+    for i, ((hsep, htok, _), (tsep, _)) in enumerate(zip(htoks, ttoks)):
+        if " " in tsep:
+            suffix = tsep.rsplit(" ", 1)[1]
+            if "--" in suffix:
+                in_neutral = True
+                out.append("--")
+            else:
+                in_neutral = False
+                out.append(hsep)
+        else:
+            dash_count = tsep.count("-")
+            if dash_count >= 2:
+                in_neutral = True
+                out.append("--")
+            elif dash_count == 1:
+                if in_neutral and i > 0:
+                    out.append("-")
+                else:
+                    out.append(hsep)
+            else:
+                out.append(hsep)
+        out.append(htok)
+    out.append(htrail)
+    return "".join(out)
+
+
+def normalize_hanzi_khinsiann(hanzi, tl):
+    """Strip all hyphens from pure-Hanji spellings and ensure Han-Lo neutral-tone roman tails
+    carry `--` (e.g. taihoa `<Hanzi>ê` + `<tl>--ê` -> `<Hanzi>--ê`)."""
+    if pd.isna(hanzi):
+        return hanzi
+    s = re.sub(r"-{3,}", "--", str(hanzi))
+    if is_pure_hanji(s):
+        return s.replace("-", "")
+
+    tl_str = "" if pd.isna(tl) else str(tl)
+    if "--" in s or "--" not in tl_str or is_roman_only_hanzi(s):
+        return s
+    parsed_hanji = tokenize_hanji_syllables(s)
+    if parsed_hanji is None:
+        return s
+    htoks, htrail = parsed_hanji
+    ttoks, _ = tokenize_tl_syllables(tl_str)
+    if len(htoks) != len(ttoks):
+        return s
+
+    out: list[str] = []
+    in_neutral = False
+    for i, ((hsep, htok, kind), (tsep, _)) in enumerate(zip(htoks, ttoks)):
+        sep_out = hsep
+        if " " in tsep:
+            suffix = tsep.rsplit(" ", 1)[1]
+            if "--" in suffix:
+                in_neutral = True
+                if kind == "roman":
+                    sep_out = "--"
+            else:
+                in_neutral = False
+        else:
+            dash_count = tsep.count("-")
+            if dash_count >= 2:
+                in_neutral = True
+                if kind == "roman":
+                    sep_out = "--"
+            elif dash_count == 1 and in_neutral and i > 0 and kind == "roman":
+                sep_out = "-"
+        out.append(sep_out)
+        out.append(htok)
+    out.append(htrail)
+    return "".join(out)
 
 
 def is_proverb(hanzi):
@@ -198,7 +385,7 @@ def is_written_word_matched(hanzi, tl):
 
 
 def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False, preserve_spaces=False,
-                      hanlo_exempt=frozenset(), keep_non_hanzi_words=False):
+                      hanlo_exempt=frozenset(), keep_non_hanzi_words=False, drop_hyphen_in_pure_hanzi=False):
     """Run the full cleaning pipeline.
 
     Args:
@@ -263,6 +450,14 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     collect_dropped(~valid_hanzi_mask, "invalid_hanzi")
     df = df[valid_hanzi_mask]
 
+    if drop_hyphen_in_pure_hanzi:
+        ids_hyphen_mask = df["hanzi"].apply(lambda h: is_pure_hanji(h) and "-" in str(h) and "--" not in str(h))
+        ids_hyphen_count = ids_hyphen_mask.sum()
+        if ids_hyphen_count > 0 and logger:
+            logger.info(f"  Removed broken IDS hyphen in pure hanzi: {ids_hyphen_count}")
+        collect_dropped(ids_hyphen_mask, "corrupt_ids_hyphen")
+        df = df[~ids_hyphen_mask]
+
     if check_roman_in_hanzi:
         roman_mask = df["hanzi"].apply(contains_roman_in_hanzi)
         roman_in_hanzi_count = roman_mask.sum()
@@ -291,6 +486,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
         logger.info(f"  Removed long entries ({max_syllables + 1}+ syllables): {long_removed}")
 
     df["tl"] = df["tl"].apply(lambda x: normalize_roman(x, preserve_spaces=preserve_spaces))
+    df["hanzi"] = [normalize_hanzi_khinsiann(h, t) for h, t in zip(df["hanzi"], df["tl"])]
 
     before_dedup = len(df)
     dup_mask = df.duplicated(subset=["hanzi", "tl"], keep="first")

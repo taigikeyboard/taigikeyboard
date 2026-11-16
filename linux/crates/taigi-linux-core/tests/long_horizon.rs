@@ -254,6 +254,21 @@ fn long_horizon_marathon() {
     let mut surprises: Vec<SurpriseFinding> = Vec::new();
     let mut seen_surprise_keys: BTreeSet<String> = BTreeSet::new();
 
+    #[derive(Clone, Debug, Default, serde::Serialize)]
+    struct KhinsiannCoverage {
+        episodes_on: u64,
+        episodes_off: u64,
+        episodes_on_hanji_shown: u64,
+        episodes_on_roman_only: u64,
+        episodes_off_hanji_shown: u64,
+        episodes_off_roman_only: u64,
+        sentences_on: u64,
+        sentences_off: u64,
+        steps_on: u64,
+        steps_off: u64,
+    }
+    let mut khinsiann_cov = KhinsiannCoverage::default();
+
     // Baseline Golden Probe snapshot on a completely clean user-data store.
     reset_all_persistent_state();
     let baseline_probes = capture_probe_snapshot(env.user_data_dir, env.dictionaries_dir);
@@ -266,6 +281,11 @@ fn long_horizon_marathon() {
 
         reset_all_persistent_state();
         let settings = build_episode_settings(persona, &mut ep_rng);
+        let khinsiann_on =
+            settings.bool(&taigi_desktop_core::settings::keys::IS_KHINSIANN_IN_HANJI_ENABLED);
+        let hanji_shown = settings
+            .choice(&taigi_desktop_core::settings::keys::CANDIDATE_DISPLAY_MODE)
+            .shows_hanji();
         let initial_surrounding = ep_rng.chance(4, 5);
         let mut sim = HostSimulator::new(
             env.user_data_dir,
@@ -314,6 +334,13 @@ fn long_horizon_marathon() {
 
             total_sentences_typed += 1;
             total_steps_executed += executed as u64;
+            if khinsiann_on {
+                khinsiann_cov.sentences_on += 1;
+                khinsiann_cov.steps_on += executed as u64;
+            } else {
+                khinsiann_cov.sentences_off += 1;
+                khinsiann_cov.steps_off += executed as u64;
+            }
             let p_entry = per_persona.entry(persona.name().to_owned()).or_default();
             p_entry.sentences += 1;
             p_entry.steps += executed as u64;
@@ -474,13 +501,20 @@ fn long_horizon_marathon() {
                     surprises: surprises.clone(),
                 };
                 let _ = ckpt.write_to_dir(&out_dir);
+                if let Ok(cov_bytes) = serde_json::to_vec_pretty(&khinsiann_cov) {
+                    let _ = std::fs::write(out_dir.join("khinsiann_coverage.json"), cov_bytes);
+                }
                 println!(
-                    "[long-horizon] checkpoint {:.0}s/{target_secs}s | episodes={} sentences={} steps={} ({:.0}/s) | bugs={} surprises={}",
+                    "[long-horizon] checkpoint {:.0}s/{target_secs}s | episodes={} sentences={} steps={} ({:.0}/s) | khinsiann(on/off) ep={}/{} sent={}/{} | bugs={} surprises={}",
                     elapsed,
                     episodes_completed,
                     total_sentences_typed,
                     total_steps_executed,
                     ckpt.throughput_steps_per_sec,
+                    khinsiann_cov.episodes_on,
+                    khinsiann_cov.episodes_off,
+                    khinsiann_cov.sentences_on,
+                    khinsiann_cov.sentences_off,
                     hard_failures.len(),
                     surprises.len()
                 );
@@ -506,6 +540,21 @@ fn long_horizon_marathon() {
         );
 
         episodes_completed += 1;
+        if khinsiann_on {
+            khinsiann_cov.episodes_on += 1;
+            if hanji_shown {
+                khinsiann_cov.episodes_on_hanji_shown += 1;
+            } else {
+                khinsiann_cov.episodes_on_roman_only += 1;
+            }
+        } else {
+            khinsiann_cov.episodes_off += 1;
+            if hanji_shown {
+                khinsiann_cov.episodes_off_hanji_shown += 1;
+            } else {
+                khinsiann_cov.episodes_off_roman_only += 1;
+            }
+        }
         per_persona
             .entry(persona.name().to_owned())
             .or_default()
@@ -535,13 +584,26 @@ fn long_horizon_marathon() {
     final_report
         .write_to_dir(&out_dir)
         .expect("write final marathon report");
+    std::fs::write(
+        out_dir.join("khinsiann_coverage.json"),
+        serde_json::to_vec_pretty(&khinsiann_cov).expect("serialize khinsiann coverage"),
+    )
+    .expect("write khinsiann coverage");
     println!(
-        "[long-horizon] DONE in {:.1}s | episodes={} sentences={} steps={} ({:.0}/s) | bugs={} surprises={} | report={}",
+        "[long-horizon] DONE in {:.1}s | episodes={} sentences={} steps={} ({:.0}/s) | khinsiann(on/off) ep={}/{} (hanji={}/{}) sent={}/{} steps={}/{} | bugs={} surprises={} | report={}",
         elapsed,
         final_report.episodes_completed,
         final_report.total_sentences_typed,
         final_report.total_steps_executed,
         final_report.throughput_steps_per_sec,
+        khinsiann_cov.episodes_on,
+        khinsiann_cov.episodes_off,
+        khinsiann_cov.episodes_on_hanji_shown,
+        khinsiann_cov.episodes_off_hanji_shown,
+        khinsiann_cov.sentences_on,
+        khinsiann_cov.sentences_off,
+        khinsiann_cov.steps_on,
+        khinsiann_cov.steps_off,
         final_report.hard_failures.len(),
         final_report.surprises.len(),
         out_dir.join("report.md").display()

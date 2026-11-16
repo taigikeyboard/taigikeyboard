@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
 import com.siansiansu.taigikeyboard.engine.proto.CandidateMessage
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
 import org.junit.Assert.assertEquals
@@ -37,7 +37,7 @@ import org.junit.Test
  */
 class ContinuousSuggestionsContractTest {
     /**
-     * v3.5.8 Phase 9 Item 5 — builds a [RustEngineBridge.ContinuousCandidate]
+     * v3.5.8 Phase 9 Item 5 — builds a [ContinuousCandidate]
      * with default `roman`/`hanji` matching the test fixture's `displayText`.
      * Production engine emits `roman` = `DictionaryRecord.tl` and `hanji` =
      * `DictionaryRecord.hanji`; the legacy tests here pre-date that split and
@@ -52,8 +52,8 @@ class ContinuousSuggestionsContractTest {
         roman: String? = null,
         hanji: String? = null,
         canonicalTl: String? = null,
-    ): RustEngineBridge.ContinuousCandidate =
-        RustEngineBridge.ContinuousCandidate(
+    ): ContinuousCandidate =
+        ContinuousCandidate(
             consumedSpanEnd = consumedSpanEnd,
             syllableCount = syllableCount,
             displayText = displayText,

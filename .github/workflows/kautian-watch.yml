@@ -100,7 +100,6 @@ jobs:
         if: steps.compare.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          RUSTUP_TOOLCHAIN: stable
         run: |
           set -euo pipefail
           existing=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&per_page=100" \
@@ -111,7 +110,10 @@ jobs:
           fi
           git submodule update --init taigi-converter
           python -m pip install -r dictionary/requirements.txt
-          rustup toolchain install stable --profile minimal --no-self-update
+          # The pinned version, host target only (.github/actions/setup-rust's reason).
+          RUSTUP_TOOLCHAIN="$(bash tools/rust-toolchain.sh)"
+          export RUSTUP_TOOLCHAIN
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --no-self-update
           cp "$RUNNER_TEMP/upstream.ods" "$KAUTIAN_PATH"
           python - <<'PY'
           import datetime, email.utils, hashlib, os, re

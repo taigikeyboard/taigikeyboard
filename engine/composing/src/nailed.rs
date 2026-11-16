@@ -113,10 +113,29 @@ pub(crate) fn has_word_space_boundary(left: &str, right: &str, output_both_scrip
 /// `NailedSegment.display_text` — they are derived fresh on every render from
 /// the segments' own fields and the request's `AppConfig`; `raw_text` keeps
 /// the user's typed characters as the authority for backspace-pop.
+#[cfg(test)]
 fn nailed_prefix_with_oracle(
     nailed: &[NailedSegment],
     text: SegmentText,
     output_both_scripts: bool,
+    syllable_joiner: Option<&str>,
+    is_compound: impl Fn(&str, &str, u8) -> bool,
+) -> String {
+    nailed_join_with_oracle(
+        nailed,
+        text,
+        output_both_scripts,
+        false,
+        syllable_joiner,
+        is_compound,
+    )
+}
+
+fn nailed_join_with_oracle(
+    nailed: &[NailedSegment],
+    text: SegmentText,
+    output_both_scripts: bool,
+    khinsiann_in_hanji: bool,
     syllable_joiner: Option<&str>,
     is_compound: impl Fn(&str, &str, u8) -> bool,
 ) -> String {
@@ -135,28 +154,38 @@ fn nailed_prefix_with_oracle(
             longest_compound_run(&nailed[j..], text, &is_compound)
         };
 
-        if j > 0 && !prev_hyphen {
+        let insert_hanji_khinsiann = if j > 0 && !prev_hyphen {
             push_inter_segment_boundary(
                 &mut s,
                 text.of(&nailed[j - 1]),
                 &nailed[j],
                 text,
                 output_both_scripts,
+                khinsiann_in_hanji,
                 syllable_joiner,
-            );
-        }
+            )
+        } else {
+            false
+        };
         for k in 0..run_len {
             if k > 0 {
                 push_boundary(&mut s, &nailed[j + k], text, joiner, syllable_joiner);
+                s.push_str(text.of(&nailed[j + k]));
+            } else {
+                phonetics::api::push_hanji_with_interword_khinsiann(
+                    &mut s,
+                    text.of(&nailed[j]),
+                    insert_hanji_khinsiann,
+                );
             }
-            s.push_str(text.of(&nailed[j + k]));
         }
         j += run_len;
     }
     s
 }
 
-/// Emit the word-level separator between `prev_rendered` and `next`.
+/// Emit the word-level separator between `prev_rendered` and `next`, returning
+/// `true` when the caller should insert an inter-word Hanji `--` before `next`.
 /// `prev_rendered` is the previous segment itself (the last compound member),
 /// rather than the tail of the accumulated string.
 fn push_inter_segment_boundary(
@@ -165,8 +194,9 @@ fn push_inter_segment_boundary(
     next: &NailedSegment,
     text: SegmentText,
     output_both_scripts: bool,
+    khinsiann_in_hanji: bool,
     syllable_joiner: Option<&str>,
-) {
+) -> bool {
     let next_rendered = text.of(next);
     let word_space = match text {
         SegmentText::Display => {
@@ -176,15 +206,19 @@ fn push_inter_segment_boundary(
     };
     if word_space {
         push_boundary(s, next, text, " ", syllable_joiner);
-        return;
+        return false;
     }
-    if !typed_separator_run(&next.raw_text).is_empty() && starts_with_romanization(next_rendered) {
+    let run = typed_separator_run(&next.raw_text);
+    if !run.is_empty() && starts_with_romanization(next_rendered) {
         // An explicit `-` / `--` continuation before romanization after Hanji
         // (`講` + `--leh` → `講--leh`, `講·leh` under None/Space): keep the
         // user's continuation without inserting an inter-syllable space before
         // the neutral-tone dot.
         let joiner = syllable_joiner.map(|_| "");
         push_boundary(s, next, text, "", joiner);
+        false
+    } else {
+        khinsiann_in_hanji && text == SegmentText::Display && run.len() >= 2
     }
 }
 
@@ -312,13 +346,7 @@ fn longest_compound_run<F: Fn(&str, &str, u8) -> bool>(
 /// installed (`with_state` → `Err`, e.g. unit tests) the join degrades to the
 /// pure boundary-space join.
 pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
-    nailed_join(
-        nailed,
-        SegmentText::Display,
-        config.output_both_scripts,
-        config.rendered_syllable_joiner(),
-        config,
-    )
+    nailed_join(nailed, SegmentText::Display, config)
 }
 
 /// Learned phrases (§50) — the canonical TL a composition of nailed
@@ -331,7 +359,7 @@ pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> Str
 /// from the same source-filtered oracle as the render (#772), so a phrase
 /// learns the separators the preedit showed.
 pub(crate) fn learned_reading(nailed: &[NailedSegment], config: &AppConfig) -> String {
-    nailed_join(nailed, SegmentText::AssociationTl, false, None, config)
+    nailed_join(nailed, SegmentText::AssociationTl, config)
 }
 
 /// Which per-segment text a nailed join renders.
@@ -354,22 +382,25 @@ impl SegmentText {
 
 /// The compound oracle reads the user's dictionary switches from
 /// `config.dictionary_sources` (absent = every source, an un-wired sender).
-fn nailed_join(
-    nailed: &[NailedSegment],
-    text: SegmentText,
-    output_both_scripts: bool,
-    syllable_joiner: Option<&str>,
-    config: &AppConfig,
-) -> String {
+fn nailed_join(nailed: &[NailedSegment], text: SegmentText, config: &AppConfig) -> String {
+    let (output_both_scripts, khinsiann_in_hanji, syllable_joiner) = match text {
+        SegmentText::Display => (
+            config.output_both_scripts,
+            config.khinsiann_in_hanji,
+            config.rendered_syllable_joiner(),
+        ),
+        SegmentText::AssociationTl => (false, false, None),
+    };
     let eligible = nailed.len() >= 2
         && nailed
             .windows(2)
             .any(|w| is_compound_member(&w[0], text) && is_compound_member(&w[1], text));
     if !eligible {
-        return nailed_prefix_with_oracle(
+        return nailed_join_with_oracle(
             nailed,
             text,
             output_both_scripts,
+            khinsiann_in_hanji,
             syllable_joiner,
             |_, _, _| false,
         );
@@ -378,27 +409,30 @@ fn nailed_join(
     LexiconHandle::with_state(|state| {
         let (Some(prefix), Some(dict)) = (state.prefix_index.as_ref(), state.dictionary.as_ref())
         else {
-            return Ok(nailed_prefix_with_oracle(
+            return Ok(nailed_join_with_oracle(
                 nailed,
                 text,
                 output_both_scripts,
+                khinsiann_in_hanji,
                 syllable_joiner,
                 |_, _, _| false,
             ));
         };
-        Ok(nailed_prefix_with_oracle(
+        Ok(nailed_join_with_oracle(
             nailed,
             text,
             output_both_scripts,
+            khinsiann_in_hanji,
             syllable_joiner,
             |hanji, reading, n| compound_hanji_exists(hanji, reading, n, &filter, prefix, dict),
         ))
     })
     .unwrap_or_else(|_| {
-        nailed_prefix_with_oracle(
+        nailed_join_with_oracle(
             nailed,
             text,
             output_both_scripts,
+            khinsiann_in_hanji,
             syllable_joiner,
             |_, _, _| false,
         )
@@ -520,6 +554,7 @@ mod tests {
             custom_dictionary_disabled: false,
             c_types_affricate: false,
             f_types_hyphen: false,
+            khinsiann_in_hanji: false,
         }
     }
 
