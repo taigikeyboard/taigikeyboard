@@ -453,3 +453,56 @@ export async function commitWord(page) {
   await page.keyboard.type("taiuan");
   await page.keyboard.press("Enter");
 }
+
+/** The roman the learning tests type: its first candidate is 教授. */
+export const LEARN_RAW = "kausiu";
+/** The candidate they pick until it ranks first. */
+export const LEARN_HANJI = "狗岫";
+
+/**
+ * The number of the profile's learned copy, as the service worker keeps it.
+ * @param {Worker} worker
+ * @returns {Promise<number>}
+ */
+export function generation(worker) {
+  return worker.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        const opening = indexedDB.open("taigi-extension-user-data", 1);
+        opening.onupgradeneeded = () =>
+          opening.result.createObjectStore("files");
+        opening.onerror = () => reject(opening.error);
+        opening.onsuccess = () => {
+          const reading = opening.result
+            .transaction("files")
+            .objectStore("files")
+            .get("snapshot");
+          reading.onerror = () => reject(reading.error);
+          reading.onsuccess = () => {
+            opening.result.close();
+            resolve(reading.result?.generation ?? 0);
+          };
+        };
+      }),
+  );
+}
+
+/**
+ * Clicks `LEARN_HANJI` and commits it, three times: enough to rank it first.
+ * Waits for each commit's save to be taken, so none lands after another tab
+ * takes its copy and gets that tab's next save refused mid-word.
+ * @param {Page} page
+ * @param {Locator} field
+ * @param {Worker} worker
+ * @returns {Promise<void>}
+ */
+export async function pickThrice(page, field, worker) {
+  for (let round = 0; round < 3; round += 1) {
+    const before = await generation(worker);
+    await page.keyboard.type(LEARN_RAW);
+    await candidates(page).filter({ hasText: LEARN_HANJI }).first().click();
+    await page.keyboard.press("Enter");
+    await expect.poll(() => generation(worker)).toBeGreaterThan(before);
+  }
+  await expect(field).toHaveValue(LEARN_HANJI.repeat(3));
+}

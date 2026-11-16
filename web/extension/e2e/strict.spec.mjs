@@ -10,8 +10,11 @@ import {
   commitWord,
   expect,
   expectToolbar,
+  LEARN_HANJI,
+  LEARN_RAW,
   openTyping,
   overlay,
+  pickThrice,
   preedit,
   test,
 } from "./helpers.mjs";
@@ -174,40 +177,10 @@ test("learned picks persist and sync across strict-CSP tabs running wasm2js", as
 
   await page.bringToFront();
   const field = await openTyping(context, worker, page, STRICT, "#text");
-  for (let round = 0; round < 3; round += 1) {
-    await page.keyboard.type("kausiu");
-    await candidates(page).filter({ hasText: "狗岫" }).first().click();
-    await page.keyboard.press("Enter");
-  }
-  await expect(field).toHaveValue("狗岫狗岫狗岫");
+  await pickThrice(page, field, worker);
 
-  // Wait for the service worker's IndexedDB generation to advance, then bring
-  // the second strict-CSP tab forward so it swaps to a fresh wasm2js instance.
-  await expect
-    .poll(() =>
-      worker.evaluate(
-        () =>
-          new Promise((resolve, reject) => {
-            const opening = indexedDB.open("taigi-extension-user-data", 1);
-            opening.onupgradeneeded = () =>
-              opening.result.createObjectStore("files");
-            opening.onerror = () => reject(opening.error);
-            opening.onsuccess = () => {
-              const reading = opening.result
-                .transaction("files")
-                .objectStore("files")
-                .get("snapshot");
-              reading.onerror = () => reject(reading.error);
-              reading.onsuccess = () => {
-                opening.result.close();
-                resolve(reading.result?.generation ?? 0);
-              };
-            };
-          }),
-      ),
-    )
-    .toBeGreaterThan(0);
-
+  // Bring the second strict-CSP tab forward so it swaps to a fresh wasm2js
+  // instance over the copy the first one saved.
   await other.bringToFront();
   await other.evaluate(() => window.dispatchEvent(new Event("focus")));
   await other.locator("#text").click();
@@ -217,9 +190,9 @@ test("learned picks persist and sync across strict-CSP tabs running wasm2js", as
     .first()
     .locator(".text");
   await expect(async () => {
-    await other.keyboard.type("kausiu");
+    await other.keyboard.type(LEARN_RAW);
     try {
-      await expect(topCell).toHaveText("狗岫", { timeout: 500 });
+      await expect(topCell).toHaveText(LEARN_HANJI, { timeout: 500 });
     } finally {
       await other.keyboard.press("Escape");
     }
