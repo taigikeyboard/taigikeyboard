@@ -7,17 +7,15 @@ import {
   B,
   candidates,
   expect,
+  LEARN_HANJI,
+  LEARN_RAW,
   launch,
   openTyping,
+  pickThrice,
   test,
 } from "./helpers.mjs";
 
-/** @typedef {import("@playwright/test").Locator} Locator */
 /** @typedef {import("@playwright/test").Page} Page */
-/** @typedef {import("@playwright/test").Worker} Worker */
-
-const RAW = "kausiu";
-const PICKED = "狗岫";
 
 /**
  * The first cell a slot key picks, past the literal roman row.
@@ -36,56 +34,13 @@ const topCell = (page) =>
  */
 async function expectTop(page, hanji) {
   await expect(async () => {
-    await page.keyboard.type(RAW);
+    await page.keyboard.type(LEARN_RAW);
     try {
       await expect(topCell(page)).toHaveText(hanji, { timeout: 500 });
     } finally {
       await page.keyboard.press("Escape");
     }
   }).toPass();
-}
-
-/**
- * Clicks `PICKED` and commits it, three times: enough to rank it first.
- * @param {Page} page
- * @param {Locator} field
- * @returns {Promise<void>}
- */
-async function pickThrice(page, field) {
-  for (let round = 0; round < 3; round += 1) {
-    await page.keyboard.type(RAW);
-    await candidates(page).filter({ hasText: PICKED }).first().click();
-    await page.keyboard.press("Enter");
-  }
-  await expect(field).toHaveValue(PICKED.repeat(3));
-}
-
-/**
- * The number of the profile's copy, as the service worker keeps it.
- * @param {Worker} worker
- * @returns {Promise<number>}
- */
-function generation(worker) {
-  return worker.evaluate(
-    () =>
-      new Promise((resolve, reject) => {
-        const opening = indexedDB.open("taigi-extension-user-data", 1);
-        opening.onupgradeneeded = () =>
-          opening.result.createObjectStore("files");
-        opening.onerror = () => reject(opening.error);
-        opening.onsuccess = () => {
-          const reading = opening.result
-            .transaction("files")
-            .objectStore("files")
-            .get("snapshot");
-          reading.onerror = () => reject(reading.error);
-          reading.onsuccess = () => {
-            opening.result.close();
-            resolve(reading.result?.generation ?? 0);
-          };
-        };
-      }),
-  );
 }
 
 const FIELDS = "/fields.html";
@@ -97,13 +52,12 @@ test("a pick on one site ranks first in a new tab on another", async ({
 }) => {
   const field = await openTyping(context, worker, page, A + FIELDS, "#text");
   await expectTop(page, "教授");
-  await pickThrice(page, field);
-  await expectTop(page, PICKED);
-  await expect.poll(() => generation(worker)).toBeGreaterThan(0);
+  await pickThrice(page, field, worker);
+  await expectTop(page, LEARN_HANJI);
 
   const other = await context.newPage();
   await openTyping(context, worker, other, B + FIELDS, "#text");
-  await expectTop(other, PICKED);
+  await expectTop(other, LEARN_HANJI);
 });
 
 test("a tab already typing takes up what another learned since", async ({
@@ -117,23 +71,20 @@ test("a tab already typing takes up what another learned since", async ({
 
   await page.bringToFront();
   const field = await openTyping(context, worker, page, A + FIELDS, "#text");
-  await pickThrice(page, field);
-  await expect.poll(() => generation(worker)).toBeGreaterThan(0);
+  await pickThrice(page, field, worker);
 
   await other.bringToFront();
   // Playwright keeps every tab visible and focused, so the browser never
   // says this one came back to the front: the test says it.
   await other.evaluate(() => window.dispatchEvent(new Event("focus")));
   await other.locator("#text").click();
-  await expectTop(other, PICKED);
+  await expectTop(other, LEARN_HANJI);
   // And what it learns in turn continues the same copy, not its old one.
-  const before = await generation(worker);
-  await pickThrice(other, other.locator("#text"));
-  await expect.poll(() => generation(worker)).toBeGreaterThan(before);
+  await pickThrice(other, other.locator("#text"), worker);
   await page.bringToFront();
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await field.click();
-  await expectTop(page, PICKED);
+  await expectTop(page, LEARN_HANJI);
 });
 
 test("the history outlives the browser, and stays in its profile", async ({
@@ -146,8 +97,7 @@ test("the history outlives the browser, and stays in its profile", async ({
   const field = await openTyping(context, worker, page, A + FIELDS, "#text");
   // A new profile knows nothing.
   await expectTop(page, "教授");
-  await pickThrice(page, field);
-  await expect.poll(() => generation(worker)).toBeGreaterThan(0);
+  await pickThrice(page, field, worker);
   await context.close();
 
   const again = await launch(extension, profile);
@@ -160,7 +110,7 @@ test("the history outlives the browser, and stays in its profile", async ({
       A + FIELDS,
       "#text",
     );
-    await expectTop(reopened, PICKED);
+    await expectTop(reopened, LEARN_HANJI);
   } finally {
     await again.context.close();
   }
