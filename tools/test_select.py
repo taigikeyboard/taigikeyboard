@@ -105,6 +105,7 @@ NO_GATE_DIRS = {
 }
 INVARIANT_PREFIXES = ("docs/", "tools/invariant_labels")
 INVARIANT_SUFFIXES = (".rs", ".kt", ".swift")
+AGENT_RULE_PATH_PREFIXES = (".claude/rules/", "docs/contributing/", "tools/agent_rule_paths")
 
 
 @dataclass(frozen=True)
@@ -193,11 +194,15 @@ class Effects:
     platforms: set[str] = field(default_factory=set)  # whole-platform gates
     python: set[str] = field(default_factory=set)  # PYTHON_SUITES keys
     swift_dirs: set[str] = field(default_factory=set)  # "ios" / "macos"
-    invariant_labels: bool = False
+    docs_checks: set[str] = field(default_factory=set)  # DOCS_CHECKS keys
     notes: list[str] = field(default_factory=list)
     unmapped: list[str] = field(default_factory=list)
 
 
+DOCS_CHECKS = {
+    "invariant-labels": Command("python3 tools/invariant_labels.py"),
+    "agent-rule-paths": Command("python3 tools/agent_rule_paths.py"),
+}
 PYTHON_SUITES = {
     "dictionary": Command("python3 -m pytest tests -q", "dictionary"),
     "tools": Command("python3 -m unittest discover -s tools -p '*_test.py'"),
@@ -285,7 +290,9 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
     effects = Effects()
     for path in paths:
         if path.endswith(INVARIANT_SUFFIXES) or path.startswith(INVARIANT_PREFIXES):
-            effects.invariant_labels = True
+            effects.docs_checks.add("invariant-labels")
+        if path.startswith(AGENT_RULE_PATH_PREFIXES):
+            effects.docs_checks.add("agent-rule-paths")
         if path.endswith(".md"):
             continue
         top = path.split("/", 1)[0]
@@ -423,8 +430,10 @@ def select(paths: Iterable[str], graph: EngineGraph) -> Selection:
         commands["python"] = [
             PYTHON_SUITES[k] for k in PYTHON_SUITES if k in effects.python
         ]
-    if effects.invariant_labels:
-        commands["docs-checks"] = [Command("python3 tools/invariant_labels.py")]
+    if effects.docs_checks:
+        commands["docs-checks"] = [
+            DOCS_CHECKS[k] for k in DOCS_CHECKS if k in effects.docs_checks
+        ]
     if set(commands) <= {"docs-checks"} and not effects.unmapped:
         notes.append(ADMIN_LANE_NOTE)
 

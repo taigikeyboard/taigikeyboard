@@ -25,7 +25,7 @@ XCTest; name tests `test{Component}_{scenario}`; stubs are `StubEngineSettings` 
 
 ## Xcode project files — maintainer only
 
-`*.xcodeproj`, `*.xcworkspace` and `*.pbxproj` are never edited by agents (`.claude/hooks/block-project-config.sh` enforces it). List any Xcode step as a maintainer action item.
+`*.xcodeproj`, `*.xcworkspace` and `*.pbxproj` are never edited by agents (`.claude/hooks/block-project-config.sh` stops Claude Code at edit time; `.github/workflows/xcode-project.yml` fails a pull request from a non–code-owner that touches them). List any Xcode step as a maintainer action item.
 
 ### Synchronized groups
 

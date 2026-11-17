@@ -1,0 +1,51 @@
+name: Agent rule paths
+
+# `.claude/rules/*.md` and docs/contributing/README.md § Which guide for which
+# path name the same guides with the same globs, so Claude Code and every other
+# coding agent are sent to the same guide for a file (tools/agent_rule_paths.py).
+# Reads files only; seconds. Its own workflow so an edit to a contributing guide
+# does not rerun Checks.
+on:
+  pull_request:
+    paths:
+      - '.claude/rules/**'
+      - 'docs/contributing/**'
+      - 'tools/agent_rule_paths*'
+      - '.github/workflows/agent-rule-paths.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.claude/rules/**'
+      - 'docs/contributing/**'
+      - 'tools/agent_rule_paths*'
+      - '.github/workflows/agent-rule-paths.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-rule-paths-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  paths:
+    name: .claude/rules paths match the contributing README
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            Makefile
+            tools/agent_rule_paths*.py
+            .claude/rules/
+            docs/contributing/
+          sparse-checkout-cone-mode: false
+
+      - name: Gate unit tests
+        working-directory: tools
+        run: python3 -m unittest agent_rule_paths_test
+
+      - name: make lint-agent-rule-paths
+        run: make lint-agent-rule-paths
