@@ -82,7 +82,7 @@ impl CandidateCellContent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::test_support::candidate;
+    use crate::engine::test_support::{candidate, tps_candidate};
 
     fn settings(swapped: bool) -> EngineSettings {
         EngineSettings {
@@ -145,10 +145,7 @@ mod tests {
             candidate_display_mode: display,
             ..EngineSettings::default()
         };
-        let hanji = ContinuousCandidate {
-            tps_text: "家".to_owned(),
-            ..candidate("ka", Some("家"), 0)
-        };
+        let hanji = tps_candidate("ka", Some("家"), 0, "家");
         for display in [
             CandidateDisplayMode::SideBySide,
             CandidateDisplayMode::RomanOnly,
@@ -159,10 +156,7 @@ mod tests {
                 CandidateCellContent::new("家", None)
             );
         }
-        let bare = ContinuousCandidate {
-            tps_text: "ㄍㄚ".to_owned(),
-            ..candidate("ka", None, 0)
-        };
+        let bare = tps_candidate("ka", None, 0, "ㄍㄚ");
         assert_eq!(
             CandidateCellContent::cell(&bare, &tps(CandidateDisplayMode::SideBySide)),
             CandidateCellContent::new("ㄍㄚ", None)

@@ -194,6 +194,19 @@ pub(crate) mod test_support {
             tps_text: String::new(),
         }
     }
+
+    /// [`candidate`] as the engine sends it under the TPS layout, with its `tps_text`.
+    pub fn tps_candidate(
+        roman: &str,
+        hanji: Option<&str>,
+        span_end: u32,
+        tps_text: &str,
+    ) -> ContinuousCandidate {
+        ContinuousCandidate {
+            tps_text: tps_text.to_owned(),
+            ..candidate(roman, hanji, span_end)
+        }
+    }
 }
 
 #[cfg(test)]

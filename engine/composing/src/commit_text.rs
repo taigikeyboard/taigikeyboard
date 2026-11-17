@@ -384,7 +384,7 @@ mod tests {
             (Lead, false, RomanOnly, R, H, unspaced("台語")),
             (Lead, true, Combined, R, H, roman("台語 (ㄉㄞˊ ㆣㄧˋ)")),
             // R5 P2 (USER 2026-09-30): a Hanji-less pick writes what its cell
-            // shows, tlDisplayToTps(roman), unspaced. Was: Android `tâi-gí`
+            // shows, tl_display_to_tps(roman), unspaced. Was: Android `tâi-gí`
             // spaced, iOS tlNumericToTPS of the display romanization.
             (Lead, false, SideBySide, R, None, unspaced(T)),
             (Lead, true, SideBySide, R, None, unspaced(T)),
