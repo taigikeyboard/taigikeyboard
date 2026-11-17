@@ -112,17 +112,17 @@ pub fn split_single_script_cells<T: Clone>(
     mark: impl Fn(&mut T, engine::CellScript),
 ) -> Vec<T> {
     let mut cells = Vec::with_capacity(rows.len() * 2);
-    let mut seen_hanji = std::collections::HashSet::new();
-    let mut seen_roman = std::collections::HashSet::new();
+    let mut seen_hanji = std::collections::HashSet::with_capacity(rows.len());
+    let mut seen_roman = std::collections::HashSet::with_capacity(rows.len());
     for row in rows {
         let hanji = hanji_of(&row);
-        if !hanji.is_empty() && seen_hanji.insert(hanji.to_owned()) {
+        if !hanji.is_empty() && !seen_hanji.contains(hanji) && seen_hanji.insert(hanji.to_owned()) {
             let mut cell = row.clone();
             mark(&mut cell, engine::CellScript::Hanji);
             cells.push(cell);
         }
         let roman = roman_of(&row);
-        if !roman.is_empty() && seen_roman.insert(roman.to_owned()) {
+        if !roman.is_empty() && !seen_roman.contains(roman) && seen_roman.insert(roman.to_owned()) {
             let mut cell = row;
             mark(&mut cell, engine::CellScript::Roman);
             cells.push(cell);
@@ -222,6 +222,28 @@ mod tests {
         assert!(mk("tps", false, false, CandidateDisplayMode::Combined).commits_plain_hanji(false));
         assert!(mk("tl", false, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(true));
         assert!(!mk("tps", false, true, CandidateDisplayMode::SideBySide).commits_plain_hanji(true));
+    }
+
+    #[test]
+    fn only_hanji_with_romanization_off_the_tps_layout_splits() {
+        use super::engine::CandidateDisplayMode;
+        let display = |input_mode: &str, mode: CandidateDisplayMode| AppConfig {
+            candidate_display_mode: mode as i32,
+            ..config(input_mode, false)
+        };
+        assert!(display("tl", CandidateDisplayMode::Combined).splits_single_script_cells());
+        assert!(display("poj", CandidateDisplayMode::Combined).splits_single_script_cells());
+        assert!(!display("tps", CandidateDisplayMode::Combined).splits_single_script_cells());
+        for mode in [
+            CandidateDisplayMode::SideBySide,
+            CandidateDisplayMode::RomanOnly,
+            CandidateDisplayMode::Unspecified,
+        ] {
+            assert!(
+                !display("tl", mode).splits_single_script_cells(),
+                "{mode:?}"
+            );
+        }
     }
 
     #[test]

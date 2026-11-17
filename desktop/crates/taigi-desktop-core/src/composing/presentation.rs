@@ -137,7 +137,8 @@ impl CandidateSource {
     }
 
     /// The candidate behind cell `cell_index` and the script its commit
-    /// writes: the cell's own, or the other one when `flip` (Space). `None`
+    /// writes: the cell's own, or the other one when `flip` (Output the Other
+    /// Script, ⇧ + slot key). `None`
     /// past the list — nothing to commit.
     pub fn resolve(
         &self,

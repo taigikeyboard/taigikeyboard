@@ -27,9 +27,13 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         _ prediction: RustEngineBridge.NextWordEnginePrediction,
         _ script: Taigi_Engine_CellScript,
     ) -> RustEngineBridge.NextWordEnginePrediction {
-        var row = prediction
-        row.cellScript = script
-        return row
+        RustEngineBridge.NextWordEnginePrediction(
+            text: prediction.text,
+            subtitle: prediction.subtitle,
+            hanji: prediction.hanji,
+            tl: prediction.tl,
+            cellScript: script,
+        )
     }
 
     private var predictions: [RustEngineBridge.NextWordEnginePrediction] {

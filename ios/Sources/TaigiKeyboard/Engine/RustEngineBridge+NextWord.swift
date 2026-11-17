@@ -50,7 +50,21 @@ public extension RustEngineBridge {
         public let hanji: String
         public let tl: String
         /// The §42 split cell this row is (`EnginePrediction.cell_script`).
-        public var cellScript: Taigi_Engine_CellScript = .paired
+        public let cellScript: Taigi_Engine_CellScript
+
+        public init(
+            text: String,
+            subtitle: String?,
+            hanji: String,
+            tl: String,
+            cellScript: Taigi_Engine_CellScript = .paired,
+        ) {
+            self.text = text
+            self.subtitle = subtitle
+            self.hanji = hanji
+            self.tl = tl
+            self.cellScript = cellScript
+        }
     }
 
     /// Filter+merge+sort+limit result. `wasStale=true` indicates the
