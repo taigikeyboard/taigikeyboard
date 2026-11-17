@@ -2,8 +2,8 @@
 number.
 
 Two trains, two numbers: `mobile` (iOS + Android share one) and `desktop`
-(macOS + Windows + Linux + ChromeOS share one). They move independently; within a train the
-platforms cannot drift apart."""
+(macOS + Windows + Linux + ChromeOS + the browser extension share one). They move
+independently; within a train the platforms cannot drift apart."""
 
 from __future__ import annotations
 
@@ -84,12 +84,15 @@ DESKTOP_CARGO_FILES = (
     LINUX_CARGO_FILE,
     MACOS_CARGO_FILE,
 )
-# The ChromeOS input method's extension manifest: the Chrome Web Store reads
-# its `version`, and `chromeos-build.yml` names the draft it attaches to from it.
+# The Chrome Web Store packages' manifests — the ChromeOS input method and the
+# browser extension: the store reads each one's `version`, and
+# `tools/release/attach-web-package.sh` names the draft it attaches to from it.
 CHROMEOS_MANIFEST_FILE = "web/chromeos/manifest.json"
+EXTENSION_MANIFEST_FILE = "web/extension/manifest.json"
+WEB_MANIFEST_FILES = (CHROMEOS_MANIFEST_FILE, EXTENSION_MANIFEST_FILE)
 # The top-level `"version": "…"` line; `manifest_version` and
 # `minimum_chrome_version` do not match because of the leading quote.
-CHROMEOS_MANIFEST_VERSION_PATTERN = re.compile(
+WEB_MANIFEST_VERSION_PATTERN = re.compile(
     r'^\s*"version"\s*:\s*"(?P<value>[^"]*)"', re.MULTILINE
 )
 # Off the train, with its own version, but its lockfile pins the desktop crates.
@@ -101,7 +104,7 @@ DESKTOP_LINKED_CARGO_FILES = ("web/Cargo.toml",)
 # numbered separately so each can ship on its own cadence).
 TRAIN_FILES = {
     "mobile": (ANDROID_GRADLE_FILE, IOS_PROJECT_FILE),
-    "desktop": (MACOS_INFO_PLIST_FILE, *DESKTOP_CARGO_FILES, CHROMEOS_MANIFEST_FILE),
+    "desktop": (MACOS_INFO_PLIST_FILE, *DESKTOP_CARGO_FILES, *WEB_MANIFEST_FILES),
 }
 TRAIN_CHOICES = tuple(TRAIN_FILES)
 # Each shipping iOS target carries a Debug and a Release build-settings block, so
@@ -310,32 +313,32 @@ def render_workspace_cargo(
     )
 
 
-def _chromeos_manifest_version_match(manifest_source: str) -> re.Match[str]:
+def _web_manifest_version_match(manifest_source: str, manifest_file: str) -> re.Match[str]:
     return _sole_match(
-        CHROMEOS_MANIFEST_VERSION_PATTERN,
+        WEB_MANIFEST_VERSION_PATTERN,
         manifest_source,
-        f'"version" entry in {CHROMEOS_MANIFEST_FILE}',
+        f'"version" entry in {manifest_file}',
     )
 
 
-def parse_chromeos_manifest_version(manifest_source: str) -> str:
+def parse_web_manifest_version(manifest_source: str, manifest_file: str) -> str:
     """The manifest's `version` as the store reads it: parsed as JSON, so a
     file a rewrite broke fails here rather than at upload."""
     try:
         manifest = json.loads(manifest_source)
     except json.JSONDecodeError as error:
-        raise ReleaseNotesError(f"{CHROMEOS_MANIFEST_FILE} is not valid JSON: {error}") from error
+        raise ReleaseNotesError(f"{manifest_file} is not valid JSON: {error}") from error
     version = manifest.get("version") if isinstance(manifest, dict) else None
     if not isinstance(version, str):
-        raise ReleaseNotesError(f"{CHROMEOS_MANIFEST_FILE} has no string \"version\"")
+        raise ReleaseNotesError(f"{manifest_file} has no string \"version\"")
     return version
 
 
-def render_chromeos_manifest(manifest_source: str, version: str) -> str:
+def render_web_manifest(manifest_source: str, version: str, manifest_file: str) -> str:
     """Swap the version in the manifest text, keeping its formatting (a JSON
     dump would rewrite every line)."""
     return _replaced_value(
-        _chromeos_manifest_version_match(manifest_source), manifest_source, version
+        _web_manifest_version_match(manifest_source, manifest_file), manifest_source, version
     )
 
 
@@ -442,7 +445,7 @@ def check_desktop_versions_in_sources(
     macos_plist: dict,
     macos_plist_path: Path,
     cargo_sources: dict[str, str],
-    chromeos_manifest_source: str,
+    manifest_sources: dict[str, str],
     version: str,
 ) -> None:
     """Hold the already-loaded desktop project files to one version."""
@@ -453,11 +456,12 @@ def check_desktop_versions_in_sources(
             raise ReleaseNotesError(
                 f"{cargo_file} workspace version is {workspace_version}; expected {version}"
             )
-    manifest_version = parse_chromeos_manifest_version(chromeos_manifest_source)
-    if manifest_version != version:
-        raise ReleaseNotesError(
-            f"{CHROMEOS_MANIFEST_FILE} version is {manifest_version}; expected {version}"
-        )
+    for manifest_file in WEB_MANIFEST_FILES:
+        manifest_version = parse_web_manifest_version(manifest_sources[manifest_file], manifest_file)
+        if manifest_version != version:
+            raise ReleaseNotesError(
+                f"{manifest_file} version is {manifest_version}; expected {version}"
+            )
 
 
 def check_project_versions(repo_root: Path, version: str, train: str) -> None:
@@ -475,7 +479,7 @@ def check_project_versions(repo_root: Path, version: str, train: str) -> None:
             macos_plist,
             macos_plist_path,
             {cargo_file: read_text_file(repo_root, cargo_file) for cargo_file in DESKTOP_CARGO_FILES},
-            read_text_file(repo_root, CHROMEOS_MANIFEST_FILE),
+            {manifest_file: read_text_file(repo_root, manifest_file) for manifest_file in WEB_MANIFEST_FILES},
             version,
         )
         return
@@ -728,17 +732,25 @@ def set_project_versions(
             cargo_file: parse_workspace_version(sources[cargo_file], cargo_file)
             for cargo_file in DESKTOP_CARGO_FILES
         }
-        current_chromeos = parse_chromeos_manifest_version(sources[CHROMEOS_MANIFEST_FILE])
-        current_versions = (current_macos, *current_workspaces.values(), current_chromeos)
+        current_manifests = {
+            manifest_file: parse_web_manifest_version(sources[manifest_file], manifest_file)
+            for manifest_file in WEB_MANIFEST_FILES
+        }
+        current_versions = (
+            current_macos,
+            *current_workspaces.values(),
+            *current_manifests.values(),
+        )
         candidates = {
             MACOS_INFO_PLIST_FILE: render_macos_plist(plist_source, version),
             **{
                 cargo_file: render_workspace_cargo(sources[cargo_file], version, cargo_file)
                 for cargo_file in DESKTOP_CARGO_FILES
             },
-            CHROMEOS_MANIFEST_FILE: render_chromeos_manifest(
-                sources[CHROMEOS_MANIFEST_FILE], version
-            ),
+            **{
+                manifest_file: render_web_manifest(sources[manifest_file], version, manifest_file)
+                for manifest_file in WEB_MANIFEST_FILES
+            },
         }
         changes = (
             f"macOS: CFBundleShortVersionString {current_macos} -> {version}, "
@@ -747,7 +759,10 @@ def set_project_versions(
                 f"{cargo_file}: workspace version {current} -> {version}"
                 for cargo_file, current in current_workspaces.items()
             ),
-            f"{CHROMEOS_MANIFEST_FILE}: version {current_chromeos} -> {version}",
+            *(
+                f"{manifest_file}: version {current} -> {version}"
+                for manifest_file, current in current_manifests.items()
+            ),
         )
 
     # A train's number never goes backwards: the stores refuse a lower mobile
@@ -773,7 +788,7 @@ def set_project_versions(
             ),
             macos_plist_path,
             {cargo_file: candidates[cargo_file] for cargo_file in DESKTOP_CARGO_FILES},
-            candidates[CHROMEOS_MANIFEST_FILE],
+            {manifest_file: candidates[manifest_file] for manifest_file in WEB_MANIFEST_FILES},
             version,
         )
 
@@ -829,7 +844,7 @@ def _parse_args() -> argparse.Namespace:
             "--train",
             choices=TRAIN_CHOICES,
             required=True,
-            help="mobile = iOS + Android; desktop = macOS + Windows + Linux + ChromeOS",
+            help="mobile = iOS + Android; desktop = macOS + Windows + Linux + ChromeOS + browser extension",
         )
     set_versions.add_argument(
         "--allow-downgrade",

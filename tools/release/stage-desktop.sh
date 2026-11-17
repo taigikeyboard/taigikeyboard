@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Stage the desktop installers on this version's draft release: the macOS
-# package, the Windows installer, the Linux packages and the ChromeOS Web Store
-# zip, each built on a GitHub-hosted runner. Staging needs no Mac.
+# package, the Windows installer, the Linux packages, and the ChromeOS and browser extension
+# Chrome Web Store zips, each built on a GitHub-hosted runner. Staging needs no Mac.
 #
 # Usage: stage-desktop.sh              a full release — every platform
-#        stage-desktop.sh <platform>   a patch release — macos | windows | linux | chromeos
+#        stage-desktop.sh <platform>   a patch release — macos | windows | linux | chromeos | extension
 #
 # The builds cannot share a machine — one needs Xcode and a Developer ID, one
 # MSVC and Inno Setup, one a Linux with the Fcitx5 headers — so this creates the
@@ -40,10 +40,10 @@ fail() {
 REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 case "$#:${1:-}" in
-    0:) PLATFORMS=(macos windows linux chromeos) ;;
-    1:macos | 1:windows | 1:linux | 1:chromeos) PLATFORMS=("$1") ;;
+    0:) PLATFORMS=(macos windows linux chromeos extension) ;;
+    1:macos | 1:windows | 1:linux | 1:chromeos | 1:extension) PLATFORMS=("$1") ;;
     *)
-        echo "usage: stage-desktop.sh [macos|windows|linux|chromeos]" >&2
+        echo "usage: stage-desktop.sh [macos|windows|linux|chromeos|extension]" >&2
         echo "No argument stages a full release; one platform stages a patch release of it alone." >&2
         exit 2
         ;;
@@ -72,8 +72,8 @@ source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 echo "==> Staging $DESKTOP_TAG (${PLATFORMS[*]}) from ${SOURCE_COMMIT:0:7}"
 
 # The package, the installer and the packages are built by
-# `.github/workflows/macos-build.yml`, `windows-build.yml`, `linux-build.yml`
-# and `chromeos-build.yml` on clean GitHub-hosted runners, never on the
+# `.github/workflows/macos-build.yml`, `windows-build.yml`, `linux-build.yml`,
+# `chromeos-build.yml` and `extension-build.yml` on clean GitHub-hosted runners, never on the
 # maintainer's own machines (`windows-release.md` § Building on a GitHub-hosted
 # runner says why; the macOS half signs with the Developer ID certificates and
 # notarizes with the API key held in the `release` environment —
@@ -127,6 +127,7 @@ macos_run=""
 windows_run=""
 linux_run=""
 chromeos_run=""
+extension_run=""
 echo ""
 echo "==> Hosted runners — dispatched together, waited on in turn"
 # The commit travels with the dispatch: every run checks it out.
@@ -134,10 +135,12 @@ stages macos && macos_run="$(dispatch macos-build.yml macOS -f "source_sha=$SOUR
 stages windows && windows_run="$(dispatch windows-build.yml Windows -f "source_sha=$SOURCE_COMMIT")"
 stages linux && linux_run="$(dispatch linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT")"
 stages chromeos && chromeos_run="$(dispatch chromeos-build.yml ChromeOS -f "source_sha=$SOURCE_COMMIT")"
+stages extension && extension_run="$(dispatch extension-build.yml "browser extension" -f "source_sha=$SOURCE_COMMIT")"
 [[ -z "$macos_run" ]] || wait_for "$macos_run" macOS
 [[ -z "$windows_run" ]] || wait_for "$windows_run" Windows
 [[ -z "$linux_run" ]] || wait_for "$linux_run" Linux
 [[ -z "$chromeos_run" ]] || wait_for "$chromeos_run" ChromeOS
+[[ -z "$extension_run" ]] || wait_for "$extension_run" "browser extension"
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the

@@ -22,7 +22,7 @@ Two version numbers, moving independently:
 | Train | Platforms | Version files | Detailed record | Announces itself through |
 | --- | --- | --- | --- | --- |
 | **mobile** | iOS + Android | Android `versionName`, iOS shipping targets' `MARKETING_VERSION` | `changelog/mobile-vMAJOR.MINOR.PATCH.md` | App Store / Google Play What's New (`changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt`) |
-| **desktop** | macOS + Windows + Linux + ChromeOS | both macOS plist keys, the `[workspace.package] version` of `windows/Cargo.toml`, `desktop/Cargo.toml`, `linux/Cargo.toml` and `macos/Cargo.toml`, and `web/chromeos/manifest.json` `version` | none — GitHub's generated notes (pull requests merged since the previous desktop release) are the body; `changelog/desktop-v*.md` stops at v3.9.0 | one GitHub release in this repository, tagged `desktop-YYYY.M.P`, holding every platform's installer — staged as a draft, published by a person, announced automatically ([`desktop-release.md` § The flow](desktop-release.md#the-flow)) |
+| **desktop** | macOS + Windows + Linux + ChromeOS + browser extension | both macOS plist keys, the `[workspace.package] version` of `windows/Cargo.toml`, `desktop/Cargo.toml`, `linux/Cargo.toml` and `macos/Cargo.toml`, and the `version` of `web/chromeos/manifest.json` and `web/extension/manifest.json` | none — GitHub's generated notes (pull requests merged since the previous desktop release) are the body; `changelog/desktop-v*.md` stops at v3.9.0 | one GitHub release in this repository, tagged `desktop-YYYY.M.P`, holding every platform's installer — staged as a draft, published by a person, announced automatically ([`desktop-release.md` § The flow](desktop-release.md#the-flow)) |
 
 Within a train the platforms cannot drift apart — `set-versions` writes every version file of the train or none, and `check-versions` holds them all to one number. Across trains nothing is compared: a mobile 3.6.7 and a desktop 3.7.0 were two unrelated facts, and the same number appearing in both was a coincidence, not a link (the desktop train has been CalVer `YYYY.M.P` since 3.9.0, so the two no longer look alike). A train never skips a number because the other train used it: after desktop 3.6.7 the next mobile release is still whatever follows the last *mobile* number. The mobile train's git tags are `mobile-MAJOR.MINOR.PATCH` (bare `vMAJOR.MINOR.PATCH` up to `v3.6.5`; `dictionary/build/version_snapshot.py` reads both); the desktop train's are `desktop-YYYY.M.P` (`desktop-MAJOR.MINOR.PATCH` up to `desktop-3.9.0`), created by publishing the release (desktop releases cut before 2026-09-09 are tagged `macos-v…` / `windows-v…` on the website repository).
 
@@ -38,7 +38,7 @@ One command per train writes that train's version into all of its project files,
 
 ```bash
 make version-mobile MAJOR.MINOR.PATCH    # iOS + Android
-make version-desktop YYYY.M.P            # macOS + Windows + Linux + ChromeOS
+make version-desktop YYYY.M.P            # macOS + Windows + Linux + ChromeOS + browser extension
 ```
 
 The desktop train takes only CalVer — year 2026 or later, month 1–12, no leading zeros (`2026.12.0`, `2026.12.1`); the mobile train stays `MAJOR.MINOR.PATCH`.

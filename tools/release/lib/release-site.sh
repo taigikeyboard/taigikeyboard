@@ -19,8 +19,10 @@ WINDOWS_SITE_PATH="_data/windows_release.json"
 LINUX_SITE_PATH="_data/linux_release.json"
 LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
 LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
-# ChromeOS has site data but no manifest: the Chrome Web Store updates it.
+# ChromeOS and the browser extension have site data but no manifest: the
+# Chrome Web Store updates them.
 CHROMEOS_SITE_PATH="_data/chromeos_release.json"
+EXTENSION_SITE_PATH="_data/extension_release.json"
 MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 

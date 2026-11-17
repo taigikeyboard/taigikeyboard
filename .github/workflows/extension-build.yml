@@ -1,24 +1,44 @@
 name: Browser extension build
 
-# The browser extension's unpacked Chrome build: `make -C web extension` on a
-# clean runner, kept as the workflow artifact `extension-zip`. Called by the
-# nightly channel (desktop-nightly.yml) only. The extension is on no release
-# and in no store yet (docs/architecture/browser-extension.md § Phases), so
-# there is no draft to attach to and the train never calls this. Pull requests
-# build and test the same package in web.yml (`e2e-extension`).
+# The browser extension's Chrome Web Store package: `make -C web extension` on a
+# clean runner, kept as the workflow artifact `extension-zip`.
+#
+# On a dispatch from `tools/release/stage-desktop.sh`, or a call from the
+# monthly `desktop-train.yml`, with the staged commit, the run attaches the zip
+# to the `desktop-<version>` draft — the browser extension's half of a desktop
+# release, as `chromeos-build.yml` is the ChromeOS half
+# (docs/architecture/browser-extension.md § Release). The nightly channel
+# (desktop-nightly.yml) calls it with `main`, `build_only`. Pull requests build
+# and test the same package in web.yml (`e2e-extension`); a dispatch without
+# `source_sha` builds without attaching.
 #
 # Budget: ~3 min warm, ~8 min cold (wasm compile), plus ~20 s for the wasm2js
 # fallback.
-#
-# No `source_sha` input: a called workflow checks out its caller's commit
-# (`main` for the nightly), and a free-form ref here would let the job run
-# code that is not `main`'s with the caches `main` saves (CodeQL
-# actions/cache-poisoning).
 on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: The commit stage-desktop.sh staged; attach runs only when it is set
+        required: false
+        type: string
   workflow_call:
+    inputs:
+      source_sha:
+        description: The commit to build (the train's release commit, or main's for the nightly)
+        required: true
+        type: string
+      build_only:
+        description: Build and test; attach nothing
+        required: false
+        type: boolean
+        default: false
 
+# Only `attach` writes (its own block below).
 permissions:
   contents: read
+
+concurrency:
+  group: extension-build-${{ inputs.source_sha || github.sha }}
 
 jobs:
   build:
@@ -28,13 +48,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.source_sha || github.sha }}
           persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          # No npm cache: setup-node's cache has no save gate, and a dispatch can
+          # build a `source_sha` other than main's (the mise and rust caches below
+          # save on main only).
 
       # Only what `make -C web extension` runs: protoc for
       # engine/protos/build.rs, wasm-bindgen, binaryen's wasm-opt and wasm2js,
@@ -62,3 +84,44 @@ jobs:
           name: extension-zip
           path: web/target/taigi-keyboard-extension.zip
           if-no-files-found: error
+
+  attach:
+    name: attach to the draft
+    needs: build
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      inputs.source_sha != '' && !inputs.build_only &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      # Before the checkout: the attach script runs from `source_sha` with a
+      # write token, so the commit must be one main has (as in
+      # desktop-train.yml `sign-and-beta`).
+      - name: Check the commit is on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          status="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$SOURCE_SHA" --jq .status)"
+          case "$status" in
+            identical | behind) ;;
+            *) echo "::error::$SOURCE_SHA is not on main (compare: $status) — only a reviewed commit is attached"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: extension-zip
+          path: web/target
+
+      - name: Attach the zip to the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: bash tools/release/attach-web-package.sh extension "$SOURCE_SHA"

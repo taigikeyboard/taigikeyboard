@@ -9,7 +9,7 @@
 # One desktop version is ONE release, tagged `desktop-<version>`, holding every
 # platform's installer. They are built on different hosted runners at
 # different times — the package once Apple has notarized it, the installer, the
-# Linux packages, the ChromeOS zip — so `stage-desktop.sh` creates the draft
+# Linux packages, the ChromeOS and browser extension zips — so `stage-desktop.sh` creates the draft
 # and each runner attaches its assets.
 #
 # That release is a DRAFT until a person publishes it. A draft has no public
@@ -54,6 +54,18 @@ LINUX_ARCH_ASSET="taigikeyboard-${SHORT_VERSION}-1-x86_64.pkg.tar.zst"
 # `.github/workflows/chromeos-build.yml` (`make -C web chromeos`); the store,
 # not this release, is how users install it (docs/architecture/chromeos-release.md).
 CHROMEOS_ASSET="TaigiKeyboard-$SHORT_VERSION-chromeos.zip"
+# The browser extension's Chrome Web Store package, built by
+# `.github/workflows/extension-build.yml` (`make -C web extension`); the store
+# installs and updates it too (docs/architecture/browser-extension.md § Release).
+EXTENSION_ASSET="TaigiKeyboard-$SHORT_VERSION-extension.zip"
+# A Chrome Web Store package's (chromeos | extension) asset name.
+web_package_asset() {
+    case "$1" in
+        chromeos) echo "$CHROMEOS_ASSET" ;;
+        extension) echo "$EXTENSION_ASSET" ;;
+        *) fail "unknown Chrome Web Store package '$1'" ;;
+    esac
+}
 # Every installer a full release carries (a patch carries a subset), one
 # "<asset>|<label>" row each: the label is what the beta's Discord post and job
 # summary call it.
@@ -64,6 +76,7 @@ DESKTOP_ASSET_ROWS=(
     "$LINUX_RPM_ASSET|Fedora (.rpm)"
     "$LINUX_ARCH_ASSET|Arch"
     "$CHROMEOS_ASSET|ChromeOS"
+    "$EXTENSION_ASSET|Browser extension"
 )
 DESKTOP_ASSETS=("${DESKTOP_ASSET_ROWS[@]%%|*}")
 
@@ -207,7 +220,7 @@ desktop_release_state() {
 }
 
 # Fails unless the draft carries every installer of the named platforms
-# (macos | windows | linux | chromeos) and each one's `.sha256`. Run after every
+# (macos | windows | linux | chromeos | extension) and each one's `.sha256`. Run after every
 # half reported success: a run that reports success and attaches nothing is
 # exactly what happened the first time staging drove a second machine.
 require_staged_assets() {
@@ -219,6 +232,7 @@ require_staged_assets() {
             windows) expected+=("$WINDOWS_ASSET") ;;
             linux) expected+=("$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET") ;;
             chromeos) expected+=("$CHROMEOS_ASSET") ;;
+            extension) expected+=("$EXTENSION_ASSET") ;;
             *) fail "unknown platform '$platform'" ;;
         esac
     done

@@ -28,7 +28,7 @@ It builds the wasm from source, so there is no stale-artifact step. `make web-ch
 
 ## Upload
 
-Automatic (maintainer 2026-11-16: upload the zip only; the listing text, screenshots and privacy fields stay as set in the Dashboard). When a published release carries `TaigiKeyboard-<v>-chromeos.zip` — the monthly publish or a `make desktop-patch PLATFORM=chromeos` — `desktop-announce.yml`, after the website and the Homebrew cask, mints a store token (§ One-time below) and runs `tools/release/chrome-web-store.sh submit <v> <sha256>`:
+Automatic (maintainer 2026-11-16: upload the zip only; the listing text, screenshots and privacy fields stay as set in the Dashboard). When a published release carries `TaigiKeyboard-<v>-chromeos.zip` — the monthly publish or a `make desktop-patch PLATFORM=chromeos` — `desktop-announce.yml`, after the website and the Homebrew cask, mints a store token (§ One-time below) and runs `tools/release/chrome-web-store.sh submit chromeos <v> <sha256>` (the browser extension's zip, the same with `extension`: `browser-extension.md` § Release):
 
 1. reads the item's status; stops if `<v>` is already submitted or published (a re-run is safe), fails if the store holds a newer version, and fails if another version is still in review or staged — let it finish (a staged one: publish it) or cancel it in the Dashboard, then re-run the workflow (it is not cancelled for you; a re-run repeats the whole announcement, ~30 min, before the submit)
 2. downloads the zip from the release anonymously and checks it against the announcement's sha256
@@ -37,7 +37,7 @@ Automatic (maintainer 2026-11-16: upload the zip only; the listing text, screens
 
 The Discord success note names the state the store returned (normally `PENDING_REVIEW`). A failure posts to #ci-alerts; the website and the cask are already done by then, and the Homebrew cask audit still runs.
 
-By hand (a failed job, or with the job's token expired): `make desktop-announce` prints the `submit` command; run it with the three `CWS_*` variables of `chrome-web-store.sh`'s header. Or upload in the Developer Dashboard: the item → Package → Upload new package → Submit for review.
+By hand (a failed job, or with the job's token expired): `make desktop-announce` prints the `submit` command; run it with the `CWS_*` variables of `chrome-web-store.sh`'s header. Or upload in the Developer Dashboard: the item → Package → Upload new package → Submit for review.
 
 ### One-time: the Chrome Web Store API
 
@@ -51,7 +51,7 @@ In the Google Cloud console or `gcloud`, with `PROJECT_ID` a project of the main
    - attribute mapping `google.subject=assertion.sub,attribute.repository_id=assertion.repository_id`
    - attribute condition `assertion.repository_id == '1359878131' && assertion.repository_owner_id == '241070258' && assertion.environment == 'release'` — numeric ids survive a rename and cannot be reclaimed by a new repository of the same name; the `release` environment admits only `main` and release tags (`desktop-release.md` § One-time: the release App)
 4. On the service account, grant `roles/iam.workloadIdentityUser` to `principalSet://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/1359878131`.
-5. Developer Dashboard → Account: add the service account's email (one per publisher). The publishing Google account needs 2-Step Verification.
+5. Developer Dashboard → Account: add the service account's email (one per publisher, so it covers both items: this one and the browser extension). The publishing Google account needs 2-Step Verification.
 6. Repository Settings → Environments → `release` → Variables (identifiers, not secrets):
 
    | Variable | Value |
@@ -59,9 +59,10 @@ In the Google Cloud console or `gcloud`, with `PROJECT_ID` a project of the main
    | `CWS_WIF_PROVIDER` | `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/taigikeyboard` |
    | `CWS_SERVICE_ACCOUNT` | the service account's email |
    | `CWS_PUBLISHER_ID` | Developer Dashboard → Publisher → Settings |
-   | `CWS_ITEM_ID` | the item's 32-letter id (its Package tab) |
+   | `CWS_ITEM_ID` | the ChromeOS item's 32-letter id (its Package tab) |
+   | `CWS_EXTENSION_ITEM_ID` | the browser extension item's id (`macjldjheiajcimfcjdcegagaemcelkf`) |
 
-7. `gh workflow run release-identity.yml` and approve the `release` environment (by hand: `CWS_ACCESS_TOKEN=$(gcloud auth print-access-token --impersonate-service-account=<email> --scopes=https://www.googleapis.com/auth/chromewebstore) CWS_PUBLISHER_ID=… CWS_ITEM_ID=… tools/release/chrome-web-store.sh status`, which needs `roles/iam.serviceAccountTokenCreator` on the service account for your account). The `chrome-web-store` job prints the item's published and submitted versions; it uploads nothing. A failed token mint points at steps 1–4; a 403 from the store at the Chrome Web Store API (step 1) or step 5; a 404 at the two ids in step 6. The job prints Google's error body.
+7. `gh workflow run release-identity.yml` and approve the `release` environment (by hand: `CWS_ACCESS_TOKEN=$(gcloud auth print-access-token --impersonate-service-account=<email> --scopes=https://www.googleapis.com/auth/chromewebstore) CWS_PUBLISHER_ID=… CWS_ITEM_ID=… tools/release/chrome-web-store.sh status chromeos`, which needs `roles/iam.serviceAccountTokenCreator` on the service account for your account). The `chrome-web-store` job prints each item's published and submitted versions; it uploads nothing. A failed token mint points at steps 1–4; a 403 from the store at the Chrome Web Store API (step 1) or step 5; a 404 at the two ids in step 6. The job prints Google's error body.
 
 ## First upload
 

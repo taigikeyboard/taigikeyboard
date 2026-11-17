@@ -67,7 +67,7 @@ jobs:
           [ "$DRY_RUN" = true ] && publish=false || publish=true
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
 
-  # The four halves, as the train builds them. `contents: write` is the most a
+  # The halves, as the train builds them. `contents: write` is the most a
   # called job asks for (attach, skipped under build_only); GitHub checks it
   # even for skipped jobs. The jobs that run hold `contents: read`.
   macos:
@@ -110,14 +110,15 @@ jobs:
       source_sha: ${{ github.sha }}
       build_only: true
 
-  # Not a release half: its own workflow, which writes nothing.
   extension:
     needs: plan
     if: needs.plan.outputs.build == 'true'
     permissions:
-      contents: read
-    # Builds the caller's commit, `main`, like the jobs above.
+      contents: write
     uses: ./.github/workflows/extension-build.yml
+    with:
+      source_sha: ${{ github.sha }}
+      build_only: true
 
   # No credentials: the ad-hoc bundle in an unsigned installer package.
   macos-package:

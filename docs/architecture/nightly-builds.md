@@ -14,8 +14,7 @@ as an update. The release flow (`desktop-release.md`) is unchanged by it.
 | Job | Holds | Does |
 |---|---|---|
 | `plan` | `contents: read` | `tools/release/nightly-release.sh check` reads the live `build.json` anonymously. If it already names `main`, nothing is built (`force` overrides). A 404, a network error or an unreadable file means build |
-| `macos` / `windows` / `linux` / `chromeos` | `contents: read` in the jobs that run | The same four build workflows the train calls, with `build_only: true` and `source_sha` = `main` |
-| `extension` | `contents: read` | `.github/workflows/extension-build.yml`: `make -C web extension`, artifact `extension-zip`. Its own workflow because the extension is in no release; the train never calls it |
+| `macos` / `windows` / `linux` / `chromeos` / `extension` | `contents: read` in the jobs that run | The same five build workflows the train calls, with `build_only: true` and `source_sha` = `main` |
 | `macos-package` | no secret | `macos/scripts/package-nightly.sh` wraps the ad-hoc signed bundle in an **unsigned** `.pkg`, using the same layout as a release (`macos/scripts/lib/installer-package.sh`, shared with `release-app.sh`), and fails if the package carries a signature |
 | `publish` | `nightly` environment | Runs only when every platform succeeded and the run is on `main` without `dry_run`. Renames each installer to its fixed name, uploads it with a `.sha256` receipt and `Cache-Control: no-cache`, reads it back anonymously, then writes `build.json` (`commit`, `version`, `built`) last |
 
@@ -32,7 +31,7 @@ of the same commit, so do not stage a hotfix at that hour.
 | `taigikeyboard-nightly.x86_64.rpm` | `sudo dnf reinstall ./taigikeyboard-nightly.x86_64.rpm` (or `install` when it is not installed) |
 | `taigikeyboard-nightly-x86_64.pkg.tar.zst` | `sudo pacman -U` reads the package metadata, not the file name, and reinstalls the same version |
 | `TaigiKeyboard-nightly-chromeos.zip` | Unzip it, then use **Load unpacked** in `chrome://extensions` with Developer mode on. The manifest has no `key`, so this copy gets its own extension ID: its settings and learned words are separate from the store copy |
-| `TaigiKeyboard-nightly-extension.zip` | The browser extension, desktop Chrome only (`browser-extension.md`; not in any store yet). Unzip it, then **Load unpacked** in `chrome://extensions` with Developer mode on. Nothing updates it: to take a newer night, unzip over the same folder and press **Reload** on its card. The manifest has no `key`, so Chrome derives the ID from the folder's path; the same folder keeps the ID, and with it the sites already granted and the learned words, while a new folder starts from nothing |
+| `TaigiKeyboard-nightly-extension.zip` | The browser extension, desktop Chrome only (`browser-extension.md`; the store copy is § Release there). Unzip it, then **Load unpacked** in `chrome://extensions` with Developer mode on. Nothing updates it: to take a newer night, unzip over the same folder and press **Reload** on its card. The manifest has no `key`, so Chrome derives the ID from the folder's path; the same folder keeps the ID, and with it the sites already granted and the learned words, while a new folder starts from nothing |
 
 ## Version
 

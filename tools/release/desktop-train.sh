@@ -163,7 +163,7 @@ other_desktop_drafts() {
 }
 
 check_assets() {
-    require_staged_assets macos windows linux chromeos
+    require_staged_assets macos windows linux chromeos extension
 }
 
 # The 5th: publish this month's draft only when it is complete and staged from
@@ -189,7 +189,7 @@ check_publish() {
     # The asset names embed the version, and each build only joins a draft
     # targeting the commit it built, so a complete set proves the draft was
     # built from a tree at $SHORT_VERSION.
-    require_staged_assets macos windows linux chromeos
+    require_staged_assets macos windows linux chromeos extension
 
     read -r release_id url < <(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" \
         --json databaseId,url --jq '"\(.databaseId) \(.url)"') ||
