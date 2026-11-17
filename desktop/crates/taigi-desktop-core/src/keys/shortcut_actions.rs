@@ -486,7 +486,10 @@ impl ShortcutConflicts {
     /// tier wins (it is the tier that fires first — a preserved key is
     /// dispatched before the classifier ever runs). A global row left on a
     /// typing key is cleared first. Idempotent.
-    pub(crate) fn resolve_across_registries(document: &mut SettingsDocument, platform: DesktopPlatform) {
+    pub(crate) fn resolve_across_registries(
+        document: &mut SettingsDocument,
+        platform: DesktopPlatform,
+    ) {
         for loser in Self::defaults_shadowed_by_recordings(document, platform) {
             loser.store_in(document, None, platform);
         }

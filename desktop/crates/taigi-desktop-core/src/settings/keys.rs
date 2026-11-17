@@ -138,13 +138,16 @@ pub(crate) const IS_TAIJIT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("taiwanJapanDictEnabled", SOURCES.taijit);
 pub(crate) const IS_KUNGGE_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kunggeDictEnabled", SOURCES.kungge);
-pub(crate) const IS_STTI_ENABLED: SettingsKey<bool> = SettingsKey::new("sttiDictEnabled", SOURCES.stti);
-pub(crate) const IS_KHPOO_ENABLED: SettingsKey<bool> = SettingsKey::new("khpooDictEnabled", SOURCES.khpoo);
+pub(crate) const IS_STTI_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("sttiDictEnabled", SOURCES.stti);
+pub(crate) const IS_KHPOO_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("khpooDictEnabled", SOURCES.khpoo);
 pub(crate) const IS_VARIANT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("variantEnabled", SOURCES.variant);
 pub const IS_KHIIN_ENABLED: SettingsKey<bool> = SettingsKey::new("khiin", SOURCES.khiin);
 pub const IS_LKK_ENABLED: SettingsKey<bool> = SettingsKey::new("lkkDictEnabled", SOURCES.lkk);
-pub(crate) const IS_DEV_ENABLED: SettingsKey<bool> = SettingsKey::new("devDictEnabled", SOURCES.dev);
+pub(crate) const IS_DEV_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("devDictEnabled", SOURCES.dev);
 
 /// Kautian subcollections (`SharedSettings.swift`'s `kautian*Enabled` keys), all default on.
 const SUBCOLL: super::engine_settings::KautianSubcollections = SOURCES.kautian_subcollections;
@@ -386,7 +389,8 @@ pub(crate) const FONT_TYPE: SettingsKey<CandidateFontChoice> =
 /// a phone keyboard has no font library to name. A file name is local by
 /// nature — a settings transfer carries the preference, never the typeface.
 /// macOS keeps a Swift twin: `SettingsStore.swift`'s `customFontFile`.
-pub(crate) const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("customFontFile", "");
+pub(crate) const CUSTOM_FONT_FILE: SettingsKey<&'static str> =
+    SettingsKey::new("customFontFile", "");
 
 /// Which OS-installed family the candidate window is set in, by the name the
 /// OS reports. Read only while `fontType` holds

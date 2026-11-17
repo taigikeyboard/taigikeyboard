@@ -504,7 +504,10 @@ impl ComposingKeyIntent {
     /// it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
     /// full-width policy maps (`policies::is_punctuation_chord_key`). Read off
     /// the unmodified characters because Ctrl rewrites what a key types.
-    pub(crate) fn tps_punctuation_chord(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<char> {
+    pub(crate) fn tps_punctuation_chord(
+        key: &KeyEventSnapshot,
+        input_mode: InputMode,
+    ) -> Option<char> {
         let chording = KeyModifiers {
             shift: false,
             ..key.modifiers
@@ -546,7 +549,9 @@ impl ComposingKeyIntent {
     /// The slot a digit `1`…`9` names, counting from zero. `0` names none:
     /// the window holds nine candidates because nine is what the digits can
     /// name without one of them meaning "the tenth" (the `Digits` set's rule).
-    pub(crate) fn direct_selection_slot(characters_ignoring_modifiers: Option<&str>) -> Option<usize> {
+    pub(crate) fn direct_selection_slot(
+        characters_ignoring_modifiers: Option<&str>,
+    ) -> Option<usize> {
         let digit = characters_ignoring_modifiers?
             .chars()
             .next()?
