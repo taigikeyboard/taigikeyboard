@@ -27,7 +27,7 @@ impl InputMode {
 
     /// Whether a change from `self` to `other` enters or leaves TPS — where
     /// the raw buffer changes alphabet, so a composition cannot carry over.
-    pub fn crosses_tps(self, other: Self) -> bool {
+    pub(crate) fn crosses_tps(self, other: Self) -> bool {
         (self == Self::Tps) != (other == Self::Tps)
     }
 
@@ -160,7 +160,7 @@ impl CandidateDisplayMode {
     /// CROSS-PLATFORM INVARIANT — mirrors iOS `SettingsModels.swift`
     /// `CandidateDisplayMode.effectiveHanjiFirst`, Android
     /// `CandidateDisplayMode.kt`.
-    pub const fn effective_hanji_first(self, stored: bool) -> bool {
+    pub(crate) const fn effective_hanji_first(self, stored: bool) -> bool {
         matches!(self, Self::Combined) || (stored && self.shows_hanji())
     }
 
@@ -168,7 +168,7 @@ impl CandidateDisplayMode {
     /// stored swap flag — the stored flag masked by the display mode, NOT the
     /// candidate projection above, which `Combined` forces on while the swap
     /// shortcut still picks the width. Mirrored on macOS / iOS / Android.
-    pub const fn effective_full_width_punctuation(self, stored: bool) -> bool {
+    pub(crate) const fn effective_full_width_punctuation(self, stored: bool) -> bool {
         stored && self.shows_hanji()
     }
 

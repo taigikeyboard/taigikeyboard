@@ -118,7 +118,7 @@ impl CandidateColorTheme {
     }
 
     /// The fixed colors, or nothing when the four color keys decide.
-    pub fn swatch(self) -> Option<CandidateSwatch> {
+    pub(crate) fn swatch(self) -> Option<CandidateSwatch> {
         Some(match self {
             Self::Custom => return None,
             Self::Default => CandidateSwatch {
@@ -436,12 +436,12 @@ impl CandidateFontSelection {
     /// with no font library, reads it back as an unknown value and falls to the
     /// system font (`SettingsDocument::choice`), which is the honest answer to
     /// "a typeface this build cannot see".
-    pub const CUSTOM_RAW: &'static str = "custom";
+    pub(crate) const CUSTOM_RAW: &'static str = "custom";
 
     /// What `fontType` holds while an installed family is selected. Outside
     /// the roster for the same reason as `CUSTOM_RAW`; not `"system"`, which
     /// is `CandidateFontChoice::System`'s own raw value.
-    pub const INSTALLED_RAW: &'static str = "installed";
+    pub(crate) const INSTALLED_RAW: &'static str = "installed";
 
     /// The bundled face this selection names, or `None` for any other kind.
     #[cfg(test)]
@@ -456,7 +456,7 @@ impl CandidateFontSelection {
     /// bundled face's is known to fit the height an inline row is given; a
     /// face the user added or the OS supplies carries no such guarantee
     /// (`CandidateMetrics::for_content`).
-    pub fn requires_line_box_measurement(self) -> bool {
+    pub(crate) fn requires_line_box_measurement(self) -> bool {
         matches!(self, Self::Custom(_) | Self::Installed(_))
     }
 }

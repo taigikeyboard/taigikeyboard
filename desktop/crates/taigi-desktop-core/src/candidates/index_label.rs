@@ -49,7 +49,7 @@ impl CandidateIndexLabel {
     /// Every form a slot can be drawn in — each slot under each set — so the
     /// column is measured against all of them and does not change width
     /// when the user switches tone scheme.
-    pub fn widest_label_forms() -> Vec<String> {
+    pub(crate) fn widest_label_forms() -> Vec<String> {
         (0..HorizontalPageLayout::PAGE_SIZE)
             .flat_map(|slot| {
                 CandidateSlotKeySet::ALL

@@ -59,7 +59,7 @@ impl ComposingSessionCoordinator {
     /// user's data (user-data-engine-roadmap P5) — it counts the picks and
     /// records the associations it decides on itself, wherever the process
     /// opened a data directory for it (R5).
-    pub fn for_desktop(settings: Arc<dyn SettingsProvider>, clock: Arc<dyn Clock>) -> Self {
+    pub(crate) fn for_desktop(settings: Arc<dyn SettingsProvider>, clock: Arc<dyn Clock>) -> Self {
         Self::new(ComposingManager::new(
             settings,
             Box::new(EngineNextWord),

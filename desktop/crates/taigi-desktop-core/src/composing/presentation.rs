@@ -125,7 +125,7 @@ impl CandidateSource {
 
     /// The same list presented again under the settings in force right
     /// now (the Hanji/romanization flip re-renders in place).
-    pub fn refresh_presentation(&mut self, manager: &ComposingManager) {
+    pub(crate) fn refresh_presentation(&mut self, manager: &ComposingManager) {
         let (presented, leads_with_literal_roman) = manager.presentation(&self.candidates);
         self.presented = presented;
         self.leads_with_literal_roman = leads_with_literal_roman;

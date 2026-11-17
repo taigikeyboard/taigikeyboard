@@ -127,7 +127,7 @@ impl ComposingKeyBindings {
     /// The action `event` is bound to, if any, on either field. Linear over
     /// the roster: fourteen fields, and a chord-keyed map would need the
     /// duplicate handling twice.
-    pub fn action_for(
+    pub(crate) fn action_for(
         &self,
         event: &KeyEventSnapshot,
         platform: DesktopPlatform,

@@ -42,7 +42,7 @@ impl MenuCommand {
     /// The shortcut whose recorded chord the row prints; `None` for the two
     /// commands with no chord by design (a key claimed for a once-in-a-while
     /// command is taken from every application).
-    pub fn chord_action(self) -> Option<ShortcutAction> {
+    pub(crate) fn chord_action(self) -> Option<ShortcutAction> {
         match self {
             Self::Shortcut(action) => Some(action),
             Self::OpenSettings => Some(ShortcutAction::OpenLastSettingsPane),

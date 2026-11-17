@@ -281,14 +281,14 @@ pub struct ExpandableListModel {
 }
 
 impl ExpandableListModel {
-    pub const MAX_VISIBLE_ROWS: usize = 5;
+    pub(crate) const MAX_VISIBLE_ROWS: usize = 5;
     pub const SEPARATOR_HEIGHT: f32 = 1.0;
     /// Two thirds of a page: `PAGE_SIZE - PAGE_SIZE / 3`.
-    pub const EXPANDED_COLUMN_COUNT: usize =
+    pub(crate) const EXPANDED_COLUMN_COUNT: usize =
         HorizontalPageLayout::PAGE_SIZE - HorizontalPageLayout::PAGE_SIZE / 3;
     /// How many columns an unfolded column shows at once at most — a third of
     /// a page, Microsoft Bopomofo's three.
-    pub const COLUMNS_PER_PAGE: usize = HorizontalPageLayout::PAGE_SIZE / 3;
+    pub(crate) const COLUMNS_PER_PAGE: usize = HorizontalPageLayout::PAGE_SIZE / 3;
     /// The unfold's duration, for the renderer: quicker than upstream's
     /// measured 0.183 s, so the grid never reads as a wait (USER 2026-11-08).
     /// Twin of macOS `ExpandableCandidatePanel.animationDuration`.
@@ -978,7 +978,7 @@ impl ExpandableListModel {
 
     /// The grid row at the viewport's top, with the half-row bias
     /// (rounds to the nearest row).
-    pub fn scroll_top_row(&self) -> usize {
+    pub(crate) fn scroll_top_row(&self) -> usize {
         ((self.scroll_y.max(0.0) + self.row_height() / 2.0) / self.row_height()).floor() as usize
     }
 

@@ -30,7 +30,7 @@ pub enum DisplayLanguage {
 
 impl DisplayLanguage {
     /// The persisted tag of a fresh install.
-    pub const DEFAULT_TAG: &'static str = "system";
+    pub(crate) const DEFAULT_TAG: &'static str = "system";
 
     /// The picker roster, in picker order — `System` first, then the production
     /// languages in the order iOS / Android / macOS list them.
@@ -61,7 +61,7 @@ impl DisplayLanguage {
     /// A stored tag → language. An unknown or removed tag reads as Hanji, the
     /// base language every key is authored in (`DisplayLanguage.swift` `fromTag`
     /// is the macOS twin).
-    pub fn from_tag(tag: &str) -> Self {
+    pub(crate) fn from_tag(tag: &str) -> Self {
         match tag {
             "system" => DisplayLanguage::System,
             "hanji" => DisplayLanguage::Hanji,
@@ -104,7 +104,7 @@ impl DisplayLanguage {
     /// How the picker labels a concrete language: its own name in its own
     /// script (an endonym, not a translation). `System` has no endonym — the
     /// picker uses the `settingsDisplayLanguageAutomatic` key for it.
-    pub fn endonym(self) -> Option<&'static str> {
+    pub(crate) fn endonym(self) -> Option<&'static str> {
         match self {
             DisplayLanguage::System => None,
             DisplayLanguage::Hanji => Some("漢字"),
@@ -173,7 +173,7 @@ impl StringResolver {
 ///
 /// This is the only formatter the generated code calls; the `{N}` contract is
 /// owned by `tools/i18n/i18n_lib.py` (`_lower_atom`, `target == "rust"`).
-pub fn format_positional(template: &str, args: &[&dyn std::fmt::Display]) -> String {
+pub(crate) fn format_positional(template: &str, args: &[&dyn std::fmt::Display]) -> String {
     let mut out = String::with_capacity(template.len() + 16);
     let mut chars = template.char_indices().peekable();
     while let Some((index, c)) = chars.next() {

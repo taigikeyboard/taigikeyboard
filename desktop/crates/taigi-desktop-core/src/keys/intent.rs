@@ -43,7 +43,7 @@ impl CaretDirection {
     /// The move an arrow asks for under the caret chord: ← / → step, ↑ / ↓
     /// jump to the start / end — the host's own paragraph jump under the
     /// same modifier (⌥↑ on the Mac, Ctrl+↑ in Word).
-    pub fn under_caret_chord(key: Option<NavigationKey>) -> Option<Self> {
+    pub(crate) fn under_caret_chord(key: Option<NavigationKey>) -> Option<Self> {
         match key? {
             NavigationKey::UpArrow => Some(Self::Start),
             NavigationKey::DownArrow => Some(Self::End),
@@ -504,7 +504,7 @@ impl ComposingKeyIntent {
     /// it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
     /// full-width policy maps (`policies::is_punctuation_chord_key`). Read off
     /// the unmodified characters because Ctrl rewrites what a key types.
-    pub fn tps_punctuation_chord(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<char> {
+    pub(crate) fn tps_punctuation_chord(key: &KeyEventSnapshot, input_mode: InputMode) -> Option<char> {
         let chording = KeyModifiers {
             shift: false,
             ..key.modifiers
@@ -546,7 +546,7 @@ impl ComposingKeyIntent {
     /// The slot a digit `1`…`9` names, counting from zero. `0` names none:
     /// the window holds nine candidates because nine is what the digits can
     /// name without one of them meaning "the tenth" (the `Digits` set's rule).
-    pub fn direct_selection_slot(characters_ignoring_modifiers: Option<&str>) -> Option<usize> {
+    pub(crate) fn direct_selection_slot(characters_ignoring_modifiers: Option<&str>) -> Option<usize> {
         let digit = characters_ignoring_modifiers?
             .chars()
             .next()?
@@ -560,7 +560,7 @@ impl ComposingKeyIntent {
     /// Visible to `ComposingKeyChord`, which refuses to bind a bare digit:
     /// the digits carry tone under Standard and pick candidates under Telex,
     /// so a chord may not take one away under either.
-    pub fn is_tone_digit(character: char) -> bool {
+    pub(crate) fn is_tone_digit(character: char) -> bool {
         character.is_ascii_digit()
     }
 
@@ -569,7 +569,7 @@ impl ComposingKeyIntent {
     /// spelled with: a custom-dictionary romanization is free text, so all of
     /// them must reach the composition. Under Telex the eight the scheme
     /// claims are taken before this is asked.
-    pub fn is_romanization_character(character: char) -> bool {
+    pub(crate) fn is_romanization_character(character: char) -> bool {
         character.is_ascii_alphabetic() || character == '-'
     }
 

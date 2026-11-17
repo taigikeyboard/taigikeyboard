@@ -116,7 +116,7 @@ impl Recorder {
 
     /// Whether this key wrote to the document, which makes the client's
     /// last report of it out of date.
-    pub fn has_written(&self) -> bool {
+    pub(crate) fn has_written(&self) -> bool {
         self.emits
             .iter()
             .any(|emit| matches!(emit, Emit::Commit(_) | Emit::DeleteSurrounding { .. }))

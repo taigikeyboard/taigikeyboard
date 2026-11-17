@@ -159,7 +159,7 @@ impl SettingsDocument {
     /// A list of strings, in stored order. A value that is not an array of
     /// strings — one non-string item spoils it, as `UserDefaults
     /// .stringArray(forKey:)` reads it on macOS — reads as the default.
-    pub fn string_list(&self, key: &SettingsKey<&'static [&'static str]>) -> Vec<String> {
+    pub(crate) fn string_list(&self, key: &SettingsKey<&'static [&'static str]>) -> Vec<String> {
         self.values
             .get(key.name)
             .and_then(Value::as_array)
@@ -286,7 +286,7 @@ impl SettingsDocument {
 
     /// Records `chord` on `action`'s `field`, or clears the field when `None`
     /// (`SettingsStore.swift` `setComposingChord` is the macOS twin).
-    pub fn set_composing_chord(
+    pub(crate) fn set_composing_chord(
         &mut self,
         action: crate::keys::ComposingAction,
         field: crate::keys::ChordField,

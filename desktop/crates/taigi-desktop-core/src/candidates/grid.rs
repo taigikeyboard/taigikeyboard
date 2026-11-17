@@ -23,7 +23,7 @@ impl ExpandedGridLayout {
     /// Degenerate inputs are held to a valid grid rather than trusted: a
     /// zero column count becomes one, and a width that is not a positive
     /// finite number (or a non-positive column width) spans one column.
-    pub fn compute(widths: &[f32], column_width: f32, column_count: usize) -> Self {
+    pub(crate) fn compute(widths: &[f32], column_width: f32, column_count: usize) -> Self {
         let column_count = column_count.max(1);
         let mut rows: Vec<Vec<GridCell>> = Vec::new();
         let mut row: Vec<GridCell> = Vec::new();
@@ -58,7 +58,7 @@ impl ExpandedGridLayout {
     /// column's `r`-th candidate at `column_start` = its column within the
     /// page. Every cell spans one column; a short last column leaves its
     /// lower rows without that cell.
-    pub fn column_major_page(
+    pub(crate) fn column_major_page(
         count: usize,
         rows_per_column: usize,
         first_column: usize,
@@ -87,7 +87,7 @@ impl ExpandedGridLayout {
         }
     }
 
-    pub fn position_of(&self, candidate_index: usize) -> Option<(usize, GridCell)> {
+    pub(crate) fn position_of(&self, candidate_index: usize) -> Option<(usize, GridCell)> {
         self.rows.iter().enumerate().find_map(|(row_index, row)| {
             row.iter()
                 .find(|cell| cell.candidate_index == candidate_index)
@@ -99,7 +99,7 @@ impl ExpandedGridLayout {
     /// row whose columns overlap the current cell's. `None` when the clamped
     /// target row is the one the selection is already on — at the top row
     /// that is where a collapse begins.
-    pub fn vertical_target(&self, candidate_index: usize, row_step: i32) -> Option<usize> {
+    pub(crate) fn vertical_target(&self, candidate_index: usize, row_step: i32) -> Option<usize> {
         let (row_index, cell) = self.position_of(candidate_index)?;
         let last_row = self.rows.len().checked_sub(1)?;
         let target_row = (row_index as i32 + row_step).clamp(0, last_row as i32) as usize;
@@ -122,7 +122,7 @@ impl ExpandedGridLayout {
     /// The first cell of `row_index` whose columns overlap
     /// `column_start..column_end`, with the horizontal pages' backward
     /// tiebreak: stepping up prefers the neighbour the highlight sits over.
-    pub fn overlapping_candidate(
+    pub(crate) fn overlapping_candidate(
         &self,
         row_index: usize,
         column_start: usize,
