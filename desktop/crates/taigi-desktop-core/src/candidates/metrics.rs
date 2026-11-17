@@ -397,7 +397,7 @@ impl CandidateMetrics {
     }
 
     /// The widest the candidate column can be in a cell `cell_width` across.
-    pub fn maximum_primary_column_width(&self, cell_width: f32, trailing_inset: f32) -> f32 {
+    pub(crate) fn maximum_primary_column_width(&self, cell_width: f32, trailing_inset: f32) -> f32 {
         self.candidate_font_size
             .max(cell_width - self.horizontal_padding - self.index_column_width() - trailing_inset)
     }
@@ -422,7 +422,7 @@ pub(crate) mod test_support {
     /// A measurer with arithmetic answers: every char is one em wide (CJK) or
     /// half an em (ASCII), the line box is 1.2 em. Enough to pin every rule
     /// that does not depend on a real face.
-    pub struct EmMeasurer;
+    pub(crate) struct EmMeasurer;
 
     impl TextMeasurer for EmMeasurer {
         fn width(&self, text: &str, font: FontSpec) -> f32 {

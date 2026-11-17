@@ -71,7 +71,7 @@ pub const SYLLABLE_SEPARATOR: SettingsKey<SyllableSeparator> =
 /// RETIRED 2026-10-06: the No Hyphens switch, replaced by `SYLLABLE_SEPARATOR`.
 /// `SettingsDocument::from_json` carries a stored `true` over as `none`, then
 /// drops the key. macOS twin: `RetiredSettingsCleanup.swift`.
-pub const RETIRED_HYPHENLESS_ROMAN_ENABLED: &str = "hyphenlessRomanEnabled";
+pub(crate) const RETIRED_HYPHENLESS_ROMAN_ENABLED: &str = "hyphenlessRomanEnabled";
 pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "nasalMarkerUppercaseEnabled",
     ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
@@ -130,47 +130,50 @@ pub const IS_TAIGITV_ENABLED: SettingsKey<bool> =
     SettingsKey::new("newwordDictEnabled", SOURCES.taigitv);
 pub const IS_ITAIGI_ENABLED: SettingsKey<bool> =
     SettingsKey::new("iTaigiDictEnabled", SOURCES.itaigi);
-pub const IS_SITBUT_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_SITBUT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("taiwanPlantDictEnabled", SOURCES.sitbut);
-pub const IS_TAIHOA_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_TAIHOA_ENABLED: SettingsKey<bool> =
     SettingsKey::new("taiHuaDictEnabled", SOURCES.taihoa);
-pub const IS_TAIJIT_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_TAIJIT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("taiwanJapanDictEnabled", SOURCES.taijit);
-pub const IS_KUNGGE_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KUNGGE_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kunggeDictEnabled", SOURCES.kungge);
-pub const IS_STTI_ENABLED: SettingsKey<bool> = SettingsKey::new("sttiDictEnabled", SOURCES.stti);
-pub const IS_KHPOO_ENABLED: SettingsKey<bool> = SettingsKey::new("khpooDictEnabled", SOURCES.khpoo);
-pub const IS_VARIANT_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_STTI_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("sttiDictEnabled", SOURCES.stti);
+pub(crate) const IS_KHPOO_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("khpooDictEnabled", SOURCES.khpoo);
+pub(crate) const IS_VARIANT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("variantEnabled", SOURCES.variant);
 pub const IS_KHIIN_ENABLED: SettingsKey<bool> = SettingsKey::new("khiin", SOURCES.khiin);
 pub const IS_LKK_ENABLED: SettingsKey<bool> = SettingsKey::new("lkkDictEnabled", SOURCES.lkk);
-pub const IS_DEV_ENABLED: SettingsKey<bool> = SettingsKey::new("devDictEnabled", SOURCES.dev);
+pub(crate) const IS_DEV_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("devDictEnabled", SOURCES.dev);
 
 /// Kautian subcollections (`SharedSettings.swift`'s `kautian*Enabled` keys), all default on.
 const SUBCOLL: super::engine_settings::KautianSubcollections = SOURCES.kautian_subcollections;
-pub const IS_KAUTIAN_ACCENT_LUKANG_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_LUKANG_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentLukangEnabled", SUBCOLL.accent_lukang);
-pub const IS_KAUTIAN_ACCENT_SANSIA_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_SANSIA_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentSansiaEnabled", SUBCOLL.accent_sansia);
-pub const IS_KAUTIAN_ACCENT_TAIPAK_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_TAIPAK_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentTaipakEnabled", SUBCOLL.accent_taipak);
-pub const IS_KAUTIAN_ACCENT_GILAN_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_GILAN_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentGilanEnabled", SUBCOLL.accent_gilan);
-pub const IS_KAUTIAN_ACCENT_TAINAN_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_TAINAN_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentTainanEnabled", SUBCOLL.accent_tainan);
-pub const IS_KAUTIAN_ACCENT_KAOHSIUNG_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_KAOHSIUNG_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentKaohsiungEnabled", SUBCOLL.accent_kaohsiung);
-pub const IS_KAUTIAN_ACCENT_KINMEN_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_KINMEN_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentKinmenEnabled", SUBCOLL.accent_kinmen);
-pub const IS_KAUTIAN_ACCENT_MAKUNG_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_MAKUNG_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentMakungEnabled", SUBCOLL.accent_makung);
-pub const IS_KAUTIAN_ACCENT_SINTIK_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_SINTIK_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentSintikEnabled", SUBCOLL.accent_sintik);
-pub const IS_KAUTIAN_ACCENT_TAICHUNG_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ACCENT_TAICHUNG_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentTaichungEnabled", SUBCOLL.accent_taichung);
-pub const IS_KAUTIAN_NAME_APPENDIX_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_NAME_APPENDIX_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianNameAppendixEnabled", SUBCOLL.name_appendix);
-pub const IS_KAUTIAN_ALT_READING_ENABLED: SettingsKey<bool> =
+pub(crate) const IS_KAUTIAN_ALT_READING_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAltReadingEnabled", SUBCOLL.alt_reading);
 
 /// The app UI display language, as a `DisplayLanguage` tag. The roster owns
@@ -374,7 +377,7 @@ pub fn apply_candidate_color_theme(document: &mut SettingsDocument, theme: Candi
 // is permanently reserved: a stored value still sits in existing
 // `settings.json` files (Windows has no retired-key sweep), so a future
 // padding knob must use a NEW key rather than inherit those values.
-pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
+pub(crate) const FONT_TYPE: SettingsKey<CandidateFontChoice> =
     SettingsKey::new("fontType", CandidateFontChoice::System);
 
 /// Which typeface the user added the candidate window is set in, by the file
@@ -386,7 +389,8 @@ pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
 /// a phone keyboard has no font library to name. A file name is local by
 /// nature — a settings transfer carries the preference, never the typeface.
 /// macOS keeps a Swift twin: `SettingsStore.swift`'s `customFontFile`.
-pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("customFontFile", "");
+pub(crate) const CUSTOM_FONT_FILE: SettingsKey<&'static str> =
+    SettingsKey::new("customFontFile", "");
 
 /// Which OS-installed family the candidate window is set in, by the name the
 /// OS reports. Read only while `fontType` holds
@@ -395,7 +399,7 @@ pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("custom
 /// name is not a file name — `customFontFile` is treated as a path component.
 /// Desktop-only and local like a file name. macOS keeps a Swift twin:
 /// `SettingsStore.swift`'s `installedFontFamily`.
-pub const INSTALLED_FONT_FAMILY: SettingsKey<&'static str> =
+pub(crate) const INSTALLED_FONT_FAMILY: SettingsKey<&'static str> =
     SettingsKey::new("installedFontFamily", "");
 
 /// Which weight of `installedFontFamily` the candidate window is set in, by
@@ -404,7 +408,7 @@ pub const INSTALLED_FONT_FAMILY: SettingsKey<&'static str> =
 /// installed selection drew before this key existed. Desktop-only and local
 /// like the family. macOS keeps a Swift twin: `SettingsStore.swift`'s
 /// `installedFontFace`.
-pub const INSTALLED_FONT_FACE: SettingsKey<&'static str> =
+pub(crate) const INSTALLED_FONT_FACE: SettingsKey<&'static str> =
     SettingsKey::new("installedFontFace", "");
 
 /// Which keys type a tone, and so which keys pick a candidate
@@ -442,7 +446,7 @@ const _: () = assert!(IS_CANDIDATE_WINDOW_ENABLED.default);
 /// What a user-cleared composing chord row stores. An absent key means "never
 /// touched" and reads as the action's default; the empty string means the
 /// user cleared the row, which is why the two cannot be collapsed.
-pub const CLEARED_COMPOSING_CHORD: &str = "";
+pub(crate) const CLEARED_COMPOSING_CHORD: &str = "";
 
 /// The keys the General pane's reset removes — every input setting the pane
 /// draws, same shape as `DICTIONARY_SOURCE_KEYS`. Not the display language
@@ -451,7 +455,7 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub const GENERAL_KEYS: [&str; 15] = [
+pub(crate) const GENERAL_KEYS: [&str; 15] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
@@ -471,7 +475,7 @@ pub const GENERAL_KEYS: [&str; 15] = [
 
 /// The keys the Appearance pane's reset removes (`SettingsStore.swift`
 /// `resetAppearanceSettings` is the macOS twin).
-pub const APPEARANCE_KEYS: [&str; 16] = [
+pub(crate) const APPEARANCE_KEYS: [&str; 16] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
     CANDIDATE_DISPLAY_MODE.name,
@@ -492,7 +496,7 @@ pub const APPEARANCE_KEYS: [&str; 16] = [
 
 /// The 13 source toggles + 12 subcollection toggles the Dictionary Sources pane's reset
 /// removes (`SettingsStore.swift` `resetDictionarySources` is the macOS twin).
-pub const DICTIONARY_SOURCE_KEYS: [&str; 25] = [
+pub(crate) const DICTIONARY_SOURCE_KEYS: [&str; 25] = [
     IS_KAUTIAN_ENABLED.name,
     IS_TAIGITV_ENABLED.name,
     IS_ITAIGI_ENABLED.name,

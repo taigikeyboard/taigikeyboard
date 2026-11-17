@@ -76,7 +76,7 @@ impl CandidateSlotKeySet {
 
     /// The slot `event` picks under this set, or `None` — the classifier's
     /// question.
-    pub fn slot_for_event(self, event: &KeyEventSnapshot) -> Option<usize> {
+    pub(crate) fn slot_for_event(self, event: &KeyEventSnapshot) -> Option<usize> {
         match self {
             Self::BareKeys | Self::BareKeysWithoutF | Self::Digits => {
                 self.slot_for_key(event.unmodified_characters(), event.modifiers)
@@ -117,7 +117,7 @@ impl CandidateSlotKeySet {
     /// drawn beside a candidate is the key that picks it. `TpsDigits` answers
     /// `None`: it reads key codes, which only the event carries
     /// (`slot_for_event`).
-    pub fn slot_for_key(self, key: Option<&str>, modifiers: KeyModifiers) -> Option<usize> {
+    pub(crate) fn slot_for_key(self, key: Option<&str>, modifiers: KeyModifiers) -> Option<usize> {
         if !modifiers.is_empty() {
             return None;
         }
@@ -168,7 +168,7 @@ impl CandidateSlotKeySet {
     /// The key this set gives the candidate in `slot`, for the nine slots a
     /// page holds — what the candidate window draws beside a cell; `""` for
     /// a slot the set leaves unkeyed.
-    pub fn label_for_slot(self, slot: usize) -> String {
+    pub(crate) fn label_for_slot(self, slot: usize) -> String {
         match self.bare_key_row() {
             Some(row) => row.get(slot).copied().unwrap_or_default().to_owned(),
             None => (slot + 1).to_string(),

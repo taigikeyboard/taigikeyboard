@@ -29,7 +29,7 @@ pub enum ScrollerStyle {
 impl ScrollerStyle {
     /// The air between an overlay scroller and the text under it
     /// (macOS: `VerticalCandidatePanel.overlayScrollerGap`).
-    pub const OVERLAY_GAP: f32 = 2.0;
+    pub(crate) const OVERLAY_GAP: f32 = 2.0;
 }
 
 /// The scroller's share, resolved from one read of the style so the
@@ -286,7 +286,7 @@ impl VerticalListModel {
     }
 
     /// Rows on screen: `min(count, visible_rows)` full rows plus the peek.
-    pub fn viewport_height(&self) -> f32 {
+    pub(crate) fn viewport_height(&self) -> f32 {
         self.geometry.window_height
     }
 
@@ -298,7 +298,7 @@ impl VerticalListModel {
         }
     }
 
-    pub fn y_for_row(&self, row: usize) -> f32 {
+    pub(crate) fn y_for_row(&self, row: usize) -> f32 {
         row as f32 * self.row_height()
     }
 

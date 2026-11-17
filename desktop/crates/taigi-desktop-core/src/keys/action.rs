@@ -80,7 +80,7 @@ impl ComposingAction {
     /// defaults: the two ways to end a composition into the document.
     /// Refilled only with a default no other composing row holds
     /// (`ComposingKeyBindings::restore_unbound`).
-    pub const REFILLED_FROM_DEFAULT: [ComposingAction; 2] =
+    pub(crate) const REFILLED_FROM_DEFAULT: [ComposingAction; 2] =
         [Self::ConfirmHighlighted, Self::CommitLiteral];
 
     /// The persisted raw name (`ComposingAction.rawValue`).
@@ -145,7 +145,7 @@ impl ComposingAction {
     /// Whether this action needs candidates on screen to mean anything. A
     /// chord whose action does not apply is not consumed: `]` still types a
     /// bracket when there is no page to turn.
-    pub fn requires_candidates(self) -> bool {
+    pub(crate) fn requires_candidates(self) -> bool {
         !matches!(self, Self::CommitLiteral)
     }
 
@@ -192,7 +192,7 @@ impl ComposingAction {
 
     /// The same key for a raw value the roster may no longer have — what a
     /// retired-settings sweep would remove.
-    pub fn settings_key_name_for_raw(raw: &str) -> String {
+    pub(crate) fn settings_key_name_for_raw(raw: &str) -> String {
         format!("composingShortcut.{raw}")
     }
 

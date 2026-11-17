@@ -34,7 +34,7 @@ impl CandidateFetchOutcome {
     /// Folds the outcome into the one decision every re-fetch of an open
     /// list makes — a key, a nail, or the display-mode cycle re-querying
     /// under the new mode (`ShortcutAction::CycleCandidateDisplayMode`).
-    pub fn list_change(self) -> CandidateListChange {
+    pub(crate) fn list_change(self) -> CandidateListChange {
         match self {
             Self::Found(candidates) if !candidates.is_empty() => {
                 CandidateListChange::Replace(candidates)

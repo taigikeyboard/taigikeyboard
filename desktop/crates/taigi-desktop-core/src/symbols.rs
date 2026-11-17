@@ -153,7 +153,7 @@ pub struct RecentSymbols {
 
 impl RecentSymbols {
     /// One slot-key page.
-    pub const CAPACITY: usize = crate::candidates::HorizontalPageLayout::PAGE_SIZE;
+    pub(crate) const CAPACITY: usize = crate::candidates::HorizontalPageLayout::PAGE_SIZE;
 
     /// Normalizes what came from the document — a hand-edited list may
     /// repeat a symbol or run past a page — so every value holds the
@@ -176,7 +176,7 @@ impl RecentSymbols {
     }
 
     /// The list with `symbol` moved to the front.
-    pub fn noting(&self, symbol: &str) -> Self {
+    pub(crate) fn noting(&self, symbol: &str) -> Self {
         Self::new(std::iter::once(symbol.to_owned()).chain(self.symbols.iter().cloned()))
     }
 

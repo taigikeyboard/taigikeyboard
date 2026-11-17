@@ -15,7 +15,7 @@ pub const PANE_FLAG: &str = "--pane";
 pub const CHECK_NOW_FLAG: &str = "--check-now";
 /// `--check-updates`: the headless check the scheduled task runs (W9);
 /// no window.
-pub const CHECK_UPDATES_FLAG: &str = "--check-updates";
+pub(crate) const CHECK_UPDATES_FLAG: &str = "--check-updates";
 /// `--prewarm`: map the Windows App Runtime this exe's window is built on
 /// and exit. No window, no settings write, no stores — the process is
 /// gone in about a second, and the images it mapped stay cached for the

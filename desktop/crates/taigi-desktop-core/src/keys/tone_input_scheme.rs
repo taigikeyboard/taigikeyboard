@@ -41,7 +41,7 @@ impl ToneInputScheme {
     /// — the two lists must name the same keys, or a key classified as Telex
     /// here would be ignored there. CROSS-PLATFORM INVARIANT — the one list for
     /// macOS, Windows and Linux.
-    pub const TELEX_KEYS: &'static str = "vydwxqz";
+    pub(crate) const TELEX_KEYS: &'static str = "vydwxqz";
 
     /// The keys that pick a candidate under this scheme.
     pub fn slot_key_set(self) -> CandidateSlotKeySet {
@@ -63,7 +63,7 @@ impl ToneInputScheme {
     /// Whether `character` is a Telex key in either case. ASCII only: the
     /// engine reads the key as an ASCII letter, and a `v` from another
     /// script is document text.
-    pub fn is_telex_key(character: char) -> bool {
+    pub(crate) fn is_telex_key(character: char) -> bool {
         character.is_ascii() && Self::TELEX_KEYS.contains(character.to_ascii_lowercase())
     }
 }

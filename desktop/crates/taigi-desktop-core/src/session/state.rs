@@ -45,7 +45,7 @@ impl TextBeforeCaret {
 
     /// Whether the swap may take the character before the caret for the
     /// auto space it left.
-    pub fn may_be_the_auto_space(self) -> bool {
+    pub(crate) fn may_be_the_auto_space(self) -> bool {
         match self {
             Self::Unreported => true,
             Self::Reported(before) => before == Some(' '),

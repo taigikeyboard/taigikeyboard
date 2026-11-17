@@ -39,7 +39,7 @@ impl LookupSelection {
 
     /// Pages begin at these absolute indexes. A list that does not start at 0,
     /// or that is not strictly increasing, is ignored and pages stay uniform.
-    pub fn set_page_starts(&mut self, starts: Vec<usize>) {
+    pub(crate) fn set_page_starts(&mut self, starts: Vec<usize>) {
         let ok = starts.first() == Some(&0)
             && starts.windows(2).all(|pair| pair[0] < pair[1])
             && starts
@@ -48,7 +48,7 @@ impl LookupSelection {
         self.page_starts = if ok { starts } else { Vec::new() };
     }
 
-    pub fn clear_page_starts(&mut self) {
+    pub(crate) fn clear_page_starts(&mut self) {
         self.page_starts.clear();
     }
 
@@ -74,14 +74,14 @@ impl LookupSelection {
 
     /// Pages of `page_size` from now on, the highlight kept — the slot key
     /// set the list is presented under (`CandidateSlotKeySet::page_size`).
-    pub fn set_page_size(&mut self, page_size: usize) {
+    pub(crate) fn set_page_size(&mut self, page_size: usize) {
         self.page_size = page_size.max(1);
     }
 
     /// Whether the list's first cell is the §34 literal, which takes no key —
     /// set whenever the list is built or presented again
     /// (`CandidateSource::leads_with_literal_roman`).
-    pub fn set_unkeyed_lead(&mut self, lead_cell_is_unkeyed: bool) {
+    pub(crate) fn set_unkeyed_lead(&mut self, lead_cell_is_unkeyed: bool) {
         self.lead_cell_is_unkeyed = lead_cell_is_unkeyed;
     }
 
@@ -123,7 +123,7 @@ impl LookupSelection {
 
     /// The absolute index of the `position`-th cell on the current page —
     /// what the panel reports for a click.
-    pub fn candidate_index_on_page(&self, position: usize) -> Option<usize> {
+    pub(crate) fn candidate_index_on_page(&self, position: usize) -> Option<usize> {
         let (start, end) = self.page_bounds();
         if position >= end - start || position >= self.page_size {
             return None;

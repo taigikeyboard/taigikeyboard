@@ -78,7 +78,7 @@ impl ListSelection {
         self.content_floor
     }
 
-    pub fn set_content_floor(&mut self, width: u32) {
+    pub(crate) fn set_content_floor(&mut self, width: u32) {
         self.content_floor = width;
     }
 
@@ -116,19 +116,19 @@ impl ListSelection {
         }
     }
 
-    pub fn set_page_starts(&mut self, starts: Vec<usize>) {
+    pub(crate) fn set_page_starts(&mut self, starts: Vec<usize>) {
         if let Highlight::Paged(selection) = &mut self.highlight {
             selection.set_page_starts(starts);
         }
     }
 
-    pub fn clear_page_starts(&mut self) {
+    pub(crate) fn clear_page_starts(&mut self) {
         if let Highlight::Paged(selection) = &mut self.highlight {
             selection.clear_page_starts();
         }
     }
 
-    pub fn set_unkeyed_lead(&mut self, lead_cell_is_unkeyed: bool) {
+    pub(crate) fn set_unkeyed_lead(&mut self, lead_cell_is_unkeyed: bool) {
         self.lead_cell_is_unkeyed = lead_cell_is_unkeyed;
         if let Highlight::Paged(selection) = &mut self.highlight {
             selection.set_unkeyed_lead(lead_cell_is_unkeyed);
@@ -137,7 +137,7 @@ impl ListSelection {
 
     /// Pages the list `page_size` at a time — one cell per slot key of the
     /// set it is presented under. A change re-lays out a measured list.
-    pub fn set_page_size(&mut self, page_size: usize) {
+    pub(crate) fn set_page_size(&mut self, page_size: usize) {
         if self.page_size == page_size {
             return;
         }
@@ -182,7 +182,7 @@ impl ListSelection {
 
     /// The absolute index a click on `position` means: the cell of the current
     /// page, or under a model, which draws the whole list, that very cell.
-    pub fn candidate_index_at(&self, position: usize) -> Option<usize> {
+    pub(crate) fn candidate_index_at(&self, position: usize) -> Option<usize> {
         match &self.highlight {
             Highlight::Paged(selection) => selection.candidate_index_on_page(position),
             Highlight::Expandable(model) => (position < model.count()).then_some(position),
@@ -213,7 +213,7 @@ impl ListSelection {
 
     /// The cells changed in place: the next `present_table` lays them out
     /// again, keeping the highlight and the unfolded state.
-    pub fn mark_stale(&mut self) {
+    pub(crate) fn mark_stale(&mut self) {
         self.needs_layout = true;
     }
 

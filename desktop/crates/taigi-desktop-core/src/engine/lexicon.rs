@@ -49,7 +49,7 @@ impl DictionarySource {
     /// The badge a search result wears for this source: the three
     /// supplements and the custom dictionary share one, as on iOS and
     /// Android (`DictionarySearchPanel.tagKey`, `DictionarySource.tagKey`).
-    pub fn badge_key(self) -> StringKey {
+    pub(crate) fn badge_key(self) -> StringKey {
         match self {
             Self::Kautian => StringKey::DictionaryKautianTag,
             Self::Taigitv => StringKey::DictionaryTaigitvTag,

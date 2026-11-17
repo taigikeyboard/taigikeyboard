@@ -397,7 +397,7 @@ pub struct ShortcutConflicts;
 
 impl ShortcutConflicts {
     /// Which other global actions currently hold the same chord as `changed`.
-    pub fn conflicting_global_actions(
+    pub(crate) fn conflicting_global_actions(
         document: &SettingsDocument,
         changed: ShortcutAction,
         platform: DesktopPlatform,
@@ -416,7 +416,7 @@ impl ShortcutConflicts {
     /// Which global actions hold a chord only because it is their default,
     /// while another global action holds the same chord because the user
     /// recorded it there (the upgrade case).
-    pub fn defaults_shadowed_by_recordings(
+    pub(crate) fn defaults_shadowed_by_recordings(
         document: &SettingsDocument,
         platform: DesktopPlatform,
     ) -> Vec<ShortcutAction> {
@@ -441,7 +441,7 @@ impl ShortcutConflicts {
 
     /// A global recording just landed on `changed`: take the chord off every
     /// other global row and every composing row that held it.
-    pub fn resolve_after_global_recording(
+    pub(crate) fn resolve_after_global_recording(
         document: &mut SettingsDocument,
         changed: ShortcutAction,
         platform: DesktopPlatform,
@@ -462,7 +462,7 @@ impl ShortcutConflicts {
 
     /// A composing recording just landed on `changed` with `chord`: take the
     /// chord off every other composing field and every global row that held it.
-    pub fn resolve_after_composing_recording(
+    pub(crate) fn resolve_after_composing_recording(
         document: &mut SettingsDocument,
         changed: (ComposingAction, ChordField),
         chord: &ComposingKeyChord,
@@ -486,7 +486,10 @@ impl ShortcutConflicts {
     /// tier wins (it is the tier that fires first — a preserved key is
     /// dispatched before the classifier ever runs). A global row left on a
     /// typing key is cleared first. Idempotent.
-    pub fn resolve_across_registries(document: &mut SettingsDocument, platform: DesktopPlatform) {
+    pub(crate) fn resolve_across_registries(
+        document: &mut SettingsDocument,
+        platform: DesktopPlatform,
+    ) {
         for loser in Self::defaults_shadowed_by_recordings(document, platform) {
             loser.store_in(document, None, platform);
         }
@@ -539,7 +542,7 @@ impl ShortcutConflicts {
     /// chord stored on two fields by hand, or by an older build that never
     /// read the second field. Clearing only the shown holder would let the
     /// hidden one resurface on the next read.
-    pub fn composing_fields_holding(
+    pub(crate) fn composing_fields_holding(
         document: &SettingsDocument,
         bindings: &ComposingKeyBindings,
         chord: &ComposingKeyChord,

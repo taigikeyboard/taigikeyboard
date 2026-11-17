@@ -156,7 +156,7 @@ pub type CustomDictionaryPage = UserDataPage<CustomDictionaryEntry>;
 pub type LearningRecordPage = UserDataPage<LearningRecord>;
 
 /// One page as the settings windows page it (`CustomDictionaryPageModel`).
-pub fn list_custom_page(
+pub(crate) fn list_custom_page(
     filter: &str,
     page: usize,
     page_size: usize,
@@ -243,7 +243,7 @@ fn reset(reset: ResetUserData) -> Result<(), UserDataError> {
 /// the engine (which skips the rows already stored and stops at the cap).
 /// A file that cannot be read or holds no usable rows is
 /// `UserDataError::Refused`.
-pub fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserDataError> {
+pub(crate) fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserDataError> {
     let size = std::fs::metadata(path)
         .map_err(|error| unreadable(&error))?
         .len();
@@ -277,7 +277,7 @@ pub fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserData
 }
 
 /// The whole dictionary as `roman,hanji` CSV bytes.
-pub fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
+pub(crate) fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
     let op = "customDictionaryExportCSV";
     match page_request(
         user_data_request::Method::ExportCustomCsv(ExportCustomCsv {}),
@@ -291,7 +291,7 @@ pub fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
 /// The custom entries `query` finds the way the keyboard finds them: by
 /// the search key the query derives under `mode`, prefix-matched. Empty
 /// when the query derives no key.
-pub fn search_custom_entries(
+pub(crate) fn search_custom_entries(
     query: &str,
     mode: InputMode,
     limit: usize,
@@ -381,7 +381,7 @@ pub fn delete_learning_record(record: LearningRecord) -> Result<bool, UserDataEr
 /// is then forgotten (a frequency row is refused); a word the dictionary holds
 /// already is not added twice. A refusal (no romanization, no search key, a
 /// full dictionary) is `UserDataError::Refused` and keeps the row.
-pub fn add_learning_record_to_custom_dictionary(
+pub(crate) fn add_learning_record_to_custom_dictionary(
     record: LearningRecord,
     roman: &str,
     hanji: &str,

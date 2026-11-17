@@ -48,7 +48,7 @@ pub fn caret_chords_label(platform: DesktopPlatform) -> String {
 /// The slot keys under TPS, named rather than drawn as `123456789`: the
 /// number row picks only once the window is up (desktop TPS roadmap D7), and
 /// the keypad picks too. A key name like `Ctrl`, so not translated.
-pub const TPS_SLOT_KEYS_LABEL: &str = "1–9, Num 1–9";
+pub(crate) const TPS_SLOT_KEYS_LABEL: &str = "1–9, Num 1–9";
 
 /// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
 /// live slot set, bare — lowercase because a bare key shows the character
@@ -68,7 +68,7 @@ pub fn slot_keys_label(slot_keys: CandidateSlotKeySet, platform: DesktopPlatform
 /// Mac's `⇧QWDFZXVY;`): every key of the live slot set behind ONE Shift —
 /// the Hanji / romanization commit aimed at a slot. `None` under TPS, where
 /// a commit is always the Hanji and the row is not drawn.
-pub fn shifted_slot_keys_label(
+pub(crate) fn shifted_slot_keys_label(
     slot_keys: CandidateSlotKeySet,
     platform: DesktopPlatform,
 ) -> Option<String> {

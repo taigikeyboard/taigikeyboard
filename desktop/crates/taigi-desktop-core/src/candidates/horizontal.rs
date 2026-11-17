@@ -32,7 +32,7 @@ impl HorizontalPageLayout {
     /// (`CandidateSlotKeySet::page_size`), which callers pass as `page_size`.
     pub const PAGE_SIZE: usize = 9;
     /// A page never packs fewer potential columns than this.
-    pub const MINIMUM_PAGE_COLUMNS: usize = 4;
+    pub(crate) const MINIMUM_PAGE_COLUMNS: usize = 4;
 
     /// The nominal width of a full row of `page_size` slots.
     pub fn row_budget(slot_width: f32, page_size: usize) -> f32 {
@@ -96,12 +96,12 @@ impl HorizontalPageLayout {
         Self { pages, page_budget }
     }
 
-    pub fn candidate_count(&self) -> usize {
+    pub(crate) fn candidate_count(&self) -> usize {
         self.pages.iter().map(Vec::len).sum()
     }
 
     /// The page holding `candidate_index`, by arithmetic over the partition.
-    pub fn page_index_containing(&self, candidate_index: usize) -> Option<usize> {
+    pub(crate) fn page_index_containing(&self, candidate_index: usize) -> Option<usize> {
         let mut start = 0;
         for (page_index, page) in self.pages.iter().enumerate() {
             if candidate_index < start + page.len() {
@@ -122,7 +122,7 @@ impl HorizontalPageLayout {
     }
 
     /// The width of one page's cells laid end to end.
-    pub fn page_width(&self, page_index: usize) -> f32 {
+    pub(crate) fn page_width(&self, page_index: usize) -> f32 {
         self.pages
             .get(page_index)
             .map_or(0.0, |page| page.iter().map(|slot| slot.width).sum())
@@ -281,7 +281,7 @@ impl HorizontalListModel {
     }
 
     /// The page the selection is on — the visible page.
-    pub fn current_page(&self) -> usize {
+    pub(crate) fn current_page(&self) -> usize {
         self.layout
             .page_index_containing(self.selected_index)
             .unwrap_or(0)
