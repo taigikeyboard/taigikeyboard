@@ -176,7 +176,7 @@ impl ShortcutAction {
 
     /// Whether this action runs against the context the chord was pressed
     /// in — the picker anchors its window to that context's caret and writes
-    /// the pick into its document (`session.rs` `toggle_symbol_picker`) —
+    /// the pick into its document (`session/symbol_picker.rs` `toggle_symbol_picker`) —
     /// rather than through `perform_global`, which flips a setting or raises
     /// a card and needs no context. Both doorways route it there: the key
     /// sink's match, and `OnPreservedKey` with the context TSF hands it.
@@ -371,7 +371,7 @@ pub fn global_rejection(chord: &ComposingKeyChord) -> Option<ChordRejection> {
     // selected one, both ways it can be reached: as a preserved key
     // registered at activation and unregistered at Deactivate
     // (`preserved_keys.rs`), and as the key sink's fallback for hosts that
-    // bypass preserved keys (`session.rs`). Reaching a layout where
+    // bypass preserved keys (`session/mod.rs`). Reaching a layout where
     // AltGr+<letter> types a glyph means having selected a different
     // language profile, which is not this TIP. That leaves Ctrl+Alt as the
     // one two-modifier family that carries the Mac's ⌃⌘ roster over intact

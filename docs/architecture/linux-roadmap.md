@@ -243,7 +243,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   equivalent). The preedit is `UpdatePreeditText` with one `UNDERLINE_SINGLE` attribute
   over the whole text, `cursor_pos` = the caret the `UpdatePreedit` effect carries, mode
   `IBUS_ENGINE_PREEDIT_COMMIT` (a focus loss commits what is typed, as the Mac's
-  `commitComposition` does; Windows leaves the text as the host left it — `session.rs`
+  `commitComposition` does; Windows leaves the text as the host left it — `session/mod.rs`
   `composition_terminated`). `CandidateClicked` selects the slot, never commits
   (`CandidateItemView.swift:47-48` — identical semantics); `PageUp` / `PageDown` /
   `CursorUp` / `CursorDown` from the panel run the same `CandidateNavigation` intents the

@@ -82,7 +82,7 @@ impl CandidatePresenter {
     }
 
     /// Wires a presenter that only ever draws its own popup — the symbol
-    /// picker (`session.rs`). No thread manager and no service, so
+    /// picker (`session/symbol_picker.rs`). No thread manager and no service, so
     /// `begin_or_update_ui_element` never registers a UI-less element: the
     /// host-drawn candidate contract is the composing list's, and a host
     /// that draws candidate lists itself would otherwise be handed a menu

@@ -16,10 +16,14 @@
 //! `InitMenu` is the legacy desktop language bar's path, off by default on
 //! Windows 11.
 
+use crate::com_guard::guarded;
 use crate::guids::CLSID_TEXT_SERVICE;
 use crate::mode_icons::MODE_ICON_RESOURCES;
 use crate::module::instance;
 use crate::product_name;
+use crate::runtime::Runtime;
+use crate::settings_launcher;
+use crate::text_service::TextService_Impl;
 use crate::ui::window;
 use crate::wide::{fill_fixed, to_wide_nul};
 use taigi_desktop_core::keys::{menu_rows, MenuCommand, MENU};
@@ -27,9 +31,16 @@ use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::StringResolver;
 use taigi_windows_platform::DESKTOP_PLATFORM;
+use windows::core::{Error, IUnknown, Interface, Ref, BOOL, BSTR, GUID};
 use windows::core::{Result, PCWSTR};
+use windows::Win32::Foundation::{E_INVALIDARG, RECT};
 use windows::Win32::Foundation::{HWND, POINT};
+use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetActiveWindow, GetFocus};
+use windows::Win32::UI::TextServices::{
+    ITfLangBarItemButton_Impl, ITfLangBarItemSink, ITfLangBarItem_Impl, ITfMenu, ITfSource_Impl,
+    TfLBIClick,
+};
 use windows::Win32::UI::TextServices::{
     GUID_LBI_INPUTMODE, TF_LANGBARITEMINFO, TF_LBI_STYLE_BTN_BUTTON, TF_LBI_STYLE_SHOWNINTRAY,
 };
@@ -227,6 +238,155 @@ pub fn owned_icon(indicator: ModeIndicator) -> Result<HICON> {
         Some(handle) => Ok(HICON(handle.0)),
         // SAFETY: a stock system icon is shared; the copy is ours to hand over.
         None => unsafe { CopyIcon(LoadIconW(None, IDI_APPLICATION)?) },
+    }
+}
+
+impl ITfLangBarItem_Impl for TextService_Impl {
+    fn GetInfo(&self, pinfo: *mut TF_LANGBARITEMINFO) -> Result<()> {
+        guarded("ITfLangBarItem::GetInfo", || {
+            if pinfo.is_null() {
+                return Err(Error::from_hresult(E_INVALIDARG));
+            }
+            // SAFETY: TSF passes a valid out-pointer to its own struct.
+            unsafe { *pinfo = item_info() };
+            Ok(())
+        })
+    }
+
+    fn GetStatus(&self) -> Result<u32> {
+        guarded("ITfLangBarItem::GetStatus", || Ok(0))
+    }
+
+    fn Show(&self, _fshow: BOOL) -> Result<()> {
+        guarded("ITfLangBarItem::Show", || Ok(()))
+    }
+
+    fn GetTooltipString(&self) -> Result<BSTR> {
+        guarded("ITfLangBarItem::GetTooltipString", || {
+            Ok(BSTR::from(product_name::localized().as_str()))
+        })
+    }
+}
+
+impl ITfLangBarItemButton_Impl for TextService_Impl {
+    /// Both mouse buttons raise the menu — this button has no mode to
+    /// toggle, and the Mac opens its menu on a plain click
+    /// (`TaigiInputController.menu()`). The rows are drawn here
+    /// rather than through `InitMenu`: the taskbar input indicator never
+    /// drives the TSF menu (this module's header).
+    fn OnClick(&self, _click: TfLBIClick, pt: &POINT, _prcarea: *const RECT) -> Result<()> {
+        guarded("ITfLangBarItemButton::OnClick", || {
+            let runtime = Runtime::shared();
+            let rows = popup_rows(&runtime.strings(), &runtime.settings.current());
+            if let Some(id) = show_popup(&rows, *pt) {
+                match menu_command(id) {
+                    None => log::warn!("tsf.menu_unknown_id id={id}"),
+                    Some(MenuCommand::OpenSettings) => {
+                        // The picker comes down first, whoever raised it: this
+                        // path never reaches the session, and the settings
+                        // window taking focus is not guaranteed to end the
+                        // context that owns the list.
+                        self.hide_symbol_picker_now();
+                        settings_launcher::open_settings();
+                    }
+                    Some(MenuCommand::CheckForUpdates) => {
+                        // Also the settings window (on General): same doorway.
+                        self.hide_symbol_picker_now();
+                        settings_launcher::check_for_updates();
+                    }
+                    Some(MenuCommand::About) => {
+                        // The settings window on About, the pane the sidebar
+                        // does not list: same doorway.
+                        self.hide_symbol_picker_now();
+                        settings_launcher::open_about();
+                    }
+                    // A shortcut row does what its chord does, through the
+                    // same doorway (`perform_global`), against the context
+                    // focused NOW — resolved after the popup's modal loop,
+                    // not before it — so the open list of that context is
+                    // the one re-presented. No focused context is the
+                    // `OnPreservedKey` case: identity 0, the switches still
+                    // flip.
+                    Some(MenuCommand::Shortcut(action)) => {
+                        let identity = self.focused_context_identity();
+                        self.perform_global(action, identity);
+                    }
+                }
+            }
+            Ok(())
+        })
+    }
+
+    /// The declarative menu of a `TF_LBI_STYLE_BTN_MENU` button, which this
+    /// item is not — `OnClick` draws its own. Answered as an empty menu
+    /// rather than `E_NOTIMPL`: a host that probes it (the legacy desktop
+    /// language bar) reads a failure as a broken item, and mozc leaves the
+    /// same no-op `S_OK` for a non-menu button
+    /// (`tip_lang_bar_menu.cc:619-624`).
+    fn InitMenu(&self, _pmenu: Ref<ITfMenu>) -> Result<()> {
+        guarded("ITfLangBarItemButton::InitMenu", || Ok(()))
+    }
+
+    /// The other half of the declarative menu; nothing selects from an
+    /// empty one, and an unexpected id is not this item's error to raise.
+    fn OnMenuSelect(&self, _wid: u32) -> Result<()> {
+        guarded("ITfLangBarItemButton::OnMenuSelect", || Ok(()))
+    }
+
+    /// A caller-owned icon: TSF destroys what it is given. Re-read after
+    /// every switch and whenever this thread gets the focus back
+    /// (`notify_lang_bar` pushes the update), so it reads the settings file
+    /// as it is now.
+    fn GetIcon(&self) -> Result<HICON> {
+        guarded("ITfLangBarItemButton::GetIcon", || {
+            owned_icon(self.mode_indicator())
+        })
+    }
+
+    /// The same state as text, for a host that draws text instead.
+    fn GetText(&self) -> Result<BSTR> {
+        guarded("ITfLangBarItemButton::GetText", || {
+            Ok(BSTR::from(self.mode_indicator().symbol()))
+        })
+    }
+}
+
+impl ITfSource_Impl for TextService_Impl {
+    /// TSF advises exactly one `ITfLangBarItemSink` on a lang-bar item; a
+    /// second subscriber is refused rather than silently replacing the
+    /// first, so every advise has a symmetric unadvise.
+    fn AdviseSink(&self, riid: *const GUID, punk: Ref<IUnknown>) -> Result<u32> {
+        guarded("ITfSource::AdviseSink", || {
+            if riid.is_null() {
+                return Err(Error::from_hresult(E_INVALIDARG));
+            }
+            // SAFETY: null-checked; TSF's own IID pointer.
+            if unsafe { *riid } != ITfLangBarItemSink::IID {
+                return Err(Error::from_hresult(CONNECT_E_NOCONNECTION));
+            }
+            // The QueryInterface happens before the borrow.
+            let sink: ITfLangBarItemSink = punk.ok()?.cast()?;
+            let mut state = self.state.borrow_mut();
+            if state.lang_bar_sink.is_some() {
+                drop(state);
+                drop(sink);
+                return Err(Error::from_hresult(CONNECT_E_ADVISELIMIT));
+            }
+            state.lang_bar_sink = Some(sink);
+            Ok(LANG_BAR_SINK_COOKIE)
+        })
+    }
+
+    fn UnadviseSink(&self, dwcookie: u32) -> Result<()> {
+        guarded("ITfSource::UnadviseSink", || {
+            if dwcookie != LANG_BAR_SINK_COOKIE {
+                return Err(Error::from_hresult(CONNECT_E_NOCONNECTION));
+            }
+            // Taken under the borrow, released after it.
+            let sink = self.state.borrow_mut().lang_bar_sink.take();
+            drop(sink);
+            Ok(())
+        })
     }
 }
 
