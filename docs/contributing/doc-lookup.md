@@ -8,7 +8,7 @@ Verify a platform IME / framework API against current docs before coding it: Key
 
 ## How (in priority order)
 
-1. **Context7 `ctx7` CLI** (primary — the `find-docs` skill in Claude Code; returns real code + APIDOC, no auth needed; rate-limited → `ctx7 login` or `CONTEXT7_API_KEY`). Two steps; `npx -y ctx7@latest …` (macOS has no `timeout` — do not wrap it); ≤3 calls per question.
+1. **Context7 `ctx7` CLI** (primary; returns real code + APIDOC, no auth needed; rate-limited → `ctx7 login` or `CONTEXT7_API_KEY`). Two steps; `npx -y ctx7@latest …` (macOS has no `timeout` — do not wrap it); ≤3 calls per question.
    - Verified library IDs (skip re-resolution):
      - iOS KeyboardKit (the pbxproj allows `11.0.0` up to (not including) `12.0.0`; the version actually built is in the gitignored `ios/TaigiKeyboard.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` of the checkout you build from — read it before pinning a query): **`/keyboardkit/keyboardkit`**. Version-pin `/keyboardkit/keyboardkit/<ver>` if `ctx7 library` lists one.
      - Android official IME: **`/websites/developer_android`** (canonical) or **`/websites/developer_android_training`**.

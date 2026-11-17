@@ -36,6 +36,22 @@ Behaviour that the platforms must agree on is specified in
 A change to shared behaviour is a change to every platform that has it, or it
 is a regression on the others.
 
+## AI-assisted contributions
+
+Use whichever coding assistant you like. The rules are the same for all of
+them, and the same as for a change written by hand.
+
+- **One copy of every rule.** Rules live in [`AGENTS.md`](AGENTS.md) and
+  [`docs/contributing/`](docs/contributing/README.md) (for `emoji/`, in
+  `emoji/AGENTS.md` and `emoji/docs/`). A tool's own files — `CLAUDE.md` and
+  `.claude/` today — hold a pointer to those rules, that tool's enforcement of
+  a rule stated there, and tooling. They never state a rule of their own.
+- **Adding a tool.** If your assistant does not read `AGENTS.md` by itself,
+  add its entry file as a pointer to `AGENTS.md`, nothing more.
+- **You answer for the diff.** Read what the assistant wrote, run the build and
+  test commands for the platforms you touched, and fill in the pull request
+  template yourself.
+
 ## Build and test
 
 Start with [`docs/BUILDING.md`](docs/BUILDING.md): prerequisites, a pinned

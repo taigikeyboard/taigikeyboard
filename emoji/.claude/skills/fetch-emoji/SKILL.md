@@ -44,7 +44,7 @@ to decide which version / verify what a version added), never the data pipe.
 5. **Review `git diff`** of `data/` + `dist/emoji.json`. New emoji appear as added lines.
    Sanity-check a few against the reference pages. The per-emoji `version` field will carry
    the new version (e.g. `E17.0`); old devices filter those out at load via the platform
-   glyph check (see `.claude/rules/output-contract.md`).
+   glyph check (see `docs/output-contract.md`).
 
 6. **If a golden test breaks**, the grouping of a new emoji likely needs a
    `MIXED_TONE_PATTERNS` entry — fix in `scripts/generate.py`, add a golden test. Do NOT

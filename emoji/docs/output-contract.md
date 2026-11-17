@@ -1,6 +1,6 @@
 # Emoji Output Contract (cross-platform)
 
-Always-on. Governs `dist/emoji.json` — the single artifact both iOS and Android consume.
+Governs `dist/emoji.json` — the single artifact both iOS and Android consume.
 Change the schema only with a matching update to both platform loaders + the tests.
 
 ## Schema
