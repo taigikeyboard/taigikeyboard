@@ -235,7 +235,7 @@ windows-release:
 #   make version-desktop 2026.12.0   (CalVer YYYY.M.P)
 #
 # Policy and semantics: docs/architecture/manual-release-notes.md § Set the version.
-# The iOS `.pbxproj` is user-owned (Claude may not edit it); this target is the
+# The iOS `.pbxproj` is maintainer-owned (agents never edit it — AGENTS.md Core Principle 1); this target is the
 # maintainer running that edit.
 #
 # The version is a bare word, which make reads as a second goal — so it gets a

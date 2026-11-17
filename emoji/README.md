@@ -34,7 +34,7 @@ emoji  action  category  order  taigi_keywords  zh_Hant_keywords  en_keywords  n
 - `exclude` — drop an upstream emoji.
 
 Keywords are `|`-separated. For Taigi terms, use Hanji and only verified romanization — never invent
-romanization (see `.claude/rules/emoji-data-authoring.md`).
+romanization (see `docs/emoji-data-authoring.md`).
 
 ## Update to a new Unicode version
 
@@ -52,7 +52,7 @@ See `data/SOURCES.md` for origins, versions, and the version-pin rationale.
 ## Output
 
 `dist/emoji.json` — categories → emoji (base, codepoints, name, skin-tone variations,
-merged + per-locale keywords). Schema in `.claude/rules/output-contract.md`.
+merged + per-locale keywords). Schema in `docs/output-contract.md`.
 
 Both apps read `dist/emoji.json` directly and decode it into their own native model — no shared
 platform modules, no platform-side hardcoded emoji lists. This pipeline is tracked directly in the

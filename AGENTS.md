@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Working instructions for coding agents — and for humans — in this repository. Tool-specific additions live in each tool's own file (`CLAUDE.md` for Claude Code). Licensing, secrets and commit conventions: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Working instructions for coding agents — and for humans — in this repository. Every rule lives here or in `docs/contributing/`; a tool's own files (`CLAUDE.md` and `.claude/` for Claude Code) hold pointers, enforcement and tooling, never a rule of their own ([`CONTRIBUTING.md`](CONTRIBUTING.md) § AI-assisted contributions). Licensing, secrets and commit conventions: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 **TaigiKeyboard** — cross-platform Taiwanese input method: iOS (Swift + KeyboardKit), Android (Kotlin + Jetpack Compose), macOS (IMKit), Windows (TSF, Rust), Linux (Fcitx5 + IBus, Rust) over a shared Rust engine. POJ/TL/TPS romanization, Hanji, tone variation, autocomplete, continuous input.
 
