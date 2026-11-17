@@ -13,7 +13,6 @@ struct ExpandedCandidateOverlay: View {
     let onTranslateToggle: () -> Void
     let onCollapse: () -> Void
     let isTPSLayout: Bool
-    /// Whether `or` maps to ㄜ in TPS mode.
 
     @Environment(\.candidateViewStyle) private var style
     @Environment(\.candidateTheme) private var theme

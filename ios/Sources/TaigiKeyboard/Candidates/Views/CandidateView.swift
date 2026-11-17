@@ -26,7 +26,6 @@ struct CandidateView: View {
     let isComposing: Bool
     /// TPS layout — affects candidate rendering and commit logic.
     let isTPSLayout: Bool
-    /// Whether `or` maps to ㄜ in TPS mode.
 
     @State private var isToolShortcutsExpanded = false
 
