@@ -192,7 +192,7 @@ fn nailed_segments_stay_untouched() {
 /// The mobile path for one key: `TpsInputAdjust` against the pending tail,
 /// `ReplaceLast` when the adjuster asks, then `Append`. Space follows the
 /// platform rule (`ActionHandler+KeyActions.swift:168-175`).
-fn mobile_key(engine: &mut Engine, key: char) {
+fn mobile_key(engine: &mut Engine, key: char) -> Option<ComposingResponse> {
     let raw = raw_of(engine);
     if key == ' ' {
         let closed = raw
@@ -200,7 +200,7 @@ fn mobile_key(engine: &mut Engine, key: char) {
             .last()
             .is_none_or(|c| c == ' ' || phonetics::is_tps_tone_mark(c));
         if closed {
-            return;
+            return None;
         }
     }
     let (adjusted, replace_last) = if key == ' ' {
@@ -216,17 +216,79 @@ fn mobile_key(engine: &mut Engine, key: char) {
         )
         .unwrap();
     }
-    requests::handle(
-        &req(Method::Append(Append { char: adjusted })),
-        engine,
-        &config_tps(),
+    Some(
+        requests::handle(
+            &req(Method::Append(Append { char: adjusted })),
+            engine,
+            &config_tps(),
+        )
+        .unwrap(),
     )
-    .unwrap();
+}
+
+/// Asserts one `TpsKey` answers as the mobile path's last call did: same
+/// raw buffer, effects and preedit; a key the mobile rule swallowed (no call)
+/// is a `TpsKey` with no effects.
+fn assert_same_key(one_step: &mut Engine, three_calls: &mut Engine, key: char, keys: &str) {
+    let single = tps_key(one_step, &key.to_string());
+    match mobile_key(three_calls, key) {
+        Some(mobile) => {
+            assert_eq!(
+                single.effect, mobile.effect,
+                "effects at {key:?} of {keys:?}"
+            );
+            assert_eq!(
+                single.preedit, mobile.preedit,
+                "preedit at {key:?} of {keys:?}"
+            );
+            assert_eq!(
+                single.is_composing, mobile.is_composing,
+                "{key:?} of {keys:?}"
+            );
+        }
+        None => assert!(single.effect.is_empty(), "refused {key:?} of {keys:?}"),
+    }
+    assert_eq!(
+        raw_of(one_step),
+        raw_of(three_calls),
+        "diverged at {key:?} of {keys:?}"
+    );
+}
+
+#[test]
+fn tps_key_matches_the_mobile_three_call_path_with_nailed_segments() {
+    for keys in ["ㄧ", "ㄧㄚˋ", " ", "ㄇˊ", "-ㄅ", "ㄚ0123456789"] {
+        let mut one_step = Engine::new();
+        let mut three_calls = Engine::new();
+        for engine in [&mut one_step, &mut three_calls] {
+            type_keys(engine, "ㄍㄚㄙ");
+            engine.apply(
+                Intent::CommitContinuous {
+                    canonical_text: "家".to_string(),
+                    association_tl: String::new(),
+                    hanji: Some("家".to_string()),
+                    consumed_bytes: "ㄍㄚ".len(),
+                    syllable_count: 1,
+                    script: Some(composing::CommitScript::Lead),
+                    roman: "ka".to_string(),
+                },
+                &config_tps(),
+            );
+        }
+        for key in keys.chars() {
+            assert_same_key(&mut one_step, &mut three_calls, key, keys);
+        }
+    }
 }
 
 #[test]
 fn tps_key_matches_the_mobile_three_call_path() {
     for keys in [
+        "ㄚ0123456789", // every digit, typed after one another: all stay literal
+        "ㄍㄚ-ㄇ",      // hyphen inside, dual-form after it
+        "-ㄍ",          // leading hyphen from Idle stays a literal
+        "ㄒㄧㄍ˙ ",     // Space after the combining tone-8 dot is refused
+        "ㆮㄧㆮ",
         "ㄍㄠㄉㄞ",     // §32: 交代 without a separator
         "ㄍㄠ ㄉㄞ",    // §31: with one
         "ㄍㄨㄇㆦ",     // §33: 龜毛
@@ -240,13 +302,7 @@ fn tps_key_matches_the_mobile_three_call_path() {
         let mut one_step = Engine::new();
         let mut three_calls = Engine::new();
         for key in keys.chars() {
-            tps_key(&mut one_step, &key.to_string());
-            mobile_key(&mut three_calls, key);
-            assert_eq!(
-                raw_of(&one_step),
-                raw_of(&three_calls),
-                "diverged at {key:?} of {keys:?}"
-            );
+            assert_same_key(&mut one_step, &mut three_calls, key, keys);
         }
     }
 }
