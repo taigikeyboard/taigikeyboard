@@ -6,8 +6,7 @@ use composing::{requests, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::{
     Append, AppendHyphen, CommitContinuous, CommitPrediction, CommitPreeditThenInsertExternal,
-    CommitRaw, CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, ReplaceLast,
-    Reset, Start,
+    CommitRaw, CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, Reset, Start,
 };
 
 use crate::common;
@@ -76,14 +75,6 @@ fn every_method_decodes_to_its_intent() {
             Intent::Append { ch: "k".into() },
         ),
         (Method::AppendHyphen(AppendHyphen {}), Intent::AppendHyphen),
-        (
-            Method::ReplaceLast(ReplaceLast {
-                replacement: "c".into(),
-            }),
-            Intent::ReplaceLast {
-                replacement: "c".into(),
-            },
-        ),
         (
             Method::DeleteBackward(DeleteBackward {}),
             Intent::DeleteBackward,

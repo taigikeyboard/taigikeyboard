@@ -38,7 +38,7 @@ public extension RustEngineBridge {
         )
     }()
 
-    // MARK: TPS (3 ops)
+    // MARK: TPS (1 op)
 
     static func tlDisplayToTPS(_ text: String, orMapsToER: Bool) -> String {
         var payload = Taigi_Engine_TlDisplayToTps()
@@ -49,32 +49,6 @@ public extension RustEngineBridge {
             input: text,
             op: "tlDisplayToTps",
         )
-    }
-
-    /// Whether `char` ends in a TPS tone mark. The op reads one scalar, so this
-    /// sends the last one: a stop coda carrying the combining tone-8 dot
-    /// (`ㆻ̇`) is a single grapheme whose last scalar is the mark U+0307.
-    static func isTPSToneMark(_ char: Character) -> Bool {
-        guard let last = char.unicodeScalars.last else { return false }
-        var payload = Taigi_Engine_IsTpsToneMark()
-        payload.char = String(last)
-        return boolDispatch(method: .isTpsToneMark(payload), op: "isTpsToneMark")
-    }
-
-    static func tpsInputAdjust(
-        incoming: String,
-        rawInput: String,
-    ) -> (adjusted: String, replaceLast: String?) {
-        var payload = Taigi_Engine_TpsInputAdjust()
-        payload.incoming = incoming
-        payload.rawInput = rawInput
-        let resp = dispatch(method: .tpsInputAdjust(payload), op: "tpsInputAdjust")
-        guard case let .tpsAdjustResult(r)? = resp?.result else {
-            recordFailure(op: "tpsInputAdjust", message: "missing result")
-            return (incoming, nil)
-        }
-        let replace = r.hasReplaceLast && r.replaceLast.present ? r.replaceLast.output : nil
-        return (r.adjusted, replace)
     }
 
     // MARK: Platform text helpers

@@ -126,14 +126,14 @@ The cross-platform behavior contract every Rust slice and platform change must p
 
 ## 3. TPS — TL ↔ TPS round-trip
 
-**Invariant**: for every supported TPS syllable sequence (MOE2 layout), `TLToTPS(TPSToTL(x)) == x` and `TPSToTL(TLToTPS(y)) == y`, modulo the documented composition-order adjustments in `TPSInputAdjuster`.
+**Invariant**: for every supported TPS syllable sequence (MOE2 layout), `TLToTPS(TPSToTL(x)) == x` and `TPSToTL(TLToTPS(y)) == y`, modulo the documented composition-order adjustments in the TPS input adjuster (`phonetics::tps_adjust`).
 
 **Why**: TPS mode shares the same candidate/scoring pipeline as POJ/TL. Divergent TPS conversion between platforms means the same keystroke shows different candidates.
 
-**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api`. Bridged via `RustEngineBridge.tlDisplayToTPS` / `tpsInputAdjust` / `isTPSToneMark`. `phonetics::api::tl_numeric_to_tps`, `phonetics::api::contains_tps` and the TPS → TL direction (`phonetics::tps_to_tl`, consumed by `composing::continuous` for per-span conversion) are Rust-internal only. No platform-side TPS converter exists.
+**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api`. Bridged via `RustEngineBridge.tlDisplayToTPS`; the key-level adjust runs inside the composing `TpsKey` op. `phonetics::api::tl_numeric_to_tps`, `phonetics::api::contains_tps` and the TPS → TL direction (`phonetics::tps_to_tl`, consumed by `composing::continuous` for per-span conversion) are Rust-internal only. No platform-side TPS converter exists.
 
 **Corner cases**:
-- `TPSInputAdjuster` reorders initial/medial/final before conversion; round-trip must account for adjuster output, not raw keystrokes.
+- The TPS input adjuster (`phonetics::tps_adjust`) reorders initial/medial/final before conversion; round-trip must account for adjuster output, not raw keystrokes.
 - Tone digits on TPS syllables pass through unchanged.
 - `phonetics::api::contains_tps` must return `false` for any pure Roman input (no false positives on ASCII-only strings).
 
@@ -752,7 +752,7 @@ In **TPS** input, a dual-form STOP key (`ㄅ`/`ㄉ`/`ㄍ`/`ㄏ`) typed after a p
 - **Ambiguous-by-default.** When both readings are valid (`ㄚ`+`ㄉ` = `kat` or `ka`+`ta`-), the gate keeps the coda; the alternate is reached via the boundary space (§31).
 - **Residuals** (space-disambiguated): chained no-space multi-syllable with a mid impossible coda (`ㄍㄠㄍㄠ`+`ㄉ`); zero-onset second syllable after an open syllable (`ㄍㄠ`+`ㄧ`+`ㄉ`).
 
-**Scope**: shared Rust engine (`phonetics`). iOS and Android call `Method::TpsInputAdjust` per keystroke (gated on the TPS layout). Needs `make build`.
+**Scope**: shared Rust engine (`phonetics`). Every platform sends `TpsKey` per keystroke (gated on the TPS input mode). Needs `make build`.
 
 **Engine sites**: `phonetics/src/tps_adjust.rs` — `adjust_initial_key`, `dual_final_form(initial, last)`, `pending_open_syllable`. Validity via `crate::tps_to_tl` → `crate::is_valid_syllable`.
 
@@ -772,7 +772,7 @@ Sibling of §32 for dual-form NASALS. In **TPS** input, `ㄇ`/`ㄋ`/`ㄫ` typed 
 - **Rule 2b interaction is benign.** `syllabic_nasal_replacement` (Rule 2b, ungated, `ㄇ`/`ㄫ` only) still folds a kept `ㄇ`/`ㄫ` to syllabic `ㆬ`/`ㆭ` when a tone mark follows; those `<vowel><nasal><tone>` sequences map to no dictionary word either way.
 - **No segmentation / ambiguous-by-default / residuals** — as §32.
 
-**Scope**: shared Rust engine (`phonetics`), reached through `Method::TpsInputAdjust`. Needs `make build`.
+**Scope**: shared Rust engine (`phonetics`), reached through `TpsKey`. Needs `make build`.
 
 **Engine sites**: `phonetics/src/tps_adjust.rs` — `adjust_initial_key`, `dual_final_form`, `pending_open_syllable`.
 

@@ -43,16 +43,5 @@ public interface PhoneticsResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult getToneVariationsResult();
 
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   * @return Whether the tpsAdjustResult field is set.
-   */
-  boolean hasTpsAdjustResult();
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   * @return The tpsAdjustResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult();
-
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse.ResultCase getResultCase();
 }

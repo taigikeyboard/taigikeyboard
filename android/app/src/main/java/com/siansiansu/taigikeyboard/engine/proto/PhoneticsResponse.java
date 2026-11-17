@@ -23,7 +23,6 @@ public  final class PhoneticsResponse extends
     STRING_RESULT(10),
     BOOL_RESULT(13),
     TONE_VARIATIONS_RESULT(14),
-    TPS_ADJUST_RESULT(15),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -42,7 +41,6 @@ public  final class PhoneticsResponse extends
         case 10: return STRING_RESULT;
         case 13: return BOOL_RESULT;
         case 14: return TONE_VARIATIONS_RESULT;
-        case 15: return TPS_ADJUST_RESULT;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -209,56 +207,6 @@ public  final class PhoneticsResponse extends
    */
   private void clearToneVariationsResult() {
     if (resultCase_ == 14) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int TPS_ADJUST_RESULT_FIELD_NUMBER = 15;
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   */
-  @java.lang.Override
-  public boolean hasTpsAdjustResult() {
-    return resultCase_ == 15;
-  }
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult() {
-    if (resultCase_ == 15) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   */
-  private void setTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 15;
-  }
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   */
-  private void mergeTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 15 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 15;
-  }
-  /**
-   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-   */
-  private void clearTpsAdjustResult() {
-    if (resultCase_ == 15) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -517,54 +465,6 @@ public  final class PhoneticsResponse extends
       return this;
     }
 
-    /**
-     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-     */
-    @java.lang.Override
-    public boolean hasTpsAdjustResult() {
-      return instance.hasTpsAdjustResult();
-    }
-    /**
-     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult() {
-      return instance.getTpsAdjustResult();
-    }
-    /**
-     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-     */
-    public Builder setTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
-      copyOnWrite();
-      instance.setTpsAdjustResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-     */
-    public Builder setTpsAdjustResult(
-        com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.Builder builderForValue) {
-      copyOnWrite();
-      instance.setTpsAdjustResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-     */
-    public Builder mergeTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
-      copyOnWrite();
-      instance.mergeTpsAdjustResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
-     */
-    public Builder clearTpsAdjustResult() {
-      copyOnWrite();
-      instance.clearTpsAdjustResult();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsResponse)
   }
   @java.lang.Override
@@ -586,11 +486,10 @@ public  final class PhoneticsResponse extends
             com.siansiansu.taigikeyboard.engine.proto.StringResult.class,
             com.siansiansu.taigikeyboard.engine.proto.BoolResult.class,
             com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.class,
-            com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\n\u000f\u0004\u0000\u0000\u0000\n<\u0000\r<\u0000\u000e" +
-              "<\u0000\u000f<\u0000";
+              "\u0000\u0003\u0001\u0000\n\u000e\u0003\u0000\u0000\u0000\n<\u0000\r<\u0000\u000e" +
+              "<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

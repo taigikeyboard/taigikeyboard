@@ -6,7 +6,7 @@ import XCTest
 /// Scope (per Codex consult 2026-05-10, session 019e11d7):
 /// - One engine call per keystroke: every raw-input mutation
 ///   (`startComposing` / `appendCharacter` / `appendHyphen` /
-///   `replaceLastCharacter`) leaves a composition `FetchAtPos` answers with
+///   `tpsKey`) leaves a composition `FetchAtPos` answers with
 ///   a candidates carrier — no separate promotion request (R12).
 /// - `fetchContinuousCandidates()` is read-only — does not mutate `rawInput`
 ///   or `isComposing` (mirrors `RustEngineBridgeContinuousTests`).
@@ -120,18 +120,20 @@ final class ComposingManagerContinuousTests: XCTestCase {
         )
     }
 
-    func testReplaceLastCharacter_ComposesInOneCall() {
-        manager.startComposing(with: "tsuab")
-        manager.replaceLastCharacter(with: "c")
+    func testTpsKey_ComposesInOneCall() {
+        manager.tpsKey("ㄗ")
+        manager.tpsKey("ㄧ")
 
+        var tpsSettings = settings
+        tpsSettings.inputMode = .tps
         let result = RustEngineBridge.composingFetchAtPos(
-            settings: settings,
+            settings: tpsSettings,
             generation: 1,
             nowMs: 0,
         )
         XCTAssertNotNil(
             result.candidates,
-            "replaceLastCharacter must keep engine in Phase::Continuous",
+            "tpsKey must keep engine in Phase::Continuous",
         )
     }
 

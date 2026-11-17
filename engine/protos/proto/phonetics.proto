@@ -34,16 +34,18 @@ message PhoneticsRequest {
   // display-form op below covers every caller (removed 2026-10-09).
   reserved 32;
   reserved "tl_numeric_to_tps";
+  // The phones' TPS key path, folded into composing `TpsKey` (removed
+  // 2026-11-17).
+  reserved 34, 35;
+  reserved "is_tps_tone_mark", "tps_input_adjust";
 
   oneof method {
     // --- Phonetics core (2 ops) ---
     TlToPoj tl_to_poj = 13;
     GetToneVariations get_tone_variations = 18;
 
-    // --- TPS (3 ops) ---
+    // --- TPS (1 op) ---
     TlDisplayToTps tl_display_to_tps = 33;
-    IsTpsToneMark is_tps_tone_mark = 34;
-    TpsInputAdjust tps_input_adjust = 35;
 
     // --- Platform text helpers (40s) ---
     IsAttachingPunctuation is_attaching_punctuation = 40;
@@ -86,19 +88,6 @@ message GetToneVariations {}
 message TlDisplayToTps {
   string text = 1;
   bool or_maps_to_er = 2;
-}
-
-// `IsTpsToneMark` checks if a single Unicode scalar is a TPS tone mark.
-// `char` MUST be a single grapheme; engine returns false for empty / multi.
-message IsTpsToneMark { string char = 1; }
-
-// `TpsInputAdjust` is the collapsed TPSAdjustmentBundle entry point:
-// runs adjustInitialKey → adjustNasalizedVowelKey → syllabicNasalReplacement
-// ?: palatalizationReplacement. Caller MUST gate by TPS layout; engine
-// does not gate (TPS is a layout, not a mode, on Android).
-message TpsInputAdjust {
-  string incoming = 1;
-  string raw_input = 2;
 }
 
 // =========================================================================
@@ -155,20 +144,22 @@ message ExternalLookupDigitForm { string reading = 1; }
 
 message PhoneticsResponse {
   // Tag 12 was the top-level `optional_string_result` (only `RestoreTone`
-  // returned it; removed 2026-09-25). `OptionalStringResult` stays as the
-  // `TpsAdjustResult.replace_last` field type.
+  // returned it; removed 2026-09-25).
   reserved 12, 16;
   reserved "optional_string_result", "custom_search_keys_result";
   // Tag 11 was `strip_tone_result`, the answer of the retired `StripTone`
   // op (removed 2026-10-04).
   reserved 11;
   reserved "strip_tone_result";
+  // Tag 15 was `tps_adjust_result`, the answer of the retired
+  // `TpsInputAdjust` op (removed 2026-11-17).
+  reserved 15;
+  reserved "tps_adjust_result";
 
   oneof result {
     StringResult string_result = 10;
     BoolResult bool_result = 13;
     ToneVariationsResult tone_variations_result = 14;
-    TpsAdjustResult tps_adjust_result = 15;
   }
 }
 
@@ -177,14 +168,6 @@ message PhoneticsResponse {
 // =========================================================================
 
 message StringResult { string output = 1; }
-
-// `OptionalStringResult` is a String? equivalent. `present` indicates
-// whether `output` is meaningful (proto3 has no native optional for
-// non-message scalar fields without the `optional` keyword).
-message OptionalStringResult {
-  string output = 1;
-  bool present = 2;
-}
 
 message BoolResult { bool value = 1; }
 
@@ -200,12 +183,4 @@ message ToneVariationsResult {
 }
 
 message ToneVariationList { repeated string variations = 1; }
-
-// `TpsAdjustResult` carries the adjusted incoming char + an optional
-// retroactive `replace_last` instruction for the platform to issue
-// `replaceLastCharacter`.
-message TpsAdjustResult {
-  string adjusted = 1;
-  OptionalStringResult replace_last = 2;
-}
 

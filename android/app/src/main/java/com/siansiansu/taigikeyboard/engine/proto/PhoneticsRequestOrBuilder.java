@@ -42,7 +42,7 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -51,35 +51,13 @@ public interface PhoneticsRequestOrBuilder extends
   boolean hasTlDisplayToTps();
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    * @return The tlDisplayToTps.
    */
   com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps getTlDisplayToTps();
-
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   * @return Whether the isTpsToneMark field is set.
-   */
-  boolean hasIsTpsToneMark();
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   * @return The isTpsToneMark.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark getIsTpsToneMark();
-
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   * @return Whether the tpsInputAdjust field is set.
-   */
-  boolean hasTpsInputAdjust();
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   * @return The tpsInputAdjust.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust();
 
   /**
    * <pre>

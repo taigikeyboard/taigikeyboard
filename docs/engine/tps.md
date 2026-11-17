@@ -25,12 +25,10 @@ All TPS conversion and key-level auto-adjust live in Rust `engine/phonetics` (`t
 | TL → TPS (display) | Rust `phonetics::tps::to_zhuyin`, wrapped by `phonetics::api::tl_display_to_tps` / `tl_numeric_to_tps` |
 | Build-time TPS keys | Rust `tps_num_from_tl`, `tps_notone_from_tl`, `tps_abbrev_from_tl`; pipeline `dictionary/common/stages/numtone.py::_derive_tps_num` |
 | Key-level auto-adjust | Rust `phonetics::tps_adjust::adjust` (rules: [`tps-auto-correct-rules.md`](../phonetics/tps-auto-correct-rules.md)) |
-| Bridge — detection | iOS `RustEngineBridge.isTPSToneMark(_)` |
 | Bridge — TL → TPS | iOS `RustEngineBridge.tlDisplayToTPS(_:orMapsToER:)` |
-| Bridge — input adjust (mobile) | `RustEngineBridge.tpsInputAdjust` (iOS `Engine/RustEngineBridge+Phonetics.swift`, Android `engine/PhoneticsBridge.kt`) returning `(adjusted, replaceLast?)` |
-| Desktop input adjust | `Method::TpsKey` → `composing::transition::tps_key` → `phonetics::tps_input_adjust`, inside the engine |
-| iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Candidates/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
-| Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/keyboard/TextInputKeyHandler.handleTaigiInput()`, layout JSON `assets/ime/text/characters/tps.json` |
+| Input adjust (every platform) | `Method::TpsKey` → `composing::transition::tps_key` → `phonetics::tps_input_adjust`, inside the engine; mobile `ComposingManager.tpsKey` (iOS / Android) |
+| iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Candidates/Views/CandidateCellHelper.swift` (candidate TPS display), `Actions/ActionHandler+KeyActions.swift` (sends `TpsKey`) |
+| Android TPS-aware glue | `ime/text/keyboard/TextInputKeyHandler.handleTaigiInput()` (sends `TpsKey`), layout JSON `assets/ime/text/characters/tps.json` |
 
 ---
 
@@ -182,15 +180,15 @@ Entering-tone codas (ㆴ/ㆵ/ㆻ/ㆷ) come from Rule 2 auto-selection or the lon
 
 ```swift
 // iOS — Engine/RustEngineBridge+Phonetics.swift
-RustEngineBridge.isTPSToneMark("ˋ")                          // true
 RustEngineBridge.tlDisplayToTPS("guá", orMapsToER: false)    // "ㆣㄨㄚˋ"
 
-// Key-level adjust (positional ㄇ/ㆬ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ):
-let r = RustEngineBridge.tpsInputAdjust(incoming: "ㄇ", rawInput: "ㄅㄚ")
-// r.adjusted = "ㆬ", r.replaceLast = nil
+// One TPS key (positional ㄇ/ㆬ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ
+// applied inside the engine) — Input/Composing/ComposingManager.swift:
+composingManager.tpsKey("ㄇ")   // rawInput "ㄅㄚ" → "ㄅㄚㆬ"
+composingManager.tpsKey(" ")    // false when the separator rule refuses it
 ```
 
-The iOS / Android `CharacterInputPipeline` calls `tpsInputAdjust` once per keystroke from `ActionHandler+KeyActions.handleCharacterInput` (iOS) / `TextInputKeyHandler.handleTaigiInput()` (Android). TPS → TL has no FFI surface.
+`ActionHandler+KeyActions.handleCharacterInput` (iOS) / `TextInputKeyHandler.handleTaigiInput()` (Android) send one `TpsKey` per keystroke under the TPS input mode; the Space key sends `" "` and commits when the engine refuses it (no effects). TPS → TL has no FFI surface.
 
 ---
 
@@ -275,7 +273,7 @@ So that a user typing ㄛ for an `or`-spelled entry still finds it, the build pi
 |---------|-----|---------|
 | Composing platform wrapper | `Input/Composing/ComposingManager.swift` | `ime/text/composing/ComposingManager.kt` |
 | Effect → text-region binding | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`) |
-| Keystroke dispatcher | `Input/CharacterInputPipeline.swift` | `ime/text/CharacterInputPipeline.kt` |
+| Keystroke dispatcher | `Actions/ActionHandler+KeyActions.swift` | `ime/text/keyboard/TextInputKeyHandler.kt` |
 | Layout / candidate UI | `Layout/`, `Candidates/Views/` | `ime/text/layout/`, `ime/text/candidates/` |
 
 ---

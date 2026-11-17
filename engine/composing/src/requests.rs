@@ -55,9 +55,6 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         Method::Start(m) => Intent::Start { text: m.text },
         Method::Append(m) => Intent::Append { ch: m.char },
         Method::AppendHyphen(_) => Intent::AppendHyphen,
-        Method::ReplaceLast(m) => Intent::ReplaceLast {
-            replacement: m.replacement,
-        },
         Method::DeleteBackward(_) => Intent::DeleteBackward,
         Method::CommitRaw(_) => Intent::CommitRaw,
         Method::CommitPreeditThenInsertExternal(m) => {

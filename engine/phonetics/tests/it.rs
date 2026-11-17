@@ -11,6 +11,7 @@ mod normalize_tone_nasal_case;
 mod op_coverage;
 mod roman_only_spelling_parity;
 mod roundtrip;
+mod tps_input_adjust;
 
 /// Every `tests/*.rs` is a `[[test]]` root in `Cargo.toml` or a `mod` of one,
 /// so a new test file cannot silently stop running under `autotests = false`.

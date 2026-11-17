@@ -366,7 +366,7 @@ fn reset_under_continuous_emits_the_abort_trio() {
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
-// ---- Append / AppendHyphen / ReplaceLast under Continuous ---------
+// ---- Append / AppendHyphen under Continuous ---------
 
 #[test]
 fn append_under_continuous_extends_pending_only() {
@@ -429,40 +429,6 @@ fn append_hyphen_under_continuous_appends_dash() {
         panic!();
     };
     assert_eq!(raw, "tsua-");
-}
-
-#[test]
-fn replace_last_under_continuous_modifies_pending_only() {
-    let mut e = engine_in_continuous("tsuagua");
-    e.apply(
-        Intent::CommitContinuous {
-            canonical_text: "珠".to_string(),
-            association_tl: String::new(),
-            hanji: None,
-            consumed_bytes: 3,
-            syllable_count: 1,
-            script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
-        },
-        &config_tl(),
-    );
-    // pending = "agua". Replace last char.
-    let resp = e.apply(
-        Intent::ReplaceLast {
-            replacement: "i".to_string(),
-        },
-        &config_tl(),
-    );
-    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
-    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
-        panic!();
-    };
-    assert_eq!(raw, "agui");
-    assert_eq!(nailed.len(), 1);
-    // Model B: combined preedit = 珠 + derived("agui") = "珠agui".
-    let preedit = resp.preedit.as_ref().expect("preedit");
-    assert_eq!(preedit.raw_input, "agui");
-    assert_eq!(preedit.display_text, "珠agui");
 }
 
 // ---- DeleteBackward (folded backspace) under Continuous -----------
@@ -1250,28 +1216,6 @@ fn empty_start_stays_idle() {
     );
     assert!(resp.effect.is_empty());
     assert!(!resp.is_composing);
-    assert_eq!(e.snapshot_state().phase, Phase::Idle);
-}
-
-#[test]
-fn replace_last_to_empty_pending_no_nailed_exits_to_idle() {
-    // Engineered: Continuous with single-char pending and no nailed segments.
-    // ReplaceLast with empty replacement collapses to Idle, fires nextword clear.
-    let mut e = engine_in_continuous("a");
-    let resp = e.apply(
-        Intent::ReplaceLast {
-            replacement: String::new(),
-        },
-        &config_tl(),
-    );
-    assert_kinds(
-        &resp.effect,
-        [
-            "ClearPreeditWithoutCommit",
-            "ClearCandidates",
-            "NextWordClearForNewComposing",
-        ],
-    );
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 

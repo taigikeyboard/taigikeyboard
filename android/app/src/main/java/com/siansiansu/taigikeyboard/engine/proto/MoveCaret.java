@@ -16,8 +16,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * cannot make — a step past an edge of the pending tail (the caret never
  * enters a nailed segment), a jump to the edge it already sits at — leaves it
  * where it is, with no effects unless a conversion is rebuilt (below). Every mutator
- * then edits at the caret: `Append` inserts there, `DeleteBackward` /
- * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
+ * then edits at the caret: `Append` inserts there, `DeleteBackward` acts on
+ * the character before it, `TelexKey` and `TpsKey` on
  * the chunk before it. Mobile never sends this, so its caret stays at the end and
  * every mutator behaves as before.
  * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
@@ -178,8 +178,8 @@ public  final class MoveCaret extends
    * cannot make — a step past an edge of the pending tail (the caret never
    * enters a nailed segment), a jump to the edge it already sits at — leaves it
    * where it is, with no effects unless a conversion is rebuilt (below). Every mutator
-   * then edits at the caret: `Append` inserts there, `DeleteBackward` /
-   * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
+   * then edits at the caret: `Append` inserts there, `DeleteBackward` acts on
+   * the character before it, `TelexKey` and `TpsKey` on
    * the chunk before it. Mobile never sends this, so its caret stays at the end and
    * every mutator behaves as before.
    * Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,

@@ -9,7 +9,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * Continuous-input abort. Maps to
  * `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
- * `Reset` / an emptying `DeleteBackward` / `ReplaceLast` exits
+ * `Reset` / an emptying `DeleteBackward` exits
  * `Phase::Continuous` without committing.
  * </pre>
  *
@@ -110,7 +110,7 @@ public  final class NextWordClearForNewComposing extends
    * <pre>
    * Continuous-input abort. Maps to
    * `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
-   * `Reset` / an emptying `DeleteBackward` / `ReplaceLast` exits
+   * `Reset` / an emptying `DeleteBackward` exits
    * `Phase::Continuous` without committing.
    * </pre>
    *

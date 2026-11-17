@@ -24,9 +24,9 @@ import com.siansiansu.taigikeyboard.engine.composingCommitPreeditThenInsertExter
 import com.siansiansu.taigikeyboard.engine.composingCommitRaw
 import com.siansiansu.taigikeyboard.engine.composingDeleteBackward
 import com.siansiansu.taigikeyboard.engine.composingFetchAtPos
-import com.siansiansu.taigikeyboard.engine.composingReplaceLast
 import com.siansiansu.taigikeyboard.engine.composingReset
 import com.siansiansu.taigikeyboard.engine.composingStart
+import com.siansiansu.taigikeyboard.engine.composingTpsKey
 import com.siansiansu.taigikeyboard.engine.continuousAppConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
@@ -205,20 +205,24 @@ class ComposingManager(
         )
     }
 
-    fun replaceLastCharacter(
-        replacement: String,
+    /**
+     * One TPS key, idle or composing: the engine applies the TPS auto-correct
+     * and inserts it. Returns `false` when the engine refused the key — a
+     * Space the syllable-separator rule turns down — so the caller handles it.
+     */
+    fun tpsKey(
+        key: String,
         ic: InputConnection,
-    ) {
-        logger.tdebug(TAG) { "[COMPOSE] fn=replaceLastCharacter replacement='$replacement'" }
-        val settings = settingsProvider.current
-        applyTransition(
-            RustEngineBridge.composingReplaceLast(
-                replacement,
-                settings,
+    ): Boolean {
+        logger.tdebug(TAG) { "[COMPOSE] fn=tpsKey key='$key'" }
+        val transition =
+            RustEngineBridge.composingTpsKey(
+                key,
+                settingsProvider.current,
                 currentGeneration,
-            ),
-            ic,
-        )
+            )
+        applyTransition(transition, ic)
+        return transition.effects.isNotEmpty()
     }
 
     /**

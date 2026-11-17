@@ -300,16 +300,19 @@ public extension RustEngineBridge {
         )
     }
 
-    internal static func composingReplaceLast(
-        _ replacement: String,
+    /// One TPS key — the engine adjusts it against the pending tail, applies
+    /// any replacement of the previous glyph and inserts it; `" "` is the
+    /// syllable separator, a no-op (no effects) where the rule refuses it.
+    internal static func composingTpsKey(
+        _ key: String,
         settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
-        var payload = Taigi_Engine_ReplaceLast()
-        payload.replacement = replacement
+        var payload = Taigi_Engine_TpsKey()
+        payload.key = key
         return composingDispatch(
-            method: .replaceLast(payload),
-            op: "composingReplaceLast",
+            method: .tpsKey(payload),
+            op: "composingTpsKey",
             generation: generation,
             config: continuousAppConfig(settings),
         )

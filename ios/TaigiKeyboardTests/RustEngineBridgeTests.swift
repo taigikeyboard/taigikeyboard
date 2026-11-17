@@ -12,8 +12,7 @@ import XCTest
 ///
 /// Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus one
 /// result-decode pin per phonetics op shape the Swift bridge maps itself.
-/// Op behaviour lives in `engine/phonetics/tests/op_coverage.rs`; TPS input
-/// adjust decode in `CharacterInputPipelineTests`; the 2 MB cap boundary in
+/// Op behaviour lives in `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
 /// `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
 final class RustEngineBridgeTests: XCTestCase {
     override class func setUp() {
@@ -44,17 +43,6 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["o\u{0358}"])
         // Universal: TL and POJ interleaved, both tone-9 marks.
         XCTAssertEqual(cache.universal["a"]?.suffix(2), ["a\u{30B}", "ă"])
-    }
-
-    // MARK: - TPS
-
-    /// Both decode branches (true / false) in one pin. The TPS Space key asks
-    /// whether the raw buffer's last Character ends in a tone mark; after `˙`
-    /// on a stop coda that Character is `ㆻ` + U+0307.
-    func test_op_isTPSToneMark_codaWithCombiningToneEightDotIsToneMark() {
-        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{0307}"))
-        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{31BB}\u{0307}"))
-        XCTAssertFalse(RustEngineBridge.isTPSToneMark("\u{31BB}"))
     }
 
     // MARK: - Platform text helpers
