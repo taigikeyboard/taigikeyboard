@@ -26,7 +26,6 @@ use crate::winui::list_pager::{
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
-use std::path::Path;
 use taigi_desktop_core::engine::user_data::{CustomDictionaryEntry, CustomDictionaryPage};
 use taigi_desktop_core::settings::custom_dictionary::{
     delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
@@ -312,7 +311,7 @@ fn export(model: &mut CustomDictionaryModel, context: &ComponentContext<Settings
         model,
         context,
         StringKey::DesktopProgressWorking,
-        move || export_job(&path, write_atomically),
+        move || export_job(&path, taigi_desktop_storage::replace_file),
     );
 }
 
@@ -329,19 +328,6 @@ fn import(model: &mut CustomDictionaryModel, context: &ComponentContext<Settings
         StringKey::DesktopProgressWorking,
         move || import_job(&path),
     );
-}
-
-/// `Data.write(to:options:.atomic)`: the file appears whole or not at all,
-/// and a failed export never damages the one it would have replaced.
-fn write_atomically(path: &Path, contents: &[u8]) -> Result<(), String> {
-    let temporary = path.with_extension(format!("csv.{}.tmp", std::process::id()));
-    std::fs::write(&temporary, contents).map_err(|error| error.to_string())?;
-    std::fs::rename(&temporary, path).map_err(|error| {
-        // The rename's error is the one worth reporting; a temporary file
-        // that will not go is not what the user asked about.
-        std::fs::remove_file(&temporary).ok();
-        error.to_string()
-    })
 }
 
 pub fn view(

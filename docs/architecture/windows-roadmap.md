@@ -100,7 +100,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   originally read as a reason to withhold `GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT`. It is
   the opposite — the TIP degrades *on purpose* there, so it FUNCTIONS in an immersive
   host, and the category is now declared (see W6). Atomic settings replace = write temp + `rename`
-  (Rust's Windows `rename` is `MoveFileExW(MOVEFILE_REPLACE_EXISTING)`) with a bounded
+  (`taigi_desktop_storage::replace_file`, std `rename`) with a bounded
   retry, because a reader holding the file open without `FILE_SHARE_DELETE` blocks it.
 - **W3 Threading, ownership, lifetime** — TSF is STA. **Codex: REFUTE AS WRITTEN — one
   process may host several thread managers / document managers / contexts (Office,

@@ -2755,6 +2755,7 @@ dependencies = [
  "log",
  "serde_json",
  "taigi-desktop-core",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 

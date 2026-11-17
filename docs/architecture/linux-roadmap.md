@@ -379,9 +379,8 @@ introspection XML and the `serialize` functions were read, not remembered).
   (`~/.local/share/taigikeyboard/`); named divergence from Windows' single
   `%APPDATA%\TaigiKeyboard\` — the XDG base-directory spec separates configuration from
   data, and `settings.json` IS what a user would copy between machines. Atomic replace =
-  write temp + `rename` (POSIX rename is atomic; the Windows retry loop is not needed and
-  not compiled — `taigi-desktop-storage::settings_file` takes the retry policy from the
-  caller). Dictionary artefacts are read from `${prefix}/share/taigikeyboard/dictionaries`
+  write temp + `rename` (`taigi_desktop_storage::replace_file`, shared with Windows, whose
+  sharing violations its bounded retry outlasts; POSIX rename is atomic and never needs it). Dictionary artefacts are read from `${prefix}/share/taigikeyboard/dictionaries`
   (`dictionary.fst`, `dictionary.bin`, `association.bin`, `syllables.fst` — the
   repo-root `assets/dictionaries/` copied at install), `${prefix}` baked at build time from
   `TAIGIKEYBOARD_PREFIX` (default `/usr`); `TAIGIKEYBOARD_DATA_DIR` at runtime overrides
