@@ -168,7 +168,10 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   clipped rect still anchors — PowerPoint flags every slide text box clipped) —
   composition end → composition start → selection (khiin `composition_utils.rs:31-69`),
   then NO window (the Mac's `presentCandidates` rule; a host-window-corner fallback was
-  refused by the PR6 Codex review). Mouse click selects, never commits
+  refused by the PR6 Codex review). One exception (#569): when a probe is refused with
+  `TS_E_NOLAYOUT` and none answers, a window already up keeps its anchor and shows the
+  new list (`ui/caret.rs` `Caret::NotLaidOut`) — Google Docs in Chrome once a combining
+  mark such as POJ `o͘` sits inside the composition. Mouse click selects, never commits
   (`CandidateItemView.swift:47-48`, identical semantics), so no edit session is needed
   from the window. **Codex: UI-less mode is a v1 architecture item, not a dogfood
   note** — the TIP registers `GUID_TFCAT_TIPCAP_UIELEMENTENABLED`, implements
