@@ -156,8 +156,8 @@ enum CandidateCellHelper {
         }
 
         // §42 Hanji with Romanization: every cell renders single-line at the TITLE font — a
-        // marked split cell shows its own `text`, an unmarked row (a
-        // missing marker) shows the hanji-led title. Measure the rendered title so
+        // marked split cell shows its own `text`, an unmarked row (only on
+        // an engine / app version skew) shows the hanji-led title. Measure the rendered title so
         // measure and render share the source (`displayTitle`'s combined arm
         // ignores the swap flag, so `false` is safe here).
         if candidateDisplayMode == .combined {

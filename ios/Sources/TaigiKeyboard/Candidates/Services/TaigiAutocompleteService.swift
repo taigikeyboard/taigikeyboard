@@ -45,28 +45,25 @@ enum CandidateCellScript {
 /// romanization row, deduped per script): the cell's own script as `text`, no
 /// subtitle, its `CandidateCellScript` marker on top of the candidate's
 /// `sidechannels` (the hanji cell also carries the roman under `bracketRomanKey`
-/// for Annotate in Brackets). `nil` for a `.paired` row — the caller builds its
-/// dual-script suggestion. The Continuous and NextWord builders share it.
-// CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/TaigiAutocompleteService.kt singleScriptWord.
+/// for Annotate in Brackets). A `.paired` row is the caller's dual-script
+/// suggestion. The Continuous and NextWord builders share it.
+// CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/TaigiAutocompleteService.kt cellScriptMarker.
 // Drift causes silent divergence (one platform's split cell shows or commits the other script).
 func singleScriptCell(
-    _ script: Taigi_Engine_CellScript,
+    showingHanji: Bool,
     hanji: String?,
     roman: String?,
     sidechannels: [String: String],
-) -> AutocompleteSuggestion? {
+) -> AutocompleteSuggestion {
     var info = sidechannels
     let text: String
-    switch script {
-    case .hanji:
+    if showingHanji {
         text = hanji ?? ""
         info[CandidateCellScript.infoKey] = CandidateCellScript.hanji
         info[CandidateCellScript.bracketRomanKey] = roman
-    case .roman:
+    } else {
         text = roman ?? ""
         info[CandidateCellScript.infoKey] = CandidateCellScript.roman
-    case .paired, .UNRECOGNIZED:
-        return nil
     }
     return AutocompleteSuggestion(text: text, title: text, subtitle: nil, additionalInfo: info)
 }
@@ -172,12 +169,17 @@ class TaigiAutocompleteService: EngineFreeAutocompleteService {
         from candidates: [RustEngineBridge.ContinuousCandidate],
     ) -> [AutocompleteSuggestion] {
         candidates.map { c in
-            singleScriptCell(
-                c.cellScript,
-                hanji: c.hanji,
-                roman: c.roman,
-                sidechannels: continuousSidechannels(for: c),
-            ) ?? dualScriptSuggestion(for: c)
+            switch c.cellScript {
+            case .hanji, .roman:
+                singleScriptCell(
+                    showingHanji: c.cellScript == .hanji,
+                    hanji: c.hanji,
+                    roman: c.roman,
+                    sidechannels: continuousSidechannels(for: c),
+                )
+            case .paired, .UNRECOGNIZED:
+                dualScriptSuggestion(for: c)
+            }
         }
     }
 

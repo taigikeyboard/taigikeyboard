@@ -75,7 +75,7 @@ val CandidateCellText.showsSubtitle: Boolean
  * script per cell, no subtitle (the engine already split each candidate
  * into adjacent Hanji + romanization cells — §42 second exception): the
  * [cellScript] marker says which script this cell shows, and an unmarked
- * COMBINED row (a missing marker — the engine splits Continuous and NextWord rows alike) renders hanji-led;
+ * COMBINED row (only on an engine / app version skew — the engine marks every split row) renders hanji-led;
  * swap decides the lead otherwise. `displayRoman` is already TPS-converted
  * by the caller when relevant.
  */

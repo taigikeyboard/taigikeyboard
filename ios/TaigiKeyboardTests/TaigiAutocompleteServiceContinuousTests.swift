@@ -344,7 +344,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
                 displayText: "台語",
                 roman: "tâi-gí",
                 hanji: "台語",
-                canonicalTl: "tâi-gí",
                 cellScript: script,
             )
         }

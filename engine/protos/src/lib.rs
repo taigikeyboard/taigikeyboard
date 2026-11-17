@@ -114,18 +114,35 @@ pub fn split_single_script_cells<T: Clone>(
     let mut cells = Vec::with_capacity(rows.len() * 2);
     let mut seen_hanji = std::collections::HashSet::with_capacity(rows.len());
     let mut seen_roman = std::collections::HashSet::with_capacity(rows.len());
+    // `contains` before `insert`: a duplicate allocates no owned key.
     for row in rows {
         let hanji = hanji_of(&row);
-        if !hanji.is_empty() && !seen_hanji.contains(hanji) && seen_hanji.insert(hanji.to_owned()) {
-            let mut cell = row.clone();
-            mark(&mut cell, engine::CellScript::Hanji);
-            cells.push(cell);
-        }
+        let shows_hanji =
+            !hanji.is_empty() && !seen_hanji.contains(hanji) && seen_hanji.insert(hanji.to_owned());
         let roman = roman_of(&row);
-        if !roman.is_empty() && !seen_roman.contains(roman) && seen_roman.insert(roman.to_owned()) {
-            let mut cell = row;
-            mark(&mut cell, engine::CellScript::Roman);
-            cells.push(cell);
+        let shows_roman =
+            !roman.is_empty() && !seen_roman.contains(roman) && seen_roman.insert(roman.to_owned());
+        // The row is cloned only when it yields both cells.
+        match (shows_hanji, shows_roman) {
+            (true, true) => {
+                let mut hanji_cell = row.clone();
+                mark(&mut hanji_cell, engine::CellScript::Hanji);
+                cells.push(hanji_cell);
+                let mut roman_cell = row;
+                mark(&mut roman_cell, engine::CellScript::Roman);
+                cells.push(roman_cell);
+            }
+            (true, false) | (false, true) => {
+                let mut cell = row;
+                let script = if shows_hanji {
+                    engine::CellScript::Hanji
+                } else {
+                    engine::CellScript::Roman
+                };
+                mark(&mut cell, script);
+                cells.push(cell);
+            }
+            (false, false) => {}
         }
     }
     cells

@@ -334,17 +334,22 @@ extension ActionHandler: AutocompleteContextUpdater {
         _ predictions: [RustEngineBridge.NextWordEnginePrediction],
     ) -> [AutocompleteSuggestion] {
         predictions.map { prediction in
-            singleScriptCell(
-                prediction.cellScript,
-                hanji: prediction.hanji,
-                roman: prediction.subtitle != nil ? prediction.text : nil,
-                sidechannels: predictionIdentity(prediction),
-            ) ?? AutocompleteSuggestion(
-                text: prediction.text,
-                title: prediction.text,
-                subtitle: prediction.subtitle,
-                additionalInfo: predictionIdentity(prediction),
-            )
+            switch prediction.cellScript {
+            case .hanji, .roman:
+                singleScriptCell(
+                    showingHanji: prediction.cellScript == .hanji,
+                    hanji: prediction.hanji,
+                    roman: prediction.subtitle != nil ? prediction.text : nil,
+                    sidechannels: predictionIdentity(prediction),
+                )
+            case .paired, .UNRECOGNIZED:
+                AutocompleteSuggestion(
+                    text: prediction.text,
+                    title: prediction.text,
+                    subtitle: prediction.subtitle,
+                    additionalInfo: predictionIdentity(prediction),
+                )
+            }
         }
     }
 
