@@ -68,7 +68,7 @@ Concretely, `engine/phonetics/src/lib.rs` is the canonical shape:
 pub mod api;        // tests + CLI hit phonetics::api::*
 pub mod requests;   // engine/dispatch routes through phonetics::requests::handle
 
-pub mod case_transform; // cross-crate case façade (dispatch/src/case.rs)
+pub mod case_transform; // cross-crate case helpers (composing re-cases candidates)
 mod case_tables;
 mod derivation;
 mod normalization;

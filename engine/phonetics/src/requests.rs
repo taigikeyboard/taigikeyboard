@@ -10,8 +10,10 @@
 //! - `punctuation` and `external_lookup` hold the two platform text helpers.
 //! - `tps_adjust` owns the TPSAdjustmentBundle port (collapsed entry).
 //! - `tone_variations` owns the GetToneVariations init-pull table builder.
-//! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
-//!   provide the foundational helpers reused here.
+//! - `case_requests` owns the `CaseRequest` handler, re-exported here as
+//!   `handle_case`.
+//! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables` provide the
+//!   foundational helpers reused here.
 
 use crate::api::{tl_display_to_poj_display, tl_display_to_tps, PhoneticsError};
 use crate::tone_variations;
@@ -22,6 +24,10 @@ use protos::engine::{
     BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, StringResult,
     TpsAdjustResult,
 };
+
+/// Dispatch a decoded `CaseRequest` — the one request family that reads the
+/// `AppConfig` snapshot (input mode, capitals-OFF nasal fold).
+pub use crate::case_requests::handle as handle_case;
 
 /// Dispatch a decoded `PhoneticsRequest`. Every remaining op is a pure
 /// function of its payload — none reads the `AppConfig` snapshot.
