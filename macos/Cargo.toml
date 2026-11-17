@@ -21,9 +21,9 @@ repository = "https://github.com/taigikeyboard/taigikeyboard"
 publish = false
 
 [workspace.dependencies]
-# `default-features = false` on every engine edge: `taigi-macos-ffi` turns
-# `user-data` on itself, the one place the macOS archive's feature set is read.
-swift-ffi = { path = "../engine/swift-ffi", default-features = false }
+# `default-features = false` on `dispatch`: the archive gets `user-data` only
+# through `swift-ffi`, whose own `dispatch` edge always turns it on.
+swift-ffi = { path = "../engine/swift-ffi" }
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }

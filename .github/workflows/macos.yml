@@ -165,8 +165,8 @@ jobs:
         run: cargo fmt --check --manifest-path macos/Cargo.toml
 
       # docs/architecture/e2e-trace-schema.md § Test mode only — the macOS
-      # half of engine.yml's `e2e-trace-guard`. The archive's engine edges set
-      # their own features (`default-features = false` + `user-data`), so
+      # half of engine.yml's `e2e-trace-guard`. The archive sets its own engine
+      # features (`dispatch` without defaults, `user-data` via `swift-ffi`), so
       # swift-ffi's graph there is not the one this archive ships.
       - name: shipped feature graph has no e2e-trace
         run: |

@@ -211,7 +211,7 @@ fn run(bytes: &[u8]) -> Response {
             },
             Err(err) => {
                 log::warn!("phonetics dispatch failed (id={id}): {err}");
-                error_response(id, phonetics_error_code(&err))
+                error_response(id, ErrorCode::FailInvariant)
             }
         },
         request::Payload::Composing(comp_req) => {
@@ -277,21 +277,13 @@ fn run(bytes: &[u8]) -> Response {
     }
 }
 
-fn phonetics_error_code(err: &phonetics::PhoneticsError) -> ErrorCode {
-    match err {
-        phonetics::PhoneticsError::UnsupportedOp => ErrorCode::FailInvariant,
-    }
-}
-
 fn lexicon_error_code(err: &lexicon::LexiconError) -> ErrorCode {
-    // Mirrors LexiconError::as_proto_error_code values literally so the
-    // mapping has a single source of truth in engine/lexicon/src/error.rs.
-    match err.as_proto_error_code() {
-        1 => ErrorCode::FailParse,
-        2 => ErrorCode::FailInternal,
-        3 => ErrorCode::FailIo,
-        4 => ErrorCode::FailInvariant,
-        _ => ErrorCode::FailInternal,
+    use lexicon::LexiconError as E;
+    match err {
+        E::InvalidPath(_) | E::PathNotAbsolute(_) | E::InvalidBinary(_) => ErrorCode::FailParse,
+        E::Mmap { .. } => ErrorCode::FailIo,
+        E::NotInitialized => ErrorCode::FailInvariant,
+        E::Internal(_) => ErrorCode::FailInternal,
     }
 }
 
