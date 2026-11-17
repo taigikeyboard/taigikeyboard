@@ -18,9 +18,11 @@ What a reviewer — human, `/code-review`, or a fresh-context subagent — check
 
 | Tier | Paths | Review |
 |---|---|---|
-| High | `engine/userdata/`, `engine/swift-ffi/`, `engine/android-jni/`, `macos/crates/taigi-macos-ffi/`, `desktop/crates/taigi-desktop-update/`, `windows/installer/`, `.github/workflows/`, `tools/release/`, `dictionary/build/` | Line-by-line; maintainer approval; state the revert path in the PR |
+| High | `engine/userdata/`, `engine/swift-ffi/`, `engine/android-jni/`, `macos/crates/taigi-macos-ffi/`, `desktop/crates/taigi-desktop-update/`, `windows/installer/`, `.github/workflows/`, `tools/release/`, `dictionary/build/`, `tools/secret-scan/`, `.claude/hooks/`, `.claude/settings.json`, `REVIEW.md` | Line-by-line; maintainer approval; state the revert path in the PR |
 | Normal | other source under `engine/`, `ios/`, `android/`, `macos/`, `windows/`, `linux/`, `desktop/`, `web/` | One review pass on the diff |
 | Low | `docs/**`, `i18n/*.json` string-only edits, comments | Skim for the defects above |
+
+The last four are the gates themselves: a diff that edits the check judging it is High.
 
 A diff with numeric / geometry fidelity risk (unit conversion, wide caller surface) is High whatever its paths (`docs/contributing/known-pitfalls.md` § Review and device gates).
 
