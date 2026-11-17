@@ -1,6 +1,6 @@
 # REVIEW.md
 
-What a reviewer — human, `/code-review`, or a fresh-context subagent — checks in a TaigiKeyboard diff. Rule detail lives in `AGENTS.md` and `docs/contributing/`; this file names what counts as a defect and how to report it.
+What a reviewer — human or coding agent, whatever the tool — checks in a TaigiKeyboard diff. Rule detail lives in `AGENTS.md` and `docs/contributing/`; this file names what counts as a defect and how to report it.
 
 ## What counts as a defect
 
