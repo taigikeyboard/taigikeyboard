@@ -53,7 +53,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertTrue(handled)
         XCTAssertTrue(session.controller.isSymbolPickerOpen)
         let content = try XCTUnwrap(session.picker.shownContent)
-        XCTAssertEqual(content.cells.map(\.text), try TestFixtures.shippedSymbolTable().symbols)
+        XCTAssertEqual(content.cells.map(\.text), try TestFixtures.shippedSymbols())
         XCTAssertEqual(content.cells.first?.text, "·", "punctuation leads: the khinsiann dot, then the most-typed marks, on the first page")
         XCTAssertEqual(content.slotKeySet, .bareKeys, "the picker is picked with the bar's own keys")
         XCTAssertFalse(content.leadCellIsUnkeyed)
@@ -239,7 +239,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     func testABracketPair_isOneWrite() throws {
         let session = try makeSession()
         try session.pressPickerChord()
-        let pair = try XCTUnwrap(TestFixtures.shippedSymbolTable().symbols.firstIndex(of: "「」"))
+        let pair = try XCTUnwrap(TestFixtures.shippedSymbols().firstIndex(of: "「」"))
 
         try session.walkPicker(cells: pair)
         try session.type("\r")
@@ -307,7 +307,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         let session = try makeSession()
         session.controller.settings.storedIsHanjiFirst = true
         try session.pressPickerChord()
-        let asciiParentheses = try XCTUnwrap(TestFixtures.shippedSymbolTable().symbols.firstIndex(of: "()"))
+        let asciiParentheses = try XCTUnwrap(TestFixtures.shippedSymbols().firstIndex(of: "()"))
 
         try session.walkPicker(cells: asciiParentheses)
         try session.type("\r")
@@ -475,7 +475,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     /// the store — a new controller over the same defaults sees it too —
     /// and the rest of the table keeps its order behind it.
     func testAPick_leadsTheNextOpening_andOutlivesTheController() throws {
-        let table = try TestFixtures.shippedSymbolTable().symbols
+        let table = try TestFixtures.shippedSymbols()
         let first = try makeSession()
         try first.pressPickerChord()
         try first.type("w")
@@ -488,7 +488,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         try second.type("q")
         XCTAssertEqual(second.client.insertedTexts, ["，"], "the first slot key now picks the recent")
-        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, ["，"])
+        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols, ["，"])
     }
 
     /// Closing, walking and an empty slot record nothing; only a write does.
@@ -498,7 +498,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.press(.rightArrow)
         try session.type("\u{1B}")
 
-        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, [])
+        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols, [])
     }
 
     /// The pick reads the list the window was shown, not the store as it is
@@ -513,7 +513,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         XCTAssertEqual(session.client.insertedTexts, ["·"])
         XCTAssertEqual(
-            SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, ["·", "★"],
+            SettingsStore(userDefaults: userDefaults).recentSymbols, ["·", "★"],
             "the pick is recorded on top of the other write",
         )
     }
@@ -561,7 +561,6 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         let controller = try TestFixtures.makeInputController()
         controller.settings = SettingsStore(userDefaults: userDefaults)
         controller.displayLanguageOverride = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
-        controller.symbolTableOverride = try TestFixtures.shippedSymbolTable()
         let bar = RecordingCandidatePresenter()
         controller.candidatePresenter = bar
         controller.symbolPickerPresenter = picker

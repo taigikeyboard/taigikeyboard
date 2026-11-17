@@ -165,7 +165,6 @@ final class ManualScreenshotTests: XCTestCase {
         let client = RecordingTextInputClient()
         let controller = try TestFixtures.makeInputController()
         controller.displayLanguageOverride = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: .standard)
-        controller.symbolTableOverride = try TestFixtures.shippedSymbolTable()
         controller.activateServer(client)
         defer {
             controller.candidatePresenter.hideForHandover()

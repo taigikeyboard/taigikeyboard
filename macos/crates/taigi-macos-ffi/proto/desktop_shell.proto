@@ -38,6 +38,8 @@ message DesktopRequest {
     TpsKeyboardPressRequest tps_keyboard_press = 20;
     DictionarySearchRequest dictionary_search = 21;
     PassThroughSwapRequest pass_through_swap = 22;
+    SymbolPickerSymbolsRequest symbol_picker_symbols = 23;
+    NoteRecentSymbolRequest note_recent_symbol = 24;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -142,6 +144,8 @@ message DesktopResponse {
     TpsKeyboardRowsReply tps_keyboard_rows = 12;
     DictionarySearchReply dictionary_search = 13;
     PassThroughSwapReply pass_through_swap = 14;
+    SymbolPickerSymbolsReply symbol_picker_symbols = 15;
+    NoteRecentSymbolReply note_recent_symbol = 16;
   }
 }
 
@@ -590,6 +594,40 @@ message PassThroughSwapRequest {
 
 message PassThroughSwapReply {
   bool may_swap = 1;
+}
+
+// The list the symbol picker opens with (`symbols::symbol_picker_symbols`,
+// the Windows and Linux one): the recents that are still in the compiled-in
+// table, most recent first, then the rest in file order. The stored
+// `recentSymbols` travel in it, like `SwitchInputModeRequest`'s values; no
+// snapshot. Refused when the compiled-in table does not validate — the
+// picker then does not open.
+message SymbolPickerSymbolsRequest {
+  // The stored `recentSymbols`, as stored; the core normalizes them.
+  repeated string recent_symbols = 1;
+}
+
+message SymbolPickerSymbolsReply {
+  // In picker order; the list a pick indexes.
+  repeated string symbols = 1;
+}
+
+// A pick moved to the front of the recents, through the core's one writer
+// (`SettingsDocument::note_recent_symbol`), on a document holding only the
+// stored list this request carries. Pure, no snapshot; never refused.
+message NoteRecentSymbolRequest {
+  // The stored `recentSymbols`, as stored.
+  repeated string recent_symbols = 1;
+  // The symbol just picked.
+  string symbol = 2;
+}
+
+message NoteRecentSymbolReply {
+  // Whether the pick changed the recents; false when it re-picked the front
+  // symbol (of the list as normalized), and nothing is stored.
+  bool changed = 1;
+  // The list to store as `recentSymbols` when `changed`.
+  repeated string recent_symbols = 2;
 }
 
 // The Manage Dictionaries search (#792): `query` looked up by desktop-core's

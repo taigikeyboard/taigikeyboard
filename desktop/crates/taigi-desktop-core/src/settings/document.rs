@@ -193,19 +193,22 @@ impl SettingsDocument {
         self.display_language().effective(system_locale)
     }
 
-    /// The symbol picker's recent picks (`SettingsStore.swift` `recentSymbols` is the macOS twin).
+    /// The symbol picker's recent picks.
     pub fn recent_symbols(&self) -> RecentSymbols {
         RecentSymbols::new(self.string_list(&keys::RECENT_SYMBOLS))
     }
 
     /// Moves `symbol` to the front of the recent picks. Re-picking the front
-    /// symbol writes nothing, so it moves no revision.
-    pub fn note_recent_symbol(&mut self, symbol: &str) {
+    /// symbol writes nothing, so it moves no revision. Answers whether it
+    /// wrote.
+    pub fn note_recent_symbol(&mut self, symbol: &str) -> bool {
         let before = self.recent_symbols();
         let after = before.noting(symbol);
-        if after != before {
+        let changed = after != before;
+        if changed {
             self.set_string_list(&keys::RECENT_SYMBOLS, after.symbols());
         }
+        changed
     }
 
     fn set_raw(&mut self, name: &str, value: Value) {

@@ -185,11 +185,10 @@ enum TestFixtures {
     }
 
     /// `<repo>/assets/symbols/desktop-symbols.json` — the symbol picker's table,
-    /// which `bundle-app.sh` copies into the assembled `.app`. The tests run
-    /// outside any bundle, so a controller case injects this copy.
+    /// which desktop-core compiles in (`symbols.rs`). Read here on its own, so
+    /// a controller case also catches a library linked from a stale table.
     static let symbolTableURL = repositoryRoot
-        .appendingPathComponent("assets/symbols")
-        .appendingPathComponent(SymbolTable.fileName)
+        .appendingPathComponent("assets/symbols/desktop-symbols.json")
 
     /// `<repo>/macos/crates/taigi-macos-ffi/fixtures/chord_rules.tsv` — the
     /// chord-rule table the Swift Shortcuts pane and desktop-core are both
@@ -197,9 +196,15 @@ enum TestFixtures {
     static let chordRulesURL = repositoryRoot
         .appendingPathComponent("macos/crates/taigi-macos-ffi/fixtures/chord_rules.tsv")
 
-    /// The shipped symbol table, read the way the app reads it.
-    static func shippedSymbolTable() throws -> SymbolTable {
-        try SymbolTable.load(from: symbolTableURL)
+    /// Every symbol of the shipped table in file order — the picker's list
+    /// with nothing recent.
+    static func shippedSymbols() throws -> [String] {
+        struct Table: Decodable {
+            struct Category: Decodable { let symbols: [String] }
+            let categories: [Category]
+        }
+        let data = try Data(contentsOf: symbolTableURL)
+        return try JSONDecoder().decode(Table.self, from: data).categories.flatMap(\.symbols)
     }
 
     /// `client: nil`: IMK rejects anything but a real client proxy here, so a
