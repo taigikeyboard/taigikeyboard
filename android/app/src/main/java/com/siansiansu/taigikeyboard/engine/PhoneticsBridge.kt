@@ -5,6 +5,7 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
+import com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod
 import com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
@@ -145,6 +146,26 @@ fun RustEngineBridge.isJoinerPunctuation(text: String): Boolean {
 fun RustEngineBridge.isSpacedPunctuation(text: String): Boolean {
     val payload = IsSpacedPunctuation.newBuilder().setText(text).build()
     return boolDispatch({ it.isSpacedPunctuation = payload }, "isSpacedPunctuation")
+}
+
+/**
+ * What a second space press writes in place of the first space (`. ` or
+ * `。`), or null for a plain space — the engine's rule and window. Null when
+ * the engine fails: a plain space.
+ */
+fun RustEngineBridge.doubleSpacePeriod(
+    textBeforeCaret: String,
+    millisSincePlainSpace: Long,
+    fullWidth: Boolean,
+): String? {
+    val payload =
+        DoubleSpacePeriod
+            .newBuilder()
+            .setTextBeforeCaret(textBeforeCaret)
+            .setMillisSincePlainSpace(millisSincePlainSpace)
+            .setFullWidth(fullWidth)
+            .build()
+    return stringDispatch({ it.doubleSpacePeriod = payload }, "", "doubleSpacePeriod").ifEmpty { null }
 }
 
 /**

@@ -265,23 +265,4 @@ class TextInputKeyHandlerTest {
         assertNull(editorActionForEnter(EditorInfo.IME_ACTION_UNSPECIFIED))
         assertNull(editorActionForEnter(EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_ENTER_ACTION))
     }
-
-    @Test
-    fun `doubleSpacePeriodReplacement earns a period after a letter number or mark`() {
-        // trace: last code point before the space — 'a' Ll, '7' Nd, 'á' Ll,
-        // 'o͘' ends in U+0358 Mn, '台' Lo, '𠢕' U+20895 Lo (surrogate pair).
-        for (text in listOf("a ", "7 ", "á ", "o͘ ", "台 ", "𠢕 ", "x𠢕 ")) {
-            assertEquals("'$text'", ". ", doubleSpacePeriodReplacement(text, isFullWidthPunctuation = false))
-            assertEquals("'$text'", "。", doubleSpacePeriodReplacement(text, isFullWidthPunctuation = true))
-        }
-    }
-
-    @Test
-    fun `doubleSpacePeriodReplacement keeps the space after punctuation whitespace or emoji`() {
-        // "😀" = U+1F600 So; "\t " ends in a tab (Cc) before the space.
-        for (text in listOf(". ", "。 ", "? ", "  ", "\t ", "\n ", "😀 ", " ", "", "a", "ab")) {
-            assertNull("'$text'", doubleSpacePeriodReplacement(text, isFullWidthPunctuation = false))
-        }
-        assertNull(doubleSpacePeriodReplacement(null, isFullWidthPunctuation = false))
-    }
 }

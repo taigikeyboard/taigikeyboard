@@ -133,9 +133,14 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         plainSpaceUptimeMs = SystemClock.uptimeMillis()
     }
 
-    /** Whether the event before this one was a plain space press less than [DOUBLE_SPACE_WINDOW_MS] ago. */
-    internal val followsRecentPlainSpace: Boolean
-        get() = plainSpaceUptimeAtEventStart?.let { SystemClock.uptimeMillis() - it < DOUBLE_SPACE_WINDOW_MS } ?: false
+    /**
+     * Milliseconds since the plain space press the event before this one wrote,
+     * or null when that event wrote none. The engine owns the double-space window.
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.millisSincePlainSpace`.
+     */
+    internal val millisSincePlainSpace: Long?
+        get() = plainSpaceUptimeAtEventStart?.let { SystemClock.uptimeMillis() - it }
 
     /**
      * Re-arms after this IME has written a space the next attaching
@@ -172,9 +177,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     companion object {
         private const val TAG = "TaigiKeyboard"
         private const val IME_ID: String = "com.siansiansu.taigikeyboard/.ime.core.TaigiKeyboard"
-
-        // CROSS-PLATFORM INVARIANT — mirrors iOS ActionHandler.doubleSpaceWindow.
-        private const val DOUBLE_SPACE_WINDOW_MS = 300L
 
         fun checkIfImeIsEnabled(context: Context): Boolean {
             val logger = CompositionRoot.shared(context).logger

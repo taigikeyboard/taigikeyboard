@@ -54,9 +54,6 @@ public class ActionHandler: StandardKeyboardActionHandler {
     private var plainSpaceUptime: TimeInterval?
     private var plainSpaceUptimeAtEventStart: TimeInterval?
 
-    // CROSS-PLATFORM INVARIANT — mirrors Android TaigiKeyboard.DOUBLE_SPACE_WINDOW_MS.
-    static let doubleSpaceWindow: TimeInterval = 0.3
-
     /// Runs one user event — a key, a backspace repeat, a candidate tap, an
     /// emoji or symbol pick — as one host write.
     ///
@@ -117,10 +114,12 @@ public class ActionHandler: StandardKeyboardActionHandler {
         plainSpaceUptime = ProcessInfo.processInfo.systemUptime
     }
 
-    /// Whether the event before this one was a plain space press less than `doubleSpaceWindow` ago.
-    var followsRecentPlainSpace: Bool {
-        guard let uptime = plainSpaceUptimeAtEventStart else { return false }
-        return ProcessInfo.processInfo.systemUptime - uptime < Self.doubleSpaceWindow
+    /// Milliseconds since the plain space press the event before this one wrote,
+    /// or nil when that event wrote none. The engine owns the double-space window.
+    // CROSS-PLATFORM INVARIANT — mirrors Android TaigiKeyboard.millisSincePlainSpace.
+    var millisSincePlainSpace: Int64? {
+        guard let uptime = plainSpaceUptimeAtEventStart else { return nil }
+        return Int64((ProcessInfo.processInfo.systemUptime - uptime) * 1000)
     }
 
     // MARK: - Action Dispatch

@@ -18,6 +18,7 @@ doctest = false
 [dependencies]
 protos = { workspace = true }
 unicode-normalization = { workspace = true }
+unicode-properties = { workspace = true }
 regex = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }

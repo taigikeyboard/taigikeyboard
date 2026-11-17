@@ -8,7 +8,7 @@ option java_multiple_files = true;
 // Phonetics module — POJ ↔ TL ↔ TPS spelling conversion, tone representation,
 // syllable structure, Unicode normalization, phonological auto-correct.
 //
-// 8 ops live in PhoneticsRequest.method oneof; each op returns its natural
+// 10 ops live in PhoneticsRequest.method oneof; each op returns its natural
 // shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
 // `oneof method` design + khiin-rs single-entry-point dispatch.
 //
@@ -50,6 +50,7 @@ message PhoneticsRequest {
     ExternalLookupDigitForm external_lookup_digit_form = 41;
     IsJoinerPunctuation is_joiner_punctuation = 42;
     IsSpacedPunctuation is_spaced_punctuation = 43;
+    DoubleSpacePeriod double_space_period = 44;
   }
 }
 
@@ -122,6 +123,24 @@ message IsJoinerPunctuation { string text = 1; }
 // `taigi，`), and arms nothing; behavioral-invariants §23. Answers
 // `BoolResult`; false for empty or multi-character text.
 message IsSpacedPunctuation { string text = 1; }
+
+// `DoubleSpacePeriod` — what a second space press writes in place of the
+// first space: `. ` (half-width) or `。` (`full_width`, no space after it).
+// It earns one only when `millis_since_plain_space` is under the 300 ms
+// window and `text_before_caret` ends in one ASCII space after a letter,
+// number or combining mark — a code point, so a supplementary-plane Hanji and
+// POJ's U+0358 count; punctuation, emoji or a second space do not. Answers
+// `StringResult`; empty = write a plain space. Only the space and the code
+// point before it matter, so the platform sends a short tail of the context
+// (iOS two Characters, Android three UTF-16 units). The platform asks only when the
+// previous event wrote a plain space, nothing is selected and nothing is
+// composing (a composing space commits instead); English mode sends
+// `full_width` false.
+message DoubleSpacePeriod {
+  string text_before_caret = 1;
+  int64 millis_since_plain_space = 2;
+  bool full_width = 3;
+}
 
 // `ExternalLookupDigitForm` — the digit-tone spelling of a TL reading that
 // the MOE dictionary and ChhoeTaigi search by: lowercased, split on `-`

@@ -74,13 +74,13 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 
 ## 7. Phonetics slice
 
-[`phonetics.proto`](../../engine/protos/proto/phonetics.proto) — 7 ops:
+[`phonetics.proto`](../../engine/protos/proto/phonetics.proto) — 10 ops:
 
 | Family | Ops | Result |
 |---|---|---|
 | Core | `TlToPoj`, `GetToneVariations` | `StringResult`, `ToneVariationsResult` |
 | TPS | `TlDisplayToTps`, `IsTpsToneMark`, `TpsInputAdjust` | `StringResult`, `BoolResult`, `TpsAdjustResult` |
-| Platform text helpers | `IsAttachingPunctuation`, `IsJoinerPunctuation`, `ExternalLookupDigitForm` | `BoolResult`, `StringResult` |
+| Platform text helpers | `IsAttachingPunctuation`, `IsJoinerPunctuation`, `IsSpacedPunctuation`, `DoubleSpacePeriod`, `ExternalLookupDigitForm` | `BoolResult`, `StringResult` |
 
 - Each op has its own payload message (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`).
 - Pure and stateless: `phonetics::requests::handle(req)` takes no `AppConfig`. Display tone normalization is not a wire op — `composing::derived` calls `phonetics::api::normalize_tone` in-process.

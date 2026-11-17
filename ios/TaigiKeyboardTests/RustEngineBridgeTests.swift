@@ -81,6 +81,15 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertFalse(RustEngineBridge.isSpacedPunctuation("("))
     }
 
+    func test_op_doubleSpacePeriod_periodOnlyInsideTheWindow() {
+        // trace: engine `double_space_period` — "a" Ll before the space,
+        // window `0..300` ms; "? " ends in punctuation.
+        XCTAssertEqual(RustEngineBridge.doubleSpacePeriod(textBeforeCaret: "a ", millisSincePlainSpace: 0, fullWidth: false), ". ")
+        XCTAssertEqual(RustEngineBridge.doubleSpacePeriod(textBeforeCaret: "a ", millisSincePlainSpace: 299, fullWidth: true), "。")
+        XCTAssertNil(RustEngineBridge.doubleSpacePeriod(textBeforeCaret: "? ", millisSincePlainSpace: 0, fullWidth: false))
+        XCTAssertNil(RustEngineBridge.doubleSpacePeriod(textBeforeCaret: "a ", millisSincePlainSpace: 300, fullWidth: false))
+    }
+
     // MARK: - T1: panic at FFI
 
     /// The FFI seam must NEVER unwind across the boundary: a valid `Response`
