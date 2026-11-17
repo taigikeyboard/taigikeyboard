@@ -24,12 +24,12 @@ pub fn tl_to_poj(input: &str) -> Option<String> {
 
 /// How TPS spells the vowel `or`: ㄜ, as `er` — the mobile default
 /// (`ios/.../SharedSettings.swift` `tpsOrMapsToER`), and no desktop setting
-/// changes it. Sent as `AppConfig.tps_or_maps_to_er` and passed to every
-/// [`tl_display_to_tps`], so a cell and its commit spell `or` alike.
+/// changes it. Sent as `AppConfig.tps_or_maps_to_er`, which the engine renders
+/// both a cell's `tps_text` and its commit with, so the two spell `or` alike.
 pub const TPS_OR_MAPS_TO_ER: bool = true;
 
-/// The TPS spelling of a display-form TL reading — what a Hanji-less
-/// candidate shows under TPS. `or_maps_to_er` is `AppConfig.tps_or_maps_to_er`,
+/// The TPS spelling of a display-form TL reading (the cell text itself arrives
+/// as `CandidateMessage.tps_text`). `or_maps_to_er` is `AppConfig.tps_or_maps_to_er`,
 /// so a cell and its commit spell `or` alike.
 pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> Option<String> {
     string_result(

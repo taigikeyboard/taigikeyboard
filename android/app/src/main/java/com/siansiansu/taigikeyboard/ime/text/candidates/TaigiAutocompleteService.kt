@@ -251,4 +251,5 @@ private fun continuousSidechannels(candidate: ContinuousCandidate): Map<String, 
         // R2: canonical TL identity → round-trips to
         // commitContinuous(associationTl) for the NextWord write.
         TaigiWord.MetadataKeys.CANONICAL_TL to candidate.canonicalTl,
+        TaigiWord.MetadataKeys.TPS_TEXT to candidate.tpsText,
     )

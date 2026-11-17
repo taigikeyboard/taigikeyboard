@@ -99,8 +99,7 @@ pub(crate) fn is_pure_romanization(text: &str) -> bool {
 }
 
 /// The TPS layout's rendering of a pick's romanization: the Bopomofo its cell
-/// shows (iOS `CandidateCellHelper` / Android `CandidateStrip.kt`
-/// `tlDisplayToTps(roman)`).
+/// shows (`CandidateMessage.tps_text`, `requests::tps_cell_text`).
 #[derive(Clone, Copy)]
 struct Bopomofo {
     or_maps_to_er: bool,
@@ -385,7 +384,7 @@ mod tests {
             (Lead, false, RomanOnly, R, H, unspaced("台語")),
             (Lead, true, Combined, R, H, roman("台語 (ㄉㄞˊ ㆣㄧˋ)")),
             // R5 P2 (USER 2026-09-30): a Hanji-less pick writes what its cell
-            // shows, tlDisplayToTps(roman), unspaced. Was: Android `tâi-gí`
+            // shows, tl_display_to_tps(roman), unspaced. Was: Android `tâi-gí`
             // spaced, iOS tlNumericToTPS of the display romanization.
             (Lead, false, SideBySide, R, None, unspaced(T)),
             (Lead, true, SideBySide, R, None, unspaced(T)),

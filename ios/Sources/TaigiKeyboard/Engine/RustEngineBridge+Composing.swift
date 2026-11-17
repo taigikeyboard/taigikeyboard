@@ -96,6 +96,10 @@ public extension RustEngineBridge {
         /// learns the same TL a normal candidate commit records. Empty
         /// only for TPS-OOV hanji-absent candidates with no dict TL.
         public let canonicalTl: String
+        /// What the cell shows under the TPS layout (`CandidateMessage.tps_text`):
+        /// the Hanji, or the Bopomofo reading of a Hanji-less candidate; empty
+        /// off TPS.
+        public let tpsText: String
 
         public init(
             consumedSpanEnd: UInt32,
@@ -104,6 +108,7 @@ public extension RustEngineBridge {
             roman: String,
             hanji: String?,
             canonicalTl: String,
+            tpsText: String = "",
         ) {
             self.consumedSpanEnd = consumedSpanEnd
             self.syllableCount = syllableCount
@@ -111,6 +116,7 @@ public extension RustEngineBridge {
             self.roman = roman
             self.hanji = hanji
             self.canonicalTl = canonicalTl
+            self.tpsText = tpsText
         }
     }
 
@@ -590,6 +596,7 @@ public extension RustEngineBridge {
                     roman: msg.roman,
                     hanji: msg.hasHanji ? msg.hanji : nil,
                     canonicalTl: msg.canonicalTl,
+                    tpsText: msg.tpsText,
                 )
             }
             : nil

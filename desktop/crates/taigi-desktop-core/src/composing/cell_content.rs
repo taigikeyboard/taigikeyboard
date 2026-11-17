@@ -3,7 +3,7 @@
 //! (`composing::commit_text`). macOS keeps a Swift twin of the cell value:
 //! `CandidateCellContent.swift`.
 
-use crate::engine::{self, ContinuousCandidate};
+use crate::engine::ContinuousCandidate;
 use crate::settings::{CandidateDisplayMode, EngineSettings, InputMode};
 
 /// Which of a candidate's two scripts a commit writes. RELATIVE to the
@@ -57,17 +57,11 @@ impl CandidateCellContent {
     /// are built by [`super::presentation`].
     ///
     /// Under TPS a cell is one script whatever Candidate Display says: the
-    /// Hanji, or for a candidate with none its reading in TPS — as on mobile
-    /// (`ios/.../CandidateCellHelper.swift`), and what the engine's commit
-    /// writes for it.
+    /// engine's `tps_text` — the Hanji, or for a candidate with none its
+    /// reading in TPS, what the engine's commit writes for it.
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {
         if settings.input_mode == InputMode::Tps {
-            let text = match candidate.nonempty_hanji() {
-                Some(hanji) => hanji.to_owned(),
-                None => engine::tl_display_to_tps(&candidate.roman, engine::TPS_OR_MAPS_TO_ER)
-                    .unwrap_or_else(|| candidate.roman.clone()),
-            };
-            return Self::new(text, None);
+            return Self::new(candidate.tps_text.clone(), None);
         }
         match candidate.nonempty_hanji() {
             None => Self::new(candidate.roman.clone(), None),
@@ -88,7 +82,7 @@ impl CandidateCellContent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::test_support::candidate;
+    use crate::engine::test_support::{candidate, tps_candidate};
 
     fn settings(swapped: bool) -> EngineSettings {
         EngineSettings {
@@ -144,14 +138,14 @@ mod tests {
 
     #[test]
     fn under_tps_a_cell_is_the_hanji_alone_or_the_reading_in_tps() {
-        // trace: `cell` TPS arm — Hanji with no annotation, whatever the
-        // swap and display mode; a Hanji-less `ka` is ㄍㄚ (tl_display_to_tps).
+        // trace: `cell` TPS arm — the engine's `tps_text` with no annotation,
+        // whatever the swap and display mode (a Hanji-less `ka` arrives as ㄍㄚ).
         let tps = |display| EngineSettings {
             input_mode: InputMode::Tps,
             candidate_display_mode: display,
             ..EngineSettings::default()
         };
-        let hanji = candidate("ka", Some("家"), 0);
+        let hanji = tps_candidate("ka", Some("家"), 0, "家");
         for display in [
             CandidateDisplayMode::SideBySide,
             CandidateDisplayMode::RomanOnly,
@@ -162,7 +156,7 @@ mod tests {
                 CandidateCellContent::new("家", None)
             );
         }
-        let bare = candidate("ka", None, 0);
+        let bare = tps_candidate("ka", None, 0, "ㄍㄚ");
         assert_eq!(
             CandidateCellContent::cell(&bare, &tps(CandidateDisplayMode::SideBySide)),
             CandidateCellContent::new("ㄍㄚ", None)

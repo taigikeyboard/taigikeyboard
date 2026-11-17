@@ -130,7 +130,6 @@ class CandidateOverlayView : FrameLayout {
                         suggestions = suggestions,
                         typeface = typeface,
                         isTPSLayout = isTPSLayout,
-                        orMapsToER = prefs.tpsOrMapsToER,
                         isHanjiFirst = isHanjiFirst,
                         isFullWidthPunctuation = isFullWidthPunctuation,
                         candidateDisplayMode = candidateDisplayMode,

@@ -129,6 +129,11 @@ data class ContinuousCandidate(
      * with no dict TL.
      */
     val canonicalTl: String,
+    /**
+     * What the cell shows under the TPS layout (`CandidateMessage.tps_text`): the
+     * Hanji, or the Bopomofo reading of a Hanji-less candidate; empty off TPS.
+     */
+    val tpsText: String = "",
 )
 
 /**
@@ -578,6 +583,7 @@ private inline fun composingFetchDispatch(
                 roman = msg.roman,
                 hanji = if (msg.hasHanji()) msg.hanji else null,
                 canonicalTl = msg.canonicalTl,
+                tpsText = msg.tpsText,
             )
         }
     } else {

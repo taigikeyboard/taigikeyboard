@@ -39,6 +39,10 @@ data class TaigiWord(
     val displayText: String
         get() = if (!hanji.isNullOrEmpty()) hanji else roman
 
+    /** What this cell shows under the TPS layout ([MetadataKeys.TPS_TEXT]); empty when absent. */
+    val tpsText: String
+        get() = additionalInfo[MetadataKeys.TPS_TEXT].orEmpty()
+
     /**
      * Reserved [additionalInfo] key strings shared between producers
      * ([com.siansiansu.taigikeyboard.ime.text.candidates.TaigiAutocompleteService])
@@ -71,6 +75,12 @@ data class TaigiWord(
          * (POJ-rendered in POJ mode).
          */
         const val CANONICAL_TL = "canonicalTl"
+
+        /**
+         * What a Continuous cell shows under the TPS layout (`CandidateMessage.tps_text`):
+         * the Hanji, or the Bopomofo reading of a Hanji-less candidate; empty off TPS.
+         */
+        const val TPS_TEXT = "tpsText"
 
         // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift additionalInfo["cellScript"].
         // Drift causes silent divergence (one platform's tap commits the other script).

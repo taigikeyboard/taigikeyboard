@@ -128,6 +128,9 @@ pub struct ContinuousCandidate {
     /// Canonical TL, snapshotted before any display recasing. Empty only when
     /// no canonical TL is recoverable.
     pub canonical_tl: String,
+    /// What the cell shows under the TPS layout — the Hanji, or the Bopomofo
+    /// reading of a Hanji-less candidate; empty off TPS (`CandidateMessage.tps_text`).
+    pub tps_text: String,
 }
 
 impl ContinuousCandidate {
@@ -139,6 +142,7 @@ impl ContinuousCandidate {
             roman: message.roman.clone(),
             hanji: message.hanji.clone(),
             canonical_tl: message.canonical_tl.clone(),
+            tps_text: message.tps_text.clone(),
         }
     }
 
@@ -187,6 +191,20 @@ pub(crate) mod test_support {
             roman: roman.to_owned(),
             hanji: hanji.map(str::to_owned),
             canonical_tl: roman.to_owned(),
+            tps_text: String::new(),
+        }
+    }
+
+    /// [`candidate`] as the engine sends it under the TPS layout, with its `tps_text`.
+    pub fn tps_candidate(
+        roman: &str,
+        hanji: Option<&str>,
+        span_end: u32,
+        tps_text: &str,
+    ) -> ContinuousCandidate {
+        ContinuousCandidate {
+            tps_text: tps_text.to_owned(),
+            ..candidate(roman, hanji, span_end)
         }
     }
 }

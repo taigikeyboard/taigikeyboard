@@ -12,7 +12,6 @@ struct CandidateSuggestionsRow: View {
     let isHanjiFirst: Bool
     let candidateDisplayMode: CandidateDisplayMode
     let isTPSLayout: Bool
-    let orMapsToER: Bool
     let currentInputMode: InputMode
     let englishAutocompleteView: AnyView?
 
@@ -76,7 +75,6 @@ struct CandidateSuggestionsRow: View {
             suggestions,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
         return ScrollView(.horizontal, showsIndicators: false) {
@@ -89,7 +87,6 @@ struct CandidateSuggestionsRow: View {
                             candidateDisplayMode: candidateDisplayMode,
                             contentHasSubtitles: contentHasSubtitles,
                             isTPSLayout: isTPSLayout,
-                            orMapsToER: orMapsToER,
                             isSelected: selectedCandidateIndex == index,
                             isFirstCandidate: index == 0,
                             onTap: onSuggestionTap,

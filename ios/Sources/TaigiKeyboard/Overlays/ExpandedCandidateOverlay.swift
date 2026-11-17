@@ -13,8 +13,6 @@ struct ExpandedCandidateOverlay: View {
     let onTranslateToggle: () -> Void
     let onCollapse: () -> Void
     let isTPSLayout: Bool
-    /// Whether `or` maps to ㄜ in TPS mode.
-    let orMapsToER: Bool
 
     @Environment(\.candidateViewStyle) private var style
     @Environment(\.candidateTheme) private var theme
@@ -53,7 +51,6 @@ struct ExpandedCandidateOverlay: View {
                 CandidateCellHelper.measuredCellWidth(
                     for: suggestion,
                     isTPSLayout: isTPSLayout,
-                    orMapsToER: orMapsToER,
                     candidateDisplayMode: candidateDisplayMode,
                     titleFontSize: theme.primaryFontSize,
                     subtitleFontSize: theme.secondaryFontSize,
@@ -95,7 +92,6 @@ struct ExpandedCandidateOverlay: View {
             suggestions,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
         return ScrollView {
@@ -142,7 +138,6 @@ struct ExpandedCandidateOverlay: View {
                     candidateDisplayMode: candidateDisplayMode,
                     contentHasSubtitles: contentHasSubtitles,
                     isTPSLayout: isTPSLayout,
-                    orMapsToER: orMapsToER,
                     isSelected: selectedCandidateIndex == item.originalIndex,
                     isFirstCandidate: item.originalIndex == 0,
                     onTap: { suggestion in

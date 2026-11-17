@@ -21,7 +21,6 @@ extension View {
         candidateStyle: CandidateView.Style,
         candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         onSymbolInsert: @escaping (String) -> Void,
         onOpenSettingsApp: @escaping () -> Void,
         oneHandedMode: OneHandedMode,
@@ -41,7 +40,6 @@ extension View {
                         onTranslateToggle: onTranslateToggle,
                         onCollapse: { expandState.collapse() },
                         isTPSLayout: isTPSLayout,
-                        orMapsToER: orMapsToER,
                     )
                     .candidateViewStyle(candidateStyle)
                     .offset(y: 2)

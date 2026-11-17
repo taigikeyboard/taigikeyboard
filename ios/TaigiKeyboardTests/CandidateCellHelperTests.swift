@@ -11,7 +11,14 @@ import XCTest
 
 final class CandidateCellHelperTests: XCTestCase {
     private let dual = AutocompleteSuggestion(text: "tâi-gí", title: "tâi-gí", subtitle: "台語")
-    private let romanOnlyRow = AutocompleteSuggestion(text: "tâi", title: "tâi", subtitle: nil)
+    /// A hanji-less row; `tpsText` is what the engine sends for it under the TPS layout
+    /// (`CandidateMessage.tps_text`, tâi → tai5 → ㄉ + ㄞ + ˊ).
+    private let romanOnlyRow = AutocompleteSuggestion(
+        text: "tâi",
+        title: "tâi",
+        subtitle: nil,
+        additionalInfo: [CandidateCellHelper.tpsTextKey: "ㄉㄞˊ"],
+    )
 
     /// §42 split cells as `buildContinuousSuggestions` emits them under Hanji with Romanization:
     /// single-script `text`, `subtitle = nil`, `cellScript` marker.
@@ -40,7 +47,6 @@ final class CandidateCellHelperTests: XCTestCase {
                 for: dual,
                 isHanjiFirst: swapped,
                 isTPSLayout: false,
-                orMapsToER: false,
                 candidateDisplayMode: .romanOnly,
             )
             XCTAssertEqual(title, "tâi-gí", "romanOnly title = engine roman (swapped=\(swapped))")
@@ -64,7 +70,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: romanOnlyRow,
             isHanjiFirst: false,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .romanOnly,
         )
         XCTAssertEqual(title, "tâi")
@@ -91,7 +96,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: dual,
             isHanjiFirst: false,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .combined,
         )
         XCTAssertEqual(title, "台語", "un-split row under 濫 leads with the hanji")
@@ -116,7 +120,6 @@ final class CandidateCellHelperTests: XCTestCase {
                         for: suggestion,
                         isHanjiFirst: swapped,
                         isTPSLayout: false,
-                        orMapsToER: false,
                         candidateDisplayMode: .combined,
                     ),
                     expected,
@@ -131,7 +134,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: romanOnlyRow,
             isHanjiFirst: true,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .combined,
         )
         XCTAssertEqual(title, "tâi", "no hanji → roman alone")
@@ -142,7 +144,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: dual,
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
             candidateDisplayMode: .combined,
         )
         XCTAssertEqual(title, "台語", "TPS: title = hanji even under combined")
@@ -155,7 +156,6 @@ final class CandidateCellHelperTests: XCTestCase {
         let width = CandidateCellHelper.measuredCellWidth(
             for: markedHanjiCell,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .combined,
             titleFontSize: titleFontSize,
             subtitleFontSize: 13,
@@ -179,7 +179,6 @@ final class CandidateCellHelperTests: XCTestCase {
         let width = CandidateCellHelper.measuredCellWidth(
             for: dual,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .combined,
             titleFontSize: titleFontSize,
             subtitleFontSize: 13,
@@ -215,7 +214,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: hostile,
             isHanjiFirst: true,
             isTPSLayout: false,
-            orMapsToER: false,
         )
         XCTAssertEqual(handled.text, "台語", "marked cell text must survive the swap rewrite")
         XCTAssertEqual(handled.subtitle, "tâi-gí", "marked cell passes through unmodified")
@@ -223,37 +221,45 @@ final class CandidateCellHelperTests: XCTestCase {
     }
 
     /// R5 P2 (parity, USER 2026-09-30): a hanji-less TPS cell shows its display romanization
-    /// rendered as TPS — `tlDisplayToTPS`, what picking it writes (engine `commit_text.rs`) and
-    /// what Android's cell shows. Was `tlNumericToTPS`, which reads tone digits, of the
-    /// tone-marked romanization.
+    /// rendered as TPS — the engine's `tps_text`, what picking it writes (engine
+    /// `commit_text.rs`) and what Android's cell shows.
     func testTPSLayout_hanjilessCell_showsItsRomanizationAsTPS() {
-        RustEngineBridge.install()
         let title = CandidateCellHelper.displayTitle(
             for: romanOnlyRow,
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
-        XCTAssertEqual(title, "ㄉㄞˊ", "trace: tâi → tai5 → ㄉ + ㄞ + ˊ")
+        XCTAssertEqual(title, "ㄉㄞˊ", "the engine's tps_text")
         let handled = CandidateCellHelper.suggestionToHandle(
             for: romanOnlyRow,
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
         )
         XCTAssertEqual(handled.text, title, "the rendered cell and the handed cell agree")
     }
 
+    /// A Hanji-only NextWord prediction (`subtitle == nil`, Hanji in `text`, no
+    /// `tpsText`) shows its Hanji under the TPS layout, never a blank cell.
+    func testTPSLayout_hanjiOnlyPrediction_showsItsHanji() {
+        let hanjiOnly = AutocompleteSuggestion(text: "去", title: "去", subtitle: nil)
+        let title = CandidateCellHelper.displayTitle(
+            for: hanjiOnly,
+            isHanjiFirst: true,
+            isTPSLayout: true,
+            candidateDisplayMode: .sideBySide,
+        )
+        XCTAssertEqual(title, "去")
+    }
+
     /// The guard also precedes the TPS fallback rewrite (defensive — TPS never
     /// splits, but a marked cell reaching a TPS-layout render must not be
-    /// re-rendered through `tlDisplayToTPS`).
+    /// rewritten to its TPS text).
     func testSuggestionToHandle_markedCell_isNoOp_underTPSLayout() {
         let handled = CandidateCellHelper.suggestionToHandle(
             for: markedRomanCell,
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
         )
         XCTAssertEqual(handled.text, "tâi-gí", "marked cell text must survive the TPS fallback")
         XCTAssertNil(handled.subtitle)
@@ -266,7 +272,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: dual,
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
             candidateDisplayMode: .romanOnly,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
@@ -287,7 +292,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: dual,
             isHanjiFirst: false,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
@@ -305,7 +309,6 @@ final class CandidateCellHelperTests: XCTestCase {
             for: dual,
             isHanjiFirst: true,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
@@ -325,7 +328,6 @@ final class CandidateCellHelperTests: XCTestCase {
             [dual],
             isHanjiFirst: false,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         ))
     }
@@ -337,7 +339,6 @@ final class CandidateCellHelperTests: XCTestCase {
             [romanOnlyRow, dual],
             isHanjiFirst: false,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         ))
     }
@@ -347,7 +348,6 @@ final class CandidateCellHelperTests: XCTestCase {
             [markedHanjiCell, markedRomanCell],
             isHanjiFirst: true,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .combined,
         ), "濫 content is one line tall — no reserved subtitle space")
     }
@@ -357,7 +357,6 @@ final class CandidateCellHelperTests: XCTestCase {
             [dual, romanOnlyRow],
             isHanjiFirst: false,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .romanOnly,
         ))
     }
@@ -370,7 +369,6 @@ final class CandidateCellHelperTests: XCTestCase {
             [romanOnlyRow],
             isHanjiFirst: true,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         ))
     }
@@ -380,7 +378,6 @@ final class CandidateCellHelperTests: XCTestCase {
             [dual],
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         ))
     }

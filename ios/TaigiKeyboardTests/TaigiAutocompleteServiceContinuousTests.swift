@@ -286,7 +286,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             for: suggestion,
             isHanjiFirst: true,
             isTPSLayout: false,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
@@ -317,7 +316,6 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
             for: suggestion,
             isHanjiFirst: false,
             isTPSLayout: true,
-            orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(

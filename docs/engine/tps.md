@@ -25,7 +25,7 @@ All TPS conversion and key-level auto-adjust live in Rust `engine/phonetics` (`t
 | TL → TPS (display) | Rust `phonetics::tps::to_zhuyin`, wrapped by `phonetics::api::tl_display_to_tps` / `tl_numeric_to_tps` |
 | Build-time TPS keys | Rust `tps_num_from_tl`, `tps_notone_from_tl`, `tps_abbrev_from_tl`; pipeline `dictionary/common/stages/numtone.py::_derive_tps_num` |
 | Key-level auto-adjust | Rust `phonetics::tps_adjust::adjust` (rules: [`tps-auto-correct-rules.md`](../phonetics/tps-auto-correct-rules.md)) |
-| Bridge — TL → TPS | iOS `RustEngineBridge.tlDisplayToTPS(_:orMapsToER:)` |
+| Candidate cell — TL → TPS | engine `CandidateMessage.tps_text` (`composing::requests::tps_cell_text`), filled under the TPS layout; iOS `CandidateCellHelper`, Android `CandidateStrip` / `CandidateOverlayContent`, desktop-core `CandidateCellContent::cell` show it |
 | Input adjust (every platform) | `Method::TpsKey` → `composing::transition::tps_key` → `phonetics::tps_input_adjust`, inside the engine; mobile `ComposingManager.tpsKey` (iOS / Android) |
 | iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Candidates/Views/CandidateCellHelper.swift` (candidate TPS display), `Actions/ActionHandler+KeyActions.swift` (sends `TpsKey`) |
 | Android TPS-aware glue | `ime/text/keyboard/TextInputKeyHandler.handleTaigiInput()` (sends `TpsKey`), layout JSON `assets/ime/text/characters/tps.json` |
@@ -179,9 +179,6 @@ Entering-tone codas (ㆴ/ㆵ/ㆻ/ㆷ) come from Rule 2 auto-selection or the lon
 ## Bridge API (called from mobile platforms)
 
 ```swift
-// iOS — Engine/RustEngineBridge+Phonetics.swift
-RustEngineBridge.tlDisplayToTPS("guá", orMapsToER: false)    // "ㆣㄨㄚˋ"
-
 // One TPS key (positional ㄇ/ㆬ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ
 // applied inside the engine) — Input/Composing/ComposingManager.swift:
 composingManager.tpsKey("ㄇ")   // rawInput "ㄅㄚ" → "ㄅㄚㆬ"

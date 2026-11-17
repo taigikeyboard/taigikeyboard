@@ -152,7 +152,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     }
 
     /// R5 P2 (parity, USER 2026-09-30): on the TPS layout a hanji-less pick writes the Bopomofo
-    /// its cell shows (`tlDisplayToTPS(roman)`), which earns no space. Was: the view-rewritten
+    /// its cell shows (`CandidateMessage.tps_text`), which earns no space. Was: the view-rewritten
     /// `tlNumericToTPS` of the display romanization. Android pins the same row engine-side
     /// (`commit_text.rs` `tps_truth_table`).
     func testCommitContinuous_TpsHanjilessPick_WritesItsBopomofo_EarnsNoSpace() {
@@ -168,8 +168,8 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             syllableCount: 1,
         )
         let result = RustEngineBridge.composingCommitContinuous(hanjiless, settings: tps, generation: envelopeGen)
-        let bopomofo = RustEngineBridge.tlDisplayToTPS("tâi", orMapsToER: tps.isTpsOrMappedToER)
-        XCTAssertEqual(bopomofo, "ㄉㄞˊ")
+        // trace: tâi → tai5 → ㄉㄞˊ (tone 5 = ˊ).
+        let bopomofo = "ㄉㄞˊ"
         XCTAssertEqual(result.outcome, .finalized(earnsAutoSpace: false))
         XCTAssertTrue(result.transition.effects.contains(.commitTextReplacingPreedit(bopomofo)), "\(result.transition.effects)")
     }

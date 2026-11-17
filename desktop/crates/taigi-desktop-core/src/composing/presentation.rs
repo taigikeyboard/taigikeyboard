@@ -185,7 +185,7 @@ impl CandidateSource {
 mod tests {
     use super::*;
     use crate::composing::{EngineNextWord, SystemClock};
-    use crate::engine::test_support::candidate;
+    use crate::engine::test_support::{candidate, tps_candidate};
     use crate::settings::{keys, SettingChoice, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
 
@@ -452,7 +452,10 @@ mod tests {
         // under Combined; `engine_settings` reads Show Typed Text First off
         // under TPS, so `leads_with_literal_roman` is false though the stored
         // setting is on and the lead has no Hanji.
-        let candidates = vec![candidate("ka", None, 0), candidate("ka", Some("家"), 1)];
+        let candidates = vec![
+            tps_candidate("ka", None, 0, "ㄍㄚ"),
+            tps_candidate("ka", Some("家"), 1, "家"),
+        ];
         let mut document = SettingsDocument::default();
         document.set_choice(&keys::INPUT_MODE, InputMode::Tps);
         document.set_choice(
