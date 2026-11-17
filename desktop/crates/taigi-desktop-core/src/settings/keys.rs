@@ -193,8 +193,8 @@ pub const UPDATE_PENDING_MANIFEST: SettingsKey<&'static str> =
 
 /// The symbol picker's last picks, most recent first (`symbols::RecentSymbols`).
 /// Bookkeeping the picker writes on every pick, like the update keys above:
-/// not a choice, so no reset touches it. macOS keeps a Swift twin:
-/// `SettingsStore.swift` `recentSymbols`.
+/// not a choice, so no reset touches it. macOS stores it in `UserDefaults`
+/// and asks the core to read and note it (`taigi-macos-ffi` `key_rules.rs`).
 pub const RECENT_SYMBOLS: SettingsKey<&'static [&'static str]> =
     SettingsKey::new("recentSymbols", &[]);
 

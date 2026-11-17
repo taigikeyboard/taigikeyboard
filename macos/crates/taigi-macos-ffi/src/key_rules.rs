@@ -3,11 +3,11 @@
 //! chord gate, recorder decision, resolved bindings, fixed-row labels and
 //! picker reading, under the Mac's grammar — and the input-mode writer the
 //! Swift settings ask (desktop TPS roadmap D5), the TPS key panel's rows
-//! (D6), and the auto-space swap gate the key path asks before its client
-//! checks. Pure — no token, no session, no
-//! runtime: a settings snapshot one of them carries is read for its one
-//! answer and never installed, so the key path keeps what the last session
-//! request carried, a panic here included.
+//! (D6), the auto-space swap gate the key path asks before its client
+//! checks, and the symbol picker's list and its recents writer. Pure — no
+//! token, no session, no runtime: a settings snapshot one of them carries is
+//! read for its one answer and never installed, so the key path keeps what
+//! the last session request carried, a panic here included.
 
 use taigi_desktop_core::composing::pass_through_may_swap;
 use taigi_desktop_core::keys::{
@@ -17,14 +17,17 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{
     keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
 };
+use taigi_desktop_core::symbols::symbol_picker_symbols;
 
 use crate::key_translation::{self, ESCAPE_KEY_CODE};
 use crate::proto::{
     chord_reply, desktop_request, desktop_response, press_reply, symbol_picker_reply, Chord,
     ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutField, ComposingShortcutsReply,
-    PassThroughSwapReply, PassThroughSwapRequest, PressReply, PressRequest, RecorderAction,
-    SettingsSnapshot, SwitchInputModeReply, SwitchInputModeRequest, SymbolPickerAction,
-    SymbolPickerKeyRequest, SymbolPickerReply, TpsKeyCap, TpsKeyboardRow, TpsKeyboardRowsReply,
+    NoteRecentSymbolReply, NoteRecentSymbolRequest, PassThroughSwapReply, PassThroughSwapRequest,
+    PressReply, PressRequest, RecorderAction, SettingsSnapshot, SwitchInputModeReply,
+    SwitchInputModeRequest, SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply,
+    SymbolPickerSymbolsReply, SymbolPickerSymbolsRequest, TpsKeyCap, TpsKeyboardRow,
+    TpsKeyboardRowsReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
@@ -51,6 +54,10 @@ pub(crate) fn answer(
         Request::PassThroughSwap(swap) => {
             pass_through_swap(swap, snapshot).map(Reply::PassThroughSwap)
         }
+        Request::SymbolPickerSymbols(symbols) => {
+            symbol_picker_symbols_reply(symbols).map(Reply::SymbolPickerSymbols)
+        }
+        Request::NoteRecentSymbol(note) => Ok(Reply::NoteRecentSymbol(note_recent_symbol(note))),
         _ => return None,
     })
 }
@@ -205,6 +212,38 @@ fn switch_input_mode(request: &SwitchInputModeRequest) -> Result<SwitchInputMode
         last_romanization_mode: (after != before.as_deref())
             .then(|| after.unwrap_or_default().to_owned()),
     })
+}
+
+/// The picker's list under the stored recents the request carries, through
+/// the list Windows and Linux open (`symbol_picker_symbols`). Not a password
+/// field: no such flag reaches this seam, and macOS turns third-party input
+/// sources off in a secure field. `NoSymbolTable` when the compiled-in table
+/// does not validate.
+fn symbol_picker_symbols_reply(
+    request: &SymbolPickerSymbolsRequest,
+) -> Result<SymbolPickerSymbolsReply, Refusal> {
+    let document = recents_document(&request.recent_symbols);
+    let symbols = symbol_picker_symbols(&document, false).ok_or(Refusal::NoSymbolTable)?;
+    Ok(SymbolPickerSymbolsReply { symbols })
+}
+
+/// Where a pick moves the stored recents, through the core's one writer
+/// (`SettingsDocument::note_recent_symbol`); `changed` false when it wrote
+/// nothing.
+fn note_recent_symbol(request: &NoteRecentSymbolRequest) -> NoteRecentSymbolReply {
+    let mut document = recents_document(&request.recent_symbols);
+    let changed = document.note_recent_symbol(&request.symbol);
+    NoteRecentSymbolReply {
+        changed,
+        recent_symbols: document.recent_symbols().symbols().to_vec(),
+    }
+}
+
+/// A document holding only the stored `recentSymbols`.
+fn recents_document(recent_symbols: &[String]) -> SettingsDocument {
+    let mut document = SettingsDocument::default();
+    document.set_string_list(&keys::RECENT_SYMBOLS, recent_symbols);
+    document
 }
 
 /// The core's TPS key panel rows as the proto carries them.
@@ -763,5 +802,65 @@ mod tests {
         assert_eq!(reply.rows[1].caps[0].shift_glyph, None);
         let count: usize = reply.rows.iter().map(|row| row.caps.len()).sum();
         assert_eq!(count, 42);
+    }
+
+    fn strings(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_owned()).collect()
+    }
+
+    /// trace: `desktop-symbols.json` punctuation opens `·`, `，`, `。`; a
+    /// stored `。` (repeated, after a blank, and one the table lacks) leads,
+    /// and the table keeps its order behind it.
+    #[test]
+    fn the_picker_list_is_the_cores_with_the_recents_first() {
+        let fresh = symbol_picker_symbols_reply(&SymbolPickerSymbolsRequest::default())
+            .expect("the compiled-in table validates");
+        assert_eq!(fresh.symbols[..3], strings(&["·", "，", "。"]));
+        let request = SymbolPickerSymbolsRequest {
+            recent_symbols: strings(&["", "。", "not-in-table", "。"]),
+        };
+        let recents = symbol_picker_symbols_reply(&request).expect("validates");
+        assert_eq!(recents.symbols[..3], strings(&["。", "·", "，"]));
+        assert_eq!(recents.symbols.len(), fresh.symbols.len());
+    }
+
+    #[test]
+    fn a_pick_leads_and_re_picking_the_front_changes_nothing() {
+        let noted = note_recent_symbol(&NoteRecentSymbolRequest {
+            recent_symbols: strings(&["，", "。"]),
+            symbol: "。".to_owned(),
+        });
+        assert!(noted.changed);
+        assert_eq!(noted.recent_symbols, strings(&["。", "，"]));
+        let again = note_recent_symbol(&NoteRecentSymbolRequest {
+            recent_symbols: noted.recent_symbols,
+            symbol: "。".to_owned(),
+        });
+        assert!(!again.changed);
+        // A hand-edited list whose normalized front is re-picked is left as
+        // stored, as `SettingsDocument::note_recent_symbol` leaves it.
+        let hand_edited = note_recent_symbol(&NoteRecentSymbolRequest {
+            recent_symbols: strings(&["。", "", "。"]),
+            symbol: "。".to_owned(),
+        });
+        assert!(!hand_edited.changed);
+    }
+
+    #[test]
+    fn the_symbol_requests_need_no_snapshot() {
+        assert!(matches!(
+            answer(
+                &desktop_request::Request::SymbolPickerSymbols(Default::default()),
+                None
+            ),
+            Some(Ok(desktop_response::Reply::SymbolPickerSymbols(_)))
+        ));
+        assert!(matches!(
+            answer(
+                &desktop_request::Request::NoteRecentSymbol(Default::default()),
+                None
+            ),
+            Some(Ok(desktop_response::Reply::NoteRecentSymbol(_)))
+        ));
     }
 }

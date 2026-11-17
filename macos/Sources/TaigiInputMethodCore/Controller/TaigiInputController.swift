@@ -130,17 +130,6 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var symbolPickerShortcut: KeyboardShortcuts.Shortcut?
 
-    /// The table the picker draws from. `nil` means the bundle's copy, which
-    /// is what production runs with; a test injects the repository's file,
-    /// since the tests run outside any bundle.
-    @MainActor
-    var symbolTableOverride: SymbolTable?
-
-    @MainActor
-    private var symbolTable: SymbolTable? {
-        symbolTableOverride ?? SymbolTable.bundled
-    }
-
     /// The display language the chrome renders in — the process-wide store,
     /// or the one a test injected.
     @MainActor
@@ -1234,11 +1223,11 @@ public final class TaigiInputController: IMKInputController {
     /// swallowing the slot keys.
     @MainActor
     private func presentSymbolPicker(in client: IMKTextInput) {
-        // No table, no picker — and nothing marked for one.
-        guard let table = symbolTable else { return }
-        // The recents lead (`RecentSymbols`), read once: this is the list
-        // the pick will index.
-        symbolPickerCells = settings.recentSymbols.ordered(table.symbols)
+        // The core's list, recents first, read once: this is the list the
+        // pick will index. None — the table did not validate — no picker,
+        // and nothing marked for one.
+        guard let cells = KeyRules.symbolPickerSymbols(recentSymbols: settings.recentSymbols) else { return }
+        symbolPickerCells = cells
         let selection = client.selectedRange()
         var markedTextLength = 0
         if selection.location == NSNotFound || selection.length == 0 {

@@ -1,5 +1,6 @@
 //! The symbol picker's table: three categories of insertable strings, compiled
-//! in from the shared desktop JSON. macOS keeps a Swift twin: `SymbolTable.swift`.
+//! in from the shared desktop JSON. macOS asks it over its seam
+//! (`taigi-macos-ffi` `key_rules.rs`).
 
 use crate::settings::SettingsDocument;
 use serde::Deserialize;
@@ -7,8 +8,8 @@ use std::collections::HashSet;
 use std::sync::OnceLock;
 
 /// `assets/symbols/desktop-symbols.json` at the repository root — the one source
-/// every desktop reads (macOS bundles the file; this crate compiles it in),
-/// so the pickers cannot drift.
+/// every desktop reads (compiled in here; macOS asks this crate for it), so
+/// the pickers cannot drift.
 const BUNDLED_JSON: &str = include_str!("../../../../assets/symbols/desktop-symbols.json");
 
 /// How the file groups its symbols. The picker shows them as ONE list, in
@@ -140,7 +141,6 @@ impl SymbolTable {
 /// keys (USER 2026-09-19: "the symbol menu should sort by most recent use"). One page, not
 /// the whole table: past `CAPACITY` a symbol falls back to its file place,
 /// so the brackets stay together and the rest of the list keeps its order.
-/// macOS keeps a Swift twin: `RecentSymbols.swift`.
 ///
 /// Pure: what is stored and what is shown are two functions of the same
 /// list. The document keeps the strings themselves

@@ -269,9 +269,9 @@ final class SettingsStore: @unchecked Sendable {
             defaultValue: false,
         )
 
-        /// The symbol picker's last picks, most recent first (`RecentSymbols`).
-        /// Bookkeeping the picker writes on every pick, like the update keys
-        /// above: not a choice, so no reset touches it.
+        /// The symbol picker's last picks, most recent first (desktop-core's
+        /// `RecentSymbols`). Bookkeeping the picker writes on every pick, like
+        /// the update keys above: not a choice, so no reset touches it.
         static let recentSymbols = SettingsKey(
             name: "recentSymbols",
             defaultValue: [String](),
@@ -568,18 +568,18 @@ final class SettingsStore: @unchecked Sendable {
         inputMode != .tps && isTelexGuideShown
     }
 
-    /// The symbol picker's recent picks.
-    var recentSymbols: RecentSymbols {
-        RecentSymbols(stringArray(Keys.recentSymbols))
+    /// The symbol picker's recent picks, as stored; desktop-core normalizes
+    /// them where it reads them (`KeyRules.symbolPickerSymbols`).
+    var recentSymbols: [String] {
+        stringArray(Keys.recentSymbols)
     }
 
-    /// Moves `symbol` to the front of the recent picks. Re-picking the front
+    /// Moves `symbol` to the front of the recent picks, through the core's
+    /// one writer (`KeyRules.notingRecentSymbol`). Re-picking the front
     /// symbol writes nothing.
     func noteRecentSymbol(_ symbol: String) {
-        let before = recentSymbols
-        let after = before.noting(symbol)
-        guard after != before else { return }
-        userDefaults.set(after.symbols, forKey: Keys.recentSymbols.name)
+        guard let after = KeyRules.notingRecentSymbol(symbol, in: recentSymbols) else { return }
+        userDefaults.set(after, forKey: Keys.recentSymbols.name)
     }
 
     /// Records `chord` on `field`, or clears the field when it is nil.

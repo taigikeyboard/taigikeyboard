@@ -41,6 +41,9 @@ pub(crate) enum Refusal {
     /// A field the request cannot run without was left unset (proto3 would
     /// otherwise read it as zero / empty and run anyway).
     Missing(&'static str),
+    /// The compiled-in symbol table did not validate: the picker has no list
+    /// (`symbols::SymbolTable::bundled`).
+    NoSymbolTable,
 }
 
 #[derive(Default)]
@@ -142,7 +145,9 @@ impl Shell {
             | Request::SymbolPickerKey(_)
             | Request::SwitchInputMode(_)
             | Request::TpsKeyboardRows(_)
-            | Request::PassThroughSwap(_) => Err(Refusal::Missing("a session request")),
+            | Request::PassThroughSwap(_)
+            | Request::SymbolPickerSymbols(_)
+            | Request::NoteRecentSymbol(_) => Err(Refusal::Missing("a session request")),
         }
     }
 

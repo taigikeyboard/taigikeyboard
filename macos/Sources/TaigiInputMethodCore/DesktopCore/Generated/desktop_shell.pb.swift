@@ -437,6 +437,22 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .passThroughSwap(newValue)}
   }
 
+  public var symbolPickerSymbols: Taigi_DesktopShell_SymbolPickerSymbolsRequest {
+    get {
+      if case .symbolPickerSymbols(let v)? = request {return v}
+      return Taigi_DesktopShell_SymbolPickerSymbolsRequest()
+    }
+    set {request = .symbolPickerSymbols(newValue)}
+  }
+
+  public var noteRecentSymbol: Taigi_DesktopShell_NoteRecentSymbolRequest {
+    get {
+      if case .noteRecentSymbol(let v)? = request {return v}
+      return Taigi_DesktopShell_NoteRecentSymbolRequest()
+    }
+    set {request = .noteRecentSymbol(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -478,6 +494,8 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case tpsKeyboardPress(Taigi_DesktopShell_TpsKeyboardPressRequest)
     case dictionarySearch(Taigi_DesktopShell_DictionarySearchRequest)
     case passThroughSwap(Taigi_DesktopShell_PassThroughSwapRequest)
+    case symbolPickerSymbols(Taigi_DesktopShell_SymbolPickerSymbolsRequest)
+    case noteRecentSymbol(Taigi_DesktopShell_NoteRecentSymbolRequest)
 
   }
 
@@ -809,6 +827,22 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     set {reply = .passThroughSwap(newValue)}
   }
 
+  public var symbolPickerSymbols: Taigi_DesktopShell_SymbolPickerSymbolsReply {
+    get {
+      if case .symbolPickerSymbols(let v)? = reply {return v}
+      return Taigi_DesktopShell_SymbolPickerSymbolsReply()
+    }
+    set {reply = .symbolPickerSymbols(newValue)}
+  }
+
+  public var noteRecentSymbol: Taigi_DesktopShell_NoteRecentSymbolReply {
+    get {
+      if case .noteRecentSymbol(let v)? = reply {return v}
+      return Taigi_DesktopShell_NoteRecentSymbolReply()
+    }
+    set {reply = .noteRecentSymbol(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Reply: Equatable, Sendable {
@@ -824,6 +858,8 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsReply)
     case dictionarySearch(Taigi_DesktopShell_DictionarySearchReply)
     case passThroughSwap(Taigi_DesktopShell_PassThroughSwapReply)
+    case symbolPickerSymbols(Taigi_DesktopShell_SymbolPickerSymbolsReply)
+    case noteRecentSymbol(Taigi_DesktopShell_NoteRecentSymbolReply)
 
   }
 
@@ -1973,6 +2009,74 @@ public nonisolated struct Taigi_DesktopShell_PassThroughSwapReply: Sendable {
   public init() {}
 }
 
+/// The list the symbol picker opens with (`symbols::symbol_picker_symbols`,
+/// the Windows and Linux one): the recents that are still in the compiled-in
+/// table, most recent first, then the rest in file order. The stored
+/// `recentSymbols` travel in it, like `SwitchInputModeRequest`'s values; no
+/// snapshot. Refused when the compiled-in table does not validate — the
+/// picker then does not open.
+public nonisolated struct Taigi_DesktopShell_SymbolPickerSymbolsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The stored `recentSymbols`, as stored; the core normalizes them.
+  public var recentSymbols: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_SymbolPickerSymbolsReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// In picker order; the list a pick indexes.
+  public var symbols: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// A pick moved to the front of the recents, through the core's one writer
+/// (`SettingsDocument::note_recent_symbol`), on a document holding only the
+/// stored list this request carries. Pure, no snapshot; never refused.
+public nonisolated struct Taigi_DesktopShell_NoteRecentSymbolRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The stored `recentSymbols`, as stored.
+  public var recentSymbols: [String] = []
+
+  /// The symbol just picked.
+  public var symbol: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_NoteRecentSymbolReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Whether the pick changed the recents; false when it re-picked the front
+  /// symbol (of the list as normalized), and nothing is stored.
+  public var changed: Bool = false
+
+  /// The list to store as `recentSymbols` when `changed`.
+  public var recentSymbols: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// The Manage Dictionaries search (#792): `query` looked up by desktop-core's
 /// one lookup (`engine::dictionary_search::search`, the Windows and Linux
 /// one) under the settings snapshot this request must carry — the input
@@ -2083,7 +2187,7 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerAction: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{3}symbol_picker_symbols\0\u{3}note_recent_symbol\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2352,6 +2456,32 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .passThroughSwap(v)
         }
       }()
+      case 23: try {
+        var v: Taigi_DesktopShell_SymbolPickerSymbolsRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .symbolPickerSymbols(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .symbolPickerSymbols(v)
+        }
+      }()
+      case 24: try {
+        var v: Taigi_DesktopShell_NoteRecentSymbolRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .noteRecentSymbol(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .noteRecentSymbol(v)
+        }
+      }()
       default: break
       }
     }
@@ -2448,6 +2578,14 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .passThroughSwap?: try {
       guard case .passThroughSwap(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
+    }()
+    case .symbolPickerSymbols?: try {
+      guard case .symbolPickerSymbols(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
+    }()
+    case .noteRecentSymbol?: try {
+      guard case .noteRecentSymbol(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 24)
     }()
     default: break
     }
@@ -2820,7 +2958,7 @@ nonisolated extension Taigi_DesktopShell_LexiconStats: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{3}symbol_picker_symbols\0\u{3}note_recent_symbol\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2985,6 +3123,32 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
           self.reply = .passThroughSwap(v)
         }
       }()
+      case 15: try {
+        var v: Taigi_DesktopShell_SymbolPickerSymbolsReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .symbolPickerSymbols(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .symbolPickerSymbols(v)
+        }
+      }()
+      case 16: try {
+        var v: Taigi_DesktopShell_NoteRecentSymbolReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .noteRecentSymbol(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .noteRecentSymbol(v)
+        }
+      }()
       default: break
       }
     }
@@ -3046,6 +3210,14 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
     case .passThroughSwap?: try {
       guard case .passThroughSwap(let v)? = self.reply else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+    }()
+    case .symbolPickerSymbols?: try {
+      guard case .symbolPickerSymbols(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    }()
+    case .noteRecentSymbol?: try {
+      guard case .noteRecentSymbol(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
     case nil: break
     }
@@ -4888,6 +5060,136 @@ nonisolated extension Taigi_DesktopShell_PassThroughSwapReply: SwiftProtobuf.Mes
 
   public static func ==(lhs: Taigi_DesktopShell_PassThroughSwapReply, rhs: Taigi_DesktopShell_PassThroughSwapReply) -> Bool {
     if lhs.maySwap != rhs.maySwap {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SymbolPickerSymbolsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SymbolPickerSymbolsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}recent_symbols\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.recentSymbols) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.recentSymbols.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.recentSymbols, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SymbolPickerSymbolsRequest, rhs: Taigi_DesktopShell_SymbolPickerSymbolsRequest) -> Bool {
+    if lhs.recentSymbols != rhs.recentSymbols {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SymbolPickerSymbolsReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SymbolPickerSymbolsReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}symbols\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.symbols) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.symbols.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.symbols, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SymbolPickerSymbolsReply, rhs: Taigi_DesktopShell_SymbolPickerSymbolsReply) -> Bool {
+    if lhs.symbols != rhs.symbols {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_NoteRecentSymbolRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NoteRecentSymbolRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}recent_symbols\0\u{1}symbol\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.recentSymbols) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.symbol) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.recentSymbols.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.recentSymbols, fieldNumber: 1)
+    }
+    if !self.symbol.isEmpty {
+      try visitor.visitSingularStringField(value: self.symbol, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_NoteRecentSymbolRequest, rhs: Taigi_DesktopShell_NoteRecentSymbolRequest) -> Bool {
+    if lhs.recentSymbols != rhs.recentSymbols {return false}
+    if lhs.symbol != rhs.symbol {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_NoteRecentSymbolReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NoteRecentSymbolReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}changed\0\u{3}recent_symbols\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.changed) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.recentSymbols) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.changed != false {
+      try visitor.visitSingularBoolField(value: self.changed, fieldNumber: 1)
+    }
+    if !self.recentSymbols.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.recentSymbols, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_NoteRecentSymbolReply, rhs: Taigi_DesktopShell_NoteRecentSymbolReply) -> Bool {
+    if lhs.changed != rhs.changed {return false}
+    if lhs.recentSymbols != rhs.recentSymbols {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

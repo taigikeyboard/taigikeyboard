@@ -164,6 +164,43 @@ enum KeyRules {
         return reply?.rows
     }
 
+    /// The list the symbol picker opens with — desktop-core's
+    /// (`symbol_picker_symbols`, from its compiled-in table): the stored
+    /// recents it still has first, then the rest in file order. Nil (logged)
+    /// when the bridge gave no reply or the core refused, the table not
+    /// validating; the picker then does not open.
+    static func symbolPickerSymbols(recentSymbols: [String]) -> [String]? {
+        var message = Taigi_DesktopShell_SymbolPickerSymbolsRequest()
+        message.recentSymbols = recentSymbols
+        let reply = DesktopCoreBridge.roundtrip(.symbolPickerSymbols(message), op: "symbolPickerSymbols") {
+            if case let .symbolPickerSymbols(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }
+        return reply?.symbols
+    }
+
+    /// Where a pick of `symbol` moves the stored recents, through the core's
+    /// one writer (`SettingsDocument::note_recent_symbol`): the list to
+    /// store, or nil when there is nothing to store — the front symbol
+    /// re-picked, or no reply from the bridge (logged).
+    static func notingRecentSymbol(_ symbol: String, in recentSymbols: [String]) -> [String]? {
+        var message = Taigi_DesktopShell_NoteRecentSymbolRequest()
+        message.recentSymbols = recentSymbols
+        message.symbol = symbol
+        let reply = DesktopCoreBridge.roundtrip(.noteRecentSymbol(message), op: "noteRecentSymbol") {
+            if case let .noteRecentSymbol(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }
+        guard let reply, reply.changed else { return nil }
+        return reply.recentSymbols
+    }
+
     /// `reply` read by `decode`: nil when there is no reply (the bridge
     /// logged why) or it holds what this side cannot read (logged here).
     private static func decoded<Reply, Value>(
