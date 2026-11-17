@@ -15,12 +15,12 @@ public final class TaigiInputController: IMKInputController {
     /// `static`: IMK builds one controller per client text session, and the
     /// category never varies, so a stored property would create an `os_log`
     /// handle per session.
-    private static let logger = DebugLogger(category: "InputController")
+    static let logger = DebugLogger(category: "InputController")
 
     /// This session's identity in the coordinator. Allocated at construction
     /// rather than read from the client, because identifying a client means
     /// asking it — see the activation rule on `activateServer` below.
-    private let sessionToken = ComposingSessionToken()
+    let sessionToken = ComposingSessionToken()
 
     /// Whether this controller last left a marked region in its client. Kept
     /// here rather than asked of the back end because the case that needs it is
@@ -32,7 +32,7 @@ public final class TaigiInputController: IMKInputController {
     /// What runs the key path: the composition, the candidate list, the
     /// commits. This controller replays what it answers (`replay`).
     @MainActor
-    private var backend: ComposingBackend {
+    var backend: ComposingBackend {
         ComposingBackend.shared
     }
 
@@ -100,7 +100,7 @@ public final class TaigiInputController: IMKInputController {
     /// window answers is read against the list it was shown, whatever the
     /// recents say by then.
     @MainActor
-    private var symbolPickerCells: [String] = []
+    var symbolPickerCells: [String] = []
 
     /// Whether the symbol picker is up for this session.
     @MainActor
@@ -113,14 +113,7 @@ public final class TaigiInputController: IMKInputController {
     /// `dismissSymbolPicker` clears exactly what was written and never an
     /// empty region the client did not have.
     @MainActor
-    private var isSymbolPickerPlaceholderMarked = false
-
-    /// What the picker marks in the document while it is up: one space,
-    /// underlined like a composition (vChewing `getAttributedStringPlaceholder`).
-    /// A space rather than a zero-width character: what the client shows is
-    /// what the user is picking over, and a zero-width leftover would be
-    /// invisible.
-    private static let symbolPickerPlaceholder = " "
+    var isSymbolPickerPlaceholderMarked = false
 
     /// The chord on the picker row, read at activation rather than per key:
     /// the registry read decodes JSON out of `UserDefaults`, and every
@@ -128,7 +121,7 @@ public final class TaigiInputController: IMKInputController {
     /// Recording a new chord means the settings window took focus, which is
     /// a fresh activation of this session on the way back.
     @MainActor
-    private var symbolPickerShortcut: KeyboardShortcuts.Shortcut?
+    var symbolPickerShortcut: KeyboardShortcuts.Shortcut?
 
     /// The display language the chrome renders in — the process-wide store,
     /// or the one a test injected.
@@ -186,7 +179,7 @@ public final class TaigiInputController: IMKInputController {
     /// the user changed the display mode afterwards. Only Auto-Space itself is
     /// re-read live at swap time, because turning the feature off should stop
     /// it.
-    private var armedAutoSpaceCaret: Int?
+    var armedAutoSpaceCaret: Int?
 
     /// Where the mode flash goes. `nil` means the shared HUD panel; a test injects a
     /// recorder, for the same reason `candidatePresenter` is injectable — the
@@ -200,7 +193,7 @@ public final class TaigiInputController: IMKInputController {
     /// is the client holding whatever marked region has to be finished there.
     /// Weak because the client belongs to the host, not to us.
     @MainActor
-    private weak var lastClient: (any IMKTextInput)?
+    weak var lastClient: (any IMKTextInput)?
 
     /// KVO on the Candidate Display key so an open bar is fetched again when the Appearance
     /// pane (or `defaults write`) changes it; armed in `activateServer`,
@@ -444,245 +437,6 @@ public final class TaigiInputController: IMKInputController {
             return onMainActor(sender) { controller, client in controller.handle(key, client: client) }
         default:
             return false
-        }
-    }
-
-    // MARK: - Input-source menu
-
-    /// The menu under the input-source icon in the menu bar.
-    ///
-    /// Built fresh on every call, which is what the contract asks for: the
-    /// system calls this "whenever the menu needs to be drawn so that input
-    /// methods can update the menu to reflect their current state"
-    /// (`IMKInputController.h:307-310`). That is what keeps each row printing
-    /// the key it currently answers to, with no refresh wiring of its own.
-    ///
-    /// Nothing here reads session state, so unlike the other entry points this
-    /// one asserts no isolation: the mode comes from `UserDefaults`, which is
-    /// thread-safe, and the rest is titles and selectors. It does build AppKit
-    /// objects, and so still rests on the process-wide assumption that IMK
-    /// calls its controllers on the main run loop — the assumption
-    /// `onMainActor` exists to turn into a crash rather than a data race
-    /// everywhere it can be checked.
-    override public func menu() -> NSMenu! {
-        // Each row's chord is read and assigned by hand rather than set through
-        // the library's `NSMenuItem.setShortcut(for:)`: that helper registers a
-        // `NotificationCenter` observer per item so a long-lived item can update
-        // itself, and this menu is rebuilt from scratch every time the system
-        // draws it (`IMKInputController.h:307-310`) — one observer would be
-        // added per draw and never removed, since removal only happens by
-        // re-binding the same item. Rebuilding IS the update mechanism the
-        // observer exists to provide. Why only the global rows claim a key
-        // equivalent is `InputSourceMenuRow`'s to say.
-        //
-        // The global chords fire through the Carbon hotkeys `ShortcutHotkeys`
-        // registers, active only while a session holds the engine.
-        //
-        // `assumeIsolated` for the same reason the rest of this class hops
-        // through `onMainActor`: IMK calls its controllers on the main run
-        // loop, and the shortcut store is main-actor-isolated. Asserting turns
-        // a broken assumption into a crash rather than a data race.
-        //
-        // The titles are resolved in the same hop, and the store is synced first: under Automatic
-        // the OS language can change while the persisted tag stays `"system"`, so nothing writes the
-        // key and no observation fires — a menu rebuilt per draw is exactly the right place to
-        // notice.
-        //
-        // Read BEFORE the hop, so the closure captures a value rather than this
-        // controller: `menu()` is nonisolated and the controller is not
-        // Sendable, so sending `self` into a main-actor closure does not
-        // compile. The store itself is `@unchecked Sendable`.
-        let injectedLanguage = displayLanguageOverride
-        let groups = MainActor.assumeIsolated { () -> [[InputSourceMenuRow]] in
-            let language = injectedLanguage ?? DisplayLanguageStore.shared
-            // Can rebuild the menu bar and relabel the settings window as a side effect: the sync
-            // commits a language change, and committing one runs the chrome renderer.
-            language.syncFromSettings()
-
-            // A row for a global shortcut may claim a key equivalent because it
-            // IS a shortcut: an entry in the registry the Shortcuts pane records,
-            // whose chord carries modifiers no composition types. Read live, so
-            // the row prints whatever the user last recorded on it. (No
-            // composing key can ever claim one — the agent proved unable to
-            // DISPLAY one without also DISPATCHING it, `InputSourceMenuRow`.)
-            //
-            // Only a chord WITH modifiers: the recorder lets a user move any
-            // row onto a bare key, and a bare key equivalent here would be
-            // eaten by the agent everywhere for as long as this input source is
-            // selected — the Carbon hotkey is session-scoped, the menu is not.
-            // Such a row prints nothing, like a cleared one; the pane still
-            // shows the key.
-            @MainActor
-            func shortcutRow(_ action: ShortcutAction, label: String, selector: Selector) -> InputSourceMenuRow {
-                guard let shortcut = KeyboardShortcuts.getShortcut(for: action.name),
-                      !shortcut.modifiers.isEmpty
-                else {
-                    return InputSourceMenuRow(label: label, action: selector)
-                }
-                return InputSourceMenuRow(
-                    label: label,
-                    keyEquivalent: shortcut.nsMenuItemKeyEquivalent ?? "",
-                    modifiers: shortcut.modifiers,
-                    action: selector,
-                )
-            }
-
-            // The global shortcuts a click can stand in for (USER 2026-09-19):
-            // the switches, each under the name the Shortcuts pane gives it,
-            // so the menu is where a user looks up what they last recorded,
-            // then the TPS key panel (desktop TPS P5; the rows are desktop-core's
-            // `keys::MENU`, the same on the three desktops).
-            // Not the Hanji/romanization swap — its default is the bare backtick, which
-            // the rule above would never print; not the symbol picker, which
-            // needs the caret a click has no hold of; and not the Telex guide
-            // (USER 2026-09-20: "very few people use it").
-            let shortcuts = [
-                shortcutRow(
-                    .toggleRomanization,
-                    label: ShortcutAction.toggleRomanization.label(language),
-                    selector: #selector(toggleRomanization(_:)),
-                ),
-                shortcutRow(
-                    .toggleTps,
-                    label: ShortcutAction.toggleTps.label(language),
-                    selector: #selector(toggleTps(_:)),
-                ),
-                shortcutRow(
-                    .cycleCandidateDisplayMode,
-                    label: ShortcutAction.cycleCandidateDisplayMode.label(language),
-                    selector: #selector(cycleCandidateDisplayMode(_:)),
-                ),
-                shortcutRow(
-                    .showTpsKeyboard,
-                    label: ShortcutAction.showTpsKeyboard.label(language),
-                    selector: #selector(showTpsKeyboard(_:)),
-                ),
-            ]
-            // One doorway (USER 2026-08-26). There was a row per settings pane
-            // from 2026-08-21 until then: each carried its own ⌃⇧ chord, and
-            // once those were retired the five rows were five names for one
-            // window. What is left is the window itself, opening wherever the
-            // user left it — naming the panes is the sidebar's job. Named
-            // TaigiKeyboard Settings, as on Windows and Linux (USER 2026-09-24: the three
-            // desktops' menus identical, i18n included; the shared row list is
-            // `taigi_desktop_core::keys::MENU`).
-            let settings = shortcutRow(
-                .openLastSettingsPane,
-                label: language.string(.desktopMenuSettings),
-                selector: #selector(showPreferences(_:)),
-            )
-            // No chord, by design: an on-demand check is a command a user
-            // reaches for once in a while, and a key equivalent claimed here
-            // is taken from the host application for as long as this input
-            // source is selected.
-            let checkForUpdates = InputSourceMenuRow(
-                label: language.string(.desktopUpdateCheckNow),
-                action: #selector(checkForUpdates(_:)),
-            )
-            // The one doorway to the About page: it has no sidebar row (USER
-            // 2026-09-20), so the menu is where it is found. No chord, as
-            // for Check for Updates.
-            let about = InputSourceMenuRow(
-                label: language.string(.homeAboutKeyboard),
-                action: #selector(showAbout(_:)),
-            )
-            return [shortcuts, [settings], [checkForUpdates, about]]
-        }
-        return InputSourceMenuRenderer.menu(groups)
-    }
-
-    /// Deliberately does not call `super`. The inherited implementation looks
-    /// for a `preferences.nib` (`IMKInputController.h:165-170`); this package is
-    /// built by SwiftPM and has no nib to find.
-    ///
-    /// What the menu's Settings row sends, since 2026-08-26: the header promises
-    /// that a row whose action IS `showPreferences:` routes here
-    /// (`IMKInputController.h:165-170`), which is the selector the system
-    /// reserves for this exact command — so a second one of our own would be
-    /// two names for one body. Opening no particular pane is what both callers
-    /// want: the user returns where they left off, which is also where the
-    /// ⌃⌘S chord the row prints lands.
-    override public func showPreferences(_: Any!) {
-        Self.logger.debug("showPreferences")
-        openSettings(on: nil)
-    }
-
-    /// Brings the window up on this controller's own settings store, so a test
-    /// drives the menu through its own defaults suite. `nil` leaves the stored
-    /// pane alone, reopening the window where the user left it.
-    private func openSettings(on pane: SettingsPane?) {
-        Self.logger.debug("open settings on \(pane?.rawValue ?? "the last-used pane")")
-        onMainActor(nil) { controller, _ in
-            // The settings window taking focus does not guarantee this
-            // session ends, and a picker left up would swallow keys behind it.
-            controller.dismissSymbolPicker()
-            ShortcutHotkeys.openSettings(
-                on: pane,
-                in: controller.settings,
-                show: controller.settingsPresenterOverride,
-            )
-        }
-    }
-
-    /// Checks for a new version, with the settings window already up.
-    ///
-    /// The window first, then the check, and never the other way round: a
-    /// fetch can take seconds, and the answer is a sheet on that window
-    /// (`UpdateAlertPresenter`). Opening it at the moment the user picks the
-    /// command is what puts the answer somewhere they are already looking —
-    /// and this process is an `LSUIElement` whose activation makes the focused
-    /// client resign, committing whatever was composing into the user's
-    /// document (`UpdateNotificationOffer`), so that cost is paid on their
-    /// click rather than seconds later when the network happens to answer.
-    ///
-    /// General because that is the pane the update state lives on
-    /// (`GeneralSettingsView`), so the outcome has somewhere to land.
-    @objc
-    private func checkForUpdates(_: Any!) {
-        Self.logger.debug("check for updates")
-        openSettings(on: .general)
-        onMainActor(nil) { controller, _ in
-            let checker = controller.updateCheckerOverride ?? UpdateChecker.shared
-            checker.checkManually()
-        }
-    }
-
-    /// The settings window on the About page, the only pane the sidebar does
-    /// not list.
-    @objc
-    private func showAbout(_: Any!) {
-        Self.logger.debug("show about")
-        openSettings(on: .about)
-    }
-
-    /// The menu's stand-ins for the global chords: each row sends the same
-    /// command its chord does, through the same doorway (`ShortcutHotkeys.perform`),
-    /// so the click and the key can never drift apart. With no session armed
-    /// the coordinator drops the command, as it drops the chord.
-    @objc
-    private func toggleRomanization(_: Any!) {
-        performGlobalShortcut(.toggleRomanization)
-    }
-
-    @objc
-    private func toggleTps(_: Any!) {
-        performGlobalShortcut(.toggleTps)
-    }
-
-    @objc
-    private func cycleCandidateDisplayMode(_: Any!) {
-        performGlobalShortcut(.cycleCandidateDisplayMode)
-    }
-
-    @objc
-    private func showTpsKeyboard(_: Any!) {
-        performGlobalShortcut(.showTpsKeyboard)
-    }
-
-    private func performGlobalShortcut(_ action: ShortcutAction) {
-        Self.logger.debug("menu shortcut \(action)")
-        onMainActor(nil) { _, _ in
-            ShortcutHotkeys.perform(action)
         }
     }
 
@@ -976,7 +730,7 @@ public final class TaigiInputController: IMKInputController {
     /// engine — nothing was answered, nothing replayed.
     @MainActor
     @discardableResult
-    private func send(
+    func send(
         client: IMKTextInput,
         armedSwap: Int?,
         _ call: (ComposingRequest) -> [ComposingEffect]?,
@@ -1159,157 +913,6 @@ public final class TaigiInputController: IMKInputController {
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 
-    // MARK: - Symbol picker
-
-    /// Whether `key` is the chord recorded on the picker row: the same key
-    /// CODE and chording modifiers the registry stores, compared as Carbon
-    /// would for the other rows — not the character, which ⌃ and ⌥ rewrite.
-    @MainActor
-    private func isSymbolPickerChord(_ key: KeyEventSnapshot) -> Bool {
-        guard let shortcut = symbolPickerShortcut,
-              let keyCode = key.keyCode, Int(keyCode) == shortcut.carbonKeyCode
-        else { return false }
-        let chording = KeyEventSnapshot.chordingModifiers
-        return key.modifiers.intersection(chording) == shortcut.modifiers.intersection(chording)
-    }
-
-    /// Ends whatever is composing, then puts the symbol list up over the
-    /// caret (`ComposingBackend.commitForSymbolPicker`). A commit that only
-    /// NAILED a segment leaves the composition running, and the picker waits
-    /// for a key that ends it.
-    @MainActor
-    private func openSymbolPicker(client: IMKTextInput) {
-        if backend.isComposing(sessionToken) {
-            // The commit moves the caret; whatever it earns re-arms.
-            armedAutoSpaceCaret = nil
-            send(client: client, armedSwap: nil) { backend.commitForSymbolPicker(in: $0) }
-            guard !backend.isComposing(sessionToken) else { return }
-        }
-        presentSymbolPicker(in: client)
-    }
-
-    /// Shows the whole table anchored to the caret — one list, in file
-    /// order, so the first pick is the symbol itself (USER 2026-09-09: a
-    /// category to choose first "it would interrupt the user's flow") — and records the
-    /// picker as open.
-    ///
-    /// The list goes up over a PLACEHOLDER marked region — one underlined
-    /// space, the caret after it — and not over a bare insertion point, even
-    /// though the composition is over by the time the picker opens. A host
-    /// that is not a Cocoa text view reads "no marked text" as "no input
-    /// method at work": Chromium (Chrome, and every Electron app) forwards
-    /// the real key event to the page unless marked text was present around
-    /// the input method's turn, so with nothing marked the arrows walked the
-    /// list AND moved the page's caret, and Return picked the symbol AND
-    /// submitted the message (USER report 2026-09-18: "after pressing ↑↓←→ the
-    /// typing position wanders off by itself, and pressing Enter types nothing"). vChewing keeps the same
-    /// placeholder for the same list — `.ofSymbolTable` with nothing typed
-    /// (`IMEStateParsed4Darwin.swift:256-266`, `InputSession_HandleStates.swift:58-64`:
-    /// "keep the inline display from being empty, so IMK does not misjudge the
-    /// composition as ended and leak the keyboard event to the client app").
-    ///
-    /// Not over a selection: marked text replaces the selection the way
-    /// typing does (`NSTextInputClient.setMarkedText`), and clearing it on
-    /// Escape would not bring the selected text back. A selection is what
-    /// the pick replaces, so the list opens over it with nothing marked —
-    /// the one case that keeps the bare anchor. A client that cannot say
-    /// what is selected is read as a caret, as the auto-space swap reads it.
-    ///
-    /// The placeholder goes in first, so the caret walk reads its rectangle
-    /// — index 0 of the marked region, which is what a client answers a line
-    /// height for. A list that did not reach the screen — no caret, no
-    /// display for it — leaves nothing behind, the placeholder included: a
-    /// picker recorded as open over a window nobody can see would go on
-    /// swallowing the slot keys.
-    @MainActor
-    private func presentSymbolPicker(in client: IMKTextInput) {
-        // The core's list, recents first, read once: this is the list the
-        // pick will index. None — the table did not validate — no picker,
-        // and nothing marked for one.
-        guard let cells = KeyRules.symbolPickerSymbols(recentSymbols: settings.recentSymbols) else { return }
-        symbolPickerCells = cells
-        let selection = client.selectedRange()
-        var markedTextLength = 0
-        if selection.location == NSNotFound || selection.length == 0 {
-            isSymbolPickerPlaceholderMarked = true
-            markedTextLength = Self.symbolPickerPlaceholder.utf16.count
-            ClientWriter(client: client)
-                .setMarkedText(Self.symbolPickerPlaceholder, caretUTF16: markedTextLength)
-        }
-        guard let caretRect = caretRect(in: client, anchorEnd: markedTextLength) else {
-            dismissSymbolPicker()
-            return
-        }
-        symbolPickerPresenter.show(
-            CandidateWindowContent(
-                cells: symbolPickerCells.map { CandidateCellContent(text: $0, annotation: nil) },
-                slotKeySet: settings.candidateSlotKeySet,
-                leadCellIsUnkeyed: false,
-            ),
-            anchoredTo: caretRect,
-            hostWindowLevel: client.windowLevel(),
-            hostBundleIdentifier: client.bundleIdentifier(),
-            ownedBy: sessionToken,
-        )
-        // The window answers a selection only while it owns a visible list.
-        if symbolPickerPresenter.selectedCandidateIndex(ownedBy: sessionToken) == nil {
-            dismissSymbolPicker()
-        }
-    }
-
-    /// One key while the picker is up. Answers whether the key was consumed;
-    /// false means the picker has closed and the key goes on through the
-    /// composing contract as if the picker had never been there.
-    @MainActor
-    private func handleSymbolPickerKey(_ key: KeyEventSnapshot, client: IMKTextInput) -> Bool {
-        // Read by desktop-core under this session's settings; a seam failure
-        // (logged) takes the picker down and lets the key go on.
-        switch KeyRules.symbolPickerIntent(for: key, in: settings.userDefaults) ?? .closeAndPassThrough {
-        case .close:
-            dismissSymbolPicker()
-        case let .navigate(direction):
-            symbolPickerPresenter.navigate(direction, ownedBy: sessionToken)
-        case let .pickSlot(slot):
-            // An empty slot on a short last page is consumed all the same,
-            // as it is on the bar: the key is the picker's while it is up.
-            pickSymbolCell(
-                at: symbolPickerPresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
-                client: client,
-            )
-        case .confirm:
-            pickSymbolCell(
-                at: symbolPickerPresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                client: client,
-            )
-        case .closeAndPassThrough:
-            dismissSymbolPicker()
-            return false
-        }
-        return true
-    }
-
-    /// Writes the symbol at `index`, closes the picker and moves the symbol
-    /// to the front of the recents, for the next opening. Nil — a slot with
-    /// no cell — does nothing, and keeps the picker up.
-    @MainActor
-    private func pickSymbolCell(at index: Int?, client: IMKTextInput) {
-        guard let index, symbolPickerCells.indices.contains(index) else { return }
-        let symbol = symbolPickerCells[index]
-        dismissSymbolPicker()
-        insertSymbol(symbol, client: client)
-        settings.noteRecentSymbol(symbol)
-    }
-
-    /// Writes `symbol` through the back end (`ComposingBackend.insertSymbol`)
-    /// — the one picker key that touches the document, so the one that
-    /// spends the auto-space arm.
-    @MainActor
-    private func insertSymbol(_ symbol: String, client: IMKTextInput) {
-        let armedSwap = armedAutoSpaceCaret
-        armedAutoSpaceCaret = nil
-        send(client: client, armedSwap: armedSwap) { backend.insertSymbol(symbol, in: $0) }
-    }
-
     /// A click on a cap of the TPS key panel (desktop TPS roadmap D6): its
     /// glyph typed as the layout key would type it, through the core's own
     /// check of the mode and the glyph (`ComposingBackend.tpsKeyboardPress`).
@@ -1336,76 +939,6 @@ public final class TaigiInputController: IMKInputController {
         send(client: client, armedSwap: nil) { backend.tpsKeyboardPress(glyph, in: $0) }
     }
 
-    /// Takes the list down and its placeholder with it — from `lastClient`,
-    /// the client this session marks (`inputControllerWillClose` clears a
-    /// leftover region through the same reference). Cleared BEFORE anything
-    /// the picker's key then writes: a pick inserts over a document with no
-    /// marked region, exactly as it did before the placeholder existed, so
-    /// the auto-space swap's `selectedRange()` and absolute `replacementRange`
-    /// still measure committed text — with a marked region up, IMK reads a
-    /// replacement range from the start of the marked text instead. Only
-    /// what went in comes out, so a host never gets an empty region it did
-    /// not have (McBopomofo #346); the flag drops before the write, so a
-    /// client callback that re-enters here finds nothing left to clear.
-    @MainActor
-    private func dismissSymbolPicker() {
-        symbolPickerCells = []
-        symbolPickerPresenter.hide(ownedBy: sessionToken)
-        guard isSymbolPickerPlaceholderMarked else { return }
-        isSymbolPickerPlaceholderMarked = false
-        if let client = lastClient {
-            ClientWriter(client: client).clearMarkedText()
-        }
-    }
-
-    // MARK: - Auto-space
-
-    /// Where the writes of a reply that arms the swap land: the start of the
-    /// marked region they commit over, or with nothing marked the selection
-    /// they replace. Asked BEFORE the reply writes anything, so the arm is
-    /// this plus what the reply inserted — never a `selectedRange()` read
-    /// after the writes. Chromium hosts answer that read from a copy the
-    /// renderer has not updated yet (the caret before the commit), which
-    /// left every swap there declined.
-    ///
-    /// A client that cannot answer, or answers mid-selection, never arms:
-    /// the swap degrades to pass-through (`guá ?`). A wrong start cannot
-    /// rewrite the wrong text either — the swap still needs the client's
-    /// caret to equal the arm and a space before it (`canSwapAutoSpace`).
-    /// Asking here is safe: this runs inside a key event, like every client
-    /// query (see `caretRect`'s activation-only deadlock rule).
-    @MainActor
-    private static func writeStart(in client: IMKTextInput) -> Int? {
-        let marked = client.markedRange()
-        if marked.location != NSNotFound {
-            return marked.location
-        }
-        let selection = client.selectedRange()
-        guard selection.location != NSNotFound, selection.length == 0 else { return nil }
-        return selection.location
-    }
-
-    /// The client half of the smart-punctuation swap (`guá ` + `?` → `guá? `):
-    /// two verifications before the back end may answer a rewrite, because
-    /// `replacementRange` is a real edit of committed text — the caret must
-    /// still be a collapsed selection exactly where the space left it, and
-    /// the character under the range must still be a space. Any client that
-    /// fails one — including one that cannot answer a substring query at
-    /// all — gets the key passed through untouched.
-    @MainActor
-    private static func canSwapAutoSpace(armedAt armedCaret: Int, in client: IMKTextInput) -> Bool {
-        let caret = client.selectedRange()
-        guard caret.length == 0, caret.location == armedCaret else { return false }
-        guard let preceding = client.attributedSubstring(from: autoSpaceRange(armedAt: armedCaret)) else { return false }
-        return preceding.string == " "
-    }
-
-    /// The auto space in front of an arm: what the swap checks and what it
-    /// replaces.
-    private static func autoSpaceRange(armedAt armedCaret: Int) -> NSRange {
-        NSRange(location: armedCaret - 1, length: 1)
-    }
-
     /// Where the character of the marked text that ends at `anchorEnd` is
     /// drawn, in screen coordinates — the composition's last character, or
     /// under TPS the last character before the caret.
@@ -1429,7 +962,7 @@ public final class TaigiInputController: IMKInputController {
     /// Safe to ask here and only here: the deadlock this call causes in Chromium
     /// hosts is specific to activation (see `activateServer`).
     @MainActor
-    private func caretRect(in client: IMKTextInput, anchorEnd: Int) -> CGRect? {
+    func caretRect(in client: IMKTextInput, anchorEnd: Int) -> CGRect? {
         var index = max(anchorEnd - 1, 0)
         while index >= 0 {
             var lineHeightRect = CGRect.zero
@@ -1536,7 +1069,7 @@ public final class TaigiInputController: IMKInputController {
     /// `body` takes the controller as a parameter rather than capturing `self`:
     /// a closure that captured it could not cross into the main-actor context
     /// without the compiler treating a non-`Sendable` controller as sent.
-    private func onMainActor<T: Sendable>(
+    func onMainActor<T: Sendable>(
         _ sender: Any!,
         _ body: @MainActor @Sendable (TaigiInputController, IMKTextInput?) -> T,
     ) -> T {
