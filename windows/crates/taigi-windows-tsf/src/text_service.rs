@@ -1,6 +1,7 @@
 //! The text service: the COM object TSF activates once per thread manager.
-//! Lifecycle, sinks, tray button + menu, settings reload, context identity
-//! (PR5a); the composing path itself is `session.rs` (PR5b).
+//! Lifecycle, sinks, tray button registration (its impls in `lang_bar.rs`),
+//! settings reload, context identity
+//! (PR5a); the composing path itself is `session/` (PR5b).
 //!
 //! Threading (roadmap W3): TSF is STA — every method here runs on the
 //! host's UI thread, so the state is a `RefCell`. RULE: no COM call of any
@@ -16,9 +17,7 @@ use crate::contexts::ContextRegistry;
 use crate::conversion_mode;
 use crate::display_attribute::{self, DisplayAttributeEnumerator};
 use crate::key_translation;
-use crate::lang_bar::{self, LANG_BAR_SINK_COOKIE};
 use crate::preserved_keys::{self, PreservedKeys};
-use crate::product_name;
 use crate::runtime::Runtime;
 use crate::session::KeyPhase;
 use crate::settings_launcher;
@@ -32,28 +31,24 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{
-    telex_guide_rows, LanguageMode, MenuCommand, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
+    telex_guide_rows, LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
 };
 use taigi_desktop_core::mode_indicator::ModeIndicator;
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
-use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
-use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
+use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, GUID};
+use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, WPARAM};
 use windows::Win32::System::SystemInformation::GetTickCount64;
 use windows::Win32::UI::Input::KeyboardAndMouse::{VK_CONTROL, VK_MENU};
 use windows::Win32::UI::TextServices::{
     IEnumTfDisplayAttributeInfo, ITfComposition, ITfCompositionSink, ITfCompositionSink_Impl,
     ITfContext, ITfDisplayAttributeInfo, ITfDisplayAttributeProvider,
     ITfDisplayAttributeProvider_Impl, ITfDocumentMgr, ITfKeyEventSink, ITfKeyEventSink_Impl,
-    ITfKeystrokeMgr, ITfLangBarItem, ITfLangBarItemButton, ITfLangBarItemButton_Impl,
-    ITfLangBarItemMgr, ITfLangBarItemSink, ITfLangBarItem_Impl, ITfMenu, ITfSource, ITfSource_Impl,
-    ITfTextInputProcessorEx, ITfTextInputProcessorEx_Impl, ITfTextInputProcessor_Impl,
+    ITfKeystrokeMgr, ITfLangBarItem, ITfLangBarItemButton, ITfLangBarItemMgr, ITfLangBarItemSink,
+    ITfSource, ITfTextInputProcessorEx, ITfTextInputProcessorEx_Impl, ITfTextInputProcessor_Impl,
     ITfThreadFocusSink, ITfThreadFocusSink_Impl, ITfThreadMgr, ITfThreadMgrEventSink,
-    ITfThreadMgrEventSink_Impl, TfLBIClick, TF_INVALID_COOKIE, TF_LANGBARITEMINFO, TF_LBI_ICON,
-    TF_LBI_TEXT,
+    ITfThreadMgrEventSink_Impl, TF_INVALID_COOKIE, TF_LBI_ICON, TF_LBI_TEXT,
 };
-use windows::Win32::UI::WindowsAndMessaging::HICON;
 use windows_core::{implement, IUnknownImpl};
 
 /// Milliseconds on a clock that only moves forward, for measuring how long a
@@ -81,7 +76,7 @@ pub(crate) struct ServiceState {
     /// The atom `RegisterGUID` gave the preedit's display attribute.
     pub(crate) display_attribute_atom: u32,
     is_lang_bar_added: bool,
-    lang_bar_sink: Option<ITfLangBarItemSink>,
+    pub(crate) lang_bar_sink: Option<ITfLangBarItemSink>,
     pub(crate) contexts: ContextRegistry,
     /// The counter context tokens are handed out from — one per service,
     /// never a COM address: an address is reused once its context is gone,
@@ -787,7 +782,7 @@ impl TextService_Impl {
 
     /// What the tray button shows: the settings in force and this
     /// activation's Shift-tap mode.
-    fn mode_indicator(&self) -> ModeIndicator {
+    pub(crate) fn mode_indicator(&self) -> ModeIndicator {
         let language_mode = self.state.borrow().language_mode;
         let settings = Runtime::shared().settings.current();
         ModeIndicator::of(&settings.engine_settings(), language_mode)
@@ -1109,155 +1104,6 @@ impl ITfDisplayAttributeProvider_Impl for TextService_Impl {
                 display_attribute::info_for(unsafe { &*guid })
             },
         )
-    }
-}
-
-impl ITfLangBarItem_Impl for TextService_Impl {
-    fn GetInfo(&self, pinfo: *mut TF_LANGBARITEMINFO) -> Result<()> {
-        guarded("ITfLangBarItem::GetInfo", || {
-            if pinfo.is_null() {
-                return Err(Error::from_hresult(E_INVALIDARG));
-            }
-            // SAFETY: TSF passes a valid out-pointer to its own struct.
-            unsafe { *pinfo = lang_bar::item_info() };
-            Ok(())
-        })
-    }
-
-    fn GetStatus(&self) -> Result<u32> {
-        guarded("ITfLangBarItem::GetStatus", || Ok(0))
-    }
-
-    fn Show(&self, _fshow: BOOL) -> Result<()> {
-        guarded("ITfLangBarItem::Show", || Ok(()))
-    }
-
-    fn GetTooltipString(&self) -> Result<BSTR> {
-        guarded("ITfLangBarItem::GetTooltipString", || {
-            Ok(BSTR::from(product_name::localized().as_str()))
-        })
-    }
-}
-
-impl ITfLangBarItemButton_Impl for TextService_Impl {
-    /// Both mouse buttons raise the menu — this button has no mode to
-    /// toggle, and the Mac opens its menu on a plain click
-    /// (`TaigiInputController.menu()`). The rows are drawn here
-    /// rather than through `InitMenu`: the taskbar input indicator never
-    /// drives the TSF menu (`lang_bar`'s module header).
-    fn OnClick(&self, _click: TfLBIClick, pt: &POINT, _prcarea: *const RECT) -> Result<()> {
-        guarded("ITfLangBarItemButton::OnClick", || {
-            let runtime = Runtime::shared();
-            let rows = lang_bar::popup_rows(&runtime.strings(), &runtime.settings.current());
-            if let Some(id) = lang_bar::show_popup(&rows, *pt) {
-                match lang_bar::menu_command(id) {
-                    None => log::warn!("tsf.menu_unknown_id id={id}"),
-                    Some(MenuCommand::OpenSettings) => {
-                        // The picker comes down first, whoever raised it: this
-                        // path never reaches the session, and the settings
-                        // window taking focus is not guaranteed to end the
-                        // context that owns the list.
-                        self.hide_symbol_picker_now();
-                        settings_launcher::open_settings();
-                    }
-                    Some(MenuCommand::CheckForUpdates) => {
-                        // Also the settings window (on General): same doorway.
-                        self.hide_symbol_picker_now();
-                        settings_launcher::check_for_updates();
-                    }
-                    Some(MenuCommand::About) => {
-                        // The settings window on About, the pane the sidebar
-                        // does not list: same doorway.
-                        self.hide_symbol_picker_now();
-                        settings_launcher::open_about();
-                    }
-                    // A shortcut row does what its chord does, through the
-                    // same doorway (`perform_global`), against the context
-                    // focused NOW — resolved after the popup's modal loop,
-                    // not before it — so the open list of that context is
-                    // the one re-presented. No focused context is the
-                    // `OnPreservedKey` case: identity 0, the switches still
-                    // flip.
-                    Some(MenuCommand::Shortcut(action)) => {
-                        let identity = self.focused_context_identity();
-                        self.perform_global(action, identity);
-                    }
-                }
-            }
-            Ok(())
-        })
-    }
-
-    /// The declarative menu of a `TF_LBI_STYLE_BTN_MENU` button, which this
-    /// item is not — `OnClick` draws its own. Answered as an empty menu
-    /// rather than `E_NOTIMPL`: a host that probes it (the legacy desktop
-    /// language bar) reads a failure as a broken item, and mozc leaves the
-    /// same no-op `S_OK` for a non-menu button
-    /// (`tip_lang_bar_menu.cc:619-624`).
-    fn InitMenu(&self, _pmenu: Ref<ITfMenu>) -> Result<()> {
-        guarded("ITfLangBarItemButton::InitMenu", || Ok(()))
-    }
-
-    /// The other half of the declarative menu; nothing selects from an
-    /// empty one, and an unexpected id is not this item's error to raise.
-    fn OnMenuSelect(&self, _wid: u32) -> Result<()> {
-        guarded("ITfLangBarItemButton::OnMenuSelect", || Ok(()))
-    }
-
-    /// A caller-owned icon: TSF destroys what it is given. Re-read after
-    /// every switch and whenever this thread gets the focus back
-    /// (`notify_lang_bar` pushes the update), so it reads the settings file
-    /// as it is now.
-    fn GetIcon(&self) -> Result<HICON> {
-        guarded("ITfLangBarItemButton::GetIcon", || {
-            lang_bar::owned_icon(self.mode_indicator())
-        })
-    }
-
-    /// The same state as text, for a host that draws text instead.
-    fn GetText(&self) -> Result<BSTR> {
-        guarded("ITfLangBarItemButton::GetText", || {
-            Ok(BSTR::from(self.mode_indicator().symbol()))
-        })
-    }
-}
-
-impl ITfSource_Impl for TextService_Impl {
-    /// TSF advises exactly one `ITfLangBarItemSink` on a lang-bar item; a
-    /// second subscriber is refused rather than silently replacing the
-    /// first, so every advise has a symmetric unadvise.
-    fn AdviseSink(&self, riid: *const GUID, punk: Ref<IUnknown>) -> Result<u32> {
-        guarded("ITfSource::AdviseSink", || {
-            if riid.is_null() {
-                return Err(Error::from_hresult(E_INVALIDARG));
-            }
-            // SAFETY: null-checked; TSF's own IID pointer.
-            if unsafe { *riid } != ITfLangBarItemSink::IID {
-                return Err(Error::from_hresult(CONNECT_E_NOCONNECTION));
-            }
-            // The QueryInterface happens before the borrow.
-            let sink: ITfLangBarItemSink = punk.ok()?.cast()?;
-            let mut state = self.state.borrow_mut();
-            if state.lang_bar_sink.is_some() {
-                drop(state);
-                drop(sink);
-                return Err(Error::from_hresult(CONNECT_E_ADVISELIMIT));
-            }
-            state.lang_bar_sink = Some(sink);
-            Ok(LANG_BAR_SINK_COOKIE)
-        })
-    }
-
-    fn UnadviseSink(&self, dwcookie: u32) -> Result<()> {
-        guarded("ITfSource::UnadviseSink", || {
-            if dwcookie != LANG_BAR_SINK_COOKIE {
-                return Err(Error::from_hresult(CONNECT_E_NOCONNECTION));
-            }
-            // Taken under the borrow, released after it.
-            let sink = self.state.borrow_mut().lang_bar_sink.take();
-            drop(sink);
-            Ok(())
-        })
     }
 }
 

@@ -35,7 +35,7 @@ impl LanguageMode {
     }
 
     /// The name the mode flash shows after a switch, as the romanization and
-    /// candidate-display switches show theirs (`session.rs` `perform_global`).
+    /// candidate-display switches show theirs (`session/mod.rs` `perform_global`).
     pub fn flash_label_key(self) -> StringKey {
         match self {
             Self::Taigi => StringKey::SettingsTaigiMode,

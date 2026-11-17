@@ -1,7 +1,7 @@
 //! The global shortcut actions — romanization / Hanji-romanization /
 //! display-mode switches, the Telex guide, the symbol picker, the TPS key
 //! panel's launch, the settings doorway. Port of the Windows
-//! `session.rs::perform_global`, with the HUD and the two floating windows
+//! `session/mod.rs::perform_global`, with the HUD and the two floating windows
 //! replaced by what a panel can draw: the guide and the picker are lookup
 //! tables, the flash is the mode label announced ([`Emit::AnnounceMode`]).
 //!
