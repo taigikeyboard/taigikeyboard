@@ -53,8 +53,8 @@ impl CandidateCellContent {
     /// `ios/.../TaigiAutocompleteService.swift` `buildContinuousSuggestions` (primary =
     /// romanization, secondary = Hanji) and the swap flip in
     /// `ios/.../CandidateCellHelper.swift` `suggestionToHandle`; arm order is the
-    /// same on every platform. Serves Pairing and Romanization Only; Combined's split cells
-    /// are built by [`super::presentation`].
+    /// same on every platform. Serves paired rows (Pairing, Romanization Only, TPS); the
+    /// engine's §42 split rows are rendered by [`super::presentation`].
     ///
     /// Under TPS a cell is one script whatever Candidate Display says: the
     /// engine's `tps_text` — the Hanji, or for a candidate with none its

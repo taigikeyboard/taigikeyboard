@@ -22,6 +22,20 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         )
     }
 
+    /// `prediction` as the engine lists it for one §42 split cell.
+    private func split(
+        _ prediction: RustEngineBridge.NextWordEnginePrediction,
+        _ script: Taigi_Engine_CellScript,
+    ) -> RustEngineBridge.NextWordEnginePrediction {
+        RustEngineBridge.NextWordEnginePrediction(
+            text: prediction.text,
+            subtitle: prediction.subtitle,
+            hanji: prediction.hanji,
+            tl: prediction.tl,
+            cellScript: script,
+        )
+    }
+
     private var predictions: [RustEngineBridge.NextWordEnginePrediction] {
         [
             prediction(text: "tsia̍h", subtitle: "食", hanji: "食"),
@@ -36,7 +50,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
     }
 
     func testUnsplit_emitsOneDualScriptSuggestionPerPrediction() {
-        let suggestions = ActionHandler.predictionSuggestions(predictions, splitCombinedCells: false)
+        let suggestions = ActionHandler.predictionSuggestions(predictions)
 
         XCTAssertEqual(suggestions.count, predictions.count)
         XCTAssertEqual(suggestions[0].text, "tsia̍h")
@@ -50,18 +64,27 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         XCTAssertEqual(suggestions[3].additionalInfo["canonicalTl"], "tāng")
     }
 
-    func testSplit_emitsHanjiThenRomanCells_dedupedPerScript() {
-        let suggestions = ActionHandler.predictionSuggestions(predictions, splitCombinedCells: true)
+    /// The engine's split rows (`EnginePrediction.cell_script`, deduped engine-side) become
+    /// single-script cells in the order listed.
+    func testSplitRows_emitHanjiThenRomanCells() {
+        let rows = [
+            split(predictions[0], .hanji),
+            split(predictions[0], .roman),
+            split(predictions[1], .hanji),
+            split(predictions[2], .hanji),
+            split(predictions[2], .roman),
+            split(predictions[3], .roman),
+            split(predictions[4], .hanji),
+        ]
+        let suggestions = ActionHandler.predictionSuggestions(rows)
 
         let shown = suggestions.map { "\(CandidateCellScript.marker(for: $0) ?? "-"):\($0.text)" }
         XCTAssertEqual(shown, [
             "hanji:食",
             "roman:tsia̍h",
-            // 𤆬's roman cell reads like 食's → collapsed; its Hanji cell stays.
             "hanji:𤆬",
             "hanji:重",
             "roman:tîng",
-            // 重/tāng: 重 already drawn, its own roman cell stays reachable.
             "roman:tāng",
             "hanji:去",
         ])
@@ -71,7 +94,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
     }
 
     func testSplitCells_shareIdentity_andHanjiCellCarriesBracketRoman() {
-        let suggestions = ActionHandler.predictionSuggestions([predictions[3]], splitCombinedCells: true)
+        let suggestions = ActionHandler.predictionSuggestions([split(predictions[3], .hanji), split(predictions[3], .roman)])
 
         XCTAssertEqual(suggestions.count, 2)
         for suggestion in suggestions {
@@ -90,7 +113,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
     /// Android parity: `PredictionWordsBuilderTest.prediction_pick_reads_the_word_not_the_cell_text`.
     @MainActor
     func testPredictionPick_readsTheMetadataNotTheCellText() {
-        let unsplit = ActionHandler.predictionSuggestions(predictions, splitCombinedCells: false)
+        let unsplit = ActionHandler.predictionSuggestions(predictions)
         let swapped = AutocompleteSuggestion(
             text: "重",
             title: "重",
@@ -106,7 +129,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
             RustEngineBridge.PredictionPick(script: .lead, roman: "", hanji: "去", canonicalTl: ""),
         )
 
-        let split = ActionHandler.predictionSuggestions([predictions[3]], splitCombinedCells: true)
+        let split = ActionHandler.predictionSuggestions([split(predictions[3], .hanji), split(predictions[3], .roman)])
             .map(ActionHandler.predictionPick(for:))
         XCTAssertEqual(split.map(\.script), [.hanji, .roman])
         // The Hanji cell carries the roman its Annotate in Brackets commit appends.

@@ -534,6 +534,10 @@ message CandidateMessage {
   // the same rendering a commit of it writes (`composing::commit_text`).
   // Empty off the TPS layout. Display only.
   string         tps_text            = 11;
+  // The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+  // Under a split, a candidate appears as up to two rows sharing every
+  // identity field; the cell index is the row index.
+  CellScript     cell_script         = 12;
 }
 
 // Platform-neutral effects. The wrapper maps document-mutation effects

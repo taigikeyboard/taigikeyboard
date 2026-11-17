@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.text.nextword
 
 import com.siansiansu.taigikeyboard.engine.NextWordEnginePrediction
 import com.siansiansu.taigikeyboard.engine.PredictionPick
+import com.siansiansu.taigikeyboard.engine.proto.CellScript
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
@@ -10,6 +11,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.siansiansu.taigikeyboard.engine.proto.CellScript.CELL_SCRIPT_HANJI as HANJI
+import com.siansiansu.taigikeyboard.engine.proto.CellScript.CELL_SCRIPT_ROMAN as ROMAN
 
 /**
  * Pins the NextWord prediction cell shape [buildPredictionWords] emits per
@@ -44,7 +47,7 @@ class PredictionWordsBuilderTest {
 
     @Test
     fun unsplit_emits_one_dual_script_word_per_prediction_with_sentinel_ids() {
-        val words = buildPredictionWords(predictions, splitCombinedCells = false)
+        val words = buildPredictionWords(predictions)
 
         assertEquals(predictions.size, words.size)
         assertEquals(listOf(-1, -2, -3, -4, -5), words.map { it.id })
@@ -57,19 +60,28 @@ class PredictionWordsBuilderTest {
     }
 
     @Test
-    fun split_emits_hanji_then_roman_cells_deduped_per_script() {
-        val words = buildPredictionWords(predictions, splitCombinedCells = true)
+    fun split_rows_emit_hanji_then_roman_cells() {
+        // The engine's split rows (`EnginePrediction.cell_script`, deduped engine-side).
+        val rows =
+            listOf(
+                predictions[0].split(HANJI),
+                predictions[0].split(ROMAN),
+                predictions[1].split(HANJI),
+                predictions[2].split(HANJI),
+                predictions[2].split(ROMAN),
+                predictions[3].split(ROMAN),
+                predictions[4].split(HANJI),
+            )
+        val words = buildPredictionWords(rows)
 
         val shown = words.map { it.additionalInfo[MetadataKeys.CELL_SCRIPT] to it.displayCellText() }
         assertEquals(
             listOf(
                 MetadataKeys.CELL_SCRIPT_HANJI to "食",
                 MetadataKeys.CELL_SCRIPT_ROMAN to "tsia̍h",
-                // 𤆬's roman cell reads like 食's → collapsed; its Hanji cell stays.
                 MetadataKeys.CELL_SCRIPT_HANJI to "𤆬",
                 MetadataKeys.CELL_SCRIPT_HANJI to "重",
                 MetadataKeys.CELL_SCRIPT_ROMAN to "tîng",
-                // 重/tāng: 重 already drawn, its own roman cell stays reachable.
                 MetadataKeys.CELL_SCRIPT_ROMAN to "tāng",
                 MetadataKeys.CELL_SCRIPT_HANJI to "去",
             ),
@@ -82,7 +94,7 @@ class PredictionWordsBuilderTest {
 
     @Test
     fun split_cells_share_the_prediction_identity() {
-        val words = buildPredictionWords(listOf(predictions[3]), splitCombinedCells = true)
+        val words = buildPredictionWords(listOf(predictions[3].split(HANJI), predictions[3].split(ROMAN)))
 
         assertEquals(2, words.size)
         words.forEach {
@@ -92,6 +104,8 @@ class PredictionWordsBuilderTest {
             assertEquals("重", it.displayText)
         }
     }
+
+    private fun NextWordEnginePrediction.split(cellScript: CellScript) = copy(cellScript = cellScript)
 
     private fun TaigiWord.displayCellText(): String = if (additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_ROMAN) roman else hanji.orEmpty()
 
@@ -105,7 +119,7 @@ class PredictionWordsBuilderTest {
      */
     @Test
     fun prediction_pick_reads_the_word_not_the_cell_text() {
-        val unsplit = buildPredictionWords(predictions, splitCombinedCells = false)
+        val unsplit = buildPredictionWords(predictions)
         assertEquals(
             PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "tāng", "重", "tāng"),
             predictionPick(unsplit[3]),
@@ -115,7 +129,7 @@ class PredictionWordsBuilderTest {
             predictionPick(unsplit[4]),
         )
 
-        val split = buildPredictionWords(listOf(predictions[3]), splitCombinedCells = true).map(::predictionPick)
+        val split = buildPredictionWords(listOf(predictions[3].split(HANJI), predictions[3].split(ROMAN))).map(::predictionPick)
         assertEquals(
             listOf(CommitScript.COMMIT_SCRIPT_HANJI, CommitScript.COMMIT_SCRIPT_ROMAN),
             split.map { it.script },

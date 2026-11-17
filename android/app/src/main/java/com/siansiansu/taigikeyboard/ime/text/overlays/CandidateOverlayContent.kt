@@ -154,8 +154,8 @@ fun CandidateOverlayContent(
 
     // Rows do NOT depend on isHanjiFirst: two-line cell width is max(roman, hanji) and
     // COMBINED single-line titles are swap-invariant, so a swap never reflows. They DO depend
-    // on candidateDisplayMode: a mixed cell — marked split cell or the unmarked hanji-led
-    // NextWord row (§42 second exception) — measures its rendered single-line title.
+    // on candidateDisplayMode: a mixed cell — marked split cell or an unmarked (hanji-led)
+    // row (§42 second exception) — measures its rendered single-line title.
     val rows =
         remember(suggestions, isTPSLayout, typeface, candidateDisplayMode) {
             CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->

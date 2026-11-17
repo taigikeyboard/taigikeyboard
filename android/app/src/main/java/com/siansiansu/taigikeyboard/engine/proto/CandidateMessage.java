@@ -485,6 +485,79 @@ public  final class CandidateMessage extends
 
   }
 
+  public static final int CELL_SCRIPT_FIELD_NUMBER = 12;
+  private int cellScript_;
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   * @return The enum numeric value on the wire for cellScript.
+   */
+  @java.lang.Override
+  public int getCellScriptValue() {
+    return cellScript_;
+  }
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   * @return The cellScript.
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CellScript getCellScript() {
+    com.siansiansu.taigikeyboard.engine.proto.CellScript result = com.siansiansu.taigikeyboard.engine.proto.CellScript.forNumber(cellScript_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CellScript.UNRECOGNIZED : result;
+  }
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   * @param value The enum numeric value on the wire for cellScript to set.
+   */
+  private void setCellScriptValue(int value) {
+      cellScript_ = value;
+  }
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   * @param value The cellScript to set.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void setCellScript(com.siansiansu.taigikeyboard.engine.proto.CellScript value) {
+    cellScript_ = value.getNumber();
+
+  }
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   */
+  private void clearCellScript() {
+
+    cellScript_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.CandidateMessage parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1059,6 +1132,83 @@ public  final class CandidateMessage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+     * Under a split, a candidate appears as up to two rows sharing every
+     * identity field; the cell index is the row index.
+     * </pre>
+     *
+     * <code>.taigi.engine.CellScript cell_script = 12;</code>
+     * @return The enum numeric value on the wire for cellScript.
+     */
+    @java.lang.Override
+    public int getCellScriptValue() {
+      return instance.getCellScriptValue();
+    }
+    /**
+     * <pre>
+     * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+     * Under a split, a candidate appears as up to two rows sharing every
+     * identity field; the cell index is the row index.
+     * </pre>
+     *
+     * <code>.taigi.engine.CellScript cell_script = 12;</code>
+     * @param value The cellScript to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setCellScriptValue(int value) {
+      copyOnWrite();
+      instance.setCellScriptValue(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+     * Under a split, a candidate appears as up to two rows sharing every
+     * identity field; the cell index is the row index.
+     * </pre>
+     *
+     * <code>.taigi.engine.CellScript cell_script = 12;</code>
+     * @return The cellScript.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CellScript getCellScript() {
+      return instance.getCellScript();
+    }
+    /**
+     * <pre>
+     * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+     * Under a split, a candidate appears as up to two rows sharing every
+     * identity field; the cell index is the row index.
+     * </pre>
+     *
+     * <code>.taigi.engine.CellScript cell_script = 12;</code>
+     * @param value The enum numeric value on the wire for cellScript to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCellScript(com.siansiansu.taigikeyboard.engine.proto.CellScript value) {
+      copyOnWrite();
+      instance.setCellScript(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+     * Under a split, a candidate appears as up to two rows sharing every
+     * identity field; the cell index is the row index.
+     * </pre>
+     *
+     * <code>.taigi.engine.CellScript cell_script = 12;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCellScript() {
+      copyOnWrite();
+      instance.clearCellScript();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CandidateMessage)
   }
   @java.lang.Override
@@ -1083,10 +1233,11 @@ public  final class CandidateMessage extends
             "hanji_",
             "canonicalTl_",
             "tpsText_",
+            "cellScript_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0001\u0002\u000b\u0007\u0000\u0000\u0000\u0002\u000b\u0003\u000b" +
-              "\u0004\u0208\b\u0208\t\u1208\u0000\n\u0208\u000b\u0208";
+              "\u0000\b\u0000\u0001\u0002\f\b\u0000\u0000\u0000\u0002\u000b\u0003\u000b\u0004\u0208" +
+              "\b\u0208\t\u1208\u0000\n\u0208\u000b\u0208\f\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

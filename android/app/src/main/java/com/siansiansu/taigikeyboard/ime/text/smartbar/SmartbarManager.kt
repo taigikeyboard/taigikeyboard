@@ -21,7 +21,6 @@ import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateDisplayParams
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateMode
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateStripState
-import com.siansiansu.taigikeyboard.ime.text.candidates.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.composing.EngineUsageRecorder
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
@@ -125,9 +124,6 @@ class SmartbarManager(
             logger = compositionRoot.logger,
             onUpdateCandidates = { updateCandidates(it) },
             onClearCandidates = { clearCandidates() },
-            splitCombinedCellsProvider = {
-                shouldSplitCombinedCells(prefs.candidateDisplayMode, prefs.isTpsLayout)
-            },
         )
 
     private val toolbarManager =

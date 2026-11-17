@@ -1181,7 +1181,8 @@ fn commits_what_each_cell_shows_and_the_flip_the_other_script() {
         (true, CandidateDisplayMode::Combined),
         (false, CandidateDisplayMode::RomanOnly),
     ] {
-        // Combined splits a Hanji candidate into two cells.
+        // Combined: the engine lists a Hanji candidate as two rows (its
+        // Hanji cell, then its roman cell).
         let cell_count = if display_mode == CandidateDisplayMode::Combined {
             2
         } else {
@@ -1197,8 +1198,14 @@ fn commits_what_each_cell_shows_and_the_flip_the_other_script() {
                     doc.set_choice(&keys::CANDIDATE_DISPLAY_MODE, display_mode);
                 });
                 rig.type_text("taigi");
-                let taigi = rig.candidate("台語");
-                let (cells, _) = rig.manager.presentation(std::slice::from_ref(&taigi));
+                let listed = rig.candidates();
+                let start = listed
+                    .iter()
+                    .position(|c| c.hanji.as_deref() == Some("台語"))
+                    .expect("台語 listed");
+                let rows = &listed[start..start + cell_count];
+                assert!(rows.iter().all(|c| c.hanji.as_deref() == Some("台語")));
+                let (cells, _) = rig.manager.presentation(rows);
                 let label = format!("swapped={swapped} {display_mode:?} cell={index} flip={flip}");
                 assert_eq!(cells.len(), cell_count, "{label}");
                 let cell = &cells[index];
@@ -1215,7 +1222,7 @@ fn commits_what_each_cell_shows_and_the_flip_the_other_script() {
                     cell.script
                 };
 
-                let (outcome, _) = rig.commit(&taigi, script);
+                let (outcome, _) = rig.commit(&rows[index], script);
 
                 // Every write, not only the last: one for a commit, none for
                 // a refusal (typing wrote none).

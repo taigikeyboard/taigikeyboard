@@ -3,11 +3,8 @@ package com.siansiansu.taigikeyboard.ime.text.candidates
 import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
-import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -65,54 +62,6 @@ class TaigiAutocompleteServiceTest {
             val result = service.autocomplete(rawInput = "gua", displayText = "gua")
             assertEquals("engine candidates pass through 1:1", 1, result.size)
             assertEquals("true", result[0].additionalInfo[MetadataKeys.IS_CONTINUOUS])
-        }
-
-    /**
-     * §42 mixed split gate: Hanji with Romanization + non-TPS splits, everything else does not.
-     * Pins the polarity of the TPS clause (an inverted condition would split
-     * under TPS and stop splitting under Hanji with Romanization).
-     */
-    @Test
-    fun `split gate is combined mode outside TPS only`() {
-        assertTrue(shouldSplitCombinedCells(CandidateDisplayMode.COMBINED, isTpsLayout = false))
-        assertFalse(
-            "TPS ignores the picker — hanji-first by construction",
-            shouldSplitCombinedCells(CandidateDisplayMode.COMBINED, isTpsLayout = true),
-        )
-        for (mode in listOf(CandidateDisplayMode.SIDE_BY_SIDE, CandidateDisplayMode.ROMAN_ONLY)) {
-            assertFalse("$mode never splits", shouldSplitCombinedCells(mode, isTpsLayout = false))
-            assertFalse("$mode never splits under TPS", shouldSplitCombinedCells(mode, isTpsLayout = true))
-        }
-    }
-
-    /**
-     * The split flag is LIVE-READ per fetch, never snapshotted at construction:
-     * flipping Candidate Display takes effect on the very next keystroke.
-     */
-    @Test
-    fun `split provider is re-read on every fetch`() =
-        runTest {
-            var splitCombinedCells = false
-            val service = TaigiAutocompleteService(
-                logger = NullLoggerBackend,
-                continuousFetcher = {
-                    listOf(cand(consumedSpanEnd = 5, displayText = "tâi-gí").copy(hanji = "台語"))
-                },
-                splitCombinedCellsProvider = { splitCombinedCells },
-            )
-
-            val unsplit = service.autocomplete(rawInput = "taigi", displayText = "taigi")
-            assertEquals("split OFF → one un-split cell", 1, unsplit.size)
-            assertNull(unsplit[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
-
-            splitCombinedCells = true
-            val split = service.autocomplete(rawInput = "taigi", displayText = "taigi")
-            assertEquals("split ON on the NEXT fetch → 漢字 cell + 羅馬字 cell", 2, split.size)
-            assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, split[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
-            assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, split[1].additionalInfo[MetadataKeys.CELL_SCRIPT])
-
-            splitCombinedCells = false
-            assertEquals("switching back un-splits immediately", 1, service.autocomplete("taigi", "taigi").size)
         }
 
     @Test

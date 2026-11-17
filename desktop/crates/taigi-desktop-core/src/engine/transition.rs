@@ -2,7 +2,7 @@
 //! effects it wants the platform to run, and the continuous candidates.
 
 use protos::engine::{
-    effect, CandidateMessage, CommitResolution, CommittedWord, ComposingResponse,
+    effect, CandidateMessage, CellScript, CommitResolution, CommittedWord, ComposingResponse,
     Effect as WireEffect,
 };
 
@@ -131,6 +131,10 @@ pub struct ContinuousCandidate {
     /// What the cell shows under the TPS layout — the Hanji, or the Bopomofo
     /// reading of a Hanji-less candidate; empty off TPS (`CandidateMessage.tps_text`).
     pub tps_text: String,
+    /// The §42 split cell this row is (`CandidateMessage.cell_script`): under
+    /// Hanji with Romanization a candidate arrives as a Hanji row then a
+    /// romanization row; PAIRED under every other display.
+    pub cell_script: CellScript,
 }
 
 impl ContinuousCandidate {
@@ -143,6 +147,7 @@ impl ContinuousCandidate {
             hanji: message.hanji.clone(),
             canonical_tl: message.canonical_tl.clone(),
             tps_text: message.tps_text.clone(),
+            cell_script: message.cell_script(),
         }
     }
 
@@ -192,6 +197,7 @@ pub(crate) mod test_support {
             hanji: hanji.map(str::to_owned),
             canonical_tl: roman.to_owned(),
             tps_text: String::new(),
+            cell_script: CellScript::Paired,
         }
     }
 

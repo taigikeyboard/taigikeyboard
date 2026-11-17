@@ -18,7 +18,7 @@
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 
-use protos::engine::CandidateDisplayMode;
+use protos::engine::{CandidateDisplayMode, CellScript};
 
 use crate::common::Fetch;
 use crate::common::{
@@ -144,6 +144,15 @@ fn fetch_with_identity(
         .unwrap_or_default()
 }
 
+/// The §42 split cell of each listed row (`CandidateMessage.cell_script`).
+fn fetch_cell_scripts(raw: &str, input_mode: &str, candidate_display_mode: i32) -> Vec<CellScript> {
+    let cfg = config_with_display_mode(input_mode, candidate_display_mode);
+    let resp = fetch_at_pos_response(&cfg, raw, Fetch::default());
+    resp.continuous
+        .map(|c| c.candidates.iter().map(|cand| cand.cell_script()).collect())
+        .unwrap_or_default()
+}
+
 /// Under a single-script display the literal absorbs dict 隻/tsiah, so its
 /// commit must still learn 隻: the literal inherits the absorbed row's
 /// `display_text` (the NextWord / frequency key) and `canonical_tl` while it
@@ -172,7 +181,7 @@ fn single_script_display_literal_inherits_absorbed_dict_identity() {
             literal.3, "tsiah",
             "canonical TL follows the absorbed row (mode {mode})"
         );
-        // Hanji with Romanization keeps the dict row itself: the platform split draws its Hanji cell.
+        // Hanji with Romanization keeps the dict row itself: the engine split lists its Hanji row.
         assert_eq!(
             candidates.iter().any(|c| c.0.as_deref() == Some("隻")),
             mode == combined,
@@ -224,12 +233,37 @@ fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
         explicit,
         "unknown value = side-by-side"
     );
-    // Hanji with Romanization keeps every row too — the split into one-script cells is the
-    // platform's (§42); only the literal's identity sidechannel differs.
+    // Hanji with Romanization keeps every row too and lists it as §42 one-script
+    // cells, deduped per script: trace — literal tsiah (roman cell); 食 Hanji +
+    // tsia̍h roman; 隻 Hanji (its tsiah absorbed by the literal); 𤆬 Hanji (its
+    // tsia̍h already shown).
     assert_eq!(
         fetch("tsiah", "tl", CandidateDisplayMode::Combined as i32),
-        explicit,
-        "COMBINED = no engine collapse"
+        vec![
+            (None, "tsiah".to_owned()),
+            (Some("食".to_owned()), "tsia̍h".to_owned()),
+            (Some("食".to_owned()), "tsia̍h".to_owned()),
+            (Some("隻".to_owned()), "tsiah".to_owned()),
+            (Some("𤆬".to_owned()), "tsia̍h".to_owned()),
+        ],
+        "COMBINED = every row, split into one-script cells"
+    );
+    assert_eq!(
+        fetch_cell_scripts("tsiah", "tl", CandidateDisplayMode::Combined as i32),
+        vec![
+            CellScript::Roman,
+            CellScript::Hanji,
+            CellScript::Roman,
+            CellScript::Hanji,
+            CellScript::Hanji,
+        ],
+        "each split row names the script its cell shows"
+    );
+    assert!(
+        fetch_cell_scripts("tsiah", "tl", SIDE_BY_SIDE)
+            .iter()
+            .all(|script| *script == CellScript::Paired),
+        "side-by-side rows are paired"
     );
 }
 

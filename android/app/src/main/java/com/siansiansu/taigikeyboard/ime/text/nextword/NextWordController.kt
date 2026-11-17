@@ -25,7 +25,7 @@ import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler
-import com.siansiansu.taigikeyboard.ime.text.candidates.splitIntoSingleScriptCells
+import com.siansiansu.taigikeyboard.ime.text.candidates.cellScriptMarker
 import com.siansiansu.taigikeyboard.ime.text.keyboard.lastGrapheme
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
@@ -63,9 +63,6 @@ class NextWordController(
     private val logger: LoggerBackend,
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
     private val onClearCandidates: () -> Unit,
-    // Hanji with Romanization split (§42): live-read per render so a picker change applies to
-    // the next prediction list. Same provider shape as CandidateUpdateCoordinator.
-    private val splitCombinedCellsProvider: () -> Boolean,
 ) {
     // / Predictions visibility echoed from every decide call. Synchronous read for
     // / SmartbarManager / CandidateClickHandler.
@@ -391,7 +388,7 @@ class NextWordController(
         val nowShowing = filterResult.predictions.isNotEmpty()
         if (nowShowing) {
             onUpdateCandidates(
-                buildPredictionWords(filterResult.predictions, splitCombinedCellsProvider()),
+                buildPredictionWords(filterResult.predictions),
             )
             scheduleContextTimeout(CONTEXT_TIMEOUT_MS)
         } else {
@@ -482,31 +479,17 @@ private fun String.toEngineInputMode(): String = engineInputMode(this, unknownAs
  * (`-99..-1`; English is `<= -100`) read by [CandidateClickHandler]; 30
  * predictions split to at most 60 cells, still inside it.
  *
- * Hanji with Romanization ([splitCombinedCells], §42): [splitIntoSingleScriptCells] — a
- * prediction with romanization becomes a Hanji cell then a romanization cell sharing
- * the prediction's identity; a hanji-only prediction lists its Hanji cell
- * alone. Every other mode emits one dual-script word per prediction
+ * Hanji with Romanization (§42): the engine lists a prediction with romanization as a
+ * Hanji row then a romanization row sharing its identity, deduped per script
+ * (`EnginePrediction.cell_script`); each row carries its [cellScriptMarker]. Every
+ * other display lists paired rows, one dual-script word per prediction
  * (`roman = ""` when the engine shaped no subtitle, so the strip renders the
  * hanji alone).
  */
-internal fun buildPredictionWords(
-    predictions: List<NextWordEnginePrediction>,
-    splitCombinedCells: Boolean,
-): List<TaigiWord> {
-    if (!splitCombinedCells) {
-        return predictions.mapIndexed { index, p ->
-            predictionWord(id = -index - 1, prediction = p, cellScript = null)
-        }
+internal fun buildPredictionWords(predictions: List<NextWordEnginePrediction>): List<TaigiWord> =
+    predictions.mapIndexed { index, p ->
+        predictionWord(id = -index - 1, prediction = p, cellScript = cellScriptMarker(p.cellScript))
     }
-
-    return splitIntoSingleScriptCells(
-        items = predictions,
-        hanjiOf = { it.hanji },
-        romanOf = { if (it.subtitle != null) it.text else null },
-    ) { prediction, cellScript, ordinal ->
-        predictionWord(id = -ordinal - 1, prediction = prediction, cellScript = cellScript)
-    }
-}
 
 private fun predictionWord(
     id: Int,

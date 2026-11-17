@@ -14,7 +14,11 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
         RustEngineBridge.install()
     }
 
-    private func candidate(roman: String, hanji: String?) -> RustEngineBridge.ContinuousCandidate {
+    private func candidate(
+        roman: String,
+        hanji: String?,
+        cellScript: Taigi_Engine_CellScript = .paired,
+    ) -> RustEngineBridge.ContinuousCandidate {
         RustEngineBridge.ContinuousCandidate(
             consumedSpanEnd: 7,
             syllableCount: 2,
@@ -22,18 +26,18 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
             roman: roman,
             hanji: hanji,
             canonicalTl: "tâi-gí",
+            cellScript: cellScript,
         )
     }
 
     /// The suggestions as the strip builds them, then as the view hands them to the handler.
     private func handed(
         _ candidates: [RustEngineBridge.ContinuousCandidate],
-        splitCombinedCells: Bool = false,
         isHanjiFirst: Bool = false,
         isTPSLayout: Bool = false,
     ) -> [AutocompleteSuggestion] {
         TaigiAutocompleteService()
-            .buildContinuousSuggestions(from: candidates, splitCombinedCells: splitCombinedCells)
+            .buildContinuousSuggestions(from: candidates)
             .map {
                 CandidateCellHelper.suggestionToHandle(
                     for: $0,
@@ -73,10 +77,13 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
         XCTAssertNil(try XCTUnwrap(ActionHandler.continuousPick(for: hanjilessTPS)).hanji)
     }
 
-    /// §42 split cells commit the script their marker names; both cells carry the same
-    /// identity and roman.
+    /// §42 split cells (the engine's Hanji row then roman row) commit the script their
+    /// marker names; both cells carry the same identity and roman.
     func testSplitCells_commitTheirOwnScript() throws {
-        let cells = handed([candidate(roman: "tâi-gí", hanji: "台語")], splitCombinedCells: true)
+        let cells = handed([
+            candidate(roman: "tâi-gí", hanji: "台語", cellScript: .hanji),
+            candidate(roman: "tâi-gí", hanji: "台語", cellScript: .roman),
+        ])
         XCTAssertEqual(cells.count, 2)
         let hanjiCell = try XCTUnwrap(ActionHandler.continuousPick(for: cells[0]))
         let romanCell = try XCTUnwrap(ActionHandler.continuousPick(for: cells[1]))

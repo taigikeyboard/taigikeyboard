@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard.ime.text.candidates
 import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
 import com.siansiansu.taigikeyboard.engine.ContinuousCommitOutcome
 import com.siansiansu.taigikeyboard.engine.ContinuousPick
+import com.siansiansu.taigikeyboard.engine.proto.CellScript
 import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
 import com.siansiansu.taigikeyboard.engine.proto.CommitResolution
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
@@ -63,8 +64,14 @@ class ContinuousPickTest {
     /** §42 split cells commit the script their marker names; both carry the same identity and roman. */
     @Test
     fun splitCells_commitTheirOwnScript() {
+        val row = candidate("tâi-gí", "台語")
         val cells =
-            buildContinuousSuggestionsForCandidates(listOf(candidate("tâi-gí", "台語")), splitCombinedCells = true)
+            buildContinuousSuggestionsForCandidates(
+                listOf(
+                    row.copy(cellScript = CellScript.CELL_SCRIPT_HANJI),
+                    row.copy(cellScript = CellScript.CELL_SCRIPT_ROMAN),
+                ),
+            )
         val picks = cells.map { requireNotNull(continuousPick(it)) }
         assertEquals(
             listOf(CommitScript.COMMIT_SCRIPT_HANJI, CommitScript.COMMIT_SCRIPT_ROMAN),

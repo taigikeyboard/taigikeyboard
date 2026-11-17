@@ -138,4 +138,27 @@ public interface CandidateMessageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getTpsTextBytes();
+
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   * @return The enum numeric value on the wire for cellScript.
+   */
+  int getCellScriptValue();
+  /**
+   * <pre>
+   * The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+   * Under a split, a candidate appears as up to two rows sharing every
+   * identity field; the cell index is the row index.
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 12;</code>
+   * @return The cellScript.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CellScript getCellScript();
 }

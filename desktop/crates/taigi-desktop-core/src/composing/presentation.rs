@@ -1,83 +1,57 @@
-//! The cells the window shows for a fetched list, each knowing which
-//! candidate it stands for and which of that candidate's scripts it commits.
-//! Under Hanji with Romanization one candidate is TWO adjacent one-script cells (hanji, then
-//! roman), so a window index is a CELL index and never indexes the fetched
-//! list directly (invariants §42).
+//! The cells the window shows for a fetched list, each knowing which of its
+//! candidate's scripts it commits. The engine lists one row per CELL: under
+//! Hanji with Romanization a candidate arrives as a Hanji row then a
+//! romanization row, already deduped per script (`CandidateMessage.cell_script`,
+//! invariants §42), so a window index is a row index.
 
-use std::collections::HashSet;
+use protos::engine::CellScript;
 
 use super::cell_content::{CandidateCellContent, CandidateScript};
 use super::manager::ComposingManager;
 use crate::engine::ContinuousCandidate;
-use crate::settings::{CandidateDisplayMode, EngineSettings, InputMode};
+use crate::settings::EngineSettings;
 
-/// One cell of the window: the candidate it was built from and the script
-/// its own commit (Enter, a slot key) writes; Space writes the flip.
+/// One cell of the window: the script its own commit (Enter, a slot key)
+/// writes — Output the Other Script writes the flip — and what it draws.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PresentedCandidate {
-    pub candidate_index: usize,
     pub script: CandidateScript,
     pub cell: CandidateCellContent,
 }
 
-/// The cells for `candidates` under `settings`, in display order: one
-/// `Primary` cell per candidate, except Hanji with Romanization splits a hanji-bearing
-/// candidate into a hanji cell then an `Alternate` roman cell — never under
-/// TPS, where a cell has one script and nothing to split.
-///
-/// Both scripts dedupe on the TEXT THE CELL SHOWS, first-seen wins: a
-/// one-script cell carries nothing that could tell it from an earlier cell
-/// reading the same, so a second one is a defect, not a second offer
-/// (USER 2026-09-03: "the same Hanji or romanization must not appear twice"). The scripts keep separate
-/// keys. Hanji cells were exempt until 2026-09-03 on Core Principle #7
-/// grounds: 重 tîng / 重 tāng ARE two words, but under Hanji with Romanization they draw two
-/// identical 重 cells, and the losing reading stays reachable through its own
-/// roman cell. Hanji–Romanization Pairing is untouched — its annotation tells the pair apart.
+/// The cell for each row of `candidates` under `settings`, in display order.
+/// A paired row is [`CandidateCellContent::cell`] committing the lead; a §42
+/// split row shows its own script alone — the Hanji row commits the lead
+/// (Hanji leads under Hanji with Romanization), the romanization row the other
+/// script, or the lead for a candidate with no Hanji.
 pub(crate) fn presentation(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
 ) -> Vec<PresentedCandidate> {
-    if settings.input_mode == InputMode::Tps
-        || settings.candidate_display_mode != CandidateDisplayMode::Combined
-    {
-        return candidates
-            .iter()
-            .enumerate()
-            .map(|(candidate_index, candidate)| PresentedCandidate {
-                candidate_index,
+    candidates
+        .iter()
+        .map(|candidate| match candidate.cell_script {
+            CellScript::Paired => PresentedCandidate {
                 script: CandidateScript::Primary,
                 cell: CandidateCellContent::cell(candidate, settings),
-            })
-            .collect();
-    }
-    let mut presented = Vec::with_capacity(candidates.len() * 2);
-    let mut seen_hanji: HashSet<&str> = HashSet::new();
-    let mut seen_roman: HashSet<&str> = HashSet::new();
-    for (candidate_index, candidate) in candidates.iter().enumerate() {
-        let hanji = candidate.nonempty_hanji();
-        if let Some(hanji) = hanji {
-            if seen_hanji.insert(hanji) {
-                presented.push(PresentedCandidate {
-                    candidate_index,
-                    script: CandidateScript::Primary,
-                    cell: CandidateCellContent::new(hanji, None),
-                });
-            }
-        }
-        let roman_is_new = seen_roman.insert(candidate.roman.as_str());
-        if roman_is_new {
-            presented.push(PresentedCandidate {
-                candidate_index,
-                script: if hanji.is_some() {
+            },
+            CellScript::Hanji => PresentedCandidate {
+                script: CandidateScript::Primary,
+                cell: CandidateCellContent::new(
+                    candidate.nonempty_hanji().unwrap_or_default(),
+                    None,
+                ),
+            },
+            CellScript::Roman => PresentedCandidate {
+                script: if candidate.nonempty_hanji().is_some() {
                     CandidateScript::Alternate
                 } else {
                     CandidateScript::Primary
                 },
                 cell: CandidateCellContent::new(candidate.roman.clone(), None),
-            });
-        }
-    }
-    presented
+            },
+        })
+        .collect()
 }
 
 /// Whether `candidates` leads with the §34 literal — the WYSIWYG romanization
@@ -163,7 +137,8 @@ impl CandidateSource {
     }
 
     /// The candidate behind cell `cell_index` and the script its commit
-    /// writes: the cell's own, or the other one when `flip` (Space). `None`
+    /// writes: the cell's own, or the other one when `flip` (Output the Other
+    /// Script, ⇧ + slot key). `None`
     /// past the list — nothing to commit.
     pub fn resolve(
         &self,
@@ -171,7 +146,7 @@ impl CandidateSource {
         flip: bool,
     ) -> Option<(&ContinuousCandidate, CandidateScript)> {
         let presented = self.presented.get(cell_index)?;
-        let candidate = self.candidates.get(presented.candidate_index)?;
+        let candidate = self.candidates.get(cell_index)?;
         let script = if flip {
             presented.script.flipped()
         } else {
@@ -186,7 +161,10 @@ mod tests {
     use super::*;
     use crate::composing::{EngineNextWord, SystemClock};
     use crate::engine::test_support::{candidate, tps_candidate};
-    use crate::settings::{keys, SettingChoice, SettingsDocument, StaticSettingsProvider};
+    use crate::settings::{
+        keys, CandidateDisplayMode, InputMode, SettingChoice, SettingsDocument,
+        StaticSettingsProvider,
+    };
     use std::sync::Arc;
 
     /// The DERIVED snapshot for a mode (`SettingsDocument::engine_settings`):
@@ -199,15 +177,23 @@ mod tests {
         }
     }
 
-    fn texts(presented: &[PresentedCandidate]) -> Vec<(usize, CandidateScript, &str)> {
+    /// A row the engine sent as the §42 split cell `script`.
+    fn split(roman: &str, hanji: Option<&str>, script: CellScript) -> ContinuousCandidate {
+        ContinuousCandidate {
+            cell_script: script,
+            ..candidate(roman, hanji, 5)
+        }
+    }
+
+    fn texts(presented: &[PresentedCandidate]) -> Vec<(CandidateScript, &str)> {
         presented
             .iter()
-            .map(|p| (p.candidate_index, p.script, p.cell.text.as_str()))
+            .map(|p| (p.script, p.cell.text.as_str()))
             .collect()
     }
 
     #[test]
-    fn side_by_side_and_roman_only_are_one_primary_cell_per_candidate_as_today() {
+    fn a_paired_row_is_one_primary_cell_as_the_display_renders_it() {
         let list = [candidate("tâi", Some("台"), 3), candidate("tâi", None, 3)];
         for mode in [
             CandidateDisplayMode::SideBySide,
@@ -217,8 +203,7 @@ mod tests {
                 let settings = settings(mode, swap);
                 let presented = presentation(&list, &settings);
                 assert_eq!(presented.len(), 2, "{mode:?} swap={swap}");
-                for (index, (presented, candidate)) in presented.iter().zip(&list).enumerate() {
-                    assert_eq!(presented.candidate_index, index);
+                for (presented, candidate) in presented.iter().zip(&list) {
                     assert_eq!(presented.script, CandidateScript::Primary);
                     assert_eq!(
                         presented.cell,
@@ -231,81 +216,44 @@ mod tests {
     }
 
     #[test]
-    fn combined_splits_a_hanji_candidate_into_hanji_then_roman_cells() {
-        // trace: 台語/tâi-gí → [台語 (0, Primary), tâi-gí (0, Alternate)];
-        // hanji-less guá → one Primary roman cell.
+    fn a_split_row_shows_its_own_script_and_the_roman_row_commits_the_other() {
+        // trace: 台語 Hanji row → (Primary, 台語); its roman row → (Alternate,
+        // tâi-gí); a hanji-less guá roman row → (Primary, guá) — one script,
+        // nothing to flip to. No annotation on any split cell, whatever the swap.
         let list = [
-            candidate("tâi-gí", Some("台語"), 5),
-            candidate("guá", None, 3),
-            candidate("guá", Some(""), 3),
+            split("tâi-gí", Some("台語"), CellScript::Hanji),
+            split("tâi-gí", Some("台語"), CellScript::Roman),
+            split("guá", None, CellScript::Roman),
         ];
-        let presented = presentation(&list, &settings(CandidateDisplayMode::Combined, false));
-        assert_eq!(
-            texts(&presented),
-            vec![
-                (0, CandidateScript::Primary, "台語"),
-                (0, CandidateScript::Alternate, "tâi-gí"),
-                (1, CandidateScript::Primary, "guá"),
-            ],
-            "the empty-hanji duplicate's roman cell is absorbed by guá's"
-        );
-        assert!(presented.iter().all(|p| p.cell.annotation.is_none()));
+        for stored_swap in [false, true] {
+            let raw = EngineSettings {
+                is_hanji_first: stored_swap,
+                candidate_display_mode: CandidateDisplayMode::Combined,
+                ..EngineSettings::default()
+            };
+            let presented = presentation(&list, &raw);
+            assert_eq!(
+                texts(&presented),
+                vec![
+                    (CandidateScript::Primary, "台語"),
+                    (CandidateScript::Alternate, "tâi-gí"),
+                    (CandidateScript::Primary, "guá"),
+                ],
+                "swap={stored_swap}"
+            );
+            assert!(presented.iter().all(|p| p.cell.annotation.is_none()));
+        }
     }
 
     #[test]
-    fn an_empty_list_presents_nothing_and_combined_ignores_the_raw_swap_flag() {
-        // trace: `presentation` maps each candidate to its cells — no
-        // candidates, no cells, in every mode.
+    fn an_empty_list_presents_nothing() {
+        // trace: `presentation` maps each row to its cell — no rows, no cells.
         for &mode in CandidateDisplayMode::ALL {
             assert!(
                 presentation(&[], &settings(mode, false)).is_empty(),
                 "{mode:?}"
             );
         }
-        // trace: under Combined the pair
-        // order is the mode's: the Combined arm never reads `is_hanji_first`,
-        // so even an underived snapshot with the flag off presents the same.
-        let list = [candidate("tâi-gí", Some("台語"), 5)];
-        let raw = |is_hanji_first| EngineSettings {
-            is_hanji_first,
-            candidate_display_mode: CandidateDisplayMode::Combined,
-            ..EngineSettings::default()
-        };
-        assert_eq!(
-            presentation(&list, &raw(false)),
-            presentation(&list, &raw(true))
-        );
-    }
-
-    #[test]
-    fn combined_dedupes_both_scripts_on_the_text_the_cell_shows() {
-        // trace: literal tâi (slot 0, hanji-less) absorbs 台's roman; 重 tîng /
-        // 重 tāng draw ONE 重 cell (first-seen) and keep both roman cells; 食 /
-        // 𤆬 keep both hanji cells and share one tsia̍h; the repeated 食 over a
-        // different span adds nothing — a cell reading the same is not listed.
-        let list = [
-            candidate("tâi", None, 3),
-            candidate("tâi", Some("台"), 3),
-            candidate("tîng", Some("重"), 5),
-            candidate("tāng", Some("重"), 5),
-            candidate("tsia̍h", Some("食"), 5),
-            candidate("tsia̍h", Some("𤆬"), 5),
-            candidate("tsia̍h", Some("食"), 6),
-        ];
-        let presented = presentation(&list, &settings(CandidateDisplayMode::Combined, false));
-        assert_eq!(
-            texts(&presented),
-            vec![
-                (0, CandidateScript::Primary, "tâi"),
-                (1, CandidateScript::Primary, "台"),
-                (2, CandidateScript::Primary, "重"),
-                (2, CandidateScript::Alternate, "tîng"),
-                (3, CandidateScript::Alternate, "tāng"),
-                (4, CandidateScript::Primary, "食"),
-                (4, CandidateScript::Alternate, "tsia̍h"),
-                (5, CandidateScript::Primary, "𤆬"),
-            ]
-        );
     }
 
     fn manager(mode: CandidateDisplayMode) -> ComposingManager {
@@ -390,13 +338,15 @@ mod tests {
 
     #[test]
     fn source_resolves_cell_indices_to_candidate_and_script_with_the_flip() {
-        // trace: Combined → cells [台語, tâi-gí, guá]; Enter on cell 1 = (台語,
-        // Alternate) = roman; the other script on cell 0 = flip → Alternate =
-        // roman; the other script on cell 1 = flip → Primary = hanji; cell 3 past the list.
+        // trace: split rows [台語 Hanji, tâi-gí Roman, guá Roman] → Enter on
+        // cell 1 = (row 1, Alternate) = roman; the other script on cell 0 = flip
+        // → Alternate = roman; on cell 1 = flip → Primary = hanji; cell 3 past
+        // the list.
         let manager = manager(CandidateDisplayMode::Combined);
         let list = vec![
-            candidate("tâi-gí", Some("台語"), 5),
-            candidate("guá", None, 3),
+            split("tâi-gí", Some("台語"), CellScript::Hanji),
+            split("tâi-gí", Some("台語"), CellScript::Roman),
+            split("guá", None, CellScript::Roman),
         ];
         let mut source = CandidateSource::default();
         assert!(source.is_empty());
@@ -408,7 +358,7 @@ mod tests {
         );
         assert_eq!(
             source.resolve(1, false),
-            Some((&list[0], CandidateScript::Alternate))
+            Some((&list[1], CandidateScript::Alternate))
         );
         assert_eq!(
             source.resolve(0, true),
@@ -416,11 +366,11 @@ mod tests {
         );
         assert_eq!(
             source.resolve(1, true),
-            Some((&list[0], CandidateScript::Primary))
+            Some((&list[1], CandidateScript::Primary))
         );
         assert_eq!(
             source.resolve(2, false),
-            Some((&list[1], CandidateScript::Primary))
+            Some((&list[2], CandidateScript::Primary))
         );
         assert_eq!(source.resolve(3, false), None);
         source.clear();
@@ -431,27 +381,37 @@ mod tests {
 
     #[test]
     fn refresh_presentation_re_renders_the_same_candidates_under_new_settings() {
-        // trace: the list set under SideBySide is one cell per candidate;
-        // re-presented by a Combined manager it is the split — candidates
-        // untouched (the swap arm's in-place update).
+        // trace: a paired 台語 set under roman-first leads with tâi-gí;
+        // re-presented after the swap it leads with 台語 — candidates untouched
+        // (the swap arm's in-place update).
         let list = vec![candidate("tâi-gí", Some("台語"), 5)];
+        let swapped = |is_hanji_first| {
+            let mut document = SettingsDocument::default();
+            document.set_bool(&keys::IS_HANJI_FIRST, is_hanji_first);
+            ComposingManager::new(
+                Arc::new(StaticSettingsProvider::new(document)),
+                Box::new(EngineNextWord),
+                Arc::new(SystemClock),
+                1,
+            )
+        };
         let mut source = CandidateSource::default();
-        source.set(list.clone(), &manager(CandidateDisplayMode::SideBySide));
-        assert_eq!(source.cells().len(), 1);
-        source.refresh_presentation(&manager(CandidateDisplayMode::Combined));
-        assert_eq!(source.cells().len(), 2);
+        source.set(list.clone(), &swapped(false));
+        assert_eq!(source.cells()[0].text, "tâi-gí");
+        source.refresh_presentation(&swapped(true));
+        assert_eq!(source.cells()[0].text, "台語");
         assert_eq!(
-            source.resolve(1, false),
-            Some((&list[0], CandidateScript::Alternate))
+            source.resolve(0, false),
+            Some((&list[0], CandidateScript::Primary))
         );
     }
 
     #[test]
-    fn under_tps_combined_keeps_one_cell_and_a_hanji_less_lead_keeps_its_key() {
-        // trace: `presentation` TPS → one Primary cell per candidate even
-        // under Combined; `engine_settings` reads Show Typed Text First off
-        // under TPS, so `leads_with_literal_roman` is false though the stored
-        // setting is on and the lead has no Hanji.
+    fn under_tps_a_paired_row_is_its_tps_text_and_a_hanji_less_lead_keeps_its_key() {
+        // trace: under TPS the engine never splits, so rows arrive PAIRED; the
+        // cell is the engine's `tps_text`. `engine_settings` reads Show Typed
+        // Text First off under TPS, so `leads_with_literal_roman` is false
+        // though the stored setting is on and the lead has no Hanji.
         let candidates = vec![
             tps_candidate("ka", None, 0, "ㄍㄚ"),
             tps_candidate("ka", Some("家"), 1, "家"),
@@ -468,8 +428,8 @@ mod tests {
         assert_eq!(
             texts(&presented),
             [
-                (0, CandidateScript::Primary, "ㄍㄚ"),
-                (1, CandidateScript::Primary, "家")
+                (CandidateScript::Primary, "ㄍㄚ"),
+                (CandidateScript::Primary, "家")
             ]
         );
         assert!(!leads_with_literal_roman(&candidates, &tps));

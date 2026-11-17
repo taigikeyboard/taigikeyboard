@@ -12,7 +12,9 @@
 use crate::api::{NextWordError, PersistedState};
 use crate::scorer;
 use indexmap::IndexMap;
-use protos::engine::{AppConfig, EnginePrediction, FilterResult, RawNextWordPrediction, Source};
+use protos::engine::{
+    AppConfig, CellScript, EnginePrediction, FilterResult, RawNextWordPrediction, Source,
+};
 
 struct MergedRow {
     hanji: String,
@@ -140,6 +142,19 @@ pub(crate) fn filter(
 
     // 4. limit truncation.
     shaped.truncate(effective_limit);
+
+    // 5. Hanji with Romanization (§42): a prediction with romanization becomes a
+    //    Hanji cell then a romanization cell, deduped per script; a Hanji-only
+    //    prediction lists its Hanji cell alone. After the truncation, so the
+    //    limit counts predictions, not cells.
+    if config.splits_single_script_cells() {
+        shaped = protos::split_single_script_cells(
+            shaped,
+            |p| &p.hanji,
+            |p| if p.subtitle.is_empty() { "" } else { &p.text },
+            |p, script| p.set_cell_script(script),
+        );
+    }
 
     Ok(FilterResult {
         predictions: shaped,
@@ -298,6 +313,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
         hanji,
         tl: m.tl,
         score: scorer::combined_score(m.dict_score, m.user_score),
+        cell_script: CellScript::Paired as i32,
     })
 }
 
@@ -1088,6 +1104,51 @@ mod tests {
             2,
             "side-by-side keeps 同音異字 apart"
         );
+    }
+
+    /// §42 — under Hanji with Romanization a prediction is a Hanji cell then a
+    /// romanization cell, deduped per script; the limit counts predictions,
+    /// not cells; the TPS layout and the other displays list paired rows.
+    #[test]
+    fn combined_display_splits_predictions_into_single_script_cells() {
+        let state = PersistedState::default();
+        let combined = |input_mode: &str| AppConfig {
+            input_mode: input_mode.to_owned(),
+            candidate_display_mode: CandidateDisplayMode::Combined as i32,
+            ..config_tl_mode_hanji_first(true)
+        };
+        // trace: scores 食 9 > 𤆬 3 > 台灣 2 → 食 Hanji, tsia̍h roman, 𤆬 Hanji
+        // (tsia̍h already shown); 台灣 truncated by limit 2.
+        let rows = || {
+            vec![
+                dict_row("食", "tsia̍h", 9),
+                dict_row("𤆬", "tsia̍h", 3),
+                dict_row("台灣", "tâi-uân", 2),
+            ]
+        };
+        let split = filter(&state, rows(), 0, 0, 2, &combined("tl")).unwrap();
+        let cells: Vec<(&str, &str, CellScript)> = split
+            .predictions
+            .iter()
+            .map(|p| (p.hanji.as_str(), p.text.as_str(), p.cell_script()))
+            .collect();
+        assert_eq!(
+            cells,
+            vec![
+                ("食", "tsia̍h", CellScript::Hanji),
+                ("食", "tsia̍h", CellScript::Roman),
+                ("𤆬", "tsia̍h", CellScript::Hanji),
+            ]
+        );
+
+        for config in [combined("tps"), config_tl_mode_hanji_first(true)] {
+            let paired = filter(&state, rows(), 0, 0, 2, &config).unwrap();
+            assert_eq!(paired.predictions.len(), 2, "{config:?}");
+            assert!(paired
+                .predictions
+                .iter()
+                .all(|p| p.cell_script() == CellScript::Paired));
+        }
     }
 
     fn separated(separator: SyllableSeparator, config: AppConfig) -> AppConfig {

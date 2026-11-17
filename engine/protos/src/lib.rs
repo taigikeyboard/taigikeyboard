@@ -30,9 +30,9 @@ impl engine::AppConfig {
     /// Whether every candidate cell shows ONE script (Romanization Only, or Hanji with Romanization's
     /// split cells) — the displays under which a cell that reads like an
     /// earlier one is collapsed into it (§42 / §44), so the collapsed row's
-    /// identity has to survive on the survivor. For Hanji with Romanization the collapse is the
-    /// platform's (§42 split) and the engine relies on it keeping the FIRST
-    /// roman cell — the slot-0 §34 literal — as the survivor. Pairing (and the
+    /// identity has to survive on the survivor. For Hanji with Romanization the collapse is
+    /// [`split_single_script_cells`], which keeps the FIRST roman cell — the
+    /// slot-0 §34 literal — as the survivor. Pairing (and the
     /// same fallbacks as [`Self::is_roman_only_display`]) answer `false`.
     pub fn is_single_script_display(&self) -> bool {
         matches!(
@@ -47,6 +47,14 @@ impl engine::AppConfig {
     /// two readers below apply the TPS fold to the stored swap / separator.
     pub fn is_tps_layout(&self) -> bool {
         matches!(self.input_mode.as_str(), "tps" | "TPS")
+    }
+
+    /// Whether candidate lists go out as §42 split cells
+    /// ([`split_single_script_cells`]): Hanji with Romanization, off the TPS
+    /// layout (TPS is Hanji-first by construction and ignores Candidate Display).
+    pub fn splits_single_script_cells(&self) -> bool {
+        self.candidate_display_mode() == engine::CandidateDisplayMode::Combined
+            && !self.is_tps_layout()
     }
 
     /// Whether the composition renders Hanji first: the swap, or the TPS
@@ -84,6 +92,60 @@ impl engine::AppConfig {
             engine::SyllableSeparator::Unspecified | engine::SyllableSeparator::Hyphen => None,
         }
     }
+}
+
+/// The §42 split (Candidate Display = Hanji with Romanization): each row
+/// becomes a Hanji cell (when `hanji_of` is non-empty) then a romanization
+/// cell (when `roman_of` is non-empty), each a clone of the row marked by
+/// `mark` with its [`engine::CellScript`]. Each script dedupes on the text its
+/// cell shows, first-seen wins: a one-script cell carries nothing that could
+/// tell it from an earlier cell reading the same (USER 2026-09-03: "the same
+/// Hanji or romanization must not appear twice"), so 重/tîng and 重/tāng draw
+/// ONE 重 cell and keep both roman cells, and the §34 literal leading the list
+/// absorbs a later row's same roman. The Continuous list
+/// (`composing::requests`) and NextWord predictions (`nextword::filter`)
+/// differ only in the projections.
+pub fn split_single_script_cells<T: Clone>(
+    rows: Vec<T>,
+    hanji_of: impl Fn(&T) -> &str,
+    roman_of: impl Fn(&T) -> &str,
+    mark: impl Fn(&mut T, engine::CellScript),
+) -> Vec<T> {
+    let mut cells = Vec::with_capacity(rows.len() * 2);
+    let mut seen_hanji = std::collections::HashSet::with_capacity(rows.len());
+    let mut seen_roman = std::collections::HashSet::with_capacity(rows.len());
+    // `contains` before `insert`: a duplicate allocates no owned key.
+    for row in rows {
+        let hanji = hanji_of(&row);
+        let shows_hanji =
+            !hanji.is_empty() && !seen_hanji.contains(hanji) && seen_hanji.insert(hanji.to_owned());
+        let roman = roman_of(&row);
+        let shows_roman =
+            !roman.is_empty() && !seen_roman.contains(roman) && seen_roman.insert(roman.to_owned());
+        // The row is cloned only when it yields both cells.
+        match (shows_hanji, shows_roman) {
+            (true, true) => {
+                let mut hanji_cell = row.clone();
+                mark(&mut hanji_cell, engine::CellScript::Hanji);
+                cells.push(hanji_cell);
+                let mut roman_cell = row;
+                mark(&mut roman_cell, engine::CellScript::Roman);
+                cells.push(roman_cell);
+            }
+            (true, false) | (false, true) => {
+                let mut cell = row;
+                let script = if shows_hanji {
+                    engine::CellScript::Hanji
+                } else {
+                    engine::CellScript::Roman
+                };
+                mark(&mut cell, script);
+                cells.push(cell);
+            }
+            (false, false) => {}
+        }
+    }
+    cells
 }
 
 #[cfg(test)]
@@ -177,5 +239,67 @@ mod tests {
         assert!(mk("tps", false, false, CandidateDisplayMode::Combined).commits_plain_hanji(false));
         assert!(mk("tl", false, false, CandidateDisplayMode::SideBySide).commits_plain_hanji(true));
         assert!(!mk("tps", false, true, CandidateDisplayMode::SideBySide).commits_plain_hanji(true));
+    }
+
+    #[test]
+    fn only_hanji_with_romanization_off_the_tps_layout_splits() {
+        use super::engine::CandidateDisplayMode;
+        let display = |input_mode: &str, mode: CandidateDisplayMode| AppConfig {
+            candidate_display_mode: mode as i32,
+            ..config(input_mode, false)
+        };
+        assert!(display("tl", CandidateDisplayMode::Combined).splits_single_script_cells());
+        assert!(display("poj", CandidateDisplayMode::Combined).splits_single_script_cells());
+        assert!(!display("tps", CandidateDisplayMode::Combined).splits_single_script_cells());
+        for mode in [
+            CandidateDisplayMode::SideBySide,
+            CandidateDisplayMode::RomanOnly,
+            CandidateDisplayMode::Unspecified,
+        ] {
+            assert!(
+                !display("tl", mode).splits_single_script_cells(),
+                "{mode:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn split_lists_hanji_then_roman_cells_deduped_per_script_first_seen() {
+        use super::engine::CellScript;
+        // trace: literal tâi (hanji-less) → one roman cell and absorbs 台's
+        // roman; 重 tîng / 重 tāng draw ONE 重 cell and keep both roman cells;
+        // 食 / 𤆬 keep both hanji cells and share one tsia̍h; a repeated 食
+        // (another span) adds nothing.
+        let rows = vec![
+            ("", "tâi", 0),
+            ("台", "tâi", 1),
+            ("重", "tîng", 2),
+            ("重", "tāng", 3),
+            ("食", "tsia̍h", 4),
+            ("𤆬", "tsia̍h", 5),
+            ("食", "tsia̍h", 6),
+        ];
+        let cells = super::split_single_script_cells(
+            rows.into_iter()
+                .map(|(hanji, roman, id)| (hanji, roman, id, CellScript::Paired))
+                .collect(),
+            |row| row.0,
+            |row| row.1,
+            |row, script| row.3 = script,
+        );
+        let shown: Vec<(usize, CellScript)> = cells.iter().map(|c| (c.2, c.3)).collect();
+        assert_eq!(
+            shown,
+            vec![
+                (0, CellScript::Roman),
+                (1, CellScript::Hanji),
+                (2, CellScript::Hanji),
+                (2, CellScript::Roman),
+                (3, CellScript::Roman),
+                (4, CellScript::Hanji),
+                (4, CellScript::Roman),
+                (5, CellScript::Hanji),
+            ]
+        );
     }
 }
