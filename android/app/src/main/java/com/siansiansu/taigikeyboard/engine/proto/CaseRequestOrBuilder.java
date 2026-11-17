@@ -12,48 +12,26 @@ public interface CaseRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
-   * @return Whether the uppercaseToneChar field is set.
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
+   * @return Whether the toneCase field is set.
    */
-  boolean hasUppercaseToneChar();
+  boolean hasToneCase();
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
-   * @return The uppercaseToneChar.
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
+   * @return The toneCase.
    */
-  com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar getUppercaseToneChar();
-
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   * @return Whether the fullUppercaseToneString field is set.
-   */
-  boolean hasFullUppercaseToneString();
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   * @return The fullUppercaseToneString.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString getFullUppercaseToneString();
-
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   * @return Whether the lowercaseToneChar field is set.
-   */
-  boolean hasLowercaseToneChar();
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   * @return The lowercaseToneChar.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar getLowercaseToneChar();
+  com.siansiansu.taigikeyboard.engine.proto.ToneCase getToneCase();
 
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -62,7 +40,7 @@ public interface CaseRequestOrBuilder extends
   boolean hasTransformInputCase();
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>

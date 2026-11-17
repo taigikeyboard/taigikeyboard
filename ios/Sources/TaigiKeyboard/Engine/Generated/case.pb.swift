@@ -69,6 +69,63 @@ public nonisolated enum Taigi_Engine_LetterCase: SwiftProtobuf.Enum, Swift.CaseI
 
 }
 
+/// Which per-char op `ToneCase` applies. Not `LetterCase`: `UPPERCASE_FIRST`
+/// leaves the rest of `input` as it is, where `LETTER_CASE_UPPERCASED`
+/// (`TransformInputCase`) lowercases it.
+public nonisolated enum Taigi_Engine_ToneCaseKind: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+
+  /// Unset — proto schema mismatch; answered with `FAIL_INVARIANT`.
+  case unspecified // = 0
+
+  /// Uppercase a single char/grapheme using mode-aware tone tables; for a
+  /// multi-char input (e.g. "tsh") only the first letter. Matches Android
+  /// `ToneUtilities.uppercaseToneLetter` (`replaceFirstChar`).
+  case uppercaseFirst // = 1
+
+  /// Uppercase ALL characters using mode-aware tone tables (Caps Lock).
+  /// Matches Android `ToneUtilities.fullUppercaseToneLetter`.
+  case uppercaseAll // = 2
+
+  /// Lowercase a single char/grapheme using mode-aware tone tables. Matches
+  /// Android `ToneUtilities.lowercaseToneLetter`.
+  case lowercase // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .uppercaseFirst
+    case 2: self = .uppercaseAll
+    case 3: self = .lowercase
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .uppercaseFirst: return 1
+    case .uppercaseAll: return 2
+    case .lowercase: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_ToneCaseKind] = [
+    .unspecified,
+    .uppercaseFirst,
+    .uppercaseAll,
+    .lowercase,
+  ]
+
+}
+
 public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -76,32 +133,16 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
 
   public var method: Taigi_Engine_CaseRequest.OneOf_Method? = nil
 
-  /// --- Per-char (single grapheme cluster) helpers ---
-  public var uppercaseToneChar: Taigi_Engine_UppercaseToneChar {
+  /// Per-char (key label) case op.
+  public var toneCase: Taigi_Engine_ToneCase {
     get {
-      if case .uppercaseToneChar(let v)? = method {return v}
-      return Taigi_Engine_UppercaseToneChar()
+      if case .toneCase(let v)? = method {return v}
+      return Taigi_Engine_ToneCase()
     }
-    set {method = .uppercaseToneChar(newValue)}
+    set {method = .toneCase(newValue)}
   }
 
-  public var fullUppercaseToneString: Taigi_Engine_FullUppercaseToneString {
-    get {
-      if case .fullUppercaseToneString(let v)? = method {return v}
-      return Taigi_Engine_FullUppercaseToneString()
-    }
-    set {method = .fullUppercaseToneString(newValue)}
-  }
-
-  public var lowercaseToneChar: Taigi_Engine_LowercaseToneChar {
-    get {
-      if case .lowercaseToneChar(let v)? = method {return v}
-      return Taigi_Engine_LowercaseToneChar()
-    }
-    set {method = .lowercaseToneChar(newValue)}
-  }
-
-  /// --- Per-string compound transforms ---
+  /// Per-string compound transform.
   public var transformInputCase: Taigi_Engine_TransformInputCase {
     get {
       if case .transformInputCase(let v)? = method {return v}
@@ -113,11 +154,9 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
-    /// --- Per-char (single grapheme cluster) helpers ---
-    case uppercaseToneChar(Taigi_Engine_UppercaseToneChar)
-    case fullUppercaseToneString(Taigi_Engine_FullUppercaseToneString)
-    case lowercaseToneChar(Taigi_Engine_LowercaseToneChar)
-    /// --- Per-string compound transforms ---
+    /// Per-char (key label) case op.
+    case toneCase(Taigi_Engine_ToneCase)
+    /// Per-string compound transform.
     case transformInputCase(Taigi_Engine_TransformInputCase)
 
   }
@@ -125,46 +164,14 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
   public init() {}
 }
 
-/// `UppercaseToneChar` uppercases a single char/grapheme using mode-aware
-/// tone tables. For multi-character inputs (e.g. "tsh") only the first
-/// letter is uppercased. Matches Android `ToneUtilities.uppercaseToneLetter`
-/// (`replaceFirstChar`) semantics.
-public nonisolated struct Taigi_Engine_UppercaseToneChar: Sendable {
+public nonisolated struct Taigi_Engine_ToneCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var input: String = String()
 
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// `FullUppercaseToneString` uppercases ALL characters in `input` using
-/// mode-aware tone tables. Matches Android
-/// `ToneUtilities.fullUppercaseToneLetter` (`uppercase()` per char) semantics.
-/// Used by Caps Lock paths.
-public nonisolated struct Taigi_Engine_FullUppercaseToneString: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var input: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// `LowercaseToneChar` lowercases a single char/grapheme using mode-aware
-/// tone tables. Matches Android `ToneUtilities.lowercaseToneLetter`.
-public nonisolated struct Taigi_Engine_LowercaseToneChar: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var input: String = String()
+  public var kind: Taigi_Engine_ToneCaseKind = .unspecified
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -173,9 +180,9 @@ public nonisolated struct Taigi_Engine_LowercaseToneChar: Sendable {
 
 /// `TransformInputCase` applies the LetterCase to `text` per
 /// `CaseTransformer.transformForInput` semantics:
-/// - LOWERCASED: lowercase per `LowercaseToneChar`
-/// - UPPERCASED: first letter upper (`UppercaseToneChar` on first), rest lower
-/// - CAPS_LOCKED: full upper per `FullUppercaseToneString`
+/// - LOWERCASED: lowercase per `TONE_CASE_KIND_LOWERCASE`
+/// - UPPERCASED: first letter upper (`TONE_CASE_KIND_UPPERCASE_FIRST`), rest lower
+/// - CAPS_LOCKED: full upper per `TONE_CASE_KIND_UPPERCASE_ALL`
 public nonisolated struct Taigi_Engine_TransformInputCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -237,9 +244,13 @@ nonisolated extension Taigi_Engine_LetterCase: SwiftProtobuf._ProtoNameProviding
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0LETTER_CASE_UNSPECIFIED\0\u{1}LETTER_CASE_LOWERCASED\0\u{1}LETTER_CASE_UPPERCASED\0\u{1}LETTER_CASE_CAPS_LOCKED\0")
 }
 
+nonisolated extension Taigi_Engine_ToneCaseKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0TONE_CASE_KIND_UNSPECIFIED\0\u{1}TONE_CASE_KIND_UPPERCASE_FIRST\0\u{1}TONE_CASE_KIND_UPPERCASE_ALL\0\u{1}TONE_CASE_KIND_LOWERCASE\0")
+}
+
 nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{b}capitalize_candidate\0\u{b}transform_candidate_case\0\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{d}tone_case\0\u{4}\u{7}transform_input_case\0\u{b}capitalize_candidate\0\u{b}transform_candidate_case\0\u{b}uppercase_tone_char\0\u{b}full_uppercase_tone_string\0\u{b}lowercase_tone_char\0\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{a}\u{1}\u{c}\u{b}\u{1}\u{c}\u{c}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -247,43 +258,17 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 10: try {
-        var v: Taigi_Engine_UppercaseToneChar?
+      case 13: try {
+        var v: Taigi_Engine_ToneCase?
         var hadOneofValue = false
         if let current = self.method {
           hadOneofValue = true
-          if case .uppercaseToneChar(let m) = current {v = m}
+          if case .toneCase(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .uppercaseToneChar(v)
-        }
-      }()
-      case 11: try {
-        var v: Taigi_Engine_FullUppercaseToneString?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .fullUppercaseToneString(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .fullUppercaseToneString(v)
-        }
-      }()
-      case 12: try {
-        var v: Taigi_Engine_LowercaseToneChar?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .lowercaseToneChar(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .lowercaseToneChar(v)
+          self.method = .toneCase(v)
         }
       }()
       case 20: try {
@@ -310,17 +295,9 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
     switch self.method {
-    case .uppercaseToneChar?: try {
-      guard case .uppercaseToneChar(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    }()
-    case .fullUppercaseToneString?: try {
-      guard case .fullUppercaseToneString(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
-    }()
-    case .lowercaseToneChar?: try {
-      guard case .lowercaseToneChar(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    case .toneCase?: try {
+      guard case .toneCase(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
     case .transformInputCase?: try {
       guard case .transformInputCase(let v)? = self.method else { preconditionFailure() }
@@ -338,9 +315,9 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
   }
 }
 
-nonisolated extension Taigi_Engine_UppercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".UppercaseToneChar"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
+nonisolated extension Taigi_Engine_ToneCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ToneCase"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{1}kind\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -349,6 +326,7 @@ nonisolated extension Taigi_Engine_UppercaseToneChar: SwiftProtobuf.Message, Swi
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
       default: break
       }
     }
@@ -358,71 +336,15 @@ nonisolated extension Taigi_Engine_UppercaseToneChar: SwiftProtobuf.Message, Swi
     if !self.input.isEmpty {
       try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
     }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_UppercaseToneChar, rhs: Taigi_Engine_UppercaseToneChar) -> Bool {
-    if lhs.input != rhs.input {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_FullUppercaseToneString: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".FullUppercaseToneString"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.input.isEmpty {
-      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_FullUppercaseToneString, rhs: Taigi_Engine_FullUppercaseToneString) -> Bool {
+  public static func ==(lhs: Taigi_Engine_ToneCase, rhs: Taigi_Engine_ToneCase) -> Bool {
     if lhs.input != rhs.input {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_LowercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".LowercaseToneChar"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.input.isEmpty {
-      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_LowercaseToneChar, rhs: Taigi_Engine_LowercaseToneChar) -> Bool {
-    if lhs.input != rhs.input {return false}
+    if lhs.kind != rhs.kind {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

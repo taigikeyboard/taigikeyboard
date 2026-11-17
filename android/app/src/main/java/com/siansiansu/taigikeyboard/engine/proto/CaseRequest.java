@@ -20,9 +20,7 @@ public  final class CaseRequest extends
   private java.lang.Object method_;
   public enum MethodCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    UPPERCASE_TONE_CHAR(10),
-    FULL_UPPERCASE_TONE_STRING(11),
-    LOWERCASE_TONE_CHAR(12),
+    TONE_CASE(13),
     TRANSFORM_INPUT_CASE(20),
     METHOD_NOT_SET(0);
     private final int value;
@@ -39,9 +37,7 @@ public  final class CaseRequest extends
 
     public static MethodCase forNumber(int value) {
       switch (value) {
-        case 10: return UPPERCASE_TONE_CHAR;
-        case 11: return FULL_UPPERCASE_TONE_STRING;
-        case 12: return LOWERCASE_TONE_CHAR;
+        case 13: return TONE_CASE;
         case 20: return TRANSFORM_INPUT_CASE;
         case 0: return METHOD_NOT_SET;
         default: return null;
@@ -64,171 +60,71 @@ public  final class CaseRequest extends
     method_ = null;
   }
 
-  public static final int UPPERCASE_TONE_CHAR_FIELD_NUMBER = 10;
+  public static final int TONE_CASE_FIELD_NUMBER = 13;
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
    */
   @java.lang.Override
-  public boolean hasUppercaseToneChar() {
-    return methodCase_ == 10;
+  public boolean hasToneCase() {
+    return methodCase_ == 13;
   }
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar getUppercaseToneChar() {
-    if (methodCase_ == 10) {
-       return (com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar) method_;
+  public com.siansiansu.taigikeyboard.engine.proto.ToneCase getToneCase() {
+    if (methodCase_ == 13) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ToneCase) method_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.ToneCase.getDefaultInstance();
   }
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
    */
-  private void setUppercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar value) {
+  private void setToneCase(com.siansiansu.taigikeyboard.engine.proto.ToneCase value) {
     java.util.Objects.requireNonNull(value);
     method_ = value;
-    methodCase_ = 10;
+    methodCase_ = 13;
   }
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
    */
-  private void mergeUppercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar value) {
+  private void mergeToneCase(com.siansiansu.taigikeyboard.engine.proto.ToneCase value) {
     java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 10 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar.newBuilder((com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar) method_)
+    if (methodCase_ == 13 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ToneCase.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ToneCase.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ToneCase) method_)
           .mergeFrom(value).buildPartial();
     } else {
       method_ = value;
     }
-    methodCase_ = 10;
+    methodCase_ = 13;
   }
   /**
    * <pre>
-   * --- Per-char (single grapheme cluster) helpers ---
+   * Per-char (key label) case op.
    * </pre>
    *
-   * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+   * <code>.taigi.engine.ToneCase tone_case = 13;</code>
    */
-  private void clearUppercaseToneChar() {
-    if (methodCase_ == 10) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int FULL_UPPERCASE_TONE_STRING_FIELD_NUMBER = 11;
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   */
-  @java.lang.Override
-  public boolean hasFullUppercaseToneString() {
-    return methodCase_ == 11;
-  }
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString getFullUppercaseToneString() {
-    if (methodCase_ == 11) {
-       return (com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   */
-  private void setFullUppercaseToneString(com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   */
-  private void mergeFullUppercaseToneString(com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 11 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.newBuilder((com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-   */
-  private void clearFullUppercaseToneString() {
-    if (methodCase_ == 11) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int LOWERCASE_TONE_CHAR_FIELD_NUMBER = 12;
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   */
-  @java.lang.Override
-  public boolean hasLowercaseToneChar() {
-    return methodCase_ == 12;
-  }
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar getLowercaseToneChar() {
-    if (methodCase_ == 12) {
-       return (com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   */
-  private void setLowercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 12;
-  }
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   */
-  private void mergeLowercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 12 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 12;
-  }
-  /**
-   * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-   */
-  private void clearLowercaseToneChar() {
-    if (methodCase_ == 12) {
+  private void clearToneCase() {
+    if (methodCase_ == 13) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -237,7 +133,7 @@ public  final class CaseRequest extends
   public static final int TRANSFORM_INPUT_CASE_FIELD_NUMBER = 20;
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -248,7 +144,7 @@ public  final class CaseRequest extends
   }
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -262,7 +158,7 @@ public  final class CaseRequest extends
   }
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -274,7 +170,7 @@ public  final class CaseRequest extends
   }
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -292,7 +188,7 @@ public  final class CaseRequest extends
   }
   /**
    * <pre>
-   * --- Per-string compound transforms ---
+   * Per-string compound transform.
    * </pre>
    *
    * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -415,175 +311,79 @@ public  final class CaseRequest extends
 
     /**
      * <pre>
-     * --- Per-char (single grapheme cluster) helpers ---
+     * Per-char (key label) case op.
      * </pre>
      *
-     * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+     * <code>.taigi.engine.ToneCase tone_case = 13;</code>
      */
     @java.lang.Override
-    public boolean hasUppercaseToneChar() {
-      return instance.hasUppercaseToneChar();
+    public boolean hasToneCase() {
+      return instance.hasToneCase();
     }
     /**
      * <pre>
-     * --- Per-char (single grapheme cluster) helpers ---
+     * Per-char (key label) case op.
      * </pre>
      *
-     * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+     * <code>.taigi.engine.ToneCase tone_case = 13;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar getUppercaseToneChar() {
-      return instance.getUppercaseToneChar();
+    public com.siansiansu.taigikeyboard.engine.proto.ToneCase getToneCase() {
+      return instance.getToneCase();
     }
     /**
      * <pre>
-     * --- Per-char (single grapheme cluster) helpers ---
+     * Per-char (key label) case op.
      * </pre>
      *
-     * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+     * <code>.taigi.engine.ToneCase tone_case = 13;</code>
      */
-    public Builder setUppercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar value) {
+    public Builder setToneCase(com.siansiansu.taigikeyboard.engine.proto.ToneCase value) {
       copyOnWrite();
-      instance.setUppercaseToneChar(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Per-char (single grapheme cluster) helpers ---
-     * </pre>
-     *
-     * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
-     */
-    public Builder setUppercaseToneChar(
-        com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar.Builder builderForValue) {
-      copyOnWrite();
-      instance.setUppercaseToneChar(builderForValue.build());
+      instance.setToneCase(value);
       return this;
     }
     /**
      * <pre>
-     * --- Per-char (single grapheme cluster) helpers ---
+     * Per-char (key label) case op.
      * </pre>
      *
-     * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+     * <code>.taigi.engine.ToneCase tone_case = 13;</code>
      */
-    public Builder mergeUppercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar value) {
+    public Builder setToneCase(
+        com.siansiansu.taigikeyboard.engine.proto.ToneCase.Builder builderForValue) {
       copyOnWrite();
-      instance.mergeUppercaseToneChar(value);
+      instance.setToneCase(builderForValue.build());
       return this;
     }
     /**
      * <pre>
-     * --- Per-char (single grapheme cluster) helpers ---
+     * Per-char (key label) case op.
      * </pre>
      *
-     * <code>.taigi.engine.UppercaseToneChar uppercase_tone_char = 10;</code>
+     * <code>.taigi.engine.ToneCase tone_case = 13;</code>
      */
-    public Builder clearUppercaseToneChar() {
+    public Builder mergeToneCase(com.siansiansu.taigikeyboard.engine.proto.ToneCase value) {
       copyOnWrite();
-      instance.clearUppercaseToneChar();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-     */
-    @java.lang.Override
-    public boolean hasFullUppercaseToneString() {
-      return instance.hasFullUppercaseToneString();
-    }
-    /**
-     * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString getFullUppercaseToneString() {
-      return instance.getFullUppercaseToneString();
-    }
-    /**
-     * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-     */
-    public Builder setFullUppercaseToneString(com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString value) {
-      copyOnWrite();
-      instance.setFullUppercaseToneString(value);
+      instance.mergeToneCase(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
+     * <pre>
+     * Per-char (key label) case op.
+     * </pre>
+     *
+     * <code>.taigi.engine.ToneCase tone_case = 13;</code>
      */
-    public Builder setFullUppercaseToneString(
-        com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.Builder builderForValue) {
+    public Builder clearToneCase() {
       copyOnWrite();
-      instance.setFullUppercaseToneString(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-     */
-    public Builder mergeFullUppercaseToneString(com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString value) {
-      copyOnWrite();
-      instance.mergeFullUppercaseToneString(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.FullUppercaseToneString full_uppercase_tone_string = 11;</code>
-     */
-    public Builder clearFullUppercaseToneString() {
-      copyOnWrite();
-      instance.clearFullUppercaseToneString();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-     */
-    @java.lang.Override
-    public boolean hasLowercaseToneChar() {
-      return instance.hasLowercaseToneChar();
-    }
-    /**
-     * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar getLowercaseToneChar() {
-      return instance.getLowercaseToneChar();
-    }
-    /**
-     * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-     */
-    public Builder setLowercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar value) {
-      copyOnWrite();
-      instance.setLowercaseToneChar(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-     */
-    public Builder setLowercaseToneChar(
-        com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.Builder builderForValue) {
-      copyOnWrite();
-      instance.setLowercaseToneChar(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-     */
-    public Builder mergeLowercaseToneChar(com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar value) {
-      copyOnWrite();
-      instance.mergeLowercaseToneChar(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.LowercaseToneChar lowercase_tone_char = 12;</code>
-     */
-    public Builder clearLowercaseToneChar() {
-      copyOnWrite();
-      instance.clearLowercaseToneChar();
+      instance.clearToneCase();
       return this;
     }
 
     /**
      * <pre>
-     * --- Per-string compound transforms ---
+     * Per-string compound transform.
      * </pre>
      *
      * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -594,7 +394,7 @@ public  final class CaseRequest extends
     }
     /**
      * <pre>
-     * --- Per-string compound transforms ---
+     * Per-string compound transform.
      * </pre>
      *
      * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -605,7 +405,7 @@ public  final class CaseRequest extends
     }
     /**
      * <pre>
-     * --- Per-string compound transforms ---
+     * Per-string compound transform.
      * </pre>
      *
      * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -617,7 +417,7 @@ public  final class CaseRequest extends
     }
     /**
      * <pre>
-     * --- Per-string compound transforms ---
+     * Per-string compound transform.
      * </pre>
      *
      * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -630,7 +430,7 @@ public  final class CaseRequest extends
     }
     /**
      * <pre>
-     * --- Per-string compound transforms ---
+     * Per-string compound transform.
      * </pre>
      *
      * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -642,7 +442,7 @@ public  final class CaseRequest extends
     }
     /**
      * <pre>
-     * --- Per-string compound transforms ---
+     * Per-string compound transform.
      * </pre>
      *
      * <code>.taigi.engine.TransformInputCase transform_input_case = 20;</code>
@@ -671,14 +471,11 @@ public  final class CaseRequest extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "method_",
             "methodCase_",
-            com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar.class,
-            com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.class,
-            com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.class,
+            com.siansiansu.taigikeyboard.engine.proto.ToneCase.class,
             com.siansiansu.taigikeyboard.engine.proto.TransformInputCase.class,
           };
           java.lang.String info =
-              "\u0000\u0004\u0001\u0000\n\u0014\u0004\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
-              "<\u0000\u0014<\u0000";
+              "\u0000\u0002\u0001\u0000\r\u0014\u0002\u0000\u0000\u0000\r<\u0000\u0014<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

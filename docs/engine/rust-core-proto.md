@@ -124,7 +124,7 @@ Tags 4 and 11 are reserved. Host API mapping per platform: [continuous-commit-an
 
 ## 8.5. Case-transform slice
 
-[`case.proto`](../../engine/protos/proto/case.proto) — `UppercaseToneChar`, `FullUppercaseToneString`, `LowercaseToneChar`, `TransformInputCase`; one result, `CaseStringResult`.
+[`case.proto`](../../engine/protos/proto/case.proto) — `ToneCase` (per-char op picked by `ToneCaseKind`), `TransformInputCase`; one result, `CaseStringResult`.
 
 - Mode comes from `AppConfig.input_mode`; messages do not repeat it.
 - `CaseStringResult` is local to `case.proto` (no coupling to `phonetics.proto`).

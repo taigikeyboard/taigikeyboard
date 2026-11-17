@@ -1,9 +1,8 @@
 package com.siansiansu.taigikeyboard.ime.text.key
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.fullUppercaseToneString
-import com.siansiansu.taigikeyboard.engine.lowercaseToneChar
-import com.siansiansu.taigikeyboard.engine.uppercaseToneChar
+import com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind
+import com.siansiansu.taigikeyboard.engine.toneCase
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
 
 /**
@@ -62,11 +61,12 @@ internal object KeyLabelCaseCache {
         val key = Key(baseLabel, mode, caps, capsLock, isNasalMarkerUppercaseEnabled)
         cache[key]?.let { return it }
 
-        val computed = when {
-            capsLock -> RustEngineBridge.fullUppercaseToneString(baseLabel, mode, isNasalMarkerUppercaseEnabled)
-            caps -> RustEngineBridge.uppercaseToneChar(baseLabel, mode, isNasalMarkerUppercaseEnabled)
-            else -> RustEngineBridge.lowercaseToneChar(baseLabel, mode, isNasalMarkerUppercaseEnabled)
+        val kind = when {
+            capsLock -> ToneCaseKind.TONE_CASE_KIND_UPPERCASE_ALL
+            caps -> ToneCaseKind.TONE_CASE_KIND_UPPERCASE_FIRST
+            else -> ToneCaseKind.TONE_CASE_KIND_LOWERCASE
         }
+        val computed = RustEngineBridge.toneCase(baseLabel, kind, mode, isNasalMarkerUppercaseEnabled)
         cache[key] = computed
         return computed
     }

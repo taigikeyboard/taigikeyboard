@@ -10,10 +10,9 @@ package com.siansiansu.taigikeyboard.engine
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.CaseRequest
 import com.siansiansu.taigikeyboard.engine.proto.CaseResponse
-import com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString
-import com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar
+import com.siansiansu.taigikeyboard.engine.proto.ToneCase
+import com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind
 import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
-import com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
@@ -54,59 +53,28 @@ enum class LetterCase(
 
 // endregion
 
-// region Per-char helpers
+// region Per-char helper
 
 /**
- * Replaces `ToneUtilities.uppercaseToneLetter`. A single char (including its combining mark)
- * uppercases via the mode's tone table; multi-char input uppercases only the first character.
+ * Replaces `ToneUtilities.uppercaseToneLetter` / `fullUppercaseToneLetter` / `lowercaseToneLetter`.
+ * Cases `input` via the mode's tone table per `kind` (proto `ToneCaseKind`): `UPPERCASE_FIRST`
+ * uppercases only the first character, `UPPERCASE_ALL` the whole string (CapsLock path),
+ * `LOWERCASE` lowercases, including the ᴺ→ⁿ nasal-marker shortcut.
  */
-fun RustEngineBridge.uppercaseToneChar(
+fun RustEngineBridge.toneCase(
     input: String,
+    kind: ToneCaseKind,
     mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
-    val payload = UppercaseToneChar.newBuilder().setInput(input).build()
+    val payload = ToneCase
+        .newBuilder()
+        .setInput(input)
+        .setKind(kind)
+        .build()
     return caseStringDispatch(
-        CaseRequest.newBuilder().setUppercaseToneChar(payload).build(),
-        op = "uppercaseToneChar",
-        mode = mode,
-        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
-        fallback = input,
-    )
-}
-
-/**
- * Replaces `ToneUtilities.fullUppercaseToneLetter`. Uppercases the whole string via the mode's
- * tone table; used by the CapsLock path.
- */
-fun RustEngineBridge.fullUppercaseToneString(
-    input: String,
-    mode: InputMode,
-    isNasalMarkerUppercaseEnabled: Boolean,
-): String {
-    val payload = FullUppercaseToneString.newBuilder().setInput(input).build()
-    return caseStringDispatch(
-        CaseRequest.newBuilder().setFullUppercaseToneString(payload).build(),
-        op = "fullUppercaseToneString",
-        mode = mode,
-        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
-        fallback = input,
-    )
-}
-
-/**
- * Replaces `ToneUtilities.lowercaseToneLetter`. Lowercases a single char via the mode's tone
- * table, including the ᴺ→ⁿ nasal-marker shortcut.
- */
-fun RustEngineBridge.lowercaseToneChar(
-    input: String,
-    mode: InputMode,
-    isNasalMarkerUppercaseEnabled: Boolean,
-): String {
-    val payload = LowercaseToneChar.newBuilder().setInput(input).build()
-    return caseStringDispatch(
-        CaseRequest.newBuilder().setLowercaseToneChar(payload).build(),
-        op = "lowercaseToneChar",
+        CaseRequest.newBuilder().setToneCase(payload).build(),
+        op = "toneCase($kind)",
         mode = mode,
         isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = input,
@@ -118,7 +86,7 @@ fun RustEngineBridge.lowercaseToneChar(
 // region Per-string compound transforms
 
 /**
- * Apply `letterCase` to `text` per the engine's input-case pipeline. Used by `KeyLabelCaseCache`.
+ * Apply `letterCase` to `text` per the engine's input-case pipeline. Used by `TextInputKeyHandler`.
  */
 fun RustEngineBridge.transformInputCase(
     text: String,

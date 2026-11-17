@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface LowercaseToneCharOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.LowercaseToneChar)
+public interface ToneCaseOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.ToneCase)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
@@ -21,4 +21,15 @@ public interface LowercaseToneCharOrBuilder extends
    */
   com.google.protobuf.ByteString
       getInputBytes();
+
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   * @return The enum numeric value on the wire for kind.
+   */
+  int getKindValue();
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   * @return The kind.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind getKind();
 }
