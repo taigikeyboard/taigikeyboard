@@ -19,7 +19,6 @@ import com.siansiansu.taigikeyboard.engine.doubleSpacePeriod
 import com.siansiansu.taigikeyboard.engine.isAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.isJoinerPunctuation
 import com.siansiansu.taigikeyboard.engine.isSpacedPunctuation
-import com.siansiansu.taigikeyboard.engine.isTpsToneMark
 import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -28,7 +27,6 @@ import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
-import com.siansiansu.taigikeyboard.ime.text.CharacterInputPipeline
 import com.siansiansu.taigikeyboard.ime.text.candidates.appendAutoSpaceIfEarned
 import com.siansiansu.taigikeyboard.ime.text.candidates.joinerReplacesAutoSpace
 import com.siansiansu.taigikeyboard.ime.text.candidates.rawPreeditWritesRomanization
@@ -402,18 +400,16 @@ internal class TextInputKeyHandler(
             return
         }
 
-        // TPS mode: space as tone 1/4 syllable boundary marker.
-        // If the current syllable has no explicit tone mark, space adds a syllable
-        // boundary and stays in composing mode (like Microsoft Zhuyin's space for tone 1).
-        // If the syllable already has a tone mark or ends with space, fall through to commit.
-        if (prefs.keyboardLayoutType == "tps" && composingManager?.isComposing() == true) {
-            val rawInput = composingManager?.getRawInput() ?: ""
-            val lastChar = rawInput.lastOrNull()
-            if (lastChar != null && !RustEngineBridge.isTpsToneMark(lastChar) && lastChar != ' ') {
-                composingManager?.appendCharacter(" ", ic)
-                candidateCoordinator.updateTaigiCandidates()
-                return
-            }
+        // TPS mode: space as tone 1/4 syllable boundary marker (like Microsoft
+        // Zhuyin's space for tone 1). The engine takes it while the syllable has
+        // no tone mark and does not already end in a space; otherwise it refuses
+        // the key and Space commits below.
+        if (prefs.inputMode == "tps" &&
+            composingManager?.isComposing() == true &&
+            composingManager?.tpsKey(" ", ic) == true
+        ) {
+            candidateCoordinator.updateTaigiCandidates()
+            return
         }
 
         if (composingManager?.isComposing() == true) {
@@ -502,21 +498,18 @@ internal class TextInputKeyHandler(
 
         val inputMode = InputMode.fromPrefString(prefs.inputMode)
         // Per-keystroke (not per-frame) — no cache needed; direct bridge call.
-        var char = RustEngineBridge.transformInputCase(
+        val char = RustEngineBridge.transformInputCase(
             text = baseText,
             letterCase = LetterCase.from(caps = caps, capsLock = capsLock),
             mode = inputMode,
             isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
         )
-
-        // TPS layout: context-aware character adjustments via CharacterInputPipeline
-        // (mirrors iOS CharacterInputPipeline.adjust collapsed entry point).
-        if (prefs.keyboardLayoutType == "tps") {
-            val rawInput = composingManager?.getRawInput() ?: ""
-            val adjustment = CharacterInputPipeline.adjust(char, rawInput)
-            char = adjustment.char
-            adjustment.replaceLast?.let { composingManager?.replaceLastCharacter(it, ic) }
-        }
+        // TPS keys go to the engine one key per op (`TpsKey`): it applies the
+        // TPS auto-correct against the composition itself. Gated on the input
+        // mode, as on iOS, not `isTpsLayout`: the engine composes under the mode
+        // (`continuousAppConfig`), and `isTpsLayout` would send `TpsKey` under a
+        // TL / POJ config.
+        val isTps = prefs.inputMode == "tps"
 
         // English mode: commit directly; punctuation still swaps with an auto space
         // a suggestion pick wrote (`hello ` + `,` → `hello, `).
@@ -543,7 +536,10 @@ internal class TextInputKeyHandler(
 
         if (isComposingCharacter(char)) {
             if (manager.isComposing()) {
-                if (char == "-") {
+                if (isTps) {
+                    manager.tpsKey(char, ic)
+                    if (consumesSingleShift(char)) releaseSingleShift()
+                } else if (char == "-") {
                     manager.appendHyphen(ic)
                 } else {
                     manager.appendCharacter(char, ic)
@@ -559,7 +555,7 @@ internal class TextInputKeyHandler(
                     ic.commitText("-", 1)
                     logger.debug(TAG) { "[INPUT] '-' committed in NextWord mode, keeping suggestions" }
                 } else {
-                    manager.startComposing(char, ic)
+                    if (isTps) manager.tpsKey(char, ic) else manager.startComposing(char, ic)
                     if (consumesSingleShift(char)) releaseSingleShift()
                     if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                     logger.debug("PERF") {
@@ -569,7 +565,7 @@ internal class TextInputKeyHandler(
                 }
             }
         } else if (manager.isComposing() && char.length == 1 && char[0].isDigit()) {
-            manager.appendCharacter(char, ic)
+            if (isTps) manager.tpsKey(char, ic) else manager.appendCharacter(char, ic)
             if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
             logger.debug("PERF") {
                 "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms"
@@ -692,7 +688,7 @@ internal fun isComposingCharacter(char: String): Boolean {
     // Three TPS tone marks are Sk (Symbol, modifier), not caught by isLetter:
     //   ˪ (U+02EA, tone 3), ˫ (U+02EB, tone 7), ˙ (U+02D9, tone 8)
     // and the tone-8 dot after ㆴㆵㆻㆷ is the combining U+0307 (Mn), which
-    // `CharacterInputPipeline.adjust` hands back in place of the typed ˙.
+    // the engine's TPS auto-correct stores in place of the typed ˙.
     return first.isLetter() ||
         first == '-' ||
         first == '˪' ||

@@ -223,9 +223,6 @@ pub enum Intent {
         ch: String,
     },
     AppendHyphen,
-    ReplaceLast {
-        replacement: String,
-    },
     DeleteBackward,
     CommitRaw,
     CommitPreeditThenInsertExternal {

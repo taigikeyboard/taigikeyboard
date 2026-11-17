@@ -18,13 +18,9 @@
 
 use crate::api::{tl_display_to_poj_display, tl_display_to_tps, PhoneticsError};
 use crate::tone_variations;
-use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
-use protos::engine::{
-    BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, StringResult,
-    TpsAdjustResult,
-};
+use protos::engine::{BoolResult, PhoneticsRequest, PhoneticsResponse, StringResult};
 
 /// Dispatch a decoded `CaseRequest` — the one request family that reads the
 /// `AppConfig` snapshot (input mode, capitals-OFF nasal fold).
@@ -54,27 +50,6 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
         Method::TlDisplayToTps(payload) => PhonResult::StringResult(StringResult {
             output: tl_display_to_tps(&payload.text, payload.or_maps_to_er),
         }),
-        Method::IsTpsToneMark(payload) => PhonResult::BoolResult(BoolResult {
-            value: tps_adjust::is_tps_tone_mark_str(&payload.char),
-        }),
-        Method::TpsInputAdjust(payload) => {
-            let (adjusted, replace_last) =
-                tps_adjust::adjust(&payload.incoming, &payload.raw_input);
-            let replace_payload = match replace_last {
-                Some(s) => OptionalStringResult {
-                    output: s,
-                    present: true,
-                },
-                None => OptionalStringResult {
-                    output: String::new(),
-                    present: false,
-                },
-            };
-            PhonResult::TpsAdjustResult(TpsAdjustResult {
-                adjusted,
-                replace_last: Some(replace_payload),
-            })
-        }
 
         // --- Platform text helpers ---
         Method::IsAttachingPunctuation(payload) => PhonResult::BoolResult(BoolResult {

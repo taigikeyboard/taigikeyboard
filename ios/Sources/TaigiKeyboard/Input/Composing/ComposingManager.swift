@@ -111,15 +111,19 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    /// TPS auto-correct — swaps the last raw-input character in place.
-    public func replaceLastCharacter(with replacement: String) {
-        logger.debug("[COMPOSE] fn=replaceLastCharacter replacement='\(replacement)'")
-        let settings = settingsProvider.current
-        apply(RustEngineBridge.composingReplaceLast(
-            replacement,
-            settings: settings,
+    /// One TPS key, idle or composing: the engine applies the TPS auto-correct
+    /// and inserts it. Returns false when the engine refused the key — a Space
+    /// the syllable-separator rule turns down — so the caller handles it itself.
+    @discardableResult
+    public func tpsKey(_ key: String) -> Bool {
+        logger.debug("[COMPOSE] fn=tpsKey key='\(key)'")
+        let transition = RustEngineBridge.composingTpsKey(
+            key,
+            settings: settingsProvider.current,
             generation: currentGeneration,
-        ))
+        )
+        apply(transition)
+        return !transition.effects.isEmpty
     }
 
     // MARK: - v3.5.8 Phase 7B — Continuous-input adapters

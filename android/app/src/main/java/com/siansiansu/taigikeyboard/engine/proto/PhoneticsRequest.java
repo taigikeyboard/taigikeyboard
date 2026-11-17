@@ -23,8 +23,6 @@ public  final class PhoneticsRequest extends
     TL_TO_POJ(13),
     GET_TONE_VARIATIONS(18),
     TL_DISPLAY_TO_TPS(33),
-    IS_TPS_TONE_MARK(34),
-    TPS_INPUT_ADJUST(35),
     IS_ATTACHING_PUNCTUATION(40),
     EXTERNAL_LOOKUP_DIGIT_FORM(41),
     IS_JOINER_PUNCTUATION(42),
@@ -48,8 +46,6 @@ public  final class PhoneticsRequest extends
         case 13: return TL_TO_POJ;
         case 18: return GET_TONE_VARIATIONS;
         case 33: return TL_DISPLAY_TO_TPS;
-        case 34: return IS_TPS_TONE_MARK;
-        case 35: return TPS_INPUT_ADJUST;
         case 40: return IS_ATTACHING_PUNCTUATION;
         case 41: return EXTERNAL_LOOKUP_DIGIT_FORM;
         case 42: return IS_JOINER_PUNCTUATION;
@@ -199,7 +195,7 @@ public  final class PhoneticsRequest extends
   public static final int TL_DISPLAY_TO_TPS_FIELD_NUMBER = 33;
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -210,7 +206,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -224,7 +220,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -236,7 +232,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -254,113 +250,13 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- TPS (3 ops) ---
+   * --- TPS (1 op) ---
    * </pre>
    *
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   private void clearTlDisplayToTps() {
     if (methodCase_ == 33) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int IS_TPS_TONE_MARK_FIELD_NUMBER = 34;
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   */
-  @java.lang.Override
-  public boolean hasIsTpsToneMark() {
-    return methodCase_ == 34;
-  }
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark getIsTpsToneMark() {
-    if (methodCase_ == 34) {
-       return (com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   */
-  private void setIsTpsToneMark(com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 34;
-  }
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   */
-  private void mergeIsTpsToneMark(com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 34 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 34;
-  }
-  /**
-   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-   */
-  private void clearIsTpsToneMark() {
-    if (methodCase_ == 34) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int TPS_INPUT_ADJUST_FIELD_NUMBER = 35;
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   */
-  @java.lang.Override
-  public boolean hasTpsInputAdjust() {
-    return methodCase_ == 35;
-  }
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust() {
-    if (methodCase_ == 35) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   */
-  private void setTpsInputAdjust(com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 35;
-  }
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   */
-  private void mergeTpsInputAdjust(com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 35 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 35;
-  }
-  /**
-   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-   */
-  private void clearTpsInputAdjust() {
-    if (methodCase_ == 35) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -867,7 +763,7 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- TPS (3 ops) ---
+     * --- TPS (1 op) ---
      * </pre>
      *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -878,7 +774,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- TPS (3 ops) ---
+     * --- TPS (1 op) ---
      * </pre>
      *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -889,7 +785,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- TPS (3 ops) ---
+     * --- TPS (1 op) ---
      * </pre>
      *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -901,7 +797,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- TPS (3 ops) ---
+     * --- TPS (1 op) ---
      * </pre>
      *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -914,7 +810,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- TPS (3 ops) ---
+     * --- TPS (1 op) ---
      * </pre>
      *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -926,7 +822,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- TPS (3 ops) ---
+     * --- TPS (1 op) ---
      * </pre>
      *
      * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
@@ -934,102 +830,6 @@ public  final class PhoneticsRequest extends
     public Builder clearTlDisplayToTps() {
       copyOnWrite();
       instance.clearTlDisplayToTps();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-     */
-    @java.lang.Override
-    public boolean hasIsTpsToneMark() {
-      return instance.hasIsTpsToneMark();
-    }
-    /**
-     * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark getIsTpsToneMark() {
-      return instance.getIsTpsToneMark();
-    }
-    /**
-     * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-     */
-    public Builder setIsTpsToneMark(com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark value) {
-      copyOnWrite();
-      instance.setIsTpsToneMark(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-     */
-    public Builder setIsTpsToneMark(
-        com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.Builder builderForValue) {
-      copyOnWrite();
-      instance.setIsTpsToneMark(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-     */
-    public Builder mergeIsTpsToneMark(com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark value) {
-      copyOnWrite();
-      instance.mergeIsTpsToneMark(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
-     */
-    public Builder clearIsTpsToneMark() {
-      copyOnWrite();
-      instance.clearIsTpsToneMark();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-     */
-    @java.lang.Override
-    public boolean hasTpsInputAdjust() {
-      return instance.hasTpsInputAdjust();
-    }
-    /**
-     * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust() {
-      return instance.getTpsInputAdjust();
-    }
-    /**
-     * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-     */
-    public Builder setTpsInputAdjust(com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust value) {
-      copyOnWrite();
-      instance.setTpsInputAdjust(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-     */
-    public Builder setTpsInputAdjust(
-        com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.Builder builderForValue) {
-      copyOnWrite();
-      instance.setTpsInputAdjust(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-     */
-    public Builder mergeTpsInputAdjust(com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust value) {
-      copyOnWrite();
-      instance.mergeTpsInputAdjust(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
-     */
-    public Builder clearTpsInputAdjust() {
-      copyOnWrite();
-      instance.clearTpsInputAdjust();
       return this;
     }
 
@@ -1318,8 +1118,6 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TlToPoj.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
-            com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.class,
-            com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
             com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.class,
             com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
             com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.class,
@@ -1327,8 +1125,8 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\r,\n\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000\"<\u0000" +
-              "#<\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
+              "\u0000\b\u0001\u0000\r,\b\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000(<\u0000" +
+              ")<\u0000*<\u0000+<\u0000,<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

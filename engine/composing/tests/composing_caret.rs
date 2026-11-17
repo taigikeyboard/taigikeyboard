@@ -180,19 +180,31 @@ fn delete_backward_removes_the_char_before_the_caret_and_stops_at_the_start() {
 }
 
 #[test]
-fn replace_last_swaps_the_char_before_the_caret() {
-    // "tai" caret 2 (after "ta"), ReplaceLast "o": drop a → "ti" caret 1,
-    // insert o → "toi" caret 2.
-    let mut engine = start("tai");
-    move_caret(&mut engine, CaretDirection::Left);
-    let resp = engine.apply(
-        Intent::ReplaceLast {
-            replacement: "o".to_string(),
+fn tps_key_replaces_the_char_before_the_caret() {
+    // "ㄗㄚ" caret after ㄗ; TpsKey ㄧ: adjust("ㄧ", "ㄗ") asks ㄗ → ㄐ
+    // (palatalization), then ㄧ lands at the caret → "ㄐㄧㄚ", caret after ㄧ
+    // (two 3-byte glyphs = byte 6).
+    let mut engine = Engine::new();
+    engine.apply(
+        Intent::Start {
+            text: "ㄗㄚ".to_string(),
         },
-        &config_tl(),
+        &config("tps"),
     );
-    assert_eq!(preedit(&resp).raw_input, "toi");
-    assert_eq!(caret_of(&engine), 2);
+    engine.apply(
+        Intent::MoveCaret {
+            direction: Some(CaretDirection::Left),
+        },
+        &config("tps"),
+    );
+    let resp = engine.apply(
+        Intent::TpsKey {
+            key: "ㄧ".to_string(),
+        },
+        &config("tps"),
+    );
+    assert_eq!(preedit(&resp).raw_input, "ㄐㄧㄚ");
+    assert_eq!(caret_of(&engine), 6);
 }
 
 #[test]

@@ -42,7 +42,7 @@ Engine state machine lives in Rust `engine/composing`. Platform side is the effe
 | **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Continuous { raw }` (the pending tail) |
 | **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
 | **ComposingState** | `Phase::Idle` or `Phase::Continuous { raw, caret, nailed, conversion }` | Rust `composing::EngineState` |
-| **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop keys (TelexKey / MoveCaret / TpsKey / CommitAsShown / CommitAsTyped) — the `composing.proto` `oneof method` | Rust `composing::Intent` |
+| **Intent** | Input intents: text input (Start / Append / AppendHyphen / DeleteBackward / CommitRaw / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop keys (TelexKey / MoveCaret / TpsKey / CommitAsShown / CommitAsTyped) — the `composing.proto` `oneof method` | Rust `composing::Intent` |
 | **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / clearCandidates / refreshCandidates / resetCandidateContext / nextWord*) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
 | **markedText** | iOS inline composition display via `setMarkedText` | iOS `HostTextWriter.update(_:)` |

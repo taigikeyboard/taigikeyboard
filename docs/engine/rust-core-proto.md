@@ -79,10 +79,10 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 | Family | Ops | Result |
 |---|---|---|
 | Core | `TlToPoj`, `GetToneVariations` | `StringResult`, `ToneVariationsResult` |
-| TPS | `TlDisplayToTps`, `IsTpsToneMark`, `TpsInputAdjust` | `StringResult`, `BoolResult`, `TpsAdjustResult` |
+| TPS | `TlDisplayToTps` | `StringResult` |
 | Platform text helpers | `IsAttachingPunctuation`, `IsJoinerPunctuation`, `IsSpacedPunctuation`, `DoubleSpacePeriod`, `ExternalLookupDigitForm` | `BoolResult`, `StringResult` |
 
-- Each op has its own payload message (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`).
+- Each op has its own payload message (e.g. `TlDisplayToTps` takes `text` + `or_maps_to_er`).
 - Pure and stateless: `phonetics::requests::handle(req)` takes no `AppConfig`. Display tone normalization is not a wire op — `composing::derived` calls `phonetics::api::normalize_tone` in-process.
 - The Rust phonetics crate is the only implementation; platforms keep no mirror.
 
@@ -94,9 +94,9 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 
 | Tags | Group | Ops |
 |---|---|---|
-| 10–19 | Text-input mutators | `Start`, `Append`, `AppendHyphen`, `ReplaceLast`, `DeleteBackward`, `CommitRaw`, `CommitPreeditThenInsertExternal`, `Reset` |
+| 10–19 | Text-input mutators | `Start`, `Append`, `AppendHyphen`, `DeleteBackward`, `CommitRaw`, `CommitPreeditThenInsertExternal`, `Reset` |
 | 31–32, 34 | Continuous input | `FetchAtPos` (read-only), `CommitContinuous`, `CommitPrediction` (a NextWord prediction tap) |
-| 40–44 | Desktop keys | `TelexKey`, `MoveCaret`, `TpsKey`, `CommitAsShown`, `CommitAsTyped` |
+| 40–44 | Desktop keys (`TpsKey` from every platform) | `TelexKey`, `MoveCaret`, `TpsKey`, `CommitAsShown`, `CommitAsTyped` |
 
 `ComposingResponse`: `preedit` (1: `raw_input`, `display_text`, `caret_utf16`), ordered `effect` list (2), `is_composing` (4), `continuous` (5, `FetchAtPos` only), `commit` (6, `CommitResolution` for a `CommitContinuous`, `CommitPrediction`, `ConfirmCompositionThenInsert`, or a finalizing `CommitRaw` / `CommitAsShown`: outcome, document text, `wrote_romanization`, `earns_auto_space`).
 
@@ -118,7 +118,7 @@ Tags 4 and 11 are reserved. Host API mapping per platform: [continuous-commit-an
 
 - Effects are platform-neutral — no `InputConnection`, `UITextDocumentProxy`, KeyboardKit or Compose types.
 - The candidate-control effects must stay on the wire: they are how composing tells the platform strip to clear, refetch or reset its context.
-- Why some intents stay distinct: `Start` vs `Append` (caret reset), `AppendHyphen` (no `"-"` string synthesized at call sites), `ReplaceLast` (TPS auto-correct), `CommitPreeditThenInsertExternal` (emoji / paste in one atomic write — splitting it reintroduces the silent finish-composing race).
+- Why some intents stay distinct: `Start` vs `Append` (caret reset), `AppendHyphen` (no `"-"` string synthesized at call sites), `CommitPreeditThenInsertExternal` (emoji / paste in one atomic write — splitting it reintroduces the silent finish-composing race).
 
 ---
 

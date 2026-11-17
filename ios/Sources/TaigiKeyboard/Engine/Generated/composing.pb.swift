@@ -211,14 +211,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .appendHyphen(newValue)}
   }
 
-  public var replaceLast: Taigi_Engine_ReplaceLast {
-    get {
-      if case .replaceLast(let v)? = method {return v}
-      return Taigi_Engine_ReplaceLast()
-    }
-    set {method = .replaceLast(newValue)}
-  }
-
   public var deleteBackward: Taigi_Engine_DeleteBackward {
     get {
       if case .deleteBackward(let v)? = method {return v}
@@ -278,7 +270,7 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
   }
 
   /// --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-  /// commits of a Hanji conversion) ---
+  /// commits of a Hanji conversion); every platform sends `tps_key` ---
   public var telexKey: Taigi_Engine_TelexKey {
     get {
       if case .telexKey(let v)? = method {return v}
@@ -334,7 +326,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     case start(Taigi_Engine_Start)
     case append(Taigi_Engine_Append)
     case appendHyphen(Taigi_Engine_AppendHyphen)
-    case replaceLast(Taigi_Engine_ReplaceLast)
     case deleteBackward(Taigi_Engine_DeleteBackward)
     case commitRaw(Taigi_Engine_CommitRaw)
     case commitPreeditThenInsertExternal(Taigi_Engine_CommitPreeditThenInsertExternal)
@@ -345,7 +336,7 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     /// A NextWord prediction tap (D1): stateless, beside the Continuous pick.
     case commitPrediction(Taigi_Engine_CommitPrediction)
     /// --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-    /// commits of a Hanji conversion) ---
+    /// commits of a Hanji conversion); every platform sends `tps_key` ---
     case telexKey(Taigi_Engine_TelexKey)
     case moveCaret(Taigi_Engine_MoveCaret)
     case tpsKey(Taigi_Engine_TpsKey)
@@ -390,19 +381,6 @@ public nonisolated struct Taigi_Engine_AppendHyphen: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// TPS auto-correct: replace the last raw-input character.
-public nonisolated struct Taigi_Engine_ReplaceLast: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var replacement: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -751,11 +729,10 @@ public nonisolated struct Taigi_Engine_TelexKey: Sendable {
 }
 
 /// One TPS key, typed at the caret: a glyph or tone mark, or U+0020 for the
-/// Space key. In a single step the engine runs the TPS auto-correct
-/// (`TpsInputAdjust`) against the pending tail before the caret, applies the
-/// replacement it asks for (`ReplaceLast`) and inserts the adjusted glyph —
-/// what a mobile platform does in three calls, without the caller having to
-/// know where the caret sits in the raw buffer.
+/// Space key. In a single step the engine runs the TPS auto-correct against
+/// the pending tail before the caret, replaces the glyph before the caret
+/// when it asks to and inserts the adjusted glyph, without the caller having
+/// to know where the caret sits in the raw buffer. Every platform sends it.
 /// Space is the soft syllable separator. It is inserted when a character of
 /// the pending tail precedes the caret (nailed segments do not count) and no
 /// tone mark or separator sits on either side of the caret. Otherwise the
@@ -765,9 +742,10 @@ public nonisolated struct Taigi_Engine_TelexKey: Sendable {
 /// unchanged snapshot. That is the caller's cue to treat the Space as its own
 /// — `display_text` cannot tell, since it never shows the separator.
 /// Idle + a glyph enters composing; Idle + Space is a no-op.
-/// The caller sends this only under `AppConfig.input_mode = "tps"`, and only
-/// a TPS glyph, a tone mark, the digit `9` (tone 9), a hyphen or U+0020 —
-/// anything else would be composed into the raw buffer as typed.
+/// The caller sends this only under `AppConfig.input_mode = "tps"`, for every
+/// key it composes: a TPS glyph, a tone mark, a digit (`9` after a syllable
+/// body becomes tone 9), a hyphen or U+0020. A key the auto-correct has no
+/// rule for is inserted as typed, as `Append` would.
 public nonisolated struct Taigi_Engine_TpsKey: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -789,8 +767,8 @@ public nonisolated struct Taigi_Engine_TpsKey: Sendable {
 /// cannot make — a step past an edge of the pending tail (the caret never
 /// enters a nailed segment), a jump to the edge it already sits at — leaves it
 /// where it is, with no effects unless a conversion is rebuilt (below). Every mutator
-/// then edits at the caret: `Append` inserts there, `DeleteBackward` /
-/// `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
+/// then edits at the caret: `Append` inserts there, `DeleteBackward` acts on
+/// the character before it, `TelexKey` and `TpsKey` on
 /// the chunk before it. Mobile never sends this, so its caret stays at the end and
 /// every mutator behaves as before.
 /// Under a Hanji conversion the request asks for (`AppConfig.hanji_conversion`,
@@ -1255,7 +1233,7 @@ public nonisolated struct Taigi_Engine_NextWordWordSelected: Sendable {
 
 /// Continuous-input abort. Maps to
 /// `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
-/// `Reset` / an emptying `DeleteBackward` / `ReplaceLast` exits
+/// `Reset` / an emptying `DeleteBackward` exits
 /// `Phase::Continuous` without committing.
 public nonisolated struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -1285,7 +1263,7 @@ nonisolated extension Taigi_Engine_CaretDirection: SwiftProtobuf._ProtoNameProvi
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{4}\u{2}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{2}commit_prediction\0\u{4}\u{6}telex_key\0\u{3}move_caret\0\u{3}tps_key\0\u{3}commit_as_shown\0\u{3}commit_as_typed\0\u{3}confirm_composition_then_insert\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{b}select_candidate\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}\u{c}\u{11}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{4}\u{2}delete_backward\0\u{4}\u{2}commit_raw\0\u{4}\u{2}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{2}commit_prediction\0\u{4}\u{6}telex_key\0\u{3}move_caret\0\u{3}tps_key\0\u{3}commit_as_shown\0\u{3}commit_as_typed\0\u{3}confirm_composition_then_insert\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{b}select_candidate\0\u{b}replace_last\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}\u{c}\u{11}\u{1}\u{c}\u{d}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1330,19 +1308,6 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.method = .appendHyphen(v)
-        }
-      }()
-      case 13: try {
-        var v: Taigi_Engine_ReplaceLast?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .replaceLast(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .replaceLast(v)
         }
       }()
       case 14: try {
@@ -1537,10 +1502,6 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
       guard case .appendHyphen(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
-    case .replaceLast?: try {
-      guard case .replaceLast(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
-    }()
     case .deleteBackward?: try {
       guard case .deleteBackward(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
@@ -1679,36 +1640,6 @@ nonisolated extension Taigi_Engine_AppendHyphen: SwiftProtobuf.Message, SwiftPro
   }
 
   public static func ==(lhs: Taigi_Engine_AppendHyphen, rhs: Taigi_Engine_AppendHyphen) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_ReplaceLast: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ReplaceLast"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}replacement\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.replacement) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.replacement.isEmpty {
-      try visitor.visitSingularStringField(value: self.replacement, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_ReplaceLast, rhs: Taigi_Engine_ReplaceLast) -> Bool {
-    if lhs.replacement != rhs.replacement {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

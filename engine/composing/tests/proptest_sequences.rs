@@ -51,7 +51,6 @@ fn arb_intent() -> impl Strategy<Value = Intent> {
         arb_text().prop_map(|ch| Intent::Append { ch }),
         arb_text().prop_map(|text| Intent::Start { text }),
         Just(Intent::AppendHyphen),
-        arb_text().prop_map(|replacement| Intent::ReplaceLast { replacement }),
         Just(Intent::DeleteBackward),
         Just(Intent::MoveCaret {
             direction: Some(CaretDirection::Left)

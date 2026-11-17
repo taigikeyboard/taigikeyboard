@@ -108,7 +108,6 @@ pub(crate) fn apply(
                 frequency,
             )
         }
-        Intent::ReplaceLast { replacement } => replace_last(state, replacement, config, frequency),
         Intent::DeleteBackward => delete_backward(state, config, frequency),
         Intent::CommitRaw => commit_raw(state, config),
         Intent::CommitPreeditThenInsertExternal { text } => match &state.phase {
@@ -582,33 +581,6 @@ fn tps_key(
             }
             None => noop(state, config),
         },
-    }
-}
-
-/// TPS auto-correct. Under `Phase::Continuous` it edits the
-/// pending tail only — nailed segments are untouched — but the preedit
-/// re-renders the whole composition (Model B).
-fn replace_last(
-    state: &mut EngineState,
-    replacement: String,
-    config: &AppConfig,
-    frequency: Frequency<'_>,
-) -> ComposingResponse {
-    match &state.phase {
-        Phase::Continuous {
-            raw, caret, nailed, ..
-        } => {
-            let Some((new_pending, caret)) = replace_before_caret(raw, *caret, &replacement) else {
-                return noop(state, config);
-            };
-            // Empty pending + empty nailed = degenerate Continuous state
-            // (Codex post-impl finding #2). Exit to Idle and clear nextword.
-            if new_pending.is_empty() && nailed.is_empty() {
-                return exit_to_idle(state, abort_continuous_effects());
-            }
-            step_continuous(state, new_pending, caret, nailed.clone(), config, frequency)
-        }
-        Phase::Idle => noop(state, config),
     }
 }
 

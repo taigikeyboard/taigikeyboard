@@ -20,10 +20,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  * (with the `panic-injector` Cargo feature) so `panicForTest` resolves.
  *
  * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus one
- * result-decode pin per phonetics op shape the Kotlin bridge maps itself
- * (both `tpsInputAdjust` `replaceLast` branches). Op behaviour lives in
- * `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
- * `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
+ * result-decode pin per phonetics op shape the Kotlin bridge maps itself.
+ * Op behaviour lives in `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap
+ * boundary in `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
  */
 @RunWith(AndroidJUnit4::class)
 class RustEngineBridgeTest {
@@ -53,14 +52,7 @@ class RustEngineBridgeTest {
     }
 
     // endregion
-    // region TPS
-
-    // Both decode branches in one pin. The TPS Space key reads the raw buffer's
-    // last char; after `˙` on a stop coda that is the combining tone-8 dot U+0307.
-    @Test fun op_isTpsToneMark_combiningToneEightDotIsToneMark_letterIsNot() {
-        assertFalse(RustEngineBridge.isTpsToneMark('a'))
-        assertTrue(RustEngineBridge.isTpsToneMark('\u0307'))
-    }
+    // region Platform text helpers
 
     // The engine's attaching set (`phonetics::punctuation`, full roster pinned
     // there) through the bridge `TextInputKeyHandler.commitNonComposingCharacter` reads.
@@ -99,18 +91,6 @@ class RustEngineBridgeTest {
         assertEquals("tai5-gi2", RustEngineBridge.externalLookupDigitForm("Tâi-gí"))
         assertEquals("hoo2", RustEngineBridge.externalLookupDigitForm("ho͘" + "2"))
         assertEquals("sann", RustEngineBridge.externalLookupDigitForm("sann1"))
-    }
-
-    @Test fun op_tpsInputAdjust_dualForm() {
-        val outcome = RustEngineBridge.tpsInputAdjust("ㄇ", "ㄚ")
-        assertEquals("ㆬ", outcome.adjusted)
-        assertNull(outcome.replaceLast)
-    }
-
-    @Test fun op_tpsInputAdjust_palatalization() {
-        val outcome = RustEngineBridge.tpsInputAdjust("ㄧ", "ㄗ")
-        assertEquals("ㄧ", outcome.adjusted)
-        assertEquals("ㄐ", outcome.replaceLast)
     }
 
     // endregion

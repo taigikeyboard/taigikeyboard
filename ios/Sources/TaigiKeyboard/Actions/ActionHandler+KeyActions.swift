@@ -30,24 +30,16 @@ extension ActionHandler {
             isNasalMarkerUppercaseEnabled: settings.isNasalMarkerUppercaseEnabled,
         )
 
-        // TPS key-level adjustments via pure pipeline (returns adjusted char +
-        // optional retroactive replacement for the last raw-input char).
-        let adjustment = CharacterInputPipeline.adjust(
-            processedChar,
-            inputMode: settings.inputMode,
-            rawInput: composingManager.rawInput,
-        )
-        if let replacement = adjustment.replaceLast {
-            composingManager.replaceLastCharacter(with: replacement)
-        }
-        let finalChar = adjustment.char
+        // TPS keys go to the engine one key per op (`TpsKey`): it applies the
+        // TPS auto-correct against the composition itself.
+        let isTPS = settings.inputMode == .tps
 
-        logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar)'")
+        logger.debug("[AUTOCAP][INPUT] processedChar='\(processedChar)'")
 
         // English mode: insert directly, skip composing; punctuation still swaps
         // with an auto space a suggestion pick wrote (`hello ` + `,` → `hello, `).
         if settings.inputMode == .english {
-            insertNonComposingCharacter(finalChar)
+            insertNonComposingCharacter(processedChar)
             // Reset single-shift (preserve Caps Lock)
             if keyboardContext.keyboardCase == .uppercased {
                 keyboardContext.keyboardCase = .lowercased
@@ -59,25 +51,27 @@ extension ActionHandler {
 
         // Standalone digit: commit directly without entering composing mode.
         // Digits only enter composing as tone markers appended to existing romanization.
-        if !composingManager.isComposing, finalChar.first?.isNumber == true {
+        if !composingManager.isComposing, processedChar.first?.isNumber == true {
             if nextWordController.isShowing {
                 nextWordController.clearDisplay()
             }
-            hostText.insert(finalChar)
+            hostText.insert(processedChar)
             return true
         }
 
         // Composing characters (letters, TPS symbols, hyphen, ˙) → enter composing
-        if isComposingCharacter(finalChar) {
+        if isComposingCharacter(processedChar) {
             if composingManager.isComposing {
-                if finalChar == "-" {
+                if isTPS {
+                    composingManager.tpsKey(processedChar)
+                } else if processedChar == "-" {
                     composingManager.appendHyphen()
                 } else {
-                    composingManager.appendCharacter(finalChar)
+                    composingManager.appendCharacter(processedChar)
                 }
             } else {
                 // Not composing: check NextWord state
-                if finalChar == "-", nextWordController.isShowing {
+                if processedChar == "-", nextWordController.isShowing {
                     // "-" during NextWord: output directly, keep NextWord suggestions
                     hostText.insert("-")
                     logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
@@ -85,12 +79,20 @@ extension ActionHandler {
                     if nextWordController.isShowing {
                         nextWordController.clearDisplay()
                     }
-                    composingManager.startComposing(with: finalChar)
+                    if isTPS {
+                        composingManager.tpsKey(processedChar)
+                    } else {
+                        composingManager.startComposing(with: processedChar)
+                    }
                 }
             }
-        } else if composingManager.isComposing, finalChar.first?.isNumber == true {
+        } else if composingManager.isComposing, processedChar.first?.isNumber == true {
             // Digit while composing → tone marker
-            composingManager.appendCharacter(finalChar)
+            if isTPS {
+                composingManager.tpsKey(processedChar)
+            } else {
+                composingManager.appendCharacter(processedChar)
+            }
         } else {
             // Non-composing char (punctuation, symbols, etc.) → commit then output
             if composingManager.isComposing {
@@ -107,19 +109,19 @@ extension ActionHandler {
             // NextWord generation so the in-flight prediction query is dropped
             // stale; it is a cheap no-op when nothing is showing.
             nextWordController.clearDisplay()
-            insertNonComposingCharacter(finalChar)
+            insertNonComposingCharacter(processedChar)
             // Text going into the document without passing through a
             // composition is still context: a full stop typed here is what
             // ends the sentence the next-word learning would otherwise carry
             // across (§40; mirrors desktop-core `note_character_typed_outside_composition`).
-            if NextWordController.isContextCharacterOutsideComposition(finalChar) {
-                nextWordController.noteCharacterTypedOutsideComposition(finalChar)
+            if NextWordController.isContextCharacterOutsideComposition(processedChar) {
+                nextWordController.noteCharacterTypedOutsideComposition(processedChar)
             }
             return true
         }
 
         // Reset single-shift (preserve Caps Lock) — only a cased letter spends it.
-        if keyboardContext.keyboardCase == .uppercased, Self.consumesSingleShift(finalChar) {
+        if keyboardContext.keyboardCase == .uppercased, Self.consumesSingleShift(processedChar) {
             keyboardContext.keyboardCase = .lowercased
         }
 
@@ -186,17 +188,12 @@ extension ActionHandler {
             return true
         }
 
-        // TPS mode: space as tone 1/4 syllable boundary marker.
-        // If the current syllable has no explicit tone mark, space adds a syllable
-        // boundary and stays in composing mode (like Microsoft Zhuyin's space for tone 1).
-        // If the syllable already has a tone mark or ends with space, fall through to commit.
-        if settings.inputMode == .tps, composingManager.isComposing {
-            if let lastChar = composingManager.rawInput.last,
-               !RustEngineBridge.isTPSToneMark(lastChar), lastChar != " "
-            {
-                composingManager.appendCharacter(" ")
-                return true
-            }
+        // TPS mode: space as tone 1/4 syllable boundary marker (like Microsoft
+        // Zhuyin's space for tone 1). The engine takes it while the syllable has
+        // no tone mark and does not already end in a space; otherwise it refuses
+        // the key and Space commits below.
+        if settings.inputMode == .tps, composingManager.isComposing, composingManager.tpsKey(" ") {
+            return true
         }
 
         // Taigi mode (POJ/TL)

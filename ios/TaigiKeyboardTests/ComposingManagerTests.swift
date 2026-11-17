@@ -104,28 +104,41 @@ final class ComposingManagerTests: XCTestCase {
         ])
     }
 
-    // MARK: - replaceLastCharacter
+    // MARK: - tpsKey
 
-    func testReplaceLastCharacter_replacesTailAndKeepsComposing() {
-        manager.startComposing(with: "ab")
+    func testTpsKey_fromIdle_startsComposing() {
+        XCTAssertTrue(manager.tpsKey("ㄗ"))
+
+        XCTAssertTrue(manager.isComposing)
+        XCTAssertEqual(manager.rawInput, "ㄗ")
+    }
+
+    // trace: engine `tps_input_adjust("ㄧ", "ㄗ")` asks ㄗ → ㄐ (palatalization);
+    // one op replaces and inserts, so one preedit update.
+    func testTpsKey_replacesThePreviousGlyphInOneStep() {
+        manager.tpsKey("ㄗ")
         spy.effects.removeAll()
 
-        manager.replaceLastCharacter(with: "c")
+        XCTAssertTrue(manager.tpsKey("ㄧ"))
 
-        XCTAssertEqual(manager.rawInput, "ac")
-        XCTAssertTrue(manager.isComposing)
-        // At wrapper level we only verify the effect list matches what the
-        // engine emitted.
+        XCTAssertEqual(manager.rawInput, "ㄐㄧ")
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
             .refreshCandidates,
         ])
     }
 
-    func testReplaceLastCharacter_whenIdle_isNoop() {
-        manager.replaceLastCharacter(with: "x")
+    // The Space key's signal: a separator the rule refuses answers false and
+    // emits nothing, so the caller commits instead.
+    func testTpsKey_space_isTakenOnceThenRefused() {
+        manager.tpsKey("ㄚ")
 
-        XCTAssertFalse(manager.isComposing)
+        XCTAssertTrue(manager.tpsKey(" "))
+        XCTAssertEqual(manager.rawInput, "ㄚ ")
+
+        spy.effects.removeAll()
+        XCTAssertFalse(manager.tpsKey(" "))
+        XCTAssertEqual(manager.rawInput, "ㄚ ")
         XCTAssertTrue(spy.effects.isEmpty)
     }
 

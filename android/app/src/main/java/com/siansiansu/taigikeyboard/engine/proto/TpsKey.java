@@ -8,11 +8,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * One TPS key, typed at the caret: a glyph or tone mark, or U+0020 for the
- * Space key. In a single step the engine runs the TPS auto-correct
- * (`TpsInputAdjust`) against the pending tail before the caret, applies the
- * replacement it asks for (`ReplaceLast`) and inserts the adjusted glyph —
- * what a mobile platform does in three calls, without the caller having to
- * know where the caret sits in the raw buffer.
+ * Space key. In a single step the engine runs the TPS auto-correct against
+ * the pending tail before the caret, replaces the glyph before the caret
+ * when it asks to and inserts the adjusted glyph, without the caller having
+ * to know where the caret sits in the raw buffer. Every platform sends it.
  * Space is the soft syllable separator. It is inserted when a character of
  * the pending tail precedes the caret (nailed segments do not count) and no
  * tone mark or separator sits on either side of the caret. Otherwise the
@@ -22,9 +21,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * unchanged snapshot. That is the caller's cue to treat the Space as its own
  * — `display_text` cannot tell, since it never shows the separator.
  * Idle + a glyph enters composing; Idle + Space is a no-op.
- * The caller sends this only under `AppConfig.input_mode = "tps"`, and only
- * a TPS glyph, a tone mark, the digit `9` (tone 9), a hyphen or U+0020 —
- * anything else would be composed into the raw buffer as typed.
+ * The caller sends this only under `AppConfig.input_mode = "tps"`, for every
+ * key it composes: a TPS glyph, a tone mark, a digit (`9` after a syllable
+ * body becomes tone 9), a hyphen or U+0020. A key the auto-correct has no
+ * rule for is inserted as typed, as `Append` would.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.TpsKey}
@@ -171,11 +171,10 @@ public  final class TpsKey extends
   /**
    * <pre>
    * One TPS key, typed at the caret: a glyph or tone mark, or U+0020 for the
-   * Space key. In a single step the engine runs the TPS auto-correct
-   * (`TpsInputAdjust`) against the pending tail before the caret, applies the
-   * replacement it asks for (`ReplaceLast`) and inserts the adjusted glyph —
-   * what a mobile platform does in three calls, without the caller having to
-   * know where the caret sits in the raw buffer.
+   * Space key. In a single step the engine runs the TPS auto-correct against
+   * the pending tail before the caret, replaces the glyph before the caret
+   * when it asks to and inserts the adjusted glyph, without the caller having
+   * to know where the caret sits in the raw buffer. Every platform sends it.
    * Space is the soft syllable separator. It is inserted when a character of
    * the pending tail precedes the caret (nailed segments do not count) and no
    * tone mark or separator sits on either side of the caret. Otherwise the
@@ -185,9 +184,10 @@ public  final class TpsKey extends
    * unchanged snapshot. That is the caller's cue to treat the Space as its own
    * — `display_text` cannot tell, since it never shows the separator.
    * Idle + a glyph enters composing; Idle + Space is a no-op.
-   * The caller sends this only under `AppConfig.input_mode = "tps"`, and only
-   * a TPS glyph, a tone mark, the digit `9` (tone 9), a hyphen or U+0020 —
-   * anything else would be composed into the raw buffer as typed.
+   * The caller sends this only under `AppConfig.input_mode = "tps"`, for every
+   * key it composes: a TPS glyph, a tone mark, a digit (`9` after a syllable
+   * body becomes tone 9), a hyphen or U+0020. A key the auto-correct has no
+   * rule for is inserted as typed, as `Append` would.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.TpsKey}

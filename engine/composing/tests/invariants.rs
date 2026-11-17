@@ -85,48 +85,6 @@ fn invariant_append_hyphen_appends_literal_dash() {
     assert_eq!(raw_input(&resp), "a-");
 }
 
-// ---- ReplaceLast ----
-
-#[test]
-fn invariant_replace_last_swaps_the_last_char() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "ab".into() }, &config_tl());
-    let resp = engine.apply(
-        Intent::ReplaceLast {
-            replacement: "c".into(),
-        },
-        &config_tl(),
-    );
-    assert_eq!(raw_input(&resp), "ac");
-}
-
-#[test]
-fn invariant_replace_last_idle_is_noop() {
-    let mut engine = Engine::new();
-    let resp = engine.apply(
-        Intent::ReplaceLast {
-            replacement: "c".into(),
-        },
-        &config_tl(),
-    );
-    assert!(!resp.is_composing);
-    assert!(resp.effect.is_empty());
-}
-
-#[test]
-fn invariant_replace_last_empty_buffer_is_noop() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "".into() }, &config_tl());
-    engine.apply(Intent::Reset, &config_tl());
-    let resp = engine.apply(
-        Intent::ReplaceLast {
-            replacement: "c".into(),
-        },
-        &config_tl(),
-    );
-    assert!(resp.effect.is_empty());
-}
-
 // ---- DeleteBackward ----
 
 #[test]

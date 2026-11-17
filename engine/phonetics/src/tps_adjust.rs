@@ -1,13 +1,6 @@
-//! TPSAdjustmentBundle port — collapsed 4-fn TPS keystroke adjustment.
-//!
-//! Replaces (this crate owns the rules; platforms are thin callers):
-//! - the removed iOS `TPSInputAdjuster` (4 functions).
-//! - the orchestration in iOS `Input/CharacterInputPipeline.swift` and Android
-//!   `ime/text/CharacterInputPipeline.kt`, both now thin callers of `adjust`.
-//!
-//! Caller (platform) MUST gate by TPS layout. Engine does not gate because
-//! Android `InputMode` (POJ/TL) has no `.tps` case — TPS is a layout, not
-//! a mode.
+//! TPS keystroke auto-correct — the rules the composing `TpsKey` op runs on
+//! every TPS key (every platform sends `TpsKey`; no platform runs these
+//! itself). The caller gates by TPS input mode; `adjust` does not.
 //!
 //! Trigger sets for syllabic-nasal (`{ㄇ, ㄫ}`) and palatalization
 //! (`{ㄗ, ㄘ, ㄙ, ㆡ}`) are disjoint by `lastChar`, so the `?:` short-circuit
@@ -16,22 +9,6 @@
 use crate::tps::fold_tps_glyph_alias;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
-
-// =========================================================================
-// Tone-mark predicate (IsTpsToneMark op)
-// =========================================================================
-
-/// Single-scalar form of [`crate::tps::is_tps_tone_mark`] (which holds the
-/// combining tone-8 dot U+0307) for the `IsTpsToneMark` op; false on empty /
-/// multi-scalar input.
-pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
-    let mut chars = s.chars();
-    let Some(c) = chars.next() else { return false };
-    if chars.next().is_some() {
-        return false;
-    }
-    crate::tps::is_tps_tone_mark(c)
-}
 
 // =========================================================================
 // Syllable-boundary set (used by adjustInitialKey)
@@ -299,11 +276,12 @@ fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 }
 
 // =========================================================================
-// `Method::TpsInputAdjust` — collapsed entry point
+// Entry point (`phonetics::tps_input_adjust`)
 // =========================================================================
 
-/// Collapse-equivalent of iOS `CharacterInputPipeline.adjust(_, .tps, raw)`.
-/// Returns `(adjusted, replace_last?)`. Caller MUST gate by TPS layout.
+/// The adjusted `incoming` glyph against `raw_input` (the composition before
+/// the caret), plus the glyph to put in place of its last character when a
+/// rule asks for one: `(adjusted, replace_last?)`.
 pub fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
     let mut adjusted = adjust_tone_nine_digit(incoming, raw_input);
     adjusted = adjust_tone_eight_dot(&adjusted, raw_input);
@@ -319,18 +297,7 @@ pub fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{adjust_initial_key, adjust_tone_nine_digit, is_tps_tone_mark_str};
-
-    // `ㄒㄧㆻ` + `˙` stores U+0307; the mobile Space key must see it as a mark.
-    #[test]
-    fn op_counts_the_combining_tone_eight_dot_as_a_tone_mark() {
-        assert!(is_tps_tone_mark_str("\u{0307}"));
-        assert!(is_tps_tone_mark_str("\u{02d9}"));
-        assert!(is_tps_tone_mark_str("\u{02ea}"));
-        assert!(!is_tps_tone_mark_str("ㆻ"));
-        assert!(!is_tps_tone_mark_str("ㆻ\u{0307}"));
-        assert!(!is_tps_tone_mark_str(""));
-    }
+    use super::{adjust_initial_key, adjust_tone_nine_digit};
 
     // INVARIANT_TPS_STOPCODA_PHONOTACTIC_GATE — a dual-form STOP (ㄅㄉㄍㄏ)
     // after a pure vowel converts to its entering-tone coda ONLY when the

@@ -1,12 +1,12 @@
 //! `TpsKey` — one TPS key at the caret: auto-correct, replacement and
-//! insertion in a single step, and the Space separator. The expected buffers
-//! are the mobile three-call results (`TpsInputAdjust` → `ReplaceLast` →
-//! `Append`), which `tps_key_matches_the_mobile_three_call_path` holds equal.
+//! insertion in a single step, and the Space separator. Every platform sends
+//! it for every TPS key; the expected buffers in `typed_keys_*` were recorded
+//! against the phones' former three-call path before it was removed.
 
 use composing::api::CaretDirection;
 use composing::{requests, Engine, Intent};
 use protos::engine::composing_request::Method;
-use protos::engine::{AppConfig, Append, ComposingResponse, ReplaceLast, TpsKey};
+use protos::engine::{AppConfig, ComposingResponse, TpsKey};
 
 use crate::common;
 use crate::common::req;
@@ -116,6 +116,12 @@ fn space_on_a_closed_syllable_is_a_no_op_with_no_effects() {
     let resp = tps_key(&mut engine, " ");
     assert!(resp.effect.is_empty());
     assert_eq!(resp.preedit.unwrap().raw_input, "ㄍㄚˋ");
+
+    // After the combining tone-8 dot: the phone's Space key commits on this
+    // empty answer. trace: "ㄒㄧㄍ˙" stores ㆻ + U+0307, a tone mark.
+    let mut engine = Engine::new();
+    type_keys(&mut engine, "ㄒㄧㄍ˙");
+    assert!(tps_key(&mut engine, " ").effect.is_empty());
 }
 
 #[test]
@@ -164,6 +170,20 @@ fn key_acts_on_the_chunk_before_the_caret() {
 fn nailed_segments_stay_untouched() {
     // trace: "ㄍㄚㄙ" — ㄙ has no coda form, so the buffer is as typed. Nail the
     // first two glyphs (6 bytes); the pending tail is "ㄙ", and ㄧ palatalizes it.
+    let mut engine = engine_with_nailed_ka();
+    let resp = tps_key(&mut engine, "ㄧ");
+    assert_eq!(resp.preedit.unwrap().raw_input, "ㄒㄧ");
+    match engine.snapshot_state().phase {
+        composing::Phase::Continuous { nailed, .. } => {
+            assert_eq!(nailed.len(), 1);
+            assert_eq!(nailed[0].display_text, "家");
+        }
+        composing::Phase::Idle => panic!("expected Continuous"),
+    }
+}
+
+/// Nails "ㄍㄚ" of "ㄍㄚㄙ" as 家, leaving the pending tail "ㄙ".
+fn engine_with_nailed_ka() -> Engine {
     let mut engine = Engine::new();
     type_keys(&mut engine, "ㄍㄚㄙ");
     engine.apply(
@@ -178,132 +198,55 @@ fn nailed_segments_stay_untouched() {
         },
         &config_tps(),
     );
-    let resp = tps_key(&mut engine, "ㄧ");
-    assert_eq!(resp.preedit.unwrap().raw_input, "ㄒㄧ");
-    match engine.snapshot_state().phase {
-        composing::Phase::Continuous { nailed, .. } => {
-            assert_eq!(nailed.len(), 1);
-            assert_eq!(nailed[0].display_text, "家");
-        }
-        composing::Phase::Idle => panic!("expected Continuous"),
-    }
+    engine
 }
 
-/// The mobile path for one key: `TpsInputAdjust` against the pending tail,
-/// `ReplaceLast` when the adjuster asks, then `Append`. Space follows the
-/// platform rule (`ActionHandler+KeyActions.swift:168-175`).
-fn mobile_key(engine: &mut Engine, key: char) -> Option<ComposingResponse> {
-    let raw = raw_of(engine);
-    if key == ' ' {
-        let closed = raw
-            .chars()
-            .last()
-            .is_none_or(|c| c == ' ' || phonetics::is_tps_tone_mark(c));
-        if closed {
-            return None;
-        }
-    }
-    let (adjusted, replace_last) = if key == ' ' {
-        (key.to_string(), None)
-    } else {
-        phonetics::tps_input_adjust(&key.to_string(), &raw)
-    };
-    if let Some(replacement) = replace_last {
-        requests::handle(
-            &req(Method::ReplaceLast(ReplaceLast { replacement })),
-            engine,
-            &config_tps(),
-        )
-        .unwrap();
-    }
-    Some(
-        requests::handle(
-            &req(Method::Append(Append { char: adjusted })),
-            engine,
-            &config_tps(),
-        )
-        .unwrap(),
-    )
-}
-
-/// Asserts one `TpsKey` answers as the mobile path's last call did: same
-/// raw buffer, effects and preedit; a key the mobile rule swallowed (no call)
-/// is a `TpsKey` with no effects.
-fn assert_same_key(one_step: &mut Engine, three_calls: &mut Engine, key: char, keys: &str) {
-    let single = tps_key(one_step, &key.to_string());
-    match mobile_key(three_calls, key) {
-        Some(mobile) => {
-            assert_eq!(
-                single.effect, mobile.effect,
-                "effects at {key:?} of {keys:?}"
-            );
-            assert_eq!(
-                single.preedit, mobile.preedit,
-                "preedit at {key:?} of {keys:?}"
-            );
-            assert_eq!(
-                single.is_composing, mobile.is_composing,
-                "{key:?} of {keys:?}"
-            );
-        }
-        None => assert!(single.effect.is_empty(), "refused {key:?} of {keys:?}"),
-    }
-    assert_eq!(
-        raw_of(one_step),
-        raw_of(three_calls),
-        "diverged at {key:?} of {keys:?}"
-    );
-}
-
+// The pending tail after typing `keys` one `TpsKey` at a time. Each expected
+// buffer is what the phones' former three-call path (`TpsInputAdjust` →
+// `ReplaceLast` → `Append`) produced, recorded before that path was removed
+// (D3) — effects and preedit matched key for key.
 #[test]
-fn tps_key_matches_the_mobile_three_call_path_with_nailed_segments() {
-    for keys in ["ㄧ", "ㄧㄚˋ", " ", "ㄇˊ", "-ㄅ", "ㄚ0123456789"] {
-        let mut one_step = Engine::new();
-        let mut three_calls = Engine::new();
-        for engine in [&mut one_step, &mut three_calls] {
-            type_keys(engine, "ㄍㄚㄙ");
-            engine.apply(
-                Intent::CommitContinuous {
-                    canonical_text: "家".to_string(),
-                    association_tl: String::new(),
-                    hanji: Some("家".to_string()),
-                    consumed_bytes: "ㄍㄚ".len(),
-                    syllable_count: 1,
-                    script: Some(composing::CommitScript::Lead),
-                    roman: "ka".to_string(),
-                },
-                &config_tps(),
-            );
-        }
-        for key in keys.chars() {
-            assert_same_key(&mut one_step, &mut three_calls, key, keys);
-        }
-    }
-}
-
-#[test]
-fn tps_key_matches_the_mobile_three_call_path() {
-    for keys in [
-        "ㄚ0123456789", // every digit, typed after one another: all stay literal
-        "ㄍㄚ-ㄇ",      // hyphen inside, dual-form after it
-        "-ㄍ",          // leading hyphen from Idle stays a literal
-        "ㄒㄧㄍ˙ ",     // Space after the combining tone-8 dot is refused
-        "ㆮㄧㆮ",
-        "ㄍㄠㄉㄞ",     // §32: 交代 without a separator
-        "ㄍㄠ ㄉㄞ",    // §31: with one
-        "ㄍㄨㄇㆦ",     // §33: 龜毛
-        "ㄗㄧㄚˋ",      // palatalization
-        "ㄇˊㄫ˫",       // syllabic nasals
-        "ㄗㄤ9",        // tone 9 from the digit
-        "ㄍㄚㄉ  ㄅㄚ", // a second Space changes nothing
-        "ㄍㄚㄉ˙ ㄅ",   // tone 8 closes the syllable
-        "ㄏㄧㄫㄉㄧㄅ",
+fn typed_keys_leave_the_expected_buffer() {
+    for (keys, expected) in [
+        ("ㄍㄠㄉㄞ", "ㄍㄠㄉㄞ"),          // §32: 交代 without a separator
+        ("ㄍㄠ ㄉㄞ", "ㄍㄠ ㄉㄞ"),        // §31: with one
+        ("ㄍㄨㄇㆦ", "ㄍㄨㄇㆦ"),          // §33: 龜毛
+        ("ㄗㄧㄚˋ", "ㄐㄧㄚˋ"),            // palatalization
+        ("ㄇˊㄫ˫", "ㆬˊㆭ˫"),              // syllabic nasals
+        ("ㄗㄤ9", "ㄗㄤˆ"),                // tone 9 from the digit
+        ("ㄍㄚㄉ  ㄅㄚ", "ㄍㄚㆵ ㄅㄚ"),   // a second Space changes nothing
+        ("ㄍㄚㄉ˙ ㄅ", "ㄍㄚㆵ\u{307}ㄅ"), // tone 8 closes the syllable
+        ("ㄏㄧㄫㄉㄧㄅ", "ㄏㄧㄥㄉㄧㆴ"),
+        ("ㄚ0123456789", "ㄚ0123456789"), // digits after a digit stay literal
+        ("ㄍㄚ-ㄇ", "ㄍㄚ-ㆬ"),           // hyphen is no syllable boundary
+        ("-ㄍ", "ㄍ"),                    // leading hyphen went to the document
+        ("ㄒㄧㄍ˙ ", "ㄒㄧㆻ\u{307}"),    // Space after the tone-8 dot refused
+        ("ㆮㄧㆮ", "ㆮㄧㆯ"),
     ] {
-        let mut one_step = Engine::new();
-        let mut three_calls = Engine::new();
+        let mut engine = Engine::new();
         for key in keys.chars() {
-            assert_same_key(&mut one_step, &mut three_calls, key, keys);
+            tps_key(&mut engine, &key.to_string());
         }
+        assert_eq!(raw_of(&engine), expected, "{keys:?}");
+    }
+}
+
+// As above, after a nailed segment: the pending tail starts at "ㄙ".
+#[test]
+fn typed_keys_after_a_nailed_segment_leave_the_expected_buffer() {
+    for (keys, expected) in [
+        ("ㄧ", "ㄒㄧ"),
+        ("ㄧㄚˋ", "ㄒㄧㄚˋ"),
+        (" ", "ㄙ "),
+        ("ㄇˊ", "ㄙㆬˊ"),
+        ("-ㄅ", "ㄙ-ㆴ"),
+        ("ㄚ0123456789", "ㄙㄚ0123456789"),
+    ] {
+        let mut engine = engine_with_nailed_ka();
+        for key in keys.chars() {
+            tps_key(&mut engine, &key.to_string());
+        }
+        assert_eq!(raw_of(&engine), expected, "{keys:?}");
     }
 }
 

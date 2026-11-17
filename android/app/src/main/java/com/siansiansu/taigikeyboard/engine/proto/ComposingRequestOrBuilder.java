@@ -52,17 +52,6 @@ public interface ComposingRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.AppendHyphen getAppendHyphen();
 
   /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   * @return Whether the replaceLast field is set.
-   */
-  boolean hasReplaceLast();
-  /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   * @return The replaceLast.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.ReplaceLast getReplaceLast();
-
-  /**
    * <code>.taigi.engine.DeleteBackward delete_backward = 14;</code>
    * @return Whether the deleteBackward field is set.
    */
@@ -158,7 +147,7 @@ public interface ComposingRequestOrBuilder extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -168,7 +157,7 @@ public interface ComposingRequestOrBuilder extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>

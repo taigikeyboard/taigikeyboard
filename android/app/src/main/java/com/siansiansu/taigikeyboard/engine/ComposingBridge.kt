@@ -312,18 +312,21 @@ fun RustEngineBridge.composingAppendHyphen(
     )
 }
 
-fun RustEngineBridge.composingReplaceLast(
-    replacement: String,
+// One TPS key — the engine adjusts it against the pending tail, applies any
+// replacement of the previous glyph and inserts it; " " is the syllable
+// separator, a no-op (no effects) where the rule refuses it.
+fun RustEngineBridge.composingTpsKey(
+    key: String,
     settings: EngineSettings,
     generation: Long,
 ): ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast
+    val payload = com.siansiansu.taigikeyboard.engine.proto.TpsKey
         .newBuilder()
-        .setReplacement(replacement)
+        .setKey(key)
         .build()
     return composingDispatch(
-        methodSetter = { it.replaceLast = payload },
-        op = "composingReplaceLast",
+        methodSetter = { it.tpsKey = payload },
+        op = "composingTpsKey",
         generation = generation,
         config = continuousAppConfig(settings),
     )

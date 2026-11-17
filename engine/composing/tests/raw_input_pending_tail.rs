@@ -143,24 +143,6 @@ fn invariant_holds_after_mid_commit_leaves_pending_tail() {
 }
 
 #[test]
-fn invariant_holds_after_replace_last_in_continuous() {
-    let mut engine = Engine::new();
-    engine.apply(
-        Intent::Start {
-            text: "tsua".to_string(),
-        },
-        &config_tl(),
-    );
-    let response = engine.apply(
-        Intent::ReplaceLast {
-            replacement: "1".to_string(),
-        },
-        &config_tl(),
-    );
-    assert_preedit_model_b_invariants(&engine, &response, "after ReplaceLast");
-}
-
-#[test]
 fn idle_phase_raw_input_is_empty() {
     let engine = Engine::new();
     assert_eq!(engine.snapshot_state().phase, Phase::Idle);

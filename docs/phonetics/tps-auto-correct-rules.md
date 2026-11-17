@@ -2,7 +2,7 @@
 
 Cross-referenced with `taigi-phonetics-reference.md` and the codebase implementations.
 
-**Scope**: TPS input only, on every platform. iOS / Android call `RustEngineBridge.tpsInputAdjust` only when the TPS layout is active (`inputMode == .tps` / `keyboardLayoutType == "tps"`); the desktops reach the same code through `Method::TpsKey` (`engine/composing/src/transition.rs` `tps_key` → `phonetics::tps_input_adjust`). POJ / TL / English input is unaffected.
+**Scope**: TPS input only, on every platform. Every platform sends one `TpsKey` per key under the TPS input mode (`engine/composing/src/transition.rs` `tps_key` → `phonetics::tps_input_adjust`). POJ / TL / English input is unaffected.
 
 ---
 
@@ -47,7 +47,7 @@ When the incoming character is **ㄧ** or **ㆪ**, and the last character of raw
 
 ### Implementation
 
-`engine/phonetics/src/tps_adjust.rs::palatalization_replacement`, called after `adjust_initial_key` inside `tps_adjust::adjust`; the result comes back as `replace_last`, which the platform applies to rawInput retroactively.
+`engine/phonetics/src/tps_adjust.rs::palatalization_replacement`, called after `adjust_initial_key` inside `tps_adjust::adjust`; the result comes back as `replace_last`, which `tps_key` applies to the character before the caret.
 
 ---
 
@@ -198,7 +198,7 @@ Lookups fold both dots to U+0307 (`tps::normalize_tps_lookup_scalar`), so the st
 
 ## Input Pipeline Execution Order
 
-All auto-correct rules run in one engine call, `engine/phonetics/src/tps_adjust.rs::adjust` (mobile: `Method::TpsInputAdjust`; desktop: inside `Method::TpsKey`), BEFORE the character is appended to the raw input. The caller gates the call by TPS input and applies both results:
+All auto-correct rules run in one engine call, `engine/phonetics/src/tps_adjust.rs::adjust`, inside `Method::TpsKey` on every platform, BEFORE the character is inserted into the raw input. The platform gates `TpsKey` by TPS input; `tps_key` applies both results:
 
 ```
 User taps key

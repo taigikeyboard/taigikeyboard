@@ -23,7 +23,6 @@ public  final class ComposingRequest extends
     START(10),
     APPEND(11),
     APPEND_HYPHEN(12),
-    REPLACE_LAST(13),
     DELETE_BACKWARD(14),
     COMMIT_RAW(16),
     COMMIT_PREEDIT_THEN_INSERT_EXTERNAL(18),
@@ -55,7 +54,6 @@ public  final class ComposingRequest extends
         case 10: return START;
         case 11: return APPEND;
         case 12: return APPEND_HYPHEN;
-        case 13: return REPLACE_LAST;
         case 14: return DELETE_BACKWARD;
         case 16: return COMMIT_RAW;
         case 18: return COMMIT_PREEDIT_THEN_INSERT_EXTERNAL;
@@ -255,56 +253,6 @@ public  final class ComposingRequest extends
    */
   private void clearAppendHyphen() {
     if (methodCase_ == 12) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int REPLACE_LAST_FIELD_NUMBER = 13;
-  /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   */
-  @java.lang.Override
-  public boolean hasReplaceLast() {
-    return methodCase_ == 13;
-  }
-  /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ReplaceLast getReplaceLast() {
-    if (methodCase_ == 13) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ReplaceLast) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   */
-  private void setReplaceLast(com.siansiansu.taigikeyboard.engine.proto.ReplaceLast value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 13;
-  }
-  /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   */
-  private void mergeReplaceLast(com.siansiansu.taigikeyboard.engine.proto.ReplaceLast value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 13 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ReplaceLast) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 13;
-  }
-  /**
-   * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-   */
-  private void clearReplaceLast() {
-    if (methodCase_ == 13) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -704,7 +652,7 @@ public  final class ComposingRequest extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -716,7 +664,7 @@ public  final class ComposingRequest extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -731,7 +679,7 @@ public  final class ComposingRequest extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -744,7 +692,7 @@ public  final class ComposingRequest extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -763,7 +711,7 @@ public  final class ComposingRequest extends
   /**
    * <pre>
    * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-   * commits of a Hanji conversion) ---
+   * commits of a Hanji conversion); every platform sends `tps_key` ---
    * </pre>
    *
    * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1303,54 +1251,6 @@ public  final class ComposingRequest extends
     }
 
     /**
-     * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-     */
-    @java.lang.Override
-    public boolean hasReplaceLast() {
-      return instance.hasReplaceLast();
-    }
-    /**
-     * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ReplaceLast getReplaceLast() {
-      return instance.getReplaceLast();
-    }
-    /**
-     * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-     */
-    public Builder setReplaceLast(com.siansiansu.taigikeyboard.engine.proto.ReplaceLast value) {
-      copyOnWrite();
-      instance.setReplaceLast(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-     */
-    public Builder setReplaceLast(
-        com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.Builder builderForValue) {
-      copyOnWrite();
-      instance.setReplaceLast(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-     */
-    public Builder mergeReplaceLast(com.siansiansu.taigikeyboard.engine.proto.ReplaceLast value) {
-      copyOnWrite();
-      instance.mergeReplaceLast(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ReplaceLast replace_last = 13;</code>
-     */
-    public Builder clearReplaceLast() {
-      copyOnWrite();
-      instance.clearReplaceLast();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.DeleteBackward delete_backward = 14;</code>
      */
     @java.lang.Override
@@ -1737,7 +1637,7 @@ public  final class ComposingRequest extends
     /**
      * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-     * commits of a Hanji conversion) ---
+     * commits of a Hanji conversion); every platform sends `tps_key` ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1749,7 +1649,7 @@ public  final class ComposingRequest extends
     /**
      * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-     * commits of a Hanji conversion) ---
+     * commits of a Hanji conversion); every platform sends `tps_key` ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1761,7 +1661,7 @@ public  final class ComposingRequest extends
     /**
      * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-     * commits of a Hanji conversion) ---
+     * commits of a Hanji conversion); every platform sends `tps_key` ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1774,7 +1674,7 @@ public  final class ComposingRequest extends
     /**
      * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-     * commits of a Hanji conversion) ---
+     * commits of a Hanji conversion); every platform sends `tps_key` ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1788,7 +1688,7 @@ public  final class ComposingRequest extends
     /**
      * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-     * commits of a Hanji conversion) ---
+     * commits of a Hanji conversion); every platform sends `tps_key` ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -1801,7 +1701,7 @@ public  final class ComposingRequest extends
     /**
      * <pre>
      * --- Desktop keys (40s: Telex tone keys, composing caret, TPS keys, the
-     * commits of a Hanji conversion) ---
+     * commits of a Hanji conversion); every platform sends `tps_key` ---
      * </pre>
      *
      * <code>.taigi.engine.TelexKey telex_key = 40;</code>
@@ -2073,7 +1973,6 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.Start.class,
             com.siansiansu.taigikeyboard.engine.proto.Append.class,
             com.siansiansu.taigikeyboard.engine.proto.AppendHyphen.class,
-            com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.class,
             com.siansiansu.taigikeyboard.engine.proto.DeleteBackward.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitRaw.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitPreeditThenInsertExternal.class,
@@ -2089,9 +1988,9 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.ConfirmCompositionThenInsert.class,
           };
           java.lang.String info =
-              "\u0000\u0011\u0001\u0000\n-\u0011\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u001f<\u0000 <\u0000" +
-              "\"<\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000-<\u0000";
+              "\u0000\u0010\u0001\u0000\n-\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u000e<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u001f<\u0000 <\u0000\"<\u0000" +
+              "(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000-<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

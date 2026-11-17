@@ -11,14 +11,11 @@ import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation
-import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
 import com.siansiansu.taigikeyboard.engine.proto.StringResult
 import com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps
 import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
-import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
-import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 
 // region Phonetics DTOs
 
@@ -35,12 +32,6 @@ data class ToneVariations(
         val EMPTY = ToneVariations(tl = emptyMap(), poj = emptyMap(), universal = emptyMap())
     }
 }
-
-/** Result of `Method::TpsInputAdjust`. */
-data class TpsAdjustOutcome(
-    val adjusted: String,
-    val replaceLast: String?,
-)
 
 // endregion
 
@@ -85,32 +76,6 @@ fun RustEngineBridge.tlDisplayToTps(
         .setOrMapsToEr(orMapsToER)
         .build()
     return stringDispatch({ it.tlDisplayToTps = payload }, text, "tlDisplayToTps")
-}
-
-fun RustEngineBridge.isTpsToneMark(char: Char): Boolean {
-    val payload = IsTpsToneMark.newBuilder().setChar(char.toString()).build()
-    return boolDispatch({ it.isTpsToneMark = payload }, "isTpsToneMark")
-}
-
-// Key-level TPS adjust: when replaceLast is non-empty the caller must replace the previous char with it.
-fun RustEngineBridge.tpsInputAdjust(
-    incoming: String,
-    rawInput: String,
-): TpsAdjustOutcome {
-    val payload = TpsInputAdjust
-        .newBuilder()
-        .setIncoming(incoming)
-        .setRawInput(rawInput)
-        .build()
-    val resp = phoneticsDispatch({ it.tpsInputAdjust = payload }, "tpsInputAdjust")
-        ?: return TpsAdjustOutcome(incoming, null)
-    if (!resp.hasTpsAdjustResult()) {
-        RustEngineBridge.recordFailure("tpsInputAdjust", "missing TpsAdjustResult")
-        return TpsAdjustOutcome(incoming, null)
-    }
-    val r: TpsAdjustResult = resp.tpsAdjustResult
-    val replace = if (r.hasReplaceLast() && r.replaceLast.present) r.replaceLast.output else null
-    return TpsAdjustOutcome(r.adjusted, replace)
 }
 
 // endregion

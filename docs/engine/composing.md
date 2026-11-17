@@ -19,7 +19,7 @@
 
 | Intent | Description |
 |---|---|
-| `Start`, `Append`, `AppendHyphen`, `ReplaceLast` | Edit the pending `raw` at the caret; the display is re-derived |
+| `Start`, `Append`, `AppendHyphen` | Edit the pending `raw` at the caret; the display is re-derived |
 | `DeleteBackward` | See below |
 | `CommitRaw` | Enter: commit the whole composition |
 | `CommitPreeditThenInsertExternal` | Commit the preedit as shown and append external text without candidate acceptance or auto spacing; idle inserts the text |
@@ -29,7 +29,7 @@
 | `CommitContinuous` | Pick a candidate: nail a prefix or finalize the composition |
 | `CommitPrediction` | Mobile: a NextWord prediction tap — the document text it writes and its usage; the composition is untouched |
 | `MoveCaret` | Desktop: step the caret inside the pending tail, or jump to its start / end; with a Hanji conversion, step over a converted word or re-open the last nailed segment |
-| `TelexKey`, `TpsKey` | Desktop Telex key; TPS key at the caret |
+| `TelexKey`, `TpsKey` | Desktop Telex key; TPS key at the caret (every platform) |
 | `CommitAsShown`, `CommitAsTyped` | Desktop, under a Hanji conversion |
 
 ### deleteBackward Flow
