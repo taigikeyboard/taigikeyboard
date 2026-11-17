@@ -470,7 +470,7 @@ impl CustomDictionaryPage {
                 let Some(path) = page.chosen_path(result, StringKey::CommonExportFailed) else {
                     return;
                 };
-                page.begin_job(move || export_job(&path, write_atomically));
+                page.begin_job(move || export_job(&path, taigi_desktop_storage::replace_file));
             },
         );
     }
@@ -675,26 +675,4 @@ fn local_date() -> String {
         .and_then(|now| now.format("%Y-%m-%d"))
         .map(|date| date.to_string())
         .unwrap_or_else(|_| "export".to_owned())
-}
-
-/// `Data.write(to:options:.atomic)`: the file appears whole or not at all,
-/// and a failed export never damages the one it would have replaced. The
-/// temporary file is created exclusively in the target's directory (no
-/// name to collide with, no symlink to follow) and removed with its handle
-/// if the write fails.
-fn write_atomically(path: &std::path::Path, contents: &[u8]) -> Result<(), String> {
-    use std::io::Write;
-    let directory = path.parent().ok_or_else(|| "no directory".to_owned())?;
-    let mut temporary = tempfile::Builder::new()
-        .prefix(".taigi-export-")
-        .suffix(".tmp")
-        .tempfile_in(directory)
-        .map_err(|error| error.to_string())?;
-    temporary
-        .write_all(contents)
-        .map_err(|error| error.to_string())?;
-    temporary
-        .persist(path)
-        .map(|_| ())
-        .map_err(|error| error.error.to_string())
 }

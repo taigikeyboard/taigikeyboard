@@ -26,14 +26,13 @@ gtk.workspace = true
 adw.workspace = true
 gio.workspace = true
 log.workspace = true
-# The export's temporary file: created exclusively in the target directory.
-tempfile.workspace = true
 
 [dev-dependencies]
 # `tests/panes.rs` records picks through the engine, as the IME would.
 dispatch.workspace = true
 protos.workspace = true
 prost.workspace = true
+tempfile.workspace = true
 
 [lints]
 workspace = true

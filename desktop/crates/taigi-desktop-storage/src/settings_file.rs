@@ -3,9 +3,9 @@
 //! settings window (two processes) see one document. Roadmap W10; the
 //! reload-by-mtime pattern follows rakukan `engine/config.rs:330-443`.
 
+use crate::replace_file::replace_file;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime};
@@ -62,10 +62,6 @@ pub struct SettingsFileStore {
 
 impl SettingsFileStore {
     pub const FILE_NAME: &'static str = "settings.json";
-    /// A rename onto a file the other process is reading fails with a
-    /// sharing violation on Windows; a few short retries outlast any read.
-    const REPLACE_ATTEMPTS: u32 = 5;
-    const REPLACE_RETRY_DELAY: Duration = Duration::from_millis(20);
     /// How long `update` waits for the other process's load → save to
     /// finish before giving up, and how old a lock file has to be before it
     /// is treated as left behind by a crash.
@@ -105,8 +101,8 @@ impl SettingsFileStore {
         })
     }
 
-    /// Writes `document` whole: to a sibling temp file, then renamed over
-    /// the real one, so a reader never sees a half-written file.
+    /// Writes `document` whole (`replace_file`), so a reader never sees a
+    /// half-written file.
     pub fn save(&self, document: &SettingsDocument) -> Result<(), SettingsFileError> {
         let write_error = |source| SettingsFileError::Write {
             path: self.path.clone(),
@@ -115,29 +111,7 @@ impl SettingsFileStore {
         if let Some(directory) = self.path.parent() {
             fs::create_dir_all(directory).map_err(write_error)?;
         }
-        // Unique per save, not per process: two saves in one process (two
-        // panes' worker threads) must not share a temp file.
-        static SAVE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
-        let sequence = SAVE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
-        let temporary = self
-            .path
-            .with_extension(format!("json.{}.{sequence}.tmp", std::process::id()));
-        fs::write(&temporary, document.to_json()).map_err(write_error)?;
-        let mut attempt = 0;
-        loop {
-            match fs::rename(&temporary, &self.path) {
-                Ok(()) => return Ok(()),
-                Err(error) if attempt + 1 < Self::REPLACE_ATTEMPTS => {
-                    log::warn!("settings.replace_retry attempt={attempt} error={error}");
-                    attempt += 1;
-                    thread::sleep(Self::REPLACE_RETRY_DELAY);
-                }
-                Err(source) => {
-                    fs::remove_file(&temporary).ok();
-                    return Err(write_error(source));
-                }
-            }
-        }
+        replace_file(&self.path, document.to_json().as_bytes()).map_err(write_error)
     }
 
     /// Load → mutate → save under a lock, the one shape every settings
@@ -323,7 +297,6 @@ mod tests {
             .unwrap();
         assert_eq!(saved.revision, 1);
         assert_eq!(store.load().unwrap(), saved);
-        assert!(!directory.path().join("settings.json.tmp").exists());
         assert_eq!(
             fs::read_dir(directory.path()).unwrap().count(),
             1,

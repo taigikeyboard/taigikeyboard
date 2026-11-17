@@ -59,14 +59,14 @@ pub fn import_job(path: &Path) -> JobOutcome {
 }
 
 /// Exports the WHOLE dictionary — not the page or the filter's matches —
-/// through `write_file`, each window's own atomic write.
+/// through `write_file`, the settings windows' atomic replace.
 pub fn export_job(
     path: &Path,
-    write_file: impl FnOnce(&Path, &[u8]) -> Result<(), String>,
+    write_file: impl FnOnce(&Path, &[u8]) -> std::io::Result<()>,
 ) -> JobOutcome {
     let outcome = user_data::export_custom_csv()
         .map_err(|error| error.to_string())
-        .and_then(|csv| write_file(path, &csv));
+        .and_then(|csv| write_file(path, &csv).map_err(|error| error.to_string()));
     JobOutcome {
         message: outcome
             .err()
