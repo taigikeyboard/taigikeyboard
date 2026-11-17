@@ -6,7 +6,8 @@ name: Release identity check
 #   installation. Setup: docs/architecture/desktop-release.md § One-time: the
 #   release App.
 # - `chrome-web-store`: mints a Chrome Web Store token through Workload
-#   Identity Federation and reads the item's status. Run after changing the
+#   Identity Federation and reads both items' status (ChromeOS input method,
+#   browser extension). Run after changing the
 #   Google Cloud side. Setup: docs/architecture/chromeos-release.md § One-time:
 #   the Chrome Web Store API.
 on:
@@ -64,11 +65,11 @@ jobs:
 
 
   # GitHub's OIDC token → Workload Identity Federation → the store's service
-  # account → a 5-minute store token, then a read-only status call
-  # (`chrome-web-store.sh status`). No stored secret: the `CWS_*` variables on
+  # account → a 5-minute store token, then a read-only status call per item
+  # (`chrome-web-store.sh status <package>`). No stored secret: the `CWS_*` variables on
   # the `release` environment are identifiers.
   chrome-web-store:
-    name: Chrome Web Store token + item status
+    name: Chrome Web Store token + items' status
     if: >-
       github.repository == 'taigikeyboard/taigikeyboard' &&
       github.ref == 'refs/heads/main'
@@ -100,9 +101,12 @@ jobs:
           persist-credentials: false
           sparse-checkout: tools/release
 
-      - name: Read the item status
+      - name: Read the items' status
         env:
           CWS_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
           CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
           CWS_ITEM_ID: ${{ vars.CWS_ITEM_ID }}
-        run: bash tools/release/chrome-web-store.sh status
+          CWS_EXTENSION_ITEM_ID: ${{ vars.CWS_EXTENSION_ITEM_ID }}
+        run: |
+          bash tools/release/chrome-web-store.sh status chromeos
+          bash tools/release/chrome-web-store.sh status extension

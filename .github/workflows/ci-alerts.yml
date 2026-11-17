@@ -27,6 +27,7 @@ on:
       - Windows build
       - Linux build
       - ChromeOS build
+      - Browser extension build
     types: [completed]
 
 permissions: {}

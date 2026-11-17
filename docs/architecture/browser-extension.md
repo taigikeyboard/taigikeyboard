@@ -2,7 +2,7 @@
 
 > **Type**: Design record + roadmap
 > **Keywords**: `browser extension`, `manifest v3`, `content script`, `optional_host_permissions`, `execCommand`, `quill`, `lexical`, `codemirror`, `slate`, `beforeinput`, `editcontext`, `hidden field`, `wasm`, `wasm2js`, `content security policy`, `learning`
-> **Status**: Chrome Phases 1–2 done 2026-11-14 (issue #864): typing, per-site access, per-tab mode, status, shared learning, CodeMirror 5 / 6 support and canvas / hidden-field detection pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Not in any store; the nightly channel carries an unpacked build for testers (`nightly-builds.md`).
+> **Status**: Chrome Phases 1–2 done 2026-11-14 (issue #864): typing, per-site access, per-tab mode, status, shared learning, CodeMirror 5 / 6 support and canvas / hidden-field detection pass `make -C web extension-e2e` in Playwright's Chromium and in Helium. Firefox not started (§ Phases). Chrome Web Store item `macjldjheiajcimfcjdcegagaemcelkf`: 3.9.0 published by hand (maintainer 2026-11-17); on the desktop train from the next release (§ Release). The nightly channel carries an unpacked build for testers (`nightly-builds.md`).
 > **Siblings**: `web-roadmap.md` (the page and the wasm engine this reuses), `chromeos-roadmap.md` (the ChromeOS system input method, a separate product).
 
 ---
@@ -158,18 +158,32 @@ The browser's permission question is a native dialog no harness can answer. The 
 
 Not automated in the browser: the native permission grant dialog and its removal (E2E verifies `removeSiteAccess` stops typing before `permissions.remove`), the keyboard shortcut, an actual incognito window (the extension must be allowed in incognito by hand; `SharedLearning`'s `isPrivate` path is unit-tested in Node), and a modal dialog.
 
+## Release
+
+The Chrome build is the Chrome Web Store item `macjldjheiajcimfcjdcegagaemcelkf`; the store installs and updates it. It rides the desktop train exactly like the ChromeOS input method (maintainer 2026-11-17: "release flow consistent with ChromeOS"), so `chromeos-release.md` is the reference and only the differences are listed here:
+
+| Step | The browser extension |
+|---|---|
+| `make version-desktop <v>` | Also writes `version` in `web/extension/manifest.json`; `check-versions --train desktop` holds it there |
+| The monthly cut, `make desktop-release` | `.github/workflows/extension-build.yml` runs `make -C web extension` and attaches `TaigiKeyboard-<v>-extension.zip` + `.sha256` to the draft (`tools/release/attach-web-package.sh`, shared with `chromeos-build.yml`) |
+| `make desktop-patch PLATFORM=extension` | An extension-only patch |
+| Beta | The zip's R2 link is in the Discord beta post ("Browser extension"); testers unpack it and **Load unpacked** |
+| Publish → announce | Mirrors the zip, writes `_data/extension_release.json` (the landing page's row shows its version), then `chrome-web-store.sh submit extension <v> <sha256>` uploads it and submits it for review — the package only, never the listing. Its own step after the ChromeOS one: a ChromeOS refusal does not hold it back |
+
+Store access is the ChromeOS setup (`chromeos-release.md` § One-time): the same service account, which the Developer Dashboard's Account page admits for every item of the publisher, plus the `release` environment variable `CWS_EXTENSION_ITEM_ID`. `release-identity.yml` reads both items' status. Firefox (Phase 3) gets its own store and its own section here.
+
 ## Phases
 
-One PR per phase. Issue #864 makes Chrome and Firefox one release: neither ships until both pass every row of § Tests. No version is assigned.
+One PR per phase. Issue #864 planned Chrome and Firefox as one release; the maintainer published the Chrome build first (3.9.0, 2026-11-17), so Firefox ships when Phase 3 passes every row of § Tests.
 
 | # | Phase | Content | Status |
 |---|---|---|---|
 | 0 | Design | Issue #864: decisions and acceptance criteria | Done |
 | 1 | Chrome | This document's D1–D7; `make -C web extension`, `extension-e2e` in `web.yml` | Merged (#901) |
 | 2 | Canvas and hidden-field editors | Recorded Google Docs, Google Sheets, Monaco and CodeMirror 5 / 6 (§ Fields): CodeMirror 5 (`CodeMirror5Surface`) and CodeMirror 6 supported with E2E rows in § Tests; `EditContext`, zero-size / clipped / transparent / off-screen fields, Google Docs' body `<iframe>` and Google Sheets' grid singleton detected as unsupported with container or corner chip placement (`hidden.spec.mjs`) | Done |
-| 3 | Firefox | A Firefox manifest from the same sources: `browser_specific_settings`, `background.scripts` in place of the service worker. Its own harness, because Playwright cannot load a Firefox extension (`web-ext` or geckodriver), and its own pass of every row of § Tests. Check in Firefox, not by analogy with Chromium, whether a page's CSP blocks `WebAssembly.compile` in a content script (D7). Firefox keeps its own learned history (#864) | Not started; blocks the release |
+| 3 | Firefox | A Firefox manifest from the same sources: `browser_specific_settings`, `background.scripts` in place of the service worker. Its own harness, because Playwright cannot load a Firefox extension (`web-ext` or geckodriver), and its own pass of every row of § Tests. Check in Firefox, not by analogy with Chromium, whether a page's CSP blocks `WebAssembly.compile` in a content script (D7). Firefox keeps its own learned history (#864) | Not started |
 | 4 | Other Chromium browsers | Edge, Brave, Vivaldi, Opera, Arc: the hand-checked rows (permission grant, shortcut, private window) once per browser. Whether to list in the Edge Add-ons store is the maintainer's call | Not started |
-| 5 | Packaging + store | A release doc in the shape of `chromeos-release.md`: version on the desktop train, the zip built in CI, store listing, privacy fields, screenshots. Developer accounts and submission are the maintainer's | Not started |
+| 5 | Packaging + store | § Release: version on the desktop train, the zip built in CI, store upload in the announcement. Developer account, listing, privacy fields and screenshots are the maintainer's | Done (Chrome; listing by hand 2026-11-17) |
 
 ### Open questions for the maintainer
 

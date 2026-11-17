@@ -6,7 +6,7 @@
 
 ## Goal
 
-The desktop train (macOS + Windows + Linux + ChromeOS) releases itself every month; the only person in the loop approves the jobs that read release secrets (D5) (maintainer, 2026-11-12: "release notes are no longer reviewed by hand in the AI era; auto-cut, auto-publish on the 5th; everything automated unless I hold it for a hotfix"):
+The desktop train (macOS + Windows + Linux + ChromeOS + the browser extension) releases itself every month; the only person in the loop approves the jobs that read release secrets (D5) (maintainer, 2026-11-12: "release notes are no longer reviewed by hand in the AI era; auto-cut, auto-publish on the 5th; everything automated unless I hold it for a hotfix"):
 
 | Day (Asia/Taipei 09:00) | What runs | Person |
 |---|---|---|
@@ -17,7 +17,7 @@ The desktop train (macOS + Windows + Linux + ChromeOS) releases itself every mon
 
 Decisions (maintainer, 2026-11-12):
 
-- **D1 Scope** — desktop + ChromeOS, including the Homebrew cask bump and the Chrome Web Store upload. The store upload was manual at first (maintainer, 2026-11-14: "I'll handle the Chrome Web Store by hand for now"); automated 2026-11-16 (maintainer: "auto-publish to the Chrome Web Store; only upload the zip, keep all other text unchanged") through Workload Identity Federation, no stored secret (`chromeos-release.md` § Upload). Mobile stays manual (`release-mobile`); revisit after the desktop train has run 1–2 cycles.
+- **D1 Scope** — desktop + ChromeOS, including the Homebrew cask bump and the Chrome Web Store upload. The store upload was manual at first (maintainer, 2026-11-14: "I'll handle the Chrome Web Store by hand for now"); automated 2026-11-16 (maintainer: "auto-publish to the Chrome Web Store; only upload the zip, keep all other text unchanged") through Workload Identity Federation, no stored secret (`chromeos-release.md` § Upload). The browser extension joined the train and the same store flow 2026-11-17 (maintainer: "release flow consistent with ChromeOS"; `browser-extension.md` § Release). Mobile stays manual (`release-mobile`); revisit after the desktop train has run 1–2 cycles.
 - **D2 Release notes = GitHub's generated notes** (maintainer, 2026-11-13: "nobody reads the release notes") — the release body is the Release Notes API's list of pull requests merged since the previous desktop release, nothing hand-written, no per-PR step, no model in CI. Replaces the fragment design (closed PR #898). GitHub Models (free inference from Actions) was retired 2026-07-30, and a Copilot or API-key step would add a cost and an outage path to the cut.
 - **D3 Writing to `main`** — a GitHub App on the `main` ruleset's bypass list pushes the release commit. Its token also publishes the draft, which matters: a release published with `GITHUB_TOKEN` does not fire `desktop-announce.yml` (GitHub suppresses workflow events caused by `GITHUB_TOKEN`).
 - **D4 Hold + hotfix** — a repository variable `RELEASE_HOLD` stops the train; a hotfix is a patch staged by hand with `/release-desktop <platform>` as today.
@@ -35,7 +35,7 @@ Decisions (maintainer, 2026-11-12):
 | Beta | `desktop-beta.yml` dispatched at the end of a stage | `tools/release/stage-desktop.sh:203` |
 | Publish | The maintainer presses **Publish release** | `docs/architecture/desktop-release.md` § The flow |
 | Announce | `release: published` → `desktop-announce.yml` | `.github/workflows/desktop-announce.yml:15-17` |
-| Chrome Web Store | Automatic upload + submit for review in the announcement (2026-11-16) | `docs/architecture/chromeos-release.md` § Upload |
+| Chrome Web Store | Automatic upload + submit for review in the announcement (ChromeOS 2026-11-16, browser extension 2026-11-17) | `docs/architecture/chromeos-release.md` § Upload |
 | Homebrew | Manual edit of `Casks/taigikeyboard.rb` in `taigikeyboard/homebrew-tap` | `docs/architecture/desktop-release.md` § The flow |
 
 The macOS half is the only one bound to a person's machine; every other half already runs on hosted runners. (Baseline before phase 4, kept as the plan's starting point; phase 4 moved the macOS half to `macos-build.yml`.)

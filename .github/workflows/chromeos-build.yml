@@ -94,6 +94,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Before the checkout: the attach script runs from `source_sha` with a
+      # write token, so the commit must be one main has (as in
+      # desktop-train.yml `sign-and-beta`).
+      - name: Check the commit is on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          status="$(gh api "repos/$GITHUB_REPOSITORY/compare/main...$SOURCE_SHA" --jq .status)"
+          case "$status" in
+            identical | behind) ;;
+            *) echo "::error::$SOURCE_SHA is not on main (compare: $status) — only a reviewed commit is attached"; exit 1 ;;
+          esac
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.source_sha || github.sha }}
@@ -103,38 +117,7 @@ jobs:
           path: web/target
 
       - name: Attach the zip to the draft release
-        working-directory: web/target
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ inputs.source_sha }}
-        run: |
-          set -euo pipefail
-          # `make version-desktop` writes the manifest with the rest of the
-          # train, so its version names the draft.
-          version="$(node --print 'require("../chromeos/manifest.json").version')"
-          tag="desktop-$version"
-          # The draft is the staging run's (stage-desktop.sh, or the train's
-          # `draft` job), created on the staged commit. A
-          # published release means the staging order was broken; a draft on
-          # another commit is another staging run's.
-          state="$(gh release view "$tag" --json isDraft,targetCommitish \
-              --jq '"\(.isDraft) \(.targetCommitish)"' 2>&1)" || {
-              echo "no release $tag: $state" >&2
-              echo "stage-desktop.sh creates the draft before dispatching this run." >&2
-              exit 1
-          }
-          read -r is_draft target <<< "$state"
-          [ "$is_draft" = true ] || {
-              echo "$tag is already published — an asset added now would be public with no test" >&2
-              exit 1
-          }
-          [ "$target" = "$SOURCE_SHA" ] || {
-              echo "::error::the $tag draft targets $target, not $SOURCE_SHA — another staging run owns it"
-              exit 1
-          }
-          # The name tools/release/lib/desktop-release.sh looks for (CHROMEOS_ASSET).
-          asset="TaigiKeyboard-${version}-chromeos.zip"
-          mv taigi-keyboard-chromeos.zip "$asset"
-          sha256sum "$asset" > "$asset.sha256"
-          gh release upload "$tag" "$asset" "$asset.sha256" --repo "$GITHUB_REPOSITORY"
-          echo "attached $asset to $tag (built from $SOURCE_SHA)"
+        run: bash tools/release/attach-web-package.sh chromeos "$SOURCE_SHA"

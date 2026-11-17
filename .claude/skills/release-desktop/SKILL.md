@@ -1,12 +1,13 @@
 ---
 name: release-desktop
-description: Stage a DESKTOP hotfix — a patch release (`YYYY.M.P`, P > 0) of ONE desktop platform (`macos` / `windows` / `linux` / `chromeos`) at the version already in the tree - upgrade check, rebuild, commit, and stage that platform's installers on an unpublished draft; stops before publishing. Required arg: the platform; optional: a release base. The monthly full release is the automatic train (`desktop-train.yml` / `desktop-publish.yml`), not this skill. Mobile train (iOS + Android) is `release-mobile`.
+description: Stage a DESKTOP hotfix — a patch release (`YYYY.M.P`, P > 0) of ONE desktop platform (`macos` / `windows` / `linux` / `chromeos` / `extension`) at the version already in the tree - upgrade check, rebuild, commit, and stage that platform's installers on an unpublished draft; stops before publishing. Required arg: the platform; optional: a release base. The monthly full release is the automatic train (`desktop-train.yml` / `desktop-publish.yml`), not this skill. Mobile train (iOS + Android) is `release-mobile`.
 disable-model-invocation: true
 ---
 
 # Release Desktop — hotfix patch
 
-The desktop train is macOS + Windows + Linux + ChromeOS, sharing one CalVer
+The desktop train is macOS + Windows + Linux + ChromeOS + the browser
+extension, sharing one CalVer
 version, unrelated to the mobile number. The **monthly full release
 (`YYYY.M.0`) runs itself**: `desktop-train.yml` cuts and stages on the 1st,
 `desktop-publish.yml` publishes on the 5th
@@ -20,7 +21,7 @@ before invoking.
 
 Arguments, in any order:
 
-- `<platform>` (required) — `macos`, `windows`, `linux` or `chromeos`: the one
+- `<platform>` (required) — `macos`, `windows`, `linux`, `chromeos` or `extension`: the one
   platform the patch ships. Example: `/release-desktop linux`
 - `<base-ref>` — overrides the derived release base.
   Example: `/release-desktop linux desktop-2026.12.0`
@@ -53,7 +54,7 @@ python3 tools/release_notes.py check-versions --train desktop --version <target>
 ```
 
 That check is what proves `windows/Cargo.toml`, `desktop/Cargo.toml`,
-`linux/Cargo.toml`, `macos/Cargo.toml`, `web/chromeos/manifest.json` and both macOS plist keys carry the same number, so a
+`linux/Cargo.toml`, `macos/Cargo.toml`, `web/chromeos/manifest.json`, `web/extension/manifest.json` and both macOS plist keys carry the same number, so a
 half-applied bump stops here. When they disagree, run
 `make version-desktop <target>` — it writes every file in one pass, or none,
 then refreshes each desktop `Cargo.lock`'s own member versions (commit them
@@ -197,7 +198,8 @@ repository: the installers are download links there, and **Publish release** is 
 button on the same page. The skill never presses it.
 
 Install it (the `.deb` on the Linux VM, S74; the ChromeOS zip unpacked in the
-ChromeOS VM, `docs/architecture/chromeos-roadmap.md` § Spike result), run the
+ChromeOS VM, `docs/architecture/chromeos-roadmap.md` § Spike result; the
+extension zip via **Load unpacked** in Chrome), run the
 manual checks the fix touches, then publish.
 (The same two steps from a terminal:
 `gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`
@@ -207,8 +209,9 @@ Publishing creates the tag and runs the announcement, which writes only the
 patched platform's `_data` / appcast
 (`docs/architecture/desktop-release.md` § The flow, § What announcing checks).
 
-**A ChromeOS patch**: the announcement uploads the zip to the Chrome Web Store
-and submits it for review; it fails while another version is still in review
+**A ChromeOS or browser extension patch**: the announcement uploads the zip to
+its Chrome Web Store item and submits it for review; it fails while another
+version of that item is still in review
 (`docs/architecture/chromeos-release.md` § Upload).
 
 **A macOS patch**: the announcement bumps and audits the Homebrew cask

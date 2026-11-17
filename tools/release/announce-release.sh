@@ -27,10 +27,10 @@
 #   5. when the release carries a macOS package, output `macos_version` and
 #      `macos_sha256` ($GITHUB_OUTPUT, else stdout) — the arguments of
 #      `bump-cask.sh`, which the workflow runs next
-#   6. when the release carries the ChromeOS zip, output `chromeos_version` and
-#      `chromeos_sha256` in Actions — the arguments of `chrome-web-store.sh
-#      submit`, which the workflow runs after the cask; by hand it prints that
-#      command instead
+#   6. for each Chrome Web Store zip the release carries (ChromeOS, the browser
+#      extension), output `<package>_version` and `<package>_sha256` in Actions
+#      — the arguments of `chrome-web-store.sh submit <package>`, which the
+#      workflow runs after the cask; by hand it prints that command instead
 #   7. in Actions, output `version`, `platforms` and `release_url` for the
 #      workflow's success note on Discord
 #
@@ -189,23 +189,27 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
 fi
 
 # No manifest to wait for: nothing installed polls for a Linux package, and the
-# Chrome Web Store updates the ChromeOS input method. The ChromeOS data still
-# matters: the landing page's ChromeOS row shows its version.
+# Chrome Web Store updates the ChromeOS input method and the browser extension.
+# Their data still matters: the landing page's rows show the version.
 # One triple per format: platform label, asset name, site data path.
 for unpolled_format in \
     "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
     "Fedora|$LINUX_RPM_ASSET|$LINUX_RPM_SITE_PATH" \
     "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH" \
-    "ChromeOS|$CHROMEOS_ASSET|$CHROMEOS_SITE_PATH"; do
+    "ChromeOS|$CHROMEOS_ASSET|$CHROMEOS_SITE_PATH" \
+    "Extension|$EXTENSION_ASSET|$EXTENSION_SITE_PATH"; do
     IFS='|' read -r label asset site_path <<< "$unpolled_format"
     if fetch_platform_asset "$label" "$asset"; then
         site_files+=("$site_path" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
-        [[ "$label" != ChromeOS ]] || chromeos_sha256="$ASSET_SHA256"
+        case "$label" in
+            ChromeOS) chromeos_sha256="$ASSET_SHA256" ;;
+            Extension) extension_sha256="$ASSET_SHA256" ;;
+        esac
     fi
 done
 
 [[ ${#site_files[@]} -gt 0 ]] ||
-    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET, $CHROMEOS_ASSET — there is nothing to announce"
+    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET, $CHROMEOS_ASSET, $EXTENSION_ASSET — there is nothing to announce"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. A manifest published before its download is reachable
@@ -228,6 +232,9 @@ fi
 if [[ -n "${GITHUB_OUTPUT:-}" && -n "${chromeos_sha256:-}" ]]; then
     printf 'chromeos_version=%s\nchromeos_sha256=%s\n' "$SHORT_VERSION" "$chromeos_sha256" >> "$GITHUB_OUTPUT"
 fi
+if [[ -n "${GITHUB_OUTPUT:-}" && -n "${extension_sha256:-}" ]]; then
+    printf 'extension_version=%s\nextension_sha256=%s\n' "$SHORT_VERSION" "$extension_sha256" >> "$GITHUB_OUTPUT"
+fi
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     platform_list="${announced_platforms[*]}"   # labels hold no space
     printf 'version=%s\nplatforms=%s\nrelease_url=%s\n' \
@@ -238,9 +245,12 @@ echo ""
 echo "✓ announced $SHORT_VERSION for ${announced_platforms[*]}"
 echo "  release   $RELEASE_PAGE_URL"
 echo "  website   https://taigikeyboard.tw/#download"
-if [[ -n "${chromeos_sha256:-}" && -z "${GITHUB_OUTPUT:-}" ]]; then
+if [[ -z "${GITHUB_OUTPUT:-}" && -n "${chromeos_sha256:-}${extension_sha256:-}" ]]; then
     echo ""
-    echo "  ChromeOS: submit it to the Chrome Web Store (CWS_* variables:"
+    echo "  Submit to the Chrome Web Store (CWS_* variables:"
     echo "  docs/architecture/chromeos-release.md § Upload):"
-    echo "    tools/release/chrome-web-store.sh submit $SHORT_VERSION $chromeos_sha256"
+    [[ -z "${chromeos_sha256:-}" ]] ||
+        echo "    tools/release/chrome-web-store.sh submit chromeos $SHORT_VERSION $chromeos_sha256"
+    [[ -z "${extension_sha256:-}" ]] ||
+        echo "    tools/release/chrome-web-store.sh submit extension $SHORT_VERSION $extension_sha256"
 fi

@@ -143,7 +143,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash tools/release/desktop-train.sh draft
 
-  # The four halves, built from the release commit. A real run waits for the
+  # The halves, built from the release commit. A real run waits for the
   # draft they attach to; a dry run builds the scratch branch's commit and
   # attaches nothing. `contents: write` is the most a called job asks for
   # (attach); GitHub checks it even for the jobs that are skipped.
@@ -196,19 +196,31 @@ jobs:
       source_sha: ${{ needs.plan.outputs.source_sha }}
       build_only: ${{ needs.plan.outputs.stage != 'true' }}
 
+  extension:
+    needs: [plan, draft]
+    if: >-
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.action != 'stop' &&
+      (needs.draft.result == 'success' || needs.plan.outputs.stage != 'true')
+    permissions:
+      contents: write
+    uses: ./.github/workflows/extension-build.yml
+    with:
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      build_only: ${{ needs.plan.outputs.stage != 'true' }}
+
   # Approval 2, once every half is built: one macOS machine that compiles
   # nothing signs the package, then mirrors the complete draft for testers. If
   # beta fails after the package is staged, re-running this job would re-sign
   # different bytes (refused): dispatch desktop-beta.yml instead.
   sign-and-beta:
     name: sign macOS, check the draft, mirror beta
-    needs: [plan, draft, macos, windows, linux, chromeos]
+    needs: [plan, draft, macos, windows, linux, chromeos, extension]
     if: >-
       !cancelled() && needs.plan.outputs.stage == 'true' &&
       github.ref == 'refs/heads/main' &&
       needs.draft.result == 'success' && needs.macos.result == 'success' &&
       needs.windows.result == 'success' && needs.linux.result == 'success' &&
-      needs.chromeos.result == 'success'
+      needs.chromeos.result == 'success' && needs.extension.result == 'success'
     runs-on: macos-26
     timeout-minutes: 60
     environment: release
@@ -270,7 +282,7 @@ jobs:
   # A failed run is reported to Discord by ci-alerts.yml.
   finish:
     name: clean up
-    needs: [plan, cut, draft, macos, windows, linux, chromeos, sign-and-beta]
+    needs: [plan, cut, draft, macos, windows, linux, chromeos, extension, sign-and-beta]
     if: >-
       always() && github.repository == 'taigikeyboard/taigikeyboard' &&
       needs.plan.outputs.scratch_branch != ''

@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
-# The ChromeOS input method's Chrome Web Store item, through the store's API v2.
+# The two Chrome Web Store items — the ChromeOS input method (`chromeos`) and the
+# browser extension (`extension`) — through the store's API v2.
 #
-# Usage: chrome-web-store.sh status
-#        chrome-web-store.sh submit <version> <sha256>
+# Usage: chrome-web-store.sh status <chromeos|extension>
+#        chrome-web-store.sh submit <chromeos|extension> <version> <sha256>
 #
 #   status   print the item's published and submitted versions and the last
 #            upload's state; changes nothing
-#   submit   upload TaigiKeyboard-<version>-chromeos.zip from the published
-#            desktop release and submit it for review, published on approval.
+#   submit   upload the package's zip (CHROMEOS_ASSET / EXTENSION_ASSET) from
+#            the published desktop release and submit it for review, published
+#            on approval.
 #            Only the package changes: the listing text, screenshots and privacy
 #            fields stay as set in the Developer Dashboard. <sha256> is
-#            announce-release.sh's `chromeos_sha256` — the digest of the zip it
+#            announce-release.sh's `<package>_sha256` — the digest of the zip it
 #            checked against the staged receipt and the R2 copy — so run this
 #            only after a successful announcement. `desktop-announce.yml` runs it;
-#            in Actions it writes `chromeos_store_state` to $GITHUB_OUTPUT.
+#            in Actions it writes `<package>_store_state` to $GITHUB_OUTPUT.
 #
 # Idempotent: a re-run finds the version already submitted or published and
 # stops. Refuses a downgrade, and a submission while another version is in
@@ -26,8 +28,9 @@
 #                      by hand, `gcloud auth print-access-token
 #                      --impersonate-service-account=<CWS_SERVICE_ACCOUNT>
 #                      --scopes=https://www.googleapis.com/auth/chromewebstore`
-#   CWS_PUBLISHER_ID   Developer Dashboard → Publisher → Settings
-#   CWS_ITEM_ID        the item's 32-letter id
+#   CWS_PUBLISHER_ID        Developer Dashboard → Publisher → Settings
+#   CWS_ITEM_ID             the ChromeOS item's 32-letter id (`chromeos`)
+#   CWS_EXTENSION_ITEM_ID   the browser extension item's (`extension`)
 
 set -euo pipefail
 
@@ -35,13 +38,21 @@ fail() { echo "error: $*" >&2; exit 1; }
 
 REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 API=https://chromewebstore.googleapis.com
-USAGE="usage: chrome-web-store.sh status | submit <version> <sha256>"
+USAGE="usage: chrome-web-store.sh status <chromeos|extension> | submit <chromeos|extension> <version> <sha256>"
 
-for name in CWS_ACCESS_TOKEN CWS_PUBLISHER_ID CWS_ITEM_ID; do
+# The package picks the item and, in `submit`, the asset in one place, so a
+# by-hand run cannot upload one package's zip to the other's item.
+PACKAGE="${2:-}"
+case "$PACKAGE" in
+    chromeos) ITEM_ID_VARIABLE=CWS_ITEM_ID ;;
+    extension) ITEM_ID_VARIABLE=CWS_EXTENSION_ITEM_ID ;;
+    *) echo "$USAGE" >&2; exit 2 ;;
+esac
+for name in CWS_ACCESS_TOKEN CWS_PUBLISHER_ID "$ITEM_ID_VARIABLE"; do
     [[ -n "${!name:-}" ]] ||
         fail "$name is not set (docs/architecture/chromeos-release.md § One-time: the Chrome Web Store API)"
 done
-ITEM="publishers/$CWS_PUBLISHER_ID/items/$CWS_ITEM_ID"
+ITEM="publishers/$CWS_PUBLISHER_ID/items/${!ITEM_ID_VARIABLE}"
 
 # One authenticated store call; prints the response body. The URL is the last
 # argument. On an HTTP error Google's body names the cause (chromeos-release.md
@@ -77,8 +88,8 @@ revision_version() {
 }
 
 report_state() {
-    echo "Chrome Web Store: $1"
-    [[ -z "${GITHUB_OUTPUT:-}" ]] || echo "chromeos_store_state=$1" >> "$GITHUB_OUTPUT"
+    echo "Chrome Web Store ($PACKAGE): $1"
+    [[ -z "${GITHUB_OUTPUT:-}" ]] || echo "${PACKAGE}_store_state=$1" >> "$GITHUB_OUTPUT"
 }
 
 submit() {
@@ -94,6 +105,8 @@ submit() {
     source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
     # shellcheck source=lib/release-site.sh
     source "$REPOSITORY_DIR/tools/release/lib/release-site.sh"
+    local asset
+    asset="$(web_package_asset "$PACKAGE")"
 
     local status published submitted submitted_state
     status="$(fetch_status)"
@@ -129,14 +142,14 @@ submit() {
             fail "the store already has $newest, newer than $version — not downgrading it"
     done
 
-    local zip="$RELEASE_TEMP_DIR/$CHROMEOS_ASSET"
-    local asset_url="https://github.com/$RELEASE_REPOSITORY/releases/download/$DESKTOP_TAG/$CHROMEOS_ASSET"
+    local zip="$RELEASE_TEMP_DIR/$asset"
+    local asset_url="https://github.com/$RELEASE_REPOSITORY/releases/download/$DESKTOP_TAG/$asset"
     echo "==> downloading $asset_url"
     anonymous_download_retrying "$asset_url" "$zip" || fail "$asset_url is not anonymously reachable"
     [[ "$(release_sha256 "$zip")" == "$sha256" ]] ||
-        fail "$CHROMEOS_ASSET does not hash to $sha256 — the announcement checked a different file"
+        fail "$asset does not hash to $sha256 — the announcement checked a different file"
 
-    echo "==> uploading $CHROMEOS_ASSET"
+    echo "==> uploading $asset"
     local upload upload_state crx_version
     upload="$(store_call -X POST -H "Content-Type: application/zip" --data-binary "@$zip" \
         "$API/upload/v2/$ITEM:upload")"
@@ -151,7 +164,7 @@ submit() {
     done
     [[ "$upload_state" == SUCCEEDED ]] || fail "upload ended $upload_state: $upload"
     [[ -z "$crx_version" || "$crx_version" == "$version" ]] ||
-        fail "the store read version $crx_version from $CHROMEOS_ASSET, not $version"
+        fail "the store read version $crx_version from $asset, not $version"
 
     echo "==> submitting $version for review"
     local published_state
@@ -165,14 +178,14 @@ submit() {
 
 case "${1:-}" in
     status)
-        [[ $# -eq 1 ]] || fail "$USAGE"
+        [[ $# -eq 2 ]] || fail "$USAGE"
         fetch_status | print_status
         ;;
     submit)
-        [[ $# -eq 3 ]] || fail "$USAGE"
+        [[ $# -eq 4 ]] || fail "$USAGE"
         RELEASE_TEMP_DIR="$(mktemp -d)"
         trap 'rm -rf "$RELEASE_TEMP_DIR"' EXIT
-        submit "$2" "$3"
+        submit "$3" "$4"
         ;;
     *)
         echo "$USAGE" >&2

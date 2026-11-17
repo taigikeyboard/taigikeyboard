@@ -373,6 +373,9 @@ CHROMEOS_MANIFEST_FIXTURE = """{
 """
 
 
+EXTENSION_MANIFEST_FIXTURE = CHROMEOS_MANIFEST_FIXTURE.replace('"116"', '"120"')
+
+
 # The version each train's writer tests move to: the desktop train is CalVer.
 NEXT_VERSION = {"mobile": "3.6.7", "desktop": "2026.12.0"}
 # A version below NEXT_VERSION on the same train.
@@ -388,6 +391,7 @@ PROJECT_FILES = (
     release_notes.LINUX_CARGO_FILE,
     release_notes.MACOS_CARGO_FILE,
     release_notes.CHROMEOS_MANIFEST_FILE,
+    release_notes.EXTENSION_MANIFEST_FILE,
 )
 
 
@@ -431,10 +435,21 @@ class ProjectVersionWriterTests(unittest.TestCase):
         linux_cargo: str = LINUX_CARGO_FIXTURE,
         macos_cargo: str = MACOS_CARGO_FIXTURE,
         chromeos_manifest: str = CHROMEOS_MANIFEST_FIXTURE,
+        extension_manifest: str = EXTENSION_MANIFEST_FIXTURE,
     ) -> None:
         for relative_path, content in zip(
             PROJECT_FILES,
-            (gradle, pbxproj, plist, cargo, desktop_cargo, linux_cargo, macos_cargo, chromeos_manifest),
+            (
+                gradle,
+                pbxproj,
+                plist,
+                cargo,
+                desktop_cargo,
+                linux_cargo,
+                macos_cargo,
+                chromeos_manifest,
+                extension_manifest,
+            ),
             strict=True,
         ):
             path = self.repo_root / relative_path
@@ -509,6 +524,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 "linux/Cargo.toml: workspace version 3.6.6 -> 2026.12.0",
                 "macos/Cargo.toml: workspace version 3.6.6 -> 2026.12.0",
                 "web/chromeos/manifest.json: version 3.6.6 -> 2026.12.0",
+                "web/extension/manifest.json: version 3.6.6 -> 2026.12.0",
             ),
         )
         # Only the version moved: the other keys, including the two that end
@@ -518,17 +534,20 @@ class ProjectVersionWriterTests(unittest.TestCase):
             CHROMEOS_MANIFEST_FIXTURE.replace('"version": "3.6.6"', '"version": "2026.12.0"'),
         )
 
-    def test_check_refuses_a_chromeos_manifest_on_another_version(self) -> None:
-        # chromeos-build.yml names the draft from the manifest: one left behind
-        # would attach to last release's draft, or to none.
-        self.write_tree(
-            chromeos_manifest=CHROMEOS_MANIFEST_FIXTURE.replace('"3.6.6"', '"3.6.5"')
-        )
-
-        with self.assertRaisesRegex(
-            release_notes.ReleaseNotesError, "web/chromeos/manifest.json version is 3.6.5"
+    def test_check_refuses_a_web_manifest_on_another_version(self) -> None:
+        # attach-web-package.sh names the draft from each manifest: one left
+        # behind would attach to last release's draft, or to none.
+        for keyword, fixture, manifest_file in (
+            ("chromeos_manifest", CHROMEOS_MANIFEST_FIXTURE, release_notes.CHROMEOS_MANIFEST_FILE),
+            ("extension_manifest", EXTENSION_MANIFEST_FIXTURE, release_notes.EXTENSION_MANIFEST_FILE),
         ):
-            release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
+            with self.subTest(manifest_file=manifest_file):
+                self.write_tree(**{keyword: fixture.replace('"3.6.6"', '"3.6.5"')})
+
+                with self.assertRaisesRegex(
+                    release_notes.ReleaseNotesError, f"{manifest_file} version is 3.6.5"
+                ):
+                    release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
 
     def test_refuses_to_move_a_chromeos_manifest_backwards(self) -> None:
         # The store refuses a version that is not higher than the last it took.
