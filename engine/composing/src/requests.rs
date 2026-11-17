@@ -232,7 +232,7 @@ fn handle_fetch_at_pos(
             candidates: listed
                 .candidates
                 .into_iter()
-                .map(raw_to_proto_candidate)
+                .map(|candidate| raw_to_proto_candidate(candidate, config))
                 .collect(),
         },
     )
@@ -788,7 +788,12 @@ fn first_learned_per_reading(entries: &[LearnedEntry]) -> Vec<LearnedEntry> {
     out
 }
 
-fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
+fn raw_to_proto_candidate(c: RawCandidate, config: &AppConfig) -> CandidateMessage {
+    let tps_text = if config.is_tps_layout() {
+        tps_cell_text(&c, config.tps_or_maps_to_er)
+    } else {
+        String::new()
+    };
     CandidateMessage {
         consumed_span_end: c.consumed_span.1,
         syllable_count: c.syllable_count as u32,
@@ -807,6 +812,17 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         // into `CommitContinuous.association_tl` on tap. Empty only for
         // TPS-OOV hanji-absent candidates with no recoverable dict TL.
         canonical_tl: c.canonical_tl,
+        tps_text,
+    }
+}
+
+/// What a candidate's one-script cell shows under the TPS layout: its Hanji, or
+/// for a Hanji-less candidate its romanization as Bopomofo — the rendering
+/// `commit_text` writes for that pick.
+fn tps_cell_text(c: &RawCandidate, or_maps_to_er: bool) -> String {
+    match c.hanji.as_deref().filter(|hanji| !hanji.is_empty()) {
+        Some(hanji) => hanji.to_owned(),
+        None => phonetics::api::tl_display_to_tps(&c.roman, or_maps_to_er),
     }
 }
 
@@ -887,7 +903,7 @@ mod tests {
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
             is_custom: false,
         };
-        let proto = raw_to_proto_candidate(raw);
+        let proto = raw_to_proto_candidate(raw, &AppConfig::default());
         assert_eq!(proto.roman, "tâi-uân");
         assert_eq!(proto.hanji.as_deref(), Some("臺灣"));
         assert_eq!(proto.display_text, "臺灣");
@@ -914,10 +930,43 @@ mod tests {
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
             is_custom: false,
         };
-        let proto = raw_to_proto_candidate(raw);
+        let proto = raw_to_proto_candidate(raw, &AppConfig::default());
         assert_eq!(proto.roman, "tāi");
         assert!(proto.hanji.is_none());
         assert_eq!(proto.display_text, "tāi");
+        assert_eq!(proto.tps_text, "", "off the TPS layout");
+    }
+
+    #[test]
+    fn raw_to_proto_candidate_fills_the_tps_cell_text_under_the_tps_layout() {
+        fn row(roman: &str, hanji: Option<&str>) -> RawCandidate {
+            RawCandidate {
+                rowid: NO_ROWID,
+                consumed_span: (0, 3),
+                syllable_count: 1,
+                display_text: hanji.unwrap_or(roman).to_owned(),
+                roman: roman.to_owned(),
+                hanji: hanji.map(str::to_owned),
+                canonical_tl: roman.to_owned(),
+                score: 0.0,
+                frequency: 0,
+                walker_cost: WALKER_COST_UNPRICED,
+                bitmask: 0,
+                user_weight: 0.0,
+                context_rank: ranking::CONTEXT_RANK_NONE,
+                coverage_kind: lexicon::COVERAGE_KIND_FULL,
+                is_custom: false,
+            }
+        }
+        let tps = AppConfig {
+            input_mode: "tps".to_owned(),
+            ..AppConfig::default()
+        };
+        // trace: a Hanji-bearing cell shows its Hanji; a Hanji-less (or
+        // empty-Hanji) `ka` renders as ㄍㄚ (tone 1 carries no mark).
+        assert_eq!(raw_to_proto_candidate(row("ka", Some("家")), &tps).tps_text, "家");
+        assert_eq!(raw_to_proto_candidate(row("ka", None), &tps).tps_text, "ㄍㄚ");
+        assert_eq!(raw_to_proto_candidate(row("ka", Some("")), &tps).tps_text, "ㄍㄚ");
     }
 
     /// §44 Romanization Only display dedupe keys on the rendered roman ALONE: two rows

@@ -38,19 +38,6 @@ public extension RustEngineBridge {
         )
     }()
 
-    // MARK: TPS (1 op)
-
-    static func tlDisplayToTPS(_ text: String, orMapsToER: Bool) -> String {
-        var payload = Taigi_Engine_TlDisplayToTps()
-        payload.text = text
-        payload.orMapsToEr = orMapsToER
-        return stringDispatch(
-            method: .tlDisplayToTps(payload),
-            input: text,
-            op: "tlDisplayToTps",
-        )
-    }
-
     // MARK: Platform text helpers
 
     /// Whether `text` is a single punctuation character that attaches to the

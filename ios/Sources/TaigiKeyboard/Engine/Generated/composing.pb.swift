@@ -996,6 +996,13 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
   /// `display_text`).
   public var canonicalTl: String = String()
 
+  /// What the candidate's one-script cell shows under the TPS layout
+  /// (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+  /// candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+  /// the same rendering a commit of it writes (`composing::commit_text`).
+  /// Empty off the TPS layout. Display only.
+  public var tpsText: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2224,7 +2231,7 @@ nonisolated extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{2}\u{4}roman\0\u{1}hanji\0\u{3}canonical_tl\0\u{b}consumed_span_start\0\u{b}score\0\u{b}form\0\u{b}script_kind\0\u{c}\u{1}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{2}\u{4}roman\0\u{1}hanji\0\u{3}canonical_tl\0\u{3}tps_text\0\u{b}consumed_span_start\0\u{b}score\0\u{b}form\0\u{b}script_kind\0\u{c}\u{1}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2238,6 +2245,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
       case 8: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
       case 10: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.tpsText) }()
       default: break
       }
     }
@@ -2266,6 +2274,9 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if !self.canonicalTl.isEmpty {
       try visitor.visitSingularStringField(value: self.canonicalTl, fieldNumber: 10)
     }
+    if !self.tpsText.isEmpty {
+      try visitor.visitSingularStringField(value: self.tpsText, fieldNumber: 11)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2276,6 +2287,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if lhs.roman != rhs.roman {return false}
     if lhs._hanji != rhs._hanji {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}
+    if lhs.tpsText != rhs.tpsText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

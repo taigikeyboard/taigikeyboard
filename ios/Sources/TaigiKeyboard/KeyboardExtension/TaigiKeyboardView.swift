@@ -120,7 +120,6 @@ struct TaigiKeyboardView: View {
         // gradient) owns the whole keyboard + candidate-bar surface and paints it itself.
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled && colors.background == nil
         let isTPSLayout = p.settings.keyboardLayoutType == .tps
-        let orMapsToER = p.settings.isTpsOrMappedToER
         let oneHandedMode = settings.oneHandedMode
 
         keyboardWithOverlays(
@@ -132,7 +131,6 @@ struct TaigiKeyboardView: View {
             candidateStyle: candidateStyle,
             candidateTheme: theme,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             oneHandedMode: oneHandedMode,
         )
         .candidateTheme(theme)
@@ -209,7 +207,6 @@ struct TaigiKeyboardView: View {
         candidateStyle: CandidateView.Style,
         candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         oneHandedMode: OneHandedMode,
     ) -> some View {
         coreKeyboard(
@@ -220,7 +217,6 @@ struct TaigiKeyboardView: View {
             candidateDisplayMode: candidateDisplayMode,
             candidateStyle: candidateStyle,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             oneHandedMode: oneHandedMode,
         )
         .withKeyboardOverlays(
@@ -236,7 +232,6 @@ struct TaigiKeyboardView: View {
             candidateStyle: candidateStyle,
             candidateTheme: candidateTheme,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             onSymbolInsert: { [controllerContext, unowned services] symbol in
                 // Same route as an emoji: the toolbar stays reachable while
                 // composing, so an active preedit commits with the symbol.
@@ -296,7 +291,6 @@ struct TaigiKeyboardView: View {
         candidateDisplayMode: CandidateDisplayMode,
         candidateStyle: CandidateView.Style,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         oneHandedMode: OneHandedMode,
     ) -> some View {
         // KeyboardKit 10: uses layout: and services: parameters
@@ -402,7 +396,6 @@ struct TaigiKeyboardView: View {
                     englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,
                     isComposing: composingManager.isComposing,
                     isTPSLayout: isTPSLayout,
-                    orMapsToER: orMapsToER,
                 )
                 .environmentObject(expandState)
                 .candidateViewStyle(candidateStyle)

@@ -260,6 +260,7 @@ class TaigiAutocompleteService: EngineFreeAutocompleteService {
             // key and value the §42 hanji cell's bracket roman rides
             // (`CandidateCellScript.bracketRomanKey`).
             "roman": c.roman,
+            CandidateCellHelper.tpsTextKey: c.tpsText,
         ]
         // §50: the pick's hanji → `ContinuousPick.hanji`; absent for a
         // hanji-less candidate so the engine never learns a literal / OOV.

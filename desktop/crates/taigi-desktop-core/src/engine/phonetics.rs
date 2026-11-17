@@ -28,8 +28,8 @@ pub fn tl_to_poj(input: &str) -> Option<String> {
 /// [`tl_display_to_tps`], so a cell and its commit spell `or` alike.
 pub const TPS_OR_MAPS_TO_ER: bool = true;
 
-/// The TPS spelling of a display-form TL reading — what a Hanji-less
-/// candidate shows under TPS. `or_maps_to_er` is `AppConfig.tps_or_maps_to_er`,
+/// The TPS spelling of a display-form TL reading (the cell text itself arrives
+/// as `CandidateMessage.tps_text`). `or_maps_to_er` is `AppConfig.tps_or_maps_to_er`,
 /// so a cell and its commit spell `or` alike.
 pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> Option<String> {
     string_result(

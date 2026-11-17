@@ -130,7 +130,7 @@ The cross-platform behavior contract every Rust slice and platform change must p
 
 **Why**: TPS mode shares the same candidate/scoring pipeline as POJ/TL. Divergent TPS conversion between platforms means the same keystroke shows different candidates.
 
-**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api`. Bridged via `RustEngineBridge.tlDisplayToTPS`; the key-level adjust runs inside the composing `TpsKey` op. `phonetics::api::tl_numeric_to_tps`, `phonetics::api::contains_tps` and the TPS → TL direction (`phonetics::tps_to_tl`, consumed by `composing::continuous` for per-span conversion) are Rust-internal only. No platform-side TPS converter exists.
+**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api`. A candidate cell's TPS text arrives as `CandidateMessage.tps_text`; the key-level adjust runs inside the composing `TpsKey` op. `phonetics::api::tl_numeric_to_tps`, `phonetics::api::contains_tps` and the TPS → TL direction (`phonetics::tps_to_tl`, consumed by `composing::continuous` for per-span conversion) are Rust-internal only. No platform-side TPS converter exists.
 
 **Corner cases**:
 - The TPS input adjuster (`phonetics::tps_adjust`) reorders initial/medial/final before conversion; round-trip must account for adjuster output, not raw keystrokes.

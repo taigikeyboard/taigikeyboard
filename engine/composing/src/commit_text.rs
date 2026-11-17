@@ -99,8 +99,7 @@ pub(crate) fn is_pure_romanization(text: &str) -> bool {
 }
 
 /// The TPS layout's rendering of a pick's romanization: the Bopomofo its cell
-/// shows (iOS `CandidateCellHelper` / Android `CandidateStrip.kt`
-/// `tlDisplayToTps(roman)`).
+/// shows (`CandidateMessage.tps_text`, `requests::tps_cell_text`).
 #[derive(Clone, Copy)]
 struct Bopomofo {
     or_maps_to_er: bool,

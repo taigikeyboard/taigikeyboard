@@ -110,4 +110,32 @@ public interface CandidateMessageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCanonicalTlBytes();
+
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   * @return The tpsText.
+   */
+  java.lang.String getTpsText();
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   * @return The bytes for tpsText.
+   */
+  com.google.protobuf.ByteString
+      getTpsTextBytes();
 }

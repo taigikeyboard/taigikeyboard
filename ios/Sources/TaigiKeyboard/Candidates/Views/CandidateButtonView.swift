@@ -12,7 +12,6 @@ struct CandidateButtonView: View {
     /// the invisible subtitle spacer below (computed once per list by the caller).
     let contentHasSubtitles: Bool
     let isTPSLayout: Bool
-    let orMapsToER: Bool
     let isSelected: Bool
     /// The top-ranked candidate (engine ranker index 0) — fills the keycap
     /// background as a visual hint.
@@ -29,7 +28,6 @@ struct CandidateButtonView: View {
             for: suggestion,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
     }
@@ -51,7 +49,6 @@ struct CandidateButtonView: View {
             for: suggestion,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
     }
@@ -78,7 +75,6 @@ struct CandidateButtonView: View {
                 for: suggestion,
                 isHanjiFirst: isHanjiFirst,
                 isTPSLayout: isTPSLayout,
-                orMapsToER: orMapsToER,
             ))
         }) {
             VStack(alignment: .center, spacing: 0) {

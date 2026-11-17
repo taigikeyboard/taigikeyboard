@@ -42,7 +42,6 @@ data class CandidateDisplayParams(
     val candidateDisplayMode: CandidateDisplayMode,
     val fontType: String,
     val layoutType: String,
-    val orMapsToER: Boolean,
     val textSizeScale: Float,
     val candidateTextColor: Int?,
     val themeTitleColor: Int,

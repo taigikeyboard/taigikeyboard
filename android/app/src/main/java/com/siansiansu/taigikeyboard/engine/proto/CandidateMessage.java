@@ -57,6 +57,7 @@ public  final class CandidateMessage extends
     roman_ = "";
     hanji_ = "";
     canonicalTl_ = "";
+    tpsText_ = "";
   }
   private int bitField0_;
   public static final int CONSUMED_SPAN_END_FIELD_NUMBER = 2;
@@ -394,6 +395,93 @@ public  final class CandidateMessage extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     canonicalTl_ = value.toStringUtf8();
+
+  }
+
+  public static final int TPS_TEXT_FIELD_NUMBER = 11;
+  private java.lang.String tpsText_;
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   * @return The tpsText.
+   */
+  @java.lang.Override
+  public java.lang.String getTpsText() {
+    return tpsText_;
+  }
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   * @return The bytes for tpsText.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getTpsTextBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(tpsText_);
+  }
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   * @param value The tpsText to set.
+   */
+  private void setTpsText(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    tpsText_ = value;
+  }
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   */
+  private void clearTpsText() {
+
+    tpsText_ = getDefaultInstance().getTpsText();
+  }
+  /**
+   * <pre>
+   * What the candidate's one-script cell shows under the TPS layout
+   * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+   * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+   * the same rendering a commit of it writes (`composing::commit_text`).
+   * Empty off the TPS layout. Display only.
+   * </pre>
+   *
+   * <code>string tps_text = 11;</code>
+   * @param value The bytes for tpsText to set.
+   */
+  private void setTpsTextBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    tpsText_ = value.toStringUtf8();
 
   }
 
@@ -882,6 +970,95 @@ public  final class CandidateMessage extends
       return this;
     }
 
+    /**
+     * <pre>
+     * What the candidate's one-script cell shows under the TPS layout
+     * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+     * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+     * the same rendering a commit of it writes (`composing::commit_text`).
+     * Empty off the TPS layout. Display only.
+     * </pre>
+     *
+     * <code>string tps_text = 11;</code>
+     * @return The tpsText.
+     */
+    @java.lang.Override
+    public java.lang.String getTpsText() {
+      return instance.getTpsText();
+    }
+    /**
+     * <pre>
+     * What the candidate's one-script cell shows under the TPS layout
+     * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+     * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+     * the same rendering a commit of it writes (`composing::commit_text`).
+     * Empty off the TPS layout. Display only.
+     * </pre>
+     *
+     * <code>string tps_text = 11;</code>
+     * @return The bytes for tpsText.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getTpsTextBytes() {
+      return instance.getTpsTextBytes();
+    }
+    /**
+     * <pre>
+     * What the candidate's one-script cell shows under the TPS layout
+     * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+     * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+     * the same rendering a commit of it writes (`composing::commit_text`).
+     * Empty off the TPS layout. Display only.
+     * </pre>
+     *
+     * <code>string tps_text = 11;</code>
+     * @param value The tpsText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTpsText(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setTpsText(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * What the candidate's one-script cell shows under the TPS layout
+     * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+     * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+     * the same rendering a commit of it writes (`composing::commit_text`).
+     * Empty off the TPS layout. Display only.
+     * </pre>
+     *
+     * <code>string tps_text = 11;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTpsText() {
+      copyOnWrite();
+      instance.clearTpsText();
+      return this;
+    }
+    /**
+     * <pre>
+     * What the candidate's one-script cell shows under the TPS layout
+     * (`AppConfig.input_mode = "tps"`): the Hanji, or for a Hanji-less
+     * candidate its `roman` rendered as Bopomofo under `tps_or_maps_to_er` —
+     * the same rendering a commit of it writes (`composing::commit_text`).
+     * Empty off the TPS layout. Display only.
+     * </pre>
+     *
+     * <code>string tps_text = 11;</code>
+     * @param value The bytes for tpsText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTpsTextBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setTpsTextBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CandidateMessage)
   }
   @java.lang.Override
@@ -905,10 +1082,11 @@ public  final class CandidateMessage extends
             "roman_",
             "hanji_",
             "canonicalTl_",
+            "tpsText_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0001\u0002\n\u0006\u0000\u0000\u0000\u0002\u000b\u0003\u000b" +
-              "\u0004\u0208\b\u0208\t\u1208\u0000\n\u0208";
+              "\u0000\u0007\u0000\u0001\u0002\u000b\u0007\u0000\u0000\u0000\u0002\u000b\u0003\u000b" +
+              "\u0004\u0208\b\u0208\t\u1208\u0000\n\u0208\u000b\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

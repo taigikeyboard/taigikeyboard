@@ -10,7 +10,6 @@ struct ExpandedCandidateGridCell: View {
     /// the invisible subtitle spacer below (computed once per list by the caller).
     let contentHasSubtitles: Bool
     let isTPSLayout: Bool
-    let orMapsToER: Bool
     let isSelected: Bool
     /// First candidate (engine ranker top, index 0) — fills the keycap background as a visual cue.
     let isFirstCandidate: Bool
@@ -26,7 +25,6 @@ struct ExpandedCandidateGridCell: View {
             for: suggestion,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
     }
@@ -48,7 +46,6 @@ struct ExpandedCandidateGridCell: View {
             for: suggestion,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
     }
@@ -71,7 +68,6 @@ struct ExpandedCandidateGridCell: View {
                 for: suggestion,
                 isHanjiFirst: isHanjiFirst,
                 isTPSLayout: isTPSLayout,
-                orMapsToER: orMapsToER,
             ))
         }) {
             VStack(alignment: .center, spacing: 2) {

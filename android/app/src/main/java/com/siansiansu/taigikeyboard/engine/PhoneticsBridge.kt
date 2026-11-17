@@ -14,7 +14,6 @@ import com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
 import com.siansiansu.taigikeyboard.engine.proto.StringResult
-import com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps
 import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
 
 // region Phonetics DTOs
@@ -61,21 +60,6 @@ val RustEngineBridge.toneVariations: ToneVariations by lazy {
         poj = result.pojVariationsMap.mapValues { it.value.variationsList.toList() },
         universal = result.universalVariationsMap.mapValues { it.value.variationsList.toList() },
     )
-}
-
-// endregion
-// region TPS
-
-fun RustEngineBridge.tlDisplayToTps(
-    text: String,
-    orMapsToER: Boolean,
-): String {
-    val payload = TlDisplayToTps
-        .newBuilder()
-        .setText(text)
-        .setOrMapsToEr(orMapsToER)
-        .build()
-    return stringDispatch({ it.tlDisplayToTps = payload }, text, "tlDisplayToTps")
 }
 
 // endregion

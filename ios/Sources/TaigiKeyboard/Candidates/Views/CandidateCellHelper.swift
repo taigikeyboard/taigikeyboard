@@ -13,6 +13,9 @@ enum CandidateCellHelper {
     // MARK: - Constants
 
     static let minimumCellWidth: CGFloat = 44
+    /// `additionalInfo` key carrying a Continuous candidate's TPS cell text
+    /// (`CandidateMessage.tps_text`). Mirrors Android `TaigiWord.MetadataKeys.TPS_TEXT`.
+    static let tpsTextKey = "tpsText"
     private static let cellHorizontalPadding: CGFloat = 20
 
     // MARK: - Display text
@@ -27,14 +30,13 @@ enum CandidateCellHelper {
         for suggestion: AutocompleteSuggestion,
         isHanjiFirst: Bool,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> String {
         if isTPSLayout {
             if let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle
             }
-            return tpsFallback(for: suggestion, orMapsToER: orMapsToER)
+            return tpsText(for: suggestion)
         }
 
         if candidateDisplayMode == .romanOnly {
@@ -92,7 +94,6 @@ enum CandidateCellHelper {
         for suggestion: AutocompleteSuggestion,
         isHanjiFirst: Bool,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
     ) -> AutocompleteSuggestion {
         // §42 Hanji with Romanization split cell: the `cellScript` marker is authoritative — the
         // cell already carries exactly the script it commits, so the swap / TPS
@@ -117,8 +118,8 @@ enum CandidateCellHelper {
         }
 
         if isTPSLayout {
-            let tpsText = tpsFallback(for: suggestion, orMapsToER: orMapsToER)
-            return replacingCommitText(of: suggestion, with: tpsText, keepOriginalSubtitle: true)
+            let tpsCellText = tpsText(for: suggestion)
+            return replacingCommitText(of: suggestion, with: tpsCellText, keepOriginalSubtitle: true)
         }
 
         return suggestion
@@ -136,7 +137,6 @@ enum CandidateCellHelper {
     static func measuredCellWidth(
         for suggestion: AutocompleteSuggestion,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
         titleFontSize: CGFloat,
         subtitleFontSize: CGFloat,
@@ -149,7 +149,7 @@ enum CandidateCellHelper {
 
         if isTPSLayout {
             let titleText = subtitle.isEmpty
-                ? tpsFallback(for: suggestion, orMapsToER: orMapsToER)
+                ? tpsText(for: suggestion)
                 : subtitle
             let width = (titleText as NSString).size(withAttributes: [.font: titleFont]).width
             return max(minimumCellWidth, width + cellHorizontalPadding)
@@ -165,7 +165,6 @@ enum CandidateCellHelper {
                 for: suggestion,
                 isHanjiFirst: false,
                 isTPSLayout: false,
-                orMapsToER: orMapsToER,
                 candidateDisplayMode: .combined,
             )
             let width = (titleText as NSString).size(withAttributes: [.font: titleFont]).width
@@ -192,7 +191,6 @@ enum CandidateCellHelper {
         for suggestion: AutocompleteSuggestion,
         isHanjiFirst: Bool,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> String? {
         guard let subtitle = displaySubtitle(
@@ -207,7 +205,6 @@ enum CandidateCellHelper {
             for: suggestion,
             isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
         )
         return subtitle == title ? nil : subtitle
@@ -228,7 +225,6 @@ enum CandidateCellHelper {
         _ suggestions: [AutocompleteSuggestion],
         isHanjiFirst: Bool,
         isTPSLayout: Bool,
-        orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> Bool {
         suggestions.contains { suggestion in
@@ -236,7 +232,6 @@ enum CandidateCellHelper {
                 for: suggestion,
                 isHanjiFirst: isHanjiFirst,
                 isTPSLayout: isTPSLayout,
-                orMapsToER: orMapsToER,
                 candidateDisplayMode: candidateDisplayMode,
             ) != nil
         }
@@ -244,16 +239,11 @@ enum CandidateCellHelper {
 
     // MARK: - Private
 
-    /// TPS fallback for a hanji-less cell: its display romanization (tone
-    /// marks) rendered as TPS symbols — what picking it writes (R5 P2, the
-    /// engine's `commit_text.rs` Bopomofo).
-    // CROSS-PLATFORM INVARIANT — mirrors android CandidateStrip.kt
-    // `tlDisplayToTps(word.roman, …)`. Drift shows one platform a cell its pick does not write.
-    private static func tpsFallback(
-        for suggestion: AutocompleteSuggestion,
-        orMapsToER: Bool,
-    ) -> String {
-        RustEngineBridge.tlDisplayToTPS(suggestion.text, orMapsToER: orMapsToER)
+    /// What a hanji-less cell shows under the TPS layout: the engine's
+    /// `CandidateMessage.tps_text` (its romanization as Bopomofo — what picking
+    /// it writes), carried under `tpsTextKey`.
+    private static func tpsText(for suggestion: AutocompleteSuggestion) -> String {
+        suggestion.additionalInfo[tpsTextKey] ?? ""
     }
 
     /// Replaces the commit text with `newText`, moving the original text to the subtitle to keep

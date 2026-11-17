@@ -54,8 +54,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -114,7 +112,6 @@ fun CandidateOverlayContent(
     suggestions: List<TaigiWord>,
     typeface: android.graphics.Typeface,
     isTPSLayout: Boolean,
-    orMapsToER: Boolean,
     isHanjiFirst: Boolean,
     /** Lights the 文/A control button — the punctuation width it flips, not the candidate projection above. */
     isFullWidthPunctuation: Boolean,
@@ -160,12 +157,11 @@ fun CandidateOverlayContent(
     // on candidateDisplayMode: a mixed cell — marked split cell or the unmarked hanji-led
     // NextWord row (§42 second exception) — measures its rendered single-line title.
     val rows =
-        remember(suggestions, isTPSLayout, orMapsToER, typeface, candidateDisplayMode) {
+        remember(suggestions, isTPSLayout, typeface, candidateDisplayMode) {
             CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->
                 measureCellWidth(
                     word,
                     isTPSLayout,
-                    orMapsToER,
                     candidateDisplayMode,
                     primaryPaint,
                     subtitlePaint,
@@ -213,7 +209,6 @@ fun CandidateOverlayContent(
                     colors = colors,
                     fontFamily = fontFamily,
                     isTPSLayout = isTPSLayout,
-                    orMapsToER = orMapsToER,
                     isHanjiFirst = isHanjiFirst,
                     candidateDisplayMode = candidateDisplayMode,
                     isClickEnabled = isClickEnabled,
@@ -275,7 +270,6 @@ private fun CandidateRow(
     colors: CandidateOverlayColors,
     fontFamily: FontFamily,
     isTPSLayout: Boolean,
-    orMapsToER: Boolean,
     isHanjiFirst: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
     isClickEnabled: Boolean,
@@ -309,7 +303,6 @@ private fun CandidateRow(
                     colors = colors,
                     fontFamily = fontFamily,
                     isTPSLayout = isTPSLayout,
-                    orMapsToER = orMapsToER,
                     isHanjiFirst = isHanjiFirst,
                     candidateDisplayMode = candidateDisplayMode,
                     onClick = { if (isClickEnabled) onCellClick(item.word, item.originalIndex) },
@@ -336,7 +329,6 @@ private fun CandidateCell(
     colors: CandidateOverlayColors,
     fontFamily: FontFamily,
     isTPSLayout: Boolean,
-    orMapsToER: Boolean,
     isHanjiFirst: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
     onClick: () -> Unit,
@@ -379,12 +371,7 @@ private fun CandidateCell(
             modifier = Modifier.padding(vertical = CellVerticalPadding, horizontal = CellHorizontalPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Memoize the TPS conversion (FFI) so it does not re-run on every recomposition
-            // (translate toggle / scroll re-entry); only word/layout/orMapsToER affect it.
-            val displayRoman =
-                remember(word.roman, isTPSLayout, orMapsToER) {
-                    if (isTPSLayout) RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER) else word.roman
-                }
+            val displayRoman = if (isTPSLayout) word.tpsText else word.roman
             val (primary, subtitle) =
                 candidateCellText(
                     hanji = word.hanji,
@@ -571,7 +558,6 @@ private fun measurementPaint(
 private fun measureCellWidth(
     word: TaigiWord,
     isTPSLayout: Boolean,
-    orMapsToER: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
     primaryPaint: Paint,
     subtitlePaint: Paint,
@@ -579,8 +565,7 @@ private fun measureCellWidth(
     cellPaddingPx: Int,
 ): Int {
     if (isTPSLayout) {
-        val title =
-            if (!word.hanji.isNullOrEmpty()) word.hanji else RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER)
+        val title = if (!word.hanji.isNullOrEmpty()) word.hanji else word.tpsText
         val titleWidth = primaryPaint.measureText(title)
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
     }

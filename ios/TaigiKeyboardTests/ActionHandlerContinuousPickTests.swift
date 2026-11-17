@@ -39,7 +39,6 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
                     for: $0,
                     isHanjiFirst: isHanjiFirst,
                     isTPSLayout: isTPSLayout,
-                    orMapsToER: false,
                 )
             }
     }

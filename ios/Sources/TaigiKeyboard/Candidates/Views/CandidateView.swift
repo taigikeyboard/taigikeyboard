@@ -27,7 +27,6 @@ struct CandidateView: View {
     /// TPS layout — affects candidate rendering and commit logic.
     let isTPSLayout: Bool
     /// Whether `or` maps to ㄜ in TPS mode.
-    let orMapsToER: Bool
 
     @State private var isToolShortcutsExpanded = false
 
@@ -65,7 +64,6 @@ struct CandidateView: View {
                     isHanjiFirst: isHanjiFirst,
                     candidateDisplayMode: candidateDisplayMode,
                     isTPSLayout: isTPSLayout,
-                    orMapsToER: orMapsToER,
                     currentInputMode: currentInputMode,
                     englishAutocompleteView: englishAutocompleteView,
                 )
