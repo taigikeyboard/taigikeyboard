@@ -55,7 +55,7 @@ Write `docs/reports/<YYYY-MM-DD>-audit-<scope>.md` (English, dated snapshot — 
 4. **Draft round order** — unscheduled, each PR 200–500 LOC, with the round type (refactor / parity / bugfix) and its pre-gate. Observable drift goes to its own `parity:` PR (`cross-platform-alignment.md` §1b).
 5. **Open USER decisions** — ranked, each with a recommendation.
 
-Then reply in chat with the summary, the top 3 rows, and one next action. Update the matching project memory file with the report path.
+Then reply in chat with the summary, the top 3 rows, the report path, and one next action.
 
 ## 5. Scope of this skill
 

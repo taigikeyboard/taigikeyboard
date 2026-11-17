@@ -1,6 +1,6 @@
 ---
 name: release-mobile
-description: Prepare a MOBILE release (iOS + Android, one shared version) of the version already in the tree - changelog, store What's New text, rebuild, commit, tag `mobile-<version>`; never uploads or submits. Optional arg: a release base. Desktop train (macOS + Windows + Linux) is `release-desktop`.
+description: Prepare a MOBILE release (iOS + Android, one shared version) of the version already in the tree - changelog, store What's New text, rebuild, commit, tag `mobile-<version>`; never uploads or submits. Optional arg: a release base. Desktop train (macOS + Windows + Linux + ChromeOS + browser extension) is `release-desktop`.
 disable-model-invocation: true
 ---
 
@@ -73,7 +73,7 @@ Sort every user-visible change into one of three buckets before writing anything
 
 - **iOS-only / Android-only** → that platform's store notes, plus its detailed-changelog section.
 - **Shared** (engine, dictionary, behavior landing on both mobile platforms) → both store notes, plus the shared detailed-changelog section. Describe it by what a phone user sees, not by the platforms it landed on.
-- **macOS-only / Windows-only / Linux-only** → NOT this release. Desktop work ships on the desktop train — see § Desktop train. Never either store note.
+- **macOS-only / Windows-only / Linux-only / ChromeOS-only / browser-extension-only** → NOT this release. Desktop work ships on the desktop train — see § Desktop train. Never either store note.
 
 Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
@@ -168,7 +168,7 @@ The user pastes iOS text into App Store Connect and Android text into the chosen
 
 ## Desktop train
 
-macOS, Windows, Linux and ChromeOS are a separate train with its own version, skill (`release-desktop`) and GitHub-generated release notes (`docs/architecture/manual-release-notes.md` § Two release trains). `check-versions --train mobile` verifies iOS + Android only; a desktop version that differs from `<target>` is expected, not a finding.
+macOS, Windows, Linux, ChromeOS and the browser extension are a separate train with its own version, skill (`release-desktop`) and GitHub-generated release notes (`docs/architecture/manual-release-notes.md` § Two release trains). `check-versions --train mobile` verifies iOS + Android only; a desktop version that differs from `<target>` is expected, not a finding.
 
 ## Guardrails
 
@@ -177,5 +177,5 @@ macOS, Windows, Linux and ChromeOS are a separate train with its own version, sk
 - Tag only the release commit made in § 6, only as `mobile-<version>`, and never move or delete an existing tag.
 - Never request, store, or use signing certificates, keystores, API keys, or store credentials.
 - Never upload a build, edit a live store listing, or submit production.
-- Never run the macOS release or publish scripts, and never put desktop-only (macOS / Windows / Linux) work in a store note.
+- Never run the macOS release or publish scripts, and never put desktop-only (macOS / Windows / Linux / ChromeOS / browser extension) work in a store note.
 - Surface the first actionable rebuild or validation failure and stop before commit.

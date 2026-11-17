@@ -197,7 +197,7 @@ Report the draft URL.
 repository: the installers are download links there, and **Publish release** is a
 button on the same page. The skill never presses it.
 
-Install it (the `.deb` on the Linux VM, S74; the ChromeOS zip unpacked in the
+Install it (the `.deb` on the Linux VM, then type in its real desktop session; the ChromeOS zip unpacked in the
 ChromeOS VM, `docs/architecture/chromeos-roadmap.md` § Spike result; the
 extension zip via **Load unpacked** in Chrome), run the
 manual checks the fix touches, then publish.
