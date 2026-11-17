@@ -224,12 +224,20 @@ fn side_by_side_keeps_every_row_for_explicit_default_and_unknown_values() {
         explicit,
         "unknown value = side-by-side"
     );
-    // Hanji with Romanization keeps every row too — the split into one-script cells is the
-    // platform's (§42); only the literal's identity sidechannel differs.
+    // Hanji with Romanization keeps every row too and lists it as §42 one-script
+    // cells, deduped per script: trace — literal tsiah (roman cell); 食 Hanji +
+    // tsia̍h roman; 隻 Hanji (its tsiah absorbed by the literal); 𤆬 Hanji (its
+    // tsia̍h already shown).
     assert_eq!(
         fetch("tsiah", "tl", CandidateDisplayMode::Combined as i32),
-        explicit,
-        "COMBINED = no engine collapse"
+        vec![
+            (None, "tsiah".to_owned()),
+            (Some("食".to_owned()), "tsia̍h".to_owned()),
+            (Some("食".to_owned()), "tsia̍h".to_owned()),
+            (Some("隻".to_owned()), "tsiah".to_owned()),
+            (Some("𤆬".to_owned()), "tsia̍h".to_owned()),
+        ],
+        "COMBINED = every row, split into one-script cells"
     );
 }
 

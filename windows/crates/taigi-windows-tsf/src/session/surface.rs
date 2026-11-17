@@ -146,10 +146,10 @@ impl Surface {
         shown_at
     }
 
-    // Both answer the window's absolute index, which is a CELL index into
-    // the source's presentation (Combined shows two cells per candidate) — the
-    // commit resolves it through `CandidateSource::resolve`, never by
-    // indexing the fetched list.
+    // Both answer the window's absolute index — a row of the fetched list, one
+    // cell per engine row (under Combined the engine lists a candidate as two
+    // rows); the commit resolves it through `CandidateSource::resolve`, which
+    // also picks the script the cell commits.
     fn selected_index(&self) -> Option<usize> {
         self.presenter.as_ref()?.borrow().selected_index(self.token)
     }

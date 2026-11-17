@@ -100,6 +100,10 @@ public extension RustEngineBridge {
         /// the Hanji, or the Bopomofo reading of a Hanji-less candidate; empty
         /// off TPS.
         public let tpsText: String
+        /// The §42 split cell this row is (`CandidateMessage.cell_script`): under
+        /// Hanji with Romanization the engine lists a candidate as a Hanji row
+        /// then a romanization row; `.paired` under every other display.
+        public let cellScript: Taigi_Engine_CellScript
 
         public init(
             consumedSpanEnd: UInt32,
@@ -109,6 +113,7 @@ public extension RustEngineBridge {
             hanji: String?,
             canonicalTl: String,
             tpsText: String = "",
+            cellScript: Taigi_Engine_CellScript = .paired,
         ) {
             self.consumedSpanEnd = consumedSpanEnd
             self.syllableCount = syllableCount
@@ -117,6 +122,7 @@ public extension RustEngineBridge {
             self.hanji = hanji
             self.canonicalTl = canonicalTl
             self.tpsText = tpsText
+            self.cellScript = cellScript
         }
     }
 
@@ -597,6 +603,7 @@ public extension RustEngineBridge {
                     hanji: msg.hasHanji ? msg.hanji : nil,
                     canonicalTl: msg.canonicalTl,
                     tpsText: msg.tpsText,
+                    cellScript: msg.cellScript,
                 )
             }
             : nil

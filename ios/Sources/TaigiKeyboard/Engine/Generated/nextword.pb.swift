@@ -60,6 +60,57 @@ public nonisolated enum Taigi_Engine_Source: SwiftProtobuf.Enum, Swift.CaseItera
 
 }
 
+/// Which script one candidate cell shows and a tap on it commits — the engine's
+/// §42 split (`behavioral-invariants.md` §42 Exception 2). Under Candidate
+/// Display = Hanji with Romanization (off the TPS layout) each candidate is
+/// listed as a Hanji cell then a romanization cell, each script deduped on the
+/// text the cell shows, first-seen wins (`protos::split_single_script_cells`);
+/// every other display lists one paired cell per candidate. Carried by
+/// `EnginePrediction` and `composing.proto` `CandidateMessage`.
+public nonisolated enum Taigi_Engine_CellScript: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+
+  /// both scripts in one cell; a tap commits the lead
+  case paired // = 0
+
+  /// the Hanji alone; a tap commits the Hanji
+  case hanji // = 1
+
+  /// the romanization alone; a tap commits it
+  case roman // = 2
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .paired
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .paired
+    case 1: self = .hanji
+    case 2: self = .roman
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .paired: return 0
+    case .hanji: return 1
+    case .roman: return 2
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_CellScript] = [
+    .paired,
+    .hanji,
+    .roman,
+  ]
+
+}
+
 public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -596,6 +647,9 @@ public nonisolated struct Taigi_Engine_EnginePrediction: Sendable {
   /// (behavioral-invariants §8). Test seam only; no platform reads it.
   public var score: Double = 0
 
+  /// The split cell this row is, or PAIRED (see `CellScript`).
+  public var cellScript: Taigi_Engine_CellScript = .paired
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -716,6 +770,10 @@ fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
 nonisolated extension Taigi_Engine_Source: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SOURCE_UNSPECIFIED\0\u{1}SOURCE_DICT\0\u{1}SOURCE_USER\0")
+}
+
+nonisolated extension Taigi_Engine_CellScript: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CELL_SCRIPT_PAIRED\0\u{1}CELL_SCRIPT_HANJI\0\u{1}CELL_SCRIPT_ROMAN\0")
 }
 
 nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -1541,7 +1599,7 @@ nonisolated extension Taigi_Engine_FilterResult: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnginePrediction"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}subtitle\0\u{1}hanji\0\u{1}tl\0\u{1}score\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}subtitle\0\u{1}hanji\0\u{1}tl\0\u{1}score\0\u{3}cell_script\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1554,6 +1612,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
       case 3: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.tl) }()
       case 5: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
+      case 6: try { try decoder.decodeSingularEnumField(value: &self.cellScript) }()
       default: break
       }
     }
@@ -1575,6 +1634,9 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
     if self.score.bitPattern != 0 {
       try visitor.visitSingularDoubleField(value: self.score, fieldNumber: 5)
     }
+    if self.cellScript != .paired {
+      try visitor.visitSingularEnumField(value: self.cellScript, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1584,6 +1646,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
     if lhs.hanji != rhs.hanji {return false}
     if lhs.tl != rhs.tl {return false}
     if lhs.score != rhs.score {return false}
+    if lhs.cellScript != rhs.cellScript {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

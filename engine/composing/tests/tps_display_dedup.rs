@@ -207,14 +207,16 @@ fn hanji_first_tl_collapses_same_commit_hanji_when_brackets_off() {
         "roman_first: {roman_first:?}"
     );
 
-    // Combined / RomanOnly -> do not collapse Hanji in engine.
+    // Combined / RomanOnly -> do not collapse Hanji in engine. Combined lists the
+    // §42 split: trace — 灣 Hanji cell, uan roman, uân roman (the second 灣
+    // Hanji cell deduped), so both readings stay reachable: three 灣 rows.
     let combined = run(true, false, CandidateDisplayMode::Combined);
     assert_eq!(
         combined
             .iter()
             .filter(|(h, _)| h.as_deref() == Some("灣"))
             .count(),
-        2,
+        3,
         "combined: {combined:?}"
     );
     let roman_only = run(true, false, CandidateDisplayMode::RomanOnly);

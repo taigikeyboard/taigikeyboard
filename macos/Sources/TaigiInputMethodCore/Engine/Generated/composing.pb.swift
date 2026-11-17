@@ -1003,6 +1003,11 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
   /// Empty off the TPS layout. Display only.
   public var tpsText: String = String()
 
+  /// The §42 split cell this row is, or PAIRED (`nextword.proto` `CellScript`).
+  /// Under a split, a candidate appears as up to two rows sharing every
+  /// identity field; the cell index is the row index.
+  public var cellScript: Taigi_Engine_CellScript = .paired
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -2231,7 +2236,7 @@ nonisolated extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{2}\u{4}roman\0\u{1}hanji\0\u{3}canonical_tl\0\u{3}tps_text\0\u{b}consumed_span_start\0\u{b}score\0\u{b}form\0\u{b}script_kind\0\u{c}\u{1}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{2}\u{4}roman\0\u{1}hanji\0\u{3}canonical_tl\0\u{3}tps_text\0\u{3}cell_script\0\u{b}consumed_span_start\0\u{b}score\0\u{b}form\0\u{b}script_kind\0\u{c}\u{1}\u{1}\u{c}\u{5}\u{1}\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2246,6 +2251,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
       case 9: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
       case 10: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
       case 11: try { try decoder.decodeSingularStringField(value: &self.tpsText) }()
+      case 12: try { try decoder.decodeSingularEnumField(value: &self.cellScript) }()
       default: break
       }
     }
@@ -2277,6 +2283,9 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if !self.tpsText.isEmpty {
       try visitor.visitSingularStringField(value: self.tpsText, fieldNumber: 11)
     }
+    if self.cellScript != .paired {
+      try visitor.visitSingularEnumField(value: self.cellScript, fieldNumber: 12)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2288,6 +2297,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if lhs._hanji != rhs._hanji {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}
     if lhs.tpsText != rhs.tpsText {return false}
+    if lhs.cellScript != rhs.cellScript {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

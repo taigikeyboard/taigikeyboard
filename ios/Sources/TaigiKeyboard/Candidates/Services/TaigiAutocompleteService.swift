@@ -40,55 +40,35 @@ enum CandidateCellScript {
     }
 }
 
-/// Whether the candidate strip renders Hanji with Romanization split cells: the picker is set
-/// to Hanji with Romanization and the layout is not TPS (TPS is hanji-first by construction and
-/// ignores the picker). Read per fetch, never snapshotted, so a settings change
-/// takes effect on the next keystroke.
-// CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/TaigiAutocompleteService.kt
-// `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still
-// splitting under TPS, or not splitting under Hanji with Romanization).
-func shouldSplitCombinedCells(
-    keyboardLayoutType: KeyboardLayoutType,
-    candidateDisplayMode: CandidateDisplayMode,
-) -> Bool {
-    keyboardLayoutType != .tps && candidateDisplayMode == .combined
-}
-
-/// The Hanji with Romanization split (§42): each item becomes a Hanji cell (when `hanji` is
-/// non-empty) then a romanization cell (when `roman` is non-nil), neither with a
-/// subtitle, each carrying its `CandidateCellScript` marker on top of the
-/// item's `sidechannels` (the hanji cell also carries the roman under
-/// `bracketRomanKey` for Annotate in Brackets). Each script dedupes on the text its cell
-/// shows, first-seen wins — a one-script cell carries nothing that could tell
-/// it from an earlier cell reading the same (USER 2026-09-03: "the same Hanji or
-/// romanization must not appear twice"). The Continuous and NextWord builders differ only in
-/// the three projections.
-// CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/TaigiAutocompleteService.kt splitIntoSingleScriptCells
-// and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
-func splitIntoSingleScriptCells<T>(
-    _ items: [T],
-    hanji: (T) -> String?,
-    roman: (T) -> String?,
-    sidechannels: (T) -> [String: String],
-) -> [AutocompleteSuggestion] {
-    var suggestions: [AutocompleteSuggestion] = []
-    var seenHanjiCells = Set<String>()
-    var seenRomanCells = Set<String>()
-    for item in items {
-        let identity = sidechannels(item)
-        let roman = roman(item)
-        if let hanji = hanji(item), !hanji.isEmpty, seenHanjiCells.insert(hanji).inserted {
-            var hanjiInfo = identity
-            hanjiInfo[CandidateCellScript.infoKey] = CandidateCellScript.hanji
-            hanjiInfo[CandidateCellScript.bracketRomanKey] = roman
-            suggestions.append(AutocompleteSuggestion(text: hanji, title: hanji, subtitle: nil, additionalInfo: hanjiInfo))
-        }
-        guard let roman, seenRomanCells.insert(roman).inserted else { continue }
-        var romanInfo = identity
-        romanInfo[CandidateCellScript.infoKey] = CandidateCellScript.roman
-        suggestions.append(AutocompleteSuggestion(text: roman, title: roman, subtitle: nil, additionalInfo: romanInfo))
+/// One §42 split cell as the engine listed it (`Taigi_Engine_CellScript`, Hanji with
+/// Romanization — the engine splits each candidate into a Hanji row then a
+/// romanization row, deduped per script): the cell's own script as `text`, no
+/// subtitle, its `CandidateCellScript` marker on top of the candidate's
+/// `sidechannels` (the hanji cell also carries the roman under `bracketRomanKey`
+/// for Annotate in Brackets). `nil` for a `.paired` row — the caller builds its
+/// dual-script suggestion. The Continuous and NextWord builders share it.
+// CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/TaigiAutocompleteService.kt singleScriptWord.
+// Drift causes silent divergence (one platform's split cell shows or commits the other script).
+func singleScriptCell(
+    _ script: Taigi_Engine_CellScript,
+    hanji: String?,
+    roman: String?,
+    sidechannels: [String: String],
+) -> AutocompleteSuggestion? {
+    var info = sidechannels
+    let text: String
+    switch script {
+    case .hanji:
+        text = hanji ?? ""
+        info[CandidateCellScript.infoKey] = CandidateCellScript.hanji
+        info[CandidateCellScript.bracketRomanKey] = roman
+    case .roman:
+        text = roman ?? ""
+        info[CandidateCellScript.infoKey] = CandidateCellScript.roman
+    case .paired, .UNRECOGNIZED:
+        return nil
     }
-    return suggestions
+    return AutocompleteSuggestion(text: text, title: text, subtitle: nil, additionalInfo: info)
 }
 
 /// Turns `ComposingManager`'s span-local engine candidates into KeyboardKit suggestions.
@@ -125,20 +105,7 @@ class TaigiAutocompleteService: EngineFreeAutocompleteService {
             return AutocompleteResult(inputText: text, suggestions: [])
         }
         let candidates = continuousFetcher?.fetchContinuousCandidates() ?? []
-        // §42 Hanji with Romanization splits cells at the builder below; TPS ignores the picker
-        // (hanji-first by construction), so a TPS layout never splits
-        // regardless of the stored mode. Mirrors Android's
-        // `splitCombinedCellsProvider`.
-        let settings = SharedSettings.shared
-        let splitCombinedCells = shouldSplitCombinedCells(
-            keyboardLayoutType: settings.keyboardLayoutType,
-            candidateDisplayMode: settings.candidateDisplayMode,
-        )
-        let suggestions = buildContinuousSuggestions(
-            from: candidates,
-            splitCombinedCells: splitCombinedCells,
-        )
-        return AutocompleteResult(inputText: text, suggestions: suggestions)
+        return AutocompleteResult(inputText: text, suggestions: buildContinuousSuggestions(from: candidates))
     }
 
     // MARK: - Internal
@@ -193,38 +160,25 @@ class TaigiAutocompleteService: EngineFreeAutocompleteService {
     /// `displayText`), so the builder trusts both fields as
     /// non-empty-when-meaningful.
     ///
-    /// §42 Hanji with Romanization (`splitCombinedCells == true`): each hanji-bearing
-    /// candidate is emitted as TWO adjacent single-script suggestions — a
-    /// Hanji cell then its romanization cell, neither with a subtitle. The
-    /// `additionalInfo["cellScript"]` marker ("hanji" | "roman") says what the
-    /// cell shows and commits; the SEMANTIC sidechannels (`displayText`,
-    /// `canonicalTl`, spans) are copied verbatim onto BOTH cells so frequency /
-    /// NextWord identity never moves.
-    ///
-    /// BOTH scripts dedupe on the TEXT THE CELL SHOWS, in fetched order,
-    /// first-seen wins (the §34 literal absorbs 台's roman; 食/𤆬 share one
-    /// `tsia̍h`; 重/tîng and 重/tāng draw ONE 重 cell and keep both roman
-    /// cells). A one-script cell carries nothing that could tell it from an
-    /// earlier cell reading the same, so a second one is a defect, not a
-    /// second offer (USER 2026-09-03: "the same Hanji or romanization must not appear twice"); Hanji
-    /// cells were exempt until then on Core Principle #7 grounds. The two
-    /// scripts keep separate keys. Split OFF (the default — Hanji–Romanization Pairing / Romanization Only / TPS
-    /// all resolve to `false` at the caller) emits the un-split shape
-    /// byte-identically — Hanji–Romanization Pairing's subtitle tells 重/tîng from 重/tāng.
+    /// §42 Hanji with Romanization: the engine lists each hanji-bearing candidate as
+    /// two rows, a Hanji cell then its romanization cell, already deduped per
+    /// script (`CandidateMessage.cell_script`); each becomes a single-script
+    /// suggestion (`singleScriptCell`) whose SEMANTIC sidechannels
+    /// (`displayText`, `canonicalTl`, spans) are the candidate's, so frequency /
+    /// NextWord identity never moves. Every other display lists `.paired` rows,
+    /// emitted in today's dual-script shape — Hanji–Romanization Pairing's
+    /// subtitle tells 重/tîng from 重/tāng.
     func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
-        splitCombinedCells: Bool = false,
     ) -> [AutocompleteSuggestion] {
-        guard splitCombinedCells else {
-            return candidates.map { dualScriptSuggestion(for: $0) }
+        candidates.map { c in
+            singleScriptCell(
+                c.cellScript,
+                hanji: c.hanji,
+                roman: c.roman,
+                sidechannels: continuousSidechannels(for: c),
+            ) ?? dualScriptSuggestion(for: c)
         }
-
-        return splitIntoSingleScriptCells(
-            candidates,
-            hanji: { $0.hanji },
-            roman: { $0.roman },
-            sidechannels: continuousSidechannels(for:),
-        )
     }
 
     /// The un-split dual-script suggestion every non-Hanji-with-Romanization mode emits (today's shape).

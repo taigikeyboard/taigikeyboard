@@ -83,4 +83,23 @@ public interface EnginePredictionOrBuilder extends
    * @return The score.
    */
   double getScore();
+
+  /**
+   * <pre>
+   * The split cell this row is, or PAIRED (see `CellScript`).
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 6;</code>
+   * @return The enum numeric value on the wire for cellScript.
+   */
+  int getCellScriptValue();
+  /**
+   * <pre>
+   * The split cell this row is, or PAIRED (see `CellScript`).
+   * </pre>
+   *
+   * <code>.taigi.engine.CellScript cell_script = 6;</code>
+   * @return The cellScript.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CellScript getCellScript();
 }

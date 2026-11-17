@@ -6,10 +6,10 @@
 package com.siansiansu.taigikeyboard.ime.text.candidates
 
 import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
+import com.siansiansu.taigikeyboard.engine.proto.CellScript
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -35,13 +35,6 @@ class TaigiAutocompleteService(
      * touches InputConnection, and invokes it on `Dispatchers.Default`.
      */
     private val continuousFetcher: suspend () -> List<ContinuousCandidate>,
-    /**
-     * Live-read: `true` iff the strip renders Hanji with Romanization split cells (mode ==
-     * COMBINED and the layout is not TPS — TPS ignores the picker). Read
-     * per fetch, never snapshotted, so a settings change takes effect on
-     * the next keystroke (android-guidelines §6 live-read rule).
-     */
-    private val splitCombinedCellsProvider: () -> Boolean = { false },
 ) {
     companion object {
         private const val TAG = "TaigiAutocompleteService"
@@ -58,7 +51,7 @@ class TaigiAutocompleteService(
         logger.debug(TAG) { "[INPUT] rawInput='$rawInput', displayText='$displayText'" }
 
         return try {
-            buildContinuousSuggestionsForCandidates(continuousFetcher(), splitCombinedCellsProvider())
+            buildContinuousSuggestionsForCandidates(continuousFetcher())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -68,24 +61,8 @@ class TaigiAutocompleteService(
     }
 }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift
-// `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still splitting
-// under TPS, or not splitting under Hanji with Romanization).
-
-/**
- * Whether the candidate strip renders Hanji with Romanization split cells: the picker is set to
- * [CandidateDisplayMode.COMBINED] and the layout is not TPS (TPS is hanji-first
- * by construction and ignores the picker). Read per fetch, never snapshotted,
- * so a settings change takes effect on the next keystroke
- * (android-guidelines §6 live-read rule).
- */
-internal fun shouldSplitCombinedCells(
-    candidateDisplayMode: CandidateDisplayMode,
-    isTpsLayout: Boolean,
-): Boolean = candidateDisplayMode == CandidateDisplayMode.COMBINED && !isTpsLayout
-
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
-// and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label mixed cell).
+// and desktop-core `composing::presentation`. Drift causes silent divergence (one platform still renders the superseded one-label mixed cell).
 
 /**
  * Wrap a list of engine [ContinuousCandidate] into the
@@ -129,91 +106,40 @@ internal fun shouldSplitCombinedCells(
  * Top-level so the contract is unit-testable without instantiating
  * collaborators.
  *
- * Hanji with Romanization split (`behavioral-invariants.md` §42 second exception, desktop
- * shipped first in #666): when [splitCombinedCells] is `true`, a
- * hanji-bearing candidate emits TWO adjacent one-script cells — a Hanji cell
- * then a romanization cell — each carrying the SAME identity sidechannels and a
- * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker saying what the cell shows
- * and commits. The roman cell KEEPS `hanji` so `TaigiWord.displayText` and
- * the word-frequency `(displayText, canonicalTl)` pair-key stay marker-independent.
- * Hanji-less candidates emit their roman cell alone.
- *
- * BOTH scripts dedupe on the TEXT THE CELL SHOWS, first-seen (fetched order)
- * wins: a one-script cell carries nothing that could tell it from an earlier
- * cell reading the same, so a second one is a defect, not a second offer
- * (USER 2026-09-03: "the same Hanji or romanization must not appear twice") — 重/tîng and 重/tāng draw
- * ONE 重 cell and keep both roman cells. Hanji cells were exempt until then on
- * Core Principle #7 grounds. The two scripts keep separate keys. Every other
- * mode ([splitCombinedCells] `false`, the default) emits exactly the
- * pre-split shape — Pairing's subtitle tells 重/tîng from 重/tāng.
+ * Hanji with Romanization (`behavioral-invariants.md` §42 second exception): the engine
+ * lists a hanji-bearing candidate as two rows, a Hanji cell then a romanization
+ * cell, already deduped per script (`CandidateMessage.cell_script`). Each row
+ * becomes one word carrying the SAME identity sidechannels plus a
+ * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker ([cellScriptMarker]) saying what the
+ * cell shows and commits. The roman cell KEEPS `hanji` so `TaigiWord.displayText`
+ * and the word-frequency `(displayText, canonicalTl)` pair-key stay
+ * marker-independent. Every other display lists paired rows, emitted without a
+ * marker — Pairing's subtitle tells 重/tîng from 重/tāng.
  */
-internal fun buildContinuousSuggestionsForCandidates(
-    candidates: List<ContinuousCandidate>,
-    splitCombinedCells: Boolean = false,
-): List<TaigiWord> {
-    if (!splitCombinedCells) {
-        return candidates.mapIndexed { index, candidate ->
-            continuousWord(
-                id = index + 1,
-                candidate = candidate,
-                hanji = candidate.hanji?.takeIf { it.isNotEmpty() },
-                cellScript = null,
-            )
-        }
-    }
-
-    // The §34 literal, being hanji-less and fetched first, absorbs a later
-    // same roman (e.g. 台's `tâi`); 食/𤆬 share one `tsia̍h` cell; 重/tîng and
-    // 重/tāng share one 重. The roman cell keeps its candidate's hanji:
-    // displayText and the word-frequency pair-key must not move (§42 — identity is
-    // shared, only the marker decides the shown/committed script).
-    return splitIntoSingleScriptCells(
-        items = candidates,
-        hanjiOf = { it.hanji },
-        romanOf = { it.roman },
-    ) { candidate, cellScript, ordinal ->
+internal fun buildContinuousSuggestionsForCandidates(candidates: List<ContinuousCandidate>): List<TaigiWord> =
+    candidates.mapIndexed { index, candidate ->
         continuousWord(
-            id = ordinal + 1,
+            id = index + 1,
             candidate = candidate,
             hanji = candidate.hanji?.takeIf { it.isNotEmpty() },
-            cellScript = cellScript,
+            cellScript = cellScriptMarker(candidate.cellScript),
         )
     }
-}
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift splitIntoSingleScriptCells
-// and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift singleScriptCell.
+// Drift causes silent divergence (one platform's split cell shows or commits the other script).
 
 /**
- * The Hanji with Romanization split (§42): each item becomes a Hanji cell (when [hanjiOf] is
- * non-empty) then a romanization cell (when [romanOf] is non-null), each script
- * deduped on the text its cell shows, first-seen wins — a one-script cell
- * carries nothing that could tell it from an earlier cell reading the same
- * (USER 2026-09-03: "the same Hanji or romanization must not appear twice"). [emit] builds the cell
- * for `(item, cellScript, ordinal)`; the Continuous and NextWord builders
- * differ only in that constructor.
+ * The [TaigiWord.MetadataKeys.CELL_SCRIPT] marker for an engine §42 split row, or
+ * `null` for a paired row (and an unknown value from a newer engine). The
+ * Continuous and NextWord builders share it.
  */
-internal fun <T> splitIntoSingleScriptCells(
-    items: List<T>,
-    hanjiOf: (T) -> String?,
-    romanOf: (T) -> String?,
-    emit: (item: T, cellScript: String, ordinal: Int) -> TaigiWord,
-): List<TaigiWord> {
-    val result = ArrayList<TaigiWord>(items.size * 2)
-    val seenHanjiCells = HashSet<String>()
-    val seenRomanCells = HashSet<String>()
-    for (item in items) {
-        val hanji = hanjiOf(item)?.takeIf { it.isNotEmpty() }
-        if (hanji != null && seenHanjiCells.add(hanji)) {
-            result += emit(item, TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI, result.size)
-        }
-        val roman = romanOf(item)
-        if (roman != null && seenRomanCells.add(roman)) {
-            result += emit(item, TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN, result.size)
-        }
+internal fun cellScriptMarker(cellScript: CellScript): String? =
+    when (cellScript) {
+        CellScript.CELL_SCRIPT_HANJI -> TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI
+        CellScript.CELL_SCRIPT_ROMAN -> TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN
+        CellScript.CELL_SCRIPT_PAIRED, CellScript.UNRECOGNIZED -> null
     }
-    return result
-}
 
 /**
  * One continuous-candidate [TaigiWord]. The marker-less form ([cellScript]

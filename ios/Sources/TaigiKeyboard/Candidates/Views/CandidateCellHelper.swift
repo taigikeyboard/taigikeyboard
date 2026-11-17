@@ -44,7 +44,7 @@ enum CandidateCellHelper {
         }
 
         // CROSS-PLATFORM INVARIANT — mirrors the desktop split cells (§42 second
-        // exception: desktop-core PresentedCandidate) and Android candidateCellText:
+        // exception: desktop-core `composing::presentation`) and Android candidateCellText:
         // under Hanji with Romanization every cell is single-script. Split cells (marked upstream in
         // TaigiAutocompleteService.buildContinuousSuggestions and
         // ActionHandler.predictionSuggestions) carry their script in `text`; an
@@ -69,7 +69,7 @@ enum CandidateCellHelper {
     ///
     /// - TPS: no subtitle
     /// - Romanization Only: no subtitle (hanji not shown)
-    /// - Hanji with Romanization: no subtitle (split cells are already single-script upstream)
+    /// - Hanji with Romanization: no subtitle (the engine's split rows are already single-script)
     /// - default: `isHanjiFirst` picks whether the subtitle is roman or hanji
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
@@ -130,7 +130,7 @@ enum CandidateCellHelper {
     /// Measures title and subtitle at their font sizes and returns max + padding. Always measures
     /// both, so a translate toggle never triggers a layout reflow. Under Hanji with Romanization each cell is
     /// single-line: it measures the rendered title at the title font (a split cell's own `text`;
-    /// an un-split NextWord row's hanji-led title) — measurement and render share one source.
+    /// an unmarked row's hanji-led title) — measurement and render share one source.
     ///
     /// Font sizes are passed in by the caller from the `CandidateTheme` environment, so this stays
     /// free of a `SharedSettings` dependency.
@@ -156,8 +156,8 @@ enum CandidateCellHelper {
         }
 
         // §42 Hanji with Romanization: every cell renders single-line at the TITLE font — a
-        // marked split cell shows its own `text`, an un-split row (NextWord
-        // prediction) shows the hanji-led title. Measure the rendered title so
+        // marked split cell shows its own `text`, an unmarked row (a
+        // missing marker) shows the hanji-led title. Measure the rendered title so
         // measure and render share the source (`displayTitle`'s combined arm
         // ignores the swap flag, so `false` is safe here).
         if candidateDisplayMode == .combined {

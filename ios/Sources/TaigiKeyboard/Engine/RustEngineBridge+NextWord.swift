@@ -49,6 +49,8 @@ public extension RustEngineBridge {
         public let subtitle: String?
         public let hanji: String
         public let tl: String
+        /// The §42 split cell this row is (`EnginePrediction.cell_script`).
+        public var cellScript: Taigi_Engine_CellScript = .paired
     }
 
     /// Filter+merge+sort+limit result. `wasStale=true` indicates the
@@ -255,6 +257,7 @@ public extension RustEngineBridge {
                 subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
                 hanji: p.hanji,
                 tl: p.tl,
+                cellScript: p.cellScript,
             )
         }
         return NextWordFilterResult(predictions: predictions, wasStale: filter.wasStale)

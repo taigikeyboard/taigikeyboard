@@ -4,6 +4,7 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
+import com.siansiansu.taigikeyboard.engine.proto.CellScript
 import com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
 import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
 import com.siansiansu.taigikeyboard.engine.proto.CommitPrediction
@@ -134,6 +135,12 @@ data class ContinuousCandidate(
      * Hanji, or the Bopomofo reading of a Hanji-less candidate; empty off TPS.
      */
     val tpsText: String = "",
+    /**
+     * The §42 split cell this row is (`CandidateMessage.cell_script`): under Hanji with
+     * Romanization the engine lists a candidate as a Hanji row then a romanization row;
+     * PAIRED under every other display.
+     */
+    val cellScript: CellScript = CellScript.CELL_SCRIPT_PAIRED,
 )
 
 /**
@@ -584,6 +591,7 @@ private inline fun composingFetchDispatch(
                 hanji = if (msg.hasHanji()) msg.hanji else null,
                 canonicalTl = msg.canonicalTl,
                 tpsText = msg.tpsText,
+                cellScript = msg.cellScript,
             )
         }
     } else {

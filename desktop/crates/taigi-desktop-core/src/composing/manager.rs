@@ -391,8 +391,8 @@ impl ComposingManager {
     }
 
     /// The cells the window shows for `candidates`, under one snapshot of the
-    /// settings in force right now — Combined splits a candidate into two, so the
-    /// window's indices are cell indices (`CandidateSource::resolve`) — plus
+    /// settings in force right now — one cell per engine row (under Combined the
+    /// engine lists a candidate as two rows), so the window's indices are row indices (`CandidateSource::resolve`) — plus
     /// whether the first cell is the §34 literal, which takes no slot key.
     ///
     /// ONE snapshot for BOTH answers, so the cells and the key row can never

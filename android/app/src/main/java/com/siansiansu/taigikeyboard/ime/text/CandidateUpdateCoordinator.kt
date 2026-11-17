@@ -11,7 +11,6 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.candidates.EnglishAutocompleteService
 import com.siansiansu.taigikeyboard.ime.text.candidates.TaigiAutocompleteService
-import com.siansiansu.taigikeyboard.ime.text.candidates.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CancellationException
@@ -152,14 +151,6 @@ class CandidateUpdateCoordinator(
                     // collapses to empty.
                     continuousFetcher = {
                         getComposingManager()?.fetchContinuousCandidates() ?: emptyList()
-                    },
-                    // Hanji with Romanization split cells (§42 second exception). Live-read per
-                    // fetch — the cached service must see a settings change on
-                    // the next keystroke. TPS ignores the picker, so the split
-                    // never fires under the TPS layout.
-                    splitCombinedCellsProvider = {
-                        val prefs = taigikeyboard.prefs
-                        shouldSplitCombinedCells(prefs.candidateDisplayMode, prefs.isTpsLayout)
                     },
                 ).also { taigiAutocompleteService = it }
             }

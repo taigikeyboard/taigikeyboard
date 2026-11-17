@@ -319,45 +319,33 @@ extension ActionHandler: AutocompleteContextUpdater {
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
-        // §42 Hanji with Romanization splits prediction cells like the Continuous list; TPS is
-        // hanji-first and ignores the picker. Live-read so a picker change
-        // applies to the next prediction list.
-        let splitCombinedCells = shouldSplitCombinedCells(
-            keyboardLayoutType: settings.keyboardLayoutType,
-            candidateDisplayMode: settings.candidateDisplayMode,
-        )
         keyboardController?.state.autocompleteContext.suggestionsFromService =
-            Self.predictionSuggestions(predictions, splitCombinedCells: splitCombinedCells)
+            Self.predictionSuggestions(predictions)
     }
 
-    /// NextWord prediction cells. Hanji with Romanization (`splitCombinedCells`, §42):
-    /// `splitIntoSingleScriptCells` — a prediction with romanization becomes a
-    /// Hanji cell then a romanization cell sharing the prediction's identity; a
-    /// hanji-only prediction (`subtitle == nil`) lists its Hanji cell alone.
-    /// Every other mode emits one dual-script suggestion per prediction.
+    /// NextWord prediction cells. Hanji with Romanization (§42): the engine lists a
+    /// prediction with romanization as a Hanji row then a romanization row sharing
+    /// its identity, deduped per script (`EnginePrediction.cell_script`), each a
+    /// `singleScriptCell`. Every other display lists `.paired` rows, one
+    /// dual-script suggestion each.
     // CROSS-PLATFORM INVARIANT — mirrors android/.../nextword/NextWordController.kt buildPredictionWords.
     // Drift causes silent divergence (one platform's Hanji with Romanization predictions render hanji-led).
     static func predictionSuggestions(
         _ predictions: [RustEngineBridge.NextWordEnginePrediction],
-        splitCombinedCells: Bool,
     ) -> [AutocompleteSuggestion] {
-        guard splitCombinedCells else {
-            return predictions.map { prediction in
-                AutocompleteSuggestion(
-                    text: prediction.text,
-                    title: prediction.text,
-                    subtitle: prediction.subtitle,
-                    additionalInfo: predictionIdentity(prediction),
-                )
-            }
+        predictions.map { prediction in
+            singleScriptCell(
+                prediction.cellScript,
+                hanji: prediction.hanji,
+                roman: prediction.subtitle != nil ? prediction.text : nil,
+                sidechannels: predictionIdentity(prediction),
+            ) ?? AutocompleteSuggestion(
+                text: prediction.text,
+                title: prediction.text,
+                subtitle: prediction.subtitle,
+                additionalInfo: predictionIdentity(prediction),
+            )
         }
-
-        return splitIntoSingleScriptCells(
-            predictions,
-            hanji: { $0.hanji },
-            roman: { $0.subtitle != nil ? $0.text : nil },
-            sidechannels: predictionIdentity,
-        )
     }
 
     private static func predictionIdentity(

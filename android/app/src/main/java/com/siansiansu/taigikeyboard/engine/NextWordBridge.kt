@@ -4,6 +4,7 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
+import com.siansiansu.taigikeyboard.engine.proto.CellScript
 import com.siansiansu.taigikeyboard.engine.proto.DecideResult
 import com.siansiansu.taigikeyboard.engine.proto.DecisionInput
 import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
@@ -66,6 +67,8 @@ data class NextWordEnginePrediction(
     val subtitle: String?,
     val hanji: String,
     val tl: String,
+    /** The §42 split cell this row is (`EnginePrediction.cell_script`). */
+    val cellScript: CellScript = CellScript.CELL_SCRIPT_PAIRED,
 )
 
 /**
@@ -301,6 +304,7 @@ fun RustEngineBridge.nextwordPredictNext(
             subtitle = if (p.subtitle.isEmpty()) null else p.subtitle,
             hanji = p.hanji,
             tl = p.tl,
+            cellScript = p.cellScript,
         )
     }
     return NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)

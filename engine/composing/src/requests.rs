@@ -36,7 +36,7 @@ use lexicon::{
 };
 use phonetics::api::roman_reading_eq;
 use protos::engine::{
-    composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
+    composing_request, AppConfig, CandidateMessage, CellScript, CommitScript as WireCommitScript,
     ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,
 };
 use ranking::{
@@ -226,16 +226,22 @@ fn handle_fetch_at_pos(
     ) else {
         return snapshot;
     };
-    with_continuous(
-        snapshot,
-        ContinuousResponse {
-            candidates: listed
-                .candidates
-                .into_iter()
-                .map(|candidate| raw_to_proto_candidate(candidate, config))
-                .collect(),
-        },
-    )
+    let candidates: Vec<CandidateMessage> = listed
+        .candidates
+        .into_iter()
+        .map(|candidate| raw_to_proto_candidate(candidate, config))
+        .collect();
+    let candidates = if config.splits_single_script_cells() {
+        protos::split_single_script_cells(
+            candidates,
+            |c| c.hanji.as_deref().unwrap_or_default(),
+            |c| &c.roman,
+            |c, script| c.set_cell_script(script),
+        )
+    } else {
+        candidates
+    };
+    with_continuous(snapshot, ContinuousResponse { candidates })
 }
 
 /// The open composition's cut and candidate order, for a shell that shows
@@ -658,8 +664,8 @@ fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
 }
 
 /// Under a single-script display the §34 literal absorbs the dictionary row
-/// that reads the same (`dedupe_display_roman` under Romanization Only; the platform's
-/// Hanji with Romanization roman-cell dedupe under it), so tapping the literal becomes the only
+/// that reads the same (`dedupe_display_roman` under Romanization Only; `protos::split_single_script_cells`'s
+/// roman-cell dedupe under Hanji with Romanization), so tapping the literal becomes the only
 /// way to commit that word. The literal therefore takes the absorbed row's
 /// identity — `display_text` (the `canonical_text` NextWord and the frequency records key on)
 /// and `canonical_tl` — while `roman` / `hanji: None` stay, so the cell still
@@ -813,6 +819,7 @@ fn raw_to_proto_candidate(c: RawCandidate, config: &AppConfig) -> CandidateMessa
         // TPS-OOV hanji-absent candidates with no recoverable dict TL.
         canonical_tl: c.canonical_tl,
         tps_text,
+        cell_script: CellScript::Paired as i32,
     }
 }
 

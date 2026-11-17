@@ -231,6 +231,19 @@ message FilterResult {
   bool                       was_stale  = 2;  // generation mismatch — late result
 }
 
+// Which script one candidate cell shows and a tap on it commits — the engine's
+// §42 split (`behavioral-invariants.md` §42 Exception 2). Under Candidate
+// Display = Hanji with Romanization (off the TPS layout) each candidate is
+// listed as a Hanji cell then a romanization cell, each script deduped on the
+// text the cell shows, first-seen wins (`protos::split_single_script_cells`);
+// every other display lists one paired cell per candidate. Carried by
+// `EnginePrediction` and `composing.proto` `CandidateMessage`.
+enum CellScript {
+  CELL_SCRIPT_PAIRED = 0;  // both scripts in one cell; a tap commits the lead
+  CELL_SCRIPT_HANJI  = 1;  // the Hanji alone; a tap commits the Hanji
+  CELL_SCRIPT_ROMAN  = 2;  // the romanization alone; a tap commits it
+}
+
 // UI-ready prediction value — mirrors iOS EnginePrediction.swift +
 // Android EnginePrediction.kt (iOS bridge presentation rule documented in
 // nextword-engine-boundary.md §13.10).
@@ -247,6 +260,8 @@ message EnginePrediction {
   // taken over the (hanji, tl) merge and the reading-variant fold
   // (behavioral-invariants §8). Test seam only; no platform reads it.
   double score    = 5;
+  // The split cell this row is, or PAIRED (see `CellScript`).
+  CellScript cell_script = 6;
 }
 
 message NextWordEffect {
