@@ -219,7 +219,7 @@ Measured 2026-11-07 on an Apple M4, 200 real cells:
 | Hidden DOM ruler, p50 / p95 / max | 1.2 / 2.1 / 4.6 ms | 6.9 / 12.8 / 25.4 ms | 2 / 3 / 20 ms | 2 / 4 / 61 ms |
 | Canvas against what is drawn | ≤0.01 px | same | 0 | up to 2.76 px short under Iansui, 384 of 1,474 strings after `ceil` |
 
-So the hidden DOM ruler: what it reads is what is drawn, and only the two expandable layouts pay for it. Loading a font moves no width (Hanji is 1 em in every face, Latin falls to the system font by `unicode-range`), so nothing listens for it; the exception is WebKit under Iansui, where the next key measures again. The window's width is read at each list, so a resize with a list open takes effect at the next key.
+So the hidden DOM ruler: what it reads is what is drawn, and only the two expandable layouts and Horizontal pay for it. Horizontal measures for its page breaks and width (`ListLayout::horizontal_page_starts`, as the Linux popup does): it packs like the collapsed Horizontal Expandable row, and a list that runs past one page keeps that packing budget as its width on every page, so the window's right edge does not move from page to page or list to list (macOS PR #894). The session asks on every key, so `PageListLayout` keeps the last list's answer and measures again only for new cells or a new size. Loading a font moves no width (Hanji is 1 em in every face, Latin falls to the system font by `unicode-range`), so nothing listens for it; the exception is WebKit under Iansui, where the next key measures again. The window's width is read at each list, so a resize with a list open takes effect at the next key.
 
 ## Behaviour against the desktops
 

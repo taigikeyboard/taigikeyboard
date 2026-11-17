@@ -273,12 +273,16 @@ export class Panel {
           }
           return cell;
         });
+    const isRow = !isColumn && !isExpanded;
     this.#setShape({
-      row: !isColumn && !isExpanded,
+      row: isRow,
       grid: isExpanded,
       vertical: isColumn && !isExpanded,
       inline: isColumn,
     });
+    // A row that runs past one page keeps the model's width, so the window
+    // does not change width with each list's first page (macOS PR #894).
+    this.#keepWidth(isRow ? layout.collapsedWidth : 0);
     const lengths = {
       "--candidate-item": layout.itemHeight,
       // A column keeps its height as it unfolds, so its rows are the model's.
@@ -312,16 +316,30 @@ export class Panel {
   }
 
   /**
-   * The reply carries the whole list; the page in view is the cursor's.
+   * The reply carries the whole list; the page in view is the cursor's, as
+   * the session pages it (`page`): a horizontal row breaks where its measured
+   * cells fill the width. A table with no `page` pages every `pageSize`.
    * @param {LookupTableEmit} table
    * @returns {void}
    */
-  #showPage({ cells, labels, cursor, cursorVisible, pageSize, vertical }) {
+  #showPage({
+    cells,
+    labels,
+    cursor,
+    cursorVisible,
+    pageSize,
+    vertical,
+    page,
+  }) {
     this.#forgetLayout();
     this.#setShape({ vertical, inline: vertical });
     this.#candidates.style.removeProperty("--candidate-row");
-    const start = Math.floor(cursor / pageSize) * pageSize;
-    const shown = cells.slice(start, start + pageSize);
+    const start = page?.start ?? Math.floor(cursor / pageSize) * pageSize;
+    const end = page?.end ?? Math.min(start + pageSize, cells.length);
+    const shown = cells.slice(start, end);
+    // A list that runs past one page keeps one width from page to page and
+    // list to list, so the window's right edge does not wander.
+    this.#keepWidth(vertical ? 0 : (page?.minWidth ?? 0));
     this.#candidates.replaceChildren(
       ...shown.map((cell, position) =>
         drawCell(cell, labels[position], position, {
@@ -333,9 +351,9 @@ export class Panel {
     const position = cursorVisible ? cursor - start : 0;
     this.#speak(labels[position], shown[position]);
     // A column has no arrows on macOS either: it shows a scroller there.
-    this.#arrows.hidden = vertical || cells.length <= pageSize;
+    this.#arrows.hidden = vertical || (start === 0 && end >= cells.length);
     this.#pageUp.disabled = start === 0;
-    this.#pageDown.disabled = start + pageSize >= cells.length;
+    this.#pageDown.disabled = end >= cells.length;
     this.#pageUp.hidden = false;
     this.#pageDown.hidden = false;
     this.#unfold.hidden = true;
@@ -352,6 +370,19 @@ export class Panel {
     list.toggleAttribute("data-grid", Boolean(grid));
     list.toggleAttribute("data-vertical", Boolean(vertical));
     list.toggleAttribute("data-inline", Boolean(inline));
+  }
+
+  /**
+   * The narrowest the list's cells may draw, 0 for their own width.
+   * @param {number} width
+   * @returns {void}
+   */
+  #keepWidth(width) {
+    if (width > 0) {
+      this.#candidates.style.minWidth = `${width}px`;
+    } else {
+      this.#candidates.style.removeProperty("min-width");
+    }
   }
 
   /** @returns {void} */
@@ -580,6 +611,7 @@ export class Panel {
     this.#endUnfold();
     this.#forgetLayout();
     this.#setShape({});
+    this.#keepWidth(0);
     this.#candidates.replaceChildren();
     this.#arrows.hidden = true;
     this.#spoken.textContent = "";

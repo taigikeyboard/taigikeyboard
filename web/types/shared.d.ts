@@ -61,6 +61,7 @@ export interface WireLayout {
   leadCellIsUnkeyed: boolean;
   hasOverflow: boolean;
   collapsed: WireCollapsedCell[];
+  collapsedWidth: number;
   rows: WireGridCell[][];
   columnWidth: number;
   itemHeight: number;
@@ -79,6 +80,12 @@ export interface WireLayout {
   transition?: WireTransition;
 }
 
+export interface WirePage {
+  start: number;
+  end: number;
+  minWidth: number;
+}
+
 export type WireEmit =
   | { type: "preedit"; text: string; caret: number }
   | { type: "clearPreedit" }
@@ -93,6 +100,7 @@ export type WireEmit =
       pageSize: number;
       vertical: boolean;
       layout?: WireLayout;
+      page?: WirePage;
     }
   | { type: "hideLookupTable" }
   | { type: "modeChanged"; symbol: string }

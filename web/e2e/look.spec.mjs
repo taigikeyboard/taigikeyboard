@@ -545,6 +545,44 @@ test("a horizontal list keeps its scripts apart and turns pages", async ({
   await expect(editor).toBeFocused();
 });
 
+// A list that runs past one page keeps one window width from page to page and
+// list to list, so the right edge does not move as the words change (macOS
+// PR #894; `layout.rs` `horizontal_page_starts`).
+for (const [candidateLayout, name] of [
+  ["horizontal", "Horizontal"],
+  ["expandable", "Horizontal Expandable"],
+]) {
+  test(`a ${name} list keeps one width across lists and pages`, async ({
+    page,
+  }) => {
+    const editor = await open(page, { settings: { candidateLayout } });
+    const widths = new Set();
+    const firstCells = new Set();
+    /** @returns {Promise<void>} */
+    const record = async () => {
+      // The arrow shows only for a list that runs past one page.
+      const arrow = candidateLayout === "horizontal" ? "#page-down" : "#unfold";
+      await expect(page.locator(arrow)).toBeVisible();
+      const box = await panel(page).boundingBox();
+      widths.add(Math.round(box?.width ?? 0));
+      firstCells.add(await candidates(page).first().textContent());
+    };
+    for (const prefix of ["ti", "kong", "lang", "sim"]) {
+      await editor.pressSequentially(prefix);
+      await record();
+      if (candidateLayout === "horizontal") {
+        await page.locator("#page-down").click();
+        await record();
+      }
+      await editor.press("Escape");
+      await expect(candidates(page)).toHaveCount(0);
+    }
+    // Different words on screen, one width.
+    expect(firstCells.size).toBeGreaterThan(1);
+    expect([...widths]).toHaveLength(1);
+  });
+}
+
 test("the composition sits on the caret's line, clear of the list", async ({
   page,
 }) => {

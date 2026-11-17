@@ -59,8 +59,11 @@ pub(crate) enum WireEmit<'a> {
         cursor_visible: bool,
         page_size: u32,
         vertical: bool,
+        /// Boxed: the other variants are a few bytes.
         #[serde(skip_serializing_if = "Option::is_none")]
-        layout: Option<WireLayout>,
+        layout: Option<Box<WireLayout>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        page: Option<WirePage>,
     },
     HideLookupTable,
     ModeChanged {
@@ -103,6 +106,9 @@ pub(crate) struct WireLayout {
     lead_cell_is_unkeyed: bool,
     has_overflow: bool,
     collapsed: Vec<WireCollapsedCell>,
+    /// The collapsed window's content width: a row that runs past one page
+    /// pads to the packing budget, so it keeps one width from list to list.
+    collapsed_width: f32,
     rows: Vec<Vec<WireGridCell>>,
     column_width: f32,
     item_height: f32,
@@ -235,6 +241,7 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
                 width: cell.rect.width,
             })
             .collect(),
+        collapsed_width: model.collapsed_content_width(),
         // Only an unfolded window draws them, and this goes out on every key.
         rows: if is_expanded {
             model
@@ -271,6 +278,32 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
         has_next_page: model.has_next_page(),
         animation_milliseconds: ExpandableListModel::ANIMATION_DURATION_SECONDS * 1000.0,
         transition: model.mode_transition().map(WireTransition::from),
+    })
+}
+
+/// The page of a list the page pages, as the session pages it: a measured
+/// horizontal row breaks where its cells fill the width, not every
+/// `pageSize` cells (`ListLayout::horizontal_page_starts`).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WirePage {
+    start: usize,
+    end: usize,
+    /// The width the row's cells keep, 0 for none: a list that runs past one
+    /// page keeps one width from page to page and list to list.
+    min_width: u32,
+}
+
+/// `None` for a list `ExpandableListModel` holds, which [`wire_layout`] says.
+pub(crate) fn wire_page(selection: &ListSelection) -> Option<WirePage> {
+    if selection.expandable().is_some() {
+        return None;
+    }
+    let (start, end) = selection.page_bounds();
+    Some(WirePage {
+        start,
+        end,
+        min_width: selection.content_floor(),
     })
 }
 
@@ -378,11 +411,12 @@ pub(crate) struct ModeText {
     pub label: String,
 }
 
-/// `layout` goes on a `LookupTable`, and nothing else has one.
+/// `layout` and `page` go on a `LookupTable`, and nothing else has them.
 pub(crate) fn wire_emit<'a>(
     emit: &'a Emit,
     mode: &'a ModeText,
     layout: Option<WireLayout>,
+    page: Option<WirePage>,
 ) -> WireEmit<'a> {
     match emit {
         Emit::Preedit { text, caret } => WireEmit::Preedit {
@@ -415,7 +449,8 @@ pub(crate) fn wire_emit<'a>(
             cursor_visible: *cursor_visible,
             page_size: *page_size,
             vertical: *vertical,
-            layout,
+            layout: layout.map(Box::new),
+            page,
         },
         Emit::HideLookupTable => WireEmit::HideLookupTable,
         Emit::ModeChanged => WireEmit::ModeChanged {
@@ -443,7 +478,7 @@ mod tests {
             symbol: "台",
             label: "label".to_owned(),
         };
-        serde_json::to_string(&wire_emit(&emit, &mode, None)).unwrap()
+        serde_json::to_string(&wire_emit(&emit, &mode, None, None)).unwrap()
     }
 
     #[test]
