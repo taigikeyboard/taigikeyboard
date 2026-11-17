@@ -18,7 +18,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use prost::Message;
 use protos::engine::{request, response, AppConfig, ErrorCode, Request, Response};
 
-mod case;
 mod context;
 mod fetch;
 mod predict;
@@ -261,17 +260,19 @@ fn run(bytes: &[u8]) -> Response {
                 }
             }
         }
-        request::Payload::CaseTransform(case_req) => match case::handle(&case_req, &config) {
-            Some(case_resp) => Response {
-                id,
-                error: ErrorCode::Ok as i32,
-                payload: Some(response::Payload::CaseTransform(case_resp)),
-            },
-            None => {
-                log::warn!("case request missing method (id={id})");
-                error_response(id, ErrorCode::FailInvariant)
+        request::Payload::CaseTransform(case_req) => {
+            match phonetics::requests::handle_case(&case_req, &config) {
+                Some(case_resp) => Response {
+                    id,
+                    error: ErrorCode::Ok as i32,
+                    payload: Some(response::Payload::CaseTransform(case_resp)),
+                },
+                None => {
+                    log::warn!("case request missing method (id={id})");
+                    error_response(id, ErrorCode::FailInvariant)
+                }
             }
-        },
+        }
         request::Payload::UserData(user_data_req) => user_data::respond(id, &user_data_req),
     }
 }

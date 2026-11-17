@@ -1,8 +1,8 @@
-//! Case-transform dispatch handler.
+//! Case-transform request handler.
 //!
 //! Routes `taigi.engine.CaseRequest` oneof variants to the corresponding
-//! `phonetics::case_transform` functions, builds a `CaseResponse`. Mode is
-//! the envelope's `phonetics::api::composing_mode` — the TPS layout cases
+//! `case_transform` functions, builds a `CaseResponse`. Mode is
+//! the envelope's `api::composing_mode` — the TPS layout cases
 //! with the TL tables, as it did while TPS arrived as `"tl"`.
 //!
 //! Returns `None` for an empty `method` oneof (the top-level dispatch
@@ -10,15 +10,15 @@
 //! `Some(CaseResponse)` — the case ops are infallible by construction
 //! (table lookups + stdlib casing).
 
-use phonetics::api::composing_mode;
-use phonetics::case_transform::{
+use crate::api::composing_mode;
+use crate::case_transform::{
     full_uppercase_tone_string, lowercase_tone_char, transform_input_case, uppercase_tone_char,
     LetterCase,
 };
 use protos::engine::case_request::Method;
 use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult};
 
-pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseResponse> {
+pub fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseResponse> {
     let method = request.method.as_ref()?;
     let mode = composing_mode(config);
 
@@ -33,7 +33,7 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
     // ⁿ becomes ᴺ in capitals OFF (§53): the raise-only ops write `ᴺ` after a capital; fold
     // it back so the platform never receives the capital marker.
     let output = if config.force_lowercase_nasal_marker {
-        phonetics::case_transform::lowercase_nasal_markers(&output)
+        crate::case_transform::lowercase_nasal_markers(&output)
     } else {
         output
     };

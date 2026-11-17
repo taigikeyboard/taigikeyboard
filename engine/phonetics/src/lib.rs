@@ -10,6 +10,7 @@
 pub mod api;
 pub mod requests;
 
+mod case_requests;
 mod case_tables;
 pub mod case_transform;
 mod custom_search;
