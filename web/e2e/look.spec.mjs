@@ -583,6 +583,34 @@ for (const [candidateLayout, name] of [
   });
 }
 
+test("a Horizontal list follows a window that narrowed at the next key", async ({
+  page,
+}) => {
+  // Extra Large, where CSS's unrounded lengths outgrow the model's rounded
+  // ones by the most.
+  const editor = await open(page, {
+    settings: { candidateLayout: "horizontal", candidateTextSize: "23" },
+  });
+  await editor.pressSequentially("ti");
+  await expect(page.locator("#page-down")).toBeVisible();
+  const wide = (await panel(page).boundingBox())?.width ?? 0;
+  await page.setViewportSize({ width: 420, height: 800 });
+  await editor.press("ArrowRight");
+  const fits = await page.evaluate(() => {
+    /** @param {string} selector */
+    const right = (selector) =>
+      document.querySelector(selector)?.getBoundingClientRect().right ?? 0;
+    return {
+      width: document.querySelector("#panel")?.getBoundingClientRect().width,
+      arrowsInPanel: right("#page-arrows") <= right("#panel") + 0.5,
+      panelInEditor: right("#panel") <= right("#editor") + 0.5,
+    };
+  });
+  expect(fits.width).toBeLessThan(wide);
+  expect(fits.arrowsInPanel).toBe(true);
+  expect(fits.panelInEditor).toBe(true);
+});
+
 test("the composition sits on the caret's line, clear of the list", async ({
   page,
 }) => {

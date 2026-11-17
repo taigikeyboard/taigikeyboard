@@ -222,13 +222,12 @@ impl From<&ModeTransition> for WireTransition {
     }
 }
 
-pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
-    let model = selection.expandable()?;
+fn wire_layout(model: &ExpandableListModel, selection: &ListSelection) -> WireLayout {
     let geometry = model.expanded_geometry();
     let is_expanded = model.mode() == ExpandableDisplayMode::Expanded;
     let grid_height =
         model.grid().rows.len() as f32 * model.row_height() - ExpandableListModel::SEPARATOR_HEIGHT;
-    Some(WireLayout {
+    WireLayout {
         is_column: model.axis() == ExpandableAxis::Column,
         is_expanded,
         lead_cell_is_unkeyed: selection.lead_cell_is_unkeyed(),
@@ -278,7 +277,7 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
         has_next_page: model.has_next_page(),
         animation_milliseconds: ExpandableListModel::ANIMATION_DURATION_SECONDS * 1000.0,
         transition: model.mode_transition().map(WireTransition::from),
-    })
+    }
 }
 
 /// The page of a list the page pages, as the session pages it: a measured
@@ -294,17 +293,25 @@ pub(crate) struct WirePage {
     min_width: u32,
 }
 
-/// `None` for a list `ExpandableListModel` holds, which [`wire_layout`] says.
-pub(crate) fn wire_page(selection: &ListSelection) -> Option<WirePage> {
-    if selection.expandable().is_some() {
-        return None;
+/// How the page draws the list on screen: from `ExpandableListModel`, or one
+/// page of it as the session pages it.
+pub(crate) enum WireList {
+    LaidOut(Box<WireLayout>),
+    Paged(WirePage),
+}
+
+pub(crate) fn wire_list(selection: &ListSelection) -> WireList {
+    match selection.expandable() {
+        Some(model) => WireList::LaidOut(Box::new(wire_layout(model, selection))),
+        None => {
+            let (start, end) = selection.page_bounds();
+            WireList::Paged(WirePage {
+                start,
+                end,
+                min_width: selection.content_floor(),
+            })
+        }
     }
-    let (start, end) = selection.page_bounds();
-    Some(WirePage {
-        start,
-        end,
-        min_width: selection.content_floor(),
-    })
 }
 
 /// One row of the TPS key panel for the page: `indent` in key widths.
@@ -411,12 +418,11 @@ pub(crate) struct ModeText {
     pub label: String,
 }
 
-/// `layout` and `page` go on a `LookupTable`, and nothing else has them.
+/// `list` goes on a `LookupTable`, and nothing else has one.
 pub(crate) fn wire_emit<'a>(
     emit: &'a Emit,
     mode: &'a ModeText,
-    layout: Option<WireLayout>,
-    page: Option<WirePage>,
+    list: Option<WireList>,
 ) -> WireEmit<'a> {
     match emit {
         Emit::Preedit { text, caret } => WireEmit::Preedit {
@@ -436,22 +442,29 @@ pub(crate) fn wire_emit<'a>(
             cursor_visible,
             page_size,
             vertical,
-        }) => WireEmit::LookupTable {
-            cells: cells
-                .iter()
-                .map(|cell| WireCell {
-                    text: &cell.text,
-                    annotation: cell.annotation.as_deref(),
-                })
-                .collect(),
-            labels,
-            cursor: *cursor,
-            cursor_visible: *cursor_visible,
-            page_size: *page_size,
-            vertical: *vertical,
-            layout: layout.map(Box::new),
-            page,
-        },
+        }) => {
+            let (layout, page) = match list {
+                Some(WireList::LaidOut(layout)) => (Some(layout), None),
+                Some(WireList::Paged(page)) => (None, Some(page)),
+                None => (None, None),
+            };
+            WireEmit::LookupTable {
+                cells: cells
+                    .iter()
+                    .map(|cell| WireCell {
+                        text: &cell.text,
+                        annotation: cell.annotation.as_deref(),
+                    })
+                    .collect(),
+                labels,
+                cursor: *cursor,
+                cursor_visible: *cursor_visible,
+                page_size: *page_size,
+                vertical: *vertical,
+                layout,
+                page,
+            }
+        }
         Emit::HideLookupTable => WireEmit::HideLookupTable,
         Emit::ModeChanged => WireEmit::ModeChanged {
             symbol: mode.symbol,
@@ -478,7 +491,7 @@ mod tests {
             symbol: "台",
             label: "label".to_owned(),
         };
-        serde_json::to_string(&wire_emit(&emit, &mode, None, None)).unwrap()
+        serde_json::to_string(&wire_emit(&emit, &mode, None)).unwrap()
     }
 
     #[test]

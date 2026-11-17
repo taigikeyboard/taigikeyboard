@@ -83,19 +83,27 @@ fn lay_out_table(state: &mut EngineState, settings: &SettingsDocument, page_size
 
 /// A horizontal row uses the same packing budget as a collapsed horizontal
 /// expandable row. Once the list fills a second page, every page keeps that
-/// budget as its width.
+/// budget as its width. The list in view: the symbol picker's while it is up,
+/// so its row keeps one width too.
 fn apply_horizontal_pages(state: &mut EngineState, settings: &SettingsDocument, page_size: usize) {
     let Some(layout) = &state.list_layout else {
         return;
     };
-    match layout.horizontal_page_starts(&state.candidates.cells(), settings, page_size) {
+    let (selection, cells) = match &mut state.symbol_picker {
+        Some(picker) => (
+            &mut picker.selection,
+            plain_cells(picker.symbols.iter().cloned()),
+        ),
+        None => (&mut state.selection, state.candidates.cells()),
+    };
+    match layout.horizontal_page_starts(&cells, settings, page_size) {
         Some((starts, floor)) => {
-            state.selection.set_page_starts(starts);
-            state.selection.set_content_floor(floor);
+            selection.set_page_starts(starts);
+            selection.set_content_floor(floor);
         }
         None => {
-            state.selection.clear_page_starts();
-            state.selection.set_content_floor(0);
+            selection.clear_page_starts();
+            selection.set_content_floor(0);
         }
     }
 }
@@ -252,6 +260,30 @@ mod tests {
         }
     }
 
+    /// Pages every list three cells at a time, 30 wide.
+    #[derive(Debug, Default)]
+    struct ThreeAPage;
+
+    impl ListLayout for ThreeAPage {
+        fn layout(
+            &self,
+            _cells: &[CandidateCellContent],
+            _settings: &SettingsDocument,
+            _page_size: usize,
+        ) -> Option<ExpandableListModel> {
+            None
+        }
+
+        fn horizontal_page_starts(
+            &self,
+            cells: &[CandidateCellContent],
+            _settings: &SettingsDocument,
+            _page_size: usize,
+        ) -> Option<(Vec<usize>, u32)> {
+            Some(((0..cells.len()).step_by(3).collect(), 30))
+        }
+    }
+
     fn picker_of(count: usize) -> SymbolPicker {
         SymbolPicker {
             symbols: vec!["，".to_owned(); count],
@@ -286,6 +318,25 @@ mod tests {
         present(&mut state);
         present(&mut state);
         assert_eq!(*layout.asked.lock().unwrap(), 1);
+    }
+
+    #[test]
+    fn the_picker_in_view_is_paged_by_width() {
+        let mut state = EngineState {
+            list_layout: Some(Arc::new(ThreeAPage)),
+            symbol_picker: Some(picker_of(10)),
+            ..EngineState::default()
+        };
+        present(&mut state);
+        let picker = state.symbol_picker.as_mut().expect("the picker");
+        assert_eq!(picker.selection.page_bounds(), (0, 3));
+        assert_eq!(picker.selection.content_floor(), 30);
+        picker
+            .selection
+            .navigate(crate::keys::CandidateNavigation::PageDown, false);
+        assert_eq!(picker.selection.page_bounds(), (3, 6));
+        // The list under the picker is left as it was.
+        assert_eq!(state.selection.content_floor(), 0);
     }
 
     #[test]

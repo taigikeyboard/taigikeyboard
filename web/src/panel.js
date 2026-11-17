@@ -269,7 +269,9 @@ export class Panel {
       : collapsed.map(({ index, width }) => {
           const cell = draw(index);
           if (!isColumn) {
-            cell.style.minWidth = `${width}px`;
+            // The model's width exactly: CSS lengths are unrounded, the
+            // model's rounded, so a cell's own width can differ by a fraction.
+            cell.style.width = `${width}px`;
           }
           return cell;
         });
@@ -282,7 +284,7 @@ export class Panel {
     });
     // A row that runs past one page keeps the model's width, so the window
     // does not change width with each list's first page (macOS PR #894).
-    this.#keepWidth(isRow ? layout.collapsedWidth : 0);
+    this.#keepWidth(isRow ? layout.collapsedWidth : 0, collapsed.length);
     const lengths = {
       "--candidate-item": layout.itemHeight,
       // A column keeps its height as it unfolds, so its rows are the model's.
@@ -339,7 +341,7 @@ export class Panel {
     const shown = cells.slice(start, end);
     // A list that runs past one page keeps one width from page to page and
     // list to list, so the window's right edge does not wander.
-    this.#keepWidth(vertical ? 0 : (page?.minWidth ?? 0));
+    this.#keepWidth(vertical ? 0 : (page?.minWidth ?? 0), shown.length);
     this.#candidates.replaceChildren(
       ...shown.map((cell, position) =>
         drawCell(cell, labels[position], position, {
@@ -373,15 +375,27 @@ export class Panel {
   }
 
   /**
-   * The narrowest the list's cells may draw, 0 for their own width.
+   * A row's width, 0 for its cells' own. The session packs a row of several
+   * cells to at most `width` from the model's rounded lengths, and CSS draws
+   * them unrounded, a fraction of a pixel apiece wider or narrower: the row
+   * is held at `width` and the cells give the difference back (`min-width: 0`
+   * in `style.css`). One cell may be wider: a word longer than the budget
+   * gets a page of its own at its own width.
    * @param {number} width
+   * @param {number} cellCount
    * @returns {void}
    */
-  #keepWidth(width) {
+  #keepWidth(width, cellCount = 0) {
+    const style = this.#candidates.style;
     if (width > 0) {
-      this.#candidates.style.minWidth = `${width}px`;
+      style.minWidth = `${width}px`;
     } else {
-      this.#candidates.style.removeProperty("min-width");
+      style.removeProperty("min-width");
+    }
+    if (width > 0 && cellCount > 1) {
+      style.maxWidth = `${width}px`;
+    } else {
+      style.removeProperty("max-width");
     }
   }
 

@@ -21,9 +21,7 @@ use taigi_desktop_core::settings::SettingsProvider;
 use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
 use crate::layout::{PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
-use crate::reply::{
-    mode_line_json, telex_guide_json, wire_emit, wire_layout, wire_page, ModeText, Reply,
-};
+use crate::reply::{mode_line_json, telex_guide_json, wire_emit, wire_list, ModeText, Reply};
 use crate::shortcuts::shortcuts;
 
 const CONTEXT: ContextToken = ContextToken(1);
@@ -425,12 +423,8 @@ impl WebSession {
                 .iter()
                 .enumerate()
                 .map(|(index, emit)| {
-                    let (layout, page) = if laid_out == Some(index) {
-                        (wire_layout(self.selection()), wire_page(self.selection()))
-                    } else {
-                        (None, None)
-                    };
-                    wire_emit(emit, &mode, layout, page)
+                    let list = (laid_out == Some(index)).then(|| wire_list(self.selection()));
+                    wire_emit(emit, &mode, list)
                 })
                 .collect(),
             settings: self.settings.take_unsent(),
