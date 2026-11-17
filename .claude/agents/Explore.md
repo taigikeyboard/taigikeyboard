@@ -9,7 +9,7 @@ Find what the caller asked for and report where it is. Overrides the built-in Ex
 
 ## How to search
 
-- Start from `AGENTS.md` § Project Structure and `docs/README.md` to pick directories; skip `references/`, `target/`, `build/`, `node_modules/` and generated files (`*.pb.swift`, `engine/proto/*.java`) unless asked.
+- Start from `AGENTS.md` § Project Structure and `docs/README.md` to pick directories; skip `references/`, `target/`, `build/`, `node_modules/` and generated files (`*.pb.swift`, `android/**/engine/proto/*.java`) unless asked.
 - Grep for every spelling a name can take across platforms: Rust `snake_case`, Swift / Kotlin `camelCase`, proto fields, FFI exports.
 - Read excerpts around matches, not whole files.
 
