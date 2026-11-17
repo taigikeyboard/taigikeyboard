@@ -239,6 +239,19 @@ final class CandidateCellHelperTests: XCTestCase {
         XCTAssertEqual(handled.text, title, "the rendered cell and the handed cell agree")
     }
 
+    /// A Hanji-only NextWord prediction (`subtitle == nil`, Hanji in `text`, no
+    /// `tpsText`) shows its Hanji under the TPS layout, never a blank cell.
+    func testTPSLayout_hanjiOnlyPrediction_showsItsHanji() {
+        let hanjiOnly = AutocompleteSuggestion(text: "去", title: "去", subtitle: nil)
+        let title = CandidateCellHelper.displayTitle(
+            for: hanjiOnly,
+            isHanjiFirst: true,
+            isTPSLayout: true,
+            candidateDisplayMode: .sideBySide,
+        )
+        XCTAssertEqual(title, "去")
+    }
+
     /// The guard also precedes the TPS fallback rewrite (defensive — TPS never
     /// splits, but a marked cell reaching a TPS-layout render must not be
     /// rewritten to its TPS text).

@@ -239,11 +239,13 @@ enum CandidateCellHelper {
 
     // MARK: - Private
 
-    /// What a hanji-less cell shows under the TPS layout: the engine's
-    /// `CandidateMessage.tps_text` (its romanization as Bopomofo — what picking
-    /// it writes), carried under `tpsTextKey`.
+    /// What a subtitle-less cell shows under the TPS layout: a Continuous
+    /// candidate's `CandidateMessage.tps_text` (its romanization as Bopomofo —
+    /// what picking it writes), carried under `tpsTextKey`. A NextWord
+    /// prediction carries none: a Hanji-only prediction holds its Hanji in
+    /// `text`, which is what its TPS cell shows.
     private static func tpsText(for suggestion: AutocompleteSuggestion) -> String {
-        suggestion.additionalInfo[tpsTextKey] ?? ""
+        suggestion.additionalInfo[tpsTextKey] ?? suggestion.text
     }
 
     /// Replaces the commit text with `newText`, moving the original text to the subtitle to keep
