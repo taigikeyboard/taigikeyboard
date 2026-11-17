@@ -275,6 +275,21 @@ class PlatformSelectionTests(SelectorTestCase):
         )
         self.assertIn(test_select.ADMIN_LANE_NOTE, selection.notes)
 
+    def test_rule_pointers_and_contributing_guides_run_the_path_gate(self) -> None:
+        self.assertEqual(
+            self.select(".claude/rules/i18n.md").commands,
+            {"docs-checks": [Command("python3 tools/agent_rule_paths.py")]},
+        )
+        self.assertEqual(
+            self.select("docs/contributing/README.md").commands,
+            {
+                "docs-checks": [
+                    Command("python3 tools/invariant_labels.py"),
+                    Command("python3 tools/agent_rule_paths.py"),
+                ]
+            },
+        )
+
     def test_changelog_only_runs_nothing(self) -> None:
         selection = self.select("changelog/3.6.10.md", "CLAUDE.md")
 

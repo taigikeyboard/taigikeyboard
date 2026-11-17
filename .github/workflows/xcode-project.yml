@@ -1,0 +1,54 @@
+name: Xcode project files
+
+# AGENTS.md Core Principle 1: Xcode project files are maintainer-only. Claude Code
+# is stopped at edit time (.claude/settings.json); this is the same rule for a
+# pull request written with any other tool, or by hand.
+#
+# - Passes when the pull request's author is an owner on any line of the base
+#   branch's CODEOWNERS — the base, so a pull request cannot add its own author.
+# - Keys on who opened the pull request, not who wrote each commit: a maintainer
+#   commit pushed onto a contributor's pull request still fails, and the
+#   maintainer merges it knowingly.
+# - Trusts the `paths` filter. When GitHub cannot compute the diff (timeout, more
+#   than 3,000 files) it runs the workflow anyway, and a pull request that touches
+#   no Xcode file fails here.
+# - A red check, not a merge block: `main` requires code-owner review, no status.
+on:
+  pull_request:
+    paths:
+      - '**/*.pbxproj'
+      - '**/*.xcodeproj/**'
+      - '**/*.xcworkspace/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xcode-project-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  maintainer-only:
+    name: Xcode project files are maintainer-only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: |
+            .github/CODEOWNERS
+          sparse-checkout-cone-mode: false
+
+      - name: Pull request author is a code owner
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          # Comments dropped, one owner per line, compared whole: `@sian` is not
+          # `@siansiansu`. No `grep -q` — it would stop reading at the first match,
+          # and pipefail would turn the resulting SIGPIPE into a failure.
+          sed 's/#.*//' .github/CODEOWNERS | tr -s '[:space:]' '\n' | grep -ixF -- "@$AUTHOR" >/dev/null && exit 0
+          echo "::error::This pull request changes an Xcode project file (.pbxproj / .xcodeproj / .xcworkspace). Those are maintainer-only (AGENTS.md Core Principle 1): revert that change and list the Xcode step as a maintainer action item in the pull request (docs/contributing/ios-guidelines.md § Xcode project files)."
+          exit 1

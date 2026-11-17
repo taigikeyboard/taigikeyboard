@@ -19,7 +19,7 @@ SHELL := /usr/bin/env sh
 .DEFAULT_GOAL := help
 
 .PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
-        fmt lint lint-ps1 lint-rust-toolchain lint-swiftui-literals hooks scan-secrets scan-secrets-full scan-private \
+        fmt lint lint-ps1 lint-rust-toolchain lint-swiftui-literals lint-agent-rule-paths hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
@@ -275,8 +275,10 @@ version-mobile version-desktop:
 #   PS      every tracked .ps1 is ASCII (lint-ps1): Windows PowerShell 5.1 reads a
 #           BOM-less script in the ANSI code page, where a UTF-8 em dash decodes
 #           to a curly quote that ends the string it sits in.
+#   Agents  `.claude/rules/` names the same paths as docs/contributing/README.md
+#           (lint-agent-rule-paths; tools/agent_rule_paths.py says why).
 # CI runs the same checks: engine.yml, desktop-shared.yml, macos.yml, web.yml, codegen-lint.yml,
-# android.yml on pull requests; linux-build.yml nightly.
+# android.yml, agent-rule-paths.yml on pull requests; linux-build.yml nightly.
 RUST_WORKSPACES := engine desktop windows linux macos
 
 fmt:
@@ -285,7 +287,7 @@ fmt:
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
-lint: lint-ps1 lint-rust-toolchain lint-swiftui-literals
+lint: lint-ps1 lint-rust-toolchain lint-swiftui-literals lint-agent-rule-paths
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
@@ -302,6 +304,9 @@ lint-rust-toolchain:
 
 lint-swiftui-literals:
 	python3 tools/swiftui_literals.py
+
+lint-agent-rule-paths:
+	python3 tools/agent_rule_paths.py
 
 lint-ps1:
 	@git ls-files -z '*.ps1' | xargs -0 perl -ne 'if (/[^\t\r\n\x20-\x7e]/) { print "$$ARGV:$$.: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } close ARGV if eof; END { exit $$bad }'

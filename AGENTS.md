@@ -26,7 +26,7 @@ emoji/             # Emoji data generator (own instructions file)
 
 ## Core Principles
 
-1. **Xcode project files are maintainer-only** — agents never edit `.xcodeproj` / `.pbxproj` / `.xcworkspace`. Xcode synchronized groups auto-include new files under most `Sources/TaigiKeyboard/*` subdirs — exceptions in `docs/contributing/ios-guidelines.md`. Android Gradle files are editable.
+1. **Xcode project files are maintainer-only** — agents never edit `.xcodeproj` / `.pbxproj` / `.xcworkspace`; CI fails a pull request from a non–code-owner that touches them. Xcode synchronized groups auto-include new files under most `Sources/TaigiKeyboard/*` subdirs — exceptions in `docs/contributing/ios-guidelines.md`. Android Gradle files are editable.
 2. **Cross-platform alignment** — align on **intended behavior**, not API calls; verify each platform independently; document when the same behavior needs different implementations (`docs/contributing/cross-platform-alignment.md`).
 3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules from test/dictionary absence; read `docs/phonetics/taigi-phonetics-reference.md` and `taigi-converter/` first (`docs/contributing/phonetics.md`).
 4. **Bugfix = root cause first** — reproduce the failure and pin the cause to `file:line` before writing the fix; the PR states both.
@@ -44,7 +44,7 @@ emoji/             # Emoji data generator (own instructions file)
 |---|---|
 | your first change | `docs/contributing/known-pitfalls.md` |
 | reviewing a diff, or filling a PR's Risk tier | `REVIEW.md` |
-| changing files on a platform | that platform's guide in `docs/contributing/` (index: `docs/contributing/README.md`) |
+| changing a file | every guide whose paths match it — `docs/contributing/README.md` § Which guide for which path |
 | adding / renaming / deleting an `i18n/*.json` key from platform code | `docs/contributing/i18n.md` |
 | adding or changing a framework / OS API call (KeyboardKit, `UITextDocumentProxy`, `InputMethodService`, Compose, DataStore) | `docs/contributing/doc-lookup.md` — verify against current docs, never from memory |
 | a real-device dogfood pass | `corpus/README.md` for test sentences |
