@@ -42,7 +42,8 @@ Check instead that a generated file changed together with its source (`make prot
 
 - Open with a one-line summary: the finding count, or exactly `No issues found.`
 - One finding per item: `path:line` — the defect — the concrete input or state that triggers it. Name only files you opened; never guess a filename.
-- Group by severity: Blocking, then Nit, then Pre-existing.
+- Group by severity: Blocking, then Trade-offs to confirm, then Nit, then Pre-existing.
+- Trade-offs to confirm: a user-visible cost the PR body accepts on purpose — a capability the diff removes, a case the new code does not handle — not the behaviour the PR exists to add. Judge it as if the PR body were silent: what you would report as Blocking then stays Blocking; anything else is a finding here, in the format above, with the consequence in place of the defect, traced in the code and given as what the user sees — "slot 9 unkeyed" is reported as "a page still holds nine candidates, so the ninth cannot be picked by key".
 - Bug fix PRs: check the PR states the root cause at `file:line` and the fix addresses it, not a symptom.
 
 ## Convergence
