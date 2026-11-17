@@ -1319,7 +1319,7 @@ IMK can activate a second controller (a system client) while it keeps delivering
 
 ### `INVARIANT_TELEX_KEY_TABLE`
 
-The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on `ToneInputScheme::TELEX_KEYS` (`x v y d z w q`):
+The desktop Telex scheme reaches every tone from the letter keys (USER 2026-11-05, #683). This replaces the 2026-09 table in `docs/reports/desktop-3.6.x-design-notes.md`, which offered no tone 6. Rules live in `engine/composing/src/telex.rs`; macOS, Windows and Linux classify on the engine's `TELEX_KEYS` (re-exported as `dispatch::TELEX_KEYS`, read by desktop-core `ToneInputScheme::is_telex_key`; `x v y d z w q`):
 
 - **`z` / `Z` is a single-tone key**, like `y d w q`: it writes tone 6 on any syllable, a stop coda included (`sit` + `z` → `sit6`), and passes to the host when idle.
 - **`c` and `h` are not Telex keys** (2026-11-09). Both are ordinary letters under either scheme and reach the engine as `Append`. The 2026-11-05 table had `c` write the affricate and dropped an `h` after `tsh` / `chh`; the `h` rule is gone, and the affricate moved to its own setting (`INVARIANT_C_TYPES_AFFRICATE` below).

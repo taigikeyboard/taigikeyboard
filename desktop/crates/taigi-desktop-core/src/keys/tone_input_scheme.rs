@@ -35,14 +35,6 @@ pub enum ToneInputScheme {
 }
 
 impl ToneInputScheme {
-    /// Lower-case Telex keys: `x v y d z w q` for tones 1/4 2/8 3 5 6 7 9 (`x` and `v`
-    /// split their pair by the coda, engine-side). Mirrors the engine's
-    /// `composing::telex::TELEX_KEYS`
-    /// — the two lists must name the same keys, or a key classified as Telex
-    /// here would be ignored there. CROSS-PLATFORM INVARIANT — the one list for
-    /// macOS, Windows and Linux.
-    pub(crate) const TELEX_KEYS: &'static str = "vydwxqz";
-
     /// The keys that pick a candidate under this scheme.
     pub fn slot_key_set(self) -> CandidateSlotKeySet {
         match self {
@@ -60,11 +52,14 @@ impl ToneInputScheme {
         }
     }
 
-    /// Whether `character` is a Telex key in either case. ASCII only: the
+    /// Whether `character` is a Telex key in either case: the engine's own
+    /// list (`dispatch::TELEX_KEYS`, `x v y d z w q` for tones 1/4 2/8 3 5 6 7 9),
+    /// so a key classified as Telex here is one the engine resolves —
+    /// CROSS-PLATFORM INVARIANT for macOS, Windows and Linux. ASCII only: the
     /// engine reads the key as an ASCII letter, and a `v` from another
     /// script is document text.
     pub(crate) fn is_telex_key(character: char) -> bool {
-        character.is_ascii() && Self::TELEX_KEYS.contains(character.to_ascii_lowercase())
+        character.is_ascii() && dispatch::TELEX_KEYS.contains(character.to_ascii_lowercase())
     }
 }
 
@@ -121,7 +116,7 @@ mod tests {
             .filter(|letter| letter.is_ascii_alphabetic() && *letter != 'f')
             .collect();
         assert_eq!(
-            ToneInputScheme::TELEX_KEYS
+            dispatch::TELEX_KEYS
                 .chars()
                 .collect::<std::collections::BTreeSet<_>>(),
             slot_letters

@@ -106,7 +106,7 @@ impl From<NavigationKey> for CandidateNavigation {
 pub enum ComposingKeyIntent {
     /// A romanization character to append to the composition.
     Input(String),
-    /// One of the Telex keys (`ToneInputScheme::TELEX_KEYS`), handed to the
+    /// One of the Telex keys (`dispatch::TELEX_KEYS`), handed to the
     /// engine's `TelexKey` intent rather than appended: the engine decides
     /// which tone it writes.
     TelexKey(String),

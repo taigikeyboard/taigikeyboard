@@ -31,6 +31,10 @@ mod user_data;
 /// asserts it equals the `userdata` crate's own limit.
 pub const CUSTOM_CSV_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
 
+/// The letters the desktop Telex scheme types tones with — for a shell that
+/// classifies a key as Telex before the engine resolves it (desktop-core).
+pub use composing::telex::TELEX_KEYS;
+
 /// The files the user's stores live in, by name — for a platform that moves
 /// them itself (the web).
 #[cfg(feature = "user-data")]
