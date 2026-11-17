@@ -26,21 +26,18 @@ crate-type = ["staticlib", "rlib"]
 doctest = false
 
 [features]
-# Both Apple consumers — the iOS app + keyboard and the macOS input method —
-# ship the user-data stores (docs/architecture/user-data-engine-roadmap.md
-# P6 / P7b).
-default = ["user-data"]
 # Dev-only: exposes `panic_for_test()` so platform tests can drive T1.
 # Release builds omit this feature; the post-build `nm` check in
 # `engine/scripts/build-xcframework.sh` asserts the symbol is absent.
 panic-injector = []
 # Test-build-only engine trace — docs/architecture/e2e-trace-schema.md.
 e2e-trace = ["dispatch/e2e-trace"]
-# The engine-owned user-data stores (bundled SQLite).
-user-data = ["dispatch/user-data"]
 
 [dependencies]
-dispatch = { workspace = true }
+# Both Apple consumers — the iOS app + keyboard and the macOS input method —
+# always ship the engine-owned user-data stores (bundled SQLite;
+# docs/architecture/user-data-engine-roadmap.md P6 / P7b).
+dispatch = { workspace = true, features = ["user-data"] }
 protos = { workspace = true }
 log = { workspace = true }
 swift-bridge = { workspace = true }

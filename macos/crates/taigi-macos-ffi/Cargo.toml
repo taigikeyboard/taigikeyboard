@@ -20,8 +20,9 @@ e2e-trace = ["swift-ffi/e2e-trace"]
 panic-injector = ["swift-ffi/panic-injector"]
 
 [dependencies]
-# The macOS app ships the user-data stores (user-data-engine-roadmap P7b).
-swift-ffi = { workspace = true, features = ["user-data"] }
+# The engine seam; it always carries the user-data stores
+# (user-data-engine-roadmap P7b).
+swift-ffi = { workspace = true }
 dispatch = { workspace = true }
 protos = { workspace = true }
 taigi-desktop-core = { workspace = true }
