@@ -49,36 +49,47 @@ message CaseRequest {
   reserved 22;
   reserved "transform_candidate_case";
 
-  oneof method {
-    // --- Per-char (single grapheme cluster) helpers ---
-    UppercaseToneChar       uppercase_tone_char        = 10;
-    FullUppercaseToneString full_uppercase_tone_string = 11;
-    LowercaseToneChar       lowercase_tone_char        = 12;
+  // Tags 10-12 were the per-char helpers `uppercase_tone_char`,
+  // `full_uppercase_tone_string` and `lowercase_tone_char` — three
+  // `{ string input }` messages, merged into `tone_case` 2026-11-17.
+  reserved 10, 11, 12;
+  reserved "uppercase_tone_char", "full_uppercase_tone_string", "lowercase_tone_char";
 
-    // --- Per-string compound transforms ---
-    TransformInputCase      transform_input_case       = 20;
+  oneof method {
+    // Per-char (key label) case op.
+    ToneCase           tone_case            = 13;
+
+    // Per-string compound transform.
+    TransformInputCase transform_input_case = 20;
   }
 }
 
 // =========================================================================
-// Per-char request payloads
+// Per-char request payload
 // =========================================================================
 
-// `UppercaseToneChar` uppercases a single char/grapheme using mode-aware
-// tone tables. For multi-character inputs (e.g. "tsh") only the first
-// letter is uppercased. Matches Android `ToneUtilities.uppercaseToneLetter`
-// (`replaceFirstChar`) semantics.
-message UppercaseToneChar { string input = 1; }
+// Which per-char op `ToneCase` applies. Not `LetterCase`: `UPPERCASE_FIRST`
+// leaves the rest of `input` as it is, where `LETTER_CASE_UPPERCASED`
+// (`TransformInputCase`) lowercases it.
+enum ToneCaseKind {
+  // Unset — proto schema mismatch; answered with `FAIL_INVARIANT`.
+  TONE_CASE_KIND_UNSPECIFIED     = 0;
+  // Uppercase a single char/grapheme using mode-aware tone tables; for a
+  // multi-char input (e.g. "tsh") only the first letter. Matches Android
+  // `ToneUtilities.uppercaseToneLetter` (`replaceFirstChar`).
+  TONE_CASE_KIND_UPPERCASE_FIRST = 1;
+  // Uppercase ALL characters using mode-aware tone tables (Caps Lock).
+  // Matches Android `ToneUtilities.fullUppercaseToneLetter`.
+  TONE_CASE_KIND_UPPERCASE_ALL   = 2;
+  // Lowercase a single char/grapheme using mode-aware tone tables. Matches
+  // Android `ToneUtilities.lowercaseToneLetter`.
+  TONE_CASE_KIND_LOWERCASE       = 3;
+}
 
-// `FullUppercaseToneString` uppercases ALL characters in `input` using
-// mode-aware tone tables. Matches Android
-// `ToneUtilities.fullUppercaseToneLetter` (`uppercase()` per char) semantics.
-// Used by Caps Lock paths.
-message FullUppercaseToneString { string input = 1; }
-
-// `LowercaseToneChar` lowercases a single char/grapheme using mode-aware
-// tone tables. Matches Android `ToneUtilities.lowercaseToneLetter`.
-message LowercaseToneChar { string input = 1; }
+message ToneCase {
+  string       input = 1;
+  ToneCaseKind kind  = 2;
+}
 
 // =========================================================================
 // Per-string compound request payloads
@@ -86,9 +97,9 @@ message LowercaseToneChar { string input = 1; }
 
 // `TransformInputCase` applies the LetterCase to `text` per
 // `CaseTransformer.transformForInput` semantics:
-// - LOWERCASED: lowercase per `LowercaseToneChar`
-// - UPPERCASED: first letter upper (`UppercaseToneChar` on first), rest lower
-// - CAPS_LOCKED: full upper per `FullUppercaseToneString`
+// - LOWERCASED: lowercase per `TONE_CASE_KIND_LOWERCASE`
+// - UPPERCASED: first letter upper (`TONE_CASE_KIND_UPPERCASE_FIRST`), rest lower
+// - CAPS_LOCKED: full upper per `TONE_CASE_KIND_UPPERCASE_ALL`
 message TransformInputCase {
   string     text        = 1;
   LetterCase letter_case = 2;

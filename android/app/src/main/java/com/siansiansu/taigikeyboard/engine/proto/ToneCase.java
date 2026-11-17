@@ -6,20 +6,15 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * <pre>
- * `LowercaseToneChar` lowercases a single char/grapheme using mode-aware
- * tone tables. Matches Android `ToneUtilities.lowercaseToneLetter`.
- * </pre>
- *
- * Protobuf type {@code taigi.engine.LowercaseToneChar}
+ * Protobuf type {@code taigi.engine.ToneCase}
  */
 @com.google.protobuf.Generated
-public  final class LowercaseToneChar extends
+public  final class ToneCase extends
     com.google.protobuf.GeneratedMessageLite<
-        LowercaseToneChar, LowercaseToneChar.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.LowercaseToneChar)
-    LowercaseToneCharOrBuilder {
-  private LowercaseToneChar() {
+        ToneCase, ToneCase.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.ToneCase)
+    ToneCaseOrBuilder {
+  private ToneCase() {
     input_ = "";
   }
   public static final int INPUT_FIELD_NUMBER = 1;
@@ -69,50 +64,93 @@ public  final class LowercaseToneChar extends
 
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static final int KIND_FIELD_NUMBER = 2;
+  private int kind_;
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   * @return The enum numeric value on the wire for kind.
+   */
+  @java.lang.Override
+  public int getKindValue() {
+    return kind_;
+  }
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   * @return The kind.
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind getKind() {
+    com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind result = com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind.forNumber(kind_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind.UNRECOGNIZED : result;
+  }
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   * @param value The enum numeric value on the wire for kind to set.
+   */
+  private void setKindValue(int value) {
+      kind_ = value;
+  }
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   * @param value The kind to set.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void setKind(com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind value) {
+    kind_ = value.getNumber();
+
+  }
+  /**
+   * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+   */
+  private void clearKind() {
+
+    kind_ = 0;
+  }
+
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -120,24 +158,24 @@ public  final class LowercaseToneChar extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -148,24 +186,19 @@ public  final class LowercaseToneChar extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ToneCase prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * <pre>
-   * `LowercaseToneChar` lowercases a single char/grapheme using mode-aware
-   * tone tables. Matches Android `ToneUtilities.lowercaseToneLetter`.
-   * </pre>
-   *
-   * Protobuf type {@code taigi.engine.LowercaseToneChar}
+   * Protobuf type {@code taigi.engine.ToneCase}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.LowercaseToneChar)
-      com.siansiansu.taigikeyboard.engine.proto.LowercaseToneCharOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.ToneCase, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.ToneCase)
+      com.siansiansu.taigikeyboard.engine.proto.ToneCaseOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.ToneCase.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -220,7 +253,54 @@ public  final class LowercaseToneChar extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.LowercaseToneChar)
+    /**
+     * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+     * @return The enum numeric value on the wire for kind.
+     */
+    @java.lang.Override
+    public int getKindValue() {
+      return instance.getKindValue();
+    }
+    /**
+     * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+     * @param value The kind to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setKindValue(int value) {
+      copyOnWrite();
+      instance.setKindValue(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+     * @return The kind.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind getKind() {
+      return instance.getKind();
+    }
+    /**
+     * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+     * @param value The enum numeric value on the wire for kind to set.
+     * @return This builder for chaining.
+     */
+    public Builder setKind(com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind value) {
+      copyOnWrite();
+      instance.setKind(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ToneCaseKind kind = 2;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearKind() {
+      copyOnWrite();
+      instance.clearKind();
+      return this;
+    }
+
+    // @@protoc_insertion_point(builder_scope:taigi.engine.ToneCase)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -229,7 +309,7 @@ public  final class LowercaseToneChar extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar();
+        return new com.siansiansu.taigikeyboard.engine.proto.ToneCase();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -237,22 +317,24 @@ public  final class LowercaseToneChar extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "input_",
+            "kind_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0208";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\f" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ToneCase> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.ToneCase.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ToneCase>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -272,24 +354,24 @@ public  final class LowercaseToneChar extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.LowercaseToneChar)
-  private static final com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.ToneCase)
+  private static final com.siansiansu.taigikeyboard.engine.proto.ToneCase DEFAULT_INSTANCE;
   static {
-    LowercaseToneChar defaultInstance = new LowercaseToneChar();
+    ToneCase defaultInstance = new ToneCase();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      LowercaseToneChar.class, defaultInstance);
+      ToneCase.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.ToneCase getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<LowercaseToneChar> PARSER;
+  private static volatile com.google.protobuf.Parser<ToneCase> PARSER;
 
-  public static com.google.protobuf.Parser<LowercaseToneChar> parser() {
+  public static com.google.protobuf.Parser<ToneCase> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

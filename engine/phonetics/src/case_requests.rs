@@ -5,10 +5,10 @@
 //! the envelope's `api::composing_mode` — the TPS layout cases
 //! with the TL tables, as it did while TPS arrived as `"tl"`.
 //!
-//! Returns `None` for an empty `method` oneof (the top-level dispatch
-//! converts that to `ErrorCode::FailInvariant`). Otherwise always returns
-//! `Some(CaseResponse)` — the case ops are infallible by construction
-//! (table lookups + stdlib casing).
+//! Returns `None` for an empty `method` oneof or an unset `ToneCase.kind`
+//! (the top-level dispatch converts that to `ErrorCode::FailInvariant`).
+//! Otherwise always returns `Some(CaseResponse)` — the case ops are
+//! infallible by construction (table lookups + stdlib casing).
 
 use crate::api::composing_mode;
 use crate::case_transform::{
@@ -16,16 +16,19 @@ use crate::case_transform::{
     LetterCase,
 };
 use protos::engine::case_request::Method;
-use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult};
+use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult, ToneCaseKind};
 
 pub fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseResponse> {
     let method = request.method.as_ref()?;
     let mode = composing_mode(config);
 
     let output = match method {
-        Method::UppercaseToneChar(req) => uppercase_tone_char(&req.input, mode),
-        Method::FullUppercaseToneString(req) => full_uppercase_tone_string(&req.input, mode),
-        Method::LowercaseToneChar(req) => lowercase_tone_char(&req.input, mode),
+        Method::ToneCase(req) => match req.kind() {
+            ToneCaseKind::UppercaseFirst => uppercase_tone_char(&req.input, mode),
+            ToneCaseKind::UppercaseAll => full_uppercase_tone_string(&req.input, mode),
+            ToneCaseKind::Lowercase => lowercase_tone_char(&req.input, mode),
+            ToneCaseKind::Unspecified => return None,
+        },
         Method::TransformInputCase(req) => {
             transform_input_case(&req.text, proto_to_letter_case(req.letter_case()), mode)
         }
@@ -61,9 +64,14 @@ fn proto_to_letter_case(proto: protos::engine::LetterCase) -> LetterCase {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{
-        FullUppercaseToneString, LowercaseToneChar, TransformInputCase, UppercaseToneChar,
-    };
+    use protos::engine::{ToneCase, TransformInputCase};
+
+    fn tone_case(input: &str, kind: ToneCaseKind) -> Method {
+        Method::ToneCase(ToneCase {
+            input: input.to_string(),
+            kind: kind as i32,
+        })
+    }
 
     fn config_for(mode: &str) -> AppConfig {
         AppConfig {
@@ -81,9 +89,7 @@ mod tests {
     #[test]
     fn dispatch_uppercase_tone_char_uses_mode_table() {
         let req = CaseRequest {
-            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
-                input: "á".to_string(),
-            })),
+            method: Some(tone_case("á", ToneCaseKind::UppercaseFirst)),
         };
         let resp = handle(&req, &config_for("poj")).expect("response present");
         assert_eq!(unwrap_string(resp), "Á");
@@ -92,9 +98,7 @@ mod tests {
     #[test]
     fn dispatch_full_uppercase_tone_string_all_chars() {
         let req = CaseRequest {
-            method: Some(Method::FullUppercaseToneString(FullUppercaseToneString {
-                input: "tsh".to_string(),
-            })),
+            method: Some(tone_case("tsh", ToneCaseKind::UppercaseAll)),
         };
         let resp = handle(&req, &config_for("tl")).expect("response present");
         assert_eq!(unwrap_string(resp), "TSH");
@@ -103,9 +107,7 @@ mod tests {
     #[test]
     fn dispatch_lowercase_tone_char_uses_table() {
         let req = CaseRequest {
-            method: Some(Method::LowercaseToneChar(LowercaseToneChar {
-                input: "Á".to_string(),
-            })),
+            method: Some(tone_case("Á", ToneCaseKind::Lowercase)),
         };
         let resp = handle(&req, &config_for("poj")).expect("response present");
         assert_eq!(unwrap_string(resp), "á");
@@ -129,9 +131,7 @@ mod tests {
         // trace: `uppercase_tone_char` maps `ⁿ` → `ᴺ` (mode-independent
         // shortcut); the OFF fold lowers it back.
         let marker_key = CaseRequest {
-            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
-                input: "\u{207f}".to_string(),
-            })),
+            method: Some(tone_case("\u{207f}", ToneCaseKind::UppercaseFirst)),
         };
         let default = handle(&marker_key, &config_for("poj")).expect("response present");
         assert_eq!(unwrap_string(default), "\u{1d3a}");
@@ -149,15 +149,9 @@ mod tests {
     fn dispatch_tps_layout_cases_like_tl() {
         let letter_case = protos::engine::LetterCase::CapsLocked as i32;
         let methods = [
-            Method::UppercaseToneChar(UppercaseToneChar {
-                input: "a̋".to_string(),
-            }),
-            Method::FullUppercaseToneString(FullUppercaseToneString {
-                input: "tshiâⁿ".to_string(),
-            }),
-            Method::LowercaseToneChar(LowercaseToneChar {
-                input: "Á".to_string(),
-            }),
+            tone_case("a̋", ToneCaseKind::UppercaseFirst),
+            tone_case("tshiâⁿ", ToneCaseKind::UppercaseAll),
+            tone_case("Á", ToneCaseKind::Lowercase),
             Method::TransformInputCase(TransformInputCase {
                 text: "tsh".to_string(),
                 letter_case,
@@ -172,12 +166,18 @@ mod tests {
             assert_eq!(tps, tl, "{req:?}");
         }
         let req = CaseRequest {
-            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
-                input: "a̋".to_string(),
-            })),
+            method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
         };
         let tps = handle(&req, &config_for("tps")).expect("response present");
         assert_eq!(unwrap_string(tps), "A̋");
+    }
+
+    #[test]
+    fn dispatch_returns_none_for_unspecified_tone_case_kind() {
+        let req = CaseRequest {
+            method: Some(tone_case("a", ToneCaseKind::Unspecified)),
+        };
+        assert!(handle(&req, &config_for("tl")).is_none());
     }
 
     #[test]
@@ -205,9 +205,7 @@ mod tests {
     #[test]
     fn dispatch_reads_mode_from_envelope() {
         let req = CaseRequest {
-            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
-                input: "a̋".to_string(),
-            })),
+            method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
         };
         let tl_resp = handle(&req, &config_for("tl")).expect("response present");
         assert_eq!(unwrap_string(tl_resp), "A̋");
@@ -224,9 +222,7 @@ mod tests {
     fn dispatch_unknown_input_mode_string_defaults_to_tl() {
         // composing_mode contract: anything not "poj"/"english" → TL.
         let req = CaseRequest {
-            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
-                input: "a̋".to_string(),
-            })),
+            method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
         };
         let resp = handle(&req, &config_for("xxx")).expect("response present");
         assert_eq!(unwrap_string(resp), "A̋");
