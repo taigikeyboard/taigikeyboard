@@ -354,7 +354,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   indicator (the panel indicator — GNOME Shell shows the symbol in the top bar; the component
   file names the root as `<icon_prop_key>` for the other panels) and whose
   sub-properties mirror the Mac's input-source menu row for row
-  (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`): the two switch rows
+  (`InputSourceMenuRenderer.swift`, `TaigiInputController+Menu.swift` `menu()`): the two switch rows
   under their Shortcuts-pane names with the recorded chord in the tooltip, a separator, TaigiKeyboard Settings
   (`PropertyActivate` → spawn the settings window on the last pane), a separator, About
   (settings window on the About pane) — the shared list's Check for Updates row is skipped (§ L10).
