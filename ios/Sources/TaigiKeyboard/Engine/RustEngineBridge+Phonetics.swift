@@ -108,6 +108,18 @@ public extension RustEngineBridge {
         return boolDispatch(method: .isSpacedPunctuation(payload), op: "isSpacedPunctuation")
     }
 
+    /// What a second space press writes in place of the first space (`. ` or
+    /// `。`), or nil for a plain space — the engine's rule and window. Nil
+    /// when the engine fails: a plain space.
+    static func doubleSpacePeriod(textBeforeCaret: String, millisSincePlainSpace: Int64, fullWidth: Bool) -> String? {
+        var payload = Taigi_Engine_DoubleSpacePeriod()
+        payload.textBeforeCaret = textBeforeCaret
+        payload.millisSincePlainSpace = millisSincePlainSpace
+        payload.fullWidth = fullWidth
+        let period = stringDispatch(method: .doubleSpacePeriod(payload), input: "", op: "doubleSpacePeriod")
+        return period.isEmpty ? nil : period
+    }
+
     /// The digit-tone spelling of a TL reading that the web dictionaries
     /// search by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every
     /// platform asks. The reading as written when the engine fails.

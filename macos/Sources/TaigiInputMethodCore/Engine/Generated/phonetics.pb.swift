@@ -102,6 +102,14 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     set {method = .isSpacedPunctuation(newValue)}
   }
 
+  public var doubleSpacePeriod: Taigi_Engine_DoubleSpacePeriod {
+    get {
+      if case .doubleSpacePeriod(let v)? = method {return v}
+      return Taigi_Engine_DoubleSpacePeriod()
+    }
+    set {method = .doubleSpacePeriod(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
@@ -117,6 +125,7 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     case externalLookupDigitForm(Taigi_Engine_ExternalLookupDigitForm)
     case isJoinerPunctuation(Taigi_Engine_IsJoinerPunctuation)
     case isSpacedPunctuation(Taigi_Engine_IsSpacedPunctuation)
+    case doubleSpacePeriod(Taigi_Engine_DoubleSpacePeriod)
 
   }
 
@@ -239,6 +248,34 @@ public nonisolated struct Taigi_Engine_IsSpacedPunctuation: Sendable {
   // methods supported on all messages.
 
   public var text: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `DoubleSpacePeriod` — what a second space press writes in place of the
+/// first space: `. ` (half-width) or `。` (`full_width`, no space after it).
+/// It earns one only when `millis_since_plain_space` is under the 300 ms
+/// window and `text_before_caret` ends in one ASCII space after a letter,
+/// number or combining mark — a code point, so a supplementary-plane Hanji and
+/// POJ's U+0358 count; punctuation, emoji or a second space do not. Answers
+/// `StringResult`; empty = write a plain space. Only the space and the code
+/// point before it matter, so the platform sends a short tail of the context
+/// (iOS two Characters, Android three UTF-16 units). The platform asks only when the
+/// previous event wrote a plain space, nothing is selected and nothing is
+/// composing (a composing space commits instead); English mode sends
+/// `full_width` false.
+public nonisolated struct Taigi_Engine_DoubleSpacePeriod: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var textBeforeCaret: String = String()
+
+  public var millisSincePlainSpace: Int64 = 0
+
+  public var fullWidth: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -420,7 +457,7 @@ fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
 nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{d}tl_to_poj\0\u{4}\u{5}get_tone_variations\0\u{4}\u{f}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{4}\u{5}is_attaching_punctuation\0\u{3}external_lookup_digit_form\0\u{3}is_joiner_punctuation\0\u{3}is_spaced_punctuation\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{b}poj_to_tl\0\u{b}normalize_input\0\u{b}derive_notone\0\u{b}derive_abbrev\0\u{b}derive_custom_search_keys\0\u{b}derive_custom_query_key\0\u{b}strip_tone\0\u{b}nfd_preprocess_for_lookup\0\u{b}tl_numeric_to_tps\0\u{c}\u{a}\u{1}\u{c}\u{c}\u{1}\u{c}\u{e}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{17}\u{1}\u{c}\u{1e}\u{1}\u{c}\u{b}\u{1}\u{c}\u{13}\u{1}\u{c} \u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{d}tl_to_poj\0\u{4}\u{5}get_tone_variations\0\u{4}\u{f}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{4}\u{5}is_attaching_punctuation\0\u{3}external_lookup_digit_form\0\u{3}is_joiner_punctuation\0\u{3}is_spaced_punctuation\0\u{3}double_space_period\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{b}poj_to_tl\0\u{b}normalize_input\0\u{b}derive_notone\0\u{b}derive_abbrev\0\u{b}derive_custom_search_keys\0\u{b}derive_custom_query_key\0\u{b}strip_tone\0\u{b}nfd_preprocess_for_lookup\0\u{b}tl_numeric_to_tps\0\u{c}\u{a}\u{1}\u{c}\u{c}\u{1}\u{c}\u{e}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{17}\u{1}\u{c}\u{1e}\u{1}\u{c}\u{b}\u{1}\u{c}\u{13}\u{1}\u{c} \u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -545,6 +582,19 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
           self.method = .isSpacedPunctuation(v)
         }
       }()
+      case 44: try {
+        var v: Taigi_Engine_DoubleSpacePeriod?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .doubleSpacePeriod(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .doubleSpacePeriod(v)
+        }
+      }()
       default: break
       }
     }
@@ -591,6 +641,10 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
     case .isSpacedPunctuation?: try {
       guard case .isSpacedPunctuation(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 43)
+    }()
+    case .doubleSpacePeriod?: try {
+      guard case .doubleSpacePeriod(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 44)
     }()
     case nil: break
     }
@@ -838,6 +892,46 @@ nonisolated extension Taigi_Engine_IsSpacedPunctuation: SwiftProtobuf.Message, S
 
   public static func ==(lhs: Taigi_Engine_IsSpacedPunctuation, rhs: Taigi_Engine_IsSpacedPunctuation) -> Bool {
     if lhs.text != rhs.text {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_DoubleSpacePeriod: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DoubleSpacePeriod"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}text_before_caret\0\u{3}millis_since_plain_space\0\u{3}full_width\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.textBeforeCaret) }()
+      case 2: try { try decoder.decodeSingularInt64Field(value: &self.millisSincePlainSpace) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.fullWidth) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.textBeforeCaret.isEmpty {
+      try visitor.visitSingularStringField(value: self.textBeforeCaret, fieldNumber: 1)
+    }
+    if self.millisSincePlainSpace != 0 {
+      try visitor.visitSingularInt64Field(value: self.millisSincePlainSpace, fieldNumber: 2)
+    }
+    if self.fullWidth != false {
+      try visitor.visitSingularBoolField(value: self.fullWidth, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_DoubleSpacePeriod, rhs: Taigi_Engine_DoubleSpacePeriod) -> Bool {
+    if lhs.textBeforeCaret != rhs.textBeforeCaret {return false}
+    if lhs.millisSincePlainSpace != rhs.millisSincePlainSpace {return false}
+    if lhs.fullWidth != rhs.fullWidth {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -15,6 +15,7 @@ import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.LetterCase
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.doubleSpacePeriod
 import com.siansiansu.taigikeyboard.engine.isAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.isJoinerPunctuation
 import com.siansiansu.taigikeyboard.engine.isSpacedPunctuation
@@ -74,6 +75,7 @@ internal class TextInputKeyHandler(
         private const val GRAPHEME_LOOKBEHIND = 64
 
         // UTF-16 look-behind for the double-space check: a surrogate pair plus the space.
+        // CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.doubleSpaceLookbehind` (Characters).
         private const val DOUBLE_SPACE_LOOKBEHIND = 3
     }
 
@@ -435,10 +437,10 @@ internal class TextInputKeyHandler(
     }
 
     /**
-     * Writes a space, or — when the previous event was a plain space a moment
-     * ago and the text before it earns a period — replaces that space with
-     * [doubleSpacePeriodReplacement]. Always on, no setting. Returns the
-     * period written, or null for a plain space.
+     * Writes a space, or — when the previous event was a plain space, nothing
+     * is selected and the engine's `doubleSpacePeriod` earns a period —
+     * replaces that space with it. Always on, no setting. Returns the period
+     * written, or null for a plain space.
      *
      * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.insertSpaceOrDoubleSpacePeriod`.
      */
@@ -446,15 +448,14 @@ internal class TextInputKeyHandler(
         ic: InputConnection,
         isFullWidthPunctuation: Boolean,
     ): String? {
+        // The selection is read last: most second spaces earn no period.
         val replacement =
-            if (taigikeyboard.followsRecentPlainSpace && ic.getSelectedText(0).isNullOrEmpty()) {
-                doubleSpacePeriodReplacement(
-                    ic.getTextBeforeCursor(DOUBLE_SPACE_LOOKBEHIND, 0),
-                    isFullWidthPunctuation,
-                )
-            } else {
-                null
-            }
+            taigikeyboard.millisSincePlainSpace
+                ?.let { millis ->
+                    ic.getTextBeforeCursor(DOUBLE_SPACE_LOOKBEHIND, 0)?.let { text ->
+                        RustEngineBridge.doubleSpacePeriod(text.toString(), millis, isFullWidthPunctuation)
+                    }
+                }?.takeIf { ic.getSelectedText(0).isNullOrEmpty() }
         if (replacement == null) {
             ic.commitText(" ", 1)
             taigikeyboard.notePlainSpace()
@@ -664,37 +665,6 @@ internal fun editorActionForEnter(imeOptions: Int): Int? {
 
         else -> null
     }
-}
-
-/**
- * What a double space writes in place of its first space, or null when
- * [textBeforeCaret] does not earn a period: it must end in one ASCII space
- * after a letter, number or combining mark — a code point, so a
- * supplementary-plane hanji and POJ's U+0358 both count, and punctuation,
- * emoji or a second space do not. Full-width punctuation writes `。` with no
- * space; half-width writes `. `.
- *
- * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.doubleSpacePeriodReplacement`.
- * Drift causes silent divergence.
- */
-internal fun doubleSpacePeriodReplacement(
-    textBeforeCaret: CharSequence?,
-    isFullWidthPunctuation: Boolean,
-): String? {
-    val text = textBeforeCaret ?: return null
-    if (text.length < 2 || text[text.length - 1] != ' ') return null
-    val earnsPeriod =
-        when (Character.getType(Character.codePointBefore(text, text.length - 1)).toByte()) {
-            Character.UPPERCASE_LETTER, Character.LOWERCASE_LETTER, Character.TITLECASE_LETTER,
-            Character.MODIFIER_LETTER, Character.OTHER_LETTER,
-            Character.DECIMAL_DIGIT_NUMBER, Character.LETTER_NUMBER, Character.OTHER_NUMBER,
-            Character.NON_SPACING_MARK, Character.ENCLOSING_MARK, Character.COMBINING_SPACING_MARK,
-            -> true
-
-            else -> false
-        }
-    if (!earnsPeriod) return null
-    return if (isFullWidthPunctuation) "。" else ". "
 }
 
 /**

@@ -83,6 +83,15 @@ class RustEngineBridgeTest {
         assertFalse(RustEngineBridge.isSpacedPunctuation("("))
     }
 
+    // trace: engine `double_space_period` — 'a' Ll before the space, window
+    // `0..300` ms; "? " ends in punctuation.
+    @Test fun op_doubleSpacePeriod_periodOnlyInsideTheWindow() {
+        assertEquals(". ", RustEngineBridge.doubleSpacePeriod("a ", 0, fullWidth = false))
+        assertEquals("。", RustEngineBridge.doubleSpacePeriod("a ", 299, fullWidth = true))
+        assertNull(RustEngineBridge.doubleSpacePeriod("? ", 0, fullWidth = false))
+        assertNull(RustEngineBridge.doubleSpacePeriod("a ", 300, fullWidth = false))
+    }
+
     // The engine's digit-tone fold (`phonetics::external_lookup`, full table
     // pinned there) through the bridge `ExternalLookupURLBuilder` reads; the
     // `o͘` row is the parity-correction (the Kotlin copy left `ho͘2`).

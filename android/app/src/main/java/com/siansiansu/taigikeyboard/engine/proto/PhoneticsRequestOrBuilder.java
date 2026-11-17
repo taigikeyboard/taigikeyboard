@@ -133,5 +133,16 @@ public interface PhoneticsRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation getIsSpacedPunctuation();
 
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   * @return Whether the doubleSpacePeriod field is set.
+   */
+  boolean hasDoubleSpacePeriod();
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   * @return The doubleSpacePeriod.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod getDoubleSpacePeriod();
+
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.MethodCase getMethodCase();
 }

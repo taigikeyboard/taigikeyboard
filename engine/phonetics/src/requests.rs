@@ -7,7 +7,8 @@
 //! - This file owns the dispatch + result-shape construction.
 //! - `normalization` owns the InputNormalizer port (NFD / combining-mark
 //!   mechanics).
-//! - `punctuation` and `external_lookup` hold the two platform text helpers.
+//! - `punctuation`, `double_space` and `external_lookup` hold the platform
+//!   text helpers.
 //! - `tps_adjust` owns the TPSAdjustmentBundle port (collapsed entry).
 //! - `tone_variations` owns the GetToneVariations init-pull table builder.
 //! - `case_requests` owns the `CaseRequest` handler, re-exported here as
@@ -84,6 +85,15 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
         }),
         Method::IsSpacedPunctuation(payload) => PhonResult::BoolResult(BoolResult {
             value: crate::api::is_spaced_punctuation(&payload.text),
+        }),
+        Method::DoubleSpacePeriod(payload) => PhonResult::StringResult(StringResult {
+            output: crate::double_space::double_space_period(
+                &payload.text_before_caret,
+                payload.millis_since_plain_space,
+                payload.full_width,
+            )
+            .unwrap_or("")
+            .to_string(),
         }),
         Method::ExternalLookupDigitForm(payload) => PhonResult::StringResult(StringResult {
             output: crate::external_lookup::digit_tone_form(&payload.reading),

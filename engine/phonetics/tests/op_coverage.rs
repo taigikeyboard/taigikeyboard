@@ -8,9 +8,10 @@ use phonetics::requests::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, ExternalLookupDigitForm, GetToneVariations, IsAttachingPunctuation,
-    IsJoinerPunctuation, IsSpacedPunctuation, IsTpsToneMark, PhoneticsRequest, PhoneticsResponse,
-    StringResult, TlDisplayToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
+    AppConfig, BoolResult, DoubleSpacePeriod, ExternalLookupDigitForm, GetToneVariations,
+    IsAttachingPunctuation, IsJoinerPunctuation, IsSpacedPunctuation, IsTpsToneMark,
+    PhoneticsRequest, PhoneticsResponse, StringResult, TlDisplayToTps, TlToPoj,
+    ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
@@ -487,6 +488,62 @@ fn is_spaced_punctuation_answers_through_the_dispatcher() {
         }));
         assert_eq!(bool_result(&resp), expected, "{text:?}");
     }
+}
+
+fn double_space(text: &str, millis: i64, full_width: bool) -> String {
+    string_result(&run(Method::DoubleSpacePeriod(DoubleSpacePeriod {
+        text_before_caret: text.to_string(),
+        millis_since_plain_space: millis,
+        full_width,
+    })))
+}
+
+#[test]
+fn double_space_period_after_a_letter_number_or_mark() {
+    // trace: last code point before the space — "a" Ll, "7" Nd, "á" Ll,
+    // "o͘" ends in U+0358 Mn, "台" Lo, "𠢕" U+20895 Lo (supplementary plane);
+    // all in `GeneralCategoryGroup::{Letter, Number, Mark}`.
+    for text in [
+        "a ",
+        "7 ",
+        "á ",
+        "o\u{0358} ",
+        "台 ",
+        "\u{20895} ",
+        "x\u{20895} ",
+    ] {
+        assert_eq!(double_space(text, 0, false), ". ", "{text:?}");
+        assert_eq!(double_space(text, 299, true), "。", "{text:?}");
+    }
+}
+
+#[test]
+fn double_space_keeps_the_space_after_punctuation_whitespace_or_emoji() {
+    // trace: "😀" = U+1F600 So; "\t " ends in a tab (Cc) before the space;
+    // "a" / "ab" end in no space; " " has nothing before its space.
+    for text in [
+        ". ",
+        "。 ",
+        "? ",
+        "  ",
+        "\t ",
+        "\n ",
+        "\u{1F600} ",
+        " ",
+        "",
+        "a",
+        "ab",
+    ] {
+        assert_eq!(double_space(text, 0, false), "", "{text:?}");
+    }
+}
+
+#[test]
+fn double_space_window_is_under_300_ms() {
+    // trace: `DOUBLE_SPACE_WINDOW_MS` = 300, half-open `0..300`.
+    assert_eq!(double_space("a ", 299, false), ". ");
+    assert_eq!(double_space("a ", 300, false), "");
+    assert_eq!(double_space("a ", -1, false), "");
 }
 
 // ---- TpsInputAdjust branch coverage (mirrors commit-1 platform fixtures)

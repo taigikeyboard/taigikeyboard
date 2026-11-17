@@ -29,6 +29,7 @@ public  final class PhoneticsRequest extends
     EXTERNAL_LOOKUP_DIGIT_FORM(41),
     IS_JOINER_PUNCTUATION(42),
     IS_SPACED_PUNCTUATION(43),
+    DOUBLE_SPACE_PERIOD(44),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -53,6 +54,7 @@ public  final class PhoneticsRequest extends
         case 41: return EXTERNAL_LOOKUP_DIGIT_FORM;
         case 42: return IS_JOINER_PUNCTUATION;
         case 43: return IS_SPACED_PUNCTUATION;
+        case 44: return DOUBLE_SPACE_PERIOD;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -579,6 +581,56 @@ public  final class PhoneticsRequest extends
    */
   private void clearIsSpacedPunctuation() {
     if (methodCase_ == 43) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int DOUBLE_SPACE_PERIOD_FIELD_NUMBER = 44;
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   */
+  @java.lang.Override
+  public boolean hasDoubleSpacePeriod() {
+    return methodCase_ == 44;
+  }
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod getDoubleSpacePeriod() {
+    if (methodCase_ == 44) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   */
+  private void setDoubleSpacePeriod(com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 44;
+  }
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   */
+  private void mergeDoubleSpacePeriod(com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 44 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 44;
+  }
+  /**
+   * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+   */
+  private void clearDoubleSpacePeriod() {
+    if (methodCase_ == 44) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1197,6 +1249,54 @@ public  final class PhoneticsRequest extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+     */
+    @java.lang.Override
+    public boolean hasDoubleSpacePeriod() {
+      return instance.hasDoubleSpacePeriod();
+    }
+    /**
+     * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod getDoubleSpacePeriod() {
+      return instance.getDoubleSpacePeriod();
+    }
+    /**
+     * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+     */
+    public Builder setDoubleSpacePeriod(com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod value) {
+      copyOnWrite();
+      instance.setDoubleSpacePeriod(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+     */
+    public Builder setDoubleSpacePeriod(
+        com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDoubleSpacePeriod(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+     */
+    public Builder mergeDoubleSpacePeriod(com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod value) {
+      copyOnWrite();
+      instance.mergeDoubleSpacePeriod(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DoubleSpacePeriod double_space_period = 44;</code>
+     */
+    public Builder clearDoubleSpacePeriod() {
+      copyOnWrite();
+      instance.clearDoubleSpacePeriod();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsRequest)
   }
   @java.lang.Override
@@ -1224,10 +1324,11 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
             com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.class,
             com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation.class,
+            com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\r+\t\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000\"<\u0000" +
-              "#<\u0000(<\u0000)<\u0000*<\u0000+<\u0000";
+              "\u0000\n\u0001\u0000\r,\n\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000\"<\u0000" +
+              "#<\u0000(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

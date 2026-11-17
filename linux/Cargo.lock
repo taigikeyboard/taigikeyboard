@@ -2042,6 +2042,7 @@ dependencies = [
  "regex",
  "thiserror 2.0.21",
  "unicode-normalization",
+ "unicode-properties",
 ]
 
 [[package]]

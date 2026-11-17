@@ -219,20 +219,30 @@ extension ActionHandler {
         return true
     }
 
-    /// Writes a space, or — when the previous event was a plain space a moment
-    /// ago and the text before it earns a period — replaces that space with
-    /// `doubleSpacePeriodReplacement`. Always on, no setting. Returns the
-    /// period written, or nil for a plain space.
+    /// Writes a space, or — when the previous event was a plain space, nothing
+    /// is selected and the engine's `doubleSpacePeriod` earns a period —
+    /// replaces that space with it. Always on, no setting. Returns the period
+    /// written, or nil for a plain space.
     // CROSS-PLATFORM INVARIANT — mirrors Android
     // TextInputKeyHandler.commitSpaceOrDoubleSpacePeriod. Drift causes silent divergence.
+    // Characters of context the double-space rule reads: the space and the one before it.
+    // CROSS-PLATFORM INVARIANT — mirrors Android TextInputKeyHandler.DOUBLE_SPACE_LOOKBEHIND (UTF-16 units).
+    private static let doubleSpaceLookbehind = 2
+
     @discardableResult
     private func insertSpaceOrDoubleSpacePeriod(isFullWidthPunctuation: Bool) -> String? {
         let proxy = controllerContext.textDocumentProxy
-        let replacement: String? = if followsRecentPlainSpace, (proxy.selectedText ?? "").isEmpty {
-            Self.doubleSpacePeriodReplacement(
-                textBeforeCaret: proxy.documentContextBeforeInput,
-                isFullWidthPunctuation: isFullWidthPunctuation,
-            )
+        // The selection is read last: most second spaces earn no period.
+        let replacement: String? = if let millis = millisSincePlainSpace,
+                                      let context = proxy.documentContextBeforeInput,
+                                      let period = RustEngineBridge.doubleSpacePeriod(
+                                          textBeforeCaret: String(context.suffix(Self.doubleSpaceLookbehind)),
+                                          millisSincePlainSpace: millis,
+                                          fullWidth: isFullWidthPunctuation,
+                                      ),
+                                      (proxy.selectedText ?? "").isEmpty
+        {
+            period
         } else {
             nil
         }
@@ -244,27 +254,6 @@ extension ActionHandler {
         hostText.deleteBackward()
         hostText.insert(replacement)
         return replacement.trimmingCharacters(in: .whitespaces)
-    }
-
-    /// What a double space writes in place of its first space, or nil when
-    /// `textBeforeCaret` does not earn a period: it must end in one ASCII space
-    /// after a letter, number or combining mark — a code point, so a
-    /// supplementary-plane hanji and POJ's U+0358 both count, and punctuation,
-    /// emoji or a second space do not. Full-width punctuation writes `。` with
-    /// no space; half-width writes `. `.
-    // CROSS-PLATFORM INVARIANT — mirrors Android TextInputKeyHandler.kt
-    // `doubleSpacePeriodReplacement`. Drift causes silent divergence.
-    static func doubleSpacePeriodReplacement(textBeforeCaret: String?, isFullWidthPunctuation: Bool) -> String? {
-        guard let scalars = textBeforeCaret?.unicodeScalars, scalars.last == " " else { return nil }
-        guard let previous = scalars.dropLast().last else { return nil }
-        switch previous.properties.generalCategory {
-        case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
-             .decimalNumber, .letterNumber, .otherNumber,
-             .nonspacingMark, .enclosingMark, .spacingMark:
-            return isFullWidthPunctuation ? "。" : ". "
-        default:
-            return nil
-        }
     }
 
     // MARK: - Backspace
