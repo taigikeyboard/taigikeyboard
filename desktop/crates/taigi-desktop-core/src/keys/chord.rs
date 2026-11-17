@@ -441,7 +441,7 @@ mod tests {
             }
             // The Telex keys and the bare slot row are typing keys under one
             // rule, so a chord recorded under either scheme stays live.
-            for key in crate::keys::ToneInputScheme::TELEX_KEYS
+            for key in dispatch::TELEX_KEYS
                 .chars()
                 .map(String::from)
                 .chain(CandidateSlotKeySet::BARE_KEY_ROW.map(String::from))
