@@ -164,13 +164,14 @@ body.options {
   scroll-margin-top: 16px;
 }
 
-/* Chrome's section title (settings-section h2): regular weight, 108%. */
+/* The section title over its card (Chrome's settings-section h2, but bold,
+   maintainer 2026-11-18): one step above the in-card group headings. */
 .options .sidebar-section summary {
   min-height: 0;
   margin: 21px 0 12px;
   padding: 8px 0 4px;
-  font-size: 108%;
-  font-weight: 400;
+  font-size: 116%;
+  font-weight: 600;
   line-height: 20px;
   cursor: default;
   pointer-events: none;
