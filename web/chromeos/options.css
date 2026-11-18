@@ -212,9 +212,18 @@ body.options {
   padding-left: 60px;
 }
 
+/* A group's heading inside a card stands apart from its rows: Chrome's
+   cr-title-text weight and colour, and the row line above it once a shown
+   row precedes it. */
 .options .setting-group {
   margin: 0;
-  padding: 16px 20px 4px;
+  padding: 20px 20px 8px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.options .setting:not([hidden]) ~ .setting-group {
+  border-top: 1px solid var(--hairline);
 }
 
 /* Chrome's dropdown (md-select): an outlined 200px box, its text
