@@ -229,28 +229,15 @@ impl ListLayout for PopupListLayout {
         let RowWidths { widths, slot, gap } = self.visual_row_widths(cells, settings)?;
         // The same budget a collapsed horizontal-expandable row packs to, so
         // the two modes keep one window width once the list runs past a row.
+        // The floor is the cells' extent only: the window adds the arrows
+        // itself.
         let packed = HorizontalPageLayout::pack(
             &widths,
             slot,
             HorizontalPageLayout::row_budget(slot, page_size),
             page_size,
         );
-        let mut starts = Vec::new();
-        let mut index = 0;
-        for page in &packed.pages {
-            if page.is_empty() {
-                continue;
-            }
-            starts.push(index);
-            index += page.len();
-        }
-        // The cells' extent only: the window adds the arrows itself.
-        let floor = if packed.pages.len() > 1 {
-            (packed.page_budget - gap).max(0.0).ceil() as u32
-        } else {
-            0
-        };
-        Some((starts, floor))
+        Some(packed.page_starts_and_floor(cells.len(), page_size, gap))
     }
 
     fn layout(
@@ -477,5 +464,23 @@ mod tests {
             .expect("horizontal");
         assert!(floor > 0);
         assert_eq!(floor, other_floor);
+    }
+
+    #[test]
+    fn cells_past_the_packer_take_equal_pages() {
+        // Cells past MAX_DISPLAY_CANDIDATES take equal pages, not one long
+        // last page.
+        let layout = PopupListLayout::new(Arc::new(FixedRuler));
+        let count = taigi_desktop_core::candidates::MAX_DISPLAY_CANDIDATES + 20;
+        let cells = vec![CandidateCellContent::new("字", None); count];
+        let (starts, _) = layout
+            .horizontal_page_starts(
+                &cells,
+                &settings_with(CandidateLayout::Horizontal),
+                PAGE_SIZE,
+            )
+            .expect("horizontal");
+        let last = *starts.last().expect("starts");
+        assert!(count - last <= PAGE_SIZE);
     }
 }

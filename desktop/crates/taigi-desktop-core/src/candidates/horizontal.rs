@@ -96,6 +96,34 @@ impl HorizontalPageLayout {
         Self { pages, page_budget }
     }
 
+    /// The page starts of a `count`-long list and the content width every
+    /// page keeps once the list runs past one page (0 while it fits one), so
+    /// the window does not change width from page to page — the session's
+    /// `ListLayout::horizontal_page_starts`. The packed pages first, then
+    /// equal runs of `page_size` for the cells past what [`Self::pack`]
+    /// takes. `trailing_gap`: the gap the measured widths count after each
+    /// cell, which the last cell of a page does not draw.
+    pub fn page_starts_and_floor(
+        &self,
+        count: usize,
+        page_size: usize,
+        trailing_gap: f32,
+    ) -> (Vec<usize>, u32) {
+        let mut starts = Vec::with_capacity(self.pages.len());
+        let mut index = 0;
+        for page in &self.pages {
+            starts.push(index);
+            index += page.len();
+        }
+        starts.extend((index..count).step_by(page_size.max(1)));
+        let floor = if starts.len() > 1 {
+            (self.page_budget - trailing_gap).max(0.0).ceil() as u32
+        } else {
+            0
+        };
+        (starts, floor)
+    }
+
     pub(crate) fn candidate_count(&self) -> usize {
         self.pages.iter().map(Vec::len).sum()
     }
@@ -344,6 +372,40 @@ mod tests {
             .iter()
             .map(|page| page.iter().map(|slot| slot.candidate_index).collect())
             .collect()
+    }
+
+    #[test]
+    fn a_list_on_one_page_keeps_no_floor() {
+        // trace: 5 cells floor to the 10 slot, 50 ≤ budget 90 → one page.
+        let (starts, floor) = pack(&[5.0; 5]).page_starts_and_floor(5, NINE, 0.0);
+        assert_eq!(starts, [0]);
+        assert_eq!(floor, 0);
+    }
+
+    #[test]
+    fn a_list_past_one_page_keeps_the_budget_less_the_trailing_gap() {
+        // trace: 20 slot-wide cells → pages 9, 9, 2; budget 9 × 10 = 90.
+        let layout = pack(&[5.0; 20]);
+        assert_eq!(
+            layout.page_starts_and_floor(20, NINE, 0.0),
+            (vec![0, 9, 18], 90)
+        );
+        // 90 - 2.5 = 87.5, rounded up.
+        assert_eq!(layout.page_starts_and_floor(20, NINE, 2.5).1, 88);
+    }
+
+    #[test]
+    fn cells_past_the_packer_take_equal_pages() {
+        let count = MAX_DISPLAY_CANDIDATES + 20;
+        let (starts, _) = pack(&vec![5.0; count]).page_starts_and_floor(count, NINE, 0.0);
+        let tail: Vec<usize> = starts
+            .iter()
+            .copied()
+            .filter(|&start| start >= MAX_DISPLAY_CANDIDATES)
+            .collect();
+        // trace: 200 packed = 22 pages of 9 + one of 2, so the packed pages
+        // end at 200 and the tail runs 200, 209, 218.
+        assert_eq!(tail, [200, 209, 218]);
     }
 
     #[test]

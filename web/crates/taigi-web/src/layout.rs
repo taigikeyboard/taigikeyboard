@@ -226,30 +226,17 @@ impl PageListLayout {
         // The collapsed horizontal-expandable row's packing
         // (`ExpandableListModel::collapsed_row`), so the two layouts break at
         // the same cell and keep one window width.
-        let packed = HorizontalPageLayout::pack_with_chrome(
+        // Every page keeps the packing budget as its width once the list runs
+        // past one (`HorizontalCandidatePanel.rebuildVisiblePage` on macOS).
+        // The cell widths count no gap, so there is none to leave out.
+        HorizontalPageLayout::pack_with_chrome(
             &row.cell_widths,
             row.slot_width,
             maximum_window_width,
             row.chrome_width,
             page_size,
-        );
-        let mut starts = Vec::with_capacity(packed.pages.len());
-        let mut index = 0;
-        for page in &packed.pages {
-            starts.push(index);
-            index += page.len();
-        }
-        // Past what the packer takes: equal pages, as an unmeasured list has.
-        starts.extend((index..count).step_by(page_size.max(1)));
-        // Once the list runs past one page, every page keeps the packing
-        // budget as its width (`HorizontalCandidatePanel.rebuildVisiblePage`
-        // on macOS); a list that fits one page stays short.
-        let floor = if starts.len() > 1 {
-            packed.page_budget.ceil() as u32
-        } else {
-            0
-        };
-        (starts, floor)
+        )
+        .page_starts_and_floor(count, page_size, 0.0)
     }
 }
 
