@@ -80,11 +80,6 @@ enum GlobalShortcutPolicy {
 
 /// A recording field for one shortcut row, composing tier or global.
 ///
-/// An `NSSearchField` subclass because that is the shape a user has already
-/// learnt from every other shortcut field on the Mac: focus drives recording,
-/// the placeholder says what the field wants, and the cancel button clears the
-/// row.
-///
 /// Both tiers, since 2026-08-26. The global rows used
 /// `KeyboardShortcuts.Recorder` until then, and it refuses a modifier-less key
 /// outright — `RecorderCocoa.swift:404-410` beeps and swallows the event
@@ -96,9 +91,8 @@ enum GlobalShortcutPolicy {
 ///
 /// Refusing is part of the job. A user who recorded `a` here would have no way
 /// left to type the letter, so the keys a syllable is spelled with are turned
-/// down — beep, and the reason in the placeholder — rather than accepted
-/// (`KeyRules.press`). What each tier refuses ON TOP of that is
-/// `additionalRejection`'s to say.
+/// down with a beep rather than accepted (`KeyRules.press`). What each tier
+/// refuses ON TOP of that is `additionalRejection`'s to say.
 struct ShortcutKeyRecorder: NSViewRepresentable {
     /// The chord as stored, or nil for an empty row.
     let chord: ComposingKeyChord?
@@ -134,56 +128,85 @@ struct ShortcutKeyRecorder: NSViewRepresentable {
     }
 }
 
-/// The field itself.
-final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
+/// The field itself: a search field — the shape a shortcut field has on the
+/// Mac, capsule, centred text and clear button — that never edits text.
+///
+/// Neither editable nor selectable (until 2026-11-19 it was both), so focus
+/// installs no field editor. Recording through the editor failed on device:
+/// AppKit ends and restarts it on its own — setting the placeholder while it
+/// is installed does it (`NSCell _restartEditingWithTextView:`) — which tore
+/// sessions down mid-begin, and the clear button took the first click on a
+/// bound row. Rectangle's recorder (`MASShortcutView`) records without a
+/// text editor for the same reason. Being the first responder IS
+/// recording: a click or Tab begins it, resigning ends it, nothing in
+/// between; the clicks are this class's own (`mouseDown`).
+final class ShortcutKeyRecorderField: NSSearchField {
     /// Upstream's width for the same control, so a section mixing the two does
     /// not step (`KeyboardShortcuts.RecorderCocoa`).
     private static let minimumWidth: Double = 130
 
-    var language: DisplayLanguageStore?
+    var language: DisplayLanguageStore? {
+        didSet { refreshCell() }
+    }
+
     var additionalRejection: (@MainActor (RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
     var onRecord: ((RecordedShortcutKey?) -> Void)?
 
     var chord: ComposingKeyChord? {
-        didSet { renderChord() }
+        didSet { refreshCell() }
     }
 
-    /// Why the last key press was turned down, shown in place of the prompt
-    /// until the next one. Cleared on focus and on a successful recording.
-    private var rejection: ComposingKeyChord.Rejection?
+    /// What the row shows: blank while recording, so the caret alone says it
+    /// is waiting for a key (USER 2026-11-19 — no prompt); otherwise the chord,
+    /// or the unbound prompt.
+    var displayedText: String {
+        if isRecording {
+            return ""
+        }
+        return chord?.display ?? language?.string(.desktopShortcutUnbound) ?? ""
+    }
+
+    private(set) var isRecording = false
+
+    /// Swapped in and out of the cell: a search field draws its clear button
+    /// whenever it holds one.
+    private var clearButtonCell: NSButtonCell?
+
+    private var searchCell: NSSearchFieldCell? {
+        cell as? NSSearchFieldCell
+    }
+
+    /// The system caret (macOS 14), shown while recording.
+    private let caret = NSTextInsertionIndicator()
 
     private var eventMonitor: Any?
-    private var cancelButtonCell: NSButtonCell?
 
     /// Refuses the initial key-view focus a window hands out when it opens or
     /// becomes key, without refusing the click or Tab that comes after — the
     /// same gate the global recorders run (`RecorderCocoa.canBecomeKeyView`).
-    /// Without it, opening the pane would focus the first composing field and
-    /// start recording into it unasked.
+    /// Without it, opening the pane would focus the first row and start
+    /// recording into it unasked.
     private var canBecomeKey = false
 
-    /// Whether a recording session is live. Teardown has several entry
-    /// points — editing end, window resign, view detach — that can fire for
-    /// one session or for none; this is what keeps the global side effects
-    /// (the hotkey pause) paired one begin to one end.
-    private var isRecordingSession = false
+    /// The field whose recording session holds the global hotkey pause; only
+    /// the holder lifts it (upstream's `RecorderCocoa.activeRecorder`).
+    private weak static var activeRecorder: ShortcutKeyRecorderField?
     private var windowDidResignKeyObserver: NSObjectProtocol?
     private var windowDidBecomeKeyObserver: NSObjectProtocol?
 
     init() {
         super.init(frame: NSRect(x: 0, y: 0, width: Self.minimumWidth, height: 24))
+        isEditable = false
+        isSelectable = false
         alignment = .center
-        delegate = self
         // The magnifying glass belongs to a search field, not to a recorder.
-        (cell as? NSSearchFieldCell)?.searchButtonCell = nil
+        searchCell?.searchButtonCell = nil
+        clearButtonCell = searchCell?.cancelButtonCell
+        refreshCell()
+        caret.displayMode = .hidden
+        addSubview(caret)
         setContentHuggingPriority(.defaultHigh, for: .vertical)
         setContentHuggingPriority(.defaultHigh, for: .horizontal)
-        // Read last: hiding the cancel button is what lets the placeholder
-        // centre while the row is empty.
-        cancelButtonCell = (cell as? NSSearchFieldCell)?.cancelButtonCell
-        cancelButtonCell?.target = self
-        cancelButtonCell?.action = #selector(clearChord)
-        showsCancelButton = false
     }
 
     @available(*, unavailable)
@@ -202,107 +225,106 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         NSSize(width: Self.minimumWidth, height: super.intrinsicContentSize.height)
     }
 
-    /// Whether the clear button is drawn. Not an `NSSearchField` property —
-    /// swapping the cell in and out is how upstream does it, and it is what
-    /// lets the placeholder centre while the row is empty.
-    private var showsCancelButton: Bool {
-        get { (cell as? NSSearchFieldCell)?.cancelButtonCell != nil }
-        set { (cell as? NSSearchFieldCell)?.cancelButtonCell = newValue ? cancelButtonCell : nil }
+    /// Puts the row's state on screen. No field editor is ever installed, so
+    /// these writes restart nothing.
+    private func refreshCell() {
+        placeholderString = isRecording ? "" : language?.string(.desktopShortcutUnbound) ?? ""
+        stringValue = isRecording ? "" : chord?.display ?? ""
+        searchCell?.cancelButtonCell = showsClearButton ? clearButtonCell : nil
+        needsDisplay = true
     }
 
-    /// Recording starts the moment FOCUS arrives, not when the editing
-    /// session does: `controlTextDidBeginEditing` is only sent "upon the
-    /// first user input since the text view became the first responder"
-    /// (Cocoa Text Architecture Guide), so a monitor armed there misses the
-    /// very key press it exists to record — a bare letter landed as field
-    /// text, and a modifier chord, which inserts nothing, could never begin
-    /// the session at all. Same hook upstream uses
-    /// (`RecorderCocoa.becomeFirstResponder`).
-    override func becomeFirstResponder() -> Bool {
-        // No window yet means a SwiftUI hierarchy still assembling itself —
-        // upstream's guard, kept for the same reason.
-        guard window != nil else { return false }
-        guard super.becomeFirstResponder() else { return false }
-        beginRecording()
-        return true
+    override func layout() {
+        super.layout()
+        placeCaret()
+    }
+
+    /// One text line tall, centred: the row is blank while the caret shows.
+    /// Also placed on begin, so a row that has not been laid out yet still
+    /// shows it.
+    private func placeCaret() {
+        let font = font ?? .systemFont(ofSize: NSFont.systemFontSize)
+        let height = font.ascender - font.descender
+        caret.frame = NSRect(x: bounds.midX - 1, y: bounds.midY - height / 2, width: 2, height: height)
+    }
+
+    private var showsClearButton: Bool {
+        chord != nil && !isRecording
+    }
+
+    /// The search field's own clear-button frame — the only place a click
+    /// clears; anywhere else on the row records.
+    private var clearButtonRect: NSRect {
+        searchCell?.cancelButtonRect(forBounds: bounds) ?? .zero
+    }
+
+    /// A click on the clear button empties the row and goes straight to
+    /// recording its replacement; a click anywhere else records (USER
+    /// 2026-11-19).
+    override func mouseDown(with event: NSEvent) {
+        if showsClearButton, clearButtonRect.contains(convert(event.locationInWindow, from: nil)) {
+            clearChord()
+        }
+        window?.makeFirstResponder(self)
+    }
+
+    private func clearChord() {
+        chord = nil
+        onRecord?(nil)
+    }
+
+    override var acceptsFirstResponder: Bool {
+        true
     }
 
     override var canBecomeKeyView: Bool {
         canBecomeKey
     }
 
-    /// The normal way a session ends: the field editor detaching posts this
-    /// whenever focus leaves, text change or none — only the BEGIN
-    /// notification waits for input. Window resign and view detach
-    /// (`viewDidMoveToWindow`) are the backstop teardowns for the exits that
-    /// never detach an editor; `endRecording` is idempotent so the paths may
-    /// overlap.
-    func controlTextDidEndEditing(_: Notification) {
-        endRecording()
+    /// Recording starts the moment FOCUS arrives — a click or Tab — so the
+    /// very first key press is the one recorded. Same hook upstream uses
+    /// (`RecorderCocoa.becomeFirstResponder`).
+    override func becomeFirstResponder() -> Bool {
+        // No window yet means a SwiftUI hierarchy still assembling itself —
+        // upstream's guard, kept for the same reason.
+        guard window != nil, super.becomeFirstResponder() else { return false }
+        beginRecording()
+        return true
     }
 
-    /// Split from the responder hooks so a test can drive them: becoming
-    /// first responder needs a key window, which a unit test has no reliable
-    /// way to arrange.
+    /// The normal way a session ends: focus leaving — a recorded key, Escape,
+    /// a click elsewhere, or another row taking it. Window resign and view
+    /// detach (`viewDidMoveToWindow`) are the backstops; `endRecording` is
+    /// idempotent so the paths may overlap.
+    override func resignFirstResponder() -> Bool {
+        endRecording()
+        return super.resignFirstResponder()
+    }
+
+    /// Split from the responder hooks so a test can drive the session
+    /// without focus.
     func beginRecording() {
-        rejection = nil
-        // Blanked while recording, so the prompt is visible on a row that
-        // already holds a chord — a placeholder only shows while the text is
-        // empty, and a refusal has nowhere else to be read.
-        super.stringValue = ""
-        showsCancelButton = false
-        placeholderString = language?.string(.desktopShortcutRecording) ?? ""
-        // No caret: the field takes keys, it does not take text.
-        (currentEditor() as? NSTextView)?.insertionPointColor = .clear
+        isRecording = true
+        placeCaret()
+        caret.displayMode = .automatic
+        refreshCell()
         // The global hotkeys are off while a chord is recorded: this recorder
         // accepts modifier chords, and one that collides with a live hotkey
         // must be recorded, not acted on (upstream pauses the same way).
-        // Guarded by the session flag so the pause pairs one begin to one
-        // end whatever order the teardown entry points fire in.
-        if !isRecordingSession {
-            isRecordingSession = true
-            KeyboardShortcuts.isEnabled = false
-        }
+        Self.activeRecorder = self
+        KeyboardShortcuts.isEnabled = false
         startMonitoring()
     }
 
     func endRecording() {
         stopMonitoring()
-        if isRecordingSession {
-            isRecordingSession = false
+        if Self.activeRecorder === self {
+            Self.activeRecorder = nil
             KeyboardShortcuts.isEnabled = true
         }
-        rejection = nil
-        placeholderString = prompt
-        // The field editor is the window's, shared with every text field in
-        // it — a caret hidden for recording must not stay hidden for the next
-        // field that borrows the editor.
-        (currentEditor() as? NSTextView)?.insertionPointColor = .labelColor
-        // `showChord`, not `renderChord`: the field editor may still be
-        // attached at this point, and the guarded version would skip the very
-        // row it is putting back.
-        showChord()
-    }
-
-    /// Puts the bound chord on screen — or leaves the field empty, showing the
-    /// prompt, when the row has none.
-    private func showChord() {
-        super.stringValue = chord?.display ?? ""
-        showsCancelButton = !stringValue.isEmpty
-    }
-
-    /// The same, unless the field is recording: a row being recorded into is
-    /// deliberately blank, and a SwiftUI update arriving mid-recording must not
-    /// write the old chord back over the prompt.
-    private func renderChord() {
-        guard currentEditor() == nil else { return }
-        showChord()
-    }
-
-    @objc
-    private func clearChord() {
-        chord = nil
-        onRecord?(nil)
+        isRecording = false
+        caret.displayMode = .hidden
+        refreshCell()
     }
 
     override func viewDidMoveToWindow() {
@@ -310,16 +332,10 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         removeWindowObservers()
         guard let window else {
             // Detached mid-recording — a pane switch tears the view down
-            // without ever ending the editing session, and a monitor that
+            // without the window ever moving focus, and a monitor that
             // outlived its window would swallow every key in the app.
             endRecording()
             return
-        }
-
-        // Resolved here rather than in `init`, which runs before the language
-        // store is handed over.
-        if currentEditor() == nil {
-            placeholderString = prompt
         }
 
         // A hidden settings window only hides — recording must not survive
@@ -362,22 +378,6 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         if let windowDidBecomeKeyObserver {
             NotificationCenter.default.removeObserver(windowDidBecomeKeyObserver)
             self.windowDidBecomeKeyObserver = nil
-        }
-    }
-
-    /// What the field says while nothing is being recorded — or why the last
-    /// attempt was turned down.
-    private var prompt: String {
-        guard let language else { return "" }
-        guard let rejection else { return language.string(.desktopShortcutUnbound) }
-        switch rejection {
-        case .noKey: return language.string(.desktopShortcutRejectedNoKey)
-        // Every other refusal means the chord already belongs to something —
-        // typing, the input method, the system, or the host app. To the
-        // reader they all mean "not this key", so naming the owner is not a
-        // distinction worth a message of its own.
-        case .typesRomanization, .reservedKey, .takenBySystem, .notAGlobalKey, .belongsToHost:
-            return language.string(.desktopShortcutRejectedTaken)
         }
     }
 
@@ -425,8 +425,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         // resets every row, as the only way to put it back (USER 2026-09-19);
         // the Escape key leaves — while a field has focus it swallows every
         // key, so a user who opened one by accident needs the key that cancels
-        // everywhere else in the system; a bare Backspace, Delete or forward
-        // Delete blanks the field; everything else goes through the gate.
+        // everywhere else in the system; everything else goes through the gate.
         switch KeyRules.press(KeyEventSnapshot(event)) {
         case let .recorded(recorded)?:
             // Both storage forms are read here, off the one event that carries
@@ -435,37 +434,56 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
                 chord: recorded,
                 globalShortcut: KeyboardShortcuts.Shortcut(event: event),
             )
-            if let reason = additionalRejection?(key) {
-                refuse(reason)
+            if additionalRejection?(key) != nil {
+                NSSound.beep()
                 return nil
             }
-            rejection = nil
             chord = recorded
             onRecord?(key)
             blur()
-        case let .refused(reason)?:
-            refuse(reason)
+        case .refused?:
+            // A beep and nothing else: the session stays, ready for the next
+            // key (USER 2026-11-19 — no refusal text).
+            NSSound.beep()
         case .blur?:
             blur()
-        case .blank?:
-            stringValue = ""
-        case nil:
-            // The seam failed (logged): the key is swallowed, nothing recorded.
+        case .blank?, nil:
+            // Backspace / Delete: the row is already blank while recording and
+            // nothing is recorded — the clear button clears (desktop-core
+            // `recorder.rs`). Nil: the seam failed (logged), key swallowed.
             break
         }
         return nil
     }
 
-    private func refuse(_ reason: ComposingKeyChord.Rejection) {
-        rejection = reason
-        placeholderString = prompt
-        NSSound.beep()
-    }
-
-    /// Gives up focus, which is what ends recording — the field editor
-    /// detaching posts `controlTextDidEndEditing`, which takes the monitor
-    /// down.
+    /// Gives up focus, which is what ends recording.
     private func blur() {
         window?.makeFirstResponder(nil)
+    }
+
+    /// To assistive technology the row is a button that starts recording.
+    override func isAccessibilityElement() -> Bool {
+        true
+    }
+
+    override func accessibilityRole() -> NSAccessibility.Role? {
+        .button
+    }
+
+    /// The value, not the label: the row names the field (`ShortcutSettingsView`
+    /// sets the label), and the chord is read after it.
+    override func accessibilityValue() -> String? {
+        displayedText
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        window?.makeFirstResponder(self) ?? false
+    }
+
+    /// The clear button's job for VoiceOver, which cannot aim at its square.
+    override func accessibilityPerformDelete() -> Bool {
+        guard chord != nil else { return false }
+        clearChord()
+        return true
     }
 }

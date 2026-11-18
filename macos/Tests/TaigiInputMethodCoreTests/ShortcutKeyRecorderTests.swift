@@ -5,10 +5,8 @@ import KeyboardShortcuts
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The field is an `NSSearchField`, so a placeholder is only visible while its
-/// text is empty. That one AppKit rule is what these cases are about: a row that
-/// already holds a chord has to be blanked to ask for a new one, or the prompt
-/// and any refusal would be written where nobody can read them.
+/// Being the first responder is recording: these cases pin what the row shows
+/// on each side of that, and which clicks begin it or clear the row.
 @MainActor
 final class ShortcutKeyRecorderTests: XCTestCase {
     private var suiteName = ""
@@ -37,6 +35,7 @@ final class ShortcutKeyRecorderTests: XCTestCase {
     @MainActor
     override func tearDown() async throws {
         window.contentView?.subviews.forEach { $0.removeFromSuperview() }
+        window.orderOut(nil)
         window = nil
         field = nil
         userDefaults.removePersistentDomain(forName: suiteName)
@@ -50,22 +49,18 @@ final class ShortcutKeyRecorderTests: XCTestCase {
     func testABoundRow_showsItsChord() throws {
         field.chord = try chord("\r", .shift)
 
-        XCTAssertEqual(field.stringValue, "⇧↩")
+        XCTAssertEqual(field.displayedText, "⇧↩")
     }
 
-    /// The regression this file exists for: a row holding a chord kept showing
-    /// it while recording, so the prompt — and any refusal — had nowhere to be
-    /// seen.
-    func testRecordingABoundRow_blanksItSoThePromptIsVisible() throws {
+    /// A row being recorded into is blank — the caret alone says it waits for
+    /// a key (USER 2026-11-19: no prompt).
+    func testRecordingABoundRow_blanksIt() throws {
         field.chord = try chord("\r", .shift)
 
         field.beginRecording()
 
-        XCTAssertEqual(field.stringValue, "", "a placeholder only shows while the text is empty")
-        // Resolved through the same store the field uses, so an i18n wording change
-        // cannot fail this test (#678 renamed 撳 → 揤 and it did).
-        XCTAssertEqual(field.placeholderString, field.language?.string(.desktopShortcutRecording))
-        XCTAssertFalse(field.placeholderString?.isEmpty ?? true, "the prompt must be non-empty")
+        XCTAssertEqual(field.displayedText, "")
+        XCTAssertTrue(field.isRecording)
     }
 
     func testLeavingWithoutRecording_putsTheChordBack() throws {
@@ -74,13 +69,12 @@ final class ShortcutKeyRecorderTests: XCTestCase {
 
         field.endRecording()
 
-        XCTAssertEqual(field.stringValue, "⇧↩")
+        XCTAssertEqual(field.displayedText, "⇧↩")
         XCTAssertEqual(field.chord, try chord("\r", .shift), "leaving changed nothing")
     }
 
-    func testAnEmptyRow_promptsToRecord() {
-        XCTAssertEqual(field.stringValue, "")
-        XCTAssertEqual(field.placeholderString, "無設定")
+    func testAnEmptyRow_saysItIsUnbound() {
+        XCTAssertEqual(field.displayedText, "無設定")
     }
 
     /// The regression the arming hook moved for: recording must be armed by
@@ -114,6 +108,125 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         XCTAssertTrue(attached.canBecomeKeyView, "the user's own click or Tab must land")
     }
 
+    /// Focus through the window, the way a click or Tab arrives — the path
+    /// real use takes, unlike `beginRecording()` called bare.
+    private func focus(_ target: ShortcutKeyRecorderField) {
+        window.makeKeyAndOrderFront(nil)
+        // The initial key-view gate reopens one turn after attaching.
+        nextTurn()
+        XCTAssertTrue(window.makeFirstResponder(target))
+        nextTurn()
+    }
+
+    /// Lets the deferred end-of-editing check run.
+    private func nextTurn() {
+        let turn = expectation(description: "next runloop turn")
+        Task { @MainActor in turn.fulfill() }
+        wait(for: [turn], timeout: 10)
+    }
+
+    private func press(_ characters: String, keyCode: UInt16, _ modifiers: NSEvent.ModifierFlags = []) throws {
+        try NSApp.sendEvent(TestFixtures.keyDownEvent(
+            characters: characters,
+            modifiers: modifiers,
+            keyCode: keyCode,
+            windowNumber: window.windowNumber,
+        ))
+        nextTurn()
+    }
+
+    private func click(_ target: ShortcutKeyRecorderField, atX x: Double) throws {
+        window.makeKeyAndOrderFront(nil)
+        let point = target.convert(NSPoint(x: x, y: target.bounds.midY), to: nil)
+        try target.mouseDown(with: XCTUnwrap(NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: point,
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 1,
+            pressure: 1,
+        )))
+        nextTurn()
+    }
+
+    /// The real-device failure while this was a search field: AppKit
+    /// restarted the field editor on focus, which tore the session down
+    /// mid-begin and put the bound chord back.
+    func testFocusingABoundRow_blanksIt_andRecords() throws {
+        field.chord = try chord("j", [.control, .command])
+
+        focus(field)
+
+        XCTAssertEqual(field.displayedText, "")
+        XCTAssertTrue(field.isRecording)
+        XCTAssertFalse(KeyboardShortcuts.isEnabled, "the session must still be live")
+    }
+
+    /// A refused key beeps and changes nothing: the session waits for the
+    /// next key.
+    func testARefusedKey_keepsRecording() throws {
+        focus(field)
+
+        try press("a", keyCode: 0)
+        XCTAssertTrue(field.isRecording)
+        XCTAssertNil(field.chord)
+
+        try press("z", keyCode: 6, .control)
+        XCTAssertEqual(field.chord, try chord("z", .control), "the monitor must outlive the refusal")
+        XCTAssertFalse(field.isRecording, "a recorded key ends the session")
+    }
+
+    /// The clear button empties the row and records its replacement at once
+    /// (USER 2026-11-19).
+    func testClickingTheClearButton_clearsAndRecords() throws {
+        var recorded: [RecordedShortcutKey?] = []
+        field.onRecord = { recorded.append($0) }
+        field.chord = try chord("j", [.control, .command])
+
+        try click(field, atX: field.bounds.maxX - 5)
+
+        XCTAssertNil(field.chord)
+        XCTAssertEqual(recorded.count, 1)
+        XCTAssertNil(recorded.first ?? nil, "the row was cleared")
+        XCTAssertTrue(field.isRecording)
+    }
+
+    /// Anywhere else on a bound row records and leaves the binding alone
+    /// until a key replaces it — the first click on a bound row used to land
+    /// on the search field's clear button.
+    func testClickingTheRow_recordsWithoutClearing() throws {
+        var recorded: [RecordedShortcutKey?] = []
+        field.onRecord = { recorded.append($0) }
+        field.chord = try chord("j", [.control, .command])
+
+        try click(field, atX: field.bounds.midX)
+
+        XCTAssertEqual(field.chord, try chord("j", [.control, .command]))
+        XCTAssertTrue(recorded.isEmpty)
+        XCTAssertTrue(field.isRecording)
+    }
+
+    /// Focus moving straight to another row ends the first session before the
+    /// second begins; the hotkeys stay paused throughout.
+    func testMovingToAnotherRow_keepsTheHotkeysPaused() {
+        let other = ShortcutKeyRecorderField()
+        other.language = field.language
+        other.frame = NSRect(x: 150, y: 0, width: 130, height: 24)
+        window.contentView?.addSubview(other)
+        focus(field)
+
+        XCTAssertTrue(window.makeFirstResponder(other))
+        nextTurn()
+        XCTAssertFalse(KeyboardShortcuts.isEnabled, "the second row is recording")
+
+        XCTAssertTrue(window.makeFirstResponder(nil))
+        nextTurn()
+        XCTAssertTrue(KeyboardShortcuts.isEnabled)
+    }
+
     /// A chord that collides with a live global hotkey must be recorded, not
     /// acted on: the hotkeys are off for exactly the recording session.
     func testRecording_pausesTheGlobalHotkeys() {
@@ -124,7 +237,7 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         XCTAssertTrue(KeyboardShortcuts.isEnabled)
     }
 
-    /// Teardown has several entry points — editing end, window resign, view
+    /// Teardown has several entry points — focus leaving, window resign, view
     /// detach — that overlap on one exit and also fire with no session live.
     /// The global pause must pair one begin to one end regardless.
     func testTeardownEntryPoints_maySafelyOverlap() {
