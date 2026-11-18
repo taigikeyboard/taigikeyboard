@@ -108,12 +108,20 @@ body.popup {
   opacity: 0.8;
 }
 
-/* Chrome's menu item: full width, left-aligned, under a hairline. */
+/* A hairline between the tab's controls and the menu, edge to edge. */
+.popup-separator {
+  margin: 8px 0 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+/* Chrome's menu item (Chrome Refresh 2023): left-aligned, inset 8px, its
+   hover a rounded highlight; its text lines up with the 16px inset above. */
 .popup-menu-item {
   min-height: 36px;
-  margin-top: 8px;
-  padding: 0 16px;
-  border-top: 1px solid var(--hairline);
+  margin: 0 8px;
+  padding: 0 8px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text);
   font-size: 0.8125rem;
