@@ -2,11 +2,13 @@
 // web page's settings form over the settings document in chrome.storage.sync,
 // which the worker reads too.
 
+import init, { Session } from "./pkg/taigi_web.js";
+import { hostPlatform } from "./platform.js";
 import {
+  emptyDocument,
   STORAGE_KEY as KEY,
   parseStored,
   Settings,
-  SHORTCUTS_KEY,
 } from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
 
@@ -16,6 +18,7 @@ import { drawShortcuts } from "./shortcuts.js";
 // The browser extension's own chord (its `manifest.json` `commands`), kept by
 // the browser outside the settings document; ChromeOS declares none.
 const TOGGLE_COMMAND = "toggle-typing";
+const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
 
 const { [KEY]: stored } = await chrome.storage.sync.get(KEY);
 // The last document this page wrote or adopted: an equal one is no change.
@@ -46,6 +49,7 @@ function save(json) {
     .catch((/** @type {unknown} */ error) =>
       console.warn("settings.save.failed", errorMessage(error)),
     );
+  followSettings(json).catch(shortcutsFailed);
 }
 
 // Every form change goes through the store's write.
@@ -66,8 +70,42 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (change.newValue !== last) {
     last = change.newValue;
     settings.adopt(change.newValue);
+    followSettings(change.newValue).catch(shortcutsFailed);
   }
 });
+
+/**
+ * A session of this page's own, with no dictionaries, for the shortcut list:
+ * it follows the document, so it never waits for the input method to run.
+ * Keys are read as the visitor's machine, which on ChromeOS is "linux", as
+ * the worker's `PLATFORM`. A document it refuses gives way to the defaults,
+ * as on the page (`ime.js` `restoreSettings`).
+ * @returns {Promise<Session>}
+ */
+async function startSession() {
+  await init();
+  if (typeof stored === "string") {
+    try {
+      return new Session(stored, hostPlatform(), navigator.language);
+    } catch (error) {
+      console.warn("settings.refused", errorMessage(error));
+      settings.reset();
+    }
+  }
+  return new Session(DEFAULT_SETTINGS, hostPlatform(), navigator.language);
+}
+
+// The form never waits for the engine: a failed load leaves only the
+// Shortcuts section empty.
+const starting = startSession();
+
+/**
+ * @param {unknown} error
+ * @returns {void}
+ */
+function shortcutsFailed(error) {
+  console.warn("shortcuts.draw.failed", errorMessage(error));
+}
 
 const shortcuts = document.getElementById("shortcuts");
 
@@ -87,43 +125,50 @@ async function browserCommandRows() {
 }
 
 /**
- * Draws the session's shortcut list, the browser's own rows last in its last
- * block (Other, `shortcuts.rs`); none yet (the input method has not run)
- * leaves the section empty.
- * @param {HTMLElement} root
+ * Draws the session's shortcut list, with no Telex guide or TPS key panel
+ * rows (neither package draws those windows), the browser's own rows last in
+ * its last block (Other, `shortcuts.rs`).
  * @returns {Promise<void>}
  */
-async function showShortcuts(root) {
-  const [{ [SHORTCUTS_KEY]: published }, commandRows] = await Promise.all([
-    chrome.storage.local.get(SHORTCUTS_KEY),
-    browserCommandRows(),
-  ]);
-  if (typeof published !== "string") {
+async function showShortcuts() {
+  if (shortcuts === null) {
     return;
   }
-  const { groups } = /** @type {WireShortcuts} */ (JSON.parse(published));
-  if (groups) {
-    groups.at(-1)?.rows.push(...commandRows);
-    drawShortcuts(root, groups);
-  }
+  const [session, commandRows] = await Promise.all([
+    starting,
+    browserCommandRows(),
+  ]);
+  const { groups } = /** @type {WireShortcuts} */ (
+    JSON.parse(session.shortcuts(/* hasPageWindows */ false))
+  );
+  groups.at(-1)?.rows.push(...commandRows);
+  drawShortcuts(shortcuts, groups);
 }
 
-if (shortcuts !== null) {
-  await showShortcuts(shortcuts);
-  // Tone Keys, the input script and the language change the list.
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && SHORTCUTS_KEY in changes) {
-      showShortcuts(shortcuts);
-    }
-  });
-  // The browser announces no rebound command: read it again on return from
-  // chrome://extensions/shortcuts.
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      showShortcuts(shortcuts);
-    }
-  });
+/**
+ * Tone Keys, the input script and the language change the list.
+ * @param {string} json
+ * @returns {Promise<void>}
+ */
+async function followSettings(json) {
+  const session = await starting;
+  try {
+    session.setSettings(json);
+  } catch (error) {
+    console.warn("settings.refused", errorMessage(error));
+    return;
+  }
+  await showShortcuts();
 }
+
+showShortcuts().catch(shortcutsFailed);
+// The browser announces no rebound command: read it again on return from
+// chrome://extensions/shortcuts.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    showShortcuts().catch(shortcutsFailed);
+  }
+});
 
 // The side menu marks the section in view, as the settings page marks its
 // page: the last one whose heading has reached the window's top. A menu

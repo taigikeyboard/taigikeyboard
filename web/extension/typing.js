@@ -13,12 +13,8 @@ import { classify, focusedElement, surfaceOf } from "./field.js";
 import { chooseLanguage, translate } from "./i18n.js";
 import { SharedLearning } from "./learning-client.js";
 import { Overlay } from "./overlay.js";
-import {
-  emptyDocument,
-  parseStored,
-  SHORTCUTS_KEY,
-  STORAGE_KEY,
-} from "./settings.js";
+import { hostPlatform } from "./platform.js";
+import { emptyDocument, parseStored, STORAGE_KEY } from "./settings.js";
 
 /** @typedef {import("./background.js").BadgeState} BadgeState */
 /** @typedef {import("./background.js").TabMode} TabMode */
@@ -27,7 +23,6 @@ import {
 /** @typedef {import("./pkg/taigi_web.js").Session} Session */
 /** @typedef {import("./surface.js").Surface} Surface */
 /** @typedef {import("../types/shared.d.ts").BrowserKey} BrowserKey */
-/** @typedef {import("../types/shared.d.ts").Platform} Platform */
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
 /** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
@@ -76,8 +71,6 @@ let settingsJson = DEFAULT_SETTINGS;
 let fieldWatch;
 /** The last state told to the service worker. */
 let told = "";
-/** The shortcut list this tab last wrote for the options page. */
-let publishedShortcuts = "";
 
 /** @type {Overlay} */
 let overlay;
@@ -111,18 +104,6 @@ const learning = new SharedLearning({
   // A composition ends under the instance it began with.
   onStale: restartWhenIdle,
 });
-
-/**
- * Detects the host OS platform for engine key mapping.
- * @returns {Platform}
- */
-function platform() {
-  const name = navigator.userAgentData?.platform ?? navigator.platform;
-  if (/mac|iphone|ipad/i.test(name)) {
-    return "macos";
-  }
-  return /win/i.test(name) ? "windows" : "linux";
-}
 
 /**
  * Reads the revision counter from a serialized settings document.
@@ -171,39 +152,9 @@ function restoreSettings(target) {
  * @returns {void}
  */
 function saveSettings(json) {
-  adoptSettings(json);
-  chrome.storage.sync.set({ [STORAGE_KEY]: json }).catch(console.error);
-}
-
-/**
- * What follows the session's document outside it: the overlay's look and the
- * options page's shortcut list.
- * @param {string} json
- * @returns {void}
- */
-function adoptSettings(json) {
   settingsJson = json;
   drawSettings();
-  publishShortcuts();
-}
-
-/**
- * Writes the session's shortcut list for the options page, as the ChromeOS
- * worker does: the list follows Tone Keys, the input mode and the language.
- * Only a tab's session can: the extension pages' CSP has no
- * `'wasm-unsafe-eval'`, so the options page and `background.js` cannot run
- * one.
- * @returns {void}
- */
-function publishShortcuts() {
-  const shortcuts = run((current) =>
-    current.shortcuts(/* hasPageWindows */ false),
-  );
-  if (shortcuts === undefined || shortcuts === publishedShortcuts) {
-    return;
-  }
-  publishedShortcuts = shortcuts;
-  chrome.storage.local.set({ [SHORTCUTS_KEY]: shortcuts }).catch(console.error);
+  chrome.storage.sync.set({ [STORAGE_KEY]: json }).catch(console.error);
 }
 
 /**
@@ -238,10 +189,9 @@ async function start() {
   hasFailed = false;
   redraw();
   try {
-    starting = await createSession(platform(), navigator.language);
+    starting = await createSession(hostPlatform(), navigator.language);
     session = starting;
     restoreSettings(starting);
-    publishShortcuts();
     if (isEnglishWanted) {
       isEnglishWanted = false;
       starting.toggleLanguageMode();
@@ -816,7 +766,8 @@ async function prepare() {
     apply(call((current) => current.commitComposition()));
     try {
       run((current) => current.setSettings(json));
-      adoptSettings(json);
+      settingsJson = json;
+      drawSettings();
       redraw();
     } catch (error) {
       console.error(error);

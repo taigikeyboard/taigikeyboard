@@ -4,11 +4,7 @@
 import { imeCalls, isResetStorm, keyJson, modeMenuItem } from "./calls.js";
 import { Learning } from "./learning.js";
 import init, { Session } from "./pkg/taigi_web.js";
-import {
-  emptyDocument,
-  STORAGE_KEY as SETTINGS_KEY,
-  SHORTCUTS_KEY,
-} from "./settings.js";
+import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
 
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
@@ -41,8 +37,6 @@ let trapped = false;
 let settingsJson = DEFAULT_SETTINGS;
 // Whether this input method is the active one: the tray menu is its own.
 let active = false;
-// The shortcut list last written for the options page.
-let publishedShortcuts = "";
 /** @type {ReturnType<typeof setTimeout> | undefined} */
 let modeNoticeTimer;
 
@@ -129,27 +123,6 @@ async function start() {
   session = starting;
   // Off the first key: opening the stores takes tens of milliseconds.
   learning.attach(starting);
-  publishState();
-}
-
-/**
- * What follows the session's settings outside the field: the options page's
- * shortcut list and the tray menu's mode row. The page redraws the same on a
- * new instance and a settings change; `modeChanged` redraws only the mode.
- * @returns {void}
- */
-function publishState() {
-  const shortcuts = run((current) =>
-    current.shortcuts(/* hasPageWindows */ false),
-  );
-  if (shortcuts !== undefined && shortcuts !== publishedShortcuts) {
-    publishedShortcuts = shortcuts;
-    chrome.storage.local
-      .set({ [SHORTCUTS_KEY]: shortcuts })
-      .catch((/** @type {unknown} */ error) =>
-        console.warn("shortcuts.save.failed", errorMessage(error)),
-      );
-  }
   showModeInTray();
 }
 
@@ -308,9 +281,10 @@ function apply(replyJson) {
   if (reply.settings) {
     saveSettings(reply.settings);
   }
-  if (reply.settings) {
-    publishState();
-  } else if (reply.emits.some((emit) => emit.type === "modeChanged")) {
+  if (
+    reply.settings ||
+    reply.emits.some((emit) => emit.type === "modeChanged")
+  ) {
     showModeInTray();
   }
   // A commit is what the engine learns from.
@@ -427,7 +401,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
       run((current) => current.setSettings(json));
       if (!trapped) {
         settingsJson = json;
-        publishState();
+        showModeInTray();
       }
     } catch (error) {
       console.warn("settings.refused", errorMessage(error));
