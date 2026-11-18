@@ -3,7 +3,10 @@ name: Kautian watch
 # Daily check whether MoE has published a new 教典 export
 # (https://sutian.moe.edu.tw/media/senn/ods/kautian.ods). Compares the export's
 # data rows with the committed capture, ignoring packaging, styles and ordering.
-# Opens data PRs for manual merge; merging closes the corresponding issue.
+# Pushes a refresh branch and comments a prefilled PR link on the issue; the
+# maintainer opens and merges the PR, which closes the issue. Actions may not
+# create PRs here (workflow permissions keep can_approve_pull_request_reviews
+# off), so the job never calls `gh pr create`.
 # Refresh steps: dictionary/docs/SOURCES.md § kautian.
 on:
   schedule:
@@ -25,14 +28,14 @@ env:
 
 jobs:
   check:
-    name: compare upstream export, open data PR
+    name: compare upstream export, push refresh branch
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: write
       issues: write
-      pull-requests: write
+      pull-requests: read
     outputs:
       head: ${{ steps.refresh.outputs.head }}
     steps:
@@ -95,17 +98,26 @@ jobs:
         if: steps.compare.outputs.changed == 'true'
         uses: ./.github/actions/setup-protoc
 
-      - name: Rebuild and open data PR
+      - name: Rebuild and push refresh branch
         id: refresh
         if: steps.compare.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          existing=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&base=main&per_page=100" \
-            --paginate --jq '.[] | select(.head.ref | startswith("automation/kautian-")) | .html_url')
-          if [ -n "$existing" ]; then
-            echo "::notice::Kautian refresh PR awaiting manual merge: $existing"
+          # A refresh branch without a closed PR still awaits the maintainer
+          # (PR not opened yet, or open). Merged ones may linger: the repository
+          # does not delete head branches on merge.
+          # Assigned first: a failing command substitution in a `for` list would
+          # not stop the step under `set -e`.
+          branches=$(git ls-remote --heads origin 'refs/heads/automation/kautian-*' | sed 's#.*refs/heads/##')
+          pending=""
+          for existing in $branches; do
+            closed=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&head=$GITHUB_REPOSITORY_OWNER:$existing" --jq length)
+            if [ "$closed" = 0 ]; then pending="$pending $existing"; fi
+          done
+          if [ -n "$pending" ]; then
+            echo "::notice::Kautian refresh branch awaiting maintainer:$pending"
             exit 0
           fi
           git submodule update --init taigi-converter
@@ -162,23 +174,38 @@ jobs:
             -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit -m 'chore(dictionary): refresh MoE Kautian data'
           git push origin "HEAD:refs/heads/$branch"
-          {
-            echo 'Refresh MoE capture, provenance and rebuilt dictionary artifacts.'
-            echo
-            echo 'Manual merge required after reusable Python and Engine CI validate this exact commit.'
-            echo "Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo
-            gh api "repos/$GITHUB_REPOSITORY/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100" \
-              --paginate --jq '.[] | select(.title == "chore(dictionary): MoE kautian.ods has new data" and (has("pull_request") | not)) | "Closes #\(.number)"'
-            echo
-            cat "$RUNNER_TEMP/report/summary.md"
-          } > "$RUNNER_TEMP/kautian-pr.md"
-          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
-            --title 'chore(dictionary): refresh MoE Kautian data' --body-file "$RUNNER_TEMP/kautian-pr.md"
           echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          issue=$(gh api "repos/$GITHUB_REPOSITORY/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100" \
+            --paginate --jq '.[] | select(.title == "chore(dictionary): MoE kautian.ods has new data" and (has("pull_request") | not)) | .number' | sed -n 1p)
+          # The issue already carries the diff report; the PR body stays short
+          # so the prefilled compare URL stays within GitHub's URL length limit.
+          python - "$branch" "$issue" > "$RUNNER_TEMP/kautian-comment.md" <<'PY'
+          import os, sys, urllib.parse
+          branch, issue = sys.argv[1:]
+          server, repo = os.environ['GITHUB_SERVER_URL'], os.environ['GITHUB_REPOSITORY']
+          lines = [
+              'Refresh MoE capture, provenance and rebuilt dictionary artifacts.',
+              '',
+              f"Run: {server}/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+          ]
+          if issue:
+              lines += ['', f'Closes #{issue}']
+          query = urllib.parse.urlencode({
+              'quick_pull': '1',
+              'title': 'chore(dictionary): refresh MoE Kautian data',
+              'body': '\n'.join(lines),
+          })
+          url = f'{server}/{repo}/compare/main...{urllib.parse.quote(branch)}?{query}'
+          closing = '; merging it closes this issue' if issue else ''
+          print(f'Refresh branch `{branch}` is pushed. [Open the data PR]({url}){closing}.')
+          PY
+          cat "$RUNNER_TEMP/kautian-comment.md" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/kautian-comment.md"
+          fi
 
   python:
-    name: validate data PR (python)
+    name: validate refresh branch (python)
     needs: check
     if: needs.check.outputs.head != ''
     uses: ./.github/workflows/python.yml
@@ -188,7 +215,7 @@ jobs:
       contents: read
 
   engine:
-    name: validate data PR (engine)
+    name: validate refresh branch (engine)
     needs: check
     if: needs.check.outputs.head != ''
     uses: ./.github/workflows/engine.yml
