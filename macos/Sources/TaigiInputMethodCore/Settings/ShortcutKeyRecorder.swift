@@ -162,11 +162,11 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// start recording into it unasked.
     private var canBecomeKey = false
 
-    /// Whether a recording session is live. Teardown has several entry
-    /// points — editing end, window resign, view detach — that can fire for
-    /// one session or for none; this is what keeps the global side effects
-    /// (the hotkey pause) paired one begin to one end.
-    private var isRecordingSession = false
+    /// The field whose recording session holds the global hotkey pause; only
+    /// the holder lifts it, since an editing end lands a turn late, after
+    /// focus may have moved to another row (upstream's
+    /// `RecorderCocoa.activeRecorder`).
+    private weak static var activeRecorder: ShortcutKeyRecorderField?
     private var windowDidResignKeyObserver: NSObjectProtocol?
     private var windowDidBecomeKeyObserver: NSObjectProtocol?
 
@@ -237,13 +237,29 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// (`viewDidMoveToWindow`) are the backstop teardowns for the exits that
     /// never detach an editor; `endRecording` is idempotent so the paths may
     /// overlap.
+    ///
+    /// Judged a turn late: setting `placeholderString` while the editor is
+    /// installed — on focus and on every refusal — makes AppKit end and
+    /// restart editing (`NSCell _restartEditingWithTextView:`), which posts
+    /// this too. By the next turn a restart has the editor first responder
+    /// again; a real end has removed it. Upstream's fix for the same restart
+    /// (`RecorderCocoa.controlTextDidEndEditing`, KeyboardShortcuts 3.0.1).
     func controlTextDidEndEditing(_: Notification) {
-        endRecording()
+        // Restored while this field still owns the shared editor; a restart
+        // hides it again below.
+        setCaretVisible(true)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            if let editor = currentEditor(), window?.firstResponder === editor {
+                setCaretVisible(false)
+                return
+            }
+            endRecording()
+        }
     }
 
-    /// Split from the responder hooks so a test can drive them: becoming
-    /// first responder needs a key window, which a unit test has no reliable
-    /// way to arrange.
+    /// Split from the responder hooks so a test can drive the session
+    /// without focus (no field editor attached).
     func beginRecording() {
         rejection = nil
         // Blanked while recording, so the prompt is visible on a row that
@@ -253,35 +269,35 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         showsCancelButton = false
         placeholderString = language?.string(.desktopShortcutRecording) ?? ""
         // No caret: the field takes keys, it does not take text.
-        (currentEditor() as? NSTextView)?.insertionPointColor = .clear
+        setCaretVisible(false)
         // The global hotkeys are off while a chord is recorded: this recorder
         // accepts modifier chords, and one that collides with a live hotkey
         // must be recorded, not acted on (upstream pauses the same way).
-        // Guarded by the session flag so the pause pairs one begin to one
-        // end whatever order the teardown entry points fire in.
-        if !isRecordingSession {
-            isRecordingSession = true
-            KeyboardShortcuts.isEnabled = false
-        }
+        Self.activeRecorder = self
+        KeyboardShortcuts.isEnabled = false
         startMonitoring()
     }
 
     func endRecording() {
         stopMonitoring()
-        if isRecordingSession {
-            isRecordingSession = false
+        if Self.activeRecorder === self {
+            Self.activeRecorder = nil
             KeyboardShortcuts.isEnabled = true
         }
         rejection = nil
         placeholderString = prompt
-        // The field editor is the window's, shared with every text field in
-        // it — a caret hidden for recording must not stay hidden for the next
-        // field that borrows the editor.
-        (currentEditor() as? NSTextView)?.insertionPointColor = .labelColor
+        setCaretVisible(true)
         // `showChord`, not `renderChord`: the field editor may still be
         // attached at this point, and the guarded version would skip the very
         // row it is putting back.
         showChord()
+    }
+
+    /// The field editor is the window's, shared with every text field in it —
+    /// a caret hidden for recording must not stay hidden for the next field
+    /// that borrows the editor.
+    private func setCaretVisible(_ visible: Bool) {
+        (currentEditor() as? NSTextView)?.insertionPointColor = visible ? .labelColor : .clear
     }
 
     /// Puts the bound chord on screen — or leaves the field empty, showing the
@@ -464,7 +480,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
 
     /// Gives up focus, which is what ends recording — the field editor
     /// detaching posts `controlTextDidEndEditing`, which takes the monitor
-    /// down.
+    /// down a turn later.
     private func blur() {
         window?.makeFirstResponder(nil)
     }

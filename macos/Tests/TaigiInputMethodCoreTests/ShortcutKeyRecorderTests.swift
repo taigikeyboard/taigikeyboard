@@ -37,6 +37,7 @@ final class ShortcutKeyRecorderTests: XCTestCase {
     @MainActor
     override func tearDown() async throws {
         window.contentView?.subviews.forEach { $0.removeFromSuperview() }
+        window.orderOut(nil)
         window = nil
         field = nil
         userDefaults.removePersistentDomain(forName: suiteName)
@@ -112,6 +113,77 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         wait(for: [turn], timeout: 10)
 
         XCTAssertTrue(attached.canBecomeKeyView, "the user's own click or Tab must land")
+    }
+
+    /// Focus through the window, the way a click or Tab arrives — unlike
+    /// `beginRecording()` called bare, this installs the field editor, which
+    /// is what makes AppKit restart editing on a placeholder change.
+    private func focus(_ target: ShortcutKeyRecorderField) {
+        window.makeKeyAndOrderFront(nil)
+        // The initial key-view gate reopens one turn after attaching.
+        nextTurn()
+        XCTAssertTrue(window.makeFirstResponder(target))
+        nextTurn()
+    }
+
+    /// Lets the deferred end-of-editing check run.
+    private func nextTurn() {
+        let turn = expectation(description: "next runloop turn")
+        Task { @MainActor in turn.fulfill() }
+        wait(for: [turn], timeout: 10)
+    }
+
+    private func press(_ characters: String, keyCode: UInt16, _ modifiers: NSEvent.ModifierFlags = []) throws {
+        try NSApp.sendEvent(TestFixtures.keyDownEvent(
+            characters: characters,
+            modifiers: modifiers,
+            keyCode: keyCode,
+            windowNumber: window.windowNumber,
+        ))
+        nextTurn()
+    }
+
+    /// The real-device failure: the placeholder set on focus made AppKit end
+    /// and restart editing, the end tore the session down mid-begin, and the
+    /// bound chord came back over the prompt.
+    func testFocusingABoundRow_blanksItAndPrompts() throws {
+        field.chord = try chord("j", [.control, .command])
+
+        focus(field)
+
+        XCTAssertEqual(field.stringValue, "")
+        XCTAssertEqual(field.placeholderString, field.language?.string(.desktopShortcutRecording))
+        XCTAssertFalse(KeyboardShortcuts.isEnabled, "the session must still be live")
+    }
+
+    /// A refusal writes the placeholder mid-session too — the same restart
+    /// used to end the session, dropping both the reason and the monitor.
+    func testARefusedKey_showsWhy_andKeepsRecording() throws {
+        focus(field)
+
+        try press("a", keyCode: 0)
+        XCTAssertEqual(field.placeholderString, field.language?.string(.desktopShortcutRejectedTaken))
+
+        try press("z", keyCode: 6, .control)
+        XCTAssertEqual(field.chord, try chord("z", .control), "the monitor must outlive the refusal")
+    }
+
+    /// The end of editing is judged a turn late; by then focus may already
+    /// have moved to another row, whose session the late end must not touch.
+    func testMovingToAnotherRow_keepsTheHotkeysPaused() {
+        let other = ShortcutKeyRecorderField()
+        other.language = field.language
+        other.frame = NSRect(x: 150, y: 0, width: 130, height: 24)
+        window.contentView?.addSubview(other)
+        focus(field)
+
+        XCTAssertTrue(window.makeFirstResponder(other))
+        nextTurn()
+        XCTAssertFalse(KeyboardShortcuts.isEnabled, "the second row is recording")
+
+        XCTAssertTrue(window.makeFirstResponder(nil))
+        nextTurn()
+        XCTAssertTrue(KeyboardShortcuts.isEnabled)
     }
 
     /// A chord that collides with a live global hotkey must be recorded, not

@@ -149,13 +149,14 @@ enum TestFixtures {
         charactersIgnoringModifiers: String? = nil,
         keyCode: UInt16 = 0,
         isARepeat: Bool = false,
+        windowNumber: Int = 0,
     ) throws -> NSEvent {
         try XCTUnwrap(NSEvent.keyEvent(
             with: .keyDown,
             location: .zero,
             modifierFlags: modifiers,
             timestamp: 0,
-            windowNumber: 0,
+            windowNumber: windowNumber,
             context: nil,
             characters: characters,
             charactersIgnoringModifiers: charactersIgnoringModifiers ?? characters,
