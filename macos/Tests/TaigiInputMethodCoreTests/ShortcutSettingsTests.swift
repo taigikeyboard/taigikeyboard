@@ -112,8 +112,5 @@ final class ShortcutSettingsTests: XCTestCase {
         .desktopShortcutsTab,
         .themeEditorResetAll,
         .desktopShortcutUnbound,
-        .desktopShortcutRecording,
-        .desktopShortcutRejectedTaken,
-        .desktopShortcutRejectedNoKey,
     ]
 }

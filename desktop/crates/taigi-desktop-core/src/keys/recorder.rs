@@ -186,8 +186,8 @@ pub fn evaluate_press(
 /// The prompt a refusal replaces. Every refusal but `NoKey` means the chord
 /// already belongs to something — typing, the input method, the system, or
 /// the host app — and to the reader they all mean "not this key", so one
-/// message covers them. macOS keeps a Swift twin: `ShortcutKeyRecorder.swift`
-/// `prompt`.
+/// message covers them. Windows and Linux show it; macOS only beeps
+/// (`ShortcutKeyRecorder.swift`, USER 2026-11-19).
 pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
     match rejection {
         ChordRejection::NoKey => StringKey::DesktopShortcutRejectedNoKey,

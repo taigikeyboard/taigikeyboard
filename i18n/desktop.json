@@ -1285,7 +1285,6 @@
       "comment": "Shortcut recorder button while it is waiting for a key press.",
       "scope": {
         "platforms": [
-          "macos",
           "windows",
           "linux"
         ],
@@ -1305,7 +1304,6 @@
       "comment": "Recorder error: the chord cannot be bound because something else already owns it — a romanization key, a key the input method reserves, a candidate-slot chord, a system shortcut, or the host app. One message covers every taken case; the recorder does not name the owner.",
       "scope": {
         "platforms": [
-          "macos",
           "windows",
           "linux"
         ],
@@ -1325,7 +1323,6 @@
       "comment": "Recorder error: the event carried no key that could be recorded.",
       "scope": {
         "platforms": [
-          "macos",
           "windows",
           "linux"
         ],
