@@ -138,7 +138,10 @@ body.options {
   content: none;
 }
 
+/* `flow-root` keeps the reset button's bottom margin inside the card
+   rather than collapsing through its edge. */
 .options-card {
+  display: flow-root;
   padding: 0 20px;
   border-radius: 8px;
   background: var(--card);
@@ -228,10 +231,11 @@ body.options {
   box-shadow: none;
 }
 
-/* Chrome's outlined button, at the card's foot on its right. */
+/* Chrome's outlined button, at the card's foot on its right, 16px clear of
+   the last row and of the card's edge (Material's card action spacing). */
 .options .setting-reset {
   width: fit-content;
-  margin: 12px 0 12px auto;
+  margin: 16px 0 16px auto;
   padding: 0 16px;
   border-radius: 100px;
   background: transparent;
