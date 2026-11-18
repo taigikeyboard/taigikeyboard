@@ -13,7 +13,12 @@ import { classify, focusedElement, surfaceOf } from "./field.js";
 import { chooseLanguage, translate } from "./i18n.js";
 import { SharedLearning } from "./learning-client.js";
 import { Overlay } from "./overlay.js";
-import { emptyDocument, parseStored, STORAGE_KEY } from "./settings.js";
+import {
+  emptyDocument,
+  parseStored,
+  SHORTCUTS_KEY,
+  STORAGE_KEY,
+} from "./settings.js";
 
 /** @typedef {import("./background.js").BadgeState} BadgeState */
 /** @typedef {import("./background.js").TabMode} TabMode */
@@ -71,6 +76,8 @@ let settingsJson = DEFAULT_SETTINGS;
 let fieldWatch;
 /** The last state told to the service worker. */
 let told = "";
+/** The shortcut list this tab last wrote for the options page. */
+let publishedShortcuts = "";
 
 /** @type {Overlay} */
 let overlay;
@@ -164,9 +171,39 @@ function restoreSettings(target) {
  * @returns {void}
  */
 function saveSettings(json) {
+  adoptSettings(json);
+  chrome.storage.sync.set({ [STORAGE_KEY]: json }).catch(console.error);
+}
+
+/**
+ * What follows the session's document outside it: the overlay's look and the
+ * options page's shortcut list.
+ * @param {string} json
+ * @returns {void}
+ */
+function adoptSettings(json) {
   settingsJson = json;
   drawSettings();
-  chrome.storage.sync.set({ [STORAGE_KEY]: json }).catch(console.error);
+  publishShortcuts();
+}
+
+/**
+ * Writes the session's shortcut list for the options page, as the ChromeOS
+ * worker does: the list follows Tone Keys, the input mode and the language.
+ * Only a tab's session can: the extension pages' CSP has no
+ * `'wasm-unsafe-eval'`, so the options page and `background.js` cannot run
+ * one.
+ * @returns {void}
+ */
+function publishShortcuts() {
+  const shortcuts = run((current) =>
+    current.shortcuts(/* hasPageWindows */ false),
+  );
+  if (shortcuts === undefined || shortcuts === publishedShortcuts) {
+    return;
+  }
+  publishedShortcuts = shortcuts;
+  chrome.storage.local.set({ [SHORTCUTS_KEY]: shortcuts }).catch(console.error);
 }
 
 /**
@@ -204,6 +241,7 @@ async function start() {
     starting = await createSession(platform(), navigator.language);
     session = starting;
     restoreSettings(starting);
+    publishShortcuts();
     if (isEnglishWanted) {
       isEnglishWanted = false;
       starting.toggleLanguageMode();
@@ -778,8 +816,7 @@ async function prepare() {
     apply(call((current) => current.commitComposition()));
     try {
       run((current) => current.setSettings(json));
-      settingsJson = json;
-      drawSettings();
+      adoptSettings(json);
       redraw();
     } catch (error) {
       console.error(error);

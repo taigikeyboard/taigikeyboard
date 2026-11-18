@@ -421,7 +421,7 @@ function changeSettings(json) {
  * @returns {void}
  */
 function redrawShortcuts() {
-  const raw = run((current) => current.shortcuts());
+  const raw = run((current) => current.shortcuts(/* hasPageWindows */ true));
   if (raw === undefined) {
     return;
   }

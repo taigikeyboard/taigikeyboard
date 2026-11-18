@@ -15,6 +15,11 @@ import { setDisplayLanguage } from "./i18n.js";
 
 /** Also the ChromeOS input method's key in chrome.storage.sync. */
 export const STORAGE_KEY = "taigi.settings";
+/**
+ * Where the ChromeOS worker and a browser extension tab write their session's
+ * shortcut list for the options page, in chrome.storage.local.
+ */
+export const SHORTCUTS_KEY = "taigi.shortcuts";
 
 /**
  * Returns a fresh empty settings document at revision 0.

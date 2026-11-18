@@ -11,7 +11,6 @@
  * @property {string} title
  * @property {string[]} hiddenControls
  * @property {string[]} removedOptions
- * @property {boolean} shortcutsShown
  */
 
 /**
@@ -37,14 +36,9 @@ const CHROMEOS = {
    * expandable layout (chromeos-roadmap.md D4).
    */
   removedOptions: ["expandable", "verticalExpandable"],
-  /** The worker publishes its session's shortcut list (`options.js`). */
-  shortcutsShown: true,
 };
 
-/** The page fills this section from its session. */
-const SHORTCUTS_MARK = '<div id="shortcuts"></div>';
 const SECTION_TAG = '<details class="sidebar-section"';
-const SECTION_OPENING = `${SECTION_TAG}>`;
 const SUMMARY = /<summary data-i18n="([^"]+)">([^<]*)<\/summary>/;
 
 /**
@@ -168,9 +162,9 @@ function asCards(lines) {
 
 /**
  * `<form id="settings">…</form>` of `indexHtml`, without what `cut` names:
- * `hiddenControls`, rows to hide, `removedOptions`, options to drop, and
- * `shortcutsShown`, whether the Shortcuts section stays; every section laid
- * out as a card, and the side menu of the shown ones (`asCards`).
+ * `hiddenControls`, rows to hide, and `removedOptions`, options to drop;
+ * every section laid out as a card, and the side menu of the shown ones
+ * (`asCards`).
  *
  * @param {string} indexHtml
  * @param {OptionsCut} [cut]
@@ -187,9 +181,6 @@ export function optionsMarkup(indexHtml, cut = CHROMEOS) {
       onlyIndex(form, `name="${name}"`),
       '<label class="setting">',
     );
-  }
-  if (!cut.shortcutsShown) {
-    hideEnclosing(form, onlyIndex(form, SHORTCUTS_MARK), SECTION_OPENING);
   }
   for (const option of cut.removedOptions) {
     form.splice(onlyIndex(form, `<option value="${option}"`), 1);

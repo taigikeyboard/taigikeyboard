@@ -4,7 +4,11 @@
 import { imeCalls, isResetStorm, keyJson, modeMenuItem } from "./calls.js";
 import { Learning } from "./learning.js";
 import init, { Session } from "./pkg/taigi_web.js";
-import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
+import {
+  emptyDocument,
+  STORAGE_KEY as SETTINGS_KEY,
+  SHORTCUTS_KEY,
+} from "./settings.js";
 
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
@@ -21,10 +25,6 @@ globalThis.taigiMeasureCells = () => {
 const ENGINE_ID = "taigi";
 
 const DEFAULT_SETTINGS = JSON.stringify(emptyDocument());
-
-// The session's shortcut list, in chrome.storage.local for the options page to
-// draw (the same key in `options.js`).
-const SHORTCUTS_KEY = "taigi.shortcuts";
 
 // One notification for every mode switch: the next replaces it.
 const MODE_NOTICE_ID = "mode";
@@ -139,7 +139,9 @@ async function start() {
  * @returns {void}
  */
 function publishState() {
-  const shortcuts = run((current) => current.shortcuts());
+  const shortcuts = run((current) =>
+    current.shortcuts(/* hasPageWindows */ false),
+  );
   if (shortcuts !== undefined && shortcuts !== publishedShortcuts) {
     publishedShortcuts = shortcuts;
     chrome.storage.local

@@ -60,11 +60,13 @@ test("the extension options form hides only the key panel and font rows", () => 
   assert.match(page, /<title>台語齒盤<\/title>/);
 });
 
-test("the extension's side menu leaves out its hidden Shortcuts section", () => {
+test("the extension's side menu lists its Shortcuts section", () => {
   const { nav } = optionsMarkup(index, EXTENSION_CUT);
-  assert.doesNotMatch(nav, /shortcutsTab/);
-  // trace: General, Appearance, Manage Dictionaries keep their page order ids
-  assert.match(nav, /href="#section-2"/);
+  // trace: General, Appearance, Shortcuts, Manage Dictionaries in page order
+  assert.match(
+    nav,
+    /<a href="#section-3" data-i18n="desktop.shortcutsTab">Shortcuts<\/a>/,
+  );
   assert.match(nav, /href="#section-4"/);
 });
 

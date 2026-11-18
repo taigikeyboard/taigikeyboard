@@ -257,12 +257,14 @@ impl Session {
         self.inner.focus_lost();
     }
 
-    /// A malformed document is refused and the previous one stays.
     /// The sidebar's Shortcuts section; JSON, `shortcuts.rs`.
-    pub fn shortcuts(&self) -> String {
-        self.inner.shortcuts()
+    /// `has_page_windows`: the caller draws the Telex guide and the TPS key
+    /// panel, so their rows are listed.
+    pub fn shortcuts(&self, has_page_windows: bool) -> String {
+        self.inner.shortcuts(has_page_windows)
     }
 
+    /// A malformed document is refused and the previous one stays.
     #[wasm_bindgen(js_name = setSettings)]
     pub fn set_settings(&self, settings_json: &str) -> Result<(), JsError> {
         self.inner

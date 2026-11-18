@@ -2,14 +2,20 @@
 // web page's settings form over the settings document in chrome.storage.sync,
 // which the worker reads too.
 
-import { STORAGE_KEY as KEY, parseStored, Settings } from "./settings.js";
+import {
+  STORAGE_KEY as KEY,
+  parseStored,
+  Settings,
+  SHORTCUTS_KEY,
+} from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
 
 /** @typedef {import("../types/shared.d.ts").WireShortcuts} WireShortcuts */
+/** @typedef {import("../types/shared.d.ts").WireShortcutRow} WireShortcutRow */
 
-// The ChromeOS worker's session writes its shortcut list here (the same key
-// in `worker.js`); the browser extension's cut hides the section.
-const SHORTCUTS_KEY = "taigi.shortcuts";
+// The browser extension's own chord (its `manifest.json` `commands`), kept by
+// the browser outside the settings document; ChromeOS declares none.
+const TOGGLE_COMMAND = "toggle-typing";
 
 const { [KEY]: stored } = await chrome.storage.sync.get(KEY);
 // The last document this page wrote or adopted: an equal one is no change.
@@ -66,30 +72,55 @@ chrome.storage.onChanged.addListener((changes, area) => {
 const shortcuts = document.getElementById("shortcuts");
 
 /**
- * Draws the worker's shortcut list; none yet (the input method has not run)
+ * The browser extension's toggle as the browser's shortcuts page shows it,
+ * in the browser's language; none on ChromeOS.
+ * @returns {Promise<WireShortcutRow[]>}
+ */
+async function browserCommandRows() {
+  const commands = (await chrome.commands?.getAll()) ?? [];
+  return commands
+    .filter((command) => command.name === TOGGLE_COMMAND)
+    .map((command) => ({
+      label: command.description ?? "",
+      keys: command.shortcut?.trim() ?? "",
+    }));
+}
+
+/**
+ * Draws the session's shortcut list, the browser's own rows last in its last
+ * block (Other, `shortcuts.rs`); none yet (the input method has not run)
  * leaves the section empty.
  * @param {HTMLElement} root
- * @param {unknown} json
- * @returns {void}
+ * @returns {Promise<void>}
  */
-function showShortcuts(root, json) {
-  if (typeof json !== "string") {
+async function showShortcuts(root) {
+  const [{ [SHORTCUTS_KEY]: published }, commandRows] = await Promise.all([
+    chrome.storage.local.get(SHORTCUTS_KEY),
+    browserCommandRows(),
+  ]);
+  if (typeof published !== "string") {
     return;
   }
-  const { groups } = /** @type {WireShortcuts} */ (JSON.parse(json));
+  const { groups } = /** @type {WireShortcuts} */ (JSON.parse(published));
   if (groups) {
+    groups.at(-1)?.rows.push(...commandRows);
     drawShortcuts(root, groups);
   }
 }
 
-if (shortcuts !== null && shortcuts.closest("[hidden]") === null) {
-  const { [SHORTCUTS_KEY]: published } =
-    await chrome.storage.local.get(SHORTCUTS_KEY);
-  showShortcuts(shortcuts, published);
+if (shortcuts !== null) {
+  await showShortcuts(shortcuts);
   // Tone Keys, the input script and the language change the list.
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "local") {
-      showShortcuts(shortcuts, changes[SHORTCUTS_KEY]?.newValue);
+    if (area === "local" && SHORTCUTS_KEY in changes) {
+      showShortcuts(shortcuts);
+    }
+  });
+  // The browser announces no rebound command: read it again on return from
+  // chrome://extensions/shortcuts.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      showShortcuts(shortcuts);
     }
   });
 }
