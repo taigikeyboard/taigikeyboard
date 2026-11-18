@@ -1,7 +1,7 @@
 // Part of `make extension`: writes what the browser extension cuts from the
 // web page at build time, so both keep one markup and one stylesheet. A page
 // that drifted fails the build rather than shipping a wrong panel.
-//   node scripts/stage-extension.mjs <web/src> <web/extension> <out>
+//   node scripts/stage-extension.mjs <web/src> <web/extension> <web/chromeos/options.html> <out>
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,10 +18,10 @@ import { optionsPage } from "../chromeos/options-form.mjs";
  * @type {OptionsCut}
  */
 export const EXTENSION_CUT = {
+  title: "台語齒盤",
   hiddenControls: ["tpsKeyboardShown", "fontType"],
   removedOptions: [],
   shortcutsShown: false,
-  sectionsOpen: false,
 };
 
 /**
@@ -77,7 +77,7 @@ export function forShadowTree(css) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const [source, extension, out] = process.argv.slice(2);
+  const [source, extension, shell, out] = process.argv.slice(2);
   /**
    * @param {...string} path
    * @returns {string}
@@ -87,7 +87,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
   writeFileSync(
     join(out, "options.html"),
-    optionsPage(read(extension, "options.html"), index, EXTENSION_CUT),
+    optionsPage(read(shell), index, EXTENSION_CUT),
   );
 
   mkdirSync(join(out, "generated"), { recursive: true });

@@ -1,16 +1,16 @@
-// The ChromeOS options form, cut from the real web page (web/chromeos/options-form.mjs).
+// The ChromeOS options page, cut from the real web page (web/chromeos/options-form.mjs).
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { optionsForm, optionsPage } from "../chromeos/options-form.mjs";
+import { optionsMarkup, optionsPage } from "../chromeos/options-form.mjs";
 
 const index = readFileSync(
   new URL("../src/index.html", import.meta.url),
   "utf8",
 );
-const form = optionsForm(index);
+const { form, nav } = optionsMarkup(index);
 
 /**
  * @param {string} name
@@ -55,26 +55,61 @@ test("the Shortcuts section is shown, for the worker's list", () => {
   const at = lines.findIndex((line) => line.includes('<div id="shortcuts">'));
   const section =
     lines.slice(0, at).findLast((line) => line.includes("<details")) ?? "";
-  assert.match(section, /<details class="sidebar-section" open>/);
+  assert.match(
+    section,
+    /<details class="sidebar-section" id="section-3" open>/,
+  );
 });
 
-test("every section starts unfolded", () => {
+test("every section is unfolded, a heading over a card", () => {
   assert.doesNotMatch(form, /<details class="sidebar-section">/);
+  // trace: General, Appearance, Shortcuts, Manage Dictionaries in index.html
+  for (const id of [1, 2, 3, 4]) {
+    assert.match(
+      form,
+      new RegExp(`<details class="sidebar-section" id="section-${id}" open>`),
+    );
+  }
+  assert.equal(form.match(/<div class="options-card">/g)?.length, 4);
+  assert.match(form, /<\/summary>\n\s*<div class="options-card">/);
+  assert.match(form, /<\/div>\n\s*<\/details>/);
   assert.equal(
-    form.match(/<details class="sidebar-section" open>/g)?.length,
+    form.match(
+      /<summary role="heading" aria-level="2" tabindex="-1" data-i18n=/g,
+    )?.length,
     4,
   );
 });
 
-test("the options page puts the form where its shell marks", () => {
+test("the side menu links every shown section by its summary's key", () => {
+  assert.equal(
+    nav,
+    [
+      '<nav class="options-nav">',
+      '<a href="#section-1" data-i18n="desktop.generalTab">General</a>',
+      '<a href="#section-2" data-i18n="desktop.appearanceTab">Appearance</a>',
+      '<a href="#section-3" data-i18n="desktop.shortcutsTab">Shortcuts</a>',
+      '<a href="#section-4" data-i18n="desktop.dictionarySourcesLink">Manage Dictionaries</a>',
+      "</nav>",
+    ].join("\n"),
+  );
+});
+
+test("the options page fills its shell's title, menu and form", () => {
   const shell = readFileSync(
     new URL("../chromeos/options.html", import.meta.url),
     "utf8",
   );
   const page = optionsPage(shell, index);
-  assert.doesNotMatch(page, /<!-- form:/);
+  assert.doesNotMatch(page, /<!-- (nav|form):/);
+  assert.match(page, /<title>台語齒盤 ChromeOS<\/title>/);
   assert.ok(page.includes(form));
-  assert.throws(() => optionsPage("<body></body>", index), /form:/);
+  assert.ok(page.includes(nav));
+  assert.throws(() => optionsPage("<body></body>", index), /title/);
+  assert.throws(
+    () => optionsPage("<title></title><body></body>", index),
+    /nav:/,
+  );
 });
 
 test("the candidate layout offers Horizontal and Vertical only", () => {
@@ -85,8 +120,8 @@ test("the candidate layout offers Horizontal and Vertical only", () => {
 
 test("markup drift fails the build", () => {
   assert.throws(
-    () => optionsForm(index.replace('name="fontType"', 'name="font"')),
+    () => optionsMarkup(index.replace('name="fontType"', 'name="font"')),
     /fontType/,
   );
-  assert.throws(() => optionsForm("<p>no form</p>"), /form id="settings"/);
+  assert.throws(() => optionsMarkup("<p>no form</p>"), /form id="settings"/);
 });

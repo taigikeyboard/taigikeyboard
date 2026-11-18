@@ -139,8 +139,8 @@ jobs:
               web/src/*)
                 site=true
                 ;;
-              # ChromeOS options files are shared with the extension
-              web/chromeos/options.js|web/chromeos/options-form.mjs)
+              # ChromeOS options page files are shared with the extension
+              web/chromeos/options*)
                 extension=true
                 ;;
               # Other ChromeOS paths are tested here (`make chromeos`, smoke) and in lint/typecheck

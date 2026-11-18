@@ -1,0 +1,245 @@
+/* The options page of the ChromeOS input method and of the browser extension,
+   over the web page's style.css, drawn as chrome://settings is: a side menu,
+   one centered column of cards, toggles for switches. The colours and sizes
+   are Chromium's (ui/webui/resources/cr_elements/cr_shared_vars.css: the
+   `--cr-fallback-color-*` set, which WebUI pages without the browser theme
+   use; cr_toggle/cr_toggle.css; settings_menu.css). The page takes them by
+   redefining style.css's own tokens on its body, so style.css's rules draw in
+   them; `light-dark()` follows the page's `color-scheme`, the system's or the
+   one a stored Appearance value pins. */
+body.options {
+  --bg: light-dark(rgb(248, 250, 253), rgb(31, 31, 31));
+  --card: light-dark(#ffffff, #292a2d);
+  --text: light-dark(rgb(31, 31, 31), rgb(227, 227, 227));
+  --secondary: light-dark(rgb(68, 71, 70), rgb(196, 199, 197));
+  --accent: light-dark(rgb(11, 87, 208), rgb(168, 199, 250));
+  --border: light-dark(rgb(199, 199, 199), rgb(117, 117, 117));
+  --field: light-dark(rgb(242, 242, 242), rgb(60, 61, 64));
+  --hairline: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.1));
+  --hover: light-dark(rgba(31, 31, 31, 0.08), rgba(227, 227, 227, 0.08));
+  /* The system's UI face, as Chrome's own pages use, whatever font the
+     page's Font setting names on the root. */
+  --font: system-ui, var(--system-font);
+  /* Chrome's alone: the toggle's and the side menu's. */
+  --on-accent: light-dark(#ffffff, rgb(6, 46, 111));
+  --accent-container: light-dark(rgb(211, 227, 253), rgb(8, 66, 160));
+  --on-accent-container: light-dark(rgb(4, 30, 73), rgb(211, 227, 253));
+  --outline: light-dark(rgb(116, 119, 117), rgb(142, 145, 143));
+  --column: 680px;
+  --menu: 256px;
+
+  display: block;
+  padding: 0 16px 4rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* style.css gives every row a display, which outranks `hidden`. */
+.options [hidden] {
+  display: none;
+}
+
+.options-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+}
+
+.options-header img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.options-header h1 {
+  min-height: 0;
+  font-size: 1.375rem;
+  font-weight: 400;
+}
+
+/* The menu takes its column only where the cards keep theirs, as the
+   settings page drops its menu into a drawer on a narrow window. */
+.options-layout {
+  display: grid;
+  grid-template-columns: minmax(0, var(--column));
+  justify-content: center;
+  gap: 24px;
+}
+
+/* style.css holds every `main` to the editor's 600px measure. */
+.options-page {
+  max-width: none;
+}
+
+.options-nav {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .options-layout {
+    grid-template-columns: var(--menu) minmax(0, var(--column)) var(--menu);
+  }
+
+  .options-nav {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    padding-top: 8px;
+  }
+}
+
+.options-nav a {
+  padding: 14px 24px 14px 16px;
+  border-radius: 100px;
+  color: var(--text);
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.options-nav a:hover {
+  background: var(--hover);
+}
+
+.options-nav a[aria-current="true"] {
+  background: var(--accent-container);
+  color: var(--on-accent-container);
+}
+
+.options-nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Every section is a heading over a card; none folds. */
+.options #settings {
+  display: grid;
+  gap: 24px;
+  padding-top: 8px;
+}
+
+.options .sidebar-section {
+  border: 0;
+  scroll-margin-top: 16px;
+}
+
+.options .sidebar-section summary {
+  min-height: 0;
+  padding: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: default;
+  pointer-events: none;
+}
+
+.options .sidebar-section summary::after {
+  content: none;
+}
+
+.options-card {
+  padding: 0 20px;
+  border-radius: 8px;
+  background: var(--card);
+}
+
+/* A line above every shown row but a card's or a group's first: a hidden
+   row (`hidden` by the cut) still counts for style.css's `+`. */
+.options .setting {
+  min-height: 48px;
+  padding: 12px 0;
+  border-top: 0;
+  font-size: 0.8125rem;
+}
+
+.options .setting:not([hidden]) ~ .setting {
+  border-top: 1px solid var(--hairline);
+}
+
+.options .options-card .setting-group + .setting {
+  border-top: 0;
+}
+
+.options .setting-nested {
+  padding-left: 40px;
+}
+
+.options .setting-group {
+  margin: 0;
+  padding: 16px 0 4px;
+  font-weight: 500;
+}
+
+/* Chrome's dropdown (md-select): a filled box, its text left-aligned. */
+.options .setting select {
+  flex: none;
+  height: 36px;
+  padding: 0 32px 0 12px;
+  border-radius: 8px;
+  background:
+    var(--field) url("chevron.svg") right 12px center / 10px no-repeat;
+  color: var(--text);
+  text-align: left;
+}
+
+.options .setting select:hover {
+  background-color: color-mix(in srgb, var(--field), var(--text) 6%);
+}
+
+/* Chrome's toggle (cr-toggle): an outlined 26 × 16 track with a small grey
+   knob; on, a filled track with a larger knob at the end. Drawn only where
+   `light-dark()` is (Chrome 123): below it the colours are invalid and the
+   track would show no state, so the native checkbox stays. */
+@supports (color: light-dark(#000, #fff)) {
+  .options .setting input[type="checkbox"] {
+    width: 26px;
+    height: 16px;
+    border: 1px solid var(--outline);
+    border-radius: 50px;
+    background:
+      radial-gradient(circle, var(--outline) 4px, transparent 4.5px) left center
+      / 14px 14px no-repeat;
+    cursor: pointer;
+    transition:
+      background-color 80ms linear,
+      background-position 80ms linear;
+    appearance: none;
+  }
+
+  .options .setting input[type="checkbox"]:checked {
+    border-color: var(--accent);
+    background:
+      var(--accent)
+      radial-gradient(circle, var(--on-accent) 6px, transparent 6.5px) right
+      center / 14px 14px no-repeat;
+  }
+
+  .options .setting input[type="checkbox"]:disabled {
+    cursor: default;
+    opacity: 0.38;
+  }
+}
+
+/* One ring: style.css's `--ring` shadow gives way to Chrome's outline. */
+.options .setting :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* Chrome's outlined button, at the card's foot on its right. */
+.options .setting-reset {
+  width: fit-content;
+  margin: 12px 0 12px auto;
+  padding: 0 16px;
+  border-radius: 100px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.options .setting-reset:hover {
+  background: var(--hover);
+}

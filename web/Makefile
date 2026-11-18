@@ -113,7 +113,7 @@ site-stage: $(FONTS)/.stamp $(VENDOR)/lexical.js
 chromeos: build
 	rm -rf $(CHROMEOS) target/taigi-keyboard-chromeos.zip
 	mkdir -p $(CHROMEOS)/pkg $(CHROMEOS)/dictionaries $(CHROMEOS)/icons $(CHROMEOS)/generated
-	cp chromeos/manifest.json chromeos/*.js chromeos/offscreen.html $(CHROMEOS)/
+	cp chromeos/manifest.json chromeos/*.js chromeos/offscreen.html chromeos/options.css $(CHROMEOS)/
 	cp -R chromeos/_locales $(CHROMEOS)/
 	cp src/settings.js src/i18n.js src/learning.js src/shortcuts.js src/style.css src/chevron.svg $(CHROMEOS)/
 	cp src/generated/strings.js $(CHROMEOS)/generated/
@@ -135,9 +135,9 @@ extension-stage: node_modules/.package-lock.json
 	mkdir -p $(EXTENSION)/pkg $(EXTENSION)/dictionaries $(EXTENSION)/icons $(EXTENSION)/generated
 	cp extension/manifest.json extension/*.js extension/popup.html extension/popup.css $(EXTENSION)/
 	cp -R extension/_locales $(EXTENSION)/
-	cp $(addprefix src/,$(EXTENSION_PAGE_MODULES)) src/style.css src/chevron.svg chromeos/options.js $(EXTENSION)/
+	cp $(addprefix src/,$(EXTENSION_PAGE_MODULES)) src/style.css src/chevron.svg chromeos/options.js chromeos/options.css $(EXTENSION)/
 	cp src/generated/strings.js $(EXTENSION)/generated/
-	node scripts/stage-extension.mjs src extension $(EXTENSION)
+	node scripts/stage-extension.mjs src extension chromeos/options.html $(EXTENSION)
 	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(PKG_JS)/taigi_web_asm.js $(PKG_JS)/taigi_web_js.js $(EXTENSION)/pkg/
 	cp ../assets/dictionaries/* $(EXTENSION)/dictionaries/
 	cp $(ICONS)/16.png $(ICONS)/32.png $(ICONS)/48.png $(ICONS)/128.png $(EXTENSION)/icons/

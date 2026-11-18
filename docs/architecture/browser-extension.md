@@ -133,7 +133,7 @@ The tooltip on an enabled tab is the extension's name, the same words, and the a
 
 ## Package
 
-`make -C web extension` stages `web/target/extension/` and zips it: the extension's own files, the page's `panel.js`, `surface.js`, `i18n.js`, `settings.js` and `style.css` as they are, the wasm and its `wasm2js` fallback (`scripts/build-wasm2js.mjs`), the dictionaries uncompressed, and three things `scripts/stage-extension.mjs` cuts from the page so both keep one source: the options form (`chromeos/options-form.mjs` with the extension's list), the panel's markup (`generated/panel-markup.js`), and `overlay.css`, which is `style.css` with `:root` turned into `:host` followed by `extension/overlay.css`.
+`make -C web extension` stages `web/target/extension/` and zips it: the extension's own files, the page's `panel.js`, `surface.js`, `i18n.js`, `settings.js` and `style.css` as they are, the wasm and its `wasm2js` fallback (`scripts/build-wasm2js.mjs`), the dictionaries uncompressed, and three things `scripts/stage-extension.mjs` cuts from the page so both keep one source: the options page (ChromeOS's shell `chromeos/options.html` and `options.css`, with the form cut by `chromeos/options-form.mjs` with the extension's list), the panel's markup (`generated/panel-markup.js`), and `overlay.css`, which is `style.css` with `:root` turned into `:host` followed by `extension/overlay.css`.
 
 ## Tests
 
