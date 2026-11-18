@@ -25,7 +25,7 @@ TEXT = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
 TITLE = "chore(dictionary): MoE kautian.ods has new data"
 START, END = "<!-- kautian-watch:start -->", "<!-- kautian-watch:end -->"
 # Issue text is Taigi Hanji, worded after sutian.moe.edu.tw/und-hani (maintainer request).
-FORMAT_MARKER = "<!-- kautian-watch:format:7 -->"
+FORMAT_MARKER = "<!-- kautian-watch:format:8 -->"
 # Sheets the dictionary build reads, with their reading columns
 # (dictionary/sources/official/kautian/config.yaml select.sheets + dialect_sheet;
 # kautian_watch_test keeps the two in sync).
@@ -484,7 +484,7 @@ def link_kind(sheet: SheetDiff) -> str | None:
 
 def link_changes(differences: list[SheetDiff], *, brief: bool) -> list[str]:
     """Synonym / antonym links per (word, linked word), across headword and sense sheets."""
-    links: dict[tuple[str, str, str], dict[str, list[str]]] = {}
+    links: dict[tuple[str, str, str], dict[str, list[tuple[str, str]]]] = {}
     for sheet in differences:
         if not (kind := link_kind(sheet)):
             continue
@@ -493,14 +493,26 @@ def link_changes(differences: list[SheetDiff], *, brief: bool) -> list[str]:
                 fields = dict(zip(sheet.columns_before or (), row.values))
                 # 義項 sheets link one sense of the word; 詞目 sheets the whole word.
                 scope = f"釋義「{fields['解說']}」" if fields.get("解說") else "規个詞目"
+                # 義項tuì義項 sheets also carry the linked sense's text.
+                linked = f"對應釋義「{fields['對應解說']}」" if fields.get("對應解說") else ""
                 key = (kind, fields.get("詞目漢字", ""), fields.get("對應詞目漢字", ""))
-                links.setdefault(key, {}).setdefault(side, []).append(scope)
+                links.setdefault(key, {}).setdefault(side, []).append((scope, linked))
     tables: dict[str, list[Row]] = {}
     for (kind, word, target), sides in sorted(links.items()):
-        removed, added = "; ".join(sides.get("removed", [])), "; ".join(sides.get("added", []))
-        change = (
-            f"{removed} → {added}" if removed and added else f"增加：{added}" if added else "刪掉"
+        removed, added = sides.get("removed", []), sides.get("added", [])
+        # Unchanged own sense: the edit is in the linked sense, so show that side.
+        show_linked = sorted(scope for scope, _ in removed) == sorted(
+            scope for scope, _ in added
+        ) and sorted(linked for _, linked in removed) != sorted(linked for _, linked in added)
+        field = 1 if show_linked else 0
+        before, after = (
+            "; ".join(dict.fromkeys(item[field] for item in items)) for items in (removed, added)
         )
+        if removed and added:
+            # Same text both sides: only IDs changed (renumbering or swapped links).
+            change = "編號改" if before == after else f"{before} → {after}"
+        else:
+            change = f"增加：{after}" if added else "刪掉"
         tables.setdefault(kind, []).append((word, target, change))
     return [
         pair_table(kind, rows, header=("詞目", kind, "改變"), brief=brief)
