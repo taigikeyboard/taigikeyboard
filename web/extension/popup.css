@@ -1,23 +1,50 @@
-/* The toolbar popup, over the page's style.css: its colours and its buttons,
-   not its layout. */
+/* The toolbar popup, over the page's style.css and the options page's
+   Chrome tokens (`chromeos/options.css`), drawn as Chrome's own bubbles are:
+   a title row, the tab's state, a filled button for the next step, an
+   outlined one for the rest, and Settings as a menu row under a line. Sizes
+   are cr-button's (36px, pill, 13px / 500) and the bubble's 16px inset. */
 body.popup {
   display: flex;
+  flex-direction: column;
   align-items: stretch;
-  gap: 0.5rem;
-  width: 17rem;
+  gap: 8px;
+  width: 320px;
   min-height: 0;
-  padding: 0.875rem;
-  font-size: 0.9375rem;
-  line-height: 1.4;
+  padding: 16px 0 8px;
+  background: var(--card);
+  font-size: 0.8125rem;
+  line-height: 20px;
 }
 
 .popup p {
   margin: 0;
+  padding: 0 16px;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 4px;
+}
+
+.popup-header img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.popup-header h1 {
+  min-height: 0;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 22px;
 }
 
 .popup #site {
   color: var(--secondary);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   overflow-wrap: anywhere;
 }
 
@@ -26,33 +53,85 @@ body.popup {
 }
 
 .popup #status {
-  margin-bottom: 0.25rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-.popup .setting-reset {
+/* cr-button: the action one filled, the others outlined. */
+.popup-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  margin: 0;
-  padding: 0 0.75rem;
+  gap: 8px;
+  height: 36px;
+  margin: 0 16px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
-.popup .setting-reset:not([hidden]):has(.popup-shortcut:not([hidden])) {
+.popup-button:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+.popup-action {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.popup-action:hover {
+  background: color-mix(in srgb, var(--accent), var(--on-accent) 8%);
+  color: var(--on-accent);
+}
+
+.popup #status + .popup-button {
+  margin-top: 4px;
+}
+
+.popup-button:not([hidden]):has(.popup-shortcut:not([hidden])) {
   justify-content: space-between;
 }
 
 .popup .popup-shortcut {
-  padding: 0 0.35rem;
-  border: 1px solid var(--border);
+  padding: 0 6px;
+  border: 1px solid currentColor;
   border-radius: 4px;
-  color: var(--secondary);
   font-family: var(--system-font);
   font-size: 0.75rem;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 18px;
+  opacity: 0.8;
+}
+
+/* Chrome's menu item: full width, left-aligned, under a hairline. */
+.popup-menu-item {
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 0 16px;
+  border-top: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.popup-menu-item:hover {
+  color: var(--text);
+}
+
+.popup :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.popup-menu-item:focus-visible {
+  outline-offset: -2px;
 }
 
 /* style.css gives every button a display, which outranks `hidden`. */

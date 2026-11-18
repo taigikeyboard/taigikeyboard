@@ -7,8 +7,9 @@
    against the computed styles of chrome://settings in Chrome 158. The page
    takes them by redefining style.css's own tokens on its body, so style.css's
    rules draw in them; `light-dark()` follows the page's `color-scheme`, the
-   system's or the one a stored Appearance value pins. */
-body.options {
+   system's or the one a stored Appearance value pins. The browser
+   extension's toolbar popup (`extension/popup.css`) takes the same tokens. */
+:is(body.options, body.popup) {
   --bg: light-dark(#ffffff, rgb(32, 33, 36));
   --card: light-dark(#ffffff, rgb(41, 42, 45));
   --text: light-dark(rgb(31, 31, 31), rgb(227, 227, 227));
@@ -28,6 +29,9 @@ body.options {
   --outline: light-dark(rgb(116, 119, 117), rgb(142, 145, 143));
   --card-shadow:
     0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+}
+
+body.options {
   --column: 680px;
   --menu: 266px;
 
@@ -215,7 +219,7 @@ body.options {
 }
 
 /* Chrome's dropdown (md-select): an outlined 200px box, its text
-   left-aligned, a small filled arrow drawn in the text's colour. */
+   left-aligned, a small filled arrow in the secondary colour. */
 .options .setting select {
   flex: none;
   width: 200px;
@@ -273,7 +277,8 @@ body.options {
 }
 
 /* One ring: style.css's `--ring` shadow gives way to Chrome's outline. */
-.options .setting :focus-visible {
+.options .setting :focus-visible,
+.options .setting-reset:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   box-shadow: none;
