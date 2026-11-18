@@ -12,8 +12,6 @@ edition = "2021"
 # The floor of the desktop crates it links.
 rust-version = "1.93"
 license = "Apache-2.0"
-repository = "https://github.com/taigikeyboard/taigikeyboard"
-publish = false
 
 [workspace.dependencies]
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
