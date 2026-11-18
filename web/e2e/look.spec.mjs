@@ -545,6 +545,72 @@ test("a horizontal list keeps its scripts apart and turns pages", async ({
   await expect(editor).toBeFocused();
 });
 
+// A list that runs past one page keeps one window width from page to page and
+// list to list, so the right edge does not move as the words change (macOS
+// PR #894; `layout.rs` `horizontal_page_starts`).
+for (const [candidateLayout, name] of [
+  ["horizontal", "Horizontal"],
+  ["expandable", "Horizontal Expandable"],
+]) {
+  test(`a ${name} list keeps one width across lists and pages`, async ({
+    page,
+  }) => {
+    const editor = await open(page, { settings: { candidateLayout } });
+    const widths = new Set();
+    const firstCells = new Set();
+    /** @returns {Promise<void>} */
+    const record = async () => {
+      // The arrow shows only for a list that runs past one page.
+      const arrow = candidateLayout === "horizontal" ? "#page-down" : "#unfold";
+      await expect(page.locator(arrow)).toBeVisible();
+      const box = await panel(page).boundingBox();
+      widths.add(Math.round(box?.width ?? 0));
+      firstCells.add(await candidates(page).first().textContent());
+    };
+    for (const prefix of ["ti", "kong", "lang", "sim"]) {
+      await editor.pressSequentially(prefix);
+      await record();
+      if (candidateLayout === "horizontal") {
+        await page.locator("#page-down").click();
+        await record();
+      }
+      await editor.press("Escape");
+      await expect(candidates(page)).toHaveCount(0);
+    }
+    // Different words on screen, one width.
+    expect(firstCells.size).toBeGreaterThan(1);
+    expect([...widths]).toHaveLength(1);
+  });
+}
+
+test("a Horizontal list follows a window that narrowed at the next key", async ({
+  page,
+}) => {
+  // Extra Large, where CSS's unrounded lengths outgrow the model's rounded
+  // ones by the most.
+  const editor = await open(page, {
+    settings: { candidateLayout: "horizontal", candidateTextSize: "23" },
+  });
+  await editor.pressSequentially("ti");
+  await expect(page.locator("#page-down")).toBeVisible();
+  const wide = (await panel(page).boundingBox())?.width ?? 0;
+  await page.setViewportSize({ width: 420, height: 800 });
+  await editor.press("ArrowRight");
+  const fits = await page.evaluate(() => {
+    /** @param {string} selector */
+    const right = (selector) =>
+      document.querySelector(selector)?.getBoundingClientRect().right ?? 0;
+    return {
+      width: document.querySelector("#panel")?.getBoundingClientRect().width,
+      arrowsInPanel: right("#page-arrows") <= right("#panel") + 0.5,
+      panelInEditor: right("#panel") <= right("#editor") + 0.5,
+    };
+  });
+  expect(fits.width).toBeLessThan(wide);
+  expect(fits.arrowsInPanel).toBe(true);
+  expect(fits.panelInEditor).toBe(true);
+});
+
 test("the composition sits on the caret's line, clear of the list", async ({
   page,
 }) => {

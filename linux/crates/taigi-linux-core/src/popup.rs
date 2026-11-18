@@ -203,11 +203,17 @@ pub fn show_command(
             body: Box::new(build_expandable_show(content, model, style, caret)),
         });
     }
-    let bounds = state.selection.page_bounds();
+    // The list in view: the symbol picker's while it is up, which the core
+    // pages by width too (`session/table.rs` `apply_horizontal_pages`).
+    let selection = state
+        .symbol_picker
+        .as_ref()
+        .map_or(&state.selection, |picker| &picker.selection);
+    let bounds = selection.page_bounds();
     let mut command = page_command_in(content, style, caret, Some(bounds))?;
     if let Command::Show { body } = &mut command {
         if !body.vertical {
-            body.min_content_width = state.selection.content_floor();
+            body.min_content_width = selection.content_floor();
         }
     }
     Some(command)
@@ -739,6 +745,29 @@ mod tests {
         assert_eq!(body.labels, ["q", "w", "e"]);
         assert!(!body.vertical);
         assert_eq!(body.caret, caret());
+    }
+
+    #[test]
+    fn the_symbol_picker_shows_its_own_page() {
+        // trace: no candidates under the picker; the picker's highlight on
+        // cell 10 of 12, nine to a page → its second page, cells 9–11.
+        let mut selection = taigi_desktop_core::session::ListSelection::new(12);
+        selection.select(10);
+        let state = EngineState {
+            symbol_picker: Some(taigi_desktop_core::session::SymbolPicker {
+                symbols: (0..12).map(|index| index.to_string()).collect(),
+                selection,
+            }),
+            ..EngineState::default()
+        };
+        let Some(Command::Show { body }) =
+            show_command(&content(10, false), &state, style(), caret())
+        else {
+            panic!("show");
+        };
+        assert_eq!(body.cells.len(), 3);
+        assert_eq!(body.cells[0].text, "9");
+        assert_eq!(body.cursor, Some(1));
     }
 
     #[test]

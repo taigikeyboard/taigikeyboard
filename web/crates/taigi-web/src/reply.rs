@@ -59,8 +59,11 @@ pub(crate) enum WireEmit<'a> {
         cursor_visible: bool,
         page_size: u32,
         vertical: bool,
+        /// Boxed: the other variants are a few bytes.
         #[serde(skip_serializing_if = "Option::is_none")]
-        layout: Option<WireLayout>,
+        layout: Option<Box<WireLayout>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        page: Option<WirePage>,
     },
     HideLookupTable,
     ModeChanged {
@@ -103,6 +106,9 @@ pub(crate) struct WireLayout {
     lead_cell_is_unkeyed: bool,
     has_overflow: bool,
     collapsed: Vec<WireCollapsedCell>,
+    /// The collapsed window's content width: a row that runs past one page
+    /// pads to the packing budget, so it keeps one width from list to list.
+    collapsed_width: f32,
     rows: Vec<Vec<WireGridCell>>,
     column_width: f32,
     item_height: f32,
@@ -216,13 +222,12 @@ impl From<&ModeTransition> for WireTransition {
     }
 }
 
-pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
-    let model = selection.expandable()?;
+fn wire_layout(model: &ExpandableListModel, selection: &ListSelection) -> WireLayout {
     let geometry = model.expanded_geometry();
     let is_expanded = model.mode() == ExpandableDisplayMode::Expanded;
     let grid_height =
         model.grid().rows.len() as f32 * model.row_height() - ExpandableListModel::SEPARATOR_HEIGHT;
-    Some(WireLayout {
+    WireLayout {
         is_column: model.axis() == ExpandableAxis::Column,
         is_expanded,
         lead_cell_is_unkeyed: selection.lead_cell_is_unkeyed(),
@@ -235,6 +240,7 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
                 width: cell.rect.width,
             })
             .collect(),
+        collapsed_width: model.collapsed_content_width(),
         // Only an unfolded window draws them, and this goes out on every key.
         rows: if is_expanded {
             model
@@ -271,7 +277,41 @@ pub(crate) fn wire_layout(selection: &ListSelection) -> Option<WireLayout> {
         has_next_page: model.has_next_page(),
         animation_milliseconds: ExpandableListModel::ANIMATION_DURATION_SECONDS * 1000.0,
         transition: model.mode_transition().map(WireTransition::from),
-    })
+    }
+}
+
+/// The page of a list the page pages, as the session pages it: a measured
+/// horizontal row breaks where its cells fill the width, not every
+/// `pageSize` cells (`ListLayout::horizontal_page_starts`).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WirePage {
+    start: usize,
+    end: usize,
+    /// The width the row's cells keep, 0 for none: a list that runs past one
+    /// page keeps one width from page to page and list to list.
+    min_width: u32,
+}
+
+/// How the page draws the list on screen: from `ExpandableListModel`, or one
+/// page of it as the session pages it.
+pub(crate) enum WireList {
+    LaidOut(Box<WireLayout>),
+    Paged(WirePage),
+}
+
+pub(crate) fn wire_list(selection: &ListSelection) -> WireList {
+    match selection.expandable() {
+        Some(model) => WireList::LaidOut(Box::new(wire_layout(model, selection))),
+        None => {
+            let (start, end) = selection.page_bounds();
+            WireList::Paged(WirePage {
+                start,
+                end,
+                min_width: selection.content_floor(),
+            })
+        }
+    }
 }
 
 /// One row of the TPS key panel for the page: `indent` in key widths.
@@ -378,11 +418,11 @@ pub(crate) struct ModeText {
     pub label: String,
 }
 
-/// `layout` goes on a `LookupTable`, and nothing else has one.
+/// `list` goes on a `LookupTable`, and nothing else has one.
 pub(crate) fn wire_emit<'a>(
     emit: &'a Emit,
     mode: &'a ModeText,
-    layout: Option<WireLayout>,
+    list: Option<WireList>,
 ) -> WireEmit<'a> {
     match emit {
         Emit::Preedit { text, caret } => WireEmit::Preedit {
@@ -402,21 +442,29 @@ pub(crate) fn wire_emit<'a>(
             cursor_visible,
             page_size,
             vertical,
-        }) => WireEmit::LookupTable {
-            cells: cells
-                .iter()
-                .map(|cell| WireCell {
-                    text: &cell.text,
-                    annotation: cell.annotation.as_deref(),
-                })
-                .collect(),
-            labels,
-            cursor: *cursor,
-            cursor_visible: *cursor_visible,
-            page_size: *page_size,
-            vertical: *vertical,
-            layout,
-        },
+        }) => {
+            let (layout, page) = match list {
+                Some(WireList::LaidOut(layout)) => (Some(layout), None),
+                Some(WireList::Paged(page)) => (None, Some(page)),
+                None => (None, None),
+            };
+            WireEmit::LookupTable {
+                cells: cells
+                    .iter()
+                    .map(|cell| WireCell {
+                        text: &cell.text,
+                        annotation: cell.annotation.as_deref(),
+                    })
+                    .collect(),
+                labels,
+                cursor: *cursor,
+                cursor_visible: *cursor_visible,
+                page_size: *page_size,
+                vertical: *vertical,
+                layout,
+                page,
+            }
+        }
         Emit::HideLookupTable => WireEmit::HideLookupTable,
         Emit::ModeChanged => WireEmit::ModeChanged {
             symbol: mode.symbol,

@@ -581,10 +581,12 @@ summary:focus-visible {
   display: flex;
 }
 
+/* A row never wraps: the session pages it by its measured width
+   (`layout.rs`), the paged Horizontal list as the expandable row. */
 .candidates {
   display: flex;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -656,12 +658,14 @@ summary:focus-visible {
   padding-block: 0;
 }
 
-/* The packed row: `ExpandableListModel`'s widths and height, which is what the
-   keys go by. */
-.candidates[data-row] {
-  flex-wrap: nowrap;
+/* A row's cells give back what CSS's unrounded lengths add to the model's
+   rounded ones, so a row held at its width (`Panel.#keepWidth`) never grows. */
+.candidates:not([data-vertical], [data-grid]) li {
+  min-width: 0;
 }
 
+/* The packed row: `ExpandableListModel`'s widths and height, which is what the
+   keys go by. */
 .candidates:is([data-row], [data-grid]) li {
   box-sizing: border-box;
   height: var(--candidate-item);

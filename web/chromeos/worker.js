@@ -10,8 +10,9 @@ import { emptyDocument, STORAGE_KEY as SETTINGS_KEY } from "./settings.js";
 /** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
 /** @typedef {import("./calls.js").ImeCall} ImeCall */
 
-// The expandable layouts measure through the page's DOM, which a worker has
-// none of; the session's `catch` import then keeps the list paged.
+// The expandable layouts and Horizontal measure through the page's DOM, which
+// a worker has none of; the session's `catch` import then keeps the list paged
+// every `pageSize`, which is how `calls.js` pages it.
 globalThis.taigiMeasureCells = () => {
   throw new Error("no DOM to measure candidate cells");
 };
