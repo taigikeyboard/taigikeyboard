@@ -1,5 +1,6 @@
-// The ChromeOS options page: the web page's settings form over the settings
-// document in chrome.storage.sync, which the worker reads too.
+// The options page of the ChromeOS input method and the browser extension: the
+// web page's settings form over the settings document in chrome.storage.sync,
+// which the worker reads too.
 
 import { STORAGE_KEY as KEY, parseStored, Settings } from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
@@ -91,4 +92,42 @@ if (shortcuts !== null && shortcuts.closest("[hidden]") === null) {
       showShortcuts(shortcuts, changes[SHORTCUTS_KEY]?.newValue);
     }
   });
+}
+
+// The side menu marks the section in view, as the settings page marks its
+// page: the last one whose heading has reached the window's top. A menu
+// link scrolls its section to 16px (`scroll-margin-top` in options.css),
+// inside this reach, and the last section is long enough to get there.
+const SECTION_REACH = 80;
+const menu = /** @type {HTMLAnchorElement[]} */ ([
+  ...document.querySelectorAll(".options-nav a"),
+]).map((link) => ({
+  link,
+  section: /** @type {HTMLElement} */ (
+    document.getElementById(link.hash.slice(1))
+  ),
+}));
+/** @type {HTMLAnchorElement | null} */
+let marked = null;
+
+/** @returns {void} */
+function markSection() {
+  let current = menu[0].link;
+  for (const { link, section } of menu) {
+    if (section.getBoundingClientRect().top <= SECTION_REACH) {
+      current = link;
+    }
+  }
+  if (current === marked) {
+    return;
+  }
+  marked = current;
+  for (const { link } of menu) {
+    link.setAttribute("aria-current", String(link === current));
+  }
+}
+
+if (menu.length > 0) {
+  window.addEventListener("scroll", markSection, { passive: true });
+  markSection();
 }

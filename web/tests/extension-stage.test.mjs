@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { optionsForm, optionsPage } from "../chromeos/options-form.mjs";
+import { optionsMarkup, optionsPage } from "../chromeos/options-form.mjs";
 import {
   EXTENSION_CUT,
   forShadowTree,
@@ -36,7 +36,7 @@ function rowOf(form, name) {
 }
 
 test("the extension options form hides only the key panel and font rows", () => {
-  const form = optionsForm(index, EXTENSION_CUT);
+  const { form } = optionsMarkup(index, EXTENSION_CUT);
   for (const name of ["tpsKeyboardShown", "fontType"]) {
     assert.match(rowOf(form, name), /<label class="setting" hidden>/, name);
   }
@@ -52,10 +52,20 @@ test("the extension options form hides only the key panel and font rows", () => 
   }
   assert.match(form, /value="expandable"/);
   const shell = readFileSync(
-    new URL("../extension/options.html", import.meta.url),
+    new URL("../chromeos/options.html", import.meta.url),
     "utf8",
   );
-  assert.ok(optionsPage(shell, index, EXTENSION_CUT).includes(form));
+  const page = optionsPage(shell, index, EXTENSION_CUT);
+  assert.ok(page.includes(form));
+  assert.match(page, /<title>台語齒盤<\/title>/);
+});
+
+test("the extension's side menu leaves out its hidden Shortcuts section", () => {
+  const { nav } = optionsMarkup(index, EXTENSION_CUT);
+  assert.doesNotMatch(nav, /shortcutsTab/);
+  // trace: General, Appearance, Manage Dictionaries keep their page order ids
+  assert.match(nav, /href="#section-2"/);
+  assert.match(nav, /href="#section-4"/);
 });
 
 test("panelMarkup cuts the composition, panel, ruler and live region", () => {

@@ -5,16 +5,22 @@
     <meta name="color-scheme" content="light dark">
     <title>台語齒盤</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="options.css">
     <link rel="stylesheet" href="popup.css">
     <script type="module" src="popup.js"></script>
   </head>
   <body class="popup">
+    <header class="popup-header">
+      <img src="icons/32.png" alt="">
+      <h1>台語齒盤</h1>
+    </header>
     <p id="site"></p>
     <p id="status" role="status"></p>
-    <button id="enable" class="setting-reset" type="button" hidden><span data-i18n="web.extensionEnableSite">Use on This Site</span></button>
-    <button id="turn-on" class="setting-reset" type="button" hidden><span data-i18n="web.extensionTurnOn">Start Typing</span><kbd class="popup-shortcut" hidden></kbd></button>
-    <button id="turn-off" class="setting-reset" type="button" hidden><span data-i18n="web.extensionTurnOff">Stop Typing</span><kbd class="popup-shortcut" hidden></kbd></button>
-    <button id="remove" class="setting-reset" type="button" data-i18n="web.extensionRemoveSite" hidden>Stop Using on This Site</button>
-    <button id="settings" class="setting-reset" type="button" data-i18n="desktop.menuSettings">TaigiKeyboard Settings</button>
+    <button id="enable" class="popup-button popup-action" type="button" hidden><span data-i18n="web.extensionEnableSite">Use on This Site</span></button>
+    <button id="turn-on" class="popup-button popup-action" type="button" hidden><span data-i18n="web.extensionTurnOn">Start Typing</span><kbd class="popup-shortcut" hidden></kbd></button>
+    <button id="turn-off" class="popup-button popup-action" type="button" hidden><span data-i18n="web.extensionTurnOff">Stop Typing</span><kbd class="popup-shortcut" hidden></kbd></button>
+    <button id="remove" class="popup-button" type="button" data-i18n="web.extensionRemoveSite" hidden>Stop Using on This Site</button>
+    <hr class="popup-separator">
+    <button id="settings" class="popup-menu-item" type="button" data-i18n="desktop.menuSettings">TaigiKeyboard Settings</button>
   </body>
 </html>
