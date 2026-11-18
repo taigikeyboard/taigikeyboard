@@ -1,35 +1,38 @@
 /* The options page of the ChromeOS input method and of the browser extension,
    over the web page's style.css, drawn as chrome://settings is: a side menu,
-   one centered column of cards, toggles for switches. The colours and sizes
-   are Chromium's (ui/webui/resources/cr_elements/cr_shared_vars.css: the
+   one column of cards, toggles for switches. The colours and sizes are
+   Chromium's (ui/webui/resources/cr_elements/cr_shared_vars.css: the
    `--cr-fallback-color-*` set, which WebUI pages without the browser theme
-   use; cr_toggle/cr_toggle.css; settings_menu.css). The page takes them by
-   redefining style.css's own tokens on its body, so style.css's rules draw in
-   them; `light-dark()` follows the page's `color-scheme`, the system's or the
-   one a stored Appearance value pins. */
+   use; cr_toggle/cr_toggle.css; settings_menu.css; md_select.css), checked
+   against the computed styles of chrome://settings in Chrome 158. The page
+   takes them by redefining style.css's own tokens on its body, so style.css's
+   rules draw in them; `light-dark()` follows the page's `color-scheme`, the
+   system's or the one a stored Appearance value pins. */
 body.options {
-  --bg: light-dark(rgb(248, 250, 253), rgb(31, 31, 31));
-  --card: light-dark(#ffffff, #292a2d);
+  --bg: light-dark(#ffffff, rgb(32, 33, 36));
+  --card: light-dark(#ffffff, rgb(41, 42, 45));
   --text: light-dark(rgb(31, 31, 31), rgb(227, 227, 227));
   --secondary: light-dark(rgb(68, 71, 70), rgb(196, 199, 197));
   --accent: light-dark(rgb(11, 87, 208), rgb(168, 199, 250));
   --border: light-dark(rgb(199, 199, 199), rgb(117, 117, 117));
-  --field: light-dark(rgb(242, 242, 242), rgb(60, 61, 64));
   --hairline: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.1));
   --hover: light-dark(rgba(31, 31, 31, 0.08), rgba(227, 227, 227, 0.08));
   /* The system's UI face, as Chrome's own pages use, whatever font the
      page's Font setting names on the root. */
   --font: system-ui, var(--system-font);
-  /* Chrome's alone: the toggle's and the side menu's. */
+  /* Chrome's alone: the toggle's, the side menu's and the card's. */
   --on-accent: light-dark(#ffffff, rgb(6, 46, 111));
-  --accent-container: light-dark(rgb(211, 227, 253), rgb(8, 66, 160));
-  --on-accent-container: light-dark(rgb(4, 30, 73), rgb(211, 227, 253));
+  --menu-text: light-dark(rgb(32, 33, 36), #ffffff);
+  --menu-selected: light-dark(rgb(232, 240, 254), rgb(138, 180, 248));
+  --on-menu-selected: light-dark(rgb(25, 103, 210), rgb(32, 33, 36));
   --outline: light-dark(rgb(116, 119, 117), rgb(142, 145, 143));
+  --card-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
   --column: 680px;
-  --menu: 256px;
+  --menu: 266px;
 
   display: block;
-  padding: 0 16px 4rem;
+  padding: 0 0 4rem;
   font-size: 0.8125rem;
   line-height: 1.5;
 }
@@ -42,29 +45,30 @@ body.options {
 .options-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 22px;
   height: 56px;
+  padding-left: 21px;
 }
 
 .options-header img {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 6px;
 }
 
 .options-header h1 {
   min-height: 0;
   font-size: 1.375rem;
-  font-weight: 400;
+  font-weight: 500;
 }
 
-/* The menu takes its column only where the cards keep theirs, as the
-   settings page drops its menu into a drawer on a narrow window. */
+/* A narrow window: the cards alone, as the settings page drops its menu
+   into a drawer. */
 .options-layout {
   display: grid;
   grid-template-columns: minmax(0, var(--column));
   justify-content: center;
-  gap: 24px;
+  padding: 0 16px;
 }
 
 /* style.css holds every `main` to the editor's 600px measure. */
@@ -76,25 +80,57 @@ body.options {
   display: none;
 }
 
+/* A wide one: settings-ui's three flex columns. The menu's column keeps the
+   menu's width and grows as the empty one on the right does; the cards'
+   column grows from 708px (the card and 14px each side), the card centered
+   in it. */
 @media (min-width: 1000px) {
   .options-layout {
-    grid-template-columns: var(--menu) minmax(0, var(--column)) var(--menu);
+    display: flex;
+    padding: 0;
+  }
+
+  .options-layout::after {
+    flex: 1 1 0;
+    content: "";
   }
 
   .options-nav {
     position: sticky;
     top: 0;
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
     align-self: start;
-    padding-top: 8px;
+    min-width: var(--menu);
+    padding: 8px 0 5px;
+  }
+
+  .options-page {
+    flex: 1 1 708px;
+  }
+
+  /* style.css's `main` is a flex column: an auto margin alone would shrink
+     the form to its content. */
+  .options-page #settings {
+    width: 100%;
+    max-width: var(--column);
+    margin: 0 auto;
   }
 }
 
+/* Chrome's menu item (cr-nav-menu-item): flush with the window's edge,
+   rounded on its right. */
 .options-nav a {
-  padding: 14px 24px 14px 16px;
-  border-radius: 100px;
-  color: var(--text);
+  width: calc(var(--menu) - 3px);
+  min-height: 40px;
+  margin: 0 2px 0 1px;
+  padding: 10px 16px 10px 23px;
+  box-sizing: border-box;
+  border-radius: 0 100px 100px 0;
+  color: var(--menu-text);
+  font-size: 0.875rem;
+  font-weight: 500;
   line-height: 20px;
   text-decoration: none;
 }
@@ -104,8 +140,8 @@ body.options {
 }
 
 .options-nav a[aria-current="true"] {
-  background: var(--accent-container);
-  color: var(--on-accent-container);
+  background: var(--menu-selected);
+  color: var(--on-menu-selected);
 }
 
 .options-nav a:focus-visible {
@@ -116,8 +152,7 @@ body.options {
 /* Every section is a heading over a card; none folds. */
 .options #settings {
   display: grid;
-  gap: 24px;
-  padding-top: 8px;
+  gap: 0;
 }
 
 .options .sidebar-section {
@@ -125,11 +160,14 @@ body.options {
   scroll-margin-top: 16px;
 }
 
+/* Chrome's section title (settings-section h2): regular weight, 108%. */
 .options .sidebar-section summary {
   min-height: 0;
-  padding: 0 0 12px;
-  font-size: 1rem;
-  font-weight: 500;
+  margin: 21px 0 12px;
+  padding: 8px 0 4px;
+  font-size: 108%;
+  font-weight: 400;
+  line-height: 20px;
   cursor: default;
   pointer-events: none;
 }
@@ -142,16 +180,18 @@ body.options {
    rather than collapsing through its edge. */
 .options-card {
   display: flow-root;
-  padding: 0 20px;
   border-radius: 8px;
   background: var(--card);
+  box-shadow: var(--card-shadow);
 }
 
-/* A line above every shown row but a card's or a group's first: a hidden
-   row (`hidden` by the cut) still counts for style.css's `+`. */
+/* Rows carry the card's 20px inset, so the line between two runs edge to
+   edge as Chrome's does. A line above every shown row but a card's or a
+   group's first: a hidden row (`hidden` by the cut) still counts for
+   style.css's `+`. */
 .options .setting {
   min-height: 48px;
-  padding: 12px 0;
+  padding: 12px 20px;
   border-top: 0;
   font-size: 0.8125rem;
 }
@@ -165,29 +205,37 @@ body.options {
 }
 
 .options .setting-nested {
-  padding-left: 40px;
+  padding-left: 60px;
 }
 
 .options .setting-group {
   margin: 0;
-  padding: 16px 0 4px;
+  padding: 16px 20px 4px;
   font-weight: 500;
 }
 
-/* Chrome's dropdown (md-select): a filled box, its text left-aligned. */
+/* Chrome's dropdown (md-select): an outlined 200px box, its text
+   left-aligned, a small filled arrow drawn in the text's colour. */
 .options .setting select {
   flex: none;
+  width: 200px;
+  max-width: 100%;
   height: 36px;
-  padding: 0 32px 0 12px;
+  padding: 0 20px 0 10px;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background:
-    var(--field) url("chevron.svg") right 12px center / 10px no-repeat;
+    linear-gradient(45deg, transparent 50%, var(--secondary) 50%) right 14px
+    center / 4px 4px no-repeat,
+    linear-gradient(135deg, var(--secondary) 50%, transparent 50%) right 10px
+    center / 4px 4px no-repeat;
   color: var(--text);
+  font-size: 0.75rem;
   text-align: left;
 }
 
 .options .setting select:hover {
-  background-color: color-mix(in srgb, var(--field), var(--text) 6%);
+  background-color: var(--hover);
 }
 
 /* Chrome's toggle (cr-toggle): an outlined 26 × 16 track with a small grey
@@ -231,12 +279,15 @@ body.options {
   box-shadow: none;
 }
 
-/* Chrome's outlined button, at the card's foot on its right, 16px clear of
-   the last row and of the card's edge (Material's card action spacing). */
+/* Chrome's outlined button (cr-button), at the card's foot on its right,
+   16px clear of the last row and of the card's edge (Material's card action
+   spacing), 20px in from its side as the rows are. */
 .options .setting-reset {
   width: fit-content;
-  margin: 16px 0 16px auto;
+  height: 36px;
+  margin: 16px 20px 16px auto;
   padding: 0 16px;
+  border: 1px solid var(--border);
   border-radius: 100px;
   background: transparent;
   color: var(--accent);
