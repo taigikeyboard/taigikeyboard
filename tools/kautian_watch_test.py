@@ -500,3 +500,29 @@ def test_link_changes_pair_headword_and_sense_sheets():
     assert "**反義（1）**" in tables[0]
     assert "| 好 | 䆀 | 增加：釋義「優良。」 |" in tables[0]
     assert "近義" not in "\n".join(watch.side_effects(watch.compare(before, after), brief=True))
+
+
+def test_link_changes_show_linked_sense_edit():
+    columns = ("義項id", "詞目漢字", "解說", "對應義項id", "對應詞目漢字", "對應解說")
+    old, new = "自已犯了錯誤。", "自己犯了錯誤。"
+    other = "請罪、賠罪。"
+
+    def links(text: str) -> watch.Sheet:
+        rows = {("1", "請罪", text, "2", "謝罪", other): 1, ("2", "謝罪", other, "1", "請罪", text): 1}
+        return watch.Sheet(columns, Counter(rows))
+
+    before, after = {"義項tuì義項近義": links(old)}, {"義項tuì義項近義": links(new)}
+    table = watch.link_changes(watch.compare(before, after), brief=True)[0]
+    # trace: MoE kautian 2026-11-18 fixed 請罪's sense; 謝罪's own 解說 is unchanged,
+    # so its row shows the 對應解說 edit instead of 「請罪、賠罪。」 → 「請罪、賠罪。」.
+    assert f"| 請罪 | 謝罪 | 釋義「{old}」 → 釋義「{new}」 |" in table
+    assert f"| 謝罪 | 請罪 | 對應釋義「{old}」 → 對應釋義「{new}」 |" in table
+
+
+def test_link_changes_id_only_edit():
+    columns = ("義項id", "詞目漢字", "解說", "對應義項id", "對應詞目漢字", "對應解說")
+    before = {"義項tuì義項近義": watch.Sheet(columns, Counter({("1", "甲", "s", "2", "乙", "t"): 1}))}
+    after = {"義項tuì義項近義": watch.Sheet(columns, Counter({("9", "甲", "s", "2", "乙", "t"): 1}))}
+    table = watch.link_changes(watch.compare(before, after), brief=True)[0]
+    # trace: 義項id 1 → 9, every text field equal → no 「s」 → 「s」 row.
+    assert "| 甲 | 乙 | 編號改 |" in table
