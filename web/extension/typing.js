@@ -13,6 +13,7 @@ import { classify, focusedElement, surfaceOf } from "./field.js";
 import { chooseLanguage, translate } from "./i18n.js";
 import { SharedLearning } from "./learning-client.js";
 import { Overlay } from "./overlay.js";
+import { hostPlatform } from "./platform.js";
 import { emptyDocument, parseStored, STORAGE_KEY } from "./settings.js";
 
 /** @typedef {import("./background.js").BadgeState} BadgeState */
@@ -22,7 +23,6 @@ import { emptyDocument, parseStored, STORAGE_KEY } from "./settings.js";
 /** @typedef {import("./pkg/taigi_web.js").Session} Session */
 /** @typedef {import("./surface.js").Surface} Surface */
 /** @typedef {import("../types/shared.d.ts").BrowserKey} BrowserKey */
-/** @typedef {import("../types/shared.d.ts").Platform} Platform */
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
 /** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
@@ -104,18 +104,6 @@ const learning = new SharedLearning({
   // A composition ends under the instance it began with.
   onStale: restartWhenIdle,
 });
-
-/**
- * Detects the host OS platform for engine key mapping.
- * @returns {Platform}
- */
-function platform() {
-  const name = navigator.userAgentData?.platform ?? navigator.platform;
-  if (/mac|iphone|ipad/i.test(name)) {
-    return "macos";
-  }
-  return /win/i.test(name) ? "windows" : "linux";
-}
 
 /**
  * Reads the revision counter from a serialized settings document.
@@ -201,7 +189,7 @@ async function start() {
   hasFailed = false;
   redraw();
   try {
-    starting = await createSession(platform(), navigator.language);
+    starting = await createSession(hostPlatform(), navigator.language);
     session = starting;
     restoreSettings(starting);
     if (isEnglishWanted) {

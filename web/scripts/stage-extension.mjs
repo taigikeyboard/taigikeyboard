@@ -21,7 +21,6 @@ export const EXTENSION_CUT = {
   title: "台語齒盤",
   hiddenControls: ["tpsKeyboardShown", "fontType"],
   removedOptions: [],
-  shortcutsShown: false,
 };
 
 /**

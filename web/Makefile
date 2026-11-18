@@ -115,7 +115,7 @@ chromeos: build
 	mkdir -p $(CHROMEOS)/pkg $(CHROMEOS)/dictionaries $(CHROMEOS)/icons $(CHROMEOS)/generated
 	cp chromeos/manifest.json chromeos/*.js chromeos/offscreen.html chromeos/options.css $(CHROMEOS)/
 	cp -R chromeos/_locales $(CHROMEOS)/
-	cp src/settings.js src/i18n.js src/learning.js src/shortcuts.js src/style.css src/chevron.svg $(CHROMEOS)/
+	cp src/settings.js src/i18n.js src/learning.js src/shortcuts.js src/platform.js src/style.css src/chevron.svg $(CHROMEOS)/
 	cp src/generated/strings.js $(CHROMEOS)/generated/
 	node scripts/stage-chromeos.mjs src/index.html chromeos/options.html $(CHROMEOS)/options.html
 	cp $(PKG)/taigi_web.js $(PKG)/taigi_web_bg.wasm $(CHROMEOS)/pkg/
@@ -126,7 +126,7 @@ chromeos: build
 # The browser extension (docs/architecture/browser-extension.md): the engine
 # and the dictionaries in the package, as ChromeOS has them, and the page's
 # panel, stylesheet and settings form cut by stage-extension.mjs.
-EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js shortcuts.js
+EXTENSION_PAGE_MODULES := panel.js surface.js i18n.js settings.js shortcuts.js platform.js
 extension: build extension-stage
 # Over an existing $(PKG) and $(WASM) (CI's `e2e-extension` downloads them): run `build` first on a clean tree.
 extension-stage: node_modules/.package-lock.json

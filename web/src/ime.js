@@ -10,6 +10,7 @@ import { translate } from "./i18n.js";
 import { Learning } from "./learning.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
 import { Panel } from "./panel.js";
+import { hostPlatform } from "./platform.js";
 import { wireSave } from "./save.js";
 import { Settings } from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
@@ -19,7 +20,6 @@ import { TelexGuide } from "./telex_guide.js";
 import { TpsKeyboard } from "./tps_keyboard.js";
 
 /** @typedef {import("./pkg/taigi_web.js").Session} Session */
-/** @typedef {import("../types/shared.d.ts").Platform} Platform */
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").WireEmit} WireEmit */
 /** @typedef {import("../types/shared.d.ts").WireModeLine} WireModeLine */
@@ -138,15 +138,6 @@ function restoreSettings(target) {
     console.error(error);
     settings.reset();
   }
-}
-
-/** @returns {Platform} */
-function platform() {
-  const name = navigator.userAgentData?.platform ?? navigator.platform;
-  if (/mac|iphone|ipad/i.test(name)) {
-    return "macos";
-  }
-  return /win/i.test(name) ? "windows" : "linux";
 }
 
 /**
@@ -289,7 +280,7 @@ async function start() {
   let starting = null;
   showLoading();
   try {
-    starting = await createSession(platform(), navigator.language);
+    starting = await createSession(hostPlatform(), navigator.language);
     session = starting;
     restoreSettings(starting);
     // Off the first key: opening the stores takes tens of milliseconds.
@@ -421,7 +412,7 @@ function changeSettings(json) {
  * @returns {void}
  */
 function redrawShortcuts() {
-  const raw = run((current) => current.shortcuts());
+  const raw = run((current) => current.shortcuts(/* hasPageWindows */ true));
   if (raw === undefined) {
     return;
   }
@@ -515,7 +506,7 @@ function keyJson(event) {
  * @returns {string | undefined}
  */
 function formatKind(event) {
-  const isMac = platform() === "macos";
+  const isMac = hostPlatform() === "macos";
   const command = isMac ? event.metaKey : event.ctrlKey;
   const other = isMac ? event.ctrlKey : event.metaKey;
   if (!command || other || event.shiftKey || event.altKey) {

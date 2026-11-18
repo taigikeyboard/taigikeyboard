@@ -1,6 +1,10 @@
 //! The sidebar's Shortcuts section: the blocks of the desktops' Shortcuts pane
 //! (`ShortcutSettingsView.swift`), in the page's language and the visitor's
 //! key spelling. Read-only, so no recorder rows and no reset row.
+//! The ChromeOS input method and the browser extension draw neither of the
+//! page's own windows (`telex_guide.js`, `tps_keyboard.js`), so their list
+//! leaves those rows out; the options page appends the extension's browser
+//! command to the last block, Other.
 
 use serde::Serialize;
 use taigi_desktop_core::keys::shortcut_labels::{caret_chords_label, fixed_keys_label};
@@ -38,6 +42,7 @@ pub(crate) fn shortcuts(
     document: &SettingsDocument,
     strings: &StringResolver,
     platform: DesktopPlatform,
+    has_page_windows: bool,
 ) -> WireShortcuts {
     let bindings = ComposingKeyBindings::from_document(document, platform);
     let composing_rows = |actions: &[ComposingAction]| -> Vec<Row> {
@@ -66,7 +71,17 @@ pub(crate) fn shortcuts(
                 }),
             fixed_keys: None,
         };
-        actions.iter().map(row).collect()
+        actions
+            .iter()
+            .filter(|action| {
+                has_page_windows
+                    || !matches!(
+                        action,
+                        ShortcutAction::ShowTelexGuide | ShortcutAction::ShowTpsKeyboard
+                    )
+            })
+            .map(row)
+            .collect()
     };
 
     let mut selection = composing_rows(ComposingAction::GROUPS[0]);
@@ -127,6 +142,7 @@ mod tests {
             &SettingsDocument::default(),
             &english(),
             DesktopPlatform::Linux,
+            true,
         );
         let sizes: Vec<_> = wire.groups.iter().map(|group| group.rows.len()).collect();
         // trace: GROUPS 4 + the caret row, 3, then 3, 2, 3.
@@ -140,6 +156,7 @@ mod tests {
             &SettingsDocument::default(),
             &english(),
             DesktopPlatform::Linux,
+            true,
         );
         // trace: `shipped_chord` ConfirmHighlighted = Enter, Space;
         // CommitAlternateScript has none; slot run qwdfzxvy; behind one Shift.
@@ -155,9 +172,9 @@ mod tests {
         // trace: `default_chord` ToggleTps = Ctrl+Alt+P; `visitor_chord` makes
         // it ⌃⌘ on the Mac, and `display` there takes glyphs and no separator.
         let label = "Switch Phonetic Symbols";
-        let linux = shortcuts(&document, &english(), DesktopPlatform::Linux);
+        let linux = shortcuts(&document, &english(), DesktopPlatform::Linux, true);
         assert_eq!(row(&linux, label).keys, "Ctrl+Alt+P");
-        let mac = shortcuts(&document, &english(), DesktopPlatform::MacOS);
+        let mac = shortcuts(&document, &english(), DesktopPlatform::MacOS, true);
         assert_eq!(row(&mac, label).keys, "⌃⌘P");
     }
 
@@ -165,8 +182,25 @@ mod tests {
     fn phonetic_symbols_have_no_other_script_keys() {
         let mut document = SettingsDocument::default();
         document.set_choice(&keys::INPUT_MODE, InputMode::Tps);
-        let wire = shortcuts(&document, &english(), DesktopPlatform::Linux);
+        let wire = shortcuts(&document, &english(), DesktopPlatform::Linux, true);
         let other = row(&wire, "Output the Other Script (Hanji / Romanization)");
         assert_eq!(other.fixed_keys, None);
+    }
+
+    #[test]
+    fn a_package_lists_no_page_window_rows() {
+        let wire = shortcuts(
+            &SettingsDocument::default(),
+            &english(),
+            DesktopPlatform::Linux,
+            false,
+        );
+        let sizes: Vec<_> = wire.groups.iter().map(|group| group.rows.len()).collect();
+        // trace: as the page, less ShowTpsKeyboard (TPS block) and
+        // ShowTelexGuide (Other block).
+        assert_eq!(sizes, [5, 3, 3, 1, 2]);
+        assert_eq!(wire.groups[3].rows[0].label, "Switch Phonetic Symbols");
+        // The options page's browser command row joins this block.
+        assert_eq!(wire.groups[4].title, "Other");
     }
 }

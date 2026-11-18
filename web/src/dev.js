@@ -10,6 +10,7 @@ import {
 } from "./inspector.js";
 import { Learning } from "./learning.js";
 import { createSession, dictionaries, keepForOffline } from "./loader.js";
+import { hostPlatform } from "./platform.js";
 import { emptyDocument, parseStored, STORAGE_KEY } from "./settings.js";
 import { Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
@@ -19,7 +20,6 @@ import { TpsKeyboard } from "./tps_keyboard.js";
 /** @typedef {import("./i18n.js").StringKey} StringKey */
 /** @typedef {import("../types/shared.d.ts").CustomEntriesReply} CustomEntriesReply */
 /** @typedef {import("../types/shared.d.ts").ExplainView} ExplainView */
-/** @typedef {import("../types/shared.d.ts").Platform} Platform */
 /** @typedef {import("../types/shared.d.ts").Reply} Reply */
 /** @typedef {import("../types/shared.d.ts").SettingsDocument} SettingsDocument */
 /** @typedef {import("../types/shared.d.ts").SettingsValue} SettingsValue */
@@ -408,15 +408,6 @@ form.addEventListener("change", ({ target }) => {
   }
 });
 
-/** @returns {Platform} */
-function platform() {
-  const name = navigator.userAgentData?.platform ?? navigator.platform;
-  if (/mac|iphone|ipad/i.test(name)) {
-    return "macos";
-  }
-  return /win/i.test(name) ? "windows" : "linux";
-}
-
 /**
  * @param {StringKey} key
  * @param {string} status
@@ -534,7 +525,7 @@ async function start() {
   let starting = null;
   showLoading();
   try {
-    starting = await createSession(platform(), navigator.language);
+    starting = await createSession(hostPlatform(), navigator.language);
     session = starting;
     const preset = sessionStorage.getItem(PRESET_KEY);
     if (preset === "proposal") {

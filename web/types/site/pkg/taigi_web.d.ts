@@ -89,13 +89,17 @@ export class Session {
    * A one-word best path joins the twelve stages. Several words stay pinned.
    */
   setRankOneWord(enabled: boolean): string;
+  /**
+   * A malformed document is refused and the previous one stays.
+   */
   setSettings(settings_json: string): void;
   setSortOrder(json: string): string;
   /**
-   * A malformed document is refused and the previous one stays.
    * The sidebar's Shortcuts section; JSON, `shortcuts.rs`.
+   * `has_page_windows`: the caller draws the Telex guide and the TPS key
+   * panel, so their rows are listed.
    */
-  shortcuts(): string;
+  shortcuts(has_page_windows: boolean): string;
   /**
    * The Telex guide's card, JSON: `title` and `rows` of `key` and
    * `meaning`, in the display language.
@@ -214,7 +218,7 @@ export interface InitOutput {
     b: number,
     c: number,
   ) => [number, number, number, number];
-  readonly session_shortcuts: (a: number) => [number, number];
+  readonly session_shortcuts: (a: number, b: number) => [number, number];
   readonly session_telexGuide: (a: number) => [number, number];
   readonly session_toggleLanguageMode: (a: number) => [number, number];
   readonly session_tpsKeyPress: (

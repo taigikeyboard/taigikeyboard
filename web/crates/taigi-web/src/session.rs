@@ -345,11 +345,12 @@ impl WebSession {
     }
 
     /// The sidebar's Shortcuts section under the current document.
-    pub(crate) fn shortcuts(&self) -> String {
+    pub(crate) fn shortcuts(&self, has_page_windows: bool) -> String {
         let wire = shortcuts(
             &self.settings.current(),
             &self.runtime.strings(),
             self.runtime.platform(),
+            has_page_windows,
         );
         serde_json::to_string(&wire).expect("plain strings")
     }
