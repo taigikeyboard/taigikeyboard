@@ -295,12 +295,12 @@ final class ShortcutKeyRecorderField: NSView {
         placeCaret()
     }
 
-    /// One text line tall, at the text's leading edge: the row is blank while
-    /// the caret shows. Also placed on begin, so a row that has not been laid
-    /// out yet still shows it.
+    /// One text line tall, centred (USER 2026-11-19 — the text stays
+    /// left-aligned; the row is blank while the caret shows). Also placed on
+    /// begin, so a row that has not been laid out yet still shows it.
     private func placeCaret() {
         caret.frame = NSRect(
-            x: Self.horizontalPadding,
+            x: bounds.midX - 1,
             y: Self.lineTop,
             width: 2,
             height: Self.lineHeight,
