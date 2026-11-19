@@ -34937,7 +34937,9 @@ tín動,tín-tāng,False,False,0,False,25,tín-tāng,tin2tang7,tin2tang7,ㄉㄧ�
 吐嘴,thóo-sui,False,False,0,False,25,thó͘-sui,thoo2sui1,thoo2sui1,ㄊㆦˋㄙㄨㄧ,,thoosui,thoosui,ㄊㆦㄙㄨㄧ,,ths,ths,ㄊㄙ,,False,False,False,False,False,False,True,False,False,False,False,False,False
 吐噎,thóo-eh,False,False,0,False,25,thó͘-eh,thoo2eh4,thoo2eh4,ㄊㆦˋㆤㆷ,,thooeh,thooeh,ㄊㆦㆤㆷ,,the,the,ㄊㆤ,,False,True,False,False,False,False,True,False,False,False,False,False,False
 吐奚,thòo-he,False,False,0,False,25,thò͘-he,thoo3he1,thoo3he1,ㄊㆦ˪ㄏㆤ,,thoohe,thoohe,ㄊㆦㄏㆤ,,thh,thh,ㄊㄏ,,False,False,False,False,False,False,True,False,False,False,False,False,False
-吐奶,thòo-ling,False,False,0,False,25,thò͘-leng,thoo3ling1,thoo3leng1,ㄊㆦ˪ㄌㄧㄥ,,thooling,thooleng,ㄊㆦㄌㄧㄥ,,thl,thl,ㄊㄌ,,False,False,False,False,False,True,False,False,False,False,False,False,False
+吐奶,thòo-lin,False,False,323,False,25,thò͘-lin,thoo3lin1,thoo3lin1,ㄊㆦ˪ㄌㄧㄣ,,thoolin,thoolin,ㄊㆦㄌㄧㄣ,,thl,thl,ㄊㄌ,,True,False,False,False,False,False,False,False,False,False,False,False,False
+吐奶,thòo-ling,True,False,552,False,25,thò͘-leng,thoo3ling1,thoo3leng1,ㄊㆦ˪ㄌㄧㄥ,,thooling,thooleng,ㄊㆦㄌㄧㄥ,,thl,thl,ㄊㄌ,,True,False,False,False,False,True,False,False,False,False,False,False,False
+吐奶,thòo-ni,True,False,148,False,25,thò͘-ni,thoo3ni1,thoo3ni1,ㄊㆦ˪ㄋㄧ,,thooni,thooni,ㄊㆦㄋㄧ,,thn,thn,ㄊㄋ,,True,False,False,False,False,False,False,False,False,False,False,False,False
 吐屎,thò͘-sái,False,False,0,False,25,thò͘-sái,tho͘3sai2,thoo3sai2,,,tho͘sai,thoosai,,,ths,ths,,,False,False,False,True,False,False,False,False,False,False,False,False,False
 吐本,thòo-pún,False,False,0,False,25,thò͘-pún,thoo3pun2,thoo3pun2,ㄊㆦ˪ㄅㄨㄣˋ,,thoopun,thoopun,ㄊㆦㄅㄨㄣ,,thp,thp,ㄊㄅ,,False,False,False,False,False,True,False,False,False,False,False,False,False
 吐氣,thòo-khuì,False,False,0,False,25,thò͘-khùi,thoo3khui3,thoo3khui3,ㄊㆦ˪ㄎㄨㄧ˪,,thookhui,thookhui,ㄊㆦㄎㄨㄧ,,thkh,thkh,ㄊㄎ,,False,False,False,False,False,True,False,False,False,False,False,False,False
