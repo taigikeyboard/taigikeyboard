@@ -21,6 +21,10 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 - **PR #310** (`ad085b3b`) — a test oracle assumed `to_tl` adds default tone diacritics; `engine/phonetics/src/tables.rs:43-47` returns "" for tones 1/4. Two false BLOCKs raised against the wrong oracle. Same round: grep of `tables.rs` showed uppercase `TH`/`IN`/`OR` parse as valid finals, so an "unconditional fold is safe" pre-impl claim was false.
 - **2026-05-31 `tai5`→`ta` prefix collision** (S5 / `INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`) — the masking test built its inventory as `build_inventory(&["tai5"])`; `ta` was never in the fixture, so the production collision could not fire. Produced the fixture rule. The first fix attempt in `syllabifier::valid_span_endings` reintroduced the PR #290 `span_min_syllable_count("tania")` regression — produced the fix-location rule.
 
+### UI event tests bypassing OS dispatch
+
+- **2026-11-19 macOS shortcut recorder, three fixes in one day** (`7901eb4b1`, `f954a03a2`, `1df8c755f`) — each device bug lived in AppKit's delivery layer, and each test called the handler directly: `beginRecording()` without focus (no field editor, so AppKit's editing restart never fired); `mouseDown` without hit-testing (the search field's hosted `_NSSearchFieldClearButton` took the clear-button click, so the binding was never cleared). The second fix introduced the third bug and its test stayed green. A 20-line probe printing `subviews` + `hitTest` found the cause in a minute. USER: "this is a P0 bug — why did it get past the automated tests?" Produced the OS-dispatch test rule and widened the spike rule.
+
 ### Verify pipeline claims
 
 - **v3.5.8 Phase 1 / 1b plans** — plan cited 3 nonexistent paths (fixed in PR #249 `9eb7b890`); a CRITICAL phase turned out to be a NO-OP because `dictionary/common/notone.py::remove_tone()` already stripped digits and hyphens.
