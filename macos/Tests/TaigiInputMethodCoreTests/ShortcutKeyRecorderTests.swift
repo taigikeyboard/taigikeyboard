@@ -135,9 +135,10 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         nextTurn()
     }
 
-    /// Delivered to whatever the window hit-tests at that point, as AppKit
-    /// would: the search field hosts its own clear button view, which once took
-    /// the click away from the field.
+    /// Sent through the window, as a real click is: `NSWindow.sendEvent`
+    /// hit-tests and may hand out first responder BEFORE `mouseDown` runs —
+    /// both steps once broke the clear button on device while a test calling
+    /// `mouseDown` directly stayed green.
     private func click(_ target: ShortcutKeyRecorderField, atX x: Double) throws {
         window.makeKeyAndOrderFront(nil)
         window.displayIfNeeded()
@@ -145,17 +146,19 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         let contentView = try XCTUnwrap(window.contentView)
         let hit = contentView.hitTest(contentView.convert(point, from: nil))
         XCTAssertTrue(hit === target, "the click reached \(String(describing: hit)), not the field")
-        try hit?.mouseDown(with: XCTUnwrap(NSEvent.mouseEvent(
-            with: .leftMouseDown,
-            location: point,
-            modifierFlags: [],
-            timestamp: 0,
-            windowNumber: window.windowNumber,
-            context: nil,
-            eventNumber: 0,
-            clickCount: 1,
-            pressure: 1,
-        )))
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            try window.sendEvent(XCTUnwrap(NSEvent.mouseEvent(
+                with: type,
+                location: point,
+                modifierFlags: [],
+                timestamp: 0,
+                windowNumber: window.windowNumber,
+                context: nil,
+                eventNumber: 0,
+                clickCount: 1,
+                pressure: 1,
+            )))
+        }
         nextTurn()
     }
 

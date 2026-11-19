@@ -114,11 +114,7 @@ struct ShortcutKeyRecorder: NSViewRepresentable {
 
     func updateNSView(_ field: ShortcutKeyRecorderField, context _: Context) {
         apply(to: field)
-        // Guarded: assigning redraws the field, and doing that on every SwiftUI
-        // update would fight the row the user is recording into.
-        if field.chord != chord {
-            field.chord = chord
-        }
+        field.chord = chord
     }
 
     private func apply(to field: ShortcutKeyRecorderField) {
@@ -128,32 +124,42 @@ struct ShortcutKeyRecorder: NSViewRepresentable {
     }
 }
 
-/// The field itself: a search field — the shape a shortcut field has on the
-/// Mac, capsule, centred text and clear button — that never edits text.
+/// The field itself: a plain view that draws its own capsule, chord and
+/// clear button, the way Rectangle's recorder (`MASShortcutView`) does.
 ///
-/// Neither editable nor selectable (until 2026-11-19 it was both), so focus
-/// installs no field editor. Recording through the editor failed on device:
-/// AppKit ends and restarts it on its own — setting the placeholder while it
-/// is installed does it (`NSCell _restartEditingWithTextView:`) — which tore
-/// sessions down mid-begin, and the clear button took the first click on a
-/// bound row. Rectangle's recorder (`MASShortcutView`) records without a
-/// text editor for the same reason. Being the first responder IS
+/// Not a search field any more (USER 2026-11-19). Three device bugs in one
+/// day came from borrowing `NSSearchField`'s look while taking over its
+/// input: its field editor restarted on its own and tore sessions down
+/// (`NSCell _restartEditingWithTextView:`), and on current macOS it hosts
+/// subviews (a SwiftUI host, `_NSSearchFieldClearButton`) that took clicks
+/// before this class saw them. A view that draws everything itself has no
+/// private internals to collide with. Being the first responder IS
 /// recording: a click or Tab begins it, resigning ends it, nothing in
-/// between; the clicks are this class's own (`hitTest`, `mouseDown`).
-final class ShortcutKeyRecorderField: NSSearchField {
+/// between.
+final class ShortcutKeyRecorderField: NSView {
     /// Upstream's width for the same control, so a section mixing the two does
     /// not step (`KeyboardShortcuts.RecorderCocoa`).
     private static let minimumWidth: Double = 130
+    /// A regular-size search field's height and text baseline (measured on
+    /// macOS 26), so the rows keep the metrics they had.
+    private static let height: Double = 24
+    private static let baselineFromTop: Double = 17
+    private static let horizontalPadding: Double = 8
+    private static let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+    /// TextKit's line for the font, which is what `draw(in:)` lays out: taller
+    /// than ascender + descender, so a rect sized from those clips descenders.
+    private static let lineHeight = NSLayoutManager().defaultLineHeight(for: font)
+    private static let lineTop = baselineFromTop - NSLayoutManager().defaultBaselineOffset(for: font)
 
     var language: DisplayLanguageStore? {
-        didSet { refreshCell() }
+        didSet { needsDisplay = true }
     }
 
     var additionalRejection: (@MainActor (RecordedShortcutKey) -> ComposingKeyChord.Rejection?)?
     var onRecord: ((RecordedShortcutKey?) -> Void)?
 
     var chord: ComposingKeyChord? {
-        didSet { refreshCell() }
+        didSet { needsDisplay = true }
     }
 
     /// What the row shows: blank while recording, so the caret alone says it
@@ -166,14 +172,8 @@ final class ShortcutKeyRecorderField: NSSearchField {
         return chord?.display ?? language?.string(.desktopShortcutUnbound) ?? ""
     }
 
-    private(set) var isRecording = false
-
-    /// Swapped in and out of the cell: a search field draws its clear button
-    /// whenever it holds one.
-    private var clearButtonCell: NSButtonCell?
-
-    private var searchCell: NSSearchFieldCell? {
-        cell as? NSSearchFieldCell
+    private(set) var isRecording = false {
+        didSet { needsDisplay = true }
     }
 
     /// The system caret (macOS 14), shown while recording.
@@ -195,14 +195,8 @@ final class ShortcutKeyRecorderField: NSSearchField {
     private var windowDidBecomeKeyObserver: NSObjectProtocol?
 
     init() {
-        super.init(frame: NSRect(x: 0, y: 0, width: Self.minimumWidth, height: 24))
-        isEditable = false
-        isSelectable = false
-        alignment = .center
-        // The magnifying glass belongs to a search field, not to a recorder.
-        searchCell?.searchButtonCell = nil
-        clearButtonCell = searchCell?.cancelButtonCell
-        refreshCell()
+        super.init(frame: NSRect(x: 0, y: 0, width: Self.minimumWidth, height: Self.height))
+        focusRingType = .exterior
         caret.displayMode = .hidden
         addSubview(caret)
         setContentHuggingPriority(.defaultHigh, for: .vertical)
@@ -221,17 +215,79 @@ final class ShortcutKeyRecorderField: NSSearchField {
         }
     }
 
-    override var intrinsicContentSize: NSSize {
-        NSSize(width: Self.minimumWidth, height: super.intrinsicContentSize.height)
+    /// Top-down, so the text and caret are placed from the baseline the way
+    /// the metrics above are measured.
+    override var isFlipped: Bool {
+        true
     }
 
-    /// Puts the row's state on screen. No field editor is ever installed, so
-    /// these writes restart nothing.
-    private func refreshCell() {
-        placeholderString = isRecording ? "" : language?.string(.desktopShortcutUnbound) ?? ""
-        stringValue = isRecording ? "" : chord?.display ?? ""
-        searchCell?.cancelButtonCell = showsClearButton ? clearButtonCell : nil
-        needsDisplay = true
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: Self.minimumWidth, height: Self.height)
+    }
+
+    override var firstBaselineOffsetFromTop: CGFloat {
+        Self.baselineFromTop
+    }
+
+    override var lastBaselineOffsetFromBottom: CGFloat {
+        Self.height - Self.baselineFromTop
+    }
+
+    private var capsule: NSBezierPath {
+        let radius = bounds.height / 2
+        return NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: radius, yRadius: radius)
+    }
+
+    /// Capsule, then the text left-aligned (USER 2026-11-19: no centring),
+    /// then the clear button. System colours only, so light, dark and
+    /// increased contrast follow on their own.
+    override func draw(_: NSRect) {
+        NSColor.controlBackgroundColor.setFill()
+        capsule.fill()
+        NSColor.separatorColor.setStroke()
+        capsule.stroke()
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let text = NSAttributedString(string: displayedText, attributes: [
+            .font: Self.font,
+            .foregroundColor: chord == nil ? NSColor.placeholderTextColor : NSColor.labelColor,
+            .paragraphStyle: paragraph,
+        ])
+        let textEnd = showsClearButton ? clearButtonRect.minX : bounds.maxX - Self.horizontalPadding
+        text.draw(in: NSRect(
+            x: Self.horizontalPadding,
+            y: Self.lineTop,
+            width: max(textEnd - Self.horizontalPadding, 0),
+            height: Self.lineHeight,
+        ))
+
+        if showsClearButton, let image = Self.clearImage {
+            let size = image.size
+            image.draw(in: NSRect(
+                x: clearButtonRect.midX - size.width / 2,
+                y: clearButtonRect.midY - size.height / 2,
+                width: size.width,
+                height: size.height,
+            ))
+        }
+    }
+
+    /// The glyph a search field clears with, tinted the way it tints it: the
+    /// cross in the field's own fill, cut out of a secondary-label disc.
+    private static let clearImage: NSImage? = {
+        let configuration = NSImage.SymbolConfiguration(pointSize: NSFont.systemFontSize, weight: .regular)
+            .applying(.init(paletteColors: [.controlBackgroundColor, .secondaryLabelColor]))
+        return NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(configuration)
+    }()
+
+    override var focusRingMaskBounds: NSRect {
+        bounds
+    }
+
+    override func drawFocusRingMask() {
+        capsule.fill()
     }
 
     override func layout() {
@@ -239,34 +295,33 @@ final class ShortcutKeyRecorderField: NSSearchField {
         placeCaret()
     }
 
-    /// One text line tall, centred: the row is blank while the caret shows.
-    /// Also placed on begin, so a row that has not been laid out yet still
-    /// shows it.
+    /// One text line tall, at the text's leading edge: the row is blank while
+    /// the caret shows. Also placed on begin, so a row that has not been laid
+    /// out yet still shows it.
     private func placeCaret() {
-        let font = font ?? .systemFont(ofSize: NSFont.systemFontSize)
-        let height = font.ascender - font.descender
-        caret.frame = NSRect(x: bounds.midX - 1, y: bounds.midY - height / 2, width: 2, height: height)
+        caret.frame = NSRect(
+            x: Self.horizontalPadding,
+            y: Self.lineTop,
+            width: 2,
+            height: Self.lineHeight,
+        )
     }
 
     private var showsClearButton: Bool {
         chord != nil && !isRecording
     }
 
-    /// Every click inside the field is the field's own. On current macOS the
-    /// search field draws through subviews it hosts (a SwiftUI host and an
-    /// `_NSSearchFieldClearButton`), and those won hit-testing: a click on
-    /// the clear button never reached `mouseDown`, so the binding was never
-    /// cleared and the chord came back.
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        !isHidden && frame.contains(point) ? self : nil
+    /// A square at the trailing end, the height of the field — the only place
+    /// a click clears; anywhere else on the row records.
+    private var clearButtonRect: NSRect {
+        NSRect(x: bounds.maxX - bounds.height, y: bounds.minY, width: bounds.height, height: bounds.height)
     }
 
-    /// A click on the search field's own clear-button frame empties the row
-    /// back to the unbound prompt and leaves it there; a click anywhere else
-    /// records (USER 2026-11-19 — Rectangle's `MASShortcutView` clears the
-    /// same way).
+    /// A click on the clear button empties the row back to the unbound prompt
+    /// and leaves it there; a click anywhere else records (USER 2026-11-19 —
+    /// Rectangle's `MASShortcutView` clears the same way).
     override func mouseDown(with event: NSEvent) {
-        if showsClearButton, cancelButtonBounds.contains(convert(event.locationInWindow, from: nil)) {
+        if showsClearButton, clearButtonRect.contains(convert(event.locationInWindow, from: nil)) {
             clearChord()
             return
         }
@@ -278,7 +333,19 @@ final class ShortcutKeyRecorderField: NSSearchField {
         onRecord?(nil)
     }
 
+    /// False, so a click does not focus the row by itself: `NSWindow` hands
+    /// first responder to a view that accepts it BEFORE `mouseDown`, which
+    /// would begin recording, hide the clear button and turn a click on it
+    /// into a recording. `mouseDown` decides and focuses explicitly; Tab
+    /// (`canBecomeKeyView`) and `makeFirstResponder` do not ask this.
     override var acceptsFirstResponder: Bool {
+        false
+    }
+
+    /// True, as every system control (the search field this replaced
+    /// included) answers: a click on a row of an inactive settings window acts
+    /// at once instead of only activating the window.
+    override func acceptsFirstMouse(for _: NSEvent?) -> Bool {
         true
     }
 
@@ -312,7 +379,6 @@ final class ShortcutKeyRecorderField: NSSearchField {
         isRecording = true
         placeCaret()
         caret.displayMode = .automatic
-        refreshCell()
         // The global hotkeys are off while a chord is recorded: this recorder
         // accepts modifier chords, and one that collides with a live hotkey
         // must be recorded, not acted on (upstream pauses the same way).
@@ -329,7 +395,6 @@ final class ShortcutKeyRecorderField: NSSearchField {
         }
         isRecording = false
         caret.displayMode = .hidden
-        refreshCell()
     }
 
     override func viewDidMoveToWindow() {
@@ -477,7 +542,7 @@ final class ShortcutKeyRecorderField: NSSearchField {
 
     /// The value, not the label: the row names the field (`ShortcutSettingsView`
     /// sets the label), and the chord is read after it.
-    override func accessibilityValue() -> String? {
+    override func accessibilityValue() -> Any? {
         displayedText
     }
 
