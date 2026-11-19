@@ -135,10 +135,17 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         nextTurn()
     }
 
+    /// Delivered to whatever the window hit-tests at that point, as AppKit
+    /// would: the search field hosts its own clear button view, which once took
+    /// the click away from the field.
     private func click(_ target: ShortcutKeyRecorderField, atX x: Double) throws {
         window.makeKeyAndOrderFront(nil)
+        window.displayIfNeeded()
         let point = target.convert(NSPoint(x: x, y: target.bounds.midY), to: nil)
-        try target.mouseDown(with: XCTUnwrap(NSEvent.mouseEvent(
+        let contentView = try XCTUnwrap(window.contentView)
+        let hit = contentView.hitTest(contentView.convert(point, from: nil))
+        XCTAssertTrue(hit === target, "the click reached \(String(describing: hit)), not the field")
+        try hit?.mouseDown(with: XCTUnwrap(NSEvent.mouseEvent(
             with: .leftMouseDown,
             location: point,
             modifierFlags: [],
@@ -179,9 +186,9 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         XCTAssertFalse(field.isRecording, "a recorded key ends the session")
     }
 
-    /// The clear button empties the row and records its replacement at once
-    /// (USER 2026-11-19).
-    func testClickingTheClearButton_clearsAndRecords() throws {
+    /// The clear button empties the row back to the unbound prompt and does
+    /// not record (USER 2026-11-19, as Rectangle's `MASShortcutView` does).
+    func testClickingTheClearButton_clearsWithoutRecording() throws {
         var recorded: [RecordedShortcutKey?] = []
         field.onRecord = { recorded.append($0) }
         field.chord = try chord("j", [.control, .command])
@@ -191,7 +198,8 @@ final class ShortcutKeyRecorderTests: XCTestCase {
         XCTAssertNil(field.chord)
         XCTAssertEqual(recorded.count, 1)
         XCTAssertNil(recorded.first ?? nil, "the row was cleared")
-        XCTAssertTrue(field.isRecording)
+        XCTAssertFalse(field.isRecording)
+        XCTAssertEqual(field.displayedText, field.language?.string(.desktopShortcutUnbound))
     }
 
     /// Anywhere else on a bound row records and leaves the binding alone

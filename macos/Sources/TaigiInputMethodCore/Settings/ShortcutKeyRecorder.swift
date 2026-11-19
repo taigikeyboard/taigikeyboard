@@ -139,7 +139,7 @@ struct ShortcutKeyRecorder: NSViewRepresentable {
 /// bound row. Rectangle's recorder (`MASShortcutView`) records without a
 /// text editor for the same reason. Being the first responder IS
 /// recording: a click or Tab begins it, resigning ends it, nothing in
-/// between; the clicks are this class's own (`mouseDown`).
+/// between; the clicks are this class's own (`hitTest`, `mouseDown`).
 final class ShortcutKeyRecorderField: NSSearchField {
     /// Upstream's width for the same control, so a section mixing the two does
     /// not step (`KeyboardShortcuts.RecorderCocoa`).
@@ -252,18 +252,23 @@ final class ShortcutKeyRecorderField: NSSearchField {
         chord != nil && !isRecording
     }
 
-    /// The search field's own clear-button frame — the only place a click
-    /// clears; anywhere else on the row records.
-    private var clearButtonRect: NSRect {
-        searchCell?.cancelButtonRect(forBounds: bounds) ?? .zero
+    /// Every click inside the field is the field's own. On current macOS the
+    /// search field draws through subviews it hosts (a SwiftUI host and an
+    /// `_NSSearchFieldClearButton`), and those won hit-testing: a click on
+    /// the clear button never reached `mouseDown`, so the binding was never
+    /// cleared and the chord came back.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        !isHidden && frame.contains(point) ? self : nil
     }
 
-    /// A click on the clear button empties the row and goes straight to
-    /// recording its replacement; a click anywhere else records (USER
-    /// 2026-11-19).
+    /// A click on the search field's own clear-button frame empties the row
+    /// back to the unbound prompt and leaves it there; a click anywhere else
+    /// records (USER 2026-11-19 — Rectangle's `MASShortcutView` clears the
+    /// same way).
     override func mouseDown(with event: NSEvent) {
-        if showsClearButton, clearButtonRect.contains(convert(event.locationInWindow, from: nil)) {
+        if showsClearButton, cancelButtonBounds.contains(convert(event.locationInWindow, from: nil)) {
             clearChord()
+            return
         }
         window?.makeFirstResponder(self)
     }
