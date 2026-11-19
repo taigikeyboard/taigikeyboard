@@ -16,7 +16,7 @@ use taigi_desktop_core::settings::{
     keys, CandidateFontSelection, CandidateLayout, SettingsDocument,
 };
 use taigikeyboard_popup::text::Fonts;
-use taigikeyboard_popup::{horizontal_cell_extent, key_label_width, Cell, CellStyle, Measure};
+use taigikeyboard_popup::{row_widths, Cell, CellStyle, Measure, RowWidths};
 
 /// macOS chrome ratio, twin of Web `MACOS_CHROME_RATIO`.
 const MACOS_CHROME_RATIO: f32 = 0.7;
@@ -137,8 +137,8 @@ impl PopupListLayout {
 }
 
 impl PopupListLayout {
-    /// Widths as the popup draws a stacked row, plus the slot a short Hanji
-    /// cell occupies — so packing agrees with what the window actually shows.
+    /// The widths the popup draws a stacked row at (`row_widths`), capped at
+    /// a full row — so packing agrees with what the window actually shows.
     /// Whole px, each with the gap after it, floored at the slot: nine short
     /// cells fill a row exactly, and the row packer and the unfolded grid
     /// (one px per column) break at the same cell.
@@ -166,53 +166,29 @@ impl PopupListLayout {
             padding,
         };
         let measure = RulerMeasure(&*self.ruler);
-        let gap = taigikeyboard_popup::pads(padding, 1.0).gap;
-        // The widest key any slot set prints; every cell reserves it.
-        let key = KEY_LABEL_SAMPLES
+        let row_cells: Vec<Cell> = cells
             .iter()
-            .map(|label| key_label_width(label, &measure, 1.0))
-            .fold(0.0_f32, f32::max);
-        let extent = |text: &str, annotation: Option<String>| {
-            horizontal_cell_extent(
-                &Cell {
-                    text: text.to_owned(),
-                    annotation,
-                },
-                "",
-                cell_style,
-                &measure,
-                1.0,
-            ) + key
-                + gap
-                + gap
-        };
-        let slot = extent("字", Some("lâi".into())).ceil();
-        let budget = HorizontalPageLayout::row_budget(slot, PAGE_SIZE_HINT);
-        let widths = cells
-            .iter()
-            .map(|cell| {
-                extent(&cell.text, drawn_annotation(cell).cloned())
-                    .ceil()
-                    .max(slot)
-                    .min(budget)
+            .map(|cell| Cell {
+                text: cell.text.clone(),
+                annotation: drawn_annotation(cell).cloned(),
             })
             .collect();
+        let RowWidths {
+            mut widths,
+            slot,
+            gap,
+        } = row_widths(&row_cells, cell_style, &measure);
+        // A word wider than a full row packs as one; the popup draws it whole.
+        let budget = HorizontalPageLayout::row_budget(slot, PAGE_SIZE_HINT);
+        for width in &mut widths {
+            *width = width.min(budget);
+        }
         Some(RowWidths { widths, slot, gap })
     }
 }
 
-/// A select key wider than any digit, for the key slot every cell reserves.
-const KEY_LABEL_SAMPLES: [&str; 4] = ["8", "w", "m", ";"];
 /// The fullest slot set; a row is never wider than this many short cells.
 const PAGE_SIZE_HINT: usize = HorizontalPageLayout::PAGE_SIZE;
-
-struct RowWidths {
-    /// One per cell, gap included.
-    widths: Vec<f32>,
-    /// A short one-Hanji cell, gap included.
-    slot: f32,
-    gap: f32,
-}
 
 impl ListLayout for PopupListLayout {
     fn horizontal_page_starts(

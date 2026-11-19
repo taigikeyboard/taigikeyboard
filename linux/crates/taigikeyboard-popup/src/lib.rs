@@ -15,8 +15,8 @@ mod system_color;
 pub mod text;
 
 pub use layout::{
-    arrange, horizontal_cell_extent, key_label_width, pads, px, Arrangement, CellStyle, Glyph, Hit,
-    Measure, Pads, Rect, Role, Target,
+    arrange, pads, px, row_widths, Arrangement, CellStyle, Glyph, Hit, Measure, Pads, Rect, Role,
+    RowWidths, Target,
 };
 pub use paint::{
     capped_radius, fill_clipped, fill_round, highlight_radii, mix, pack, stroke_round,

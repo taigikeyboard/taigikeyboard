@@ -115,16 +115,6 @@ pub fn px(value: f32) -> u32 {
     value.round().clamp(1.0, 16_000.0) as u32
 }
 
-/// Width of a select-key label at `scale`.
-pub fn key_label_width(label: &str, measure: &impl Measure, scale: f32) -> f32 {
-    let scale = if scale.is_finite() && scale > 0.0 {
-        scale
-    } else {
-        1.0
-    };
-    measure.size(label, LABEL_PX * scale, false).0
-}
-
 /// The page settings a cell's width depends on, in px before scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CellStyle {
@@ -134,35 +124,93 @@ pub struct CellStyle {
     pub padding: u32,
 }
 
-/// Width of one stacked (horizontal) cell, including its own key.
-pub fn horizontal_cell_extent(
-    cell: &crate::protocol::Cell,
-    label: &str,
-    cell_style: CellStyle,
-    measure: &impl Measure,
+/// The widths a horizontal row draws its cells at, in px before scale. The
+/// row packer (`taigi-linux-core` `PopupListLayout`) packs these, and
+/// [`arrange`] draws every row cell at its width less the gap — one number on
+/// both sides, so a packed row fills the window it was packed to.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RowWidths {
+    /// One per cell, the gap after it included.
+    pub widths: Vec<f32>,
+    /// A short one-Hanji cell, gap included: no cell is narrower.
+    pub slot: f32,
+    pub gap: f32,
+}
+
+/// Measures `cells` as a horizontal row draws them: each reserves the widest
+/// select key (`KEY_LABEL_SAMPLES`), is floored at the slot, and is whole px.
+pub fn row_widths(cells: &[Cell], cell_style: CellStyle, measure: &impl Measure) -> RowWidths {
+    let row = RowCell::new(cell_style, measure, 1.0);
+    RowWidths {
+        widths: cells.iter().map(|cell| row.width(cell, measure)).collect(),
+        slot: row.slot,
+        gap: row.style.gap,
+    }
+}
+
+/// A select key wider than any digit: every row cell reserves the widest key
+/// any slot set prints, so a cell keeps its width whatever key it carries.
+const KEY_LABEL_SAMPLES: [&str; 4] = ["8", "w", "m", ";"];
+
+fn key_column(label_px: f32, measure: &impl Measure) -> f32 {
+    KEY_LABEL_SAMPLES
+        .iter()
+        .map(|label| measure.size(label, label_px, false).0)
+        .fold(0.0_f32, f32::max)
+}
+
+/// How wide a horizontal row cell is drawn. Counted in whole px before scale,
+/// as the packer counts it, then scaled — so the window's scale never makes
+/// the drawn row narrower than the width the session packed it to.
+struct RowCell {
+    /// The page's sizes before scale.
+    style: Scale,
+    /// The key column every row cell reserves, before scale.
+    key: f32,
+    /// A short one-Hanji cell, gap included, before scale.
+    slot: f32,
     scale: f32,
-) -> f32 {
-    let scale = if scale.is_finite() && scale > 0.0 {
-        scale
-    } else {
-        1.0
-    };
-    let Pads {
-        cell: cell_pad,
-        gap,
-        script: script_gap,
-        ..
-    } = pads(cell_style.padding, scale);
-    let style = Scale {
-        primary: cell_style.hanji_px.max(1) as f32 * scale,
-        secondary: cell_style.roman_px.max(1) as f32 * scale,
-        hanji_leads: cell_style.hanji_leads,
-        label_px: LABEL_PX * scale,
-        cell_pad,
-        gap,
-        script_gap,
-    };
-    layout_cell(cell, label, 0, false, None, &style, measure).w
+}
+
+impl RowCell {
+    fn new(cell_style: CellStyle, measure: &impl Measure, scale: f32) -> Self {
+        let style = Scale::of(cell_style, 1.0);
+        let key = key_column(style.label_px, measure);
+        let short = Cell {
+            text: "字".into(),
+            annotation: Some("lâi".into()),
+        };
+        let short_w = layout_cell(&short, "", 0, false, Some(key), &style, measure).w;
+        Self {
+            slot: (short_w + style.gap).ceil(),
+            style,
+            key,
+            scale,
+        }
+    }
+
+    /// `cell`'s width before scale, the gap after it included.
+    fn width(&self, cell: &Cell, measure: &impl Measure) -> f32 {
+        let laid = layout_cell(cell, "", 0, false, Some(self.key), &self.style, measure);
+        (laid.w + self.style.gap).ceil().max(self.slot)
+    }
+
+    /// Widens `laid` (`cell` laid out at scale) to its row width, less the
+    /// gap. The key stays left; the scripts stay centered in what it leaves.
+    fn widen(&self, laid: &mut LaidCell, cell: &Cell, measure: &impl Measure) {
+        let target = (self.width(cell, measure) - self.style.gap) * self.scale;
+        let extra = target - laid.w;
+        if extra <= 0.0 {
+            return;
+        }
+        for glyph in &mut laid.glyphs {
+            if glyph.role != Role::Label {
+                glyph.x += extra / 2.0;
+            }
+        }
+        laid.w = target;
+        laid.hit.w = target;
+    }
 }
 
 /// Lays `page` out at `scale`. Sizes on the page are px before scale.
@@ -195,13 +243,19 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         gap,
         script_gap,
     };
-    // Vertical rows share one key column. A horizontal cell keeps its own
-    // key width, because the cells sit side by side rather than in a column.
-    let label_slot = page.vertical.then(|| label_column(page, label_px, measure));
+    // Vertical rows share one key column. A horizontal cell is drawn at the
+    // width the row was packed to (`row_widths`), so the cells fill the
+    // window the session sized from them.
+    let row = (!page.vertical).then(|| RowCell::new(cell_style(page), measure, scale));
+    let label_slot = Some(if row.is_some() {
+        key_column(label_px, measure)
+    } else {
+        label_column(page, label_px, measure)
+    });
     let mut cells = Vec::with_capacity(page.cells.len());
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
-        cells.push(layout_cell(
+        let mut laid = layout_cell(
             cell,
             label,
             index as u32,
@@ -209,7 +263,11 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             label_slot,
             &style,
             measure,
-        ));
+        );
+        if let Some(row) = &row {
+            row.widen(&mut laid, cell, measure);
+        }
+        cells.push(laid);
     }
 
     let mut glyphs = Vec::new();
@@ -604,8 +662,9 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
     arrangement
 }
 
-/// An unfolded row keeps each cell's own width and wraps left. Stretching to
-/// a column grid is what made some candidates look twice as wide as they are.
+/// An unfolded row keeps each cell's own width — the width the grid packed
+/// (`row_widths`) — and wraps left. Stretching to a column grid is what made
+/// some candidates look twice as wide as they are.
 fn arrange_expanded_row(
     page: &Show,
     style: &Scale,
@@ -618,19 +677,14 @@ fn arrange_expanded_row(
     } = pads(page.chrome.padding, scale);
     // Every cell reserves the key column, numbered or not, so a row does not
     // shift right when the keys move onto it.
-    let label_slot = Some(label_column(page, style.label_px, measure));
+    let row = RowCell::new(cell_style(page), measure, scale);
+    let key = key_column(style.label_px, measure);
     let mut cells = Vec::new();
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
-        cells.push(layout_cell(
-            cell,
-            label,
-            index as u32,
-            false,
-            label_slot,
-            style,
-            measure,
-        ));
+        let mut laid = layout_cell(cell, label, index as u32, false, Some(key), style, measure);
+        row.widen(&mut laid, cell, measure);
+        cells.push(laid);
     }
     let row_body = cells
         .iter()
@@ -824,6 +878,36 @@ struct Scale {
     cell_pad: f32,
     gap: f32,
     script_gap: f32,
+}
+
+impl Scale {
+    fn of(cell_style: CellStyle, scale: f32) -> Self {
+        let Pads {
+            cell: cell_pad,
+            gap,
+            script: script_gap,
+            ..
+        } = pads(cell_style.padding, scale);
+        Self {
+            primary: cell_style.hanji_px.max(1) as f32 * scale,
+            secondary: cell_style.roman_px.max(1) as f32 * scale,
+            hanji_leads: cell_style.hanji_leads,
+            label_px: LABEL_PX * scale,
+            cell_pad,
+            gap,
+            script_gap,
+        }
+    }
+}
+
+/// The settings `page`'s cells are sized by.
+fn cell_style(page: &Show) -> CellStyle {
+    CellStyle {
+        hanji_px: page.hanji_px,
+        roman_px: page.roman_px,
+        hanji_leads: page.hanji_leads,
+        padding: page.chrome.padding,
+    }
 }
 
 struct LaidCell {
@@ -1136,7 +1220,7 @@ fn place_arrow(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{Caret, Cell, Show};
+    use crate::protocol::{Caret, Cell, ExpandableView, Show};
 
     struct Mono;
 
@@ -1368,6 +1452,51 @@ mod tests {
         assert_eq!(highlight.y, 0.0);
         assert!((highlight.w - layout.width).abs() < 0.01);
         assert!((highlight.h - layout.height).abs() < 0.01);
+    }
+
+    fn short_cells() -> Vec<Cell> {
+        ["矮", "啞"]
+            .into_iter()
+            .map(|text| Cell {
+                text: text.into(),
+                annotation: Some("é".into()),
+            })
+            .collect()
+    }
+
+    /// The packed extent the session sends as `min_content_width`.
+    fn packed_extent(shown: &Show) -> u32 {
+        let packed = row_widths(&shown.cells, cell_style(shown), &Mono);
+        (packed.widths.iter().sum::<f32>() - packed.gap).ceil() as u32
+    }
+
+    #[test]
+    fn a_row_draws_its_cells_at_the_packed_widths() {
+        let shown = page(false, true, short_cells());
+        let pad = pads(shown.chrome.padding, 1.0).window;
+        let layout = arrange(&shown, &Mono, 1.0);
+        assert_eq!(layout.width, pad * 2.0 + packed_extent(&shown) as f32);
+    }
+
+    #[test]
+    fn a_collapsed_row_of_short_cells_leaves_no_space_after_the_last() {
+        let mut shown = page(false, true, short_cells());
+        shown.cursor = Some(1);
+        shown.chrome.highlight_fill = 100;
+        shown.min_content_width = packed_extent(&shown);
+        shown.expandable = Some(ExpandableView {
+            absolute_indices: vec![0, 1],
+            ..ExpandableView::default()
+        });
+        for scale in [1.0, 1.25, 2.0] {
+            let layout = arrange(&shown, &Mono, scale);
+            let highlight = layout.highlight.expect("highlight");
+            assert!(
+                (highlight.x + highlight.w - layout.width).abs() < 0.01,
+                "at {scale}x the last cell ends {} short of the window",
+                layout.width - highlight.x - highlight.w,
+            );
+        }
     }
 
     #[test]
