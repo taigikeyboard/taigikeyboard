@@ -105,5 +105,24 @@ public interface LexiconRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest getDictionaryFilters();
 
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   * @return Whether the dictionarySearch field is set.
+   */
+  boolean hasDictionarySearch();
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   * @return The dictionarySearch.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest getDictionarySearch();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.MethodCase getMethodCase();
 }

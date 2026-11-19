@@ -1,19 +1,21 @@
-//! The user-data request, and the composing / next-word requests the
-//! engine's own user data joins. Built into every adapter: with the
-//! `user-data` feature and the stores open, `with_stores` answers; before
+//! The user-data request, and the composing / next-word / dictionary-search
+//! requests the engine's own user data joins. Built into every adapter: with
+//! the `user-data` feature and the stores open, `with_stores` answers; before
 //! the open, or in a build without the feature, a fetch ranks by the bundled
-//! context only (`fetch`), a prediction has no user rows, and nothing taught
-//! or recorded is kept — nowhere to keep it. Plan:
+//! context only (`fetch`), a prediction has no user rows, a dictionary search
+//! has no custom entries, and nothing taught or recorded is kept — nowhere to
+//! keep it. Plan:
 //! `docs/architecture/user-data-engine-roadmap.md`.
 
 #[cfg(feature = "user-data")]
 mod with_stores;
 
 use composing::api::ComposingError;
+use lexicon::LexiconError;
 use nextword::NextWordError;
 use protos::engine::{
-    composing_request, AppConfig, ComposingRequest, ComposingResponse, NextWordRequest,
-    NextWordResponse,
+    composing_request, lexicon_request, AppConfig, ComposingRequest, ComposingResponse,
+    LexiconResponse, NextWordRequest, NextWordResponse,
 };
 
 #[cfg(feature = "user-data")]
@@ -86,4 +88,21 @@ pub(crate) fn handle_nextword(
         config,
         generation,
     )
+}
+
+/// A lexicon request — the `Lexicon` arm of `crate::run`. With the user
+/// data built in, a `DictionarySearch` lists the user's custom entries too.
+pub(crate) fn handle_lexicon(
+    method: lexicon_request::Method,
+) -> Result<LexiconResponse, LexiconError> {
+    match method {
+        #[cfg(feature = "user-data")]
+        lexicon_request::Method::DictionarySearch(search) => {
+            lexicon::requests::handle_dictionary_search(
+                search,
+                with_stores::custom_entries_matching,
+            )
+        }
+        method => lexicon::requests::handle(method),
+    }
 }

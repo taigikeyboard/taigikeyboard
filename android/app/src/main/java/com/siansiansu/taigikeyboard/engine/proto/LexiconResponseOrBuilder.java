@@ -65,5 +65,16 @@ public interface LexiconResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse getDictionaryFiltersResult();
 
+  /**
+   * <code>.taigi.engine.DictionarySearchResponse dictionary_search_result = 19;</code>
+   * @return Whether the dictionarySearchResult field is set.
+   */
+  boolean hasDictionarySearchResult();
+  /**
+   * <code>.taigi.engine.DictionarySearchResponse dictionary_search_result = 19;</code>
+   * @return The dictionarySearchResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySearchResponse getDictionarySearchResult();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.ResultCase getResultCase();
 }
