@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR)
 > **Keywords**: `腔口差`, `accent variations`, `contribution`, `issue form`, `GitHub App`, `khpoo`, `齒盤補充辭典`
-> **Status**: Draft 2026-11-12 — Phase 1 merged (#873); Phase 2 design PAUSED 2026-11-12 — pre-impl review REVISE, two maintainer decisions open (App isolation, reason placement)
+> **Status**: Superseded 2026-11-20 — accent variation is collected in the separate `taigikeyboard/community-dictionary` repository instead (its own roadmap); Phases 2–3 here are not built. Phase 1 (#873, the khpoo append check) stays merged.
 
 ## Goal
 
