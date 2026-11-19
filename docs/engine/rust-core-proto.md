@@ -49,7 +49,7 @@ Panic catching, the request-size cap, locking, the error channel and the other e
 |---|---|---|---|---|
 | 10 | Phonetics | `phonetics.proto` | `PhoneticsRequest` | 7 |
 | 11 | Composing | `composing.proto` | `ComposingRequest` | 15 |
-| 12 | Lexicon | `lexicon.proto` | `LexiconRequest` | 5 |
+| 12 | Lexicon | `lexicon.proto` | `LexiconRequest` | 6 |
 | 13 | NextWord | `nextword.proto` | `NextWordRequest` | 9 |
 | 14 | Case | `case.proto` | `CaseRequest` (field `case_transform` — `case` is a Swift keyword) | 4 |
 | 15 | User data | `user_data.proto` | `UserDataRequest` | 15 |

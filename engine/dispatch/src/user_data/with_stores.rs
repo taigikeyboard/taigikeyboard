@@ -1,17 +1,19 @@
 //! The `user-data` build's half of `super`: the user-data request's wire
-//! answer, and the composing / next-word requests answered with the stores
-//! the platform opened. The stores, their one open per process and the
-//! requests' logic are `userdata`'s (`UserDataHandle`); this module maps its
-//! answer to the wire's error code and joins the stores to `composing` /
-//! `nextword`, which only `dispatch` sees together.
+//! answer, the composing / next-word requests answered with the stores the
+//! platform opened, and a dictionary search's custom entries. The stores,
+//! their one open per process and the requests' logic are `userdata`'s
+//! (`UserDataHandle`); this module maps its answer to the wire's error code
+//! and joins the stores to `composing` / `nextword` / `lexicon`, which only
+//! `dispatch` sees together.
 
 use composing::api::ComposingError;
 use composing::{ConversionFrequency, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
-    composing_request, next_word_request, response, AppConfig, ComposingRequest, ComposingResponse,
-    ErrorCode, NextWordRequest, NextWordResponse, RawNextWordPrediction, Response, Source,
-    UserDataRequest,
+    composing_request, next_word_request, response, user_data_request, user_data_response,
+    AppConfig, ComposingRequest, ComposingResponse, CustomDictionaryEntry, ErrorCode,
+    NextWordRequest, NextWordResponse, RawNextWordPrediction, Response, SearchCustomEntries,
+    Source, UserDataRequest, UserDataResponse,
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
@@ -242,6 +244,33 @@ fn following_rows(
         .iter()
         .map(user_prediction)
         .collect()
+}
+
+/// The custom entries a dictionary search finds, through the user-data
+/// request (which waits for a background open to settle). None before the
+/// platform opens its user data.
+pub(super) fn custom_entries_matching(search: SearchCustomEntries) -> Vec<CustomDictionaryEntry> {
+    let request = UserDataRequest {
+        method: Some(user_data_request::Method::SearchCustomEntries(search)),
+    };
+    match UserDataHandle::instance().handle(&request) {
+        Ok(UserDataResponse {
+            result: Some(user_data_response::Result::CustomEntryMatches(matches)),
+        }) => matches.entries,
+        Ok(answer) => {
+            log::warn!("dictionary search: unexpected custom-entry answer {answer:?}");
+            Vec::new()
+        }
+        // The platform has not opened its user data yet.
+        Err(RequestError::Invalid(reason)) => {
+            log::debug!("dictionary search without custom entries: {reason}");
+            Vec::new()
+        }
+        Err(RequestError::Store(message)) => {
+            log::warn!("dictionary search: custom entries failed: {message}");
+            Vec::new()
+        }
+    }
 }
 
 // The row → engine / wire forms.

@@ -1,14 +1,16 @@
 //! Dispatch: route every `LexiconRequest.method` oneof variant to the
 //! per-method API — the read-path variants
 //! (Install/SearchWithSources/SearchByHanji), the
-//! IsHanji predicate, and the v3.5.8
-//! DictionaryFilters variant.
+//! IsHanji predicate, the v3.5.8
+//! DictionaryFilters variant, and DictionarySearch (its custom entries
+//! answered by the caller).
 
 use protos::engine::lexicon_request::Method;
 use protos::engine::lexicon_response::Result as LexResult;
 use protos::engine::{
-    DictionaryFiltersRequest, InstallRequest, IsHanjiRequest, LexiconResponse,
-    SearchByHanjiRequest, SearchWithSourcesRequest,
+    CustomDictionaryEntry, DictionaryFiltersRequest, DictionarySearchRequest, InstallRequest,
+    IsHanjiRequest, LexiconResponse, SearchByHanjiRequest, SearchCustomEntries,
+    SearchWithSourcesRequest,
 };
 
 use crate::api;
@@ -53,6 +55,17 @@ pub fn handle_dictionary_filters(
     })
 }
 
+/// `custom_entries` answers the custom-entry lookup (`api::dictionary_search`).
+pub fn handle_dictionary_search(
+    req: DictionarySearchRequest,
+    custom_entries: impl FnOnce(SearchCustomEntries) -> Vec<CustomDictionaryEntry>,
+) -> Result<LexiconResponse, LexiconError> {
+    let resp = api::dictionary_search(req, custom_entries)?;
+    Ok(LexiconResponse {
+        result: Some(LexResult::DictionarySearchResult(resp)),
+    })
+}
+
 /// Dispatch `LexiconRequest.method` to the matching handler.
 pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
     match method {
@@ -61,5 +74,8 @@ pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
         Method::SearchByHanji(req) => handle_search_by_hanji(req),
         Method::IsHanji(req) => handle_is_hanji(req),
         Method::DictionaryFilters(req) => handle_dictionary_filters(req),
+        // Without user data: no custom entries (engine/dispatch answers this
+        // method itself when the user data is built in).
+        Method::DictionarySearch(req) => handle_dictionary_search(req, |_| Vec::new()),
     }
 }

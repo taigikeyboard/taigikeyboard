@@ -237,7 +237,7 @@ fn run(bytes: &[u8]) -> Response {
                 log::warn!("lexicon request missing method (id={id})");
                 return error_response(id, ErrorCode::FailInvariant);
             };
-            match lexicon::requests::handle(method) {
+            match user_data::handle_lexicon(method) {
                 Ok(lex_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
@@ -333,24 +333,27 @@ fn encode(response: &Response) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{AppConfig, IsHanjiRequest, LexiconRequest};
+    use protos::engine::lexicon_request::Method as LexiconMethod;
+    use protos::engine::{
+        AppConfig, DictionarySearchRequest, DictionarySourceToggles, IsHanjiRequest, LexiconRequest,
+    };
 
-    fn lexicon_request(req: IsHanjiRequest) -> Request {
+    fn lexicon_request(method: LexiconMethod) -> Request {
         Request {
             id: 42,
             config_snapshot: Some(AppConfig::default()),
             generation: 7,
             payload: Some(request::Payload::Lexicon(LexiconRequest {
-                method: Some(protos::engine::lexicon_request::Method::IsHanji(req)),
+                method: Some(method),
             })),
         }
     }
 
     #[test]
     fn dispatch_routes_lexicon_request_to_lexicon() {
-        let req = lexicon_request(IsHanjiRequest {
+        let req = lexicon_request(LexiconMethod::IsHanji(IsHanjiRequest {
             text: "我".to_owned(),
-        });
+        }));
         let mut buf = Vec::with_capacity(req.encoded_len());
         req.encode(&mut buf).unwrap();
 
@@ -368,6 +371,38 @@ mod tests {
             panic!("expected IsHanjiResult, got {result:?}");
         };
         assert!(is_hanji.is_hanji, "我 is hanji");
+    }
+
+    // No unit test in this crate installs a lexicon, so this one sees the
+    // engine before install.
+    #[test]
+    fn dictionary_search_before_install_answers_no_rows() {
+        let req = lexicon_request(LexiconMethod::DictionarySearch(DictionarySearchRequest {
+            query: "tsiah".to_owned(),
+            input_mode: "tl".to_owned(),
+            toggles: Some(DictionarySourceToggles {
+                kautian: true,
+                ..DictionarySourceToggles::default()
+            }),
+            custom_dictionary_enabled: true,
+            limit: 20,
+        }));
+        let resp = Response::decode(process_request(&req.encode_to_vec()).as_slice()).unwrap();
+
+        assert_eq!(
+            resp.error,
+            ErrorCode::Ok as i32,
+            "not installed is no error"
+        );
+        let Some(response::Payload::Lexicon(lex_resp)) = resp.payload else {
+            panic!("expected Lexicon payload");
+        };
+        let Some(protos::engine::lexicon_response::Result::DictionarySearchResult(found)) =
+            lex_resp.result
+        else {
+            panic!("expected DictionarySearchResult");
+        };
+        assert!(found.rows.is_empty(), "{found:?}");
     }
 
     #[test]

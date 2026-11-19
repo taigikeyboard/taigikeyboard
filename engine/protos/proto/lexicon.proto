@@ -6,7 +6,9 @@ option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
 // Lexicon module — dictionary install, search, input
-// classification and dictionary-filter resolution.
+// classification, dictionary-filter resolution and the Manage
+// Dictionaries search (`DictionarySearchRequest`, whose custom entries
+// engine/dispatch joins from the user data).
 //
 // Ops live in the LexiconRequest.method oneof. Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
 // (engine::dispatch) routes by Request.payload tag and then per-module
@@ -42,6 +44,7 @@ message LexiconRequest {
     SearchByHanjiRequest      search_by_hanji       = 14;  // Tab3 Hanji prefix
     IsHanjiRequest            is_hanji              = 17;  // v3.5.7 Tab3 short-circuit
     DictionaryFiltersRequest  dictionary_filters    = 18;  // v3.5.8 toggles → bitmasks + enabled codes
+    DictionarySearchRequest   dictionary_search     = 19;  // Manage Dictionaries search, one call
   }
 }
 
@@ -153,6 +156,54 @@ message DictionaryFiltersResponse {
   repeated DictionarySourceCode   enabled_source_codes       = 3;
 }
 
+// `DictionarySearchRequest` is the Manage Dictionaries search in one call:
+// the engine picks the Hanji or romanization lookup, applies the source
+// toggles, renders each row's romanization, keeps only the enabled
+// sources' badges and puts the user's custom entries first.
+message DictionarySearchRequest {
+  // What the user typed into the search box. Empty → no rows.
+  string query = 1;
+  // The settings input mode, spelled as `AppConfig.input_mode`
+  // (`tl` / `poj` / `tps` / `english`; anything else reads as TL).
+  string input_mode = 2;
+  // Absent = every toggle off, as `DictionaryFiltersRequest`.
+  DictionarySourceToggles toggles = 3;
+  // Enable Custom Dictionary. False (or absent) leaves the custom entries out.
+  bool custom_dictionary_enabled = 4;
+  // The most rows per section: up to `limit` custom entries, then up to
+  // `limit` dictionary rows.
+  uint32 limit = 5;
+}
+
+// `DictionarySearchResponse.rows`: the custom entries (romanization
+// order; none for a Hanji query, when Enable Custom Dictionary is off or
+// before the platform opens its user data), then the dictionary rows in
+// the engine's order (`lexicon::search`). No dictionary rows before the
+// dictionary is installed.
+message DictionarySearchResponse {
+  repeated DictionarySearchRow rows = 1;
+}
+
+message DictionarySearchRow {
+  oneof id {
+    // The dictionary row id (`TaigiWord.id`).
+    int64 system_id = 1;
+    // The custom entry's id (`CustomDictionaryEntry.id`).
+    string custom_id = 2;
+  }
+  // The romanization as shown: POJ under `poj`, TL otherwise (TPS shows
+  // TL); a custom entry's romanization as the user saved it.
+  string roman = 3;
+  // What the web dictionaries are asked with: the row's TL, or a custom
+  // entry's own romanization.
+  string lookup_tl = 4;
+  // Absent for a romanization-only entry.
+  optional string hanji = 5;
+  // The badges: the row's sources the user has on, in source-bit order;
+  // `[CUSTOM]` for a custom entry.
+  repeated DictionarySourceCode sources = 6;
+}
+
 // =========================================================================
 // Response envelope
 // =========================================================================
@@ -168,6 +219,7 @@ message LexiconResponse {
     SearchByHanjiResponse      search_by_hanji_result      = 14;
     IsHanjiResponse            is_hanji_result             = 17;
     DictionaryFiltersResponse  dictionary_filters_result   = 18;
+    DictionarySearchResponse   dictionary_search_result    = 19;
   }
 }
 

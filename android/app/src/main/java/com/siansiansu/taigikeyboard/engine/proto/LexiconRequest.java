@@ -25,6 +25,7 @@ public  final class LexiconRequest extends
     SEARCH_BY_HANJI(14),
     IS_HANJI(17),
     DICTIONARY_FILTERS(18),
+    DICTIONARY_SEARCH(19),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -45,6 +46,7 @@ public  final class LexiconRequest extends
         case 14: return SEARCH_BY_HANJI;
         case 17: return IS_HANJI;
         case 18: return DICTIONARY_FILTERS;
+        case 19: return DICTIONARY_SEARCH;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -411,6 +413,76 @@ public  final class LexiconRequest extends
    */
   private void clearDictionaryFilters() {
     if (methodCase_ == 18) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int DICTIONARY_SEARCH_FIELD_NUMBER = 19;
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   */
+  @java.lang.Override
+  public boolean hasDictionarySearch() {
+    return methodCase_ == 19;
+  }
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest getDictionarySearch() {
+    if (methodCase_ == 19) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   */
+  private void setDictionarySearch(com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 19;
+  }
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   */
+  private void mergeDictionarySearch(com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 19 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 19;
+  }
+  /**
+   * <pre>
+   * Manage Dictionaries search, one call
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+   */
+  private void clearDictionarySearch() {
+    if (methodCase_ == 19) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -885,6 +957,78 @@ public  final class LexiconRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Manage Dictionaries search, one call
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+     */
+    @java.lang.Override
+    public boolean hasDictionarySearch() {
+      return instance.hasDictionarySearch();
+    }
+    /**
+     * <pre>
+     * Manage Dictionaries search, one call
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest getDictionarySearch() {
+      return instance.getDictionarySearch();
+    }
+    /**
+     * <pre>
+     * Manage Dictionaries search, one call
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+     */
+    public Builder setDictionarySearch(com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest value) {
+      copyOnWrite();
+      instance.setDictionarySearch(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Manage Dictionaries search, one call
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+     */
+    public Builder setDictionarySearch(
+        com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDictionarySearch(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Manage Dictionaries search, one call
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+     */
+    public Builder mergeDictionarySearch(com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest value) {
+      copyOnWrite();
+      instance.mergeDictionarySearch(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Manage Dictionaries search, one call
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionarySearchRequest dictionary_search = 19;</code>
+     */
+    public Builder clearDictionarySearch() {
+      copyOnWrite();
+      instance.clearDictionarySearch();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.LexiconRequest)
   }
   @java.lang.Override
@@ -908,10 +1052,11 @@ public  final class LexiconRequest extends
             com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest.class,
           };
           java.lang.String info =
-              "\u0000\u0005\u0001\u0000\u000b\u0012\u0005\u0000\u0000\u0000\u000b<\u0000\r<\u0000" +
-              "\u000e<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\u0006\u0001\u0000\u000b\u0013\u0006\u0000\u0000\u0000\u000b<\u0000\r<\u0000" +
+              "\u000e<\u0000\u0011<\u0000\u0012<\u0000\u0013<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
