@@ -329,7 +329,8 @@ pub(crate) fn walk_buffer(
 /// cannot be silently broken by a future seam refactor.
 ///
 /// Returns `None` when the synth must be suppressed (trailing-hyphen
-/// shadow short of raw, or the walker cannot span the buffer) — caller
+/// shadow short of raw, the walker cannot span the buffer, or a one-syllable
+/// all-OOV synth in TL/POJ that would repeat the §34 literal, #1030) — caller
 /// leaves the span-local list untouched (pre-S2 behavior preserved).
 ///
 /// `continuous_keys` is the seam's single `build_continuous_keys` result
@@ -415,6 +416,14 @@ pub(super) fn fetch_walker_slot0_inner(
             mode,
             &crate::shadow::oov_reading_barriers(barriers, 0, shadow.len(), mode),
         ) {
+            // #1030: a one-syllable synth (`huh`) only re-reads the typed text,
+            // which the §34 literal owns in TL/POJ (TPS has no literal).
+            Some(segs)
+                if segs.len() == 1
+                    && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj) =>
+            {
+                return None;
+            }
             Some(segs) if !segs.is_empty() => {
                 // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
                 // synth strips Bopomofo tone marks per syllable; TL/POJ

@@ -425,9 +425,11 @@ fn listed_candidates(
     // the platform sends `literal_roman_candidate_disabled = true` and the
     // forced prepend is skipped — the dedupe `retain` lives inside this
     // block so it is skipped too. This suppresses ONLY the §34 WYSIWYG
-    // prepend; any roman-only / OOV-synth candidate `assemble_candidates`
-    // produced on its own stays. Inverted sentinel: proto3 default `false`
-    // = show (legacy always-on), so un-wired builds are unaffected.
+    // prepend; roman-only rows and the multi-syllable OOV synth
+    // `assemble_candidates` produced on its own stay (the walker emits no
+    // one-syllable OOV synth in TL/POJ, #1030). Inverted sentinel: proto3
+    // default `false` = show (legacy always-on), so un-wired builds are
+    // unaffected.
     let mut literal_at = None;
     if !literal_roman_candidate_disabled {
         if let Some(mut literal) = literal_roman_candidate(raw, config, mode) {
