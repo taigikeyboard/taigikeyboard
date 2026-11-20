@@ -30,8 +30,7 @@
           "android",
           "ios",
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"

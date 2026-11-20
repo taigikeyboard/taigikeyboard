@@ -1009,24 +1009,6 @@
         }
       }
     },
-    "i18n_dictionary_hanziLabel": {
-      "comment": "Custom-entry column header and field label: what typing the romanization finds (揣).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hanji"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "漢字"
-          }
-        }
-      }
-    },
     "i18n_dictionary_hanziPlaceholder": {
       "comment": "Placeholder example for the Hanji field in the custom-entry dialog.",
       "extractionState": "manual",
@@ -1963,24 +1945,6 @@
         }
       }
     },
-    "i18n_dictionary_romanLabel": {
-      "comment": "Custom-entry column header and field label: the romanization the user types (拍).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Romanization"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ローマ字"
-          }
-        }
-      }
-    },
     "i18n_dictionary_romanPlaceholder": {
       "comment": "Placeholder example for the romanization field in the custom-entry dialog.",
       "extractionState": "manual",
@@ -2324,7 +2288,7 @@
       }
     },
     "i18n_home_appHeaderTitle": {
-      "comment": "Home tab large title — the app name; ALSO the desktop About page heading. ALSO the macOS bundle's localized name (macos/App/*.lproj/InfoPlist.strings) — editing this renames the macOS input source; see MACOS_BUNDLE_NAME_KEY in tools/i18n/i18n_lib.py.",
+      "comment": "Home tab large title — the app name; ALSO the Linux settings window sidebar title. ALSO, read straight from the source without a platform scope, the macOS bundle's localized name (macos/App/*.lproj/InfoPlist.strings) and the Windows product name (windows/build-support/product_name_strings.rs) — editing this renames both input methods; see MACOS_BUNDLE_NAME_KEY in tools/i18n/i18n_lib.py.",
       "extractionState": "manual",
       "localizations": {
         "en": {
