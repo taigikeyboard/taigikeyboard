@@ -67,6 +67,13 @@ impl JobOutcome {
             is_reload_wanted: false,
         }
     }
+
+    /// Whether the job wrote the learning stores — a restored backup — so
+    /// a Learning Records list already on screen reloads too. A refused
+    /// restore wrote nothing.
+    pub fn has_written_learning_records(&self) -> bool {
+        matches!(self.message, Some(PageMessage::BackupImported { .. }))
+    }
 }
 
 /// The job a page started and still waits on, and whether its busy

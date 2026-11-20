@@ -1,4 +1,4 @@
-//! The CSV file dialogs, owned by the settings window. `rfd` wants a
+//! The file dialogs, owned by the settings window. `rfd` wants a
 //! window to be modal to, and Reactor hands out no HWND — so the owner
 //! comes from `platform::dialog_owner()`, read at the moment the dialog
 //! opens. That call happens inside a message handler on the UI thread,
@@ -21,17 +21,39 @@ fn dialog() -> rfd::FileDialog {
     }
 }
 
-/// Where to write a CSV, or `None` because the user cancelled.
-pub fn save(suggested_name: &str) -> Option<PathBuf> {
+/// A kind of file the Custom Dictionary pane writes and reads: the filter's
+/// label, the extension a save writes, and the extensions an open accepts.
+pub struct FileKind {
+    label: &'static str,
+    saved: &'static str,
+    opened: &'static [&'static str],
+}
+
+/// The custom dictionary as `roman,hanji` lines.
+pub const CSV: FileKind = FileKind {
+    label: "CSV",
+    saved: "csv",
+    opened: &["csv", "txt"],
+};
+
+/// A `.taigi` backup.
+pub const BACKUP: FileKind = FileKind {
+    label: "Taigi backup",
+    saved: "taigi",
+    opened: taigi_desktop_core::settings::custom_dictionary::BACKUP_OPEN_EXTENSIONS,
+};
+
+/// Where to write a `kind` file, or `None` because the user cancelled.
+pub fn save(kind: &FileKind, suggested_name: &str) -> Option<PathBuf> {
     dialog()
         .set_file_name(suggested_name)
-        .add_filter("CSV", &["csv"])
+        .add_filter(kind.label, &[kind.saved])
         .save_file()
 }
 
-/// Which CSV to read, or `None` because the user cancelled.
-pub fn open() -> Option<PathBuf> {
-    dialog().add_filter("CSV", &["csv", "txt"]).pick_file()
+/// Which `kind` file to read, or `None` because the user cancelled.
+pub fn open(kind: &FileKind) -> Option<PathBuf> {
+    dialog().add_filter(kind.label, kind.opened).pick_file()
 }
 
 /// Which font file to take into the library, or `None` because the user

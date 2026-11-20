@@ -93,6 +93,10 @@ pub enum Message {
     ShowBusy(u64),
     /// What the list on screen holds, as `list_selection` reports it.
     RowsApplied(Option<Vec<String>>),
+    /// Another page wrote learning rows (Custom Dictionary's backup
+    /// restore): reload the page on screen. A page never shown yet loads on
+    /// its first show anyway.
+    Reload,
 }
 
 /// The row open in the record dialog: its count, and — for a row the
@@ -367,6 +371,11 @@ pub fn update(
             model.job.show_busy(generation);
         }
         Message::RowsApplied(rows) => model.settled.report(rows),
+        Message::Reload => {
+            if model.is_first_load_requested {
+                load(model, context);
+            }
+        }
     }
 }
 

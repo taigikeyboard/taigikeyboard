@@ -12,13 +12,13 @@ use std::path::Path;
 
 use protos::engine::{
     request, response, user_data_request, user_data_response, AddLearningRecordToCustomDictionary,
-    DeleteCustomEntry, DeleteLearningRecord, ExportCustomCsv, ImportCustomCsv, ListCustomEntries,
-    ListLearningRecords, OpenUserData, ResetUserData, SaveCustomEntry, SetLearningRecordCount,
-    UserDataJournal, UserDataRequest,
+    BackupRefusal, DeleteCustomEntry, DeleteLearningRecord, ExportBackup, ExportCustomCsv,
+    ImportBackup, ImportCustomCsv, ListCustomEntries, ListLearningRecords, OpenUserData,
+    ResetUserData, SaveCustomEntry, SetLearningRecordCount, UserDataJournal, UserDataRequest,
 };
 pub use protos::engine::{
-    CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
-    LearningRecord, LearningRecordKind, LearningRecordOrder,
+    BackupImported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
+    CustomEntries, LearningRecord, LearningRecordKind, LearningRecordOrder,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -287,6 +287,54 @@ pub(crate) fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
     }
 }
 
+/// Every store as `.taigi` backup bytes (`ExportBackup`), naming `platform`
+/// and `app_version` as the writer — what the phones export, so a restore on
+/// any platform types the same.
+pub(crate) fn export_backup(
+    platform: DesktopPlatform,
+    app_version: &str,
+) -> Result<Vec<u8>, UserDataError> {
+    let op = "backupExport";
+    match page_request(
+        user_data_request::Method::ExportBackup(ExportBackup {
+            platform: platform.backup_name().to_owned(),
+            app_version: app_version.to_owned(),
+        }),
+        op,
+    )? {
+        user_data_response::Result::BackupExported(exported) => Ok(exported.backup),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// Restores the `.taigi` file the user picked, merged with what is stored
+/// (`ImportBackup`). Read whole — no size cap, as on the phones. A file that
+/// cannot be read or is not a backup is `UserDataError::Refused`.
+pub(crate) fn import_backup_file(path: &Path) -> Result<BackupImported, UserDataError> {
+    let backup = std::fs::read(path).map_err(|error| unreadable(&error))?;
+    let op = "backupImport";
+    match page_request(
+        user_data_request::Method::ImportBackup(ImportBackup { backup }),
+        op,
+    )? {
+        user_data_response::Result::BackupImported(imported) => match imported.refusal() {
+            BackupRefusal::None => Ok(imported),
+            refusal => Err(backup_refused(refusal)),
+        },
+        _ => Err(other_result(op)),
+    }
+}
+
+/// The alert's line for a refused backup — the engine answers only the
+/// refusal, so the words are `userdata::backup::BackupError`'s.
+fn backup_refused(refusal: BackupRefusal) -> UserDataError {
+    let detail = match refusal {
+        BackupRefusal::UnsupportedVersion => "unsupported backup version",
+        BackupRefusal::None | BackupRefusal::Unreadable => "not a .taigi backup",
+    };
+    refused(CustomDictionaryRefusal::None as i32, detail.to_owned())
+}
+
 /// One page of learned rows of `kind` as the settings windows page them:
 /// `filter` as a substring of a row's words or readings, `page_size` rows
 /// from `page` (zero-based) in `order`.
@@ -449,6 +497,36 @@ mod tests {
         assert_eq!(journal(DesktopPlatform::Windows), UserDataJournal::Wal);
         assert_eq!(journal(DesktopPlatform::Linux), UserDataJournal::Wal);
         assert_eq!(journal(DesktopPlatform::MacOS), UserDataJournal::Delete);
+    }
+
+    #[test]
+    fn a_backup_names_its_writer_as_the_proto_lists_them() {
+        // trace: `ExportBackup.platform` — `ios`, `android`, `macos`,
+        // `windows`, `linux` (user_data.proto).
+        assert_eq!(DesktopPlatform::Windows.backup_name(), "windows");
+        assert_eq!(DesktopPlatform::Linux.backup_name(), "linux");
+        assert_eq!(DesktopPlatform::MacOS.backup_name(), "macos");
+    }
+
+    /// trace: the engine answers a refusal with no words of its own; the
+    /// alert line is `BackupError`'s, under no custom-dictionary refusal.
+    #[test]
+    fn a_refused_backup_reads_as_the_codec_error() {
+        for (refusal, detail) in [
+            (BackupRefusal::Unreadable, "not a .taigi backup"),
+            (
+                BackupRefusal::UnsupportedVersion,
+                "unsupported backup version",
+            ),
+        ] {
+            assert_eq!(
+                backup_refused(refusal),
+                UserDataError::Refused {
+                    refusal: CustomDictionaryRefusal::None,
+                    detail: detail.to_owned(),
+                }
+            );
+        }
     }
 
     /// trace: the import refuses a missing file with the codec's own words
