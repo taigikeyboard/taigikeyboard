@@ -20,15 +20,24 @@ struct CustomDictionaryImportResult: Equatable, Sendable {
     let skipped: Int
 }
 
+/// What a restored `.taigi` backup added to each store it counts.
+struct BackupImportResult: Hashable, Sendable {
+    let customDictionary: Int
+    let frequency: Int
+    let association: Int
+}
+
 /// Why a user-data request did nothing. The description is the alert's
-/// diagnostic line, English on purpose (`UserDataPageMessage.failure`).
+/// diagnostic line, untranslated on purpose (`UserDataPageMessage.failure`).
 enum UserDataClientError: Error, Equatable, CustomStringConvertible {
     /// The round-trip failed or the engine refused the request; the bridge
     /// logged why.
     case engineUnavailable(op: String)
     /// Something the user can be told — a full dictionary, an unusable file —
     /// in the engine's own words (`custom dictionary is full (max 30000
-    /// entries)`).
+    /// entries)`), or desktop-core's where the engine answers only a code (a
+    /// refused backup) or never saw the file (one that could not be read,
+    /// whose tail is the system's reason, in the system's language).
     case refused(detail: String)
     /// A reset that emptied some stores and not others, one line per store
     /// that failed (`user_frequency: <error>`).
@@ -57,6 +66,12 @@ protocol UserDataClient: Sendable {
     func deleteAll() throws
     func exportCSV() throws -> Data
     func importCSV(at url: URL) throws -> CustomDictionaryImportResult
+    /// Every store as a `.taigi` backup.
+    func exportBackup() throws -> Data
+    /// Restores the `.taigi` file at `url`, merged with what is stored. A
+    /// file that cannot be read or is not a backup throws
+    /// `UserDataClientError.refused`.
+    func importBackup(at url: URL) throws -> BackupImportResult
     /// Empties what the input method learned — counts, bigrams, learned
     /// phrases — and leaves the custom dictionary alone.
     func clearLearningRecords() throws
@@ -137,11 +152,16 @@ struct EngineUserDataClient: UserDataClient {
     }
 
     func importCSV(at url: URL) throws -> CustomDictionaryImportResult {
-        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        let size: Int
+        do {
+            size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        } catch {
+            throw Self.unreadable(error)
+        }
         guard size <= Self.maxImportFileBytes else {
             throw UserDataClientError.refused(detail: "file is larger than 5 MB")
         }
-        guard let imported = try RustEngineBridge.customDictionaryImportCSV(Data(contentsOf: url)) else {
+        guard let imported = try RustEngineBridge.customDictionaryImportCSV(Self.read(url)) else {
             throw UserDataClientError.engineUnavailable(op: "customDictionaryImportCSV")
         }
         guard imported.refusal == .none else { throw UserDataClientError.refused(detail: imported.detail) }
@@ -149,6 +169,51 @@ struct EngineUserDataClient: UserDataClient {
             imported: Int(imported.imported),
             skipped: Int(imported.skipped),
         )
+    }
+
+    func exportBackup() throws -> Data {
+        guard let backup = RustEngineBridge.backupExport(appVersion: AppVersion.installed) else {
+            throw UserDataClientError.engineUnavailable(op: "backupExport")
+        }
+        return backup
+    }
+
+    /// Read whole, with no size cap, as on the other platforms.
+    func importBackup(at url: URL) throws -> BackupImportResult {
+        guard let imported = try RustEngineBridge.backupImport(Self.read(url)) else {
+            throw UserDataClientError.engineUnavailable(op: "backupImport")
+        }
+        guard imported.refusal == .none else {
+            throw UserDataClientError.refused(detail: Self.refusalDetail(imported.refusal))
+        }
+        return BackupImportResult(
+            customDictionary: Int(imported.customDictionary),
+            frequency: Int(imported.frequency),
+            association: Int(imported.association),
+        )
+    }
+
+    /// The alert's line for a refused backup. The engine answers only the
+    /// refusal, so the words are desktop-core's (`backup_refused`,
+    /// `engine/user_data.rs`), which are `userdata::backup::BackupError`'s.
+    /// CROSS-PLATFORM INVARIANT: the same words on every desktop.
+    static func refusalDetail(_ refusal: Taigi_Engine_BackupRefusal) -> String {
+        refusal == .unsupportedVersion ? "unsupported backup version" : "not a .taigi backup"
+    }
+
+    /// The file the user picked, or a refusal saying why it could not be read.
+    private static func read(_ url: URL) throws -> Data {
+        do {
+            return try Data(contentsOf: url)
+        } catch {
+            throw unreadable(error)
+        }
+    }
+
+    /// desktop-core's words for a file it could not read (`unreadable`,
+    /// `engine/user_data.rs`), with the system's reason after them.
+    private static func unreadable(_ error: Error) -> UserDataClientError {
+        .refused(detail: "could not read the file: \(error.localizedDescription)")
     }
 
     func clearLearningRecords() throws {

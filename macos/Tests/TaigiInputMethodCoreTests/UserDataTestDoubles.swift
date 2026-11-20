@@ -7,8 +7,10 @@
 // `engine/dispatch/src/user_data.rs`, `engine/dispatch/tests/user_data_*.rs`);
 // these record what this side SENDS.
 
+import AppKit
 import Foundation
 @testable import TaigiInputMethodCore
+import UniformTypeIdentifiers
 
 /// A custom dictionary held in memory, answering the pages' requests the way
 /// the engine does: newest edit first, a case-insensitive substring filter,
@@ -74,6 +76,39 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         let imported = lock.withLock { rowsToImport }
         try applyCustomWrite { rows.insert(contentsOf: imported, at: 0) }
         return CustomDictionaryImportResult(imported: imported.count, skipped: 0)
+    }
+
+    /// What `exportBackup` answers.
+    var backupToExport = Data("{\"version\":4}".utf8)
+    /// What `importBackup` adds to the custom dictionary.
+    var backupRowsToImport: [CustomDictionaryRow] = []
+    /// Set to make both backup requests throw it before they touch the store
+    /// — an engine that did not answer, a refused file.
+    var backupError: UserDataClientError?
+    /// The file the last `importBackup` was handed.
+    private(set) var lastBackupImportURL: URL?
+
+    func exportBackup() throws -> Data {
+        try lock.withLock {
+            if let backupError {
+                throw backupError
+            }
+            return backupToExport
+        }
+    }
+
+    /// Restores into the store, counting one frequency and two association
+    /// records beside the rows, as a phone backup carries.
+    func importBackup(at url: URL) throws -> BackupImportResult {
+        let imported = try lock.withLock {
+            lastBackupImportURL = url
+            if let backupError {
+                throw backupError
+            }
+            return backupRowsToImport
+        }
+        try applyCustomWrite { rows.insert(contentsOf: imported, at: 0) }
+        return BackupImportResult(customDictionary: imported.count, frequency: 1, association: 2)
     }
 
     private func applyCustomWrite(_ write: () -> Void) throws {
@@ -207,5 +242,29 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
 
     private static func isSameRow(_ stored: Taigi_Engine_LearningRecord, _ listed: Taigi_Engine_LearningRecord) -> Bool {
         stored.kind == listed.kind && stored.id == listed.id && stored.text == listed.text && stored.tl == listed.tl
+    }
+}
+
+/// Answers in the file panels' place: a panel is modal UI no test can click.
+@MainActor
+final class FakeFilePanels: UserDataFilePresenting {
+    /// What the open panel answers; `nil` is a cancel.
+    var fileToOpen: URL?
+    /// Set to make the write fail, as a full disk does.
+    var writeError: Error?
+    private(set) var openedContentTypes: [UTType]?
+    private(set) var written: (data: Data, suggestedName: String, contentTypes: [UTType])?
+
+    func chooseFileToOpen(contentTypes: [UTType], in _: NSWindow) async -> URL? {
+        openedContentTypes = contentTypes
+        return fileToOpen
+    }
+
+    func write(_ data: Data, suggestedName: String, contentTypes: [UTType], in _: NSWindow) async throws -> URL? {
+        if let writeError {
+            throw writeError
+        }
+        written = (data, suggestedName, contentTypes)
+        return URL(fileURLWithPath: "/tmp/\(suggestedName)")
     }
 }

@@ -149,6 +149,33 @@ extension RustEngineBridge {
         return added
     }
 
+    // MARK: - Backup
+
+    /// The `.taigi` backup of every store, naming `macos` (desktop-core's
+    /// `DesktopPlatform::MacOS.backup_name()`) and `appVersion` as the writer.
+    static func backupExport(appVersion: String) -> Data? {
+        var export = Taigi_Engine_ExportBackup()
+        export.platform = "macos"
+        export.appVersion = appVersion
+        guard case let .backupExported(exported)? = userDataResult(
+            .exportBackup(export),
+            op: "backupExport",
+        ) else { return nil }
+        return exported.backup
+    }
+
+    /// Restores `backup`, merged with what is stored; the answer's `refusal`
+    /// says why nothing was.
+    static func backupImport(_ backup: Data) -> Taigi_Engine_BackupImported? {
+        var importing = Taigi_Engine_ImportBackup()
+        importing.backup = backup
+        guard case let .backupImported(imported)? = userDataResult(
+            .importBackup(importing),
+            op: "backupImport",
+        ) else { return nil }
+        return imported
+    }
+
     /// `nil` for a failed round-trip, a refusal (a request before the open),
     /// or an answer of the wrong kind — the caller's `case let` rejects the
     /// last, and every one is logged.
