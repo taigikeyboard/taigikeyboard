@@ -66,7 +66,6 @@ import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.theme.BuiltInTheme
 import com.siansiansu.taigikeyboard.ime.theme.BuiltInThemes
@@ -75,6 +74,7 @@ import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.theme.ThemeBackground
 import com.siansiansu.taigikeyboard.ime.theme.ThemeGradient
 import com.siansiansu.taigikeyboard.ime.theme.ThemeImageBackground
+import com.siansiansu.taigikeyboard.ime.theme.ThemeImageCache
 import com.siansiansu.taigikeyboard.ime.theme.ThemeImageVariant
 import com.siansiansu.taigikeyboard.ime.theme.ThemeKeyStyle
 import com.siansiansu.taigikeyboard.ime.theme.UserTheme
@@ -132,6 +132,8 @@ private val appearanceSaver: Saver<ThemeAppearance, String> =
 @Composable
 fun ThemeEditorScreen(
     prefs: PrefHelper,
+    // Where a picked photo is saved and decoded.
+    themeImageCache: ThemeImageCache,
     editing: UserTheme?,
     // Create only: the built-in a new theme is customized from (null = blank).
     base: BuiltInTheme?,
@@ -186,7 +188,6 @@ fun ThemeEditorScreen(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val themeImageCache = remember(context) { CompositionRoot.shared(context).themeImages }
     val photoPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
             uri ?: return@rememberLauncherForActivityResult

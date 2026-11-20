@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -27,7 +26,6 @@ import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.commonDuplicateName
 import com.siansiansu.taigikeyboard.i18n.stringRes
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.theme.BuiltInTheme
 import com.siansiansu.taigikeyboard.ime.theme.BuiltInThemes
@@ -66,7 +64,11 @@ internal fun selectionAfterDelete(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ThemePickerScreen(prefs: PrefHelper) {
+fun ThemePickerScreen(
+    prefs: PrefHelper,
+    // Delete and Duplicate mutate in place (add / edit go through the editor Activity).
+    userThemeStore: UserThemeStore,
+) {
     val context = LocalContext.current
     val stringResolver = LocalStringResolver.current
     val selectedThemeId by prefs
@@ -75,9 +77,6 @@ fun ThemePickerScreen(prefs: PrefHelper) {
     val userThemes by prefs
         .observeUserThemes()
         .collectAsStateWithLifecycle(initialValue = prefs.loadUserThemes())
-
-    // Delete is the only in-place mutation (add/edit go through the editor Activity).
-    val userThemeStore = remember(prefs, context) { CompositionRoot.shared(context).userThemeStore(prefs) }
 
     val applyTheme: (String) -> Unit = { id ->
         if (selectedThemeId != id) prefs.selectedThemeId = id

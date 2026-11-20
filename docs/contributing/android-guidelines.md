@@ -24,6 +24,7 @@ Logging goes through the `LoggerBackend` interface (`ime/core/logging/LoggerBack
 - Manual DI: `ime/core/CompositionRoot.kt`; no Hilt.
 - Three scopes: app (`TaigiKeyboardApplication`), IME service (`TaigiKeyboard`, whose `serviceScope` is cancelled in `onDestroy`), input view (`onStartInputView` / `onFinishInputView` — reset per-field state there).
 - Never keep an Activity context in an `object` or a long-lived class; use `applicationContext`.
+- Layering: `ime/` may use the shared look (`ui/theme`, `ui/components`) but never an app tab screen (`ui/tabs`) — something both need moves out first, as the option lists did (`ime/settings/SettingOptions.kt`); `ImeLayeringTest` pins it. A tab screen takes its services as parameters from its Activity, like `prefs`, rather than calling `CompositionRoot.shared` itself.
 
 ## 5. IME host facts
 
