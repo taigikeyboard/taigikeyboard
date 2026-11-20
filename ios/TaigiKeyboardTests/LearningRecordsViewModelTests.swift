@@ -618,9 +618,9 @@ final class LearningRecordsViewModelTests: XCTestCase {
         // trace: 1_767_225_600_000 ms = 2026-01-01T00:00:00Z — the desktop's `last_used_label` fixture.
         var used = record(1, "台灣", tl: "tâi-uân")
         used.lastUsedMs = 1_767_225_600_000
-        XCTAssertEqual(used.lastUsedLabel(in: try XCTUnwrap(TimeZone(identifier: "UTC"))), "2026-01-01")
-        XCTAssertEqual(used.lastUsedLabel(in: try XCTUnwrap(TimeZone(identifier: "Asia/Taipei"))), "2026-01-01")
-        XCTAssertEqual(used.lastUsedLabel(in: try XCTUnwrap(TimeZone(secondsFromGMT: -3600))), "2025-12-31")
+        XCTAssertEqual(try used.lastUsedLabel(in: XCTUnwrap(TimeZone(identifier: "UTC"))), "2026-01-01")
+        XCTAssertEqual(try used.lastUsedLabel(in: XCTUnwrap(TimeZone(identifier: "Asia/Taipei"))), "2026-01-01")
+        XCTAssertEqual(try used.lastUsedLabel(in: XCTUnwrap(TimeZone(secondsFromGMT: -3600))), "2025-12-31")
         XCTAssertEqual(record(1, "台灣", tl: "tâi-uân").lastUsedLabel(), "", "no readable time")
     }
 }
