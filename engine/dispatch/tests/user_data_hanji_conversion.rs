@@ -31,6 +31,7 @@ fn composing(method: composing_request::Method) -> ComposingResponse {
         tps_converting(),
         7,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(method),
         }),
     );

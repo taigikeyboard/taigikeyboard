@@ -16,6 +16,7 @@ public  final class ComposingRequest extends
     ComposingRequestOrBuilder {
   private ComposingRequest() {
   }
+  private int bitField0_;
   private int methodCase_ = 0;
   private java.lang.Object method_;
   public enum MethodCase
@@ -971,6 +972,88 @@ public  final class ComposingRequest extends
       methodCase_ = 0;
       method_ = null;
     }
+  }
+
+  public static final int NEXT_WORD_CONTEXT_FIELD_NUMBER = 50;
+  private com.siansiansu.taigikeyboard.engine.proto.NextWordContext nextWordContext_;
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   */
+  @java.lang.Override
+  public boolean hasNextWordContext() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.NextWordContext getNextWordContext() {
+    return nextWordContext_ == null ? com.siansiansu.taigikeyboard.engine.proto.NextWordContext.getDefaultInstance() : nextWordContext_;
+  }
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   */
+  private void setNextWordContext(com.siansiansu.taigikeyboard.engine.proto.NextWordContext value) {
+    java.util.Objects.requireNonNull(value);
+    nextWordContext_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeNextWordContext(com.siansiansu.taigikeyboard.engine.proto.NextWordContext value) {
+    java.util.Objects.requireNonNull(value);
+    if (nextWordContext_ != null &&
+        nextWordContext_ != com.siansiansu.taigikeyboard.engine.proto.NextWordContext.getDefaultInstance()) {
+      nextWordContext_ =
+        com.siansiansu.taigikeyboard.engine.proto.NextWordContext.newBuilder(nextWordContext_).mergeFrom(value).buildPartial();
+    } else {
+      nextWordContext_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   */
+  private void clearNextWordContext() {
+    nextWordContext_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.ComposingRequest parseFrom(
@@ -1952,6 +2035,95 @@ public  final class ComposingRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The shell's next-word envelope, so the engine applies the composition's
+     * next-word handshakes in this same call (one FFI hop per commit, see
+     * `Effect`). A request whose answer carries no handshake (a read-only
+     * `FetchAtPos`) leaves it unused.
+     * </pre>
+     *
+     * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+     */
+    @java.lang.Override
+    public boolean hasNextWordContext() {
+      return instance.hasNextWordContext();
+    }
+    /**
+     * <pre>
+     * The shell's next-word envelope, so the engine applies the composition's
+     * next-word handshakes in this same call (one FFI hop per commit, see
+     * `Effect`). A request whose answer carries no handshake (a read-only
+     * `FetchAtPos`) leaves it unused.
+     * </pre>
+     *
+     * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.NextWordContext getNextWordContext() {
+      return instance.getNextWordContext();
+    }
+    /**
+     * <pre>
+     * The shell's next-word envelope, so the engine applies the composition's
+     * next-word handshakes in this same call (one FFI hop per commit, see
+     * `Effect`). A request whose answer carries no handshake (a read-only
+     * `FetchAtPos`) leaves it unused.
+     * </pre>
+     *
+     * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+     */
+    public Builder setNextWordContext(com.siansiansu.taigikeyboard.engine.proto.NextWordContext value) {
+      copyOnWrite();
+      instance.setNextWordContext(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * The shell's next-word envelope, so the engine applies the composition's
+     * next-word handshakes in this same call (one FFI hop per commit, see
+     * `Effect`). A request whose answer carries no handshake (a read-only
+     * `FetchAtPos`) leaves it unused.
+     * </pre>
+     *
+     * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+     */
+    public Builder setNextWordContext(
+        com.siansiansu.taigikeyboard.engine.proto.NextWordContext.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNextWordContext(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * The shell's next-word envelope, so the engine applies the composition's
+     * next-word handshakes in this same call (one FFI hop per commit, see
+     * `Effect`). A request whose answer carries no handshake (a read-only
+     * `FetchAtPos`) leaves it unused.
+     * </pre>
+     *
+     * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+     */
+    public Builder mergeNextWordContext(com.siansiansu.taigikeyboard.engine.proto.NextWordContext value) {
+      copyOnWrite();
+      instance.mergeNextWordContext(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The shell's next-word envelope, so the engine applies the composition's
+     * next-word handshakes in this same call (one FFI hop per commit, see
+     * `Effect`). A request whose answer carries no handshake (a read-only
+     * `FetchAtPos`) leaves it unused.
+     * </pre>
+     *
+     * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+     */
+    public Builder clearNextWordContext() {  copyOnWrite();
+      instance.clearNextWordContext();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ComposingRequest)
   }
   @java.lang.Override
@@ -1970,6 +2142,7 @@ public  final class ComposingRequest extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "method_",
             "methodCase_",
+            "bitField0_",
             com.siansiansu.taigikeyboard.engine.proto.Start.class,
             com.siansiansu.taigikeyboard.engine.proto.Append.class,
             com.siansiansu.taigikeyboard.engine.proto.AppendHyphen.class,
@@ -1986,11 +2159,12 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.CommitAsShown.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitAsTyped.class,
             com.siansiansu.taigikeyboard.engine.proto.ConfirmCompositionThenInsert.class,
+            "nextWordContext_",
           };
           java.lang.String info =
-              "\u0000\u0010\u0001\u0000\n-\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\u0000\u0011\u0001\u0001\n2\u0011\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
               "\u000e<\u0000\u0010<\u0000\u0012<\u0000\u0013<\u0000\u001f<\u0000 <\u0000\"<\u0000" +
-              "(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000-<\u0000";
+              "(<\u0000)<\u0000*<\u0000+<\u0000,<\u0000-<\u00002\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

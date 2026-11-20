@@ -72,6 +72,21 @@ message ComposingRequest {
     CommitAsTyped                   commit_as_typed                      = 44;
     ConfirmCompositionThenInsert    confirm_composition_then_insert      = 45;
   }
+
+  // The shell's next-word envelope, so the engine applies the composition's
+  // next-word handshakes in this same call (one FFI hop per commit, see
+  // `Effect`). A request whose answer carries no handshake (a read-only
+  // `FetchAtPos`) leaves it unused.
+  NextWordContext next_word_context = 50;
+}
+
+// `generation` is the next-word envelope generation (`Request.generation` of
+// the shell's own next-word requests — on the phones a counter of its own,
+// distinct from the composing one); `now_ms` is the shell's one clock read
+// for this request (`nextword.proto` `DecisionInput`).
+message NextWordContext {
+  uint64 generation = 1;
+  int64  now_ms     = 2;
 }
 
 // Begin a fresh composition buffer with `text`. Caret resets.
@@ -330,6 +345,12 @@ message CommitResolution {
   // True when it left an auto space immediately before the caret; the host
   // arms its punctuation swap only after that write succeeds.
   bool leaves_trailing_auto_space = 5;
+  // The commit's next-word handshake was a `NextWordWordSelected`: the commit
+  // teaches next word. False for a commit that ends with
+  // `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+  // with no handshake (a prediction tap). `CommitAsTyped` answers no
+  // `CommitResolution`.
+  bool taught_next_word = 6;
 }
 
 enum CommitOutcome {
@@ -551,13 +572,15 @@ message CandidateMessage {
 // candidate strip; the NextWord ranking they refresh runs in the engine
 // (`engine/nextword`).
 //
-// `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
-// The platform FFI shim translates each to a `NextWordRequest` and dispatches
-// via `nextword::EngineHandle::instance().handle(req, config, generation)`,
-// injecting the current `now_ms` clock at dispatch time (composing engine has
-// no clock and emits effects without timestamps). This preserves the
-// `composing/handle.rs:54-58` lock-order rule — composing's `Mutex<Engine>`
-// is released before the platform makes the nextword call.
+// `NextWord*` effects (tags 8/9/10) are the composition's next-word
+// handshakes. With `ComposingRequest.next_word_context` set, `dispatch`
+// applies each as its `NextWordRequest` (the context's generation and
+// `now_ms`) after the composing call returns — composing's `Mutex<Engine>` is
+// released first (`composing/handle.rs` lock-order rule) — and puts the
+// answer in its place as `next_word_decided`, so the shell runs the
+// `DecideResult` at the position the handshake held. Without the context the
+// handshakes reach the shell as tags 8/9/10 and it sends the requests itself
+// (temporary, remove after the phones send the context — roadmap E2).
 message Effect {
   // Was `PhraseLearned`: a learned phrase is kept by the engine itself
   // (user-data-engine-roadmap P9a).
@@ -577,6 +600,9 @@ message Effect {
     NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
+    // A handshake the engine applied (`next_word_context` set): the executor
+    // runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+    DecideResult                   next_word_decided                    = 12;
   }
 }
 

@@ -18,13 +18,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * candidate strip; the NextWord ranking they refresh runs in the engine
  * (`engine/nextword`).
  *
- * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
- * The platform FFI shim translates each to a `NextWordRequest` and dispatches
- * via `nextword::EngineHandle::instance().handle(req, config, generation)`,
- * injecting the current `now_ms` clock at dispatch time (composing engine has
- * no clock and emits effects without timestamps). This preserves the
- * `composing/handle.rs:54-58` lock-order rule — composing's `Mutex&lt;Engine&gt;`
- * is released before the platform makes the nextword call.
+ * `NextWord*` effects (tags 8/9/10) are the composition's next-word
+ * handshakes. With `ComposingRequest.next_word_context` set, `dispatch`
+ * applies each as its `NextWordRequest` (the context's generation and
+ * `now_ms`) after the composing call returns — composing's `Mutex&lt;Engine&gt;` is
+ * released first (`composing/handle.rs` lock-order rule) — and puts the
+ * answer in its place as `next_word_decided`, so the shell runs the
+ * `DecideResult` at the position the handshake held. Without the context the
+ * handshakes reach the shell as tags 8/9/10 and it sends the requests itself
+ * (temporary, remove after the phones send the context — roadmap E2).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.Effect}
@@ -50,6 +52,7 @@ public  final class Effect extends
     NEXT_WORD_UPDATE_LAST_SELECTED_WORD(8),
     NEXT_WORD_WORD_SELECTED(9),
     NEXT_WORD_CLEAR_FOR_NEW_COMPOSING(10),
+    NEXT_WORD_DECIDED(12),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -74,6 +77,7 @@ public  final class Effect extends
         case 8: return NEXT_WORD_UPDATE_LAST_SELECTED_WORD;
         case 9: return NEXT_WORD_WORD_SELECTED;
         case 10: return NEXT_WORD_CLEAR_FOR_NEW_COMPOSING;
+        case 12: return NEXT_WORD_DECIDED;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -545,6 +549,81 @@ public  final class Effect extends
     }
   }
 
+  public static final int NEXT_WORD_DECIDED_FIELD_NUMBER = 12;
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   */
+  @java.lang.Override
+  public boolean hasNextWordDecided() {
+    return kindCase_ == 12;
+  }
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DecideResult getNextWordDecided() {
+    if (kindCase_ == 12) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DecideResult) kind_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DecideResult.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   */
+  private void setNextWordDecided(com.siansiansu.taigikeyboard.engine.proto.DecideResult value) {
+    java.util.Objects.requireNonNull(value);
+    kind_ = value;
+    kindCase_ = 12;
+  }
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   */
+  private void mergeNextWordDecided(com.siansiansu.taigikeyboard.engine.proto.DecideResult value) {
+    java.util.Objects.requireNonNull(value);
+    if (kindCase_ == 12 &&
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.DecideResult.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.DecideResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DecideResult) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 12;
+  }
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   */
+  private void clearNextWordDecided() {
+    if (kindCase_ == 12) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.Effect parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -641,13 +720,15 @@ public  final class Effect extends
    * candidate strip; the NextWord ranking they refresh runs in the engine
    * (`engine/nextword`).
    *
-   * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
-   * The platform FFI shim translates each to a `NextWordRequest` and dispatches
-   * via `nextword::EngineHandle::instance().handle(req, config, generation)`,
-   * injecting the current `now_ms` clock at dispatch time (composing engine has
-   * no clock and emits effects without timestamps). This preserves the
-   * `composing/handle.rs:54-58` lock-order rule — composing's `Mutex&lt;Engine&gt;`
-   * is released before the platform makes the nextword call.
+   * `NextWord*` effects (tags 8/9/10) are the composition's next-word
+   * handshakes. With `ComposingRequest.next_word_context` set, `dispatch`
+   * applies each as its `NextWordRequest` (the context's generation and
+   * `now_ms`) after the composing call returns — composing's `Mutex&lt;Engine&gt;` is
+   * released first (`composing/handle.rs` lock-order rule) — and puts the
+   * answer in its place as `next_word_decided`, so the shell runs the
+   * `DecideResult` at the position the handshake held. Without the context the
+   * handshakes reach the shell as tags 8/9/10 and it sends the requests itself
+   * (temporary, remove after the phones send the context — roadmap E2).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.Effect}
@@ -1107,6 +1188,84 @@ public  final class Effect extends
       return this;
     }
 
+    /**
+     * <pre>
+     * A handshake the engine applied (`next_word_context` set): the executor
+     * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+     * </pre>
+     *
+     * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+     */
+    @java.lang.Override
+    public boolean hasNextWordDecided() {
+      return instance.hasNextWordDecided();
+    }
+    /**
+     * <pre>
+     * A handshake the engine applied (`next_word_context` set): the executor
+     * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+     * </pre>
+     *
+     * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DecideResult getNextWordDecided() {
+      return instance.getNextWordDecided();
+    }
+    /**
+     * <pre>
+     * A handshake the engine applied (`next_word_context` set): the executor
+     * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+     * </pre>
+     *
+     * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+     */
+    public Builder setNextWordDecided(com.siansiansu.taigikeyboard.engine.proto.DecideResult value) {
+      copyOnWrite();
+      instance.setNextWordDecided(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A handshake the engine applied (`next_word_context` set): the executor
+     * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+     * </pre>
+     *
+     * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+     */
+    public Builder setNextWordDecided(
+        com.siansiansu.taigikeyboard.engine.proto.DecideResult.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNextWordDecided(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * A handshake the engine applied (`next_word_context` set): the executor
+     * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+     * </pre>
+     *
+     * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+     */
+    public Builder mergeNextWordDecided(com.siansiansu.taigikeyboard.engine.proto.DecideResult value) {
+      copyOnWrite();
+      instance.mergeNextWordDecided(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * A handshake the engine applied (`next_word_context` set): the executor
+     * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+     * </pre>
+     *
+     * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+     */
+    public Builder clearNextWordDecided() {
+      copyOnWrite();
+      instance.clearNextWordDecided();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.Effect)
   }
   @java.lang.Override
@@ -1134,10 +1293,12 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.class,
+            com.siansiansu.taigikeyboard.engine.proto.DecideResult.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\u0001\n\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000";
+              "\u0000\n\u0001\u0000\u0001\f\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000\f<\u0000" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

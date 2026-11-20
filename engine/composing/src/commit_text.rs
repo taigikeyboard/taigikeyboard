@@ -277,6 +277,8 @@ pub(crate) fn commit_resolution(
         wrote_romanization: resolved.wrote_romanization,
         earns_auto_space,
         leaves_trailing_auto_space: false,
+        // Set from the effects once the transition is built (`Engine::apply_ranked`).
+        taught_next_word: false,
     }
 }
 

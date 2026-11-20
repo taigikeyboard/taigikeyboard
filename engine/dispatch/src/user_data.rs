@@ -55,8 +55,22 @@ pub(crate) fn explain_composition(
 /// A composing request — the `Composing` arm of `crate::run`. A
 /// `FetchAtPos` takes the one fetch path, with or without the stores; every
 /// other request goes to composing — with the stores, ranked by and
-/// teaching the user's data.
+/// teaching the user's data. With the shell's next-word envelope on the
+/// request, the answer's next-word handshakes are applied here too
+/// (`next_word_handshake`), after the composing engine's lock is released.
 pub(crate) fn handle_composing(
+    request: &ComposingRequest,
+    config: &AppConfig,
+    generation: u64,
+) -> Result<ComposingResponse, ComposingError> {
+    let mut response = composing_response(request, config, generation)?;
+    if let Some(context) = request.next_word_context.as_ref() {
+        crate::next_word_handshake::apply(&mut response, context, config);
+    }
+    Ok(response)
+}
+
+fn composing_response(
     request: &ComposingRequest,
     config: &AppConfig,
     generation: u64,

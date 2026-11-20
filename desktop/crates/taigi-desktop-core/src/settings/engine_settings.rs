@@ -270,7 +270,7 @@ impl SettingChoice for SyllableSeparator {
 /// Immutable snapshot of everything the engine needs to render a composition.
 ///
 /// A snapshot rather than a set of getters because a single user intent can
-/// issue several engine calls (a commit, then the next-word handshake), and
+/// issue several engine calls (a commit, then forgetting the next-word context), and
 /// those calls must agree: reading the settings twice could straddle a change
 /// and render the two halves of one intent under different rules.
 #[derive(Clone, Debug, PartialEq, Eq)]

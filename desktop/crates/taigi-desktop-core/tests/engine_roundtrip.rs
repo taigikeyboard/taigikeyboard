@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 
 use protos::engine::CommitOutcome;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect};
+use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect, RequestStamp};
 use taigi_desktop_core::settings::{EngineSettings, InputMode};
 
 fn dictionaries_dir() -> PathBuf {
@@ -37,16 +37,23 @@ fn engine() -> std::sync::MutexGuard<'static, ()> {
 
 /// Fresh generation per test, from 1000 like the macOS `TestFixtures`, so a
 /// composition left behind by one test is dropped by the next.
-fn fresh_generation() -> u64 {
+fn fresh_stamp() -> RequestStamp {
     static NEXT: AtomicU64 = AtomicU64::new(1000);
-    NEXT.fetch_add(1, Ordering::Relaxed)
+    RequestStamp {
+        generation: NEXT.fetch_add(1, Ordering::Relaxed),
+        now_ms: 0,
+    }
 }
 
-fn compose(text: &str, settings: &EngineSettings, generation: u64) -> engine::ComposingTransition {
+fn compose(
+    text: &str,
+    settings: &EngineSettings,
+    stamp: RequestStamp,
+) -> engine::ComposingTransition {
     let mut last = None;
     for character in text.chars() {
-        let step = engine::append(&character.to_string(), settings, generation)
-            .expect("append round trip");
+        let step =
+            engine::append(&character.to_string(), settings, stamp).expect("append round trip");
         last = Some(step);
     }
     last.expect("non-empty text")
@@ -56,8 +63,8 @@ fn compose(text: &str, settings: &EngineSettings, generation: u64) -> engine::Co
 fn append_renders_tone_digit_as_diacritic_and_updates_preedit() {
     let _engine = engine();
     let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    let transition = compose("tai5", &settings, generation);
+    let stamp = fresh_stamp();
+    let transition = compose("tai5", &settings, stamp);
     assert!(transition.is_composing);
     assert_eq!(transition.raw_input, "tai5");
     assert_eq!(transition.display_text, "tâi");
@@ -66,7 +73,7 @@ fn append_renders_tone_digit_as_diacritic_and_updates_preedit() {
         effect,
         Effect::UpdatePreedit { text, caret_utf16: 3 } if text == "tâi"
     )));
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
@@ -76,18 +83,18 @@ fn telex_key_writes_the_tone() {
     // (`y` = tone 3 → `tè`, `z` = tone 6 → `tě`).
     let _engine = engine();
     let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("te", &settings, generation);
-    let toned = engine::telex_key("v", &settings, generation).expect("telex round trip");
+    let stamp = fresh_stamp();
+    compose("te", &settings, stamp);
+    let toned = engine::telex_key("v", &settings, stamp).expect("telex round trip");
     assert_eq!(toned.raw_input, "te2");
     assert_eq!(toned.display_text, "té");
-    let retoned = engine::telex_key("y", &settings, generation).expect("telex round trip");
+    let retoned = engine::telex_key("y", &settings, stamp).expect("telex round trip");
     assert_eq!(retoned.raw_input, "te3");
     assert_eq!(retoned.display_text, "tè");
-    let sixth = engine::telex_key("z", &settings, generation).expect("telex round trip");
+    let sixth = engine::telex_key("z", &settings, stamp).expect("telex round trip");
     assert_eq!(sixth.raw_input, "te6");
     assert_eq!(sixth.display_text, "tě");
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
@@ -107,11 +114,11 @@ fn append_c_spells_the_mode_affricate_only_when_the_setting_is_on() {
             is_c_affricate_enabled: is_on,
             ..EngineSettings::default()
         };
-        let generation = fresh_generation();
-        let started = engine::append("c", &settings, generation).expect("append round trip");
+        let stamp = fresh_stamp();
+        let started = engine::append("c", &settings, stamp).expect("append round trip");
         assert!(started.is_composing, "{mode:?} {is_on}");
         assert_eq!(started.raw_input, raw, "{mode:?} {is_on}");
-        engine::reset(generation);
+        engine::reset(stamp);
     }
 }
 
@@ -126,11 +133,11 @@ fn append_f_types_the_hyphen_only_when_the_setting_is_on() {
             is_f_hyphen_enabled: is_on,
             ..EngineSettings::default()
         };
-        let generation = fresh_generation();
-        engine::append("tai5", &settings, generation).expect("append round trip");
-        let after = engine::append("f", &settings, generation).expect("append round trip");
+        let stamp = fresh_stamp();
+        engine::append("tai5", &settings, stamp).expect("append round trip");
+        let after = engine::append("f", &settings, stamp).expect("append round trip");
         assert_eq!(after.raw_input, raw, "{is_on}");
-        engine::reset(generation);
+        engine::reset(stamp);
     }
 }
 
@@ -151,21 +158,21 @@ fn tps_key_composes_glyphs_and_space_is_taken_once() {
     // 結); a second Space is refused with no effects.
     let _engine = engine();
     let settings = tps_settings();
-    let generation = fresh_generation();
+    let stamp = fresh_stamp();
     for key in ["ㄍ", "ㄚ", "ㄉ"] {
-        engine::tps_key(key, &settings, generation).expect("tps round trip");
+        engine::tps_key(key, &settings, stamp).expect("tps round trip");
     }
-    let separated = engine::tps_key(" ", &settings, generation).expect("tps round trip");
+    let separated = engine::tps_key(" ", &settings, stamp).expect("tps round trip");
     assert_eq!(separated.raw_input, "ㄍㄚㆵ ");
     assert_eq!(separated.display_text, "結");
     assert!(!separated.effects.is_empty(), "the separator is taken");
-    let refused = engine::tps_key(" ", &settings, generation).expect("tps round trip");
+    let refused = engine::tps_key(" ", &settings, stamp).expect("tps round trip");
     assert!(
         refused.effects.is_empty(),
         "a closed syllable refuses Space"
     );
     assert_eq!(refused.raw_input, "ㄍㄚㆵ ");
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
@@ -188,15 +195,15 @@ fn every_layout_glyph_begins_a_composition_the_engine_takes() {
     for (typed, modifiers) in keys {
         let glyph = tps_glyph_for_event(&KeyEventSnapshot::text(&typed, modifiers))
             .unwrap_or_else(|| panic!("{typed:?} is a layout key"));
-        let generation = fresh_generation();
-        let taken = engine::tps_key(glyph, &settings, generation).expect("tps round trip");
+        let stamp = fresh_stamp();
+        let taken = engine::tps_key(glyph, &settings, stamp).expect("tps round trip");
         assert!(!taken.effects.is_empty(), "{typed:?} → {glyph:?} taken");
         assert!(
             taken.raw_input.contains(glyph),
             "{typed:?} → {glyph:?} in {:?}",
             taken.raw_input
         );
-        engine::reset(generation);
+        engine::reset(stamp);
     }
 }
 
@@ -224,10 +231,10 @@ fn tl_display_to_tps_spells_a_reading_in_tps() {
 fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     let _engine = engine();
     let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("taigi", &settings, generation);
+    let stamp = fresh_stamp();
+    compose("taigi", &settings, stamp);
 
-    let fetch = engine::fetch_at_pos(&settings, generation, 0).expect("fetch round trip");
+    let fetch = engine::fetch_at_pos(&settings, stamp).expect("fetch round trip");
     let candidates = fetch
         .candidates
         .expect("continuous phase answers with a list");
@@ -257,7 +264,7 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
             syllable_count: taigi.syllable_count,
         },
         &settings,
-        generation,
+        stamp,
     )
     .expect("commit round trip");
     // trace: hanji-first default → LEAD resolves the Hanji; no romanization
@@ -265,6 +272,7 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     assert_eq!(commit.commit.outcome(), CommitOutcome::Finalized);
     assert_eq!(commit.commit.document_text, "台語");
     assert!(!commit.commit.earns_auto_space);
+    let taught = commit.commit.taught_next_word;
     let commit = commit.transition;
     assert!(
         !commit.is_composing,
@@ -273,19 +281,19 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     assert!(commit.effects.iter().any(
         |effect| matches!(effect, Effect::CommitTextReplacingPreedit(text) if text == "台語")
     ));
-    assert!(commit.effects.iter().any(|effect| matches!(
-        effect,
-        Effect::NextWordWordSelected { text, roman, .. } if text == "台語" && roman == "tâi-gí"
-    )));
+    // The engine applied the final-commit handshake in the same call: the
+    // commit taught next word, and the handshake's place holds its decision.
+    assert!(taught);
+    assert!(commit.effects.contains(&Effect::NextWordDecided));
 }
 
 #[test]
 fn partial_commit_nails_a_segment_and_stays_composing() {
     let _engine = engine();
     let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("taigi", &settings, generation);
-    let fetch = engine::fetch_at_pos(&settings, generation, 0).expect("fetch");
+    let stamp = fresh_stamp();
+    compose("taigi", &settings, stamp);
+    let fetch = engine::fetch_at_pos(&settings, stamp).expect("fetch");
     let candidates = fetch.candidates.expect("continuous");
     let tai = candidates
         .iter()
@@ -304,7 +312,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
             syllable_count: tai.syllable_count,
         },
         &settings,
-        generation,
+        stamp,
     )
     .expect("commit");
     assert_eq!(commit.commit.outcome(), CommitOutcome::Nailed);
@@ -313,10 +321,8 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
         commit.is_composing,
         "Model B: a nailed segment stays in the composition"
     );
-    assert!(commit.effects.iter().any(|effect| matches!(
-        effect,
-        Effect::NextWordUpdateLastSelectedWord { text, .. } if text == "台"
-    )));
+    // The nail handshake, applied by the engine.
+    assert!(commit.effects.contains(&Effect::NextWordDecided));
     assert!(
         !commit
             .effects
@@ -324,7 +330,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
             .any(|effect| matches!(effect, Effect::CommitTextReplacingPreedit(_))),
         "nothing reaches the document until the final commit"
     );
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 /// §34 under the shipped defaults: Show Typed Text First is OFF out of the box on
@@ -336,10 +342,10 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
 #[test]
 fn literal_roman_candidate_is_absent_under_the_shipped_defaults() {
     let _engine = engine();
-    let generation = fresh_generation();
+    let stamp = fresh_stamp();
     let settings = EngineSettings::default();
-    compose("tai", &settings, generation);
-    let candidates = engine::fetch_at_pos(&settings, generation, 0)
+    compose("tai", &settings, stamp);
+    let candidates = engine::fetch_at_pos(&settings, stamp)
         .expect("fetch")
         .candidates
         .expect("continuous");
@@ -348,26 +354,26 @@ fn literal_roman_candidate_is_absent_under_the_shipped_defaults() {
         "§34 off: nothing forces the one-script literal to the front: {:?}",
         candidates[0]
     );
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
 fn permissive_tones_are_standard_on_the_desktop() {
     let _engine = engine();
-    let generation = fresh_generation();
+    let stamp = fresh_stamp();
     let settings = EngineSettings {
         is_literal_roman_candidate_enabled: true,
         ..EngineSettings::default()
     };
     let mut last = None;
     for character in "tai5gi2".chars() {
-        last = engine::append(&character.to_string(), &settings, generation);
+        last = engine::append(&character.to_string(), &settings, stamp);
     }
     assert_eq!(last.unwrap().display_text, "tâigí");
-    let snapshot = engine::fetch_at_pos(&settings, generation, 0).unwrap();
+    let snapshot = engine::fetch_at_pos(&settings, stamp).unwrap();
     assert_eq!(snapshot.transition.display_text, "tâigí");
     assert_eq!(snapshot.candidates.unwrap()[0].roman, "tâigí");
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
@@ -377,26 +383,26 @@ fn telex_keys_mark_unseparated_syllables() {
     // `tâigí` (each tone digit closes its segment).
     let _engine = engine();
     let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("tai", &settings, generation);
-    engine::telex_key("d", &settings, generation).expect("telex round trip");
-    compose("gi", &settings, generation);
-    let toned = engine::telex_key("v", &settings, generation).expect("telex round trip");
+    let stamp = fresh_stamp();
+    compose("tai", &settings, stamp);
+    engine::telex_key("d", &settings, stamp).expect("telex round trip");
+    compose("gi", &settings, stamp);
+    let toned = engine::telex_key("v", &settings, stamp).expect("telex round trip");
     assert_eq!(toned.raw_input, "tai5gi2");
     assert_eq!(toned.display_text, "tâigí");
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
 fn poj_mode_renders_poj_display_and_keeps_canonical_tl() {
     let _engine = engine();
-    let generation = fresh_generation();
+    let stamp = fresh_stamp();
     let poj = EngineSettings {
         input_mode: InputMode::Poj,
         ..EngineSettings::default()
     };
-    compose("chiah", &poj, generation);
-    let candidates = engine::fetch_at_pos(&poj, generation, 0)
+    compose("chiah", &poj, stamp);
+    let candidates = engine::fetch_at_pos(&poj, stamp)
         .expect("fetch")
         .candidates
         .expect("continuous");
@@ -410,18 +416,19 @@ fn poj_mode_renders_poj_display_and_keeps_canonical_tl() {
         "canonical TL identity: {}",
         eat.canonical_tl
     );
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 #[test]
 fn confirm_composition_then_insert_is_one_effect() {
     let _engine = engine();
     let settings = EngineSettings::default();
-    let generation = fresh_generation();
-    compose("gua2", &settings, generation);
-    let commit = engine::confirm_composition_then_insert(None, " ", false, &settings, generation)
-        .expect("commit")
-        .transition;
+    let stamp = fresh_stamp();
+    compose("gua2", &settings, stamp);
+    let committed = engine::confirm_composition_then_insert(None, " ", false, &settings, stamp)
+        .expect("commit");
+    let taught = committed.commit.taught_next_word;
+    let commit = committed.transition;
     assert!(!commit.is_composing);
     let commits: Vec<_> = commit
         .effects
@@ -436,12 +443,10 @@ fn confirm_composition_then_insert_is_one_effect() {
         ["guá "],
         "preedit + external text in ONE document mutation"
     );
-    assert!(
-        commit
-            .effects
-            .contains(&Effect::NextWordClearForNewComposing),
-        "the engine emits only the clear handshake here; the platform sends ResetAll itself"
-    );
+    // The engine applied only the clear handshake here (nothing picked); the
+    // platform sends ResetAll itself.
+    assert!(commit.effects.contains(&Effect::NextWordDecided));
+    assert!(!taught, "an unpicked composition teaches next word nothing");
 }
 
 // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
@@ -463,9 +468,9 @@ fn all_sources_off_fetches_no_dictionary_candidates() {
     sources.khiin = false;
     sources.lkk = false;
     sources.dev = false;
-    let generation = fresh_generation();
-    compose("taigi", &settings, generation);
-    let candidates = engine::fetch_at_pos(&settings, generation, 0)
+    let stamp = fresh_stamp();
+    compose("taigi", &settings, stamp);
+    let candidates = engine::fetch_at_pos(&settings, stamp)
         .expect("fetch round trip")
         .candidates
         .expect("continuous phase answers with a list");
@@ -478,7 +483,7 @@ fn all_sources_off_fetches_no_dictionary_candidates() {
         !candidates.is_empty(),
         "the typed-text literal is not a dictionary row"
     );
-    engine::reset(generation);
+    engine::reset(stamp);
 }
 
 /// The badges a search row wears are the row's sources the user has on:

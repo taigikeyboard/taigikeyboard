@@ -507,7 +507,8 @@ pub fn config_tl_with_sources(sources: DictionarySourceToggles) -> AppConfig {
     config_with_sources("tl", sources)
 }
 
-/// The `ComposingResponse.commit` a pick answers with.
+/// The `ComposingResponse.commit` a pick answers with. A pick that finalizes
+/// picked every segment, so it teaches next word.
 pub fn resolution(
     outcome: CommitOutcome,
     text: &str,
@@ -520,6 +521,7 @@ pub fn resolution(
         wrote_romanization: roman,
         earns_auto_space: space,
         leaves_trailing_auto_space: false,
+        taught_next_word: outcome == CommitOutcome::Finalized,
     }
 }
 
@@ -553,12 +555,14 @@ pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
             Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
             Kind::NextWordWordSelected(_) => "NextWordWordSelected",
             Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
+            Kind::NextWordDecided(_) => "NextWordDecided",
         })
         .collect()
 }
 
 pub fn req(method: Method) -> ComposingRequest {
     ComposingRequest {
+        next_word_context: None,
         method: Some(method),
     }
 }

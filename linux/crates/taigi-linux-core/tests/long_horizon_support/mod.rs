@@ -120,8 +120,12 @@ pub fn reset_transient_engine_state() {
     static PROBE_GEN: AtomicU64 = AtomicU64::new(1_u64 << 62);
     let gen = PROBE_GEN.fetch_add(1, Ordering::Relaxed);
     let settings = taigi_desktop_core::settings::EngineSettings::default();
-    let _ = engine::reset(gen);
-    engine::nextword_reset_all(0, &settings, gen);
+    let stamp = engine::RequestStamp {
+        generation: gen,
+        now_ms: 0,
+    };
+    let _ = engine::reset(stamp);
+    engine::nextword_reset_all(&settings, stamp);
 }
 
 /// Empties all four SQLite stores (`frequency`, `association`, `learned_phrases`,

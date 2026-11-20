@@ -32,6 +32,7 @@ fn composing(method: composing_request::Method) -> Response {
     roundtrip(
         COMPOSING_GENERATION,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(method),
         }),
     )
@@ -46,6 +47,7 @@ fn fetch_with(config: protos::engine::AppConfig, fetch: FetchAtPos) -> Continuou
         config,
         COMPOSING_GENERATION,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(composing_request::Method::FetchAtPos(FetchAtPos {
                 now_ms: NOW_MS,
                 ..fetch

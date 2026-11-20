@@ -109,5 +109,26 @@ public interface EffectOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing getNextWordClearForNewComposing();
 
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   * @return Whether the nextWordDecided field is set.
+   */
+  boolean hasNextWordDecided();
+  /**
+   * <pre>
+   * A handshake the engine applied (`next_word_context` set): the executor
+   * runs it as it runs every `DecideResult` (`nextword-engine-boundary.md` §2).
+   * </pre>
+   *
+   * <code>.taigi.engine.DecideResult next_word_decided = 12;</code>
+   * @return The nextWordDecided.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DecideResult getNextWordDecided();
+
   public com.siansiansu.taigikeyboard.engine.proto.Effect.KindCase getKindCase();
 }

@@ -8,11 +8,9 @@ use protos::engine::{Append, ComposingRequest, FetchAtPos, Reset, Start};
 use crate::common::{config_tl, req};
 
 fn req_start(text: &str) -> ComposingRequest {
-    ComposingRequest {
-        method: Some(Method::Start(Start {
-            text: text.to_string(),
-        })),
-    }
+    req(Method::Start(Start {
+        text: text.to_string(),
+    }))
 }
 
 #[test]
@@ -38,13 +36,7 @@ fn lifecycle_generation_mismatch_resets_phase_to_idle() {
     // Send a Reset intent with a NEW generation. The mismatch silently resets state to Idle FIRST,
     // then the Reset intent runs against an Idle engine — which is a noop (no effects).
     let resp = handle
-        .handle(
-            &ComposingRequest {
-                method: Some(Method::Reset(Reset {})),
-            },
-            &config_tl(),
-            2,
-        )
+        .handle(&req(Method::Reset(Reset {})), &config_tl(), 2)
         .unwrap();
     assert!(resp.effect.is_empty());
     assert!(!resp.is_composing);
@@ -56,22 +48,10 @@ fn lifecycle_engine_reset_is_idempotent() {
     handle.handle(&req_start("a"), &config_tl(), 1).unwrap();
     // Two consecutive Reset intents at the same generation.
     let r1 = handle
-        .handle(
-            &ComposingRequest {
-                method: Some(Method::Reset(Reset {})),
-            },
-            &config_tl(),
-            1,
-        )
+        .handle(&req(Method::Reset(Reset {})), &config_tl(), 1)
         .unwrap();
     let r2 = handle
-        .handle(
-            &ComposingRequest {
-                method: Some(Method::Reset(Reset {})),
-            },
-            &config_tl(),
-            1,
-        )
+        .handle(&req(Method::Reset(Reset {})), &config_tl(), 1)
         .unwrap();
     // First Reset emits the abort trio (was composing). Second Reset is idle → noop.
     assert_eq!(r1.effect.len(), 3);

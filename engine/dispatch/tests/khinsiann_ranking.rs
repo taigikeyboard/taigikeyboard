@@ -113,6 +113,7 @@ fn fetch_candidates(cfg: AppConfig, raw: &str) -> Vec<CandidateMessage> {
         cfg.clone(),
         GENERATION,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(composing_request::Method::Reset(Reset {})),
         }),
     );
@@ -120,6 +121,7 @@ fn fetch_candidates(cfg: AppConfig, raw: &str) -> Vec<CandidateMessage> {
         cfg.clone(),
         GENERATION,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(composing_request::Method::Start(Start {
                 text: raw.to_owned(),
             })),
@@ -129,6 +131,7 @@ fn fetch_candidates(cfg: AppConfig, raw: &str) -> Vec<CandidateMessage> {
         cfg,
         GENERATION,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(composing_request::Method::FetchAtPos(FetchAtPos {
                 now_ms: NOW_MS,
                 ..FetchAtPos::default()

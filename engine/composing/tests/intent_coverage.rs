@@ -134,7 +134,10 @@ fn every_method_decodes_to_its_intent() {
 fn intent_missing_method_returns_error() {
     let mut engine = Engine::new();
     let result = requests::handle(
-        &ComposingRequest { method: None },
+        &ComposingRequest {
+            method: None,
+            next_word_context: None,
+        },
         &mut engine,
         &config_tl(),
     );

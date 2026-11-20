@@ -387,14 +387,12 @@ impl ComposingEffectExecutor for CompositionEditor<'_> {
                 Effect::UpdatePreedit { text, caret_utf16 } => self.set_preedit(text, *caret_utf16),
                 Effect::ClearPreeditWithoutCommit => self.end_with(""),
                 Effect::CommitTextReplacingPreedit(text) => self.end_with(text),
-                // No autocomplete surface; the learning handshakes never reach
-                // an executor (`ComposingManager` reports them to next word).
+                // No autocomplete surface, no prediction UI (the engine applied the
+                // next-word handshake already).
                 Effect::ClearCandidates
                 | Effect::RefreshCandidates
                 | Effect::ResetCandidateContext
-                | Effect::NextWordUpdateLastSelectedWord { .. }
-                | Effect::NextWordWordSelected { .. }
-                | Effect::NextWordClearForNewComposing => Ok(()),
+                | Effect::NextWordDecided => Ok(()),
             }
         };
         self.record(outcome);

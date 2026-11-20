@@ -1548,6 +1548,19 @@ fn next_word_update_last_selected_word(text: String, roman: String) -> Effect {
     }
 }
 
+/// Sets `CommitResolution.taught_next_word` from the commit's handshake
+/// ([`next_word_terminal`]), so a shell that has the engine apply the
+/// handshakes (`ComposingRequest.next_word_context`) need not scan for it.
+pub(crate) fn mark_taught_next_word(response: &mut ComposingResponse) {
+    let taught = response
+        .effect
+        .iter()
+        .any(|effect| matches!(effect.kind, Some(effect::Kind::NextWordWordSelected(_))));
+    if let Some(commit) = response.commit.as_mut() {
+        commit.taught_next_word = taught;
+    }
+}
+
 /// The NextWord handshake of a commit whose last word is `text` / `roman`,
 /// after the nailed `preceding`: [`next_word_word_selected`] when the user
 /// picked every one of them, else `NextWordClearForNewComposing` — a segment

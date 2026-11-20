@@ -1,87 +1,64 @@
-//! Next-word slice of the engine bridge: the learning intents the desktop
-//! sends, which is three of the engine's eight.
+//! Next-word slice of the engine bridge: the two intents the desktop sends
+//! itself, out of the engine's eight.
 //!
-//! The desktop learns but does not predict, so the whole read half —
-//! `FilterPredictions`, `SetPredictionsVisible` — has no caller and is not wrapped. `Backspace` and
+//! A composition's commits are not among them: every composing request
+//! carries `NextWordContext`, and the engine applies the commit's next-word
+//! handshake in that same call (roadmap E2). The desktop learns but does not
+//! predict, so the whole read half — `FilterPredictions`,
+//! `SetPredictionsVisible` — has no caller and is not wrapped. `Backspace` and
 //! `ContextTimeoutFired` are absent too: recording is already fenced by a
-//! strict 10-second window inside the engine (`decide.rs` `should_record_association`), so with
-//! no predictions on screen a fired timeout changes nothing observable.
+//! strict 10-second window inside the engine (`decide.rs`
+//! `should_record_association`), so with no predictions on screen a fired
+//! timeout changes nothing observable.
 //!
 //! The desktop acts on none of the answer's effects: the engine records the
 //! bigrams it decides on itself (user-data-engine-roadmap P9b), and the rest
 //! are about a prediction UI the desktop does not have.
 
 use protos::engine::{
-    next_word_request, next_word_response, request, response, CommittedWord, DecisionInput,
-    NextWordRequest, ResetAll, UpdateLastSelectedWord, WordSelected,
+    next_word_request, next_word_response, request, response, DecisionInput, NextWordRequest,
+    ResetAll, WordSelected,
 };
 
 use super::bridge::{app_config, record_failure, roundtrip};
+use super::composing::RequestStamp;
 use crate::settings::EngineSettings;
 
-/// The user committed `text`, read as `roman`. `trigger_prediction` is forced
-/// `false` rather than forwarded from the composing effect: the flag only
-/// decides whether the engine appends a `QueryPredictions` effect, and the
-/// desktop has nothing to answer such a query with (`decide.rs` `decide_word_selected`).
-pub fn word_selected(
-    text: &str,
-    roman: &str,
-    preceding: &[CommittedWord],
-    now_ms: i64,
-    settings: &EngineSettings,
-    generation: u64,
-) {
+/// `character` reached the document outside any composition: a commit with
+/// no reading and no prediction, so the engine can end the context on
+/// sentence-end punctuation (`decide.rs` sentence-end rule).
+pub fn character_typed(character: &str, settings: &EngineSettings, stamp: RequestStamp) {
     decide(
         next_word_request::Method::WordSelected(WordSelected {
-            text: text.to_owned(),
-            roman: roman.to_owned(),
-            // Gates Enter-commits-raw-romanization paths, which reach the
-            // engine as ordinary commits on desktop.
+            text: character.to_owned(),
+            roman: String::new(),
             require_roman_mode: false,
+            // The desktop has nothing to answer a prediction query with.
             trigger_prediction: false,
-            input: Some(DecisionInput { now_ms }),
-            preceding: preceding.to_vec(),
+            input: Some(DecisionInput {
+                now_ms: stamp.now_ms,
+            }),
+            preceding: Vec::new(),
         }),
         "nextwordWordSelected",
         settings,
-        generation,
-    )
-}
-
-/// A continuous composition nailed a segment mid-commit: nothing is
-/// finalized into the document yet, so the engine learns nothing and keeps
-/// the committed context — the final commit's `preceding` carries the
-/// segment (behavioral-invariants §40).
-pub fn update_last_selected_word(
-    text: &str,
-    roman: &str,
-    now_ms: i64,
-    settings: &EngineSettings,
-    generation: u64,
-) {
-    decide(
-        next_word_request::Method::UpdateLastSelectedWord(UpdateLastSelectedWord {
-            text: text.to_owned(),
-            roman: roman.to_owned(),
-            input: Some(DecisionInput { now_ms }),
-        }),
-        "nextwordUpdateLastSelectedWord",
-        settings,
-        generation,
+        stamp.generation,
     )
 }
 
 /// Forgets the current context outright. Sent when the composition session
 /// changes hands, so the last word typed in one application cannot be
 /// learned as the predecessor of the first word typed in the next.
-pub fn reset_all(now_ms: i64, settings: &EngineSettings, generation: u64) {
+pub fn reset_all(settings: &EngineSettings, stamp: RequestStamp) {
     decide(
         next_word_request::Method::ResetAll(ResetAll {
-            input: Some(DecisionInput { now_ms }),
+            input: Some(DecisionInput {
+                now_ms: stamp.now_ms,
+            }),
         }),
         "nextwordResetAll",
         settings,
-        generation,
+        stamp.generation,
     )
 }
 

@@ -19,7 +19,7 @@ pub mod user_data;
 pub use composing::{
     append, commit_as_shown, commit_as_typed, commit_continuous, commit_raw,
     confirm_composition_then_insert, delete_backward, fetch_at_pos, move_caret, reset, telex_key,
-    tps_key, CommitContinuousArgs, CommitScript,
+    tps_key, CommitContinuousArgs, CommitScript, RequestStamp,
 };
 
 /// The config every engine request carries, from the settings in force.
@@ -28,11 +28,7 @@ pub fn app_config(settings: &crate::settings::EngineSettings) -> protos::engine:
 }
 pub use external_lookup::{chhoe_url, moe_url};
 pub use lexicon::{install as lexicon_install, DictionarySource, LexiconInstallStats};
-pub use nextword::{
-    reset_all as nextword_reset_all,
-    update_last_selected_word as nextword_update_last_selected_word,
-    word_selected as nextword_word_selected,
-};
+pub use nextword::{character_typed as nextword_character_typed, reset_all as nextword_reset_all};
 pub use phonetics::{
     is_attaching_punctuation, is_spaced_punctuation, tl_display_to_tps, tl_to_poj,
     TPS_OR_MAPS_TO_ER,

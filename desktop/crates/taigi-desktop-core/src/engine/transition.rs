@@ -2,13 +2,12 @@
 //! effects it wants the platform to run, and the continuous candidates.
 
 use protos::engine::{
-    effect, CandidateMessage, CellScript, CommitResolution, CommittedWord, ComposingResponse,
-    Effect as WireEffect,
+    effect, CandidateMessage, CellScript, CommitResolution, ComposingResponse, Effect as WireEffect,
 };
 
 /// The complete effect vocabulary of `engine/protos/proto/composing.proto`
-/// `Effect`. All ten kinds are decoded even though the desktop acts on only
-/// some: an effect dropped at decode time is invisible when the slice that
+/// `Effect` the desktop receives. Every such kind is decoded even though the
+/// desktop acts on only some: an effect dropped at decode time is invisible when the slice that
 /// needs it lands, whereas an explicitly ignored variant shows up in every
 /// `match` the compiler checks.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -24,24 +23,10 @@ pub enum Effect {
     ClearCandidates,
     RefreshCandidates,
     ResetCandidateContext,
-    /// Continuous-input nail / unnail handshake. Next-word learns nothing
-    /// from it (behavioral-invariants §40); it marks a nailed segment.
-    NextWordUpdateLastSelectedWord {
-        text: String,
-        roman: String,
-    },
-    /// Continuous-input final-commit handshake. `trigger_prediction` is the
-    /// engine's decision — forwarded, never hardcoded. `preceding` = the
-    /// nailed segments committed before `text`, in document order, learned
-    /// with it as one sequence (§40).
-    NextWordWordSelected {
-        text: String,
-        roman: String,
-        trigger_prediction: bool,
-        preceding: Vec<CommittedWord>,
-    },
-    /// Continuous-input abort handshake. Distinct from a full next-word reset.
-    NextWordClearForNewComposing,
+    /// A next-word handshake the engine applied in the same call (every
+    /// desktop request carries `NextWordContext`). Its decision is about a
+    /// prediction UI the desktop does not have, so it carries nothing.
+    NextWordDecided,
 }
 
 /// One engine response, decoded. `effects` is the whole reason this type
@@ -74,8 +59,9 @@ impl ComposingTransition {
 }
 
 impl Effect {
-    /// `None` only for an effect whose `kind` the wire left unset, which the
-    /// current engine never emits. Every kind it does emit has an arm here —
+    /// `None` for an effect whose `kind` the wire left unset, which the
+    /// current engine never emits, and for the unapplied next-word handshakes
+    /// a desktop request never gets back. Every kind it does emit has an arm here —
     /// the exhaustive `match` makes a newly added engine effect a compile
     /// error rather than a silently dropped instruction.
     pub(super) fn decode(effect: &WireEffect) -> Option<Self> {
@@ -91,19 +77,16 @@ impl Effect {
             effect::Kind::ClearCandidates(_) => Effect::ClearCandidates,
             effect::Kind::RefreshCandidates(_) => Effect::RefreshCandidates,
             effect::Kind::ResetCandidateContext(_) => Effect::ResetCandidateContext,
-            effect::Kind::NextWordUpdateLastSelectedWord(payload) => {
-                Effect::NextWordUpdateLastSelectedWord {
-                    text: payload.text.clone(),
-                    roman: payload.roman.clone(),
-                }
+            effect::Kind::NextWordDecided(_) => Effect::NextWordDecided,
+            // A request carrying `NextWordContext` gets these back applied,
+            // as `NextWordDecided`, and the desktop always sends it: one here
+            // means its learning was skipped.
+            effect::Kind::NextWordUpdateLastSelectedWord(_)
+            | effect::Kind::NextWordWordSelected(_)
+            | effect::Kind::NextWordClearForNewComposing(_) => {
+                log::error!("composing answer carried an unapplied next-word handshake");
+                return None;
             }
-            effect::Kind::NextWordWordSelected(payload) => Effect::NextWordWordSelected {
-                text: payload.text.clone(),
-                roman: payload.roman.clone(),
-                trigger_prediction: payload.trigger_prediction,
-                preceding: payload.preceding.clone(),
-            },
-            effect::Kind::NextWordClearForNewComposing(_) => Effect::NextWordClearForNewComposing,
         })
     }
 }
@@ -220,8 +203,8 @@ mod tests {
     use super::*;
     use protos::engine::{
         ClearCandidates, ClearPreeditWithoutCommit, CommitTextReplacingPreedit, ComposingResponse,
-        NextWordClearForNewComposing, NextWordUpdateLastSelectedWord, NextWordWordSelected,
-        RefreshCandidates, ResetCandidateContext, UpdatePreedit,
+        DecideResult, NextWordClearForNewComposing, NextWordUpdateLastSelectedWord,
+        NextWordWordSelected, RefreshCandidates, ResetCandidateContext, UpdatePreedit,
     };
 
     #[test]
@@ -240,15 +223,7 @@ mod tests {
                     })),
                 },
                 WireEffect {
-                    kind: Some(effect::Kind::NextWordWordSelected(NextWordWordSelected {
-                        text: "台".into(),
-                        roman: "tâi".into(),
-                        trigger_prediction: true,
-                        preceding: vec![CommittedWord {
-                            text: "台".into(),
-                            roman: "tâi".into(),
-                        }],
-                    })),
+                    kind: Some(effect::Kind::NextWordDecided(DecideResult::default())),
                 },
                 WireEffect {
                     kind: Some(effect::Kind::ClearPreeditWithoutCommit(
@@ -271,15 +246,7 @@ mod tests {
                     text: "tâi".into(),
                     caret_utf16: 0,
                 },
-                Effect::NextWordWordSelected {
-                    text: "台".into(),
-                    roman: "tâi".into(),
-                    trigger_prediction: true,
-                    preceding: vec![CommittedWord {
-                        text: "台".into(),
-                        roman: "tâi".into(),
-                    }],
-                },
+                Effect::NextWordDecided,
                 Effect::ClearPreeditWithoutCommit,
             ],
             "an unset kind is dropped, everything else keeps its order"
@@ -289,9 +256,10 @@ mod tests {
 
     #[test]
     fn decodes_every_effect_kind_with_its_payload() {
-        // trace: all nine wire `effect::Kind`s in one response, payloads
-        // carried, wire order kept; a `trigger_prediction` of false is
-        // carried, not assumed.
+        // trace: every wire `effect::Kind` in one response, payloads
+        // carried, wire order kept; the three unapplied handshakes (never
+        // sent to a desktop, which always sends `NextWordContext`) decode to
+        // nothing.
         let wire = |kind| WireEffect { kind: Some(kind) };
         let response = ComposingResponse {
             effect: vec![
@@ -327,6 +295,7 @@ mod tests {
                 wire(effect::Kind::NextWordClearForNewComposing(
                     NextWordClearForNewComposing {},
                 )),
+                wire(effect::Kind::NextWordDecided(DecideResult::default())),
             ],
             ..Default::default()
         };
@@ -342,17 +311,7 @@ mod tests {
                 Effect::ClearCandidates,
                 Effect::RefreshCandidates,
                 Effect::ResetCandidateContext,
-                Effect::NextWordUpdateLastSelectedWord {
-                    text: "台".into(),
-                    roman: "tâi".into(),
-                },
-                Effect::NextWordWordSelected {
-                    text: "語".into(),
-                    roman: "gí".into(),
-                    trigger_prediction: false,
-                    preceding: vec![],
-                },
-                Effect::NextWordClearForNewComposing,
+                Effect::NextWordDecided,
             ]
         );
     }

@@ -472,7 +472,9 @@ impl Engine {
         config: &AppConfig,
         frequency: Option<&dyn ConversionFrequency>,
     ) -> Applied {
-        crate::transition::apply(&mut self.state, intent, config, frequency)
+        let mut applied = crate::transition::apply(&mut self.state, intent, config, frequency);
+        crate::transition::mark_taught_next_word(&mut applied.response);
+        applied
     }
 
     /// Pure-Rust observability of the engine's `EngineState`. Returns a

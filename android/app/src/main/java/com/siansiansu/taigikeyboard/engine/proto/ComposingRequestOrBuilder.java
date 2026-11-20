@@ -220,5 +220,30 @@ public interface ComposingRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ConfirmCompositionThenInsert getConfirmCompositionThenInsert();
 
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   * @return Whether the nextWordContext field is set.
+   */
+  boolean hasNextWordContext();
+  /**
+   * <pre>
+   * The shell's next-word envelope, so the engine applies the composition's
+   * next-word handshakes in this same call (one FFI hop per commit, see
+   * `Effect`). A request whose answer carries no handshake (a read-only
+   * `FetchAtPos`) leaves it unused.
+   * </pre>
+   *
+   * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
+   * @return The nextWordContext.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NextWordContext getNextWordContext();
+
   public com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.MethodCase getMethodCase();
 }

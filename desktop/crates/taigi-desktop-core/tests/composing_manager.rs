@@ -17,7 +17,7 @@ use taigi_desktop_core::composing::{
     ContextToken, NextWordPort, TpsKeyOutcome,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect};
+use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect, RequestStamp};
 use taigi_desktop_core::keys::CaretDirection;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, EngineSettings, InputMode, SettingsDocument, SettingsProvider,
@@ -61,43 +61,38 @@ impl SettingsProvider for MutableSettings {
     }
 }
 
-/// One next-word handshake the manager reported. What the engine learns from
-/// it — the window, noise, sentence ends, compounds — is the engine's
-/// (`engine/nextword/src/decide.rs`); when and what the manager reports is
-/// the desktop's.
+/// One next-word report the manager made itself. A composition's commits are
+/// not among them: the engine applies their handshakes inside the composing
+/// call (roadmap E2) — pinned by the engine's
+/// `dispatch/tests/composing_next_word.rs`. What the engine learns from a
+/// report — the window, noise, sentence ends — is the engine's
+/// (`engine/nextword/src/decide.rs`); when the manager reports is the
+/// desktop's.
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum Handshake {
-    Selected {
-        text: String,
-        roman: String,
-        now_ms: i64,
-    },
-    Nailed {
-        text: String,
-        roman: String,
-    },
+enum Report {
+    Typed { character: String, now_ms: i64 },
     Forgot,
 }
 
-/// What the manager handed on: each next-word handshake, and the clock. The
+/// What the manager handed on: each next-word report, and the clock. The
 /// picks are the engine's to count (R5) — pinned by the engine's
 /// `dispatch/tests/user_data_writes.rs` `engine_resolved_picks_are_counted_by_the_engine`.
 #[derive(Default)]
 struct Memory {
-    handshakes: Mutex<Vec<Handshake>>,
+    reports: Mutex<Vec<Report>>,
     now_ms: Mutex<i64>,
 }
 
 impl Memory {
-    /// The reported texts in order, `"∅"` for a forgotten context.
+    /// The reported characters in order, `"∅"` for a forgotten context.
     fn reported(&self) -> Vec<String> {
-        self.handshakes
+        self.reports
             .lock()
             .unwrap()
             .iter()
-            .map(|handshake| match handshake {
-                Handshake::Selected { text, .. } | Handshake::Nailed { text, .. } => text.clone(),
-                Handshake::Forgot => "∅".to_owned(),
+            .map(|report| match report {
+                Report::Typed { character, .. } => character.clone(),
+                Report::Forgot => "∅".to_owned(),
             })
             .collect()
     }
@@ -107,38 +102,15 @@ impl Memory {
 struct Handle(Arc<Memory>);
 
 impl NextWordPort for Handle {
-    fn word_selected(
-        &self,
-        text: &str,
-        roman: &str,
-        _preceding: &[protos::engine::CommittedWord],
-        now_ms: i64,
-        _settings: &EngineSettings,
-        _generation: u64,
-    ) {
-        self.0.handshakes.lock().unwrap().push(Handshake::Selected {
-            text: text.to_owned(),
-            roman: roman.to_owned(),
-            now_ms,
+    fn character_typed(&self, character: &str, _settings: &EngineSettings, stamp: RequestStamp) {
+        self.0.reports.lock().unwrap().push(Report::Typed {
+            character: character.to_owned(),
+            now_ms: stamp.now_ms,
         });
     }
 
-    fn segment_nailed(
-        &self,
-        text: &str,
-        roman: &str,
-        _now_ms: i64,
-        _settings: &EngineSettings,
-        _generation: u64,
-    ) {
-        self.0.handshakes.lock().unwrap().push(Handshake::Nailed {
-            text: text.to_owned(),
-            roman: roman.to_owned(),
-        });
-    }
-
-    fn forget_context(&self, _now_ms: i64, _settings: &EngineSettings, _generation: u64) {
-        self.0.handshakes.lock().unwrap().push(Handshake::Forgot);
+    fn forget_context(&self, _settings: &EngineSettings, _stamp: RequestStamp) {
+        self.0.reports.lock().unwrap().push(Report::Forgot);
     }
 }
 
@@ -439,7 +411,8 @@ fn a_tps_commit_forgets_the_context_unless_every_word_was_picked() {
     assert_eq!(rig.memory.reported(), ["∅", "∅"]);
 
     // trace: the pick nails 好 and keeps composing (H4); commit as shown of
-    // a composition of picks reports the word, and forgets nothing.
+    // a composition of picks teaches (`taught_next_word`), so it forgets
+    // nothing.
     rig.type_tps(&["ㄏ", "ㄛ", "ˋ"]);
     let good = rig.candidate("好");
     let (outcome, written) = rig.commit(&good, CandidateScript::Primary);
@@ -449,7 +422,7 @@ fn a_tps_commit_forgets_the_context_unless_every_word_was_picked() {
     );
     assert!(rig.manager.is_composing());
     assert_eq!(rig.commit_composition().as_deref(), Some("好"));
-    assert_eq!(rig.memory.reported(), ["∅", "∅", "好", "好"]);
+    assert_eq!(rig.memory.reported(), ["∅", "∅"]);
 }
 
 /// USER's example (2026-09-09): `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`, shown as
@@ -936,7 +909,7 @@ fn alternate_on_a_single_script_candidate_commits_its_one_script() {
 // `user_data_writes.rs` `engine_resolved_picks_are_counted_by_the_engine`.
 
 #[test]
-fn two_commits_report_their_readings_and_a_full_stop_is_reported_between() {
+fn picks_report_nothing_themselves_and_a_full_stop_is_reported_with_the_clock() {
     let _lock = engine_lock();
     let mut rig = rig();
     rig.type_text("tai5");
@@ -946,22 +919,9 @@ fn two_commits_report_their_readings_and_a_full_stop_is_reported_between() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    assert_eq!(
-        *rig.memory.handshakes.lock().unwrap(),
-        vec![
-            Handshake::Selected {
-                text: "台".to_owned(),
-                roman: "tâi".to_owned(),
-                now_ms: 1_000,
-            },
-            Handshake::Selected {
-                text: "語".to_owned(),
-                roman: "gí".to_owned(),
-                now_ms: 1_500,
-            },
-        ]
-    );
-    rig.memory.handshakes.lock().unwrap().clear();
+    // trace: both picks finalize with `taught_next_word` — the engine learned
+    // them in the composing call, and the manager forgets nothing.
+    assert!(rig.memory.reported().is_empty());
 
     // A full stop typed outside a composition is reported — the engine ends
     // the context on it (`decide.rs` sentence-end rule).
@@ -970,7 +930,13 @@ fn two_commits_report_their_readings_and_a_full_stop_is_reported_between() {
     rig.type_text("bun5");
     let bun = rig.candidate("文");
     rig.commit(&bun, CandidateScript::Primary);
-    assert_eq!(rig.memory.reported(), vec!["。", "文"]);
+    assert_eq!(
+        *rig.memory.reports.lock().unwrap(),
+        vec![Report::Typed {
+            character: "。".to_owned(),
+            now_ms: 1_500,
+        }]
+    );
 }
 
 // INVARIANT_NEXTWORD_PUNCTUATION_OUTSIDE_COMPOSITION_REACHES_ENGINE (§40)
@@ -988,7 +954,7 @@ fn a_comma_is_reported_and_a_letter_outside_is_not() {
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
     // The engine ends the context on the comma (a clause mark, `decide.rs`).
-    assert_eq!(rig.memory.reported(), vec!["台", ",", "語"]);
+    assert_eq!(rig.memory.reported(), vec![","]);
 }
 
 #[test]
@@ -1002,58 +968,25 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    assert_eq!(rig.memory.reported(), vec!["台", "∅", "語"]);
-    rig.memory.handshakes.lock().unwrap().clear();
+    assert_eq!(rig.memory.reported(), vec!["∅"]);
+    rig.memory.reports.lock().unwrap().clear();
 
     // Punctuation committed mid-composition drops the context rather than
     // letting the next commit skip a word.
-    // trace: `confirm_composition_then_insert` — no pick, so `finish_commit`
-    // forgets the context (∅), then the literal is reported as typed outside
-    // the composition (`note_character_typed_outside_composition`).
+    // trace: `confirm_composition_then_insert` — no pick, so the commit is
+    // finalized without `taught_next_word` and `finish_commit` forgets the
+    // context (∅), then the literal is reported as typed outside the
+    // composition (`note_character_typed_outside_composition`).
     rig.type_text("gua2");
     rig.manager
         .confirm_composition_then_insert(None, ".", false, &mut rig.recorder);
     rig.type_text("bun5");
     let bun = rig.candidate("文");
     rig.commit(&bun, CandidateScript::Primary);
-    assert_eq!(rig.memory.reported(), vec!["∅", ".", "文"]);
+    assert_eq!(rig.memory.reported(), vec!["∅", "."]);
 }
 
 // MARK: - ported from the macOS suites
-
-/// trace: a pair with one half
-/// written in the other script is reported under the identity: each
-/// handshake carries the candidate's display text and canonical TL, whichever
-/// script reached the document.
-#[test]
-fn reports_a_pair_written_in_two_scripts_under_its_identity() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    rig.type_text("tai5");
-    let tai = rig.candidate("台");
-    rig.commit(&tai, CandidateScript::Primary);
-    rig.type_text("gi2");
-    let gi = rig.candidate("語");
-    rig.commit(&gi, CandidateScript::Alternate);
-    let reported: Vec<(String, String)> = rig
-        .memory
-        .handshakes
-        .lock()
-        .unwrap()
-        .iter()
-        .map(|handshake| match handshake {
-            Handshake::Selected { text, roman, .. } => (text.clone(), roman.clone()),
-            other => panic!("expected a selection, got {other:?}"),
-        })
-        .collect();
-    assert_eq!(
-        reported,
-        vec![
-            (tai.display_text, tai.canonical_tl),
-            (gi.display_text, gi.canonical_tl),
-        ]
-    );
-}
 
 /// trace: another manager's
 /// generation resets the engine underneath this one; the next fetch answers
