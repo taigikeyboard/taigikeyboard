@@ -155,8 +155,9 @@ impl UserDataHandle {
         })
     }
 
-    /// A page of one learning store. Paged always: a store holds up to
-    /// 50 000 rows, which never travel in one answer.
+    /// A page of one learning store. `limit` 0 is refused rather than read as
+    /// "everything": a store holds up to 50 000 rows, and a caller asks for
+    /// the rows it shows.
     fn list_learning_records(
         stores: &UserDataStores,
         list: &ListLearningRecords,

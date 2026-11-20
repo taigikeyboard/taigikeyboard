@@ -299,7 +299,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
 
     func testAFailedReReadAfterAWrite_retriesTheListedRowsNotTheNextPage() async {
         // trace: 250 rows, 200 listed (offsets 0, 100). The write lands; its re-read fails.
-        // Retry re-reads the 200 listed rows as (limit 100, offset 0), (100, 100) — no offset 200.
+        // Retry re-reads the 200 listed rows in one read (limit 200, offset 0) — no offset 200.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
         _ = await viewModel.load()
@@ -320,8 +320,8 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertNil(retry)
 
         let retried = fake.calls.dropFirst(before)
-        XCTAssertEqual(retried.map(\.limit), [100, 100])
-        XCTAssertEqual(retried.map(\.offset), [0, 100])
+        XCTAssertEqual(retried.map(\.limit), [200])
+        XCTAssertEqual(retried.map(\.offset), [0])
         XCTAssertNil(viewModel.failedRead)
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 200))
         XCTAssertEqual(viewModel.records[0].count, 7)
@@ -354,7 +354,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
 
     func testALaterAppearance_reReadsTheListedRowsInPlace() async {
         // trace: 250 rows, 200 listed. Back from another tab the keyboard learned row 0:
-        // the re-read asks (100, 0), (100, 100) and shows 200 rows, the new one first.
+        // the re-read asks (200, 0) and shows 200 rows, the new one first.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
         _ = await viewModel.load()
@@ -363,33 +363,9 @@ final class LearningRecordsViewModelTests: XCTestCase {
 
         _ = await viewModel.load()
 
-        XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 0, 100])
-        XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100, 100])
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 0])
+        XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 200])
         XCTAssertEqual(viewModel.records.map(\.id), Array(0 ... 199), "the place in the list is kept")
-    }
-
-    func testAReReadPulledBack_landsTheServedPage() async {
-        // trace: 250 rows, 250 listed. A write's re-read gets (100, 0) → rows 1–100 of 250;
-        // then the matches shrink to 20, so (100, 100) is served from offset 0 (last page of 20)
-        // → the rows read from offset 0 on are replaced: 20 rows, matching 20.
-        let fake = FakeLearningRecords(rows: numberedRows(250))
-        let viewModel = makeViewModel(fake)
-        _ = await viewModel.load()
-        _ = await viewModel.loadNextPage()
-        _ = await viewModel.loadNextPage()
-        fake.isHolding = true
-
-        let write = Task { await landed(viewModel.setCount(viewModel.records[0], to: 5)) }
-        await waitForParked(1, in: fake)
-        fake.resolve(0)
-        await waitForParked(1, in: fake)
-        fake.rows = Array(fake.rows.prefix(20))
-        fake.resolve(0)
-        _ = await write.value
-
-        XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 20))
-        XCTAssertEqual(viewModel.matchingTotal, 20)
-        XCTAssertFalse(viewModel.hasMoreRows)
     }
 
     func testAnOrderChange_overtakesAFilterStillSettling() async {
@@ -515,9 +491,9 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100])
     }
 
-    func testAWrite_reReadsTheListedRowsInPagesOfAtMost100() async {
+    func testAWrite_reReadsTheListedRowsInOneRead() async {
         // trace: 250 rows listed after offsets 0, 100, 200. The reload re-reads
-        // max(100, 250) = 250 rows as limits 100, 100, 50 from offsets 0, 100, 200.
+        // max(100, 250) = 250 rows as one read: limit 250 from offset 0.
         let fake = FakeLearningRecords(rows: numberedRows(250))
         let viewModel = makeViewModel(fake)
         _ = await viewModel.load()
@@ -527,8 +503,8 @@ final class LearningRecordsViewModelTests: XCTestCase {
         _ = await landed(viewModel.setCount(viewModel.records[200], to: 9))
 
         let reload = fake.calls.dropFirst(3)
-        XCTAssertEqual(reload.map(\.offset), [0, 100, 200])
-        XCTAssertEqual(reload.map(\.limit), [100, 100, 50])
+        XCTAssertEqual(reload.map(\.offset), [0])
+        XCTAssertEqual(reload.map(\.limit), [250])
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 250))
         XCTAssertEqual(viewModel.records[200].count, 9)
     }
@@ -629,7 +605,8 @@ final class LearningRecordsViewModelTests: XCTestCase {
 
     func testCountFromText_isAWholeNumberOfAtLeastOne() {
         let cases: [(String, Int64?)] = [
-            ("12", 12), (" 3 ", 3), ("1", 1), ("1000000", 1_000_000), ("1000001", nil),
+            // Above the engine's 1 000 000 is still a count: the engine clamps it.
+            ("12", 12), (" 3 ", 3), ("1", 1), ("1000000", 1_000_000), ("2000000", 2_000_000),
             ("0", nil), ("-1", nil), ("1.5", nil), ("", nil), ("abc", nil),
         ]
         for (text, expected) in cases {
@@ -637,8 +614,14 @@ final class LearningRecordsViewModelTests: XCTestCase {
         }
     }
 
-    func testLastUsedLabel_isEmptyWithoutAReadableTime() {
-        XCTAssertEqual(record(1, "台灣", tl: "tâi-uân").lastUsedLabel, "")
+    func testLastUsedLabel_isTheIsoDayInTheTimeZone() throws {
+        // trace: 1_767_225_600_000 ms = 2026-01-01T00:00:00Z — the desktop's `last_used_label` fixture.
+        var used = record(1, "台灣", tl: "tâi-uân")
+        used.lastUsedMs = 1_767_225_600_000
+        XCTAssertEqual(used.lastUsedLabel(in: try XCTUnwrap(TimeZone(identifier: "UTC"))), "2026-01-01")
+        XCTAssertEqual(used.lastUsedLabel(in: try XCTUnwrap(TimeZone(identifier: "Asia/Taipei"))), "2026-01-01")
+        XCTAssertEqual(used.lastUsedLabel(in: try XCTUnwrap(TimeZone(secondsFromGMT: -3600))), "2025-12-31")
+        XCTAssertEqual(record(1, "台灣", tl: "tâi-uân").lastUsedLabel(), "", "no readable time")
     }
 }
 

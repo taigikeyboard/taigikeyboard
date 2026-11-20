@@ -48,9 +48,9 @@ Each PR 200–500 LOC. Pre-gates per `~/.claude/rules/round-workflow.md`; Codex 
 | G1 | Android: ~~option lists → `ime/settings`~~ (done R6, `ime/settings/SettingOptions.kt`), icons neutral; screens through view models; logger injected | refactor · after #471 | 1 | Pending |
 | G2 | Android `RustEngineBridge.kt` DTOs → per-area `*Bridge.kt` as top-level types; `SmartbarManager` forwarders: only the internal `handleNextWordPrediction` removed, the 7 caller-facing ones kept as the facade (USER 2026-11-16) | refactor · sandwich skipped (moves) | 1 | Done (R6) |
 | G3 | iOS: Platform-layer `SharedSettings.shared` consumers injected; `ActionHandler` deps injected (iOS `UsageRecorder` deleted by D2); Engine-layer purity | refactor · `refactor-reviewer` · after #471 | 1 | Pending |
-| G4 | Mobile Learning Records view models (one listing call); English current-word split, last-used date, count rule aligned | refactor + parity · decisions 7–8 confirmed 2026-11-17 (Android split; ISO date, count ≥ 1) | 1–2 | Pending |
+| G4 | Mobile Learning Records view models (one listing call); English current-word split, last-used date, count rule aligned | refactor + parity · decisions 7–8 confirmed 2026-11-17 (Android split; ISO date, count ≥ 1) | 1–2 | In progress — PR1 (Learning Records view models, date, count) in review; PR2 (English current-word split + Android stops recording English picks, maintainer 2026-11-20) next |
 
-Active PR pointer: none — next round G4.
+Active PR pointer: G4 PR1 — branch `refactor/g4-learning-records-vm`.
 
 **Order (maintainer asked for an order, 2026-11-17):** ~~E4 remainder~~ (done 2026-11-17) → ~~F4~~ (done 2026-11-17) → ~~D2b~~ (done 2026-11-17) → ~~D3~~ (done 2026-11-17) → ~~D4~~ (done 2026-11-17) → ~~C1~~ (done 2026-11-20) → ~~C2~~ (done 2026-11-20) → ~~C3~~ (done 2026-11-20) → ~~E2~~ (done 2026-11-20) → ~~B2~~ (done 2026-11-20) → G4 → A3 → G1 → G3. Desktop / engine follow-ups first while R8–F3 are fresh; D before E2 (audit §5.3: the mobile commit path is engine-owned first); C, the largest, after the clean-ups; A3 after every round that adds or removes `dictionary.*` keys (C2, C3, B2, G4), so the scope pass runs once; G1 / G3 last, lowest payoff. F1 / F2 stay partly done (the macOS remainder is not adopted).
 

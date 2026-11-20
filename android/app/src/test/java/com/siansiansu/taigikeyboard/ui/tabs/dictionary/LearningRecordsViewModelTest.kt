@@ -29,8 +29,9 @@ import java.time.ZoneOffset
 
 /**
  * JVM tests for the Learning Records page's view model. The engine is faked
- * (no `.so` on the JVM); the fake pages like the engine does — the offset
- * pulled back to the last page that exists (`engine/userdata/src/paging.rs`).
+ * (no `.so` on the JVM); the fake pages like the engine does — the filter
+ * trimmed, the offset pulled back to the last page that exists
+ * (`engine/userdata/src/paging.rs`).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LearningRecordsViewModelTest {
@@ -86,7 +87,8 @@ class LearningRecordsViewModelTest {
             offset: Int,
         ): LearningRecords {
             val ofKind = rows.filter { it.kind == kind }
-            val matching = ofKind.filter { filter.isEmpty() || it.text.contains(filter) || it.tl.contains(filter) }
+            val trimmed = filter.trim()
+            val matching = ofKind.filter { trimmed.isEmpty() || it.text.contains(trimmed) || it.tl.contains(trimmed) }
             val served = if (offset > 0 && offset >= matching.size) (maxOf(matching.size - 1, 0) / limit) * limit else offset
             return LearningRecords
                 .newBuilder()
@@ -228,7 +230,7 @@ class LearningRecordsViewModelTest {
     }
 
     @Test
-    fun `the filter goes to the engine trimmed once typing settles and lists from the first row`() =
+    fun `the filter goes to the engine as typed once typing settles and lists from the first row`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(frequencyRows(150))
             val model = viewModel(client)
@@ -243,7 +245,7 @@ class LearningRecordsViewModelTest {
 
             advanceUntilIdle()
 
-            assertEquals(listOf(ListCall(frequency, mostUsed, "w1", 100, 0)), client.listCalls.drop(2))
+            assertEquals(listOf(ListCall(frequency, mostUsed, " w1 ", 100, 0)), client.listCalls.drop(2))
             // trace: "w1" matches w1, w10..w19, w100..w150 = 1 + 10 + 51 = 62 rows.
             assertEquals(62, model.state.value.matchingTotal)
             assertEquals(62, model.state.value.records.size)
@@ -251,22 +253,27 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
-    fun `an order change lists from the first row in the new order`() =
+    fun `an order change lists from the first row in the new order, the old rows shown until it lands`() =
         runTest(dispatcher) {
-            val client = FakeLearningRecords(frequencyRows(3))
+            val client = FakeLearningRecords(frequencyRows(150))
             val model = viewModel(client)
             advanceUntilIdle()
 
             model.selectOrder(mostRecent)
+            assertEquals("the old order's rows stay until the answer", 100, model.state.value.records.size)
+            model.loadMore()
             advanceUntilIdle()
 
-            assertEquals(mostRecent, client.listCalls.last().order)
-            assertEquals(0, client.listCalls.last().offset)
-            assertEquals(3, model.state.value.records.size)
+            // trace: the pending order read blocks loadMore → no (100, 100) onto the old order's rows.
+            assertEquals(
+                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostRecent, "", 100, 0)),
+                client.listCalls,
+            )
+            assertEquals(100, model.state.value.records.size)
         }
 
     @Test
-    fun `a count edit sends the listed row and reads every loaded row again one engine page at a time`() =
+    fun `a count edit sends the listed row and reads every loaded row again in one engine read`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(frequencyRows(260))
             val model = viewModel(client)
@@ -283,15 +290,8 @@ class LearningRecordsViewModelTest {
             advanceUntilIdle()
 
             assertEquals(listOf(listed to 40L), client.setCalls)
-            // trace: 260 loaded → chunks (100, 0), (100, 100), (60, 200); never one 260-row request.
-            assertEquals(
-                listOf(
-                    ListCall(frequency, mostUsed, "", 100, 0),
-                    ListCall(frequency, mostUsed, "", 100, 100),
-                    ListCall(frequency, mostUsed, "", 60, 200),
-                ),
-                client.listCalls.drop(before),
-            )
+            // trace: 260 loaded → one read (260, 0).
+            assertEquals(listOf(ListCall(frequency, mostUsed, "", 260, 0)), client.listCalls.drop(before))
             assertEquals(
                 (1L..260L).toList(),
                 model.state.value.records
@@ -316,11 +316,8 @@ class LearningRecordsViewModelTest {
             model.delete(model.state.value.records[0])
             advanceUntilIdle()
 
-            // trace: chunks (100, 0) → 100 rows; (100, 100) → rows 101..180, 180 matches → done.
-            assertEquals(
-                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostUsed, "", 100, 100)),
-                client.listCalls.drop(before),
-            )
+            // trace: one read (250, 0) → rows 1..180, 180 matches.
+            assertEquals(listOf(ListCall(frequency, mostUsed, "", 250, 0)), client.listCalls.drop(before))
             assertEquals(
                 (1L..180L).toList(),
                 model.state.value.records
@@ -375,11 +372,8 @@ class LearningRecordsViewModelTest {
             model.retry()
             advanceUntilIdle()
 
-            // trace: 200 loaded → chunks (100, 0), (100, 100); a next-page retry would ask (100, 200).
-            assertEquals(
-                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostUsed, "", 100, 100)),
-                client.listCalls.drop(before),
-            )
+            // trace: 200 loaded → one read (200, 0); a next-page retry would ask (100, 200).
+            assertEquals(listOf(ListCall(frequency, mostUsed, "", 200, 0)), client.listCalls.drop(before))
             assertEquals(
                 (1L..200L).toList(),
                 model.state.value.records
@@ -405,13 +399,13 @@ class LearningRecordsViewModelTest {
             advanceUntilIdle()
 
             // trace: 0 rows listed → one page (100, 0), kind / order / filter kept; 120 matches → load more stays possible.
-            assertEquals(listOf(ListCall(phrase, mostRecent, "w", 100, 0)), client.listCalls.drop(before))
+            assertEquals(listOf(ListCall(phrase, mostRecent, " w ", 100, 0)), client.listCalls.drop(before))
             assertEquals(100, model.state.value.records.size)
             assertEquals(120, model.state.value.matchingTotal)
         }
 
     @Test
-    fun `a refresh re-reads every loaded row one engine page at a time`() =
+    fun `a refresh re-reads every loaded row in one engine read`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(frequencyRows(150))
             val model = viewModel(client)
@@ -424,11 +418,8 @@ class LearningRecordsViewModelTest {
             model.refresh()
             advanceUntilIdle()
 
-            // trace: 150 loaded → chunks (100, 0), (50, 100); the 151st row waits for load more.
-            assertEquals(
-                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostUsed, "", 50, 100)),
-                client.listCalls.drop(before),
-            )
+            // trace: 150 loaded → one read (150, 0); the 151st row waits for load more.
+            assertEquals(listOf(ListCall(frequency, mostUsed, "", 150, 0)), client.listCalls.drop(before))
             assertEquals(150, model.state.value.records.size)
             assertEquals(151, model.state.value.matchingTotal)
         }
