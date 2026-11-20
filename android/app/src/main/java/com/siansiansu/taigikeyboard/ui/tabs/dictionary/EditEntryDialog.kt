@@ -27,7 +27,8 @@ internal fun EditEntryDialog(
     var roman by remember(entry) { mutableStateOf(entry?.roman ?: "") }
     var hanji by remember(entry) { mutableStateOf(entry?.hanji ?: "") }
     val isEditing = entry != null
-    val canSave = roman.isNotBlank() && hanji.isNotBlank()
+    // Romanization only: the engine stores a word with no Hanji, as on the desktop.
+    val canSave = roman.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,

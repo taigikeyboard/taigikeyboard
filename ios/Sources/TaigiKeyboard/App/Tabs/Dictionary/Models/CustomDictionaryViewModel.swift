@@ -119,9 +119,18 @@ final class CustomDictionaryViewModel: ObservableObject {
         }
     }
 
-    func save(_ entry: CustomDictionaryEntry) async {
-        try? await userData.save(entry)
+    /// Adds or edits `entry`, then re-reads the list. Answers the failure's
+    /// detail — the engine's refusal in its own words, or the store error —
+    /// for the page's alert, `nil` once saved.
+    func save(_ entry: CustomDictionaryEntry) async -> String? {
+        var failure: String?
+        do {
+            try await userData.save(entry)
+        } catch {
+            failure = error.localizedDescription
+        }
         await load()
+        return failure
     }
 
     func delete(id: String) async {

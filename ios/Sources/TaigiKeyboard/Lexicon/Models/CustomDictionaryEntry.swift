@@ -18,6 +18,12 @@ struct CustomDictionaryEntry: Identifiable, Equatable, Sendable {
         self.roman = roman
         self.hanji = hanji
     }
+
+    /// The list row: a romanization-only word shows its romanization alone.
+    /// Twin of Android `CustomDictionaryWord.listLabel`.
+    var listLabel: String {
+        hanji.isEmpty ? roman : "\(roman) → \(hanji)"
+    }
 }
 
 /// One page of the custom dictionary list, as the engine cut it.

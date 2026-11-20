@@ -71,6 +71,7 @@ import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
+import com.siansiansu.taigikeyboard.ui.components.resultMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -102,7 +103,7 @@ fun CustomDictionaryScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var editingEntry by remember { mutableStateOf<CustomDictionaryWord?>(null) }
     var showResultDialog by remember { mutableStateOf(false) }
-    var resultMessage by remember { mutableStateOf("") }
+    var resultText by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -128,14 +129,14 @@ fun CustomDictionaryScreen(
             scope.launch {
                 try {
                     val result = viewModel.importFile(uri)
-                    resultMessage =
+                    resultText =
                         stringResolver.dictionaryImportResult(
                             imported = result.imported,
                             skipped = result.skipped,
                         )
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage =
+                    resultText =
                         when ((e as? UserDataException.Refused)?.refusal) {
                             CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_FILE_TOO_LARGE ->
                                 stringResolver.resolve(StringKey.DICTIONARY_FILE_TOO_LARGE)
@@ -165,10 +166,10 @@ fun CustomDictionaryScreen(
                             outputStream.write(csv)
                         }
                     }
-                    resultMessage = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
+                    resultText = stringResolver.resolve(StringKey.DICTIONARY_EXPORT_SUCCESS)
                     showResultDialog = true
                 } catch (_: Exception) {
-                    resultMessage = stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
+                    resultText = stringResolver.resolve(StringKey.COMMON_EXPORT_FAILED)
                     showResultDialog = true
                 }
             }
@@ -349,7 +350,7 @@ fun CustomDictionaryScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "${entry.roman} → ${entry.hanji}",
+                                text = entry.listLabel,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier =
@@ -400,8 +401,13 @@ fun CustomDictionaryScreen(
             entry = editingEntry,
             onDismiss = { showEditDialog = false },
             onSave = { entry ->
-                viewModel.save(entry)
                 showEditDialog = false
+                scope.launch {
+                    viewModel.save(entry)?.let { detail ->
+                        resultText = resultMessage(stringResolver.resolve(StringKey.DESKTOP_CUSTOM_DICT_WRITE_FAILED), detail)
+                        showResultDialog = true
+                    }
+                }
             },
         )
     }
@@ -409,7 +415,7 @@ fun CustomDictionaryScreen(
     // Result dialog
     if (showResultDialog) {
         ResultDialog(
-            message = resultMessage,
+            message = resultText,
             confirmLabel = L10n.commonOk,
             onDismiss = { showResultDialog = false },
         )

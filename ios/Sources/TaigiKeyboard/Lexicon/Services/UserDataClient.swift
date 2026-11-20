@@ -56,8 +56,9 @@ struct UserDataUnavailable: LocalizedError {
     }
 }
 
-/// The engine would not do what was asked — an unsearchable romanization, a
-/// store a reset could not empty — in its own words.
+/// The engine would not do what was asked — a full dictionary, an
+/// unsearchable romanization, a store a reset could not empty — in its own
+/// words.
 struct UserDataRefused: LocalizedError {
     let detail: String
 
@@ -75,7 +76,8 @@ protocol UserDataClient: Sendable {
     /// One page of the words `filter` matches, newest edit first; the engine
     /// trims the filter and cuts the page. `limit` is at least 1.
     func listCustomEntries(filter: String, limit: UInt32, offset: UInt32) async throws -> CustomDictionaryPage
-    /// A refusal (a full dictionary, an unsearchable romanization) throws.
+    /// A refusal (a full dictionary, an unsearchable romanization) throws
+    /// `UserDataRefused` in the engine's words.
     func save(_ entry: CustomDictionaryEntry) async throws
     func delete(id: String) async throws
     /// Empties the custom dictionary.
@@ -144,9 +146,6 @@ struct EngineUserDataClient: UserDataClient {
     func save(_ entry: CustomDictionaryEntry) async throws {
         let saved = try await engine("customDictionarySave") {
             RustEngineBridge.customDictionarySave(id: entry.id, roman: entry.roman, hanji: entry.hanji)
-        }
-        if saved.refusal == .full {
-            throw CustomDictionaryError.tooManyEntries
         }
         if saved.refusal != .none {
             throw UserDataRefused(detail: saved.detail)
