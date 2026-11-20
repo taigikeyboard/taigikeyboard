@@ -3,7 +3,6 @@
 
 import Foundation
 import Observation
-import SwiftProtobuf
 
 /// Minimal write-only view of the composing-context state that the keyboard
 /// extension needs updated when composing starts/stops. KeyboardKit's
