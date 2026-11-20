@@ -31,13 +31,16 @@ use super::{fused_shadow, fused_shadow_with_barriers, lookup_form, strip_tones_f
 /// dictionary build. A group that is a valid syllable yet could also
 /// split (`ai5` as `a`+`i5`) still keys verbatim — unchanged.
 ///
+/// A typed `-` (`barriers`, span-local) inside a group splits it, the same
+/// cut the §52 lattice makes: `ti-a2` → `tia2` keys toneless + pin.
+///
 /// The span-local + walker callers pass a lattice edge (which proves the
 /// SPAN splits into syllables, not that every digit-closed group is one);
 /// the partial-prefix caller ([`build_partial_prefix_key`]) passes the raw
 /// whole-buffer shadow, possibly an INCOMPLETE syllable (`ts5`, `abc1`) —
 /// that keys toneless + pin, and the pin is fail-closed on a spelling
 /// mismatch, so it can widen the prefix scan but never admit a wrong tone.
-fn span_is_fully_toned_ascii(span: &str) -> bool {
+fn span_is_fully_toned_ascii(span: &str, barriers: &[usize]) -> bool {
     if span.is_empty() {
         return false;
     }
@@ -48,6 +51,9 @@ fn span_is_fully_toned_ascii(span: &str) -> bool {
             // group is an orphan digit (`5tai`, `tai55`).
             let group = &span[group_start..i];
             if group.is_empty() || !phonetics::is_valid_syllable(group) {
+                return false;
+            }
+            if crate::syllabifier::crosses_barrier(barriers, group_start, i) {
                 return false;
             }
             group_start = i + 1;
@@ -139,9 +145,14 @@ fn span_is_fully_toned_tps(span: &str) -> bool {
 ///
 /// `English` mode has no tone semantics (a trailing digit in an English
 /// buffer is not a tone), so it keeps the legacy digit-strip.
-pub(crate) fn fst_body_for_span(span: &str, mode: InputMode) -> String {
+///
+/// `barriers` are the typed-`-` offsets in SPAN coordinates
+/// ([`span_local_barriers`]); only the TL / POJ check reads them.
+pub(crate) fn fst_body_for_span(span: &str, mode: InputMode, barriers: &[usize]) -> String {
     match mode {
-        InputMode::Tl | InputMode::Poj if span_is_fully_toned_ascii(span) => span.to_string(),
+        InputMode::Tl | InputMode::Poj if span_is_fully_toned_ascii(span, barriers) => {
+            span.to_string()
+        }
         InputMode::Tps if span_is_fully_toned_tps(span) => span
             .chars()
             .map(phonetics::normalize_tps_lookup_scalar)
@@ -475,12 +486,12 @@ pub(crate) fn span_key(
     one_syllable_segments: &[(usize, usize)],
 ) -> Option<SpanKey> {
     let span = &shadow[start..end];
-    let body = fst_body_for_span(span, mode);
+    let span_barriers = span_local_barriers(barriers, start, end);
+    let body = fst_body_for_span(span, mode, &span_barriers);
     if body.is_empty() {
         return None;
     }
     let prefix = KeyFamily::for_input_mode(mode).prefix();
-    let span_barriers = span_local_barriers(barriers, start, end);
     let final_only = key_final_only_offsets(span, &body, mode, &span_barriers, prefix.len());
     // §52 — the typed runs this span answers to: each interior / trailing
     // barrier with its kind, plus the run typed right before the span
@@ -1285,6 +1296,18 @@ mod tests {
     }
 
     #[test]
+    fn span_key_reads_hyphens_in_span_coordinates_for_the_toned_check() {
+        // #867, walker-edge shape: `tshiu2-ki-a2` → shadow `tshiu2kia2`,
+        // barriers 6 and 8. The (6, 10) edge `kia2` drops 6 (its own start)
+        // and keeps 8 as local 2, inside `kia` → toneless key.
+        let k = span_key("tshiu2kia2", 6, 10, InputMode::Tl, &[6, 8], &[], &[]).expect("body");
+        assert_eq!(k.key, "tl:kia");
+        // Typed without the hyphen, `kia2` is one toned syllable → verbatim.
+        let k = span_key("tshiu2kia2", 6, 10, InputMode::Tl, &[6], &[], &[]).expect("body");
+        assert_eq!(k.key, "tl:kia2");
+    }
+
+    #[test]
     fn key_final_only_offsets_marks_the_glyph_before_a_barrier() {
         // Span ㄎㄛㆻㄫ with a barrier after ㆻ (byte 9): the ㆻ slot (key
         // offset 4 + 6) is Final-only; nothing else is restricted.
@@ -1514,23 +1537,38 @@ mod tests {
     #[test]
     fn span_is_fully_toned_ascii_requires_one_syllable_per_group() {
         // Every digit-closed group is one valid syllable → verbatim key.
-        assert!(span_is_fully_toned_ascii("tai5"));
-        assert!(span_is_fully_toned_ascii("kok4bin5tong2"));
+        assert!(span_is_fully_toned_ascii("tai5", &[]));
+        assert!(span_is_fully_toned_ascii("kok4bin5tong2", &[]));
         assert!(
-            span_is_fully_toned_ascii("chit4"),
+            span_is_fully_toned_ascii("chit4", &[]),
             "POJ spelling folds to TL"
         );
         // A fused group carrying an untoned syllable is PARTIAL tone.
-        assert!(!span_is_fully_toned_ascii("kokbin5tong2"));
-        assert!(!span_is_fully_toned_ascii("kok4bintong2"));
-        assert!(!span_is_fully_toned_ascii("tengsek4"));
+        assert!(!span_is_fully_toned_ascii("kokbin5tong2", &[]));
+        assert!(!span_is_fully_toned_ascii("kok4bintong2", &[]));
+        assert!(!span_is_fully_toned_ascii("tengsek4", &[]));
         // Open tail, orphan digit, non-syllable group, separator leak.
-        assert!(!span_is_fully_toned_ascii("kokbin5tong"));
-        assert!(!span_is_fully_toned_ascii("5tai"));
-        assert!(!span_is_fully_toned_ascii("tai55"));
-        assert!(!span_is_fully_toned_ascii("abc1"));
-        assert!(!span_is_fully_toned_ascii("tai5-gi2"));
-        assert!(!span_is_fully_toned_ascii(""));
+        assert!(!span_is_fully_toned_ascii("kokbin5tong", &[]));
+        assert!(!span_is_fully_toned_ascii("5tai", &[]));
+        assert!(!span_is_fully_toned_ascii("tai55", &[]));
+        assert!(!span_is_fully_toned_ascii("abc1", &[]));
+        assert!(!span_is_fully_toned_ascii("tai5-gi2", &[]));
+        assert!(!span_is_fully_toned_ascii("", &[]));
+    }
+
+    #[test]
+    fn span_is_fully_toned_ascii_splits_groups_at_typed_hyphens() {
+        // `ti-a2` → `tia2`: barrier 2 inside the `tia` group → partial tone.
+        assert!(!span_is_fully_toned_ascii("tia2", &[2]));
+        assert!(!span_is_fully_toned_ascii("ai5", &[1]));
+        // trace: `tshiu2-ki-a2` → `tshiu2kia2`, barriers 6 (opens the
+        // `kia` group, not inside it) and 8 (inside `kia`).
+        assert!(!span_is_fully_toned_ascii("tshiu2kia2", &[6, 8]));
+        // A barrier right after a digit opens the next group: `tai5-gi2`.
+        assert!(span_is_fully_toned_ascii("tai5gi2", &[4]));
+        // The same shape typed without the hyphen keeps its one-syllable
+        // verbatim key.
+        assert!(span_is_fully_toned_ascii("tia2", &[]));
     }
 
     #[test]
@@ -1649,15 +1687,15 @@ mod tests {
     fn fst_body_for_span_tps_toned_keeps_mark_toneless_strips() {
         // Toned span kept verbatim (tone-8 normalized); toneless stripped.
         assert_eq!(
-            fst_body_for_span("\u{3109}\u{311e}\u{02ca}", InputMode::Tps),
+            fst_body_for_span("\u{3109}\u{311e}\u{02ca}", InputMode::Tps, &[]),
             "\u{3109}\u{311e}\u{02ca}"
         );
         assert_eq!(
-            fst_body_for_span("\u{310d}\u{311a}\u{31b5}\u{02d9}", InputMode::Tps),
+            fst_body_for_span("\u{310d}\u{311a}\u{31b5}\u{02d9}", InputMode::Tps, &[]),
             "\u{310d}\u{311a}\u{31b5}\u{0307}"
         );
         assert_eq!(
-            fst_body_for_span("\u{3109}\u{311e}", InputMode::Tps),
+            fst_body_for_span("\u{3109}\u{311e}", InputMode::Tps, &[]),
             "\u{3109}\u{311e}"
         );
     }
@@ -1676,7 +1714,11 @@ mod tests {
             "\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}"
         ));
         assert_eq!(
-            fst_body_for_span("\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}", InputMode::Tps),
+            fst_body_for_span(
+                "\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}",
+                InputMode::Tps,
+                &[]
+            ),
             "\u{310d}\u{3120}\u{3109}\u{311e}\u{02ca}"
         );
         // A leading tone-4 stop-coda syllable behaves the same way.

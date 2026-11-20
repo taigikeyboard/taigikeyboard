@@ -6,6 +6,7 @@ mod common;
 mod candidate_dump;
 mod continuous_context_rerank;
 mod cross_mode_parity;
+mod hyphen_toned_span_prod;
 mod one_syllable_segment_prod;
 mod telex_prod;
 mod tps_glyph_alias;
