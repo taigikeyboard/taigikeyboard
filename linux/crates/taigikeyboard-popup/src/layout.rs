@@ -180,7 +180,7 @@ impl RowCell {
             text: "字".into(),
             annotation: Some("lâi".into()),
         };
-        let short_w = layout_cell(&short, "", 0, false, Some(key), &style, measure).w;
+        let short_w = layout_cell(&short, "", 0, false, key, &style, measure).w;
         Self {
             slot: (short_w + style.gap).ceil(),
             style,
@@ -191,7 +191,7 @@ impl RowCell {
 
     /// `cell`'s width before scale, the gap after it included.
     fn width(&self, cell: &Cell, measure: &impl Measure) -> f32 {
-        let laid = layout_cell(cell, "", 0, false, Some(self.key), &self.style, measure);
+        let laid = layout_cell(cell, "", 0, false, self.key, &self.style, measure);
         (laid.w + self.style.gap).ceil().max(self.slot)
     }
 
@@ -247,11 +247,11 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     // width the row was packed to (`row_widths`), so the cells fill the
     // window the session sized from them.
     let row = (!page.vertical).then(|| RowCell::new(cell_style(page), measure, scale));
-    let label_slot = Some(if row.is_some() {
+    let label_slot = if row.is_some() {
         key_column(label_px, measure)
     } else {
         label_column(page, label_px, measure)
-    });
+    };
     let mut cells = Vec::with_capacity(page.cells.len());
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
@@ -489,7 +489,7 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
     // Every vertical-expandable cell reserves the key column, including rows
     // that are not numbered yet, so a column does not jump when its numbers
     // appear.
-    let label_slot = Some(label_column(page, label_px, measure));
+    let label_slot = label_column(page, label_px, measure);
     let mut cells = Vec::new();
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
@@ -682,7 +682,7 @@ fn arrange_expanded_row(
     let mut cells = Vec::new();
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
-        let mut laid = layout_cell(cell, label, index as u32, false, Some(key), style, measure);
+        let mut laid = layout_cell(cell, label, index as u32, false, key, style, measure);
         row.widen(&mut laid, cell, measure);
         cells.push(laid);
     }
@@ -929,12 +929,15 @@ fn label_column(page: &Show, label_px: f32, measure: &impl Measure) -> f32 {
         .fold(0.0_f32, f32::max)
 }
 
+/// Lays one cell out. `slot` is the key column the cell reserves
+/// ([`key_column`] in a row, [`label_column`] in a column); the key is
+/// centered inside it.
 fn layout_cell(
     cell: &Cell,
     label: &str,
     index: u32,
     vertical: bool,
-    label_slot: Option<f32>,
+    slot: f32,
     style: &Scale,
     measure: &impl Measure,
 ) -> LaidCell {
@@ -953,9 +956,6 @@ fn layout_cell(
     } else {
         measure.size(label, label_px, false)
     };
-    // `None` is a horizontal cell: the key is only as wide as its own glyph.
-    // `Some` is the vertical column, and the key is centered inside it.
-    let slot = label_slot.unwrap_or(label_w);
     let annotation = cell.annotation.as_deref().filter(|text| !text.is_empty());
     let paired = annotation.is_some();
     let text_hanji = hanji_script(&cell.text, true, paired, hanji_leads);
