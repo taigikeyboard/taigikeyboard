@@ -1,11 +1,13 @@
 //! Which word the user tends to type after which. Port of
-//! the former Swift `UserAssociationStore`; SQL byte-identical.
+//! the former Swift `UserAssociationStore`; SQL byte-identical apart from the
+//! `.taigi` v4 restore (`import_merge`, #1032).
 
 use crate::capacity::LearningCapacity;
 use crate::database::{
     has_column, immediate_transaction, normalize_khinsiann_rows, strip_khinsiann_if_changed,
     table_exists, user_version, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
+use crate::timestamp::RESTORED_TIMESTAMP_SQL;
 use rusqlite::types::Value;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
@@ -14,7 +16,8 @@ const TABLE_NAME: &str = "user_association";
 /// Ported from iOS `NextWordSchema.schemaVersion` and
 /// Android `NextWordService.DATABASE_VERSION`.
 const SCHEMA_VERSION: i64 = 7;
-const ROW_COLUMNS: &str = "prev_word, prev_tl, next_word, next_tl, count";
+const ROW_COLUMNS: &str =
+    "prev_word, prev_tl, next_word, next_tl, count, CAST(strftime('%s', last_used) AS INTEGER) * 1000";
 const LIST_ORDER: &str = "count DESC, last_used DESC, prev_word ASC, next_word ASC";
 
 /// One learned bigram. `previous_tl` / `next_tl` are canonical TL — the
@@ -27,11 +30,13 @@ pub struct AssociationPair {
     pub next_tl: String,
 }
 
-/// A stored bigram and how many times it has been seen.
+/// A stored bigram, how many times it has been seen, and when last (epoch
+/// ms, 0 when the store has no time for it).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AssociationRow {
     pub pair: AssociationPair,
     pub count: i64,
+    pub last_used_ms: i64,
 }
 
 /// One word learned after a previous one, as a prediction reads it.
@@ -43,9 +48,9 @@ pub struct FollowingRow {
     pub last_used_ms: i64,
 }
 
-/// Records the bigrams the engine decides are worth learning. Write-only on
-/// the desktop today (no next-word surface); what it buys is that when one
-/// lands it starts with the user's real history.
+/// Records the bigrams the engine decides are worth learning, on every
+/// platform, and answers the Hanji-keyed recall the next-word predictions
+/// and the composing continuations read (`dispatch::user_data::with_stores`).
 pub struct UserAssociationStore {
     pub(crate) database: UserDataDatabase,
     capacity: LearningCapacity,
@@ -133,19 +138,23 @@ impl UserAssociationStore {
         });
     }
 
-    /// Merges a backup's bigrams: a pair already stored keeps the larger
-    /// count, every imported one counts as used now — the phones' `.taigi`
-    /// merge (iOS `NextWordRepository.batchImportAssociations`). One
-    /// transaction, then the cap. Answers how many pairs were merged.
-    pub fn import_merge(&self, rows: Vec<AssociationRow>) -> Result<usize, UserDataDatabaseError> {
+    /// Merges a backup's `(pair, count, last_used)` rows: a pair already
+    /// stored keeps the larger count and the later use. `last_used` is the
+    /// file's text, stored through [`RESTORED_TIMESTAMP_SQL`] — empty (a
+    /// backup before version 4) counts as used now. One transaction, then
+    /// the cap. Answers how many pairs were merged.
+    pub fn import_merge(
+        &self,
+        rows: Vec<(AssociationPair, i64, String)>,
+    ) -> Result<usize, UserDataDatabaseError> {
         let capacity = self.capacity.detached();
         self.database.perform(move |connection| {
             immediate_transaction::<_, UserDataDatabaseError>(connection, |connection| {
                 let mut statement = connection.prepare(&format!(
-                    "INSERT INTO {TABLE_NAME}\n    (prev_word, prev_tl, next_word, next_tl, count, last_used)\nVALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)\nON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = CURRENT_TIMESTAMP;"
+                    "INSERT INTO {TABLE_NAME}\n    (prev_word, prev_tl, next_word, next_tl, count, last_used)\nVALUES (?, ?, ?, ?, ?, {RESTORED_TIMESTAMP_SQL})\nON CONFLICT(prev_word, prev_tl, next_word, next_tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = MAX(COALESCE(last_used, excluded.last_used), excluded.last_used);"
                 ))?;
                 let mut merged = 0;
-                for AssociationRow { pair, count } in rows {
+                for (pair, count, last_used) in rows {
                     let previous = phonetics::api::strip_khinsiann_hanji(&pair.previous);
                     let next = phonetics::api::strip_khinsiann_hanji(&pair.next);
                     if previous.is_empty() || next.is_empty() {
@@ -156,7 +165,8 @@ impl UserAssociationStore {
                         pair.previous_tl,
                         next,
                         pair.next_tl,
-                        count
+                        count,
+                        last_used
                     ])?;
                     merged += 1;
                 }
@@ -201,8 +211,8 @@ impl UserAssociationStore {
     }
 
     /// Every learned row with its count, most-used first, or `None` when
-    /// the store could not be read. For the tests: the capacity ceiling and
-    /// `delete_all` are only assertable against the table's contents.
+    /// the store could not be read — the `.taigi` export (times included),
+    /// and the tests that assert the capacity ceiling and `delete_all`.
     pub fn all_rows(&self) -> Option<Vec<AssociationRow>> {
         self.database.wait_for_queued_writes();
         self.database.read(|connection| {
@@ -218,6 +228,7 @@ impl UserAssociationStore {
                         next_tl: row.get(3)?,
                     },
                     count: row.get(4)?,
+                    last_used_ms: row.get::<_, Option<i64>>(5)?.unwrap_or(0),
                 })
             })?;
             rows.collect()

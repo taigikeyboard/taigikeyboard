@@ -1077,11 +1077,11 @@
         ]
       },
       "values": {
-        "hanji": "備份包含自訂詞、詞頻佮詞關聯紀錄，可能有私人內容，請妥當保管。",
-        "tailo": "Pī-hūn pau-hâm tsū-tīng-sû, sû pîn kah sû kuan-liân kì-lio̍k, khó-lîng ū su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
-        "poj": "Pī-hūn pau-hâm chū-tēng-sû, sû pîn kah sû koan-liân kì-lio̍k, khó-lêng ū su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
-        "en": "A backup contains your custom words, frequency records, and association records, which may be private. Store it securely.",
-        "ja": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
+        "hanji": "備份包含自訂詞、詞頻、詞關聯佮詞句紀錄，可能有私人內容，請妥當保管。",
+        "tailo": "Pī-hūn pau-hâm tsū-tīng-sû, sû pîn, sû kuan-liân kah sû-kù kì-lio̍k, khó-lîng ū su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
+        "poj": "Pī-hūn pau-hâm chū-tēng-sû, sû pîn, sû koan-liân kah sû-kù kì-lio̍k, khó-lêng ū su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
+        "en": "A backup contains your custom words, frequency records, association records, and phrases, which may be private. Store it securely.",
+        "ja": "バックアップには、カスタム単語、単語頻度、単語連携、フレーズの記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
       }
     },
     "moeDescription": {

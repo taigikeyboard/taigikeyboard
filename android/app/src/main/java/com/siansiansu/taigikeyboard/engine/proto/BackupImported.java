@@ -141,6 +141,32 @@ public  final class BackupImported extends
     association_ = 0;
   }
 
+  public static final int LEARNED_PHRASES_FIELD_NUMBER = 5;
+  private int learnedPhrases_;
+  /**
+   * <code>uint32 learned_phrases = 5;</code>
+   * @return The learnedPhrases.
+   */
+  @java.lang.Override
+  public int getLearnedPhrases() {
+    return learnedPhrases_;
+  }
+  /**
+   * <code>uint32 learned_phrases = 5;</code>
+   * @param value The learnedPhrases to set.
+   */
+  private void setLearnedPhrases(int value) {
+
+    learnedPhrases_ = value;
+  }
+  /**
+   * <code>uint32 learned_phrases = 5;</code>
+   */
+  private void clearLearnedPhrases() {
+
+    learnedPhrases_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.BackupImported parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -373,6 +399,34 @@ public  final class BackupImported extends
       return this;
     }
 
+    /**
+     * <code>uint32 learned_phrases = 5;</code>
+     * @return The learnedPhrases.
+     */
+    @java.lang.Override
+    public int getLearnedPhrases() {
+      return instance.getLearnedPhrases();
+    }
+    /**
+     * <code>uint32 learned_phrases = 5;</code>
+     * @param value The learnedPhrases to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLearnedPhrases(int value) {
+      copyOnWrite();
+      instance.setLearnedPhrases(value);
+      return this;
+    }
+    /**
+     * <code>uint32 learned_phrases = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLearnedPhrases() {
+      copyOnWrite();
+      instance.clearLearnedPhrases();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.BackupImported)
   }
   @java.lang.Override
@@ -393,10 +447,11 @@ public  final class BackupImported extends
             "customDictionary_",
             "frequency_",
             "association_",
+            "learnedPhrases_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\f\u0002\u000b" +
-              "\u0003\u000b\u0004\u000b";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\f\u0002\u000b" +
+              "\u0003\u000b\u0004\u000b\u0005\u000b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

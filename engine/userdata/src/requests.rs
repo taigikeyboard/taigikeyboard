@@ -304,6 +304,7 @@ impl UserDataHandle {
                 custom_dictionary: u32::try_from(merged.custom_dictionary).unwrap_or(u32::MAX),
                 frequency: u32::try_from(merged.frequency).unwrap_or(u32::MAX),
                 association: u32::try_from(merged.association).unwrap_or(u32::MAX),
+                learned_phrases: u32::try_from(merged.learned_phrases).unwrap_or(u32::MAX),
             }),
             Err(BackupError::Unreadable(_)) => Ok(refused(BackupRefusal::Unreadable)),
             Err(BackupError::UnsupportedVersion(_)) => {

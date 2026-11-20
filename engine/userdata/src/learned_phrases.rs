@@ -1,13 +1,15 @@
 //! The phrases the user composed segment by segment (§50) — learning data
 //! in its own `learned_phrases.db`, never the custom dictionary's (USER
 //! 2026-09-21). Port of the former Swift `LearnedPhraseStore`; SQL
-//! byte-identical.
+//! byte-identical apart from the `.taigi` v4 restore (`import_merge`,
+//! #1032).
 
 use crate::custom_dictionary::SearchKeyDeriver;
 use crate::database::{
     immediate_transaction, migrate_to_version, normalize_khinsiann_rows,
     strip_khinsiann_if_changed, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
+use crate::timestamp::RESTORED_TIMESTAMP_SQL;
 use phonetics::api::CustomSearchKey;
 use rusqlite::types::Value;
 use rusqlite::{params, Connection};
@@ -28,8 +30,7 @@ pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learnin
     delete_dependents: Some(delete_search_keys),
 };
 
-/// One learned phrase with its count, for the tests: no product surface
-/// lists learned phrases.
+/// One learned phrase with its count, as a fetch reads it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LearnedPhraseRow {
     pub hanji: String,
@@ -99,14 +100,7 @@ impl LearnedPhraseStore {
     /// keystroke path. The keys are derived before the write lock is taken
     /// (an FFI round-trip has no business holding it).
     pub fn learn_phrase(&self, hanji: &str, canonical_tl: &str) {
-        let hanji = phonetics::api::learning_hanji_key(hanji);
-        if hanji.is_empty() || canonical_tl.is_empty() {
-            return;
-        }
-        let hanji = hanji.into_owned();
-        let Some(search_keys) =
-            (self.derive_search_keys)(canonical_tl).filter(|keys| !keys.is_empty())
-        else {
+        let Some((hanji, search_keys)) = self.keyed_phrase(hanji, canonical_tl) else {
             return;
         };
         let limit = self.limit;
@@ -128,9 +122,67 @@ impl LearnedPhraseStore {
                     return Ok(());
                 }
                 write_search_keys(connection, row_id, &search_keys)?;
-                evict_past_cap(connection, limit, row_id)
+                evict_past_cap(connection, limit, Some(row_id))
             })
         });
+    }
+
+    /// Merges a backup's `(hanji, canonical TL, learn_count, updated_at)`
+    /// rows: a pair already stored keeps the larger count and the later
+    /// touch; `updated_at` is the file's text, stored through
+    /// [`RESTORED_TIMESTAMP_SQL`]. Unlike [`learn_phrase`](Self::learn_phrase)
+    /// every row writes its keys (`OR IGNORE` absorbs the ones a stored row
+    /// already has) — a restored count is rarely 1 — and the cap is enforced
+    /// once, after the batch. Rows whose Hanji or reading is empty, or whose
+    /// keys cannot be derived, are skipped as `learn_phrase` skips them.
+    /// The keys are derived before the transaction. Answers how many rows
+    /// were merged.
+    pub fn import_merge(
+        &self,
+        rows: Vec<(String, String, i64, String)>,
+    ) -> Result<usize, UserDataDatabaseError> {
+        let keyed: Vec<(String, String, i64, String, Vec<CustomSearchKey>)> = rows
+            .into_iter()
+            .filter_map(|(hanji, canonical_tl, learn_count, updated_at)| {
+                let (hanji, search_keys) = self.keyed_phrase(&hanji, &canonical_tl)?;
+                let learn_count = learn_count.clamp(1, Self::MAX_LEARN_COUNT);
+                Some((hanji, canonical_tl, learn_count, updated_at, search_keys))
+            })
+            .collect();
+        let limit = self.limit;
+        self.database.perform(move |connection| {
+            immediate_transaction::<_, UserDataDatabaseError>(connection, |connection| {
+                let mut upsert = connection.prepare(&format!(
+                    "INSERT INTO {TABLE_NAME} (roman, hanzi, learn_count, updated_at)\nVALUES (?, ?, ?, {RESTORED_TIMESTAMP_SQL})\nON CONFLICT(hanzi, roman) DO UPDATE SET\n    learn_count = MAX(learn_count, excluded.learn_count),\n    updated_at = MAX(updated_at, excluded.updated_at)\nRETURNING id;"
+                ))?;
+                for (hanji, canonical_tl, learn_count, updated_at, search_keys) in &keyed {
+                    let row_id: i64 = upsert.query_row(
+                        params![canonical_tl, hanji, learn_count, updated_at],
+                        |row| row.get(0),
+                    )?;
+                    write_search_keys(connection, row_id, search_keys)?;
+                }
+                evict_past_cap(connection, limit, None)?;
+                Ok(keyed.len())
+            })
+        })
+    }
+
+    /// The stored Hanji key and the search keys of a phrase worth storing;
+    /// `None` when its Hanji or reading is empty or its keys cannot be
+    /// derived.
+    fn keyed_phrase(
+        &self,
+        hanji: &str,
+        canonical_tl: &str,
+    ) -> Option<(String, Vec<CustomSearchKey>)> {
+        let hanji = phonetics::api::learning_hanji_key(hanji);
+        if hanji.is_empty() || canonical_tl.is_empty() {
+            return None;
+        }
+        let search_keys =
+            (self.derive_search_keys)(canonical_tl).filter(|keys| !keys.is_empty())?;
+        Some((hanji.into_owned(), search_keys))
     }
 
     /// Bumps a phrase the user just committed as one candidate, so a phrase
@@ -198,17 +250,25 @@ impl LearnedPhraseStore {
             .unwrap_or_default()
     }
 
-    /// Every phrase, most composed first. For the tests — nothing in the
-    /// shipped UI lists learned phrases.
-    pub fn all_rows(&self) -> Option<Vec<LearnedPhraseRow>> {
+    /// Every phrase with its last touch (epoch ms, 0 when the store has no
+    /// time for it), most composed first — the `.taigi` export.
+    pub fn backup_rows(&self) -> Option<Vec<(LearnedPhraseRow, i64)>> {
         self.database.wait_for_queued_writes();
         self.database.read(|connection| {
             let mut statement = connection.prepare(&format!(
-                "SELECT hanzi, roman, learn_count FROM {TABLE_NAME}\nORDER BY learn_count DESC, updated_at DESC, id;"
+                "SELECT hanzi, roman, learn_count, CAST(strftime('%s', updated_at) AS INTEGER) * 1000\nFROM {TABLE_NAME}\nORDER BY learn_count DESC, updated_at DESC, id;"
             ))?;
-            let rows = statement.query_map([], decode_row)?;
+            let rows = statement.query_map([], |row| {
+                Ok((decode_row(row)?, row.get::<_, Option<i64>>(3)?.unwrap_or(0)))
+            })?;
             rows.collect()
         })
+    }
+
+    /// Every phrase, most composed first. For the tests.
+    pub fn all_rows(&self) -> Option<Vec<LearnedPhraseRow>> {
+        self.backup_rows()
+            .map(|rows| rows.into_iter().map(|(row, _)| row).collect())
     }
 
     /// Forgets everything — the learning-data wipe, beside the frequency and
@@ -251,7 +311,7 @@ fn write_search_keys(
     phrase_id: i64,
     search_keys: &[CustomSearchKey],
 ) -> rusqlite::Result<()> {
-    let mut statement = connection.prepare(&format!(
+    let mut statement = connection.prepare_cached(&format!(
         "INSERT OR IGNORE INTO {SEARCH_KEY_TABLE_NAME} (phrase_id, family, form, key)\nVALUES (?, ?, ?, ?);"
     ))?;
     for key in search_keys {
@@ -261,12 +321,16 @@ fn write_search_keys(
 }
 
 /// Drops rows past `cap`, never `kept_id` (the row just inserted survives
-/// whatever its timestamp ties with). A cheap `COUNT(*)` first — under the
-/// cap the ordered walk never runs. Keys first, so the subquery still
-/// resolves against the intact main table; `OFFSET cap - 1` selects exactly
-/// the rows past the cap once the kept row is set aside. Ported
-/// from iOS `evictPastCap` / Android `PAST_CAP_SQL`.
-fn evict_past_cap(connection: &Connection, cap: usize, kept_id: i64) -> rusqlite::Result<()> {
+/// whatever its timestamp ties with; a restore's batch keeps none aside).
+/// A cheap `COUNT(*)` first — under the cap the ordered walk never runs.
+/// Keys first, so the subquery still resolves against the intact main table;
+/// the offset then selects exactly the rows past the cap. Ported from iOS
+/// `evictPastCap` / Android `PAST_CAP_SQL`.
+fn evict_past_cap(
+    connection: &Connection,
+    cap: usize,
+    kept_id: Option<i64>,
+) -> rusqlite::Result<()> {
     let count: i64 =
         connection.query_row(&format!("SELECT COUNT(*) FROM {TABLE_NAME};"), [], |row| {
             row.get(0)
@@ -275,9 +339,9 @@ fn evict_past_cap(connection: &Connection, cap: usize, kept_id: i64) -> rusqlite
         return Ok(());
     }
     let past_cap = format!(
-        "SELECT id FROM {TABLE_NAME}\nWHERE id <> ?\nORDER BY learn_count DESC, updated_at DESC, id\nLIMIT -1 OFFSET ?"
+        "SELECT id FROM {TABLE_NAME}\nWHERE id IS NOT ?\nORDER BY learn_count DESC, updated_at DESC, id\nLIMIT -1 OFFSET ?"
     );
-    let offset = cap.saturating_sub(1) as i64;
+    let offset = cap.saturating_sub(usize::from(kept_id.is_some())) as i64;
     connection.execute(
         &format!("DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE phrase_id IN ({past_cap});"),
         params![kept_id, offset],

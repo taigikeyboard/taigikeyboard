@@ -1,32 +1,38 @@
-//! The `.taigi` backup file: the custom dictionary, the frequency counts and
-//! the learned bigrams in one JSON document; learned phrases never travel
-//! (§50). One codec for every platform (user-data-engine-roadmap P4b); the
-//! file picker and share sheet stay with the platform.
+//! The `.taigi` backup file: the custom dictionary, the frequency counts, the
+//! learned bigrams and the learned phrases (§50) in one JSON document — what
+//! typing reads from the user's stores, so a restore on any platform, phone
+//! or desktop, types as the device that wrote the file did (#1032). One codec
+//! for every platform (user-data-engine-roadmap P4b); the file picker and
+//! share sheet stay with the platform.
 //!
-//! Versions share one shape and differ in how a restore treats a bigram
-//! reading: 1 and 2 (iOS and Android) may carry POJ, so their readings are
-//! folded POJ → TL; 3 (this codec) writes the readings the store holds and
-//! restores them unchanged — a fold would misread a TL `eng` / `ek` final as
-//! POJ (蔣經國 `tsiúnn-keng-kok` → `king`). An older app still reads a
-//! version-3 file, folding its readings as it always did.
+//! Versions share one shape. 1 and 2 (iOS and Android) may carry POJ bigram
+//! readings, so those are folded POJ → TL; from 3 the readings are the ones
+//! the store holds and restore unchanged — a fold would misread a TL `eng` /
+//! `ek` final as POJ (蔣經國 `tsiúnn-keng-kok` → `king`). 4 adds the learned
+//! phrases, each learned row's last use (`lastUsed` / `updatedAt`, which the
+//! walker's decay and the stores' eviction read) and each custom word's
+//! `createdAt` / `updatedAt` (the keystroke order of homophone custom words);
+//! a file before 4 restores those as used now. An older app reads a newer
+//! file as its own version, ignoring what it does not know.
 //!
 //! Reading is lenient, as Android's was: a missing field takes its default,
 //! an unknown one is ignored, only a version below 1 is refused — so an old
 //! backup, or one from the other phone, still restores. Writing is iOS's
-//! shape: sorted keys, pretty-printed, `lastUsed` empty, ids and times of
-//! custom rows left out. Every struct below declares its fields in the
-//! serialized keys' alphabetical order, which IS the sorted-keys output —
-//! whatever `serde_json` features the build unifies.
+//! shape: sorted keys, pretty-printed, times in the stores' own
+//! `yyyy-MM-dd HH:mm:ss` UTC text, custom ids left out (a restore mints its
+//! own). Every struct below declares its fields in the serialized keys'
+//! alphabetical order, which IS the sorted-keys output — whatever
+//! `serde_json` features the build unifies.
 
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use crate::timestamp::format_rfc3339_utc;
-use crate::{AssociationPair, AssociationRow, CustomDictionaryRow, UserDataStores};
+use crate::timestamp::{format_rfc3339_utc, format_utc_timestamp};
+use crate::{AssociationPair, CustomDictionaryRow, UserDataStores};
 
 /// The version this codec writes.
-pub const BACKUP_VERSION: i64 = 3;
+pub const BACKUP_VERSION: i64 = 4;
 
 /// The first version whose bigram readings restore unchanged.
 const VERBATIM_READINGS_VERSION: i64 = 3;
@@ -37,6 +43,7 @@ struct Backup {
     app_version: String,
     custom_dictionary: Vec<CustomEntry>,
     exported_at: String,
+    learned_phrases: Vec<LearnedPhraseEntry>,
     platform: String,
     user_association: Vec<AssociationEntry>,
     user_frequency: Vec<FrequencyEntry>,
@@ -44,14 +51,25 @@ struct Backup {
 }
 
 #[derive(Serialize, Deserialize, Default)]
-#[serde(default)]
+#[serde(default, rename_all = "camelCase")]
 struct CustomEntry {
+    created_at: String,
     hanzi: String,
     /// The unreleased 2026-09-20 shape tagged learned phrases `origin = 1`;
     /// read to skip them, never written.
     #[serde(skip_serializing_if = "Option::is_none")]
     origin: Option<i64>,
     roman: String,
+    updated_at: String,
+}
+
+#[derive(Serialize, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+struct LearnedPhraseEntry {
+    hanzi: String,
+    learn_count: i64,
+    roman: String,
+    updated_at: String,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -97,6 +115,16 @@ pub struct BackupImported {
     pub custom_dictionary: usize,
     pub frequency: usize,
     pub association: usize,
+    pub learned_phrases: usize,
+}
+
+/// A store's epoch-ms time as the file writes it; empty when the store had
+/// none (0), which a restore reads as now.
+fn backup_timestamp(epoch_ms: i64) -> String {
+    if epoch_ms < 1000 {
+        return String::new();
+    }
+    format_utc_timestamp((epoch_ms / 1000) as u64)
 }
 
 /// The stores as a `.taigi` file. `platform` / `app_version` name the
@@ -116,23 +144,38 @@ pub fn export_backup(
         .association
         .all_rows()
         .ok_or_else(|| store_error("association store not readable"))?;
+    let learned = stores
+        .learned_phrases
+        .backup_rows()
+        .ok_or_else(|| store_error("learned phrase store not readable"))?;
     let backup = Backup {
         app_version: app_version.to_owned(),
         custom_dictionary: custom
             .into_iter()
             .map(|row| CustomEntry {
+                created_at: row.created_at,
                 hanzi: row.hanji,
                 origin: None,
                 roman: row.roman,
+                updated_at: row.updated_at,
             })
             .collect(),
         exported_at: format_rfc3339_utc(now_seconds),
+        learned_phrases: learned
+            .into_iter()
+            .map(|(row, updated_at_ms)| LearnedPhraseEntry {
+                hanzi: row.hanji,
+                learn_count: row.learn_count,
+                roman: row.canonical_tl,
+                updated_at: backup_timestamp(updated_at_ms),
+            })
+            .collect(),
         platform: platform.to_owned(),
         user_association: association
             .into_iter()
             .map(|row| AssociationEntry {
                 count: row.count,
-                last_used: String::new(),
+                last_used: backup_timestamp(row.last_used_ms),
                 next_tl: row.pair.next_tl,
                 next_word: row.pair.next,
                 prev_tl: Some(row.pair.previous_tl),
@@ -143,7 +186,7 @@ pub fn export_backup(
             .into_iter()
             .map(|row| FrequencyEntry {
                 count: row.count,
-                last_used: String::new(),
+                last_used: backup_timestamp(row.last_used_ms),
                 tl: Some(row.tl),
                 word: row.word,
             })
@@ -155,11 +198,12 @@ pub fn export_backup(
 
 /// Restores a `.taigi` file into the stores, merging with what is there:
 /// custom words already stored are skipped and the import fills whatever
-/// room the dictionary has left; counts keep the larger of the two and count
-/// as used now; bigram readings of a version-1 / -2 file are folded POJ →
-/// TL (the phones could write POJ there). A custom row missing its
-/// romanization or its Hanji is skipped, as Android's restore did; a missing
-/// count reads as 1, as Android's did.
+/// room the dictionary has left, keeping the file's times; learned rows keep
+/// the larger count and the later use (a file before version 4 has no use
+/// times: they count as used now); bigram readings of a version-1 / -2 file
+/// are folded POJ → TL (the phones could write POJ there). A custom row
+/// missing its romanization or its Hanji is skipped, as Android's restore
+/// did; a missing count reads as 1, as Android's did.
 pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImported, BackupError> {
     let backup: Backup = serde_json::from_slice(bytes)
         .map_err(|error| BackupError::Unreadable(error.to_string()))?;
@@ -172,7 +216,11 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
         .iter()
         .filter(|entry| entry.origin != Some(1))
         .filter(|entry| !entry.roman.is_empty() && !entry.hanzi.is_empty())
-        .map(|entry| CustomDictionaryRow::new(&entry.roman, &entry.hanzi))
+        .map(|entry| CustomDictionaryRow {
+            created_at: entry.created_at.clone(),
+            updated_at: entry.updated_at.clone(),
+            ..CustomDictionaryRow::new(&entry.roman, &entry.hanzi)
+        })
         .collect();
     let custom_dictionary = stores
         .custom_dictionary
@@ -186,7 +234,14 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
             backup
                 .user_frequency
                 .into_iter()
-                .map(|entry| (entry.word, entry.tl.unwrap_or_default(), entry.count.max(1)))
+                .map(|entry| {
+                    (
+                        entry.word,
+                        entry.tl.unwrap_or_default(),
+                        entry.count.max(1),
+                        entry.last_used,
+                    )
+                })
                 .collect(),
         )
         .map_err(store_error)?;
@@ -205,14 +260,35 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
             backup
                 .user_association
                 .into_iter()
-                .map(|entry| AssociationRow {
-                    pair: AssociationPair {
-                        previous: entry.prev_word,
-                        previous_tl: reading(entry.prev_tl.unwrap_or_default()),
-                        next: entry.next_word,
-                        next_tl: reading(entry.next_tl),
-                    },
-                    count: entry.count.max(1),
+                .map(|entry| {
+                    (
+                        AssociationPair {
+                            previous: entry.prev_word,
+                            previous_tl: reading(entry.prev_tl.unwrap_or_default()),
+                            next: entry.next_word,
+                            next_tl: reading(entry.next_tl),
+                        },
+                        entry.count.max(1),
+                        entry.last_used,
+                    )
+                })
+                .collect(),
+        )
+        .map_err(store_error)?;
+
+    let learned_phrases = stores
+        .learned_phrases
+        .import_merge(
+            backup
+                .learned_phrases
+                .into_iter()
+                .map(|entry| {
+                    (
+                        entry.hanzi,
+                        entry.roman,
+                        entry.learn_count,
+                        entry.updated_at,
+                    )
                 })
                 .collect(),
         )
@@ -222,5 +298,6 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
         custom_dictionary,
         frequency,
         association,
+        learned_phrases,
     })
 }

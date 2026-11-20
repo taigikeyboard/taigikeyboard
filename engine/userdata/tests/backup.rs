@@ -3,8 +3,11 @@
 //! and what the engine writes must restore on the other side.
 
 use crate::common::{pair, paths, scratch};
+use phonetics::api::derive_custom_query_key;
+use std::sync::Arc;
 use userdata::{
-    export_backup, import_backup, BackupError, CustomDictionaryRow, JournalMode, UserDataStores,
+    derive_custom_search_keys, export_backup, import_backup, unix_millis_now, BackupError,
+    CustomDictionaryRow, CustomDictionaryStore, JournalMode, LearnedPhraseStore, UserDataStores,
     BACKUP_VERSION,
 };
 
@@ -132,7 +135,10 @@ fn what_the_engine_writes_restores_on_a_fresh_install() {
     let text = String::from_utf8(bytes.clone()).unwrap();
     assert!(text.contains(&format!("\"version\": {BACKUP_VERSION}")));
     assert!(text.contains("\"exportedAt\": \"2027-01-15T08:00:00Z\""));
-    assert!(text.contains("\"lastUsed\": \"\""));
+    assert!(
+        !text.contains("\"lastUsed\": \"\""),
+        "every learned row carries its last use"
+    );
     assert!(
         text.find("\"appVersion\"").unwrap() < text.find("\"version\"").unwrap(),
         "sorted keys"
@@ -233,7 +239,7 @@ fn what_the_engine_writes_keeps_tl_special_finals_through_a_restore() {
     let bytes = export_backup(&source, "ios", "3.6.11", 1_800_000_000).unwrap();
     assert!(String::from_utf8(bytes.clone())
         .unwrap()
-        .contains("\"version\": 3"));
+        .contains(&format!("\"version\": {BACKUP_VERSION}")));
 
     let target_directory = scratch();
     let target = stores(&target_directory);
@@ -260,4 +266,260 @@ fn a_restored_decomposed_roman_is_stored_and_exported_in_nfc() {
         String::from_utf8(export_backup(&stores, "macos", "3.6.13", 1_800_000_000).unwrap())
             .unwrap();
     assert!(exported.contains("l\u{ed}") && !exported.contains("li\u{301}"));
+}
+
+/// A version-4 file with every store and old times on every learned row.
+// trace: 2025-01-02 03:04:05 UTC = 1_735_689_600 (2025-01-01) + 86_400
+// + 3·3600 + 4·60 + 5 = 1_735_787_045 s.
+const V4_BACKUP: &str = r#"{
+  "customDictionary": [
+    { "createdAt": "2025-01-02 03:04:05", "hanzi": "屢", "roman": "lí", "updatedAt": "2025-01-02 03:04:05" },
+    { "createdAt": "2025-03-01 00:00:00", "hanzi": "李", "roman": "lí", "updatedAt": "2025-03-01 00:00:00" }
+  ],
+  "learnedPhrases": [
+    { "hanzi": "記起來", "learnCount": 3, "roman": "kì--khí-lâi", "updatedAt": "2025-01-02 03:04:05" }
+  ],
+  "userAssociation": [
+    { "count": 3, "lastUsed": "2025-01-02 03:04:05", "nextTl": "hok", "nextWord": "複", "prevTl": "tîng", "prevWord": "重" }
+  ],
+  "userFrequency": [
+    { "count": 5, "lastUsed": "2025-01-02 03:04:05", "tl": "tâi-uân", "word": "台灣" }
+  ],
+  "version": 4
+}"#;
+const V4_LAST_USED_MS: i64 = 1_735_787_045_000;
+
+/// What typing reads from `stores`, times included: frequency
+/// `(word, count, last_used_ms)`, association `(count, last_used_ms)`,
+/// learned phrases `(hanji, canonical_tl, learn_count, updated_at_ms)`.
+type TypingState = (
+    Vec<(String, i64, i64)>,
+    Vec<(i64, i64)>,
+    Vec<(String, String, i64, i64)>,
+);
+
+/// The Hanji the keystroke path hands over for `typed`, in order.
+fn keystroke_hanji(stores: &UserDataStores, typed: &str) -> Vec<String> {
+    let query = derive_custom_query_key(typed, "tl").expect("a query key");
+    stores
+        .custom_dictionary
+        .keystroke_rows(&query, CustomDictionaryStore::KEYSTROKE_LIMIT)
+        .into_iter()
+        .map(|row| row.hanji)
+        .collect()
+}
+
+fn typing_state(stores: &UserDataStores) -> TypingState {
+    let frequency = stores
+        .frequency
+        .all_rows()
+        .unwrap()
+        .into_iter()
+        .map(|row| (row.word, row.count, row.last_used_ms))
+        .collect();
+    let association = stores
+        .association
+        .all_rows()
+        .unwrap()
+        .into_iter()
+        .map(|row| (row.count, row.last_used_ms))
+        .collect();
+    let learned = stores
+        .learned_phrases
+        .backup_rows()
+        .unwrap()
+        .into_iter()
+        .map(|(row, updated_at_ms)| (row.hanji, row.canonical_tl, row.learn_count, updated_at_ms))
+        .collect();
+    (frequency, association, learned)
+}
+
+#[test]
+fn a_version_4_backup_round_trips_every_store_with_its_times() {
+    let source_directory = scratch();
+    let source = stores(&source_directory);
+    let imported = import_backup(&source, V4_BACKUP.as_bytes()).unwrap();
+    assert_eq!(imported.learned_phrases, 1);
+    assert_eq!(
+        typing_state(&source),
+        (
+            vec![("台灣".to_owned(), 5, V4_LAST_USED_MS)],
+            vec![(3, V4_LAST_USED_MS)],
+            vec![(
+                "記起來".to_owned(),
+                "kì--khí-lâi".to_owned(),
+                3,
+                V4_LAST_USED_MS
+            )],
+        ),
+        "the file's times are kept, not stamped now"
+    );
+
+    let bytes = export_backup(&source, "android", "3.10.0", 1_800_000_000).unwrap();
+    let text = String::from_utf8(bytes.clone()).unwrap();
+    assert!(text.contains("\"lastUsed\": \"2025-01-02 03:04:05\""));
+    assert!(text.contains("\"learnedPhrases\""));
+    assert!(text.contains("\"createdAt\": \"2025-03-01 00:00:00\""));
+
+    let target_directory = scratch();
+    let target = stores(&target_directory);
+    import_backup(&target, &bytes).unwrap();
+    assert_eq!(typing_state(&target), typing_state(&source));
+}
+
+#[test]
+fn a_restored_learned_phrase_is_found_by_its_whole_buffer_key() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    import_backup(&stores, V4_BACKUP.as_bytes()).unwrap();
+
+    let query = derive_custom_query_key("kikhilai", "tl").expect("a query key");
+    let found = stores
+        .learned_phrases
+        .rows_matching(&query, LearnedPhraseStore::KEYSTROKE_LIMIT);
+    assert_eq!(found.len(), 1, "a restored phrase carries its search keys");
+    assert_eq!(found[0].hanji, "記起來");
+}
+
+#[test]
+fn homophone_custom_words_keep_their_keystroke_order_through_a_restore() {
+    let source_directory = scratch();
+    let source = stores(&source_directory);
+    import_backup(&source, V4_BACKUP.as_bytes()).unwrap();
+    assert_eq!(
+        keystroke_hanji(&source, "li"),
+        ["屢", "李"],
+        "filed first leads"
+    );
+
+    let bytes = export_backup(&source, "ios", "3.10.0", 1_800_000_000).unwrap();
+    let target_directory = scratch();
+    let target = stores(&target_directory);
+    import_backup(&target, &bytes).unwrap();
+    assert_eq!(
+        keystroke_hanji(&target, "li"),
+        ["屢", "李"],
+        "new ids, same order"
+    );
+}
+
+#[test]
+fn a_restore_keeps_the_later_use_and_a_file_without_times_counts_as_now() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    import_backup(&stores, V4_BACKUP.as_bytes()).unwrap();
+    let last_used = |stores: &UserDataStores| stores.frequency.all_rows().unwrap()[0].last_used_ms;
+    assert_eq!(last_used(&stores), V4_LAST_USED_MS);
+
+    // The iOS version-2 file has `lastUsed` "": its 台灣 counts as used now.
+    let before = unix_millis_now() / 1000 * 1000;
+    import_backup(&stores, IOS_BACKUP.as_bytes()).unwrap();
+    let now_stamped = last_used(&stores);
+    assert!(now_stamped >= before, "later use wins");
+
+    // The older time in the file never moves it back.
+    import_backup(&stores, V4_BACKUP.as_bytes()).unwrap();
+    assert_eq!(last_used(&stores), now_stamped);
+}
+
+#[test]
+fn a_restore_past_the_learned_phrase_cap_keeps_the_most_composed() {
+    let directory = scratch();
+    let store = LearnedPhraseStore::new(
+        paths(&directory).learned_phrases,
+        JournalMode::Delete,
+        Arc::new(derive_custom_search_keys),
+        2,
+    );
+    store.open_blocking();
+    let row = |hanji: &str, tl: &str, count: i64| {
+        (
+            hanji.to_owned(),
+            tl.to_owned(),
+            count,
+            "2025-01-02 03:04:05".to_owned(),
+        )
+    };
+    let merged = store
+        .import_merge(vec![
+            row("記起來", "kì--khí-lâi", 5),
+            row("食飽未", "tsia̍h-pá--buē", 1),
+            row("台灣人", "tâi-uân-lâng", 3),
+        ])
+        .unwrap();
+    assert_eq!(merged, 3);
+    let kept: Vec<String> = store
+        .all_rows()
+        .unwrap()
+        .into_iter()
+        .map(|row| row.hanji)
+        .collect();
+    assert_eq!(kept, ["記起來", "台灣人"]);
+}
+
+#[test]
+fn a_restored_learned_phrase_already_stored_keeps_the_larger_count_and_later_touch() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    for _ in 0..7 {
+        stores.learned_phrases.learn_phrase("記起來", "kì--khí-lâi");
+    }
+    let stored = |stores: &UserDataStores| stores.learned_phrases.backup_rows().unwrap();
+    let (_, learned_now_ms) = stored(&stores)[0].clone();
+
+    // The file holds 記起來 at 3 and an old touch: 7 and the local touch stay.
+    import_backup(&stores, V4_BACKUP.as_bytes()).unwrap();
+    let rows = stored(&stores);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].0.learn_count, 7, "MAX(7, 3)");
+    assert_eq!(rows[0].1, learned_now_ms, "the later touch stays");
+    let query = derive_custom_query_key("kikhilai", "tl").expect("a query key");
+    assert_eq!(
+        stores
+            .learned_phrases
+            .rows_matching(&query, LearnedPhraseStore::KEYSTROKE_LIMIT)
+            .len(),
+        1,
+        "its keys are written once, not doubled"
+    );
+}
+
+#[test]
+fn a_restored_bigram_keeps_the_later_use() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    let last_used =
+        |stores: &UserDataStores| stores.association.all_rows().unwrap()[0].last_used_ms;
+    import_backup(&stores, V4_BACKUP.as_bytes()).unwrap();
+    assert_eq!(last_used(&stores), V4_LAST_USED_MS);
+
+    let before = unix_millis_now() / 1000 * 1000;
+    stores
+        .association
+        .record(&[pair("重", "tîng", "複", "hok")]);
+    let recorded = last_used(&stores);
+    assert!(recorded >= before);
+    import_backup(&stores, V4_BACKUP.as_bytes()).unwrap();
+    assert_eq!(
+        last_used(&stores),
+        recorded,
+        "the older file time never wins"
+    );
+}
+
+#[test]
+fn homophone_custom_words_filed_in_one_second_order_by_hanji() {
+    // A CSV import or a version-1 to -3 restore files a batch within one
+    // second; the tie falls to the Hanji, never the per-device UUID. The
+    // times are fixed here so the test never straddles a second.
+    // trace: SQLite compares UTF-8 bytes — 屢 U+5C62 (E5 B1 A2) before
+    // 李 U+674E (E6 9D 8E), whatever order the file lists them in.
+    let directory = scratch();
+    let stores = stores(&directory);
+    let backup = r#"{ "version": 4, "customDictionary": [
+        { "createdAt": "2025-01-02 03:04:05", "hanzi": "李", "roman": "lí" },
+        { "createdAt": "2025-01-02 03:04:05", "hanzi": "屢", "roman": "lí" }
+    ] }"#;
+    import_backup(&stores, backup.as_bytes()).unwrap();
+    assert_eq!(keystroke_hanji(&stores, "li"), ["屢", "李"]);
 }

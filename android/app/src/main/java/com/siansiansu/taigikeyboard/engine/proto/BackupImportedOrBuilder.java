@@ -38,4 +38,10 @@ public interface BackupImportedOrBuilder extends
    * @return The association.
    */
   int getAssociation();
+
+  /**
+   * <code>uint32 learned_phrases = 5;</code>
+   * @return The learnedPhrases.
+   */
+  int getLearnedPhrases();
 }

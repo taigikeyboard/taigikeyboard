@@ -876,8 +876,9 @@ public nonisolated struct Taigi_Engine_BackupExported: Sendable {
 
 /// Restores a `.taigi` file's bytes, merging with what is stored: custom
 /// words already there are skipped and the import stops at the dictionary's
-/// cap; counts keep the larger of the two; bigram readings are normalized
-/// to TL. Old and cross-platform backups are read leniently.
+/// cap; learned rows keep the larger count and the later use; bigram
+/// readings of a version-1 / -2 file are normalized to TL. Old and
+/// cross-platform backups are read leniently.
 public nonisolated struct Taigi_Engine_ImportBackup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -903,6 +904,8 @@ public nonisolated struct Taigi_Engine_BackupImported: Sendable {
   public var frequency: UInt32 = 0
 
   public var association: UInt32 = 0
+
+  public var learnedPhrases: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2400,7 +2403,7 @@ nonisolated extension Taigi_Engine_ImportBackup: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Taigi_Engine_BackupImported: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BackupImported"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{3}custom_dictionary\0\u{1}frequency\0\u{1}association\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}refusal\0\u{3}custom_dictionary\0\u{1}frequency\0\u{1}association\0\u{3}learned_phrases\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2412,6 +2415,7 @@ nonisolated extension Taigi_Engine_BackupImported: SwiftProtobuf.Message, SwiftP
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.customDictionary) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.frequency) }()
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.association) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.learnedPhrases) }()
       default: break
       }
     }
@@ -2430,6 +2434,9 @@ nonisolated extension Taigi_Engine_BackupImported: SwiftProtobuf.Message, SwiftP
     if self.association != 0 {
       try visitor.visitSingularUInt32Field(value: self.association, fieldNumber: 4)
     }
+    if self.learnedPhrases != 0 {
+      try visitor.visitSingularUInt32Field(value: self.learnedPhrases, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2438,6 +2445,7 @@ nonisolated extension Taigi_Engine_BackupImported: SwiftProtobuf.Message, SwiftP
     if lhs.customDictionary != rhs.customDictionary {return false}
     if lhs.frequency != rhs.frequency {return false}
     if lhs.association != rhs.association {return false}
+    if lhs.learnedPhrases != rhs.learnedPhrases {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
