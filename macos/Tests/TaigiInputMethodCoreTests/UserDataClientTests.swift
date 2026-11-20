@@ -40,4 +40,48 @@ final class UserDataClientTests: XCTestCase {
             "user_frequency: disk I/O error\nlearned_phrases: locked",
         )
     }
+
+    /// A backup that cannot be read is refused before any engine round-trip,
+    /// in desktop-core's words (`could not read the file: …`).
+    func testAnUnreadableBackup_isRefusedBeforeTheEngine() throws {
+        let missing = try TestFixtures.scratchDirectory().appendingPathComponent("absent.taigi")
+
+        XCTAssertThrowsError(try EngineUserDataClient().importBackup(at: missing)) {
+            guard case let .refused(detail) = $0 as? UserDataClientError else {
+                return XCTFail("expected a refusal, got \($0)")
+            }
+            XCTAssertTrue(detail.hasPrefix("could not read the file: "), detail)
+        }
+    }
+
+    /// A readable backup gets past the read: before the open the engine
+    /// refuses the request, a failure rather than a refusal of the file.
+    func testAReadableBackup_getsPastTheRead() throws {
+        let file = try TestFixtures.scratchDirectory().appendingPathComponent("backup.taigi")
+        try Data("{}".utf8).write(to: file)
+
+        XCTAssertThrowsError(try EngineUserDataClient().importBackup(at: file)) {
+            XCTAssertEqual($0 as? UserDataClientError, .engineUnavailable(op: "backupImport"))
+        }
+    }
+
+    /// A CSV whose size cannot be read is refused in the same words.
+    func testAMissingCSV_isRefusedBeforeTheEngine() throws {
+        let missing = try TestFixtures.scratchDirectory().appendingPathComponent("absent.csv")
+
+        XCTAssertThrowsError(try EngineUserDataClient().importCSV(at: missing)) {
+            guard case let .refused(detail) = $0 as? UserDataClientError else {
+                return XCTFail("expected a refusal, got \($0)")
+            }
+            XCTAssertTrue(detail.hasPrefix("could not read the file: "), detail)
+        }
+    }
+
+    /// trace: desktop-core `backup_refused` (`engine/user_data.rs`) —
+    /// UnsupportedVersion → "unsupported backup version"; None / Unreadable →
+    /// "not a .taigi backup".
+    func testARefusedBackup_readsAsDesktopCoreSaysIt() {
+        XCTAssertEqual(EngineUserDataClient.refusalDetail(.unsupportedVersion), "unsupported backup version")
+        XCTAssertEqual(EngineUserDataClient.refusalDetail(.unreadable), "not a .taigi backup")
+    }
 }

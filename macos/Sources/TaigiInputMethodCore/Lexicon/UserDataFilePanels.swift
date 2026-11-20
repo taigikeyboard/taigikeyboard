@@ -12,6 +12,9 @@ import UniformTypeIdentifiers
 /// than SwiftUI's `fileImporter` for the same reason — the parent window here
 /// is hand-built (`SettingsWindowController`), so naming it is the reliable
 /// way to attach the sheet to it.
+///
+/// A page model reaches them through `UserDataFilePresenting`, so a test can
+/// answer in their place: a panel is modal UI no test can click.
 @MainActor
 enum UserDataFilePanels {
     /// Runs `body` with the window the panels hang their sheets on.
@@ -74,10 +77,36 @@ enum UserDataFilePanels {
         "\(prefix)_\(dateFormatter.string(from: Date())).\(fileExtension)"
     }
 
+    /// The `.taigi` backup, as `Info.plist` exports it (the same identifier
+    /// iOS exports).
+    static let backupContentType = UTType(exportedAs: "tw.taigikeyboard.backup", conformingTo: .json)
+
+    /// The panels themselves, for a page model that takes `UserDataFilePresenting`.
+    struct System: UserDataFilePresenting {
+        func chooseFileToOpen(contentTypes: [UTType], in window: NSWindow) async -> URL? {
+            await UserDataFilePanels.chooseFileToOpen(contentTypes: contentTypes, in: window)
+        }
+
+        func write(_ data: Data, suggestedName: String, contentTypes: [UTType], in window: NSWindow) async throws -> URL? {
+            try await UserDataFilePanels.write(data, suggestedName: suggestedName, contentTypes: contentTypes, in: window)
+        }
+    }
+
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         return formatter
     }()
+}
+
+/// What a page model asks of the file panels (`UserDataFilePanels.System`).
+@MainActor
+protocol UserDataFilePresenting {
+    /// The file the user chose to read, or `nil` when they cancelled.
+    func chooseFileToOpen(contentTypes: [UTType], in window: NSWindow) async -> URL?
+    /// Writes `data` where the user chose; `nil` when they cancelled, a throw
+    /// when the write failed.
+    @discardableResult
+    func write(_ data: Data, suggestedName: String, contentTypes: [UTType], in window: NSWindow) async throws -> URL?
 }

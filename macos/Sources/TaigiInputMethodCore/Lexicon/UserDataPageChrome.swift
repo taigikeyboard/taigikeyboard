@@ -1,4 +1,4 @@
-// The parts the Dictionary page is built from: a filter box, an import/export pair,
+// The parts the Dictionary page is built from: a filter box, import/export pairs,
 // a destructive clear, and somewhere for a failure to appear.
 
 import SwiftUI
@@ -53,9 +53,10 @@ enum UserDataPageActivity: Equatable, Sendable {
 /// One case per valid title-and-body pairing rather than a free title beside a
 /// free body, which would admit a success title over a failure explanation.
 enum UserDataPageMessage: Identifiable, Hashable {
-    /// `diagnostic` is the store's own error text, which is English and stays
+    /// `diagnostic` is the store's own error text, untranslated and staying
     /// that way: it names a SQLite or file-system condition, not something the
-    /// product has wording for.
+    /// product has wording for. (A file the system could not read carries the
+    /// system's reason, in the system's language.)
     case failure(StringKey, diagnostic: String)
     /// A receipt with nothing to add: a title, and no body at all — a word
     /// filed in the custom dictionary, a row already gone.
@@ -65,6 +66,7 @@ enum UserDataPageMessage: Identifiable, Hashable {
     /// explanations on two pages.
     case notUTF8
     case imported(Int, skipped: Int)
+    case backupImported(BackupImportResult)
 
     var id: Self {
         self
@@ -79,7 +81,7 @@ enum UserDataPageMessage: Identifiable, Hashable {
         case let .failure(key, _): language.resolve(key)
         case let .done(key): language.resolve(key)
         case .notUTF8: language.resolve(.commonImportFailed)
-        case .imported: language.resolve(.desktopImportComplete)
+        case .imported, .backupImported: language.resolve(.desktopImportComplete)
         }
     }
 
@@ -92,6 +94,12 @@ enum UserDataPageMessage: Identifiable, Hashable {
         case .notUTF8: language.resolve(.desktopNotUTF8Detail)
         case let .imported(imported, skipped):
             language.dictionaryImportResult(imported: imported, skipped: skipped)
+        case let .backupImported(result):
+            language.dictionaryImportBackupResult(
+                customDict: result.customDictionary,
+                frequency: result.frequency,
+                association: result.association,
+            )
         }
     }
 }
@@ -209,12 +217,9 @@ struct UserDataFilterField: View {
     }
 }
 
-/// The Custom Dictionary page's CSV pair and its delete-everything row. Its one caller
-/// since the frequency / association pages were removed, kept a separate view because the
-/// page it serves is already long enough without three more rows inline.
+/// The Custom Dictionary page's CSV pair and its delete-everything row, kept a separate view
+/// because the page it serves is already long enough without three more rows inline.
 struct UserDataActionsSection: View {
-    @Environment(DisplayLanguageStore.self) private var language
-
     let exportTitle: StringKey
     let importTitle: StringKey
     let deleteTitle: StringKey
@@ -224,25 +229,42 @@ struct UserDataActionsSection: View {
 
     var body: some View {
         Section {
-            // One row, both verbs, trailing (USER 2026-08-26). They are a pair
-            // — the same file, written one way and read the other — and a pair
-            // reads as one choice side by side and as two unrelated commands
-            // stacked. Trailing is where System Settings puts a row's action
-            // button; a `Button` alone in a form row sits leading, in the
-            // column the pane's LABELS occupy, and these rows have no label.
-            //
-            // Import first (USER): the pair ends on the button nearest the
-            // trailing edge, and Export is the one that ends in a file panel the
-            // user then does something with.
-            //
+            UserDataImportExportRow(
+                importTitle: importTitle,
+                exportTitle: exportTitle,
+                onImport: onImport,
+                onExport: onExport,
+            )
             // The clear stays a full-width centred `WideActionRow`: it is not
             // a control on a row, it is the row (USER 2026-08-24).
-            HStack {
-                Spacer()
-                Button(language.string(importTitle), action: onImport)
-                Button(language.string(exportTitle), action: onExport)
-            }
             WideActionRow(titleKey: deleteTitle, role: .destructive, action: onDelete)
+        }
+    }
+}
+
+/// An import / export pair for one kind of file — the CSV, the `.taigi` backup.
+///
+/// One row, both verbs, trailing (USER 2026-08-26). They are a pair — the same
+/// file, written one way and read the other — and a pair reads as one choice side
+/// by side and as two unrelated commands stacked. Trailing is where System Settings
+/// puts a row's action button; a `Button` alone in a form row sits leading, in the
+/// column the pane's LABELS occupy, and these rows have no label.
+///
+/// Import first (USER): the pair ends on the button nearest the trailing edge, and
+/// Export is the one that ends in a file panel the user then does something with.
+struct UserDataImportExportRow: View {
+    @Environment(DisplayLanguageStore.self) private var language
+
+    let importTitle: StringKey
+    let exportTitle: StringKey
+    let onImport: () -> Void
+    let onExport: () -> Void
+
+    var body: some View {
+        HStack {
+            Spacer()
+            Button(language.string(importTitle), action: onImport)
+            Button(language.string(exportTitle), action: onExport)
         }
     }
 }
