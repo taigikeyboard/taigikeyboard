@@ -1,71 +1,34 @@
-//! Where the manager reports commits for next-word learning.
+//! Where the manager reports what reaches next word without a composition.
 //!
-//! The engine decides WHAT is worth learning — the 10-second window, how a
-//! compound splits, whether the text is noise (`engine/nextword/src/decide.rs`)
-//! — and records it itself (user-data-engine-roadmap P9b). The manager only
-//! reports the commits (`INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`,
-//! invariants §40).
+//! The engine decides WHAT is worth learning (`engine/nextword/src/decide.rs`)
+//! and records it itself (user-data-engine-roadmap P9b). A composition's
+//! commits reach it inside the composing call (`engine/dispatch/src/next_word_handshake.rs`).
+//! The manager only reports what no composition carries
+//! (`INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, invariants §40).
 
-use crate::engine;
+use crate::engine::{self, RequestStamp};
 use crate::settings::EngineSettings;
-use protos::engine::CommittedWord;
 
-/// Where the handshakes go: the engine in production ([`EngineNextWord`]); a
+/// Where the reports go: the engine in production ([`EngineNextWord`]); a
 /// recorder in the manager tests, which check what is reported and when.
 pub trait NextWordPort: Send {
-    /// The user finalized `text` into the document, after the `preceding`
-    /// words of the same commit (a continuous composition's nailed segments).
-    fn word_selected(
-        &self,
-        text: &str,
-        roman: &str,
-        preceding: &[CommittedWord],
-        now_ms: i64,
-        settings: &EngineSettings,
-        generation: u64,
-    );
-    /// A continuous composition nailed a segment without finalizing — the
-    /// engine learns nothing from it (§40).
-    fn segment_nailed(
-        &self,
-        text: &str,
-        roman: &str,
-        now_ms: i64,
-        settings: &EngineSettings,
-        generation: u64,
-    );
+    /// `character` reached the document outside any composition (punctuation,
+    /// a symbol), so the engine can end the context on sentence-end
+    /// punctuation.
+    fn character_typed(&self, character: &str, settings: &EngineSettings, stamp: RequestStamp);
     /// The context is gone: nothing that follows follows it.
-    fn forget_context(&self, now_ms: i64, settings: &EngineSettings, generation: u64);
+    fn forget_context(&self, settings: &EngineSettings, stamp: RequestStamp);
 }
 
 /// The engine's next-word slice.
 pub struct EngineNextWord;
 
 impl NextWordPort for EngineNextWord {
-    fn word_selected(
-        &self,
-        text: &str,
-        roman: &str,
-        preceding: &[CommittedWord],
-        now_ms: i64,
-        settings: &EngineSettings,
-        generation: u64,
-    ) {
-        engine::nextword_word_selected(text, roman, preceding, now_ms, settings, generation);
+    fn character_typed(&self, character: &str, settings: &EngineSettings, stamp: RequestStamp) {
+        engine::nextword_character_typed(character, settings, stamp);
     }
 
-    fn segment_nailed(
-        &self,
-        text: &str,
-        roman: &str,
-        now_ms: i64,
-        settings: &EngineSettings,
-        generation: u64,
-    ) {
-        engine::nextword_update_last_selected_word(text, roman, now_ms, settings, generation);
-    }
-
-    fn forget_context(&self, now_ms: i64, settings: &EngineSettings, generation: u64) {
-        engine::nextword_reset_all(now_ms, settings, generation);
+    fn forget_context(&self, settings: &EngineSettings, stamp: RequestStamp) {
+        engine::nextword_reset_all(settings, stamp);
     }
 }

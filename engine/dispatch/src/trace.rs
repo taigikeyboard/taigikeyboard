@@ -263,6 +263,7 @@ mod tests {
             id: 7,
             generation: 3,
             payload: Some(request::Payload::Composing(ComposingRequest {
+                next_word_context: None,
                 method: Some(composing_request::Method::Append(Append {
                     char: "a".into(),
                 })),

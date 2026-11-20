@@ -424,9 +424,7 @@ impl ComposingEffectExecutor for RecordingSurface<'_> {
             EngineEffect::ClearCandidates
             | EngineEffect::RefreshCandidates
             | EngineEffect::ResetCandidateContext
-            | EngineEffect::NextWordUpdateLastSelectedWord { .. }
-            | EngineEffect::NextWordWordSelected { .. }
-            | EngineEffect::NextWordClearForNewComposing => {}
+            | EngineEffect::NextWordDecided => {}
         }
     }
 }
@@ -771,7 +769,7 @@ mod tests {
                 EngineEffect::ClearCandidates,
                 EngineEffect::RefreshCandidates,
                 EngineEffect::ResetCandidateContext,
-                EngineEffect::NextWordClearForNewComposing,
+                EngineEffect::NextWordDecided,
             ] {
                 surface.execute(&effect);
             }

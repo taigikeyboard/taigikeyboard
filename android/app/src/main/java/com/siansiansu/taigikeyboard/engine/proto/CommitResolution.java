@@ -271,6 +271,56 @@ public  final class CommitResolution extends
     leavesTrailingAutoSpace_ = false;
   }
 
+  public static final int TAUGHT_NEXT_WORD_FIELD_NUMBER = 6;
+  private boolean taughtNextWord_;
+  /**
+   * <pre>
+   * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+   * teaches next word. False for a commit that ends with
+   * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * `CommitResolution`.
+   * </pre>
+   *
+   * <code>bool taught_next_word = 6;</code>
+   * @return The taughtNextWord.
+   */
+  @java.lang.Override
+  public boolean getTaughtNextWord() {
+    return taughtNextWord_;
+  }
+  /**
+   * <pre>
+   * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+   * teaches next word. False for a commit that ends with
+   * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * `CommitResolution`.
+   * </pre>
+   *
+   * <code>bool taught_next_word = 6;</code>
+   * @param value The taughtNextWord to set.
+   */
+  private void setTaughtNextWord(boolean value) {
+
+    taughtNextWord_ = value;
+  }
+  /**
+   * <pre>
+   * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+   * teaches next word. False for a commit that ends with
+   * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * `CommitResolution`.
+   * </pre>
+   *
+   * <code>bool taught_next_word = 6;</code>
+   */
+  private void clearTaughtNextWord() {
+
+    taughtNextWord_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.CommitResolution parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -634,6 +684,58 @@ public  final class CommitResolution extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+     * teaches next word. False for a commit that ends with
+     * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+     * with no handshake (a prediction tap). `CommitAsTyped` answers no
+     * `CommitResolution`.
+     * </pre>
+     *
+     * <code>bool taught_next_word = 6;</code>
+     * @return The taughtNextWord.
+     */
+    @java.lang.Override
+    public boolean getTaughtNextWord() {
+      return instance.getTaughtNextWord();
+    }
+    /**
+     * <pre>
+     * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+     * teaches next word. False for a commit that ends with
+     * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+     * with no handshake (a prediction tap). `CommitAsTyped` answers no
+     * `CommitResolution`.
+     * </pre>
+     *
+     * <code>bool taught_next_word = 6;</code>
+     * @param value The taughtNextWord to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTaughtNextWord(boolean value) {
+      copyOnWrite();
+      instance.setTaughtNextWord(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+     * teaches next word. False for a commit that ends with
+     * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+     * with no handshake (a prediction tap). `CommitAsTyped` answers no
+     * `CommitResolution`.
+     * </pre>
+     *
+     * <code>bool taught_next_word = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTaughtNextWord() {
+      copyOnWrite();
+      instance.clearTaughtNextWord();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CommitResolution)
   }
   @java.lang.Override
@@ -655,10 +757,11 @@ public  final class CommitResolution extends
             "wroteRomanization_",
             "earnsAutoSpace_",
             "leavesTrailingAutoSpace_",
+            "taughtNextWord_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\f\u0002\u0208" +
-              "\u0003\u0007\u0004\u0007\u0005\u0007";
+              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\f\u0002\u0208" +
+              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

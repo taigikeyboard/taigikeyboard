@@ -44,8 +44,13 @@ fn config(swapped: bool, brackets: bool, display: CandidateDisplayMode) -> AppCo
     }
 }
 
+/// A prediction tap carries no next-word handshake (the phone reports the
+/// tap itself), so it teaches next word nothing here.
 fn written(text: &str, roman: bool, space: bool) -> CommitResolution {
-    resolution(CommitOutcome::Finalized, text, roman, space)
+    CommitResolution {
+        taught_next_word: false,
+        ..resolution(CommitOutcome::Finalized, text, roman, space)
+    }
 }
 
 #[test]

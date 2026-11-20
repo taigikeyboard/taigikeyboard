@@ -77,4 +77,18 @@ public interface CommitResolutionOrBuilder extends
    * @return The leavesTrailingAutoSpace.
    */
   boolean getLeavesTrailingAutoSpace();
+
+  /**
+   * <pre>
+   * The commit's next-word handshake was a `NextWordWordSelected`: the commit
+   * teaches next word. False for a commit that ends with
+   * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
+   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * `CommitResolution`.
+   * </pre>
+   *
+   * <code>bool taught_next_word = 6;</code>
+   * @return The taughtNextWord.
+   */
+  boolean getTaughtNextWord();
 }

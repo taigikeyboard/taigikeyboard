@@ -16,13 +16,15 @@ use super::outcomes::{
     CandidateCommitOutcome, CandidateFetchOutcome, ConfirmCompositionThenInsertOutcome,
 };
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
-use crate::engine::{self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect};
+use crate::engine::{
+    self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect, RequestStamp,
+};
 use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, InputMode, SettingsProvider};
 
 /// Writes the engine's document effects into the client that is currently
-/// focused. Learning handshakes never reach it — the manager reports them to
-/// the next-word port, because they write to a database rather than a document.
+/// focused. Next-word handshakes never reach it: the engine applies them in the
+/// composing call, and the desktop has no prediction UI for their decisions.
 pub trait ComposingEffectExecutor {
     fn execute(&mut self, effect: &Effect);
 }
@@ -66,7 +68,9 @@ pub struct ComposingManager {
     /// the conversion those settings asked for.
     preedit_settings: Option<EngineSettings>,
     settings: Arc<dyn SettingsProvider>,
-    /// Where the next-word handshakes go, stamped with `clock`.
+    /// Where the reports no composition carries go (a character typed outside
+    /// one, a forgotten context), stamped with `clock` — as is every engine
+    /// request (`stamp`).
     next_word: Box<dyn NextWordPort>,
     clock: Arc<dyn Clock>,
     /// Unique across everything that talks to the engine in this process:
@@ -118,6 +122,15 @@ impl ComposingManager {
         self.current_generation
     }
 
+    /// The envelope of an engine request sent now: the generation and the one
+    /// clock read the engine's next-word decisions run on.
+    fn stamp(&self) -> RequestStamp {
+        RequestStamp {
+            generation: self.current_generation,
+            now_ms: self.clock.now_ms(),
+        }
+    }
+
     fn current_settings(&self) -> EngineSettings {
         self.settings.current().engine_settings()
     }
@@ -147,11 +160,8 @@ impl ComposingManager {
         // usually a change of application, and carrying the context across
         // would learn the last word typed in a chat window as the predecessor
         // of the first word typed in a terminal.
-        self.next_word.forget_context(
-            self.clock.now_ms(),
-            &self.current_settings(),
-            self.current_generation,
-        );
+        self.next_word
+            .forget_context(&self.current_settings(), self.stamp());
     }
 
     /// A character reached the host without going through a composition.
@@ -166,14 +176,8 @@ impl ComposingManager {
         {
             return;
         }
-        self.next_word.word_selected(
-            character,
-            "",
-            &[],
-            self.clock.now_ms(),
-            &self.current_settings(),
-            self.current_generation,
-        );
+        self.next_word
+            .character_typed(character, &self.current_settings(), self.stamp());
     }
 
     /// Appends one typed character. The engine starts a composition when idle,
@@ -181,7 +185,7 @@ impl ComposingManager {
     pub fn append(&mut self, character: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("append");
         let settings = self.current_settings();
-        let transition = engine::append(character, &settings, self.current_generation);
+        let transition = engine::append(character, &settings, self.stamp());
         self.apply(transition, &settings, executor);
     }
 
@@ -191,7 +195,7 @@ impl ComposingManager {
     pub fn telex_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("telexKey");
         let settings = self.current_settings();
-        let transition = engine::telex_key(key, &settings, self.current_generation);
+        let transition = engine::telex_key(key, &settings, self.stamp());
         self.apply(transition, &settings, executor);
     }
 
@@ -205,7 +209,7 @@ impl ComposingManager {
     ) -> TpsKeyOutcome {
         log::debug!("tpsKey");
         let settings = self.current_settings();
-        let Some(transition) = engine::tps_key(key, &settings, self.current_generation) else {
+        let Some(transition) = engine::tps_key(key, &settings, self.stamp()) else {
             return TpsKeyOutcome::Failed;
         };
         let outcome = if !transition.effects.is_empty() {
@@ -225,7 +229,7 @@ impl ComposingManager {
     pub fn delete_backward(&mut self, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("deleteBackward");
         let settings = self.current_settings();
-        let transition = engine::delete_backward(&settings, self.current_generation);
+        let transition = engine::delete_backward(&settings, self.stamp());
         self.apply(transition, &settings, executor);
     }
 
@@ -239,7 +243,7 @@ impl ComposingManager {
     ) {
         log::debug!("moveCaret");
         let settings = self.current_settings();
-        let transition = engine::move_caret(direction, &settings, self.current_generation);
+        let transition = engine::move_caret(direction, &settings, self.stamp());
         self.apply(transition, &settings, executor);
     }
 
@@ -259,8 +263,9 @@ impl ComposingManager {
         } else {
             engine::commit_raw
         };
-        let committed = commit(&settings, self.current_generation)?;
-        self.finish_commit(committed.transition, &settings, executor);
+        let committed = commit(&settings, self.stamp())?;
+        let teaches_nothing = Self::finalized_teaching_nothing(&committed.commit);
+        self.finish_commit(committed.transition, teaches_nothing, &settings, executor);
         (committed.commit.outcome() == CommitOutcome::Finalized).then_some(committed.commit)
     }
 
@@ -272,9 +277,11 @@ impl ComposingManager {
     ) -> Option<String> {
         log::debug!("commitCompositionAsTyped");
         let settings = self.composition_settings();
-        let transition = engine::commit_as_typed(&settings, self.current_generation)?;
+        let transition = engine::commit_as_typed(&settings, self.stamp())?;
         let committed = Self::committed_text(&transition);
-        self.finish_commit(transition, &settings, executor);
+        // As typed never teaches: whatever it wrote leaves the context behind.
+        let teaches_nothing = committed.is_some();
+        self.finish_commit(transition, teaches_nothing, &settings, executor);
         committed
     }
 
@@ -296,13 +303,14 @@ impl ComposingManager {
             text,
             auto_space_enabled,
             &settings,
-            self.current_generation,
+            self.stamp(),
         ) else {
             return ConfirmCompositionThenInsertOutcome::Unavailable;
         };
         let finalized = committed.commit.outcome() == CommitOutcome::Finalized;
         let leaves_trailing_auto_space = committed.commit.leaves_trailing_auto_space;
-        self.finish_commit(committed.transition, &settings, executor);
+        let teaches_nothing = Self::finalized_teaching_nothing(&committed.commit);
+        self.finish_commit(committed.transition, teaches_nothing, &settings, executor);
         if finalized {
             self.note_character_typed_outside_composition(text);
             ConfirmCompositionThenInsertOutcome::Finalized {
@@ -313,30 +321,28 @@ impl ComposingManager {
         }
     }
 
-    /// Applies a commit's answer. A commit that
-    /// teaches next word nothing — `NextWordClearForNewComposing` with no
-    /// `NextWordWordSelected`: an external insert without a final pick, a TPS composition
-    /// holding a word the user did not pick (H7), commit as typed — leaves the
-    /// context of the commit BEFORE it, which the next commit would pair
-    /// itself with; the context is forgotten, under-learning one pair rather
-    /// than learning a wrong one. TL and POJ's `CommitRaw` always teaches.
+    /// Whether a commit's answer wrote the composition and taught next word
+    /// nothing (`CommitResolution.taught_next_word`).
+    fn finalized_teaching_nothing(commit: &CommitResolution) -> bool {
+        commit.outcome() == CommitOutcome::Finalized && !commit.taught_next_word
+    }
+
+    /// Applies a commit's answer. A commit that `teaches_nothing` — an
+    /// external insert without a final pick, a TPS composition holding a word
+    /// the user did not pick (H7), commit as typed — leaves the context of
+    /// the commit BEFORE it, which the next commit would pair itself with; the
+    /// context is forgotten, under-learning one pair rather than learning a
+    /// wrong one. TL and POJ's `CommitRaw` always teaches.
     fn finish_commit(
         &mut self,
         transition: ComposingTransition,
+        teaches_nothing: bool,
         settings: &EngineSettings,
         executor: &mut dyn ComposingEffectExecutor,
     ) {
-        let teaches_nothing = transition
-            .effects
-            .contains(&Effect::NextWordClearForNewComposing)
-            && !transition
-                .effects
-                .iter()
-                .any(|effect| matches!(effect, Effect::NextWordWordSelected { .. }));
         self.apply(Some(transition), settings, executor);
         if teaches_nothing {
-            self.next_word
-                .forget_context(self.clock.now_ms(), settings, self.current_generation);
+            self.next_word.forget_context(settings, self.stamp());
         }
     }
 
@@ -366,7 +372,7 @@ impl ComposingManager {
     /// Abandons the composition. Nothing reaches the document.
     pub fn cancel_composition(&mut self, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("cancelComposition");
-        let transition = engine::reset(self.current_generation);
+        let transition = engine::reset(self.stamp());
         self.apply(transition, &self.current_settings(), executor);
     }
 
@@ -378,9 +384,7 @@ impl ComposingManager {
     /// and ranks with it itself (user-data-engine-roadmap P3b / P5).
     pub fn fetch_candidates(&mut self) -> CandidateFetchOutcome {
         let settings = self.composition_settings();
-        let Some(fetched) =
-            engine::fetch_at_pos(&settings, self.current_generation, self.clock.now_ms())
-        else {
+        let Some(fetched) = engine::fetch_at_pos(&settings, self.stamp()) else {
             return CandidateFetchOutcome::Unavailable;
         };
         self.mirror(&fetched.transition, settings.input_mode);
@@ -429,7 +433,7 @@ impl ComposingManager {
         let Some(committed) = engine::commit_continuous(
             &Self::candidate_args(candidate, script),
             &settings,
-            self.current_generation,
+            self.stamp(),
         ) else {
             return CandidateCommitOutcome::Unavailable;
         };
@@ -496,37 +500,10 @@ impl ComposingManager {
         }
         for effect in &transition.effects {
             match effect {
-                // Learning handshakes are not document effects; routed here so
-                // the executor keeps its one job and the generation stays out
-                // of the effect path.
-                Effect::NextWordWordSelected {
-                    text,
-                    roman,
-                    preceding,
-                    ..
-                } => {
-                    self.next_word.word_selected(
-                        text,
-                        roman,
-                        preceding,
-                        self.clock.now_ms(),
-                        settings,
-                        self.current_generation,
-                    );
-                }
-                Effect::NextWordUpdateLastSelectedWord { text, roman } => {
-                    self.next_word.segment_nailed(
-                        text,
-                        roman,
-                        self.clock.now_ms(),
-                        settings,
-                        self.current_generation,
-                    );
-                }
-                // Hides predictions while keeping the context. The desktop
-                // shows no predictions, so there is nothing to hide and the
-                // context is exactly what must survive.
-                Effect::NextWordClearForNewComposing => {}
+                // The engine already applied the handshake (learning included);
+                // its decision is about predictions, which the desktop does not
+                // show.
+                Effect::NextWordDecided => {}
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)
@@ -562,5 +539,39 @@ impl ComposingManager {
         self.display_caret_utf16 = 0;
         self.composition_input_mode = None;
         self.preedit_settings = None;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::composing::EngineNextWord;
+    use crate::settings::{SettingsDocument, StaticSettingsProvider};
+
+    struct FixedClock(i64);
+
+    impl Clock for FixedClock {
+        fn now_ms(&self) -> i64 {
+            self.0
+        }
+    }
+
+    /// The engine's association window reads the stamp's clock (roadmap E2),
+    /// so every request must carry the manager's clock, not a constant.
+    #[test]
+    fn a_request_stamp_carries_the_generation_and_the_clock() {
+        let manager = ComposingManager::new(
+            Arc::new(StaticSettingsProvider::new(SettingsDocument::default())),
+            Box::new(EngineNextWord),
+            Arc::new(FixedClock(42_000)),
+            7,
+        );
+        assert_eq!(
+            manager.stamp(),
+            RequestStamp {
+                generation: 7,
+                now_ms: 42_000,
+            }
+        );
     }
 }

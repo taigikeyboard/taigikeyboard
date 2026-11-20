@@ -62,7 +62,7 @@ pub trait SettingsStore: Send + Sync {
 /// caches nothing (behavioural invariant §11 — a snapshot taken at
 /// construction is exactly what breaks mid-session TL↔POJ switching). One
 /// user intent takes ONE snapshot and passes it down, so a compound operation
-/// (a commit followed by its next-word handshake) cannot straddle a change.
+/// (a commit followed by forgetting the next-word context) cannot straddle a change.
 pub trait SettingsProvider: Send + Sync {
     /// The document as of now. Cheap to call: implementations hand out a
     /// shared, already-parsed copy and only re-read the file when it changed.

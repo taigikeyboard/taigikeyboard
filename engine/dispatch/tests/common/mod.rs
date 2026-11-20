@@ -75,3 +75,43 @@ pub fn production_lexicon_ready() -> bool {
         lexicon::EngineHandle::install(paths).is_ok()
     })
 }
+
+/// One composing request, with the shell's next-word envelope when given.
+#[allow(dead_code)]
+pub fn composing(
+    config: AppConfig,
+    generation: u64,
+    method: protos::engine::composing_request::Method,
+    next_word_context: Option<protos::engine::NextWordContext>,
+) -> protos::engine::ComposingResponse {
+    let response = roundtrip(
+        config,
+        generation,
+        request::Payload::Composing(protos::engine::ComposingRequest {
+            method: Some(method),
+            next_word_context,
+        }),
+    );
+    match response.payload {
+        Some(response::Payload::Composing(composing)) => composing,
+        other => panic!("composing answered {other:?}"),
+    }
+}
+
+/// The `user_association.db` rows once the engine's queued write lands
+/// (at most 5 s).
+#[cfg(feature = "user-data")]
+#[allow(dead_code)]
+pub fn wait_for_association_rows(
+    reader: &userdata::UserDataStores,
+) -> Vec<userdata::AssociationRow> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    loop {
+        let rows = reader.association.all_rows().expect("association rows");
+        if !rows.is_empty() {
+            return rows;
+        }
+        assert!(std::time::Instant::now() < deadline, "no pair was recorded");
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+}

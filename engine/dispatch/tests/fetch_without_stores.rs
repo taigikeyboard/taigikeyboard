@@ -19,6 +19,7 @@ fn composing(generation: u64, method: composing_request::Method) -> response::Pa
         tl_config(true),
         generation,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(method),
         }),
     )

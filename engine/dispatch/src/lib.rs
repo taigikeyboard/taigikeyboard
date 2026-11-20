@@ -20,6 +20,7 @@ use protos::engine::{request, response, AppConfig, ErrorCode, Request, Response}
 
 mod context;
 mod fetch;
+mod next_word_handshake;
 mod predict;
 #[cfg(feature = "e2e-trace")]
 pub mod trace;

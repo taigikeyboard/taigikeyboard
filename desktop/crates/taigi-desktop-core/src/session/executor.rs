@@ -171,14 +171,12 @@ impl ComposingEffectExecutor for Recorder {
                 self.emits.push(Emit::ClearPreedit);
                 self.emits.push(Emit::Commit(text.clone()));
             }
-            // No autocomplete surface; the learning handshakes never reach
-            // an executor (`ComposingManager` reports them to next word).
+            // No autocomplete surface, no prediction UI (the engine applied the
+            // next-word handshake already).
             Effect::ClearCandidates
             | Effect::RefreshCandidates
             | Effect::ResetCandidateContext
-            | Effect::NextWordUpdateLastSelectedWord { .. }
-            | Effect::NextWordWordSelected { .. }
-            | Effect::NextWordClearForNewComposing => {}
+            | Effect::NextWordDecided => {}
         }
     }
 }

@@ -641,6 +641,10 @@ public extension RustEngineBridge {
                 )
             case .nextWordClearForNewComposing:
                 return .nextWordClearForNewComposing
+            // Answers a request carrying `NextWordContext`, which iOS does not
+            // send yet (roadmap E2 PR2).
+            case .nextWordDecided:
+                return nil
             }
         }
         return ComposingTransition(

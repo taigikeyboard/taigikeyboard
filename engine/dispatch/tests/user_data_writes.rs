@@ -23,6 +23,7 @@ fn composing(method: composing_request::Method) -> ComposingResponse {
     let response = roundtrip(
         7,
         request::Payload::Composing(ComposingRequest {
+            next_word_context: None,
             method: Some(method),
         }),
     );

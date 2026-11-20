@@ -18,7 +18,9 @@ use lexicon::{CustomEntry, LearnedEntry};
 use proptest::prelude::*;
 use proptest::test_runner::{Config as ProptestConfig, TestRunner};
 use protos::engine::effect::Kind;
-use protos::engine::{AppConfig, CandidateMessage, CommitOutcome, ComposingResponse};
+use protos::engine::{
+    AppConfig, CandidateMessage, CommitOutcome, CommitResolution, ComposingResponse,
+};
 use ranking::FrequencyMap;
 use test_support::engine_install_lock;
 
@@ -362,10 +364,13 @@ fn commit_as_shown_writes_the_preedit_and_teaches_nothing_unpicked() {
     assert!(!applied.response.is_composing);
     assert_eq!((applied.learned, applied.usage), (None, None));
     // trace: `finalized_composition_resolution` — the TPS layout writes no
-    // romanization, so no auto space.
+    // romanization, so no auto space; unpicked, so it teaches next word nothing.
     assert_eq!(
         applied.response.commit,
-        Some(resolution(CommitOutcome::Finalized, "死絲", false, false))
+        Some(CommitResolution {
+            taught_next_word: false,
+            ..resolution(CommitOutcome::Finalized, "死絲", false, false)
+        })
     );
 }
 
