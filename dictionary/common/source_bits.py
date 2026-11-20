@@ -8,7 +8,7 @@ listed below in the SAME PR (see rules/cross-platform-alignment.md §3a).
 `SOURCE_BITS` + `IS_VARIANT_BIT` (bit-layout owners):
   - engine/lexicon/src/dictionary_reader.rs (binary-reader filter mask)
   - engine/lexicon/src/dictionary_filters.rs `SOURCES` (bit -> wire code -> toggle;
-    the per-row `TaigiWord.sources` every platform shows)
+    the per-row `DictionarySearchRow.sources` every platform shows)
 """
 
 from __future__ import annotations
@@ -44,10 +44,10 @@ DICT_BIN_COLUMNS: Final[list[str]] = list(SOURCE_BITS.keys()) + ["is_variant"]
 # independently gate main / accent / name / alt_reading. Bit-layout owner — mirrors:
 #   - engine/lexicon/src/dictionary_reader.rs (KAUTIAN_SUBTAG_* consts + reader)
 #   - docs/engine/binary-format.md §1 (record layout)
-# The wire `enabled_sources_bitmask` carries the user's subcollection ENABLE
+# The engine's `enabled_sources_bitmask` carries the user's subcollection ENABLE
 # bits in the SAME 13-bit layout (main | accent[10] | name | alt_reading) at a
 # high offset;
-# see lexicon.proto + dictionary_reader.rs `Filter::from_enabled_bitmask`.
+# see dictionary_filters.rs + dictionary_reader.rs `Filter::from_enabled_bitmask`.
 KAUTIAN_SUBTAG_MAIN_BIT: Final[int] = 0  # headword (main entry)
 KAUTIAN_SUBTAG_ACCENT_SHIFT: Final[int] = 1  # accent_mask occupies bits 1..=10
 KAUTIAN_SUBTAG_ACCENT_COUNT: Final[int] = 10  # 10 dialect columns (語音差異)

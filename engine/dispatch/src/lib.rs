@@ -335,7 +335,7 @@ mod tests {
     use super::*;
     use protos::engine::lexicon_request::Method as LexiconMethod;
     use protos::engine::{
-        AppConfig, DictionarySearchRequest, DictionarySourceToggles, IsHanjiRequest, LexiconRequest,
+        AppConfig, DictionarySearchRequest, DictionarySourceToggles, LexiconRequest,
     };
 
     fn lexicon_request(method: LexiconMethod) -> Request {
@@ -349,32 +349,8 @@ mod tests {
         }
     }
 
-    #[test]
-    fn dispatch_routes_lexicon_request_to_lexicon() {
-        let req = lexicon_request(LexiconMethod::IsHanji(IsHanjiRequest {
-            text: "我".to_owned(),
-        }));
-        let mut buf = Vec::with_capacity(req.encoded_len());
-        req.encode(&mut buf).unwrap();
-
-        let resp_bytes = process_request(&buf);
-        let resp = Response::decode(resp_bytes.as_slice()).unwrap();
-
-        assert_eq!(resp.id, 42);
-        assert_eq!(resp.error, ErrorCode::Ok as i32);
-        let payload = resp.payload.expect("payload present");
-        let response::Payload::Lexicon(lex_resp) = payload else {
-            panic!("expected Lexicon payload, got {payload:?}");
-        };
-        let result = lex_resp.result.expect("result present");
-        let protos::engine::lexicon_response::Result::IsHanjiResult(is_hanji) = result else {
-            panic!("expected IsHanjiResult, got {result:?}");
-        };
-        assert!(is_hanji.is_hanji, "我 is hanji");
-    }
-
-    // No unit test in this crate installs a lexicon, so this one sees the
-    // engine before install.
+    // The lexicon arm's routing. No unit test in this crate installs a
+    // lexicon, so this one sees the engine before install.
     #[test]
     fn dictionary_search_before_install_answers_no_rows() {
         let req = lexicon_request(LexiconMethod::DictionarySearch(DictionarySearchRequest {
@@ -389,6 +365,7 @@ mod tests {
         }));
         let resp = Response::decode(process_request(&req.encode_to_vec()).as_slice()).unwrap();
 
+        assert_eq!(resp.id, 42);
         assert_eq!(
             resp.error,
             ErrorCode::Ok as i32,

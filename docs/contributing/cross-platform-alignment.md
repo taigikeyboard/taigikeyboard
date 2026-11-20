@@ -73,7 +73,7 @@ Intentional today:
 
 ### 3a. Invariants: constants, tests and docs move together
 
-- Behaviour that must match carries an `INVARIANT_*` label in `behavioral-invariants.md`. A rule both platforms compute belongs in the engine (examples: `IsAttachingPunctuation`, `ExternalLookupDigitForm`, `TaigiWord.sources`); a mirrored platform pair is the fallback for what cannot move.
+- Behaviour that must match carries an `INVARIANT_*` label in `behavioral-invariants.md`. A rule both platforms compute belongs in the engine (examples: `IsAttachingPunctuation`, `ExternalLookupDigitForm`, `DictionarySearchRow.sources`); a mirrored platform pair is the fallback for what cannot move.
 - A mirrored constant carries `// CROSS-PLATFORM INVARIANT — mirrors <other file>[:<symbol>]. Drift causes silent divergence.`
 - The pinning test names its label: a `// INVARIANT_<LABEL> (<doc> §N)` comment above it, or a name prefix (`fn invariant_<label>_…` / `func testINVARIANT_<label>_…` / `fun INVARIANT_<label>_…`). CI `INVARIANT labels` (`tools/invariant_labels.py`) fails when a documented label is in no test; `tools/invariant_labels_pending.txt` only shrinks.
 - Changing an invariant constant updates iOS source, Android source, `behavioral-invariants.md` and the test in one PR.

@@ -383,7 +383,7 @@ impl Default for EngineSettings {
 }
 
 /// Which bundled dictionaries the user has switched on, in the shape the
-/// engine's `compute_filters` op reads them. Field order mirrors
+/// engine's `DictionarySourceToggles` carries them. Field order mirrors
 /// `engine/protos/proto/lexicon.proto::DictionarySourceToggles`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DictionarySourceToggles {

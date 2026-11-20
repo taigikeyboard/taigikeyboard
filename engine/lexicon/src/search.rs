@@ -19,7 +19,7 @@ use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter, KAUTI
 use crate::error::LexiconError;
 use crate::prefix_index::PrefixIndex;
 
-/// Public per-row output. Mirrors proto `TaigiWord` but kept Rust-native to
+/// Public per-row output, kept Rust-native to
 /// avoid coupling search internals to prost types.
 #[derive(Debug, Clone)]
 pub struct SearchRow {

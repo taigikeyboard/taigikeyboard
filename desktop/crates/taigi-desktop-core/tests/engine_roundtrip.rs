@@ -481,21 +481,32 @@ fn all_sources_off_fetches_no_dictionary_candidates() {
     engine::reset(generation);
 }
 
+/// The badges a search row wears are the row's sources the user has on:
+/// the default toggles badge the MOE dictionary, never iTaigi (off by
+/// default) — until iTaigi is switched on.
 #[test]
 fn default_toggles_resolve_their_badge_sources() {
+    use engine::dictionary_search::lookup;
+    use engine::DictionarySource;
+
+    // trace: `DictionarySourceToggles::DEFAULT` has kautian on, itaigi off
+    // (engine_settings.rs); the shipped dictionary holds MOE and iTaigi rows
+    // for tsiah (食 / tsia̍h is MOE; the positive control below pins iTaigi).
     let _engine = engine();
-    let defaults =
-        engine::dictionary_filters(&EngineSettings::default().dictionary_sources).expect("resolve");
-    assert!(defaults
-        .enabled_sources
-        .contains(&engine::DictionarySource::Kautian));
-    assert!(!defaults
-        .enabled_sources
-        .contains(&engine::DictionarySource::Itaigi));
+    let badges = |toggles| -> Vec<DictionarySource> {
+        lookup("tsiah", InputMode::Tl, &toggles, false, 20)
+            .into_iter()
+            .flat_map(|result| result.sources)
+            .collect()
+    };
+    let defaults = EngineSettings::default().dictionary_sources;
+    let default_badges = badges(defaults.clone());
+    assert!(default_badges.contains(&DictionarySource::Kautian));
+    assert!(!default_badges.contains(&DictionarySource::Itaigi));
+    let mut with_itaigi = defaults;
+    with_itaigi.itaigi = true;
     assert!(
-        defaults
-            .enabled_sources
-            .contains(&engine::DictionarySource::Custom),
-        "always-on"
+        badges(with_itaigi).contains(&DictionarySource::Itaigi),
+        "positive control: an iTaigi row exists for tsiah"
     );
 }

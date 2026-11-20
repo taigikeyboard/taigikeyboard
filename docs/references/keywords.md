@@ -120,7 +120,7 @@ NextWord state machine lives in Rust `engine/nextword`. Platform glue handles ti
 |---------|-----------|-----------------|
 | **Backup (`.taigi`)** | Export/import user data (custom dict, frequency, associations) | engine ops `ExportBackup` / `ImportBackup` → `userdata::export_backup` / `import_backup` |
 | **DataManagement** | Production UI for user data | `DataManagementView` / `DataManagementScreen` |
-| **DictionarySearch** | In-app dictionary search from settings (lexicon op `DictionarySearch`) | iOS / Android `DictionarySearchService` (settings snapshot, over a `LexiconClient`); Android `DictionarySearchViewModel`; Windows + Linux `taigi_desktop_core::engine::dictionary_search` (one lookup for both settings windows, custom rows through `SearchCustomEntries`) |
+| **DictionarySearch** | In-app dictionary search from settings (lexicon op `DictionarySearch`) | iOS / Android `DictionarySearchService` (settings snapshot, over a `LexiconClient`); Android `DictionarySearchViewModel`; Windows + Linux + macOS `taigi_desktop_core::engine::dictionary_search` (one `DictionarySearch` per query for the three settings windows) |
 
 ### 10. Input Flow (`architecture/system-overview.md` §4)
 | Keyword | Definition | Key Class/Method |

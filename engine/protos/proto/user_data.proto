@@ -15,6 +15,12 @@ option java_multiple_files = true;
 // feature; without it every request answers `FAIL_INVARIANT`.
 
 message UserDataRequest {
+  // Tag 11 was `search_custom_entries`, the dictionary search's custom-entry
+  // lookup; engine/dispatch now joins them into lexicon `DictionarySearch`
+  // (removed 2026-11-20, roadmap C3).
+  reserved 11;
+  reserved "search_custom_entries";
+
   oneof method {
     OpenUserData open = 1;
     ResetUserData reset = 2;
@@ -26,7 +32,6 @@ message UserDataRequest {
     ExportCustomCsv export_custom_csv = 8;
     ExportBackup export_backup = 9;
     ImportBackup import_backup = 10;
-    SearchCustomEntries search_custom_entries = 11;
     ListLearningRecords list_learning_records = 12;
     SetLearningRecordCount set_learning_record_count = 13;
     DeleteLearningRecord delete_learning_record = 14;
@@ -35,6 +40,10 @@ message UserDataRequest {
 }
 
 message UserDataResponse {
+  // Tag 11 was `custom_entry_matches`, `search_custom_entries`'s answer.
+  reserved 11;
+  reserved "custom_entry_matches";
+
   oneof result {
     UserDataOpened opened = 1;
     UserDataReset reset = 2;
@@ -46,7 +55,6 @@ message UserDataResponse {
     CustomCsvExported custom_csv_exported = 8;
     BackupExported backup_exported = 9;
     BackupImported backup_imported = 10;
-    CustomEntryMatches custom_entry_matches = 11;
     LearningRecords learning_records = 12;
     LearningRecordSaved learning_record_saved = 13;
     LearningRecordDeleted learning_record_deleted = 14;
@@ -238,21 +246,6 @@ message CustomCsvImported {
   // (`file holds more than 30000 entries`); empty when imported.
   string detail = 4;
 }
-
-// A dictionary search looks entries up the way the keyboard does — by the
-// search key the query derives, prefix-matched — not by the page's
-// substring filter.
-message SearchCustomEntries {
-  // What the user typed into a dictionary search box.
-  string query = 1;
-  // `tl` / `poj` / `tps`, the settings input mode the query is typed in.
-  string input_mode = 2;
-  uint32 limit = 3;
-}
-
-// Entries whose search key starts with the query's, ordered by
-// romanization. Empty when the query derives no key.
-message CustomEntryMatches { repeated CustomDictionaryEntry entries = 1; }
 
 message ExportCustomCsv {}
 

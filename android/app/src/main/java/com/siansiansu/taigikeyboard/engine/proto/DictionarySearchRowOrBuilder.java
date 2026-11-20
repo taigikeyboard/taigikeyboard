@@ -12,7 +12,7 @@ public interface DictionarySearchRowOrBuilder extends
 
   /**
    * <pre>
-   * The dictionary row id (`TaigiWord.id`).
+   * The dictionary row id.
    * </pre>
    *
    * <code>int64 system_id = 1;</code>
@@ -21,7 +21,7 @@ public interface DictionarySearchRowOrBuilder extends
   boolean hasSystemId();
   /**
    * <pre>
-   * The dictionary row id (`TaigiWord.id`).
+   * The dictionary row id.
    * </pre>
    *
    * <code>int64 system_id = 1;</code>

@@ -1,6 +1,7 @@
 //! The user-data requests after the open — the pages' (list, save, delete,
-//! search, CSV and backup import / export, reset) and the key path's
-//! `RecordUsage` — answered from the stores [`UserDataHandle`] opened.
+//! CSV and backup import / export, reset) and the key path's
+//! `RecordUsage` — answered from the stores [`UserDataHandle`] opened, and
+//! the dictionary search's custom-entry lookup.
 //! `engine/dispatch` routes `UserDataRequest` here and maps [`RequestError`]
 //! to the wire's error code.
 
@@ -9,11 +10,10 @@ use std::fmt::Display;
 use protos::engine::{
     user_data_request, user_data_response, AddLearningRecordToCustomDictionary, BackupExported,
     BackupImported, BackupRefusal, CustomCsvExported, CustomCsvImported, CustomDictionaryEntry,
-    CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted, CustomEntryMatches,
-    CustomEntrySaved, ImportBackup, ImportCustomCsv, LearningRecord,
-    LearningRecordAddedToCustomDictionary, LearningRecordDeleted, LearningRecordKind,
-    LearningRecordOrder, LearningRecordSaved, LearningRecords, ListCustomEntries,
-    ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry, SearchCustomEntries,
+    CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted, CustomEntrySaved, ImportBackup,
+    ImportCustomCsv, LearningRecord, LearningRecordAddedToCustomDictionary, LearningRecordDeleted,
+    LearningRecordKind, LearningRecordOrder, LearningRecordSaved, LearningRecords,
+    ListCustomEntries, ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry,
     UserDataReset,
 };
 
@@ -80,9 +80,6 @@ impl UserDataHandle {
             Method::ImportBackup(import) => {
                 Answer::BackupImported(Self::import_backup(stores, import)?)
             }
-            Method::SearchCustomEntries(search) => {
-                Answer::CustomEntryMatches(Self::search_custom_entries(stores, search)?)
-            }
             Method::ListLearningRecords(list) => {
                 Answer::LearningRecords(Self::list_learning_records(stores, list)?)
             }
@@ -110,22 +107,22 @@ impl UserDataHandle {
         })
     }
 
-    /// The dictionary search's lookup: the query's key, prefix-matched as
-    /// the keyboard matches it. A query that derives no key matches nothing.
-    fn search_custom_entries(
-        stores: &UserDataStores,
-        search: &SearchCustomEntries,
-    ) -> Result<CustomEntryMatches, RequestError> {
-        let entries = phonetics::api::derive_custom_query_key(&search.query, &search.input_mode)
-            .map(|key| {
-                stores
-                    .custom_dictionary
-                    .rows_matching(&key, search.limit as usize)
-            })
+    /// The dictionary search's custom entries (lexicon `DictionarySearch`,
+    /// joined by engine/dispatch): the key `query` derives under
+    /// `input_mode`, prefix-matched as the keyboard matches it, at most
+    /// `limit`, in romanization order. A query that derives no key matches
+    /// nothing. Like a page request, waits for a background open to finish.
+    pub fn custom_entries_matching(
+        &self,
+        query: &str,
+        input_mode: &str,
+        limit: usize,
+    ) -> Result<Vec<CustomDictionaryEntry>, RequestError> {
+        let stores = self.settled_stores()?;
+        let rows = phonetics::api::derive_custom_query_key(query, input_mode)
+            .map(|key| stores.custom_dictionary.rows_matching(&key, limit))
             .unwrap_or_default();
-        Ok(CustomEntryMatches {
-            entries: entries.iter().map(custom_dictionary_entry).collect(),
-        })
+        Ok(rows.iter().map(custom_dictionary_entry).collect())
     }
 
     fn list_custom_entries(
@@ -667,21 +664,12 @@ mod tests {
     }
 
     fn search(handle: &UserDataHandle, query: &str) -> Vec<String> {
-        match call(
-            handle,
-            user_data_request::Method::SearchCustomEntries(SearchCustomEntries {
-                query: query.into(),
-                input_mode: "tl".into(),
-                limit: 50,
-            }),
-        ) {
-            user_data_response::Result::CustomEntryMatches(matches) => matches
-                .entries
-                .into_iter()
-                .map(|entry| entry.hanji)
-                .collect(),
-            other => panic!("expected matches, got {other:?}"),
-        }
+        handle
+            .custom_entries_matching(query, "tl", 50)
+            .expect("custom entries")
+            .into_iter()
+            .map(|entry| entry.hanji)
+            .collect()
     }
 
     #[test]

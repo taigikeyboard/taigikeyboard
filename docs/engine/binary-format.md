@@ -325,8 +325,8 @@ Layer 4 — Source OR match (on the EFFECTIVE bitmask):
     else                                                                 → reject
 ```
 dev (bit 10, Supplementary Word List) rides `enabled_mask` like any other source
-(default on, user-toggleable). `Filter::from_enabled_bitmask` decodes the wire
-`enabled_sources_bitmask`; variant and khiin ride bits 12 and 9 of it.
+(default on, user-toggleable). `Filter::from_enabled_bitmask` decodes the engine's
+`enabled_sources_bitmask` (resolved from `DictionarySourceToggles`); variant and khiin ride bits 12 and 9 of it.
 
 The same `effective_source_bitmask` is emitted as the candidate's
 `source_bitmask` so a multi-source survivor ranks by its other source's tier,
@@ -352,8 +352,8 @@ There is no platform `allEnabled` flag. `u32::MAX` on the wire means "every sour
 ### 4.5 `kautian_subtag` (v3) + wire subcollection-enable bits
 
 The per-record `kautian_subtag` u16 (dictionary.bin §1.1) and the user's
-subcollection-enable bits in `enabled_sources_bitmask` (the wire field on
-`SearchWithSourcesRequest` / `SearchByHanjiRequest` / continuous) share ONE 13-bit layout so the filter
+subcollection-enable bits in `enabled_sources_bitmask` (the mask the engine
+resolves from `DictionarySourceToggles` for the dictionary search and the fetch) share ONE 13-bit layout so the filter
 test is a single AND:
 
 ```
@@ -371,7 +371,7 @@ subcollection bit layout (13 bits):
 row belongs to. `0` for non-kautian rows. A row may carry multiple classes
 (e.g. a headword that is also an accent reading = main + accent bits).
 
-**Wire** (`enabled_sources_bitmask` high region): which subcollections the user
+**Filter** (`enabled_sources_bitmask` high region): which subcollections the user
 has enabled.
 
 ```
@@ -387,7 +387,7 @@ has enabled.
 `dictionary/common/source_bits.py::encode_kautian_subtag` +
 `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`).
 
-ENCODE: `compute_filters` sets bit 13 + the enable mask from
+ENCODE: `dictionary_filter_bitmask` sets bit 13 + the enable mask from
 `DictionarySourceToggles.kautian_subcollections` (a nested message — PRESENCE
 is the active sentinel). Every platform always sends it; a caller that leaves
 it absent keeps the gate off = legacy all-on. The same mask gates the Tab3

@@ -119,7 +119,7 @@ interface EngineSettings {
 
     // kautian subcollection toggles (nested under the MOE/kautian master). Order
     // mirrors config.yaml dialect_columns; the bridge packs these into the
-    // KautianSubcollectionToggles proto and Rust compute_filters owns the subtag bit
+    // KautianSubcollectionToggles proto and Rust dictionary_filter_bitmask owns the subtag bit
     // layout. Absent sub-message ⇒ engine keeps legacy all-on (DD5).
     val isKautianAccentLukangEnabled: Boolean
     val isKautianAccentSansiaEnabled: Boolean

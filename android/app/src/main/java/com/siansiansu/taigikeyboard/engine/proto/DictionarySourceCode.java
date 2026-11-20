@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * `DictionarySourceCode` is the wire-stable mapping for
- * `DictionaryFiltersResponse.enabled_source_codes`. Decoupled from platform
+ * `DictionarySearchRow.sources`. Decoupled from platform
  * `DictionarySource` enum raw values — Swift uses `String` raw values and
  * Kotlin has no stable numeric value beyond `ordinal`. Platforms decode
  * via explicit switch/map.

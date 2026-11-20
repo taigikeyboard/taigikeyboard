@@ -59,8 +59,8 @@ fn rust_cjk_ranges_equal_the_pipeline_table() {
     assert_eq!(python_ranges(&source), CJK_RANGES);
 }
 
-/// A lone character beyond Extension E is Hanji, so the platforms route it
-/// to `search_by_hanji`, which finds its `dictionary.csv` row.
+/// A lone character beyond Extension E is Hanji, so the dictionary search
+/// takes its Hanji lookup, which finds the character's `dictionary.csv` row.
 #[test]
 fn shipped_characters_beyond_extension_e_reach_the_hanji_search() {
     let Some(artifacts) = ProductionArtifacts::locate() else {
@@ -85,18 +85,43 @@ fn shipped_characters_beyond_extension_e_reach_the_hanji_search() {
         ("\u{FA0D}", "khak"),
     ] {
         assert!(is_hanji(query), "{query:?} is Hanji");
-        let rows = lexicon::api::search_by_hanji(protos::engine::SearchByHanjiRequest {
-            query: query.to_owned(),
-            limit: 20,
-            enabled_sources_bitmask: u32::MAX,
-            ..Default::default()
-        })
-        .expect("search_by_hanji")
+        let rows = lexicon::api::dictionary_search(
+            protos::engine::DictionarySearchRequest {
+                query: query.to_owned(),
+                input_mode: "tl".to_owned(),
+                toggles: Some(all_sources_on()),
+                custom_dictionary_enabled: false,
+                limit: 20,
+            },
+            |_| Vec::new(),
+        )
+        .expect("dictionary search")
         .rows;
         assert!(
             rows.iter()
-                .any(|row| row.hanji.as_deref() == Some(query) && row.roman == tl),
+                .any(|row| row.hanji.as_deref() == Some(query) && row.lookup_tl == tl),
             "{query:?}/{tl} in {rows:?}"
         );
+    }
+}
+
+/// Every source and the variant characters on; no kautian subcollection
+/// gate (absent sub-message).
+fn all_sources_on() -> protos::engine::DictionarySourceToggles {
+    protos::engine::DictionarySourceToggles {
+        kautian: true,
+        taigitv: true,
+        itaigi: true,
+        sitbut: true,
+        taihoa: true,
+        taijit: true,
+        kungge: true,
+        stti: true,
+        khpoo: true,
+        variant: true,
+        khiin: true,
+        lkk: true,
+        dev: true,
+        kautian_subcollections: None,
     }
 }

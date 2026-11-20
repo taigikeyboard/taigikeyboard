@@ -3,8 +3,8 @@
 //! `EnabledDictionaries` copies (~80 LOC verbatim-mirrored bit math) per audit residue
 //! 2026-05-04 § A.1 P2.
 //!
-//! Pure logic, no I/O. The dispatch layer wraps `compute_filters` into a
-//! `LexiconResponse::DictionaryFiltersResult` envelope.
+//! Pure logic, no I/O. Every request that carries the toggles
+//! (`DictionarySearch`, `AppConfig.dictionary_sources`) resolves them here.
 //!
 //! Bit layout (must match `dictionary.bin` filter and
 //! `engine/lexicon/src/search.rs::build_filter` consumer):
@@ -20,7 +20,7 @@ use crate::dictionary_reader::{
     KAUTIAN_SUBTAG_MAIN_BIT, KAUTIAN_SUBTAG_NAME_BIT, WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT,
     WIRE_KAUTIAN_SUBCOLL_MASK, WIRE_KAUTIAN_SUBCOLL_SHIFT,
 };
-use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionarySourceToggles};
+use protos::engine::{DictionarySourceCode, DictionarySourceToggles};
 use DictionarySourceCode as C;
 
 /// `association_bitmask` when every association source is on: the
@@ -29,7 +29,7 @@ const ASSOC_ALL_ENABLED_SENTINEL: u32 = u32::MAX;
 
 /// Each source's record-bitmask bit, wire code and user toggle, in bit order
 /// (layout in the module header) — the one table the filter mask, the
-/// association mask, the enabled codes and the per-row sources all read.
+/// association mask and the per-row sources all read.
 /// Bit 12 (variant) is a filter, not a source.
 type SourceToggle = fn(&DictionarySourceToggles) -> bool;
 const SOURCES: [(u32, DictionarySourceCode, SourceToggle); 12] = [
@@ -50,18 +50,6 @@ const SOURCES: [(u32, DictionarySourceCode, SourceToggle); 12] = [
 /// The association bin carries the first nine sources (kautian … khpoo, bits
 /// 0-8).
 const ASSOCIATION_SOURCES: usize = 9;
-
-/// Compute filter bitmasks + enabled-source codes from the user's
-/// 12-toggle preference snapshot.
-pub(crate) fn compute_filters(toggles: &DictionarySourceToggles) -> DictionaryFiltersResponse {
-    DictionaryFiltersResponse {
-        dictionary_filter_bitmask: dictionary_filter_bitmask(toggles),
-        enabled_source_codes: enabled_source_codes(toggles)
-            .into_iter()
-            .map(|c| c as i32)
-            .collect(),
-    }
-}
 
 /// Full `dictionary.bin` filter bitmask: source/variant bits 0-12 plus the
 /// kautian subcollection wire high region (bit 13 active + bits 14..=26 enable
@@ -146,29 +134,12 @@ fn toggled_bits(
 }
 
 /// The sources a record's (effective) bitmask names, in bit order — the
-/// order every platform draws the result badges in (`TaigiWord.sources`).
+/// order every platform draws the result badges in (`DictionarySearchRow.sources`).
 pub(crate) fn source_codes(bitmask: u32) -> Vec<DictionarySourceCode> {
     SOURCES
         .iter()
         .filter(|(bit, _, _)| bitmask & bit != 0)
         .map(|(_, code, _)| *code)
-        .collect()
-}
-
-/// `DictionarySourceCode` set the platform should mark as enabled when
-/// retagging Tab3 result badges. `CUSTOM` is non-toggleable and always
-/// present; `DEV` (dictionary-supplement-file source) is gated by the dev toggle and pushed
-/// first-when-present so the order stays `[DEV?, CUSTOM, …]`; `variant` is
-/// a filter bit, not a source code.
-fn enabled_source_codes(t: &DictionarySourceToggles) -> Vec<DictionarySourceCode> {
-    let (dev, rest): (Vec<_>, Vec<_>) = SOURCES
-        .iter()
-        .filter(|(_, _, is_on)| is_on(t))
-        .map(|(_, code, _)| *code)
-        .partition(|code| *code == C::DictSourceDev);
-    dev.into_iter()
-        .chain([C::DictSourceCustom])
-        .chain(rest)
         .collect()
 }
 
@@ -223,16 +194,11 @@ mod tests {
     }
 
     /// INVARIANT: every source is toggleable — all-off ⇒ empty source mask.
-    /// dev (bit 10, dictionary-supplement-file toggle) is no longer an unconditional floor;
-    /// `CUSTOM` stays in the source-code list (separate user-dict path, not a
-    /// `dictionary.bin` source bit).
+    /// dev (bit 10, dictionary-supplement-file toggle) is no longer an unconditional floor.
     #[test]
     fn all_toggles_off_keeps_nothing() {
-        let r = compute_filters(&all_off());
-        assert_eq!(r.dictionary_filter_bitmask, 0);
+        assert_eq!(dictionary_filter_bitmask(&all_off()), 0);
         assert_eq!(association_bitmask(&all_off()), 0);
-        let codes: Vec<i32> = vec![DictionarySourceCode::DictSourceCustom as i32];
-        assert_eq!(r.enabled_source_codes, codes);
     }
 
     /// INVARIANT: when every association source is on,
@@ -241,10 +207,9 @@ mod tests {
     /// associationBitmask()` branch.
     #[test]
     fn all_assoc_sources_returns_sentinel() {
-        let r = compute_filters(&all_on());
         assert_eq!(association_bitmask(&all_on()), u32::MAX);
         // dictionary_filter_bitmask: bits 0-12 all set
-        assert_eq!(r.dictionary_filter_bitmask, 0x1FFF);
+        assert_eq!(dictionary_filter_bitmask(&all_on()), 0x1FFF);
     }
 
     /// 8-of-9 association sources on → NOT sentinel; equals exact mask.
@@ -252,9 +217,8 @@ mod tests {
     fn one_assoc_source_off_is_exact_mask() {
         let mut t = all_on();
         t.khpoo = false; // bit 8 off
-        let r = compute_filters(&t);
         assert_eq!(association_bitmask(&t), 0xFF); // bits 0-7
-        assert_eq!(r.dictionary_filter_bitmask, 0x1FFF & !(1 << 8));
+        assert_eq!(dictionary_filter_bitmask(&t), 0x1FFF & !(1 << 8));
     }
 
     /// Bit position truth table — each toggle drives the documented bit.
@@ -279,47 +243,13 @@ mod tests {
         for (set, expected_bit) in cases {
             let mut t = all_off();
             set(&mut t);
-            let mask = compute_filters(&t).dictionary_filter_bitmask;
+            let mask = dictionary_filter_bitmask(&t);
             // Each toggle drives exactly its bit — no unconditional dev floor.
             assert_eq!(
                 mask, expected_bit,
                 "toggle bit {expected_bit:#x} should be the only bit set",
             );
         }
-    }
-
-    /// `variant` toggle never appears in `enabled_source_codes` —
-    /// it's a filter bit, not a source.
-    #[test]
-    fn variant_excluded_from_source_codes() {
-        let mut t = all_off();
-        t.variant = true;
-        let r = compute_filters(&t);
-        // dev off (all_off) ⇒ only CUSTOM in source codes.
-        let codes: Vec<i32> = vec![DictionarySourceCode::DictSourceCustom as i32];
-        assert_eq!(r.enabled_source_codes, codes);
-        // Dictionary filter has only bit 12 (variant) — no dev floor.
-        assert_eq!(r.dictionary_filter_bitmask, 1 << 12);
-    }
-
-    /// Source codes order is stable (DEV/CUSTOM first, then toggle-on
-    /// in declaration order). Pinned because Tab3 retag iterates the
-    /// list and order divergence between platforms would be a bug.
-    #[test]
-    fn source_codes_order_is_stable() {
-        let mut t = all_off();
-        t.dev = true;
-        t.lkk = true;
-        t.kautian = true;
-        let r = compute_filters(&t);
-        // DEV (when on) first, then CUSTOM, then toggle-on in declaration order.
-        let expected: Vec<i32> = vec![
-            DictionarySourceCode::DictSourceDev as i32,
-            DictionarySourceCode::DictSourceCustom as i32,
-            DictionarySourceCode::DictSourceKautian as i32,
-            DictionarySourceCode::DictSourceLkk as i32,
-        ];
-        assert_eq!(r.enabled_source_codes, expected);
     }
 
     // --- kautian subcollection wire ENCODE (Phase 3) ---
@@ -330,7 +260,7 @@ mod tests {
     fn subcoll_absent_sets_no_high_bits() {
         let mut t = all_on(); // kautian master on, but kautian_subcollections left None
         t.kautian_subcollections = None;
-        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        let mask = dictionary_filter_bitmask(&t);
         assert_eq!(
             mask & WIRE_HIGH_REGION,
             0,
@@ -345,7 +275,7 @@ mod tests {
         let mut t = all_off();
         t.kautian = true;
         t.kautian_subcollections = Some(all_subcoll_on());
-        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        let mask = dictionary_filter_bitmask(&t);
         let expected_high = WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT
             | (KAUTIAN_SUBTAG_USED_MASK as u32) << WIRE_KAUTIAN_SUBCOLL_SHIFT;
         assert_eq!(mask & WIRE_HIGH_REGION, expected_high);
@@ -360,7 +290,7 @@ mod tests {
         let mut t = all_off();
         t.kautian = true;
         t.kautian_subcollections = Some(KautianSubcollectionToggles::default());
-        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        let mask = dictionary_filter_bitmask(&t);
         let main_only = 1u32 << KAUTIAN_SUBTAG_MAIN_BIT;
         let expected_high =
             WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT | (main_only << WIRE_KAUTIAN_SUBCOLL_SHIFT);
@@ -374,7 +304,7 @@ mod tests {
         let mut t = all_off();
         t.kautian = false;
         t.kautian_subcollections = Some(all_subcoll_on());
-        let mask = compute_filters(&t).dictionary_filter_bitmask;
+        let mask = dictionary_filter_bitmask(&t);
         assert_eq!(mask & WIRE_HIGH_REGION, 0);
         assert_eq!(mask & (1 << 0), 0, "kautian source bit stays off");
     }
@@ -405,7 +335,7 @@ mod tests {
             let mut t = all_off();
             t.kautian = true;
             t.kautian_subcollections = Some(sub);
-            let mask = compute_filters(&t).dictionary_filter_bitmask;
+            let mask = dictionary_filter_bitmask(&t);
             // main (bit 0) is always on, plus the one toggled bit.
             let subtag = (1u16 << KAUTIAN_SUBTAG_MAIN_BIT) | (1u16 << subtag_bit);
             let expected_high =

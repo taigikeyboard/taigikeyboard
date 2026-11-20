@@ -8,7 +8,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
- * preferences that drives `DictionaryFiltersRequest`. Field tags map
+ * preferences the engine resolves into its source filter
+ * (`lexicon::api::dictionary_filter_bitmask`). Field tags map
  * directly to the bit positions the engine consumes; reordering tags is
  * a wire break.
  *
@@ -20,8 +21,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * sub-message is the active sentinel — a platform that ships the toggles
  * sets it; any caller that leaves it absent (a platform whose UI is not
  * yet wired, NextWord) signals "no subcollection gating" and the engine
- * keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
- * owns the subtag bit packing so the layout lives in Rust only.
+ * keeps the legacy all-on behaviour (wire bit 13 stays 0).
+ * `dictionary_filter_bitmask` owns the subtag bit packing so the layout lives in Rust only.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.DictionarySourceToggles}
@@ -687,7 +688,8 @@ public  final class DictionarySourceToggles extends
   /**
    * <pre>
    * `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
-   * preferences that drives `DictionaryFiltersRequest`. Field tags map
+   * preferences the engine resolves into its source filter
+   * (`lexicon::api::dictionary_filter_bitmask`). Field tags map
    * directly to the bit positions the engine consumes; reordering tags is
    * a wire break.
    *
@@ -699,8 +701,8 @@ public  final class DictionarySourceToggles extends
    * sub-message is the active sentinel — a platform that ships the toggles
    * sets it; any caller that leaves it absent (a platform whose UI is not
    * yet wired, NextWord) signals "no subcollection gating" and the engine
-   * keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
-   * owns the subtag bit packing so the layout lives in Rust only.
+   * keeps the legacy all-on behaviour (wire bit 13 stays 0).
+   * `dictionary_filter_bitmask` owns the subtag bit packing so the layout lives in Rust only.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.DictionarySourceToggles}

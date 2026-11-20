@@ -1,15 +1,12 @@
-//! Lexicon slice of the engine bridge: loading the dictionary data and
-//! resolving the user's source toggles into the engine's bitmask, and the
-//! Manage Dictionaries search's two lookups. Twin of iOS
-//! `RustEngineBridge+Lexicon.swift`.
-
-use std::collections::BTreeSet;
+//! Lexicon slice of the engine bridge: loading the dictionary data, the
+//! user's source toggles on the wire, and the Manage Dictionaries search's
+//! one engine call. Twin of iOS `EngineLexiconClient`.
 
 use protos::engine::{
-    lexicon_request, lexicon_response, request, response, DictionaryFiltersRequest,
-    DictionarySourceCode, DictionarySourceToggles as WireDictionarySourceToggles,
-    InputMode as WireInputMode, InstallRequest, IsHanjiRequest, KautianSubcollectionToggles,
-    LexiconRequest, LexiconResponse, SearchByHanjiRequest, SearchWithSourcesRequest, TaigiWord,
+    lexicon_request, lexicon_response, request, response, DictionarySearchRequest,
+    DictionarySearchRow, DictionarySourceCode,
+    DictionarySourceToggles as WireDictionarySourceToggles, InstallRequest,
+    KautianSubcollectionToggles, LexiconRequest, LexiconResponse,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -68,7 +65,7 @@ impl DictionarySource {
 
     /// An unrecognised code is dropped — a newer engine naming a source this
     /// build has never heard of is not a reason to fail a search.
-    fn from_code(code: i32) -> Option<Self> {
+    pub(crate) fn from_code(code: i32) -> Option<Self> {
         Some(match DictionarySourceCode::try_from(code).ok()? {
             DictionarySourceCode::DictSourceKautian => Self::Kautian,
             DictionarySourceCode::DictSourceTaigitv => Self::Taigitv,
@@ -87,23 +84,6 @@ impl DictionarySource {
         })
     }
 }
-
-/// What one resolve of the user's dictionary toggles answered. Both halves
-/// come from the same round-trip on purpose: the mask decides which rows the
-/// engine returns and the source set decides which badges those rows carry.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DictionaryFilters {
-    /// The engine's own answer, verbatim.
-    pub dictionary_filter_bitmask: u32,
-    /// The sources the user has switched on, for labelling results.
-    pub enabled_sources: BTreeSet<DictionarySource>,
-}
-
-/// What a SEARCH sends when the toggles could not be resolved. The search
-/// path takes `u32::MAX` as its "filter disabled" sentinel
-/// (`engine/lexicon/src/dictionary_reader.rs:147`); sending `0` there would
-/// be fail-CLOSED.
-pub const ALL_SOURCES_ENABLED_SEARCH_BITMASK: u32 = u32::MAX;
 
 /// Points the engine at the dictionary data. Sent once per process; the
 /// files are read-only and outlive every composing session.
@@ -142,41 +122,7 @@ pub fn install(
     }
 }
 
-/// Resolves the user's dictionary toggles into the bitmask the engine filters
-/// candidates by. The bit layout — including the kautian subcollection region
-/// in bits 13-25 — belongs to Rust (`engine/lexicon/src/dictionary_filters.rs`);
-/// this asks for it rather than reproducing it (no redundant fallback,
-/// `AGENTS.md` § Design principles).
-///
-/// `None` means the round-trip failed. Callers resolve ONCE per query and pass
-/// the answer down, so mask and badge set describe one instant.
-pub fn dictionary_filters(toggles: &DictionarySourceToggles) -> Option<DictionaryFilters> {
-    let op = "lexiconDictionaryFilters";
-    let response = lexicon_response(
-        lexicon_request::Method::DictionaryFilters(DictionaryFiltersRequest {
-            toggles: Some(dictionary_toggles(toggles)),
-        }),
-        op,
-    )?;
-    match response.result {
-        Some(lexicon_response::Result::DictionaryFiltersResult(result)) => {
-            Some(DictionaryFilters {
-                dictionary_filter_bitmask: result.dictionary_filter_bitmask,
-                enabled_sources: result
-                    .enabled_source_codes
-                    .iter()
-                    .filter_map(|code| DictionarySource::from_code(*code))
-                    .collect(),
-            })
-        }
-        _ => {
-            record_failure(op, "response carried no dictionary-filters result");
-            None
-        }
-    }
-}
-
-/// The user's dictionary toggles on the wire — what `DictionaryFilters` and
+/// The user's dictionary toggles on the wire — what `DictionarySearch` and
 /// `FetchAtPos` carry; the engine resolves them into its source filter.
 pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDictionarySourceToggles {
     let subcollections = &toggles.kautian_subcollections;
@@ -213,112 +159,35 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDicti
     }
 }
 
-/// One dictionary record as the Manage Dictionaries search lists it.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LexiconRow {
-    pub id: i64,
-    pub roman: String,
-    pub hanji: Option<String>,
-    /// The dictionaries the record belongs to, in the engine's (source-bit)
-    /// order — the order the badges are drawn in.
-    pub sources: Vec<DictionarySource>,
-}
-
-impl LexiconRow {
-    fn from_wire(word: TaigiWord) -> Self {
-        Self {
-            id: word.id,
-            roman: word.roman,
-            hanji: word.hanji,
-            sources: word
-                .sources
-                .into_iter()
-                .filter_map(DictionarySource::from_code)
-                .collect(),
-        }
-    }
-}
-
-fn wire_input_mode(mode: InputMode) -> i32 {
-    match mode {
-        InputMode::Tl => WireInputMode::Tl as i32,
-        InputMode::Poj => WireInputMode::Poj as i32,
-        InputMode::Tps => WireInputMode::Tps as i32,
-    }
-}
-
-/// The Manage Dictionaries search's all-source romanization lookup.
-pub fn search_with_sources(
-    input: &str,
-    mode: InputMode,
-    limit: u32,
-    enabled_sources_bitmask: u32,
-) -> Vec<LexiconRow> {
-    let op = "lexiconSearchWithSources";
-    let request = SearchWithSourcesRequest {
-        input: input.to_owned(),
-        input_mode: wire_input_mode(mode),
-        limit,
-        enabled_sources_bitmask,
-    };
-    let Some(response) = lexicon_response(lexicon_request::Method::SearchWithSources(request), op)
-    else {
-        return Vec::new();
-    };
-    match response.result {
-        Some(lexicon_response::Result::SearchWithSourcesResult(result)) => {
-            result.rows.into_iter().map(LexiconRow::from_wire).collect()
-        }
-        _ => {
-            record_failure(op, "response carried no search result");
-            Vec::new()
-        }
-    }
-}
-
-/// The Manage Dictionaries search's hanji-prefix lookup.
-pub fn search_by_hanji(
+/// The Manage Dictionaries search (lexicon `DictionarySearch`): the engine
+/// picks the Hanji or romanization lookup, filters by `toggles`, renders the
+/// romanization for `mode` and lists the custom entries first (when
+/// `custom_dictionary_enabled`), at most `limit` rows per section. Empty when
+/// the engine could not answer — logged, never retried.
+pub fn dictionary_search(
     query: &str,
     mode: InputMode,
+    toggles: &DictionarySourceToggles,
+    custom_dictionary_enabled: bool,
     limit: u32,
-    enabled_sources_bitmask: u32,
-) -> Vec<LexiconRow> {
-    let op = "lexiconSearchByHanji";
-    let request = SearchByHanjiRequest {
+) -> Vec<DictionarySearchRow> {
+    let op = "lexiconDictionarySearch";
+    let request = DictionarySearchRequest {
         query: query.to_owned(),
-        input_mode: wire_input_mode(mode),
+        input_mode: mode.wire().to_owned(),
+        toggles: Some(dictionary_toggles(toggles)),
+        custom_dictionary_enabled,
         limit,
-        enabled_sources_bitmask,
     };
-    let Some(response) = lexicon_response(lexicon_request::Method::SearchByHanji(request), op)
+    let Some(response) = lexicon_response(lexicon_request::Method::DictionarySearch(request), op)
     else {
         return Vec::new();
     };
     match response.result {
-        Some(lexicon_response::Result::SearchByHanjiResult(result)) => {
-            result.rows.into_iter().map(LexiconRow::from_wire).collect()
-        }
+        Some(lexicon_response::Result::DictionarySearchResult(result)) => result.rows,
         _ => {
-            record_failure(op, "response carried no search result");
+            record_failure(op, "response carried no dictionary-search result");
             Vec::new()
-        }
-    }
-}
-
-/// Whether `text` is a hanji query.
-pub fn is_hanji(text: &str) -> bool {
-    let op = "isHanji";
-    let request = IsHanjiRequest {
-        text: text.to_owned(),
-    };
-    let Some(response) = lexicon_response(lexicon_request::Method::IsHanji(request), op) else {
-        return false;
-    };
-    match response.result {
-        Some(lexicon_response::Result::IsHanjiResult(result)) => result.is_hanji,
-        _ => {
-            record_failure(op, "response carried no is-hanji result");
-            false
         }
     }
 }
@@ -462,32 +331,6 @@ mod tests {
                 assert_eq!(wire_field(&wire), read(&toggles), "{name} in {toggles:?}");
             }
         }
-    }
-
-    #[test]
-    fn wire_sources_keep_the_engine_order_and_drop_unknown_codes() {
-        // trace: codes 1 (kautian), 10 (khiin), 12 (dev), 11 (lkk) in the
-        // engine's bit order; 0 (unspecified) and 999 (a newer engine's
-        // source) are dropped by `from_code`.
-        let word = TaigiWord {
-            sources: vec![1, 10, 12, 11, 0, 999],
-            ..TaigiWord::default()
-        };
-        assert_eq!(
-            LexiconRow::from_wire(word).sources,
-            vec![
-                DictionarySource::Kautian,
-                DictionarySource::Khiin,
-                DictionarySource::Dev,
-                DictionarySource::Lkk
-            ]
-        );
-    }
-
-    #[test]
-    fn is_hanji_answers_through_the_engine() {
-        assert!(is_hanji("台語"));
-        assert!(!is_hanji("tai"));
     }
 
     #[test]

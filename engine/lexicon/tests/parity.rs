@@ -414,16 +414,16 @@ fn lookup_associations_filters_before_limit() {
 
 // --- INVARIANT_LEX_API_BITMASK_HONORED ---------------------------------
 
-/// Regression for v3.5.6 fix r3173440126 — `api::search_with_sources` and
-/// `api::search_by_hanji` previously hardcoded `u32::MAX` (Tab3 paths),
-/// bypassing user dictionary-source toggles AND falsely forcing variant +
-/// khiin on. Drives the assertion through `lexicon::api` so the regression
-/// is pinned at the layer where it actually existed (search.rs has always
-/// honored the bitmask param; api.rs was the leak point).
+/// Regression for v3.5.6 fix r3173440126 — the Tab3 search paths in
+/// `lexicon::api` once hardcoded `u32::MAX`, bypassing user
+/// dictionary-source toggles AND falsely forcing variant + khiin on. Drives
+/// the assertion through `api::dictionary_search` (the one search entry
+/// since 2026-11-20) so the regression stays pinned at the layer where it
+/// existed (search.rs has always honored the bitmask param).
 #[test]
 fn invariant_lex_api_bitmask_plumbing_honored() {
     use lexicon::api;
-    use protos::engine::{SearchByHanjiRequest, SearchWithSourcesRequest};
+    use protos::engine::{DictionarySearchRequest, DictionarySourceToggles};
 
     let _engine_lock = engine_install_lock();
 
@@ -446,45 +446,44 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     .expect("paths validated");
     EngineHandle::install(paths).expect("install");
 
-    // search_with_sources: mask=0x0001 hits, mask=0x0002 misses.
-    let make_with_sources = |mask: u32| SearchWithSourcesRequest {
-        input: "test".to_string(),
-        input_mode: protos::engine::InputMode::Tl as i32,
-        limit: 10,
-        enabled_sources_bitmask: mask,
+    // trace: kautian alone → mask 0x0001 (the row's bit), taigitv alone →
+    // mask 0x0002 (`dictionary_filters` bit layout).
+    let kautian = DictionarySourceToggles {
+        kautian: true,
+        ..DictionarySourceToggles::default()
     };
-    let hit = api::search_with_sources(make_with_sources(0x0001)).expect("hit");
-    assert_eq!(
-        hit.rows.len(),
-        1,
-        "search_with_sources with matching mask returns entry"
-    );
-
-    let miss = api::search_with_sources(make_with_sources(0x0002)).expect("miss");
-    assert!(
-        miss.rows.is_empty(),
-        "search_with_sources with non-matching mask filters entry"
-    );
-
-    // search_by_hanji: same assertions, hanji-prefix path.
-    let make_by_hanji = |mask: u32| SearchByHanjiRequest {
-        query: "好".to_string(),
-        input_mode: protos::engine::InputMode::Tl as i32,
-        limit: 10,
-        enabled_sources_bitmask: mask,
+    let taigitv = DictionarySourceToggles {
+        taigitv: true,
+        ..DictionarySourceToggles::default()
     };
-    let hit_h = api::search_by_hanji(make_by_hanji(0x0001)).expect("hit_h");
-    assert_eq!(
-        hit_h.rows.len(),
-        1,
-        "search_by_hanji with matching mask returns entry"
-    );
+    let rows = |query: &str, toggles: &DictionarySourceToggles| {
+        api::dictionary_search(
+            DictionarySearchRequest {
+                query: query.to_owned(),
+                input_mode: "tl".to_owned(),
+                toggles: Some(*toggles),
+                custom_dictionary_enabled: false,
+                limit: 10,
+            },
+            |_| Vec::new(),
+        )
+        .expect("search")
+        .rows
+    };
 
-    let miss_h = api::search_by_hanji(make_by_hanji(0x0002)).expect("miss_h");
-    assert!(
-        miss_h.rows.is_empty(),
-        "search_by_hanji with non-matching mask filters entry"
+    // Romanization path: the matching source hits, the other filters it.
+    assert_eq!(
+        rows("test", &kautian).len(),
+        1,
+        "romanization, matching mask"
     );
+    assert!(
+        rows("test", &taigitv).is_empty(),
+        "romanization, other mask"
+    );
+    // Hanji-prefix path: same assertions.
+    assert_eq!(rows("好", &kautian).len(), 1, "Hanji, matching mask");
+    assert!(rows("好", &taigitv).is_empty(), "Hanji, other mask");
 }
 
 // --- INVARIANT_LEX_INSTALL_PATH_VALIDATION -----------------------------

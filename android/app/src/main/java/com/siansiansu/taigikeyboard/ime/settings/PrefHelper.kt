@@ -627,7 +627,7 @@ class PrefHelper(
     var devDictEnabled: Boolean by preference(PreferenceKeys.DEV_DICT_ENABLED, true)
 
     // MOE dictionary subsets (accents + name appendix), nested under the MOE master toggle; all default on
-    // (DD5 opt-out). Accent order follows config.yaml dialect_columns; bit layout lives in Rust compute_filters.
+    // (DD5 opt-out). Accent order follows config.yaml dialect_columns; bit layout lives in Rust dictionary_filter_bitmask.
     var kautianAccentLukangEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_LUKANG_ENABLED, true)
 
     var kautianAccentSansiaEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_ACCENT_SANSIA_ENABLED, true)

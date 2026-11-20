@@ -74,7 +74,7 @@ protocol EngineSettings {
 
     // kautian subcollection toggles (nested under the kautian master). Order
     // mirrors config.yaml dialect_columns; the bridge packs these into the
-    // KautianSubcollectionToggles proto and `compute_filters` owns the subtag bit
+    // KautianSubcollectionToggles proto and `dictionary_filter_bitmask` owns the subtag bit
     // layout. Absent gate ⇒ engine keeps legacy all-on (DD5).
     var isKautianAccentLukangEnabled: Bool { get }
     var isKautianAccentSansiaEnabled: Bool { get }
