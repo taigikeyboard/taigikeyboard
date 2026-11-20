@@ -75,7 +75,7 @@ message GetToneVariations {}
 // {tl, poj, tps} × {num, notone, abbrev} bundle for a stored roman) and the
 // READ side (the one family-native query key) are both derived in-process
 // by `engine/userdata` (`phonetics::api::derive_custom_search_keys` /
-// `derive_custom_query_key`), behind the user-data ops (`SearchCustomEntries`).
+// `derive_custom_query_key`), behind the user-data ops and the dictionary search.
 // The `DeriveCustomQueryKey` op (tag 23) went with its last caller, the
 // desktop settings search, on 2026-09-30.
 

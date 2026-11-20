@@ -66,7 +66,7 @@ Engine ops (`UserDataRequest`, `engine/protos/proto/user_data.proto`), reached t
 |-----------|-----------|-----|
 | Create/Update | `SaveCustomEntry` | `save` |
 | Read all / page | `ListCustomEntries` (page + `total` + `matching_total`) | `listAll` |
-| Search | `SearchCustomEntries` | — (the lexicon `DictionarySearch` reads it inside the engine; `LexiconClient.dictionarySearch`) |
+| Search | — (no user-data op: the lexicon `DictionarySearch` reads it inside the engine, `UserDataHandle::custom_entries_matching`) | — (`LexiconClient.dictionarySearch`) |
 | Delete one | `DeleteCustomEntry` | `delete` |
 | Delete all | `ResetUserData.custom_dictionary` | `deleteAll` |
 | CSV import / export | `ImportCustomCsv` / `ExportCustomCsv` | `importCSV` / `exportCSV` (Android `importCsv` / `exportCsv`) |

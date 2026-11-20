@@ -75,7 +75,7 @@ pub const VARIANT_BIT: u16 = 1 << 12;
 /// read so a future writer cannot corrupt the filter AND.
 pub const KAUTIAN_SUBTAG_USED_MASK: u16 = (1 << (KAUTIAN_SUBTAG_ALT_READING_BIT + 1)) - 1;
 /// Subtag bit positions (mirror `source_bits.py::KAUTIAN_SUBTAG_*`). The
-/// ENCODE side (`dictionary_filters::compute_filters`) packs the wire enable
+/// ENCODE side (`dictionary_filters::dictionary_filter_bitmask`) packs the wire enable
 /// mask from these so the subcollection bit layout lives in Rust only.
 pub const KAUTIAN_SUBTAG_MAIN_BIT: u16 = 0;
 pub const KAUTIAN_SUBTAG_ACCENT_SHIFT: u16 = 1;
@@ -89,7 +89,7 @@ pub const KAUTIAN_SUBTAG_ALT_READING_BIT: u16 = 12;
 /// = all subcollections on, zero behaviour change). bits 14..=26 = enable mask
 /// in the SAME 13-bit layout as the subtag, so the filter test is one AND.
 /// `u32::MAX` (the all-enabled sentinel) also carries bit 13 set; a real
-/// platform mask (Phase 3 `compute_filters`) sets bit 13 + the 13 bits
+/// platform mask (Phase 3 `dictionary_filter_bitmask`) sets bit 13 + the 13 bits
 /// explicitly and MUST never equal `u32::MAX`.
 pub const WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT: u32 = 1 << 13;
 pub const WIRE_KAUTIAN_SUBCOLL_SHIFT: u32 = 14;

@@ -10,10 +10,9 @@ use composing::api::ComposingError;
 use composing::{ConversionFrequency, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
-    composing_request, next_word_request, response, user_data_request, user_data_response,
-    AppConfig, ComposingRequest, ComposingResponse, CustomDictionaryEntry, ErrorCode,
-    NextWordRequest, NextWordResponse, RawNextWordPrediction, Response, SearchCustomEntries,
-    Source, UserDataRequest, UserDataResponse,
+    composing_request, next_word_request, response, AppConfig, ComposingRequest, ComposingResponse,
+    CustomDictionaryEntry, DictionarySearchRequest, ErrorCode, NextWordRequest, NextWordResponse,
+    RawNextWordPrediction, Response, Source, UserDataRequest,
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
@@ -246,21 +245,17 @@ fn following_rows(
         .collect()
 }
 
-/// The custom entries a dictionary search finds, through the user-data
-/// request (which waits for a background open to settle). None before the
-/// platform opens its user data.
-pub(super) fn custom_entries_matching(search: SearchCustomEntries) -> Vec<CustomDictionaryEntry> {
-    let request = UserDataRequest {
-        method: Some(user_data_request::Method::SearchCustomEntries(search)),
-    };
-    match UserDataHandle::instance().handle(&request) {
-        Ok(UserDataResponse {
-            result: Some(user_data_response::Result::CustomEntryMatches(matches)),
-        }) => matches.entries,
-        Ok(answer) => {
-            log::warn!("dictionary search: unexpected custom-entry answer {answer:?}");
-            Vec::new()
-        }
+/// The custom entries a dictionary search finds (waits for a background
+/// open to settle). None before the platform opens its user data.
+pub(super) fn custom_entries_matching(
+    search: &DictionarySearchRequest,
+) -> Vec<CustomDictionaryEntry> {
+    match UserDataHandle::instance().custom_entries_matching(
+        &search.query,
+        &search.input_mode,
+        search.limit as usize,
+    ) {
+        Ok(entries) => entries,
         // The platform has not opened its user data yet.
         Err(RequestError::Invalid(reason)) => {
             log::debug!("dictionary search without custom entries: {reason}");

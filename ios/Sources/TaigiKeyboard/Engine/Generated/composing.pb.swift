@@ -495,10 +495,10 @@ public nonisolated struct Taigi_Engine_Reset: Sendable {
 /// `engine/ranking/src/score.rs::decayed_user_weight_delta`.
 ///
 /// The source filter is the request config's `AppConfig.dictionary_sources`
-/// — the user's dictionary switches, the same message Tab3 browse
-/// (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine resolves
-/// them with the encoder behind `DictionaryFilters`, so keyboard candidates
-/// honour the same 12 source toggles + kautian subcollection toggles as browse
+/// — the user's dictionary switches, the same message the dictionary search
+/// (`DictionarySearchRequest`) and `PredictNext` carry. The engine resolves
+/// them with one encoder (`lexicon::api::dictionary_filter_bitmask`), so keyboard candidates
+/// honour the same 12 source toggles + kautian subcollection toggles as the search
 /// and no platform computes a bitmask. Absent switches keep every source on;
 /// every dictionary off offers no dictionary candidates (§57).
 ///

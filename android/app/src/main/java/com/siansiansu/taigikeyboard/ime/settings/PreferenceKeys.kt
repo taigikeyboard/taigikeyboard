@@ -115,7 +115,7 @@ object PreferenceKeys {
     val DEV_DICT_ENABLED = booleanPreferencesKey("dictionary__dev_dict_enabled")
 
     // MOE subsets (accents + name appendix), nested under the MOE master; both default ON (opt-out).
-    // Accent order matches config.yaml dialect_columns (= subtag bit - 1); bit layout lives in Rust compute_filters.
+    // Accent order matches config.yaml dialect_columns (= subtag bit - 1); bit layout lives in Rust dictionary_filter_bitmask.
     val KAUTIAN_ACCENT_LUKANG_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_lukang_enabled")
     val KAUTIAN_ACCENT_SANSIA_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_sansia_enabled")
     val KAUTIAN_ACCENT_TAIPAK_ENABLED = booleanPreferencesKey("dictionary__kautian_accent_taipak_enabled")

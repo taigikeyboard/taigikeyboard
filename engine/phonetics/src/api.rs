@@ -147,8 +147,8 @@ pub fn is_word_material(c: char) -> bool {
 
 // In-process search-key derivation for the engine's own user-data stores
 // (`userdata`): the write-side bundle plus the read-side query key. No wire
-// op: the read side answers `SearchCustomEntries` (the `DeriveCustomQueryKey`
-// op went with its last caller on 2026-09-30).
+// op: the read side answers the dictionary search's custom entries (the
+// `DeriveCustomQueryKey` op went with its last caller on 2026-09-30).
 pub use crate::custom_search::{
     custom_search_reading, derive_custom_query_key, derive_custom_search_keys,
     tps_toneless_edge_key, CustomSearchKey,

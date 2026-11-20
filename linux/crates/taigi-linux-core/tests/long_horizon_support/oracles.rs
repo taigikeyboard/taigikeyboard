@@ -5,12 +5,8 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use std::sync::OnceLock;
-
 use serde::{Deserialize, Serialize};
-use taigi_desktop_core::engine::{
-    dictionary_filters, search_by_hanji, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
-};
+use taigi_desktop_core::engine::dictionary_search::lookup;
 use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, DictionarySourceToggles, InputMode, SettingsDocument,
@@ -475,7 +471,7 @@ pub fn evaluate_corpus_reachability(
             continue;
         }
         let syl_len = word.syllables.len();
-        // Find any substring of `syl_len` characters inside `hanji_clauses` that `search_by_hanji` knows!
+        // Find any substring of `syl_len` characters inside `hanji_clauses` that the dictionary search's Hanji lookup knows!
         let Some(target_hanji) = find_matching_lexicon_hanji(&hanji_clauses, syl_len, word) else {
             continue;
         };
@@ -641,21 +637,12 @@ fn is_cjk(ch: char) -> bool {
     (0x3400..=0x9FFF).contains(&code) || (0x20000..=0x323AF).contains(&code)
 }
 
-fn default_enabled_bitmask() -> u32 {
-    static MASK: OnceLock<u32> = OnceLock::new();
-    *MASK.get_or_init(|| {
-        dictionary_filters(&DictionarySourceToggles::default())
-            .map(|f| f.dictionary_filter_bitmask)
-            .unwrap_or(ALL_SOURCES_ENABLED_SEARCH_BITMASK)
-    })
-}
-
 fn find_matching_lexicon_hanji(
     runs: &[Vec<char>],
     syl_len: usize,
     word: &EncodedWord,
 ) -> Option<String> {
-    let bitmask = default_enabled_bitmask();
+    let toggles = DictionarySourceToggles::default();
     let target_tl_lower = word.display_tl.to_lowercase();
     for run in runs {
         if run.len() < syl_len {
@@ -663,10 +650,11 @@ fn find_matching_lexicon_hanji(
         }
         for win in run.windows(syl_len) {
             let candidate: String = win.iter().collect();
-            let rows = search_by_hanji(&candidate, InputMode::Tl, 16, bitmask);
+            // A Hanji query: dictionary rows only, TL romanization.
+            let rows = lookup(&candidate, InputMode::Tl, &toggles, false, 16);
             if rows.iter().any(|r| {
                 r.hanji.as_deref() == Some(candidate.as_str())
-                    && r.roman.to_lowercase() == target_tl_lower
+                    && r.lookup_tl.to_lowercase() == target_tl_lower
             }) {
                 return Some(candidate);
             }

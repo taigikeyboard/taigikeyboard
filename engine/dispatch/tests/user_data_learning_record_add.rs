@@ -13,9 +13,9 @@ use common::{open_user_data, user_data};
 use protos::engine::{
     response, user_data_request, user_data_response, AddLearningRecordToCustomDictionary,
     CustomDictionaryRefusal, ErrorCode, LearningRecord, LearningRecordKind, ListLearningRecords,
-    RecordUsage, Response, SearchCustomEntries,
+    RecordUsage, Response,
 };
-use userdata::{JournalMode, UserDataPaths, UserDataStores};
+use userdata::{JournalMode, UserDataHandle, UserDataPaths, UserDataStores};
 
 fn answer(response: Response) -> user_data_response::Result {
     assert_eq!(response.error, ErrorCode::Ok as i32, "{response:?}");
@@ -68,21 +68,15 @@ fn record_usage(word: &str, tl: &str) {
     )));
 }
 
+/// The custom entries a dictionary search finds for `query` — the lookup
+/// engine/dispatch joins into `DictionarySearch`.
 fn custom_words(query: &str) -> Vec<String> {
-    match answer(user_data(user_data_request::Method::SearchCustomEntries(
-        SearchCustomEntries {
-            query: query.into(),
-            input_mode: "tl".into(),
-            limit: 5,
-        },
-    ))) {
-        user_data_response::Result::CustomEntryMatches(matches) => matches
-            .entries
-            .into_iter()
-            .map(|entry| entry.hanji)
-            .collect(),
-        other => panic!("expected matches, got {other:?}"),
-    }
+    UserDataHandle::instance()
+        .custom_entries_matching(query, "tl", 5)
+        .expect("custom entries")
+        .into_iter()
+        .map(|entry| entry.hanji)
+        .collect()
 }
 
 fn refused(record: LearningRecord) {

@@ -1,14 +1,14 @@
-//! The Manage Dictionaries search's lookup: the custom dictionary first,
-//! then the engine's dictionaries under the user's source toggles, in the
-//! pane's order. One lookup for the Windows and Linux settings windows. Twin of
-//! iOS `DictionarySearchService.swift`.
+//! The Manage Dictionaries search: the settings in force sent as one engine
+//! `DictionarySearch` (custom entries first, then the dictionaries under the
+//! user's source toggles, in the engine's order), decoded for the pane. One
+//! lookup for the Windows, Linux and macOS settings windows. Twin of iOS
+//! `DictionarySearchService.swift`.
 
-use super::user_data::search_custom_entries;
-use super::{
-    chhoe_url, dictionary_filters, is_hanji, moe_url, search_by_hanji, search_with_sources,
-    tl_to_poj, DictionarySource, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
-};
-use crate::settings::{keys, InputMode, SettingsDocument};
+use protos::engine::{dictionary_search_row, DictionarySearchRow};
+
+use super::lexicon::dictionary_search;
+use super::{chhoe_url, moe_url, DictionarySource};
+use crate::settings::{keys, DictionarySourceToggles, InputMode, SettingsDocument};
 use crate::strings::StringKey;
 
 /// `DictionarySearchService.resultLimit`.
@@ -25,9 +25,8 @@ pub struct DictionarySearchResult {
     pub id: ResultId,
     /// The romanization as the current mode spells it.
     pub roman: String,
-    /// What the web dictionaries are asked with: the row's TL, or a custom
-    /// entry's own romanization, as iOS and Android ask with it
-    /// (`DictionarySearchService` `tl = entry.roman`).
+    /// What the web dictionaries are asked with (the engine's `lookup_tl`):
+    /// the row's TL, or a custom entry's own romanization.
     pub lookup_tl: String,
     pub hanji: Option<String>,
     pub sources: Vec<DictionarySource>,
@@ -63,91 +62,94 @@ impl DictionarySearchResult {
         }
         keys
     }
+
+    /// A row without an id is one this build cannot key — dropped, never
+    /// shown with a made-up identity.
+    fn from_wire(row: DictionarySearchRow) -> Option<Self> {
+        let id = match row.id? {
+            dictionary_search_row::Id::SystemId(id) => ResultId::System(id),
+            dictionary_search_row::Id::CustomId(id) => ResultId::Custom(id),
+        };
+        Some(Self {
+            id,
+            roman: row.roman,
+            lookup_tl: row.lookup_tl,
+            hanji: row.hanji,
+            sources: row
+                .sources
+                .into_iter()
+                .filter_map(DictionarySource::from_code)
+                .collect(),
+        })
+    }
 }
 
-/// Every hit for `query`: custom entries (never for a hanji query), then
-/// the system rows sorted the page's way.
+/// Every hit for `query` under the settings in force: custom entries (never
+/// for a Hanji query, none when Enable Custom Dictionary is off), then the
+/// dictionary rows.
 pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchResult> {
-    if query.is_empty() {
-        return Vec::new();
-    }
-    let mode: InputMode = settings.choice(&keys::INPUT_MODE);
-    let toggles = settings.dictionary_sources();
-    let filters = dictionary_filters(&toggles);
-    let is_hanji_query = is_hanji(query);
-    let sources_bitmask = filters
-        .as_ref()
-        .map_or(ALL_SOURCES_ENABLED_SEARCH_BITMASK, |filters| {
-            filters.dictionary_filter_bitmask
-        });
-    let rows = if is_hanji_query {
-        search_by_hanji(query, mode, RESULT_LIMIT, sources_bitmask)
-    } else {
-        search_with_sources(query, mode, RESULT_LIMIT, sources_bitmask)
-    };
-    // The engine owns the order (corpus order, MOE rows first — `lexicon::search`).
-    let system: Vec<DictionarySearchResult> = rows
-        .into_iter()
-        .map(|row| {
-            let mut sources = row.sources;
-            // Badges only for sources the user has on.
-            if let Some(filters) = &filters {
-                sources.retain(|source| filters.enabled_sources.contains(source));
-            }
-            DictionarySearchResult {
-                id: ResultId::System(row.id),
-                roman: display_roman(&row.roman, mode),
-                lookup_tl: row.roman,
-                hanji: row.hanji,
-                sources,
-            }
-        })
-        .collect();
-    let mut results = if is_hanji_query {
-        Vec::new()
-    } else {
-        custom_results(query, settings, mode)
-    };
-    results.extend(system);
-    results
+    lookup(
+        query,
+        settings.choice(&keys::INPUT_MODE),
+        &settings.dictionary_sources(),
+        settings.bool(&keys::IS_CUSTOM_DICT_ENABLED),
+        RESULT_LIMIT,
+    )
 }
 
-fn display_roman(tl: &str, mode: InputMode) -> String {
-    match mode {
-        InputMode::Poj => tl_to_poj(tl).unwrap_or_else(|| tl.to_owned()),
-        // TL under TPS, as iOS shows (`DictionarySearchService.swift`); the
-        // search itself still reads the `tps:` family (`wire_input_mode`).
-        InputMode::Tl | InputMode::Tps => tl.to_owned(),
-    }
-}
-
-/// The custom entries the query finds the way the keyboard does (the
-/// engine derives the key and prefix-matches it); none when the custom
-/// dictionary is off or the engine could not answer.
-fn custom_results(
+/// [`search`] with every input spelled out, `limit` rows per section.
+pub fn lookup(
     query: &str,
-    settings: &SettingsDocument,
     mode: InputMode,
+    toggles: &DictionarySourceToggles,
+    custom_dictionary_enabled: bool,
+    limit: u32,
 ) -> Vec<DictionarySearchResult> {
-    if !settings.bool(&keys::IS_CUSTOM_DICT_ENABLED) {
-        return Vec::new();
-    }
-    search_custom_entries(query, mode, RESULT_LIMIT as usize)
-        .unwrap_or_default()
+    dictionary_search(query, mode, toggles, custom_dictionary_enabled, limit)
         .into_iter()
-        .map(|entry| DictionarySearchResult {
-            id: ResultId::Custom(entry.id),
-            lookup_tl: entry.roman.clone(),
-            roman: entry.roman,
-            hanji: (!entry.hanji.is_empty()).then_some(entry.hanji),
-            sources: vec![DictionarySource::Custom],
-        })
+        .filter_map(DictionarySearchResult::from_wire)
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wire_rows_keep_the_engine_order_and_drop_unknown_codes() {
+        // trace: codes 1 (kautian), 10 (khiin), 12 (dev), 11 (lkk) in the
+        // engine's bit order; 0 (unspecified) and 999 (a newer engine's
+        // source) are dropped by `from_code`.
+        let row = DictionarySearchRow {
+            id: Some(dictionary_search_row::Id::SystemId(7)),
+            sources: vec![1, 10, 12, 11, 0, 999],
+            ..DictionarySearchRow::default()
+        };
+        let result = DictionarySearchResult::from_wire(row).expect("keyed");
+        assert_eq!(result.key(), "system:7");
+        assert_eq!(
+            result.sources,
+            [
+                DictionarySource::Kautian,
+                DictionarySource::Khiin,
+                DictionarySource::Dev,
+                DictionarySource::Lkk
+            ]
+        );
+        let custom = DictionarySearchRow {
+            id: Some(dictionary_search_row::Id::CustomId("c1".to_owned())),
+            ..DictionarySearchRow::default()
+        };
+        assert_eq!(
+            DictionarySearchResult::from_wire(custom).map(|result| result.key()),
+            Some("custom:c1".to_owned())
+        );
+        assert_eq!(
+            DictionarySearchResult::from_wire(DictionarySearchRow::default()),
+            None,
+            "no id"
+        );
+    }
 
     #[test]
     fn badge_keys_dedup_by_word_in_source_order() {

@@ -27,11 +27,7 @@ pub fn app_config(settings: &crate::settings::EngineSettings) -> protos::engine:
     bridge::app_config(settings)
 }
 pub use external_lookup::{chhoe_url, moe_url};
-pub use lexicon::{
-    dictionary_filters, install as lexicon_install, is_hanji, search_by_hanji, search_with_sources,
-    DictionaryFilters, DictionarySource, LexiconInstallStats, LexiconRow,
-    ALL_SOURCES_ENABLED_SEARCH_BITMASK,
-};
+pub use lexicon::{install as lexicon_install, DictionarySource, LexiconInstallStats};
 pub use nextword::{
     reset_all as nextword_reset_all,
     update_last_selected_word as nextword_update_last_selected_word,

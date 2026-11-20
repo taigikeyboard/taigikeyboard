@@ -22,50 +22,6 @@ public interface LexiconResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.InstallResponse getInstallResult();
 
   /**
-   * <code>.taigi.engine.SearchWithSourcesResponse search_with_sources_result = 13;</code>
-   * @return Whether the searchWithSourcesResult field is set.
-   */
-  boolean hasSearchWithSourcesResult();
-  /**
-   * <code>.taigi.engine.SearchWithSourcesResponse search_with_sources_result = 13;</code>
-   * @return The searchWithSourcesResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse getSearchWithSourcesResult();
-
-  /**
-   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
-   * @return Whether the searchByHanjiResult field is set.
-   */
-  boolean hasSearchByHanjiResult();
-  /**
-   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
-   * @return The searchByHanjiResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse getSearchByHanjiResult();
-
-  /**
-   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
-   * @return Whether the isHanjiResult field is set.
-   */
-  boolean hasIsHanjiResult();
-  /**
-   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
-   * @return The isHanjiResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse getIsHanjiResult();
-
-  /**
-   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
-   * @return Whether the dictionaryFiltersResult field is set.
-   */
-  boolean hasDictionaryFiltersResult();
-  /**
-   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
-   * @return The dictionaryFiltersResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse getDictionaryFiltersResult();
-
-  /**
    * <code>.taigi.engine.DictionarySearchResponse dictionary_search_result = 19;</code>
    * @return Whether the dictionarySearchResult field is set.
    */

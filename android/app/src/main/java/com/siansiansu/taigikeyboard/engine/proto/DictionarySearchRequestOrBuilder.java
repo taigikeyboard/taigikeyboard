@@ -54,7 +54,7 @@ public interface DictionarySearchRequestOrBuilder extends
 
   /**
    * <pre>
-   * Absent = every toggle off, as `DictionaryFiltersRequest`.
+   * Absent = every toggle off.
    * </pre>
    *
    * <code>.taigi.engine.DictionarySourceToggles toggles = 3;</code>
@@ -63,7 +63,7 @@ public interface DictionarySearchRequestOrBuilder extends
   boolean hasToggles();
   /**
    * <pre>
-   * Absent = every toggle off, as `DictionaryFiltersRequest`.
+   * Absent = every toggle off.
    * </pre>
    *
    * <code>.taigi.engine.DictionarySourceToggles toggles = 3;</code>

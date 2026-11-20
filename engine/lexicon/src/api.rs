@@ -4,15 +4,13 @@
 
 use phonetics::{InputMode, KeyFamily};
 use protos::engine::{
-    dictionary_search_row, CustomDictionaryEntry, DictionaryFiltersRequest,
-    DictionaryFiltersResponse, DictionarySearchRequest, DictionarySearchResponse,
-    DictionarySearchRow, DictionarySourceCode, InstallRequest, InstallResponse, IsHanjiRequest,
-    IsHanjiResponse, SearchByHanjiRequest, SearchByHanjiResponse, SearchCustomEntries,
-    SearchWithSourcesRequest, SearchWithSourcesResponse, TaigiWord,
+    dictionary_search_row, CustomDictionaryEntry, DictionarySearchRequest,
+    DictionarySearchResponse, DictionarySearchRow, DictionarySourceCode, InstallRequest,
+    InstallResponse,
 };
 
 use crate::classification;
-use crate::dictionary_filters::{compute_filters, source_codes};
+use crate::dictionary_filters::source_codes;
 // The source filter alone, for an engine composing request that carries the
 // toggles in its config (`AppConfig.dictionary_sources`).
 pub use crate::dictionary_filters::{association_bitmask, dictionary_filter_bitmask};
@@ -39,39 +37,6 @@ pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
     })
 }
 
-// Tab3 romanization lookup, filtered by the enabled-source bitmask.
-pub fn search_with_sources(
-    req: SearchWithSourcesRequest,
-) -> Result<SearchWithSourcesResponse, LexiconError> {
-    let params = SearchParams {
-        input: req.input,
-        family: proto_key_family(req.input_mode),
-        limit: req.limit,
-        enabled_sources_bitmask: req.enabled_sources_bitmask,
-    };
-    let rows =
-        with_search_readers(|prefix_index, dict| search::search(&params, prefix_index, dict))?;
-    Ok(SearchWithSourcesResponse {
-        rows: rows.into_iter().map(search_row_to_taigi_word).collect(),
-    })
-}
-
-// Tab3 Hanji lookup: scans the index under the `hanzi:` prefix, filtered by the source bitmask.
-pub fn search_by_hanji(req: SearchByHanjiRequest) -> Result<SearchByHanjiResponse, LexiconError> {
-    let rows = with_search_readers(|prefix_index, dict| {
-        search::search_by_hanji(
-            &req.query,
-            req.limit,
-            req.enabled_sources_bitmask,
-            prefix_index,
-            dict,
-        )
-    })?;
-    Ok(SearchByHanjiResponse {
-        rows: rows.into_iter().map(search_row_to_taigi_word).collect(),
-    })
-}
-
 // The Manage Dictionaries search. A Hanji query takes the Hanji lookup,
 // anything else the romanization lookup in the input mode's family, and
 // also lists the custom entries `custom_entries` finds for it (asked only
@@ -83,7 +48,7 @@ pub fn search_by_hanji(req: SearchByHanjiRequest) -> Result<SearchByHanjiRespons
 // installed there are no dictionary rows; the custom entries still show.
 pub fn dictionary_search(
     req: DictionarySearchRequest,
-    custom_entries: impl FnOnce(SearchCustomEntries) -> Vec<CustomDictionaryEntry>,
+    custom_entries: impl FnOnce(&DictionarySearchRequest) -> Vec<CustomDictionaryEntry>,
 ) -> Result<DictionarySearchResponse, LexiconError> {
     if req.query.is_empty() {
         return Ok(DictionarySearchResponse::default());
@@ -118,11 +83,7 @@ pub fn dictionary_search(
     // Asked after the lexicon lock is released: the user-data read may wait
     // for a background open.
     let custom_rows = if req.custom_dictionary_enabled && !is_hanji_query {
-        custom_entries(SearchCustomEntries {
-            query: req.query,
-            input_mode: req.input_mode,
-            limit: req.limit,
-        })
+        custom_entries(&req)
     } else {
         Vec::new()
     };
@@ -215,41 +176,4 @@ pub fn lookup_associations(
             reader,
         )
     })
-}
-
-// True when the text contains any CJK ideograph in `classification::CJK_RANGES`.
-pub fn is_hanji(req: IsHanjiRequest) -> Result<IsHanjiResponse, LexiconError> {
-    Ok(IsHanjiResponse {
-        is_hanji: classification::is_hanji(&req.text),
-    })
-}
-
-// Maps the user's dictionary toggles to a source bitmask plus the enabled source-code list.
-pub fn dictionary_filters(
-    req: DictionaryFiltersRequest,
-) -> Result<DictionaryFiltersResponse, LexiconError> {
-    let toggles = req.toggles.unwrap_or_default();
-    Ok(compute_filters(&toggles))
-}
-
-fn proto_key_family(value: i32) -> KeyFamily {
-    use protos::engine::InputMode;
-    match InputMode::try_from(value).unwrap_or(InputMode::Unspecified) {
-        InputMode::Poj => KeyFamily::Poj,
-        InputMode::Tps => KeyFamily::Tps,
-        // Unspecified + Tl default to TL.
-        _ => KeyFamily::Tl,
-    }
-}
-
-fn search_row_to_taigi_word(row: SearchRow) -> TaigiWord {
-    TaigiWord {
-        id: row.id,
-        roman: row.roman,
-        hanji: row.hanji,
-        sources: source_codes(row.source_bitmask.unwrap_or(0))
-            .into_iter()
-            .map(|code| code as i32)
-            .collect(),
-    }
 }

@@ -10,7 +10,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `KautianSubcollectionToggles` is the per-subcollection enable state for the
  * kautian source (Phase 3). The main subcollection (main entry / headword) is
  * NOT a field — it is always on whenever the kautian master toggle is on,
- * so `compute_filters` sets its subtag bit unconditionally when this
+ * so `dictionary_filter_bitmask` sets its subtag bit unconditionally when this
  * message is present. Field tags map to the kautian subtag bit positions:
  * accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
  * `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
@@ -572,7 +572,7 @@ public  final class KautianSubcollectionToggles extends
    * `KautianSubcollectionToggles` is the per-subcollection enable state for the
    * kautian source (Phase 3). The main subcollection (main entry / headword) is
    * NOT a field — it is always on whenever the kautian master toggle is on,
-   * so `compute_filters` sets its subtag bit unconditionally when this
+   * so `dictionary_filter_bitmask` sets its subtag bit unconditionally when this
    * message is present. Field tags map to the kautian subtag bit positions:
    * accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
    * `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust

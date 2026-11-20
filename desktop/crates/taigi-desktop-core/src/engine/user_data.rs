@@ -13,8 +13,8 @@ use std::path::Path;
 use protos::engine::{
     request, response, user_data_request, user_data_response, AddLearningRecordToCustomDictionary,
     DeleteCustomEntry, DeleteLearningRecord, ExportCustomCsv, ImportCustomCsv, ListCustomEntries,
-    ListLearningRecords, OpenUserData, ResetUserData, SaveCustomEntry, SearchCustomEntries,
-    SetLearningRecordCount, UserDataJournal, UserDataRequest,
+    ListLearningRecords, OpenUserData, ResetUserData, SaveCustomEntry, SetLearningRecordCount,
+    UserDataJournal, UserDataRequest,
 };
 pub use protos::engine::{
     CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
@@ -23,7 +23,6 @@ pub use protos::engine::{
 
 use super::bridge::{record_failure, roundtrip};
 use crate::platform::DesktopPlatform;
-use crate::settings::InputMode;
 
 /// Opens the engine's stores over `directory` — the desktop's one-directory
 /// layout, under `platform`'s journal (U3, [`journal`]). Cheap enough for a
@@ -284,28 +283,6 @@ pub(crate) fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
         op,
     )? {
         user_data_response::Result::CustomCsvExported(exported) => Ok(exported.csv),
-        _ => Err(other_result(op)),
-    }
-}
-
-/// The custom entries `query` finds the way the keyboard finds them: by
-/// the search key the query derives under `mode`, prefix-matched. Empty
-/// when the query derives no key.
-pub(crate) fn search_custom_entries(
-    query: &str,
-    mode: InputMode,
-    limit: usize,
-) -> Result<Vec<CustomDictionaryEntry>, UserDataError> {
-    let op = "customDictionarySearch";
-    match page_request(
-        user_data_request::Method::SearchCustomEntries(SearchCustomEntries {
-            query: query.to_owned(),
-            input_mode: mode.wire().to_owned(),
-            limit: clamped(limit),
-        }),
-        op,
-    )? {
-        user_data_response::Result::CustomEntryMatches(matches) => Ok(matches.entries),
         _ => Err(other_result(op)),
     }
 }

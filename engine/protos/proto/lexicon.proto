@@ -5,10 +5,9 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
-// Lexicon module — dictionary install, search, input
-// classification, dictionary-filter resolution and the Manage
-// Dictionaries search (`DictionarySearchRequest`, whose custom entries
-// engine/dispatch joins from the user data).
+// Lexicon module — dictionary install and the Manage Dictionaries search
+// (`DictionarySearchRequest`, whose custom entries engine/dispatch joins
+// from the user data).
 //
 // Ops live in the LexiconRequest.method oneof. Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
 // (engine::dispatch) routes by Request.payload tag and then per-module
@@ -18,10 +17,6 @@ option java_multiple_files = true;
 // - Capitalization (`capitalize`, `startsWithRomanLetter`) — kept platform
 //   per audit § 3 (Android does not have these in CandidateProcessor;
 //   moving them to Rust would change Android behavior)
-//
-// v3.5.7 added `is_hanji` for the Tab3 Hanji short-circuit. Tab3 parity
-// correction in same slice — Android `DictionarySearchViewModel.kt:97`
-// previously used Kotlin `Char.code` (16-bit), missing CJK Extensions B/C/D/E.
 
 // =========================================================================
 // Request envelope
@@ -35,15 +30,16 @@ message LexiconRequest {
   // engine/dispatch for nextword `PredictNext` (2026-09-25).
   // Tag 12 was `search` (the keyboard autocomplete entry retired in v3.5.8
   // Item 13; the last wrapper had no caller; removed 2026-09-30).
-  reserved 10, 12, 15, 16;
-  reserved "process_candidates", "search", "classify_input", "assoc_lookup";
+  // Tags 13 `search_with_sources`, 14 `search_by_hanji`, 17 `is_hanji` and
+  // 18 `dictionary_filters` were the shells' own dictionary-search
+  // orchestration; `dictionary_search` answers it in one call (removed
+  // 2026-11-20, roadmap C3).
+  reserved 10, 12, 13, 14, 15, 16, 17, 18;
+  reserved "process_candidates", "search", "classify_input", "assoc_lookup",
+      "search_with_sources", "search_by_hanji", "is_hanji", "dictionary_filters";
 
   oneof method {
     InstallRequest            install               = 11;  // lexicon read-path
-    SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
-    SearchByHanjiRequest      search_by_hanji       = 14;  // Tab3 Hanji prefix
-    IsHanjiRequest            is_hanji              = 17;  // v3.5.7 Tab3 short-circuit
-    DictionaryFiltersRequest  dictionary_filters    = 18;  // v3.5.8 toggles → bitmasks + enabled codes
     DictionarySearchRequest   dictionary_search     = 19;  // Manage Dictionaries search, one call
   }
 }
@@ -78,84 +74,6 @@ message InstallRequest {
   string syllable_inventory_path = 5;
 }
 
-// `SearchWithSourcesRequest` is Tab3's all-source lookup. The input may be
-// either romanized or hanji; the engine internally classifies
-// and dispatches to the matching prefix family.
-message SearchWithSourcesRequest {
-  string input                   = 1;
-  InputMode input_mode           = 2;
-  uint32 limit                   = 3;
-  // Source-toggle bitmask filtering Tab3 results. Bit layout encodes
-  // sources(0-8,11) + khiin(9) + dev(10, set iff `toggles.dev`) + variant(12).
-  // Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
-  // api.rs hardcoded `u32::MAX`, which both bypassed source filters
-  // AND falsely forced khiin/variant on regardless of user toggles.
-  //
-  // kautian subcollections (binary v3): the HIGH region carries the user's
-  // per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
-  // subcollection gating = all on, the legacy/pre-UI default), bits 14..=26 =
-  // enable mask (main | accent[10] | name | alt_reading, same layout as the
-  // record subtag).
-  // ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
-  // .kautian_subcollections` when present; a caller that leaves the sub-message absent
-  // keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
-  // in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
-  // Same field semantics apply to `SearchByHanjiRequest` below.
-  uint32 enabled_sources_bitmask = 4;
-}
-
-// `SearchByHanjiRequest` is Tab3's Hanji-prefix-only lookup.
-message SearchByHanjiRequest {
-  string query                   = 1;
-  InputMode input_mode           = 2;
-  uint32 limit                   = 3;
-  // Same semantics as SearchWithSourcesRequest.enabled_sources_bitmask.
-  uint32 enabled_sources_bitmask = 4;
-}
-
-// `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
-// short-circuit Hanji queries. Tab3 needs the predicate without paying the
-// search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE.
-message IsHanjiRequest {
-  string text = 1;
-}
-
-// `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
-// preferences into the ready-to-send bitmasks consumed by
-// `SearchWithSourcesRequest` / `SearchByHanjiRequest`.
-//
-// Single Rust source of truth replaces verbatim-mirrored bit math previously
-// in `ios/.../EnabledDictionaries.swift` + `android/.../EnabledDictionaries.kt`
-// (~80 LOC pure-logic duplication, audit residue 2026-05-04 § A.1 P2).
-//
-// `toggles` may be absent on the wire (prost `Option<DictionarySourceToggles>`);
-// the engine treats absence as `DictionarySourceToggles::default()` (all false).
-message DictionaryFiltersRequest {
-  DictionarySourceToggles toggles = 1;
-}
-
-// `DictionaryFiltersResponse` carries ready-to-send outputs:
-// - `dictionary_filter_bitmask` plumbs straight into
-//   `SearchWithSourcesRequest.enabled_sources_bitmask` /
-//   `SearchByHanjiRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
-//   bit 10 dev (set iff `toggles.dev`), bit 12 variant
-//   (`lexicon::dictionary_filters::dictionary_filter_bitmask`).
-// - `enabled_source_codes` lists every `DictionarySourceCode` whose source
-//   the user has toggled on, in the order `[DEV?, CUSTOM, …]`: `DEV` only
-//   when `toggles.dev`; `CUSTOM` is always present (non-toggleable)
-//   (`lexicon::dictionary_filters::enabled_source_codes`). Platforms decode via explicit switch/map into their
-//   `DictionarySource` enum — DO NOT use Swift `rawValue` or Kotlin
-//   `ordinal` since the platform enums lack stable numeric values.
-message DictionaryFiltersResponse {
-  // Tag 2 was `assoc_lookup_bitmask`: no platform read it; engine/dispatch
-  // `PredictNext` takes the association mask from
-  // `lexicon::api::association_bitmask` (2026-10-01).
-  reserved 2;
-  reserved "assoc_lookup_bitmask";
-  uint32                          dictionary_filter_bitmask  = 1;
-  repeated DictionarySourceCode   enabled_source_codes       = 3;
-}
-
 // `DictionarySearchRequest` is the Manage Dictionaries search in one call:
 // the engine picks the Hanji or romanization lookup, applies the source
 // toggles, renders each row's romanization, keeps only the enabled
@@ -166,7 +84,7 @@ message DictionarySearchRequest {
   // The settings input mode, spelled as `AppConfig.input_mode`
   // (`tl` / `poj` / `tps` / `english`; anything else reads as TL).
   string input_mode = 2;
-  // Absent = every toggle off, as `DictionaryFiltersRequest`.
+  // Absent = every toggle off.
   DictionarySourceToggles toggles = 3;
   // Enable Custom Dictionary. False (or absent) leaves the custom entries out.
   bool custom_dictionary_enabled = 4;
@@ -186,7 +104,7 @@ message DictionarySearchResponse {
 
 message DictionarySearchRow {
   oneof id {
-    // The dictionary row id (`TaigiWord.id`).
+    // The dictionary row id.
     int64 system_id = 1;
     // The custom entry's id (`CustomDictionaryEntry.id`).
     string custom_id = 2;
@@ -209,16 +127,13 @@ message DictionarySearchRow {
 // =========================================================================
 
 message LexiconResponse {
-  reserved 10, 12, 15, 16;
+  reserved 10, 12, 13, 14, 15, 16, 17, 18;
   reserved "process_candidates_result", "search_result", "classify_input_result",
-      "assoc_lookup_result";
+      "assoc_lookup_result", "search_with_sources_result", "search_by_hanji_result",
+      "is_hanji_result", "dictionary_filters_result";
 
   oneof result {
     InstallResponse            install_result              = 11;
-    SearchWithSourcesResponse  search_with_sources_result  = 13;
-    SearchByHanjiResponse      search_by_hanji_result      = 14;
-    IsHanjiResponse            is_hanji_result             = 17;
-    DictionaryFiltersResponse  dictionary_filters_result   = 18;
     DictionarySearchResponse   dictionary_search_result    = 19;
   }
 }
@@ -234,59 +149,13 @@ message InstallResponse {
   uint64 prefix_index_entry_count  = 2;
 }
 
-message SearchWithSourcesResponse {
-  repeated TaigiWord rows = 1;
-}
-
-message SearchByHanjiResponse {
-  repeated TaigiWord rows = 1;
-}
-
-message IsHanjiResponse {
-  bool is_hanji = 1;
-}
-
 // =========================================================================
 // Shared value types
 // =========================================================================
 
-// `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
-// Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id.
-// `sources` are the dictionaries the record belongs to, in source-bit order
-// (`dictionary/common/source_bits.py`: kautian … khiin, dev, lkk) — the
-// order the badges are drawn in. Decoded from the record's effective source
-// bitmask by the engine (`dictionary_filters::source_codes`); never CUSTOM.
-//
-// `hanji` uses proto3 `optional` so platforms can distinguish "field
-// absent" from "scalar default".
-message TaigiWord {
-  // Tag 5 was `source_bitmask`, decoded on every platform; replaced by
-  // `sources` 2026-10-04. Tag 4 was `length_score`, the raw dictionary
-  // frequency; no platform ordered on it once the engine owned the search
-  // order (removed 2026-10-09).
-  reserved 4, 5;
-  reserved "length_score", "source_bitmask";
-
-  int64 id = 1;
-  string roman = 2;
-  optional string hanji = 3;
-  repeated DictionarySourceCode sources = 6;
-}
-
-// `InputMode` is lexicon-local. Mirrors the platform-side input-mode setting
-// (TL / POJ / TPS). `engine/protos/envelope.proto::AppConfig.input_mode` uses
-// a string today; we re-encode here as enum so the lexicon bridge surface
-// stays type-safe at the FFI boundary. Values map: "tl"→TL, "poj"→POJ,
-// "tps"→TPS; anything else → UNSPECIFIED (engine treats as TL).
-enum InputMode {
-  INPUT_MODE_UNSPECIFIED  = 0;
-  INPUT_MODE_TL           = 1;
-  INPUT_MODE_POJ          = 2;
-  INPUT_MODE_TPS          = 3;
-}
-
 // `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
-// preferences that drives `DictionaryFiltersRequest`. Field tags map
+// preferences the engine resolves into its source filter
+// (`lexicon::api::dictionary_filter_bitmask`). Field tags map
 // directly to the bit positions the engine consumes; reordering tags is
 // a wire break.
 //
@@ -298,8 +167,8 @@ enum InputMode {
 // sub-message is the active sentinel — a platform that ships the toggles
 // sets it; any caller that leaves it absent (a platform whose UI is not
 // yet wired, NextWord) signals "no subcollection gating" and the engine
-// keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
-// owns the subtag bit packing so the layout lives in Rust only.
+// keeps the legacy all-on behaviour (wire bit 13 stays 0).
+// `dictionary_filter_bitmask` owns the subtag bit packing so the layout lives in Rust only.
 message DictionarySourceToggles {
   bool kautian = 1;  // 教育部臺灣台語常用詞辭典
   bool taigitv = 2;  // 台語新詞辭庫
@@ -322,7 +191,7 @@ message DictionarySourceToggles {
 // `KautianSubcollectionToggles` is the per-subcollection enable state for the
 // kautian source (Phase 3). The main subcollection (main entry / headword) is
 // NOT a field — it is always on whenever the kautian master toggle is on,
-// so `compute_filters` sets its subtag bit unconditionally when this
+// so `dictionary_filter_bitmask` sets its subtag bit unconditionally when this
 // message is present. Field tags map to the kautian subtag bit positions:
 // accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
 // `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
@@ -344,7 +213,7 @@ message KautianSubcollectionToggles {
 }
 
 // `DictionarySourceCode` is the wire-stable mapping for
-// `DictionaryFiltersResponse.enabled_source_codes`. Decoupled from platform
+// `DictionarySearchRow.sources`. Decoupled from platform
 // `DictionarySource` enum raw values — Swift uses `String` raw values and
 // Kotlin has no stable numeric value beyond `ordinal`. Platforms decode
 // via explicit switch/map.

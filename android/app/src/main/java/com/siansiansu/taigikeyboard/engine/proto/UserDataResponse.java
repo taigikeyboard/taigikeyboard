@@ -30,7 +30,6 @@ public  final class UserDataResponse extends
     CUSTOM_CSV_EXPORTED(8),
     BACKUP_EXPORTED(9),
     BACKUP_IMPORTED(10),
-    CUSTOM_ENTRY_MATCHES(11),
     LEARNING_RECORDS(12),
     LEARNING_RECORD_SAVED(13),
     LEARNING_RECORD_DELETED(14),
@@ -60,7 +59,6 @@ public  final class UserDataResponse extends
         case 8: return CUSTOM_CSV_EXPORTED;
         case 9: return BACKUP_EXPORTED;
         case 10: return BACKUP_IMPORTED;
-        case 11: return CUSTOM_ENTRY_MATCHES;
         case 12: return LEARNING_RECORDS;
         case 13: return LEARNING_RECORD_SAVED;
         case 14: return LEARNING_RECORD_DELETED;
@@ -581,56 +579,6 @@ public  final class UserDataResponse extends
    */
   private void clearBackupImported() {
     if (resultCase_ == 10) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int CUSTOM_ENTRY_MATCHES_FIELD_NUMBER = 11;
-  /**
-   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-   */
-  @java.lang.Override
-  public boolean hasCustomEntryMatches() {
-    return resultCase_ == 11;
-  }
-  /**
-   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches getCustomEntryMatches() {
-    if (resultCase_ == 11) {
-       return (com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-   */
-  private void setCustomEntryMatches(com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-   */
-  private void mergeCustomEntryMatches(com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 11 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-   */
-  private void clearCustomEntryMatches() {
-    if (resultCase_ == 11) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -1426,54 +1374,6 @@ public  final class UserDataResponse extends
     }
 
     /**
-     * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-     */
-    @java.lang.Override
-    public boolean hasCustomEntryMatches() {
-      return instance.hasCustomEntryMatches();
-    }
-    /**
-     * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches getCustomEntryMatches() {
-      return instance.getCustomEntryMatches();
-    }
-    /**
-     * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-     */
-    public Builder setCustomEntryMatches(com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches value) {
-      copyOnWrite();
-      instance.setCustomEntryMatches(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-     */
-    public Builder setCustomEntryMatches(
-        com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.Builder builderForValue) {
-      copyOnWrite();
-      instance.setCustomEntryMatches(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-     */
-    public Builder mergeCustomEntryMatches(com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches value) {
-      copyOnWrite();
-      instance.mergeCustomEntryMatches(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CustomEntryMatches custom_entry_matches = 11;</code>
-     */
-    public Builder clearCustomEntryMatches() {
-      copyOnWrite();
-      instance.clearCustomEntryMatches();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
      */
     @java.lang.Override
@@ -1693,16 +1593,15 @@ public  final class UserDataResponse extends
             com.siansiansu.taigikeyboard.engine.proto.CustomCsvExported.class,
             com.siansiansu.taigikeyboard.engine.proto.BackupExported.class,
             com.siansiansu.taigikeyboard.engine.proto.BackupImported.class,
-            com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.class,
             com.siansiansu.taigikeyboard.engine.proto.LearningRecords.class,
             com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.class,
             com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.class,
             com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.class,
           };
           java.lang.String info =
-              "\u0000\u000f\u0001\u0000\u0001\u000f\u000f\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u000e\u0001\u0000\u0001\u000f\u000e\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
-              "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
+              "\t<\u0000\n<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

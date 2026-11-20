@@ -68,7 +68,7 @@ public  final class DictionarySearchRow extends
   public static final int SYSTEM_ID_FIELD_NUMBER = 1;
   /**
    * <pre>
-   * The dictionary row id (`TaigiWord.id`).
+   * The dictionary row id.
    * </pre>
    *
    * <code>int64 system_id = 1;</code>
@@ -80,7 +80,7 @@ public  final class DictionarySearchRow extends
   }
   /**
    * <pre>
-   * The dictionary row id (`TaigiWord.id`).
+   * The dictionary row id.
    * </pre>
    *
    * <code>int64 system_id = 1;</code>
@@ -95,7 +95,7 @@ public  final class DictionarySearchRow extends
   }
   /**
    * <pre>
-   * The dictionary row id (`TaigiWord.id`).
+   * The dictionary row id.
    * </pre>
    *
    * <code>int64 system_id = 1;</code>
@@ -107,7 +107,7 @@ public  final class DictionarySearchRow extends
   }
   /**
    * <pre>
-   * The dictionary row id (`TaigiWord.id`).
+   * The dictionary row id.
    * </pre>
    *
    * <code>int64 system_id = 1;</code>
@@ -734,7 +734,7 @@ public  final class DictionarySearchRow extends
 
     /**
      * <pre>
-     * The dictionary row id (`TaigiWord.id`).
+     * The dictionary row id.
      * </pre>
      *
      * <code>int64 system_id = 1;</code>
@@ -746,7 +746,7 @@ public  final class DictionarySearchRow extends
     }
     /**
      * <pre>
-     * The dictionary row id (`TaigiWord.id`).
+     * The dictionary row id.
      * </pre>
      *
      * <code>int64 system_id = 1;</code>
@@ -758,7 +758,7 @@ public  final class DictionarySearchRow extends
     }
     /**
      * <pre>
-     * The dictionary row id (`TaigiWord.id`).
+     * The dictionary row id.
      * </pre>
      *
      * <code>int64 system_id = 1;</code>
@@ -772,7 +772,7 @@ public  final class DictionarySearchRow extends
     }
     /**
      * <pre>
-     * The dictionary row id (`TaigiWord.id`).
+     * The dictionary row id.
      * </pre>
      *
      * <code>int64 system_id = 1;</code>
