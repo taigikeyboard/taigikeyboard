@@ -674,13 +674,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A backup contains your custom words, frequency records, and association records, which may be private. Store it securely."
+            "value": "A backup contains your custom words, frequency records, association records, and phrases, which may be private. Store it securely."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バックアップには、カスタム単語、単語頻度、単語連携の記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
+            "value": "バックアップには、カスタム単語、単語頻度、単語連携、フレーズの記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。"
           }
         }
       }

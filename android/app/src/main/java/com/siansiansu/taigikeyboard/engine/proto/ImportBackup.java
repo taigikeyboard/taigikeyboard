@@ -9,8 +9,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * Restores a `.taigi` file's bytes, merging with what is stored: custom
  * words already there are skipped and the import stops at the dictionary's
- * cap; counts keep the larger of the two; bigram readings are normalized
- * to TL. Old and cross-platform backups are read leniently.
+ * cap; learned rows keep the larger count and the later use; bigram
+ * readings of a version-1 / -2 file are normalized to TL. Old and
+ * cross-platform backups are read leniently.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ImportBackup}
@@ -138,8 +139,9 @@ public  final class ImportBackup extends
    * <pre>
    * Restores a `.taigi` file's bytes, merging with what is stored: custom
    * words already there are skipped and the import stops at the dictionary's
-   * cap; counts keep the larger of the two; bigram readings are normalized
-   * to TL. Old and cross-platform backups are read leniently.
+   * cap; learned rows keep the larger count and the later use; bigram
+   * readings of a version-1 / -2 file are normalized to TL. Old and
+   * cross-platform backups are read leniently.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ImportBackup}

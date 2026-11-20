@@ -1,5 +1,6 @@
 //! How often the user has committed each word, and how recently. Port of
-//! the former Swift `UserFrequencyStore`; SQL byte-identical.
+//! the former Swift `UserFrequencyStore`; SQL byte-identical apart from the
+//! `.taigi` v4 restore (`import_merge`, #1032).
 
 use crate::capacity::LearningCapacity;
 use crate::database::{
@@ -7,6 +8,7 @@ use crate::database::{
     strip_khinsiann_if_changed, table_exists, JournalMode, StoreSchema, UserDataDatabase,
     UserDataDatabaseError,
 };
+use crate::timestamp::RESTORED_TIMESTAMP_SQL;
 use rusqlite::types::Value;
 use rusqlite::{params, params_from_iter, Connection};
 use std::path::PathBuf;
@@ -122,28 +124,30 @@ impl UserFrequencyStore {
         });
     }
 
-    /// Merges a backup's counts: a `(word, tl)` already stored keeps the
-    /// larger count, and every imported row counts as used now — the phones'
-    /// `.taigi` merge (iOS `UserFrequencyRepository.batchImportMerge`). One
-    /// transaction, then the cap, so no reader sees the table over it.
-    /// Answers how many rows were merged.
+    /// Merges a backup's `(word, tl, count, last_used)` rows: a `(word, tl)`
+    /// already stored keeps the larger count and the later use, so the
+    /// walker's decay reads the same history it read on the device that
+    /// wrote the file. `last_used` is the file's text, stored through
+    /// [`RESTORED_TIMESTAMP_SQL`] — empty (a backup before version 4) counts
+    /// as used now. One transaction, then the cap, so no reader sees the
+    /// table over it. Answers how many rows were merged.
     pub fn import_merge(
         &self,
-        rows: Vec<(String, String, i64)>,
+        rows: Vec<(String, String, i64, String)>,
     ) -> Result<usize, UserDataDatabaseError> {
         let capacity = self.capacity_for_writer();
         self.database.perform(move |connection| {
             immediate_transaction::<_, UserDataDatabaseError>(connection, |connection| {
                 let mut statement = connection.prepare(&format!(
-                    "INSERT INTO {TABLE_NAME} (word, tl, count, last_used)\nVALUES (?, ?, ?, CURRENT_TIMESTAMP)\nON CONFLICT(word, tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = CURRENT_TIMESTAMP;"
+                    "INSERT INTO {TABLE_NAME} (word, tl, count, last_used)\nVALUES (?, ?, ?, {RESTORED_TIMESTAMP_SQL})\nON CONFLICT(word, tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = MAX(COALESCE(last_used, excluded.last_used), excluded.last_used);"
                 ))?;
                 let mut merged = 0;
-                for (word, tl, count) in rows {
+                for (word, tl, count, last_used) in rows {
                     let word = phonetics::api::strip_khinsiann_hanji(&word);
                     if word.is_empty() {
                         continue;
                     }
-                    statement.execute(params![word, tl, count])?;
+                    statement.execute(params![word, tl, count, last_used])?;
                     merged += 1;
                 }
                 capacity.enforce(connection)?;
@@ -216,7 +220,7 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FrequencyRow> {
         word: row.get(0)?,
         tl: row.get(1)?,
         count: row.get(2)?,
-        last_used_ms: row.get(3)?,
+        last_used_ms: row.get::<_, Option<i64>>(3)?.unwrap_or(0),
     })
 }
 

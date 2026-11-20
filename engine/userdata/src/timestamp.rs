@@ -3,6 +3,17 @@
 //! the macOS formatter binds, so the stored text sorts the way the query
 //! orders by it regardless of locale or time zone.
 
+/// The SQL expression a restore stores for a timestamp a `.taigi` file
+/// carries (one `?`): the stored `yyyy-MM-dd HH:mm:ss` form of whatever
+/// SQLite's `datetime` reads (an RFC 3339 `…T…Z` would sort wrongly as text),
+/// never later than now (a clock ahead on the other device would zero the
+/// walker's decayed weight, `ranking::decayed_user_weight_delta`), and now
+/// when the text is empty or unreadable (a backup before version 4). A bare
+/// number reads as a Julian day number, as `datetime` reads it — only a
+/// hand-edited file holds one.
+pub(crate) const RESTORED_TIMESTAMP_SQL: &str =
+    "COALESCE(MIN(datetime(?), CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)";
+
 /// Now, as `yyyy-MM-dd HH:mm:ss` in UTC.
 pub fn utc_timestamp_now() -> String {
     format_utc_timestamp(unix_seconds_now())
@@ -90,5 +101,27 @@ mod tests {
         );
         assert_eq!(format_utc_timestamp(1_756_425_599), "2025-08-28 23:59:59");
         assert_eq!(utc_timestamp_now().len(), 19);
+    }
+
+    #[test]
+    fn a_restored_timestamp_is_stored_text_never_past_now() {
+        let connection = rusqlite::Connection::open_in_memory().unwrap();
+        let restored = |text: &str| -> String {
+            connection
+                .query_row(
+                    &format!("SELECT {RESTORED_TIMESTAMP_SQL};"),
+                    [text],
+                    |row| row.get(0),
+                )
+                .unwrap()
+        };
+        assert_eq!(restored("2026-11-20 12:34:56"), "2026-11-20 12:34:56");
+        assert_eq!(restored("2026-11-20T12:34:56Z"), "2026-11-20 12:34:56");
+        let now = utc_timestamp_now();
+        for text in ["", "not a time", "2999-01-01 00:00:00"] {
+            let stamped = restored(text);
+            assert_eq!(stamped.len(), 19, "{text:?}");
+            assert!(stamped.as_str() >= now.as_str(), "{text:?} reads as now");
+        }
     }
 }

@@ -6,9 +6,8 @@
 //! plan and status in `docs/architecture/user-data-engine-roadmap.md`.
 //! Moved from `desktop/crates/taigi-desktop-storage` (roadmap P1), itself a
 //! port of `macos/Sources/TaigiInputMethodCore/Storage/` over rusqlite: the
-//! SQL is byte-identical to the macOS stores (which mirror iOS / Android), so
-//! a `.taigi` export or a hand-copied database means the same thing on every
-//! platform.
+//! schemas are the macOS stores' (which mirror iOS / Android), so a `.taigi`
+//! export or a hand-copied database means the same thing on every platform.
 //!
 //! `UserDataHandle` is the process's one open of the stores and answers
 //! every `UserDataRequest`; `engine/dispatch` routes the request to it and

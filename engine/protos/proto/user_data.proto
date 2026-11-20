@@ -254,10 +254,11 @@ message CustomCsvExported { bytes csv = 1; }
 
 // ---- The `.taigi` backup (roadmap P4b) ----
 //
-// Version 2, the JSON iOS and Android already exchange: the custom
-// dictionary, frequency counts and learned bigrams — never learned phrases
-// (§50). The platform picks the file and shares it; the engine writes and
-// reads its bytes.
+// Version 4 (`userdata/src/backup.rs`): the custom dictionary, frequency
+// counts, learned bigrams and learned phrases (§50), with each learned row's
+// last use and each custom word's times — what typing reads, so a restore on
+// any platform types the same. The platform picks the file and shares it;
+// the engine writes and reads its bytes.
 
 // `platform` / `app_version` name the writer in the file (`ios`,
 // `android`, `macos`, `windows`, `linux`).
@@ -270,8 +271,9 @@ message BackupExported { bytes backup = 1; }
 
 // Restores a `.taigi` file's bytes, merging with what is stored: custom
 // words already there are skipped and the import stops at the dictionary's
-// cap; counts keep the larger of the two; bigram readings are normalized
-// to TL. Old and cross-platform backups are read leniently.
+// cap; learned rows keep the larger count and the later use; bigram
+// readings of a version-1 / -2 file are normalized to TL. Old and
+// cross-platform backups are read leniently.
 message ImportBackup { bytes backup = 1; }
 
 enum BackupRefusal {
@@ -288,6 +290,7 @@ message BackupImported {
   uint32 custom_dictionary = 2;
   uint32 frequency = 3;
   uint32 association = 4;
+  uint32 learned_phrases = 5;
 }
 
 // ---- The Learning Records pages (learning-records-page-roadmap) ----

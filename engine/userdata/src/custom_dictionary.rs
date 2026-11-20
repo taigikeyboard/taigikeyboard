@@ -1,12 +1,13 @@
 //! The words the user added themselves, and the keys that make them findable
 //! from any romanization. Port of the former Swift `CustomDictionaryStore`;
-//! SQL byte-identical.
+//! SQL byte-identical apart from the keystroke order (`KEYSTROKE_ORDER`) and
+//! the restored times (#1032).
 
 use crate::database::{
     has_column, immediate_transaction, is_taken_over, mark_taken_over, user_version, JournalMode,
     StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
-use crate::timestamp::utc_timestamp_now;
+use crate::timestamp::{utc_timestamp_now, RESTORED_TIMESTAMP_SQL};
 use phonetics::api::{CustomSearchKey, InputMode};
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
@@ -132,6 +133,11 @@ pub struct CustomDictionaryStore {
     entry_limit: usize,
 }
 
+/// The keystroke path's order under one key: filed first, then Hanji — never
+/// the per-device UUID, so homophones keep their order across a `.taigi`
+/// restore, which carries `createdAt` but mints new ids (#1032).
+const KEYSTROKE_ORDER: &str = "entry.roman, entry.created_at, entry.hanzi, entry.id";
+
 /// Newest edit first; `id` breaks ties (an import stamps thousands of rows with
 /// one second), so pages cut by offset never skip or repeat a row.
 const LISTED_ORDER: &str = "updated_at DESC, id";
@@ -199,7 +205,7 @@ impl CustomDictionaryStore {
         self.database
             .read(|connection| {
                 let mut statement = connection.prepare_cached(&format!(
-                    "SELECT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE search_key.family = ?1\n  AND ((search_key.form = ?2 AND search_key.key LIKE ?3 || '%')\n    OR (search_key.form = 'abbrev' AND search_key.key = ?3))\nGROUP BY entry.id\nORDER BY MIN(length(search_key.key)), entry.roman, entry.id\nLIMIT ?4;"
+                    "SELECT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE search_key.family = ?1\n  AND ((search_key.form = ?2 AND search_key.key LIKE ?3 || '%')\n    OR (search_key.form = 'abbrev' AND search_key.key = ?3))\nGROUP BY entry.id\nORDER BY MIN(length(search_key.key)), {KEYSTROKE_ORDER}\nLIMIT ?4;"
                 ))?;
                 let rows = statement.query_map(
                     params![query_key.family, query_key.form, query_key.key, limit as i64],
@@ -224,7 +230,7 @@ impl CustomDictionaryStore {
         self.database
             .read(|connection| {
                 let mut statement = connection.prepare_cached(&format!(
-                    "SELECT DISTINCT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE search_key.family = ?1 AND search_key.form = ?2 AND search_key.key = ?3\nORDER BY entry.roman, entry.id\nLIMIT ?4;"
+                    "SELECT DISTINCT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE search_key.family = ?1 AND search_key.form = ?2 AND search_key.key = ?3\nORDER BY {KEYSTROKE_ORDER}\nLIMIT ?4;"
                 ))?;
                 let mut seen = HashSet::new();
                 let mut rows = Vec::new();
@@ -726,12 +732,13 @@ fn row_exists(
     connection: &Connection,
     identity: &CustomDictionaryIdentity,
 ) -> rusqlite::Result<bool> {
+    // Cached, as every per-row statement of an import is: a restore runs
+    // them once per row, up to the dictionary's cap.
     connection
-        .query_row(
-            &format!("SELECT 1 FROM {TABLE_NAME} WHERE roman = ? AND hanzi = ? LIMIT 1;"),
-            params![identity.roman, identity.hanji],
-            |_| Ok(()),
-        )
+        .prepare_cached(&format!(
+            "SELECT 1 FROM {TABLE_NAME} WHERE roman = ? AND hanzi = ? LIMIT 1;"
+        ))?
+        .query_row(params![identity.roman, identity.hanji], |_| Ok(()))
         .optional()
         .map(|found| found.is_some())
 }
@@ -759,12 +766,14 @@ fn write_row(
     row: &CustomDictionaryRow,
     search_keys: &[CustomSearchKey],
 ) -> Result<(), CustomDictionaryError> {
-    connection.execute(
-        &format!(
-            "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at)\nVALUES (?, ?, ?, ?, ?)\nON CONFLICT(id) DO UPDATE SET\n    roman = excluded.roman,\n    hanzi = excluded.hanzi,\n    updated_at = excluded.updated_at;"
-        ),
-        params![row.id, row.roman, row.hanji, row.created_at, row.updated_at],
-    )?;
+    // The times go through the restore's normalisation: a `.taigi` file's
+    // text lands in the one sortable form; a time this process minted is
+    // already in it.
+    connection
+        .prepare_cached(&format!(
+            "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at)\nVALUES (?, ?, ?, {RESTORED_TIMESTAMP_SQL}, {RESTORED_TIMESTAMP_SQL})\nON CONFLICT(id) DO UPDATE SET\n    roman = excluded.roman,\n    hanzi = excluded.hanzi,\n    updated_at = excluded.updated_at;"
+        ))?
+        .execute(params![row.id, row.roman, row.hanji, row.created_at, row.updated_at])?;
     // Replace rather than add: an edited roman must not stay findable under
     // the keys of the roman it replaced.
     replace_search_keys(connection, &row.id, search_keys)
@@ -776,20 +785,26 @@ fn replace_search_keys(
     search_keys: &[CustomSearchKey],
 ) -> Result<(), CustomDictionaryError> {
     delete_search_keys(connection, entry_id)?;
+    let mut insert = connection.prepare_cached(&format!(
+        "INSERT INTO {SEARCH_KEY_TABLE_NAME} (entry_id, family, form, key)\nVALUES (?, ?, ?, ?);"
+    ))?;
     for search_key in search_keys {
-        connection.execute(
-            &format!("INSERT INTO {SEARCH_KEY_TABLE_NAME} (entry_id, family, form, key)\nVALUES (?, ?, ?, ?);"),
-            params![entry_id, search_key.family, search_key.form, search_key.key],
-        )?;
+        insert.execute(params![
+            entry_id,
+            search_key.family,
+            search_key.form,
+            search_key.key
+        ])?;
     }
     Ok(())
 }
 
 fn delete_search_keys(connection: &Connection, entry_id: &str) -> rusqlite::Result<()> {
-    connection.execute(
-        &format!("DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id = ?;"),
-        params![entry_id],
-    )?;
+    connection
+        .prepare_cached(&format!(
+            "DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id = ?;"
+        ))?
+        .execute(params![entry_id])?;
     Ok(())
 }
 

@@ -87,7 +87,7 @@
     <string name="i18n_dictionary_exportBackup">Export All at Once</string>
     <string name="i18n_dictionary_importBackup">Import All at Once</string>
     <string name="i18n_dictionary_importBackupResult">Imported %1$d custom entries, %2$d frequency records, %3$d association records</string>
-    <string name="i18n_dictionary_backupPrivacyWarning">A backup contains your custom words, frequency records, and association records, which may be private. Store it securely.</string>
+    <string name="i18n_dictionary_backupPrivacyWarning">A backup contains your custom words, frequency records, association records, and phrases, which may be private. Store it securely.</string>
     <string name="i18n_dictionary_moeDescription">Search Taiwanese Taigi and Mandarin, with audio for headwords and example sentences for easy learning. Includes category and radical-stroke indexes plus appendices.</string>
     <string name="i18n_dictionary_newwordDescription">Taigi TV invites experts and scholars to meet regularly, settle fitting Taigi terms for emerging words, and build a public lookup glossary.</string>
     <string name="i18n_dictionary_sttiDescription">Since 2017, the project has translated academic terminology from eight fields into Taigi: language arts, mathematics, social studies, natural science, arts, integrative activities, technology, and health and physical education.</string>
