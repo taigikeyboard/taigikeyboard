@@ -33,5 +33,5 @@ stage_options:
     mode: mark
     variants_csv: ../../../supplementary/variants/data/variants.csv
 
-license: CC-BY-SA-3.0-TW
+license: CC0-1.0
 source_url: https://itaigi.tw/
