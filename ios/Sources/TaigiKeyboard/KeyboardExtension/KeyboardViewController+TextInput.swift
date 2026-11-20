@@ -23,12 +23,8 @@ extension KeyboardViewController {
                 "refreshCandidates"
             case .resetCandidateContext:
                 "resetCandidateContext"
-            case let .nextWordUpdateLastSelectedWord(text, roman):
-                "nextWordUpdateLastSelectedWord text.len=\(text.count) roman.len=\(roman.count)"
-            case let .nextWordWordSelected(text, roman, triggerPrediction, preceding):
-                "nextWordWordSelected text.len=\(text.count) roman.len=\(roman.count) trigger=\(triggerPrediction) preceding=\(preceding.count)"
-            case .nextWordClearForNewComposing:
-                "nextWordClearForNewComposing"
+            case let .nextWordDecided(result):
+                "nextWordDecided effects=\(result.effects.count)"
             }
             return "[COMMIT] fn=execute effect=\(kind)"
         }())
@@ -49,25 +45,11 @@ extension KeyboardViewController {
             performAutocomplete()
         case .resetCandidateContext:
             state.autocompleteContext.reset()
-        case let .nextWordUpdateLastSelectedWord(text, roman):
-            // Nail / unnail handshake — NextWord learns nothing from it (§40);
-            // the final commit's `preceding` carries the nailed segments.
-            actionHandler?.nextWordController.updateLastSelectedWord(text: text, roman: roman)
-        case let .nextWordWordSelected(text, roman, triggerPrediction, preceding):
-            // Final-commit handshake. Forward triggerPrediction + preceding
-            // verbatim — the engine already decided what to predict and learn.
-            actionHandler?.nextWordController.process(
-                text: text,
-                roman: roman,
-                requireRomanMode: false,
-                triggerPrediction: triggerPrediction,
-                preceding: preceding,
-            )
-        case .nextWordClearForNewComposing:
-            // ClearForNewComposing ≠ ResetAll — clearDisplay() sends the
-            // matching `nextwordClearForNewComposing` intent. Do NOT route
-            // to `resetAndClearUI()` (that maps to `nextwordResetAll`).
-            actionHandler?.nextWordController.clearDisplay()
+        case let .nextWordDecided(result):
+            // The composition's next-word handshake (a commit's learning, a
+            // nail, an abort's clear), already applied by the engine in this
+            // same call; run its answer here, in the engine's order.
+            actionHandler?.nextWordController.applyComposingDecision(result)
         }
     }
 }

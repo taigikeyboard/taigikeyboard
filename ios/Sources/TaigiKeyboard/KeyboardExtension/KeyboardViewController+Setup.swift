@@ -107,6 +107,10 @@ extension KeyboardViewController {
         handler.composingManager.setContextSink(state.keyboardContext)
         handler.composingManager.delegate = self
         handler.nextWordController.contextUpdater = handler
+        // Captures the controller, not the handler, so it forms no cycle
+        // (`cleanupServices` releases the handler by dropping it).
+        let nextWordController = handler.nextWordController
+        handler.composingManager.nextWordContext = { nextWordController.requestContext() }
 
         // 4. Connect TaigiAutocompleteService with handler (requires handler already created)
         wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)

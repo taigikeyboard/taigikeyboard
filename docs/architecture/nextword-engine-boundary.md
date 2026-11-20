@@ -6,9 +6,8 @@ The next-word state machine is Rust `engine/nextword` (wire shape: `engine/proto
 
 Executors own the clock, the context-timeout timer, the main-thread hop and the settings snapshot, and never see a user row:
 
-- iOS `NextWord/NextWordController.swift`
-- Android `ime/text/nextword/NextWordController.kt` (§13)
-- macOS / Windows / Linux `taigi-desktop-core` — desktops show no predictions. A composition's handshakes are applied by the engine inside the composing call (`ComposingRequest.next_word_context`, `engine/dispatch/src/next_word_handshake.rs`; the answer comes back in place as `Effect.next_word_decided`); `composing/next_word.rs` sends only what no composition carries — a character typed outside one, and `ResetAll`. The phones still relay the handshakes as their own requests until roadmap E2 PR2.
+- iOS `NextWord/NextWordController.swift` and Android `ime/text/nextword/NextWordController.kt` (§13) — a composition's handshakes are applied by the engine inside the composing call, under the envelope the controller hands the composing manager (`requestContext`); the controller runs the answer (`applyComposingDecision`). Its own requests are the rest: a prediction tap, a character typed outside a composition, backspace, the context timeout, `ClearForNewComposing` / `ResetAll` of its own, and the visibility echo.
+- macOS / Windows / Linux `taigi-desktop-core` — desktops show no predictions. A composition's handshakes are applied by the engine inside the composing call (`ComposingRequest.next_word_context`, `engine/dispatch/src/next_word_handshake.rs`; the answer comes back in place as `Effect.next_word_decided`); `composing/next_word.rs` sends only what no composition carries — a character typed outside one, and `ResetAll`.
 
 ## 2. Contract shape
 

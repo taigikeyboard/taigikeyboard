@@ -19,14 +19,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * (`engine/nextword`).
  *
  * `NextWord*` effects (tags 8/9/10) are the composition's next-word
- * handshakes. With `ComposingRequest.next_word_context` set, `dispatch`
+ * handshakes, a message from the composing engine to `dispatch` that never
+ * reaches a shell. With `ComposingRequest.next_word_context` set, `dispatch`
  * applies each as its `NextWordRequest` (the context's generation and
  * `now_ms`) after the composing call returns — composing's `Mutex&lt;Engine&gt;` is
  * released first (`composing/handle.rs` lock-order rule) — and puts the
  * answer in its place as `next_word_decided`, so the shell runs the
- * `DecideResult` at the position the handshake held. Without the context the
- * handshakes reach the shell as tags 8/9/10 and it sends the requests itself
- * (temporary, remove after the phones send the context — roadmap E2).
+ * `DecideResult` at the position the handshake held. Without the context
+ * `dispatch` drops them, logged, and clears `CommitResolution.taught_next_word`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.Effect}
@@ -721,14 +721,14 @@ public  final class Effect extends
    * (`engine/nextword`).
    *
    * `NextWord*` effects (tags 8/9/10) are the composition's next-word
-   * handshakes. With `ComposingRequest.next_word_context` set, `dispatch`
+   * handshakes, a message from the composing engine to `dispatch` that never
+   * reaches a shell. With `ComposingRequest.next_word_context` set, `dispatch`
    * applies each as its `NextWordRequest` (the context's generation and
    * `now_ms`) after the composing call returns — composing's `Mutex&lt;Engine&gt;` is
    * released first (`composing/handle.rs` lock-order rule) — and puts the
    * answer in its place as `next_word_decided`, so the shell runs the
-   * `DecideResult` at the position the handshake held. Without the context the
-   * handshakes reach the shell as tags 8/9/10 and it sends the requests itself
-   * (temporary, remove after the phones send the context — roadmap E2).
+   * `DecideResult` at the position the handshake held. Without the context
+   * `dispatch` drops them, logged, and clears `CommitResolution.taught_next_word`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.Effect}

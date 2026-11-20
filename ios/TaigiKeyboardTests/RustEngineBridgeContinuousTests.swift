@@ -5,7 +5,7 @@ import XCTest
 /// v3.5.8 Phase 7A — iOS bridge surface tests for the continuous-input slice.
 ///
 /// Scope: Swift-side decode the engine cannot see — the `candidates` nil
-/// branch of `ContinuousFetchResult`, the partial-consume NextWord effect,
+/// branch of `ContinuousFetchResult`, the partial-consume next-word decision,
 /// the engine-resolved commit (`earnsAutoSpace`, `ContinuousPick.request`),
 /// spacing flags, the bridge-failure flag. Phase transitions, fetch, reset
 /// and stale-generation behaviour are
@@ -61,13 +61,17 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
     }
 
-    // MARK: - CommitContinuous mid-commit emits NextWordUpdateLastSelectedWord
+    // MARK: - CommitContinuous mid-commit carries the nail's next-word decision
 
-    func testCommitContinuous_PartialConsume_EmitsNextWordUpdateLastSelectedWord() {
+    func testCommitContinuous_PartialConsume_CarriesTheNailDecision() {
         // Multi-syllable buffer; consume only the leading syllable so the
-        // engine stays in Continuous (mid-commit branch). Phase 4 contract
-        // emits NextWordUpdateLastSelectedWord (NOT WordSelected) in this
-        // path because the user is composing a sentence, not finalizing.
+        // engine stays in Continuous (mid-commit branch). The nail's
+        // next-word handshake (UpdateLastSelectedWord, NOT WordSelected — the
+        // user is composing a sentence, not finalizing) is applied under the
+        // envelope and answered in place as the decision.
+        var context = Taigi_Engine_NextWordContext()
+        context.generation = envelopeGen
+        context.nowMs = 1_000_000
         _ = RustEngineBridge.composingStart(
             "taibak", settings: settings, generation: envelopeGen,
         )
@@ -75,18 +79,19 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             taiPick,
             settings: settings,
             generation: envelopeGen,
+            nextWordContext: context,
         ).transition
         XCTAssertTrue(commit.isComposing, "Mid-commit must stay in Continuous phase")
         XCTAssertEqual(commit.rawInput, "bak", "Pending tail should remain after mid-commit")
-        let hasUpdate = commit.effects.contains { effect in
-            if case .nextWordUpdateLastSelectedWord = effect {
+        let hasDecision = commit.effects.contains { effect in
+            if case .nextWordDecided = effect {
                 return true
             }
             return false
         }
         XCTAssertTrue(
-            hasUpdate,
-            "Phase 4 mid-commit contract: emits NextWordUpdateLastSelectedWord; got \(commit.effects)",
+            hasDecision,
+            "Mid-commit carries the nail's next-word decision; got \(commit.effects)",
         )
     }
 

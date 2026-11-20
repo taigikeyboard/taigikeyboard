@@ -6,7 +6,8 @@
 //! (`ComposingRequest.next_word_context`). Each handshake becomes the
 //! `NextWordRequest` the shells used to send, and its `DecideResult` takes the
 //! handshake's place in the effect list, so the executor runs it in the same
-//! order as before (`nextword-engine-boundary.md` §2).
+//! order as before (`nextword-engine-boundary.md` §2). Without the envelope
+//! the handshakes are dropped (`drop_unapplied`).
 
 use protos::engine::{
     effect, next_word_request, next_word_response, AppConfig, ClearForNewComposing,
@@ -36,6 +37,22 @@ pub(crate) fn apply(
             Err(other) => Some(other),
         })
         .collect();
+}
+
+/// Drops the handshakes of an answer whose request carried no next-word
+/// envelope: there is no generation or clock to apply them under, and a
+/// handshake never reaches a shell. The commit then taught nothing.
+pub(crate) fn drop_unapplied(response: &mut ComposingResponse) {
+    if !response.effect.iter().any(is_handshake) {
+        return;
+    }
+    log::warn!(
+        "composing request without a next-word context; its next-word handshakes are dropped"
+    );
+    response.effect.retain(|effect| !is_handshake(effect));
+    if let Some(commit) = response.commit.as_mut() {
+        commit.taught_next_word = false;
+    }
 }
 
 fn is_handshake(effect: &Effect) -> bool {

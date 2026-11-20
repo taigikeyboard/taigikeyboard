@@ -5,7 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.engine.ComposingTransition
+import com.siansiansu.taigikeyboard.engine.NextWordDecideResult
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -173,76 +173,26 @@ class SmartbarManager(
 
     fun noteCharacterTypedOutsideComposition(char: String) = nextWordController.noteCharacterTypedOutsideComposition(char)
 
+    fun nextWordRequestContext() = nextWordController.requestContext()
+
     /**
-     * Dispatch a NextWord-shaped composing-engine Effect
-     * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /
-     * `NextWordClearForNewComposing`) to the underlying [NextWordController].
-     * Wired into [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager]
-     * via the [com.siansiansu.taigikeyboard.ime.text.composing.NextWordEffectRouter]
-     * constructor parameter.
+     * Run the composition's next-word decision (`ComposingTransition.Effect.NextWordDecided`:
+     * the engine applied the commit's, nail's or abort's next-word handshake in the
+     * composing call) on the underlying [NextWordController]. Wired into
+     * [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager] via its
+     * `nextWordRouter` constructor parameter.
      *
-     * Unrelated to [NextWordController.handleNextWordPrediction], the platform tap path for a
-     * NextWord prediction (engine `Phase::Idle`, where the engine does NOT
-     * emit `NextWordWordSelected`, so the two paths do not double-fire).
+     * A decision that clears the predictions clears the strip here, without a second
+     * `ClearForNewComposing` (the engine already ran it): the decision is applied
+     * with the UI already cleared. A Continuous backspace-pop's decision clears
+     * nothing unless predictions were showing, so live composing candidates do not
+     * flicker.
      */
-    fun dispatchComposingNextWordEffect(effect: ComposingTransition.Effect) {
-        when (effect) {
-            is ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> {
-                nextWordController.updateLastSelectedWord(
-                    word = effect.text,
-                    roman = effect.roman.ifEmpty { effect.text },
-                )
-            }
-
-            is ComposingTransition.Effect.NextWordWordSelected -> {
-                // Final-commit dispatch. Forward `triggerPrediction` exactly —
-                // engine's `transition.rs:644-653` emits `true` today but the
-                // bridge contract is "verbatim" so a future false must not be
-                // silently overridden.
-                nextWordController.handleEngineWordSelected(
-                    text = effect.text,
-                    roman = effect.roman.ifEmpty { effect.text },
-                    triggerPrediction = effect.triggerPrediction,
-                    preceding = effect.preceding,
-                )
-            }
-
-            ComposingTransition.Effect.NextWordClearForNewComposing -> {
-                // The composing crate has no nextword dep so it cannot
-                // dispatch ClearForNewComposing to the NextWord engine
-                // directly — this effect is its request to the platform.
-                // Engine-side cleanup is therefore UNCONDITIONAL.
-                //
-                // The visible-strip clear is conditional: Continuous
-                // backspace-pop emits this alongside UpdatePreedit /
-                // RefreshCandidates (engine/composing/tests/continuous_phase.rs)
-                // while Taigi composing candidates are still active; an
-                // unconditional candidate wipe would cause visible flicker.
-                if (nextWordController.isShowingNextWordCandidates()) {
-                    clearCandidates()
-                } else {
-                    nextWordController.clearNextWordState()
-                }
-            }
-
-            else -> {
-                // Router contract: ComposingManager.applyTransition only
-                // forwards the three NextWord-shaped Effects. Reaching this
-                // branch means a routing-layer bug. Debug: crash loudly to
-                // surface it. Release: the stray effect is dropped so the
-                // user's keyboard never crashes; the facade `e` below is a
-                // best-effort diagnostic — the AndroidLoggerBackend gates
-                // every level on `BuildConfig.DEBUG` per the
-                // zero-logs-in-release privacy policy (docs/contributing/security-rules.md),
-                // so in production this is intentionally swallowed, not surfaced.
-                val msg = "NextWordEffectRouter received non-NextWord effect: $effect"
-                if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
-                    throw IllegalStateException(msg)
-                } else {
-                    logger.e(TAG, msg)
-                }
-            }
+    fun dispatchComposingNextWordDecision(decision: NextWordDecideResult) {
+        if (decision.effects.any { it is NextWordDecideResult.Effect.ClearPredictionsUI }) {
+            clearCandidateStrip()
         }
+        nextWordController.applyComposingDecision(decision)
     }
 
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
@@ -554,7 +504,7 @@ class SmartbarManager(
     }
 
     /**
-     * Bumped on every [clearCandidates]. An async candidate producer captures
+     * Bumped on every strip clear ([clearCandidates], a next-word decision that clears). An async candidate producer captures
      * it when it starts and publishes only if it is unchanged, so a strip
      * cleared by any path (space, Enter, candidate tap, symbol, mode switch)
      * cannot be repopulated by a result computed for the text before the
@@ -564,16 +514,21 @@ class SmartbarManager(
         private set
 
     fun clearCandidates() {
-        clearEpoch++
         logger.debug(TAG) {
             val stackTrace = Thread.currentThread().stackTrace
             val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
             "[DEBUG] clearCandidates() called from: $caller, hadCandidates=$hasCandidates"
         }
 
+        clearCandidateStrip()
+        nextWordController.clearNextWordState()
+    }
+
+    // The strip itself, with no next-word engine call.
+    private fun clearCandidateStrip() {
+        clearEpoch++
         currentSuggestions = emptyList()
         hasCandidates = false
-        nextWordController.clearNextWordState()
 
         if (activeContainer == SmartbarContainer.CANDIDATES ||
             activeContainer == SmartbarContainer.ENGLISH_CANDIDATES

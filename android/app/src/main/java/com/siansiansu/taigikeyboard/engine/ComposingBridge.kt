@@ -10,9 +10,9 @@ import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
 import com.siansiansu.taigikeyboard.engine.proto.CommitPrediction
 import com.siansiansu.taigikeyboard.engine.proto.CommitResolution
 import com.siansiansu.taigikeyboard.engine.proto.CommitScript
-import com.siansiansu.taigikeyboard.engine.proto.CommittedWord
 import com.siansiansu.taigikeyboard.engine.proto.ComposingRequest
 import com.siansiansu.taigikeyboard.engine.proto.ComposingResponse
+import com.siansiansu.taigikeyboard.engine.proto.NextWordContext
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 
@@ -46,38 +46,14 @@ data class ComposingTransition(
         object ResetCandidateContext : Effect()
 
         /**
-         * v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
-         * `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
-         * Platform delegate forwards to `NextWordController.updateLastSelectedWord`
-         * which injects `nowMs` + envelope generation.
+         * The composition's next-word handshake, applied by the engine in this
+         * same call (the request's `nextWordContext`): a commit's learning, a
+         * nail, or an abort's clear. `NextWordController.applyComposingDecision`
+         * runs it at this position, as every other [NextWordDecideResult].
          */
-        data class NextWordUpdateLastSelectedWord(
-            val text: String,
-            val roman: String,
+        data class NextWordDecided(
+            val result: NextWordDecideResult,
         ) : Effect()
-
-        /**
-         * v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
-         * `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
-         * trigger_prediction, now_ms, preceding)`. Forward `triggerPrediction`
-         * and `preceding` exactly — `preceding` is the nailed segments committed
-         * before `text`, learned as one sequence (behavioral-invariants §40).
-         */
-        data class NextWordWordSelected(
-            val text: String,
-            val roman: String,
-            val triggerPrediction: Boolean,
-            val preceding: List<CommittedWord>,
-        ) : Effect()
-
-        /**
-         * v3.5.8 Phase 4 — continuous-input abort handshake. Maps to
-         * `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
-         * forwards to `NextWordController.onClearCandidates()` (Android equivalent
-         * of iOS `NextWordController.clearDisplay()`); NOT the structurally
-         * distinct `ResetAll` intent.
-         */
-        object NextWordClearForNewComposing : Effect()
     }
 
     companion object {
@@ -278,6 +254,7 @@ fun RustEngineBridge.composingStart(
     text: String,
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Start
         .newBuilder()
@@ -287,6 +264,7 @@ fun RustEngineBridge.composingStart(
         methodSetter = { it.start = payload },
         op = "composingStart",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
@@ -295,6 +273,7 @@ fun RustEngineBridge.composingAppend(
     ch: String,
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Append
         .newBuilder()
@@ -304,6 +283,7 @@ fun RustEngineBridge.composingAppend(
         methodSetter = { it.append = payload },
         op = "composingAppend",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
@@ -312,6 +292,7 @@ fun RustEngineBridge.composingAppend(
 fun RustEngineBridge.composingAppendHyphen(
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen
         .newBuilder()
@@ -320,6 +301,7 @@ fun RustEngineBridge.composingAppendHyphen(
         methodSetter = { it.appendHyphen = payload },
         op = "composingAppendHyphen",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
@@ -331,6 +313,7 @@ fun RustEngineBridge.composingTpsKey(
     key: String,
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.TpsKey
         .newBuilder()
@@ -340,6 +323,7 @@ fun RustEngineBridge.composingTpsKey(
         methodSetter = { it.tpsKey = payload },
         op = "composingTpsKey",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
@@ -348,6 +332,7 @@ fun RustEngineBridge.composingTpsKey(
 fun RustEngineBridge.composingDeleteBackward(
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward
         .newBuilder()
@@ -356,6 +341,7 @@ fun RustEngineBridge.composingDeleteBackward(
         methodSetter = { it.deleteBackward = payload },
         op = "composingDeleteBackward",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
@@ -365,6 +351,7 @@ fun RustEngineBridge.composingDeleteBackward(
 fun RustEngineBridge.composingCommitRaw(
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
         .newBuilder()
@@ -373,6 +360,7 @@ fun RustEngineBridge.composingCommitRaw(
         methodSetter = { it.commitRaw = payload },
         op = "composingCommitRaw",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
@@ -384,6 +372,7 @@ fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
     text: String,
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto
         .CommitPreeditThenInsertExternal
@@ -394,11 +383,15 @@ fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
         methodSetter = { it.commitPreeditThenInsertExternal = payload },
         op = "composingCommitPreeditThenInsertExternal",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     )
 }
 
-fun RustEngineBridge.composingReset(generation: Long): ComposingTransition {
+fun RustEngineBridge.composingReset(
+    generation: Long,
+    nextWordContext: NextWordContext? = null,
+): ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Reset
         .newBuilder()
         .build()
@@ -406,6 +399,7 @@ fun RustEngineBridge.composingReset(generation: Long): ComposingTransition {
         methodSetter = { it.reset = payload },
         op = "composingReset",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = null,
     )
 }
@@ -464,12 +458,14 @@ fun RustEngineBridge.composingCommitContinuous(
     pick: ContinuousPick,
     settings: EngineSettings,
     generation: Long,
+    nextWordContext: NextWordContext? = null,
 ): ContinuousCommitResult {
     val request = pick.toRequest()
     val payload = composingProtoRoundtrip(
         methodSetter = { it.commitContinuous = request },
         op = "composingCommitContinuous",
         generation = generation,
+        nextWordContext = nextWordContext,
         config = continuousAppConfig(settings),
     ) ?: return ContinuousCommitResult.FAILED
     // Always set on this path; an absent one reads as UNSPECIFIED → ignored.
@@ -522,9 +518,11 @@ private inline fun composingProtoRoundtrip(
     op: String,
     generation: Long,
     config: AppConfig?,
+    nextWordContext: NextWordContext? = null,
 ): ComposingResponse? {
     val composingBuilder = ComposingRequest.newBuilder()
     methodSetter(composingBuilder)
+    if (nextWordContext != null) composingBuilder.nextWordContext = nextWordContext
     val composingRequest = composingBuilder.build()
     val response = RustEngineBridge.dispatch(op) {
         setGeneration(generation)
@@ -548,8 +546,9 @@ private inline fun composingDispatch(
     op: String,
     generation: Long,
     config: AppConfig?,
+    nextWordContext: NextWordContext?,
 ): ComposingTransition {
-    val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
+    val payload = composingProtoRoundtrip(methodSetter, op, generation, config, nextWordContext)
         ?: return ComposingTransition.NOOP
     val transition = synthComposing(payload)
     RustEngineBridge.backend.tdebug("RustEngineBridge") {
@@ -607,9 +606,9 @@ private inline fun composingFetchDispatch(
 private fun synthComposing(proto: ComposingResponse): ComposingTransition {
     // Effect contract is exhaustive — every emitted Effect.kind maps to a
     // Kotlin case. The InputConnection-bound effects route through
-    // DefaultComposingDelegate; the 3 NextWord-shaped effects route
-    // through SmartbarManager.dispatchComposingNextWordEffect via the
-    // NextWordEffectRouter sibling on ComposingManager.
+    // DefaultComposingDelegate; the next-word decision routes through
+    // SmartbarManager.dispatchComposingNextWordDecision via the
+    // nextWordRouter sibling on ComposingManager.
     val effects: List<ComposingTransition.Effect> = proto.effectList.mapNotNull { eff ->
         when {
             eff.hasUpdatePreedit() -> {
@@ -638,24 +637,20 @@ private fun synthComposing(proto: ComposingResponse): ComposingTransition {
                 ComposingTransition.Effect.ResetCandidateContext
             }
 
-            eff.hasNextWordUpdateLastSelectedWord() -> {
-                ComposingTransition.Effect.NextWordUpdateLastSelectedWord(
-                    text = eff.nextWordUpdateLastSelectedWord.text,
-                    roman = eff.nextWordUpdateLastSelectedWord.roman,
-                )
+            eff.hasNextWordDecided() -> {
+                ComposingTransition.Effect.NextWordDecided(synthDecideResult(eff.nextWordDecided))
             }
 
-            eff.hasNextWordWordSelected() -> {
-                ComposingTransition.Effect.NextWordWordSelected(
-                    text = eff.nextWordWordSelected.text,
-                    roman = eff.nextWordWordSelected.roman,
-                    triggerPrediction = eff.nextWordWordSelected.triggerPrediction,
-                    preceding = eff.nextWordWordSelected.precedingList,
+            // Composing-to-engine handshakes: the engine applies or drops them
+            // before answering, so one here is an engine bug.
+            eff.hasNextWordUpdateLastSelectedWord() ||
+                eff.hasNextWordWordSelected() ||
+                eff.hasNextWordClearForNewComposing() -> {
+                RustEngineBridge.backend.e(
+                    "RustEngineBridge",
+                    "composing answer carried an unapplied next-word handshake",
                 )
-            }
-
-            eff.hasNextWordClearForNewComposing() -> {
-                ComposingTransition.Effect.NextWordClearForNewComposing
+                null
             }
 
             else -> {

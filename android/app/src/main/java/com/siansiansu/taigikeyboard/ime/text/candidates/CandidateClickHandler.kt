@@ -65,8 +65,8 @@ class CandidateClickHandler(
             val composingManager = getComposingManager()
 
             // Continuous-input branch routes BEFORE the sentinel-id branches.
-            // The engine emits NextWordWordSelected on final commits which the
-            // ComposingManager NextWordEffectRouter routes — onNextWordPrediction
+            // A final commit carries its next-word decision, which the
+            // ComposingManager nextWordRouter routes — onNextWordPrediction
             // is intentionally NOT called from the continuous branch to avoid
             // double-firing predictions.
             if (selectedWord.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true") {
@@ -242,7 +242,7 @@ class CandidateClickHandler(
             // but `RefreshCandidates` is a delegate no-op so the strip would
             // keep stale `consumedBytes` metadata until the next keypress.
             // Trigger the standard refresh. Final-commit deliberately skipped:
-            // it emits NextWordWordSelected which drives async NextWord
+            // its next-word decision drives the async NextWord
             // predict; a Taigi refresh would see `rawInput=null` and call
             // `clearCandidates()`, racing with / wiping the fresh predictions.
             ContinuousCommitOutcome.Nailed -> onRequestCandidateRefresh()

@@ -43,7 +43,7 @@ final class ComposingManagerTests: XCTestCase {
         // starts at generation 1, so once the first test sets `last_generation = 1`,
         // no later test mismatches and the singleton leaks the prior test's
         // composing / next-word state (e.g. rawInput "ab" → next test sees "aba",
-        // or stray `nextWordClearForNewComposing` effects). Bump to a strictly
+        // or stray next-word effects). Bump to a strictly
         // increasing per-test generation so each test's first engine request forces
         // the full reset. Bump count is bounded by tests-per-process (trivial).
         Self.generationSeed += 1
@@ -179,13 +179,11 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "")
         // v3.5.8 Continuous: the single composing char lives in the PREEDIT,
         // never the document, so deleting it clears the preedit + exits to Idle
-        // with NO DeleteBackwardFromDocument; the terminal effect is
-        // NextWordClearForNewComposing (matches engine/composing/tests/
+        // with NO DeleteBackwardFromDocument (matches engine/composing/tests/
         // continuous_phase.rs::delete_backward_under_continuous_with_empty_state_exits_to_idle).
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
             .clearCandidates,
-            .nextWordClearForNewComposing,
         ])
     }
 
@@ -208,16 +206,50 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         // startComposing composes in Phase::Continuous (R12);
         // `commitComposition` routes through CommitRaw, which under Continuous
-        // commits `derived_display(pending)` and fires the terminal
-        // NextWordWordSelected (records the association — Model B; matches
+        // commits `derived_display(pending)` (matches
         // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_commits_derived_display_and_fires_nextword
-        // and testCommitRawInput below). roman carries the raw buffer "hello".
+        // and testCommitRawInput below). With no next-word envelope set the
+        // engine drops the commit's next-word handshake
+        // (`testCommitComposition_withNextWordContext_runsTheDecision`).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived),
             .clearCandidates,
             .resetCandidateContext,
-            .nextWordWordSelected(text: derived, roman: "hello", triggerPrediction: true, preceding: []),
         ])
+    }
+
+    /// With the next-word envelope set, the engine applies the commit's
+    /// next-word handshake in the same call and the decision takes the
+    /// handshake's place, last (roadmap E2). Its generations come from the
+    /// process-wide next-word engine, so only the shape is asserted.
+    func testCommitComposition_withNextWordContext_runsTheDecision() {
+        var context = Taigi_Engine_NextWordContext()
+        // A generation no other test uses, so the next-word engine starts clean.
+        context.generation = 900_000 + Self.generationSeed
+        context.nowMs = 1_000_000
+        manager.nextWordContext = { context }
+        manager.startComposing(with: "hello")
+        let derived = manager.composingText
+        spy.effects.removeAll()
+
+        manager.commitComposition()
+
+        XCTAssertEqual(Array(spy.effects.prefix(3)), [
+            .commitTextReplacingPreedit(derived),
+            .clearCandidates,
+            .resetCandidateContext,
+        ])
+        guard spy.effects.count == 4, case let .nextWordDecided(decided) = spy.effects[3] else {
+            return XCTFail("expected the decision last, got \(spy.effects)")
+        }
+        // trace: Enter's handshake has trigger_prediction on → decide.rs asks
+        // for predictions after the word.
+        XCTAssertTrue(decided.effects.contains { effect in
+            if case .queryPredictions = effect {
+                return true
+            }
+            return false
+        })
     }
 
     func testCommitComposition_whenIdle_isNoop() {
@@ -240,14 +272,13 @@ final class ComposingManagerTests: XCTestCase {
         manager.commitPreeditThenInsertExternal("😀")
 
         XCTAssertFalse(manager.isComposing)
-        // Under Continuous the pending derived + external commit atomically,
-        // then NextWordClearForNewComposing (matches engine/composing/tests/
+        // Under Continuous the pending derived + external commit atomically
+        // (matches engine/composing/tests/
         // continuous_phase.rs::commit_preedit_then_insert_external_under_continuous_combines_pending_and_external).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived + "😀"),
             .clearCandidates,
             .resetCandidateContext,
-            .nextWordClearForNewComposing,
         ])
     }
 
@@ -285,14 +316,13 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
-        // Under Continuous, reset exits to Idle with the composing clear pair +
-        // a terminal NextWordClearForNewComposing (matches engine/composing/tests/
+        // Under Continuous, reset exits to Idle with the composing clear pair
+        // (matches engine/composing/tests/
         // continuous_phase.rs::reset_under_continuous_emits_nextword_clear_in_addition_to_composing_pair).
         // The clear-not-commit invariant below is unaffected.
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
             .clearCandidates,
-            .nextWordClearForNewComposing,
         ])
         XCTAssertFalse(spy.effects.contains { effect in
             if case .commitTextReplacingPreedit = effect {

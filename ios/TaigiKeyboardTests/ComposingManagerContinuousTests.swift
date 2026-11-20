@@ -13,8 +13,8 @@ import XCTest
 /// - `commitContinuous` mid-commit stays in Continuous (pending tail remains
 ///   addressable); full-commit exits to Idle and clears mirror.
 /// - `reset` from a composition returns to Idle and emits the abort
-///   effect trio (`ClearPreeditWithoutCommit` + `ClearCandidates` +
-///   `NextWordClearForNewComposing`).
+///   effects (`ClearPreeditWithoutCommit` + `ClearCandidates`; the engine drops
+///   the next-word handshake, no envelope is set).
 ///
 /// Boundary coverage: `RustEngineBridgeContinuousTests` pins the FFI
 /// contract; this file pins the `ComposingManager` observable-mirror +
@@ -239,10 +239,10 @@ final class ComposingManagerContinuousTests: XCTestCase {
     // MARK: - reset
 
     /// `reset` from a composition emits the engine-defined abort
-    /// trio. Order is asserted at the engine layer
+    /// effects. Order is asserted at the engine layer
     /// (`engine/composing/tests/continuous_phase.rs`); the wrapper just
     /// fans the effects to the delegate.
-    func testReset_FromComposition_EmitsAbortTrio() {
+    func testReset_FromComposition_EmitsAbortEffects() {
         manager.startComposing(with: "tsua")
         spy.effects.removeAll()
 
@@ -250,12 +250,11 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing, "Reset must exit to Idle")
         XCTAssertEqual(manager.rawInput, "")
-        // Abort trio order pinned by engine: ClearPreeditWithoutCommit ->
-        // ClearCandidates -> NextWordClearForNewComposing.
+        // Abort order pinned by engine: ClearPreeditWithoutCommit ->
+        // ClearCandidates (the next-word handshake is dropped: no envelope).
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
             .clearCandidates,
-            .nextWordClearForNewComposing,
         ])
     }
 

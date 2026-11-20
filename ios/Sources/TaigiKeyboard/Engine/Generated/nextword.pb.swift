@@ -407,8 +407,8 @@ public nonisolated struct Taigi_Engine_ResetAll: Sendable {
 
 /// Continuous-input nail / unnail handshake: the composing engine emits
 /// `Effect::NextWordUpdateLastSelectedWord` when `Phase::Continuous` lands (or
-/// a backspace pops) a segment, and the platform forwards it through this
-/// intent. Learns nothing and changes no state — a nailed segment is not in
+/// a backspace pops) a segment, and `dispatch` applies it as this intent.
+/// Learns nothing and changes no state — a nailed segment is not in
 /// the document yet; the final commit's `WordSelected.preceding` carries it
 /// (behavioral-invariants §40 INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING).
 public nonisolated struct Taigi_Engine_UpdateLastSelectedWord: Sendable {

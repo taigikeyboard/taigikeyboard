@@ -84,10 +84,6 @@ data class NextWordFilterResult(
 // endregion
 
 // region Decide intents (6)
-// UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8
-// Phase 4 brought iOS into the call site through a continuous-input
-// mid-commit handshake. iOS bridge wraps it in
-// RustEngineBridge+NextWord.swift::nextwordUpdateLastSelectedWord.
 
 // Records the association, starts the context timer, and optionally queries the next-word prediction.
 fun RustEngineBridge.nextwordWordSelected(
@@ -99,7 +95,6 @@ fun RustEngineBridge.nextwordWordSelected(
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
-    preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> = emptyList(),
 ): NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected
         .newBuilder()
@@ -108,7 +103,6 @@ fun RustEngineBridge.nextwordWordSelected(
         .setRequireRomanMode(requireRomanMode)
         .setTriggerPrediction(triggerPrediction)
         .setInput(decisionInput(nowMs))
-        .addAllPreceding(preceding)
         .build()
     return decideDispatch(
         methodSetter = { it.wordSelected = payload },
@@ -221,33 +215,6 @@ fun RustEngineBridge.nextwordSetPredictionsVisible(
     )
 }
 
-/**
- * Continuous-input nail / unnail handshake. The engine learns nothing from it
- * and changes no state; the final commit's `preceding` carries the nailed
- * segments (behavioral-invariants §40).
- */
-fun RustEngineBridge.nextwordUpdateLastSelectedWord(
-    text: String,
-    roman: String,
-    nowMs: Long,
-    inputMode: String,
-    hanjiFirst: Boolean,
-    generation: Long,
-): NextWordDecideResult {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord
-        .newBuilder()
-        .setText(text)
-        .setRoman(roman)
-        .setInput(decisionInput(nowMs))
-        .build()
-    return decideDispatch(
-        methodSetter = { it.updateLastSelectedWord = payload },
-        op = "nextwordUpdateLastSelectedWord",
-        generation = generation,
-        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
-    )
-}
-
 // endregion
 // region Predict
 
@@ -355,7 +322,8 @@ private inline fun decideDispatch(
     return synthDecideResult(resp.decide)
 }
 
-private fun synthDecideResult(proto: DecideResult): NextWordDecideResult {
+// Also reads the decision a composing answer carries (`Effect.next_word_decided`).
+internal fun synthDecideResult(proto: DecideResult): NextWordDecideResult {
     val effects: List<NextWordDecideResult.Effect> = proto.effectsList.mapNotNull { eff ->
         when {
             eff.hasRescheduleContextTimeout() -> {
