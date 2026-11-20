@@ -16,8 +16,8 @@ import com.siansiansu.taigikeyboard.engine.nextwordContextTimeoutFired
 import com.siansiansu.taigikeyboard.engine.nextwordPredictNext
 import com.siansiansu.taigikeyboard.engine.nextwordResetAll
 import com.siansiansu.taigikeyboard.engine.nextwordSetPredictionsVisible
-import com.siansiansu.taigikeyboard.engine.nextwordUpdateLastSelectedWord
 import com.siansiansu.taigikeyboard.engine.nextwordWordSelected
+import com.siansiansu.taigikeyboard.engine.proto.NextWordContext
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -156,33 +156,18 @@ class NextWordController(
     fun handleNextWordPrediction(
         displayText: String,
         roman: String,
-    ) = handleEngineWordSelected(displayText, roman, triggerPrediction = true, preceding = emptyList())
-
-    /**
-     * Forward a `NextWordWordSelected` — the engine's `Phase::Continuous`
-     * final-commit Effect with its `triggerPrediction` flag and `preceding`
-     * segments preserved verbatim (the engine learns the whole composition,
-     * §40); the effect path must not silently ignore a future `false` from
-     * the engine.
-     */
-    fun handleEngineWordSelected(
-        text: String,
-        roman: String,
-        triggerPrediction: Boolean,
-        preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord>,
     ) {
         val settings = settingsProvider.current
         applyDecideResult(
             RustEngineBridge.nextwordWordSelected(
-                text = text,
+                text = displayText,
                 roman = roman,
                 requireRomanMode = false,
-                triggerPrediction = triggerPrediction,
+                triggerPrediction = true,
                 nowMs = System.currentTimeMillis(),
                 inputMode = settings.inputMode.toEngineInputMode(),
                 hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
-                preceding = preceding,
             ),
         )
     }
@@ -214,28 +199,26 @@ class NextWordController(
     }
 
     /**
-     * Continuous-input nail / unnail handshake (composing engine
-     * `NextWordUpdateLastSelectedWord` effect). The engine learns nothing
-     * from it and keeps the committed context — a nailed segment is not in
-     * the document yet; the final commit's `preceding` carries it
-     * (behavioral-invariants §40).
+     * The next-word envelope every composing request that can commit, nail or
+     * reset carries, so the engine applies the composition's next-word
+     * handshake in that same call (roadmap E2). One clock read per request.
+     * Main thread only, as every other reader of [envelopeGen].
      */
-    fun updateLastSelectedWord(
-        word: String,
-        roman: String? = null,
-    ) {
-        if (word.isEmpty()) return
-        val settings = settingsProvider.current
-        applyDecideResult(
-            RustEngineBridge.nextwordUpdateLastSelectedWord(
-                text = word,
-                roman = roman ?: word,
-                nowMs = System.currentTimeMillis(),
-                inputMode = settings.inputMode.toEngineInputMode(),
-                hanjiFirst = settings.isHanjiFirst,
-                generation = envelopeGen,
-            ),
-        )
+    fun requestContext(): NextWordContext =
+        NextWordContext
+            .newBuilder()
+            .setGeneration(envelopeGen)
+            .setNowMs(System.currentTimeMillis())
+            .build()
+
+    /**
+     * Run the decision a composing answer carries (`NextWordDecided`) at the
+     * position the engine put it. [SmartbarManager.dispatchComposingNextWordDecision]
+     * has already cleared the strip when the decision clears predictions, so
+     * it is applied with the UI cleared — no second `ClearForNewComposing`.
+     */
+    fun applyComposingDecision(decision: NextWordDecideResult) {
+        applyDecideResult(decision, isUiAlreadyCleared = true)
     }
 
     /**

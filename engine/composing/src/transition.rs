@@ -693,8 +693,8 @@ fn unnail_last(
     // Unnail handshake. NextWord learns nothing from it and keeps its
     // committed context (behavioral-invariants §40) — the popped segment can
     // no longer reach NextWord at all, because only the final commit's
-    // `preceding` carries nailed segments. Kept for platforms that read the
-    // effect stream; canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
+    // `preceding` carries nailed segments. Applied by `dispatch` in this same
+    // call (roadmap E2); canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
     // A segment nailed as shown is no word the user selected (B4): the
     // handshake names only a picked one.
     let nextword_correction = match nailed.last() {

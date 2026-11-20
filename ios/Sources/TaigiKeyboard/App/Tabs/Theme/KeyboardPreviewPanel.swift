@@ -21,6 +21,7 @@ struct KeyboardPreviewPanel: View {
     var isLiquidGlassEnabled = false
 
     @State private var previewState = KeyboardState()
+    // No next-word envelope: a preview commit teaches next word nothing.
     @State private var composingManager = ComposingManager()
 
     var body: some View {

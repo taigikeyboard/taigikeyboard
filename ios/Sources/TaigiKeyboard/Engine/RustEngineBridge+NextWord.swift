@@ -6,13 +6,6 @@ import SwiftProtobuf
 /// NextWord slice extension for `RustEngineBridge`. Mirrors the pattern
 /// established in v3.5.4 for the composing slice — proto roundtrip
 /// helpers + Swift-friendly synthesized value types.
-///
-/// `nextwordUpdateLastSelectedWord` was an Android-only Space-path intent
-/// pre-v3.5.8 (per `nextword-engine-boundary.md` §13 + `nextword-slice-audit.md`
-/// §5 #5). v3.5.8 Phase 4 introduced a continuous-input mid-commit handshake
-/// that emits the matching `Effect.nextWordUpdateLastSelectedWord` from the
-/// composing engine; iOS now needs the wrapper to forward the effect through
-/// `NextWordController.updateLastSelectedWord`.
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
@@ -77,37 +70,11 @@ public extension RustEngineBridge {
 
     // MARK: - Decide intents (6)
 
-    /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Updates
-    /// `state.last_selected_word` + `last_selection_time_ms` without
-    /// bumping `current_generation`, no timer effects; the engine records only
-    /// a compound's own bigrams. Pre-v3.5.8 this was Android-only;
-    /// the Phase 4 effect-based handshake brought iOS into the call site.
-    static func nextwordUpdateLastSelectedWord(
-        text: String,
-        roman: String,
-        nowMs: Int64,
-        mode: InputMode,
-        hanjiFirst: Bool,
-        generation: UInt64,
-    ) -> NextWordDecideResult {
-        var payload = Taigi_Engine_UpdateLastSelectedWord()
-        payload.text = text
-        payload.roman = roman
-        payload.input = decisionInput(nowMs: nowMs)
-        return decideDispatch(
-            method: .updateLastSelectedWord(payload),
-            op: "nextwordUpdateLastSelectedWord",
-            generation: generation,
-            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
-        )
-    }
-
     static func nextwordWordSelected(
         text: String,
         roman: String,
         requireRomanMode: Bool,
         triggerPrediction: Bool,
-        preceding: [Taigi_Engine_CommittedWord] = [],
         nowMs: Int64,
         mode: InputMode,
         hanjiFirst: Bool,
@@ -118,7 +85,6 @@ public extension RustEngineBridge {
         payload.roman = roman
         payload.requireRomanMode = requireRomanMode
         payload.triggerPrediction = triggerPrediction
-        payload.preceding = preceding
         payload.input = decisionInput(nowMs: nowMs)
         return decideDispatch(
             method: .wordSelected(payload),
@@ -335,7 +301,8 @@ public extension RustEngineBridge {
         return synthDecideResult(decide)
     }
 
-    private static func synthDecideResult(_ proto: Taigi_Engine_DecideResult) -> NextWordDecideResult {
+    /// Also reads the decision a composing answer carries (`Effect.next_word_decided`).
+    static func synthDecideResult(_ proto: Taigi_Engine_DecideResult) -> NextWordDecideResult {
         let effects: [NextWordDecideResult.Effect] = proto.effects.compactMap { eff in
             guard let kind = eff.kind else { return nil }
             switch kind {

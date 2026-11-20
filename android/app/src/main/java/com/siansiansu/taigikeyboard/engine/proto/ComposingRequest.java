@@ -980,8 +980,9 @@ public  final class ComposingRequest extends
    * <pre>
    * The shell's next-word envelope, so the engine applies the composition's
    * next-word handshakes in this same call (one FFI hop per commit, see
-   * `Effect`). A request whose answer carries no handshake (a read-only
-   * `FetchAtPos`) leaves it unused.
+   * `Effect`). Every request that can commit, nail or reset carries it; a
+   * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+   * unset.
    * </pre>
    *
    * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -994,8 +995,9 @@ public  final class ComposingRequest extends
    * <pre>
    * The shell's next-word envelope, so the engine applies the composition's
    * next-word handshakes in this same call (one FFI hop per commit, see
-   * `Effect`). A request whose answer carries no handshake (a read-only
-   * `FetchAtPos`) leaves it unused.
+   * `Effect`). Every request that can commit, nail or reset carries it; a
+   * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+   * unset.
    * </pre>
    *
    * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -1008,8 +1010,9 @@ public  final class ComposingRequest extends
    * <pre>
    * The shell's next-word envelope, so the engine applies the composition's
    * next-word handshakes in this same call (one FFI hop per commit, see
-   * `Effect`). A request whose answer carries no handshake (a read-only
-   * `FetchAtPos`) leaves it unused.
+   * `Effect`). Every request that can commit, nail or reset carries it; a
+   * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+   * unset.
    * </pre>
    *
    * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -1023,8 +1026,9 @@ public  final class ComposingRequest extends
    * <pre>
    * The shell's next-word envelope, so the engine applies the composition's
    * next-word handshakes in this same call (one FFI hop per commit, see
-   * `Effect`). A request whose answer carries no handshake (a read-only
-   * `FetchAtPos`) leaves it unused.
+   * `Effect`). Every request that can commit, nail or reset carries it; a
+   * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+   * unset.
    * </pre>
    *
    * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -1045,8 +1049,9 @@ public  final class ComposingRequest extends
    * <pre>
    * The shell's next-word envelope, so the engine applies the composition's
    * next-word handshakes in this same call (one FFI hop per commit, see
-   * `Effect`). A request whose answer carries no handshake (a read-only
-   * `FetchAtPos`) leaves it unused.
+   * `Effect`). Every request that can commit, nail or reset carries it; a
+   * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+   * unset.
    * </pre>
    *
    * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -2039,8 +2044,9 @@ public  final class ComposingRequest extends
      * <pre>
      * The shell's next-word envelope, so the engine applies the composition's
      * next-word handshakes in this same call (one FFI hop per commit, see
-     * `Effect`). A request whose answer carries no handshake (a read-only
-     * `FetchAtPos`) leaves it unused.
+     * `Effect`). Every request that can commit, nail or reset carries it; a
+     * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+     * unset.
      * </pre>
      *
      * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -2053,8 +2059,9 @@ public  final class ComposingRequest extends
      * <pre>
      * The shell's next-word envelope, so the engine applies the composition's
      * next-word handshakes in this same call (one FFI hop per commit, see
-     * `Effect`). A request whose answer carries no handshake (a read-only
-     * `FetchAtPos`) leaves it unused.
+     * `Effect`). Every request that can commit, nail or reset carries it; a
+     * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+     * unset.
      * </pre>
      *
      * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -2067,8 +2074,9 @@ public  final class ComposingRequest extends
      * <pre>
      * The shell's next-word envelope, so the engine applies the composition's
      * next-word handshakes in this same call (one FFI hop per commit, see
-     * `Effect`). A request whose answer carries no handshake (a read-only
-     * `FetchAtPos`) leaves it unused.
+     * `Effect`). Every request that can commit, nail or reset carries it; a
+     * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+     * unset.
      * </pre>
      *
      * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -2082,8 +2090,9 @@ public  final class ComposingRequest extends
      * <pre>
      * The shell's next-word envelope, so the engine applies the composition's
      * next-word handshakes in this same call (one FFI hop per commit, see
-     * `Effect`). A request whose answer carries no handshake (a read-only
-     * `FetchAtPos`) leaves it unused.
+     * `Effect`). Every request that can commit, nail or reset carries it; a
+     * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+     * unset.
      * </pre>
      *
      * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -2098,8 +2107,9 @@ public  final class ComposingRequest extends
      * <pre>
      * The shell's next-word envelope, so the engine applies the composition's
      * next-word handshakes in this same call (one FFI hop per commit, see
-     * `Effect`). A request whose answer carries no handshake (a read-only
-     * `FetchAtPos`) leaves it unused.
+     * `Effect`). Every request that can commit, nail or reset carries it; a
+     * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+     * unset.
      * </pre>
      *
      * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>
@@ -2113,8 +2123,9 @@ public  final class ComposingRequest extends
      * <pre>
      * The shell's next-word envelope, so the engine applies the composition's
      * next-word handshakes in this same call (one FFI hop per commit, see
-     * `Effect`). A request whose answer carries no handshake (a read-only
-     * `FetchAtPos`) leaves it unused.
+     * `Effect`). Every request that can commit, nail or reset carries it; a
+     * read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+     * unset.
      * </pre>
      *
      * <code>.taigi.engine.NextWordContext next_word_context = 50;</code>

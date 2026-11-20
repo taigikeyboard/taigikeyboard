@@ -24,11 +24,11 @@ Effect names describe behaviour, not an OS API. `UpdatePreedit.display` is the e
 | `ClearPreeditWithoutCommit` | `setMarkedText("", selectedRange: 0)` + `unmarkText()` | `setComposingText("", 1)` **then** `finishComposingText()` (§11.2 rule 1) |
 | `CommitTextReplacingPreedit(text)` | over a marked region: `setMarkedText(text, …)` + `unmarkText()`, never `insertText` — Flutter hosts before flutter/flutter#191062 insert at the caret and keep the preedit. Inside a user event the commit is held and written once with the literals that follow (`INVARIANT_composing_host_commit_one_write_per_event`). No marked region: `insertText(text)` | `commitText(text, 1)` — no `finishComposingText` first (§11.2 rule 2) |
 | `ClearCandidates` / `RefreshCandidates` / `ResetCandidateContext` | candidate / autocomplete state only | no `InputConnection` call |
-| `NextWordUpdateLastSelectedWord` / `NextWordWordSelected` / `NextWordClearForNewComposing` | `NextWordController` | `NextWordEffectRouter` → `NextWordController` |
+| `NextWordDecided(DecideResult)` — the composition's next-word handshake, applied by the engine in the same call | `NextWordController.applyComposingDecision` | `ComposingManager` `nextWordRouter` → `SmartbarManager.dispatchComposingNextWordDecision` → `NextWordController.applyComposingDecision` |
 
 ### 2.3 Ordering
 
-Effects run in list order. Engine tests in `engine/composing/src/transition.rs` pin each sequence, for example:
+Effects run in list order. Engine tests in `engine/composing/src/transition.rs` pin each sequence as the composing engine emits it; `engine/dispatch` then replaces each `NextWord*` handshake in place with its `NextWordDecided` before the answer reaches the platform. For example:
 
 - Backspace to an empty composition → `ClearPreeditWithoutCommit`, `ClearCandidates`, `NextWordClearForNewComposing` (nothing is deleted from the document; the text lived only in the preedit).
 - Enter (`CommitRaw`) → `CommitTextReplacingPreedit(whole composition)`, `ClearCandidates`, `ResetCandidateContext`, `NextWordWordSelected`.

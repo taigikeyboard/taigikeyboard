@@ -54,39 +54,13 @@ object DefaultComposingDelegate : ComposingDelegate {
                 Unit
             }
 
-            is ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
-            is ComposingTransition.Effect.NextWordWordSelected,
-            ComposingTransition.Effect.NextWordClearForNewComposing,
-            -> {
-                // NextWord-shaped effects flow through the sibling
-                // `NextWordEffectRouter` injected into ComposingManager, not
+            is ComposingTransition.Effect.NextWordDecided -> {
+                // The next-word decision flows through the sibling
+                // `nextWordRouter` injected into ComposingManager, not
                 // the InputConnection-bound delegate. Listed exhaustively so
                 // a future Effect variant fails compile here.
                 Unit
             }
         }
-    }
-}
-
-/**
- * Sibling of [ComposingDelegate] for v3.5.8 Phase 4 NextWord-shaped Effects
- * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /
- * `NextWordClearForNewComposing`). Decoupled because these targets are
- * `NextWordController`, not [InputConnection].
- *
- * [ComposingManager.applyTransition] dispatches each NextWord-shaped Effect
- * here in proto-list order, sandwiched alongside [DefaultComposingDelegate]
- * calls for the InputConnection-bound effects in the same Effect[] response.
- *
- * Default implementation = [NoopNextWordEffectRouter]; tests + non-IME
- * callers don't need to wire NextWord plumbing.
- */
-fun interface NextWordEffectRouter {
-    fun route(effect: ComposingTransition.Effect)
-}
-
-object NoopNextWordEffectRouter : NextWordEffectRouter {
-    override fun route(effect: ComposingTransition.Effect) {
-        // intentional no-op — see KDoc on NextWordEffectRouter
     }
 }

@@ -25,29 +25,11 @@ public extension RustEngineBridge {
             case clearCandidates
             case refreshCandidates
             case resetCandidateContext
-            /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
-            /// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
-            /// Platform delegate forwards to `NextWordController.updateLastSelectedWord`
-            /// which injects `nowMs` + envelope generation. NextWord learns nothing
-            /// from it (§40); `ComposingManager` reads it as the nail signal.
-            case nextWordUpdateLastSelectedWord(text: String, roman: String)
-            /// v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
-            /// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
-            /// trigger_prediction, now_ms, preceding)`. Forward `triggerPrediction`
-            /// and `preceding` exactly — `preceding` is the nailed segments committed
-            /// before `text`, learned as one sequence (behavioral-invariants §40).
-            case nextWordWordSelected(
-                text: String,
-                roman: String,
-                triggerPrediction: Bool,
-                preceding: [Taigi_Engine_CommittedWord],
-            )
-            /// v3.5.8 Phase 4 — continuous-input abort handshake. Maps to
-            /// `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
-            /// forwards to `NextWordController.clearDisplay()` (NOT
-            /// `resetAndClearUI()` — that sends the structurally distinct
-            /// `ResetAll` intent).
-            case nextWordClearForNewComposing
+            /// The composition's next-word handshake, applied by the engine in this
+            /// same call (the request's `nextWordContext`): a commit's learning, a
+            /// nail, or an abort's clear. `NextWordController.applyComposingDecision`
+            /// runs it at this position, as every other `DecideResult`.
+            case nextWordDecided(NextWordDecideResult)
         }
 
         public let rawInput: String
@@ -274,6 +256,7 @@ public extension RustEngineBridge {
         _ text: String,
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Start()
         payload.text = text
@@ -281,6 +264,7 @@ public extension RustEngineBridge {
             method: .start(payload),
             op: "composingStart",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
@@ -289,6 +273,7 @@ public extension RustEngineBridge {
         _ char: String,
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Append()
         payload.char = char
@@ -296,6 +281,7 @@ public extension RustEngineBridge {
             method: .append(payload),
             op: "composingAppend",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
@@ -303,11 +289,13 @@ public extension RustEngineBridge {
     internal static func composingAppendHyphen(
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         composingDispatch(
             method: .appendHyphen(Taigi_Engine_AppendHyphen()),
             op: "composingAppendHyphen",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
@@ -319,6 +307,7 @@ public extension RustEngineBridge {
         _ key: String,
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_TpsKey()
         payload.key = key
@@ -326,6 +315,7 @@ public extension RustEngineBridge {
             method: .tpsKey(payload),
             op: "composingTpsKey",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
@@ -333,11 +323,13 @@ public extension RustEngineBridge {
     internal static func composingDeleteBackward(
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         composingDispatch(
             method: .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
@@ -347,11 +339,13 @@ public extension RustEngineBridge {
     internal static func composingCommitRaw(
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         composingDispatch(
             method: .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
@@ -362,6 +356,7 @@ public extension RustEngineBridge {
         _ text: String,
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitPreeditThenInsertExternal()
         payload.text = text
@@ -369,15 +364,20 @@ public extension RustEngineBridge {
             method: .commitPreeditThenInsertExternal(payload),
             op: "composingCommitPreeditThenInsertExternal",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         )
     }
 
-    static func composingReset(generation: UInt64) -> ComposingTransition {
+    static func composingReset(
+        generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
+    ) -> ComposingTransition {
         composingDispatch(
             method: .reset(Taigi_Engine_Reset()),
             op: "composingReset",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: nil,
         )
     }
@@ -430,11 +430,13 @@ public extension RustEngineBridge {
         _ pick: ContinuousPick,
         settings: EngineSettings,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
     ) -> ContinuousCommitResult {
         guard let payload = composingProtoRoundtrip(
             method: .commitContinuous(pick.request),
             op: "composingCommitContinuous",
             generation: generation,
+            nextWordContext: nextWordContext,
             config: continuousAppConfig(settings),
         ) else {
             return .failed
@@ -519,11 +521,15 @@ public extension RustEngineBridge {
         method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext? = nil,
         config: Taigi_Engine_AppConfig?,
     ) -> Taigi_Engine_ComposingResponse? {
         let logger = LoggerFactory.make(category: "RustEngineBridge")
         var composing = Taigi_Engine_ComposingRequest()
         composing.method = method
+        if let nextWordContext {
+            composing.nextWordContext = nextWordContext
+        }
 
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
@@ -551,12 +557,14 @@ public extension RustEngineBridge {
         method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
         generation: UInt64,
+        nextWordContext: Taigi_Engine_NextWordContext?,
         config: Taigi_Engine_AppConfig?,
     ) -> ComposingTransition {
         guard let payload = composingProtoRoundtrip(
             method: method,
             op: op,
             generation: generation,
+            nextWordContext: nextWordContext,
             config: config,
         ) else {
             return .noop
@@ -630,20 +638,13 @@ public extension RustEngineBridge {
             case .clearCandidates_p: return .clearCandidates
             case .refreshCandidates: return .refreshCandidates
             case .resetCandidateContext: return .resetCandidateContext
-            case let .nextWordUpdateLastSelectedWord(m):
-                return .nextWordUpdateLastSelectedWord(text: m.text, roman: m.roman)
-            case let .nextWordWordSelected(m):
-                return .nextWordWordSelected(
-                    text: m.text,
-                    roman: m.roman,
-                    triggerPrediction: m.triggerPrediction,
-                    preceding: m.preceding,
-                )
-            case .nextWordClearForNewComposing:
-                return .nextWordClearForNewComposing
-            // Answers a request carrying `NextWordContext`, which iOS does not
-            // send yet (roadmap E2 PR2).
-            case .nextWordDecided:
+            case let .nextWordDecided(decided):
+                return .nextWordDecided(synthDecideResult(decided))
+            // Composing-to-engine handshakes: the engine applies or drops them
+            // before answering, so one here is an engine bug.
+            case .nextWordUpdateLastSelectedWord, .nextWordWordSelected, .nextWordClearForNewComposing:
+                LoggerFactory.make(category: "RustEngineBridge")
+                    .error("composing answer carried an unapplied next-word handshake")
                 return nil
             }
         }

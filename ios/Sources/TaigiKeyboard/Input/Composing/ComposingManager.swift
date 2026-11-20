@@ -59,6 +59,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     @ObservationIgnored
     weak var delegate: (any ComposingDelegate)?
 
+    /// The next-word envelope (`NextWordController.requestContext`) sent with
+    /// every request that can commit, nail or reset, so the engine applies the
+    /// composition's next-word handshake in the same call and answers
+    /// `.nextWordDecided`. Unset (a preview keyboard, a test), the engine drops
+    /// the handshake and nothing is learned.
+    @ObservationIgnored
+    var nextWordContext: (() -> Taigi_Engine_NextWordContext)?
+
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "ComposingManager")
 
@@ -88,6 +96,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             text,
             settings: settings,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         ))
     }
 
@@ -98,6 +107,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             char,
             settings: settings,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         ))
     }
 
@@ -108,6 +118,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         apply(RustEngineBridge.composingAppendHyphen(
             settings: settings,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         ))
     }
 
@@ -121,6 +132,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             key,
             settings: settingsProvider.current,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         )
         apply(transition)
         return !transition.effects.isEmpty
@@ -173,10 +185,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// The engine resolves the document text, counts the pick (R5), and
     /// answers what the pick did — the outcome callers gate the auto space on.
     /// Model B mid-commit (nail) emits `[UpdatePreedit(whole composition),
-    /// NextWordUpdateLastSelectedWord, RefreshCandidates]` and stays
+    /// NextWordDecided (the nail), RefreshCandidates]` and stays
     /// Continuous; final-commit (`consumedBytes >= pending.utf8.count`)
     /// emits `[CommitTextReplacingPreedit(whole composition),
-    /// ClearCandidates, ResetCandidateContext, NextWordWordSelected]`
+    /// ClearCandidates, ResetCandidateContext, NextWordDecided]`
     /// and exits Continuous; a stale generation or a rejected pick emits
     /// nothing and answers `.ignored`.
     public func commitContinuous(_ pick: RustEngineBridge.ContinuousPick) -> RustEngineBridge.ContinuousCommitOutcome {
@@ -189,6 +201,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             pick,
             settings: settingsProvider.current,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         )
         applyAsSelfCommit(result.transition)
         return result.outcome
@@ -212,6 +225,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         apply(RustEngineBridge.composingDeleteBackward(
             settings: settings,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         ))
     }
 
@@ -220,13 +234,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // Model B (§10.3 + v3.5.8 Phase 9 Finding 2): finalize the WHOLE
         // current composition. Route through `CommitRaw` — under Continuous
         // the engine commits `Σ nailed.display_text + derived(pending)` (the
-        // whole composition) and fires the terminal NextWord; it builds the
+        // whole composition) and applies its terminal next-word handshake; it builds the
         // string from engine state, so there is no prefix duplication.
         // Idle → `CommitRaw` is a no-op.
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
             settings: settings,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         ))
     }
 
@@ -237,13 +252,17 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             text,
             settings: settings,
             generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
         ))
     }
 
     // Clears the composition without committing it.
     public func reset() {
         logger.debug("[COMPOSE] fn=reset")
-        applyAsSelfCommit(RustEngineBridge.composingReset(generation: currentGeneration))
+        applyAsSelfCommit(RustEngineBridge.composingReset(
+            generation: currentGeneration,
+            nextWordContext: nextWordContext?(),
+        ))
     }
 
     // MARK: - Apply Transition (three-phase, see boundary doc §2.4)

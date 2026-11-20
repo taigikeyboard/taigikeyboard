@@ -278,7 +278,8 @@ public  final class CommitResolution extends
    * The commit's next-word handshake was a `NextWordWordSelected`: the commit
    * teaches next word. False for a commit that ends with
    * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * with no handshake (a prediction tap), and when the request carried no
+   * `next_word_context` (nothing was taught). `CommitAsTyped` answers no
    * `CommitResolution`.
    * </pre>
    *
@@ -294,7 +295,8 @@ public  final class CommitResolution extends
    * The commit's next-word handshake was a `NextWordWordSelected`: the commit
    * teaches next word. False for a commit that ends with
    * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * with no handshake (a prediction tap), and when the request carried no
+   * `next_word_context` (nothing was taught). `CommitAsTyped` answers no
    * `CommitResolution`.
    * </pre>
    *
@@ -310,7 +312,8 @@ public  final class CommitResolution extends
    * The commit's next-word handshake was a `NextWordWordSelected`: the commit
    * teaches next word. False for a commit that ends with
    * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-   * with no handshake (a prediction tap). `CommitAsTyped` answers no
+   * with no handshake (a prediction tap), and when the request carried no
+   * `next_word_context` (nothing was taught). `CommitAsTyped` answers no
    * `CommitResolution`.
    * </pre>
    *
@@ -689,7 +692,8 @@ public  final class CommitResolution extends
      * The commit's next-word handshake was a `NextWordWordSelected`: the commit
      * teaches next word. False for a commit that ends with
      * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-     * with no handshake (a prediction tap). `CommitAsTyped` answers no
+     * with no handshake (a prediction tap), and when the request carried no
+     * `next_word_context` (nothing was taught). `CommitAsTyped` answers no
      * `CommitResolution`.
      * </pre>
      *
@@ -705,7 +709,8 @@ public  final class CommitResolution extends
      * The commit's next-word handshake was a `NextWordWordSelected`: the commit
      * teaches next word. False for a commit that ends with
      * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-     * with no handshake (a prediction tap). `CommitAsTyped` answers no
+     * with no handshake (a prediction tap), and when the request carried no
+     * `next_word_context` (nothing was taught). `CommitAsTyped` answers no
      * `CommitResolution`.
      * </pre>
      *
@@ -723,7 +728,8 @@ public  final class CommitResolution extends
      * The commit's next-word handshake was a `NextWordWordSelected`: the commit
      * teaches next word. False for a commit that ends with
      * `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-     * with no handshake (a prediction tap). `CommitAsTyped` answers no
+     * with no handshake (a prediction tap), and when the request carried no
+     * `next_word_context` (nothing was taught). `CommitAsTyped` answers no
      * `CommitResolution`.
      * </pre>
      *

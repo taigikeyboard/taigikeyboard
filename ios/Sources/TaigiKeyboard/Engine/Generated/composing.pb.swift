@@ -321,8 +321,9 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
 
   /// The shell's next-word envelope, so the engine applies the composition's
   /// next-word handshakes in this same call (one FFI hop per commit, see
-  /// `Effect`). A request whose answer carries no handshake (a read-only
-  /// `FetchAtPos`) leaves it unused.
+  /// `Effect`). Every request that can commit, nail or reset carries it; a
+  /// read-only `FetchAtPos` or a `CommitPrediction` (no handshake) may leave it
+  /// unset.
   public var nextWordContext: Taigi_Engine_NextWordContext {
     get {_nextWordContext ?? Taigi_Engine_NextWordContext()}
     set {_nextWordContext = newValue}
@@ -739,7 +740,8 @@ public nonisolated struct Taigi_Engine_CommitResolution: Sendable {
   /// The commit's next-word handshake was a `NextWordWordSelected`: the commit
   /// teaches next word. False for a commit that ends with
   /// `NextWordClearForNewComposing` (a segment nailed as shown) and for one
-  /// with no handshake (a prediction tap). `CommitAsTyped` answers no
+  /// with no handshake (a prediction tap), and when the request carried no
+  /// `next_word_context` (nothing was taught). `CommitAsTyped` answers no
   /// `CommitResolution`.
   public var taughtNextWord: Bool = false
 
@@ -1067,14 +1069,14 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
 /// (`engine/nextword`).
 ///
 /// `NextWord*` effects (tags 8/9/10) are the composition's next-word
-/// handshakes. With `ComposingRequest.next_word_context` set, `dispatch`
+/// handshakes, a message from the composing engine to `dispatch` that never
+/// reaches a shell. With `ComposingRequest.next_word_context` set, `dispatch`
 /// applies each as its `NextWordRequest` (the context's generation and
 /// `now_ms`) after the composing call returns — composing's `Mutex<Engine>` is
 /// released first (`composing/handle.rs` lock-order rule) — and puts the
 /// answer in its place as `next_word_decided`, so the shell runs the
-/// `DecideResult` at the position the handshake held. Without the context the
-/// handshakes reach the shell as tags 8/9/10 and it sends the requests itself
-/// (temporary, remove after the phones send the context — roadmap E2).
+/// `DecideResult` at the position the handshake held. Without the context
+/// `dispatch` drops them, logged, and clears `CommitResolution.taught_next_word`.
 public nonisolated struct Taigi_Engine_Effect: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

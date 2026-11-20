@@ -13,7 +13,8 @@ import UIKit
 ///    - `handleReturnAction` → commit raw or selected candidate  (KeyActions)
 ///    - `handleBackspaceAction` → delete / re-predict NextWord  (KeyActions)
 ///    - `handleSuggestionSelection` → commit + frequency + NextWord  (Suggestions)
-/// 4. `nextWordController.process()` — record association → update state → predict  (NextWordController)
+/// 4. `nextWordController` — a composing commit's decision (`applyComposingDecision`, learned in the engine call);
+///    a prediction tap or a character typed outside a composition (`process`)  (NextWordController)
 public class ActionHandler: StandardKeyboardActionHandler {
     // MARK: - Properties
 

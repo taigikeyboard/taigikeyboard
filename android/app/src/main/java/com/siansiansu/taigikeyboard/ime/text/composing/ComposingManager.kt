@@ -13,6 +13,7 @@ import com.siansiansu.taigikeyboard.engine.ComposingTransition
 import com.siansiansu.taigikeyboard.engine.ContinuousCandidate
 import com.siansiansu.taigikeyboard.engine.ContinuousCommitOutcome
 import com.siansiansu.taigikeyboard.engine.ContinuousPick
+import com.siansiansu.taigikeyboard.engine.NextWordDecideResult
 import com.siansiansu.taigikeyboard.engine.PredictionCommit
 import com.siansiansu.taigikeyboard.engine.PredictionPick
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
@@ -28,6 +29,7 @@ import com.siansiansu.taigikeyboard.engine.composingReset
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.composingTpsKey
 import com.siansiansu.taigikeyboard.engine.continuousAppConfig
+import com.siansiansu.taigikeyboard.engine.proto.NextWordContext
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
@@ -66,7 +68,14 @@ import java.util.concurrent.atomic.AtomicLong
 class ComposingManager(
     private val settingsProvider: EngineSettingsProvider,
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
-    private val nextWordRouter: NextWordEffectRouter = NoopNextWordEffectRouter,
+    // Runs the composition's next-word decision (`ComposingTransition.Effect.NextWordDecided`: the
+    // engine applied the commit's, nail's or abort's next-word handshake in the composing call) on
+    // `NextWordController`, at its place in the effect list. A no-op for tests and non-IME callers.
+    private val nextWordRouter: (NextWordDecideResult) -> Unit = {},
+    // The next-word envelope (`NextWordController.requestContext`) sent with every request that
+    // can commit, nail or reset, so the engine applies the composition's next-word handshake in
+    // the same call and answers `NextWordDecided`. `null` (tests), the engine drops the handshake.
+    private val nextWordContext: () -> NextWordContext? = { null },
     private val logger: LoggerBackend = NullLoggerBackend,
 ) {
     // Engine-mirror state: 3 MutableStateFlow, public read-only StateFlow surface; sync getters read `.value`.
@@ -172,6 +181,7 @@ class ComposingManager(
                 char,
                 settings,
                 currentGeneration,
+                nextWordContext(),
             ),
             ic,
         )
@@ -188,6 +198,7 @@ class ComposingManager(
                 char,
                 settings,
                 currentGeneration,
+                nextWordContext(),
             ),
             ic,
         )
@@ -200,6 +211,7 @@ class ComposingManager(
             RustEngineBridge.composingAppendHyphen(
                 settings,
                 currentGeneration,
+                nextWordContext(),
             ),
             ic,
         )
@@ -220,6 +232,7 @@ class ComposingManager(
                 key,
                 settingsProvider.current,
                 currentGeneration,
+                nextWordContext(),
             )
         applyTransition(transition, ic)
         return transition.effects.isNotEmpty()
@@ -248,6 +261,7 @@ class ComposingManager(
             RustEngineBridge.composingDeleteBackward(
                 settings,
                 currentGeneration,
+                nextWordContext(),
             ),
             ic,
         )
@@ -260,7 +274,7 @@ class ComposingManager(
         // Model B (§10.3 + v3.5.8 Phase 9 Finding 2): finalize the WHOLE
         // current composition via CommitRaw — under Continuous the engine
         // commits `Σ nailed.display_text + derived(pending)` (the whole
-        // composition) and fires the terminal NextWord, building the string
+        // composition) and applies its terminal next-word handshake, building the string
         // from engine state so there is no prefix duplication. An empty
         // composition makes `CommitRaw` a no-op.
         val settings = settingsProvider.current
@@ -268,6 +282,7 @@ class ComposingManager(
             RustEngineBridge.composingCommitRaw(
                 settings,
                 currentGeneration,
+                nextWordContext(),
             ),
             ic,
         )
@@ -284,6 +299,7 @@ class ComposingManager(
                 text,
                 settings,
                 currentGeneration,
+                nextWordContext(),
             ),
             ic,
         )
@@ -292,7 +308,7 @@ class ComposingManager(
     fun reset(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=reset" }
         applyAsSelfCommit(
-            RustEngineBridge.composingReset(currentGeneration),
+            RustEngineBridge.composingReset(currentGeneration, nextWordContext()),
             ic,
         )
     }
@@ -354,11 +370,11 @@ class ComposingManager(
      * The engine resolves the document text, counts the pick (R5), and
      * answers what the pick did — the outcome callers gate the auto space and
      * the strip refresh on. **Model B** (§10): mid-commit (nail) emits
-     * `[UpdatePreedit(whole composition), NextWordUpdateLastSelectedWord,
+     * `[UpdatePreedit(whole composition), NextWordDecided (the nail),
      * RefreshCandidates]` and stays Continuous; final-commit
      * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit
      * (whole composition), ClearCandidates, ResetCandidateContext,
-     * NextWordWordSelected]` and exits Continuous; a stale generation or a
+     * NextWordDecided]` and exits Continuous; a stale generation or a
      * rejected pick emits nothing and answers `Ignored`.
      */
     fun commitContinuous(
@@ -372,6 +388,7 @@ class ComposingManager(
             pick = pick,
             settings = settingsProvider.current,
             generation = currentGeneration,
+            nextWordContext = nextWordContext(),
         )
         selfCommitInProgress = true
         try {
@@ -522,17 +539,10 @@ class ComposingManager(
                 "[COMMIT] fn=applyTransition effect=${effect.describeKind()}"
             }
             when (effect) {
-                is ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
-                is ComposingTransition.Effect.NextWordWordSelected,
-                ComposingTransition.Effect.NextWordClearForNewComposing,
-                -> {
-                    // NextWord-shaped composing effects flow through a sibling
-                    // router, not the InputConnection-bound delegate. Engine
-                    // emits these only on Continuous mid/final commits + resets;
-                    // the platform NextWord callback path on a prediction tap
-                    // (CandidateClickHandler.onNextWordPrediction) and this
-                    // engine effect path do not double-fire.
-                    nextWordRouter.route(effect)
+                is ComposingTransition.Effect.NextWordDecided -> {
+                    // The next-word decision runs on NextWordController through a
+                    // sibling router, not the InputConnection-bound delegate.
+                    nextWordRouter(effect.result)
                 }
 
                 else -> {
@@ -557,9 +567,7 @@ private fun ComposingTransition.Effect.describeKind(): String =
         ComposingTransition.Effect.ClearCandidates -> "ClearCandidates"
         ComposingTransition.Effect.RefreshCandidates -> "RefreshCandidates"
         ComposingTransition.Effect.ResetCandidateContext -> "ResetCandidateContext"
-        is ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> "NextWordUpdateLastSelectedWord"
-        is ComposingTransition.Effect.NextWordWordSelected -> "NextWordWordSelected trigger=$triggerPrediction"
-        ComposingTransition.Effect.NextWordClearForNewComposing -> "NextWordClearForNewComposing"
+        is ComposingTransition.Effect.NextWordDecided -> "NextWordDecided effects=${result.effects.size}"
     }
 
 /**

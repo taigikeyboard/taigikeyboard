@@ -1,7 +1,8 @@
 //! A composing request carrying the shell's next-word envelope gets its
 //! next-word handshakes applied in the same call (roadmap E2): each handshake
 //! is replaced in place by the engine's decision, and the pairs it decides are
-//! recorded. Without the envelope the handshakes reach the shell unchanged.
+//! recorded. Without the envelope the handshakes are dropped and the commit
+//! teaches nothing.
 //! Its own process: the user-data handle is process-wide.
 #![cfg(feature = "user-data")]
 
@@ -74,7 +75,7 @@ fn association_count(reader: &UserDataStores) -> usize {
 }
 
 #[test]
-fn handshakes_are_applied_in_place_only_with_the_envelope() {
+fn handshakes_are_applied_in_place_with_the_envelope_and_dropped_without() {
     let directory = tempfile::tempdir().unwrap();
     open_user_data(directory.path());
     let reader = UserDataStores::at(
@@ -83,19 +84,14 @@ fn handshakes_are_applied_in_place_only_with_the_envelope() {
     );
     reader.open_blocking();
 
-    // Control: without the envelope the shell gets the handshake and the
-    // engine learns nothing from two quick commits.
+    // Control: without the envelope the handshake is dropped, the commit
+    // reports it taught nothing, and two quick commits learn nothing.
     let first = type_and_commit("tsit", None);
     assert_eq!(
         kind_names(&first),
-        [
-            "commit",
-            "clear_candidates",
-            "reset_candidate_context",
-            "word_selected"
-        ]
+        ["commit", "clear_candidates", "reset_candidate_context"]
     );
-    assert!(first.commit.as_ref().unwrap().taught_next_word);
+    assert!(!first.commit.as_ref().unwrap().taught_next_word);
     type_and_commit("e", None);
     assert_eq!(association_count(&reader), 0);
 
@@ -112,6 +108,7 @@ fn handshakes_are_applied_in_place_only_with_the_envelope() {
             "decided"
         ]
     );
+    assert!(first.commit.as_ref().unwrap().taught_next_word);
     let Some(effect::Kind::NextWordDecided(decided)) = first.effect[3].kind.as_ref() else {
         unreachable!()
     };

@@ -354,10 +354,11 @@ class TextInputManager(
     private fun newComposingManager(): ComposingManager =
         ComposingManager(
             settingsProvider = taigikeyboard.prefs,
-            // Route NextWord-shaped composing effects (Continuous
-            // mid/final commits, abort) into the SmartbarManager-
-            // owned NextWordController.
-            nextWordRouter = { effect -> smartbarManager.dispatchComposingNextWordEffect(effect) },
+            // The composition's next-word decision (Continuous mid / final
+            // commits, abort) runs on the SmartbarManager-owned
+            // NextWordController, under its envelope.
+            nextWordRouter = { decision -> smartbarManager.dispatchComposingNextWordDecision(decision) },
+            nextWordContext = { smartbarManager.nextWordRequestContext() },
             logger = taigikeyboard.compositionRoot.logger,
         )
 

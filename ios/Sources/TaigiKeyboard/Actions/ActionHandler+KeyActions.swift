@@ -99,7 +99,7 @@ extension ActionHandler {
                 composingManager.commitComposition()
             }
             // Model B §10.3: the engine commit (commitComposition→CommitRaw)
-            // already fires the terminal NextWordWordSelected (records the
+            // already applies the terminal next-word handshake (records the
             // association). Punctuation SUPPRESSES the next-word *display*
             // (converges with Space; resolves the iOS/Android Model-B
             // divergence). Unconditional on this path — mirrors Android's
@@ -199,7 +199,7 @@ extension ActionHandler {
         // Taigi mode (POJ/TL)
         if composingManager.isComposing {
             // Model B §10.3: the engine commit (commitComposition→CommitRaw)
-            // fires the terminal NextWordWordSelected → records the
+            // applies the terminal next-word handshake → records the
             // association (the SOLE association source; the old manual
             // `process(triggerPrediction:false)` double-recorded it). Space
             // SUPPRESSES the next-word *display*: clearDisplay() AFTER the
@@ -317,8 +317,8 @@ extension ActionHandler {
             //
             // Model B §10.3: `commitComposition()`→CommitRaw → the engine's
             // Continuous final-commit emits the terminal
-            // NextWordWordSelected(trigger:true), routed to
-            // `nextWordController.process` → records the association +
+            // next-word handshake (trigger on), applied in the same call and run
+            // by `nextWordController.applyComposingDecision` → records the association +
             // predicts. Enter KEEPS the engine prediction (nothing clears
             // after; only auto-space inserts a literal). The old manual
             // `process(requireRomanMode:true)` was redundant — in swapped

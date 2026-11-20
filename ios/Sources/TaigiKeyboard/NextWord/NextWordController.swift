@@ -18,7 +18,8 @@ import Foundation
 /// - `rePredictAfterBackspace(lastChar:)`
 /// - `resetAndClearUI()`
 /// - `clearDisplay()`
-/// - `updateLastSelectedWord(text:roman:)` (continuous nail / unnail handshake; learns nothing)
+/// - `requestContext()` / `applyComposingDecision(_:)` (the composing engine applies its
+///   next-word handshakes in its own call under this envelope; the controller runs the answer)
 /// - `isShowing` (read-only)
 final class NextWordController {
     let logger = DebugLogger(category: "NextWord")
@@ -85,7 +86,6 @@ final class NextWordController {
         roman: String,
         requireRomanMode: Bool = false,
         triggerPrediction: Bool = true,
-        preceding: [Taigi_Engine_CommittedWord] = [],
     ) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordWordSelected(
@@ -93,7 +93,6 @@ final class NextWordController {
             roman: roman,
             requireRomanMode: requireRomanMode,
             triggerPrediction: triggerPrediction,
-            preceding: preceding,
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             hanjiFirst: settings.isHanjiFirst,
@@ -164,22 +163,20 @@ final class NextWordController {
         applyDecideResult(result)
     }
 
-    /// v3.5.8 Phase 4 — continuous-input nail / unnail handshake. Emitted by
-    /// the composing engine via `Effect.nextWordUpdateLastSelectedWord`
-    /// when a `Phase::Continuous` mid-commit lands (or a backspace pops) a
-    /// segment. The engine learns nothing from it and keeps the committed
-    /// context: a nailed segment is not in the document yet, and the final
-    /// commit's `preceding` carries it (behavioral-invariants §40).
-    func updateLastSelectedWord(text: String, roman: String) {
-        let settings = settingsProvider.current
-        let result = RustEngineBridge.nextwordUpdateLastSelectedWord(
-            text: text,
-            roman: roman,
-            nowMs: Self.currentTimestampMs,
-            mode: settings.inputMode,
-            hanjiFirst: settings.isHanjiFirst,
-            generation: envelopeGen,
-        )
+    /// The next-word envelope every composing request that can commit, nail or
+    /// reset carries, so the engine applies the composition's next-word
+    /// handshake in that same call (roadmap E2). One clock read per request.
+    func requestContext() -> Taigi_Engine_NextWordContext {
+        var context = Taigi_Engine_NextWordContext()
+        context.generation = envelopeGen
+        context.nowMs = Self.currentTimestampMs
+        return context
+    }
+
+    /// Runs the decision a composing answer carries (`.nextWordDecided`) at the
+    /// position the engine put it — a commit's learning and prediction query,
+    /// or an abort's clear.
+    func applyComposingDecision(_ result: RustEngineBridge.NextWordDecideResult) {
         applyDecideResult(result)
     }
 

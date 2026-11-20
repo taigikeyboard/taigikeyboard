@@ -110,9 +110,10 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 | 5 | `ClearCandidates` | Candidate strip |
 | 6 | `RefreshCandidates` | Candidate strip |
 | 7 | `ResetCandidateContext` | Candidate strip |
-| 8 | `NextWordUpdateLastSelectedWord` | NextWord (the platform shim sends a `NextWordRequest`) |
-| 9 | `NextWordWordSelected` | NextWord |
-| 10 | `NextWordClearForNewComposing` | NextWord |
+| 8 | `NextWordUpdateLastSelectedWord` | `engine/dispatch` only — applied as its `NextWordRequest` under `ComposingRequest.next_word_context`, never reaches a platform |
+| 9 | `NextWordWordSelected` | `engine/dispatch` only |
+| 10 | `NextWordClearForNewComposing` | `engine/dispatch` only |
+| 12 | `NextWordDecided` (`DecideResult`) | NextWord executor — the handshake's decision, in the handshake's place |
 
 Tags 4 and 11 are reserved. Host API mapping per platform: [continuous-commit-and-display.md §10.6](continuous-commit-and-display.md#106-effects--host-api).
 

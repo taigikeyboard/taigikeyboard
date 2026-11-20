@@ -328,8 +328,8 @@ internal class TextInputKeyHandler(
         if (composingManager?.isComposing() == true) {
             val committedText = composingManager?.getComposingText() ?: ""
             // Model B §10.3: clear the candidate strip + NextWord state
-            // BEFORE the commit so the engine's terminal NextWordWordSelected
-            // (fired by commitComposition→CommitRaw) SURVIVES. clearCandidates()
+            // BEFORE the commit so the engine's terminal next-word decision
+            // (carried by commitComposition→CommitRaw) SURVIVES. clearCandidates()
             // bumps the NextWord generation; running it AFTER the commit (the
             // old order) stale-drops the engine's in-flight prediction query
             // (= Enter regression). The engine effect is the SOLE
@@ -363,8 +363,8 @@ internal class TextInputKeyHandler(
                 rawPreeditWritesRomanization(prefs.isTpsLayout),
             )
             // Model B §10.3: NO manual handleNextWordPrediction. The engine's
-            // terminal NextWordWordSelected (from commitComposition→CommitRaw
-            // above, dispatched via dispatchComposingNextWordEffect) is the
+            // terminal next-word decision (from commitComposition→CommitRaw
+            // above, run via dispatchComposingNextWordDecision) is the
             // SOLE association/prediction source; clearCandidates() was moved
             // before the commit so that engine prediction survives → Enter
             // keeps showing next-word predictions.
@@ -414,7 +414,7 @@ internal class TextInputKeyHandler(
 
         if (composingManager?.isComposing() == true) {
             // Model B §10.3: the engine commit (commitComposition→CommitRaw)
-            // fires the terminal NextWordWordSelected → records the
+            // carries the terminal next-word decision → records the
             // association (the SOLE source; the old manual
             // handleNextWordPrediction double-recorded it AND re-showed the
             // prediction — the Model-B Space regression). Space SUPPRESSES the
