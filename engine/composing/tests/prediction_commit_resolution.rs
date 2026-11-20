@@ -140,9 +140,8 @@ fn a_tps_prediction_brackets_its_bopomofo() {
 
 #[test]
 fn a_written_prediction_counts_its_usage_without_a_learned_phrase() {
-    // trace: the phones' `UsageRecorder.record(Usage(displayText: hanji,
-    // canonicalTl: tl))` → `RecordUsage` with no Hanji, so no learned-phrase
-    // touch (`userdata` `record_usage`); identity is `(hanji, canonical TL)`.
+    // trace: `Applied.usage` carries no Hanji, so no learned-phrase touch
+    // (`userdata` `record_usage`); identity is `(hanji, canonical TL)`.
     let applied = send(
         &EngineHandle::new(),
         tap(CommitScript::Lead, TL, HANJI),

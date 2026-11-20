@@ -430,23 +430,6 @@ class NextWordController(
          * update in the Rust crate + an `INVARIANT_*` parity-test mirror.
          */
         const val CONTEXT_TIMEOUT_MS: Long = 30_000L
-
-        /**
-         * Extract the trailing "word" from [text] using whitespace and ASCII
-         * punctuation as separators. Pure platform helper (UI-side,
-         * unrelated to the engine state machine); preserved across the
-         * Rust swap because `CandidateClickHandler` depends on it.
-         */
-        fun extractCurrentWord(text: String): String {
-            val trimmed = text.trimEnd()
-            if (trimmed.isEmpty()) return ""
-            val lastSeparatorIndex = trimmed.indexOfLast { it.isWhitespace() || it in ".,!?;:" }
-            return if (lastSeparatorIndex >= 0) {
-                trimmed.substring(lastSeparatorIndex + 1)
-            } else {
-                trimmed
-            }
-        }
     }
 }
 
@@ -459,8 +442,8 @@ private fun String.toEngineInputMode(): String = engineInputMode(this, unknownAs
 
 /**
  * NextWord prediction cells. Ids run `-1..-n` — the NextWord sentinel range
- * (`-99..-1`; English is `<= -100`) read by [CandidateClickHandler]; 30
- * predictions split to at most 60 cells, still inside it.
+ * (`-99..-1`; English is `<= -100`) that `SmartbarManager.updateCandidates`
+ * reads as `id < 0`. 30 predictions split to at most 60 cells, still inside it.
  *
  * Hanji with Romanization (§42): the engine lists a prediction with romanization as a
  * Hanji row then a romanization row sharing its identity, deduped per script

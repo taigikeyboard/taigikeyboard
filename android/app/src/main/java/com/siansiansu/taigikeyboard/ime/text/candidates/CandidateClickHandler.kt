@@ -14,9 +14,6 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
-import com.siansiansu.taigikeyboard.ime.text.composing.Usage
-import com.siansiansu.taigikeyboard.ime.text.composing.UsageRecorder
-import com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController
 
 /**
  * Handles candidate click events extracted from SmartbarManager.
@@ -26,7 +23,6 @@ import com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController
  */
 class CandidateClickHandler(
     private val taigikeyboard: TaigiKeyboard,
-    private val usage: UsageRecorder,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
     private val getComposingManager: () -> com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     private val onClearCandidates: () -> Unit,
@@ -64,7 +60,7 @@ class CandidateClickHandler(
 
             val composingManager = getComposingManager()
 
-            // Continuous-input branch routes BEFORE the sentinel-id branches.
+            // Continuous-input branch routes BEFORE the prediction path.
             // A final commit carries its next-word decision, which the
             // ComposingManager nextWordRouter routes — onNextWordPrediction
             // is intentionally NOT called from the continuous branch to avoid
@@ -77,26 +73,10 @@ class CandidateClickHandler(
                 return@withTrace
             }
 
-            if (selectedWord.id <= -100) {
-                // An English word IS Latin text, so it takes the spacing.
-                val textToCommit = selectedWord.roman
-                logger.debug(TAG) { "[ENGLISH-CLICK] id=${selectedWord.id}, text='$textToCommit'" }
-                val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
-                val currentWord = NextWordController.extractCurrentWord(textBeforeCursor)
-                if (currentWord.isNotEmpty()) {
-                    ic.deleteSurroundingText(currentWord.length, 0)
-                }
-                ic.commitText(textToCommit, 1)
-                onClearCandidates()
-                logger.debug(TAG) { "[ENGLISH-CLICK] Replaced '$currentWord' with '$textToCommit'" }
-                appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, true)
-                recordCommittedWord(selectedWord)
-                return@withTrace
-            }
-
             // A NextWord prediction (`id < 0`): the only other word the strip
             // carries (`TaigiAutocompleteService` produces Continuous cells,
-            // `NextWordController` the predictions).
+            // `NextWordController` the predictions). English suggestions live
+            // in their own strip ([handleEnglishCandidateClick]).
             commitNextWordPrediction(selectedWord, ic, composingManager)
         }
     }
@@ -116,7 +96,7 @@ class CandidateClickHandler(
             val ic = taigikeyboard.currentInputConnection ?: return
 
             val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
-            val currentWord = NextWordController.extractCurrentWord(textBeforeCursor)
+            val currentWord = EnglishAutocompleteService.extractCurrentWord(textBeforeCursor)
 
             if (currentWord.isNotEmpty()) {
                 ic.deleteSurroundingText(currentWord.length, 0)
@@ -183,26 +163,10 @@ class CandidateClickHandler(
         ic.commitText(commit.text, 1)
         manager.reset(ic)
         appendAutoSpace(taigikeyboard, ic, taigikeyboard.prefs.isAutoSpaceEnabled && commit.earnsAutoSpace)
-        learnCommittedWord(word, pick.canonicalTl)
-    }
-
-    /** Usage count + NextWord learning for a committed English word. */
-    private fun recordCommittedWord(word: TaigiWord) {
-        // R5 pair-key (#7): the canonical-TL reading from the metadata sidechannel
-        // keeps multi-reading Hanji in separate buckets; "" on English rows.
-        val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-        usage.record(Usage(word.displayText, canonicalTl))
-        learnCommittedWord(word, canonicalTl)
-    }
-
-    private fun learnCommittedWord(
-        word: TaigiWord,
-        canonicalTl: String,
-    ) {
         // NextWord learns the canonical reading, not the rendered `roman` (the
         // Syllable Separator rewrites its hyphens, §49); iOS learns from the
         // same sidechannel.
-        onNextWordPrediction(word.displayText, canonicalTl.ifEmpty { word.roman })
+        onNextWordPrediction(word.displayText, pick.canonicalTl.ifEmpty { word.roman })
     }
 
     /**

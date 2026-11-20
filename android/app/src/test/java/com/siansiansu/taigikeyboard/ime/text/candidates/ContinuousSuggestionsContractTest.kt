@@ -307,8 +307,8 @@ class ContinuousSuggestionsContractTest {
         // Lexicon-path slot-0 composing-text cell (non-Continuous mode only):
         // id == 0. Continuous: id >= 1. Routing decision keys off
         // additionalInfo NOT id, but the sentinel ranges must not be
-        // shadowed lest the click handler picks the wrong branch on a
-        // metadata-decode failure fallthrough.
+        // shadowed lest `SmartbarManager.updateCandidates` reads a
+        // Continuous strip as predictions (`id < 0`).
         val candidates = (0 until 5).map { i ->
             cand(
                 consumedSpanEnd = 3,

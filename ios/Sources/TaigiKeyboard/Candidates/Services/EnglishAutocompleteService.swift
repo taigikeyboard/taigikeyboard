@@ -31,7 +31,7 @@ class EnglishAutocompleteService: EngineFreeAutocompleteService {
 
     // Completions first; spelling guesses only when there are none. Three suggestions max either way.
     private func getSuggestions(for text: String) -> [AutocompleteSuggestion] {
-        let currentWord = extractCurrentWord(from: text)
+        let currentWord = Self.extractCurrentWord(from: text)
         guard !currentWord.isEmpty else { return [] }
 
         var suggestions: [AutocompleteSuggestion] = []
@@ -72,16 +72,16 @@ class EnglishAutocompleteService: EngineFreeAutocompleteService {
         return suggestions
     }
 
-    /// Returns the word after the last space — the one currently being typed.
-    private func extractCurrentWord(from text: String) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return "" }
-
-        if let lastSpaceIndex = trimmed.lastIndex(of: " ") {
-            let wordStartIndex = trimmed.index(after: lastSpaceIndex)
-            return String(trimmed[wordStartIndex...])
-        }
-
-        return trimmed
+    /// The word being typed at the end of `text`: what follows the last whitespace or `.,!?;:`
+    /// once trailing whitespace is dropped. Apostrophe and hyphen do not split, so `don't` stays
+    /// one token.
+    /// CROSS-PLATFORM INVARIANT — mirrors Android `EnglishAutocompleteService.extractCurrentWord`.
+    static func extractCurrentWord(from text: String) -> String {
+        let word = text.reversed()
+            .drop(while: { $0.isWhitespace })
+            .prefix(while: { !$0.isWhitespace && !wordSeparators.contains($0) })
+        return String(word.reversed())
     }
+
+    private static let wordSeparators: Set<Character> = [".", ",", "!", "?", ";", ":"]
 }

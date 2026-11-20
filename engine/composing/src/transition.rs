@@ -1403,8 +1403,7 @@ fn confirm_composition_then_insert(
 /// ([`resolve_commit_text`]), and its usage. The composition is left as it is
 /// (the snapshot answers it unchanged). No Hanji, no script, a script the
 /// prediction lacks, or an empty document text is ignored: no usage. The
-/// usage carries no `hanji`, so counting it touches no learned phrase — as
-/// the platforms' `RecordUsage`.
+/// usage carries no `hanji`, so counting it touches no learned phrase.
 fn commit_prediction(
     state: &EngineState,
     script: Option<CommitScript>,
