@@ -43,7 +43,8 @@ class ThemeEditorActivity : ComponentActivity() {
 
         val prefs = PrefHelper(this)
         prefs.warmUp()
-        val store = CompositionRoot.shared(this).userThemeStore(prefs)
+        val root = CompositionRoot.shared(this)
+        val store = root.userThemeStore(prefs)
 
         // Create mode = no id; edit mode = a requested id loaded fresh from the store
         // (never a stale snapshot). An edit request whose theme no longer exists (e.g.
@@ -61,6 +62,7 @@ class ThemeEditorActivity : ComponentActivity() {
         setTaigiContent(prefs) {
             ThemeEditorScreen(
                 prefs = prefs,
+                themeImageCache = root.themeImages,
                 editing = editing,
                 base = intent.getStringExtra(EXTRA_BASE_THEME_ID)?.let { BuiltInThemes.theme(it) },
                 canSaveNew = { store.load().size < UserThemeStore.MAX_USER_THEMES },

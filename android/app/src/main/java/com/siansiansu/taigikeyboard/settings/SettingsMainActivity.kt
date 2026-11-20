@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,6 +18,7 @@ import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
@@ -125,11 +127,14 @@ class SettingsMainActivity : AppCompatActivity() {
                             }
 
                             TAB_THEME -> {
-                                ThemePickerScreen(prefs = prefs)
+                                ThemePickerScreen(
+                                    prefs = prefs,
+                                    userThemeStore = remember(prefs) { CompositionRoot.shared(this).userThemeStore(prefs) },
+                                )
                             }
 
                             TAB_LAYOUT -> {
-                                LayoutScreen(prefs = prefs)
+                                LayoutScreen(prefs = prefs, tables = CompositionRoot.shared(this).customLayoutTables)
                             }
 
                             TAB_DICTIONARY -> {

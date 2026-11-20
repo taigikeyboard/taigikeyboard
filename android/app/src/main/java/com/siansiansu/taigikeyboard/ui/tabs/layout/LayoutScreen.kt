@@ -31,9 +31,9 @@ import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.generated.commonDuplicateName
 import com.siansiansu.taigikeyboard.i18n.stringRes
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
+import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
@@ -92,7 +92,10 @@ internal val layoutShelves: List<LayoutShelf> =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LayoutScreen(prefs: PrefHelper) {
+fun LayoutScreen(
+    prefs: PrefHelper,
+    tables: CustomLayoutTables,
+) {
     val selectedLayout by prefs
         .observeKeyboardLayoutType()
         .collectAsStateWithLifecycle(initialValue = prefs.keyboardLayoutType)
@@ -105,7 +108,6 @@ fun LayoutScreen(prefs: PrefHelper) {
         .collectAsStateWithLifecycle(initialValue = remember(prefs) { prefs.loadCustomLayouts() })
     val context = LocalContext.current
     val stringResolver = LocalStringResolver.current
-    val tables = remember(context) { CompositionRoot.shared(context).customLayoutTables }
     val isDark = isSystemInDarkTheme()
     var showCreateDialog by rememberSaveable { mutableStateOf(false) }
     // Where the new layout shows, picked in the create dialog; starts from the new draft's each time it opens.
