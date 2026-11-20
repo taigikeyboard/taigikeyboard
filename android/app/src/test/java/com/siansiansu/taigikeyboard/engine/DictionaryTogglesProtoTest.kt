@@ -8,7 +8,7 @@ import org.junit.Test
 
 /**
  * The dictionary toggles `continuousAppConfig` puts in `AppConfig.dictionarySources`
- * (and `dictionaryFilters` / `nextwordPredictNext` send): the engine resolves them into
+ * (and `dictionarySearch` / `nextwordPredictNext` send): the engine resolves them into
  * its source filter, so every dictionary off offers no dictionary candidates
  * (`behavioral-invariants.md` §57). JVM tests cannot load the engine; the builder
  * only builds a proto. Engine side: `golden_fetch_at_pos.rs`

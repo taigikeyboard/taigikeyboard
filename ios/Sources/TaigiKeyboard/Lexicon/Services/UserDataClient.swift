@@ -86,9 +86,6 @@ protocol UserDataClient: Sendable {
     /// Empties what the keyboard learned — counts, bigrams, learned phrases —
     /// and leaves the custom dictionary alone.
     func clearLearningRecords() async throws
-    /// The dictionary search's lookup, by the key `query` derives under the
-    /// settings `inputMode`; empty when nothing matches or the engine did not answer.
-    func search(query: String, mode: InputMode, limit: Int) async -> [CustomDictionaryEntry]
     func exportBackup(appVersion: String) async throws -> Data
     /// A `.taigi` file the user picked; a refusal throws `BackupError`.
     func importBackup(url: URL) async throws -> BackupImportResult
@@ -123,8 +120,9 @@ struct EngineUserDataClient: UserDataClient {
     /// the shared pool. `.default`, the QoS of the engine's own store threads
     /// that answer it (`engine/userdata` `database.rs` worker, `handle.rs` open
     /// thread): a higher-QoS queue blocked on them is a priority inversion
-    /// (Thread Performance Checker, `thread_parking/darwin.rs`).
-    private static let requests = DispatchQueue(label: "EngineUserDataClient.requests", qos: .default)
+    /// (Thread Performance Checker, `thread_parking/darwin.rs`). Shared with
+    /// `EngineLexiconClient`, whose dictionary search waits the same way.
+    static let requests = DispatchQueue(label: "EngineUserDataClient.requests", qos: .default)
 
     /// The largest file an import reads. CROSS-PLATFORM INVARIANT — the engine
     /// refuses the same size (`engine/userdata/src/csv.rs`); checked on this
@@ -187,13 +185,6 @@ struct EngineUserDataClient: UserDataClient {
         reset.association = true
         reset.learnedPhrases = true
         try await self.reset(reset)
-    }
-
-    func search(query: String, mode: InputMode, limit: Int) async -> [CustomDictionaryEntry] {
-        let found = try? await engine("customDictionarySearch") {
-            RustEngineBridge.customDictionarySearch(query: query, inputMode: mode.rawValue, limit: limit)
-        }
-        return found?.map(CustomDictionaryEntry.init) ?? []
     }
 
     func exportBackup(appVersion: String) async throws -> Data {

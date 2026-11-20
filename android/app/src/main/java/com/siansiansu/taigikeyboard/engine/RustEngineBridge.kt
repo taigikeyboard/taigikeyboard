@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - `CaseTransformBridge.kt` — per-char/per-word case operations
  * - `UserDataBridge.kt` — the engine-owned user data (open, picks, dictionary pages, backup)
  * Callers outside this package import each extension by name
- * (`import com.siansiansu.taigikeyboard.engine.tlToPoj`).
+ * (`import com.siansiansu.taigikeyboard.engine.dictionarySearch`).
  *
  * Every slice sends through [dispatch] — one request-id allocator, one
  * JNI hop, one `try/Throwable` boundary (a JNI throw or a parse failure

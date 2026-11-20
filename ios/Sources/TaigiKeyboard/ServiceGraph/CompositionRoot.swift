@@ -15,7 +15,6 @@ enum CompositionRoot {
     static let userData: any UserDataClient = EngineUserDataClient()
 
     static let dictionarySearchService: DictionarySearchService = .init(
-        userData: userData,
         settingsProvider: SharedSettings.shared,
     )
 }

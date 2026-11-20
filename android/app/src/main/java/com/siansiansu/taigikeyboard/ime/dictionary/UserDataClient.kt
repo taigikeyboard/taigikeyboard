@@ -12,7 +12,6 @@ import com.siansiansu.taigikeyboard.engine.customDictionaryExportCsv
 import com.siansiansu.taigikeyboard.engine.customDictionaryImportCsv
 import com.siansiansu.taigikeyboard.engine.customDictionaryList
 import com.siansiansu.taigikeyboard.engine.customDictionarySave
-import com.siansiansu.taigikeyboard.engine.customDictionarySearch
 import com.siansiansu.taigikeyboard.engine.learningRecordAddToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.learningRecordDelete
 import com.siansiansu.taigikeyboard.engine.learningRecordSetCount
@@ -117,17 +116,6 @@ interface UserDataClient {
     /** Empties what the keyboard learned — counts, bigrams, learned phrases — and leaves the custom dictionary alone. */
     suspend fun clearLearningRecords()
 
-    /**
-     * The dictionary search's lookup, by the key [query] derives under the
-     * settings [inputMode] (`poj` / `tl` / `tps`); empty when nothing matches
-     * or the engine did not answer.
-     */
-    suspend fun search(
-        query: String,
-        inputMode: String,
-        limit: Int,
-    ): List<CustomDictionaryWord>
-
     suspend fun exportBackup(appVersion: String): ByteArray
 
     suspend fun importBackup(backup: ByteArray): BackupImportResult
@@ -225,15 +213,6 @@ object EngineUserDataClient : UserDataClient {
                 .setLearnedPhrases(true)
                 .build(),
         )
-
-    override suspend fun search(
-        query: String,
-        inputMode: String,
-        limit: Int,
-    ): List<CustomDictionaryWord> =
-        withContext(Dispatchers.IO) {
-            RustEngineBridge.customDictionarySearch(query, inputMode, limit)?.map(::word) ?: emptyList()
-        }
 
     override suspend fun exportBackup(appVersion: String): ByteArray = engine("backupExport") { RustEngineBridge.backupExport(appVersion) }
 

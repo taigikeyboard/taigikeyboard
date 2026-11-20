@@ -29,12 +29,6 @@ open class StubUserDataClient : UserDataClient {
 
     override suspend fun clearLearningRecords(): Unit = error("unused")
 
-    override suspend fun search(
-        query: String,
-        inputMode: String,
-        limit: Int,
-    ): List<CustomDictionaryWord> = error("unused")
-
     override suspend fun exportBackup(appVersion: String): ByteArray = error("unused")
 
     override suspend fun importBackup(backup: ByteArray): BackupImportResult = error("unused")

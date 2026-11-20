@@ -14,7 +14,6 @@ import com.siansiansu.taigikeyboard.engine.proto.IsSpacedPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse
 import com.siansiansu.taigikeyboard.engine.proto.StringResult
-import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
 
 // region Phonetics DTOs
 
@@ -35,11 +34,6 @@ data class ToneVariations(
 // endregion
 
 // region Phonetics core
-
-fun RustEngineBridge.tlToPoj(input: String): String {
-    val payload = TlToPoj.newBuilder().setInput(input).build()
-    return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj")
-}
 
 /**
  * The long-press tone variations, pulled from the engine on first use (`GetToneVariations`) and kept;
