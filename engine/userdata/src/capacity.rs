@@ -38,6 +38,11 @@ impl LearningCapacity {
         }
     }
 
+    /// The most rows the table keeps.
+    pub fn max_rows(&self) -> i64 {
+        self.max_rows
+    }
+
     /// Counts `records` towards the next check and answers whether this
     /// write is the one that should run it. Counting a whole compound commit
     /// at once keeps the check on a schedule of rows written, not calls made.

@@ -48,12 +48,13 @@ pub fn register_dictionary_bytes(path: &std::path::Path, bytes: Vec<u8>) {
     mmap_host::register(path, bytes);
 }
 
-/// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
-/// from the IME are kilobytes at worst; 2 MB is generous slack for proto
-/// envelope overhead. Single source of truth — `swift-ffi` and
-/// `android-jni` import this constant for their pre-allocation early
-/// rejection so the cap stays in lock-step across both FFI seams.
-pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
+/// Maximum accepted size of an FFI request byte buffer. The largest request
+/// is a `.taigi` restore (`ImportBackup`): every store at its cap, at
+/// four-syllable rows, exports to about 20 MB — under half the cap
+/// (`tests/backup_request_size.rs`); key path requests are kilobytes. Single
+/// source of truth — `swift-ffi`, `android-jni` and the macOS FFI check it
+/// before copying or decoding, so the cap stays in lock-step across the seams.
+pub const MAX_REQUEST_BYTES: usize = 64 * 1024 * 1024;
 
 /// The open composition's segmentation and candidate order, as JSON, or
 /// `None` when nothing is being composed. The same walk and the same sort
