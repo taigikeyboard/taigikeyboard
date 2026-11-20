@@ -2,52 +2,29 @@
 // RustEngineBridge+Lexicon.swift). Read-path only — the mutable `user_association.db` SQLite half of
 // NextWord persistence is out of scope; only the bundled `association.bin` read-only half goes
 // through here. Sends through `RustEngineBridge.dispatch` (shared request-id counter, JNI hop,
-// exception boundary and `recordFailure` sink). DTOs (`LexiconRow`,
-// `LexiconInstallStats`, `LexiconInputMode`, `DictionaryToggles`, `DictionaryFilters`) are defined below.
+// exception boundary and `recordFailure` sink). DTOs (`LexiconInstallStats`, `DictionaryToggles`)
+// are defined below.
 
 package com.siansiansu.taigikeyboard.engine
 
-import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
+import com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRequest
+import com.siansiansu.taigikeyboard.engine.proto.DictionarySearchRow
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
-import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
-import com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest
 import com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
-import com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiRequest
-import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles as ProtoDictionarySourceToggles
-import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
 
 // region Lexicon DTOs
-
-/** Bridge-synthesized companion to proto `TaigiWord` (lexicon search row). */
-data class LexiconRow(
-    val id: Long,
-    val roman: String,
-    val hanji: String?,
-    /** The dictionaries the record belongs to, in the engine's (source-bit) order — the badge order. */
-    val sources: List<DictionarySource>,
-)
 
 /** Engine install diagnostic counts (for dogfood logging). */
 data class LexiconInstallStats(
     val dictionaryRecordCount: ULong,
     val prefixIndexEntryCount: ULong,
 )
-
-/** Lexicon engine `inputMode` enum (mirrors proto `InputMode`). */
-enum class LexiconInputMode(
-    val protoValue: Int,
-) {
-    UNSPECIFIED(0),
-    TL(1),
-    POJ(2),
-    TPS(3),
-}
 
 /**
  * Snapshot of the user's dictionary preference state. Field order mirrors
@@ -128,34 +105,9 @@ data class DictionaryToggles(
     }
 }
 
-/**
- * Output of `dictionaryFilters` — ready-to-send bitmask plus the
- * decoded enabled-source set for dictionary-search retag. Replaces verbatim
- * platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
- */
-data class DictionaryFilters(
-    val dictionaryFilterBitmask: UInt,
-    val enabledSources: Set<DictionarySource>,
-) {
-    companion object {
-        /**
-         * What a failed resolve degrades to: every source on. `UInt.MAX_VALUE`
-         * is the engine's "filter disabled" sentinel on the search path
-         * (`dictionary_reader.rs::Filter::from_enabled_bitmask`). Fail-open on
-         * purpose — a wider candidate list is recoverable, an empty one looks
-         * like a broken keyboard. Mirrors iOS
-         * `RustEngineBridge.DictionaryFilters.allSourcesEnabled`.
-         */
-        val ALL_SOURCES_ENABLED = DictionaryFilters(
-            dictionaryFilterBitmask = UInt.MAX_VALUE,
-            enabledSources = DictionarySource.entries.toSet(),
-        )
-    }
-}
-
 // endregion
 
-// region Read path (5 ops)
+// region Read path
 
 /**
  * Install (or atomically reinstall) the lexicon engine state. Called
@@ -197,83 +149,40 @@ fun RustEngineBridge.lexiconInstall(
 }
 
 /**
- * Dictionary-search multi-source lookup. Engine classifies `input` as romanization or Hanji.
+ * The Manage Dictionaries search in one call (`DictionarySearch`): the engine picks the Hanji or
+ * romanization lookup, filters by [toggles], renders the romanization and puts the custom entries
+ * first. [inputMode] is the stored settings spelling. `null` = the engine failed (recorded).
+ * Blocks while the user data is still opening — call it off the main thread.
  */
-fun RustEngineBridge.searchWithSources(
-    input: String,
-    inputMode: LexiconInputMode,
-    limit: UInt,
-    enabledSourcesBitmask: UInt,
-): List<LexiconRow> {
-    val payload = SearchWithSourcesRequest
-        .newBuilder()
-        .setInput(input)
-        .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
-        .setLimit(limit.toInt())
-        .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
-        .build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setSearchWithSources(payload).build(), "searchWithSources")
-        ?: return emptyList()
-    if (!resp.hasSearchWithSourcesResult()) return emptyList()
-    return resp.searchWithSourcesResult.rowsList.map(::taigiWordToRow)
-}
-
-/**
- * Dictionary-search hanji-prefix lookup; `query` must be Hanji.
- */
-fun RustEngineBridge.searchByHanji(
+fun RustEngineBridge.dictionarySearch(
     query: String,
-    inputMode: LexiconInputMode,
-    limit: UInt,
-    enabledSourcesBitmask: UInt,
-): List<LexiconRow> {
-    val payload = SearchByHanjiRequest
+    inputMode: String,
+    toggles: DictionaryToggles,
+    customDictionaryEnabled: Boolean,
+    limit: Int,
+): List<DictionarySearchRow>? {
+    val payload = DictionarySearchRequest
         .newBuilder()
         .setQuery(query)
-        .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
-        .setLimit(limit.toInt())
-        .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
+        .setInputMode(inputMode)
+        .setToggles(dictionaryTogglesProto(toggles))
+        .setCustomDictionaryEnabled(customDictionaryEnabled)
+        .setLimit(limit.coerceAtLeast(0))
         .build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setSearchByHanji(payload).build(), "searchByHanji")
-        ?: return emptyList()
-    if (!resp.hasSearchByHanjiResult()) return emptyList()
-    return resp.searchByHanjiResult.rowsList.map(::taigiWordToRow)
+    val resp = lexiconDispatch(LexiconRequest.newBuilder().setDictionarySearch(payload).build(), "dictionarySearch")
+        ?: return null
+    if (!resp.hasDictionarySearchResult()) {
+        RustEngineBridge.recordFailure("dictionarySearch", "missing dictionary_search result")
+        return null
+    }
+    return resp.dictionarySearchResult.rowsList
 }
 
 // endregion
-// region Classification (v3.5.7)
 
-/**
- * Resolve user's 12-toggle dictionary preferences into ready-to-send
- * filter bitmasks + enabled-source set. Single FFI hop replaces the
- * pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
- *
- * Call ONCE per query and pass the result down the search pipeline;
- * resolving again inside the dictionary search's badge filter would split the snapshot.
- */
-fun RustEngineBridge.dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters {
-    val payload = DictionaryFiltersRequest
-        .newBuilder()
-        .setToggles(dictionaryTogglesProto(toggles))
-        .build()
-    // The bit layout belongs to Rust (`compute_filters`); no platform
-    // mirror. `lexiconDispatch` records its own failures.
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setDictionaryFilters(payload).build(), "dictionaryFilters")
-        ?: return DictionaryFilters.ALL_SOURCES_ENABLED
-    if (!resp.hasDictionaryFiltersResult()) {
-        RustEngineBridge.recordFailure("dictionaryFilters", "missing dictionary_filters result")
-        return DictionaryFilters.ALL_SOURCES_ENABLED
-    }
-    val r = resp.dictionaryFiltersResult
-    return DictionaryFilters(
-        dictionaryFilterBitmask = r.dictionaryFilterBitmask.toUInt(),
-        enabledSources = r.enabledSourceCodesList
-            .mapNotNull(::platformDictionarySource)
-            .toSet(),
-    )
-}
+// region Helpers
 
-/** Proto form of the user's dictionary toggles, shared by [dictionaryFilters], `continuousAppConfig` and `nextwordPredictNext`. */
+/** Proto form of the user's dictionary toggles, shared by [dictionarySearch], `continuousAppConfig` and `nextwordPredictNext`. */
 internal fun dictionaryTogglesProto(toggles: DictionaryToggles): ProtoDictionarySourceToggles =
     ProtoDictionarySourceToggles
         .newBuilder()
@@ -312,20 +221,6 @@ internal fun dictionaryTogglesProto(toggles: DictionaryToggles): ProtoDictionary
         ).build()
 
 /**
- * Dictionary-search short-circuit predicate. True iff `text` contains any CJK
- * ideograph in the engine's `CJK_RANGES` (the `dictionary/common/cjk.py`
- * table). See
- * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`.
- * Engine-side check fixes the pre-v3.5.7 Kotlin `Char.code` (16-bit) miss on Ext B-E.
- */
-fun RustEngineBridge.isHanji(text: String): Boolean {
-    val payload = IsHanjiRequest.newBuilder().setText(text).build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setIsHanji(payload).build(), "isHanji") ?: return false
-    if (!resp.hasIsHanjiResult()) return false
-    return resp.isHanjiResult.isHanji
-}
-
-/**
  * Map proto `DictionarySourceCode` to the platform `DictionarySource`
  * enum. Explicit `when` (no `ordinal` reliance — Kotlin enum has no
  * stable numeric value; codes are wire-stable per
@@ -333,7 +228,7 @@ fun RustEngineBridge.isHanji(text: String): Boolean {
  * codes return `null` and the caller drops them. Mirrors iOS
  * `RustEngineBridge.platformDictionarySource` — must drift together.
  */
-private fun platformDictionarySource(code: DictionarySourceCode): DictionarySource? =
+internal fun platformDictionarySource(code: DictionarySourceCode): DictionarySource? =
     when (code) {
         DictionarySourceCode.DICT_SOURCE_KAUTIAN -> DictionarySource.KAUTIAN
 
@@ -366,7 +261,7 @@ private fun platformDictionarySource(code: DictionarySourceCode): DictionarySour
         -> null
     }
 
-// endregion Classification
+// endregion Helpers
 
 private fun lexiconDispatch(
     lexiconRequest: LexiconRequest,
@@ -379,11 +274,3 @@ private fun lexiconDispatch(
     }
     return response.lexicon
 }
-
-private fun taigiWordToRow(proto: ProtoTaigiWord): LexiconRow =
-    LexiconRow(
-        id = proto.id,
-        roman = proto.roman,
-        hanji = if (proto.hasHanji()) proto.hanji else null,
-        sources = proto.sourcesList.mapNotNull(::platformDictionarySource),
-    )

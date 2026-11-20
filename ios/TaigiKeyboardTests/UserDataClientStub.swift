@@ -36,11 +36,6 @@ class UserDataClientStub: UserDataClient, @unchecked Sendable {
         XCTFail("unused")
     }
 
-    func search(query _: String, mode _: InputMode, limit _: Int) async -> [CustomDictionaryEntry] {
-        XCTFail("unused")
-        return []
-    }
-
     func exportBackup(appVersion _: String) async throws -> Data {
         XCTFail("unused")
         return Data()

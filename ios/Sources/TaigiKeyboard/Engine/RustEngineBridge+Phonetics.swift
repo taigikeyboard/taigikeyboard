@@ -14,13 +14,7 @@ import SwiftProtobuf
 /// helpers, so colocation keeps those helpers `private` to one file
 /// instead of widening to `internal`.
 public extension RustEngineBridge {
-    // MARK: Phonetics core (2 ops)
-
-    static func tlToPoj(_ input: String) -> String {
-        var payload = Taigi_Engine_TlToPoj()
-        payload.input = input
-        return stringDispatch(method: .tlToPoj(payload), input: input, op: "tlToPoj")
-    }
+    // MARK: Phonetics core
 
     /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
     /// initializer is dispatch_once-equivalent — thread-safe by construction.

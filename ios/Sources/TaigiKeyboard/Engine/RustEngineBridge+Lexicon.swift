@@ -10,31 +10,10 @@ import SwiftProtobuf
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
-    /// Bridge-synthesized companion to the proto `TaigiWord` returned by
-    /// lexicon search responses. Optional fields surface as Swift
-    /// `Optional` per proto3 `optional` semantics; `LexiconClient` hands
-    /// the rows on as they are.
-    struct LexiconRow: Equatable {
-        public let id: Int64
-        public let roman: String
-        public let hanji: String?
-        /// The dictionaries the record belongs to, in the engine's
-        /// (source-bit) order — the order the badges are drawn in.
-        let sources: [DictionarySource]
-    }
-
     /// Engine install diagnostic counts.
     struct LexiconInstallStats: Equatable {
         public let dictionaryRecordCount: UInt64
         public let prefixIndexEntryCount: UInt64
-    }
-
-    /// Lexicon engine `inputMode` (mirrors proto `InputMode`).
-    enum LexiconInputMode: Int32, Equatable {
-        case unspecified = 0
-        case tl = 1
-        case poj = 2
-        case tps = 3
     }
 
     /// 12-toggle snapshot the user's dictionary preference state.
@@ -78,28 +57,6 @@ public extension RustEngineBridge {
         }
     }
 
-    /// Output of `lexiconDictionaryFilters` — ready-to-send bitmask plus
-    /// the decoded enabled-source set for Tab3 retag. Replaces verbatim
-    /// platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
-    ///
-    /// `internal` (not `public`) because `enabledSources` references the
-    /// internal `DictionarySource` enum.
-    internal struct DictionaryFilters: Equatable {
-        let dictionaryFilterBitmask: UInt32
-        let enabledSources: Set<DictionarySource>
-
-        /// What a failed resolve degrades to: every source on. `UInt32.max` is
-        /// the engine's "filter disabled" sentinel on the search path
-        /// (`dictionary_reader.rs::Filter::from_enabled_bitmask`). Fail-open on
-        /// purpose — a wider candidate list is recoverable, an empty one looks
-        /// like a broken keyboard. Mirrors
-        /// Android `RustEngineBridge.DictionaryFilters.ALL_SOURCES_ENABLED`.
-        static let allSourcesEnabled = DictionaryFilters(
-            dictionaryFilterBitmask: UInt32.max,
-            enabledSources: Set(DictionarySource.allCases),
-        )
-    }
-
     // MARK: - Methods
 
     /// Install (or atomically reinstall) the lexicon engine state. Called
@@ -138,76 +95,37 @@ public extension RustEngineBridge {
         )
     }
 
-    /// Tab3 multi-source dictionary lookup.
-    static func lexiconSearchWithSources(
-        input: String,
-        inputMode: LexiconInputMode,
-        limit: UInt32,
-        enabledSourcesBitmask: UInt32,
-    ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchWithSourcesRequest()
-        payload.input = input
-        payload.inputMode = Taigi_Engine_InputMode(rawValue: Int(inputMode.rawValue)) ?? .unspecified
-        payload.limit = limit
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
-        guard let resp = lexiconDispatch(method: .searchWithSources(payload), op: "lexiconSearchWithSources") else {
-            return []
-        }
-        guard case let .searchWithSourcesResult(r)? = resp.result else {
-            recordFailure(op: "lexiconSearchWithSources", message: "missing result")
-            return []
-        }
-        return r.rows.map(taigiWordToRow)
-    }
-
-    /// Tab3 hanji-prefix dictionary lookup.
-    static func lexiconSearchByHanji(
+    /// The Manage Dictionaries search in one call (`DictionarySearch`): the
+    /// engine picks the Hanji or romanization lookup, filters by `toggles`,
+    /// renders the romanization and puts the custom entries first. `inputMode`
+    /// is the settings spelling (`InputMode.rawValue`). `nil` = the engine
+    /// failed (recorded). Blocks while the user data is still opening — call
+    /// it off the main thread.
+    static func dictionarySearch(
         query: String,
-        inputMode: LexiconInputMode,
-        limit: UInt32,
-        enabledSourcesBitmask: UInt32,
-    ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchByHanjiRequest()
+        inputMode: String,
+        toggles: DictionaryToggles,
+        customDictionaryEnabled: Bool,
+        limit: Int,
+    ) -> [Taigi_Engine_DictionarySearchRow]? {
+        var payload = Taigi_Engine_DictionarySearchRequest()
         payload.query = query
-        payload.inputMode = Taigi_Engine_InputMode(rawValue: Int(inputMode.rawValue)) ?? .unspecified
-        payload.limit = limit
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
-        guard let resp = lexiconDispatch(method: .searchByHanji(payload), op: "lexiconSearchByHanji") else {
-            return []
-        }
-        guard case let .searchByHanjiResult(r)? = resp.result else {
-            recordFailure(op: "lexiconSearchByHanji", message: "missing result")
-            return []
-        }
-        return r.rows.map(taigiWordToRow)
-    }
-
-    /// Resolve user's 12-toggle dictionary preferences into ready-to-send
-    /// filter bitmasks + enabled-source set. Single FFI hop replaces the
-    /// pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
-    ///
-    /// Call ONCE per query and pass the result down the search pipeline;
-    /// re-resolving inside `fetchSystemResults` would split the snapshot.
-    internal static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
-        var payload = Taigi_Engine_DictionaryFiltersRequest()
+        payload.inputMode = inputMode
         payload.toggles = dictionaryTogglesProto(toggles)
-        // The bit layout belongs to Rust (`compute_filters`); no platform
-        // mirror. `lexiconDispatch` records its own failures.
-        guard let resp = lexiconDispatch(method: .dictionaryFilters(payload), op: "lexiconDictionaryFilters") else {
-            return .allSourcesEnabled
+        payload.customDictionaryEnabled = customDictionaryEnabled
+        payload.limit = UInt32(clamping: limit)
+        guard let resp = lexiconDispatch(method: .dictionarySearch(payload), op: "dictionarySearch") else {
+            return nil
         }
-        guard case let .dictionaryFiltersResult(r)? = resp.result else {
-            recordFailure(op: "lexiconDictionaryFilters", message: "missing dictionary_filters result")
-            return .allSourcesEnabled
+        guard case let .dictionarySearchResult(r)? = resp.result else {
+            recordFailure(op: "dictionarySearch", message: "missing dictionary_search result")
+            return nil
         }
-        return DictionaryFilters(
-            dictionaryFilterBitmask: r.dictionaryFilterBitmask,
-            enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:))),
-        )
+        return r.rows
     }
 
     /// Proto form of the user's dictionary toggles, shared by
-    /// `lexiconDictionaryFilters`, `continuousAppConfig` and `nextwordPredictNext`.
+    /// `dictionarySearch`, `continuousAppConfig` and `nextwordPredictNext`.
     static func dictionaryTogglesProto(_ toggles: DictionaryToggles) -> Taigi_Engine_DictionarySourceToggles {
         var togglesProto = Taigi_Engine_DictionarySourceToggles()
         togglesProto.kautian = toggles.kautian
@@ -242,40 +160,14 @@ public extension RustEngineBridge {
         return togglesProto
     }
 
-    /// Tab3 short-circuit predicate. True iff `text` contains any CJK
-    /// ideograph in the engine's `CJK_RANGES` (the `dictionary/common/cjk.py`
-    /// table). See
-    /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`.
-    static func isHanji(_ text: String) -> Bool {
-        var payload = Taigi_Engine_IsHanjiRequest()
-        payload.text = text
-        guard let resp = lexiconDispatch(method: .isHanji(payload), op: "isHanji") else {
-            return false
-        }
-        guard case let .isHanjiResult(r)? = resp.result else {
-            recordFailure(op: "isHanji", message: "missing is_hanji result")
-            return false
-        }
-        return r.isHanji
-    }
-
-    // MARK: - Private helpers
-
-    private static func taigiWordToRow(_ proto: Taigi_Engine_TaigiWord) -> LexiconRow {
-        LexiconRow(
-            id: proto.id,
-            roman: proto.roman,
-            hanji: proto.hasHanji ? proto.hanji : nil,
-            sources: proto.sources.compactMap(platformDictionarySource(from:)),
-        )
-    }
+    // MARK: - Helpers
 
     /// Map proto `DictionarySourceCode` to the platform `DictionarySource`
     /// enum. Explicit switch (no `rawValue` / `ordinal` reliance — Swift
     /// `DictionarySource` is `String`-backed; codes are wire-stable per
     /// `lexicon.proto::DictionarySourceCode`).
     /// Unspecified / unrecognised codes return `nil` and the caller drops them.
-    private static func platformDictionarySource(from code: Taigi_Engine_DictionarySourceCode) -> DictionarySource? {
+    internal static func platformDictionarySource(from code: Taigi_Engine_DictionarySourceCode) -> DictionarySource? {
         switch code {
         case .dictSourceKautian: .kautian
         case .dictSourceTaigitv: .taigitv
@@ -299,8 +191,8 @@ public extension RustEngineBridge {
 
     /// Lexicon envelope dispatch — encode → FFI roundtrip → decode the
     /// `LexiconResponse` payload. Used by every lexicon method in this
-    /// file (searchWithSources / searchByHanji / dictionaryFilters / isHanji). No `AppConfig` snapshot needed — lexicon ops
-    /// read no live config.
+    /// file (install / dictionarySearch). No `AppConfig` snapshot needed —
+    /// lexicon ops read no live config.
     private static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,
         op: String,

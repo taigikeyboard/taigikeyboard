@@ -9,7 +9,6 @@ import com.google.protobuf.UnsafeByteOperations
 import com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary
 import com.siansiansu.taigikeyboard.engine.proto.BackupImported
 import com.siansiansu.taigikeyboard.engine.proto.CustomCsvImported
-import com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry
 import com.siansiansu.taigikeyboard.engine.proto.CustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.CustomEntryDeleted
 import com.siansiansu.taigikeyboard.engine.proto.CustomEntrySaved
@@ -32,7 +31,6 @@ import com.siansiansu.taigikeyboard.engine.proto.OpenUserData
 import com.siansiansu.taigikeyboard.engine.proto.RecordUsage
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
 import com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry
-import com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.SetLearningRecordCount
 import com.siansiansu.taigikeyboard.engine.proto.UserDataJournal
 import com.siansiansu.taigikeyboard.engine.proto.UserDataRequest
@@ -137,29 +135,6 @@ fun RustEngineBridge.customDictionaryExportCsv(): ByteArray? =
         ?.customCsvExported
         ?.csv
         ?.toByteArray()
-
-/**
- * The entries a dictionary search finds for [query] — by the key the query
- * derives under the settings [inputMode] (`poj` / `tl` / `tps`; the engine
- * reads TPS as the TL family and upgrades to TPS when the query carries it),
- * the way the keyboard finds them.
- */
-fun RustEngineBridge.customDictionarySearch(
-    query: String,
-    inputMode: String,
-    limit: Int,
-): List<CustomDictionaryEntry>? {
-    val search = SearchCustomEntries
-        .newBuilder()
-        .setQuery(query)
-        .setInputMode(inputMode)
-        .setLimit(limit)
-        .build()
-    return userData("customDictionarySearch") { setSearchCustomEntries(search) }
-        ?.takeIf { it.hasCustomEntryMatches() }
-        ?.customEntryMatches
-        ?.entriesList
-}
 
 /** The `.taigi` backup of what the engine holds, written by `android` [appVersion]. */
 fun RustEngineBridge.backupExport(appVersion: String): ByteArray? {

@@ -5,13 +5,9 @@ import Foundation
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
 /// Search result with source information for dictionary search (Manage Dictionaries page).
-struct DictionarySearchResult {
-    /// Sentinel id for results synthesised from the user's custom dictionary.
-    static let customDictMarkerId = -2
-
-    let id: Int
+struct DictionarySearchResult: Equatable {
     let roman: String // Display form (POJ or TL based on user setting)
-    let tl: String // Raw TL from database (for external lookup URLs)
+    let tl: String // TL the web dictionaries are asked with (a custom entry's own romanization)
     let hanji: String?
     let sources: [DictionarySource]
 

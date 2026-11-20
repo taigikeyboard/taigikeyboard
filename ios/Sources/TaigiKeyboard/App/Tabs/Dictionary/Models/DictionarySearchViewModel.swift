@@ -14,7 +14,6 @@ final class DictionarySearchViewModel: ObservableObject {
 
     private var searchTask: Task<Void, Never>?
     private let service: DictionarySearchService
-    private let logger = DebugLogger(category: "DictionarySearchVM")
 
     init(service: DictionarySearchService = CompositionRoot.dictionarySearchService) {
         self.service = service
@@ -36,17 +35,10 @@ final class DictionarySearchViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
 
-            do {
-                let newResults = try await service.search(query: query)
-                guard !Task.isCancelled else { return }
-                results = newResults
-                isSearching = false
-            } catch {
-                guard !Task.isCancelled else { return }
-                logger.error("[SEARCH] Failed: \(error.localizedDescription)")
-                results = []
-                isSearching = false
-            }
+            let newResults = await service.search(query: query)
+            guard !Task.isCancelled else { return }
+            results = newResults
+            isSearching = false
         }
     }
 }

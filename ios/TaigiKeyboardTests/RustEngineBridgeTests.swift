@@ -29,10 +29,6 @@ final class RustEngineBridgeTests: XCTestCase {
 
     // MARK: - Phonetics core
 
-    func test_op_tlToPoj_canonical() {
-        XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
-    }
-
     func test_op_toneVariations_lazyCache_returnsAllThreeMaps() {
         let cache = RustEngineBridge.toneVariations
         XCTAssertFalse(cache.poj.isEmpty, "POJ map should populate")

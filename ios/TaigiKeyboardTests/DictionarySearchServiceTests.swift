@@ -1,142 +1,115 @@
 @testable import TaigiKeyboard
 import XCTest
 
-/// Dictionary search policy pins, mirrored by Android
-/// `DictionarySearchServiceTest`. The lexicon and the custom dictionary are
-/// fakes, so only the platform-side policy is observed: the custom-dictionary
-/// toggle gates search as it gates the keyboard, system rows keep the engine's
-/// order, and the TPS layout searches the `tps:` family.
+/// Dictionary search pins, mirrored by Android `DictionarySearchServiceTest`.
+/// The engine's `DictionarySearch` op owns the search (golden:
+/// `engine/dispatch/tests/dictionary_search.rs`); the platform side is the
+/// settings snapshot the service sends and the row decoding.
 final class DictionarySearchServiceTests: XCTestCase {
-    private final class FakeLexicon: LexiconClient, @unchecked Sendable {
-        private let rows: [RustEngineBridge.LexiconRow]
-        private(set) var romanModes: [RustEngineBridge.LexiconInputMode] = []
-        private(set) var hanjiModes: [RustEngineBridge.LexiconInputMode] = []
+    private struct Sent: Equatable {
+        let query: String
+        let inputMode: InputMode
+        let toggles: RustEngineBridge.DictionaryToggles
+        let customDictionaryEnabled: Bool
+        let limit: Int
+    }
 
-        init(rows: [RustEngineBridge.LexiconRow] = []) {
+    private final class FakeLexicon: LexiconClient, @unchecked Sendable {
+        private let rows: [DictionarySearchResult]
+        private(set) var sent: [Sent] = []
+
+        init(rows: [DictionarySearchResult] = []) {
             self.rows = rows
         }
 
-        /// CJK by the BMP range only — enough for the fixtures; production asks the engine.
-        func isHanji(_ text: String) -> Bool {
-            text.unicodeScalars.contains { (0x4E00 ... 0x9FFF).contains($0.value) }
-        }
-
-        func dictionaryFilters(toggles _: RustEngineBridge.DictionaryToggles) -> RustEngineBridge.DictionaryFilters {
-            .allSourcesEnabled
-        }
-
-        func searchWithSources(
-            input _: String,
-            inputMode: RustEngineBridge.LexiconInputMode,
-            limit _: UInt32,
-            enabledSourcesBitmask _: UInt32,
-        ) -> [RustEngineBridge.LexiconRow] {
-            romanModes.append(inputMode)
-            return rows
-        }
-
-        func searchByHanji(
-            query _: String,
-            inputMode: RustEngineBridge.LexiconInputMode,
-            limit _: UInt32,
-            enabledSourcesBitmask _: UInt32,
-        ) -> [RustEngineBridge.LexiconRow] {
-            hanjiModes.append(inputMode)
+        func dictionarySearch(
+            query: String,
+            inputMode: InputMode,
+            toggles: RustEngineBridge.DictionaryToggles,
+            customDictionaryEnabled: Bool,
+            limit: Int,
+        ) async -> [DictionarySearchResult] {
+            sent.append(Sent(
+                query: query,
+                inputMode: inputMode,
+                toggles: toggles,
+                customDictionaryEnabled: customDictionaryEnabled,
+                limit: limit,
+            ))
             return rows
         }
     }
 
-    private final class FakeUserData: UserDataClientStub, @unchecked Sendable {
-        private let entries: [CustomDictionaryEntry]
-        private(set) var searchCalls = 0
-
-        init(entries: [CustomDictionaryEntry]) {
-            self.entries = entries
-        }
-
-        override func search(query: String, mode _: InputMode, limit _: Int) async -> [CustomDictionaryEntry] {
-            searchCalls += 1
-            return entries.filter { $0.roman.hasPrefix(query) }
-        }
+    private func makeService(settings: StubEngineSettings = StubEngineSettings(), lexicon: FakeLexicon) -> DictionarySearchService {
+        DictionarySearchService(lexicon: lexicon, settingsProvider: StubEngineSettingsProvider(settings))
     }
 
-    private let myWord = CustomDictionaryEntry(roman: "taigi", hanji: "我的台語")
-    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanji: "台語", sources: [.kautian])
-
-    private func makeService(
-        settings: StubEngineSettings = StubEngineSettings(),
-        lexicon: FakeLexicon = FakeLexicon(),
-        userData: FakeUserData,
-    ) -> DictionarySearchService {
-        DictionarySearchService(lexicon: lexicon, userData: userData, settingsProvider: StubEngineSettingsProvider(settings))
-    }
-
-    // CROSS-PLATFORM INVARIANT — mirrors Android DictionarySearchServiceTest
-    // `custom dictionary off - its entries are neither searched nor listed`.
-    func testCustomDictionaryOff_itsEntriesAreNotSearched() async throws {
-        var settings = StubEngineSettings()
-        settings.isCustomDictEnabled = false
-        let userData = FakeUserData(entries: [myWord])
-
-        let results = try await makeService(settings: settings, userData: userData).search(query: "taigi")
-
-        XCTAssertEqual(userData.searchCalls, 0)
-        XCTAssertFalse(results.contains { $0.sources == [.custom] })
-    }
-
-    // CROSS-PLATFORM INVARIANT — mirrors Android `custom dictionary on - its entries lead the system rows`.
-    func testCustomDictionaryOn_itsEntriesLeadTheSystemRows() async throws {
-        let userData = FakeUserData(entries: [myWord])
-
-        let results = try await makeService(lexicon: FakeLexicon(rows: [kautianRow]), userData: userData).search(query: "taigi")
-
-        XCTAssertEqual(userData.searchCalls, 1)
-        XCTAssertEqual(results.first?.sources, [.custom])
-        XCTAssertEqual(results.first?.id, DictionarySearchResult.customDictMarkerId)
-        XCTAssertEqual(results.last?.sources, [.kautian])
-        XCTAssertEqual(results.count, 2)
-    }
-
-    // CROSS-PLATFORM INVARIANT — mirrors Android `system rows keep the engine order`:
-    // the engine owns the search order (E1 P5b), so a MOE row the engine listed last stays last.
-    func testSystemRows_keepTheEngineOrder() async throws {
-        let rows = [
-            RustEngineBridge.LexiconRow(id: 2, roman: "tâi-gí", hanji: "台語", sources: [.taigitv]),
-            RustEngineBridge.LexiconRow(id: 3, roman: "tāi-ki", hanji: "代記", sources: [.taigitv]),
-            kautianRow,
-        ]
-
-        let results = try await makeService(lexicon: FakeLexicon(rows: rows), userData: FakeUserData(entries: [])).search(query: "taigi")
-
-        XCTAssertEqual(results.map(\.id), [2, 3, 1])
-    }
-
-    func testAHanjiQuery_takesTheHanjiPathAndNeverConsultsTheCustomDictionary() async throws {
+    // CROSS-PLATFORM INVARIANT — mirrors Android `an empty query asks the engine nothing`.
+    func testAnEmptyQuery_asksTheEngineNothing() async {
         let lexicon = FakeLexicon()
-        let userData = FakeUserData(entries: [CustomDictionaryEntry(roman: "taigi", hanji: "台語")])
 
-        _ = try await makeService(lexicon: lexicon, userData: userData).search(query: "台語")
+        let results = await makeService(lexicon: lexicon).search(query: "")
 
-        XCTAssertEqual(lexicon.hanjiModes.count, 1)
-        XCTAssertTrue(lexicon.romanModes.isEmpty)
-        XCTAssertEqual(userData.searchCalls, 0)
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertTrue(lexicon.sent.isEmpty)
     }
 
-    // CROSS-PLATFORM INVARIANT — mirrors Android `the TPS layout searches the TPS family`.
-    func testTpsLayout_searchesTheTpsFamily() async throws {
+    // CROSS-PLATFORM INVARIANT — mirrors Android `one request carries the settings snapshot`.
+    func testOneRequest_carriesTheSettingsSnapshot() async {
         var settings = StubEngineSettings()
         settings.inputMode = .tps
+        settings.isCustomDictEnabled = false
+        settings.isTaiHuaDictEnabled = false
         let lexicon = FakeLexicon()
 
-        _ = try await makeService(settings: settings, lexicon: lexicon, userData: FakeUserData(entries: [])).search(query: "ㄉㄞ")
+        _ = await makeService(settings: settings, lexicon: lexicon).search(query: "ㄉㄞ")
 
-        XCTAssertEqual(lexicon.romanModes, [.tps])
+        XCTAssertEqual(lexicon.sent, [Sent(
+            query: "ㄉㄞ",
+            inputMode: .tps,
+            toggles: RustEngineBridge.DictionaryToggles(from: settings),
+            customDictionaryEnabled: false,
+            limit: 20,
+        )])
+        XCTAssertFalse(lexicon.sent[0].toggles.taihoa)
     }
 
-    func testLexiconMode_mapsEveryInputMode() {
-        XCTAssertEqual(DictionarySearchService.lexiconMode(.tl), .tl)
-        XCTAssertEqual(DictionarySearchService.lexiconMode(.poj), .poj)
-        XCTAssertEqual(DictionarySearchService.lexiconMode(.tps), .tps)
-        XCTAssertEqual(DictionarySearchService.lexiconMode(.english), .tl)
+    // CROSS-PLATFORM INVARIANT — mirrors Android `rows keep the engine order`:
+    // the engine puts custom entries first and owns the dictionary order.
+    func testRows_keepTheEngineOrder() async {
+        let rows = [
+            DictionarySearchResult(roman: "taigi", tl: "taigi", hanji: "我的台語", sources: [.custom]),
+            DictionarySearchResult(roman: "tâi-gí", tl: "tâi-gí", hanji: "台語", sources: [.kautian]),
+        ]
+
+        let results = await makeService(lexicon: FakeLexicon(rows: rows)).search(query: "taigi")
+
+        XCTAssertEqual(results, rows)
+    }
+
+    // CROSS-PLATFORM INVARIANT — mirrors Android `a row decodes lookup TL, absent Hanji and known sources`.
+    func testARow_decodesLookupTlAbsentHanjiAndKnownSources() {
+        var row = Taigi_Engine_DictionarySearchRow()
+        row.customID = "c1"
+        row.roman = "Tâi-gí"
+        row.lookupTl = "Tâi-gí"
+        row.sources = [.dictSourceCustom, .dictSourceUnspecified]
+
+        XCTAssertEqual(
+            DictionarySearchResult(row),
+            DictionarySearchResult(roman: "Tâi-gí", tl: "Tâi-gí", hanji: nil, sources: [.custom]),
+        )
+
+        var system = Taigi_Engine_DictionarySearchRow()
+        system.systemID = 7
+        system.roman = "tâi-gí"
+        system.lookupTl = "tâi-gí"
+        system.hanji = "台語"
+        system.sources = [.dictSourceKautian, .dictSourceTaigitv]
+
+        XCTAssertEqual(
+            DictionarySearchResult(system),
+            DictionarySearchResult(roman: "tâi-gí", tl: "tâi-gí", hanji: "台語", sources: [.kautian, .taigitv]),
+        )
     }
 }

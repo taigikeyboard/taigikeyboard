@@ -56,7 +56,7 @@ Engine state machine lives in Rust `engine/composing`. Platform side is the effe
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
 
 ### 3. Tone Engine (`engine/tone.md`)
-All tone logic lives in Rust `engine/phonetics`. Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`tlToPoj`, `externalLookupDigitForm`, …); preedit tone rendering runs inside composing ops.
+All tone logic lives in Rust `engine/phonetics`. Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`externalLookupDigitForm`, `doubleSpacePeriod`, …); preedit tone rendering runs inside composing ops.
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
@@ -120,7 +120,7 @@ NextWord state machine lives in Rust `engine/nextword`. Platform glue handles ti
 |---------|-----------|-----------------|
 | **Backup (`.taigi`)** | Export/import user data (custom dict, frequency, associations) | engine ops `ExportBackup` / `ImportBackup` → `userdata::export_backup` / `import_backup` |
 | **DataManagement** | Production UI for user data | `DataManagementView` / `DataManagementScreen` |
-| **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanji` for hanzi inputs) | iOS / Android `DictionarySearchService` (policy, over a `LexiconClient`); Android `DictionarySearchViewModel`; Windows + Linux `taigi_desktop_core::engine::dictionary_search` (one lookup for both settings windows, custom rows through `SearchCustomEntries`) |
+| **DictionarySearch** | In-app dictionary search from settings (lexicon op `DictionarySearch`) | iOS / Android `DictionarySearchService` (settings snapshot, over a `LexiconClient`); Android `DictionarySearchViewModel`; Windows + Linux `taigi_desktop_core::engine::dictionary_search` (one lookup for both settings windows, custom rows through `SearchCustomEntries`) |
 
 ### 10. Input Flow (`architecture/system-overview.md` §4)
 | Keyword | Definition | Key Class/Method |

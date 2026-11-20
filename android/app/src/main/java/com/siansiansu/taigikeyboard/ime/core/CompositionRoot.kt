@@ -42,7 +42,7 @@ class CompositionRoot private constructor(
     appContext: Context,
 ) {
     val logger: LoggerBackend = AndroidLoggerBackend()
-    val lexicon: LexiconService = LexiconService(appContext, logger)
+    val lexicon: LexiconService = LexiconService(awaitLexiconReady = ::awaitLexiconReady)
 
     /** The user's data — counts, bigrams, custom dictionary, learned phrases — which the engine owns (roadmap P8b). */
     val userData: UserDataClient = EngineUserDataClient

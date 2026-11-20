@@ -21,7 +21,6 @@ class DictionarySearchViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     companion object {
-        private const val TAG = "DictionarySearchVM"
         private const val SEARCH_DEBOUNCE_MILLIS = 300L
     }
 
@@ -35,13 +34,10 @@ class DictionarySearchViewModel(
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
     private val root = CompositionRoot.shared(application)
-    private val logger = root.logger
     private val service =
         DictionarySearchService(
             lexicon = root.lexicon,
-            userData = root.userData,
             settingsProvider = PrefHelper(application),
-            logger = logger,
         )
 
     init {
@@ -72,13 +68,7 @@ class DictionarySearchViewModel(
 
     private suspend fun performSearch(query: String) {
         _isSearching.value = true
-        _results.value =
-            try {
-                service.search(query)
-            } catch (e: Exception) {
-                logger.e(TAG, "[SEARCH] Failed: ${e.message}", e)
-                emptyList()
-            }
+        _results.value = service.search(query)
         _isSearching.value = false
     }
 }

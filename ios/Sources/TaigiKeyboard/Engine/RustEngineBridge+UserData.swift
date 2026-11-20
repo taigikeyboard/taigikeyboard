@@ -101,25 +101,6 @@ extension RustEngineBridge {
         return exported.csv
     }
 
-    /// The entries a dictionary search finds for `query` — by the key the
-    /// query derives under the settings `inputMode` (`tl` / `poj` / `tps`),
-    /// the way the keyboard finds them.
-    static func customDictionarySearch(
-        query: String,
-        inputMode: String,
-        limit: Int,
-    ) -> [Taigi_Engine_CustomDictionaryEntry]? {
-        var search = Taigi_Engine_SearchCustomEntries()
-        search.query = query
-        search.inputMode = inputMode
-        search.limit = UInt32(clamping: limit)
-        guard case let .customEntryMatches(matches)? = userDataResult(
-            .searchCustomEntries(search),
-            op: "customDictionarySearch",
-        ) else { return nil }
-        return matches.entries
-    }
-
     // MARK: - Learning records
 
     /// One page of `kind` in `order` whose text or TL holds `filter`; the
