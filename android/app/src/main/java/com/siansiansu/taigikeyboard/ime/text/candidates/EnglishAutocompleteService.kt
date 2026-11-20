@@ -25,6 +25,19 @@ class EnglishAutocompleteService(
     companion object {
         private const val MAX_SUGGESTIONS = 3
         private const val ASSET_NAME = "english_freq.txt"
+
+        /**
+         * The word being typed at the end of [text]: what follows the last whitespace or
+         * `.,!?;:` once trailing whitespace is dropped. Apostrophe and hyphen do not split,
+         * so `don't` stays one token. The suggestions and the tap that replaces the word
+         * read the same rule.
+         * CROSS-PLATFORM INVARIANT — mirrors iOS `EnglishAutocompleteService.extractCurrentWord`.
+         */
+        fun extractCurrentWord(text: String): String {
+            val trimmed = text.trimEnd()
+            val lastSeparatorIndex = trimmed.indexOfLast { it.isWhitespace() || it in ".,!?;:" }
+            return trimmed.substring(lastSeparatorIndex + 1)
+        }
     }
 
     private val logger = CompositionRoot.shared(context).logger
@@ -77,20 +90,6 @@ class EnglishAutocompleteService(
             logger.e(TAG, "[LOAD] failed to load $ASSET_NAME — English suggestions disabled", e)
             null
         }
-
-    // Separators are whitespace and `.,!?;:` — apostrophe and hyphen do not split, so `don't` stays one token.
-    private fun extractCurrentWord(text: String): String {
-        val trimmed = text.trimEnd()
-        if (trimmed.isEmpty()) return ""
-
-        val lastSeparatorIndex = trimmed.indexOfLast { it.isWhitespace() || it in ".,!?;:" }
-
-        return if (lastSeparatorIndex >= 0) {
-            trimmed.substring(lastSeparatorIndex + 1)
-        } else {
-            trimmed
-        }
-    }
 
     /** Releases the word list; call from onDestroy. */
     fun close() {

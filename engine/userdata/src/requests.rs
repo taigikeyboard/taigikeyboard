@@ -320,8 +320,9 @@ impl UserDataHandle {
         })
     }
 
-    /// One commit counted — what each platform's candidate / prediction tap
-    /// handler did itself. A platform pick names no Hanji: the learned-phrase
+    /// One commit counted from outside the engine. No platform sends it since
+    /// the engine counts every pick itself (Android's English-pick sender went
+    /// in G4); tests seed counts with it. It names no Hanji: the learned-phrase
     /// touch (§50) belongs to the commits the engine resolves itself.
     pub(crate) fn record_usage(&self, usage: &RecordUsage) -> Result<(), RequestError> {
         let stores = self.opened_stores()?;

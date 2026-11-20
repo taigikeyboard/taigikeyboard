@@ -21,7 +21,6 @@ import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateDisplayParams
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateMode
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateStripState
-import com.siansiansu.taigikeyboard.ime.text.composing.EngineUsageRecorder
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController
@@ -151,7 +150,6 @@ class SmartbarManager(
     private val candidateClickHandler =
         CandidateClickHandler(
             taigikeyboard = taigikeyboard,
-            usage = EngineUsageRecorder,
             getCurrentSuggestions = { currentSuggestions },
             getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
             onClearCandidates = { clearCandidates() },
@@ -490,10 +488,14 @@ class SmartbarManager(
     }
 
     private fun refreshSurfacesForScriptFlags() {
+        // Repaint the live strip in its own mode (its list is `currentSuggestions`): going
+        // through `updateCandidates` would turn an English strip into a Taigi one, whose
+        // tap commits a prediction.
         if (currentSuggestions.isNotEmpty()) {
-            updateCandidates(currentSuggestions)
+            val mode = _candidateStripState.value.mode
+            pushCandidateState(mode)
 
-            if (isExpanded) {
+            if (isExpanded && mode is CandidateMode.Taigi) {
                 candidateOverlayView?.updateSuggestions(currentSuggestions)
             }
         }

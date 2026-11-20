@@ -28,7 +28,6 @@ import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.ListLearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.OpenUserData
-import com.siansiansu.taigikeyboard.engine.proto.RecordUsage
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
 import com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry
 import com.siansiansu.taigikeyboard.engine.proto.SetLearningRecordCount
@@ -60,23 +59,6 @@ fun RustEngineBridge.userDataOpen(
         .setInBackground(true)
         .build()
     userData("userDataOpen") { setOpen(open) }
-}
-
-/**
- * One NextWord prediction pick, as the engine counts it (a Continuous pick the
- * engine counts itself, R5). Best-effort: the engine queues the write, and a
- * failed round-trip is logged, never surfaced.
- */
-fun RustEngineBridge.userDataRecordUsage(
-    displayText: String,
-    canonicalTl: String,
-) {
-    val usage = RecordUsage
-        .newBuilder()
-        .setDisplayText(displayText)
-        .setCanonicalTl(canonicalTl)
-        .build()
-    userData("userDataRecordUsage") { setRecordUsage(usage) }
 }
 
 /** Empties the selected stores in place; `null` when the engine could not. */
