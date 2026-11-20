@@ -1,6 +1,6 @@
 # TaigiKeyboard 台語齒盤
 
-A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, and ChromeOS.
+A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, ChromeOS, and browser extensions.
 
 [![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)](https://apps.apple.com/app/id6751871806)
 [![Android 9+](https://img.shields.io/badge/Android-9%2B-green)](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard)
@@ -8,6 +8,7 @@ A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, and ChromeOS.
 [![Windows 10+](https://img.shields.io/badge/Windows-10%2B-blue)](https://taigikeyboard.tw/#download)
 [![Linux Fcitx5 | IBus](https://img.shields.io/badge/Linux-Fcitx5%20%7C%20IBus-orange)](https://taigikeyboard.tw/#download)
 [![ChromeOS](https://img.shields.io/badge/ChromeOS-Web_Store-4285F4)](https://chromewebstore.google.com/detail/alkppnijpfcahccbkcgpacejljlnidgc)
+[![Browser extension](https://img.shields.io/badge/Browser_extension-Web_Store-4285F4)](https://chromewebstore.google.com/detail/macjldjheiajcimfcjdcegagaemcelkf)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-Join_chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/UFn9RdynPu)
 
@@ -20,6 +21,7 @@ A Taiwanese IME for iPhone, iPad, Android, macOS, Windows, Linux, and ChromeOS.
 | macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
 | Linux | [GitHub Releases](https://github.com/taigikeyboard/taigikeyboard/releases) (`.deb`, `.rpm`, Arch; Fcitx5 or IBus) |
 | ChromeOS | [Chrome Web Store](https://chromewebstore.google.com/detail/alkppnijpfcahccbkcgpacejljlnidgc) |
+| Browser extension | [Chrome Web Store](https://chromewebstore.google.com/detail/macjldjheiajcimfcjdcegagaemcelkf) |
 
 See the [installation guide](docs/INSTALL.md) for setup instructions.
 
