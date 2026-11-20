@@ -30,7 +30,7 @@ Engine state is `Send + !Sync`; the platform may call concurrently (IME thread, 
 
 ### 1.4 Request size cap
 
-`dispatch::MAX_REQUEST_BYTES` (2 MB) is checked before the request is copied or decoded; over the cap answers `FAIL_INVARIANT`, exactly the cap is accepted.
+`dispatch::MAX_REQUEST_BYTES` (64 MB) is checked before the request is copied or decoded; over the cap answers `FAIL_INVARIANT`, exactly the cap is accepted. The cap must admit the largest legitimate request — a `.taigi` restore of every store at its cap (about 20 MB at four-syllable rows, `engine/dispatch/tests/backup_request_size.rs`).
 
 ### 1.5 Error channel — the protobuf envelope
 

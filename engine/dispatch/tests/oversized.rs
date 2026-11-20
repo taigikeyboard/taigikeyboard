@@ -5,8 +5,8 @@
 //! Library-level documented behavior: the dispatcher itself has **no
 //! input size cap**. It accepts any input that fits in memory; bounded
 //! behavior is guaranteed because every op is linear in input size and
-//! never allocates more than 2× the input. The 2 MB FFI-side guard
-//! lives in `swift-ffi` / `android-jni` (see `MAX_REQUEST_BYTES`).
+//! never allocates more than 2× the input. The 64 MB FFI-side guard
+//! lives in `swift-ffi` / `android-jni` / the macOS FFI (see `MAX_REQUEST_BYTES`).
 //!
 //! Pass a 1.2 MB protobuf payload (>1 MB threshold) and assert the
 //! response is `Ok` — proving "bounded" via "completes without crash"

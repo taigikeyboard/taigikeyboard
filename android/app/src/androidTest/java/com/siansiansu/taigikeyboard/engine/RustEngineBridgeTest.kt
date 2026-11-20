@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  *
  * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus one
  * result-decode pin per phonetics op shape the Kotlin bridge maps itself.
- * Op behaviour lives in `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap
+ * Op behaviour lives in `engine/phonetics/tests/op_coverage.rs`; the 64 MB cap
  * boundary in `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
  */
 @RunWith(AndroidJUnit4::class)
@@ -112,7 +112,8 @@ class RustEngineBridgeTest {
     // region T5 — oversized
 
     @Test fun T5_overCap_returnsFailInvariant() {
-        val oversized = ByteArray(2 * 1024 * 1024 + 1)
+        // One byte over `dispatch::MAX_REQUEST_BYTES` (64 MB).
+        val oversized = ByteArray(64 * 1024 * 1024 + 1)
         val response = RustEngineBridge.sendRawBytes(oversized)
         assertNotNull(response)
         assertEquals(ErrorCode.FAIL_INVARIANT, response!!.error)
