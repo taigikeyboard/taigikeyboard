@@ -244,7 +244,7 @@
       }
     },
     "shortcutNavigateCandidates": {
-      "comment": "Read-only row under the slot-key row on the Shortcuts pane: the fixed navigation keys that move the highlight through the candidate window (arrows, Page Up / Page Down); what ↓ does follows the window layout. Fixed tier, no binding can shadow it (USER 2026-09-20). Authored whole, like its siblings.",
+      "comment": "No longer drawn (#520, 2026-10-16; key kept like shortcutSelectCandidateSlot). Was the read-only row under the slot-key row on the Shortcuts pane: the fixed navigation keys that move the highlight through the candidate window (arrows, Page Up / Page Down); what ↓ does follows the window layout. Fixed tier, no binding can shadow it (USER 2026-09-20). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -649,10 +649,7 @@
       "comment": "Linux Appearance row: the primary text size in the candidate window, in px. The leading line of the current input mode (Hanji or romanization). The stored key stays hanjiFontSize.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows",
-          "linux",
-          "web"
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -670,10 +667,7 @@
       "comment": "Linux Appearance row: the secondary text size in the candidate window, in px. The other line of the current input mode. The stored key stays romanFontSize.",
       "scope": {
         "platforms": [
-          "macos",
-          "windows",
-          "linux",
-          "web"
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -690,7 +684,7 @@
     "hanjiFont": {
       "comment": "Linux Appearance row: the Hanji typeface in the candidate window. Empty means the system sans.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -704,7 +698,7 @@
     "romanFont": {
       "comment": "Linux Appearance row: the romanization typeface in the candidate window.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -718,7 +712,7 @@
     "candidateCornerRadius": {
       "comment": "Linux Appearance row: the candidate window's corner radius, in px. Zero is square.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -732,7 +726,7 @@
     "candidateWindowPadding": {
       "comment": "Linux Appearance row: the air around the candidate window's text, in px. It scales the window pad, the cell pad and the gaps together.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -746,7 +740,7 @@
     "candidateHighlightFill": {
       "comment": "Linux Appearance row: how full the highlighted candidate's background is. The row is five steps, 1–5, stored as 0, 25, 50, 75 and 100. 5 meets the window's outer edge.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -760,7 +754,7 @@
     "candidateColorTheme": {
       "comment": "Linux Appearance row: which color set the candidate window uses. Default keeps the shipped colors. The six built-in names reuse theme.palette*. Custom (theme.cardMenuCustomize) reveals the four color rows.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -774,7 +768,7 @@
     "candidateTextColor": {
       "comment": "Linux Appearance row: the candidate window's text color. Shown when the color theme is custom.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -788,7 +782,7 @@
     "candidateSelectedTextColor": {
       "comment": "Linux Appearance row: the highlighted candidate's text color. Shown when the color theme is custom.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -802,7 +796,7 @@
     "candidateBackgroundColor": {
       "comment": "Linux Appearance row: the candidate window's background color. Shown when the color theme is custom.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -816,7 +810,7 @@
     "candidateSelectedBackgroundColor": {
       "comment": "Linux Appearance row: the highlighted candidate's background color. Shown when the color theme is custom.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -841,24 +835,10 @@
         "ja": "ここに入力して候補ウィンドウをテストします"
       }
     },
-    "candidatePreview": {
-      "comment": "Linux Appearance group: a live sample of the candidate window.",
-      "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
-        "surfaces": ["host"]
-      },
-      "values": {
-        "hanji": "預覽",
-        "tailo": "Ī-lám",
-        "poj": "Ū-lám",
-        "en": "Preview",
-        "ja": "プレビュー"
-      }
-    },
     "systemFont": {
       "comment": "Linux Appearance row: use the system sans for a candidate-window script, and the label shown while that choice is on.",
       "scope": {
-        "platforms": ["macos", "windows", "linux", "web"],
+        "platforms": ["linux"],
         "surfaces": ["host"]
       },
       "values": {
@@ -1022,7 +1002,6 @@
         "platforms": [
           "macos",
           "windows",
-          "linux",
           "web"
         ],
         "surfaces": [
@@ -1471,8 +1450,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1587,8 +1565,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1666,8 +1643,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1687,7 +1663,6 @@
         "platforms": [
           "macos",
           "windows",
-          "linux",
           "web"
         ],
         "surfaces": [
@@ -1707,8 +1682,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1802,8 +1776,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1822,8 +1795,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1842,8 +1814,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"
@@ -1862,8 +1833,7 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows",
-          "linux"
+          "windows"
         ],
         "surfaces": [
           "host"

@@ -598,139 +598,6 @@
         "ja": "この語は選んだことがあり、文全体の区切りより上なので先頭です。"
       }
     },
-    "inspectorBeats": {
-      "comment": "Why this candidate is ahead of the previous one. {reason} is a clause.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "排佇上一筆頭前，因為{reason}。",
-        "tailo": "Pâi tī tsi̍t-pí thâu-tsîng, in-uī {reason}.",
-        "poj": "Pâi tī chi̍t-pí thâu-chêng, in-ūi {reason}.",
-        "en": "Ahead of the row above, because {reason}.",
-        "ja": "一つ上より前なのは、{reason}からです。"
-      },
-      "placeholders": { "reason": "string" }
-    },
-    "inspectorReasonTier": {
-      "comment": "Sort reason: this row covers the whole input and the previous one covers only the front.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "伊食規段輸入，上一筆干焦食頭前",
-        "tailo": "i tsia̍h kui tuānn su-ji̍p, tsi̍t-pí kan-na tsia̍h thâu-tsîng",
-        "poj": "i chia̍h kui toāⁿ su-ji̍p, chi̍t-pí kan-na chia̍h thâu-chêng",
-        "en": "it covers everything typed, and the row above covers only the front",
-        "ja": "入力全体を食べていて、一つ上は先頭だけ"
-      }
-    },
-    "inspectorReasonAbbreviation": {
-      "comment": "Sort reason: the previous row is an abbreviation.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "上一筆是縮寫",
-        "tailo": "tsi̍t-pí sī sok-siá",
-        "poj": "chi̍t-pí sī sok-siá",
-        "en": "the row above is an abbreviation",
-        "ja": "一つ上は略称"
-      }
-    },
-    "inspectorReasonPreference": {
-      "comment": "Sort reason: this row was picked, or it is a saved custom word.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "你選過伊，抑是伊是你存的詞",
-        "tailo": "lí suán-kuè i, ia̍h-sī i sī lí tshûn ê sû",
-        "poj": "lí soán-kòe i, ia̍h-sī i sī lí chhûn ê sû",
-        "en": "you have picked it, or it is a word you saved",
-        "ja": "選んだことがあるか、登録した語"
-      }
-    },
-    "inspectorReasonCoverage": {
-      "comment": "Sort reason: a closer syllable match than the row above.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "伊比上一筆較接近完整的音節",
-        "tailo": "i pí tsi̍t-pí khah tsiap-kīn uân-tsíng ê im-chat",
-        "poj": "i pí chi̍t-pí khah chiap-kīn oân-chéng ê im-chat",
-        "en": "it matches the syllables more closely than the row above",
-        "ja": "一つ上より音節の一致が近い"
-      }
-    },
-    "inspectorReasonUserWeight": {
-      "comment": "Sort reason: a higher decayed selection weight.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "你選伊的次數較濟，權重猶佇咧",
-        "tailo": "lí suán i ê tshù-sòo khah tsē, khuân-tāng iáu tī--leh",
-        "poj": "lí soán i ê chhù-sò͘ khah chē, koân-tāng iáu tī--leh",
-        "en": "you have picked it more, and that weight is still there",
-        "ja": "選んだ回数が多く、その重みがまだ残っている"
-      }
-    },
-    "inspectorReasonContext": {
-      "comment": "Sort reason: it continues the previous word.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "伊接佇上一个詞後面",
-        "tailo": "i tsiap tī tsi̍t ê sû āu-bīn",
-        "poj": "i chiap tī chi̍t ê sû āu-bīn",
-        "en": "it continues the previous word",
-        "ja": "前の語の続き"
-      }
-    },
-    "inspectorReasonWalkerCost": {
-      "comment": "Sort reason: the corpus sees it more often.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "語料裡伊較常見",
-        "tailo": "gí-liāu--ni̍h i khah tsiông-kiàn",
-        "poj": "gí-liāu--ni̍h i khah chiông-kiàn",
-        "en": "the corpus sees it more often",
-        "ja": "コーパスでよりよく出る"
-      }
-    },
-    "inspectorReasonScore": {
-      "comment": "Sort reason: a higher dictionary score.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "辭典分數較懸",
-        "tailo": "sû-tián hun-sòo khah kuân",
-        "poj": "sû-tián hun-sò͘ khah koân",
-        "en": "its dictionary score is higher",
-        "ja": "辞書の点が高い"
-      }
-    },
-    "inspectorReasonFrequency": {
-      "comment": "Sort reason: a higher dictionary frequency.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "辭典詞頻較懸",
-        "tailo": "sû-tián sû-pîn khah kuân",
-        "poj": "sû-tián sû-pîn khah koân",
-        "en": "its dictionary frequency is higher",
-        "ja": "辞書の頻度が高い"
-      }
-    },
-    "inspectorReasonCoverageBytes": {
-      "comment": "Sort reason: it consumes more of what was typed.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "伊食的字較濟",
-        "tailo": "i tsia̍h ê jī khah tsē",
-        "poj": "i chia̍h ê jī khah chē",
-        "en": "it consumes more of what you typed",
-        "ja": "食べている文字が多い"
-      }
-    },
-    "inspectorReasonSource": {
-      "comment": "Sort reason: its dictionary source ranks higher.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "辭典來源較優先",
-        "tailo": "sû-tián lâi-guân khah iu-sian",
-        "poj": "sû-tián lâi-goân khah iu-sian",
-        "en": "its dictionary source ranks higher",
-        "ja": "辞書の出所が優先"
-      }
-    },
     "inspectorReasonStable": {
       "comment": "Sort reason: every other field ties.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
@@ -776,18 +643,6 @@
         "en": "Not picked yet",
         "ja": "まだ選んでいない"
       }
-    },
-    "inspectorWeight": {
-      "comment": "The decayed selection weight. {weight} is a number like 1.20.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "權重 {weight}",
-        "tailo": "khuân-tāng {weight}",
-        "poj": "koân-tāng {weight}",
-        "en": "weight {weight}",
-        "ja": "重み {weight}"
-      },
-      "placeholders": { "weight": "string" }
     },
     "inspectorCoversAll": {
       "comment": "This candidate consumes the whole input.",
@@ -1494,28 +1349,6 @@
         "poj": "Koat-sèng",
         "en": "Decided",
         "ja": "決着"
-      }
-    },
-    "inspectorTie": {
-      "comment": "Legend: this stage tied with the column on the left.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "平手",
-        "tailo": "Pênn-tshiú",
-        "poj": "Pêⁿ-chhiú",
-        "en": "Tie",
-        "ja": "同点"
-      }
-    },
-    "inspectorLater": {
-      "comment": "Legend: an earlier stage already decided, so this one was not compared.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "未比",
-        "tailo": "Buē pí",
-        "poj": "Bē pí",
-        "en": "Not compared",
-        "ja": "未比較"
       }
     },
     "inspectorRank": {
