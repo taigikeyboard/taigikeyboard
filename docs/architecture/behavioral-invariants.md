@@ -645,12 +645,12 @@ A user-added custom-dictionary entry is findable whichever input mode (TL / POJ 
 
 The custom-dictionary table is bounded by a hard row cap of **30000** on every platform. User-authored entries are NEVER silently evicted (unlike `user_frequency` / `user_association`, learned data pruned oldest-first); the cap **grandfathers** every existing row and **blocks new inserts** beyond the limit. CSV export is the user's escape hatch.
 
-- **Single save** (`UserDataRequest.save_custom_entry` → `CustomDictionaryStore::upsert`) — inserting a NEW id at/over the cap is refused (`CustomDictionaryRefusal` `FULL`). The refusal is swallowed at the call boundary (iOS `CustomDictionaryViewModel.save` `try?`; Android `CustomDictionaryViewModel.save` logs it) — no "dictionary full" UI; the guard is defensive. Updating an **existing** id always bypasses the cap.
+- **Single save** (`UserDataRequest.save_custom_entry` → `CustomDictionaryStore::upsert`) — inserting a NEW id at/over the cap is refused (`CustomDictionaryRefusal` `FULL`). Every platform shows the refusal as the engine's detail under the write-failed title (`desktop.customDictWriteFailed`; iOS `CustomDictionaryView` alert, Android `CustomDictionaryScreen` dialog, desktop-core `custom_dictionary::write_outcome`). Updating an **existing** id always bypasses the cap.
 - **Bulk import** (`ImportCustomCsv` → `CustomDictionaryStore::batch_import`) — (1) a file whose own row count exceeds the cap is refused outright (`FULL`, iOS `tooManyEntries`); (2) each chunk re-counts inside its transaction, stops at the cap, and reports overflow (with duplicates) in the **skipped** count. A `.taigi` restore (`ImportBackup`) uses the same loop without gate (1) (`import_until_full`): it fills the room left, on every platform.
 - **TOCTOU** — check and write run in the same `BEGIN IMMEDIATE` transaction on the store's one serial writer (`immediate_transaction`).
 - **Cap is one engine constant** — `CustomDictionaryStore::MAX_ENTRIES` (`engine/userdata/src/custom_dictionary.rs`), also the CSV decoder's row limit (`engine/userdata/src/requests.rs::import_custom_csv`). Changing it requires this doc + the invariant tests in the same PR.
 
-**Scope**: engine `userdata` store policy, reached through the `UserDataRequest` ops. Platforms only word the refusal (iOS `UserDataClient.swift` `tooManyEntries`, Android `CustomDictionaryScreen.kt`).
+**Scope**: engine `userdata` store policy, reached through the `UserDataRequest` ops. Platforms only word the refusal (an import's `FULL`: iOS `UserDataClient.swift` `tooManyEntries`, Android `CustomDictionaryScreen.kt`).
 
 **Platform sites**: `engine/userdata/src/custom_dictionary.rs` (`MAX_ENTRIES`, `upsert` guard, `batch_import` pre-check, `import_until_full`), `engine/userdata/src/backup.rs` (`import_backup` → `import_until_full`), `engine/userdata/src/requests.rs` (`refusal` → `CustomDictionaryRefusal`).
 

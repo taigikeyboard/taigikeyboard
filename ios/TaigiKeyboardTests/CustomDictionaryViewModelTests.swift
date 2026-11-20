@@ -78,6 +78,23 @@ final class CustomDictionaryViewModelTests: XCTestCase {
             return answer
         }
 
+        /// Set: the next saves are refused with this detail, as the engine refuses.
+        var saveRefusal: String? {
+            get { lock.withLock { storedSaveRefusal } }
+            set { lock.withLock { storedSaveRefusal = newValue } }
+        }
+
+        private var storedSaveRefusal: String?
+
+        override func save(_ entry: CustomDictionaryEntry) async throws {
+            try lock.withLock {
+                if let storedSaveRefusal {
+                    throw UserDataRefused(detail: storedSaveRefusal)
+                }
+                storedRows.insert(entry, at: 0)
+            }
+        }
+
         private func page(filter: String, limit: Int, offset: Int) -> CustomDictionaryPage {
             let query = filter.trimmingCharacters(in: .whitespaces)
             let matching = storedRows.filter { query.isEmpty || $0.roman.contains(query) }
@@ -97,6 +114,29 @@ final class CustomDictionaryViewModelTests: XCTestCase {
 
     private func makeViewModel(_ fake: FakeDictionary, filterSettle: Duration = .zero) -> CustomDictionaryViewModel {
         CustomDictionaryViewModel(userData: fake, filterSettle: filterSettle)
+    }
+
+    func testRomanizationOnlySave_isStoredAndListed() async {
+        let fake = FakeDictionary(rows: [])
+        let viewModel = makeViewModel(fake)
+
+        let failure = await viewModel.save(CustomDictionaryEntry(roman: "gâu-tsá", hanji: ""))
+
+        XCTAssertNil(failure)
+        XCTAssertEqual(viewModel.entries.map(\.roman), ["gâu-tsá"])
+        XCTAssertEqual(viewModel.entries.map(\.hanji), [""])
+    }
+
+    func testRefusedSave_answersTheEngineDetail_andRereadsTheList() async {
+        let fake = FakeDictionary(rows: words(3))
+        fake.saveRefusal = "the custom dictionary is full"
+        let viewModel = makeViewModel(fake)
+
+        let failure = await viewModel.save(CustomDictionaryEntry(roman: "gâu-tsá", hanji: "𠢕早"))
+
+        XCTAssertEqual(failure, "the custom dictionary is full")
+        XCTAssertEqual(fake.calls.count, 1)
+        XCTAssertEqual(viewModel.entries.count, 3)
     }
 
     func testListsOnePage_thenEveryRowAPageAtATime() async {

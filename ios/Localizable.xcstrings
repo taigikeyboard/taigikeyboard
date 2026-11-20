@@ -577,6 +577,24 @@
         }
       }
     },
+    "i18n_desktop_customDictWriteFailed": {
+      "comment": "Alert title when a custom-dictionary write failed.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could Not Save to the Custom Dictionary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム辞書に保存できませんでした"
+          }
+        }
+      }
+    },
     "i18n_desktop_dictionarySourcesLink": {
       "comment": "Manage Dictionaries — the dictionary-source toggles page. Desktop: settings sidebar row + pane title. Mobile: Dictionary tab entry row + subpage title.",
       "extractionState": "manual",

@@ -13,6 +13,8 @@ struct CustomDictionaryView: View {
     @State private var editingEntry: CustomDictionaryEntry?
     @State private var romanInput = ""
     @State private var hanjiInput = ""
+    /// A save the engine refused or could not store: its detail, for the alert.
+    @State private var saveFailure: String?
 
     var body: some View {
         List {
@@ -106,7 +108,7 @@ struct CustomDictionaryView: View {
                                 showEntryAlert = true
                             } label: {
                                 HStack {
-                                    Text(verbatim: "\(entry.roman) → \(entry.hanji)")
+                                    Text(verbatim: entry.listLabel)
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
                                     Spacer()
@@ -172,6 +174,24 @@ struct CustomDictionaryView: View {
             Button(lang.string(.commonSave)) {
                 saveEntryFromAlert()
             }
+            // Romanization only: the engine stores a word with no Hanji, as on the desktop.
+            .disabled(trimmedRoman.isEmpty)
+        }
+        .alert(
+            lang.string(.desktopCustomDictWriteFailed),
+            isPresented: Binding(
+                get: { saveFailure != nil },
+                set: {
+                    if !$0 {
+                        saveFailure = nil
+                    }
+                },
+            ),
+            presenting: saveFailure,
+        ) { _ in
+            Button(lang.string(.commonOk), role: .cancel) {}
+        } message: { detail in
+            Text(verbatim: detail)
         }
         .importExportModifiers(
             handler: importExport,
@@ -214,10 +234,13 @@ struct CustomDictionaryView: View {
 
     // MARK: - Actions
 
+    private var trimmedRoman: String {
+        romanInput.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func saveEntryFromAlert() {
-        let trimmedRoman = romanInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedHanji = hanjiInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedRoman.isEmpty, !trimmedHanji.isEmpty else { return }
+        guard !trimmedRoman.isEmpty else { return }
 
         let entry = if let existing = editingEntry {
             CustomDictionaryEntry(id: existing.id, roman: trimmedRoman, hanji: trimmedHanji)
@@ -225,7 +248,7 @@ struct CustomDictionaryView: View {
             CustomDictionaryEntry(roman: trimmedRoman, hanji: trimmedHanji)
         }
         editingEntry = nil
-        Task { await viewModel.save(entry) }
+        Task { saveFailure = await viewModel.save(entry) }
     }
 
     private func handleImport(_ result: Result<[URL], Error>) {

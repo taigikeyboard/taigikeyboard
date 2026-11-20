@@ -35,7 +35,11 @@ data class CustomDictionaryWord(
     val id: String = UUID.randomUUID().toString(),
     val roman: String,
     val hanji: String,
-)
+) {
+    /** The list row: a romanization-only word shows its romanization alone. Twin of iOS `CustomDictionaryEntry.listLabel`. */
+    val listLabel: String
+        get() = if (hanji.isEmpty()) roman else "$roman → $hanji"
+}
 
 /** One page of the custom dictionary list, as the engine cut it. */
 data class CustomDictionaryPage(

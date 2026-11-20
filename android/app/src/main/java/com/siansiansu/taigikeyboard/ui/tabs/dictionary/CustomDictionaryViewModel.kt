@@ -52,13 +52,24 @@ class CustomDictionaryViewModel(
 
     fun loadMore() = listing.loadMore()
 
-    // A refused save (a full dictionary, an unsearchable romanization) is
-    // logged, not shown — the screen has never surfaced one.
-    fun save(entry: CustomDictionaryWord) {
-        viewModelScope.launch {
-            quietly("save", Unit) { userData.save(entry) }
-            load()
-        }
+    /**
+     * Adds or edits [entry], then re-reads the list. Answers the failure's
+     * detail — the engine's refusal in its own words, or the store error —
+     * for the screen's dialog, `null` once saved. Twin of iOS `save`.
+     */
+    suspend fun save(entry: CustomDictionaryWord): String? {
+        val failure =
+            try {
+                userData.save(entry)
+                null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                root.logger.w(TAG, "[CUSTOM-DICT] save failed: ${e.message}", e)
+                e.message.orEmpty()
+            }
+        load()
+        return failure
     }
 
     fun delete(id: String) {

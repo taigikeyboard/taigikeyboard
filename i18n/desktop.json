@@ -507,6 +507,8 @@
       "comment": "Alert title when a custom-dictionary write failed.",
       "scope": {
         "platforms": [
+          "android",
+          "ios",
           "macos",
           "windows",
           "linux"
