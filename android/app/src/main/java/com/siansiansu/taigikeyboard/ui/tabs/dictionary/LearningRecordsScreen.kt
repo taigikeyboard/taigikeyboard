@@ -319,6 +319,7 @@ private fun RecordRow(
 }
 
 // Edit one row's count: a whole number from 1.
+// A count above the ceiling is not refused; the engine clamps it to its `MAX_COUNT`.
 @Composable
 private fun EditCountDialog(
     record: LearningRecord,
@@ -326,7 +327,7 @@ private fun EditCountDialog(
     onSave: (Long) -> Unit,
 ) {
     var countText by remember(record) { mutableStateOf(record.count.toString()) }
-    val count = countText.toLongOrNull()?.takeIf { it in 1..MAX_LEARNING_RECORD_COUNT }
+    val count = countText.toLongOrNull()?.takeIf { it >= 1 }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -345,7 +346,7 @@ private fun EditCountDialog(
                 }
                 OutlinedTextField(
                     value = countText,
-                    onValueChange = { typed -> countText = typed.filter(Char::isDigit).take(MAX_LEARNING_RECORD_COUNT.toString().length) },
+                    onValueChange = { typed -> countText = typed.filter(Char::isDigit) },
                     label = { Text(L10n.dictionaryLearningRecordsCount) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,

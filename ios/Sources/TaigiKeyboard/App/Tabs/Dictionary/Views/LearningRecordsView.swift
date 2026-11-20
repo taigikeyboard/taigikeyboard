@@ -195,7 +195,7 @@ struct LearningRecordsView: View {
                         .font(AppStyle.bodyFont)
                         .monospacedDigit()
                         .foregroundColor(.primary)
-                    let lastUsed = record.lastUsedLabel
+                    let lastUsed = record.lastUsedLabel()
                     if !lastUsed.isEmpty {
                         Text(verbatim: "\(lang.string(.dictionaryLearningRecordsLastUsed)) \(lastUsed)")
                             .font(AppStyle.captionFont)

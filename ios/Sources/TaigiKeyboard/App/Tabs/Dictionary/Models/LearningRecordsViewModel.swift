@@ -20,8 +20,6 @@ final class LearningRecordsViewModel: ObservableObject {
     /// `FILTER_SETTLE`, so a word typed letter by letter is one query.
     /// `nonisolated`: `init`'s default argument reads it outside the main actor.
     nonisolated static let filterSettle: Duration = .milliseconds(200)
-    /// The highest count the engine stores (`engine/userdata` `MAX_COUNT`).
-    static let maxCount: Int64 = 1_000_000
 
     @Published private(set) var order: Taigi_Engine_LearningRecordOrder = .mostUsed
     @Published private(set) var records: [Taigi_Engine_LearningRecord] = []
@@ -171,13 +169,11 @@ final class LearningRecordsViewModel: ObservableObject {
         }
     }
 
-    /// The count the edit alert's field holds: a whole number in
-    /// `1 ... maxCount`; anything else keeps Save disabled.
+    /// The count the edit alert's field holds: a whole number of at least 1;
+    /// anything else keeps Save disabled. A count above the ceiling is not
+    /// refused: the engine clamps it to its `MAX_COUNT`.
     static func count(from text: String) -> Int64? {
-        guard let count = Int64(text.trimmingCharacters(in: .whitespaces)), (1 ... maxCount).contains(count) else {
-            return nil
-        }
-        return count
+        Int64(text.trimmingCharacters(in: .whitespaces)).flatMap { $0 >= 1 ? $0 : nil }
     }
 
     // MARK: - Loading
@@ -201,9 +197,9 @@ final class LearningRecordsViewModel: ObservableObject {
         reload(rowCount: max(Int(Self.pageSize), records.count))
     }
 
-    /// Lists `rowCount` rows from the top for what is asked now, in engine
-    /// pages of at most `pageSize`, and shows them in one go; every answer
-    /// still in flight is stale from here. A stale answer earns no notice.
+    /// Lists `rowCount` rows from the top for what is asked now in one engine
+    /// read (one snapshot, so no row comes twice); every answer still in
+    /// flight is stale from here. A stale answer earns no notice.
     @discardableResult
     private func reload(rowCount: Int = Int(pageSize)) -> Task<LearningRecordsNotice?, Never> {
         generation += 1
@@ -215,35 +211,16 @@ final class LearningRecordsViewModel: ObservableObject {
         return Task {
             var notice: LearningRecordsNotice?
             do {
-                var rows: [Taigi_Engine_LearningRecord] = []
-                var matching = 0
-                while true {
-                    let offset = rows.count
-                    let page = try await userData.listLearningRecords(
-                        kind: kind,
-                        order: order,
-                        filter: filter,
-                        limit: UInt32(clamping: min(Int(Self.pageSize), rowCount - offset)),
-                        offset: UInt32(clamping: offset),
-                    )
-                    guard generation == self.generation else { return nil }
-                    matching = Int(page.matchingTotal)
-                    // Served from an earlier offset (the matches shrank under
-                    // the re-read): it is the last page there is, and it
-                    // overrides the rows read from that offset on.
-                    let served = Int(page.offset)
-                    if served < offset {
-                        rows.removeSubrange(served...)
-                    }
-                    rows += page.records
-                    if served != offset || page.records.isEmpty || rows.count >= min(rowCount, matching) {
-                        break
-                    }
-                }
-                // A row the keyboard moved between pages is not listed twice.
-                var listed = Set<Int64>()
-                records = rows.filter { listed.insert($0.id).inserted }
-                matchingTotal = matching
+                let page = try await userData.listLearningRecords(
+                    kind: kind,
+                    order: order,
+                    filter: filter,
+                    limit: UInt32(clamping: rowCount),
+                    offset: 0,
+                )
+                guard generation == self.generation else { return nil }
+                records = page.records
+                matchingTotal = Int(page.matchingTotal)
                 listedGeneration = generation
                 failedRead = nil
             } catch {
@@ -295,11 +272,11 @@ struct LearningRecordsWrite {
 }
 
 extension Taigi_Engine_LearningRecord {
-    /// The day the row was last used, in this device's calendar and
-    /// locale; empty when the store held no readable time.
-    var lastUsedLabel: String {
+    /// The day the row was last used, `yyyy-MM-dd` in `timeZone` — the
+    /// desktop's `last_used_label`; empty when the store held no readable time.
+    func lastUsedLabel(in timeZone: TimeZone = .current) -> String {
         guard lastUsedMs > 0 else { return "" }
         return Date(timeIntervalSince1970: TimeInterval(lastUsedMs) / 1000)
-            .formatted(date: .numeric, time: .omitted)
+            .formatted(Date.ISO8601FormatStyle(timeZone: timeZone).year().month().day())
     }
 }

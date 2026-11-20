@@ -30,13 +30,6 @@ internal const val LEARNING_RECORDS_PAGE_SIZE = 100
 /** How long the filter must stay unchanged before the engine is asked — the desktop's `FILTER_SETTLE`. */
 internal const val LEARNING_RECORDS_FILTER_SETTLE_MILLIS = 200L
 
-/**
- * The largest count the edit dialog accepts. CROSS-PLATFORM INVARIANT — the
- * engine clamps to the same (`engine/userdata/src/learning_records.rs`
- * `MAX_COUNT`).
- */
-internal const val MAX_LEARNING_RECORD_COUNT = 1_000_000L
-
 /** A read [LearningRecordsViewModel.retry] can repeat: the page after the loaded rows, or the list from the first row. */
 private enum class FailedRead { NEXT_PAGE, LIST }
 
@@ -61,7 +54,7 @@ sealed interface LearningRecordsMessage {
 
 data class LearningRecordsState(
     val order: LearningRecordOrder = LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_USED,
-    /** The search box as typed; the engine gets it trimmed. */
+    /** The search box as typed; the engine trims it. */
     val filter: String = "",
     /** The rows loaded so far, from the first. */
     val records: List<LearningRecord> = emptyList(),
@@ -113,8 +106,8 @@ class LearningRecordsViewModel internal constructor(
 
     fun selectOrder(order: LearningRecordOrder) {
         if (order == _state.value.order) return
-        // The rows shown are in the old order, so the list starts empty.
-        _state.update { it.copy(order = order, records = emptyList(), total = 0, matchingTotal = 0) }
+        // The old order's rows stay on screen until the new order's answer replaces them.
+        _state.update { it.copy(order = order) }
         reload()
     }
 
@@ -160,9 +153,9 @@ class LearningRecordsViewModel internal constructor(
         }
 
     /**
-     * Reads the rows listed so far again from the first, one engine page at a
-     * time, keeping order and filter: the keyboard may have learned,
-     * moved or evicted rows since they were read.
+     * Reads the rows listed so far again from the first, keeping order and
+     * filter: the keyboard may have learned, moved or evicted rows since they
+     * were read.
      */
     fun refresh() {
         reload(rows = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
@@ -206,26 +199,12 @@ class LearningRecordsViewModel internal constructor(
     }
 
     /**
-     * Reads the first [rows] rows, one engine page (at most
-     * [LEARNING_RECORDS_PAGE_SIZE]) at a time, and replaces the list with them
-     * in one go. A chunk the engine served from an earlier offset (the matches
-     * shrank under it) is the last page that exists: it overrides the rows
-     * read from that offset on.
+     * Reads the first [rows] rows in one engine read and replaces the list with
+     * them; one snapshot, so no row comes twice.
      */
     private suspend fun readFromStart(rows: Int) {
-        val asked = _state.value
-        val records = mutableListOf<LearningRecord>()
-        while (true) {
-            val offset = records.size
-            val page = read(asked, offset, minOf(LEARNING_RECORDS_PAGE_SIZE, rows - offset), FailedRead.LIST) ?: return
-            if (page.offset < offset) records.subList(page.offset, offset).clear()
-            records += page.recordsList
-            val isDone = page.offset != offset || page.recordsCount == 0 || records.size >= rows || records.size >= page.matchingTotal
-            if (isDone) {
-                land(records = records, page = page)
-                return
-            }
-        }
+        val page = read(_state.value, offset = 0, limit = rows, FailedRead.LIST) ?: return
+        land(page)
     }
 
     /**
@@ -239,10 +218,11 @@ class LearningRecordsViewModel internal constructor(
             readFromStart(rows = offset)
             return
         }
-        land(records = asked.records + page.recordsList, page = page)
+        // A row the keyboard moved between the two reads may come twice; it is listed once.
+        land(page, records = (asked.records + page.recordsList).distinctBy { it.id })
     }
 
-    /** One engine page, or `null` after the failure is shown (it waits for [retry]). */
+    /** One engine read, or `null` after the failure is shown (it waits for [retry]). */
     private suspend fun read(
         asked: LearningRecordsState,
         offset: Int,
@@ -250,7 +230,7 @@ class LearningRecordsViewModel internal constructor(
         whenFailed: FailedRead,
     ): LearningRecords? =
         try {
-            userData.listLearningRecords(kind, asked.order, asked.filter.trim(), limit, offset)
+            userData.listLearningRecords(kind, asked.order, asked.filter, limit, offset)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -262,13 +242,12 @@ class LearningRecordsViewModel internal constructor(
         }
 
     private fun land(
-        records: List<LearningRecord>,
         page: LearningRecords,
+        records: List<LearningRecord> = page.recordsList,
     ) {
         _state.update {
             it.copy(
-                // A row the keyboard moved between two pages may come twice; it is listed once.
-                records = records.distinctBy { record -> record.id },
+                records = records,
                 total = page.total,
                 matchingTotal = page.matchingTotal,
                 isLoading = false,
