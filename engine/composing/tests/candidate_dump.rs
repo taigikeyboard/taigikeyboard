@@ -31,6 +31,9 @@
 //! DUMP_CUSTOM="tâi-gí:台語" DUMP_LEARNED="記起來:kì--khí-lâi" \
 //! DUMP_INPUTS="tai5,tai5gi2,tsua" DUMP_MODE=tl \
 //!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
+//! # Show Typed Text First off (the default on every platform): no §34 literal
+//! DUMP_NO_LITERAL=1 DUMP_INPUTS="huh" \
+//!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
 //! # many inputs, one per line, verbatim (keeps a TPS trailing space)
 //! DUMP_INPUTS_FILE=/tmp/inputs.txt DUMP_MODE=tps \
 //!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
@@ -38,8 +41,8 @@
 //!
 //! Requires the production artifacts to exist (run `make dict` first if
 //! `assets/dictionaries/` is stale — see the stale-artifact gate in `AGENTS.md`).
-//! Prints `consumed_span`, `syllable_count`, `roman`,
-//! and `hanji` per candidate.
+//! Prints `consumed_span`, `syllable_count`, `roman`, `hanji`,
+//! `display_text` and `canonical_tl` per candidate.
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use protos::engine::DictionarySourceToggles;
@@ -169,6 +172,7 @@ fn dump_continuous_candidates() {
                 now_ms,
                 custom: custom.clone(),
                 learned: learned.clone(),
+                literal_roman_candidate_disabled: std::env::var("DUMP_NO_LITERAL").is_ok(),
                 ..Default::default()
             },
         );
@@ -180,11 +184,13 @@ fn dump_continuous_candidates() {
         );
         for (i, cand) in candidates.iter().enumerate() {
             println!(
-                "  [{i:>3}] end={} syll={} roman={:<16} hanji={}",
+                "  [{i:>3}] end={} syll={} roman={:<16} hanji={} display={} tl={}",
                 cand.consumed_span_end,
                 cand.syllable_count,
                 cand.roman,
                 cand.hanji.as_deref().unwrap_or(""),
+                cand.display_text,
+                cand.canonical_tl,
             );
         }
     }
