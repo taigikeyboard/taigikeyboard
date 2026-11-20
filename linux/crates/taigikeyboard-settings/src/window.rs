@@ -437,6 +437,16 @@ impl SettingsWindow {
         }
     }
 
+    /// Learning Records' list, reloaded: Custom Dictionary's backup restore
+    /// wrote the learning stores too. The page loads once, when it is built.
+    pub fn reload_learning_records(&self) {
+        for page in self.pages.borrow().iter() {
+            if let Some(records) = page.state::<pages::learning_records::LearningRecordsPage>() {
+                records.reload();
+            }
+        }
+    }
+
     /// Every row follows the document (and the recorder) as it is now.
     fn refresh_pages(self: &Rc<Self>) {
         let document = self.writer.borrow().document().clone();
@@ -614,6 +624,12 @@ impl Shell {
     pub fn reload_custom_dictionary(&self) {
         if let Some(shell) = self.0.upgrade() {
             shell.reload_custom_dictionary();
+        }
+    }
+
+    pub fn reload_learning_records(&self) {
+        if let Some(shell) = self.0.upgrade() {
+            shell.reload_learning_records();
         }
     }
 

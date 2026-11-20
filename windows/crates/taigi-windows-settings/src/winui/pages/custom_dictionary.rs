@@ -2,7 +2,8 @@
 //! `CustomDictionaryPage.swift`: rows fetched one PAGE at a time (10, so a
 //! page never needs a scroller of its own), a filter that reloads once it
 //! settles, a `ListView` whose selection drives the add / edit / delete
-//! trio, the pager under it, CSV import/export, and delete all.
+//! trio, the pager under it, CSV import/export, the `.taigi` backup, and
+//! delete all.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::custom_dictionary`'s, shared with the
@@ -20,16 +21,18 @@
 //! state is a line of text.
 
 use crate::winui::cards;
+use crate::winui::file_dialog;
 use crate::winui::list_pager::{
     self, icon_button, ADD_GLYPH, CONTROL_GAP, EDIT_GLYPH, REMOVE_GLYPH, SECONDARY_OPACITY,
     TABLE_COLUMN_GAP, TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
+use crate::winui::pages::learning_records;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::engine::user_data::{CustomDictionaryEntry, CustomDictionaryPage};
 use taigi_desktop_core::settings::custom_dictionary::{
-    delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
-    save_entry_job, Listing,
+    backup_file_name, delete_all_job, delete_entry_job, export_backup_job, export_file_name,
+    export_job, fetch, import_backup_job, import_job, save_entry_job, Listing,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
@@ -62,6 +65,9 @@ pub enum Message {
     EntryDialogClosed(ContentDialogResult),
     Export,
     Import,
+    ExportBackup,
+    /// Restores into every store, so Learning Records reloads too.
+    ImportBackup,
     /// Delete All runs on the press, no confirmation (USER 2026-10-16).
     DeleteAll,
     JobFinished(u64, Box<JobOutcome>),
@@ -232,6 +238,8 @@ pub fn update(
         }
         Message::Export => export(model, context),
         Message::Import => import(model, context),
+        Message::ExportBackup => export_backup(model, context),
+        Message::ImportBackup => import_backup(model, context),
         Message::DeleteAll => begin_job(
             model,
             context,
@@ -243,6 +251,13 @@ pub fn update(
                 return;
             }
             model.job_label = None;
+            // A restore wrote the learning stores too, and Learning Records
+            // loads once, on its first show.
+            if outcome.has_written_learning_records() {
+                context.sender().send(WindowMessage::LearningRecords(
+                    learning_records::Message::Reload,
+                ));
+            }
             let JobOutcome {
                 message,
                 is_reload_wanted,
@@ -304,7 +319,7 @@ fn export(model: &mut CustomDictionaryModel, context: &ComponentContext<Settings
         return;
     }
     let suggested = export_file_name(&taigi_windows_platform::local_date());
-    let Some(path) = crate::winui::file_dialog::save(&suggested) else {
+    let Some(path) = file_dialog::save(&file_dialog::CSV, &suggested) else {
         return;
     };
     begin_job(
@@ -319,7 +334,7 @@ fn import(model: &mut CustomDictionaryModel, context: &ComponentContext<Settings
     if model.is_working() {
         return;
     }
-    let Some(path) = crate::winui::file_dialog::open() else {
+    let Some(path) = file_dialog::open(&file_dialog::CSV) else {
         return;
     };
     begin_job(
@@ -327,6 +342,44 @@ fn import(model: &mut CustomDictionaryModel, context: &ComponentContext<Settings
         context,
         StringKey::DesktopProgressWorking,
         move || import_job(&path),
+    );
+}
+
+fn export_backup(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
+    if model.is_working() {
+        return;
+    }
+    let suggested = backup_file_name(&taigi_windows_platform::local_date());
+    let Some(path) = file_dialog::save(&file_dialog::BACKUP, &suggested) else {
+        return;
+    };
+    begin_job(
+        model,
+        context,
+        StringKey::DesktopProgressWorking,
+        move || {
+            export_backup_job(
+                &path,
+                taigi_windows_platform::DESKTOP_PLATFORM,
+                crate::updates::INSTALLED_VERSION,
+                taigi_desktop_storage::replace_file,
+            )
+        },
+    );
+}
+
+fn import_backup(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
+    if model.is_working() {
+        return;
+    }
+    let Some(path) = file_dialog::open(&file_dialog::BACKUP) else {
+        return;
+    };
+    begin_job(
+        model,
+        context,
+        StringKey::DesktopProgressWorking,
+        move || import_backup_job(&path),
     );
 }
 
@@ -367,6 +420,7 @@ pub fn view(
         entry_table(model, strings, context, is_enabled),
         cards::section_gap(),
         csv_row(strings, context, is_enabled),
+        backup_row(strings, context, is_enabled),
         cards::action_row(
             strings.resolve(StringKey::DictionaryDeleteAll),
             strings.resolve(StringKey::CommonDelete),
@@ -536,6 +590,38 @@ fn csv_row(
                 .on_click(context.callback(|()| WindowMessage::CustomDictionary(Message::Export)))
                 .content(strings.resolve(StringKey::DictionaryExportCSV)),
         ))
+}
+
+/// The `.taigi` backup as one card: its title, the privacy line under it,
+/// and import / export — every store, not only this page's words.
+fn backup_row(
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+    is_enabled: bool,
+) -> View {
+    cards::described_row(
+        strings.resolve(StringKey::DictionaryBackupRestore),
+        strings.resolve(StringKey::DictionaryBackupPrivacyWarning),
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(CONTROL_GAP)
+            .children((
+                Button::new()
+                    .is_enabled(is_enabled)
+                    .on_click(
+                        context
+                            .callback(|()| WindowMessage::CustomDictionary(Message::ImportBackup)),
+                    )
+                    .content(strings.resolve(StringKey::DictionaryImportBackup)),
+                Button::new()
+                    .is_enabled(is_enabled)
+                    .on_click(
+                        context
+                            .callback(|()| WindowMessage::CustomDictionary(Message::ExportBackup)),
+                    )
+                    .content(strings.resolve(StringKey::DictionaryExportBackup)),
+            )),
+    )
 }
 
 /// Add or edit one entry (`CustomDictionaryEntrySheet`).

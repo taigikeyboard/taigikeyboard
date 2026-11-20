@@ -115,7 +115,7 @@ CREATE TABLE user_frequency (
 -- Indexes (the UNIQUE autoindex serves `WHERE word IN`)
 CREATE INDEX idx_count ON user_frequency(count DESC);
 CREATE INDEX idx_last_used ON user_frequency(last_used DESC);
--- PRAGMA user_version = 2
+-- PRAGMA user_version = 3 (v3 = pure-Hanji neutral-tone keys normalized, `會記--得` -> `會記得`)
 ```
 
 Takeover: a pre-pair-key table (inline `word UNIQUE`, no `tl` — both phones before R5) is rebuilt with `tl = ''`, gated on the shape, not the stamp (`migrate_to_pair_key_if_needed`); Android's side `metadata(key, value)` table is left in place.
@@ -157,7 +157,7 @@ Capacity: 50000 rows, pruned 5000 at a time in the same `count ASC, last_used AS
 
 ### Migration mechanism
 
-- **One engine migrator** (`engine/userdata/src/association.rs::apply_schema`), `PRAGMA user_version` = 6 — the number iOS (`NextWordSchema.schemaVersion`) and Android (`NextWordService.DATABASE_VERSION`) had already reached, so an older phone build reopening the file skips its own migrations (roadmap U8).
+- **One engine migrator** (`engine/userdata/src/association.rs::apply_schema`), `PRAGMA user_version` = 7. The engine took over at 6 — the number iOS (`NextWordSchema.schemaVersion`) and Android (`NextWordService.DATABASE_VERSION`) had already reached, so an older phone build reopening the file skips its own migrations (roadmap U8); 7 adds the pure-Hanji neutral-tone key normalization, run in the same immediate transaction as any pre-v6 takeover.
 - **Takeover**: any pre-v6 table is converged in one `BEGIN IMMEDIATE` transaction — v2 dropped (its key shape is ambiguous, as both phones treated it); any other table carrying `id` / `prev_word` / `next_word` / `count` / `last_used` rebuilt under the v6 key with `id` copied and `COALESCE`d readings (`rebuild_to_v6`; subsumes iOS v3–v5 and Android v0/v1 + v3–v5); anything else dropped. NAMED DIVERGENCE: iOS used to drop every pre-v3 table, the engine keeps one that has the columns (roadmap U7).
 
 **Journal mode**: the platform picks it on `OpenUserData.journal` and the engine sets it on every open (roadmap U3) — `DELETE` on iOS, Android and macOS (a phone file still in WAL is switched to `DELETE` on open, as both native stores' one-time WAL → DELETE migration did), WAL on Windows and Linux.
@@ -278,7 +278,7 @@ DataStore blobs are listed for completeness only; they are not candidates for en
 
 ## 8. macOS / Windows / Linux stores
 
-The desktops run the same engine stores as the phones (`engine/userdata`, the same schemas and stamps as §4–§6: `user_frequency` **v2**, `user_association` **v6**, `custom_dictionary` **v4**, `learned_phrases` **v1**, and the same `LearningCapacity` caps of 20 000 / 50 000 rows): macOS under `~/Library/Application Support/<bundle id>/`, opened with the `DELETE` journal at launch (`RustEngineBridge+UserData.swift`); Windows under `%APPDATA%\TaigiKeyboard\` and Linux under `$XDG_DATA_HOME/taigikeyboard`, opened with WAL (`taigi-desktop-core` `engine/user_data.rs`). The Windows / Linux settings apps read the custom dictionary in-process through the same `userdata` API. Neither desktop reads or writes `.taigi` backups (`macos-roadmap.md` § Settings pane roster); the custom dictionary has CSV import/export only. Desktop databases stay inside Time Machine / roaming-profile scope — the iOS OS-backup exclusion (`behavioral-invariants.md` §29) is not mirrored.
+The desktops run the same engine stores as the phones (`engine/userdata`, the same schemas and stamps as §4–§6: `user_frequency` **v3**, `user_association` **v7**, `custom_dictionary` **v4**, `learned_phrases` **v2**, and the same `LearningCapacity` caps of 20 000 / 50 000 rows): macOS under `~/Library/Application Support/<bundle id>/`, opened with the `DELETE` journal at launch (`RustEngineBridge+UserData.swift`); Windows under `%APPDATA%\TaigiKeyboard\` and Linux under `$XDG_DATA_HOME/taigikeyboard`, opened with WAL (`taigi-desktop-core` `engine/user_data.rs`). The Windows / Linux settings apps read the custom dictionary in-process through the same `userdata` API. Windows and Linux export and import `.taigi` backups on the Custom Dictionary pane, beside its CSV import/export (`taigi-desktop-core` `settings/custom_dictionary.rs`; `docs/engine/custom-dictionary.md` § `.taigi` Backup); macOS does not yet. Desktop databases stay inside Time Machine / roaming-profile scope — the iOS OS-backup exclusion (`behavioral-invariants.md` §29) is not mirrored.
 
 ---
 

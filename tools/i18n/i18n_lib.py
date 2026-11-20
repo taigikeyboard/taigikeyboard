@@ -1169,8 +1169,11 @@ def _emit_rust_strings(entries) -> str:
     for index, (namespace, key, entry, plural_langs) in enumerate(fmt_entries):
         order = _placeholder_names_in_order(entry["values"][BASE_LANGUAGE])
         declared = entry["placeholders"]
-        params = ", ".join(f"{name}: {PLACEHOLDER_TYPES[declared[name]]['rust']['param']}" for name in order)
-        args = ", ".join(f"&{name}" for name in order)
+        # Placeholders are lowerCamelCase (`customDict`); a Rust parameter is snake_case.
+        params = ", ".join(
+            f"{_camel_to_snake(name)}: {PLACEHOLDER_TYPES[declared[name]]['rust']['param']}" for name in order
+        )
+        args = ", ".join(f"&{_camel_to_snake(name)}" for name in order)
         accessor = rust_accessor(namespace, key)
         variant = rust_variant(namespace, key)
         if index:
@@ -1187,7 +1190,7 @@ def _emit_rust_strings(entries) -> str:
                 declared,
                 "rust",
                 rust_escape,
-                lambda n, o, t: f"if {n} == 1 {{ {o} }} else {{ {t} }}",
+                lambda n, o, t: f"if {_camel_to_snake(n)} == 1 {{ {o} }} else {{ {t} }}",
             )
             joined = ",\n                ".join(parts)
             lines.extend(

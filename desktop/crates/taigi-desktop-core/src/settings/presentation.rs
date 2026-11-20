@@ -80,10 +80,24 @@ pub fn nasal_marker_style_label(is_uppercase: bool) -> StringKey {
 /// is the macOS twin).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PageMessage {
-    Failure { title: StringKey, detail: String },
+    Failure {
+        title: StringKey,
+        detail: String,
+    },
     Done(StringKey),
     NotUtf8,
-    Imported { imported: usize, skipped: usize },
+    Imported {
+        imported: usize,
+        skipped: usize,
+    },
+    /// Rows a `.taigi` restore merged into the custom dictionary, the
+    /// frequency counts and the next-word associations — the three the
+    /// phones' result line counts.
+    BackupImported {
+        custom_dictionary: u32,
+        frequency: u32,
+        association: u32,
+    },
 }
 
 impl PageMessage {
@@ -99,7 +113,7 @@ impl PageMessage {
             Self::Failure { title, .. } => *title,
             Self::Done(key) => *key,
             Self::NotUtf8 => StringKey::CommonImportFailed,
-            Self::Imported { .. } => StringKey::DesktopImportComplete,
+            Self::Imported { .. } | Self::BackupImported { .. } => StringKey::DesktopImportComplete,
         };
         strings.resolve(key).to_owned()
     }
@@ -112,6 +126,15 @@ impl PageMessage {
             Self::Imported { imported, skipped } => {
                 Some(strings.format(StringKey::DictionaryImportResult, &[imported, skipped]))
             }
+            Self::BackupImported {
+                custom_dictionary,
+                frequency,
+                association,
+            } => Some(strings.dictionary_import_backup_result(
+                i64::from(*custom_dictionary),
+                i64::from(*frequency),
+                i64::from(*association),
+            )),
         }
     }
 }
@@ -166,5 +189,32 @@ mod tests {
         let done = PageMessage::Done(StringKey::DesktopImportComplete);
         assert_eq!(done.title(&strings), "Import Complete");
         assert_eq!(done.detail(&strings), None);
+    }
+
+    #[test]
+    fn a_restored_backup_counts_its_rows_in_the_plural_each_takes() {
+        let restored = |custom_dictionary, frequency, association| PageMessage::BackupImported {
+            custom_dictionary,
+            frequency,
+            association,
+        };
+        let english = StringResolver::new(DisplayLanguage::English);
+        assert_eq!(restored(1, 2, 0).title(&english), "Import Complete");
+        // trace: dictionary.importBackupResult en — CLDR `one` iff n == 1.
+        assert_eq!(
+            restored(1, 2, 0).detail(&english).as_deref(),
+            Some("Imported 1 custom entry, 2 frequency records, 0 association records")
+        );
+        assert_eq!(
+            restored(3, 1, 1).detail(&english).as_deref(),
+            Some("Imported 3 custom entries, 1 frequency record, 1 association record")
+        );
+        // trace: hanji "匯入 {customDict} 項自訂詞、{frequency} 項詞頻、{association} 項詞關聯".
+        assert_eq!(
+            restored(3, 1, 1)
+                .detail(&StringResolver::new(DisplayLanguage::Hanji))
+                .as_deref(),
+            Some("匯入 3 項自訂詞、1 項詞頻、1 項詞關聯")
+        );
     }
 }

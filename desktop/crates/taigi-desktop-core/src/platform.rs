@@ -7,20 +7,33 @@
 /// `taigi_linux_platform::DESKTOP_PLATFORM`).
 ///
 /// It selects, each beside the rule it parametrises:
-/// - the user-data journal (`engine/user_data.rs`);
+/// - the user-data journal and the writer a `.taigi` backup names
+///   (`engine/user_data.rs`);
 /// - the caret-chord modifier (`keys/intent.rs`);
 /// - the chord grammar — modifier letters, reserved keys, the case fold of
 ///   a chord key, how a chord reads on screen (`keys/chord.rs`,
 ///   `keys/shortcut_labels.rs`).
 ///
 /// Windows and Linux share every rule; MacOS carries the macOS input
-/// method's own (`macos/Sources/TaigiInputMethodCore`). The engine itself is
-/// never told which desktop is calling.
+/// method's own (`macos/Sources/TaigiInputMethodCore`). The engine is told
+/// which desktop is calling only as the writer of a backup it exports.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DesktopPlatform {
     Windows,
     Linux,
     MacOS,
+}
+
+impl DesktopPlatform {
+    /// The writer a `.taigi` backup names (`ExportBackup.platform`), beside
+    /// the phones' `ios` / `android`.
+    pub fn backup_name(self) -> &'static str {
+        match self {
+            Self::Windows => "windows",
+            Self::Linux => "linux",
+            Self::MacOS => "macos",
+        }
+    }
 }
 
 #[cfg(test)]

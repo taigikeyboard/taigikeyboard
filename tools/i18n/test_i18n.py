@@ -1099,6 +1099,24 @@ class WindowsEmitTest(unittest.TestCase):
         self.assertIn('" imported, "', rust)
         self.assertIn("pub fn probe_result(&self, imported: i64, skipped: i64) -> String {", rust)
 
+    def test_rust_parameters_are_snake_case(self):
+        outputs = self._outputs(
+            {
+                "result": {
+                    "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                    "placeholders": {"customDict": "int"},
+                    "values": {
+                        "hanji": "{customDict} 項",
+                        "en": "{customDict, plural, one {# entry} other {# entries}}",
+                    },
+                }
+            },
+        )
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn("pub fn probe_result(&self, custom_dict: i64) -> String {", rust)
+        self.assertIn('if custom_dict == 1 { "{0} entry" } else { "{0} entries" }', rust)
+        self.assertIn("self.format(StringKey::ProbeResult, &[&custom_dict])", rust)
+
     def test_rust_keyword_placeholder_and_snake_case_collision_rejected(self):
         with self.assertRaisesRegex(ValueError, "non-keyword identifier"):
             i18n_lib.validate_namespace(

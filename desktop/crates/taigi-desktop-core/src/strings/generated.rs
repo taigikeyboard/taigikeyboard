@@ -153,6 +153,11 @@ pub enum StringKey {
     DictionaryNoResults,
     DictionaryLookupChhoe,
     DictionaryLookupMoe,
+    DictionaryBackupRestore,
+    DictionaryExportBackup,
+    DictionaryImportBackup,
+    DictionaryImportBackupResult,
+    DictionaryBackupPrivacyWarning,
     DictionaryKautianTag,
     DictionaryTaigitvTag,
     DictionaryITaigiTag,
@@ -385,6 +390,11 @@ impl StringKey {
             Self::DictionaryNoResults => "i18n_dictionary_noResults",
             Self::DictionaryLookupChhoe => "i18n_dictionary_lookupChhoe",
             Self::DictionaryLookupMoe => "i18n_dictionary_lookupMoe",
+            Self::DictionaryBackupRestore => "i18n_dictionary_backupRestore",
+            Self::DictionaryExportBackup => "i18n_dictionary_exportBackup",
+            Self::DictionaryImportBackup => "i18n_dictionary_importBackup",
+            Self::DictionaryImportBackupResult => "i18n_dictionary_importBackupResult",
+            Self::DictionaryBackupPrivacyWarning => "i18n_dictionary_backupPrivacyWarning",
             Self::DictionaryKautianTag => "i18n_dictionary_kautianTag",
             Self::DictionaryTaigitvTag => "i18n_dictionary_taigitvTag",
             Self::DictionaryITaigiTag => "i18n_dictionary_iTaigiTag",
@@ -629,6 +639,11 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::DictionaryNoResults => "揣無結果",
         StringKey::DictionaryLookupChhoe => "ChhoeTaigi 辭典",
         StringKey::DictionaryLookupMoe => "教育部辭典",
+        StringKey::DictionaryBackupRestore => "備份復原",
+        StringKey::DictionaryExportBackup => "一擺全出",
+        StringKey::DictionaryImportBackup => "一擺全入",
+        StringKey::DictionaryImportBackupResult => "匯入 {0} 項自訂詞、{1} 項詞頻、{2} 項詞關聯",
+        StringKey::DictionaryBackupPrivacyWarning => "備份包含自訂詞、詞頻、詞關聯佮詞句紀錄，可能有私人內容，請妥當保管。",
         StringKey::DictionaryKautianTag => "教典",
         StringKey::DictionaryTaigitvTag => "台語新詞",
         StringKey::DictionaryITaigiTag => "iTaigi",
@@ -861,6 +876,11 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::DictionaryNoResults => "No results",
         StringKey::DictionaryLookupChhoe => "ChhoeTaigi Dictionary",
         StringKey::DictionaryLookupMoe => "MOE Dictionary",
+        StringKey::DictionaryBackupRestore => "Backup and Restore",
+        StringKey::DictionaryExportBackup => "Export All at Once",
+        StringKey::DictionaryImportBackup => "Import All at Once",
+        StringKey::DictionaryImportBackupResult => "Imported {0} custom entries, {1} frequency records, {2} association records",
+        StringKey::DictionaryBackupPrivacyWarning => "A backup contains your custom words, frequency records, association records, and phrases, which may be private. Store it securely.",
         StringKey::DictionaryKautianTag => "MOE Dict",
         StringKey::DictionaryTaigitvTag => "Taigi New Words",
         StringKey::DictionaryITaigiTag => "iTaigi",
@@ -1093,6 +1113,11 @@ fn ja(key: StringKey) -> Option<&'static str> {
         StringKey::DictionaryNoResults => "結果がありません",
         StringKey::DictionaryLookupChhoe => "ChhoeTaigi 辞典",
         StringKey::DictionaryLookupMoe => "教育部辞典",
+        StringKey::DictionaryBackupRestore => "バックアップと復元",
+        StringKey::DictionaryExportBackup => "すべてを一括エクスポート",
+        StringKey::DictionaryImportBackup => "すべてを一括インポート",
+        StringKey::DictionaryImportBackupResult => "{0} 件のカスタム単語、{1} 件の単語頻度、{2} 件の単語連携をインポートしました",
+        StringKey::DictionaryBackupPrivacyWarning => "バックアップには、カスタム単語、単語頻度、単語連携、フレーズの記録が含まれ、個人的な内容が含まれる場合があります。安全に保管してください。",
         StringKey::DictionaryKautianTag => "教育部辞典",
         StringKey::DictionaryTaigitvTag => "台湾語新語",
         StringKey::DictionaryITaigiTag => "iTaigi",
@@ -1325,6 +1350,11 @@ fn tailo(key: StringKey) -> Option<&'static str> {
         StringKey::DictionaryNoResults => "Tshuē-bô kiat-kó",
         StringKey::DictionaryLookupChhoe => "ChhoeTaigi sû-tián",
         StringKey::DictionaryLookupMoe => "Kàu-io̍k-pōo sû-tián",
+        StringKey::DictionaryBackupRestore => "Pī-hūn ho̍k-guân",
+        StringKey::DictionaryExportBackup => "Tsi̍t-pái tsuân tshut",
+        StringKey::DictionaryImportBackup => "Tsi̍t-pái tsuân ji̍p",
+        StringKey::DictionaryImportBackupResult => "Huē-ji̍p {0} hāng tsū-tīng-sû,{1} hāng sû pîn,{2} hāng sû kuan-liân",
+        StringKey::DictionaryBackupPrivacyWarning => "Pī-hūn pau-hâm tsū-tīng-sû, sû pîn, sû kuan-liân kah sû-kù kì-lio̍k, khó-lîng ū su-jîn luē-iông, tshiánn thò-tòng pó-kuán.",
         StringKey::DictionaryKautianTag => "Kàu-tián",
         StringKey::DictionaryTaigitvTag => "Tâi-gí sin-sû",
         StringKey::DictionaryITaigiTag => "iTaigi",
@@ -1557,6 +1587,11 @@ fn poj(key: StringKey) -> Option<&'static str> {
         StringKey::DictionaryNoResults => "Chhōe-bô kiat-kó",
         StringKey::DictionaryLookupChhoe => "ChhoeTaigi sû-tián",
         StringKey::DictionaryLookupMoe => "Kàu-io̍k-pō͘ sû-tián",
+        StringKey::DictionaryBackupRestore => "Pī-hūn ho̍k-goân",
+        StringKey::DictionaryExportBackup => "Chi̍t-pái choân chhut",
+        StringKey::DictionaryImportBackup => "Chi̍t-pái choân ji̍p",
+        StringKey::DictionaryImportBackupResult => "Hōe-ji̍p {0} hāng chū-tēng-sû,{1} hāng sû pîn,{2} hāng sû koan-liân",
+        StringKey::DictionaryBackupPrivacyWarning => "Pī-hūn pau-hâm chū-tēng-sû, sû pîn, sû koan-liân kah sû-kù kì-lio̍k, khó-lêng ū su-jîn lōe-iông, chhiáⁿ thò-tòng pó-koán.",
         StringKey::DictionaryKautianTag => "Kàu-tián",
         StringKey::DictionaryTaigitvTag => "Tâi-gí sin-sû",
         StringKey::DictionaryITaigiTag => "iTaigi",
@@ -1663,5 +1698,22 @@ impl StringResolver {
 
     pub fn dictionary_import_result(&self, imported: i64, skipped: i64) -> String {
         self.format(StringKey::DictionaryImportResult, &[&imported, &skipped])
+    }
+
+    pub fn dictionary_import_backup_result(&self, custom_dict: i64, frequency: i64, association: i64) -> String {
+        if self.language == DisplayLanguage::English {
+            // CLDR en plural: category 'one' iff n == 1; the generated map holds the 'other' fallback.
+            let template = [
+                "Imported ",
+                if custom_dict == 1 { "{0} custom entry" } else { "{0} custom entries" },
+                ", ",
+                if frequency == 1 { "{1} frequency record" } else { "{1} frequency records" },
+                ", ",
+                if association == 1 { "{2} association record" } else { "{2} association records" },
+            ]
+            .concat();
+            return self.format_template(&template, &[&custom_dict, &frequency, &association]);
+        }
+        self.format(StringKey::DictionaryImportBackupResult, &[&custom_dict, &frequency, &association])
     }
 }

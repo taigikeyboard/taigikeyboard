@@ -390,8 +390,9 @@ impl LearningRecordsPage {
         self.state.borrow().listing.rows.clone()
     }
 
-    /// Reloads the page on screen (for the tests; the page reloads itself
-    /// after every write).
+    /// Reloads the page on screen: after another page wrote learning rows
+    /// (Custom Dictionary's backup restore,
+    /// `SettingsWindow::reload_learning_records`), and in the tests.
     pub fn reload(self: &Rc<Self>) {
         self.load();
     }
