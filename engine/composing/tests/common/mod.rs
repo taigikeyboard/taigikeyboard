@@ -475,6 +475,7 @@ pub fn frequency_map(rows: impl IntoIterator<Item = Selected>) -> ranking::Frequ
             let data = FrequencyData {
                 count: row.count,
                 last_used_ms: row.last_used_ms,
+                ..Default::default()
             };
             (row.hanji, row.canonical_tl, data)
         })

@@ -84,6 +84,7 @@ pub(super) fn handle_composing(
             &usage.display_text,
             &usage.canonical_tl,
             usage.hanji.as_deref(),
+            usage.abbreviation,
         );
     }
     Ok(applied.response)
@@ -189,11 +190,16 @@ impl UserRowSource for StoredRows<'_> {
     }
 }
 
-/// A stored row as the `(word, canonical TL)`-keyed entry ranking reads.
+/// A stored row as the `(word, canonical TL)`-keyed entry ranking reads:
+/// the reading picks (every pick but the abbreviation ones) apart from the
+/// abbreviation picks. A reading pick's recency is the row's `last_used`,
+/// which an abbreviation pick also touches.
 fn frequency_entry(row: FrequencyRow) -> (String, String, FrequencyData) {
     let data = FrequencyData {
-        count: ranked_count(row.count),
+        count: ranked_count(row.count - row.abbrev_count.max(0)),
         last_used_ms: row.last_used_ms,
+        abbrev_count: ranked_count(row.abbrev_count),
+        abbrev_last_used_ms: row.abbrev_last_used_ms,
     };
     (row.word, row.tl, data)
 }

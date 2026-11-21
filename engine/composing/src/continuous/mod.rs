@@ -49,7 +49,8 @@
 //!    blocks by `CandidateSortKey` (tier first, USER 2026-10-12), so an
 //!    extension covering the whole input leads front-segment rows. A picked
 //!    multi-syllable extension then swaps above a walker sentence
-//!    (`assemble::picked_extension_outranks_sentence`); every other slot 0 stays.
+//!    (`assemble::picked_extension_outranks_sentence`); every other slot 0
+//!    of several words stays. A one-word slot 0 is sorted with the rest.
 //! 5. POJ presentation pass: `mode == Poj` → [`recase_tl_as_poj_display`]
 //!    over every candidate's `roman` then [`dedupe_rendered_continuous`].
 //!    Skipped (not identity-called) for TL / English / TPS — the gate sits

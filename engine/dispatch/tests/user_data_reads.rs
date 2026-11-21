@@ -142,6 +142,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
             let data = FrequencyData {
                 count: i32::try_from(row.count).unwrap(),
                 last_used_ms: row.last_used_ms,
+                ..Default::default()
             };
             (row.word, row.tl, data)
         })

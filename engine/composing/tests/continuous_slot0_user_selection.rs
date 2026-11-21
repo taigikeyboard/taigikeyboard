@@ -256,17 +256,19 @@ fn picked_partial_word_takes_slot0_from_the_sentence() {
 }
 
 #[test]
-fn picked_partial_word_stays_behind_a_dictionary_word_at_slot0() {
+fn picked_partial_word_passes_a_one_word_path() {
     let _lock = engine_install_lock();
     install_partial_pick_fixture();
-    // `anko` is an exact dictionary word: predictive stays behind exact.
+    // `anko` walks the one dictionary word 安哥. A one-word path joins the
+    // sort (ranking-lab proposal, 2026-11), so the picked 按講 leads it on
+    // `preference_class`, before `coverage_kind` holds a prefix back.
     let hanji = fetch_hanji_with_freq(
         "anko",
         vec![selected("按講", "àn-kóng", 10, TWO_HOURS_MS)],
         NOW_MS,
     );
-    assert_eq!(hanji[0], "安哥", "exact word keeps slot 0; got {hanji:?}");
-    assert_eq!(hanji[1], "按講", "pick still leads the rest; got {hanji:?}");
+    assert_eq!(hanji[0], "按講", "the pick leads; got {hanji:?}");
+    assert_eq!(hanji[1], "安哥", "the exact word follows; got {hanji:?}");
 }
 
 #[test]
@@ -315,13 +317,15 @@ fn one_syllable_pick_stays_behind_a_sentence() {
 }
 
 #[test]
-fn one_syllable_pick_stays_behind_the_exact_syllable() {
+fn one_syllable_pick_passes_a_one_word_path() {
     let _lock = engine_install_lock();
     install_partial_pick_fixture();
-    // The store keys 講 by its reading, so this row may come from `kong`.
+    // `ko` walks the one word 哥, which joins the sort (ranking-lab
+    // proposal, 2026-11): the picked 講 leads it on `preference_class`. The
+    // store keys 講 by its reading, so the pick may have come from `kong`.
     let hanji = fetch_hanji_with_freq("ko", vec![selected("講", "kóng", 10, TWO_HOURS_MS)], NOW_MS);
-    assert_eq!(hanji[0], "哥", "exact syllable keeps slot 0; got {hanji:?}");
-    assert_eq!(hanji[1], "講", "pick still leads the rest; got {hanji:?}");
+    assert_eq!(hanji[0], "講", "the pick leads; got {hanji:?}");
+    assert_eq!(hanji[1], "哥", "the exact syllable follows; got {hanji:?}");
 }
 
 // An auto-capitalized sentence start recases what the row shows, never its

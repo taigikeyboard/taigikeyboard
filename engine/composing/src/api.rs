@@ -86,6 +86,9 @@ pub struct Usage {
     pub display_text: String,
     pub canonical_tl: String,
     pub hanji: Option<String>,
+    /// The pick was a whole-buffer abbreviation hit (`si` → 所以), counted
+    /// apart from the word's reading picks.
+    pub abbreviation: bool,
 }
 
 impl Phase {

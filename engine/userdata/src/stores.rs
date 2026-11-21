@@ -97,8 +97,21 @@ impl UserDataStores {
     /// write both a `RecordUsage` request (never with a Hanji) and an
     /// engine-resolved commit make. Queued and best-effort: a failed write
     /// is logged by the store.
-    pub fn record_usage(&self, display_text: &str, canonical_tl: &str, hanji: Option<&str>) {
-        self.frequency.record(display_text, canonical_tl);
+    /// `abbreviation`: the pick was a whole-buffer abbreviation hit, counted
+    /// apart as well ([`UserFrequencyStore::record_abbreviation`]).
+    pub fn record_usage(
+        &self,
+        display_text: &str,
+        canonical_tl: &str,
+        hanji: Option<&str>,
+        abbreviation: bool,
+    ) {
+        if abbreviation {
+            self.frequency
+                .record_abbreviation(display_text, canonical_tl);
+        } else {
+            self.frequency.record(display_text, canonical_tl);
+        }
         if let Some(hanji) = hanji {
             self.learned_phrases.touch_phrase(hanji, canonical_tl);
         }

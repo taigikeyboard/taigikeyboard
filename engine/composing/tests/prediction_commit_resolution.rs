@@ -151,6 +151,7 @@ fn a_written_prediction_counts_its_usage_without_a_learned_phrase() {
         display_text: HANJI.into(),
         canonical_tl: TL.into(),
         hanji: None,
+        abbreviation: false,
     };
     assert_eq!(applied.usage, Some(expected));
     assert_eq!(applied.learned, None);

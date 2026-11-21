@@ -279,12 +279,6 @@ impl Session {
             .map_err(|error| JsError::new(&error))
     }
 
-    /// A one-word best path joins the twelve stages. Several words stay pinned.
-    #[wasm_bindgen(js_name = setRankOneWord)]
-    pub fn set_rank_one_word(&mut self, enabled: bool) -> String {
-        self.inner.set_rank_one_word(enabled)
-    }
-
     /// The custom dictionary as JSON `{ "entries": [...] }`.
     #[wasm_bindgen(js_name = listCustomEntries)]
     pub fn list_custom_entries(&self) -> Result<String, JsError> {

@@ -211,6 +211,7 @@ pub fn frequency_map(rows: &[FrequencyFixture]) -> ranking::FrequencyMap {
             let data = ranking::FrequencyData {
                 count: row.count,
                 last_used_ms: row.last_used_ms,
+                ..Default::default()
             };
             (row.display_text_key.clone(), row.canonical_tl.clone(), data)
         })

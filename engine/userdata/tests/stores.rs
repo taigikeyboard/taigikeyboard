@@ -103,6 +103,61 @@ fn recording_counts_the_pair_and_reads_back_by_word() {
 }
 
 #[test]
+fn an_abbreviation_pick_counts_in_both_columns_a_reading_pick_in_one() {
+    let directory = scratch();
+    let store = frequency_store(&directory, UserFrequencyStore::shipped_capacity());
+    store.record("所以", "sóo-í");
+    store.record_abbreviation("所以", "sóo-í");
+    store.record_abbreviation("所以", "sóo-í");
+    store.record_abbreviation("阿姨", "a-î");
+    let rows = store.all_rows().unwrap();
+    let row = |word: &str| rows.iter().find(|row| row.word == word).unwrap();
+    assert_eq!((row("所以").count, row("所以").abbrev_count), (3, 2));
+    assert!(row("所以").abbrev_last_used_ms > 1_600_000_000_000);
+    assert_eq!((row("阿姨").count, row("阿姨").abbrev_count), (1, 1));
+}
+
+/// A table from before the split gains the abbreviation columns on open and
+/// keeps every row: its picks read as reading picks.
+#[test]
+fn a_table_from_before_the_split_gains_the_columns_and_keeps_its_counts() {
+    let directory = scratch();
+    let path = paths(&directory).frequency;
+    {
+        let connection = rusqlite::Connection::open(&path).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE user_frequency (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    word TEXT NOT NULL,
+                    tl TEXT NOT NULL DEFAULT '',
+                    count INTEGER DEFAULT 1,
+                    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(word, tl)
+                );
+                INSERT INTO user_frequency (word, tl, count) VALUES ('是', 'sī', 1548);
+                PRAGMA user_version = 2;",
+            )
+            .unwrap();
+    }
+    let store = frequency_store(&directory, UserFrequencyStore::shipped_capacity());
+    let rows = store.all_rows().unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        (
+            rows[0].count,
+            rows[0].abbrev_count,
+            rows[0].abbrev_last_used_ms
+        ),
+        (1548, 0, 0)
+    );
+    store.record_abbreviation("是", "sī");
+    let rows = store.all_rows().unwrap();
+    assert_eq!((rows[0].count, rows[0].abbrev_count), (1549, 1));
+}
+
+#[test]
 fn a_store_that_is_not_open_answers_none_rather_than_waiting() {
     let directory = scratch();
     let store = UserFrequencyStore::new(

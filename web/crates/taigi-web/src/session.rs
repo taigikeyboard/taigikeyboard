@@ -151,15 +151,6 @@ impl WebSession {
         Ok(self.reply(true, &emits, None))
     }
 
-    /// The developer page's switch. A one-word best path joins the twelve
-    /// stages instead of staying at slot 0. A path of several words stays
-    /// pinned. This thread only; official input methods never set it.
-    pub(crate) fn set_rank_one_word(&mut self, enabled: bool) -> String {
-        dispatch::set_dev_rank_one_word_path(enabled);
-        let emits = refresh_composition(&self.runtime, CONTEXT, &mut self.state);
-        self.reply(true, &emits, None)
-    }
-
     /// The open composition's segmentation and candidate order, JSON, or
     /// `null` when nothing is being composed. The dev page draws it.
     pub(crate) fn explain(&self) -> String {

@@ -61,30 +61,7 @@ const form = /** @type {HTMLFormElement} */ (requireElement("settings"));
 
 const surface = new Surface(editor, editorBox);
 const SORT_KEY = "taigi.devSortOrder";
-const RANK_ONE_WORD_KEY = "taigi.devRankOneWord";
 const PRESET_KEY = "taigi.devSortPreset";
-/**
- * Preference, then a partial prefix behind a full syllable or an
- * abbreviation, then selection weight, then abbreviation.
- * The rest stay in the engine's order.
- */
-const PROPOSAL = [
-  "tier",
-  "preference_class",
-  "coverage_kind",
-  "user_weight",
-  "abbreviation",
-  "context_rank",
-  "walker_cost",
-  "score",
-  "frequency",
-  "coverage",
-  "source_rank",
-  "stable_idx",
-];
-const rankOneWord = /** @type {HTMLInputElement} */ (
-  requireElement("rank-one-word-input")
-);
 const presetInputs = /** @type {NodeListOf<HTMLInputElement>} */ (
   document.querySelectorAll("[name=sortPreset]")
 );
@@ -162,11 +139,6 @@ function rememberedSort() {
   return null;
 }
 
-/** @returns {boolean} */
-function rememberedRankOneWord() {
-  return sessionStorage.getItem(RANK_ONE_WORD_KEY) === "1";
-}
-
 /**
  * @param {string[]} left
  * @param {string[]} right
@@ -195,40 +167,19 @@ function showPreset(name) {
 }
 
 /**
- * A saved choice, or one inferred from an older note that only stored the
- * order and the switch.
+ * A saved Test order, or one inferred from an older note that only stored
+ * the order. Anything else is the engine's own order.
  *
  * @returns {void}
  */
 function rememberedPreset() {
-  const stored = sessionStorage.getItem(PRESET_KEY);
-  if (stored === "original" || stored === "proposal" || stored === "test") {
-    if (stored === "original") {
-      applyPreset("original");
-    } else if (stored === "proposal") {
-      applyPreset("proposal");
-    } else {
-      const order = rememberedSort();
-      if (order) {
-        setSortFieldOrder(order);
-      }
-      rankOneWord.checked = rememberedRankOneWord();
-      showPreset("test");
-    }
-    return;
-  }
-  const order = rememberedSort();
-  const rank = rememberedRankOneWord();
-  if (order && sameOrder(order, PROPOSAL) && rank) {
-    applyPreset("proposal");
-  } else if ((!order || sameOrder(order, defaultSortFields())) && !rank) {
-    applyPreset("original");
-  } else {
-    if (order) {
-      setSortFieldOrder(order);
-    }
-    rankOneWord.checked = rank;
+  const order =
+    sessionStorage.getItem(PRESET_KEY) === "original" ? null : rememberedSort();
+  if (order && !sameOrder(order, defaultSortFields())) {
+    setSortFieldOrder(order);
     showPreset("test");
+  } else {
+    applyPreset("original");
   }
 }
 
@@ -238,35 +189,11 @@ function rememberedPreset() {
  */
 function applyPreset(name) {
   applyingPreset = true;
-  if (name === "proposal") {
-    installSort(PROPOSAL);
-    installRankOneWord(true);
-  } else if (name === "original") {
+  if (name === "original") {
     installSort(defaultSortFields());
-    installRankOneWord(false);
   }
   applyingPreset = false;
   showPreset(name);
-}
-
-/**
- * @param {boolean} enabled
- * @returns {void}
- */
-function installRankOneWord(enabled) {
-  rankOneWord.checked = enabled;
-  try {
-    sessionStorage.setItem(RANK_ONE_WORD_KEY, enabled ? "1" : "0");
-  } catch {
-    // A private window may refuse. The engine still keeps it for this tab.
-  }
-  if (!applyingPreset) {
-    showPreset("test");
-  }
-  if (session === null) {
-    return;
-  }
-  apply(call((current) => current.setRankOneWord(enabled)));
 }
 
 /**
@@ -527,20 +454,11 @@ async function start() {
   try {
     starting = await createSession(hostPlatform(), navigator.language);
     session = starting;
-    const preset = sessionStorage.getItem(PRESET_KEY);
-    if (preset === "proposal") {
-      call((current) => current.setSortOrder(JSON.stringify(PROPOSAL)));
-      call((current) => current.setRankOneWord(true));
-    } else if (preset === "test") {
+    if (sessionStorage.getItem(PRESET_KEY) === "test") {
       const order = rememberedSort();
       if (order) {
         call((current) => current.setSortOrder(JSON.stringify(order)));
       }
-      if (rememberedRankOneWord()) {
-        call((current) => current.setRankOneWord(true));
-      }
-    } else {
-      call((current) => current.setRankOneWord(false));
     }
     restoreSettings(starting);
     learning.attach(starting);
@@ -929,11 +847,6 @@ requireElement("custom-words").addEventListener("mousedown", (event) => {
   if (target?.closest("button")) {
     event.preventDefault();
   }
-});
-
-rankOneWord.addEventListener("change", () => {
-  installRankOneWord(rankOneWord.checked);
-  editor.focus();
 });
 
 for (const input of presetInputs) {

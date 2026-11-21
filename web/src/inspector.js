@@ -13,14 +13,13 @@ import { translate } from "./i18n.js";
 /** How many comparison cards to draw before the next click. */
 const PAGE = 8;
 
-/** @type {Array<[string, StringKey, StringKey]>} */
+/**
+ * The engine's built-in order, `ranking::SORT_FIELDS`.
+ *
+ * @type {Array<[string, StringKey, StringKey]>}
+ */
 const CANONICAL = [
   ["tier", "web.inspectorStageTier", "web.inspectorDetailTier"],
-  [
-    "abbreviation",
-    "web.inspectorStageAbbreviation",
-    "web.inspectorDetailAbbreviation",
-  ],
   [
     "preference_class",
     "web.inspectorStagePreference",
@@ -35,6 +34,11 @@ const CANONICAL = [
     "user_weight",
     "web.inspectorStageUserWeight",
     "web.inspectorDetailUserWeight",
+  ],
+  [
+    "abbreviation",
+    "web.inspectorStageAbbreviation",
+    "web.inspectorDetailAbbreviation",
   ],
   ["context_rank", "web.inspectorStageContext", "web.inspectorDetailContext"],
   [
