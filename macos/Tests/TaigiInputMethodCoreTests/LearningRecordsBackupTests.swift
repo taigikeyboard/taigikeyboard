@@ -1,4 +1,4 @@
-// The `.taigi` backup pair on the Custom Dictionary page (#1032), as desktop-core's
+// The `.taigi` backup pair on the Learning Records page (#1032), as desktop-core's
 // `export_backup_job` / `import_backup_job` behave on Windows and Linux.
 
 import AppKit
@@ -6,18 +6,41 @@ import AppKit
 import XCTest
 
 @MainActor
-final class CustomDictionaryBackupTests: XCTestCase {
+final class LearningRecordsBackupTests: XCTestCase {
     private var client = FakeUserDataClient()
     private var panels = FakeFilePanels()
     private let window = NSWindow()
+    /// Each case's own defaults domain, as `LearningRecordsPageTests` keeps.
+    private var suiteName = ""
+    private var settings: SettingsStore!
 
-    private func makeModel(rows: Int = 1) async -> CustomDictionaryPageModel {
+    override func setUp() async throws {
+        try await super.setUp()
+        suiteName = "LearningRecordsBackupTests.\(UUID().uuidString)"
+        settings = try SettingsStore(userDefaults: XCTUnwrap(UserDefaults(suiteName: suiteName)))
+    }
+
+    override func tearDown() async throws {
+        settings.userDefaults.removePersistentDomain(forName: suiteName)
+        try await super.tearDown()
+    }
+
+    /// A frequency record, as the page opens on word frequency.
+    private func record(id: Int64) -> Taigi_Engine_LearningRecord {
+        var record = Taigi_Engine_LearningRecord()
+        record.kind = .frequency
+        record.id = id
+        record.text = "字\(id)"
+        record.tl = "ji\(id)"
+        record.count = id
+        return record
+    }
+
+    private func makeModel() async -> LearningRecordsPageModel {
         client = FakeUserDataClient()
+        client.seedLearningRecords([record(id: 1)])
         panels = FakeFilePanels()
-        let model = CustomDictionaryPageModel(client: client, panels: panels)
-        for index in 0 ..< rows {
-            await model.save(CustomDictionaryRow(roman: "row\(index)", hanji: "字\(index)"))
-        }
+        let model = LearningRecordsPageModel(client: client, settings: settings, panels: panels)
         await model.load()
         return model
     }
@@ -70,7 +93,7 @@ final class CustomDictionaryBackupTests: XCTestCase {
 
     func testExport_doesNothingWhileAnotherHoldsTheSlot() async {
         let model = await makeModel()
-        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
+        XCTAssertTrue(model.beginWork())
 
         await model.exportBackup(in: window)
 
@@ -82,10 +105,10 @@ final class CustomDictionaryBackupTests: XCTestCase {
 
     /// The open panel offers the backup type and plain JSON (an Android
     /// export can be named `.taigi.json`); the counts come back as the
-    /// receipt, and the list shows the restored words.
+    /// receipt, and the list shows the restored records.
     func testImport_reportsEachStoresCountAndReloadsTheList() async throws {
         let model = await makeModel()
-        client.backupRowsToImport = [CustomDictionaryRow(roman: "tsit", hanji: "一")]
+        client.backupRecordsToImport = [record(id: 2)]
         panels.fileToOpen = try TestFixtures.scratchDirectory().appendingPathComponent("taigi_backup.taigi.json")
 
         await model.importBackup(in: window)
@@ -94,9 +117,9 @@ final class CustomDictionaryBackupTests: XCTestCase {
         XCTAssertEqual(client.lastBackupImportURL, panels.fileToOpen)
         XCTAssertEqual(
             model.message,
-            .backupImported(BackupImportResult(customDictionary: 1, frequency: 1, association: 2)),
+            .backupImported(BackupImportResult(customDictionary: 0, frequency: 1, association: 2)),
         )
-        XCTAssertEqual(model.list.rows.map(\.roman), ["tsit", "row0"])
+        XCTAssertEqual(model.list.rows.map(\.tl), ["ji2", "ji1"])
         XCTAssertEqual(model.activity, .idle)
     }
 
@@ -112,7 +135,7 @@ final class CustomDictionaryBackupTests: XCTestCase {
             model.message,
             .failure(.commonImportFailed, diagnostic: "unsupported backup version"),
         )
-        XCTAssertEqual(model.list.rows.map(\.roman), ["row0"])
+        XCTAssertEqual(model.list.rows.map(\.tl), ["ji1"])
     }
 
     /// A cancelled panel imports nothing, says nothing, and frees the slot.
@@ -130,7 +153,7 @@ final class CustomDictionaryBackupTests: XCTestCase {
     func testImport_doesNothingWhileAnotherHoldsTheSlot() async throws {
         let model = await makeModel()
         panels.fileToOpen = try TestFixtures.scratchDirectory().appendingPathComponent("taigi_backup.taigi")
-        XCTAssertTrue(model.beginWork(.desktopProgressWorking))
+        XCTAssertTrue(model.beginWork())
 
         await model.importBackup(in: window)
 

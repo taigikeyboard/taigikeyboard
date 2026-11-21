@@ -107,8 +107,8 @@ A `.taigi` file is a single plain-text **JSON** document carrying all **four** u
 | engine `engine/userdata/src/backup.rs` (ops `ExportBackup` / `ImportBackup`) | the one encoder / decoder |
 | iOS `App/Tabs/Dictionary/Utilities/BackupDocument.swift` + `UserDataClient.exportBackup` / `importBackup` | file document; `UTType.taigiBackup` = `tw.taigikeyboard.backup` |
 | Android `ui/tabs/dictionary/DataManagementViewModel.kt` + `UserDataClient.exportBackup` / `importBackup` | file picker / share, bytes to the engine |
-| Windows / Linux `taigi-desktop-core` `settings/custom_dictionary.rs` (`export_backup_job` / `import_backup_job`) + each settings window's Custom Dictionary pane | save / open dialog (open accepts `.taigi` and `.json`), bytes to the engine; a restore reloads Learning Records too |
-| macOS `Lexicon/CustomDictionaryPage.swift` (`CustomDictionaryPageModel.exportBackup` / `importBackup`, the Swift twin of the row above) + `EngineUserDataClient.exportBackup` / `importBackup` | save / open panel on the exported `tw.taigikeyboard.backup` type (open accepts `.taigi` and `.json`), bytes to the engine; Learning Records loads afresh when next shown |
+| Windows / Linux `taigi-desktop-core` `settings/learning_records.rs` (`export_backup_job` / `import_backup_job`) + each settings window's Learning Records pane | save / open dialog (open accepts `.taigi` and `.json`), bytes to the engine; a restore reloads Custom Dictionary too |
+| macOS `Lexicon/LearningRecordsPage.swift` (`LearningRecordsPageModel.exportBackup` / `importBackup`, the Swift twin of the row above) + `EngineUserDataClient.exportBackup` / `importBackup` | save / open panel on the exported `tw.taigikeyboard.backup` type (open accepts `.taigi` and `.json`), bytes to the engine; Custom Dictionary loads afresh when next shown |
 
 ### Format
 

@@ -98,7 +98,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   view, an iOS counterpart or pinned history.
 - Named shell divergences: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, the `.taigi` backup on
-  the Custom Dictionary pane (macOS has none yet; the phones give it a page of its own).
+  the Learning Records pane (as on macOS; the phones give it a page of its own).
 
 ## TSF / COM discipline
 

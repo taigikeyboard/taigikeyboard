@@ -970,6 +970,25 @@ pub(crate) fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
     button
 }
 
+/// An activatable row that runs a command (import, export).
+pub(crate) fn action_row(group: &adw::PreferencesGroup, title: &str, icon: &str) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(title)
+        .activatable(true)
+        .build();
+    row.add_suffix(&gtk::Image::from_icon_name(icon));
+    group.add(&row);
+    row
+}
+
+/// `YYYY-MM-DD` in local time for the export's suggested name.
+pub(crate) fn local_date() -> String {
+    gtk::glib::DateTime::now_local()
+        .and_then(|now| now.format("%Y-%m-%d"))
+        .map(|date| date.to_string())
+        .unwrap_or_else(|_| "export".to_owned())
+}
+
 /// A row whose button empties a store; the button is the destructive one.
 pub(crate) fn destructive_row(
     group: &adw::PreferencesGroup,

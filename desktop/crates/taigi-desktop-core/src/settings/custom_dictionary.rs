@@ -1,17 +1,16 @@
 //! The Custom Dictionary pane's model, shared by both settings windows: the
 //! list (`listing.rs`, shared with Learning Records) and what each job —
-//! the word edits, CSV import / export, the `.taigi` backup — answers. The
+//! the word edits, CSV import / export — answers. The
 //! shells own the widgets, the timers, and the work slot a job runs in —
 //! Windows holds one per page, Linux one per window so an outcome outlives a
 //! page rebuilt under it. macOS keeps a Swift twin:
 //! `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
 
-use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
+use super::listing::{self, write_export, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
 use super::presentation::PageMessage;
 use crate::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
 };
-use crate::platform::DesktopPlatform;
 use crate::strings::StringKey;
 use std::path::Path;
 
@@ -72,64 +71,6 @@ pub fn export_job(
 /// The name the export's save dialog suggests.
 pub fn export_file_name(local_date: &str) -> String {
     format!("taigi_custom_dictionary_{local_date}.csv")
-}
-
-/// Restores a `.taigi` backup — every store, merged with what is stored —
-/// and reloads: the list, and the Learning Records the restore also wrote.
-pub fn import_backup_job(path: &Path) -> JobOutcome {
-    let message = match user_data::import_backup_file(path) {
-        Ok(imported) => PageMessage::BackupImported {
-            custom_dictionary: imported.custom_dictionary,
-            frequency: imported.frequency,
-            association: imported.association,
-        },
-        Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
-    };
-    JobOutcome {
-        message: Some(message),
-        is_reload_wanted: true,
-    }
-}
-
-/// Exports every store as a `.taigi` backup naming `platform` and
-/// `app_version`, through `write_file`. Silent on success, as the CSV export.
-pub fn export_backup_job(
-    path: &Path,
-    platform: DesktopPlatform,
-    app_version: &str,
-    write_file: impl FnOnce(&Path, &[u8]) -> std::io::Result<()>,
-) -> JobOutcome {
-    write_export(
-        user_data::export_backup(platform, app_version),
-        path,
-        write_file,
-    )
-}
-
-/// The name the backup's save dialog suggests (the phones' name).
-pub fn backup_file_name(local_date: &str) -> String {
-    format!("taigi_backup_{local_date}.taigi")
-}
-
-/// The extensions the backup's open dialog accepts: `.json` too, as an
-/// Android export can be named that (iOS's importer accepts both).
-pub const BACKUP_OPEN_EXTENSIONS: &[&str] = &["taigi", "json"];
-
-/// Writes an export's bytes, answering only its failure.
-fn write_export(
-    bytes: Result<Vec<u8>, UserDataError>,
-    path: &Path,
-    write_file: impl FnOnce(&Path, &[u8]) -> std::io::Result<()>,
-) -> JobOutcome {
-    let outcome = bytes
-        .map_err(|error| error.to_string())
-        .and_then(|bytes| write_file(path, &bytes).map_err(|error| error.to_string()));
-    JobOutcome {
-        message: outcome
-            .err()
-            .map(|error| PageMessage::failure(StringKey::CommonExportFailed, error)),
-        is_reload_wanted: false,
-    }
 }
 
 /// The dictionary's page on screen (`listing.rs`).
@@ -443,38 +384,5 @@ mod tests {
             export_file_name("2026-09-30"),
             "taigi_custom_dictionary_2026-09-30.csv"
         );
-        assert_eq!(
-            backup_file_name("2026-11-21"),
-            "taigi_backup_2026-11-21.taigi"
-        );
-    }
-
-    /// trace: an unreadable file fails before any engine round-trip, as
-    /// Import Failed with the reader's words, and still asks for a reload.
-    #[test]
-    fn a_backup_import_of_a_missing_file_fails_and_reloads() {
-        let directory = tempfile::tempdir().unwrap();
-        let outcome = import_backup_job(&directory.path().join("absent.taigi"));
-        assert!(outcome.is_reload_wanted);
-        assert!(
-            !outcome.has_written_learning_records(),
-            "a refused restore wrote nothing"
-        );
-        let restored = JobOutcome {
-            message: Some(PageMessage::BackupImported {
-                custom_dictionary: 0,
-                frequency: 1,
-                association: 0,
-            }),
-            is_reload_wanted: true,
-        };
-        assert!(restored.has_written_learning_records());
-        match outcome.message {
-            Some(PageMessage::Failure { title, detail }) => {
-                assert_eq!(title, StringKey::CommonImportFailed);
-                assert!(detail.starts_with("could not read the file: "), "{detail}");
-            }
-            other => panic!("expected an import failure, got {other:?}"),
-        }
     }
 }

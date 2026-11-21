@@ -80,8 +80,8 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
 
     /// What `exportBackup` answers.
     var backupToExport = Data("{\"version\":4}".utf8)
-    /// What `importBackup` adds to the custom dictionary.
-    var backupRowsToImport: [CustomDictionaryRow] = []
+    /// What `importBackup` adds to the learning records.
+    var backupRecordsToImport: [Taigi_Engine_LearningRecord] = []
     /// Set to make both backup requests throw it before they touch the store
     /// — an engine that did not answer, a refused file.
     var backupError: UserDataClientError?
@@ -97,18 +97,21 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         }
     }
 
-    /// Restores into the store, counting one frequency and two association
-    /// records beside the rows, as a phone backup carries.
+    /// Restores into the learning records, counting them as frequency
+    /// records beside two association records, as a phone backup carries.
     func importBackup(at url: URL) throws -> BackupImportResult {
-        let imported = try lock.withLock {
+        try lock.withLock {
             lastBackupImportURL = url
             if let backupError {
                 throw backupError
             }
-            return backupRowsToImport
+            learningRecords.append(contentsOf: backupRecordsToImport)
+            return BackupImportResult(
+                customDictionary: 0,
+                frequency: backupRecordsToImport.count,
+                association: 2,
+            )
         }
-        try applyCustomWrite { rows.insert(contentsOf: imported, at: 0) }
-        return BackupImportResult(customDictionary: imported.count, frequency: 1, association: 2)
     }
 
     private func applyCustomWrite(_ write: () -> Void) throws {

@@ -8,8 +8,9 @@
 //! dialog: the count and, for a row the engine says can be added, an Add to
 //! Custom Dictionary tab beside it — then Delete Learning Records in its own
 //! group: it empties every learning store, whichever kind is on screen, on
-//! the press. No add — a word the user wants is a custom word, which a
-//! listed row's word can become here.
+//! the press. Between them, the `.taigi` backup: every store, so a restore
+//! reloads Custom Dictionary too. No add — a word the user wants is a
+//! custom word, which a listed row's word can become here.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::learning_records`'s, shared with the
@@ -18,13 +19,13 @@
 
 use super::custom_dictionary::word_dialog;
 use super::{
-    append_pager, busy_indicator, destructive_row, icon_button, remove_rows, table_line,
-    PageContext,
+    action_row, append_pager, busy_indicator, destructive_row, icon_button, local_date,
+    remove_rows, table_line, PageContext,
 };
 use crate::jobs;
 use crate::window::{JobSlot, Shell};
 use adw::prelude::*;
-use gtk::glib;
+use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use taigi_desktop_core::engine::user_data::{
@@ -32,8 +33,9 @@ use taigi_desktop_core::engine::user_data::{
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::learning_records::{
-    add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
-    offers_add_to_custom_dictionary, order_label, set_count_job, Listing, KINDS, MAX_COUNT, ORDERS,
+    add_to_custom_dictionary_job, backup_file_name, clear_all_job, count_note, delete_job,
+    export_backup_job, fetch, import_backup_job, last_used_label, offers_add_to_custom_dictionary,
+    order_label, set_count_job, Listing, BACKUP_OPEN_EXTENSIONS, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
@@ -200,6 +202,21 @@ impl LearningRecordsPage {
         entries.add(&verbs);
         page.add(&entries);
 
+        // The `.taigi` backup: every store, not only this page's records.
+        let backup = adw::PreferencesGroup::builder()
+            .title(strings.resolve(StringKey::DictionaryBackupRestore))
+            .build();
+        let import_backup = action_row(
+            &backup,
+            strings.resolve(StringKey::DictionaryImportBackup),
+            "document-open-symbolic",
+        );
+        let export_backup = action_row(
+            &backup,
+            strings.resolve(StringKey::DictionaryExportBackup),
+            "document-save-symbolic",
+        );
+        page.add(&backup);
         let clear_group = adw::PreferencesGroup::new();
         let clear = destructive_row(
             &clear_group,
@@ -212,6 +229,8 @@ impl LearningRecordsPage {
             kind.clone().upcast(),
             order.clone().upcast(),
             filter.clone().upcast(),
+            import_backup.clone().upcast(),
+            export_backup.clone().upcast(),
             clear.clone().upcast(),
         ];
         let this = Rc::new(Self {
@@ -241,6 +260,7 @@ impl LearningRecordsPage {
             },
         });
         this.connect(&kind, &order, &filter, &clear);
+        this.connect_backup(&import_backup, &export_backup);
         this.render();
         this
     }
@@ -390,9 +410,8 @@ impl LearningRecordsPage {
         self.state.borrow().listing.rows.clone()
     }
 
-    /// Reloads the page on screen: after another page wrote learning rows
-    /// (Custom Dictionary's backup restore,
-    /// `SettingsWindow::reload_learning_records`), and in the tests.
+    /// Reloads the page on screen (for the tests; the page reloads itself
+    /// after every write).
     pub fn reload(self: &Rc<Self>) {
         self.load();
     }
@@ -443,8 +462,8 @@ impl LearningRecordsPage {
     }
 
     /// `begin_job`; `writes_custom_dictionary` also reloads Custom
-    /// Dictionary's list once the job lands, so the word it filed shows
-    /// there without leaving the pane.
+    /// Dictionary's list once the job lands, so the word it filed (or the
+    /// rows a restore wrote) shows there without leaving the pane.
     fn begin_job_then(
         self: &Rc<Self>,
         writes_custom_dictionary: bool,
@@ -659,6 +678,98 @@ impl LearningRecordsPage {
                 });
             },
         );
+    }
+
+    fn connect_backup(self: &Rc<Self>, import: &adw::ActionRow, export: &adw::ActionRow) {
+        let weak = Rc::downgrade(self);
+        import.connect_activated(move |_| {
+            if let Some(page) = weak.upgrade() {
+                page.import_backup();
+            }
+        });
+        let weak = Rc::downgrade(self);
+        export.connect_activated(move |_| {
+            if let Some(page) = weak.upgrade() {
+                page.export_backup();
+            }
+        });
+    }
+
+    fn export_backup(self: &Rc<Self>) {
+        if self.job_slot.is_taken() {
+            return;
+        }
+        let dialog = gtk::FileDialog::new();
+        dialog.set_initial_name(Some(&backup_file_name(&local_date())));
+        let weak = Rc::downgrade(self);
+        dialog.save(
+            self.shell.window().as_ref(),
+            gio::Cancellable::NONE,
+            move |result| {
+                let Some(page) = weak.upgrade() else { return };
+                let Some(path) = page.chosen_path(result, StringKey::CommonExportFailed) else {
+                    return;
+                };
+                page.begin_job(move || {
+                    export_backup_job(
+                        &path,
+                        taigi_linux_platform::DESKTOP_PLATFORM,
+                        env!("CARGO_PKG_VERSION"),
+                        taigi_desktop_storage::replace_file,
+                    )
+                });
+            },
+        );
+    }
+
+    /// Restores a `.taigi` file. The chooser's default filter is the
+    /// backup's extensions; an all-files filter reaches a file renamed in
+    /// transit.
+    fn import_backup(self: &Rc<Self>) {
+        if self.job_slot.is_taken() {
+            return;
+        }
+        let backups = gtk::FileFilter::new();
+        backups.set_name(Some("Taigi backup"));
+        for extension in BACKUP_OPEN_EXTENSIONS {
+            backups.add_suffix(extension);
+        }
+        let all_files = gtk::FileFilter::new();
+        all_files.set_name(Some("*"));
+        all_files.add_pattern("*");
+        let filters = gio::ListStore::new::<gtk::FileFilter>();
+        filters.append(&backups);
+        filters.append(&all_files);
+        let dialog = gtk::FileDialog::new();
+        dialog.set_filters(Some(&filters));
+        dialog.set_default_filter(Some(&backups));
+        let weak = Rc::downgrade(self);
+        dialog.open(
+            self.shell.window().as_ref(),
+            gio::Cancellable::NONE,
+            move |result| {
+                let Some(page) = weak.upgrade() else { return };
+                let Some(path) = page.chosen_path(result, StringKey::CommonImportFailed) else {
+                    return;
+                };
+                // A restore writes the custom dictionary too, so its landing
+                // reloads that page, as Add to Custom Dictionary does.
+                page.begin_job_then(true, move || import_backup_job(&path));
+            },
+        );
+    }
+
+    /// The file the chooser answered: a dismissal is nothing, any other
+    /// refusal — and a file with no local path — is said as `failure`.
+    fn chosen_path(
+        &self,
+        result: Result<gio::File, glib::Error>,
+        failure: StringKey,
+    ) -> Option<std::path::PathBuf> {
+        super::chosen_path(result).unwrap_or_else(|error| {
+            self.report(PageMessage::failure(failure, error));
+            None
+        })
     }
 
     fn report(&self, message: PageMessage) {
