@@ -42,7 +42,7 @@ Android debug 3.10.0 built from `main` on 2026-11-21, Samsung Notes, Annotate in
 | 1 | TPS multi-word conversion (bugfix) | engine → all | Merged #1058 `bc70d4872`; Android device verified |
 | 2 | Bracket units always spaced (D2) | iOS, Android | Merged #1059 `ec0350de4`; Android device verified |
 | 3 | Desktop key + settings rows + the D2 spacing gate | desktop-core, macOS, Windows, Linux | Merged #1060 `40e90a77e`; device check pending |
-| 4 | Web settings row | Web | Pending |
+| 4 | Web settings row | Web, ChromeOS, browser extension | In review |
 
 The desktop D2 gate ships with the desktop key in Phase 3, not before: desktop Auto-Space defaults to off (`desktop/crates/taigi-desktop-core/src/settings/keys.rs:111`), so the key without the gate would give every desktop user who turns brackets on `台語 (tâi-gí)我 (guá)`, and the gate without the key would be dead code.
 
@@ -75,8 +75,9 @@ The desktop D2 gate ships with the desktop key in Phase 3, not before: desktop A
 
 ### Phase 4 — Web
 
-- Row beside the swap control: `web/src/index.html:69-70`, `web/src/settings.js:191-218` (disabled under Romanization Only and TPS, `allows_output_both_scripts`), `web/src/dev.html:54`. i18n scope gains web on the existing key.
+- Row beside the swap control: `web/src/index.html:69-71`, `web/src/settings.js:220-222` (disabled under Romanization Only and TPS, `allows_output_both_scripts`), `web/src/dev.html:59-61` with the same rule in `web/src/dev.js` `showControls`. i18n scope gains web on the existing key.
 - Playwright: typing `tai5gi2` with brackets on writes `台語 (tâi-gí)`.
+- The ChromeOS and browser-extension options pages are cut from the same form (`web/chromeos/options-form.mjs`), which hides only rows those packages cannot honour; Output Script and Candidate Display show there, so the row does too, over the same desktop-core session (maintainer 2026-11-21).
 
 ## Best practices alignment
 
@@ -90,4 +91,3 @@ The desktop D2 gate ships with the desktop key in Phase 3, not before: desktop A
 
 - Per-word brackets inside one whole-sentence pick (D1): the commit would need word boundaries carried through, and the text gets busier.
 - Two-line ruby output (#849, closed as not planned).
-- A ChromeOS options-page row: that page carries no display setting at all (no swap, no Candidate Display).

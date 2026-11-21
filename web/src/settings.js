@@ -194,6 +194,7 @@ export class Settings {
       inputMode,
       isTranslateSwapped,
       khinsiannInHanjiEnabled,
+      outputBothScripts,
       tpsKeyboardShown,
     } = elements;
     const dependentControls =
@@ -216,6 +217,9 @@ export class Settings {
     const isRomanOnly = candidateDisplayMode.value === "romanOnly";
     isTranslateSwapped.disabled = isRomanOnly;
     khinsiannInHanjiEnabled.disabled = isRomanOnly;
+    // TPS commits its Hanji as shown: brackets would land on picks only
+    // (`allows_output_both_scripts`).
+    outputBothScripts.disabled = isRomanOnly || isTyping;
     const root = document.documentElement;
     root.dataset.theme = candidateAppearanceMode.value;
     root.dataset.font = fontType.value;
