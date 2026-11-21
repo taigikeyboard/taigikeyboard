@@ -119,48 +119,6 @@ final class CustomDictionaryPageModel {
         await importCSV(at: url)
     }
 
-    /// Writes every store as a `.taigi` backup. Silent on success, as the CSV
-    /// export.
-    func exportBackup(in window: NSWindow) async {
-        guard beginWork(.desktopProgressWorking) else { return }
-        defer { activity = .idle }
-        do {
-            let backup = try await UserDataRequests.run(on: client) { try $0.exportBackup() }
-            try await panels.write(
-                backup,
-                suggestedName: UserDataFilePanels.exportFileName(prefix: "taigi_backup", extension: "taigi"),
-                contentTypes: [UserDataFilePanels.backupContentType],
-                in: window,
-            )
-        } catch {
-            message = .failure(.commonExportFailed, error)
-        }
-    }
-
-    /// Restores a `.taigi` backup. The slot is taken before the panel, as for
-    /// `importCSV(in:)`. `.json` too: an Android export can be named
-    /// `.taigi.json` (desktop-core `BACKUP_OPEN_EXTENSIONS`).
-    func importBackup(in window: NSWindow) async {
-        guard beginWork(.desktopProgressWorking) else { return }
-        defer { activity = .idle }
-        guard let url = await panels.chooseFileToOpen(
-            contentTypes: [UserDataFilePanels.backupContentType, .json],
-            in: window,
-        ) else { return }
-        await importBackup(at: url)
-    }
-
-    /// Restores `url` and reloads either way, as desktop-core's
-    /// `import_backup_job`. A Learning Records page needs no signal: it is
-    /// never on screen beside this one, and loads when it next appears. The
-    /// caller holds the work slot; internal so a test can drive it.
-    func importBackup(at url: URL) async {
-        await importAndReload {
-            let result = try await UserDataRequests.run(on: self.client) { try $0.importBackup(at: url) }
-            return .backupImported(result)
-        }
-    }
-
     /// Imports `url` and reloads, whatever the import answered: the engine
     /// commits a large file in chunks (`IMPORT_CHUNK_SIZE`), so one that
     /// fails partway has still added rows. The caller holds the work slot;
@@ -259,18 +217,6 @@ struct CustomDictionaryPage: View {
                 onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importCSV) } },
                 onDelete: { Task { await model.deleteAll() } },
             )
-
-            // The `.taigi` backup: every store, not only this page's words.
-            Section {
-                UserDataImportExportRow(
-                    importTitle: .dictionaryImportBackup,
-                    exportTitle: .dictionaryExportBackup,
-                    onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importBackup) } },
-                    onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportBackup) } },
-                )
-            } header: {
-                Text(language.string(.dictionaryBackupRestore))
-            }
         }
         .formStyle(.grouped)
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }

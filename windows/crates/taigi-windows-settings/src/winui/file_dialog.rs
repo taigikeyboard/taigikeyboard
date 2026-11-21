@@ -21,7 +21,7 @@ fn dialog() -> rfd::FileDialog {
     }
 }
 
-/// A kind of file the Custom Dictionary pane writes and reads: the filter's
+/// A kind of file a settings page writes and reads: the filter's
 /// label, the extension a save writes, and the extensions an open accepts.
 pub struct FileKind {
     label: &'static str,
@@ -40,7 +40,7 @@ pub const CSV: FileKind = FileKind {
 pub const BACKUP: FileKind = FileKind {
     label: "Taigi backup",
     saved: "taigi",
-    opened: taigi_desktop_core::settings::custom_dictionary::BACKUP_OPEN_EXTENSIONS,
+    opened: taigi_desktop_core::settings::learning_records::BACKUP_OPEN_EXTENSIONS,
 };
 
 /// Where to write a `kind` file, or `None` because the user cancelled.

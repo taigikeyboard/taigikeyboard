@@ -6,9 +6,11 @@
 //! dialog: the count and, for a row the engine says can be added, an Add to
 //! Custom Dictionary tab beside it) — plus, on learned phrases, Add to
 //! Custom Dictionary, which opens Custom Dictionary's Add Word dialog over
-//! the row's word — and the pager under it, then Delete Learning Records under
-//! the card: it empties every learning store, whichever kind is on screen,
-//! on the press. No add — a word the user wants is a custom word.
+//! the row's word — and the pager under it, then the `.taigi` backup (every
+//! store, so a restore reloads Custom Dictionary too) and Delete Learning
+//! Records under the card: it empties every learning store, whichever kind
+//! is on screen, on the press. No add — a word the user wants is a custom
+//! word.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::learning_records`'s, shared with the
@@ -18,6 +20,7 @@
 //! keyboard learns the row again on the next pick.
 
 use crate::winui::cards;
+use crate::winui::file_dialog;
 use crate::winui::list_pager::{
     self, icon_button, ADD_GLYPH, CONTROL_GAP, EDIT_GLYPH, REMOVE_GLYPH, SECONDARY_OPACITY,
     TABLE_COLUMN_GAP, TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
@@ -30,9 +33,9 @@ use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
 };
 use taigi_desktop_core::settings::learning_records::{
-    add_to_custom_dictionary_job, clear_all_job, count_note, delete_job, fetch, last_used_label,
-    offers_add_to_custom_dictionary, order_label, set_count_job, whole_count, Listing, KINDS,
-    MAX_COUNT, ORDERS,
+    add_to_custom_dictionary_job, backup_file_name, clear_all_job, count_note, delete_job,
+    export_backup_job, fetch, import_backup_job, last_used_label, offers_add_to_custom_dictionary,
+    order_label, set_count_job, whole_count, Listing, KINDS, MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
@@ -88,15 +91,14 @@ pub enum Message {
     /// Delete Learning Records runs on the press, no confirmation (USER
     /// 2026-10-16).
     ClearAll,
+    ExportBackup,
+    /// Restores into every store, so Custom Dictionary reloads too.
+    ImportBackup,
     JobFinished(u64, Box<JobOutcome>),
     /// The job at this generation has run long enough to say so.
     ShowBusy(u64),
     /// What the list on screen holds, as `list_selection` reports it.
     RowsApplied(Option<Vec<String>>),
-    /// Another page wrote learning rows (Custom Dictionary's backup
-    /// restore): reload the page on screen. A page never shown yet loads on
-    /// its first show anyway.
-    Reload,
 }
 
 /// The row open in the record dialog: its count, and — for a row the
@@ -134,8 +136,8 @@ pub struct LearningRecordsModel {
     /// The page's one work slot: the job it waits on, and whether the
     /// overlay shows.
     job: JobState,
-    /// Whether the job `job` waits on files a word in the custom
-    /// dictionary, so its landing reloads that page too.
+    /// Whether the job `job` waits on writes the custom dictionary (an
+    /// added word, a restored backup), so its landing reloads that page too.
     is_job_custom_dictionary_write: bool,
 }
 
@@ -344,6 +346,8 @@ pub fn update(
             }
         }
         Message::ClearAll => begin_job(model, context, clear_all_job),
+        Message::ExportBackup => export_backup(model, context),
+        Message::ImportBackup => import_backup(model, context),
         Message::JobFinished(generation, outcome) => {
             if !model.job.finish(generation) {
                 return;
@@ -358,9 +362,9 @@ pub fn update(
             if is_reload_wanted {
                 load(model, context);
             }
-            // The word lands on Custom Dictionary without leaving for it:
-            // that page loads once, on its first show, and would otherwise
-            // keep the rows it read before the add.
+            // The added word or restored rows land on Custom Dictionary
+            // without leaving for it: that page loads once, on its first
+            // show, and would otherwise keep the rows it read before.
             if std::mem::take(&mut model.is_job_custom_dictionary_write) {
                 context.sender().send(WindowMessage::CustomDictionary(
                     custom_dictionary::Message::Reload,
@@ -371,11 +375,6 @@ pub fn update(
             model.job.show_busy(generation);
         }
         Message::RowsApplied(rows) => model.settled.report(rows),
-        Message::Reload => {
-            if model.is_first_load_requested {
-                load(model, context);
-            }
-        }
     }
 }
 
@@ -455,6 +454,36 @@ fn begin_job_then(
     }
 }
 
+fn export_backup(model: &mut LearningRecordsModel, context: &ComponentContext<SettingsWindow>) {
+    if model.job.is_running() {
+        return;
+    }
+    let suggested = backup_file_name(&taigi_windows_platform::local_date());
+    let Some(path) = file_dialog::save(&file_dialog::BACKUP, &suggested) else {
+        return;
+    };
+    begin_job(model, context, move || {
+        export_backup_job(
+            &path,
+            taigi_windows_platform::DESKTOP_PLATFORM,
+            crate::updates::INSTALLED_VERSION,
+            taigi_desktop_storage::replace_file,
+        )
+    });
+}
+
+/// A restore writes the custom dictionary too, so its landing reloads that
+/// page, as Add to Custom Dictionary does.
+fn import_backup(model: &mut LearningRecordsModel, context: &ComponentContext<SettingsWindow>) {
+    if model.job.is_running() {
+        return;
+    }
+    let Some(path) = file_dialog::open(&file_dialog::BACKUP) else {
+        return;
+    };
+    begin_job_then(model, context, true, move || import_backup_job(&path));
+}
+
 pub fn view(
     window: &SettingsWindow,
     strings: &StringResolver,
@@ -507,6 +536,7 @@ pub fn view(
             ),
         record_table(model, strings, context, is_enabled),
         cards::section_gap(),
+        backup_row(strings, context, is_enabled),
         cards::action_row(
             strings.resolve(StringKey::DictionaryClearLearningRecords),
             strings.resolve(StringKey::CommonDelete),
@@ -524,6 +554,37 @@ pub fn view(
         count_dialog(model, strings, context),
         add_word_dialog(model, strings, context),
     ))
+}
+
+/// The `.taigi` backup as one card: its title and import / export —
+/// every store, not only this page's records.
+fn backup_row(
+    strings: &StringResolver,
+    context: &mut ViewContext<SettingsWindow>,
+    is_enabled: bool,
+) -> View {
+    cards::row(
+        strings.resolve(StringKey::DictionaryBackupRestore),
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(CONTROL_GAP)
+            .children((
+                Button::new()
+                    .is_enabled(is_enabled)
+                    .on_click(
+                        context
+                            .callback(|()| WindowMessage::LearningRecords(Message::ImportBackup)),
+                    )
+                    .content(strings.resolve(StringKey::DictionaryImportBackup)),
+                Button::new()
+                    .is_enabled(is_enabled)
+                    .on_click(
+                        context
+                            .callback(|()| WindowMessage::LearningRecords(Message::ExportBackup)),
+                    )
+                    .content(strings.resolve(StringKey::DictionaryExportBackup)),
+            )),
+    )
 }
 
 /// Add to Custom Dictionary: Custom Dictionary's Add Word dialog over the

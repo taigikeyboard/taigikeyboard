@@ -426,23 +426,13 @@ impl SettingsWindow {
     }
 
     /// Custom Dictionary's list, reloaded: another page (Learning Records'
-    /// add) wrote a word into the store it lists. The page loads once, when
+    /// add or backup restore) wrote into the store it lists. The page loads once, when
     /// it is built, and would otherwise keep the rows it read before.
     pub fn reload_custom_dictionary(&self) {
         for page in self.pages.borrow().iter() {
             if let Some(dictionary) = page.state::<pages::custom_dictionary::CustomDictionaryPage>()
             {
                 dictionary.reload();
-            }
-        }
-    }
-
-    /// Learning Records' list, reloaded: Custom Dictionary's backup restore
-    /// wrote the learning stores too. The page loads once, when it is built.
-    pub fn reload_learning_records(&self) {
-        for page in self.pages.borrow().iter() {
-            if let Some(records) = page.state::<pages::learning_records::LearningRecordsPage>() {
-                records.reload();
             }
         }
     }
@@ -624,12 +614,6 @@ impl Shell {
     pub fn reload_custom_dictionary(&self) {
         if let Some(shell) = self.0.upgrade() {
             shell.reload_custom_dictionary();
-        }
-    }
-
-    pub fn reload_learning_records(&self) {
-        if let Some(shell) = self.0.upgrade() {
-            shell.reload_learning_records();
         }
     }
 

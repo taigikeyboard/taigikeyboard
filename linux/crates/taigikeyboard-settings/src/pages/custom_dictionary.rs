@@ -2,7 +2,7 @@
 //! `CustomDictionaryPage.swift` / the Windows `custom_dictionary.rs`: rows
 //! fetched one PAGE at a time (10), a filter that reloads once it settles,
 //! a list whose selection drives the add / edit / delete trio, the pager
-//! under it, CSV import / export, the `.taigi` backup, and delete all.
+//! under it, CSV import / export, and delete all.
 //!
 //! The listing rules and every job body are
 //! `taigi_desktop_core::settings::custom_dictionary`'s, shared with the
@@ -18,8 +18,8 @@
 //! list says so in words.
 
 use super::{
-    append_pager, busy_indicator, destructive_row, icon_button, remove_rows, table_line,
-    PageContext,
+    action_row, append_pager, busy_indicator, destructive_row, icon_button, local_date,
+    remove_rows, table_line, PageContext,
 };
 use crate::jobs;
 use crate::window::{JobSlot, Shell};
@@ -29,9 +29,8 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use taigi_desktop_core::engine::user_data::CustomDictionaryEntry;
 use taigi_desktop_core::settings::custom_dictionary::{
-    backup_file_name, delete_all_job, delete_entry_job, export_backup_job, export_file_name,
-    export_job, fetch, import_backup_job, import_job, save_entry_job, Listing,
-    BACKUP_OPEN_EXTENSIONS,
+    delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
+    save_entry_job, Listing,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{
@@ -185,21 +184,6 @@ impl CustomDictionaryPage {
             "document-save-symbolic",
         );
         page.add(&csv);
-        // The `.taigi` backup: every store, not only this page's words.
-        let backup = adw::PreferencesGroup::builder()
-            .title(strings.resolve(StringKey::DictionaryBackupRestore))
-            .build();
-        let import_backup = action_row(
-            &backup,
-            strings.resolve(StringKey::DictionaryImportBackup),
-            "document-open-symbolic",
-        );
-        let export_backup = action_row(
-            &backup,
-            strings.resolve(StringKey::DictionaryExportBackup),
-            "document-save-symbolic",
-        );
-        page.add(&backup);
         let delete_all_group = adw::PreferencesGroup::new();
         let delete_all = destructive_row(
             &delete_all_group,
@@ -213,8 +197,6 @@ impl CustomDictionaryPage {
             add.clone().upcast(),
             import.clone().upcast(),
             export.clone().upcast(),
-            import_backup.clone().upcast(),
-            export_backup.clone().upcast(),
             delete_all.clone().upcast(),
         ];
         let this = Rc::new(Self {
@@ -239,7 +221,6 @@ impl CustomDictionaryPage {
             },
         });
         this.connect(&add, &import, &export, &delete_all);
-        this.connect_backup(&import_backup, &export_backup);
         this.render();
         this
     }
@@ -377,7 +358,8 @@ impl CustomDictionaryPage {
     }
 
     /// Reloads the page on screen: after another page's write to the store
-    /// (Learning Records' add, `SettingsWindow::reload_custom_dictionary`),
+    /// (Learning Records' add or backup restore,
+    /// `SettingsWindow::reload_custom_dictionary`),
     /// and in the tests. The page reloads itself after its own writes.
     pub fn reload(self: &Rc<Self>) {
         self.load();
@@ -432,11 +414,6 @@ impl CustomDictionaryPage {
             slot.release(generation);
             let outcome =
                 outcome.unwrap_or_else(JobOutcome::did_not_finish::<CustomDictionaryEntry>);
-            // A restore wrote the learning stores too, and Learning Records
-            // loads once, when it is built.
-            if outcome.has_written_learning_records() {
-                shell.reload_learning_records();
-            }
             if let Some(message) = outcome.message {
                 shell.report(&message, &strings);
             }
@@ -479,21 +456,6 @@ impl CustomDictionaryPage {
         );
     }
 
-    fn connect_backup(self: &Rc<Self>, import: &adw::ActionRow, export: &adw::ActionRow) {
-        let weak = Rc::downgrade(self);
-        import.connect_activated(move |_| {
-            if let Some(page) = weak.upgrade() {
-                page.import_backup();
-            }
-        });
-        let weak = Rc::downgrade(self);
-        export.connect_activated(move |_| {
-            if let Some(page) = weak.upgrade() {
-                page.export_backup();
-            }
-        });
-    }
-
     fn export(self: &Rc<Self>) {
         if self.job_slot.is_taken() {
             return;
@@ -529,68 +491,6 @@ impl CustomDictionaryPage {
                     return;
                 };
                 page.begin_job(move || import_job(&path));
-            },
-        );
-    }
-
-    fn export_backup(self: &Rc<Self>) {
-        if self.job_slot.is_taken() {
-            return;
-        }
-        let dialog = gtk::FileDialog::new();
-        dialog.set_initial_name(Some(&backup_file_name(&local_date())));
-        let weak = Rc::downgrade(self);
-        dialog.save(
-            self.shell.window().as_ref(),
-            gio::Cancellable::NONE,
-            move |result| {
-                let Some(page) = weak.upgrade() else { return };
-                let Some(path) = page.chosen_path(result, StringKey::CommonExportFailed) else {
-                    return;
-                };
-                page.begin_job(move || {
-                    export_backup_job(
-                        &path,
-                        taigi_linux_platform::DESKTOP_PLATFORM,
-                        env!("CARGO_PKG_VERSION"),
-                        taigi_desktop_storage::replace_file,
-                    )
-                });
-            },
-        );
-    }
-
-    /// Restores a `.taigi` file. The chooser's default filter is the
-    /// backup's extensions; an all-files filter reaches a file renamed in
-    /// transit.
-    fn import_backup(self: &Rc<Self>) {
-        if self.job_slot.is_taken() {
-            return;
-        }
-        let backups = gtk::FileFilter::new();
-        backups.set_name(Some("Taigi backup"));
-        for extension in BACKUP_OPEN_EXTENSIONS {
-            backups.add_suffix(extension);
-        }
-        let all_files = gtk::FileFilter::new();
-        all_files.set_name(Some("*"));
-        all_files.add_pattern("*");
-        let filters = gio::ListStore::new::<gtk::FileFilter>();
-        filters.append(&backups);
-        filters.append(&all_files);
-        let dialog = gtk::FileDialog::new();
-        dialog.set_filters(Some(&filters));
-        dialog.set_default_filter(Some(&backups));
-        let weak = Rc::downgrade(self);
-        dialog.open(
-            self.shell.window().as_ref(),
-            gio::Cancellable::NONE,
-            move |result| {
-                let Some(page) = weak.upgrade() else { return };
-                let Some(path) = page.chosen_path(result, StringKey::CommonImportFailed) else {
-                    return;
-                };
-                page.begin_job(move || import_backup_job(&path));
             },
         );
     }
@@ -757,23 +657,4 @@ pub(super) fn word_dialog(
         on_save(roman, hanji_entry.text().to_string());
     });
     dialog.present(shell.window().as_ref());
-}
-
-/// An activatable row that runs a command (import, export).
-fn action_row(group: &adw::PreferencesGroup, title: &str, icon: &str) -> adw::ActionRow {
-    let row = adw::ActionRow::builder()
-        .title(title)
-        .activatable(true)
-        .build();
-    row.add_suffix(&gtk::Image::from_icon_name(icon));
-    group.add(&row);
-    row
-}
-
-/// `YYYY-MM-DD` in local time for the export's suggested name.
-fn local_date() -> String {
-    glib::DateTime::now_local()
-        .and_then(|now| now.format("%Y-%m-%d"))
-        .map(|date| date.to_string())
-        .unwrap_or_else(|_| "export".to_owned())
 }

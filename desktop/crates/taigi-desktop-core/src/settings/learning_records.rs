@@ -1,20 +1,22 @@
 //! The Learning Records pane's model, shared by both settings windows:
 //! which kinds and orders there are to pick from, the list (`listing.rs`,
-//! shared with Custom Dictionary), what each job answers, and how a row
-//! reads. The engine owns the rows and their rules
-//! (`engine/userdata/src/learning_records.rs`); the shells own the widgets
-//! and which kind and order are on screen.
+//! shared with Custom Dictionary), what each job — the record edits, the
+//! `.taigi` backup — answers, and how a row reads. The engine owns the rows
+//! and their rules (`engine/userdata/src/learning_records.rs`); the shells
+//! own the widgets and which kind and order are on screen.
 //!
 //! Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 use super::choices::SettingChoice;
-use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
+use super::listing::{self, write_export, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
 use super::presentation::PageMessage;
 use crate::engine::user_data::{
     self, LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
     UserDataError,
 };
+use crate::platform::DesktopPlatform;
 use crate::strings::StringKey;
+use std::path::Path;
 
 /// The learned rows on screen.
 pub type Listing = listing::Listing<LearningRecord>;
@@ -170,6 +172,48 @@ pub fn clear_all_job() -> JobOutcome {
         StringKey::DictionaryClearLearningRecordsFailed,
     )
 }
+
+/// Restores a `.taigi` backup — every store, merged with what is stored —
+/// and reloads: the list, and (the shell's part) the Custom Dictionary the
+/// restore also wrote.
+pub fn import_backup_job(path: &Path) -> JobOutcome {
+    let message = match user_data::import_backup_file(path) {
+        Ok(imported) => PageMessage::BackupImported {
+            custom_dictionary: imported.custom_dictionary,
+            frequency: imported.frequency,
+            association: imported.association,
+        },
+        Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
+    };
+    JobOutcome {
+        message: Some(message),
+        is_reload_wanted: true,
+    }
+}
+
+/// Exports every store as a `.taigi` backup naming `platform` and
+/// `app_version`, through `write_file`. Silent on success, as the CSV export.
+pub fn export_backup_job(
+    path: &Path,
+    platform: DesktopPlatform,
+    app_version: &str,
+    write_file: impl FnOnce(&Path, &[u8]) -> std::io::Result<()>,
+) -> JobOutcome {
+    write_export(
+        user_data::export_backup(platform, app_version),
+        path,
+        write_file,
+    )
+}
+
+/// The name the backup's save dialog suggests (the phones' name).
+pub fn backup_file_name(local_date: &str) -> String {
+    format!("taigi_backup_{local_date}.taigi")
+}
+
+/// The extensions the backup's open dialog accepts: `.json` too, as an
+/// Android export can be named that (iOS's importer accepts both).
+pub const BACKUP_OPEN_EXTENSIONS: &[&str] = &["taigi", "json"];
 
 /// Every write reloads: the row was added, went, or was never there. A write
 /// that landed says `receipt`, when it has one, and one that failed is
@@ -468,5 +512,29 @@ mod tests {
         // trace: 2024-02-29T12:00:00Z = 1709208000 s.
         assert_eq!(last_used_label(1_709_208_000_000, 0), "2024-02-29");
         assert_eq!(last_used_label(0, 0), "", "no readable time");
+    }
+
+    #[test]
+    fn the_backup_suggests_a_dated_file_name() {
+        assert_eq!(
+            backup_file_name("2026-11-21"),
+            "taigi_backup_2026-11-21.taigi"
+        );
+    }
+
+    /// trace: an unreadable file fails before any engine round-trip, as
+    /// Import Failed with the reader's words, and still asks for a reload.
+    #[test]
+    fn a_backup_import_of_a_missing_file_fails_and_reloads() {
+        let directory = tempfile::tempdir().unwrap();
+        let outcome = import_backup_job(&directory.path().join("absent.taigi"));
+        assert!(outcome.is_reload_wanted);
+        match outcome.message {
+            Some(PageMessage::Failure { title, detail }) => {
+                assert_eq!(title, StringKey::CommonImportFailed);
+                assert!(detail.starts_with("could not read the file: "), "{detail}");
+            }
+            other => panic!("expected an import failure, got {other:?}"),
+        }
     }
 }

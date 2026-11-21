@@ -5,8 +5,9 @@
 //! the work slot a job runs in.
 
 use super::presentation::PageMessage;
-use crate::engine::user_data::UserDataPage;
+use crate::engine::user_data::{UserDataError, UserDataPage};
 use crate::strings::StringKey;
+use std::path::Path;
 use std::time::Duration;
 
 /// Rows per page (`CustomDictionaryPageModel.pageSize`).
@@ -67,12 +68,22 @@ impl JobOutcome {
             is_reload_wanted: false,
         }
     }
+}
 
-    /// Whether the job wrote the learning stores — a restored backup — so
-    /// a Learning Records list already on screen reloads too. A refused
-    /// restore wrote nothing.
-    pub fn has_written_learning_records(&self) -> bool {
-        matches!(self.message, Some(PageMessage::BackupImported { .. }))
+/// Writes an export's bytes, answering only its failure.
+pub(super) fn write_export(
+    bytes: Result<Vec<u8>, UserDataError>,
+    path: &Path,
+    write_file: impl FnOnce(&Path, &[u8]) -> std::io::Result<()>,
+) -> JobOutcome {
+    let outcome = bytes
+        .map_err(|error| error.to_string())
+        .and_then(|bytes| write_file(path, &bytes).map_err(|error| error.to_string()));
+    JobOutcome {
+        message: outcome
+            .err()
+            .map(|error| PageMessage::failure(StringKey::CommonExportFailed, error)),
+        is_reload_wanted: false,
     }
 }
 

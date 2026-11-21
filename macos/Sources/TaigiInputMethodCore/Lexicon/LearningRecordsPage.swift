@@ -3,9 +3,9 @@
 // The Custom Dictionary page's shape (`CustomDictionaryPage.swift`) over the
 // engine's learning stores: a kind and an order picker over a filter, a paged
 // table, a record sheet (the count, and for a row that can be added an Add to
-// Custom Dictionary tab beside it) and `−`, then Delete
-// Learning Records, which empties
-// every learning store whichever kind is on screen. Nothing is added here by
+// Custom Dictionary tab beside it) and `−`, then the `.taigi` backup (every
+// store) and Delete Learning Records, which empties every learning store
+// whichever kind is on screen. Nothing is added here by
 // hand — a word the user wants is a custom word, so a learned phrase's word can
 // be filed there (Add to Custom Dictionary, through Custom Dictionary's Add Word
 // sheet, pre-filled and editable). Word frequency offers no add: its words are
@@ -13,6 +13,7 @@
 // Design: `docs/architecture/learning-records-page-roadmap.md`.
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Reads and writes the learning stores on behalf of the page, one page of
 /// rows at a time (`UserDataPagedList`).
@@ -73,10 +74,16 @@ final class LearningRecordsPageModel {
 
     private let client: any UserDataClient
     private let settings: SettingsStore
+    private let panels: any UserDataFilePresenting
 
-    init(client: any UserDataClient, settings: SettingsStore) {
+    init(
+        client: any UserDataClient,
+        settings: SettingsStore,
+        panels: any UserDataFilePresenting = UserDataFilePanels.System(),
+    ) {
         self.client = client
         self.settings = settings
+        self.panels = panels
         kind = settings.learningRecordsKind
         order = settings.learningRecordsOrder
     }
@@ -152,6 +159,53 @@ final class LearningRecordsPageModel {
             try $0.clearLearningRecords()
             return true
         }
+    }
+
+    /// Writes every store as a `.taigi` backup. Silent on success, as
+    /// Custom Dictionary's CSV export.
+    func exportBackup(in window: NSWindow) async {
+        guard beginWork() else { return }
+        defer { activity = .idle }
+        do {
+            let backup = try await UserDataRequests.run(on: client) { try $0.exportBackup() }
+            try await panels.write(
+                backup,
+                suggestedName: UserDataFilePanels.exportFileName(prefix: "taigi_backup", extension: "taigi"),
+                contentTypes: [UserDataFilePanels.backupContentType],
+                in: window,
+            )
+        } catch {
+            message = .failure(.commonExportFailed, error)
+        }
+    }
+
+    /// Restores a `.taigi` backup. The slot is taken before the panel, not
+    /// after it: the restore still runs once the panel closes
+    /// (`CustomDictionaryPageModel.importCSV(in:)`). `.json` too: an Android
+    /// export can be named `.taigi.json` (desktop-core
+    /// `BACKUP_OPEN_EXTENSIONS`).
+    func importBackup(in window: NSWindow) async {
+        guard beginWork() else { return }
+        defer { activity = .idle }
+        guard let url = await panels.chooseFileToOpen(
+            contentTypes: [UserDataFilePanels.backupContentType, .json],
+            in: window,
+        ) else { return }
+        await importBackup(at: url)
+    }
+
+    /// Restores `url` and reloads either way, as desktop-core's
+    /// `import_backup_job`. Custom Dictionary needs no signal: it is never on
+    /// screen beside this page, and loads when it next appears. The caller
+    /// holds the work slot; internal so a test can drive it.
+    func importBackup(at url: URL) async {
+        do {
+            let result = try await UserDataRequests.run(on: client) { try $0.importBackup(at: url) }
+            message = .backupImported(result)
+        } catch {
+            message = .failure(.commonImportFailed, error)
+        }
+        await load()
     }
 
     /// Claims the page's one work slot (`CustomDictionaryPageModel.beginWork`).
@@ -252,6 +306,18 @@ struct LearningRecordsPage: View {
                     Text(model.list.countLabel)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            // The `.taigi` backup: every store, not only this page's records.
+            Section {
+                UserDataImportExportRow(
+                    importTitle: .dictionaryImportBackup,
+                    exportTitle: .dictionaryExportBackup,
+                    onImport: { Task { await UserDataFilePanels.withSettingsWindow(model.importBackup) } },
+                    onExport: { Task { await UserDataFilePanels.withSettingsWindow(model.exportBackup) } },
+                )
+            } header: {
+                Text(language.string(.dictionaryBackupRestore))
             }
 
             Section {
