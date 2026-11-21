@@ -94,6 +94,13 @@ public class ActionHandler: StandardKeyboardActionHandler {
         isAutoSpaceArmed = true
     }
 
+    /// Hands the arm this event consumed on to the next, for a key that writes
+    /// nothing (`keepsAutoSpaceArm`): `Tâi-gí ` + 123 + `…` → `Tâi-gí…`.
+    /// CROSS-PLATFORM INVARIANT — mirrors Android `TaigiKeyboard.retainAutoSpaceArm`.
+    func retainAutoSpaceArm() {
+        isAutoSpaceArmed = wasAutoSpaceArmedAtEventStart
+    }
+
     /// True when the space in front of the caret is one this handler wrote and
     /// Auto-Space is still on. The setting is read live so switching the feature
     /// off stops the swap; the provenance is the consumed arm.
@@ -196,7 +203,12 @@ public class ActionHandler: StandardKeyboardActionHandler {
             // without telling us. Only the auto-space paths put it back. The
             // event closes before autocomplete and before KeyboardKit's
             // fall-through, so both start with the host text written.
-            performInputEvent { handled = handleTaigiSpecificAction(action) }
+            performInputEvent {
+                handled = handleTaigiSpecificAction(action)
+                if Self.keepsAutoSpaceArm(action) {
+                    retainAutoSpaceArm()
+                }
+            }
             if handled, !shouldSkipAutocomplete(for: action) {
                 keyboardController?.performAutocomplete()
             }
@@ -205,6 +217,16 @@ public class ActionHandler: StandardKeyboardActionHandler {
             return
         }
         super.handle(gesture, on: action)
+    }
+
+    /// Whether `action` writes nothing and moves no caret — shift and the
+    /// layout-page keys (emoji page included) — so the auto-space arm outlives it.
+    /// CROSS-PLATFORM INVARIANT — mirrors Android `keepsAutoSpaceArm`.
+    static func keepsAutoSpaceArm(_ action: KeyboardAction) -> Bool {
+        switch action {
+        case .shift, .keyboardType: true
+        default: false
+        }
     }
 
     /// Whether `gesture` ends an active spacebar drag gesture — the long-press sequence
