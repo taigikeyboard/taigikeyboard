@@ -163,15 +163,15 @@ final class CandidateMetricsTests: XCTestCase {
     /// (USER 2026-08-25). The shape is the arrangement's, not the size's: how
     /// big the window is drawn may not round it differently.
     ///
-    /// trace: container 16, inset 4, highlight 12 at every step.
+    /// trace: container 16, inset 2, highlight 14 at every step.
     func testStackedArrangement_roundsToAFixedRectangleAtEveryStep() {
         for size in CandidateSizeChoice.allCases {
             let metrics = CandidateMetrics(size: size, cellArrangement: .stacked)
             let label = "\(size)"
 
             XCTAssertEqual(metrics.tahoeContainerCornerRadius, 16, label)
-            XCTAssertEqual(metrics.tahoeHighlightInset, 4, label)
-            XCTAssertEqual(metrics.tahoeHighlightCornerRadius, 12, label)
+            XCTAssertEqual(metrics.tahoeHighlightInset, 2, label)
+            XCTAssertEqual(metrics.tahoeHighlightCornerRadius, 14, label)
             XCTAssertLessThan(
                 metrics.tahoeContainerCornerRadius, metrics.itemHeight / 2,
                 "\(label): a stacked cell that still resolved to a capsule would not have "

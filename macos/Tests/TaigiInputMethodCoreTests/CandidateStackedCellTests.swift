@@ -112,7 +112,7 @@ final class CandidateStackedCellTests: XCTestCase {
         view.layoutSubtreeIfNeeded()
 
         let highlight = try XCTUnwrap(view.subviews.first { !($0 is NSTextField) })
-        XCTAssertEqual(highlight.frame, view.bounds.insetBy(dx: 4, dy: 4))
+        XCTAssertEqual(highlight.frame, view.bounds.insetBy(dx: 2, dy: 2))
         XCTAssertEqual(highlight.layer?.cornerRadius, metrics.tahoeHighlightCornerRadius)
     }
 
@@ -129,7 +129,7 @@ final class CandidateStackedCellTests: XCTestCase {
         view.layoutSubtreeIfNeeded()
 
         let highlight = try XCTUnwrap(view.subviews.first { !($0 is NSTextField) })
-        XCTAssertEqual(highlight.layer?.cornerRadius, (20 - 2 * 4) / 2)
+        XCTAssertEqual(highlight.layer?.cornerRadius, (20 - 2 * 2) / 2)
         XCTAssertLessThan(
             try XCTUnwrap(highlight.layer?.cornerRadius), metrics.tahoeHighlightCornerRadius,
         )
