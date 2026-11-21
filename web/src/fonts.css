@@ -1,10 +1,14 @@
-/* The Font setting's faces, the roster of assets/fonts/font. Each covers Hanji and
-   the romanization, as the macOS candidate window draws them: Latin with its
-   combining tone marks (U+0300-036F, o͘ U+0358) and POJ's ⁿ (U+207F), which every
-   face has and places (tsi̍t, kha̍h, o͘ in Chromium, Firefox and WebKit). An installed
-   copy (`local()`) is the full font. A browser fetches a face only once text uses
-   it. scripts/subset-fonts.sh cuts the files to this one range, which every face
-   repeats exactly. */
+/* The Font setting's faces, the roster of assets/fonts/font, each declared twice
+   over one file. The face's own name covers Hanji and the romanization, as the
+   macOS candidate window draws them: Latin with its combining tone marks
+   (U+0300-036F, o͘ U+0358) and POJ's ⁿ (U+207F). It is what the text is written in:
+   the editor, the title, the composition and the candidate window (`--text-font`).
+   "<name> Hanji" covers the Hanji alone, so the page's own labels keep the system
+   font for Latin (`--font`). An installed copy (`local()`) is the full font. A
+   browser fetches a file only once text uses it, once for both names.
+   scripts/subset-fonts.sh cuts the files to the face's own range, which every
+   face repeats exactly; the Hanji range repeats its CJK part. */
+
 @font-face {
   font-family: "jf-openhuninn";
   src:
@@ -13,6 +17,17 @@
   font-display: swap;
   unicode-range:
     U+0000-024F, U+0300-036F, U+1E00-1EFF, U+207F,
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
+  font-family: "jf-openhuninn Hanji";
+  src:
+    local("jf-openhuninn-2.1"),
+    url("fonts/jf_openhuninn_2_1.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
     U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
     U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
 }
@@ -31,6 +46,18 @@
 }
 
 @font-face {
+  font-family: "Iansui Hanji";
+  src:
+    local("Iansui Regular"),
+    local("Iansui-Regular"),
+    url("fonts/iansui_regular.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
   font-family: "GenYoMin2 TW";
   src:
     local("GenYoMin2 TW R"),
@@ -44,6 +71,18 @@
 }
 
 @font-face {
+  font-family: "GenYoMin2 TW Hanji";
+  src:
+    local("GenYoMin2 TW R"),
+    local("GenYoMin2TW-R"),
+    url("fonts/genyomin2tw_r.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
   font-family: "GenYoGothic2 TW";
   src:
     local("GenYoGothic2 TW R"),
@@ -52,6 +91,18 @@
   font-display: swap;
   unicode-range:
     U+0000-024F, U+0300-036F, U+1E00-1EFF, U+207F,
+    U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
+    U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
+}
+
+@font-face {
+  font-family: "GenYoGothic2 TW Hanji";
+  src:
+    local("GenYoGothic2 TW R"),
+    local("GenYoGothic2TW-R"),
+    url("fonts/genyogothic2tw_r.woff2") format("woff2");
+  font-display: swap;
+  unicode-range:
     U+2E80-2EFF, U+3000-30FF, U+3100-312F, U+31A0-31BF, U+3400-4DBF,
     U+4E00-9FFF, U+F900-FAFF, U+FF00-FFEF, U+20000-3FFFF;
 }
