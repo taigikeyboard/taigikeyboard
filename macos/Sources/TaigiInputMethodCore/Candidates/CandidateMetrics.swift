@@ -170,13 +170,11 @@ struct CandidateMetrics: Equatable, Sendable {
 
     /// How far Tahoe insets the selection from the cell's edge, so the
     /// highlight nests inside the window's own curve rather than touching it.
-    /// A stacked cell takes the wider inset: its container radius no longer
-    /// grows with the cell, so the nesting has to be visible at 16pt.
+    /// One inset for both arrangements, so the selection sits the same
+    /// distance from the window's edge in a row as in a column; a stacked
+    /// cell's wider 4pt took room from its second line.
     var tahoeHighlightInset: CGFloat {
-        switch cellArrangement {
-        case .inline: Self.inlineHighlightInset
-        case .stacked: Self.stackedHighlightInset
-        }
+        Self.highlightInset
     }
 
     /// The radius the selection is drawn at: concentric with the window, which
@@ -228,8 +226,7 @@ struct CandidateMetrics: Equatable, Sendable {
     private static let stackedContainerCornerRadius: CGFloat = 16
     /// Upstream's inset, which a capsule needs no more of than a hairline's
     /// worth (`MacishCandidateItemView.swift`).
-    private static let inlineHighlightInset: CGFloat = 2
-    private static let stackedHighlightInset: CGFloat = 4
+    private static let highlightInset: CGFloat = 2
     /// How much of upstream's air the window keeps: the paddings are the base
     /// values times this, times the text scale (USER 2026-09-23). The
     /// tightest step of the former window-size ladder (0.7 / 0.85 / 1.0) —

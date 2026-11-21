@@ -51,8 +51,9 @@ const BASE_STACKED_LINE_GAP: f32 = 2.0;
 const BASE_TAHOE_SEPARATOR_INSET: f32 = 8.0;
 /// What a window of two-line cells rounds to — fixed, not scaled.
 const STACKED_CONTAINER_CORNER_RADIUS: f32 = 16.0;
-const INLINE_HIGHLIGHT_INSET: f32 = 2.0;
-const STACKED_HIGHLIGHT_INSET: f32 = 4.0;
+/// One for both arrangements: the selection sits as far from the window's
+/// edge in a row as in a column.
+const HIGHLIGHT_INSET: f32 = 2.0;
 /// How much of the reference air the window keeps: the paddings are the base
 /// values times this, times the text scale, so the air grows and shrinks with
 /// the glyphs at one fixed ratio (USER 2026-09-23).
@@ -311,10 +312,7 @@ impl CandidateMetrics {
     }
 
     pub fn tahoe_highlight_inset(&self) -> f32 {
-        match self.cell_arrangement {
-            CandidateCellArrangement::Inline => INLINE_HIGHLIGHT_INSET,
-            CandidateCellArrangement::Stacked => STACKED_HIGHLIGHT_INSET,
-        }
+        HIGHLIGHT_INSET
     }
 
     /// Concentric with the window: the outer radius less the padding between.
@@ -539,7 +537,7 @@ mod tests {
     #[test]
     fn corner_geometry_matches_macos() {
         // trace: an inline window rounds to half its row; a stacked one to a
-        // fixed 16 (inset 4, highlight 12), under half of every step's row;
+        // fixed 16 (inset 2, highlight 14), under half of every step's row;
         // corner_radius = min(r, shorter side / 2).
         let inline = metrics(S::Standard, Inline);
         assert_eq!(
@@ -550,8 +548,8 @@ mod tests {
         for size in S::ALL {
             let stacked = metrics(*size, Stacked);
             assert_eq!(stacked.tahoe_container_corner_radius(), 16.0);
-            assert_eq!(stacked.tahoe_highlight_inset(), 4.0);
-            assert_eq!(stacked.tahoe_highlight_corner_radius(), 12.0);
+            assert_eq!(stacked.tahoe_highlight_inset(), 2.0);
+            assert_eq!(stacked.tahoe_highlight_corner_radius(), 14.0);
             assert!(
                 16.0 < stacked.item_height() / 2.0,
                 "{size:?} {}",
