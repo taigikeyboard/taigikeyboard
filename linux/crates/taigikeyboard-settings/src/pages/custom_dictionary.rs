@@ -188,7 +188,6 @@ impl CustomDictionaryPage {
         // The `.taigi` backup: every store, not only this page's words.
         let backup = adw::PreferencesGroup::builder()
             .title(strings.resolve(StringKey::DictionaryBackupRestore))
-            .description(strings.resolve(StringKey::DictionaryBackupPrivacyWarning))
             .build();
         let import_backup = action_row(
             &backup,

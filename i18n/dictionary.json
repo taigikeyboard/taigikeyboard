@@ -1082,10 +1082,7 @@
       "scope": {
         "platforms": [
           "android",
-          "ios",
-          "macos",
-          "windows",
-          "linux"
+          "ios"
         ],
         "surfaces": [
           "host"

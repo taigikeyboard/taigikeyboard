@@ -270,9 +270,6 @@ struct CustomDictionaryPage: View {
                 )
             } header: {
                 Text(language.string(.dictionaryBackupRestore))
-            } footer: {
-                Text(language.string(.dictionaryBackupPrivacyWarning))
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
