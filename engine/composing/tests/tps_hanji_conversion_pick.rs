@@ -25,12 +25,12 @@ use ranking::FrequencyMap;
 use test_support::engine_install_lock;
 
 use crate::common::{
-    commit_text, config, config_converting, converted_words, effect_kinds, frequency_map, pick_of,
-    resolution, selected, Fetch, Selected, NOW_MS,
+    commit_text, config, config_converting, converted_words, custom, effect_kinds, frequency_map,
+    pick_of, resolution, selected, Fetch, Selected, NOW_MS,
 };
 use crate::tps_hanji_conversion::{
-    caret_utf16, composing_engine, display, install_fixture_with, nailed, pick, raw_input, step,
-    tps_key,
+    caret_utf16, composing_engine, display, install_fixture_with, install_rows, nailed, pick,
+    raw_input, row, step, tps_key,
 };
 
 /// 絲 (si1, frequency 10) under 詩 (si1, 50): the same toned reading.
@@ -662,13 +662,6 @@ fn an_open_reading_asks_for_no_counts() {
     assert!(counts.asked.borrow().is_empty());
 }
 
-fn custom(roman: &str, hanji: &str) -> CustomEntry {
-    CustomEntry {
-        roman: roman.into(),
-        hanji: Some(hanji.into()),
-    }
-}
-
 /// The walk of `raw` with `user_rows` and `rows`' counts: the engine (for
 /// its conversion) and the store (for what the walk asked).
 fn walk_with(raw: &str, rows: Vec<Selected>, user_rows: UserRows) -> (Engine, Counts) {
@@ -1026,4 +1019,88 @@ fn the_words_list_puts_longer_words_first() {
         position(&word, "今仔日") < position(&word, "今"),
         "{word:?}"
     );
+}
+
+/// An open `ㄒㄧ` that lists each match kind: the full readings 是 / 死 / 詩,
+/// the abbreviation 小姨 (`sió-î`, face `ㄒㄧ`) and the prefix extension 仙
+/// (`sian`, `ㄒㄧㄢ`). Fixture rule: `ㄒㄧ` is the one strict-prefix syllable
+/// of `ㄒㄧㄢ` and `ㄒㄧㄜ` and lists its own rows; `ㄒ` alone is no syllable.
+fn install_match_kind_fixture() {
+    // `build_dictionary_fst`, not the `_tps` one: it carries the
+    // `tps-abbrev:` face 小姨 is listed by.
+    let rows = [
+        row("是", "sī", 1, 1000),
+        row("死", "sí", 1, 900),
+        row("詩", "si", 1, 50),
+        row("仙", "sian", 1, 300),
+        row("小姨", "sió-î", 2, 200),
+    ];
+    install_rows(&rows, &rows, crate::common::build_dictionary_fst);
+}
+
+fn hanji_of(candidates: &[CandidateMessage]) -> Vec<String> {
+    candidates.iter().filter_map(|c| c.hanji.clone()).collect()
+}
+
+/// The word list (conversion on) and the sentence list (off) of `raw`.
+fn word_and_sentence_lists(raw: &str, fetch: impl Fn() -> Fetch) -> (Vec<String>, Vec<String>) {
+    let converting = config_converting("tps");
+    let (mut engine, _) = composing_engine(raw, &converting);
+    assert_eq!(
+        engine.word_list_start(&converting),
+        Some(WordListStart::InTail(0))
+    );
+    let word = hanji_of(&list_with(&mut engine, fetch(), &converting));
+    let plain = config("tps");
+    let (mut engine, _) = composing_engine(raw, &plain);
+    let sentence = hanji_of(&list_with(&mut engine, fetch(), &plain));
+    (word, sentence)
+}
+
+// F5 decision: a never-picked word's list reads full readings, then
+// abbreviations, then prefix extensions — the sort's `coverage_kind` ties a
+// full reading with an abbreviation and `abbreviation` breaks the tie. trace:
+// one edge `ㄒㄧ`, its path 是 (the cheapest); 死 / 詩 by corpus cost.
+#[test]
+fn a_never_picked_words_list_reads_full_then_abbreviation_then_prefix() {
+    let _lock = engine_install_lock();
+    install_match_kind_fixture();
+    let (word, sentence) = word_and_sentence_lists("ㄒㄧ", Fetch::default);
+    assert_eq!(word, ["是", "死", "詩", "小姨", "仙"]);
+    assert_eq!(word, sentence);
+}
+
+// The word list of a one-edge input reads as the sentence list: custom words
+// first (class 1), whatever their match kind — a custom 先 `sian` extends the
+// input, a custom 心意 `sim-ì` abbreviates it (退伍 / 大人 under `thng`).
+// trace: the custom rows lead on `preference_class`, the abbreviation 心意
+// before the prefix 先 on `coverage_kind`; the rest as above.
+#[test]
+fn a_one_edge_words_list_reads_as_the_sentence_list() {
+    let _lock = engine_install_lock();
+    install_match_kind_fixture();
+    let fetch = || Fetch {
+        custom: vec![custom("sian", "先"), custom("sim-ì", "心意")],
+        ..Fetch::default()
+    };
+    let (word, sentence) = word_and_sentence_lists("ㄒㄧ", fetch);
+    assert_eq!(word, sentence);
+    assert_eq!(&word[..2], ["心意", "先"], "{word:?}");
+}
+
+// F6 on TPS: the one-word path 是 leads a picked one-syllable prefix 仙 in
+// both lists. trace: the sort reads 仙 (picked, class 0), 是, 死, 詩, 小姨;
+// the post-pass moves 是 ahead of 仙.
+#[test]
+fn a_one_word_path_leads_a_picked_one_syllable_prefix_in_tps() {
+    let _lock = engine_install_lock();
+    install_match_kind_fixture();
+    let fetch = || Fetch {
+        now_ms: NOW_MS,
+        frequency: vec![selected("仙", "sian", 10, 1_000)],
+        ..Fetch::default()
+    };
+    let (word, sentence) = word_and_sentence_lists("ㄒㄧ", fetch);
+    assert_eq!(word, ["是", "仙", "死", "詩", "小姨"]);
+    assert_eq!(word, sentence);
 }

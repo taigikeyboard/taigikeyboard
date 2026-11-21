@@ -15,22 +15,73 @@ use lexicon::{
 };
 use phonetics::api::roman_reading_eq;
 use ranking::{
-    candidate_lead, sort_by_candidate_key, FrequencyMap, COVERAGE_KIND_PARTIAL_PREFIX,
-    WALKER_COST_UNPRICED,
+    sort_by_candidate_key, FrequencyMap, COVERAGE_KIND_PARTIAL_PREFIX, WALKER_COST_UNPRICED,
 };
 
 /// The shape of a continuous candidate list.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ListShape {
-    /// The whole tail's list: the walker's path over it, however many words,
-    /// at slot 0, then the left-anchored words in ranking order.
+    /// The whole tail's list: the walker's path over it — a sentence of
+    /// several words at slot 0, one word sorted with the rest (Step 4d) — and
+    /// the left-anchored words in ranking order.
     Sentence,
     /// A Hanji conversion's list of one word (H4): the walker's path only
     /// when it is one word — so a reading the dictionary has no word for
-    /// keeps its row — and longer words first, each length in ranking order,
-    /// a row covering its reading in full above the prefix extensions and
-    /// abbreviations (`ranking::COVERAGE_KIND_*` ascend in that order).
+    /// keeps its row — then the sentence list's order within a tier, longer
+    /// words first among the front-segment rows.
     Word,
+}
+
+/// The rows [`assemble_candidates`] lists, and whether the Step 4d post-pass
+/// moved a one-word walker path ahead of one-syllable prefix picks.
+#[derive(Debug, Default)]
+pub(crate) struct Assembled {
+    pub(crate) candidates: Vec<RawCandidate>,
+    pub(crate) walker_moved: bool,
+}
+
+/// A picked one-syllable word reached as a prefix extension (`ko` → a
+/// picked 講 `kóng`): the store keys a pick by its reading, so it may come
+/// from a longer typed syllable.
+pub(crate) fn is_one_syllable_prefix_pick(candidate: &RawCandidate) -> bool {
+    candidate.user_weight > 0.0
+        && candidate.syllable_count == 1
+        && candidate.coverage_kind == COVERAGE_KIND_PARTIAL_PREFIX
+}
+
+/// Step 4d post-pass: the one-word walker path leads the one-syllable prefix
+/// picks among the picks the sort put directly before it (`ko` → 哥 before a
+/// picked 講) — the short-word sweep [`picked_extension_outranks_sentence`]
+/// refuses a sentence. Rule and examples: `docs/engine/continuous-input-ranking.md`
+/// step 4d. `rows` pairs each row with its pre-sort index; the path is index 0
+/// (Step 4 `insert(0, …)`). Returns whether the path moved.
+fn lead_one_syllable_prefix_picks(rows: &mut [(usize, RawCandidate)]) -> bool {
+    let Some(at) = rows.iter().position(|(index, _)| *index == 0) else {
+        return false;
+    };
+    let run = rows[..at]
+        .iter()
+        .rev()
+        .take_while(|(_, candidate)| candidate.user_weight > 0.0)
+        .count();
+    let start = at - run;
+    if !rows[start..at]
+        .iter()
+        .any(|(_, candidate)| is_one_syllable_prefix_pick(candidate))
+    {
+        return false;
+    }
+    // Stable: kept picks first, then the path, then the moved picks.
+    rows[start..=at].sort_by_key(|(index, candidate)| {
+        if *index == 0 {
+            1
+        } else if is_one_syllable_prefix_pick(candidate) {
+            2
+        } else {
+            0
+        }
+    });
+    true
 }
 
 /// Whether the top ranked row is a picked word that takes slot 0 from the
@@ -48,8 +99,8 @@ fn picked_extension_outranks_sentence(candidates: &[RawCandidate], raw_len: u32)
         return false;
     };
     top_ranked.coverage_kind == COVERAGE_KIND_PARTIAL_PREFIX
-        && candidate_lead(&top_ranked.rank_facts(), raw_len).0 == 0
-        && top_ranked.syllable_count >= 2
+        && top_ranked.consumed_span.1 == raw_len
+        && !is_one_syllable_prefix_pick(top_ranked)
         && top_ranked.user_weight > sentence.user_weight
 }
 
@@ -105,7 +156,7 @@ pub(crate) fn assemble_candidates(
     context: &ranking::ContextRanks,
     config: &protos::engine::AppConfig,
     shape: ListShape,
-) -> Vec<RawCandidate> {
+) -> Assembled {
     let raw_len = raw.len() as u32;
     let enabled_sources_bitmask = crate::requests::source_filter_bitmask(config);
     let syllable_joiner = config.rendered_syllable_joiner();
@@ -199,7 +250,9 @@ pub(crate) fn assemble_candidates(
         // bare merge, Step 4b, Step 4c) — the only case Step 4d must re-sort,
         // along with a one-word path the walker placed at slot 0.
         let mut appended_blocks = false;
+        // Whether Step 4 put a one-word path into the sort, at index 0.
         let mut release_one_word = false;
+        let mut walker_moved = false;
 
         // ---- Step 2: empty-keys partial-prefix vs span-local fetch.
         let mut candidates: Vec<RawCandidate> = if keys.is_empty() {
@@ -445,7 +498,8 @@ pub(crate) fn assemble_candidates(
                         // A one-word path is one word like any other row, so it
                         // joins the twelve stages (ranking-lab proposal, 2026-11):
                         // a word picked through the abbreviation `kip` can pass
-                        // 級. A path of several words stays pinned at slot 0.
+                        // 級, then the Step 4d post-pass places it. A path of
+                        // several words stays pinned at slot 0.
                         if !composed_from_edges {
                             walker_slot0_len = 0;
                             release_one_word = true;
@@ -615,14 +669,26 @@ pub(crate) fn assemble_candidates(
         // the concatenation is re-sorted (stable — each block's own order and
         // its exclude → truncate are kept). A walker slot 0 of several words
         // stays put, unless a picked word the walker cannot reach outranks
-        // its sentence; a one-word slot 0 is sorted with the rest.
+        // its sentence; a one-word slot 0 is sorted with the rest, then
+        // [`lead_one_syllable_prefix_picks`] places it.
         if appended_blocks || release_one_word {
             let ranked = candidates.split_off(walker_slot0_len.min(candidates.len()));
-            candidates.extend(sort_by_candidate_key(
-                ranked,
-                raw_len,
-                RawCandidate::rank_facts,
-            ));
+            if release_one_word {
+                // Each row keeps its pre-sort index; the released path is 0.
+                let mut sorted = sort_by_candidate_key(
+                    ranked.into_iter().enumerate().collect(),
+                    raw_len,
+                    |(_, candidate): &(usize, RawCandidate)| candidate.rank_facts(),
+                );
+                walker_moved = lead_one_syllable_prefix_picks(&mut sorted);
+                candidates.extend(sorted.into_iter().map(|(_, candidate)| candidate));
+            } else {
+                candidates.extend(sort_by_candidate_key(
+                    ranked,
+                    raw_len,
+                    RawCandidate::rank_facts,
+                ));
+            }
             if walker_slot0_is_sentence && picked_extension_outranks_sentence(&candidates, raw_len)
             {
                 candidates.swap(0, 1);
@@ -723,20 +789,21 @@ pub(crate) fn assemble_candidates(
         if dedupe_commit_hanji {
             dedupe_same_commit_hanji(&mut candidates);
         }
-        // A word's list: the Step 4d lead (`candidate_lead`) and match kind,
-        // then longer words first whatever the counts or the custom source
-        // (H4); each length keeps its ranking. The walker's slot 0 stays put.
+        // A word's list: the Step 4d order within a tier, so the whole-input
+        // rows (end == raw_len, which no row passes) read as in the sentence
+        // list, and longer words first among the front-segment rows whatever
+        // the counts or the custom source (H4). Stable, so each length keeps
+        // its ranking. The Step 4 filter lets only a one-edge path in, so no
+        // slot is pinned ahead of this sort; a dictionary word the walker
+        // reaches over several edges (`hoogua` → 予我) is a whole-input row
+        // and leads with its tier.
         if shape == ListShape::Word {
-            let ranked_from = walker_slot0_len.min(candidates.len());
-            candidates[ranked_from..].sort_by_key(|candidate| {
-                (
-                    candidate_lead(&candidate.rank_facts(), raw_len),
-                    candidate.coverage_kind,
-                    std::cmp::Reverse(candidate.consumed_span.1),
-                )
-            });
+            candidates.sort_by_key(|candidate| std::cmp::Reverse(candidate.consumed_span.1));
         }
-        Ok(candidates)
+        Ok(Assembled {
+            candidates,
+            walker_moved,
+        })
     })
     .unwrap_or_default()
     // Step 6 (wrap into `ContinuousResponse` via `raw_to_proto_candidate`

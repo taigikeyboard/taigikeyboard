@@ -18,6 +18,8 @@ use protos::engine::effect::Kind;
 use protos::engine::{
     AppConfig, ComposingResponse, DictionarySourceToggles, HanjiConversion, TpsKey,
 };
+use std::path::PathBuf;
+
 use test_support::{engine_install_lock, write_temp};
 
 use crate::common::{
@@ -77,13 +79,22 @@ pub(crate) fn install_fixture_with(extra: &[(&'static str, &'static str, u32)]) 
             .chain(extra)
             .collect::<Vec<_>>()
     };
-    let rows = with_extra();
     let mut syllable_rows = with_extra();
     syllable_rows.push(row("喇", "lá", 1, 1));
-    let dict_path = write_temp("dictionary-hanji-conversion.bin", &build_tkdb_v4(&rows));
-    let fst_path = build_dictionary_fst_tps(&rows);
+    install_rows(&with_extra(), &syllable_rows, build_dictionary_fst_tps);
+}
+
+/// Installs `rows` as the dictionary, its FST built by `dictionary_fst`, over
+/// the TPS syllables of `syllable_rows`.
+pub(crate) fn install_rows(
+    rows: &[Row],
+    syllable_rows: &[Row],
+    dictionary_fst: fn(&[Row]) -> PathBuf,
+) {
+    let dict_path = write_temp("dictionary-hanji-conversion.bin", &build_tkdb_v4(rows));
+    let fst_path = dictionary_fst(rows);
     let association_path = write_temp("association-hanji-conversion.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst_tps(&syllable_rows);
+    let syllables_path = build_syllables_fst_tps(syllable_rows);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
