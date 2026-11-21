@@ -406,16 +406,17 @@ fn a_typed_comma_swaps_an_armed_space_or_is_written_full_width() {
 }
 
 /// #852: in the full width `^` and `_` write the two-cell ellipsis and dash,
-/// whole, and neither takes an armed space's place (neither attaches).
+/// whole. #879: both attach, so each takes an armed space's place and, being
+/// full width, arms nothing — `啥mih……`, as `，` does.
 #[test]
 fn caret_and_underscore_write_the_two_cell_ellipsis_and_dash() {
     for (typed, mark) in [("^", "……"), ("_", "——")] {
         let mut rig = new_rig(true);
         rig.surface.can_swap = true;
         let key = KeyEventSnapshot::text(typed, KeyModifiers::SHIFT);
-        assert!(!pass_through_may_swap(&key, &rig.settings), "{typed}");
+        assert!(pass_through_may_swap(&key, &rig.settings), "{typed}");
         assert!(rig.run(ComposingKeyIntent::PassThrough, &key));
-        assert_eq!(rig.calls(), [format!("insert \"{mark}\"")]);
+        assert_eq!(rig.calls(), [format!("swap \"{mark}\"")]);
 
         // Roman-first: half width, the client's key.
         drop(rig);

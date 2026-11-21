@@ -77,6 +77,12 @@ mod tests {
         let full_width = augment_insert("？", "guá", true);
         assert_eq!(full_width.text, "？");
         assert!(!full_width.leaves_trailing_auto_space);
+        // #879: the two-cell ellipsis and dash attach without a space.
+        for mark in ["……", "——"] {
+            let attached = augment_insert(mark, "siánn-mih", true);
+            assert_eq!(attached.text, mark);
+            assert!(!attached.leaves_trailing_auto_space);
+        }
         let opening = augment_insert("(", "guá", true);
         assert_eq!(opening.text, " (");
         assert!(!opening.leaves_trailing_auto_space);
