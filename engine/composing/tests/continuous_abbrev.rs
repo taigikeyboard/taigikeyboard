@@ -10,12 +10,19 @@
 //! `common::build_dictionary_fst` emits the `*_abbrev` keys like
 //! `create_fst.py` does.
 
-use protos::engine::CandidateMessage;
+use composing::api::{CaretDirection, CommitScript, ContinuousPick};
+use composing::{requests, Engine, Intent};
+use protos::engine::composing_request::Method;
+use protos::engine::{
+    AppConfig, Append, CandidateDisplayMode, CandidateMessage, CellScript, CommitContinuous,
+    FetchAtPos, Start,
+};
 
 use crate::common::Fetch;
 use crate::common::{
-    build_dictionary_fst, build_syllables_fst, build_tkdb_v4, config, empty_association_bin,
-    fetch_at_pos_response, fetch_hanji, fetch_hanji_with_custom, install_lexicon, Row,
+    build_dictionary_fst, build_syllables_fst, build_tkdb_v4, config, config_with_display_mode,
+    continuous, empty_association_bin, fetch_at_pos_response, fetch_hanji, fetch_hanji_with_custom,
+    fetched_engine, install_lexicon, pick_of, send, Row,
 };
 use lexicon::CustomEntry;
 use test_support::{engine_install_lock, write_temp};
@@ -83,6 +90,35 @@ fn fixture_rows() -> Vec<Row> {
             tl: "tsia̍h-pn̄g",
             syll: 2,
             freq: 144,
+        },
+        // trace: abbrev "si" (sóo + í: a vowel-initial syllable keeps its
+        // vowel, `derive_abbrev`), toneless "sooi" — `si` lists it as an
+        // abbreviation row only.
+        Row {
+            toneless_key: "sooi",
+            hanji: "所以",
+            tl: "sóo-í",
+            syll: 2,
+            freq: 300,
+        },
+        // trace: abbrev "ai" AND toneless "ai" — `ai` lists it as a reading
+        // row and drops the abbreviation twin (`retain_absent_from`).
+        Row {
+            toneless_key: "ai",
+            hanji: "阿姨",
+            tl: "a-î",
+            syll: 2,
+            freq: 300,
+        },
+        // trace: abbrev "am", toneless "ama" — `am` is a strict prefix of
+        // the toneless key, so `am` lists it as a Step 4b prefix row and
+        // drops the abbreviation twin.
+        Row {
+            toneless_key: "ama",
+            hanji: "阿嬤",
+            tl: "a-má",
+            syll: 2,
+            freq: 300,
         },
     ];
     // trace: toneless `mk…` AND abbrev "mk" — under buffer `mk` each of
@@ -299,4 +335,298 @@ fn custom_entry_sharing_the_abbreviated_word_shows_once() {
         vec!["鎖匙", "先生"],
         "custom first, dictionary 鎖匙 deduped onto it"
     );
+}
+
+// ---- Which picks count as abbreviation picks (`Usage::abbreviation`) ----
+//
+// A pick is an abbreviation pick when it names a row the last fetch listed
+// as a whole-buffer abbreviation (`COVERAGE_KIND_ABBREV`) for the same
+// composing state — the row whose rank the pick should raise. These fetch
+// the list, then pick a row from it, as a platform does.
+
+/// A fresh engine composing `raw` under `config`, and the list a fetch with
+/// `fetch` answered (recorded on the engine, `requests::apply`).
+fn listed(raw: &str, config: &AppConfig, fetch: Fetch) -> (Engine, Vec<CandidateMessage>) {
+    let (engine, response) = fetched_engine(config, raw, fetch);
+    let candidates = response
+        .continuous
+        .map(|c| c.candidates)
+        .unwrap_or_default();
+    (engine, candidates)
+}
+
+/// The first listed cell of `hanji` consuming `end` bytes.
+fn row_of<'a>(candidates: &'a [CandidateMessage], hanji: &str, end: u32) -> &'a CandidateMessage {
+    candidates
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some(hanji) && c.consumed_span_end == end)
+        .unwrap_or_else(|| panic!("no {hanji} ending at {end}: {candidates:?}"))
+}
+
+/// Whether the pick `intent` counted as an abbreviation pick; `None` when it
+/// counted nothing.
+fn abbreviation(engine: &mut Engine, intent: Intent, config: &AppConfig) -> Option<bool> {
+    engine
+        .apply_learning(intent, config)
+        .usage
+        .map(|usage| usage.abbreviation)
+}
+
+#[test]
+fn a_pick_of_a_listed_abbreviation_row_is_an_abbreviation_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("si", &config, Fetch::default());
+    let sooi = pick_of(row_of(&candidates, "所以", 2), CommitScript::Lead);
+    assert_eq!(abbreviation(&mut engine, sooi, &config), Some(true));
+}
+
+#[test]
+fn a_pick_of_the_words_full_row_is_a_reading_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("ai", &config, Fetch::default());
+    let ai = pick_of(row_of(&candidates, "阿姨", 2), CommitScript::Lead);
+    assert_eq!(abbreviation(&mut engine, ai, &config), Some(false));
+}
+
+// The root cause (PR #1057 follow-up): `am` is both 阿嬤's abbreviation and a
+// strict prefix of its toneless key `ama`; the list shows the prefix row, so
+// the pick must raise the reading weight that row ranks by.
+#[test]
+fn a_pick_of_the_words_prefix_row_is_a_reading_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("am", &config, Fetch::default());
+    let ama = pick_of(row_of(&candidates, "阿嬤", 2), CommitScript::Lead);
+    assert_eq!(abbreviation(&mut engine, ama, &config), Some(false));
+}
+
+#[test]
+fn a_word_typed_in_full_is_a_reading_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("sooi", &config, Fetch::default());
+    let sooi = pick_of(row_of(&candidates, "所以", 4), CommitScript::Lead);
+    assert_eq!(abbreviation(&mut engine, sooi, &config), Some(false));
+}
+
+#[test]
+fn a_pick_with_no_fetch_before_it_is_a_reading_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (_, candidates) = listed("si", &config, Fetch::default());
+    let sooi = pick_of(row_of(&candidates, "所以", 2), CommitScript::Lead);
+    let mut unfetched = Engine::new();
+    unfetched.apply(Intent::Start { text: "si".into() }, &config);
+    assert_eq!(abbreviation(&mut unfetched, sooi, &config), Some(false));
+}
+
+// The record is keyed on what the list was built from (tail, nailed, list
+// start), not on the keystrokes that led there: typing `a` after `si`
+// leaves a record for `si` that a pick under `sia` does not match; deleting
+// back to `si` restores the state the list was fetched for, whose list a
+// refetch would answer the same, so the pick counts as an abbreviation.
+#[test]
+fn the_record_matches_the_state_it_was_listed_for() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("si", &config, Fetch::default());
+    let sooi = pick_of(row_of(&candidates, "所以", 2), CommitScript::Lead);
+    let mut typed_on = engine.clone();
+    typed_on.apply(Intent::Append { ch: "a".into() }, &config);
+    assert_eq!(
+        abbreviation(&mut typed_on, sooi.clone(), &config),
+        Some(false)
+    );
+    engine.apply(Intent::Append { ch: "a".into() }, &config);
+    engine.apply(Intent::DeleteBackward, &config);
+    assert_eq!(abbreviation(&mut engine, sooi, &config), Some(true));
+}
+
+// A desktop caret move keeps the list on screen without a refetch; outside a
+// conversion the list does not depend on the caret, so the record holds.
+#[test]
+fn a_caret_move_keeps_the_record() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("si", &config, Fetch::default());
+    let sooi = pick_of(row_of(&candidates, "所以", 2), CommitScript::Lead);
+    engine.apply(
+        Intent::MoveCaret {
+            direction: Some(CaretDirection::Left),
+        },
+        &config,
+    );
+    assert_eq!(abbreviation(&mut engine, sooi, &config), Some(true));
+}
+
+// Hanji with Romanization splits a row into a Hanji cell and a roman cell;
+// both carry the row's identity, so the roman cell counts as the row does.
+#[test]
+fn the_roman_cell_of_an_abbreviation_row_is_an_abbreviation_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config_with_display_mode("tl", CandidateDisplayMode::Combined as i32);
+    let (mut engine, candidates) = listed("si", &config, Fetch::default());
+    let roman_cell = candidates
+        .iter()
+        .find(|c| c.display_text == "所以" && c.cell_script() == CellScript::Roman)
+        .unwrap_or_else(|| panic!("a roman cell of 所以: {candidates:?}"));
+    let pick = pick_of(roman_cell, CommitScript::Roman);
+    assert_eq!(abbreviation(&mut engine, pick, &config), Some(true));
+}
+
+// trace: a custom 你好 `lí-hó` abbreviates to `lh` (`derive_custom_search_keys`
+// abbrev form); the custom merge lists it as a whole-buffer
+// `COVERAGE_KIND_ABBREV` synth (`push_custom_entries`).
+#[test]
+fn a_custom_abbreviation_row_is_an_abbreviation_pick() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let fetch = Fetch {
+        custom: vec![CustomEntry {
+            roman: "lí-hó".into(),
+            hanji: Some("你好".into()),
+        }],
+        ..Fetch::default()
+    };
+    let (mut engine, candidates) = listed("lh", &config, fetch);
+    let pick = pick_of(row_of(&candidates, "你好", 2), CommitScript::Lead);
+    assert_eq!(abbreviation(&mut engine, pick, &config), Some(true));
+}
+
+#[test]
+fn a_pick_confirmed_with_a_literal_counts_as_the_row_does() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let (mut engine, candidates) = listed("si", &config, Fetch::default());
+    let row = row_of(&candidates, "所以", 2);
+    let confirm = Intent::ConfirmCompositionThenInsert {
+        candidate: Some(ContinuousPick {
+            canonical_text: row.display_text.clone(),
+            association_tl: row.canonical_tl.clone(),
+            hanji: row.hanji.clone(),
+            consumed_bytes: row.consumed_span_end as usize,
+            syllable_count: row.syllable_count as u8,
+            script: Some(CommitScript::Lead),
+            roman: row.roman.clone(),
+        }),
+        text: "，".into(),
+        auto_space_enabled: false,
+        candidate_spacing_enabled: false,
+    };
+    assert_eq!(abbreviation(&mut engine, confirm, &config), Some(true));
+}
+
+// ---- The record through `EngineHandle` (generation, worker-thread fetch) ----
+
+/// The wire pick of 所以's whole-buffer row under `si`.
+fn sooi_pick(config: &AppConfig) -> Method {
+    let (_, candidates) = listed("si", config, Fetch::default());
+    let row = row_of(&candidates, "所以", 2);
+    Method::CommitContinuous(CommitContinuous {
+        canonical_text: row.display_text.clone(),
+        association_tl: row.canonical_tl.clone(),
+        hanji: row.hanji.clone(),
+        consumed_bytes: row.consumed_span_end,
+        syllable_count: row.syllable_count,
+        script: protos::engine::CommitScript::Lead as i32,
+        roman: row.roman.clone(),
+    })
+}
+
+#[test]
+fn a_new_generation_forgets_the_record() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let sooi = sooi_pick(&config);
+    let fetched = |generation_after: u64| {
+        let handle = continuous("si", 1, &config);
+        send(
+            &handle,
+            1,
+            Method::FetchAtPos(FetchAtPos::default()),
+            &config,
+        );
+        // A new context composes the same buffer again (the drop resets).
+        send(
+            &handle,
+            generation_after,
+            Method::Start(Start { text: "si".into() }),
+            &config,
+        );
+        handle
+    };
+    let same = fetched(1);
+    let applied = send(&same, 1, sooi.clone(), &config);
+    assert_eq!(applied.usage.map(|u| u.abbreviation), Some(true));
+    let reset = fetched(2);
+    let applied = send(&reset, 2, sooi, &config);
+    assert_eq!(applied.usage.map(|u| u.abbreviation), Some(false));
+}
+
+// A worker-thread fetch answers from a clone; one for `s` finishing after the
+// main thread typed `i` (and the `si` fetch landed) must not replace the `si`
+// record — `si`'s 所以 abbreviation row would be forgotten.
+#[test]
+fn a_fetch_landing_after_the_state_moved_on_is_dropped() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let sooi = sooi_pick(&config);
+    let handle = continuous("s", 1, &config);
+    let stale = handle.engine_at(1).expect("generation 1");
+    send(
+        &handle,
+        1,
+        Method::Append(Append { char: "i".into() }),
+        &config,
+    );
+    send(
+        &handle,
+        1,
+        Method::FetchAtPos(FetchAtPos::default()),
+        &config,
+    );
+    let (_, listing) = requests::query_listing(&Fetch::default().intent(), &stale, &config);
+    let listing = listing.expect("composing `s`");
+    handle.remember_listing(1, Some(listing), &config);
+    let applied = send(&handle, 1, sooi, &config);
+    assert_eq!(applied.usage.map(|u| u.abbreviation), Some(true));
+}
+
+// A fetch from an older generation is dropped even when the new generation
+// composes the same buffer: the `si` listing it carries matches the state, so
+// only the generation check stops it.
+#[test]
+fn a_fetch_from_an_older_generation_is_dropped() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let config = config("tl");
+    let sooi = sooi_pick(&config);
+    let handle = continuous("si", 1, &config);
+    let older = handle.engine_at(1).expect("generation 1");
+    let (_, listing) = requests::query_listing(&Fetch::default().intent(), &older, &config);
+    let listing = listing.expect("composing `si`");
+    // A new context composes the same buffer again (the drop resets).
+    send(
+        &handle,
+        2,
+        Method::Start(Start { text: "si".into() }),
+        &config,
+    );
+    handle.remember_listing(1, Some(listing), &config);
+    let applied = send(&handle, 2, sooi, &config);
+    assert_eq!(applied.usage.map(|u| u.abbreviation), Some(false));
 }

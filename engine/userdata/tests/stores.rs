@@ -157,6 +157,51 @@ fn a_table_from_before_the_split_gains_the_columns_and_keeps_its_counts() {
     assert_eq!((rows[0].count, rows[0].abbrev_count), (1549, 1));
 }
 
+/// The khinsiann migration merging `會記--得` into `會記得` merges the
+/// abbreviation picks too.
+#[test]
+fn a_khinsiann_merge_sums_the_abbreviation_picks_and_keeps_the_later_one() {
+    let directory = scratch();
+    let path = paths(&directory).frequency;
+    {
+        let connection = rusqlite::Connection::open(&path).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE user_frequency (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    word TEXT NOT NULL,
+                    tl TEXT NOT NULL DEFAULT '',
+                    count INTEGER DEFAULT 1,
+                    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    abbrev_count INTEGER NOT NULL DEFAULT 0,
+                    abbrev_last_used TIMESTAMP,
+                    UNIQUE(word, tl)
+                );
+                INSERT INTO user_frequency (word, tl, count, abbrev_count, abbrev_last_used)
+                    VALUES ('會記得', 'ē-kì--tit', 5, 1, '2026-01-01 00:00:00');
+                INSERT INTO user_frequency (word, tl, count, abbrev_count, abbrev_last_used)
+                    VALUES ('會記--得', 'ē-kì--tit', 3, 2, '2026-01-02 00:00:00');
+                PRAGMA user_version = 2;",
+            )
+            .unwrap();
+    }
+    let store = frequency_store(&directory, UserFrequencyStore::shipped_capacity());
+    let rows = store.all_rows().unwrap();
+    // trace: counts 5 + 3, abbreviation picks 1 + 2, the later abbreviation
+    // time 2026-01-02T00:00:00Z = 1767312000 s.
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        (
+            rows[0].word.as_str(),
+            rows[0].count,
+            rows[0].abbrev_count,
+            rows[0].abbrev_last_used_ms
+        ),
+        ("會記得", 8, 3, 1_767_312_000_000)
+    );
+}
+
 #[test]
 fn a_store_that_is_not_open_answers_none_rather_than_waiting() {
     let directory = scratch();

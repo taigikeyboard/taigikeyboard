@@ -98,6 +98,21 @@ pub fn composing(
     }
 }
 
+/// Polls `read` until it holds, at most 5 s: the engine's writes are
+/// queued, and this process reads them back through its own connection.
+#[cfg(feature = "user-data")]
+#[allow(dead_code)]
+pub fn eventually(mut read: impl FnMut() -> bool) -> bool {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while std::time::Instant::now() < deadline {
+        if read() {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    }
+    false
+}
+
 /// The `user_association.db` rows once the engine's queued write lands
 /// (at most 5 s).
 #[cfg(feature = "user-data")]
@@ -105,13 +120,13 @@ pub fn composing(
 pub fn wait_for_association_rows(
     reader: &userdata::UserDataStores,
 ) -> Vec<userdata::AssociationRow> {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-    loop {
-        let rows = reader.association.all_rows().expect("association rows");
-        if !rows.is_empty() {
-            return rows;
-        }
-        assert!(std::time::Instant::now() < deadline, "no pair was recorded");
-        std::thread::sleep(std::time::Duration::from_millis(20));
-    }
+    let mut rows = Vec::new();
+    assert!(
+        eventually(|| {
+            rows = reader.association.all_rows().expect("association rows");
+            !rows.is_empty()
+        }),
+        "no pair was recorded"
+    );
+    rows
 }

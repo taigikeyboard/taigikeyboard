@@ -18,8 +18,8 @@
 
 use std::path::{Path, PathBuf};
 
-use composing::api::Engine;
-use composing::{requests, Intent, UserRows};
+use composing::api::{CommitScript, Engine};
+use composing::{requests, Applied, EngineHandle, Intent, UserRows};
 use lexicon::{
     CustomEntry, EngineHandle as LexiconHandle, LearnedEntry, LexiconPaths, SyllableInventory,
 };
@@ -27,8 +27,8 @@ use phonetics::{canonicalize_poj_syllable, canonicalize_syllable};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::{
-    AppConfig, CommitOutcome, CommitResolution, ComposingRequest, ComposingResponse,
-    DictionarySourceToggles, Effect, FetchAtPos, Start,
+    AppConfig, CandidateMessage, CommitOutcome, CommitResolution, ComposingRequest,
+    ComposingResponse, DictionarySourceToggles, Effect, FetchAtPos, Start,
 };
 use ranking::FrequencyData;
 use test_support::{
@@ -568,13 +568,48 @@ pub fn req(method: Method) -> ComposingRequest {
     }
 }
 
+/// `method` sent through `handle` at `generation`.
+pub fn send(handle: &EngineHandle, generation: u64, method: Method, config: &AppConfig) -> Applied {
+    handle
+        .handle_learning(&req(method), config, generation)
+        .expect("composing request")
+}
+
+/// A handle in `Phase::Continuous` over `raw` at `generation`.
+pub fn continuous(raw: &str, generation: u64, config: &AppConfig) -> EngineHandle {
+    let handle = EngineHandle::new();
+    let start = Method::Start(Start { text: raw.into() });
+    send(&handle, generation, start, config);
+    handle
+}
+
+/// The `CommitContinuous` a tap on `row` sends, writing `script`.
+pub fn pick_of(row: &CandidateMessage, script: CommitScript) -> Intent {
+    Intent::CommitContinuous {
+        canonical_text: row.display_text.clone(),
+        association_tl: row.canonical_tl.clone(),
+        hanji: row.hanji.clone(),
+        consumed_bytes: row.consumed_span_end as usize,
+        syllable_count: row.syllable_count as u8,
+        script: Some(script),
+        roman: row.roman.clone(),
+    }
+}
+
 /// Drive `raw` through `Start → FetchAtPos` on a fresh
 /// `Engine` and return the `FetchAtPos` response (its `continuous` carrier is
 /// `None` when the engine never entered the continuous phase — callers that
 /// care distinguish that from an empty candidate list).
 pub fn fetch_at_pos_response(config: &AppConfig, raw: &str, fetch: Fetch) -> ComposingResponse {
+    fetched_engine(config, raw, fetch).1
+}
+
+/// [`fetch_at_pos_response`], with the engine it answered (the fetch's rows
+/// recorded on it, `requests::apply`).
+pub fn fetched_engine(config: &AppConfig, raw: &str, fetch: Fetch) -> (Engine, ComposingResponse) {
     let mut engine = continuous_engine(config, raw);
-    requests::apply(fetch.intent(), &mut engine, config)
+    let response = requests::apply(fetch.intent(), &mut engine, config);
+    (engine, response)
 }
 
 /// [`fetch_at_pos_response`] for a wire `FetchAtPos`, decoded the way a
@@ -588,7 +623,8 @@ pub fn wire_fetch_at_pos_response(
     requests::handle(&req(Method::FetchAtPos(fetch)), &mut engine, config).expect("FetchAtPos")
 }
 
-fn continuous_engine(config: &AppConfig, raw: &str) -> Engine {
+/// A fresh engine composing `raw` under `config`.
+pub fn continuous_engine(config: &AppConfig, raw: &str) -> Engine {
     let mut engine = Engine::new();
     requests::handle(
         &req(Method::Start(Start { text: raw.into() })),

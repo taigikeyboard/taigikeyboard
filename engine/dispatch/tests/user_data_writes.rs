@@ -8,8 +8,7 @@
 
 mod common;
 
-use common::{open_user_data, tl_config, user_data};
-use std::time::{Duration, Instant};
+use common::{eventually, open_user_data, tl_config, user_data};
 
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, user_data_request,
@@ -133,19 +132,6 @@ fn word_selected(text: &str, roman: &str, now_ms: i64) {
         },
         other => panic!("expected a nextword payload, got {other:?}"),
     }
-}
-
-/// Polls `read` until it holds: the engine's writes are queued, and this
-/// process reads them back through its own connection.
-fn eventually(mut read: impl FnMut() -> bool) -> bool {
-    let deadline = Instant::now() + Duration::from_secs(5);
-    while Instant::now() < deadline {
-        if read() {
-            return true;
-        }
-        std::thread::sleep(Duration::from_millis(20));
-    }
-    false
 }
 
 #[test]

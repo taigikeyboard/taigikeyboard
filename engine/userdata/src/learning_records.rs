@@ -29,6 +29,9 @@ pub(crate) struct Table {
     /// order: text, TL.
     pub(crate) identity: [&'static str; 2],
     pub(crate) count: &'static str,
+    /// A column counting a share of [`count`](Self::count)'s picks, which a
+    /// set count caps so the share never exceeds the whole.
+    pub(crate) count_share: Option<&'static str>,
     pub(crate) last_used: &'static str,
     /// What else the store deletes with the row whose `id` this is, inside
     /// the caller's transaction.
@@ -192,10 +195,10 @@ pub(crate) fn list(
     })
 }
 
-/// Sets `record`'s count, clamped to `1..=MAX_COUNT`, and answers the row
-/// as stored — `None` when the guard matches nothing. One statement: the
-/// keyboard's own increments land before or after it, and the row's time is
-/// not touched.
+/// Sets `record`'s count, clamped to `1..=MAX_COUNT`, capping the table's
+/// count share at it, and answers the row as stored — `None` when the guard
+/// matches nothing. One statement: the keyboard's own increments land before
+/// or after it, and the row's time is not touched.
 pub(crate) fn set_count(
     stores: &UserDataStores,
     kind: LearningRecordKind,
@@ -206,11 +209,15 @@ pub(crate) fn set_count(
     let (guard, guard_values) = table.guard(record);
     let mut values = vec![Value::from(count.clamp(1, MAX_COUNT))];
     values.extend(guard_values);
+    let share = table
+        .count_share
+        .map(|share| format!(", {share} = MIN({share}, ?1)"))
+        .unwrap_or_default();
     database.perform::<_, UserDataDatabaseError>(move |connection| {
         Ok(connection
             .query_row(
                 &format!(
-                    "UPDATE {} SET {} = ? WHERE {guard} RETURNING {};",
+                    "UPDATE {} SET {} = ?1{share} WHERE {guard} RETURNING {};",
                     table.name,
                     table.count,
                     table.columns()
@@ -430,6 +437,27 @@ mod tests {
         set(&stores, meal, 7);
         record_times(&stores, "食飯", "tsia̍h-pn̄g", 1);
         assert_eq!(filtered(&stores, FREQUENCY, "食飯").records[0].count, 8);
+    }
+
+    #[test]
+    fn setting_a_count_below_the_abbreviation_picks_caps_them_at_it() {
+        // trace: ten abbreviation picks → count 10, abbrev_count 10; set 1 →
+        // abbrev_count MIN(10, 1) = 1, so the reading count 1 - 1 stays >= 0.
+        // Set 5 → MIN(1, 5) = 1: raising the count leaves the share alone.
+        let directory = tempfile::tempdir().unwrap();
+        let stores = open(directory.path());
+        for _ in 0..10 {
+            stores.frequency.record_abbreviation("所以", "sóo-í");
+        }
+        let row = all(&stores, FREQUENCY).remove(0);
+        let abbrev_count =
+            |stores: &UserDataStores| stores.frequency.all_rows().unwrap()[0].abbrev_count;
+        assert_eq!((row.count, abbrev_count(&stores)), (10, 10));
+
+        assert_eq!(set(&stores, &row, 1).unwrap().count, 1);
+        assert_eq!(abbrev_count(&stores), 1);
+        assert_eq!(set(&stores, &row, 5).unwrap().count, 5);
+        assert_eq!(abbrev_count(&stores), 1);
     }
 
     #[test]

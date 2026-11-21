@@ -86,9 +86,117 @@ pub struct Usage {
     pub display_text: String,
     pub canonical_tl: String,
     pub hanji: Option<String>,
-    /// The pick was a whole-buffer abbreviation hit (`si` → 所以), counted
-    /// apart from the word's reading picks.
+    /// The pick was a whole-buffer abbreviation row (`si` → 所以), counted
+    /// apart from the word's reading picks ([`ListedAbbreviations`]).
     pub abbreviation: bool,
+}
+
+/// What a `FetchAtPos` list was built from: the pending tail, the segments
+/// nailed before it and where the list starts
+/// ([`crate::conversion::word_list_start`]). Not the whole [`Phase`]: the
+/// caret moves without a refetch (desktop `MoveCaret` keeps the list on
+/// screen), and it only changes what is listed through `word_list_start`
+/// — never outside a conversion, at every word boundary under one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ListingBasis {
+    raw: String,
+    nailed: Vec<NailedSegment>,
+    word_list_start: Option<WordListStart>,
+}
+
+impl ListingBasis {
+    /// The basis a list of `phase` is built from under `config`; `None` when
+    /// idle (nothing is listed).
+    pub(crate) fn of(phase: &Phase, config: &AppConfig) -> Option<Self> {
+        let (raw, nailed) = Self::tail(phase)?;
+        Some(Self {
+            raw: raw.to_owned(),
+            nailed: nailed.to_vec(),
+            word_list_start: Self::start_of(phase, config),
+        })
+    }
+
+    /// Whether a list of `phase` under `config` is built from this basis —
+    /// [`of`](Self::of) compared without building one.
+    pub(crate) fn matches(&self, phase: &Phase, config: &AppConfig) -> bool {
+        Self::tail(phase).is_some_and(|(raw, nailed)| self.raw == raw && self.nailed == nailed)
+            && self.word_list_start == Self::start_of(phase, config)
+    }
+
+    /// Where a list of `phase` starts under `config`
+    /// ([`crate::conversion::word_list_start`]); `None` when idle or for the
+    /// whole tail's list.
+    pub(crate) fn start_of(phase: &Phase, config: &AppConfig) -> Option<WordListStart> {
+        match phase {
+            Phase::Continuous {
+                raw,
+                caret,
+                nailed,
+                conversion,
+            } => {
+                crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config)
+            }
+            Phase::Idle => None,
+        }
+    }
+
+    /// The pending tail and the segments nailed before it; `None` when idle.
+    fn tail(phase: &Phase) -> Option<(&str, &[NailedSegment])> {
+        match phase {
+            Phase::Continuous { raw, nailed, .. } => Some((raw, nailed)),
+            Phase::Idle => None,
+        }
+    }
+}
+
+/// The whole-buffer abbreviation rows a `FetchAtPos` listed (§46) — the
+/// candidates with `COVERAGE_KIND_ABBREV`, custom-dictionary ones included —
+/// and the basis they were listed for.
+///
+/// A fetch changes no composing state; it only records these rows beside it
+/// (`Engine::remember_listing`, through `EngineHandle::remember_listing`
+/// re-checked under the mutex for a fetch answered from a clone) for the pick
+/// that follows to count itself by (`Usage::abbreviation`). A record is kept
+/// only when it was built from the state the engine holds now — a fetch
+/// answered from an older copy (a worker-thread fetch landing after the next
+/// keystroke, or one from an older generation) is dropped — and a matching
+/// one always replaces the record, an empty one included.
+///
+/// A pick is an abbreviation pick only when it names one of these rows under
+/// the same basis (`transition::commit_continuous`); a row the list showed as
+/// a reading (a full or prefix row of the same word, whose abbreviation twin
+/// the list dropped, `continuous::assemble`) is not here, so its pick counts
+/// where that row ranks. No record for the state the pick is made in (no
+/// fetch, a new generation) counts a reading pick.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ListedAbbreviations {
+    basis: ListingBasis,
+    /// `(consumed span end, display text, canonical TL)` per row — the end
+    /// in the coordinates a pick's `consumed_bytes` uses (the spans the
+    /// fetch answered).
+    rows: Vec<(u32, String, String)>,
+}
+
+impl ListedAbbreviations {
+    pub(crate) fn new(basis: ListingBasis, rows: Vec<(u32, String, String)>) -> Self {
+        Self { basis, rows }
+    }
+
+    /// Whether a pick of `(display_text, canonical_tl)` ending at
+    /// `consumed_bytes`, made in `phase`, names a listed abbreviation row.
+    pub(crate) fn lists(
+        &self,
+        phase: &Phase,
+        config: &AppConfig,
+        consumed_bytes: usize,
+        display_text: &str,
+        canonical_tl: &str,
+    ) -> bool {
+        self.basis.matches(phase, config)
+            && self.rows.iter().any(|(end, display, tl)| {
+                *end as usize == consumed_bytes && display == display_text && tl == canonical_tl
+            })
+    }
 }
 
 impl Phase {
@@ -249,7 +357,8 @@ pub enum Intent {
     /// outside the `transition::apply` pure path because the fetch
     /// needs lexicon state — see `requests::handle_fetch_at_pos`.
     /// `transition.rs` only sees this variant via a defensive snapshot
-    /// arm; production callers always go through dispatch.
+    /// arm; production callers always go through dispatch. It records the
+    /// abbreviation rows it listed ([`ListedAbbreviations`]).
     ///
     /// `now_ms` is the platform wall clock (epoch-ms) the recency ranking
     /// reads; `user_rows` the user's own data the fetch ranks with
@@ -343,11 +452,11 @@ pub enum Intent {
 }
 
 impl Intent {
-    /// `true` for intents that only read engine state. `requests::query`
-    /// answers them from `&Engine`; `EngineHandle` runs them against a
-    /// clone with its locks released and never lets them reset state on a
-    /// generation mismatch (a stale worker-thread fetch must not wipe a
-    /// newer context).
+    /// `true` for intents that only read composing state (a fetch records
+    /// [`ListedAbbreviations`] beside it). `requests::query_listing` answers
+    /// them from `&Engine`; `EngineHandle` runs them against a clone with its
+    /// locks released and never lets them reset state on a generation
+    /// mismatch (a stale worker-thread fetch must not wipe a newer context).
     pub fn is_read_only(&self) -> bool {
         matches!(self, Intent::FetchAtPos { .. })
     }
@@ -360,9 +469,14 @@ pub enum ComposingError {
 }
 
 /// State machine. Held inside `Mutex<Engine>` at the FFI boundary.
+///
+/// `listed` ([`ListedAbbreviations`]) sits beside the state, not in it: a
+/// record of what the user was shown, never composing state a transition
+/// changes.
 #[derive(Clone, Debug, Default)]
 pub struct Engine {
     state: EngineState,
+    listed: Option<ListedAbbreviations>,
 }
 
 impl Engine {
@@ -444,16 +558,21 @@ impl Engine {
     /// whole tail's list. A pick resolves the same start
     /// (`transition::commit_continuous`).
     pub fn word_list_start(&self, config: &AppConfig) -> Option<WordListStart> {
-        match &self.state.phase {
-            Phase::Continuous {
-                raw,
-                caret,
-                nailed,
-                conversion,
-            } => {
-                crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config)
-            }
-            Phase::Idle => None,
+        ListingBasis::start_of(&self.state.phase, config)
+    }
+
+    /// The basis a list fetched now is built from under `config`
+    /// ([`ListingBasis`]); `None` when idle.
+    pub(crate) fn listing_basis(&self, config: &AppConfig) -> Option<ListingBasis> {
+        ListingBasis::of(&self.state.phase, config)
+    }
+
+    /// Records the rows a `FetchAtPos` listed ([`ListedAbbreviations`]) when
+    /// they were listed for the state held now; `None` (not composing)
+    /// records nothing.
+    pub fn remember_listing(&mut self, listing: Option<ListedAbbreviations>, config: &AppConfig) {
+        if let Some(listing) = listing.filter(|l| l.basis.matches(&self.state.phase, config)) {
+            self.listed = Some(listing);
         }
     }
 
@@ -478,7 +597,13 @@ impl Engine {
         config: &AppConfig,
         frequency: Option<&dyn ConversionFrequency>,
     ) -> Applied {
-        let mut applied = crate::transition::apply(&mut self.state, intent, config, frequency);
+        let mut applied = crate::transition::apply(
+            &mut self.state,
+            intent,
+            config,
+            frequency,
+            self.listed.as_ref(),
+        );
         crate::transition::mark_taught_next_word(&mut applied.response);
         applied
     }
@@ -505,5 +630,6 @@ impl Engine {
     /// generation-mismatch drop. Call site is `EngineHandle::handle`.
     pub(crate) fn reset(&mut self) {
         self.state = EngineState::default();
+        self.listed = None;
     }
 }
