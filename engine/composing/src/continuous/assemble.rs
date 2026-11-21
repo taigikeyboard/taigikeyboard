@@ -189,15 +189,15 @@ pub(crate) fn assemble_candidates(
             .as_ref()
             .map_or(&[], |continuous_keys| &continuous_keys.keys);
 
-        // Rows ahead of the ranked list: 1 once the walker's whole-sentence
-        // slot is prepended (Step 4), which no later sort may move.
+        // Rows ahead of the ranked list: 1 once the walker prepends a
+        // sentence of several words (Step 4), which no later sort may move.
         let mut walker_slot0_len = 0usize;
         // Whether that slot is a sentence the walker composed from several
         // edges, not one word: the only slot a picked extension may take.
         let mut walker_slot0_is_sentence = false;
         // Whether a block was appended after the first sorted one (the §35
         // bare merge, Step 4b, Step 4c) — the only case Step 4d must re-sort,
-        // along with a one-word path the developer page released from slot 0.
+        // along with a one-word path the walker placed at slot 0.
         let mut appended_blocks = false;
         let mut release_one_word = false;
 
@@ -442,12 +442,11 @@ pub(crate) fn assemble_candidates(
                         });
                         c.insert(0, slot0);
                         walker_slot0_len = 1;
-                        // A one-word path is the whole sentence, so it normally
-                        // stays at slot 0 ahead of the twelve stages (`kip` →
-                        // 級, and an abbreviation of those letters cannot pass
-                        // it). The developer page can let that one word join
-                        // the sort. A path of several words stays pinned.
-                        if !composed_from_edges && ranking::dev_rank_one_word_path() {
+                        // A one-word path is one word like any other row, so it
+                        // joins the twelve stages (ranking-lab proposal, 2026-11):
+                        // a word picked through the abbreviation `kip` can pass
+                        // 級. A path of several words stays pinned at slot 0.
+                        if !composed_from_edges {
                             walker_slot0_len = 0;
                             release_one_word = true;
                         }
@@ -614,8 +613,9 @@ pub(crate) fn assemble_candidates(
         // the tier: a Step 4b extension or Step 4c abbreviation covering the
         // whole input outranks a span-local row covering only its front, so
         // the concatenation is re-sorted (stable — each block's own order and
-        // its exclude → truncate are kept). The walker's slot 0 stays put,
-        // unless a picked word the walker cannot reach outranks its sentence.
+        // its exclude → truncate are kept). A walker slot 0 of several words
+        // stays put, unless a picked word the walker cannot reach outranks
+        // its sentence; a one-word slot 0 is sorted with the rest.
         if appended_blocks || release_one_word {
             let ranked = candidates.split_off(walker_slot0_len.min(candidates.len()));
             candidates.extend(sort_by_candidate_key(

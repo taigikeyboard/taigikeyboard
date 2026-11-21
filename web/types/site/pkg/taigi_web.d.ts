@@ -86,10 +86,6 @@ export class Session {
    */
   saveCustomEntry(roman: string, hanji: string): string;
   /**
-   * A one-word best path joins the twelve stages. Several words stay pinned.
-   */
-  setRankOneWord(enabled: boolean): string;
-  /**
    * A malformed document is refused and the previous one stays.
    */
   setSettings(settings_json: string): void;
@@ -207,7 +203,6 @@ export interface InitOutput {
     d: number,
     e: number,
   ) => [number, number, number, number];
-  readonly session_setRankOneWord: (a: number, b: number) => [number, number];
   readonly session_setSettings: (
     a: number,
     b: number,

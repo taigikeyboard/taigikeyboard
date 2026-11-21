@@ -179,12 +179,12 @@ fn poj_follows_the_same_reach() {
 }
 
 #[test]
-fn a_custom_abbreviation_trails_the_full_syllable_rows() {
-    // USER 2026-10-16: `thng` listed the literal, then custom bisyllables
-    // reached through their initials (退伍 `thui-ńg`, 大人 `thai-ngìn`) ahead
-    // of 湯 / 糖. A reading leads every abbreviation of its tier, custom or
-    // not (`CandidateSortKey::abbreviation`); custom still leads the
-    // abbreviations (`tkt` above).
+fn a_custom_abbreviation_leads_the_never_picked_full_syllable_rows() {
+    // Ranking-lab proposal (2026-11): `preference_class` is compared before
+    // `abbreviation`, so custom bisyllables reached through their initials
+    // (退伍 `thui-ńg`, 大人 `thai-ngìn`) lead the never-picked readings
+    // 湯 / 糖. This reverses USER 2026-10-16, which put every reading of the
+    // tier first.
     let _lock = engine_install_lock();
     let rows = [
         Row {
@@ -222,8 +222,8 @@ fn a_custom_abbreviation_trails_the_full_syllable_rows() {
         let words: Vec<&str> = cells.iter().filter_map(|c| c.0.as_deref()).collect();
         assert_eq!(
             words,
-            ["湯", "糖", "退伍", "大人"],
-            "{input_mode}: readings first, then the custom abbreviations; got {cells:?}"
+            ["退伍", "大人", "湯", "糖"],
+            "{input_mode}: custom words first, then the never-picked readings; got {cells:?}"
         );
     }
 }

@@ -484,17 +484,17 @@ fn explain_mechanism(
 ) -> crate::explain::Mechanism {
     use crate::explain::{CandidatePiece, WordPiece};
     let sentence = sentence_hanji(&segmentation.words, config.khinsiann_in_hanji);
-    // One word is still the walker's path, and it normally occupies slot 0.
-    // When the developer page ranks that word with the rest, it is an
-    // ordinary row: tagging it `sentence` would pull it back out of the
-    // twelve stages. A path of several words stays a sentence.
+    // One word is still the walker's path, but it is ranked with the rest
+    // (`continuous::assemble` Step 4), so it is an ordinary row: tagging it
+    // `sentence` would pull it back out of the twelve stages. A path of
+    // several words stays a sentence.
     let one_word = segmentation
         .words
         .iter()
         .filter(|word| word.kind != "gap")
         .count()
         <= 1;
-    let sentence_at = if one_word && ranking::dev_rank_one_word_path() {
+    let sentence_at = if one_word {
         None
     } else {
         listed.candidates.iter().position(|candidate| {

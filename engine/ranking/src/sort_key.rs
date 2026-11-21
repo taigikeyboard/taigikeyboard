@@ -12,10 +12,10 @@ use crate::{source_tier_rank, CONTEXT_RANK_NONE};
 /// [`CandidateSortKey::deciding_field`] returns.
 pub const SORT_FIELDS: [&str; 12] = [
     "tier",
-    "abbreviation",
     "preference_class",
     "coverage_kind",
     "user_weight",
+    "abbreviation",
     "context_rank",
     "walker_cost",
     "score",
@@ -30,10 +30,6 @@ thread_local! {
     /// [`SORT_FIELDS`]. Each thread keeps its own copy, so a web test does
     /// not change a desktop engine running in another thread.
     static DEV_SORT_ORDER: Cell<[u8; 12]> = const { Cell::new([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) };
-    /// When set, a one-word walker path joins [`CandidateSortKey`] instead of
-    /// staying at slot 0. A path of several words stays ahead of the sort.
-    /// Official input methods leave this unset.
-    static DEV_RANK_ONE_WORD: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Install a comparison order for this thread. `fields` is a permutation of
@@ -50,17 +46,6 @@ pub fn set_dev_sort_order(fields: &[&str]) -> bool {
 /// Restore this thread to [`SORT_FIELDS`].
 pub fn reset_dev_sort_order() {
     DEV_SORT_ORDER.with(|cell| cell.set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
-}
-
-/// Whether this thread ranks a one-word best path with the other rows.
-/// Default `false`: that path stays at slot 0, ahead of the twelve stages.
-pub fn dev_rank_one_word_path() -> bool {
-    DEV_RANK_ONE_WORD.with(|cell| cell.get())
-}
-
-/// The developer page's switch. Official input methods never call this.
-pub fn set_dev_rank_one_word_path(enabled: bool) {
-    DEV_RANK_ONE_WORD.with(|cell| cell.set(enabled));
 }
 
 fn order_from_names(fields: &[&str]) -> Option<[u8; 12]> {
@@ -96,16 +81,20 @@ pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 
 /// [`CandidateRankFacts::coverage_kind`] of a whole-buffer abbreviation hit:
 /// the typed buffer (`ss`, `tk`, `thng`, `ㄙㄒ`) equals the record's
-/// per-syllable-initial face. The `abbreviation` field, compared before
-/// `preference_class`, ranks it below every reading of its tier, custom
-/// words included: an acronym-shaped buffer that
-/// is also a valid syllable or onset (`thng`, `ts`, `kh`) is a reading at
-/// least as often as it is an abbreviation, so the single-syllable hits the
-/// user was reaching for keep their positions and the abbreviated words trail
-/// them — `thng` lists 湯 / 糖 before a custom 退伍 `thui-ńg` reached
-/// through its initials (USER 2026-10-16). librime likewise penalises a user
-/// phrase reached through an abbreviation
-/// (`references/librime/src/rime/dict/user_dictionary.cc:239`).
+/// per-syllable-initial face. The `abbreviation` field, compared right after
+/// `user_weight`, ranks it below every reading of its preference class and
+/// selection weight: an acronym-shaped buffer that is also a valid syllable
+/// or onset (`thng`, `ts`, `kh`) is a reading at least as often as it is an
+/// abbreviation, so a never-picked dictionary abbreviation trails the
+/// never-picked readings. librime likewise penalises a user phrase reached
+/// through an abbreviation
+/// (`references/librime/src/rime/dict/user_dictionary.cc:239`). The
+/// preference class comes first (ranking-lab proposal, 2026-11): a word the
+/// user picked through the abbreviation itself (its own `abbrev_count`,
+/// apart from its reading picks) leads every never-picked reading, and so
+/// does a custom word the user filed (`thng` → a custom 退伍 `thui-ńg`
+/// before 湯 / 糖, which reversed USER 2026-10-16). Among picked words the
+/// selection weight decides before the abbreviation does.
 pub const COVERAGE_KIND_ABBREV: u8 = 2;
 
 /// The candidate fields the continuous sort reads — everything
@@ -164,10 +153,11 @@ pub fn sort_by_candidate_key<T>(
     indexed.into_iter().map(|(_, item)| item).collect()
 }
 
-/// The leading `(tier, abbreviation)` of [`CandidateSortKey`]: whole input
-/// before front segment, then readings before abbreviations. Shared with
-/// any list that orders on these but not on the rest of the key (the TPS
-/// word list, `composing::continuous`, which puts longer words next).
+/// `(tier, abbreviation)`: whole input before front segment, then readings
+/// before abbreviations. [`CandidateSortKey`] compares the same two fields
+/// but with preference and selection weight between them; the TPS word
+/// list (`composing::continuous`) leads with this pair alone and puts
+/// longer words next.
 pub fn candidate_lead(facts: &CandidateRankFacts, raw_len: u32) -> (u8, u8) {
     let tier = u8::from(facts.consumed_span.1 != raw_len);
     let abbreviation = u8::from(facts.coverage_kind == COVERAGE_KIND_ABBREV);
@@ -201,15 +191,16 @@ fn preference_class(facts: &CandidateRankFacts) -> u8 {
 //
 // Encodes the lexicographic sort policy pinned in
 // `docs/releases/v3.5.8/plan.md` § Phase 9 (+ whole-sentence lattice + walker S8). Field
-// order in this struct matches `#[derive(Ord)]`'s lexicographic
-// comparison; `Reverse<T>` flips individual dimensions whose policy
-// is descending. NaN-safe because floats are wrapped in `NonNanF64`
+// order in this struct is [`SORT_FIELDS`], which `Ord` compares in turn
+// unless [`set_dev_sort_order`] installed another order; `Reverse<T>` flips
+// individual dimensions whose policy is descending. NaN-safe because floats are wrapped in `NonNanF64`
 // which coerces NaN to `f64::MIN` at construction.
 //
-// Order: tier, abbreviation, preference_class, coverage_kind, -user_weight,
+// Order: tier, preference_class, coverage_kind, -user_weight, abbreviation,
 // context_rank, walker_cost, -score, -freq, -coverage, source_rank,
-// stable_idx — the first two are [`candidate_lead`], shared with the TPS
-// word list. Bigram P5 (§56) added
+// stable_idx. The ranking-lab proposal (2026-11) moved `abbreviation` from
+// second to after `-user_weight`, so a word picked through its abbreviation
+// can lead the never-picked readings of its letters. Bigram P5 (§56) added
 // `context_rank` between `-user_weight` and `-score`; E1 P5a added
 // `walker_cost` below it for the walker's edge pick, and P5b made the
 // candidate list read it too, so the list and slot 0 share one scale. S8 moved `-coverage` from
@@ -227,9 +218,6 @@ pub struct CandidateSortKey {
     /// covering only a front segment (`taiuanl` → 台灣人 before 台灣;
     /// `docs/engine/continuous-input-ranking.md`).
     tier: u8,
-    /// `1` for an abbreviation hit ([`COVERAGE_KIND_ABBREV`], which says why),
-    /// `0` for a reading: every reading of the tier leads, custom or not.
-    abbreviation: u8,
     /// [`preference_class`]: selected words, then never-selected custom
     /// words, then the rest — whatever their full/partial match kind or
     /// corpus cost ("the word I put in shows up", but below the words the
@@ -246,6 +234,10 @@ pub struct CandidateSortKey {
     /// before the never-selected). `f64` so two selections seconds apart do
     /// not collapse into a tie.
     neg_user_weight: Reverse<NonNanF64>,
+    /// `1` for an abbreviation hit ([`COVERAGE_KIND_ABBREV`], which says why),
+    /// `0` for a reading: among words of one preference class and selection
+    /// weight, every reading leads, custom or not.
+    abbreviation: u8,
     /// Ascending: [`CandidateRankFacts::context_rank`] — a continuation of the
     /// previous word (user-learned first, then bundled) precedes the rest
     /// (§56). Below `user_weight` so a selected word still beats every
@@ -298,10 +290,10 @@ impl CandidateSortKey {
         let (tier, abbreviation) = candidate_lead(facts, raw_len);
         Self {
             tier,
-            abbreviation,
             preference_class: preference_class(facts),
             coverage_kind: facts.coverage_kind,
             neg_user_weight: Reverse(NonNanF64::new(facts.user_weight)),
+            abbreviation,
             context_rank: facts.context_rank,
             walker_cost: facts.walker_cost,
             neg_score: Reverse(NonNanF64::new(f64::from(facts.score))),
@@ -336,12 +328,12 @@ impl CandidateSortKey {
     fn cmp_dim(&self, other: &Self, dim: u8) -> Ordering {
         match dim {
             0 => self.tier.cmp(&other.tier),
-            1 => self.abbreviation.cmp(&other.abbreviation),
-            2 => self.preference_class.cmp(&other.preference_class),
-            3 => {
+            1 => self.preference_class.cmp(&other.preference_class),
+            2 => {
                 coverage_kind_rank(self.coverage_kind).cmp(&coverage_kind_rank(other.coverage_kind))
             }
-            4 => self.neg_user_weight.cmp(&other.neg_user_weight),
+            3 => self.neg_user_weight.cmp(&other.neg_user_weight),
+            4 => self.abbreviation.cmp(&other.abbreviation),
             5 => self.context_rank.cmp(&other.context_rank),
             6 => self.walker_cost.cmp(&other.walker_cost),
             7 => self.neg_score.cmp(&other.neg_score),
@@ -750,11 +742,14 @@ mod tests {
         );
     }
 
-    // USER 2026-10-16: a reading leads every abbreviation of its tier, a
-    // custom one included (`thng` → 湯 before a custom 退伍 `thui-ńg`);
-    // among the never-selected abbreviations the custom word still leads.
+    // Ranking-lab proposal (2026-11): the preference class leads the
+    // abbreviation, so a never-selected custom word reached through its
+    // initials (`thng` → 退伍 `thui-ńg`) leads the never-selected dictionary
+    // readings (湯 / 糖), and trails a reading the user picked. A dictionary
+    // abbreviation still trails the readings of its class, even with a
+    // context hit.
     #[test]
-    fn custom_abbreviation_trails_readings_but_leads_abbreviations() {
+    fn custom_abbreviation_leads_never_selected_readings_and_trails_picks() {
         let raw_len: u32 = 4;
         let custom_abbreviation = CandidateRankFacts {
             is_custom: true,
@@ -762,13 +757,20 @@ mod tests {
         };
         let dictionary_full_weak = cand(0, 4, 0.001, 1, 0);
         let dictionary_partial_weak = cand_partial(0, 4, 0.001, 1, 0);
+        let picked_full = cand_with_user_weight(0, 4, 0.001, 1, 0, 0.1);
         let dictionary_abbreviation = CandidateRankFacts {
             context_rank: CONTEXT_RANK_USER,
             ..cand_abbreviation(0, 4, 0.0, 0, 0)
         };
-        assert!(key(&dictionary_full_weak, raw_len, 1) < key(&custom_abbreviation, raw_len, 0));
-        assert!(key(&dictionary_partial_weak, raw_len, 1) < key(&custom_abbreviation, raw_len, 0));
-        assert!(key(&custom_abbreviation, raw_len, 1) < key(&dictionary_abbreviation, raw_len, 0));
+        let custom = key(&custom_abbreviation, raw_len, 1);
+        let full = key(&dictionary_full_weak, raw_len, 0);
+        assert!(custom < full);
+        assert_eq!(custom.deciding_field(&full), "preference_class");
+        assert!(custom < key(&dictionary_partial_weak, raw_len, 0));
+        assert!(key(&picked_full, raw_len, 2) < custom);
+        let dictionary = key(&dictionary_abbreviation, raw_len, 0);
+        assert!(full < dictionary);
+        assert_eq!(full.deciding_field(&dictionary), "abbreviation");
     }
 
     #[test]
@@ -856,7 +858,7 @@ mod tests {
         // score + the heavier user weight + best source rank still loses to
         // a full-syllable candidate with min freq, min score and worst
         // source rank — `coverage_kind` sits above every dimension except
-        // `tier`, `abbreviation` and `preference_class`.
+        // `tier` and `preference_class`.
         let raw_len: u32 = 3;
         let full_weak = cand_with_user_weight(0, 3, 0.001, 1, 0, 0.1);
         let mut partial_strong = cand_partial(0, 3, f32::MAX, u32::MAX, KAUTIAN_BIT);
@@ -870,25 +872,12 @@ mod tests {
         assert!(key(&never_full, raw_len, 0) < key(&never_partial, raw_len, 1));
     }
 
-    // The dev page's proposal order. `coverage_kind` holds a partial prefix
-    // behind a full syllable or an abbreviation, then `user_weight` can lift
-    // an abbreviation over a full syllable, and `abbreviation` breaks a
-    // weight tie. The built-in order still compares `abbreviation` first.
+    // Ranking-lab proposal (2026-11), the built-in order: `coverage_kind`
+    // holds a partial prefix behind a full syllable or an abbreviation, then
+    // `user_weight` can lift an abbreviation over a full syllable, and
+    // `abbreviation` breaks a weight tie.
     #[test]
-    fn proposal_order_holds_a_prefix_and_lets_weight_lift_an_abbreviation() {
-        let _restore = RestoreOrder;
-        let mut fields = SORT_FIELDS.to_vec();
-        let proposal = [
-            "tier",
-            "preference_class",
-            "coverage_kind",
-            "user_weight",
-            "abbreviation",
-        ];
-        fields.retain(|field| !proposal.contains(field));
-        fields.splice(0..0, proposal);
-        assert!(set_dev_sort_order(&fields));
-
+    fn a_prefix_trails_and_weight_lifts_an_abbreviation() {
         let raw_len: u32 = 4;
         let full_light = key(&cand_with_user_weight(0, 4, 1.0, 1, 0, 0.1), raw_len, 0);
         let prefix_heavy = key(
@@ -923,13 +912,6 @@ mod tests {
         assert_eq!(abbrev_heavy.deciding_field(&full_light), "user_weight");
         assert!(full_light < abbrev_light);
         assert_eq!(full_light.deciding_field(&abbrev_light), "abbreviation");
-
-        reset_dev_sort_order();
-        assert!(
-            full_light < abbrev_heavy,
-            "the built-in order still puts every reading before an abbreviation"
-        );
-        assert_eq!(full_light.deciding_field(&abbrev_heavy), "abbreviation");
     }
 
     // USER 2026-10-12: whole-input coverage leads the match kind — a
@@ -988,24 +970,6 @@ mod tests {
         assert!(front < whole, "a rejected order leaves the installed one");
         reset_dev_sort_order();
         assert!(whole < front);
-    }
-
-    #[test]
-    fn dev_rank_one_word_path_defaults_off() {
-        let _restore = RestoreOneWord;
-        assert!(!dev_rank_one_word_path());
-        set_dev_rank_one_word_path(true);
-        assert!(dev_rank_one_word_path());
-        set_dev_rank_one_word_path(false);
-        assert!(!dev_rank_one_word_path());
-    }
-
-    struct RestoreOneWord;
-
-    impl Drop for RestoreOneWord {
-        fn drop(&mut self) {
-            set_dev_rank_one_word_path(false);
-        }
     }
 
     struct RestoreOrder;

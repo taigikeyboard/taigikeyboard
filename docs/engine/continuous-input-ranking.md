@@ -16,10 +16,10 @@ One `FetchAtPos` is answered by `composing::continuous::assemble_candidates` ([`
 | 1 | Syllabify the pending `raw` and build the left-anchored FST keys (all modes: TL / POJ / TPS / English) | `shadow::build_continuous_keys` |
 | 2 | No key → whole-buffer partial-prefix scan; else span-local exact fetch per key | `fetch_via_lexicon_partial_inner` / `lexicon::fetch_candidates_for_keys_with_barriers` |
 | 3 | Recase each candidate's `roman` to the user's typed segment | `recase_roman` |
-| 4 | Prepend the whole-sentence walker's best path at slot 0 (not sort-compared; only step 4d's picked extension can displace it) | `fetch_walker_slot0_inner` |
+| 4 | Prepend the whole-sentence walker's best path at slot 0. A path of several words is not sort-compared (only step 4d's picked extension can displace it); a one-word path joins the step 4d sort like any other row (a picked 講 on `ko` leads 哥) | `fetch_walker_slot0_inner` |
 | 4b | Whole-input prefix-extension scan (`COVERAGE_KIND_PARTIAL_PREFIX`) | `fetch_via_lexicon_partial_inner` |
 | 4c | Whole-buffer abbreviation lookup | `continuous/assemble.rs` Step 4c |
-| 4d | Re-sort the merged blocks by `CandidateSortKey`, keeping slot 0 in place; a picked multi-syllable partial prefix covering the whole input then swaps above a slot 0 composed from several edges that is not itself a dictionary word (`antsua` → 按怎 over 安紙). The walker has no edge past the input. A dictionary word at slot 0 keeps it (`ko` → 哥 over a picked 講: exact before predictive), and so does a sentence against a one-syllable pick, which is keyed by reading, not by what was typed | `ranking::sort_by_candidate_key`, `picked_extension_outranks_sentence` |
+| 4d | Re-sort the merged blocks by `CandidateSortKey`, keeping a slot 0 of several words in place; a picked multi-syllable partial prefix covering the whole input then swaps above a slot 0 composed from several edges that is not itself a dictionary word (`antsua` → 按怎 over 安紙). The walker has no edge past the input. A dictionary word that is several edges keeps slot 0 (`hoogua` → 予我), and so does a sentence against a one-syllable pick, which is keyed by reading, not by what was typed | `ranking::sort_by_candidate_key`, `picked_extension_outranks_sentence` |
 | 5 | POJ mode only: render `roman` as POJ, then dedupe the rendered list | `recase_tl_as_poj_display`, `dedupe_rendered_continuous` |
 
 The dispatch caller runs the fetch twice: a neutral pass discovers the candidates, then their `user_frequency.db` rows are read and the fetch re-runs ranked (`engine/dispatch/src/fetch.rs` `fetch_at_pos` / `candidate_frequency`). No platform sends frequency rows.
@@ -35,10 +35,10 @@ The dispatch caller runs the fetch twice: a neutral pass discovers the candidate
 | # | Field | Order | Meaning |
 |---|---|---|---|
 | 1 | `tier` | 0 first | 0 = the candidate consumes the whole input, 1 = only its front (`taiuanl` → 台灣人 before 台灣) |
-| 2 | `abbreviation` | 0 first | 1 = abbreviation hit (`COVERAGE_KIND_ABBREV`); every reading of the tier — full syllable or partial prefix, custom or not — leads every abbreviation (`thng` → 湯 / 糖 before a custom 退伍 `thui-ńg` reached through its initials; USER 2026-10-16, librime's abbreviation credibility penalty) |
-| 3 | `preference_class` | 0 first | 0 = selected (`user_weight > 0`, any source), 1 = never-selected custom-dictionary word, 2 = the rest. The user's picks lead the words the user filed, which lead the rest ("the word I put in shows up", USER 2026-10-12; below the picks, USER 2026-10-16: a bulk-filed custom 屢 `lí` no longer buries 你 on `li2`). A selected partial prefix therefore leads a never-selected full syllable. §43 bounds which custom words reach class 1 |
-| 4 | `coverage_kind` | partial prefix last | a partial prefix sorts after a full syllable or an abbreviation, which tie. The stored ordinal stays full `0`, prefix `1`, abbreviation `2`. Field 2 is compared first, so that tie never decides the list |
-| 5 | `user_weight` | descending | decayed user-selection weight; orders the selected words (field 3 already put them before every never-selected one) — a picked custom word gets no lift over a heavier-picked dictionary word |
+| 2 | `preference_class` | 0 first | 0 = selected (`user_weight > 0`, any source), 1 = never-selected custom-dictionary word, 2 = the rest. The user's picks lead the words the user filed, which lead the rest ("the word I put in shows up", USER 2026-10-12; below the picks, USER 2026-10-16: a bulk-filed custom 屢 `lí` no longer buries 你 on `li2`). A selected partial prefix therefore leads a never-selected full syllable, and a custom word reached through its initials leads the never-selected readings (`thng` → a custom 退伍 `thui-ńg` before 湯 / 糖). §43 bounds which custom words reach class 1 |
+| 3 | `coverage_kind` | partial prefix last | a partial prefix sorts after a full syllable or an abbreviation, which tie (`mk` → the abbreviation 物件 before the extension 毋甘). The stored ordinal stays full `0`, prefix `1`, abbreviation `2` |
+| 4 | `user_weight` | descending | decayed user-selection weight; orders the selected words (field 2 already put them before every never-selected one) — a picked custom word gets no lift over a heavier-picked dictionary word. An abbreviation hit reads only the picks made through an abbreviation (`abbrev_count`), a reading only the rest |
+| 5 | `abbreviation` | 0 first | 1 = abbreviation hit (`COVERAGE_KIND_ABBREV`); among rows the fields above tie, a reading leads an abbreviation (librime's abbreviation credibility penalty). A word picked through the abbreviation itself leads the never-picked readings on field 2 |
 | 6 | `context_rank` | ascending | continuation of the previous word (behavioral-invariants §56 `INVARIANT_CONTINUOUS_CONTEXT_RERANK`) |
 | 7 | `walker_cost` | ascending | `dictionary.bin` corpus cost (milli-nats); `WALKER_COST_UNPRICED` for custom / learned / synthesized rows, which therefore follow every priced row of their tier unless a field above lifts them |
 | 8 | `score` | descending | `calculate_continuous_score` = `freq × (1 + 0.1 × (syllables − 1))`, purely dictionary-derived |
@@ -47,7 +47,9 @@ The dispatch caller runs the fetch twice: a neutral pass discovers the candidate
 | 11 | `source_rank` | ascending | `source_tier_rank`: custom 0, kautian 1, taigitv 2, stti 3, kungge 4, other 5 |
 | 12 | `stable_idx` | ascending | insertion order |
 
-There is no recency field: recency enters only through the decay inside `user_weight`. Fields 1–2 are `candidate_lead`; the TPS word list leads with them and `coverage_kind`, then puts longer words first whatever the counts or the custom source (H4), each length keeping this order. `CandidateSortKey::without_context` neutralizes field 6 for the walker's context-free edge pick.
+Fields 2–5 are the order the Ranking Engine Lab's proposal settled on (2026-11); before it, `abbreviation` was field 2, so every reading of a tier led every abbreviation, and a one-word walker path stayed at slot 0.
+
+There is no recency field: recency enters only through the decay inside `user_weight`. Fields 1 and 5 are `candidate_lead`; the TPS word list leads with them and `coverage_kind`, then puts longer words first whatever the counts or the custom source (H4), each length keeping this order. `CandidateSortKey::without_context` neutralizes field 6 for the walker's context-free edge pick.
 
 **User weight.** `FrequencyData::user_weight(now_ms)` → `decayed_user_weight_delta(count, now_ms, last_used_ms)` ([`engine/ranking/src/score.rs`](../../engine/ranking/src/score.rs)):
 

@@ -362,28 +362,6 @@
         "ja": "この区間を覆う辞書の語がないので、一つにはまとめず、音節のまま読みます。"
       }
     },
-    "inspectorRankOneWord": {
-      "comment": "Developer-page switch. A one-word best path joins the twelve sort stages.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "單音節整句參加排序",
-        "tailo": "Tan-im-tsiat tsíng-kù tsham-ka pâi-sū",
-        "poj": "Tan-im-chiat chéng-kù chham-ka pâi-sū",
-        "en": "Rank a one-word sentence",
-        "ja": "一語の文も並べ替えに入れる"
-      }
-    },
-    "inspectorRankOneWordNote": {
-      "comment": "What the developer-page switch changes, and that the writing page leaves it off.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "像 kip 這款一个詞的會進入排序比較，袂閣固定排頭前。選詞權重排佇縮寫頭前的時，選過的縮寫就排會贏。多詞的整句照舊固定。書寫頁面無開這个。",
-        "tailo": "Phah--khui liáu-āu, kip tsit khuán tsi̍t ê sû ê tsíng-kù ē tsìn-ji̍p tsa̍p-jī kuan, bô-koh kòo-tīng pâi thâu-tsîng. Suán-sû kuân-tāng pâi tī sok-siá thâu-tsîng ê sî, suán-kuè ê sok-siá tō pâi ē iâⁿ. To-sû ê tsíng-kù tsiàu-kū kòo-tīng. Su-siá ia̍h-bīn bô khui tsit ê.",
-        "poj": "Phah--khui liáu-āu, kip chit khoán chi̍t ê sû ê chéng-kù ē chìn-ji̍p cha̍p-jī koan, bô-koh kò͘-tēng pâi thâu-chêng. Soán-sû koân-tāng pâi tī sok-siá thâu-chêng ê sî, soán-kòe ê sok-siá tō pâi ē iâⁿ. To-sû ê chéng-kù chiàu-kū kò͘-tēng. Su-siá ia̍h-bīn bô khui chit ê.",
-        "en": "When this is on, a one-word path such as kip joins the twelve stages instead of staying at the front. A picked abbreviation can then lead, once selection weight is ordered ahead of abbreviation. A sentence of several words stays pinned. The writing page never turns this on.",
-        "ja": "オンにすると、kip のような一語の文は先頭に固定されず、十二段階に入ります。選択の重みが略称より前なら、選んだ略称が上に来られます。複数語の文は固定のままです。執筆ページではオンになりません。"
-      }
-    },
     "inspectorCustomNote": {
       "comment": "The developer page writes the same custom dictionary the writing page reads.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
@@ -789,7 +767,7 @@
       }
     },
     "inspectorPresetOriginal": {
-      "comment": "Sort-rules choice that restores the engine's built-in order and turns off ranking a one-word sentence.",
+      "comment": "Sort-rules choice that restores the engine's built-in order.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
         "hanji": "原始",
@@ -799,19 +777,8 @@
         "ja": "元の順序"
       }
     },
-    "inspectorPresetProposal": {
-      "comment": "Sort-rules choice named by the person who proposed it. Preference, selection weight, and syllable match move ahead of abbreviation, and a one-word sentence joins the sort.",
-      "scope": { "platforms": ["web"], "surfaces": ["host"] },
-      "values": {
-        "hanji": "建中提案",
-        "tailo": "Kiàn-tiong thê-àn",
-        "poj": "Kiàn-tiong thê-àn",
-        "en": "Jianzhong Proposal",
-        "ja": "建中案"
-      }
-    },
     "inspectorPresetTest": {
-      "comment": "Sort-rules choice selected once the user changes the stage order or the one-word switch.",
+      "comment": "Sort-rules choice selected once the user changes the stage order.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
         "hanji": "測試",
@@ -866,18 +833,18 @@
       }
     },
     "inspectorDetailAbbreviation": {
-      "comment": "Stage 2: within a tier, a reading leads an abbreviation.",
+      "comment": "Stage 5: when the stages above tie, a reading leads an abbreviation.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
-        "hanji": "仝一段內，照讀音拍的排佇縮寫頭前。縮寫是逐个音節的頭一个字母。",
-        "tailo": "Kāng tsi̍t tuānn lāi, tiàu tha̍k-im phah ê pâi tī sok-siá thâu-tsîng. Sok-siá sī ta̍k ê im-tsiat ê thâu tsi̍t ê jī-bó.",
-        "poj": "Kāng chi̍t toāⁿ lāi, tiàu tha̍k-im phah ê pâi tī sok-siá thâu-chêng. Sok-siá sī ta̍k ê im-chiat ê thâu chi̍t ê jī-bó.",
-        "en": "Inside the same tier, a reading comes before an abbreviation. An abbreviation is the first letter of each syllable.",
-        "ja": "同じ段の中では、読みで打った候補が略称より前です。略称は各音節の最初の字です。"
+        "hanji": "頂懸的關攏平的時，照讀音拍的排佇縮寫頭前。縮寫是逐个音節的頭一个字母。",
+        "tailo": "Tíng-kuân ê kuan lóng pênn ê sî, tiàu tha̍k-im phah ê pâi tī sok-siá thâu-tsîng. Sok-siá sī ta̍k ê im-tsiat ê thâu tsi̍t ê jī-bó.",
+        "poj": "Téng-koân ê koan lóng pêⁿ ê sî, chiàu tha̍k-im phah ê pâi tī sok-siá thâu-chêng. Sok-siá sī ta̍k ê im-chiat ê thâu chi̍t ê jī-bó.",
+        "en": "When the stages above tie, a reading comes before an abbreviation. An abbreviation is the first letter of each syllable.",
+        "ja": "上の段階が同じなら、読みで打った候補が略称より前です。略称は各音節の最初の字です。"
       }
     },
     "inspectorDetailPreference": {
-      "comment": "Stage 3: selected words, then never-selected custom words, then the rest.",
+      "comment": "Stage 2: selected words, then never-selected custom words, then the rest.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
         "hanji": "選過的詞排頭前，閣來是存過、猶未選的自訂詞，閣來是其他。",
@@ -888,7 +855,7 @@
       }
     },
     "inspectorDetailCoverage": {
-      "comment": "Stage 4: a partial prefix sorts after a full syllable or an abbreviation, which tie.",
+      "comment": "Stage 3: a partial prefix sorts after a full syllable or an abbreviation, which tie.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
         "hanji": "部分前綴排後壁。完整音節佮縮寫佇這關平手，攏排頭前。",
@@ -899,7 +866,7 @@
       }
     },
     "inspectorDetailUserWeight": {
-      "comment": "Stage 5: higher decayed selection weight wins.",
+      "comment": "Stage 4: higher decayed selection weight wins.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
         "hanji": "愈大愈頭前。選過的詞佇這關再分先後；無選過的權重是 0。",

@@ -182,11 +182,20 @@ fn span_local_branch_dedupes_partial_overlap_before_capping() {
     // abbreviation block is then filled to the cap from the rows the
     // exclude did not touch (物件 + the 30 `mó-ka` rows → 30 survive).
     // Every two-syllable row covers the whole input, so 毋 — covering only
-    // `m` — follows them all (tier first, USER 2026-10-12).
+    // `m` — follows them all (tier first, USER 2026-10-12). An abbreviation
+    // ties a full syllable on `coverage_kind`, so the abbreviation block
+    // leads the seven partial extensions.
     let cands = fetch("mk", "tl");
     let hanji: Vec<&str> = cands.iter().filter_map(|c| c.hanji.as_deref()).collect();
     assert_eq!(hanji.last(), Some(&"毋"), "{hanji:?}");
-    assert_eq!(hanji[0], "毋甘", "partial extension first: {hanji:?}");
+    assert_eq!(hanji[0], "物件", "abbreviation first: {hanji:?}");
+    let partials = &hanji[hanji.len() - 8..hanji.len() - 1];
+    assert!(
+        partials
+            .iter()
+            .all(|word| word.starts_with('毋') && word.chars().count() == 2),
+        "the partial extensions follow the abbreviations: {hanji:?}"
+    );
     let distinct: std::collections::HashSet<&str> = hanji.iter().copied().collect();
     assert_eq!(
         distinct.len(),

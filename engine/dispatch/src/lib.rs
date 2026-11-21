@@ -75,13 +75,6 @@ pub fn reset_dev_sort_order() {
     ranking::reset_dev_sort_order();
 }
 
-/// The developer page's switch: a one-word best path joins the twelve-stage
-/// comparison. A path of several words stays at slot 0. Official input
-/// methods never call this.
-pub fn set_dev_rank_one_word_path(enabled: bool) {
-    ranking::set_dev_rank_one_word_path(enabled);
-}
-
 pub fn explain_composition(
     config: &AppConfig,
     generation: u64,
