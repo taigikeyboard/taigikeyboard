@@ -44,7 +44,7 @@ pub use database::{
     deferred_transaction, immediate_transaction, JournalMode, UserDataDatabase,
     UserDataDatabaseError, TAIGI_APPLICATION_ID,
 };
-pub use frequency::{FrequencyRow, UserFrequencyStore};
+pub use frequency::{FrequencyImportRow, FrequencyRow, UserFrequencyStore};
 pub use handle::UserDataHandle;
 pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{
