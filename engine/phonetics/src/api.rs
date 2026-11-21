@@ -1,4 +1,4 @@
-//! High-level Phonetics API for direct in-process callers (the dev
+//! High-level Phone            for tok in crate::tps::tl_syllable_tokens(segment) {ics API for direct in-process callers (the dev
 //! `cli` crate, integration tests, and `phonetics::requests::handle`).
 //! The cross-platform FFI envelope lives in `engine/dispatch` per
 //! `docs/contributing/rust-ffi-safety.md` §2; this module never decodes a
@@ -92,20 +92,30 @@ pub fn contains_tps(text: &str) -> bool {
 }
 
 /// Numeric-tone TL (`"hoo2"`, `"tai5-gi2"`, `"tai5 ho2-lang5"`) → TPS
-/// Bopomofo, one syllable per [`tl_syllables`] token joined by a single space
+/// Bopomofo, one syllable per TL token joined by a single space
 /// (the platforms' `joined(separator: " ")` / `joinToString(" ")`); a
 /// continuous pick's words are space-joined, so `-` alone is not a boundary.
-/// Empty tokens (`--`, a leading or trailing separator) are dropped so
-/// nothing double-spaces.
+/// A neutral-tone `--` marks every later syllable of its word with
+/// [`crate::tps::KHINSIANN_DOT`] (reference §5.5; scope as
+/// [`crate::khinsiann::render_hanji_khinsiann`]), so words are split before
+/// [`crate::tps::tl_syllable_tokens`] drops the `--`.
 pub fn tl_numeric_to_tps(text: &str, or_maps_to_er: bool) -> String {
-    tl_syllables(text)
-        .map(|tok| {
-            crate::tps::to_zhuyin(tok, false, or_maps_to_er)
-                .trim_end()
-                .to_string()
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+    let mut syllables = Vec::new();
+    for word in text.split([' ', '\t']) {
+        for (k, segment) in word.split("--").enumerate() {
+            for tok in crate::tps::tl_syllable_tokens(segment) {
+                let tps = crate::tps::to_zhuyin(tok, false, or_maps_to_er);
+                let neutral = k > 0 && tok.chars().any(char::is_alphabetic);
+                let dot = if neutral {
+                    crate::tps::KHINSIANN_DOT
+                } else {
+                    ""
+                };
+                syllables.push(format!("{dot}{}", tps.trim_end()));
+            }
+        }
+    }
+    syllables.join(" ")
 }
 
 /// Display TL with tone marks (`"hóo"`, `"tâi-gí"`) → TPS Bopomofo: the tone

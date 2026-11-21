@@ -46,6 +46,7 @@ from common.taigi_bridge import (
     convert_tl_to_poj_strict,
     convert_tl_to_tps_strict,
     prefetch_convert,
+    prefetch_tl_to_tps_strict,
 )
 from common import read_dictionary_csv, read_dictionary_csv_polars
 
@@ -284,7 +285,7 @@ def _prefetch_supplement(tls: set[str]) -> None:
     prefetch_numeric_tone(tls)
     prefetch_numeric_tone(pojs, ascii_only=True)
     syllables = {s for tl in tls if len(parts := _tl_syllables(tl)) >= 2 for s in parts}
-    prefetch_convert(tls | syllables, "tl", "zhuyin")
+    prefetch_tl_to_tps_strict(tls | syllables)
 
 
 def _assemble_supplement_row(

@@ -356,6 +356,24 @@ class BridgeDeadError(RuntimeError):
     pass
 
 
+# Mid-word neutral-tone `--` (any run of 2+ hyphens after a non-space; the
+# converter splits words on " " only): the converter marks each
+# following syllable with `·` for display, but TPS keys carry no marker and
+# `·` is residue here. Rewriting it to `-` keeps keys byte-identical to the
+# pre-marker converter; a word-initial `--` (`--ah`, `m̄ --eh`) is left as is
+# and still raises `TpsResidueError` (empty `tps_num`, unchanged).
+_MID_WORD_NEUTRAL_RE = re.compile(r"(?<=[^ ])-{2,}")
+
+
+def _tps_key_tl(tl: str) -> str:
+    return _MID_WORD_NEUTRAL_RE.sub("-", tl)
+
+
+def prefetch_tl_to_tps_strict(tls: Iterable[str]) -> None:
+    """Prefetch `convert_tl_to_tps_strict` under the same rewritten keys."""
+    prefetch_convert((_tps_key_tl(tl) for tl in tls), "tl", "zhuyin")
+
+
 def convert_tl_to_tps_strict(tl: str) -> str:
     """Convert hyphen/space-separated TL → per-syllable-space-separated TPS.
 
@@ -367,7 +385,7 @@ def convert_tl_to_tps_strict(tl: str) -> str:
     Raises:
       - `TpsResidueError` (recoverable, per-row): non-Bopomofo residue
         in the converted output (malformed TL that broke per-syllable
-        splitting in `taigi-converter/src/converter.js:20-30`, or a
+        splitting in `taigi-converter/src/converter.js` `convert`, or a
         dialectal source-data character with no Bopomofo equivalent,
         e.g. `ṳ`), or JS-side `error` / null result on this specific
         TL token. Callers catch this subclass to skip the row.
@@ -379,7 +397,7 @@ def convert_tl_to_tps_strict(tl: str) -> str:
     Callers feed the hyphenated `tl` column, NOT the fused `tl_num`.
     """
     try:
-        converted = _convert_strict(tl, "tl", "zhuyin")
+        converted = _convert_strict(_tps_key_tl(tl), "tl", "zhuyin")
     except BridgeDeadError:
         # Fail loud — propagate.
         raise

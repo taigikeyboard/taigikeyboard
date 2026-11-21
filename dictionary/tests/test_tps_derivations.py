@@ -194,3 +194,19 @@ def test_zhuyin_vowels_table_invariant_only_er_or_map_to_oe():
         "substitution would now silently broaden recall to additional vowels — "
         "re-examine the C-3a dual-emit design before shipping the bridge change."
     )
+
+
+def test_convert_tl_to_tps_keys_carry_no_neutral_marker():
+    # The converter marks neutral-tone syllables with `·` for display
+    # (`thiann--tio̍h` → `ㄊㄧㆩ ·ㄉㄧㄛㆷ̇`); TPS keys must not, so the bridge
+    # rewrites a mid-word `--` to `-` first. trace: th → ㄊ, iann → ㄧㆩ;
+    # t → ㄉ, ioh → ㄧㄛㆷ, 8 → U+0307.
+    assert convert_tl_to_tps_strict("thiann--tio̍h") == "ㄊㄧㆩ ㄉㄧㄛㆷ̇"
+    assert "·" not in convert_tl_to_tps_strict("tsáu--tshut-khì")
+
+
+def test_convert_tl_to_tps_word_initial_neutral_still_rejected():
+    # A word-initial `--` keeps today's behaviour: `·` residue → empty
+    # `tps_num` for the row (31 lkk rows such as `--ah`).
+    with pytest.raises(TpsResidueError):
+        convert_tl_to_tps_strict("--ê")
