@@ -51,9 +51,12 @@ pub const TPS_KEYBOARD_SHOWN: SettingsKey<bool> = SettingsKey::new("tpsKeyboardS
 pub const TELEX_GUIDE_SHOWN: SettingsKey<bool> = SettingsKey::new("telexGuideShown", false);
 pub const IS_HANJI_FIRST: SettingsKey<bool> =
     SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_hanji_first);
-// RETIRED 2026-09-30: `outputBothScripts` (Annotate in Brackets). No desktop
-// UI ever wrote it; mobile keeps its own key and UI. A hand-edited `true` in an
-// existing `settings.json` is now inert, so the spelling stays reserved.
+/// Annotate in Brackets: a candidate commit writes `Hanji (romanization)` or
+/// `romanization (Hanji)`. Same spelling and default (off) as mobile; the
+/// derived value lives in `SettingsDocument::engine_settings`. Returned
+/// 2026-11-21 (bracket-annotation roadmap Phase 3) after a 2026-09-30
+/// retirement, so a hand-edited `true` left in `settings.json` takes effect.
+pub const OUTPUT_BOTH_SCRIPTS: SettingsKey<bool> = SettingsKey::new("outputBothScripts", false);
 /// What a candidate cell shows. Same key and raw strings on every platform
 /// (`SharedSettings.swift` `candidateDisplayMode`). The swap toggle above
 /// keeps its own storage while this is `romanOnly`; the derived value lives
@@ -455,7 +458,7 @@ pub(crate) const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub(crate) const GENERAL_KEYS: [&str; 15] = [
+pub(crate) const GENERAL_KEYS: [&str; 16] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
@@ -465,6 +468,7 @@ pub(crate) const GENERAL_KEYS: [&str; 15] = [
     IS_C_AFFRICATE_ENABLED.name,
     IS_F_HYPHEN_ENABLED.name,
     IS_HANJI_FIRST.name,
+    OUTPUT_BOTH_SCRIPTS.name,
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,
     IS_LITERAL_ROMAN_CANDIDATE_ENABLED.name,

@@ -628,6 +628,17 @@ mod tests {
             key_event("'", CONTROL, None),
             vec![auto_space(), tps()]
         ));
+        // Annotate in Brackets keeps the swap with Auto-Space off, except
+        // under Romanization Only, which shows no Hanji to annotate.
+        let brackets = || boolean(keys::OUTPUT_BOTH_SCRIPTS.name, true);
+        assert!(may_swap(key_event(",", 0, None), vec![brackets()]));
+        assert!(!may_swap(
+            key_event(",", 0, None),
+            vec![
+                brackets(),
+                text(keys::CANDIDATE_DISPLAY_MODE.name, "romanOnly")
+            ]
+        ));
         assert_eq!(
             pass_through_swap(&PassThroughSwapRequest { event: None }, None),
             Err(Refusal::Missing("event"))

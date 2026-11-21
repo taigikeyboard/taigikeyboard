@@ -131,7 +131,9 @@ pub fn perform_intent(
                 .commit_composition(surface)
                 .is_some_and(|commit| commit.earns_auto_space);
             close_list(list, surface);
-            append_auto_space(earns_auto_space, settings, surface);
+            // The preedit is not a bracket unit: plain Auto-Space.
+            let is_auto_space_enabled = settings.bool(&keys::IS_AUTO_SPACE_ENABLED);
+            append_auto_space(is_auto_space_enabled, earns_auto_space, surface);
             true
         }
         ComposingKeyIntent::CommitAsTyped => {
@@ -155,6 +157,7 @@ pub fn perform_intent(
                 candidate,
                 &document_text,
                 settings.bool(&keys::IS_AUTO_SPACE_ENABLED),
+                spaces_candidate_commits(settings),
                 surface,
             ) {
                 ConfirmCompositionThenInsertOutcome::Finalized {
@@ -309,16 +312,15 @@ pub fn pass_through_may_consume(
     if snapshot.is_remapped || document_punctuation(settings, &typed).is_some() {
         return true;
     }
-    is_swap_armed
-        && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        && engine::is_attaching_punctuation(&typed)
+    is_swap_armed && spaces_candidate_commits(settings) && engine::is_attaching_punctuation(&typed)
 }
 
 /// Whether a key the classifier passes through outside a composition would
-/// take an armed auto space's place: Auto-Space on and the text the swap
-/// writes for it attaching punctuation (`swap_auto_space`). For a shell
-/// that must make the swap's client checks before the key runs (macOS),
-/// and only asks them when this holds.
+/// take an armed auto space's place: the swap's switch on
+/// (`spaces_candidate_commits`) and the text the swap writes for it attaching
+/// punctuation (`swap_auto_space`). For a shell that must make the swap's
+/// client checks before the key runs (macOS), and only asks them when this
+/// holds.
 pub fn pass_through_may_swap(snapshot: &KeyEventSnapshot, settings: &SettingsDocument) -> bool {
     let Some(typed) =
         ComposingKeyIntent::document_text(snapshot, settings.choice(&keys::INPUT_MODE))
@@ -326,7 +328,7 @@ pub fn pass_through_may_swap(snapshot: &KeyEventSnapshot, settings: &SettingsDoc
         return false;
     };
     let punctuation = document_punctuation(settings, &typed);
-    settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+    spaces_candidate_commits(settings)
         && engine::is_attaching_punctuation(punctuation.as_deref().unwrap_or(&typed))
 }
 
@@ -428,7 +430,11 @@ fn commit_candidate(
     match outcome {
         CandidateCommitOutcome::Finalized { earns_auto_space } => {
             close_list(list, surface);
-            append_auto_space(earns_auto_space, settings, surface);
+            append_auto_space(
+                spaces_candidate_commits(settings),
+                earns_auto_space,
+                surface,
+            );
         }
         CandidateCommitOutcome::Nailed { refetch: false } => close_list(list, surface),
         CandidateCommitOutcome::Nailed { refetch: true }
@@ -439,18 +445,18 @@ fn commit_candidate(
 
 /// The swap for `text` about to be written outside a composition. The arm's
 /// EXISTENCE is the verdict — it is only ever set after a commit that wrote
-/// romanization earned its space — so only Auto-Space itself is re-read
-/// live here. A half-width mark moves the space after itself and re-arms
-/// the swap (`?!` chains); a full-width mark takes the space's place and
-/// arms nothing. Either way the engine hears about the character as the end
-/// of a context.
+/// romanization earned its space — so only the switch
+/// (`spaces_candidate_commits`) is re-read live here. A half-width mark moves
+/// the space after itself and re-arms the swap (`?!` chains); a full-width
+/// mark takes the space's place and arms nothing. Either way the engine
+/// hears about the character as the end of a context.
 fn swap_auto_space(
     text: &str,
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     surface: &mut impl IntentSurface,
 ) -> bool {
-    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED) || !engine::is_attaching_punctuation(text) {
+    if !spaces_candidate_commits(settings) || !engine::is_attaching_punctuation(text) {
         return false;
     }
     let is_spaced = engine::is_spaced_punctuation(text);
@@ -471,14 +477,15 @@ fn swap_auto_space(
 
 /// The trailing auto space after an explicit commit that earned one (it
 /// wrote romanization with no trailing `-`), and the swap armed on it — with
-/// Auto-Space live, and not once a write of this key has failed. Lifecycle
-/// commits never come here.
+/// the commit's switch on (Auto-Space for the preedit,
+/// `spaces_candidate_commits` for a candidate), and not once a write of this
+/// key has failed. Lifecycle commits never come here.
 fn append_auto_space(
+    is_spacing_enabled: bool,
     earns_auto_space: bool,
-    settings: &SettingsDocument,
     surface: &mut impl IntentSurface,
 ) {
-    if !auto_space_gate(settings, earns_auto_space) {
+    if !policies::is_gate_active(is_spacing_enabled, earns_auto_space) {
         return;
     }
     surface.insert_external(" ");
@@ -487,13 +494,12 @@ fn append_auto_space(
     }
 }
 
-/// The gate every auto-space site reads: Auto-Space live, and the commit's
-/// own verdict — the engine's `earns_auto_space` for a candidate and for
-/// the preedit as rendered.
-fn auto_space_gate(settings: &SettingsDocument, wrote_romanization: bool) -> bool {
-    policies::is_gate_active(
+/// The switch a candidate commit and the swap read (`policies::spaces_candidate_commits`):
+/// Auto-Space, or effective Annotate in Brackets.
+fn spaces_candidate_commits(settings: &SettingsDocument) -> bool {
+    policies::spaces_candidate_commits(
         settings.bool(&keys::IS_AUTO_SPACE_ENABLED),
-        wrote_romanization,
+        settings.effective_output_both_scripts(),
     )
 }
 

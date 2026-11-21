@@ -304,11 +304,14 @@ impl CommitContinuousArgs<'_> {
 }
 
 /// Finalizes the preedit, optionally accepting a candidate first, and
-/// appends the literal and auto space in one engine transition.
+/// appends the literal and auto space in one engine transition: a pick that
+/// finalizes reads `candidate_spacing_enabled`, the composition written as
+/// shown `auto_space_enabled`.
 pub fn confirm_composition_then_insert(
     candidate: Option<&CommitContinuousArgs<'_>>,
     text: &str,
     auto_space_enabled: bool,
+    candidate_spacing_enabled: bool,
     settings: &EngineSettings,
     stamp: RequestStamp,
 ) -> Option<CommitResult> {
@@ -317,6 +320,7 @@ pub fn confirm_composition_then_insert(
             candidate: candidate.map(CommitContinuousArgs::to_wire),
             text: text.to_owned(),
             auto_space_enabled,
+            candidate_spacing_enabled,
         }),
         "composingConfirmCompositionThenInsert",
         stamp,

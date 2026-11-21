@@ -191,6 +191,7 @@ enum StringKey: String {
     case settingsCandidateDisplayModeSideBySide = "i18n_settings_candidateDisplayModeSideBySide"
     case settingsCandidateDisplayModeCombined = "i18n_settings_candidateDisplayModeCombined"
     case settingsCandidateDisplayModeRomanOnly = "i18n_settings_candidateDisplayModeRomanOnly"
+    case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
     case settingsInputScript = "i18n_settings_inputScript"
     case settingsOutputScript = "i18n_settings_outputScript"
     case settingsOutputScriptHanji = "i18n_settings_outputScriptHanji"

@@ -87,6 +87,16 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     output_row.set_sensitive(allows_swap(context.document));
     context.on_refresh(move |document| output_row.set_sensitive(allows_swap(document)));
+    // Annotate in Brackets: greys where it has no effect (Romanization Only, TPS).
+    let brackets_row = context.switch_row_in(
+        |row| group.add(row),
+        StringKey::SettingsOutputBothScripts,
+        keys::OUTPUT_BOTH_SCRIPTS,
+    );
+    brackets_row.set_sensitive(context.document.allows_output_both_scripts());
+    context.on_refresh(move |document| {
+        brackets_row.set_sensitive(document.allows_output_both_scripts());
+    });
     let khinsiann_row = context.switch_row_in(
         |row| group.add(row),
         StringKey::SettingsKhinsiannInHanji,

@@ -590,9 +590,9 @@ fn commit_then_insert_reaches_the_host_as_one_write_and_drops_the_context() {
     let _lock = engine_lock();
     let mut rig = rig();
     rig.type_text("gua2");
-    let outcome = rig
-        .manager
-        .confirm_composition_then_insert(None, " ", false, &mut rig.recorder);
+    let outcome =
+        rig.manager
+            .confirm_composition_then_insert(None, " ", false, false, &mut rig.recorder);
     assert_eq!(
         outcome,
         ConfirmCompositionThenInsertOutcome::Finalized {
@@ -979,7 +979,7 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     // composition (`note_character_typed_outside_composition`).
     rig.type_text("gua2");
     rig.manager
-        .confirm_composition_then_insert(None, ".", false, &mut rig.recorder);
+        .confirm_composition_then_insert(None, ".", false, false, &mut rig.recorder);
     rig.type_text("bun5");
     let bun = rig.candidate("文");
     rig.commit(&bun, CandidateScript::Primary);

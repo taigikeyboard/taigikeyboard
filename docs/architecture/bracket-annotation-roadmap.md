@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `annotate in brackets`, `outputBothScripts`, `output_both_scripts`, `commit text`, `tps`, `auto-space`, `desktop settings`, `web`
-> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D3 settled). Phases 0–2 done; Phase 3 next.
+> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D4 settled). Phases 0–2 done; Phase 3 next.
 > **Siblings**: `behavioral-invariants.md` (§ Annotate in Brackets rows), `../engine/continuous-commit-and-display.md` §10.2.
 
 ---
@@ -32,6 +32,7 @@ Android debug 3.10.0 built from `main` on 2026-11-21, Samsung Notes, Annotate in
 | D1 | One bracket per pick, or per word inside a whole-sentence pick? | One bracket per pick; no engine change |
 | D2 | With Auto-Space off, do bracket units still get a space between them? | Yes: with brackets on, a space always separates two bracket units, whatever Auto-Space says; punctuation still replaces it |
 | D3 | Fix the TPS defect on its own first? | Yes, its own bugfix PR |
+| D4 | Brackets under desktop TPS (its Hanji conversion commits as shown: only picked words bracketed, no space after)? | Off under TPS, like Show Typed Text First |
 
 ## Phases
 
@@ -62,13 +63,13 @@ The desktop D2 gate ships with the desktop key in Phase 3, not before: desktop A
 ### Phase 3 — Desktop key, settings rows and the D2 spacing gate
 
 - desktop-core: `OUTPUT_BOTH_SCRIPTS = "outputBothScripts"` (default `false`) replaces the RETIRED note at `keys.rs:54-56`; the same spelling as iOS. Add it to `key_path.rs:46-57` `key_path_settings()` (macOS pushes only that list) and to `keys.rs:458-474` `GENERAL_KEYS` (Reset).
-- Projection: `CandidateDisplayMode::effective_output_both_scripts(stored) = stored && shows_hanji` beside the existing projections (`settings/document.rs:717-733`), the name the mobile twins use (Android `CandidateDisplayMode.kt`, iOS `SharedSettings.swift:926-927`); `engine_settings()` fills `EngineSettings`, `engine/bridge.rs:111-128` sets the wire field; the test at `bridge.rs:253` flips.
-- macOS: toggle under Output Script in `GeneralSettingsView.swift:155-164`, disabled under Romanization Only like the khinsiann toggle; `SettingsStore.Keys`, `resetGeneralSettings` (`SettingsStore.swift:644-661`), `EngineSettings.swift:197-211` defaults; remove the `outputBothScripts` tombstone in `RetiredSettingsCleanup.swift:37-42` (it would delete the setting every launch) and its test; `DesktopCoreRuntimeTests.swift:134-150`.
-- Windows `windows/crates/taigi-windows-settings/src/winui/pages/general.rs:119-139`, Linux `linux/crates/taigikeyboard-settings/src/pages/general.rs:79-97`: a switch row under Output Script.
+- Projection: `SettingsDocument::effective_output_both_scripts()` = stored && `allows_output_both_scripts()` (shows Hanji, not TPS — D4) beside the existing projections (`settings/document.rs:717-733`), the name the mobile twins use (Android `CandidateDisplayMode.kt`, iOS `SharedSettings.swift:926-927`); `engine_settings()` fills `EngineSettings`, `engine/bridge.rs:111-128` sets the wire field; the test at `bridge.rs:253` flips.
+- macOS: toggle under Output Script in `GeneralSettingsView.swift:155-164`, disabled under Romanization Only and TPS (D4; like the C-affricate row under TPS); `SettingsStore.Keys`, `resetGeneralSettings` (`SettingsStore.swift:644-661`), `EngineSettings.swift:197-211` defaults; remove the `outputBothScripts` tombstone in `RetiredSettingsCleanup.swift:37-42` (it would delete the setting every launch) and its test; `DesktopCoreRuntimeTests.swift:134-150`.
+- Windows `windows/crates/taigi-windows-settings/src/winui/pages/general.rs:119-139`, Linux `linux/crates/taigikeyboard-settings/src/pages/general.rs:79-97`: a switch row under Output Script, greyed by desktop-core `SettingsDocument::allows_output_both_scripts`.
 - i18n: `outputBothScripts` (`i18n/settings.json:79-84`) scope gains macos / windows / linux; no new key.
 - Upgrade: Windows and Linux have no retired-key sweep, so a hand-edited `outputBothScripts: true` left in `settings.json` takes effect on upgrade; accepted, stated in the PR.
-- D2 gate (Phase 2 rule): `composing/intent_executor.rs` `append_auto_space` / `auto_space_gate` serve both a candidate commit and `CommitRaw` / `CommitAsShown` (`finalized_composition_resolution`), so the gate must tell them apart — only the candidate commit takes `auto || effective brackets`; the `auto_space_enabled` passed to `confirm_composition_then_insert` (`:157`) and the swap sites (`pass_through_may_consume`, `pass_through_may_swap`, `swap_auto_space`) follow the same rule. Settle there whether that needs a `CommitResolution` field.
-- Visible change: with brackets on, same-Hanji dedupe is off (`engine/composing/src/continuous/dedupe.rs:103`), so the desktop TPS window can show duplicate Hanji cells, as mobile already does.
+- D2 gate (Phase 2 rule): `composing/intent_executor.rs` `append_auto_space` / `auto_space_gate` serve both a candidate commit and `CommitRaw` / `CommitAsShown` (`finalized_composition_resolution`), so the gate must tell them apart — only the candidate commit takes `auto || effective brackets`; the `auto_space_enabled` passed to `confirm_composition_then_insert` (`:157`) and the swap sites (`pass_through_may_consume`, `pass_through_may_swap`, `swap_auto_space`) follow the same rule. Settled in the pre-implementation review (2026-11-21, Fable, Codex skipped): a `ConfirmCompositionThenInsert.candidate_spacing_enabled` field, read by the engine only when the pick finalizes the composition (`transition.rs` `confirm_composition_then_insert`); a `CommitResolution` field comes too late, since the engine writes the space inside the transition. macOS `ComposingBackend.swift` `panel(_:attaches:)` dropped its own Auto-Space check; the core decides.
+- Visible change: under TL / POJ with brackets on, same-Hanji dedupe is off (`engine/composing/src/continuous/dedupe.rs:103`), so two readings of one Hanji word show as two cells, as on mobile (they write different strings). Under TPS nothing changes (D4).
 - Tests: desktop-core `tests/intent_executor.rs` (bracket text, auto-space verdict, Romanization Only masks it), the projection test, `document.rs:896-937` expectations.
 - Docs: `behavioral-invariants.md:528`, `:1045`; `engine/protos/proto/envelope.proto:87`, `composing.proto:343` (the platform no longer ANDs plain Auto-Space).
 

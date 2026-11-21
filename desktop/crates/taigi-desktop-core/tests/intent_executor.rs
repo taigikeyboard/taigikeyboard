@@ -168,6 +168,11 @@ impl Rig {
     fn calls(&self) -> Vec<&str> {
         self.surface.calls.iter().map(String::as_str).collect()
     }
+
+    fn select_cell(&mut self, text: &str) {
+        let index = self.list.cells().iter().position(|cell| cell.text == text);
+        self.surface.selected = Some(index.unwrap_or_else(|| panic!("a {text} cell")));
+    }
 }
 
 fn no_key() -> KeyEventSnapshot {
@@ -1297,4 +1302,101 @@ fn a_keyless_commit_after_a_switch_across_tps_writes_the_glyphs_unspaced() {
         assert!(rig.run(intent.clone(), &no_key()));
         assert_eq!(rig.calls(), expected, "{intent:?}");
     }
+}
+
+/// Auto-Space off, Annotate in Brackets on.
+fn brackets_rig(configure: impl FnOnce(&mut SettingsDocument)) -> Rig {
+    configured_rig(false, |settings| {
+        settings.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
+        configure(settings);
+    })
+}
+
+/// `INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`: with brackets on, a candidate
+/// commit that earns a space gets it whatever Auto-Space says.
+#[test]
+fn brackets_space_a_candidate_commit() {
+    let mut rig = brackets_rig(|_| {});
+    rig.type_word("gua");
+    rig.select_cell("我");
+    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+    assert_eq!(
+        rig.calls(),
+        ["commit 我 (guá)", "list closed", "insert \" \"", "arm"]
+    );
+}
+
+/// The preedit committed as typed is no bracket unit: plain Auto-Space.
+#[test]
+fn brackets_leave_the_preedit_unspaced() {
+    let mut rig = brackets_rig(|_| {});
+    rig.type_word("gua");
+    assert!(rig.run(ComposingKeyIntent::Commit, &no_key()));
+    assert_eq!(rig.calls(), ["commit gua", "list closed"]);
+}
+
+/// Romanization Only shows no Hanji to annotate, so brackets are off and
+/// with them the candidate spacing.
+#[test]
+fn romanization_only_masks_brackets_and_their_spacing() {
+    use taigi_desktop_core::settings::CandidateDisplayMode;
+
+    let mut rig = brackets_rig(|settings| {
+        settings.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+    });
+    rig.type_word("gua");
+    rig.select_cell("guá");
+    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+    assert_eq!(rig.calls(), ["commit guá", "list closed"]);
+    assert!(!pass_through_may_swap(&comma(), &rig.settings));
+}
+
+/// Punctuation on a highlighted cell: the finalized pick takes the bracket
+/// spacing, so a half-width mark keeps the space after it and arms it.
+#[test]
+fn brackets_space_punctuation_after_a_highlighted_pick() {
+    let mut rig = brackets_rig(|settings| {
+        settings.set_bool(&keys::IS_HANJI_FIRST, false);
+    });
+    rig.type_word("ho");
+    rig.select_cell("hó");
+    assert!(rig.run(ComposingKeyIntent::CommitThenInsert("?".into()), &no_key()));
+    assert_eq!(rig.calls(), ["commit hó (好)? ", "list closed", "arm"]);
+}
+
+/// The swap reads the same switch: an armed space takes an attaching mark.
+#[test]
+fn brackets_keep_the_swap_with_auto_space_off() {
+    let mut settings = SettingsDocument::default();
+    settings.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
+    settings.set_bool(&keys::IS_HANJI_FIRST, false);
+    assert!(pass_through_may_consume(&comma(), &settings, true));
+    assert!(pass_through_may_swap(&comma(), &settings));
+
+    let mut rig = brackets_rig(|_| {});
+    rig.surface.can_swap = true;
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &comma()));
+    assert_eq!(rig.calls(), ["swap \"，\""]);
+}
+
+/// D4: desktop TPS commits its Hanji conversion as shown, so a stored
+/// brackets switch is inert there — a pick writes the plain Hanji, no space
+/// follows the commit, and no swap is offered.
+#[test]
+fn brackets_are_inert_under_tps() {
+    let mut rig = configured_tps_rig(|settings| {
+        settings.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
+        settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false);
+    });
+    rig.type_tps("ㄏㄛˋ");
+    rig.pick_first();
+    rig.type_tps("ㄌㄤˊ");
+    rig.pick_first();
+    assert!(rig.run(ComposingKeyIntent::Commit, &no_key()));
+    // trace (read by running): with brackets on this wrote `好 (ㄏㄛˋ) 人 (ㄌㄤˊ)`.
+    assert_eq!(rig.calls(), ["commit 好人", "list closed"]);
+    assert!(!pass_through_may_swap(&comma(), &rig.settings));
 }

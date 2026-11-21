@@ -485,7 +485,14 @@ public nonisolated struct Taigi_Engine_ConfirmCompositionThenInsert: Sendable {
 
   public var text: String = String()
 
+  /// Spacing for a write of the composition as shown (no candidate, or a
+  /// partial pick's tail): the platform's Auto-Space.
   public var autoSpaceEnabled: Bool = false
+
+  /// Spacing for a pick that finalizes the composition: Auto-Space OR effective
+  /// Annotate in Brackets (behavioral-invariants
+  /// INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+  public var candidateSpacingEnabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -729,7 +736,9 @@ public nonisolated struct Taigi_Engine_CommitResolution: Sendable {
   public var wroteRomanization: Bool = false
 
   /// FINALIZED && wrote_romanization && `document_text` does not end in `-`.
-  /// The platform still ANDs its live Auto-Space setting.
+  /// The platform still ANDs its live switch: Auto-Space, or for a candidate
+  /// commit Auto-Space OR effective Annotate in Brackets
+  /// (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
   public var earnsAutoSpace: Bool = false
 
   /// ConfirmCompositionThenInsert already included its spacing in the document write.
@@ -1824,7 +1833,7 @@ nonisolated extension Taigi_Engine_CommitPreeditThenInsertExternal: SwiftProtobu
 
 nonisolated extension Taigi_Engine_ConfirmCompositionThenInsert: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConfirmCompositionThenInsert"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}candidate\0\u{1}text\0\u{3}auto_space_enabled\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}candidate\0\u{1}text\0\u{3}auto_space_enabled\0\u{3}candidate_spacing_enabled\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1835,6 +1844,7 @@ nonisolated extension Taigi_Engine_ConfirmCompositionThenInsert: SwiftProtobuf.M
       case 1: try { try decoder.decodeSingularMessageField(value: &self._candidate) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.autoSpaceEnabled) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.candidateSpacingEnabled) }()
       default: break
       }
     }
@@ -1854,6 +1864,9 @@ nonisolated extension Taigi_Engine_ConfirmCompositionThenInsert: SwiftProtobuf.M
     if self.autoSpaceEnabled != false {
       try visitor.visitSingularBoolField(value: self.autoSpaceEnabled, fieldNumber: 3)
     }
+    if self.candidateSpacingEnabled != false {
+      try visitor.visitSingularBoolField(value: self.candidateSpacingEnabled, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1861,6 +1874,7 @@ nonisolated extension Taigi_Engine_ConfirmCompositionThenInsert: SwiftProtobuf.M
     if lhs._candidate != rhs._candidate {return false}
     if lhs.text != rhs.text {return false}
     if lhs.autoSpaceEnabled != rhs.autoSpaceEnabled {return false}
+    if lhs.candidateSpacingEnabled != rhs.candidateSpacingEnabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

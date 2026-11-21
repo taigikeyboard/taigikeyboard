@@ -246,6 +246,24 @@ impl SettingsDocument {
         self.choice::<InputMode>(&keys::INPUT_MODE) == InputMode::Tps
     }
 
+    /// Whether Annotate in Brackets takes effect: a cell shows Hanji, and the
+    /// input mode is not TPS, whose Hanji conversion commits as shown — only
+    /// the picked words would carry brackets and none a space after
+    /// (maintainer 2026-11-21, roadmap D4). The settings rows grey out where
+    /// this is false; `engine_settings` masks the stored switch with it.
+    pub fn allows_output_both_scripts(&self) -> bool {
+        !self.is_typing_tps()
+            && self
+                .choice::<CandidateDisplayMode>(&keys::CANDIDATE_DISPLAY_MODE)
+                .shows_hanji()
+    }
+
+    /// Annotate in Brackets as the engine gets it: the stored switch where
+    /// [`Self::allows_output_both_scripts`].
+    pub fn effective_output_both_scripts(&self) -> bool {
+        self.allows_output_both_scripts() && self.bool(&keys::OUTPUT_BOTH_SCRIPTS)
+    }
+
     /// The layout keys are read in: the chosen one, except under TPS, whose
     /// glyphs keep their QWERTY positions. macOS twin: the picker binding
     /// and `TaigiInputController` keyboard override (QWERTY under TPS).
@@ -376,6 +394,7 @@ impl SettingsDocument {
             is_f_hyphen_enabled: input_mode != InputMode::Tps
                 && self.bool(&keys::IS_F_HYPHEN_ENABLED),
             is_khinsiann_in_hanji_enabled: self.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
+            is_output_both_scripts: self.effective_output_both_scripts(),
         }
     }
 
@@ -733,6 +752,28 @@ mod tests {
         assert!(!RomanOnly.effective_full_width_punctuation(true));
     }
 
+    /// Brackets are off under Romanization Only and TPS (D4); the stored value is kept.
+    #[test]
+    fn brackets_take_effect_only_where_allowed() {
+        let mut doc = SettingsDocument::default();
+        doc.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
+        assert!(doc.engine_settings().is_output_both_scripts);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.allows_output_both_scripts());
+        assert!(!doc.engine_settings().is_output_both_scripts);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tl);
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        assert!(!doc.allows_output_both_scripts());
+        assert!(!doc.engine_settings().is_output_both_scripts);
+        assert!(
+            doc.bool(&keys::OUTPUT_BOTH_SCRIPTS),
+            "stored value untouched"
+        );
+    }
+
     /// Under combined the candidate projection stays swapped while the
     /// punctuation width follows the stored flag the swap shortcut toggles.
     #[test]
@@ -907,9 +948,11 @@ mod tests {
         doc.set_bool(&keys::IS_C_AFFRICATE_ENABLED, true);
         doc.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
         doc.set_bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED, true);
+        doc.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
 
         // trace: stored swap=false under the default SideBySide →
         // effective_hanji_first(false)=false, effective_full_width_punctuation(false)=false;
+        // stored brackets=true under SideBySide + POJ → allows_output_both_scripts()=true;
         // every field not set above keeps its default.
         let expected = EngineSettings {
             input_mode: InputMode::Poj,
@@ -933,6 +976,7 @@ mod tests {
             is_c_affricate_enabled: true,
             is_f_hyphen_enabled: true,
             is_khinsiann_in_hanji_enabled: true,
+            is_output_both_scripts: true,
         };
         assert_eq!(doc.engine_settings(), expected);
         doc.reset_general();

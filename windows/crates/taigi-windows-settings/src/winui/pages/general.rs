@@ -130,6 +130,13 @@ pub fn view(
             },
             context,
         ),
+        // Annotate in Brackets: greys where it has no effect (Romanization Only, TPS).
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsOutputBothScripts),
+            document.bool(&keys::OUTPUT_BOTH_SCRIPTS),
+            document.allows_output_both_scripts(),
+            context.callback(|is_on| Message::SetSwitch(keys::OUTPUT_BOTH_SCRIPTS, is_on)),
+        ),
         cards::switch_row(
             strings.resolve(StringKey::SettingsKhinsiannInHanji),
             document.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),

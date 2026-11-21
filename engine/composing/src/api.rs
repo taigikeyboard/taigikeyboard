@@ -233,7 +233,10 @@ pub enum Intent {
     ConfirmCompositionThenInsert {
         candidate: Option<ContinuousPick>,
         text: String,
+        /// Spacing for the composition written as shown.
         auto_space_enabled: bool,
+        /// Spacing for a pick that finalizes the composition.
+        candidate_spacing_enabled: bool,
     },
     Reset,
     /// v3.5.8 Phase 6 — pure read of span-local continuous-input

@@ -191,7 +191,9 @@ public  final class CommitResolution extends
   /**
    * <pre>
    * FINALIZED &amp;&amp; wrote_romanization &amp;&amp; `document_text` does not end in `-`.
-   * The platform still ANDs its live Auto-Space setting.
+   * The platform still ANDs its live switch: Auto-Space, or for a candidate
+   * commit Auto-Space OR effective Annotate in Brackets
+   * (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
    * </pre>
    *
    * <code>bool earns_auto_space = 4;</code>
@@ -204,7 +206,9 @@ public  final class CommitResolution extends
   /**
    * <pre>
    * FINALIZED &amp;&amp; wrote_romanization &amp;&amp; `document_text` does not end in `-`.
-   * The platform still ANDs its live Auto-Space setting.
+   * The platform still ANDs its live switch: Auto-Space, or for a candidate
+   * commit Auto-Space OR effective Annotate in Brackets
+   * (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
    * </pre>
    *
    * <code>bool earns_auto_space = 4;</code>
@@ -217,7 +221,9 @@ public  final class CommitResolution extends
   /**
    * <pre>
    * FINALIZED &amp;&amp; wrote_romanization &amp;&amp; `document_text` does not end in `-`.
-   * The platform still ANDs its live Auto-Space setting.
+   * The platform still ANDs its live switch: Auto-Space, or for a candidate
+   * commit Auto-Space OR effective Annotate in Brackets
+   * (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
    * </pre>
    *
    * <code>bool earns_auto_space = 4;</code>
@@ -601,7 +607,9 @@ public  final class CommitResolution extends
     /**
      * <pre>
      * FINALIZED &amp;&amp; wrote_romanization &amp;&amp; `document_text` does not end in `-`.
-     * The platform still ANDs its live Auto-Space setting.
+     * The platform still ANDs its live switch: Auto-Space, or for a candidate
+     * commit Auto-Space OR effective Annotate in Brackets
+     * (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
      * </pre>
      *
      * <code>bool earns_auto_space = 4;</code>
@@ -614,7 +622,9 @@ public  final class CommitResolution extends
     /**
      * <pre>
      * FINALIZED &amp;&amp; wrote_romanization &amp;&amp; `document_text` does not end in `-`.
-     * The platform still ANDs its live Auto-Space setting.
+     * The platform still ANDs its live switch: Auto-Space, or for a candidate
+     * commit Auto-Space OR effective Annotate in Brackets
+     * (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
      * </pre>
      *
      * <code>bool earns_auto_space = 4;</code>
@@ -629,7 +639,9 @@ public  final class CommitResolution extends
     /**
      * <pre>
      * FINALIZED &amp;&amp; wrote_romanization &amp;&amp; `document_text` does not end in `-`.
-     * The platform still ANDs its live Auto-Space setting.
+     * The platform still ANDs its live switch: Auto-Space, or for a candidate
+     * commit Auto-Space OR effective Annotate in Brackets
+     * (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
      * </pre>
      *
      * <code>bool earns_auto_space = 4;</code>

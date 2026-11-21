@@ -45,6 +45,7 @@ impl KeyPathSetting {
 pub fn key_path_settings() -> Vec<KeyPathSetting> {
     let switches = [
         keys::IS_HANJI_FIRST,
+        keys::OUTPUT_BOTH_SCRIPTS,
         keys::IS_AUTO_SPACE_ENABLED,
         keys::IS_CANDIDATE_WINDOW_ENABLED,
         keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED,
