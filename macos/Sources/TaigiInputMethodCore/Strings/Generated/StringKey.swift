@@ -143,7 +143,6 @@ enum StringKey: String {
     case dictionaryExportBackup = "i18n_dictionary_exportBackup"
     case dictionaryImportBackup = "i18n_dictionary_importBackup"
     case dictionaryImportBackupResult = "i18n_dictionary_importBackupResult"
-    case dictionaryBackupPrivacyWarning = "i18n_dictionary_backupPrivacyWarning"
     case dictionaryKautianTag = "i18n_dictionary_kautianTag"
     case dictionaryTaigitvTag = "i18n_dictionary_taigitvTag"
     case dictionaryITaigiTag = "i18n_dictionary_iTaigiTag"

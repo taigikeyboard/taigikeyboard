@@ -592,16 +592,15 @@ fn csv_row(
         ))
 }
 
-/// The `.taigi` backup as one card: its title, the privacy line under it,
-/// and import / export — every store, not only this page's words.
+/// The `.taigi` backup as one card: its title and import / export —
+/// every store, not only this page's words.
 fn backup_row(
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
     is_enabled: bool,
 ) -> View {
-    cards::described_row(
+    cards::row(
         strings.resolve(StringKey::DictionaryBackupRestore),
-        strings.resolve(StringKey::DictionaryBackupPrivacyWarning),
         StackPanel::new()
             .orientation(Orientation::Horizontal)
             .spacing(CONTROL_GAP)
