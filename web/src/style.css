@@ -22,9 +22,12 @@
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Helvetica Neue", Helvetica, "PingFang TC", "Noto Sans TC", Arial,
     sans-serif;
+  /* The page's labels: the chosen face for Hanji, the system font for Latin. */
   --font: var(--system-font);
+  /* What is written: the chosen face for Hanji and the romanization alike. */
+  --text-font: var(--system-font);
   /* ZenPen's `article`: the editor. */
-  --editor-font: 22px / 30px var(--font);
+  --editor-font: 22px / 30px var(--text-font);
   /* ZenPen's `section`. */
   --measure: 600px;
   --sidebar-width: 21rem;
@@ -41,22 +44,26 @@
   color-scheme: dark;
 }
 
-/* Set on the root with the rest of the settings, so `--font` needs no redefining
-   in each rule that reads it. */
+/* Set on the root with the rest of the settings, so `--font` and `--text-font`
+   need no redefining in each rule that reads them (fonts.css: the two names). */
 :root[data-font="openHuninn"] {
-  --font: "jf-openhuninn", var(--system-font);
+  --font: "jf-openhuninn Hanji", var(--system-font);
+  --text-font: "jf-openhuninn", var(--system-font);
 }
 
 :root[data-font="iansui"] {
-  --font: "Iansui", var(--system-font);
+  --font: "Iansui Hanji", var(--system-font);
+  --text-font: "Iansui", var(--system-font);
 }
 
 :root[data-font="genYoMin"] {
-  --font: "GenYoMin2 TW", var(--system-font);
+  --font: "GenYoMin2 TW Hanji", var(--system-font);
+  --text-font: "GenYoMin2 TW", var(--system-font);
 }
 
 :root[data-font="genYoGothic"] {
-  --font: "GenYoGothic2 TW", var(--system-font);
+  --font: "GenYoGothic2 TW Hanji", var(--system-font);
+  --text-font: "GenYoGothic2 TW", var(--system-font);
 }
 
 /* The markup's English holds the slots, unseen, until i18n.js has run; by then
@@ -121,6 +128,11 @@ h1 {
   font-weight: 700;
   line-height: normal;
   overflow-wrap: break-word;
+}
+
+/* The document's title is written text, as the editor is. */
+#title {
+  font-family: var(--text-font);
 }
 
 button {
@@ -530,6 +542,7 @@ summary:focus-visible {
   box-shadow:
     0 0 0 1px var(--border),
     var(--menu-shadow);
+  font-family: var(--text-font);
   font-size: var(--candidate-size);
   line-height: 1.2;
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -550,6 +563,7 @@ summary:focus-visible {
   visibility: hidden;
   width: max-content;
   contain: layout style;
+  font-family: var(--text-font);
 }
 
 #ruler span {

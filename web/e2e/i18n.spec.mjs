@@ -127,7 +127,9 @@ test("the markup's English stays unseen until it is translated", async ({
   await expect(firstSection(page)).toBeHidden();
 });
 
-test("the default font is the only one fetched", async ({ page }) => {
+test("the default font is the only one fetched, once for both names", async ({
+  page,
+}) => {
   /** @type {string[]} */
   const fonts = [];
   page.on("request", (request) => {
@@ -141,6 +143,7 @@ test("the default font is the only one fetched", async ({ page }) => {
   // None at all where the machine has Iansui installed (`local()`).
   const others = fonts.filter((path) => !path.endsWith("iansui_regular.woff2"));
   expect(others).toEqual([]);
+  expect(fonts.length).toBeLessThanOrEqual(1);
 });
 
 for (const [value, family] of [
@@ -149,14 +152,30 @@ for (const [value, family] of [
   ["genYoMin", "GenYoMin2 TW"],
   ["genYoGothic", "GenYoGothic2 TW"],
 ]) {
-  test(`${value} sets Hanji and romanization`, async ({ page }) => {
+  test(`${value} sets the text's Hanji and romanization, the labels' Hanji`, async ({
+    page,
+  }) => {
     await open(page);
     await setting(page, "fontType").selectOption(value);
     expect(await facesFor(page, family, "台")).toBe(1);
     expect(await facesFor(page, family, "tsi̍t")).toBe(1);
-    await expect(page.locator("#text")).toHaveCSS(
+    expect(await facesFor(page, `${family} Hanji`, "台")).toBe(1);
+    expect(await facesFor(page, `${family} Hanji`, "tsi̍t")).toBe(0);
+    for (const selector of [
+      "#text",
+      "#title",
+      "#preedit",
+      "#panel",
+      "#ruler",
+    ]) {
+      await expect(page.locator(selector)).toHaveCSS(
+        "font-family",
+        new RegExp(`^"?${family}"?,`),
+      );
+    }
+    await expect(page.locator("body")).toHaveCSS(
       "font-family",
-      new RegExp(family),
+      new RegExp(`^"?${family} Hanji"?,`),
     );
   });
 }

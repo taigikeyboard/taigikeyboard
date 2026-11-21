@@ -48,6 +48,7 @@ body.dev main {
   color: var(--text);
   font: inherit;
   font-size: 0.9375rem;
+  font-family: var(--text-font);
 }
 
 #custom-status:empty {
@@ -67,6 +68,7 @@ body.dev main {
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--hairline);
   font-size: 0.9375rem;
+  font-family: var(--text-font);
 }
 
 #custom-list li span:first-child {
@@ -216,6 +218,7 @@ body.dev #text {
   background: none;
   color: var(--text);
   font-size: var(--candidate-size);
+  font-family: var(--text-font);
 }
 
 .choice[aria-current="true"] {
@@ -249,6 +252,7 @@ body.dev #text {
 .raw {
   margin: 0;
   font-size: 1.25rem;
+  font-family: var(--text-font);
 }
 
 .cuts {
@@ -270,6 +274,7 @@ body.dev #text {
 
 .cut b {
   font-size: 1.15rem;
+  font-family: var(--text-font);
 }
 
 .cut small,
@@ -349,11 +354,12 @@ body.dev #text {
 .name b {
   margin-right: 0.45rem;
   font-size: 1.35rem;
+  font-family: var(--text-font);
 }
 
 .coverage {
   margin: 0;
-  font-family: var(--font);
+  font-family: var(--text-font);
 }
 
 .coverage .head {
