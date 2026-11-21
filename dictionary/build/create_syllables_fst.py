@@ -71,7 +71,7 @@ from pathlib import Path
 from build.common import LOG_DIR, OUTPUT_DIR
 from build.dictionary_records import load_dictionary_records
 from common.logging_utils import log_header, setup_logging
-from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict, prefetch_convert
+from common.taigi_bridge import TpsResidueError, convert_tl_to_tps_strict, prefetch_tl_to_tps_strict
 
 CSV_FILE = OUTPUT_DIR / "dictionary.csv"
 OUTPUT_FILE = OUTPUT_DIR / "syllables.fst"
@@ -134,10 +134,8 @@ def collect_family_lines(logger) -> tuple[list[str], list[str], list[str]]:
     tl_lines = [record.tl_num for record in records if record.tl_num]
     poj_lines = [record.poj_num for record in records if record.poj_num]
 
-    prefetch_convert(
-        {s for record in records if record.tl for s in _TL_SPLIT_RE.split(record.tl) if s},
-        "tl",
-        "zhuyin",
+    prefetch_tl_to_tps_strict(
+        {s for record in records if record.tl for s in _TL_SPLIT_RE.split(record.tl) if s}
     )
     tps_seen: set[str] = set()
     tps_lines: list[str] = []

@@ -387,6 +387,10 @@ In connected speech, all syllables except the last one in a phrase undergo tone 
 - `--` replaces the hyphen position; no space before `--`.
 - Neutral tone syllables retain their original tone mark in TL notation.
 - TPS marks neutral tone at the beginning of each syllable, retaining the original tone mark.
+  - *Project decision (maintainer, 2026-11-21; the sources above name no character or scope):* the
+    marker is `·` U+00B7 (not `˙` U+02D9, the encode-safe tone-8 mark), and every syllable after
+    `--` up to the end of its word carries it: `thiann--tio̍h` → `ㄊㄧㆩ ·ㄉㄧㄛㆷ̇`,
+    `tsáu--tshut-khì` → `ㄗㄠˋ ·ㄘㄨㆵ ·ㄎㄧ˪`. Display only — TPS search keys carry no marker.
 - TLPA classifies neutral tone as tone 0.
 
 ### 5.6 Special Tone Rules

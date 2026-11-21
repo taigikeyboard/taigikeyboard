@@ -357,8 +357,8 @@ fn tl_numeric_to_tps_preserves_syllable_boundaries() {
     );
 }
 
-/// Repeated hyphen `--` (or leading / trailing `-`) must NOT introduce
-/// double spaces — empty tokens are filtered before joining.
+/// A neutral-tone `--` (or leading / trailing `-`) must NOT introduce double
+/// spaces — empty tokens are filtered before joining.
 #[test]
 fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
     let out = phonetics::api::tl_numeric_to_tps("gua2--gua2", false);
@@ -384,9 +384,10 @@ fn tl_display_to_tps_converts_every_word_of_a_multi_word_reading() {
     assert_eq!(tl_display_to_tps("tâi hó-lâng", false), EXPECTED);
     // Control: the hyphen-only reading always converted.
     assert_eq!(tl_display_to_tps("tâi-hó-lâng", false), EXPECTED);
-    // Tab and runs of separators collapse to one space; `--` stays dropped.
+    // Tab and runs of separators collapse to one space; `--` is one space too,
+    // and marks the syllable after it neutral (·).
     assert_eq!(tl_numeric_to_tps("tai5\tho2  lang5", false), EXPECTED);
-    assert_eq!(tl_numeric_to_tps(" tai5--ho2 ", false), "ㄉㄞˊ ㄏㄛˋ");
+    assert_eq!(tl_numeric_to_tps(" tai5--ho2 ", false), "ㄉㄞˊ ·ㄏㄛˋ");
     // A three-word sentence. trace: g → ㆣ, ua → ㄨㄚ, 2 → ˋ; b → ㆠ, e → ㆤ,
     // h coda → ㆷ (tone 4 unmarked); kh → ㄎ, i → ㄧ, 3 → ˪.
     assert_eq!(
@@ -518,4 +519,38 @@ fn double_space_window_is_under_300_ms() {
     assert_eq!(double_space("a ", 299, false), ". ");
     assert_eq!(double_space("a ", 300, false), "");
     assert_eq!(double_space("a ", -1, false), "");
+}
+
+/// Neutral tone (`--`): every syllable after it, up to the end of its word,
+/// gets the `·` prefix and keeps its own tone mark (reference §5.5; marker
+/// U+00B7 = `tps::KHINSIANN_DOT`, maintainer decision 2026-11-21).
+#[test]
+fn tl_numeric_to_tps_marks_neutral_tone_syllables_to_word_end() {
+    use phonetics::api::{tl_display_to_tps, tl_numeric_to_tps};
+    // trace: th → ㄊ, iann → ㄧㆩ (tone 1 unmarked); t → ㄉ, ioh → ㄧㄛㆷ,
+    // 8 → U+0307.
+    assert_eq!(
+        tl_display_to_tps("thiann--tio̍h", false),
+        "ㄊㄧㆩ ·ㄉㄧㄛㆷ\u{0307}"
+    );
+    // Every syllable to the word end: ts → ㄗ, au → ㄠ, 2 → ˋ; tsh → ㄘ,
+    // ut → ㄨㆵ (tone 4); kh → ㄎ, i → ㄧ, 3 → ˪.
+    assert_eq!(
+        tl_numeric_to_tps("tsau2--tshut4-khi3", false),
+        "ㄗㄠˋ ·ㄘㄨㆵ ·ㄎㄧ˪"
+    );
+    // Two `--` in one word; word-initial `--`; the mark resets at a space.
+    assert_eq!(
+        tl_numeric_to_tps("tng2--lai5--ah4", false),
+        "ㄉㆭˋ ·ㄌㄞˊ ·ㄚㆷ"
+    );
+    assert_eq!(tl_numeric_to_tps("--e5", false), "·ㆤˊ");
+    assert_eq!(tl_numeric_to_tps("m7 --eh4", false), "ㆬ˫ ·ㆤㆷ");
+    assert_eq!(
+        tl_numeric_to_tps("au7--jit8 ka2", false),
+        "ㄠ˫ ·ㆢㄧㆵ\u{0307} ㄍㄚˋ"
+    );
+    // Control: a TPS-only reading (TPS OOV synth carries Bopomofo as its
+    // roman) passes through unchanged.
+    assert_eq!(tl_numeric_to_tps("ㄉㄞˊ ㄏㄛˋ", false), "ㄉㄞˊ ㄏㄛˋ");
 }
