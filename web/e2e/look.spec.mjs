@@ -672,3 +672,87 @@ test("the composition sits on the caret's line, clear of the list", async ({
     await editor.press("Escape");
   }
 });
+
+/// How far the selection sits inside the window, and every corner of the
+/// selected cell's text that falls outside the window's rounded box or the
+/// selection's.
+/** @param {import("@playwright/test").Page} page */
+const selectionFit = (page) =>
+  panel(page).evaluate((root) => {
+    const cell = /** @type {Element} */ (
+      root.querySelector('li[aria-current="true"]')
+    );
+    const mark = getComputedStyle(cell, "::before");
+    const window = root.getBoundingClientRect();
+    const cellBox = cell.getBoundingClientRect();
+    const inset = Number.parseFloat(mark.top);
+    const shapes = {
+      window: {
+        box: window,
+        radius: Number.parseFloat(getComputedStyle(root).borderTopLeftRadius),
+      },
+      selection: {
+        box: new DOMRect(
+          cellBox.x + inset,
+          cellBox.y + inset,
+          cellBox.width - 2 * inset,
+          cellBox.height - 2 * inset,
+        ),
+        radius: Number.parseFloat(mark.borderTopLeftRadius),
+      },
+    };
+    const outside = [];
+    for (const part of cell.querySelectorAll(":scope > span")) {
+      const text = part.getBoundingClientRect();
+      for (const [name, { box, radius }] of Object.entries(shapes)) {
+        for (const x of [text.left, text.right]) {
+          for (const y of [text.top, text.bottom]) {
+            const dx = Math.max(
+              box.left + radius - x,
+              x - (box.right - radius),
+              0,
+            );
+            const dy = Math.max(
+              box.top + radius - y,
+              y - (box.bottom - radius),
+              0,
+            );
+            const inside =
+              x >= box.left - 0.5 &&
+              x <= box.right + 0.5 &&
+              y >= box.top - 0.5 &&
+              y <= box.bottom + 0.5 &&
+              Math.hypot(dx, dy) <= radius + 0.5;
+            if (!inside) {
+              outside.push(`${part.className} past the ${name} at ${x},${y}`);
+            }
+          }
+        }
+      }
+    }
+    return { inset: cellBox.top + inset - window.top, outside };
+  });
+
+test("the selection keeps one inset and the text stays inside the corners", async ({
+  page,
+}) => {
+  const insets = new Set();
+  for (const layout of [
+    "vertical",
+    "horizontal",
+    "expandable",
+    "verticalExpandable",
+  ]) {
+    for (const size of ["13", "17", "23"]) {
+      const editor = await open(page, {
+        settings: { candidateLayout: layout, candidateTextSize: size },
+      });
+      await editor.pressSequentially("tshuann");
+      await expect(candidates(page).first()).toBeVisible();
+      const { inset, outside } = await selectionFit(page);
+      expect(outside, `${layout} ${size}`).toEqual([]);
+      insets.add(inset);
+    }
+  }
+  expect([...insets]).toHaveLength(1);
+});

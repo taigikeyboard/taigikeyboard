@@ -513,8 +513,12 @@ summary:focus-visible {
   --candidate-padding-y: calc(var(--candidate-size) * 0.525);
   --candidate-separator-inset: calc(var(--candidate-size) * 0.35);
   --candidate-row: calc(var(--candidate-size) + var(--candidate-padding-y));
-  --candidate-radius: 16px;
-  --candidate-highlight-inset: 4px;
+  /* Two-line cells: the cell's half vertical padding is all the air between
+     the annotation and the window's edge, so the corner stays inside it; a
+     fixed 16px reached into the bottom line up to Standard. */
+  --candidate-radius: var(--candidate-padding-y);
+  /* One gap between the selection and the window's edge in every layout. */
+  --candidate-highlight-inset: 2px;
   position: absolute;
   z-index: 1;
   width: max-content;
@@ -532,10 +536,9 @@ summary:focus-visible {
   backdrop-filter: blur(24px) saturate(180%);
 }
 
-/* One-line cells draw a capsule, two-line cells a fixed radius. */
+/* One-line cells draw a capsule. */
 #panel:has(.candidates[data-inline]) {
   --candidate-radius: calc(var(--candidate-row) / 2);
-  --candidate-highlight-inset: 2px;
 }
 
 /* Hidden, but laid out: `#panel[hidden]` measures nothing, and the first key of
