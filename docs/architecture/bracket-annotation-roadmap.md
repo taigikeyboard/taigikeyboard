@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `annotate in brackets`, `outputBothScripts`, `output_both_scripts`, `commit text`, `tps`, `auto-space`, `desktop settings`, `web`
-> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D4 settled). Phases 0–3 done; Phase 4 next.
+> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D4 settled). Phases 0–4 done.
 > **Siblings**: `behavioral-invariants.md` (§ Annotate in Brackets rows), `../engine/continuous-commit-and-display.md` §10.2.
 
 ---
@@ -42,7 +42,7 @@ Android debug 3.10.0 built from `main` on 2026-11-21, Samsung Notes, Annotate in
 | 1 | TPS multi-word conversion (bugfix) | engine → all | Merged #1058 `bc70d4872`; Android device verified |
 | 2 | Bracket units always spaced (D2) | iOS, Android | Merged #1059 `ec0350de4`; Android device verified |
 | 3 | Desktop key + settings rows + the D2 spacing gate | desktop-core, macOS, Windows, Linux | Merged #1060 `40e90a77e`; device check pending |
-| 4 | Web settings row | Web, ChromeOS, browser extension | In review |
+| 4 | Web settings row | Web, ChromeOS, browser extension | Merged #1061 `105412a5a` |
 
 The desktop D2 gate ships with the desktop key in Phase 3, not before: desktop Auto-Space defaults to off (`desktop/crates/taigi-desktop-core/src/settings/keys.rs:111`), so the key without the gate would give every desktop user who turns brackets on `台語 (tâi-gí)我 (guá)`, and the gate without the key would be dead code.
 
