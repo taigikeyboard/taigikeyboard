@@ -69,6 +69,21 @@ final class ActionHandlerCommitRulesTests: XCTestCase {
         )
     }
 
+    /// Either setting spaces a candidate commit. Mirrors Android
+    /// `INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS_eitherSettingSpaces`.
+    func testINVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS_eitherSettingSpaces() {
+        XCTAssertTrue(ActionHandler.spacesCandidateCommits(isAutoSpaceEnabled: true, isOutputBothScripts: false))
+        XCTAssertTrue(
+            ActionHandler.spacesCandidateCommits(isAutoSpaceEnabled: false, isOutputBothScripts: true),
+            "brackets on, Auto-Space off",
+        )
+        XCTAssertTrue(ActionHandler.spacesCandidateCommits(isAutoSpaceEnabled: true, isOutputBothScripts: true))
+        XCTAssertFalse(
+            ActionHandler.spacesCandidateCommits(isAutoSpaceEnabled: false, isOutputBothScripts: false),
+            "neither setting",
+        )
+    }
+
     /// A joiner takes the auto space's place outside English, unless the Space
     /// separator wants that space (`hōo ·guá`).
     func test_joinerReplacesAutoSpace_exceptInEnglishAndUnderTheSpaceSeparator() {

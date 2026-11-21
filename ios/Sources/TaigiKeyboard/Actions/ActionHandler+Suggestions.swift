@@ -27,7 +27,7 @@ extension ActionHandler {
             // pick wrote (romanization, no trailing `-`, §23); a nail keeps
             // composing and a stale / rejected pick wrote nothing.
             if case let .finalized(earnsAutoSpace) = composingManager.commitContinuous(pick) {
-                appendAutoSpace(ifEarned: settings.isAutoSpaceEnabled && earnsAutoSpace)
+                appendAutoSpace(ifEarned: earnsAutoSpace && isCandidateSpacingOn)
             }
             return
         }
@@ -53,7 +53,7 @@ extension ActionHandler {
         }
         hostText.insert(commit.text)
         logger.debug("[SELECT] prediction script=\(pick.script) textToCommit='\(commit.text)'")
-        appendAutoSpace(ifEarned: settings.isAutoSpaceEnabled && commit.earnsAutoSpace)
+        appendAutoSpace(ifEarned: commit.earnsAutoSpace && isCandidateSpacingOn)
 
         // NextWord learns the reading as sent, so it gets the canonical TL,
         // never the rendered `roman` (POJ in POJ mode; a POJ → TL fold would
@@ -130,6 +130,31 @@ extension ActionHandler {
         documentText: String,
     ) -> Bool {
         isAutoSpaceEnabled && wroteRomanization && !documentText.hasSuffix("-")
+    }
+
+    /// Whether a candidate or prediction commit may take the engine's earned
+    /// space: Auto-Space is on, or Annotate in Brackets is (EFFECTIVE, so never
+    /// under Romanization Only) — bracket units are always spaced apart, as one
+    /// composition already spaces them (`INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`,
+    /// roadmap D2). Also gates the swap of that space. Not for the raw-preedit
+    /// and English-word commits (`appendAutoSpaceIfEarned`), which are not
+    /// bracket units.
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../candidates/CandidateClickHandler.kt
+    // `spacesCandidateCommits`. Drift causes silent divergence (one platform gluing
+    // bracket units).
+    static func spacesCandidateCommits(
+        isAutoSpaceEnabled: Bool,
+        isOutputBothScripts: Bool,
+    ) -> Bool {
+        isAutoSpaceEnabled || isOutputBothScripts
+    }
+
+    /// `spacesCandidateCommits` over the live settings.
+    var isCandidateSpacingOn: Bool {
+        Self.spacesCandidateCommits(
+            isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
+            isOutputBothScripts: settings.isOutputBothScripts,
+        )
     }
 
     /// Whether a typed joiner takes the place of the auto space before it. Not

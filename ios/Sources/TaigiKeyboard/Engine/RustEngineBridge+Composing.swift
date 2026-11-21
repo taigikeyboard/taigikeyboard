@@ -159,7 +159,7 @@ public extension RustEngineBridge {
         case nailed
         /// The whole composition was written and the engine is Idle.
         /// `earnsAutoSpace` is the engine's §23 verdict on what the pick wrote;
-        /// the live Auto-Space setting is the caller's.
+        /// the live spacing gate is the caller's.
         case finalized(earnsAutoSpace: Bool)
 
         // CROSS-PLATFORM INVARIANT — mirrors desktop-core `CandidateCommitOutcome::from_resolution`
@@ -209,8 +209,8 @@ public extension RustEngineBridge {
     }
 
     /// What a prediction tap writes into the document, as the engine resolved
-    /// it. `earnsAutoSpace` is the engine's §23 verdict; the live Auto-Space
-    /// setting is the caller's.
+    /// it. `earnsAutoSpace` is the engine's §23 verdict; the live spacing gate
+    /// is the caller's.
     struct PredictionCommit: Equatable {
         public let text: String
         public let earnsAutoSpace: Bool

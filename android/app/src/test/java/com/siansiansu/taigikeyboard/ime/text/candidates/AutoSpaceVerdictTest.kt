@@ -33,6 +33,21 @@ class AutoSpaceVerdictTest {
         )
     }
 
+    /** Either setting spaces a candidate commit. Mirrors iOS `testINVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS_eitherSettingSpaces`. */
+    @Test
+    fun INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS_eitherSettingSpaces() {
+        assertTrue(spacesCandidateCommits(isAutoSpaceEnabled = true, isOutputBothScripts = false))
+        assertTrue(
+            "brackets on, Auto-Space off",
+            spacesCandidateCommits(isAutoSpaceEnabled = false, isOutputBothScripts = true),
+        )
+        assertTrue(spacesCandidateCommits(isAutoSpaceEnabled = true, isOutputBothScripts = true))
+        assertFalse(
+            "neither setting",
+            spacesCandidateCommits(isAutoSpaceEnabled = false, isOutputBothScripts = false),
+        )
+    }
+
     /** Enter writes the composition as typed: romanization in TL/POJ, Bopomofo in TPS. */
     @Test
     fun rawCommit_writesRomanizationUnlessTheLayoutComposesBopomofo() {

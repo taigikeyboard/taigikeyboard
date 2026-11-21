@@ -31,6 +31,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
+import com.siansiansu.taigikeyboard.ime.text.candidates.spacesCandidateCommits
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
@@ -161,12 +162,21 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     /**
-     * Whether the space in front of the caret is one this IME wrote and
-     * Auto-Space is still on. The setting is read live so switching the feature
-     * off stops the swap; the provenance is the consumed arm.
+     * Whether a candidate or prediction commit takes the engine's earned space:
+     * Auto-Space or EFFECTIVE Annotate in Brackets, read live
+     * ([spacesCandidateCommits]).
+     */
+    internal val isCandidateSpacingOn: Boolean
+        get() = spacesCandidateCommits(prefs.isAutoSpaceEnabled, prefs.isOutputBothScripts)
+
+    /**
+     * Whether the space in front of the caret is one this IME wrote and a
+     * setting that spaces candidate commits is still on ([isCandidateSpacingOn]). The settings
+     * are read live so switching them off stops the swap; the provenance is the
+     * consumed arm.
      */
     internal val isAutoSpaceSwapArmed: Boolean
-        get() = wasAutoSpaceArmedAtEventStart && prefs.isAutoSpaceEnabled
+        get() = wasAutoSpaceArmedAtEventStart && isCandidateSpacingOn
 
     /** Forgets any armed space and plain-space mark — a new editor's document is not ours to rewrite. */
     internal fun clearSpaceMarks() {
