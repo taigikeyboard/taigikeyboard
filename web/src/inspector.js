@@ -314,6 +314,14 @@ function whyScored(entry, previous, next) {
   if (row.placedBy === "picked_over_sentence") {
     return translate("web.inspectorPickedOver");
   }
+  if (row.placedBy === "behind_path") {
+    // A one-syllable pick stands aside for the one-word path ahead of it:
+    // the store keys it by its reading, not by what was typed.
+    return translate("web.inspectorFrontHeldHere", {
+      index: String(entry.index + 1),
+      reason: translate("web.inspectorFrontSyllables"),
+    });
+  }
   if (!previous || row.placedBy === "lead") {
     const stage = next && CANONICAL.find(([id]) => id === next.row.placedBy);
     if (stage && next && currentBeats(next.row, row, stage[0])) {
@@ -637,7 +645,10 @@ function frontSteps(sentence, rival, wordCount) {
               count: String(wordCount),
             })
           : translate("web.inspectorFrontOneWord"),
-      hold: wordCount < 2,
+      // A pinned one-word path is one the engine moved ahead of
+      // one-syllable picks (`path_over_prefix_pick`), so one word holds
+      // nothing: the syllables check decides.
+      hold: false,
     },
   ];
   if (rival) {
@@ -685,7 +696,7 @@ function frontSteps(sentence, rival, wordCount) {
  * @returns {string}
  */
 function frontWhy(rival, steps, decided) {
-  if (!rival || decided === 0) {
+  if (!rival) {
     return translate("web.inspectorFrontHeldWords");
   }
   if (decided < 0) {
@@ -1068,7 +1079,17 @@ export class Inspector {
       const wordCount = sentenceWordCount(view);
       const list = element("div", "cards pinned-row");
       for (const entry of pinned) {
-        list.append(pinnedCard(entry, rival, wordCount));
+        // A moved one-word path is checked against the pick it moved ahead
+        // of, the row right after it — unless a later dedupe dropped that
+        // pick, in which case the next row is unrelated.
+        const next = rows[entry.index + 1] ?? null;
+        const against =
+          entry.row.placedBy === "path_over_prefix_pick"
+            ? next?.row.placedBy === "behind_path"
+              ? next
+              : null
+            : rival;
+        list.append(pinnedCard(entry, against, wordCount));
       }
       section.append(list);
       this.body.append(section);

@@ -428,6 +428,14 @@ pub fn selected(hanji: &str, canonical_tl: &str, count: i32, age_ms: i64) -> Sel
     }
 }
 
+/// A custom-dictionary entry: `hanji` filed under `roman`.
+pub fn custom(roman: &str, hanji: &str) -> CustomEntry {
+    CustomEntry {
+        roman: roman.into(),
+        hanji: Some(hanji.into()),
+    }
+}
+
 /// A `FetchAtPos` as the engine runs it: the settings a platform sends plus
 /// the user rows the engine reads from its stores (`composing::UserRows`).
 /// Its source filter is the config's `dictionary_sources` (absent = every

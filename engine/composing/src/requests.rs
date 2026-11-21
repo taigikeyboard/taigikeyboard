@@ -28,7 +28,9 @@ use crate::api::{
     CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent,
     ListedAbbreviations, Phase, UserRows,
 };
-use crate::continuous::{assemble_candidates, retain_first_by_key, ListShape};
+use crate::continuous::{
+    assemble_candidates, is_one_syllable_prefix_pick, retain_first_by_key, Assembled, ListShape,
+};
 use crate::derived::buffer_input_mode;
 use crate::WordListStart;
 use lexicon::dictionary_reader::NO_ROWID;
@@ -353,6 +355,9 @@ struct Listed {
     learned: Vec<LearnedEntry>,
     candidates: Vec<RawCandidate>,
     literal_at: Option<usize>,
+    /// The Step 4d post-pass moved the one-word walker path ahead of
+    /// one-syllable prefix picks (`continuous::assemble`).
+    walker_moved: bool,
     /// Hanji leaked into the buffer: an empty list, no cut.
     blocked: bool,
 }
@@ -399,6 +404,7 @@ fn listed_candidates(
             learned: Vec::new(),
             candidates: Vec::new(),
             literal_at: None,
+            walker_moved: false,
             blocked: true,
         });
     }
@@ -433,7 +439,10 @@ fn listed_candidates(
     // The config's source filter flows into `ContinuousFetchCtx` so the
     // span-local + partial-prefix fetchers apply the same `Filter` the Tab3
     // browse path uses.
-    let mut candidates = assemble_candidates(
+    let Assembled {
+        mut candidates,
+        walker_moved,
+    } = assemble_candidates(
         raw,
         &user_rows.frequency,
         now_ms,
@@ -504,6 +513,7 @@ fn listed_candidates(
         learned,
         candidates,
         literal_at,
+        walker_moved,
         blocked: false,
     })
 }
@@ -519,23 +529,35 @@ fn explain_mechanism(
     // One word is still the walker's path, but it is ranked with the rest
     // (`continuous::assemble` Step 4), so it is an ordinary row: tagging it
     // `sentence` would pull it back out of the twelve stages. A path of
-    // several words stays a sentence.
+    // several words stays a sentence, and so does a one-word path the Step 4d
+    // post-pass moved ahead of one-syllable prefix picks — no sort field
+    // placed it, so it reads `path_over_prefix_pick` and the picks it passed
+    // `behind_path`.
     let one_word = segmentation
         .words
         .iter()
         .filter(|word| word.kind != "gap")
         .count()
         <= 1;
-    let sentence_at = if one_word {
+    let raw_len = listed.raw.len() as u32;
+    let is_sentence = |candidate: &RawCandidate| {
+        sentence
+            .as_ref()
+            .is_some_and(|hanji| candidate.hanji.as_deref() == Some(hanji))
+    };
+    let path_moved = one_word && listed.walker_moved;
+    let sentence_at = if path_moved {
+        listed
+            .candidates
+            .iter()
+            .position(|candidate| is_sentence(candidate) && candidate.consumed_span.1 == raw_len)
+    } else if one_word {
         None
     } else {
-        listed.candidates.iter().position(|candidate| {
-            sentence
-                .as_ref()
-                .is_some_and(|hanji| candidate.hanji.as_deref() == Some(hanji))
-        })
+        listed.candidates.iter().position(is_sentence)
     };
     let mut previous: Option<CandidateSortKey> = None;
+    let mut behind_path = false;
     let pieces: Vec<CandidatePiece> = listed
         .candidates
         .iter()
@@ -548,16 +570,22 @@ fn explain_mechanism(
             } else {
                 "word"
             };
-            let key = CandidateSortKey::new(
-                &candidate.rank_facts(),
-                listed.raw.len() as u32,
-                index as u32,
-            );
+            behind_path = if role == "sentence" {
+                path_moved
+            } else {
+                behind_path && is_one_syllable_prefix_pick(candidate)
+            };
+            let key = CandidateSortKey::new(&candidate.rank_facts(), raw_len, index as u32);
             let placed_by = match role {
                 "literal" => "literal",
+                "sentence" if path_moved => "path_over_prefix_pick",
                 "sentence" if previous.is_some() => "sentence_after",
                 "sentence" => "sentence",
-                _ if sentence_at.is_some_and(|at| at > index) && previous.is_none() => {
+                _ if behind_path => "behind_path",
+                _ if !path_moved
+                    && sentence_at.is_some_and(|at| at > index)
+                    && previous.is_none() =>
+                {
                     "picked_over_sentence"
                 }
                 _ => previous
@@ -568,7 +596,6 @@ fn explain_mechanism(
                 previous = Some(key);
             }
             let (start, end) = candidate.consumed_span;
-            let raw_len = listed.raw.len() as u32;
             let lookup_key = phonetics::api::learning_hanji_key(&candidate.display_text);
             let picks = frequency.get(&lookup_key, &candidate.canonical_tl);
             CandidatePiece {

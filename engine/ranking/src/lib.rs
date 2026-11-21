@@ -26,7 +26,7 @@ pub use score::{
     USER_WEIGHT_DECAY_TAU_MS,
 };
 pub use sort_key::{
-    candidate_lead, reset_dev_sort_order, set_dev_sort_order, sort_by_candidate_key,
-    CandidateRankFacts, CandidateSortKey, COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL,
-    COVERAGE_KIND_PARTIAL_PREFIX, WALKER_COST_UNPRICED,
+    reset_dev_sort_order, set_dev_sort_order, sort_by_candidate_key, CandidateRankFacts,
+    CandidateSortKey, COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX,
+    WALKER_COST_UNPRICED,
 };

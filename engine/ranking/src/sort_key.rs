@@ -153,17 +153,6 @@ pub fn sort_by_candidate_key<T>(
     indexed.into_iter().map(|(_, item)| item).collect()
 }
 
-/// `(tier, abbreviation)`: whole input before front segment, then readings
-/// before abbreviations. [`CandidateSortKey`] compares the same two fields
-/// but with preference and selection weight between them; the TPS word
-/// list (`composing::continuous`) leads with this pair alone and puts
-/// longer words next.
-pub fn candidate_lead(facts: &CandidateRankFacts, raw_len: u32) -> (u8, u8) {
-    let tier = u8::from(facts.consumed_span.1 != raw_len);
-    let abbreviation = u8::from(facts.coverage_kind == COVERAGE_KIND_ABBREV);
-    (tier, abbreviation)
-}
-
 /// A partial prefix sorts after a full syllable or an abbreviation, which
 /// share one rank. The stored [`COVERAGE_KIND_ABBREV`] ordinal stays `2`
 /// so a caller can still tell the three kinds apart.
@@ -287,13 +276,12 @@ impl CandidateSortKey {
         // candidate (`record_to_candidate` → false, dict.bin source
         // bits; `custom_entry_to_candidate` → true, forces rank 0).
         let source_rank = source_tier_rank(facts.bitmask, facts.is_custom);
-        let (tier, abbreviation) = candidate_lead(facts, raw_len);
         Self {
-            tier,
+            tier: u8::from(end != raw_len),
             preference_class: preference_class(facts),
             coverage_kind: facts.coverage_kind,
             neg_user_weight: Reverse(NonNanF64::new(facts.user_weight)),
-            abbreviation,
+            abbreviation: u8::from(facts.coverage_kind == COVERAGE_KIND_ABBREV),
             context_rank: facts.context_rank,
             walker_cost: facts.walker_cost,
             neg_score: Reverse(NonNanF64::new(f64::from(facts.score))),

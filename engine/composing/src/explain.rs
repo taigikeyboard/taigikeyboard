@@ -40,8 +40,11 @@ pub struct CandidatePiece {
     /// `sentence`, `literal` or `word`.
     pub role: &'static str,
     /// Why this row is ahead of the previous scored row: `sentence`,
-    /// `literal`, `lead`, `picked_over_sentence`, or a
-    /// [`ranking::CandidateSortKey`] dimension name.
+    /// `sentence_after` (the walker's path, behind rows that stay ahead of
+    /// it), `path_over_prefix_pick` (a one-word path the Step 4d post-pass
+    /// moved ahead of one-syllable prefix picks), `behind_path` (a pick it
+    /// moved behind that path), `literal`, `lead`, `picked_over_sentence`,
+    /// or a [`ranking::CandidateSortKey`] dimension name.
     pub placed_by: &'static str,
     /// `picked`, `custom` or `rest`.
     pub preference: &'static str,
