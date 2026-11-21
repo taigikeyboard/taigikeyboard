@@ -11,7 +11,8 @@
 //! the request's own effects then apply against fresh state.
 //!
 //! Read-only intents (`Intent::is_read_only`: `FetchAtPos`)
-//! never mutate. A platform may run the candidate search on a worker
+//! never mutate composing state (a fetch records the rows it listed,
+//! [`ListedAbbreviations`]). A platform may run the candidate search on a worker
 //! thread (Android does), so a fetch can finish after the main thread has
 //! already moved the engine to a newer generation. Letting that stale
 //! fetch reset the engine would wipe the new context's composing state;
@@ -23,7 +24,9 @@
 //! re-rank) takes that clone once ([`EngineHandle::engine_at`]) and answers
 //! every pass from it, so the rows it read describe the state it answers.
 
-use crate::api::{Applied, ComposingError, ConversionFrequency, Engine, Intent};
+use crate::api::{
+    Applied, ComposingError, ConversionFrequency, Engine, Intent, ListedAbbreviations,
+};
 use crate::requests;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, ComposingRequest, ComposingResponse};
@@ -127,12 +130,31 @@ impl EngineHandle {
 
     /// Answers a read-only intent (`Intent::is_read_only`) — a `FetchAtPos`
     /// the engine built with the user's rows (`UserRows`), or one decoded
-    /// from the wire. A stale generation answers the idle snapshot (module
-    /// doc).
+    /// from the wire — and records the rows it listed
+    /// ([`remember_listing`](Self::remember_listing)). A stale generation
+    /// answers the idle snapshot (module doc).
     pub fn query(&self, intent: &Intent, config: &AppConfig, generation: u64) -> ComposingResponse {
-        match self.engine_at(generation) {
-            Some(snapshot) => requests::query(intent, &snapshot, config),
-            None => Engine::idle_snapshot(config),
+        let Some(snapshot) = self.engine_at(generation) else {
+            return Engine::idle_snapshot(config);
+        };
+        let (response, listing) = requests::query_listing(intent, &snapshot, config);
+        self.remember_listing(generation, listing, config);
+        response
+    }
+
+    /// [`Engine::remember_listing`] for a fetch answered from a clone as of
+    /// `generation`: dropped when a mutating request has moved the generation
+    /// on ([`ListedAbbreviations`]).
+    pub fn remember_listing(
+        &self,
+        generation: u64,
+        listing: Option<ListedAbbreviations>,
+        config: &AppConfig,
+    ) {
+        if listing.is_some() {
+            self.at(generation, |engine| {
+                engine.remember_listing(listing, config)
+            });
         }
     }
 
@@ -140,28 +162,28 @@ impl EngineHandle {
     /// is stale. A `FetchAtPos` reads what it ranks against from it
     /// (`Engine::pending_snapshot`) — the user-data stores and the bigram
     /// tables (user-data-engine-roadmap P3b, bigram-lm-roadmap P5) — and
-    /// answers every pass from it (`requests::query`).
+    /// answers every pass from it (`requests::query_listing`).
     pub fn engine_at(&self, generation: u64) -> Option<Engine> {
-        self.read_at(generation, Engine::clone)
+        self.at(generation, |engine| engine.clone())
     }
 
-    /// Runs `read` on the engine as of `generation`, or answers `None` when a
-    /// mutating request has moved the engine on. A lock-free fast reject for
-    /// the common stale case, re-checked under the mutex: a newer generation
-    /// may land between the load and the lock, and that state must not be
-    /// answered as ours.
-    fn read_at<T>(&self, generation: u64, read: impl FnOnce(&Engine) -> T) -> Option<T> {
+    /// Runs `access` on the engine as of `generation`, or answers `None` when
+    /// a mutating request has moved the engine on. A lock-free fast reject
+    /// for the common stale case, re-checked under the mutex: a newer
+    /// generation may land between the load and the lock, and that state
+    /// must not be answered as ours.
+    fn at<T>(&self, generation: u64, access: impl FnOnce(&mut Engine) -> T) -> Option<T> {
         if self.last_generation.load(Ordering::Acquire) != generation {
             return None;
         }
-        let engine = self
+        let mut engine = self
             .composing
             .lock()
             .expect("composing engine mutex poisoned");
         if self.last_generation.load(Ordering::Acquire) != generation {
             return None;
         }
-        Some(read(&engine))
+        Some(access(&mut engine))
     }
 }
 impl Default for EngineHandle {

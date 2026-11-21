@@ -26,6 +26,7 @@ pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learnin
     name: TABLE_NAME,
     identity: ["hanzi", "roman"],
     count: "learn_count",
+    count_share: None,
     last_used: "updated_at",
     delete_dependents: Some(delete_search_keys),
 };

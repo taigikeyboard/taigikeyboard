@@ -4,7 +4,7 @@
 //! roadmap P3b, brainstorm R5, §56. Without user data (the stores not open
 //! yet, or a build without them) the bundled context ranks one pass alone.
 
-use composing::requests::{fetch_at_pos_intent, mechanism, query};
+use composing::requests::{fetch_at_pos_intent, mechanism, query_listing};
 use composing::{ConversionFrequency, Engine, EngineHandle, UserRows};
 use protos::engine::{AppConfig, ComposingResponse, FetchAtPos};
 use ranking::{ContextRanks, FrequencyMap, CONTEXT_RANK_USER};
@@ -26,25 +26,38 @@ pub(crate) trait UserRowSource: ConversionFrequency {
 /// Answers a `FetchAtPos`. The main thread keeps typing while a worker
 /// fetches: every pass answers from one copy of the engine as of
 /// `generation`, so rows read for one buffer never rank another. A stale
-/// generation answers the idle snapshot.
+/// generation answers the idle snapshot. The pass answered records its rows
+/// (`EngineHandle::remember_listing`) before the response returns.
 pub(crate) fn fetch_at_pos(
     source: Option<&dyn UserRowSource>,
     sent: &FetchAtPos,
     config: &AppConfig,
     generation: u64,
 ) -> ComposingResponse {
-    let Some(engine) = EngineHandle::instance().engine_at(generation) else {
+    let handle = EngineHandle::instance();
+    let Some(engine) = handle.engine_at(generation) else {
         return Engine::idle_snapshot(config);
     };
     let (mut rows, context) = ranking_inputs(source, &engine, config, sent.now_ms);
-    if let Some(source) = source {
-        let (neutral, frequency) = neutral_pass(source, &engine, sent, &rows, &context, config);
-        if frequency.is_empty() {
-            return neutral;
+    let (response, listing) = match source {
+        None => query_listing(&fetch_at_pos_intent(sent, rows, context), &engine, config),
+        Some(source) => {
+            let neutral = query_listing(
+                &fetch_at_pos_intent(sent, rows.clone(), context.clone()),
+                &engine,
+                config,
+            );
+            let frequency = candidate_frequency(source, &neutral.0);
+            if frequency.is_empty() {
+                neutral
+            } else {
+                rows.frequency = frequency;
+                query_listing(&fetch_at_pos_intent(sent, rows, context), &engine, config)
+            }
         }
-        rows.frequency = frequency;
-    }
-    query(&fetch_at_pos_intent(sent, rows, context), &engine, config)
+    };
+    handle.remember_listing(generation, listing, config);
+    response
 }
 
 /// The open composition's cut and candidate order, ranked with the rows the
@@ -58,7 +71,13 @@ pub(crate) fn explain(
     let engine = EngineHandle::instance().engine_at(generation)?;
     let (mut rows, context) = ranking_inputs(source, &engine, config, sent.now_ms);
     if let Some(source) = source {
-        rows.frequency = neutral_pass(source, &engine, sent, &rows, &context, config).1;
+        let neutral = query_listing(
+            &fetch_at_pos_intent(sent, rows.clone(), context.clone()),
+            &engine,
+            config,
+        )
+        .0;
+        rows.frequency = candidate_frequency(source, &neutral);
     }
     mechanism(
         &engine,
@@ -92,25 +111,6 @@ fn ranking_inputs(
         }
     }
     (rows, context)
-}
-
-/// The fetch before the learned counts, and the counts of the candidates it
-/// offered — what a re-ranked pass adds to `rows`.
-fn neutral_pass(
-    source: &dyn UserRowSource,
-    engine: &Engine,
-    sent: &FetchAtPos,
-    rows: &UserRows,
-    context: &ContextRanks,
-    config: &AppConfig,
-) -> (ComposingResponse, FrequencyMap) {
-    let neutral = query(
-        &fetch_at_pos_intent(sent, rows.clone(), context.clone()),
-        engine,
-        config,
-    );
-    let frequency = candidate_frequency(source, &neutral);
-    (neutral, frequency)
 }
 
 /// The learned counts for the candidates `neutral` offers, each word asked

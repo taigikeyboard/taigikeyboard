@@ -25,7 +25,7 @@ use ranking::FrequencyMap;
 use test_support::engine_install_lock;
 
 use crate::common::{
-    commit_text, config, config_converting, converted_words, effect_kinds, frequency_map,
+    commit_text, config, config_converting, converted_words, effect_kinds, frequency_map, pick_of,
     resolution, selected, Fetch, Selected, NOW_MS,
 };
 use crate::tps_hanji_conversion::{
@@ -164,18 +164,7 @@ fn a_tail_of_tone_marks_after_a_pick_keeps_composing() {
         .into_iter()
         .next()
         .expect("the tone mark's own row");
-    let response = engine.apply(
-        Intent::CommitContinuous {
-            canonical_text: row.display_text.clone(),
-            association_tl: row.canonical_tl.clone(),
-            hanji: row.hanji.clone(),
-            consumed_bytes: row.consumed_span_end as usize,
-            syllable_count: row.syllable_count as u8,
-            script: Some(CommitScript::Lead),
-            roman: row.roman.clone(),
-        },
-        &config,
-    );
+    let response = engine.apply(pick_of(&row, CommitScript::Lead), &config);
     assert_eq!(outcome(&response), Some(CommitOutcome::Nailed as i32));
     assert!(response.is_composing);
 }
@@ -239,6 +228,74 @@ fn a_pick_nails_the_words_before_it_as_shown_and_keeps_composing() {
     // The word nailed as shown keeps its identity for context.
     assert_eq!(nailed(&engine)[0].association_tl, "sí");
     assert_eq!(nailed(&engine)[0].hanji.as_deref(), Some("死"));
+}
+
+// trace: "ㄒㄧˋㄙㄧ" → 死 (0, 8), then "ㄙㄧ" (8, 14) the caret ends, so the
+// list reads "ㄙㄧ" from 8. A custom 所以 `sóo-í` is TPS ㄙㆦˋ ㄧˋ: abbreviation
+// `ㄙㄧ` (`tps_abbrev_from_tl`, first glyph per syllable), toneless reading
+// `ㄙㆦㄧ`, so the list holds it as a whole-buffer abbreviation row, its span
+// shifted back into the tail: 8 + 6 = 14. A pick of that row is an
+// abbreviation pick.
+#[test]
+fn a_whole_list_abbreviation_pick_after_a_converted_word_is_counted_as_one() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄒㄧˋㄙㄧ", &config);
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::InTail(8))
+    );
+    let row = sooi_row(&mut engine, &config);
+    assert_eq!(row.consumed_span_end, 14);
+    let applied = engine.apply_learning(pick_of(&row, CommitScript::Lead), &config);
+    assert_eq!(applied.usage.map(|usage| usage.abbreviation), Some(true));
+}
+
+// The same row listed for the last nailed segment (H4 ↓ after a pick):
+// trace: "ㄙㄧ" nailed as 所以 leaves an empty tail, the caret at 0, so the
+// list reads the segment's raw "ㄙㄧ" from 0 (`WordListStart::LastNailed`),
+// 所以 ending at 6. Picking it again re-opens the segment and counts it as an
+// abbreviation pick — the record was listed for that nailed state.
+#[test]
+fn an_abbreviation_pick_from_the_last_nailed_words_list_is_counted_as_one() {
+    let _lock = engine_install_lock();
+    install_fixture_with(EXTRA_ROWS);
+    let config = config_converting("tps");
+    let (mut engine, _) = composing_engine("ㄙㄧ", &config);
+    let row = sooi_row(&mut engine, &config);
+    let first = engine.apply_learning(pick_of(&row, CommitScript::Lead), &config);
+    assert_eq!(first.usage.map(|usage| usage.abbreviation), Some(true));
+    assert_eq!(
+        engine.word_list_start(&config),
+        Some(WordListStart::LastNailed)
+    );
+    // Before the list is fetched again, the record describes the old tail.
+    let unfetched = engine
+        .clone()
+        .apply_learning(pick_of(&row, CommitScript::Lead), &config);
+    assert_eq!(unfetched.usage.map(|usage| usage.abbreviation), Some(false));
+    let again = sooi_row(&mut engine, &config);
+    assert_eq!(again.consumed_span_end, 6);
+    let second = engine.apply_learning(pick_of(&again, CommitScript::Lead), &config);
+    assert_eq!(second.usage.map(|usage| usage.abbreviation), Some(true));
+}
+
+/// The 所以 row of the list a fetch carrying the custom 所以 `sóo-í` answers.
+fn sooi_row(engine: &mut Engine, config: &AppConfig) -> CandidateMessage {
+    let fetch = Fetch {
+        custom: vec![CustomEntry {
+            roman: "sóo-í".into(),
+            hanji: Some("所以".into()),
+        }],
+        ..Fetch::default()
+    };
+    let listed = list_with(engine, fetch, config);
+    listed
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some("所以"))
+        .unwrap_or_else(|| panic!("所以 in the list: {listed:?}"))
+        .clone()
 }
 
 // A pick of the first word: nothing before it; the rest is walked again and
@@ -805,18 +862,7 @@ fn check_session(steps: Vec<Step>, config: &AppConfig) -> Result<(), TestCaseErr
                 let Some(row) = listed.get(index) else {
                     continue;
                 };
-                engine.apply(
-                    Intent::CommitContinuous {
-                        canonical_text: row.display_text.clone(),
-                        association_tl: row.canonical_tl.clone(),
-                        hanji: row.hanji.clone(),
-                        consumed_bytes: row.consumed_span_end as usize,
-                        syllable_count: row.syllable_count as u8,
-                        script: Some(CommitScript::Lead),
-                        roman: row.roman.clone(),
-                    },
-                    config,
-                )
+                engine.apply(pick_of(row, CommitScript::Lead), config)
             }
             Step::CommitAsShown => {
                 let response = engine.apply(Intent::CommitAsShown, config);

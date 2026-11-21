@@ -30,6 +30,7 @@ pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learnin
     name: TABLE_NAME,
     identity: ["word", "tl"],
     count: "count",
+    count_share: Some("abbrev_count"),
     last_used: "last_used",
     delete_dependents: None,
 };
@@ -268,11 +269,11 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
 /// Han-Lo entries (`邊--a`) are left unchanged by `strip_khinsiann_hanji`.
 fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Result<()> {
     let select_sql = format!(
-        "SELECT id, word, tl, count, last_used, created_at FROM {TABLE_NAME} WHERE word LIKE '%--%' ORDER BY id ASC;"
+        "SELECT id, word, tl, count, last_used, created_at, abbrev_count, abbrev_last_used FROM {TABLE_NAME} WHERE word LIKE '%--%' ORDER BY id ASC;"
     );
     let update_sql = format!("UPDATE OR IGNORE {TABLE_NAME} SET word = ?1 WHERE id = ?2;");
     let merge_sql = format!(
-        "UPDATE {TABLE_NAME}\nSET count = COALESCE(count, 0) + ?1,\n    last_used = CASE WHEN last_used IS NULL THEN ?2 WHEN ?2 IS NULL THEN last_used ELSE MAX(last_used, ?2) END,\n    created_at = CASE WHEN created_at IS NULL THEN ?3 WHEN ?3 IS NULL THEN created_at ELSE MIN(created_at, ?3) END\nWHERE word = ?4 AND tl = ?5;"
+        "UPDATE {TABLE_NAME}\nSET count = COALESCE(count, 0) + ?1,\n    last_used = CASE WHEN last_used IS NULL THEN ?2 WHEN ?2 IS NULL THEN last_used ELSE MAX(last_used, ?2) END,\n    created_at = CASE WHEN created_at IS NULL THEN ?3 WHEN ?3 IS NULL THEN created_at ELSE MIN(created_at, ?3) END,\n    abbrev_count = abbrev_count + ?6,\n    abbrev_last_used = CASE WHEN abbrev_last_used IS NULL THEN ?7 WHEN ?7 IS NULL THEN abbrev_last_used ELSE MAX(abbrev_last_used, ?7) END\nWHERE word = ?4 AND tl = ?5;"
     );
     migrate_to_version(connection, SCHEMA_VERSION, |connection| {
         normalize_khinsiann_rows(
@@ -288,6 +289,8 @@ fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Resul
                         row.get::<_, Option<i64>>(3)?,
                         row.get::<_, Value>(4)?,
                         row.get::<_, Value>(5)?,
+                        row.get::<_, i64>(6)?,
+                        row.get::<_, Value>(7)?,
                     ),
                 ))
             },
@@ -297,11 +300,22 @@ fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Resul
                     .execute(&update_sql, params![stripped, id])
                     .map(|_| ())
             },
-            |connection, _id, (_word, tl, count, last_used, created_at), stripped| {
+            |connection,
+             _id,
+             (_word, tl, count, last_used, created_at, abbrev_count, abbrev_last_used),
+             stripped| {
                 connection
                     .execute(
                         &merge_sql,
-                        params![count.unwrap_or(0), last_used, created_at, stripped, tl],
+                        params![
+                            count.unwrap_or(0),
+                            last_used,
+                            created_at,
+                            stripped,
+                            tl,
+                            abbrev_count,
+                            abbrev_last_used
+                        ],
                     )
                     .map(|_| ())
             },

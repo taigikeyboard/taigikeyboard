@@ -7,7 +7,8 @@
 //! state via `transition::apply`), `FetchAtPos` needs lexicon state
 //! (`lexicon::EngineHandle::with_state` — prefix index + dictionary +
 //! syllable inventory) and so it is resolved here in dispatch outside
-//! the pure transition table. After v3.5.9 A2 the candidate-assembly
+//! the pure transition table; it changes no composing state
+//! ([`ListedAbbreviations`]). After v3.5.9 A2 the candidate-assembly
 //! 6-step seam lives in [`crate::continuous::assemble_candidates`];
 //! dispatch only handles the phase/hanji guards, the proto →
 //! domain hoists (`mode`, the source filter from `AppConfig.dictionary_sources`),
@@ -24,7 +25,8 @@
 //! `build_keys_tps` `tl:`-folded path is retired).
 
 use crate::api::{
-    CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent, Phase, UserRows,
+    CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent,
+    ListedAbbreviations, Phase, UserRows,
 };
 use crate::continuous::{assemble_candidates, retain_first_by_key, ListShape};
 use crate::derived::buffer_input_mode;
@@ -144,8 +146,8 @@ pub(crate) fn source_filter_bitmask(config: &AppConfig) -> u32 {
 /// in-process Rust API also used directly by the workspace tests.
 ///
 /// The read-only intent (`FetchAtPos`) is short-circuited via
-/// [`query`] (not `engine.apply`) so the pure transition table stays free
-/// of lexicon access. See module docs.
+/// [`apply`] → [`query_listing`] (not `engine.apply`) so the pure transition
+/// table stays free of lexicon access. See module docs.
 pub fn handle(
     req: &ComposingRequest,
     engine: &mut Engine,
@@ -156,10 +158,13 @@ pub fn handle(
 }
 
 /// Apply an already-decoded intent. Read-only intents are answered by
-/// [`query`] so the pure transition table never sees them.
+/// [`query_listing`] so the pure transition table never sees them; the rows
+/// a fetch listed are recorded on `engine` (`Engine::remember_listing`).
 pub fn apply(intent: Intent, engine: &mut Engine, config: &AppConfig) -> ComposingResponse {
     if intent.is_read_only() {
-        query(&intent, engine, config)
+        let (response, listing) = query_listing(&intent, engine, config);
+        engine.remember_listing(listing, config);
+        response
     } else {
         engine.apply(intent, config)
     }
@@ -169,8 +174,14 @@ pub fn apply(intent: Intent, engine: &mut Engine, config: &AppConfig) -> Composi
 /// mutating it — the `&Engine` receiver is the type-level guarantee that
 /// `EngineHandle` relies on when it runs a fetch against a released-lock
 /// clone. Callers gate on `is_read_only`; a mutating intent here is a
-/// programming error.
-pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingResponse {
+/// programming error. Also answers the rows the list holds
+/// ([`ListedAbbreviations`]) for the caller to record on the engine it
+/// answered for (`Engine::remember_listing`) — `None` when not composing.
+pub fn query_listing(
+    intent: &Intent,
+    engine: &Engine,
+    config: &AppConfig,
+) -> (ComposingResponse, Option<ListedAbbreviations>) {
     match intent {
         Intent::FetchAtPos {
             now_ms,
@@ -185,7 +196,7 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             *literal_roman_candidate_disabled,
             config,
         ),
-        mutating => unreachable!("query() called with mutating intent {mutating:?}"),
+        mutating => unreachable!("query_listing() called with mutating intent {mutating:?}"),
     }
 }
 
@@ -215,7 +226,7 @@ fn handle_fetch_at_pos(
     context: &ranking::ContextRanks,
     literal_roman_candidate_disabled: bool,
     config: &AppConfig,
-) -> ComposingResponse {
+) -> (ComposingResponse, Option<ListedAbbreviations>) {
     let snapshot = engine.snapshot(config);
     let Some(listed) = listed_candidates(
         engine,
@@ -225,8 +236,25 @@ fn handle_fetch_at_pos(
         literal_roman_candidate_disabled,
         config,
     ) else {
-        return snapshot;
+        return (snapshot, None);
     };
+    // Before the wire encoding drops `coverage_kind`; the spans are already
+    // in the coordinates a pick's `consumed_bytes` uses.
+    let listing = engine.listing_basis(config).map(|basis| {
+        let rows = listed
+            .candidates
+            .iter()
+            .filter(|candidate| candidate.coverage_kind == COVERAGE_KIND_ABBREV)
+            .map(|candidate| {
+                (
+                    candidate.consumed_span.1,
+                    candidate.display_text.clone(),
+                    candidate.canonical_tl.clone(),
+                )
+            })
+            .collect();
+        ListedAbbreviations::new(basis, rows)
+    });
     let candidates: Vec<CandidateMessage> = listed
         .candidates
         .into_iter()
@@ -242,7 +270,10 @@ fn handle_fetch_at_pos(
     } else {
         candidates
     };
-    with_continuous(snapshot, ContinuousResponse { candidates })
+    (
+        with_continuous(snapshot, ContinuousResponse { candidates }),
+        listing,
+    )
 }
 
 /// The open composition's cut and candidate order, for a shell that shows

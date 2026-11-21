@@ -29,7 +29,7 @@
 
 use crate::api::{
     Applied, CaretDirection, CommitScript, ContinuousPick, ConversionFrequency, EngineState,
-    Intent, NailedSegment, Phase, Usage,
+    Intent, ListedAbbreviations, ListingBasis, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{
     commit_resolution, finalized_composition_resolution, resolve_commit_text,
@@ -62,12 +62,14 @@ const MAX_LEARNED_PHRASE_SYLLABLES: usize = 6;
 type Frequency<'a> = Option<&'a dyn ConversionFrequency>;
 
 /// Apply `intent` against `state`, mutate, return the proto response and
-/// the phrase a final commit taught (§50).
+/// the phrase a final commit taught (§50). `listed` is read by a pick
+/// ([`ListedAbbreviations`]), never written here.
 pub(crate) fn apply(
     state: &mut EngineState,
     intent: Intent,
     config: &AppConfig,
     frequency: Frequency<'_>,
+    listed: Option<&ListedAbbreviations>,
 ) -> Applied {
     let response = match intent {
         Intent::Start { text } => match &state.phase {
@@ -106,6 +108,7 @@ pub(crate) fn apply(
                 },
                 config,
                 frequency,
+                listed,
             )
         }
         Intent::DeleteBackward => delete_backward(state, config, frequency),
@@ -130,6 +133,7 @@ pub(crate) fn apply(
                 candidate_spacing_enabled,
                 config,
                 frequency,
+                listed,
             );
         }
         Intent::Reset => reset(state, config),
@@ -156,7 +160,7 @@ pub(crate) fn apply(
                 consumed_bytes,
                 syllable_count,
             };
-            return commit_continuous(state, pick, script, &roman, config, frequency);
+            return commit_continuous(state, pick, script, &roman, config, frequency, listed);
         }
         Intent::CommitPrediction {
             script,
@@ -1233,6 +1237,9 @@ struct SegmentPick {
 /// `ComposingResponse.commit` and, for a pick that nailed or finalized, its
 /// usage (`Applied.usage`). A pick with no script, no canonical text, or a
 /// script it does not have, is ignored: no state change, no usage.
+///
+/// The usage is an abbreviation pick (§46) when `listed` lists it
+/// ([`ListedAbbreviations`]).
 fn commit_continuous(
     state: &mut EngineState,
     pick: SegmentPick,
@@ -1240,6 +1247,7 @@ fn commit_continuous(
     roman: &str,
     config: &AppConfig,
     frequency: Frequency<'_>,
+    listed: Option<&ListedAbbreviations>,
 ) -> Applied {
     let hanji = pick.hanji.clone().filter(|hanji| !hanji.is_empty());
     let resolved = script
@@ -1250,21 +1258,22 @@ fn commit_continuous(
         response.commit = Some(commit_resolution(CommitOutcome::Ignored, None));
         return response.into();
     };
+    let abbreviation = listed.is_some_and(|listed| {
+        listed.lists(
+            &state.phase,
+            config,
+            pick.consumed_bytes,
+            &pick.canonical_text,
+            &pick.association_tl,
+        )
+    });
     let usage = Usage {
         display_text: pick.canonical_text.clone(),
         canonical_tl: pick.association_tl.clone(),
         hanji,
-        abbreviation: is_abbreviation_pick(state, &pick, config),
+        abbreviation,
     };
-    let word_list_start = match &state.phase {
-        Phase::Continuous {
-            raw,
-            caret,
-            nailed,
-            conversion,
-        } => crate::conversion::word_list_start(nailed, raw, *caret, conversion.as_ref(), config),
-        Phase::Idle => None,
-    };
+    let word_list_start = ListingBasis::start_of(&state.phase, config);
     let (mut applied, outcome) = match word_list_start {
         Some(WordListStart::InTail(start)) => nail_pick_keeping_composition(
             state,
@@ -1297,54 +1306,10 @@ fn commit_continuous(
     applied
 }
 
-/// Whether `pick` was reached as a whole-buffer abbreviation (§46): it
-/// consumes the whole text its list reads, that text is an abbreviation
-/// query ([`crate::shadow::abbrev_query_key`]), and the word's own
-/// abbreviation key — read off the same key bundle the custom-dictionary
-/// match uses, [`phonetics::api::derive_custom_search_keys`] — is that query.
-/// A buffer that is both a reading and an abbreviation of the word (`ai` /
-/// 阿姨 `a-î`) counts as an abbreviation pick.
-fn is_abbreviation_pick(state: &EngineState, pick: &SegmentPick, config: &AppConfig) -> bool {
-    let Phase::Continuous {
-        raw,
-        caret,
-        nailed,
-        conversion,
-    } = &state.phase
-    else {
-        return false;
-    };
-    if pick.syllable_count < 2 || pick.association_tl.is_empty() {
-        return false;
-    }
-    let listed = match crate::conversion::word_list_start(
-        nailed,
-        raw,
-        *caret,
-        conversion.as_ref(),
-        config,
-    ) {
-        Some(start) => start.listed(nailed, raw).0,
-        None => raw.clone(),
-    };
-    if pick.consumed_bytes != listed.len() {
-        return false;
-    }
-    let Some(key) = crate::shadow::abbrev_query_key(&listed, buffer_input_mode(&listed, config))
-    else {
-        return false;
-    };
-    let Some((family, body)) = phonetics::split_abbrev_family_key(&key) else {
-        return false;
-    };
-    phonetics::api::derive_custom_search_keys(&pick.association_tl)
-        .iter()
-        .any(|search| search.family == family && search.form == "abbrev" && search.key == body)
-}
-
 /// Accept a pick and finish with a literal in the same transition. Learning
 /// remains the pick's: a full pick teaches its words, a partial pick followed
 /// by an unpicked tail teaches no final word or phrase.
+#[allow(clippy::too_many_arguments)]
 fn confirm_composition_then_insert(
     state: &mut EngineState,
     candidate: Option<ContinuousPick>,
@@ -1353,6 +1318,7 @@ fn confirm_composition_then_insert(
     candidate_spacing_enabled: bool,
     config: &AppConfig,
     frequency: Frequency<'_>,
+    listed: Option<&ListedAbbreviations>,
 ) -> Applied {
     if text.is_empty() || matches!(state.phase, Phase::Idle) {
         let mut response = noop(state, config);
@@ -1374,6 +1340,7 @@ fn confirm_composition_then_insert(
             &candidate.roman,
             config,
             frequency,
+            listed,
         );
         if applied
             .response
