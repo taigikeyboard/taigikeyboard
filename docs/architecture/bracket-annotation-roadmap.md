@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `annotate in brackets`, `outputBothScripts`, `output_both_scripts`, `commit text`, `tps`, `auto-space`, `desktop settings`, `web`
-> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D3 settled). Phase 0 done; Phase 1 next.
+> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D3 settled). Phases 0–1 done; Phase 2 next.
 > **Siblings**: `behavioral-invariants.md` (§ Annotate in Brackets rows), `../engine/continuous-commit-and-display.md` §10.2.
 
 ---
@@ -38,7 +38,7 @@ Android debug 3.10.0 built from `main` on 2026-11-21, Samsung Notes, Annotate in
 | Phase | Change | Platforms | Status |
 |---|---|---|---|
 | 0 | This roadmap + maintainer memory | docs | Done 2026-11-21 |
-| 1 | TPS multi-word conversion (bugfix) | engine → all | In progress |
+| 1 | TPS multi-word conversion (bugfix) | engine → all | Merged #1058 `bc70d4872`; Android device verified |
 | 2 | Bracket units always spaced (D2) | engine, iOS, Android, desktop-core | Pending |
 | 3 | Desktop key + settings rows | desktop-core, macOS, Windows, Linux | Pending |
 | 4 | Web settings row | Web | Pending |
