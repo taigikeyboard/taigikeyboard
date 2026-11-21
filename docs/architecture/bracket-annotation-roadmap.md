@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `annotate in brackets`, `outputBothScripts`, `output_both_scripts`, `commit text`, `tps`, `auto-space`, `desktop settings`, `web`
-> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D3 settled). Phases 0–1 done; Phase 2 next.
+> **Status**: Accepted 2026-11-21 (maintainer decisions D1–D3 settled). Phases 0–1 done; Phase 2 in progress.
 > **Siblings**: `behavioral-invariants.md` (§ Annotate in Brackets rows), `../engine/continuous-commit-and-display.md` §10.2.
 
 ---
@@ -39,11 +39,11 @@ Android debug 3.10.0 built from `main` on 2026-11-21, Samsung Notes, Annotate in
 |---|---|---|---|
 | 0 | This roadmap + maintainer memory | docs | Done 2026-11-21 |
 | 1 | TPS multi-word conversion (bugfix) | engine → all | Merged #1058 `bc70d4872`; Android device verified |
-| 2 | Bracket units always spaced (D2) | engine, iOS, Android, desktop-core | Pending |
-| 3 | Desktop key + settings rows | desktop-core, macOS, Windows, Linux | Pending |
+| 2 | Bracket units always spaced (D2) | iOS, Android | In progress |
+| 3 | Desktop key + settings rows + the D2 spacing gate | desktop-core, macOS, Windows, Linux | Pending |
 | 4 | Web settings row | Web | Pending |
 
-Phase 2 lands before Phase 3: desktop Auto-Space defaults to off (`desktop/crates/taigi-desktop-core/src/settings/keys.rs:111`), so without it every desktop user who turns brackets on would get `台語 (tâi-gí)我 (guá)`.
+The desktop D2 gate ships with the desktop key in Phase 3, not before: desktop Auto-Space defaults to off (`desktop/crates/taigi-desktop-core/src/settings/keys.rs:111`), so the key without the gate would give every desktop user who turns brackets on `台語 (tâi-gí)我 (guá)`, and the gate without the key would be dead code.
 
 ### Phase 1 — TPS multi-word conversion (grounded in code)
 
@@ -52,12 +52,14 @@ Phase 2 lands before Phase 3: desktop Auto-Space defaults to off (`desktop/crate
 - **Callers** (none relies on spaces staying unsplit): `commit_text.rs:110` (bracket and TPS no-Hanji lead), `composing/src/requests.rs:834` `tps_cell_text`, `phonetics/src/requests.rs:51` (`TlDisplayToTps`), desktop-core `engine/phonetics.rs:34`. Check `linux/.../long_horizon_support/corpus.rs:422`, which splits on `-` before calling.
 - **Tests**: `engine/phonetics/tests/op_coverage.rs` rows (`tâi hó-lâng`, a three-word sentence, the hyphen-only control); a multi-word bracket row in `commit_text.rs` `tps_truth_table`, and the device reading `tâi hór-lâng` under both `tps_or_maps_to_er` values in `tps_bopomofo_follows_the_or_setting`.
 
-### Phase 2 — Bracket units always spaced (D2)
+### Phase 2 — Bracket units always spaced (D2) (grounded in code)
 
-- Inside one composition `nailed.rs:76` `has_word_space_boundary` already returns true under brackets. Across commits the engine answers `earns_auto_space` (`commit_text.rs:271-273`) and each platform gates it on the Auto-Space toggle: Android `CandidateClickHandler.kt:248`, `:346-350`; iOS `ActionHandler+Suggestions.swift:30`, `:56`, `:127-132`; desktop `intent_executor.rs:476-497` via `policies::is_gate_active`.
-- Change: a bracketed commit's space no longer depends on the toggle. The design (one new verdict on `CommitResolution` vs. widening the platform gates) is settled in this phase's pre-implementation review.
+- Inside one composition `nailed.rs:76` `has_word_space_boundary` already returns true under brackets. Across commits the engine answers `earns_auto_space` (`commit_text.rs:271-273`) and the phones AND it with the Auto-Space toggle: Android `CandidateClickHandler.kt:165` (prediction), `:216` (Continuous); iOS `ActionHandler+Suggestions.swift:30`, `:56`; the swap re-reads the toggle (Android `TaigiKeyboard.kt` `isAutoSpaceSwapArmed`, iOS `ActionHandler.swift`).
+- Design (pre-implementation review 2026-11-21, Fable, Codex skipped): a platform predicate `spacesCandidateCommits(isAutoSpaceEnabled, isOutputBothScripts)` = either setting (the effective brackets value the phones already send the engine), read at those four commit sites and by the swap. No engine or proto change: a `CommitResolution` field was rejected because the swap needs the platform-side value anyway.
+- Scope (maintainer 2026-11-21): every candidate or prediction commit that earns a space, a Hanji-less one included (`gua 講 (kóng)`); the raw-preedit and English-word commits (`appendAutoSpaceIfEarned`) keep plain Auto-Space (`gua講 (kóng)` after Enter).
+- Pins: `behavioral-invariants.md` §23 `INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`.
 
-### Phase 3 — Desktop key and settings rows
+### Phase 3 — Desktop key, settings rows and the D2 spacing gate
 
 - desktop-core: `OUTPUT_BOTH_SCRIPTS = "outputBothScripts"` (default `false`) replaces the RETIRED note at `keys.rs:54-56`; the same spelling as iOS. Add it to `key_path.rs:46-57` `key_path_settings()` (macOS pushes only that list) and to `keys.rs:458-474` `GENERAL_KEYS` (Reset).
 - Projection: `CandidateDisplayMode::effective_output_both_scripts(stored) = stored && shows_hanji` beside the existing projections (`settings/document.rs:717-733`), the name the mobile twins use (Android `CandidateDisplayMode.kt`, iOS `SharedSettings.swift:926-927`); `engine_settings()` fills `EngineSettings`, `engine/bridge.rs:111-128` sets the wire field; the test at `bridge.rs:253` flips.
@@ -65,9 +67,10 @@ Phase 2 lands before Phase 3: desktop Auto-Space defaults to off (`desktop/crate
 - Windows `windows/crates/taigi-windows-settings/src/winui/pages/general.rs:119-139`, Linux `linux/crates/taigikeyboard-settings/src/pages/general.rs:79-97`: a switch row under Output Script.
 - i18n: `outputBothScripts` (`i18n/settings.json:79-84`) scope gains macos / windows / linux; no new key.
 - Upgrade: Windows and Linux have no retired-key sweep, so a hand-edited `outputBothScripts: true` left in `settings.json` takes effect on upgrade; accepted, stated in the PR.
+- D2 gate (Phase 2 rule): `composing/intent_executor.rs` `append_auto_space` / `auto_space_gate` serve both a candidate commit and `CommitRaw` / `CommitAsShown` (`finalized_composition_resolution`), so the gate must tell them apart — only the candidate commit takes `auto || effective brackets`; the `auto_space_enabled` passed to `confirm_composition_then_insert` (`:157`) and the swap sites (`pass_through_may_consume`, `pass_through_may_swap`, `swap_auto_space`) follow the same rule. Settle there whether that needs a `CommitResolution` field.
 - Visible change: with brackets on, same-Hanji dedupe is off (`engine/composing/src/continuous/dedupe.rs:103`), so the desktop TPS window can show duplicate Hanji cells, as mobile already does.
 - Tests: desktop-core `tests/intent_executor.rs` (bracket text, auto-space verdict, Romanization Only masks it), the projection test, `document.rs:896-937` expectations.
-- Docs: `behavioral-invariants.md:528`, `:1045`; `engine/protos/proto/envelope.proto:87`.
+- Docs: `behavioral-invariants.md:528`, `:1045`; `engine/protos/proto/envelope.proto:87`, `composing.proto:343` (the platform no longer ANDs plain Auto-Space).
 
 ### Phase 4 — Web
 

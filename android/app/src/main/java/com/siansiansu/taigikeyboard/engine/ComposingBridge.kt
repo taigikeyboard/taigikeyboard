@@ -179,7 +179,7 @@ sealed interface ContinuousCommitOutcome {
     /**
      * The whole composition was written and the engine is Idle.
      * [earnsAutoSpace] is the engine's §23 verdict on what the pick wrote;
-     * the live Auto-Space setting is the caller's.
+     * the live spacing gate is the caller's.
      */
     data class Finalized(
         val earnsAutoSpace: Boolean,
@@ -238,8 +238,8 @@ data class PredictionPick(
 
 /**
  * What a prediction tap writes into the document, as the engine resolved
- * it. [earnsAutoSpace] is the engine's §23 verdict; the live Auto-Space
- * setting is the caller's.
+ * it. [earnsAutoSpace] is the engine's §23 verdict; the live spacing gate
+ * is the caller's.
  */
 data class PredictionCommit(
     val text: String,

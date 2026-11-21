@@ -162,7 +162,7 @@ class CandidateClickHandler(
         logger.debug(TAG) { "[NEXTWORD-CLICK] id=${word.id}, roman='${word.roman}', hanji='${word.hanji}', text='${commit.text}'" }
         ic.commitText(commit.text, 1)
         manager.reset(ic)
-        appendAutoSpace(taigikeyboard, ic, taigikeyboard.prefs.isAutoSpaceEnabled && commit.earnsAutoSpace)
+        appendAutoSpace(taigikeyboard, ic, commit.earnsAutoSpace && taigikeyboard.isCandidateSpacingOn)
         // NextWord learns the canonical reading, not the rendered `roman` (the
         // Syllable Separator rewrites its hyphens, §49); iOS learns from the
         // same sidechannel.
@@ -213,7 +213,7 @@ class CandidateClickHandler(
             // Auto-space only on the final commit, as the engine judged what
             // the pick wrote (romanization, no trailing `-`, §23).
             is ContinuousCommitOutcome.Finalized ->
-                appendAutoSpace(taigikeyboard, ic, taigikeyboard.prefs.isAutoSpaceEnabled && outcome.earnsAutoSpace)
+                appendAutoSpace(taigikeyboard, ic, outcome.earnsAutoSpace && taigikeyboard.isCandidateSpacingOn)
             // A stale tap (the engine had silently reset to Idle) or a
             // rejected pick wrote nothing.
             ContinuousCommitOutcome.Ignored -> Unit
@@ -250,8 +250,9 @@ internal fun appendAutoSpaceIfEarned(
 
 /**
  * The one insertion site of the auto space: [isEarned] is the whole verdict,
- * the live Auto-Space setting included ([appendAutoSpaceIfEarned], or the
- * engine's `earns_auto_space` ANDed with it on a Continuous or prediction commit).
+ * the live setting included ([appendAutoSpaceIfEarned], or the engine's
+ * `earns_auto_space` ANDed with [TaigiKeyboard.isCandidateSpacingOn] on a
+ * Continuous or prediction commit).
  */
 private fun appendAutoSpace(
     taigikeyboard: TaigiKeyboard,
@@ -348,6 +349,22 @@ internal fun shouldAppendAutoSpace(
     wroteRomanization: Boolean,
     committedText: String,
 ): Boolean = isAutoSpaceEnabled && wroteRomanization && !committedText.endsWith("-")
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
+// `spacesCandidateCommits`. Drift causes silent divergence (one platform gluing bracket units).
+
+/**
+ * Whether a candidate or prediction commit may take the engine's earned space:
+ * Auto-Space is on, or Annotate in Brackets is (EFFECTIVE, so never under
+ * Romanization Only) — bracket units are always spaced apart, as one
+ * composition already spaces them (`INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`,
+ * roadmap D2). Also gates the swap of that space. Not for the raw-preedit and
+ * English-word commits ([appendAutoSpaceIfEarned]), which are not bracket units.
+ */
+internal fun spacesCandidateCommits(
+    isAutoSpaceEnabled: Boolean,
+    isOutputBothScripts: Boolean,
+): Boolean = isAutoSpaceEnabled || isOutputBothScripts
 
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
 // `joinerReplacesAutoSpace`. Drift causes silent divergence.

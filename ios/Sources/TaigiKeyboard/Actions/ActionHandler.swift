@@ -102,12 +102,13 @@ public class ActionHandler: StandardKeyboardActionHandler {
     }
 
     /// True when the space in front of the caret is one this handler wrote and
-    /// Auto-Space is still on. The setting is read live so switching the feature
-    /// off stops the swap; the provenance is the consumed arm.
+    /// a setting that spaces candidate commits is still on (`isCandidateSpacingOn`). The
+    /// settings are read live so switching them off stops the swap; the
+    /// provenance is the consumed arm.
     /// The stored flag is read first: it is false for almost every keystroke,
     /// which keeps the App-Group defaults read off the common path.
     var isAutoSpaceSwapArmed: Bool {
-        wasAutoSpaceArmedAtEventStart && settings.isAutoSpaceEnabled
+        wasAutoSpaceArmedAtEventStart && isCandidateSpacingOn
     }
 
     /// Forgets any armed space and plain-space mark — a new field's document is not ours to rewrite.
