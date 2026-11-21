@@ -10,8 +10,9 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use taigi_desktop_core::candidates::{
-    CandidateChrome, CandidateMetrics, CollapsedLayout, ExpandableGeometryInput,
-    ExpandableListModel, FontSpec, HorizontalPageLayout, TextMeasurer, MAX_DISPLAY_CANDIDATES,
+    CandidateCellArrangement, CandidateChrome, CandidateMetrics, CollapsedLayout,
+    ExpandableGeometryInput, ExpandableListModel, FontSpec, HorizontalPageLayout, TextMeasurer,
+    MAX_DISPLAY_CANDIDATES,
 };
 use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::session::ListLayout;
@@ -45,6 +46,31 @@ fn line_height(font: FontSpec) -> f32 {
 /// An annotation that draws: `CandidateMetrics::measure_annotation`'s rule.
 fn drawn_annotation(cell: &CandidateCellContent) -> Option<&String> {
     cell.annotation.as_ref().filter(|text| !text.is_empty())
+}
+
+/// The metrics the page lays a list out with and draws it at: macOS's air.
+fn page_metrics(
+    settings: &SettingsDocument,
+    arrangement: CandidateCellArrangement,
+    measurer: &dyn TextMeasurer,
+) -> CandidateMetrics {
+    CandidateMetrics::resolve_with_chrome(
+        settings.choice(&keys::CANDIDATE_SIZE),
+        CandidateFontSelection::default(),
+        arrangement,
+        CandidateChrome::MACOS,
+        measurer,
+    )
+}
+
+/// The lengths the panel draws every list at (`WireLengths`): the font sizes,
+/// gaps and paddings, which no measurement and no arrangement moves.
+pub(crate) fn page_lengths(settings: &SettingsDocument) -> CandidateMetrics {
+    page_metrics(
+        settings,
+        CandidateCellArrangement::Inline,
+        &RunRecorder::default(),
+    )
 }
 
 /// Writes down what `CandidateMetrics` wants measured. The font sizes do not
@@ -156,13 +182,7 @@ impl PageListLayout {
         layout: CandidateLayout,
     ) -> Option<MeasuredCells> {
         let resolve = |measurer: &dyn TextMeasurer| {
-            CandidateMetrics::resolve_with_chrome(
-                settings.choice(&keys::CANDIDATE_SIZE),
-                CandidateFontSelection::default(),
-                layout.cell_arrangement(),
-                CandidateChrome::MACOS,
-                measurer,
-            )
+            page_metrics(settings, layout.cell_arrangement(), measurer)
         };
         let recorder = RunRecorder::default();
         let sizes = resolve(&recorder);

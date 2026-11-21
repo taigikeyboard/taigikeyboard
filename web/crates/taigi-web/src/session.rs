@@ -19,9 +19,11 @@ use taigi_desktop_core::session::{
 use taigi_desktop_core::settings::SettingsProvider;
 
 use crate::key::{core_tier_snapshot, is_mac_core_tier, shift_index, BrowserKey, SHIFT_SCAN_CODES};
-use crate::layout::{PageListLayout, TextRuler};
+use crate::layout::{page_lengths, PageListLayout, TextRuler};
 use crate::page_settings::PageSettings;
-use crate::reply::{mode_line_json, telex_guide_json, wire_emit, wire_list, ModeText, Reply};
+use crate::reply::{
+    mode_line_json, telex_guide_json, wire_emit, wire_list, ModeText, Reply, WireLengths,
+};
 use crate::shortcuts::shortcuts;
 
 const CONTEXT: ContextToken = ContextToken(1);
@@ -409,6 +411,7 @@ impl WebSession {
         let laid_out = emits
             .iter()
             .rposition(|emit| matches!(emit, Emit::LookupTable(table) if table.cursor_visible));
+        let lengths = WireLengths::from(&page_lengths(&self.runtime.settings.current()));
         let reply = Reply {
             handled,
             emits: emits
@@ -416,7 +419,7 @@ impl WebSession {
                 .enumerate()
                 .map(|(index, emit)| {
                     let list = (laid_out == Some(index)).then(|| wire_list(self.selection()));
-                    wire_emit(emit, &mode, list)
+                    wire_emit(emit, &mode, list, lengths)
                 })
                 .collect(),
             settings: self.settings.take_unsent(),

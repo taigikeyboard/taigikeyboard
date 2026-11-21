@@ -10,6 +10,18 @@
 /** @typedef {Extract<WireEmit, { type: "lookupTable" }>} LookupTableEmit */
 
 /**
+ * Sets each custom property to its length in pixels.
+ * @param {HTMLElement} element
+ * @param {Record<string, number>} lengths
+ * @returns {void}
+ */
+function setPixelProperties(element, lengths) {
+  for (const [name, length] of Object.entries(lengths)) {
+    element.style.setProperty(name, `${length}px`);
+  }
+}
+
+/**
  * Builds a `<span>` element with the given class name and text content.
  * @param {string} className
  * @param {string} text
@@ -217,6 +229,7 @@ export class Panel {
    */
   showTable(table) {
     this.#endUnfold();
+    setPixelProperties(this.#root, table.lengths);
     if (table.layout) {
       this.#showLaidOut(table, table.layout);
     } else {
@@ -269,8 +282,8 @@ export class Panel {
       : collapsed.map(({ index, width }) => {
           const cell = draw(index);
           if (!isColumn) {
-            // The model's width exactly: CSS lengths are unrounded, the
-            // model's rounded, so a cell's own width can differ by a fraction.
+            // The model's width exactly: it rounds each measured text up, and
+            // CSS draws the text at its own fraction.
             cell.style.width = `${width}px`;
           }
           return cell;
@@ -299,9 +312,7 @@ export class Panel {
       "--candidate-band-height": layout.keyedBand?.height ?? 0,
       "--candidate-primary": layout.primaryColumn ?? 0,
     };
-    for (const [name, length] of Object.entries(lengths)) {
-      list.style.setProperty(name, `${length}px`);
-    }
+    setPixelProperties(list, lengths);
     // A count, not a length: the `px` loop above would break `repeat()`.
     list.style.setProperty("--candidate-columns", `${layout.columns}`);
     list.replaceChildren(...drawn);
@@ -376,11 +387,11 @@ export class Panel {
 
   /**
    * A row's width, 0 for its cells' own. The session packs a row of several
-   * cells to at most `width` from the model's rounded lengths, and CSS draws
-   * them unrounded, a fraction of a pixel apiece wider or narrower: the row
-   * is held at `width` and the cells give the difference back (`min-width: 0`
-   * in `style.css`). One cell may be wider: a word longer than the budget
-   * gets a page of its own at its own width.
+   * cells to at most `width` from text widths it rounds up, and CSS draws
+   * each text at its own fraction: the row is held at `width`, and a cell
+   * that would push past it gives way (`min-width: 0` in `style.css`). One
+   * cell may be wider: a word longer than the budget gets a page of its own
+   * at its own width.
    * @param {number} width
    * @param {number} cellCount
    * @returns {void}

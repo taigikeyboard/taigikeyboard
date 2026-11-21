@@ -80,6 +80,9 @@ export interface WireLayout {
   transition?: WireTransition;
 }
 
+/** `reply.rs` `WireLengths`: the panel's lengths in whole pixels, by custom property. */
+export type WireLengths = Record<`--candidate-${string}`, number>;
+
 export interface WirePage {
   start: number;
   end: number;
@@ -99,6 +102,7 @@ export type WireEmit =
       cursorVisible: boolean;
       pageSize: number;
       vertical: boolean;
+      lengths: WireLengths;
       layout?: WireLayout;
       page?: WirePage;
     }

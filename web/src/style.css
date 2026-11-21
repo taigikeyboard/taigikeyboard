@@ -514,19 +514,12 @@ summary:focus-visible {
   color: var(--accent);
 }
 
-/* macOS Tahoe's candidate window (`CandidateMetrics.swift`, base values at 16 pt:
-   side padding 11 at the full ratio, vertical padding 14 and the separator inset
-   8 at the chrome ratio 0.7; `CandidateChrome::MACOS`, which the layout model
-   resolves). Every length follows `--candidate-size`, unrounded. */
+/* macOS Tahoe's candidate window (`CandidateMetrics.swift`). The font sizes,
+   gaps and paddings (`--candidate-annotation`, `-index`, `-annotation-gap`,
+   `-index-gap`, `-line-gap`, `-padding-x`, `-padding-y`, `-separator-inset`)
+   are the layout model's, set on this element by `Panel` from each list's
+   `lengths`: whole pixels, so what the model measured is what draws. */
 #panel {
-  --candidate-annotation: calc(var(--candidate-size) * 0.875);
-  --candidate-index: calc(var(--candidate-size) * 0.625);
-  --candidate-annotation-gap: calc(var(--candidate-size) * 0.4375);
-  --candidate-index-gap: calc(var(--candidate-size) * 0.125);
-  --candidate-line-gap: calc(var(--candidate-size) * 0.125);
-  --candidate-padding-x: calc(var(--candidate-size) * 0.6875);
-  --candidate-padding-y: calc(var(--candidate-size) * 0.6125);
-  --candidate-separator-inset: calc(var(--candidate-size) * 0.35);
   --candidate-row: calc(var(--candidate-size) + var(--candidate-padding-y));
   /* Two-line cells: a fixed rounded rectangle at every size, as macOS draws. */
   --candidate-radius: 16px;
@@ -681,8 +674,9 @@ summary:focus-visible {
   padding-block: 0;
 }
 
-/* A row's cells give back what CSS's unrounded lengths add to the model's
-   rounded ones, so a row held at its width (`Panel.#keepWidth`) never grows. */
+/* A row's cells give back what their text's own fractions differ from the
+   model's rounded-up widths, so a row held at its width (`Panel.#keepWidth`)
+   never grows. */
 .candidates:not([data-vertical], [data-grid]) li {
   min-width: 0;
 }

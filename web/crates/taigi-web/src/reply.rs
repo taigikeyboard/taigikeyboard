@@ -4,8 +4,8 @@
 
 use serde::Serialize;
 use taigi_desktop_core::candidates::{
-    CellLayer, ExpandableAxis, ExpandableDisplayMode, ExpandableListModel, ExpandableModeChange,
-    ModeTransition, Rect, Track,
+    CandidateMetrics, CellLayer, ExpandableAxis, ExpandableDisplayMode, ExpandableListModel,
+    ExpandableModeChange, ModeTransition, Rect, Track,
 };
 use taigi_desktop_core::keys::{telex_guide_rows, tps_keyboard_rows, LanguageMode};
 use taigi_desktop_core::session::{Emit, ListSelection, LookupTableContent};
@@ -59,6 +59,7 @@ pub(crate) enum WireEmit<'a> {
         cursor_visible: bool,
         page_size: u32,
         vertical: bool,
+        lengths: WireLengths,
         /// Boxed: the other variants are a few bytes.
         #[serde(skip_serializing_if = "Option::is_none")]
         layout: Option<Box<WireLayout>>,
@@ -79,6 +80,44 @@ pub(crate) enum WireEmit<'a> {
         row: usize,
         cap: usize,
     },
+}
+
+/// The panel's lengths as `CandidateMetrics` resolves them, whole pixels, each
+/// named by the custom property `web/src/style.css` draws it from: the page
+/// draws what the model measured, so a cell the model sized never wraps.
+#[derive(Clone, Copy, Debug, Serialize)]
+pub(crate) struct WireLengths {
+    #[serde(rename = "--candidate-annotation")]
+    annotation: f32,
+    #[serde(rename = "--candidate-index")]
+    index: f32,
+    #[serde(rename = "--candidate-annotation-gap")]
+    annotation_gap: f32,
+    #[serde(rename = "--candidate-index-gap")]
+    index_gap: f32,
+    #[serde(rename = "--candidate-line-gap")]
+    line_gap: f32,
+    #[serde(rename = "--candidate-padding-x")]
+    padding_x: f32,
+    #[serde(rename = "--candidate-padding-y")]
+    padding_y: f32,
+    #[serde(rename = "--candidate-separator-inset")]
+    separator_inset: f32,
+}
+
+impl From<&CandidateMetrics> for WireLengths {
+    fn from(metrics: &CandidateMetrics) -> Self {
+        Self {
+            annotation: metrics.annotation_font_size(),
+            index: metrics.index_font_size(),
+            annotation_gap: metrics.candidate_annotation_gap(),
+            index_gap: metrics.index_candidate_gap(),
+            line_gap: metrics.stacked_line_gap(),
+            padding_x: metrics.horizontal_padding(),
+            padding_y: metrics.vertical_padding(),
+            separator_inset: metrics.tahoe_separator_inset(),
+        }
+    }
 }
 
 /// A collapsed cell.
@@ -418,11 +457,12 @@ pub(crate) struct ModeText {
     pub label: String,
 }
 
-/// `list` goes on a `LookupTable`, and nothing else has one.
+/// `list` and `lengths` go on a `LookupTable`, and nothing else has one.
 pub(crate) fn wire_emit<'a>(
     emit: &'a Emit,
     mode: &'a ModeText,
     list: Option<WireList>,
+    lengths: WireLengths,
 ) -> WireEmit<'a> {
     match emit {
         Emit::Preedit { text, caret } => WireEmit::Preedit {
@@ -461,6 +501,7 @@ pub(crate) fn wire_emit<'a>(
                 cursor_visible: *cursor_visible,
                 page_size: *page_size,
                 vertical: *vertical,
+                lengths,
                 layout,
                 page,
             }
@@ -491,7 +532,10 @@ mod tests {
             symbol: "台",
             label: "label".to_owned(),
         };
-        serde_json::to_string(&wire_emit(&emit, &mode, None)).unwrap()
+        let lengths = WireLengths::from(&crate::layout::page_lengths(
+            &taigi_desktop_core::settings::SettingsDocument::default(),
+        ));
+        serde_json::to_string(&wire_emit(&emit, &mode, None, lengths)).unwrap()
     }
 
     #[test]
@@ -524,7 +568,11 @@ mod tests {
                 page_size: 9,
                 vertical: false,
             })),
-            r#"{"type":"lookupTable","cells":[{"text":"台","annotation":"tâi"}],"labels":["1"],"cursor":0,"cursorVisible":true,"pageSize":9,"vertical":false}"#
+            // trace: Standard 17, scale 1.0625 — annotation 14 * s → 15, index
+            // 10 * s → 11, gaps 7 * s → 7 and 2 * s → 2, line gap 2 * s → 2,
+            // padding x 11 * s → 12, padding y 14 * .7 * s → 10, separator
+            // 8 * .7 * s → 6 (Swift `testEveryStep_resolvesToItsTracedValues`).
+            r#"{"type":"lookupTable","cells":[{"text":"台","annotation":"tâi"}],"labels":["1"],"cursor":0,"cursorVisible":true,"pageSize":9,"vertical":false,"lengths":{"--candidate-annotation":15.0,"--candidate-index":11.0,"--candidate-annotation-gap":7.0,"--candidate-index-gap":2.0,"--candidate-line-gap":2.0,"--candidate-padding-x":12.0,"--candidate-padding-y":10.0,"--candidate-separator-inset":6.0}}"#
         );
         assert_eq!(
             json(Emit::ModeChanged),
