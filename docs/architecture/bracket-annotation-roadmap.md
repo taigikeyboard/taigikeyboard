@@ -38,7 +38,7 @@ Android debug 3.10.0 built from `main` on 2026-11-21, Samsung Notes, Annotate in
 | Phase | Change | Platforms | Status |
 |---|---|---|---|
 | 0 | This roadmap + maintainer memory | docs | Done 2026-11-21 |
-| 1 | TPS multi-word conversion (bugfix) | engine → all | Pending |
+| 1 | TPS multi-word conversion (bugfix) | engine → all | In progress |
 | 2 | Bracket units always spaced (D2) | engine, iOS, Android, desktop-core | Pending |
 | 3 | Desktop key + settings rows | desktop-core, macOS, Windows, Linux | Pending |
 | 4 | Web settings row | Web | Pending |
@@ -48,9 +48,9 @@ Phase 2 lands before Phase 3: desktop Auto-Space defaults to off (`desktop/crate
 ### Phase 1 — TPS multi-word conversion (grounded in code)
 
 - **Root cause** (reproduced with a probe against `phonetics`): `engine/phonetics/src/api.rs:98-108` `tl_numeric_to_tps` splits on `-` only. A continuous pick's romanization joins words with spaces (`tâi hó-lâng` → `tai5 ho2-lang5`), and `tps::to_zhuyin` takes one syllable (its contract: the caller pre-splits). `tl_display_to_tps("tâi hó-lâng")` = `ㄉㄞˊ ho2 ㄌㄤˊ`; control `tâi-hó-lâng` = `ㄉㄞˊ ㄏㄛˋ ㄌㄤˊ`.
-- **Fix**: split with the existing tokenizer (`engine/phonetics/src/tps.rs:397-407` `tl_syllable_tokens`, public as `api::tl_syllables`), not a new pattern; update the comments at `api.rs:94-97` and `tps.rs:579-582`.
+- **Fix**: split with the existing tokenizer (`engine/phonetics/src/tps.rs:397-407` `tl_syllable_tokens`, public as `api::tl_syllables`), not a new pattern; update the comment at `api.rs:94-97` (`tps.rs`'s "caller pre-splits on `[-\s]+`" is already true).
 - **Callers** (none relies on spaces staying unsplit): `commit_text.rs:110` (bracket and TPS no-Hanji lead), `composing/src/requests.rs:834` `tps_cell_text`, `phonetics/src/requests.rs:51` (`TlDisplayToTps`), desktop-core `engine/phonetics.rs:34`. Check `linux/.../long_horizon_support/corpus.rs:422`, which splits on `-` before calling.
-- **Tests**: `api.rs` unit rows (`tâi hó-lâng`, a sentence, the hyphen-only control); a multi-word bracket row in `commit_text.rs` `tps_truth_table`, with the real romanization from `engine/composing/tests/candidate_dump.rs` (the device pick carries `hór`) and `tps_or_maps_to_er` set explicitly.
+- **Tests**: `engine/phonetics/tests/op_coverage.rs` rows (`tâi hó-lâng`, a three-word sentence, the hyphen-only control); a multi-word bracket row in `commit_text.rs` `tps_truth_table`, and the device reading `tâi hór-lâng` under both `tps_or_maps_to_er` values in `tps_bopomofo_follows_the_or_setting`.
 
 ### Phase 2 — Bracket units always spaced (D2)
 

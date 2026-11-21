@@ -91,13 +91,14 @@ pub fn contains_tps(text: &str) -> bool {
     is_zhuyin(text)
 }
 
-/// Numeric-tone TL (`"hoo2"`, `"tai5-gi2"`) → TPS Bopomofo, one syllable per
-/// `-`-separated token joined by a single space (the platforms'
-/// `joined(separator: " ")` / `joinToString(" ")`). Empty tokens (`--`, a
-/// leading or trailing `-`) are dropped so nothing double-spaces.
+/// Numeric-tone TL (`"hoo2"`, `"tai5-gi2"`, `"tai5 ho2-lang5"`) → TPS
+/// Bopomofo, one syllable per [`tl_syllables`] token joined by a single space
+/// (the platforms' `joined(separator: " ")` / `joinToString(" ")`); a
+/// continuous pick's words are space-joined, so `-` alone is not a boundary.
+/// Empty tokens (`--`, a leading or trailing separator) are dropped so
+/// nothing double-spaces.
 pub fn tl_numeric_to_tps(text: &str, or_maps_to_er: bool) -> String {
-    text.split('-')
-        .filter(|tok| !tok.is_empty())
+    tl_syllables(text)
         .map(|tok| {
             crate::tps::to_zhuyin(tok, false, or_maps_to_er)
                 .trim_end()

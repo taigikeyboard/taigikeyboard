@@ -385,6 +385,9 @@ mod tests {
             // Annotate in Brackets arrives already masked under Romanization Only).
             (Lead, false, RomanOnly, R, H, unspaced("台語")),
             (Lead, true, Combined, R, H, roman("台語 (ㄉㄞˊ ㆣㄧˋ)")),
+            // A continuous pick's words are space-joined; every syllable is
+            // Bopomofo (trace: tâi → ㄉㄞˊ, hó → ㄏㄛˋ, lâng → ㄌㄤˊ).
+            (Lead, true, SideBySide, "tâi hó-lâng", Some("台好人"), roman("台好人 (ㄉㄞˊ ㄏㄛˋ ㄌㄤˊ)")),
             // R5 P2 (USER 2026-09-30): a Hanji-less pick writes what its cell
             // shows, tl_display_to_tps(roman), unspaced. Was: Android `tâi-gí`
             // spaced, iOS tlNumericToTPS of the display romanization.
@@ -424,6 +427,26 @@ mod tests {
                 ..AppConfig::default()
             };
             let resolved = resolve_commit_text(CommitScript::Lead, "kór", None, &config);
+            assert_eq!(
+                resolved.map(|resolved| resolved.text).as_deref(),
+                Some(expected),
+                "or_maps_to_er={or_maps_to_er}"
+            );
+        }
+        // The device pick (2026-11-21): a space-joined continuous reading with
+        // `or`, bracketed. trace: tâi → ㄉㄞˊ; hór → ㄏ + ㄜ / ㄛ + ˋ; lâng → ㄌㄤˊ.
+        for (or_maps_to_er, expected) in [
+            (true, "台好人 (ㄉㄞˊ ㄏㄜˋ ㄌㄤˊ)"),
+            (false, "台好人 (ㄉㄞˊ ㄏㄛˋ ㄌㄤˊ)"),
+        ] {
+            let config = AppConfig {
+                input_mode: "tps".into(),
+                tps_or_maps_to_er: or_maps_to_er,
+                output_both_scripts: true,
+                ..AppConfig::default()
+            };
+            let resolved =
+                resolve_commit_text(CommitScript::Lead, "tâi hór-lâng", Some("台好人"), &config);
             assert_eq!(
                 resolved.map(|resolved| resolved.text).as_deref(),
                 Some(expected),

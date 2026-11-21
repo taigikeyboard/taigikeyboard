@@ -373,6 +373,28 @@ fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
     );
 }
 
+/// A continuous pick's words are space-joined (`tâi hó-lâng`); every syllable
+/// of every word converts.
+#[test]
+fn tl_display_to_tps_converts_every_word_of_a_multi_word_reading() {
+    use phonetics::api::{tl_display_to_tps, tl_numeric_to_tps};
+    // trace: tps.rs t → ㄉ, ai → ㄞ, 5 → ˊ; h → ㄏ, o → ㄛ (or_maps_to_er
+    // off), 2 → ˋ; l → ㄌ, ang → ㄤ, 5 → ˊ.
+    const EXPECTED: &str = "ㄉㄞˊ ㄏㄛˋ ㄌㄤˊ";
+    assert_eq!(tl_display_to_tps("tâi hó-lâng", false), EXPECTED);
+    // Control: the hyphen-only reading always converted.
+    assert_eq!(tl_display_to_tps("tâi-hó-lâng", false), EXPECTED);
+    // Tab and runs of separators collapse to one space; `--` stays dropped.
+    assert_eq!(tl_numeric_to_tps("tai5\tho2  lang5", false), EXPECTED);
+    assert_eq!(tl_numeric_to_tps(" tai5--ho2 ", false), "ㄉㄞˊ ㄏㄛˋ");
+    // A three-word sentence. trace: g → ㆣ, ua → ㄨㄚ, 2 → ˋ; b → ㆠ, e → ㆤ,
+    // h coda → ㆷ (tone 4 unmarked); kh → ㄎ, i → ㄧ, 3 → ˪.
+    assert_eq!(
+        tl_display_to_tps("guá beh khì", false),
+        "ㆣㄨㄚˋ ㆠㆤㆷ ㄎㄧ˪"
+    );
+}
+
 /// Display-form path shares the helper, so the syllable-boundary fix must
 /// also apply there.
 #[test]
