@@ -54,6 +54,7 @@ fn a_backup_of_every_store_at_its_cap_fits_one_ffi_request() {
         })),
         "userFrequency": rows(frequency, |i| serde_json::json!({
             "word": hanji(i), "tl": reading(i), "count": 999, "lastUsed": used,
+            "abbrevCount": 999, "abbrevLastUsed": used,
         })),
         "userAssociation": rows(association, |i| serde_json::json!({
             "prevWord": hanji(i), "prevTl": reading(i),

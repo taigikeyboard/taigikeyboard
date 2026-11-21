@@ -51,6 +51,23 @@ pub struct FrequencyRow {
     pub abbrev_last_used_ms: i64,
 }
 
+/// One `.taigi` frequency row to merge ([`UserFrequencyStore::import_merge`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FrequencyImportRow {
+    pub word: String,
+    pub tl: String,
+    /// Every pick, abbreviation picks included; at least 1.
+    pub count: i64,
+    /// The file's text; empty = used now.
+    pub last_used: String,
+    /// The picks of [`count`](Self::count) made through an abbreviation;
+    /// the merge clamps it to `0..=count`.
+    pub abbrev_count: i64,
+    /// The file's text, read only when [`abbrev_count`](Self::abbrev_count)
+    /// is positive; empty then = used now.
+    pub abbrev_last_used: String,
+}
+
 /// Records candidate commits and answers what the ranker should boost. The
 /// engine does the ranking (`engine/ranking/src/score.rs`); this store only
 /// hands it counts. A word is the `(Hanji, canonical TL)` PAIR (Core Principle
@@ -146,30 +163,52 @@ impl UserFrequencyStore {
         });
     }
 
-    /// Merges a backup's `(word, tl, count, last_used)` rows: a `(word, tl)`
-    /// already stored keeps the larger count and the later use, so the
-    /// walker's decay reads the same history it read on the device that
-    /// wrote the file. `last_used` is the file's text, stored through
-    /// [`RESTORED_TIMESTAMP_SQL`] — empty (a backup before version 4) counts
-    /// as used now. One transaction, then the cap, so no reader sees the
-    /// table over it. Answers how many rows were merged.
+    /// Merges a backup's rows: a `(word, tl)` already stored keeps the
+    /// larger reading picks (`count - abbrev_count`) and the larger
+    /// abbreviation picks, each side's own, with `count` their sum — with no
+    /// abbreviation picks on either side, the larger count — and the later
+    /// use, so the walker's decay reads the same history it read on the
+    /// device that wrote the file. `last_used` is the file's text, stored
+    /// through [`RESTORED_TIMESTAMP_SQL`] — empty (a backup before version 4)
+    /// counts as used now. `abbrev_count` is clamped to `0..=count` first (a
+    /// hand-edited file). `abbrev_last_used` is read the same way as
+    /// `last_used`, the later of the two kept, only for a row with
+    /// abbreviation picks: a file row without any leaves the stored time as
+    /// it was (`NULL` on a new row). One transaction, then the cap, so no
+    /// reader sees the table over it. Answers how many rows were merged.
     pub fn import_merge(
         &self,
-        rows: Vec<(String, String, i64, String)>,
+        rows: Vec<FrequencyImportRow>,
     ) -> Result<usize, UserDataDatabaseError> {
         let capacity = self.capacity_for_writer();
         self.database.perform(move |connection| {
             immediate_transaction::<_, UserDataDatabaseError>(connection, |connection| {
+                // Every right-hand side reads the stored row before this
+                // update, so `count` is summed from the old split. The bare
+                // `?` of each `RESTORED_TIMESTAMP_SQL` takes the next number
+                // after the largest so far: `?4` (`last_used`), then `?6`.
+                let abbrev_last_used =
+                    later_time_sql("abbrev_last_used", "excluded.abbrev_last_used");
                 let mut statement = connection.prepare(&format!(
-                    "INSERT INTO {TABLE_NAME} (word, tl, count, last_used)\nVALUES (?, ?, ?, {RESTORED_TIMESTAMP_SQL})\nON CONFLICT(word, tl) DO UPDATE SET\n    count = MAX(count, excluded.count),\n    last_used = MAX(COALESCE(last_used, excluded.last_used), excluded.last_used);"
+                    "INSERT INTO {TABLE_NAME} (word, tl, count, last_used, abbrev_count, abbrev_last_used)\nVALUES (?1, ?2, ?3, {RESTORED_TIMESTAMP_SQL}, ?5, CASE WHEN ?5 > 0 THEN {RESTORED_TIMESTAMP_SQL} END)\nON CONFLICT(word, tl) DO UPDATE SET\n    count = MAX(count - abbrev_count, excluded.count - excluded.abbrev_count) + MAX(abbrev_count, excluded.abbrev_count),\n    last_used = MAX(COALESCE(last_used, excluded.last_used), excluded.last_used),\n    abbrev_count = MAX(abbrev_count, excluded.abbrev_count),\n    abbrev_last_used = {abbrev_last_used};"
                 ))?;
                 let mut merged = 0;
-                for (word, tl, count, last_used) in rows {
-                    let word = phonetics::api::strip_khinsiann_hanji(&word);
+                for row in rows {
+                    let word = phonetics::api::strip_khinsiann_hanji(&row.word);
                     if word.is_empty() {
                         continue;
                     }
-                    statement.execute(params![word, tl, count, last_used])?;
+                    // `min` before `max`, not `clamp`: no panic on a count
+                    // below 0.
+                    let abbrev_count = row.abbrev_count.min(row.count).max(0);
+                    statement.execute(params![
+                        word,
+                        row.tl,
+                        row.count,
+                        row.last_used,
+                        abbrev_count,
+                        row.abbrev_last_used
+                    ])?;
                     merged += 1;
                 }
                 capacity.enforce(connection)?;
@@ -237,6 +276,12 @@ impl UserFrequencyStore {
     }
 }
 
+/// The later of two nullable stored times as SQL: either one when the other
+/// is `NULL` (SQLite's two-argument `MAX` is `NULL` then).
+fn later_time_sql(stored: &str, other: &str) -> String {
+    format!("COALESCE(MAX({stored}, {other}), {stored}, {other})")
+}
+
 fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<FrequencyRow> {
     Ok(FrequencyRow {
         word: row.get(0)?,
@@ -272,8 +317,9 @@ fn migrate_khinsiann_hanji_if_needed(connection: &Connection) -> rusqlite::Resul
         "SELECT id, word, tl, count, last_used, created_at, abbrev_count, abbrev_last_used FROM {TABLE_NAME} WHERE word LIKE '%--%' ORDER BY id ASC;"
     );
     let update_sql = format!("UPDATE OR IGNORE {TABLE_NAME} SET word = ?1 WHERE id = ?2;");
+    let abbrev_last_used = later_time_sql("abbrev_last_used", "?7");
     let merge_sql = format!(
-        "UPDATE {TABLE_NAME}\nSET count = COALESCE(count, 0) + ?1,\n    last_used = CASE WHEN last_used IS NULL THEN ?2 WHEN ?2 IS NULL THEN last_used ELSE MAX(last_used, ?2) END,\n    created_at = CASE WHEN created_at IS NULL THEN ?3 WHEN ?3 IS NULL THEN created_at ELSE MIN(created_at, ?3) END,\n    abbrev_count = abbrev_count + ?6,\n    abbrev_last_used = CASE WHEN abbrev_last_used IS NULL THEN ?7 WHEN ?7 IS NULL THEN abbrev_last_used ELSE MAX(abbrev_last_used, ?7) END\nWHERE word = ?4 AND tl = ?5;"
+        "UPDATE {TABLE_NAME}\nSET count = COALESCE(count, 0) + ?1,\n    last_used = CASE WHEN last_used IS NULL THEN ?2 WHEN ?2 IS NULL THEN last_used ELSE MAX(last_used, ?2) END,\n    created_at = CASE WHEN created_at IS NULL THEN ?3 WHEN ?3 IS NULL THEN created_at ELSE MIN(created_at, ?3) END,\n    abbrev_count = abbrev_count + ?6,\n    abbrev_last_used = {abbrev_last_used}\nWHERE word = ?4 AND tl = ?5;"
     );
     migrate_to_version(connection, SCHEMA_VERSION, |connection| {
         normalize_khinsiann_rows(

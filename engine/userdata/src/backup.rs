@@ -10,10 +10,14 @@
 //! the store holds and restore unchanged — a fold would misread a TL `eng` /
 //! `ek` final as POJ (蔣經國 `tsiúnn-keng-kok` → `king`). 4 adds the learned
 //! phrases, each learned row's last use (`lastUsed` / `updatedAt`, which the
-//! walker's decay and the stores' eviction read) and each custom word's
-//! `createdAt` / `updatedAt` (the keystroke order of homophone custom words);
-//! a file before 4 restores those as used now. An older app reads a newer
-//! file as its own version, ignoring what it does not know.
+//! walker's decay and the stores' eviction read), each custom word's
+//! `createdAt` / `updatedAt` (the keystroke order of homophone custom words)
+//! and each frequency row's abbreviation picks (`abbrevCount` /
+//! `abbrevLastUsed`, written only for a row that has any; frequency rows keep
+//! reading and abbreviation picks apart, `UserFrequencyStore::import_merge`);
+//! a file before 4 restores those times as used now and no abbreviation
+//! picks. An older app reads a newer file as its
+//! own version, ignoring what it does not know.
 //!
 //! Reading is lenient, as Android's was: a missing field takes its default,
 //! an unknown one is ignored, only a version below 1 is refused — so an old
@@ -29,7 +33,7 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 use crate::timestamp::{format_rfc3339_utc, format_utc_timestamp};
-use crate::{AssociationPair, CustomDictionaryRow, UserDataStores};
+use crate::{AssociationPair, CustomDictionaryRow, FrequencyImportRow, UserDataStores};
 
 /// The version this codec writes.
 pub const BACKUP_VERSION: i64 = 4;
@@ -75,6 +79,13 @@ struct LearnedPhraseEntry {
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 struct FrequencyEntry {
+    /// The picks of `count` made through a whole-buffer abbreviation; absent
+    /// (0) in a file before them and for a row without any.
+    #[serde(skip_serializing_if = "is_zero")]
+    abbrev_count: i64,
+    /// Last abbreviation pick; empty with no abbreviation picks.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    abbrev_last_used: String,
     count: i64,
     last_used: String,
     /// Absent in a backup written before the `(word, tl)` pair key: the
@@ -92,6 +103,10 @@ struct AssociationEntry {
     next_word: String,
     prev_tl: Option<String>,
     prev_word: String,
+}
+
+fn is_zero(value: &i64) -> bool {
+    *value == 0
 }
 
 /// Why a backup could not be restored.
@@ -185,6 +200,8 @@ pub fn export_backup(
         user_frequency: frequency
             .into_iter()
             .map(|row| FrequencyEntry {
+                abbrev_count: row.abbrev_count,
+                abbrev_last_used: backup_timestamp(row.abbrev_last_used_ms),
                 count: row.count,
                 last_used: backup_timestamp(row.last_used_ms),
                 tl: Some(row.tl),
@@ -200,7 +217,9 @@ pub fn export_backup(
 /// custom words already stored are skipped and the import fills whatever
 /// room the dictionary has left, keeping the file's times; learned rows keep
 /// the larger count and the later use (a file before version 4 has no use
-/// times: they count as used now); bigram readings of a version-1 / -2 file
+/// times: they count as used now) — frequency rows keep reading and
+/// abbreviation picks apart ([`UserFrequencyStore::import_merge`](crate::UserFrequencyStore::import_merge));
+/// bigram readings of a version-1 / -2 file
 /// are folded POJ → TL (the phones could write POJ there). A custom row
 /// missing its romanization or its Hanji is skipped, as Android's restore
 /// did; a missing count reads as 1, as Android's did.
@@ -234,13 +253,13 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
             backup
                 .user_frequency
                 .into_iter()
-                .map(|entry| {
-                    (
-                        entry.word,
-                        entry.tl.unwrap_or_default(),
-                        entry.count.max(1),
-                        entry.last_used,
-                    )
+                .map(|entry| FrequencyImportRow {
+                    word: entry.word,
+                    tl: entry.tl.unwrap_or_default(),
+                    count: entry.count.max(1),
+                    last_used: entry.last_used,
+                    abbrev_count: entry.abbrev_count,
+                    abbrev_last_used: entry.abbrev_last_used,
                 })
                 .collect(),
         )

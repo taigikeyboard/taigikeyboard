@@ -107,22 +107,183 @@ fn an_android_backup_restores_leniently() {
     );
 }
 
-#[test]
-fn a_restore_keeps_the_larger_count() {
-    let directory = scratch();
-    let stores = stores(&directory);
-    for _ in 0..9 {
-        stores.frequency.record("台灣", "tâi-uân");
-    }
-    stores.frequency.all_rows(); // flush the queued writes
-
-    import_backup(&stores, IOS_BACKUP.as_bytes()).unwrap();
-
+/// The 台灣 row's `(count, abbrev_count, abbrev_last_used_ms)`.
+fn taiwan_picks(stores: &UserDataStores) -> (i64, i64, i64) {
     let rows = stores
         .frequency
         .rows_for_words(&["台灣".to_owned()])
         .unwrap();
-    assert_eq!(rows[0].count, 9, "MAX(9, 5)");
+    assert_eq!(rows.len(), 1);
+    (
+        rows[0].count,
+        rows[0].abbrev_count,
+        rows[0].abbrev_last_used_ms,
+    )
+}
+
+/// Records `readings` reading picks and `abbreviations` abbreviation picks
+/// of 台灣, then waits for the writes.
+fn stores_picks(stores: &UserDataStores, readings: usize, abbreviations: usize) {
+    for _ in 0..readings {
+        stores.frequency.record("台灣", "tâi-uân");
+    }
+    for _ in 0..abbreviations {
+        stores.frequency.record_abbreviation("台灣", "tâi-uân");
+    }
+    stores.frequency.all_rows(); // flush the queued writes
+}
+
+/// A version-4 file with one 台灣 row of `count` picks, `abbrev` of them
+/// through an abbreviation, last used 2025-01-02 03:04:05;
+/// `abbrev_last_used` `None` leaves the `abbrevLastUsed` key out.
+fn abbreviation_backup(count: i64, abbrev: i64, abbrev_last_used: Option<&str>) -> String {
+    let abbrev_last_used = abbrev_last_used
+        .map(|time| format!(r#""abbrevLastUsed": "{time}", "#))
+        .unwrap_or_default();
+    format!(
+        r#"{{ "version": 4, "userFrequency": [{{ "abbrevCount": {abbrev}, {abbrev_last_used}"count": {count}, "lastUsed": "2025-01-02 03:04:05", "tl": "tâi-uân", "word": "台灣" }}] }}"#
+    )
+}
+
+const V4_TIME: Option<&str> = Some("2025-01-02 03:04:05");
+
+#[test]
+fn a_restore_keeps_the_larger_count_when_neither_side_has_abbreviation_picks() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    stores_picks(&stores, 9, 0);
+
+    import_backup(&stores, IOS_BACKUP.as_bytes()).unwrap();
+
+    assert_eq!(taiwan_picks(&stores).0, 9, "MAX(9, 5)");
+}
+
+#[test]
+fn abbreviation_picks_survive_an_export_and_restore() {
+    let source_directory = scratch();
+    let source = stores(&source_directory);
+    stores_picks(&source, 4, 3);
+    let (_, _, abbreviated_at) = taiwan_picks(&source);
+    assert!(abbreviated_at > 0);
+
+    let bytes = export_backup(&source, "ios", "3.10.0", 1_800_000_000).unwrap();
+    let target_directory = scratch();
+    let target = stores(&target_directory);
+    import_backup(&target, &bytes).unwrap();
+    assert_eq!(
+        taiwan_picks(&target),
+        (7, 3, abbreviated_at),
+        "abbreviation picks stay abbreviation picks"
+    );
+}
+
+#[test]
+fn a_file_without_abbreviation_keys_restores_a_fresh_row_without_abbreviation_picks() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    import_backup(&stores, IOS_BACKUP.as_bytes()).unwrap();
+    assert_eq!(taiwan_picks(&stores), (5, 0, 0), "none, never");
+}
+
+#[test]
+fn a_file_without_abbreviation_keys_leaves_the_local_abbreviation_picks() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    stores_picks(&stores, 2, 3);
+    let (_, _, abbreviated_at) = taiwan_picks(&stores);
+    import_backup(&stores, IOS_BACKUP.as_bytes()).unwrap();
+    // trace: local 5 picks / 3 abbreviation, file 5 / 0 → abbrev MAX(3, 0)
+    // = 3, readings MAX(5 - 3, 5 - 0) = 5, count 5 + 3 = 8.
+    assert_eq!(
+        taiwan_picks(&stores),
+        (8, 3, abbreviated_at),
+        "the local abbreviation picks and their time stay"
+    );
+}
+
+#[test]
+fn a_restore_keeps_the_larger_reading_and_abbreviation_picks_apart() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    stores_picks(&stores, 8, 2);
+    let (count, _, abbreviated_at) = taiwan_picks(&stores);
+    assert_eq!(count, 10);
+
+    let backup = abbreviation_backup(11, 9, V4_TIME);
+    import_backup(&stores, backup.as_bytes()).unwrap();
+    // trace: local 10 / 2 (8 readings), file 11 / 9 (2 readings) →
+    // abbrev MAX(2, 9) = 9, readings MAX(8, 2) = 8, count 8 + 9 = 17.
+    // The file's 2025 abbreviation time is older than the local one.
+    let merged = taiwan_picks(&stores);
+    assert_eq!(merged, (17, 9, abbreviated_at));
+
+    import_backup(&stores, backup.as_bytes()).unwrap();
+    assert_eq!(
+        taiwan_picks(&stores),
+        merged,
+        "a second restore changes nothing"
+    );
+}
+
+#[test]
+fn a_restore_takes_the_file_abbreviation_time_when_the_local_row_has_none() {
+    // Local row with reading picks only: `abbrev_last_used` is NULL.
+    let directory = scratch();
+    let stores = stores(&directory);
+    stores_picks(&stores, 4, 0);
+    assert_eq!(taiwan_picks(&stores), (4, 0, 0));
+    import_backup(&stores, abbreviation_backup(5, 2, V4_TIME).as_bytes()).unwrap();
+    // trace: local 4 / 0 (4 readings), file 5 / 2 (3 readings) → abbrev
+    // MAX(0, 2) = 2, readings MAX(4, 3) = 4, count 4 + 2 = 6; time
+    // MAX(NULL, file) = NULL → COALESCE(NULL, NULL, file) = file 2025 time.
+    assert_eq!(taiwan_picks(&stores), (6, 2, V4_LAST_USED_MS));
+}
+
+#[test]
+fn a_restore_takes_the_file_abbreviation_time_when_it_is_later() {
+    // Local abbreviation time 2025 (seeded by a restore: a future time is
+    // capped at now by `RESTORED_TIMESTAMP_SQL`); the file's is 2026.
+    let directory = scratch();
+    let stores = stores(&directory);
+    import_backup(&stores, abbreviation_backup(3, 1, V4_TIME).as_bytes()).unwrap();
+    assert_eq!(taiwan_picks(&stores), (3, 1, V4_LAST_USED_MS));
+    let backup = abbreviation_backup(5, 3, Some("2026-01-02 03:04:05"));
+    import_backup(&stores, backup.as_bytes()).unwrap();
+    // trace: local 3 / 1 (2 readings), file 5 / 3 (2 readings) → abbrev
+    // MAX(1, 3) = 3, readings MAX(2, 2) = 2, count 2 + 3 = 5; time
+    // MAX(2025-01-02, 2026-01-02 03:04:05 UTC) = 1_767_323_045_000 ms.
+    assert_eq!(taiwan_picks(&stores), (5, 3, 1_767_323_045_000));
+}
+
+#[test]
+fn a_negative_hand_edited_abbreviation_count_restores_none() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    import_backup(&stores, abbreviation_backup(5, -3, V4_TIME).as_bytes()).unwrap();
+    assert_eq!(taiwan_picks(&stores), (5, 0, 0), "none, no time");
+}
+
+#[test]
+fn a_hand_edited_abbreviation_count_above_the_count_is_clamped_to_it() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    import_backup(&stores, abbreviation_backup(5, 99, V4_TIME).as_bytes()).unwrap();
+    assert_eq!(
+        taiwan_picks(&stores),
+        (5, 5, V4_LAST_USED_MS),
+        "never more abbreviation picks than picks"
+    );
+}
+
+#[test]
+fn abbreviation_picks_without_a_time_count_as_now() {
+    let directory = scratch();
+    let stores = stores(&directory);
+    let before = unix_millis_now() / 1000 * 1000;
+    import_backup(&stores, abbreviation_backup(5, 2, None).as_bytes()).unwrap();
+    let (count, abbrev, abbreviated_at) = taiwan_picks(&stores);
+    assert_eq!((count, abbrev), (5, 2));
+    assert!(abbreviated_at >= before);
 }
 
 #[test]
@@ -144,6 +305,10 @@ fn what_the_engine_writes_restores_on_a_fresh_install() {
         "sorted keys"
     );
     assert!(!text.contains("origin"), "never written");
+    assert!(
+        !text.contains("abbrev"),
+        "a row without abbreviation picks writes no abbreviation keys"
+    );
     // Persisted JSON key names: the code says `hanji` / `previous`, the
     // `.taigi` format keeps what older apps wrote and read.
     for key in [
@@ -283,17 +448,18 @@ const V4_BACKUP: &str = r#"{
     { "count": 3, "lastUsed": "2025-01-02 03:04:05", "nextTl": "hok", "nextWord": "複", "prevTl": "tîng", "prevWord": "重" }
   ],
   "userFrequency": [
-    { "count": 5, "lastUsed": "2025-01-02 03:04:05", "tl": "tâi-uân", "word": "台灣" }
+    { "abbrevCount": 2, "abbrevLastUsed": "2025-01-02 03:04:05", "count": 5, "lastUsed": "2025-01-02 03:04:05", "tl": "tâi-uân", "word": "台灣" }
   ],
   "version": 4
 }"#;
 const V4_LAST_USED_MS: i64 = 1_735_787_045_000;
 
 /// What typing reads from `stores`, times included: frequency
-/// `(word, count, last_used_ms)`, association `(count, last_used_ms)`,
-/// learned phrases `(hanji, canonical_tl, learn_count, updated_at_ms)`.
+/// `(word, count, last_used_ms, abbrev_count, abbrev_last_used_ms)`,
+/// association `(count, last_used_ms)`, learned phrases
+/// `(hanji, canonical_tl, learn_count, updated_at_ms)`.
 type TypingState = (
-    Vec<(String, i64, i64)>,
+    Vec<(String, i64, i64, i64, i64)>,
     Vec<(i64, i64)>,
     Vec<(String, String, i64, i64)>,
 );
@@ -315,7 +481,15 @@ fn typing_state(stores: &UserDataStores) -> TypingState {
         .all_rows()
         .unwrap()
         .into_iter()
-        .map(|row| (row.word, row.count, row.last_used_ms))
+        .map(|row| {
+            (
+                row.word,
+                row.count,
+                row.last_used_ms,
+                row.abbrev_count,
+                row.abbrev_last_used_ms,
+            )
+        })
         .collect();
     let association = stores
         .association
@@ -343,7 +517,7 @@ fn a_version_4_backup_round_trips_every_store_with_its_times() {
     assert_eq!(
         typing_state(&source),
         (
-            vec![("台灣".to_owned(), 5, V4_LAST_USED_MS)],
+            vec![("台灣".to_owned(), 5, V4_LAST_USED_MS, 2, V4_LAST_USED_MS)],
             vec![(3, V4_LAST_USED_MS)],
             vec![(
                 "記起來".to_owned(),
@@ -358,6 +532,8 @@ fn a_version_4_backup_round_trips_every_store_with_its_times() {
     let bytes = export_backup(&source, "android", "3.10.0", 1_800_000_000).unwrap();
     let text = String::from_utf8(bytes.clone()).unwrap();
     assert!(text.contains("\"lastUsed\": \"2025-01-02 03:04:05\""));
+    assert!(text.contains("\"abbrevCount\": 2"));
+    assert!(text.contains("\"abbrevLastUsed\": \"2025-01-02 03:04:05\""));
     assert!(text.contains("\"learnedPhrases\""));
     assert!(text.contains("\"createdAt\": \"2025-03-01 00:00:00\""));
 

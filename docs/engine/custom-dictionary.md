@@ -112,7 +112,7 @@ A `.taigi` file is a single plain-text **JSON** document carrying all **four** u
 
 ### Format
 
-- Top-level: `version`, `exportedAt` (ISO-8601 UTC), `platform` (`ios`/`android`/`macos`/`windows`/`linux`), `appVersion`, plus `customDictionary[]` (`roman`, `hanzi`, `createdAt`, `updatedAt`), `userFrequency[]` (`word`, `tl`, `count`, `lastUsed`), `userAssociation[]` (`prevWord`, `prevTl`, `nextWord`, `nextTl`, `count`, `lastUsed`), `learnedPhrases[]` (`hanzi`, `roman`, `learnCount`, `updatedAt`). Times are the stores' `yyyy-MM-dd HH:mm:ss` UTC text (written since v4; empty before).
+- Top-level: `version`, `exportedAt` (ISO-8601 UTC), `platform` (`ios`/`android`/`macos`/`windows`/`linux`), `appVersion`, plus `customDictionary[]` (`roman`, `hanzi`, `createdAt`, `updatedAt`), `userFrequency[]` (`word`, `tl`, `count`, `lastUsed`, plus `abbrevCount` / `abbrevLastUsed` — the picks of `count` made through a whole-buffer abbreviation and the last of them — written only for a row that has any), `userAssociation[]` (`prevWord`, `prevTl`, `nextWord`, `nextTl`, `count`, `lastUsed`), `learnedPhrases[]` (`hanzi`, `roman`, `learnCount`, `updatedAt`). Times are the stores' `yyyy-MM-dd HH:mm:ss` UTC text (written since v4; empty before).
 - **Version**: export writes `4` (`BACKUP_VERSION`, `engine/userdata/src/backup.rs`); import accepts `version >= 1`. All versions share one shape; reading is lenient (missing fields default, unknown fields ignored).
 - `userFrequency[].tl` (canonical TL, the `(Hanji, canonical-TL)` pair identity) is optional on decode — a backup without it imports into the legacy `tl=""` bucket.
 - Custom-dict rows carry `roman`+`hanzi` and their times; the id and the search keys are regenerated on import. Same-key custom rows reach the keystroke path by `roman, created_at, hanzi`, so homophones keep their order across a restore.
@@ -120,7 +120,7 @@ A `.taigi` file is a single plain-text **JSON** document carrying all **four** u
 ### Import semantics — **merge, never replace**
 
 - Custom dictionary: adds non-duplicates only (dedup by `roman\thanzi`).
-- Frequency + association + learned phrases: **higher-count-wins, later-use-wins** merge; capacity is enforced after the import. A file time is stored through SQLite `datetime`, clamped to now; empty (v1–v3) or unreadable counts as used now. Restored learned phrases get their search keys.
+- Frequency + association + learned phrases: **higher-count-wins, later-use-wins** merge; capacity is enforced after the import. Frequency rows keep reading and abbreviation picks apart (`UserFrequencyStore::import_merge`). A file time is stored through SQLite `datetime`, clamped to now; empty (v1–v3) or unreadable counts as used now. Restored learned phrases get their search keys.
 - Bigram readings of a version 1 / 2 file (the phones could write POJ there) are folded POJ → TL; version 3 and later readings restore unchanged, since a fold would misread a TL `eng` / `ek` final as POJ.
 
 > **Row cap (30000, `CustomDictionaryStore::MAX_ENTRIES`)**: a `.taigi` restore fills the space left and stops (`CustomDictionaryStore::import_until_full`); a CSV whose own row count exceeds the cap is refused before anything is written (`batch_import`).

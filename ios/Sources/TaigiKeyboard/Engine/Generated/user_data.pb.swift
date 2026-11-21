@@ -876,9 +876,10 @@ public nonisolated struct Taigi_Engine_BackupExported: Sendable {
 
 /// Restores a `.taigi` file's bytes, merging with what is stored: custom
 /// words already there are skipped and the import stops at the dictionary's
-/// cap; learned rows keep the larger count and the later use; bigram
-/// readings of a version-1 / -2 file are normalized to TL. Old and
-/// cross-platform backups are read leniently.
+/// cap; learned rows keep the larger count and the later use (frequency
+/// rows keep the larger reading and abbreviation picks apart, so the count
+/// is their sum); bigram readings of a version-1 / -2 file are normalized
+/// to TL. Old and cross-platform backups are read leniently.
 public nonisolated struct Taigi_Engine_ImportBackup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
