@@ -7,8 +7,8 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use taigi_desktop_core::candidates::{
-    CandidateMetrics, CollapsedLayout, ExpandableGeometryInput, ExpandableListModel, FontSpec,
-    HorizontalPageLayout, TextMeasurer,
+    CandidateChrome, CandidateMetrics, CollapsedLayout, ExpandableGeometryInput,
+    ExpandableListModel, FontSpec, HorizontalPageLayout, TextMeasurer,
 };
 use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::session::ListLayout;
@@ -18,8 +18,9 @@ use taigi_desktop_core::settings::{
 use taigikeyboard_popup::text::Fonts;
 use taigikeyboard_popup::{row_widths, Cell, CellStyle, Measure, RowWidths};
 
-/// macOS chrome ratio, twin of Web `MACOS_CHROME_RATIO`.
-const MACOS_CHROME_RATIO: f32 = 0.7;
+/// The core's base paddings at macOS's chrome ratio 0.7, not macOS's own
+/// paddings (`CandidateChrome::MACOS`, which Web draws).
+const CHROME: CandidateChrome = CandidateChrome::with_ratio(0.7);
 /// The chevron column beside a list (`CHEVRON_COLUMN_RATIO` on Web).
 const CHEVRON_COLUMN_RATIO: f32 = 1.5;
 const LINE_HEIGHT_RATIO: f32 = 1.2;
@@ -230,11 +231,11 @@ impl ListLayout for PopupListLayout {
             return None;
         }
         let recorder = RunRecorder::default();
-        let sizes = CandidateMetrics::resolve_with_chrome_ratio(
+        let sizes = CandidateMetrics::resolve_with_chrome(
             settings.choice(&keys::CANDIDATE_SIZE),
             CandidateFontSelection::default(),
             layout.cell_arrangement(),
-            MACOS_CHROME_RATIO,
+            CHROME,
             &recorder,
         );
         let mut runs = recorder.runs.into_inner();

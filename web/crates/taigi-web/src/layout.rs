@@ -10,8 +10,8 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 use taigi_desktop_core::candidates::{
-    CandidateMetrics, CollapsedLayout, ExpandableGeometryInput, ExpandableListModel, FontSpec,
-    HorizontalPageLayout, TextMeasurer, MAX_DISPLAY_CANDIDATES,
+    CandidateChrome, CandidateMetrics, CollapsedLayout, ExpandableGeometryInput,
+    ExpandableListModel, FontSpec, HorizontalPageLayout, TextMeasurer, MAX_DISPLAY_CANDIDATES,
 };
 use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::session::ListLayout;
@@ -19,8 +19,6 @@ use taigi_desktop_core::settings::{
     keys, CandidateFontSelection, CandidateLayout, CandidateSizeChoice, SettingsDocument,
 };
 
-/// macOS's ratio, which `web/src/style.css` draws.
-const MACOS_CHROME_RATIO: f32 = 0.7;
 /// `#page-arrows`' width against the candidate size.
 const CHEVRON_COLUMN_RATIO: f32 = 1.5;
 /// The panel's `line-height`.
@@ -158,11 +156,11 @@ impl PageListLayout {
         layout: CandidateLayout,
     ) -> Option<MeasuredCells> {
         let resolve = |measurer: &dyn TextMeasurer| {
-            CandidateMetrics::resolve_with_chrome_ratio(
+            CandidateMetrics::resolve_with_chrome(
                 settings.choice(&keys::CANDIDATE_SIZE),
                 CandidateFontSelection::default(),
                 layout.cell_arrangement(),
-                MACOS_CHROME_RATIO,
+                CandidateChrome::MACOS,
                 measurer,
             )
         };
