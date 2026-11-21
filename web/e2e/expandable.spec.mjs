@@ -4,7 +4,14 @@
 
 import { expect, test } from "@playwright/test";
 
-import { candidates, expectText, open, panel, TIER } from "./helpers.mjs";
+import {
+  candidates,
+  expectText,
+  open,
+  panel,
+  settled,
+  TIER,
+} from "./helpers.mjs";
 
 /** @typedef {import("@playwright/test").Locator} Locator */
 /** @typedef {import("@playwright/test").Page} Page */
@@ -43,15 +50,6 @@ async function expectCollapsed(page) {
 
 /** @param {Locator} locator */
 const position = (locator) => locator.getAttribute("data-position");
-
-/**
- * The unfold has finished, so boxes read their final size.
- * @param {Page} page
- */
-const settled = (page) =>
-  expect
-    .poll(() => panel(page).evaluate((root) => root.getAnimations().length))
-    .toBe(0);
 
 test("the first key of a word packs from real widths", async ({ page }) => {
   const editor = await open(page, { settings: ROW });

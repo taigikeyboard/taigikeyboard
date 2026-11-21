@@ -14,6 +14,7 @@ import {
   open,
   panel,
   preedit,
+  settled,
   TIER,
   toggle,
 } from "./helpers.mjs";
@@ -756,33 +757,46 @@ test("the selection keeps one inset and the text stays inside the corners", asyn
   expect([...insets]).toHaveLength(1);
 });
 
-/// Every script of every cell on one line: a cell the model sizes (a row's or
-/// a column's) is as wide as the model measured, so a length drawn wider than
-/// the model's wraps its widest script. Expandable at 13, 15 and 23 once did:
-/// CSS drew `0.875 × size` where the model measured `round(14 × size / 16)`.
+/** @param {Page} page */
+const wrappedScripts = (page) =>
+  panel(page).evaluate((root) =>
+    [...root.querySelectorAll("li > span")]
+      .filter((part) => {
+        const range = document.createRange();
+        range.selectNodeContents(part);
+        return range.getClientRects().length > 1;
+      })
+      .map((part) => part.textContent),
+  );
+
+/// Every script of every cell on one line, collapsed and unfolded: a cell the
+/// model sizes is as wide as the model measured, so any length drawn wider
+/// than the model's wraps its widest script.
 test("no script wraps at any size in any layout", async ({ page }) => {
-  for (const layout of [
-    "vertical",
-    "horizontal",
-    "expandable",
-    "verticalExpandable",
-  ]) {
+  /** @type {Array<[string, string | null]>} */
+  const layouts = [
+    ["vertical", null],
+    ["horizontal", null],
+    ["expandable", "ArrowDown"],
+    ["verticalExpandable", "ArrowRight"],
+  ];
+  for (const [layout, unfoldKey] of layouts) {
     for (const size of ["13", "15", "17", "20", "23"]) {
       const editor = await open(page, {
         settings: { candidateLayout: layout, candidateTextSize: size },
       });
       await editor.pressSequentially("tsiahpa");
       await expect(candidates(page).first()).toBeVisible();
-      const wrapped = await panel(page).evaluate((root) =>
-        [...root.querySelectorAll("li > span")]
-          .filter((part) => {
-            const range = document.createRange();
-            range.selectNodeContents(part);
-            return range.getClientRects().length > 1;
-          })
-          .map((part) => part.textContent),
-      );
-      expect(wrapped, `${layout} ${size}`).toEqual([]);
+      expect(await wrappedScripts(page), `${layout} ${size}`).toEqual([]);
+      if (unfoldKey) {
+        await editor.press(unfoldKey);
+        await expect(page.locator("#candidates")).toHaveAttribute("data-grid");
+        await settled(page);
+        expect(
+          await wrappedScripts(page),
+          `${layout} ${size} unfolded`,
+        ).toEqual([]);
+      }
     }
   }
 });

@@ -617,13 +617,14 @@ summary:focus-visible {
     "index annotation" auto / auto auto;
   align-content: center;
   align-items: center;
-  column-gap: var(--candidate-index-gap);
   padding: calc(var(--candidate-padding-y) / 2) var(--candidate-padding-x);
   cursor: default;
 }
 
-/* Two-line cells: the air between the scripts (`stackedLineGap`). */
+/* Two-line cells: the key's gap (two columns, one gutter) and the air between
+   the scripts (`stackedLineGap`). */
 .candidates:not([data-inline]) li {
+  column-gap: var(--candidate-index-gap);
   row-gap: var(--candidate-line-gap);
 }
 
@@ -754,8 +755,12 @@ summary:focus-visible {
   background: var(--hairline);
 }
 
+/* One-line cells: the key's gap is its own margin, not a column gap, which would
+   open between the two scripts too, where the model charges the annotation gap
+   alone (`CandidateMetrics::cell_width`). */
 .candidates[data-inline] li .index {
   grid-area: auto / 1;
+  margin-right: var(--candidate-index-gap);
 }
 
 .candidates[data-inline] li .text {

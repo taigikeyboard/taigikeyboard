@@ -193,6 +193,15 @@ export const inputMode = (page) => page.locator('select[name="inputMode"]');
 export const panel = (page) => page.locator("#panel");
 
 /**
+ * The unfold has finished, so boxes read their final size.
+ * @param {Page} page
+ */
+export const settled = (page) =>
+  expect
+    .poll(() => panel(page).evaluate((root) => root.getAnimations().length))
+    .toBe(0);
+
+/**
  * @param {Page} page
  * @param {string} state
  * @returns {Promise<void>}
