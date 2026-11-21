@@ -149,13 +149,11 @@ for (const [value, family] of [
   ["genYoMin", "GenYoMin2 TW"],
   ["genYoGothic", "GenYoGothic2 TW"],
 ]) {
-  test(`${value} sets Hanji and leaves romanization alone`, async ({
-    page,
-  }) => {
+  test(`${value} sets Hanji and romanization`, async ({ page }) => {
     await open(page);
     await setting(page, "fontType").selectOption(value);
     expect(await facesFor(page, family, "台")).toBe(1);
-    expect(await facesFor(page, family, "tsi̍t")).toBe(0);
+    expect(await facesFor(page, family, "tsi̍t")).toBe(1);
     await expect(page.locator("#text")).toHaveCSS(
       "font-family",
       new RegExp(family),
