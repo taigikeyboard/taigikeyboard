@@ -155,10 +155,11 @@ public nonisolated struct Taigi_Engine_TlDisplayToTps: Sendable {
   public init() {}
 }
 
-/// `IsAttachingPunctuation` — whether `text` is a single punctuation character
+/// `IsAttachingPunctuation` — whether `text`, whole, is a punctuation mark
 /// that attaches to the preceding word under auto-space, so it swaps with the
 /// trailing auto space (`guá ` + `?` → `guá? `; behavioral-invariants §23).
-/// Answers `BoolResult`; false for empty or multi-character text.
+/// Answers `BoolResult`; a mark may be two cells (`……`); false for empty text
+/// or text with anything beside the mark (`?!`).
 public nonisolated struct Taigi_Engine_IsAttachingPunctuation: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

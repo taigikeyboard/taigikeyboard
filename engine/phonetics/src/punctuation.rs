@@ -8,27 +8,27 @@
 //! the punctuation (`guá ` + `?` → `guá? `), not leave it before (`guá ?`).
 //! Only a half-width (Latin) mark keeps the space after it: a full-width
 //! mark carries its own spacing, so it takes the space's place and leaves
-//! none (`taigi ` + `，` → `taigi，`; `IsSpacedPunctuation`).
+//! none (`taigi ` + `，` → `taigi，`; `IsSpacedPunctuation`). The ellipsis
+//! and the dash are not ASCII either, so they too leave none: `啥mih ` +
+//! `……` → `啥mih……`.
 //! A *joiner* binds the next syllable to the word, so it takes the space's
 //! place and leaves none (`hōo ` + `·` → `hōo·`).
 
-/// Sentence-end + clause separators + CLOSING brackets/quotes. OPENING
-/// brackets/quotes (`(（[「『`) are deliberately excluded — they need a
-/// LEADING space, not attachment. ASCII straight quotes (`"` `'`) are
-/// excluded because the same glyph serves as both opening and closing;
-/// attaching them would corrupt `guá "…"` into `guá" …`.
-const ATTACHING: [char; 19] = [
-    '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', ')', '）', ']', '】',
-    '」', '』',
+/// Sentence-end + clause separators + CLOSING brackets/quotes + the
+/// ellipsis and the dash. OPENING brackets/quotes (`(（[「『`) are
+/// deliberately excluded — they need a LEADING space, not attachment. ASCII
+/// straight quotes (`"` `'`) are excluded because the same glyph serves as
+/// both opening and closing; attaching them would corrupt `guá "…"` into
+/// `guá" …`. The ellipsis and the dash sit against the word before them
+/// (#879; `伊——罕得`) in one cell (mobile keys) or two (desktop `^` / `_`).
+const ATTACHING: [&str; 24] = [
+    "。", "！", "？", ".", "!", "?", "，", ",", "、", "；", ";", "：", ":", ")", "）", "]", "】",
+    "」", "』", "…", "……", "⋯", "—", "——",
 ];
 
-/// True when `text` is a single attaching-punctuation character.
+/// True when `text` is, whole, one entry of [`ATTACHING`].
 pub(crate) fn is_attaching_punctuation(text: &str) -> bool {
-    let mut chars = text.chars();
-    match (chars.next(), chars.next()) {
-        (Some(c), None) => ATTACHING.contains(&c),
-        _ => false,
-    }
+    ATTACHING.contains(&text)
 }
 
 /// True when `text` is attaching punctuation the auto space follows: a
@@ -52,13 +52,14 @@ mod tests {
     // INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP (behavioral-invariants.md §23)
     #[test]
     fn attaching_set_is_the_cross_platform_roster() {
-        // trace: the 19 glyphs of `ATTACHING` — the set iOS / Android /
-        // macOS `AutoSpacePunctuation` and desktop-core `policies::auto_space`
-        // each held before it moved here; openers and straight quotes are
-        // outside it.
+        // trace: the 24 entries of `ATTACHING` — the 19 glyphs iOS /
+        // Android / macOS `AutoSpacePunctuation` and desktop-core
+        // `policies::auto_space` each held before it moved here, plus the
+        // ellipsis and the dash in one and two cells (#879); openers and
+        // straight quotes are outside it.
         for glyph in [
             "。", "！", "？", ".", "!", "?", "，", ",", "、", "；", ";", "：", ":", ")", "）", "]",
-            "】", "」", "』",
+            "】", "」", "』", "…", "……", "⋯", "—", "——",
         ] {
             assert!(is_attaching_punctuation(glyph), "{glyph}");
         }
@@ -68,24 +69,40 @@ mod tests {
     }
 
     #[test]
-    fn only_a_single_character_attaches() {
-        // trace: two scalars never match, even when the first is in the set —
-        // `?` + U+0301 is one Swift grapheme but not the Character `?`, so
-        // every old platform copy answered false too.
-        for text in ["", "a", "台", " ", "?!", "? ", "guá?", "?\u{0301}"] {
+    fn only_a_whole_entry_attaches() {
+        // trace: text is matched whole, so a set member with anything beside
+        // it never matches — `?` + U+0301 is one Swift grapheme but not the
+        // Character `?`, so every old platform copy answered false too. The
+        // two-cell marks are entries; three cells, or `…` beside `⋯`, are not.
+        for text in [
+            "",
+            "a",
+            "台",
+            " ",
+            "?!",
+            "? ",
+            "guá?",
+            "?\u{0301}",
+            "………",
+            "…⋯",
+            "—— ",
+            "-",
+            "--",
+        ] {
             assert!(!is_attaching_punctuation(text), "{text:?}");
         }
     }
 
     #[test]
     fn only_the_half_width_attaching_marks_keep_the_space() {
-        // trace: the eight ASCII glyphs of `ATTACHING`; its eleven
+        // trace: the eight ASCII glyphs of `ATTACHING`; its sixteen
         // full-width ones are not spaced, nor is anything outside it.
         for glyph in [".", "!", "?", ",", ";", ":", ")", "]"] {
             assert!(is_spaced_punctuation(glyph), "{glyph}");
         }
         for glyph in [
-            "。", "！", "？", "，", "、", "；", "：", "）", "】", "」", "』", "(", "a", "?!", "",
+            "。", "！", "？", "，", "、", "；", "：", "）", "】", "」", "』", "…", "……", "⋯", "—",
+            "——", "(", "a", "?!", "",
         ] {
             assert!(!is_spaced_punctuation(glyph), "{glyph:?}");
         }

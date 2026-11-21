@@ -7,10 +7,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `IsAttachingPunctuation` — whether `text` is a single punctuation character
+ * `IsAttachingPunctuation` — whether `text`, whole, is a punctuation mark
  * that attaches to the preceding word under auto-space, so it swaps with the
  * trailing auto space (`guá ` + `?` → `guá? `; behavioral-invariants §23).
- * Answers `BoolResult`; false for empty or multi-character text.
+ * Answers `BoolResult`; a mark may be two cells (`……`); false for empty text
+ * or text with anything beside the mark (`?!`).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.IsAttachingPunctuation}
@@ -156,10 +157,11 @@ public  final class IsAttachingPunctuation extends
 
   /**
    * <pre>
-   * `IsAttachingPunctuation` — whether `text` is a single punctuation character
+   * `IsAttachingPunctuation` — whether `text`, whole, is a punctuation mark
    * that attaches to the preceding word under auto-space, so it swaps with the
    * trailing auto space (`guá ` + `?` → `guá? `; behavioral-invariants §23).
-   * Answers `BoolResult`; false for empty or multi-character text.
+   * Answers `BoolResult`; a mark may be two cells (`……`); false for empty text
+   * or text with anything beside the mark (`?!`).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.IsAttachingPunctuation}

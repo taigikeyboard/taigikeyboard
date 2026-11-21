@@ -391,11 +391,13 @@ fn tl_display_to_tps_preserves_syllable_boundaries() {
 
 #[test]
 fn is_attaching_punctuation_answers_through_the_dispatcher() {
-    // trace: `punctuation::ATTACHING` holds `?` and `」`, not the opener `(`;
-    // two characters never attach.
+    // trace: `punctuation::ATTACHING` holds `?`, `」` and the two-cell
+    // ellipsis `……` (#879), not the opener `(`; text matches an entry whole,
+    // so `?!` does not attach.
     for (text, expected) in [
         ("?", true),
         ("」", true),
+        ("……", true),
         ("(", false),
         ("?!", false),
         ("", false),
@@ -422,12 +424,14 @@ fn is_joiner_punctuation_answers_through_the_dispatcher() {
 #[test]
 fn is_spaced_punctuation_answers_through_the_dispatcher() {
     // trace: `punctuation::is_spaced_punctuation` = attaching AND ASCII —
-    // `?` and `)` yes; their full-width `？` `）` and the opener `(` no.
+    // `?` and `)` yes; their full-width `？` `）`, the full-width dash `——`
+    // and the opener `(` no.
     for (text, expected) in [
         ("?", true),
         (")", true),
         ("？", false),
         ("）", false),
+        ("——", false),
         ("(", false),
         ("", false),
     ] {

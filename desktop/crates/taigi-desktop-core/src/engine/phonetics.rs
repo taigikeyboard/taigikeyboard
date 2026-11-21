@@ -53,7 +53,7 @@ pub fn external_lookup_digit_form(reading: &str) -> Option<String> {
     )
 }
 
-/// Whether `text` is a single punctuation character that attaches to the
+/// Whether `text` is, whole, a punctuation mark that attaches to the
 /// preceding word under auto-space (`guá ` + `?` → `guá? `) — the engine's
 /// set, the one every platform asks. False when the engine fails: no swap,
 /// the space stays where it is.
