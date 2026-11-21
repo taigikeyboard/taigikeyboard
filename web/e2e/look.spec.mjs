@@ -437,6 +437,26 @@ test("Output Script stores a boolean and writes romanization", async ({
 test("Output Script greys under Romanization Only", async ({ page }) => {
   await open(page, { settings: { candidateDisplayMode: "romanOnly" } });
   await expect(page.getByLabel("Output Script")).toBeDisabled();
+  await expect(page.getByLabel("Annotate in Brackets")).toBeDisabled();
+});
+
+test("Annotate in Brackets writes the romanization after the pick", async ({
+  page,
+}) => {
+  // trace: Hanji first, brackets on → `台語 (tâi-gí)`; Auto-Space is off, but a
+  // bracket unit still takes its space (`spaces_candidate_commits`, D2).
+  const editor = await open(page);
+  await page.getByLabel("Annotate in Brackets").check();
+  await editor.focus();
+  await editor.pressSequentially("tai5gi2");
+  await editor.press("Enter");
+  await expectText(editor, "台語 (tâi-gí) ");
+});
+
+test("Annotate in Brackets greys under TPS", async ({ page }) => {
+  // trace: TPS commits its Hanji as shown (`allows_output_both_scripts`, D4).
+  await open(page, { settings: { inputMode: "tps", outputBothScripts: true } });
+  await expect(page.getByLabel("Annotate in Brackets")).toBeDisabled();
 });
 
 test("a dictionary row keeps its default and its value", async ({ page }) => {

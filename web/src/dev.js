@@ -294,6 +294,14 @@ function showControls() {
   if (tpsShownControl) {
     tpsShownControl.disabled = mode !== "tps";
   }
+  // The writing page's rule (`settings.js`, `allows_output_both_scripts`).
+  const bracketsControl = /** @type {HTMLInputElement | null} */ (
+    form.elements.namedItem("outputBothScripts")
+  );
+  if (bracketsControl) {
+    bracketsControl.disabled =
+      mode === "tps" || values.candidateDisplayMode === "romanOnly";
+  }
   document.documentElement.toggleAttribute(
     "data-tps-keyboard",
     mode === "tps" && Boolean(tpsShownControl?.checked),
