@@ -1,6 +1,8 @@
 // Pins the pure key rules ActionHandler shares with Android TextInputKeyHandler.kt:
-// the action-field Return and single-shot Shift consumption.
+// the action-field Return, single-shot Shift consumption and which keys keep
+// the auto-space arm.
 
+import KeyboardKit
 @testable import TaigiKeyboard
 import UIKit
 import XCTest
@@ -27,6 +29,22 @@ final class ActionHandlerKeyRulesTests: XCTestCase {
         }
         for char in ["-", "2", "8", "ㄅ", "ˋ", "", "."] {
             XCTAssertFalse(ActionHandler.consumesSingleShift(char), char)
+        }
+    }
+
+    func testKeepsAutoSpaceArm_shiftAndPageKeysOnly() {
+        // trace: `keepsAutoSpaceArm` — `.shift` and every `.keyboardType`
+        // write nothing; a character, space or backspace writes the document.
+        let keeps: [KeyboardAction] = [
+            .shift(.lowercased), .keyboardType(.numeric),
+            .keyboardType(.symbolic), .keyboardType(.alphabetic), .keyboardType(.emojis),
+        ]
+        for action in keeps {
+            XCTAssertTrue(ActionHandler.keepsAutoSpaceArm(action), "\(action)")
+        }
+        let writes: [KeyboardAction] = [.character("…"), .character("?"), .space, .backspace]
+        for action in writes {
+            XCTAssertFalse(ActionHandler.keepsAutoSpaceArm(action), "\(action)")
         }
     }
 }

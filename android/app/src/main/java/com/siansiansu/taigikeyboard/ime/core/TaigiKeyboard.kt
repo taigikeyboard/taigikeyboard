@@ -152,6 +152,15 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     /**
+     * Hands the arm this event consumed on to the next, for a key that writes
+     * nothing (`keepsAutoSpaceArm`): `Tâi-gí ` + ?123 + `…` → `Tâi-gí…`.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.retainAutoSpaceArm`.
+     */
+    internal fun retainAutoSpaceArm() {
+        isAutoSpaceArmed = wasAutoSpaceArmedAtEventStart
+    }
+
+    /**
      * Whether the space in front of the caret is one this IME wrote and
      * Auto-Space is still on. The setting is read live so switching the feature
      * off stops the swap; the provenance is the consumed arm.

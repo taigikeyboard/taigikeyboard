@@ -98,8 +98,9 @@ internal class TextInputKeyHandler(
         }
         // Every key gets exactly one chance at the punctuation swap: the arm
         // is consumed here, before any dispatch or early return, and only the
-        // auto-space paths put it back.
+        // auto-space paths put it back — and the keys that write nothing.
         taigikeyboard.beginInputEvent()
+        if (keepsAutoSpaceArm(keyData.code)) taigikeyboard.retainAutoSpaceArm()
         val ic = taigikeyboard.currentInputConnection
 
         when (keyData.code) {
@@ -147,11 +148,15 @@ internal class TextInputKeyHandler(
 
             KeyCode.VIEW_NUMERIC_ADVANCED -> {
                 if (prefs.isFullWidthPunctuation && uiCoordinator.activeKeyboardMode == KeyboardMode.SYMBOLS) {
-                    ic?.beginBatchEdit()
-                    ic?.commitText("、", 1)
-                    ic?.endBatchEdit()
+                    ic?.let {
+                        it.beginBatchEdit()
+                        commitNonComposingCharacter(it, "、")
+                        it.endBatchEdit()
+                    }
                 } else {
                     uiCoordinator.setActiveKeyboardMode(KeyboardMode.NUMERIC_ADVANCED)
+                    // Out of `keepsAutoSpaceArm`: the branch above writes `、`.
+                    taigikeyboard.retainAutoSpaceArm()
                 }
             }
 
@@ -764,3 +769,24 @@ internal fun lastGraphemeLength(text: String): Int {
  * Drift causes silent divergence.
  */
 internal fun lastGrapheme(text: String): String = text.takeLast(lastGraphemeLength(text))
+
+/**
+ * Whether the key [code] writes nothing and moves no caret — shift and the
+ * layout-page and emoji-page keys — so the auto-space arm outlives it.
+ * `VIEW_NUMERIC_ADVANCED` is left out: under full width it writes `、`.
+ * CROSS-PLATFORM INVARIANT — mirrors iOS `ActionHandler.keepsAutoSpaceArm`.
+ */
+internal fun keepsAutoSpaceArm(code: Int): Boolean =
+    when (code) {
+        KeyCode.SHIFT,
+        KeyCode.VIEW_CHARACTERS,
+        KeyCode.VIEW_NUMERIC,
+        KeyCode.VIEW_PHONE,
+        KeyCode.VIEW_PHONE2,
+        KeyCode.VIEW_SYMBOLS,
+        KeyCode.VIEW_SYMBOLS2,
+        KeyCode.SWITCH_TO_MEDIA_CONTEXT,
+        KeyCode.SWITCH_TO_TEXT_CONTEXT,
+        -> true
+        else -> false
+    }

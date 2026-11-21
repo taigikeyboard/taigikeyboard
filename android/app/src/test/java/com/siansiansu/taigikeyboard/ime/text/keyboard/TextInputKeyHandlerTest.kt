@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -264,5 +265,27 @@ class TextInputKeyHandlerTest {
         assertNull(editorActionForEnter(EditorInfo.IME_ACTION_NONE))
         assertNull(editorActionForEnter(EditorInfo.IME_ACTION_UNSPECIFIED))
         assertNull(editorActionForEnter(EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_ENTER_ACTION))
+    }
+
+    @Test
+    fun `keepsAutoSpaceArm is true for shift and the page keys only`() {
+        // trace: `keepsAutoSpaceArm` — shift, the six VIEW_* page switches and
+        // the emoji-page switches write nothing; VIEW_NUMERIC_ADVANCED can write
+        // `、`, and delete / enter / a character write the document.
+        val keeps =
+            listOf(
+                KeyCode.SHIFT,
+                KeyCode.VIEW_CHARACTERS,
+                KeyCode.VIEW_NUMERIC,
+                KeyCode.VIEW_PHONE,
+                KeyCode.VIEW_PHONE2,
+                KeyCode.VIEW_SYMBOLS,
+                KeyCode.VIEW_SYMBOLS2,
+                KeyCode.SWITCH_TO_MEDIA_CONTEXT,
+                KeyCode.SWITCH_TO_TEXT_CONTEXT,
+            )
+        for (code in keeps) assertTrue("$code", keepsAutoSpaceArm(code))
+        val writes = listOf(KeyCode.VIEW_NUMERIC_ADVANCED, KeyCode.DELETE, KeyCode.ENTER, KeyCode.VIEW_CLIPBOARD, '?'.code)
+        for (code in writes) assertFalse("$code", keepsAutoSpaceArm(code))
     }
 }
