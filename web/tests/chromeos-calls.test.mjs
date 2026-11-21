@@ -116,6 +116,7 @@ test("only the cursor's page of candidates is sent, with page-relative IDs", () 
     cursorVisible: true,
     pageSize: 2,
     vertical: true,
+    lengths: {},
   };
   const [candidates, properties, cursor] = imeCalls(
     { handled: true, emits: [table] },
@@ -154,6 +155,7 @@ test("a hidden cursor sets no candidate position", () => {
     cursorVisible: false,
     pageSize: 9,
     vertical: false,
+    lengths: {},
   };
   const calls = imeCalls({ handled: true, emits: [table] }, ids);
   assert.equal(calls.length, 2);
