@@ -99,6 +99,12 @@ final class SettingsStore: @unchecked Sendable {
             name: "khinsiannInHanjiEnabled",
             defaultValue: EngineSettings.defaults.isKhinsiannInHanjiEnabled,
         )
+        /// Annotate in Brackets — desktop-core `keys::OUTPUT_BOTH_SCRIPTS`, the
+        /// mobile spelling.
+        static let isOutputBothScripts = SettingsKey(
+            name: "outputBothScripts",
+            defaultValue: EngineSettings.defaults.isOutputBothScripts,
+        )
         /// Type ts / ch with c — desktop-core `keys::IS_C_AFFRICATE_ENABLED`.
         static let isCAffricateEnabled = SettingsKey(
             name: "cAffricateEnabled",
@@ -652,6 +658,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isCAffricateEnabled.name,
             Keys.isFHyphenEnabled.name,
             Keys.isHanjiFirst.name,
+            Keys.isOutputBothScripts.name,
             Keys.isAutoSpaceEnabled.name,
             Keys.isCandidateWindowEnabled.name,
             Keys.isLiteralRomanCandidateEnabled.name,

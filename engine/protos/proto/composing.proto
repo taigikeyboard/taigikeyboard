@@ -125,7 +125,13 @@ message CommitPreeditThenInsertExternal { string text = 1; }
 message ConfirmCompositionThenInsert {
   optional CommitContinuous candidate = 1;
   string text = 2;
+  // Spacing for a write of the composition as shown (no candidate, or a
+  // partial pick's tail): the platform's Auto-Space.
   bool auto_space_enabled = 3;
+  // Spacing for a pick that finalizes the composition: Auto-Space OR effective
+  // Annotate in Brackets (behavioral-invariants
+  // INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+  bool candidate_spacing_enabled = 4;
 }
 
 // Clear all state (mode switch, teardown). User-initiated; emits the abort
@@ -340,7 +346,9 @@ message CommitResolution {
   // `document_text` carries romanization (behavioral-invariants §23).
   bool wrote_romanization = 3;
   // FINALIZED && wrote_romanization && `document_text` does not end in `-`.
-  // The platform still ANDs its live Auto-Space setting.
+  // The platform still ANDs its live switch: Auto-Space, or for a candidate
+  // commit Auto-Space OR effective Annotate in Brackets
+  // (behavioral-invariants INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS).
   bool earns_auto_space   = 4;
   // ConfirmCompositionThenInsert already included its spacing in the document write.
   // True when it left an auto space immediately before the caret; the host

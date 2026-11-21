@@ -21,6 +21,7 @@ fn pick(consumed_bytes: u32) -> CommitContinuous {
     }
 }
 
+/// One spacing switch for both writes, as when brackets are off.
 fn insert(
     engine: &mut Engine,
     candidate: Option<CommitContinuous>,
@@ -28,11 +29,30 @@ fn insert(
     auto_space_enabled: bool,
     config: &AppConfig,
 ) -> composing::Applied {
+    insert_spaced(
+        engine,
+        candidate,
+        text,
+        auto_space_enabled,
+        auto_space_enabled,
+        config,
+    )
+}
+
+fn insert_spaced(
+    engine: &mut Engine,
+    candidate: Option<CommitContinuous>,
+    text: &str,
+    auto_space_enabled: bool,
+    candidate_spacing_enabled: bool,
+    config: &AppConfig,
+) -> composing::Applied {
     let intent = requests::decode_intent(&req(Method::ConfirmCompositionThenInsert(
         ConfirmCompositionThenInsert {
             candidate,
             text: text.into(),
             auto_space_enabled,
+            candidate_spacing_enabled,
         },
     )))
     .unwrap();
@@ -235,6 +255,7 @@ fn generation_mismatch_rejects_the_pick_and_literal_together() {
                     candidate: Some(pick(3)),
                     text: "?".into(),
                     auto_space_enabled: true,
+                    candidate_spacing_enabled: true,
                 },
             )),
             &config,
@@ -377,4 +398,38 @@ fn tps_confirmation_does_not_learn_an_unpicked_pending_tail() {
     assert!(applied.learned.is_none());
     assert!(selected_words(&applied.response).is_empty());
     assert_eq!(applied.usage.unwrap().canonical_tl, "si");
+}
+
+/// A pick that finalizes reads `candidate_spacing_enabled`; the composition
+/// written as shown (a partial pick's tail) reads `auto_space_enabled`
+/// (`INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`).
+#[test]
+fn each_write_reads_its_own_spacing_switch() {
+    let config = AppConfig {
+        is_hanji_first: false,
+        ..config_tl()
+    };
+    for (raw, auto_space, candidate_spacing, expected, leaves_space) in [
+        ("tai", false, true, "tâi? ", true),
+        ("tai", true, false, "tâi?", false),
+        // trace (read by running): the nailed `tâi` and the tail `gi` as shown.
+        ("taigi", false, true, "tâi gi?", false),
+        ("taigi", true, false, "tâi gi? ", true),
+    ] {
+        let mut engine = Engine::new();
+        start(&mut engine, raw, &config);
+        let applied = insert_spaced(
+            &mut engine,
+            Some(pick(3)),
+            "?",
+            auto_space,
+            candidate_spacing,
+            &config,
+        );
+        assert_one_write(&applied.response, expected);
+        assert_eq!(
+            applied.response.commit.unwrap().leaves_trailing_auto_space,
+            leaves_space
+        );
+    }
 }

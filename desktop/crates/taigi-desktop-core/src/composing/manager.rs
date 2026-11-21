@@ -294,6 +294,7 @@ impl ComposingManager {
         candidate: Option<(&ContinuousCandidate, CandidateScript)>,
         text: &str,
         auto_space_enabled: bool,
+        candidate_spacing_enabled: bool,
         executor: &mut dyn ComposingEffectExecutor,
     ) -> ConfirmCompositionThenInsertOutcome {
         let settings = self.composition_settings();
@@ -302,6 +303,7 @@ impl ComposingManager {
             args.as_ref(),
             text,
             auto_space_enabled,
+            candidate_spacing_enabled,
             &settings,
             self.stamp(),
         ) else {

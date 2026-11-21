@@ -120,12 +120,14 @@ pub(crate) fn apply(
             candidate,
             text,
             auto_space_enabled,
+            candidate_spacing_enabled,
         } => {
             return confirm_composition_then_insert(
                 state,
                 candidate,
                 &text,
                 auto_space_enabled,
+                candidate_spacing_enabled,
                 config,
                 frequency,
             );
@@ -1302,6 +1304,7 @@ fn confirm_composition_then_insert(
     candidate: Option<ContinuousPick>,
     text: &str,
     auto_space_enabled: bool,
+    candidate_spacing_enabled: bool,
     config: &AppConfig,
     frequency: Frequency<'_>,
 ) -> Applied {
@@ -1383,7 +1386,7 @@ fn confirm_composition_then_insert(
                     let insert = crate::external_insert::augment_insert(
                         text,
                         &committed.text,
-                        auto_space_enabled && resolution.earns_auto_space,
+                        candidate_spacing_enabled && resolution.earns_auto_space,
                     );
                     // The pick's resolution names its own segment; the write
                     // is the whole composition, which `document_text` reports

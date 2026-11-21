@@ -125,6 +125,11 @@ public  final class ConfirmCompositionThenInsert extends
   public static final int AUTO_SPACE_ENABLED_FIELD_NUMBER = 3;
   private boolean autoSpaceEnabled_;
   /**
+   * <pre>
+   * Spacing for a write of the composition as shown (no candidate, or a
+   * partial pick's tail): the platform's Auto-Space.
+   * </pre>
+   *
    * <code>bool auto_space_enabled = 3;</code>
    * @return The autoSpaceEnabled.
    */
@@ -133,6 +138,11 @@ public  final class ConfirmCompositionThenInsert extends
     return autoSpaceEnabled_;
   }
   /**
+   * <pre>
+   * Spacing for a write of the composition as shown (no candidate, or a
+   * partial pick's tail): the platform's Auto-Space.
+   * </pre>
+   *
    * <code>bool auto_space_enabled = 3;</code>
    * @param value The autoSpaceEnabled to set.
    */
@@ -141,11 +151,60 @@ public  final class ConfirmCompositionThenInsert extends
     autoSpaceEnabled_ = value;
   }
   /**
+   * <pre>
+   * Spacing for a write of the composition as shown (no candidate, or a
+   * partial pick's tail): the platform's Auto-Space.
+   * </pre>
+   *
    * <code>bool auto_space_enabled = 3;</code>
    */
   private void clearAutoSpaceEnabled() {
 
     autoSpaceEnabled_ = false;
+  }
+
+  public static final int CANDIDATE_SPACING_ENABLED_FIELD_NUMBER = 4;
+  private boolean candidateSpacingEnabled_;
+  /**
+   * <pre>
+   * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+   * Annotate in Brackets (behavioral-invariants
+   * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+   * </pre>
+   *
+   * <code>bool candidate_spacing_enabled = 4;</code>
+   * @return The candidateSpacingEnabled.
+   */
+  @java.lang.Override
+  public boolean getCandidateSpacingEnabled() {
+    return candidateSpacingEnabled_;
+  }
+  /**
+   * <pre>
+   * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+   * Annotate in Brackets (behavioral-invariants
+   * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+   * </pre>
+   *
+   * <code>bool candidate_spacing_enabled = 4;</code>
+   * @param value The candidateSpacingEnabled to set.
+   */
+  private void setCandidateSpacingEnabled(boolean value) {
+
+    candidateSpacingEnabled_ = value;
+  }
+  /**
+   * <pre>
+   * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+   * Annotate in Brackets (behavioral-invariants
+   * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+   * </pre>
+   *
+   * <code>bool candidate_spacing_enabled = 4;</code>
+   */
+  private void clearCandidateSpacingEnabled() {
+
+    candidateSpacingEnabled_ = false;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.ConfirmCompositionThenInsert parseFrom(
@@ -352,6 +411,11 @@ public  final class ConfirmCompositionThenInsert extends
     }
 
     /**
+     * <pre>
+     * Spacing for a write of the composition as shown (no candidate, or a
+     * partial pick's tail): the platform's Auto-Space.
+     * </pre>
+     *
      * <code>bool auto_space_enabled = 3;</code>
      * @return The autoSpaceEnabled.
      */
@@ -360,6 +424,11 @@ public  final class ConfirmCompositionThenInsert extends
       return instance.getAutoSpaceEnabled();
     }
     /**
+     * <pre>
+     * Spacing for a write of the composition as shown (no candidate, or a
+     * partial pick's tail): the platform's Auto-Space.
+     * </pre>
+     *
      * <code>bool auto_space_enabled = 3;</code>
      * @param value The autoSpaceEnabled to set.
      * @return This builder for chaining.
@@ -370,12 +439,63 @@ public  final class ConfirmCompositionThenInsert extends
       return this;
     }
     /**
+     * <pre>
+     * Spacing for a write of the composition as shown (no candidate, or a
+     * partial pick's tail): the platform's Auto-Space.
+     * </pre>
+     *
      * <code>bool auto_space_enabled = 3;</code>
      * @return This builder for chaining.
      */
     public Builder clearAutoSpaceEnabled() {
       copyOnWrite();
       instance.clearAutoSpaceEnabled();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+     * Annotate in Brackets (behavioral-invariants
+     * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+     * </pre>
+     *
+     * <code>bool candidate_spacing_enabled = 4;</code>
+     * @return The candidateSpacingEnabled.
+     */
+    @java.lang.Override
+    public boolean getCandidateSpacingEnabled() {
+      return instance.getCandidateSpacingEnabled();
+    }
+    /**
+     * <pre>
+     * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+     * Annotate in Brackets (behavioral-invariants
+     * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+     * </pre>
+     *
+     * <code>bool candidate_spacing_enabled = 4;</code>
+     * @param value The candidateSpacingEnabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCandidateSpacingEnabled(boolean value) {
+      copyOnWrite();
+      instance.setCandidateSpacingEnabled(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+     * Annotate in Brackets (behavioral-invariants
+     * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+     * </pre>
+     *
+     * <code>bool candidate_spacing_enabled = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCandidateSpacingEnabled() {
+      copyOnWrite();
+      instance.clearCandidateSpacingEnabled();
       return this;
     }
 
@@ -399,10 +519,11 @@ public  final class ConfirmCompositionThenInsert extends
             "candidate_",
             "text_",
             "autoSpaceEnabled_",
+            "candidateSpacingEnabled_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u1009\u0000\u0002" +
-              "\u0208\u0003\u0007";
+              "\u0000\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u1009\u0000\u0002" +
+              "\u0208\u0003\u0007\u0004\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

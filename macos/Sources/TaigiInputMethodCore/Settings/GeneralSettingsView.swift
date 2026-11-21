@@ -70,6 +70,8 @@ struct GeneralSettingsView: View {
     private var isNasalMarkerUppercaseEnabled = SettingsStore.Keys.isNasalMarkerUppercaseEnabled.defaultValue
     @AppStorage(SettingsStore.Keys.isKhinsiannInHanjiEnabled.name)
     private var isKhinsiannInHanjiEnabled = SettingsStore.Keys.isKhinsiannInHanjiEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.isOutputBothScripts.name)
+    private var isOutputBothScripts = SettingsStore.Keys.isOutputBothScripts.defaultValue
 
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
@@ -157,6 +159,11 @@ struct GeneralSettingsView: View {
                     Text(language.string(.settingsOutputScriptRoman)).tag(false)
                 }
                 .disabled(!candidateDisplayMode.allowsSwapToggle)
+
+                // Annotate in Brackets: greys where it has no effect — Romanization
+                // Only, and TPS (desktop-core `allows_output_both_scripts`).
+                Toggle(language.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts)
+                    .disabled(!candidateDisplayMode.showsHanji || inputMode == .tps)
 
                 // Side-by-Side with Romanization output still displays Hanji candidates,
                 // so only Romanization Only (`!showsHanji`) disables this toggle.

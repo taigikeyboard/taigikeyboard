@@ -342,6 +342,12 @@ pub struct EngineSettings {
     /// Swift twin of the default: `EngineSettings.swift`
     /// `isKhinsiannInHanjiEnabled`.
     pub is_khinsiann_in_hanji_enabled: bool,
+    /// Annotate in Brackets — `AppConfig.output_both_scripts`. The EFFECTIVE
+    /// value (`SettingsDocument::effective_output_both_scripts`, the twin of mobile
+    /// `effectiveOutputBothScripts` plus the TPS mask); the stored key stays untouched. Off by
+    /// default on every platform. macOS keeps a Swift twin of the default:
+    /// `EngineSettings.swift` `isOutputBothScripts`.
+    pub is_output_both_scripts: bool,
 }
 
 impl EngineSettings {
@@ -372,6 +378,7 @@ impl EngineSettings {
             is_c_affricate_enabled: false,
             is_f_hyphen_enabled: false,
             is_khinsiann_in_hanji_enabled: false,
+            is_output_both_scripts: false,
         }
     };
 }

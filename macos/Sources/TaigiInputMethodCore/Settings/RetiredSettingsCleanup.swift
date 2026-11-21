@@ -34,12 +34,10 @@ enum RetiredSettingsCleanup {
         // is always on, so a stored value (a `false` left by an older build or
         // a hand edit) is inert now.
         "associationRecordingEnabled",
-        // Annotate in Brackets and Frequency Records, retired 2026-09-30: both
-        // toggles shipped in v3.6.5, and nothing reads the keys any more — the
-        // desktop never brackets, and the engine counts every pick
-        // (`RecordUsage` tag 4 reserved). Mobile keeps its own Annotate in
-        // Brackets key and UI.
-        "outputBothScripts",
+        // Frequency Records, retired 2026-09-30: the toggle shipped in v3.6.5,
+        // and the engine counts every pick (`RecordUsage` tag 4 reserved).
+        // (Annotate in Brackets, retired the same day, returned 2026-11-21 under
+        // its old name `outputBothScripts`, so it is no longer swept.)
         "frequencyRecordingEnabled",
     ]
 

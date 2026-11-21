@@ -130,6 +130,7 @@ fn confirm_composition_then_insert_learns_the_same_phrase_without_the_literal() 
             }),
             text: "?".into(),
             auto_space_enabled: true,
+            candidate_spacing_enabled: true,
         },
     ));
     let applied = engine.apply_learning(requests::decode_intent(&request).unwrap(), &config_tl());
@@ -1066,6 +1067,7 @@ fn roman_first_hanji_pick_then_insert_preserves_learning() {
             }),
             text: "?".into(),
             auto_space_enabled: true,
+            candidate_spacing_enabled: true,
         },
     ));
     let applied = engine.apply_learning(requests::decode_intent(&request).unwrap(), &config_tl());

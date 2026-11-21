@@ -126,7 +126,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         c_types_affricate: settings.is_c_affricate_enabled,
         f_types_hyphen: settings.is_f_hyphen_enabled,
         khinsiann_in_hanji: settings.is_khinsiann_in_hanji_enabled,
-        ..Default::default()
+        output_both_scripts: settings.is_output_both_scripts,
     }
 }
 
@@ -249,15 +249,21 @@ mod tests {
         };
         let swapped = app_config(&settings);
         assert!(swapped.is_hanji_first);
-        assert!(
-            !swapped.output_both_scripts,
-            "desktop has no Annotate in Brackets: the wire field stays at its default"
-        );
+        assert!(!swapped.output_both_scripts, "brackets off by default");
         let roman_first = EngineSettings {
             is_hanji_first: false,
             ..EngineSettings::default()
         };
         assert!(!app_config(&roman_first).is_hanji_first);
+    }
+
+    #[test]
+    fn app_config_carries_annotate_in_brackets() {
+        let settings = EngineSettings {
+            is_output_both_scripts: true,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&settings).output_both_scripts);
     }
 
     #[test]

@@ -5,13 +5,23 @@
 //! (`CommitResolution.earns_auto_space`), as is which punctuation attaches
 //! (`engine::is_attaching_punctuation`), as on every platform.
 
-/// True when this commit earns a trailing space at all — the same gate every
-/// insertion site and the punctuation swap read. `wrote_romanization` is the
+/// True when this commit earns a trailing space at all. `is_spacing_enabled`
+/// is the switch the commit reads — Auto-Space for the preedit as rendered,
+/// [`spaces_candidate_commits`] for a candidate; `wrote_romanization` is the
 /// engine's verdict on the string it resolved
-/// (`CommitResolution.earns_auto_space`), for a candidate and for the
-/// preedit as rendered alike.
-pub fn is_gate_active(is_auto_space_enabled: bool, wrote_romanization: bool) -> bool {
-    is_auto_space_enabled && wrote_romanization
+/// (`CommitResolution.earns_auto_space`).
+pub fn is_gate_active(is_spacing_enabled: bool, wrote_romanization: bool) -> bool {
+    is_spacing_enabled && wrote_romanization
+}
+
+/// Whether a candidate commit that earns a space gets one: Auto-Space, or
+/// effective Annotate in Brackets, which keeps every bracket unit spaced
+/// (`INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`). The swap reads it too: its
+/// arm only exists after a commit that wrote the space. Twin of Android
+/// `CandidateClickHandler.kt` `spacesCandidateCommits`, iOS
+/// `ActionHandler+Suggestions.swift` `spacesCandidateCommits`.
+pub fn spaces_candidate_commits(is_auto_space_enabled: bool, is_output_both_scripts: bool) -> bool {
+    is_auto_space_enabled || is_output_both_scripts
 }
 
 #[cfg(test)]
@@ -38,6 +48,14 @@ mod tests {
         assert!(!is_gate_active(false, false));
         assert!(is_gate_active(true, true));
         assert!(!is_gate_active(true, false));
+    }
+
+    #[test]
+    fn either_setting_spaces_a_candidate_commit() {
+        assert!(!spaces_candidate_commits(false, false));
+        assert!(spaces_candidate_commits(true, false));
+        assert!(spaces_candidate_commits(false, true));
+        assert!(spaces_candidate_commits(true, true));
     }
 
     #[test]

@@ -313,8 +313,10 @@ final class ComposingBackend {
     /// crosses. The highlight is asked whether or not a list is up — the core's
     /// picker commit reads it; the slots only while one is. The swap's
     /// client check — two client queries — is asked only when a swap can
-    /// happen: an arm, Auto-Space on, and what the request writes attaches
-    /// (`attaches`, read last).
+    /// happen: an arm and what the request writes attaches (`attaches`, read
+    /// last). The switch the swap reads (Auto-Space, or Annotate in Brackets) is
+    /// the core's: `pass_through_may_swap` on the key path, `swap_auto_space`
+    /// for a picked symbol.
     private static func panel(
         _ request: ComposingRequest,
         attaches: @autoclosure () -> Bool,
@@ -332,10 +334,7 @@ final class ComposingBackend {
                 }
             }
         }
-        if let canSwapPrecedingSpace = state.canSwapPrecedingSpace,
-           request.settings.isAutoSpaceEnabled,
-           attaches()
-        {
+        if let canSwapPrecedingSpace = state.canSwapPrecedingSpace, attaches() {
             panel.swapAvailable = canSwapPrecedingSpace()
         }
         return panel

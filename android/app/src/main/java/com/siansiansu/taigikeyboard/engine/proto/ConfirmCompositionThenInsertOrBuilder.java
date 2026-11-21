@@ -34,8 +34,25 @@ public interface ConfirmCompositionThenInsertOrBuilder extends
       getTextBytes();
 
   /**
+   * <pre>
+   * Spacing for a write of the composition as shown (no candidate, or a
+   * partial pick's tail): the platform's Auto-Space.
+   * </pre>
+   *
    * <code>bool auto_space_enabled = 3;</code>
    * @return The autoSpaceEnabled.
    */
   boolean getAutoSpaceEnabled();
+
+  /**
+   * <pre>
+   * Spacing for a pick that finalizes the composition: Auto-Space OR effective
+   * Annotate in Brackets (behavioral-invariants
+   * INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS). 2026-11-21.
+   * </pre>
+   *
+   * <code>bool candidate_spacing_enabled = 4;</code>
+   * @return The candidateSpacingEnabled.
+   */
+  boolean getCandidateSpacingEnabled();
 }

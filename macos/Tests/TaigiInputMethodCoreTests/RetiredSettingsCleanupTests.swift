@@ -23,11 +23,24 @@ final class RetiredSettingsCleanupTests: XCTestCase {
     }
 
     func testStoredTrueValuesOfRetiredToggles_areRemoved() {
-        userDefaults.set(true, forKey: "outputBothScripts")
+        userDefaults.set(true, forKey: "frequencyRecordingEnabled")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        XCTAssertNil(userDefaults.object(forKey: "outputBothScripts"))
+        XCTAssertNil(userDefaults.object(forKey: "frequencyRecordingEnabled"))
+    }
+
+    /// Annotate in Brackets came back under its retired name, so the sweep must
+    /// leave what the General pane row writes.
+    func testAnnotateInBrackets_survivesTheSweep() {
+        userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
+
+        RetiredSettingsCleanup.run(userDefaults: userDefaults)
+
+        XCTAssertEqual(
+            userDefaults.object(forKey: SettingsStore.Keys.isOutputBothScripts.name) as? Bool,
+            true,
+        )
     }
 
     /// No Hyphens left a stored `true` behind: it becomes Syllable Separator

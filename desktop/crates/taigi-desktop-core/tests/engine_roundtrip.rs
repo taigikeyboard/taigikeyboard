@@ -425,8 +425,9 @@ fn confirm_composition_then_insert_is_one_effect() {
     let settings = EngineSettings::default();
     let stamp = fresh_stamp();
     compose("gua2", &settings, stamp);
-    let committed = engine::confirm_composition_then_insert(None, " ", false, &settings, stamp)
-        .expect("commit");
+    let committed =
+        engine::confirm_composition_then_insert(None, " ", false, false, &settings, stamp)
+            .expect("commit");
     let taught = committed.commit.taught_next_word;
     let commit = committed.transition;
     assert!(!commit.is_composing);

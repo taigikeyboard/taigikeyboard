@@ -7,5 +7,5 @@
 mod auto_space;
 mod full_width;
 
-pub use auto_space::is_gate_active;
+pub use auto_space::{is_gate_active, spaces_candidate_commits};
 pub use full_width::{full_width_mapped, is_punctuation_chord_key};

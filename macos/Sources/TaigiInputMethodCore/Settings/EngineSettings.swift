@@ -190,6 +190,11 @@ struct EngineSettings: Sendable {
     /// Mirrors desktop-core `EngineSettings::is_khinsiann_in_hanji_enabled`, OFF.
     let isKhinsiannInHanjiEnabled: Bool
 
+    /// Annotate in Brackets: a candidate commit writes both scripts,
+    /// `Hanji (romanization)`. Mirrors desktop-core
+    /// `EngineSettings::is_output_both_scripts`, OFF.
+    let isOutputBothScripts: Bool
+
     /// What a fresh install types with. Every value matches the iOS and Android
     /// default for the same setting, so someone using two of the four platforms
     /// gets the same composition and the same candidate order out of the box.
@@ -208,5 +213,6 @@ struct EngineSettings: Sendable {
         isCAffricateEnabled: false,
         isFHyphenEnabled: false,
         isKhinsiannInHanjiEnabled: false,
+        isOutputBothScripts: false,
     )
 }

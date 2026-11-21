@@ -130,13 +130,25 @@ pub fn view(
             },
             context,
         ),
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsKhinsiannInHanji),
-            document.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
-            document.choice(&keys::CANDIDATE_DISPLAY_MODE).shows_hanji(),
-            context
-                .callback(|is_on| Message::SetSwitch(keys::IS_KHINSIANN_IN_HANJI_ENABLED, is_on)),
-        ),
+        // Two Hanji-output switches in one fragment: the outer tuple is at
+        // `IntoViews`' 16-element limit.
+        View::fragment((
+            // Annotate in Brackets: greys where it has no effect (Romanization Only, TPS).
+            cards::switch_row(
+                strings.resolve(StringKey::SettingsOutputBothScripts),
+                document.bool(&keys::OUTPUT_BOTH_SCRIPTS),
+                document.allows_output_both_scripts(),
+                context.callback(|is_on| Message::SetSwitch(keys::OUTPUT_BOTH_SCRIPTS, is_on)),
+            ),
+            cards::switch_row(
+                strings.resolve(StringKey::SettingsKhinsiannInHanji),
+                document.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
+                document.choice(&keys::CANDIDATE_DISPLAY_MODE).shows_hanji(),
+                context.callback(|is_on| {
+                    Message::SetSwitch(keys::IS_KHINSIANN_IN_HANJI_ENABLED, is_on)
+                }),
+            ),
+        )),
         // Syllable Separator (§49), directly under Output Script — it describes that
         // output's shape.
         choice_row(

@@ -314,6 +314,28 @@ final class AutoSpaceControllerTests: XCTestCase {
         XCTAssertTrue(session.client.writes.isEmpty)
     }
 
+    /// `INVARIANT_BRACKETS_SPACE_CANDIDATE_COMMITS`: with Annotate in Brackets on,
+    /// a candidate commit is spaced and its space swaps with Auto-Space off.
+    func testBracketsWithAutoSpaceOff_spaceACandidateCommitAndKeepTheSwap() throws {
+        UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
+        let session = try composedSession { $0.isAutoSpaceEnabled = false }
+        session.client.documentTextForReads = ""
+        session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
+        try session.walkToFirstTwoScriptCell()
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+        XCTAssertEqual(session.client.insertedTexts.count, 2, "one commit, one space")
+        XCTAssertTrue(session.client.insertedTexts.first?.hasSuffix(")") == true, "the commit is bracketed")
+        XCTAssertEqual(session.client.insertedTexts.last, " ", "the bracket unit is spaced")
+        session.client.clearWrites()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "?"), client: session.client,
+        )
+
+        XCTAssertTrue(handled, "the swap consumes the key")
+        XCTAssertEqual(session.client.insertedTexts.last, "? ")
+    }
+
     func testAnInterveningKey_disarmsTheSwap() throws {
         let session = try swappableCommittedSession()
         // A letter starts a new composition — the caret has moved on.

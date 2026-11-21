@@ -72,6 +72,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             }),
             text: m.text,
             auto_space_enabled: m.auto_space_enabled,
+            candidate_spacing_enabled: m.candidate_spacing_enabled,
         },
         Method::Reset(_) => Intent::Reset,
         // The user rows are the engine's own reads (`UserRows`); a platform
