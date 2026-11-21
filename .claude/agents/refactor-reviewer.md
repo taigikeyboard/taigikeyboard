@@ -1,7 +1,7 @@
 ---
 name: refactor-reviewer
 description: Read-only behavior-freeze review of a refactor diff. Give it the changed files; checks semantic equivalence, public-signature changes, cross-platform counterparts (iOS↔Android by file name, user-data stores once in engine/userdata/, the three desktops sharing desktop/ crates), dead code and stale comments; returns PASS / NEEDS ATTENTION with file:line issues. Use for refactor rounds; not for feature or bugfix review (use /code-review).
-model: opus
+model: fable
 tools: Read, Grep, Glob, Bash
 ---
 
