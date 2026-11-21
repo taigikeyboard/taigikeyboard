@@ -36,7 +36,9 @@ pub trait TextMeasurer {
     fn line_height(&self, font: FontSpec) -> f32;
 }
 
-/// Reference values at 16 pt (the same base values as macOS's `CandidateMetrics`).
+/// Reference values at 16 pt (the same base values as macOS's `CandidateMetrics`,
+/// except the two paddings: these are the Windows and Linux windows', macOS's
+/// are in `CandidateChrome::MACOS`).
 const BASE_CANDIDATE_FONT_SIZE: f32 = 16.0;
 const BASE_ANNOTATION_FONT_SIZE: f32 = 14.0;
 const BASE_CANDIDATE_ANNOTATION_GAP: f32 = 7.0;
@@ -65,6 +67,40 @@ const HIGHLIGHT_INSET: f32 = 2.0;
 /// Windows. Each platform's ratio is its tightest step of the former
 /// window-size ladder (Mac 0.7 / 0.85 / 1.0, Windows 0.6 / 0.72 / 0.85).
 const CHROME_RATIO: f32 = 0.6;
+
+/// How much air a window keeps around its text, at 16 pt: each value is scaled
+/// by the text scale and rounded to a whole point.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CandidateChrome {
+    horizontal_padding: f32,
+    vertical_padding: f32,
+    separator_inset: f32,
+}
+
+impl CandidateChrome {
+    /// The Windows window: `CHROME_RATIO` of the base paddings. It differs from
+    /// macOS's in the ratio, the base paddings and the side padding's share.
+    pub const WINDOWS: Self = Self::with_ratio(CHROME_RATIO);
+
+    /// `CandidateMetrics.swift`, which the web page draws: base paddings 11 and
+    /// 14, the side one at its full share, since a shorter one left the text
+    /// touching the rounded corners at Standard and smaller; the vertical one
+    /// and the separator inset at the chrome ratio 0.7.
+    pub const MACOS: Self = Self {
+        horizontal_padding: 11.0,
+        vertical_padding: 14.0 * 0.7,
+        separator_inset: BASE_TAHOE_SEPARATOR_INSET * 0.7,
+    };
+
+    /// `ratio` of every base value.
+    pub const fn with_ratio(ratio: f32) -> Self {
+        Self {
+            horizontal_padding: BASE_HORIZONTAL_PADDING * ratio,
+            vertical_padding: BASE_VERTICAL_PADDING * ratio,
+            separator_inset: BASE_TAHOE_SEPARATOR_INSET * ratio,
+        }
+    }
+}
 
 /// The metrics, resolved. Immutable: a size change rebuilds the window.
 #[derive(Clone, Debug, PartialEq)]
@@ -102,38 +138,37 @@ pub struct CandidateMetrics {
 impl CandidateMetrics {
     /// Resolves every value. Scaled values round to whole points; the size
     /// choice scales the fonts, the text-anchored gaps and — through
-    /// `CHROME_RATIO` — the paddings, all by the same text scale.
+    /// `CandidateChrome::WINDOWS` — the paddings, all by the same text scale.
     pub fn resolve(
         size: CandidateSizeChoice,
         font_selection: CandidateFontSelection,
         cell_arrangement: CandidateCellArrangement,
         measurer: &dyn TextMeasurer,
     ) -> Self {
-        Self::resolve_with_chrome_ratio(
+        Self::resolve_with_chrome(
             size,
             font_selection,
             cell_arrangement,
-            CHROME_RATIO,
+            CandidateChrome::WINDOWS,
             measurer,
         )
     }
 
-    /// `resolve` for a window that keeps another share of the reference air:
-    /// the web page draws macOS's ratio.
-    pub fn resolve_with_chrome_ratio(
+    /// `resolve` for a window that keeps other air: the web page draws
+    /// macOS's (`CandidateChrome::MACOS`).
+    pub fn resolve_with_chrome(
         size: CandidateSizeChoice,
         font_selection: CandidateFontSelection,
         cell_arrangement: CandidateCellArrangement,
-        chrome_ratio: f32,
+        chrome: CandidateChrome,
         measurer: &dyn TextMeasurer,
     ) -> Self {
         let candidate_font_size = size.font_size();
         let text_scale = candidate_font_size / BASE_CANDIDATE_FONT_SIZE;
-        let chrome_scale = chrome_ratio * text_scale;
         let annotation_font_size = (BASE_ANNOTATION_FONT_SIZE * text_scale).round();
         let index_font_size = (BASE_INDEX_FONT_SIZE * text_scale).round();
         let stacked_line_gap = (BASE_STACKED_LINE_GAP * text_scale).round();
-        let vertical_padding = (BASE_VERTICAL_PADDING * chrome_scale).round();
+        let vertical_padding = (chrome.vertical_padding * text_scale).round();
         let candidate_font = FontSpec {
             selection: font_selection,
             size: candidate_font_size,
@@ -186,10 +221,10 @@ impl CandidateMetrics {
             candidate_annotation_gap: (BASE_CANDIDATE_ANNOTATION_GAP * text_scale).round(),
             index_font_size,
             index_candidate_gap: (BASE_INDEX_CANDIDATE_GAP * text_scale).round(),
-            horizontal_padding: (BASE_HORIZONTAL_PADDING * chrome_scale).round(),
+            horizontal_padding: (chrome.horizontal_padding * text_scale).round(),
             vertical_padding,
             stacked_line_gap,
-            tahoe_separator_inset: (BASE_TAHOE_SEPARATOR_INSET * chrome_scale).round(),
+            tahoe_separator_inset: (chrome.separator_inset * text_scale).round(),
             item_height,
             stacked_item_height: item_height,
             stacked_line_heights,
@@ -559,6 +594,40 @@ mod tests {
         assert_eq!(CandidateMetrics::corner_radius(16.0, 200.0, 57.0), 16.0);
         assert_eq!(CandidateMetrics::corner_radius(16.0, 10.0, 57.0), 5.0);
         assert_eq!(CandidateMetrics::corner_radius(16.0, 200.0, 24.0), 12.0);
+    }
+
+    #[test]
+    fn macos_chrome_resolves_the_swift_paddings() {
+        // trace: `CandidateMetricsTests.testEveryStep_resolvesToItsTracedValues`
+        // — h 11 * scale: 13→9, 15→10, 17→12, 20→14, 23→16; v 14 * .7 * scale:
+        // 8, 9, 10, 12, 14; separator inset 8 * .7 * scale: 5, 5, 6, 7, 8.
+        let resolved: Vec<[f32; 3]> = S::ALL
+            .iter()
+            .map(|size| {
+                let macos = CandidateMetrics::resolve_with_chrome(
+                    *size,
+                    CandidateFontSelection::default(),
+                    Inline,
+                    CandidateChrome::MACOS,
+                    &EmMeasurer,
+                );
+                [
+                    macos.horizontal_padding(),
+                    macos.vertical_padding(),
+                    macos.tahoe_separator_inset(),
+                ]
+            })
+            .collect();
+        assert_eq!(
+            resolved,
+            [
+                [9.0, 8.0, 5.0],
+                [10.0, 9.0, 5.0],
+                [12.0, 10.0, 6.0],
+                [14.0, 12.0, 7.0],
+                [16.0, 14.0, 8.0],
+            ]
+        );
     }
 
     #[test]

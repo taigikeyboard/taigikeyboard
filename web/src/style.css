@@ -514,21 +514,22 @@ summary:focus-visible {
   color: var(--accent);
 }
 
-/* macOS Tahoe's candidate window (`CandidateMetrics.swift`, base values at 16 pt,
-   chrome ratio 0.7). Every length follows `--candidate-size`, unrounded. */
+/* macOS Tahoe's candidate window (`CandidateMetrics.swift`, base values at 16 pt:
+   side padding 11 at the full ratio, vertical padding 14 and the separator inset
+   8 at the chrome ratio 0.7; `CandidateChrome::MACOS`, which the layout model
+   resolves). Every length follows `--candidate-size`, unrounded. */
 #panel {
   --candidate-annotation: calc(var(--candidate-size) * 0.875);
   --candidate-index: calc(var(--candidate-size) * 0.625);
   --candidate-annotation-gap: calc(var(--candidate-size) * 0.4375);
   --candidate-index-gap: calc(var(--candidate-size) * 0.125);
-  --candidate-padding-x: calc(var(--candidate-size) * 0.39375);
-  --candidate-padding-y: calc(var(--candidate-size) * 0.525);
+  --candidate-line-gap: calc(var(--candidate-size) * 0.125);
+  --candidate-padding-x: calc(var(--candidate-size) * 0.6875);
+  --candidate-padding-y: calc(var(--candidate-size) * 0.6125);
   --candidate-separator-inset: calc(var(--candidate-size) * 0.35);
   --candidate-row: calc(var(--candidate-size) + var(--candidate-padding-y));
-  /* Two-line cells: the cell's half vertical padding is all the air between
-     the annotation and the window's edge, so the corner stays inside it; a
-     fixed 16px reached into the bottom line up to Standard. */
-  --candidate-radius: var(--candidate-padding-y);
+  /* Two-line cells: a fixed rounded rectangle at every size, as macOS draws. */
+  --candidate-radius: 16px;
   /* One gap between the selection and the window's edge in every layout. */
   --candidate-highlight-inset: 2px;
   position: absolute;
@@ -626,6 +627,11 @@ summary:focus-visible {
   column-gap: var(--candidate-index-gap);
   padding: calc(var(--candidate-padding-y) / 2) var(--candidate-padding-x);
   cursor: default;
+}
+
+/* Two-line cells: the air between the scripts (`stackedLineGap`). */
+.candidates:not([data-inline]) li {
+  row-gap: var(--candidate-line-gap);
 }
 
 .candidates .index {

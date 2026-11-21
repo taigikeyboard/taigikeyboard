@@ -30,7 +30,9 @@ pub use expandable::{
 pub use grid::{ExpandedGridLayout, GridCell};
 pub use horizontal::{HorizontalListModel, HorizontalPageLayout, PageSlot};
 pub use index_label::CandidateIndexLabel;
-pub use metrics::{CandidateCellArrangement, CandidateMetrics, FontSpec, TextMeasurer};
+pub use metrics::{
+    CandidateCellArrangement, CandidateChrome, CandidateMetrics, FontSpec, TextMeasurer,
+};
 pub use positioning::{panel_frame, Point, Rect, Size};
 pub use vertical::{ScrollerStyle, VerticalGeometry, VerticalLayoutInput, VerticalListModel};
 
