@@ -394,6 +394,11 @@ mod tests {
             (Lead, false, SideBySide, R, None, unspaced(T)),
             (Lead, true, SideBySide, R, None, unspaced(T)),
             (Lead, true, Combined, R, Some(""), unspaced(T)),
+            // Neutral tone: `˙` U+02D9 before every syllable after `--`
+            // (reference §5.5). trace: thiann → ㄊㄧㆩ (tone 1 unmarked);
+            // tio̍h → ㄉㄧㄛㆷ + U+0307 (tone 8); ah → ㄚㆷ (tone 4 unmarked).
+            (Lead, true, SideBySide, "thiann--tio̍h", Some("聽著"), roman("聽著 (ㄊㄧㆩ \u{02d9}ㄉㄧㄛㆷ\u{0307})")),
+            (Lead, false, SideBySide, "--ah", None, unspaced("\u{02d9}ㄚㆷ")),
             // A §42 split cell never shows under TPS; were one sent, it commits
             // as on TL/POJ (the removed iOS markedCellCommit /
             // Android resolveMarkedCellCommit read no layout).

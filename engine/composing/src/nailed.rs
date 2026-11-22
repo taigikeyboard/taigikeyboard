@@ -223,8 +223,8 @@ fn push_inter_segment_boundary(
 }
 
 /// The boundary in front of `next` (§51). A rendering that opens with
-/// `-` / `·` is a dictionary khinsiann piece or a §34 literal carrying
-/// its own separator, so a typed run adds nothing to it — except the Space
+/// `-` / `·` (or, under TPS, `˙`) is a dictionary khinsiann piece or a §34
+/// literal carrying its own separator, so a typed run adds nothing to it — except the Space
 /// joiner in front of a rendered `·`, which separates syllables, not marks
 /// the neutral tone (`hōo ·guá`).
 fn push_boundary(
@@ -245,10 +245,11 @@ fn push_boundary(
     }
     // `syllable_joiner`: `None` = the Hyphen setting (write the run as typed);
     // `Some` = the Space / None joiner (`AppConfig::rendered_syllable_joiner`).
-    // A rendered `·guá` piece already carries its dot, so it takes the joiner
-    // alone — the half of `phonetics::api::syllable_joiner_display`'s rule
-    // that a piece rendered on its own cannot see.
-    let opens_with_dot = rendered.starts_with('·');
+    // A rendered `·guá` piece (or, under TPS, `˙ㄚㆷ`) already carries its
+    // neutral-tone dot, so it takes the joiner alone — the half of
+    // `phonetics::api::syllable_joiner_display`'s rule that a piece rendered
+    // on its own cannot see.
+    let opens_with_dot = phonetics::api::opens_with_neutral_mark(rendered);
     match syllable_joiner {
         None if opens_with_dot => {}
         None => s.push_str(run),
@@ -1082,6 +1083,24 @@ mod tests {
                 "{joiner:?} {raw}"
             );
         }
+    }
+
+    #[test]
+    fn tps_rendered_dot_piece_takes_no_typed_run() {
+        // Under TPS with Annotate in Brackets, a Hanji-less `--ah` piece
+        // renders as `tl_display_to_tps` text, `˙ㄚㆷ` (U+02D9): it carries its
+        // neutral-tone mark like a roman `·ah`, so the typed `--` is not
+        // written again (§51 never doubled).
+        let n = [
+            seg_dc("轉 (ㄉㆭˋ)", "轉", 1),
+            seg_raw("\u{02d9}ㄚㆷ", "", "--ah"),
+        ];
+        // TPS always renders with `syllable_joiner` None
+        // (`AppConfig::rendered_syllable_joiner`).
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, SegmentText::Display, true, None, |_, _, _| false),
+            "轉 (ㄉㆭˋ)\u{02d9}ㄚㆷ"
+        );
     }
 
     #[test]

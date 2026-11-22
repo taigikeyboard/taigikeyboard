@@ -1046,6 +1046,12 @@ mod tests {
             raw_to_proto_candidate(row("ka", Some(""), (0, 3)), &tps).tps_text,
             "ㄍㄚ"
         );
+        // A Hanji-less neutral-tone reading: `˙` U+02D9 before the syllable.
+        // trace: m̄ → ㆬ + ˫ (tone 7); --eh → ㆤㆷ (tone 4 unmarked).
+        assert_eq!(
+            raw_to_proto_candidate(row("m̄ --eh", None, (0, 6)), &tps).tps_text,
+            "ㆬ˫ \u{02d9}ㆤㆷ"
+        );
     }
 
     /// §44 Romanization Only display dedupe keys on the rendered roman ALONE: two rows

@@ -214,7 +214,7 @@ TPS candidates use the same font sizes as every other layout (iOS `CandidateThem
 | tsi̍t-pái | ㄐㄧㆵ̇ ㄅㄞˋ |
 
 A romanization hyphen `-` becomes a TPS space separator. A neutral-tone `--` also becomes a
-space, and the rest of its word takes the `·` prefix (`api::tl_numeric_to_tps`, reference §5.5).
+space, and the rest of its word takes the `˙` U+02D9 prefix (`api::tl_numeric_to_tps`, reference §5.5).
 Display only: the fused key columns carry no marker (`dictionary/common/taigi_bridge.py`
 `_tps_key_tl`).
 

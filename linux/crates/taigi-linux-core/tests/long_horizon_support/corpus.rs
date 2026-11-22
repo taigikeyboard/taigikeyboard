@@ -418,7 +418,7 @@ fn derive_tps_strokes(display_tl: &str) -> Vec<TpsStroke> {
             continue;
         }
         // Convert each original syllable separately: the display converter joins
-        // syllables with spaces; `part` holds no `--`, so no neutral `·` (phonetics/api.rs).
+        // syllables with spaces; `part` holds no `--`, so no neutral `˙` (phonetics/api.rs).
         let Some(tps_text) = tl_display_to_tps(part, TPS_OR_MAPS_TO_ER) else {
             return Vec::new();
         };

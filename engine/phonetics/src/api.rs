@@ -1,4 +1,4 @@
-//! High-level Phone            for tok in crate::tps::tl_syllable_tokens(segment) {ics API for direct in-process callers (the dev
+//! High-level Phonetics API for direct in-process callers (the dev
 //! `cli` crate, integration tests, and `phonetics::requests::handle`).
 //! The cross-platform FFI envelope lives in `engine/dispatch` per
 //! `docs/contributing/rust-ffi-safety.md` §2; this module never decodes a
@@ -96,7 +96,7 @@ pub fn contains_tps(text: &str) -> bool {
 /// (the platforms' `joined(separator: " ")` / `joinToString(" ")`); a
 /// continuous pick's words are space-joined, so `-` alone is not a boundary.
 /// A neutral-tone `--` marks every later syllable of its word with
-/// [`crate::tps::KHINSIANN_DOT`] (reference §5.5; scope as
+/// [`crate::tps::TPS_NEUTRAL_MARK`] `˙` (reference §5.5; scope as
 /// [`crate::khinsiann::render_hanji_khinsiann`]), so words are split before
 /// [`crate::tps::tl_syllable_tokens`] drops the `--`.
 pub fn tl_numeric_to_tps(text: &str, or_maps_to_er: bool) -> String {
@@ -107,7 +107,7 @@ pub fn tl_numeric_to_tps(text: &str, or_maps_to_er: bool) -> String {
                 let tps = crate::tps::to_zhuyin(tok, false, or_maps_to_er);
                 let neutral = k > 0 && tok.chars().any(char::is_alphabetic);
                 let dot = if neutral {
-                    crate::tps::KHINSIANN_DOT
+                    crate::tps::TPS_NEUTRAL_MARK
                 } else {
                     ""
                 };
@@ -176,7 +176,8 @@ pub use crate::khinsiann::{
 };
 pub use crate::reading_key::{roman_reading_eq, stored_roman_mode, toneless_reading_key};
 pub use crate::separators::{
-    push_syllable_joiner_run, render_typed_separators, syllable_joiner_display,
+    opens_with_neutral_mark, push_syllable_joiner_run, render_typed_separators,
+    syllable_joiner_display,
 };
 pub use crate::tone_render::{
     consumed_tone_digit_offsets, literal_learning_text, normalize_tone, to_tone_marks,
