@@ -58,7 +58,7 @@ jobs:
       # Only what `make -C web chromeos` runs (web/Makefile `build`): protoc for
       # engine/protos/build.rs, wasm-bindgen, binaryen's wasm-opt, zig for the
       # SQLite wasm objects. Versions are mise.toml's, as in web.yml.
-      - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
         with:
           version: 2026.11.2
           install_args: protoc github:wasm-bindgen/wasm-bindgen github:WebAssembly/binaryen zig
