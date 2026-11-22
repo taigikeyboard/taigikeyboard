@@ -1319,8 +1319,8 @@
         "ja": "記録できるキーがありません"
       }
     },
-    "sponsorLink": {
-      "comment": "About page: the first link card, out to the ECPay donation page (USER 2026-09-20: a row like the links under it, not a button).",
+    "sponsorEcpay": {
+      "comment": "About page: the first of three sponsor rows, the website's #sponsor methods (USER 2026-11-22), out to the ECPay donation page, for donors in Taiwan.",
       "scope": {
         "platforms": [
           "macos",
@@ -1332,11 +1332,51 @@
         ]
       },
       "values": {
-        "hanji": "贊助齒盤維護運作",
-        "tailo": "Tsàn-tsōo Khí-puânn uî-hōo ūn-tsok",
-        "poj": "Chàn-chō͘ Khí-pôaⁿ ûi-hō͘ ūn-chok",
-        "en": "Support the Keyboard's Upkeep",
-        "ja": "齒盤の維持・運営を支援する"
+        "hanji": "用綠界 ECPay 贊助（佇台灣使用）",
+        "tailo": "Iōng ECPay tsàn-tsōo (tī Tâi-uân sú-iōng)",
+        "poj": "Iōng ECPay chàn-chō͘ (tī Tâi-oân sú-iōng)",
+        "en": "Support via ECPay (Taiwan only)",
+        "ja": "綠界 ECPay で支援（台湾から）"
+      }
+    },
+    "sponsorPaypal": {
+      "comment": "About page: the second sponsor row, out to the PayPal donation page, for donors outside Taiwan, in USD.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "用 PayPal 贊助（佇外國使用・用美金）",
+        "tailo": "Iōng PayPal tsàn-tsōo (tī guā-kok sú-iōng · iōng Bí-kim)",
+        "poj": "Iōng PayPal chàn-chō͘ (tī gōa-kok sú-iōng · iōng Bí-kim)",
+        "en": "Support via PayPal (outside Taiwan · USD)",
+        "ja": "PayPal で支援（台湾以外から・米ドル決済）"
+      }
+    },
+    "sponsorKofi": {
+      "comment": "About page: the third sponsor row, out to the Ko-fi page.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "用 Ko-fi 贊助",
+        "tailo": "Iōng Ko-fi tsàn-tsōo",
+        "poj": "Iōng Ko-fi chàn-chō͘",
+        "en": "Support via Ko-fi",
+        "ja": "Ko-fi で支援"
       }
     },
     "updateCheckNow": {

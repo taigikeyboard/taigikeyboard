@@ -7,8 +7,12 @@
 use super::{SettingsDocument, SettingsPane};
 use crate::strings::{DisplayLanguage, StringKey, StringResolver};
 
-/// `AboutPage.sponsorURL`.
-pub const SPONSOR_URL: &str = "https://p.ecpay.com.tw/AA663DE";
+/// `AboutPage.sponsorECPayURL` — the website's #sponsor methods (USER 2026-11-22).
+pub const SPONSOR_ECPAY_URL: &str = "https://p.ecpay.com.tw/AA663DE";
+/// `AboutPage.sponsorPayPalURL`.
+pub const SPONSOR_PAYPAL_URL: &str = "https://www.paypal.com/ncp/payment/AZNAN8NSJXR7J";
+/// `AboutPage.sponsorKofiURL`.
+pub const SPONSOR_KOFI_URL: &str = "https://ko-fi.com/taigikeyboard";
 /// `AboutPage.websiteURL` — also the Linux General pane's download link
 /// (roadmap L10).
 pub const WEBSITE_URL: &str = "https://taigikeyboard.tw";
