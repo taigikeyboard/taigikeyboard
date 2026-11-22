@@ -20,7 +20,7 @@
 /// straight quotes (`"` `'`) are excluded because the same glyph serves as
 /// both opening and closing; attaching them would corrupt `guá "…"` into
 /// `guá" …`. The ellipsis and the dash sit against the word before them
-/// (#879; `伊——罕得`) in one cell (mobile keys) or two (desktop `^` / `_`).
+/// (#879; `伊——罕得`) in one cell (`…` `—`) or two (`……` `——`).
 const ATTACHING: [&str; 24] = [
     "。", "！", "？", ".", "!", "?", "，", ",", "、", "；", ";", "：", ":", ")", "）", "]", "】",
     "」", "』", "…", "……", "⋯", "—", "——",

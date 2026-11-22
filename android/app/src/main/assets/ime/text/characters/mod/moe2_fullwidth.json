@@ -28,7 +28,7 @@
         { "code": 12290, "label": "。" },
         { "code": 65281, "label": "！" },
         { "code": 65311, "label": "？" },
-        { "code":  8230, "label": "…" },
+        { "code":     0, "label": "……" },
         { "code": 65289, "label": "）" },
         { "code": 12301, "label": "」" }
       ] },

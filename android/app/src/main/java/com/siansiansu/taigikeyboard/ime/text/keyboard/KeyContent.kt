@@ -261,10 +261,16 @@ private fun LabelContent(
         if (w <= 0f || h <= 0f) return@Canvas
 
         val baseTextSize = h * 0.58f * fontSizeScale
-        val perKeyTextSize = scaleTextSizeForKey(data, label, baseTextSize)
+        labelPaint.typeface = typeface
+        labelPaint.textSize = scaleTextSizeForKey(data, label, baseTextSize)
+        // A one-line label wider than the key face (`……` is two full-width cells) shrinks to
+        // fit, as iOS `minimumScaleFactor`.
+        val maxLabelWidth = w * 0.9f
+        val labelWidth = if (label.contains('\n')) 0f else labelPaint.measureText(label)
+        val perKeyTextSize =
+            if (labelWidth > maxLabelWidth) labelPaint.textSize * maxLabelWidth / labelWidth else labelPaint.textSize
 
         labelPaint.textSize = perKeyTextSize
-        labelPaint.typeface = typeface
         labelPaint.color = labelColorArgb
         labelPaint.alpha = if (mode == KeyboardMode.CHARACTERS && data.code == KeyCode.SPACE) 120 else 255
 

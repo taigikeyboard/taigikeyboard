@@ -37,7 +37,10 @@ final class CalloutCharsTests: XCTestCase {
     func testEllipsisKey_isUnicodeEllipsis() {
         // Android `western_default.json`: U+2026 with popup ⋯ ‥.
         XCTAssertEqual(chars("…", .tl, .qwerty), ["⋯", "‥"])
-        XCTAssertEqual(chars("⋯", .tl, .qwerty), ["…", "‥"])
+        // Full-width key types the MOE mark U+2026 ×2 (#851); Android `western_fullwidth.json`.
+        XCTAssertEqual(chars("……", .tl, .qwerty), ["⋯", "…", "‥"])
+        XCTAssertEqual(chars("。", .tl, .moe1), ["。", "！", "？", "……"])
+        XCTAssertEqual(chars("。", .tl, .moe2), ["。", "！", "？", "……", "）", "」"])
         XCTAssertNil(TaigiCallouts.SymbolCallouts.actions["..."])
     }
 }

@@ -64,6 +64,8 @@ class TpsPopupWithBaseGlyphTest {
             tpsGlyphKey("ㄗ", KeyData(code = 0, label = "ㄐ")) to false,
             // no popup variants
             tpsGlyphKey("ㆦ") to true,
+            // full-width symbol page ellipsis (code 0, two code points; #851)
+            tpsGlyphKey("……", KeyData(code = 0x22EF, label = "⋯")) to true,
             // non-character key
             KeyData(code = 0, label = "x", popup = mutableListOf(KeyData(code = 0, label = "y")), type = KeyType.FUNCTION) to true,
         )
