@@ -1,0 +1,10 @@
+{
+  "id": "s1079-tl-han-lo-hanji",
+  "source": "Discord #bugs report 2026-11-22: the POJ rendering of a Han-Lo word is POJ-only; TL mode keeps the dictionary spelling `親tsiânn`.",
+  "settings": { "romanization": "tl", "output": "hanji", "auto_space": false },
+  "steps": [
+    { "type": "text", "value": "tshintsiann" },
+    { "type": "pick", "hanji": "親tsiânn", "tl": "tshin-tsiânn" }
+  ],
+  "expect": { "committed": "親tsiânn" }
+}
