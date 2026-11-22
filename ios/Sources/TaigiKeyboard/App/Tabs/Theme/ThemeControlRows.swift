@@ -8,6 +8,8 @@ import SwiftUI
 enum ThemeSliderRanges {
     static let scale: ClosedRange<Double> = 0.85 ... 1.15
     static let scaleStep: Double = 0.01
+    /// Key height reaches past the text scales, for a keyboard as tall as Gboard's (#1024).
+    static let keyHeight: ClosedRange<Double> = 0.85 ... 1.40
     static let radius: ClosedRange<Double> = 0 ... 15
     static let radiusStep: Double = 0.5
     static let borderWidth: ClosedRange<Double> = 0 ... 3

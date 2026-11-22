@@ -101,7 +101,7 @@ struct ThemeEditorView: View {
                                   ThemeSliderRanges.shadow, ThemeSliderRanges.shadowStep)
                     }
                     sliderRow(lang.string(.themeKeyHeight), \.keyHeightScale,
-                              ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
+                              ThemeSliderRanges.keyHeight, ThemeSliderRanges.scaleStep)
                     sliderRow(lang.string(.themeKeyFontSize), \.keyFontSizeScale,
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                 }
