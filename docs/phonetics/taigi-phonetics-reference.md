@@ -393,14 +393,17 @@ In connected speech, all syllables except the last one in a phrase undergo tone 
     is for annotation, and running text separates syllables with spaces, so the two do not
     collide. Source: zi-hi.com 方音符號 (tones and Unicode sections), citing 中推會
     《數位排版中注音符號調號定位方式》 for the tone-8 mark.
-  - *Project decision (maintainer, 2026-11-22; scope from 2026-11-21):* taigi-converter and the
-    kautian mirror write `˙` U+02D9 before the syllable, and every syllable after `--` up to the
-    end of its word carries it: `thiann--tio̍h` → `ㄊㄧㆩ ˙ㄉㄧㄛㆷ̇`, `tsáu--tshut-khì` →
+  - *Project decision (maintainer, 2026-11-22; scope from 2026-11-21):* taigi-converter, the
+    kautian mirror and the keyboard engine write `˙` U+02D9 before the syllable, and every
+    syllable after `--` up to the end of its word carries it: `thiann--tio̍h` → `ㄊㄧㆩ ˙ㄉㄧㄛㆷ̇`, `tsáu--tshut-khì` →
     `ㄗㄠˋ ˙ㄘㄨㆵ ˙ㄎㄧ˪`. Display only — TPS search keys carry no marker. TPS → TL gives every
     neutral syllable its own `--` (`ㄐㄧㄚㆷ̇ ˙ㄐㄧㆵ̇ ˙ㄉㄧㆰˋ ˙ㄚˋ` → `tsia̍h--tsi̍t--tiám--á`), since
-    TPS cannot tell `-á` from `--ah`; a `˙` right after a syllable stays tone 8. The keyboard
-    engine still writes `·` U+00B7: its TPS keyboards type `˙` as the tone-8 key and treat `·`
-    as the joiner (`engine/phonetics/src/tps.rs` `KHINSIANN_DOT`).
+    TPS cannot tell `-á` from `--ah`; a `˙` right after a syllable stays tone 8. The engine's
+    TPS display (`engine/phonetics/src/tps.rs` `TPS_NEUTRAL_MARK`) writes tone 8 as U+0307 over
+    the coda, so a `˙` there is neutral; a tone-8 key `˙` typed elsewhere stays in the raw preedit
+    and is never re-read from display text. Romanization keeps `·` U+00B7 for the Syllable
+    Separator rendering of `--` (`hōo·guá`) and the joiner (`engine/phonetics/src/separators.rs`
+    `KHINSIANN_DOT`).
 - TLPA classifies neutral tone as tone 0.
 
 ### 5.6 Special Tone Rules

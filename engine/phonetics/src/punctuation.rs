@@ -42,7 +42,7 @@ pub(crate) fn is_spaced_punctuation(text: &str) -> bool {
 /// True when `text` is the khinsiann dot, the one joiner: it stands between
 /// two syllables of a phrase, so it never takes a space on either side.
 pub(crate) fn is_joiner_punctuation(text: &str) -> bool {
-    text == crate::tps::KHINSIANN_DOT
+    text == crate::separators::KHINSIANN_DOT
 }
 
 #[cfg(test)]
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn the_khinsiann_dot_is_the_only_joiner() {
-        // trace: `tps::KHINSIANN_DOT` = U+00B7. U+02D9 `˙` is the TPS tone 8
+        // trace: `separators::KHINSIANN_DOT` = U+00B7. U+02D9 `˙` is the TPS tone 8
         // mark and `-` composes, neither is a joiner; the dot is not in
         // `ATTACHING`, so a character is never both.
         assert!(is_joiner_punctuation("\u{00b7}"));

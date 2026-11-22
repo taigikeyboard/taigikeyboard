@@ -108,11 +108,12 @@ pub(crate) const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
     ("9", "\u{02c6}"),
 ];
 
-/// The engine's neutral-tone marker (`--` → `·` U+00B7); Syllable Separator romanization
-/// (`api::syllable_joiner_display`) writes the same glyph. taigi-converter writes `˙` U+02D9
-/// (reference §5.5); the engine keeps `·` because `˙` is also the tone-8 key every TPS
-/// keyboard types and `·` is the joiner (`punctuation::is_joiner_punctuation`).
-pub(crate) const KHINSIANN_DOT: &str = "\u{00b7}";
+/// The TPS neutral-tone mark (`--` → `˙` U+02D9, written before the syllable): Unicode's
+/// Bopomofo light tone, as taigi-converter `zhuyin.js` writes it (reference §5.5). Display
+/// only: with `encode_safe = false` (every display caller) tone 8 renders as U+0307 over the
+/// coda, so a `˙` in display text is neutral. A typed `˙` that did not follow a stop coda stays
+/// in the raw preedit as typed and looks the same; display text is never re-parsed.
+pub(crate) const TPS_NEUTRAL_MARK: &str = "\u{02d9}";
 
 const PUNCTUATION_CHARS: &[&str] = &[
     "\u{ff0e}", "\u{300c}", "\u{300d}", "\u{ff0c}", "\u{3002}", "\u{ff1f}", "--", ",", ".", "?",
@@ -704,12 +705,14 @@ pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
         }
     }
 
-    result.replace("--", KHINSIANN_DOT)
+    result.replace("--", TPS_NEUTRAL_MARK)
 }
 
 /// Convert a TPS string to a TL tone-numbered string. Mirrors `fromZhuyin` in
-/// `zhuyin.js`. Word segmentation is **not** performed here — that is the
-/// segmenter's job, which belongs with the Lexicon slice.
+/// `zhuyin.js`, except that a `˙` with no syllable before it is dropped here
+/// (`REV_TONES` consumes it as a toneless tone 8); the converter restores it as
+/// a neutral-tone `--`. Word segmentation is **not** performed here — that is
+/// the segmenter's job, which belongs with the Lexicon slice.
 pub fn from_zhuyin(text: &str) -> String {
     let rev_punct = [
         ("\u{3002}", "."),

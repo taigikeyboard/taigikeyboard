@@ -2,6 +2,19 @@
 
 use crate::api::InputMode;
 
+/// The romanization's neutral-tone dot `·` U+00B7: the Syllable Separator
+/// rendering of a `--` ([`syllable_joiner_display`]) and the one joiner
+/// punctuation (`punctuation::is_joiner_punctuation`). TPS writes its own mark,
+/// `tps::TPS_NEUTRAL_MARK`; `˙` U+02D9 here would collide with the TPS tone-8 key.
+pub(crate) const KHINSIANN_DOT: &str = "\u{00b7}";
+
+/// Whether a rendered piece opens with its own neutral-tone mark: the
+/// romanization's [`KHINSIANN_DOT`] (`·guá`) or the TPS
+/// `tps::TPS_NEUTRAL_MARK` (`˙ㄚㆷ`).
+pub fn opens_with_neutral_mark(rendered: &str) -> bool {
+    rendered.starts_with(KHINSIANN_DOT) || rendered.starts_with(crate::tps::TPS_NEUTRAL_MARK)
+}
+
 /// §55 — `roman` with the separator at every typed boundary replaced by
 /// the `-` run the user typed there. `runs` are `(typed offset, run
 /// length)` pairs (`(4, 1)` for a `-`, `(7, 2)` for a `--`), `typed` the
@@ -106,7 +119,7 @@ pub fn syllable_joiner_display(roman: &str, joiner: &str) -> String {
 }
 
 /// Appends one run of `run_len` hyphens between two syllables, rendered:
-/// `joiner`, then one [`crate::tps::KHINSIANN_DOT`] per neutral-tone `--` (an
+/// `joiner`, then one [`KHINSIANN_DOT`] per neutral-tone `--` (an
 /// odd hyphen left over is the plain syllable boundary the joiner already
 /// wrote). The dot stays glued to the syllable after it: `---` → ` ·`, never
 /// `· `. `composing::nailed::push_boundary` calls it for a typed run between
@@ -114,7 +127,7 @@ pub fn syllable_joiner_display(roman: &str, joiner: &str) -> String {
 pub fn push_syllable_joiner_run(out: &mut String, run_len: usize, joiner: &str) {
     out.push_str(joiner);
     for _ in 0..run_len / 2 {
-        out.push_str(crate::tps::KHINSIANN_DOT);
+        out.push_str(KHINSIANN_DOT);
     }
 }
 
@@ -156,6 +169,16 @@ mod tests {
         assert_eq!(space("tâi --ah"), "tâi \u{00b7}ah");
         assert_eq!(space("tai-"), "tai");
         assert_eq!(space("keng-lâm su-īⁿ"), "keng lâm su īⁿ");
+    }
+
+    #[test]
+    fn opens_with_neutral_mark_accepts_the_roman_dot_and_the_tps_mark() {
+        assert!(opens_with_neutral_mark("\u{00b7}guá"));
+        assert!(opens_with_neutral_mark("\u{02d9}ㄚㆷ"));
+        // Control: a hyphen literal, a tone-8 dot over a coda, plain text.
+        for text in ["--guá", "ㄉㄧㄛㆷ\u{0307}", "guá", ""] {
+            assert!(!opens_with_neutral_mark(text), "{text:?}");
+        }
     }
 
     #[test]
