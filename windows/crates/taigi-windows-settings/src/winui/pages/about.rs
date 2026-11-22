@@ -2,7 +2,7 @@
 //! `AboutPage.swift`.
 //!
 //! What the tray menu's About row opens (USER 2026-09-20): two lines the
-//! USER wrote; the sponsor and the seven community links as rows of one card; the attribution line. In
+//! USER wrote; the three sponsor and the seven community links as rows of one card; the attribution line. In
 //! the same cards as every other pane (USER 2026-09-20: "make it a page"). No app
 //! icon, no name and no version — the update row on General already says which build
 //! this is.
@@ -11,8 +11,8 @@ use crate::winui::cards;
 use crate::winui::font_awesome::FontAwesomeGlyph;
 use crate::winui::window::{Message, SettingsWindow};
 use taigi_desktop_core::settings::presentation::{
-    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, THREADS_URL,
-    WEBSITE_URL,
+    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_ECPAY_URL,
+    SPONSOR_KOFI_URL, SPONSOR_PAYPAL_URL, THREADS_URL, WEBSITE_URL,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -44,15 +44,29 @@ pub fn view(
     View::fragment((
         introduction,
         cards::section_gap(),
-        // Every action a row, the sponsor link first (USER 2026-09-20: no
+        // Every action a row, the sponsor links first (USER 2026-09-20: no
         // lone button on the page); one card, as on the Mac.
         cards::link_group([
             link_row(
                 strings,
                 context,
                 FontAwesomeGlyph::Heart,
-                StringKey::DesktopSponsorLink,
-                SPONSOR_URL,
+                StringKey::DesktopSponsorEcpay,
+                SPONSOR_ECPAY_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Heart,
+                StringKey::DesktopSponsorPaypal,
+                SPONSOR_PAYPAL_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Heart,
+                StringKey::DesktopSponsorKofi,
+                SPONSOR_KOFI_URL,
             ),
             link_row(
                 strings,

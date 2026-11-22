@@ -3,7 +3,7 @@
 import SwiftUI
 
 /// What the input-source menu's About row opens (USER 2026-09-20): two lines the
-/// USER wrote; the sponsor and the seven community links as rows; the
+/// USER wrote; the three sponsor and the seven community links as rows; the
 /// attribution line.
 ///
 /// A grouped `Form` like every other pane (USER 2026-09-20: "make it a page"), so the
@@ -26,12 +26,14 @@ struct AboutPage: View {
                 .padding(.vertical, Metrics.cardInset)
             }
 
-            // Every action a row, the sponsor link first (USER 2026-09-20: no
+            // Every action a row, the sponsor links first (USER 2026-09-20: no
             // lone button on the page). The attribution as the card's
             // footer: fine print on the ground, where a form puts a note that
             // is neither a setting nor a link.
             Section {
-                ExternalLinkButton(titleKey: .desktopSponsorLink, url: Self.sponsorURL, style: .row(.heart))
+                ExternalLinkButton(titleKey: .desktopSponsorEcpay, url: Self.sponsorECPayURL, style: .row(.heart))
+                ExternalLinkButton(titleKey: .desktopSponsorPaypal, url: Self.sponsorPayPalURL, style: .row(.heart))
+                ExternalLinkButton(titleKey: .desktopSponsorKofi, url: Self.sponsorKofiURL, style: .row(.heart))
                 ExternalLinkButton(titleKey: .homeWebsiteLink, url: Self.websiteURL, style: .row(.globe))
                 ExternalLinkButton(titleKey: .homeGithubLink, url: Self.githubURL, style: .row(.github))
                 ExternalLinkButton(titleKey: .homeDiscordLink, url: Self.discordURL, style: .row(.discord))
@@ -55,7 +57,10 @@ struct AboutPage: View {
     private static let instagramURL = URL(string: "https://www.instagram.com/taigikeyboardtw/")
     private static let threadsURL = URL(string: "https://www.threads.com/@siansiansu")
     private static let emailURL = URL(string: "mailto:info@taigikeyboard.tw")
-    private static let sponsorURL = URL(string: "https://p.ecpay.com.tw/AA663DE")
+    /// The website's #sponsor methods (USER 2026-11-22).
+    private static let sponsorECPayURL = URL(string: "https://p.ecpay.com.tw/AA663DE")
+    private static let sponsorPayPalURL = URL(string: "https://www.paypal.com/ncp/payment/AZNAN8NSJXR7J")
+    private static let sponsorKofiURL = URL(string: "https://ko-fi.com/taigikeyboard")
 
     private enum Metrics {
         /// Between paragraphs of one text.
