@@ -108,8 +108,10 @@ pub(crate) const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
     ("9", "\u{02c6}"),
 ];
 
-/// The neutral-tone marker as TPS writes it (`--` → `·` U+00B7, `zhuyin.js:204`);
-/// Syllable Separator romanization (`api::syllable_joiner_display`) writes the same glyph.
+/// The engine's neutral-tone marker (`--` → `·` U+00B7); Syllable Separator romanization
+/// (`api::syllable_joiner_display`) writes the same glyph. taigi-converter writes `˙` U+02D9
+/// (reference §5.5); the engine keeps `·` because `˙` is also the tone-8 key every TPS
+/// keyboard types and `·` is the joiner (`punctuation::is_joiner_punctuation`).
 pub(crate) const KHINSIANN_DOT: &str = "\u{00b7}";
 
 const PUNCTUATION_CHARS: &[&str] = &[

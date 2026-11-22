@@ -358,11 +358,15 @@ class BridgeDeadError(RuntimeError):
 
 # Mid-word neutral-tone `--` (any run of 2+ hyphens after a non-space; the
 # converter splits words on " " only): the converter marks each
-# following syllable with `·` for display, but TPS keys carry no marker and
-# `·` is residue here. Rewriting it to `-` keeps keys byte-identical to the
-# pre-marker converter; a word-initial `--` (`--ah`, `m̄ --eh`) is left as is
-# and still raises `TpsResidueError` (empty `tps_num`, unchanged).
+# following syllable with `˙` (U+02D9) for display, but TPS keys carry no
+# marker. Rewriting it to `-` keeps keys byte-identical to the pre-marker
+# converter; a word-initial `--` (`--ah`, `m̄ --eh`) is left as is and raises
+# `TpsResidueError` through `_TPS_NEUTRAL_MARK_RE` (empty `tps_num`,
+# unchanged). `˙` is also the encode-safe tone-8 mark, so the residue set
+# allows it; only a syllable-initial `˙` is the neutral mark (tone 8 sits
+# after the coda, and the converter writes it as U+0307 here).
 _MID_WORD_NEUTRAL_RE = re.compile(r"(?<=[^ ])-{2,}")
+_TPS_NEUTRAL_MARK_RE = re.compile(r"(?:^|\s)˙")
 
 
 def _tps_key_tl(tl: str) -> str:
@@ -413,6 +417,11 @@ def convert_tl_to_tps_strict(tl: str) -> str:
         raise TpsResidueError(
             f"taigi-converter tl→zhuyin produced non-Bopomofo residue: {tl!r} → {converted!r} "
             f"— check for dialectal source chars or pass hyphenated TL, not fused tl_num"
+        )
+    if _TPS_NEUTRAL_MARK_RE.search(converted):
+        raise TpsResidueError(
+            f"taigi-converter tl→zhuyin marked a word-initial neutral tone: {tl!r} → {converted!r} "
+            f"— TPS keys carry no neutral-tone mark"
         )
     return converted
 
