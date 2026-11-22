@@ -196,6 +196,9 @@ public extension RustEngineBridge {
         public let hanji: String
         /// The canonical TL the engine counts the usage under.
         public let canonicalTl: String
+        /// The stored Hanji spelling the engine counts the usage under
+        /// (`EnginePrediction.display_text`).
+        public let canonicalText: String
 
         /// The wire request.
         var request: Taigi_Engine_CommitPrediction {
@@ -204,6 +207,7 @@ public extension RustEngineBridge {
             request.roman = roman
             request.hanji = hanji
             request.canonicalTl = canonicalTl
+            request.canonicalText = canonicalText
             return request
         }
     }

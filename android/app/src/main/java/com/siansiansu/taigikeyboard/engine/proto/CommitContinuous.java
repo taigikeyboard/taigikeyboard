@@ -313,15 +313,16 @@ public  final class CommitContinuous extends
   private java.lang.String hanji_;
   /**
    * <pre>
-   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-   * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-   * a composition with any hanji-less segment is
-   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-   * F2: hanji is an explicit sidechannel, never inferred from
-   * `canonical_text` vs `association_tl`).
+   * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+   * candidate carries hanji regardless of which script the document received
+   * (a Hanji with Romanization roman cell commits the same candidate). Its
+   * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+   * usage store `canonical_text`, the stored spelling, since POJ mode shows
+   * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+   * (§34 literal, OOV synth, roman-only custom row); a composition with any
+   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+   * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
    *
    * <code>optional string hanji = 6;</code>
@@ -333,15 +334,16 @@ public  final class CommitContinuous extends
   }
   /**
    * <pre>
-   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-   * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-   * a composition with any hanji-less segment is
-   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-   * F2: hanji is an explicit sidechannel, never inferred from
-   * `canonical_text` vs `association_tl`).
+   * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+   * candidate carries hanji regardless of which script the document received
+   * (a Hanji with Romanization roman cell commits the same candidate). Its
+   * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+   * usage store `canonical_text`, the stored spelling, since POJ mode shows
+   * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+   * (§34 literal, OOV synth, roman-only custom row); a composition with any
+   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+   * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
    *
    * <code>optional string hanji = 6;</code>
@@ -353,15 +355,16 @@ public  final class CommitContinuous extends
   }
   /**
    * <pre>
-   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-   * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-   * a composition with any hanji-less segment is
-   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-   * F2: hanji is an explicit sidechannel, never inferred from
-   * `canonical_text` vs `association_tl`).
+   * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+   * candidate carries hanji regardless of which script the document received
+   * (a Hanji with Romanization roman cell commits the same candidate). Its
+   * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+   * usage store `canonical_text`, the stored spelling, since POJ mode shows
+   * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+   * (§34 literal, OOV synth, roman-only custom row); a composition with any
+   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+   * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
    *
    * <code>optional string hanji = 6;</code>
@@ -374,15 +377,16 @@ public  final class CommitContinuous extends
   }
   /**
    * <pre>
-   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-   * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-   * a composition with any hanji-less segment is
-   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-   * F2: hanji is an explicit sidechannel, never inferred from
-   * `canonical_text` vs `association_tl`).
+   * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+   * candidate carries hanji regardless of which script the document received
+   * (a Hanji with Romanization roman cell commits the same candidate). Its
+   * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+   * usage store `canonical_text`, the stored spelling, since POJ mode shows
+   * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+   * (§34 literal, OOV synth, roman-only custom row); a composition with any
+   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+   * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
    *
    * <code>optional string hanji = 6;</code>
@@ -396,15 +400,16 @@ public  final class CommitContinuous extends
   }
   /**
    * <pre>
-   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-   * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-   * a composition with any hanji-less segment is
-   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-   * F2: hanji is an explicit sidechannel, never inferred from
-   * `canonical_text` vs `association_tl`).
+   * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+   * candidate carries hanji regardless of which script the document received
+   * (a Hanji with Romanization roman cell commits the same candidate). Its
+   * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+   * usage store `canonical_text`, the stored spelling, since POJ mode shows
+   * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+   * (§34 literal, OOV synth, roman-only custom row); a composition with any
+   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+   * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
    *
    * <code>optional string hanji = 6;</code>
@@ -415,15 +420,16 @@ public  final class CommitContinuous extends
   }
   /**
    * <pre>
-   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-   * whenever the picked candidate carries hanji regardless of which script
-   * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-   * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-   * a composition with any hanji-less segment is
-   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-   * F2: hanji is an explicit sidechannel, never inferred from
-   * `canonical_text` vs `association_tl`).
+   * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+   * candidate carries hanji regardless of which script the document received
+   * (a Hanji with Romanization roman cell commits the same candidate). Its
+   * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+   * usage store `canonical_text`, the stored spelling, since POJ mode shows
+   * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+   * (§34 literal, OOV synth, roman-only custom row); a composition with any
+   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+   * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
    *
    * <code>optional string hanji = 6;</code>
@@ -1001,15 +1007,16 @@ public  final class CommitContinuous extends
 
     /**
      * <pre>
-     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-     * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-     * a composition with any hanji-less segment is
-     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-     * F2: hanji is an explicit sidechannel, never inferred from
-     * `canonical_text` vs `association_tl`).
+     * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+     * candidate carries hanji regardless of which script the document received
+     * (a Hanji with Romanization roman cell commits the same candidate). Its
+     * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+     * usage store `canonical_text`, the stored spelling, since POJ mode shows
+     * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+     * (§34 literal, OOV synth, roman-only custom row); a composition with any
+     * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+     * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+     * sidechannel, never inferred from `canonical_text` vs `association_tl`).
      * </pre>
      *
      * <code>optional string hanji = 6;</code>
@@ -1021,15 +1028,16 @@ public  final class CommitContinuous extends
     }
     /**
      * <pre>
-     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-     * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-     * a composition with any hanji-less segment is
-     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-     * F2: hanji is an explicit sidechannel, never inferred from
-     * `canonical_text` vs `association_tl`).
+     * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+     * candidate carries hanji regardless of which script the document received
+     * (a Hanji with Romanization roman cell commits the same candidate). Its
+     * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+     * usage store `canonical_text`, the stored spelling, since POJ mode shows
+     * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+     * (§34 literal, OOV synth, roman-only custom row); a composition with any
+     * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+     * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+     * sidechannel, never inferred from `canonical_text` vs `association_tl`).
      * </pre>
      *
      * <code>optional string hanji = 6;</code>
@@ -1041,15 +1049,16 @@ public  final class CommitContinuous extends
     }
     /**
      * <pre>
-     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-     * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-     * a composition with any hanji-less segment is
-     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-     * F2: hanji is an explicit sidechannel, never inferred from
-     * `canonical_text` vs `association_tl`).
+     * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+     * candidate carries hanji regardless of which script the document received
+     * (a Hanji with Romanization roman cell commits the same candidate). Its
+     * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+     * usage store `canonical_text`, the stored spelling, since POJ mode shows
+     * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+     * (§34 literal, OOV synth, roman-only custom row); a composition with any
+     * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+     * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+     * sidechannel, never inferred from `canonical_text` vs `association_tl`).
      * </pre>
      *
      * <code>optional string hanji = 6;</code>
@@ -1062,15 +1071,16 @@ public  final class CommitContinuous extends
     }
     /**
      * <pre>
-     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-     * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-     * a composition with any hanji-less segment is
-     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-     * F2: hanji is an explicit sidechannel, never inferred from
-     * `canonical_text` vs `association_tl`).
+     * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+     * candidate carries hanji regardless of which script the document received
+     * (a Hanji with Romanization roman cell commits the same candidate). Its
+     * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+     * usage store `canonical_text`, the stored spelling, since POJ mode shows
+     * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+     * (§34 literal, OOV synth, roman-only custom row); a composition with any
+     * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+     * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+     * sidechannel, never inferred from `canonical_text` vs `association_tl`).
      * </pre>
      *
      * <code>optional string hanji = 6;</code>
@@ -1085,15 +1095,16 @@ public  final class CommitContinuous extends
     }
     /**
      * <pre>
-     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-     * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-     * a composition with any hanji-less segment is
-     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-     * F2: hanji is an explicit sidechannel, never inferred from
-     * `canonical_text` vs `association_tl`).
+     * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+     * candidate carries hanji regardless of which script the document received
+     * (a Hanji with Romanization roman cell commits the same candidate). Its
+     * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+     * usage store `canonical_text`, the stored spelling, since POJ mode shows
+     * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+     * (§34 literal, OOV synth, roman-only custom row); a composition with any
+     * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+     * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+     * sidechannel, never inferred from `canonical_text` vs `association_tl`).
      * </pre>
      *
      * <code>optional string hanji = 6;</code>
@@ -1106,15 +1117,16 @@ public  final class CommitContinuous extends
     }
     /**
      * <pre>
-     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-     * whenever the picked candidate carries hanji regardless of which script
-     * the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-     * Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-     * a composition with any hanji-less segment is
-     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-     * F2: hanji is an explicit sidechannel, never inferred from
-     * `canonical_text` vs `association_tl`).
+     * The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+     * candidate carries hanji regardless of which script the document received
+     * (a Hanji with Romanization roman cell commits the same candidate). Its
+     * presence marks a Hanji pick (§50 learned phrases); the phrase and the
+     * usage store `canonical_text`, the stored spelling, since POJ mode shows
+     * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+     * (§34 literal, OOV synth, roman-only custom row); a composition with any
+     * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+     * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+     * sidechannel, never inferred from `canonical_text` vs `association_tl`).
      * </pre>
      *
      * <code>optional string hanji = 6;</code>

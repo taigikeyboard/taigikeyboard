@@ -638,6 +638,8 @@ public nonisolated struct Taigi_Engine_EnginePrediction: Sendable {
   /// non-empty by the empty-hanji filter.
   public var subtitle: String = String()
 
+  /// The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+  /// POJ mode a Han-Lo word's romanization in POJ.
   public var hanji: String = String()
 
   public var tl: String = String()
@@ -649,6 +651,11 @@ public nonisolated struct Taigi_Engine_EnginePrediction: Sendable {
 
   /// The split cell this row is, or PAIRED (see `CellScript`).
   public var cellScript: Taigi_Engine_CellScript = .paired
+
+  /// The stored Hanji spelling: the key the pick is counted under and NextWord
+  /// learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+  /// in every mode.
+  public var displayText: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1599,7 +1606,7 @@ nonisolated extension Taigi_Engine_FilterResult: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnginePrediction"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}subtitle\0\u{1}hanji\0\u{1}tl\0\u{1}score\0\u{3}cell_script\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}subtitle\0\u{1}hanji\0\u{1}tl\0\u{1}score\0\u{3}cell_script\0\u{3}display_text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1613,6 +1620,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
       case 4: try { try decoder.decodeSingularStringField(value: &self.tl) }()
       case 5: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
       case 6: try { try decoder.decodeSingularEnumField(value: &self.cellScript) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
       default: break
       }
     }
@@ -1637,6 +1645,9 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
     if self.cellScript != .paired {
       try visitor.visitSingularEnumField(value: self.cellScript, fieldNumber: 6)
     }
+    if !self.displayText.isEmpty {
+      try visitor.visitSingularStringField(value: self.displayText, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1647,6 +1658,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
     if lhs.tl != rhs.tl {return false}
     if lhs.score != rhs.score {return false}
     if lhs.cellScript != rhs.cellScript {return false}
+    if lhs.displayText != rhs.displayText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

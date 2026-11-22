@@ -98,6 +98,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             roman: m.roman,
             hanji: m.hanji,
             canonical_tl: m.canonical_tl,
+            canonical_text: m.canonical_text,
         },
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
         Method::TpsKey(m) => Intent::TpsKey { key: m.key },

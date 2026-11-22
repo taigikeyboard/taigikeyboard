@@ -12,12 +12,14 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         text: String,
         subtitle: String?,
         hanji: String,
+        displayText: String? = nil,
         tl: String? = nil,
     ) -> RustEngineBridge.NextWordEnginePrediction {
         RustEngineBridge.NextWordEnginePrediction(
             text: text,
             subtitle: subtitle,
             hanji: hanji,
+            displayText: displayText ?? hanji,
             tl: tl ?? text,
         )
     }
@@ -31,6 +33,7 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
             text: prediction.text,
             subtitle: prediction.subtitle,
             hanji: prediction.hanji,
+            displayText: prediction.displayText,
             tl: prediction.tl,
             cellScript: script,
         )
@@ -122,11 +125,13 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         )
         XCTAssertEqual(
             ActionHandler.predictionPick(for: swapped),
-            RustEngineBridge.PredictionPick(script: .lead, roman: "tāng", hanji: "重", canonicalTl: "tāng"),
+            RustEngineBridge.PredictionPick(
+                script: .lead, roman: "tāng", hanji: "重", canonicalTl: "tāng", canonicalText: "重",
+            ),
         )
         XCTAssertEqual(
             ActionHandler.predictionPick(for: unsplit[4]),
-            RustEngineBridge.PredictionPick(script: .lead, roman: "", hanji: "去", canonicalTl: ""),
+            RustEngineBridge.PredictionPick(script: .lead, roman: "", hanji: "去", canonicalTl: "", canonicalText: "去"),
         )
 
         let split = ActionHandler.predictionSuggestions([split(predictions[3], .hanji), split(predictions[3], .roman)])
@@ -134,5 +139,22 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         XCTAssertEqual(split.map(\.script), [.hanji, .roman])
         // The Hanji cell carries the roman its Annotate in Brackets commit appends.
         XCTAssertEqual(split.map(\.roman), ["tāng", "tāng"])
+    }
+
+    /// POJ mode shows a Han-Lo prediction's romanization in POJ (`親chiâⁿ`); the tap
+    /// writes the shown Hanji and is counted under the stored spelling
+    /// (`EnginePrediction.display_text`), so TL and POJ picks share one count.
+    @MainActor
+    func testPredictionPick_countsTheStoredSpellingNotTheShownHanji() {
+        let hanLo = prediction(
+            text: "chhin-chiâⁿ",
+            subtitle: "親chiâⁿ",
+            hanji: "親chiâⁿ",
+            displayText: "親tsiânn",
+            tl: "tshin-tsiânn",
+        )
+        let pick = ActionHandler.predictionPick(for: ActionHandler.predictionSuggestions([hanLo])[0])
+        XCTAssertEqual(pick.hanji, "親chiâⁿ")
+        XCTAssertEqual(pick.canonicalText, "親tsiânn")
     }
 }

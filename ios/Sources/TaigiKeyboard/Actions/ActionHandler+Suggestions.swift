@@ -58,7 +58,7 @@ extension ActionHandler {
         // NextWord learns the reading as sent, so it gets the canonical TL,
         // never the rendered `roman` (POJ in POJ mode; a POJ → TL fold would
         // misread TL `eng` / `ek`).
-        nextWordController.process(text: pick.hanji, roman: pick.canonicalTl)
+        nextWordController.process(text: pick.canonicalText, roman: pick.canonicalTl)
     }
 
     // MARK: - Suggestion Helpers
@@ -114,6 +114,7 @@ extension ActionHandler {
             roman: info["roman"] ?? "",
             hanji: info["hanzi"] ?? "",
             canonicalTl: info["canonicalTl"] ?? "",
+            canonicalText: info["displayText"] ?? "",
         )
     }
 

@@ -16,9 +16,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * write — a Hanji-only prediction once the swap is off) — the platform then
  * writes nothing. A split cell whose own script is missing commits the lead,
  * as a Continuous pick does (the phones' fail-open marker rule). With the
- * user-data stores open the engine counts the pick's usage under `(hanji,
- * canonical_tl)` itself (the platform sends no `RecordUsage` for it) and
- * touches no learned phrase. Stateless: the composition is left as it is
+ * user-data stores open the engine counts the pick's usage under
+ * `(canonical_text, canonical_tl)` itself (the platform sends no
+ * `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
  * (a new generation still resets it, as for every request); NextWord
  * learning stays the platform's `WordSelected`.
  * </pre>
@@ -35,6 +35,7 @@ public  final class CommitPrediction extends
     roman_ = "";
     hanji_ = "";
     canonicalTl_ = "";
+    canonicalText_ = "";
   }
   public static final int SCRIPT_FIELD_NUMBER = 1;
   private int script_;
@@ -180,7 +181,7 @@ public  final class CommitPrediction extends
   private java.lang.String hanji_;
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -192,7 +193,7 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -205,7 +206,7 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -219,7 +220,7 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -230,7 +231,7 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -307,6 +308,78 @@ public  final class CommitPrediction extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     canonicalTl_ = value.toStringUtf8();
+
+  }
+
+  public static final int CANONICAL_TEXT_FIELD_NUMBER = 5;
+  private java.lang.String canonicalText_;
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   * @return The canonicalText.
+   */
+  @java.lang.Override
+  public java.lang.String getCanonicalText() {
+    return canonicalText_;
+  }
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   * @return The bytes for canonicalText.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCanonicalTextBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(canonicalText_);
+  }
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   * @param value The canonicalText to set.
+   */
+  private void setCanonicalText(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    canonicalText_ = value;
+  }
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   */
+  private void clearCanonicalText() {
+
+    canonicalText_ = getDefaultInstance().getCanonicalText();
+  }
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   * @param value The bytes for canonicalText to set.
+   */
+  private void setCanonicalTextBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    canonicalText_ = value.toStringUtf8();
 
   }
 
@@ -404,9 +477,9 @@ public  final class CommitPrediction extends
    * write — a Hanji-only prediction once the swap is off) — the platform then
    * writes nothing. A split cell whose own script is missing commits the lead,
    * as a Continuous pick does (the phones' fail-open marker rule). With the
-   * user-data stores open the engine counts the pick's usage under `(hanji,
-   * canonical_tl)` itself (the platform sends no `RecordUsage` for it) and
-   * touches no learned phrase. Stateless: the composition is left as it is
+   * user-data stores open the engine counts the pick's usage under
+   * `(canonical_text, canonical_tl)` itself (the platform sends no
+   * `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
    * (a new generation still resets it, as for every request); NextWord
    * learning stays the platform's `WordSelected`.
    * </pre>
@@ -572,7 +645,7 @@ public  final class CommitPrediction extends
 
     /**
      * <pre>
-     * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -584,7 +657,7 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -597,7 +670,7 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -612,7 +685,7 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -625,7 +698,7 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -708,6 +781,80 @@ public  final class CommitPrediction extends
       return this;
     }
 
+    /**
+     * <pre>
+     * `EnginePrediction.display_text` — the key the usage is counted under.
+     * Empty → the commit is IGNORED.
+     * </pre>
+     *
+     * <code>string canonical_text = 5;</code>
+     * @return The canonicalText.
+     */
+    @java.lang.Override
+    public java.lang.String getCanonicalText() {
+      return instance.getCanonicalText();
+    }
+    /**
+     * <pre>
+     * `EnginePrediction.display_text` — the key the usage is counted under.
+     * Empty → the commit is IGNORED.
+     * </pre>
+     *
+     * <code>string canonical_text = 5;</code>
+     * @return The bytes for canonicalText.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getCanonicalTextBytes() {
+      return instance.getCanonicalTextBytes();
+    }
+    /**
+     * <pre>
+     * `EnginePrediction.display_text` — the key the usage is counted under.
+     * Empty → the commit is IGNORED.
+     * </pre>
+     *
+     * <code>string canonical_text = 5;</code>
+     * @param value The canonicalText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalText(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setCanonicalText(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * `EnginePrediction.display_text` — the key the usage is counted under.
+     * Empty → the commit is IGNORED.
+     * </pre>
+     *
+     * <code>string canonical_text = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCanonicalText() {
+      copyOnWrite();
+      instance.clearCanonicalText();
+      return this;
+    }
+    /**
+     * <pre>
+     * `EnginePrediction.display_text` — the key the usage is counted under.
+     * Empty → the commit is IGNORED.
+     * </pre>
+     *
+     * <code>string canonical_text = 5;</code>
+     * @param value The bytes for canonicalText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalTextBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setCanonicalTextBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CommitPrediction)
   }
   @java.lang.Override
@@ -728,10 +875,11 @@ public  final class CommitPrediction extends
             "roman_",
             "hanji_",
             "canonicalTl_",
+            "canonicalText_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\f\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\f\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208\u0005\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

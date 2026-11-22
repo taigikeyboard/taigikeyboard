@@ -224,6 +224,11 @@ data class PredictionPick(
     val hanji: String,
     /** The canonical TL the engine counts the usage under. */
     val canonicalTl: String,
+    /**
+     * The stored Hanji spelling the engine counts the usage under
+     * (`EnginePrediction.display_text`).
+     */
+    val canonicalText: String,
 ) {
     /** The wire request. */
     fun toRequest(): CommitPrediction =
@@ -233,6 +238,7 @@ data class PredictionPick(
             .setRoman(roman)
             .setHanji(hanji)
             .setCanonicalTl(canonicalTl)
+            .setCanonicalText(canonicalText)
             .build()
 }
 

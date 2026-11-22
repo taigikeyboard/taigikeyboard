@@ -40,7 +40,11 @@ public extension RustEngineBridge {
     struct NextWordEnginePrediction: Equatable {
         public let text: String
         public let subtitle: String?
+        /// The Hanji as shown (POJ mode renders a Han-Lo word's romanization in POJ).
         public let hanji: String
+        /// The stored Hanji spelling (`EnginePrediction.display_text`): the key a tap
+        /// is counted under and NextWord learns.
+        public let displayText: String
         public let tl: String
         /// The §42 split cell this row is (`EnginePrediction.cell_script`).
         public let cellScript: Taigi_Engine_CellScript
@@ -49,12 +53,14 @@ public extension RustEngineBridge {
             text: String,
             subtitle: String?,
             hanji: String,
+            displayText: String,
             tl: String,
             cellScript: Taigi_Engine_CellScript = .paired,
         ) {
             self.text = text
             self.subtitle = subtitle
             self.hanji = hanji
+            self.displayText = displayText
             self.tl = tl
             self.cellScript = cellScript
         }
@@ -236,6 +242,7 @@ public extension RustEngineBridge {
                 text: p.text,
                 subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
                 hanji: p.hanji,
+                displayText: p.displayText,
                 tl: p.tl,
                 cellScript: p.cellScript,
             )

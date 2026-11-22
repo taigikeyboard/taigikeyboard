@@ -320,6 +320,7 @@ fn prediction_taps_are_counted_by_the_engine(reader: &UserDataStores) {
             roman: tl.to_owned(),
             hanji: hanji.to_owned(),
             canonical_tl: tl.to_owned(),
+            canonical_text: hanji.to_owned(),
         })
     };
     let phrase = "做進出口";

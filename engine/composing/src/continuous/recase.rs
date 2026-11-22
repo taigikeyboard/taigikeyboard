@@ -3,6 +3,13 @@
 
 use lexicon::RawCandidate;
 
+/// Whether a word's Hanji shows its TL romanization runs in POJ
+/// (`phonetics::api::render_hanji_display`): in POJ mode, for a dictionary or
+/// learned word. A custom word's Hanji is shown as the user saved it.
+pub(crate) fn shows_poj_roman_in_hanji(mode: phonetics::InputMode, is_custom: bool) -> bool {
+    mode == phonetics::InputMode::Poj && !is_custom
+}
+
 /// v3.5.8 — derive the keyboard `LetterCase` intent from a user raw
 /// input segment so a continuous candidate's roman mirrors the case the
 /// user actually typed for *that* span (`Hittui` → segment `Hit`

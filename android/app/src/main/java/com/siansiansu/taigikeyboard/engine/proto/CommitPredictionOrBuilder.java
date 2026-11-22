@@ -55,7 +55,7 @@ public interface CommitPredictionOrBuilder extends
 
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -64,7 +64,7 @@ public interface CommitPredictionOrBuilder extends
   java.lang.String getHanji();
   /**
    * <pre>
-   * `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -92,4 +92,26 @@ public interface CommitPredictionOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCanonicalTlBytes();
+
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   * @return The canonicalText.
+   */
+  java.lang.String getCanonicalText();
+  /**
+   * <pre>
+   * `EnginePrediction.display_text` — the key the usage is counted under.
+   * Empty → the commit is IGNORED.
+   * </pre>
+   *
+   * <code>string canonical_text = 5;</code>
+   * @return The bytes for canonicalText.
+   */
+  com.google.protobuf.ByteString
+      getCanonicalTextBytes();
 }

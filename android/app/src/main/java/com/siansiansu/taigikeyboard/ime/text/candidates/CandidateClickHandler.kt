@@ -166,7 +166,7 @@ class CandidateClickHandler(
         // NextWord learns the canonical reading, not the rendered `roman` (the
         // Syllable Separator rewrites its hyphens, §49); iOS learns from the
         // same sidechannel.
-        onNextWordPrediction(word.displayText, pick.canonicalTl.ifEmpty { word.roman })
+        onNextWordPrediction(pick.canonicalText, pick.canonicalTl.ifEmpty { word.roman })
     }
 
     /**
@@ -282,7 +282,7 @@ internal fun continuousPick(word: TaigiWord): ContinuousPick? {
         // Absent only when the pick carries no reading (TPS-OOV) → "" → the
         // engine uses the raw committed slice for NextWord.
         associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: "",
-        // §50 — the pick's hanji (identity, not the committed script): the
+        // §50 — the pick's shown hanji, whatever script was committed: the
         // engine learns a composition only when every segment carried one.
         hanji = word.hanji?.takeIf { it.isNotEmpty() },
         consumedBytes = consumedBytes,
@@ -319,6 +319,7 @@ internal fun predictionPick(word: TaigiWord): PredictionPick =
         roman = word.roman,
         hanji = word.hanji.orEmpty(),
         canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: "",
+        canonicalText = word.additionalInfo[TaigiWord.MetadataKeys.DISPLAY_TEXT] ?: "",
     )
 
 // CROSS-PLATFORM INVARIANT — ios `ActionHandler.rawPreeditWritesRomanization`;

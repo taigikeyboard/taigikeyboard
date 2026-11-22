@@ -112,6 +112,32 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
 }
 
 #[test]
+fn a_phrase_learns_the_stored_spelling_not_the_shown_hanji() {
+    // POJ mode shows a Han-Lo word's romanization in POJ (`親chiâⁿ` for the
+    // stored `親tsiânn`); the pick echoes the stored spelling as
+    // `canonical_text`, and that is what the phrase and its usage keep.
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let mut e = engine_in_continuous("kikhilai");
+    e.apply_learning(pick((Some("記"), "kì", 2, 1)), &config_tl());
+    let shown = Intent::CommitContinuous {
+        canonical_text: "起來".into(),
+        association_tl: "khí-lâi".into(),
+        hanji: Some("khí來".into()),
+        consumed_bytes: 6,
+        syllable_count: 2,
+        script: Some(CommitScript::Hanji),
+        roman: "khí-lâi".into(),
+    };
+    let fin = e.apply_learning(shown, &config_tl());
+    assert_eq!(fin.learned, phrase("記起來", "kì khí-lâi"));
+    assert_eq!(
+        fin.usage.and_then(|usage| usage.hanji),
+        Some("起來".to_owned())
+    );
+}
+
+#[test]
 fn confirm_composition_then_insert_learns_the_same_phrase_without_the_literal() {
     let _lock = engine_install_lock();
     install(&fixture_rows(), FIXTURE_SYLLABLES);

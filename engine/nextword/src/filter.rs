@@ -292,11 +292,12 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     if !config.is_hanji_first && roman.is_empty() {
         return None;
     }
+    // The shown Hanji, its romanization runs in POJ wherever `roman` is;
+    // `display_text` keeps the stored spelling, the key a pick is counted
+    // under and NextWord learns.
     let hanji =
-        match phonetics::api::render_hanji_khinsiann(&m.hanji, &m.tl, config.khinsiann_in_hanji) {
-            std::borrow::Cow::Borrowed(_) => m.hanji,
-            std::borrow::Cow::Owned(rendered) => rendered,
-        };
+        phonetics::api::render_hanji_display(&m.hanji, &m.tl, config.khinsiann_in_hanji, !use_tl)
+            .into_owned();
     let text = if roman.is_empty() {
         hanji.clone()
     } else {
@@ -314,6 +315,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
         tl: m.tl,
         score: scorer::combined_score(m.dict_score, m.user_score),
         cell_script: CellScript::Paired as i32,
+        display_text: m.hanji,
     })
 }
 
@@ -830,6 +832,33 @@ mod tests {
         // Specific value depends on phonetics impl; just verify it's not empty
         // and not equal to TL input (sanity check that conversion happened).
         assert!(!p.text.is_empty());
+    }
+
+    #[test]
+    fn poj_mode_shows_a_han_lo_romanization_in_poj_keyed_by_the_stored_spelling() {
+        // trace: `tsiânn` → POJ `chiâⁿ` (`tl_roman_in_hanji_to_poj`); the
+        // production row `親tsiânn` reads `chhin-chiâⁿ` in its `poj` column.
+        let shaped = |config: &AppConfig| {
+            let result = filter(
+                &PersistedState::default(),
+                vec![dict_row("親tsiânn", "tshin-tsiânn", 5)],
+                0,
+                1_000,
+                10,
+                config,
+            )
+            .unwrap();
+            let p = result.predictions[0].clone();
+            (p.hanji, p.display_text)
+        };
+        assert_eq!(
+            shaped(&config_poj_mode()),
+            ("親chi\u{e2}\u{207f}".to_owned(), "親tsiânn".to_owned())
+        );
+        assert_eq!(
+            shaped(&config_tl_mode_hanji_first(false)),
+            ("親tsiânn".to_owned(), "親tsiânn".to_owned())
+        );
     }
 
     #[test]

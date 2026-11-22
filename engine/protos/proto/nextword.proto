@@ -254,6 +254,8 @@ message EnginePrediction {
   // non-nil empty subtitle cannot arise because hanji is required
   // non-empty by the empty-hanji filter.
   string subtitle = 2;
+  // The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+  // POJ mode a Han-Lo word's romanization in POJ.
   string hanji    = 3;
   string tl       = 4;
   // Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
@@ -262,6 +264,10 @@ message EnginePrediction {
   double score    = 5;
   // The split cell this row is, or PAIRED (see `CellScript`).
   CellScript cell_script = 6;
+  // The stored Hanji spelling: the key the pick is counted under and NextWord
+  // learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+  // in every mode.
+  string display_text = 7;
 }
 
 message NextWordEffect {

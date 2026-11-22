@@ -43,7 +43,7 @@ fn is_hanzi_separator(c: char) -> bool {
     matches!(c, ' ' | '\u{3000}' | '-')
 }
 
-fn is_roman_syllable_char(c: char) -> bool {
+pub(crate) fn is_roman_syllable_char(c: char) -> bool {
     (c.is_alphabetic() || is_combining_mark(c) || ('\u{0300}'..='\u{036F}').contains(&c))
         && !is_cjk_char(c)
         && !is_kana(c)

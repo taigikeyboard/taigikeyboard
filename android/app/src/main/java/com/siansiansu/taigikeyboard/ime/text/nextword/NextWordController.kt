@@ -467,12 +467,18 @@ private fun predictionWord(
     // TL (only text/subtitle are mode-shaped), matching the Continuous read
     // key. Without it the freq write would land in the legacy tl=="" bucket
     // and 重/tāng could inherit a count learned from 重/tîng.
-    val identity = TaigiWord.MetadataKeys.CANONICAL_TL to prediction.tl
+    // The stored spelling the tap is counted under and NextWord learns;
+    // `hanji` is the shown Hanji the document gets.
+    val identity =
+        mapOf(
+            TaigiWord.MetadataKeys.CANONICAL_TL to prediction.tl,
+            TaigiWord.MetadataKeys.DISPLAY_TEXT to prediction.displayText,
+        )
     return TaigiWord(
         id = id,
         roman = if (prediction.subtitle != null) prediction.text else "",
         hanji = prediction.hanji,
         additionalInfo =
-            if (cellScript == null) mapOf(identity) else mapOf(identity, TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript),
+            if (cellScript == null) identity else identity + (TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript),
     )
 }

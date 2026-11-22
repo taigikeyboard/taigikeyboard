@@ -2,7 +2,7 @@
 
 use super::dedupe::{dedupe_rendered_continuous, dedupe_same_commit_hanji, retain_absent_from};
 use super::partial_prefix::fetch_via_lexicon_partial_inner;
-use super::recase::{recase_all, recase_roman, recase_tl_as_poj_display};
+use super::recase::{recase_all, recase_roman, recase_tl_as_poj_display, shows_poj_roman_in_hanji};
 use super::walk::{fetch_walker_slot0_inner, synth_consumed_span};
 
 use crate::shadow::{build_continuous_keys, build_partial_prefix_key};
@@ -104,15 +104,25 @@ fn picked_extension_outranks_sentence(candidates: &[RawCandidate], raw_len: u32)
         && top_ranked.user_weight > sentence.user_weight
 }
 
-fn apply_khinsiann_in_hanji(candidates: &mut [RawCandidate], enabled: bool) {
-    if !enabled {
+/// The shown `hanji` of each candidate (`render_hanji_display`); `display_text`
+/// keeps the stored spelling, the identity key.
+fn apply_hanji_display(
+    candidates: &mut [RawCandidate],
+    khinsiann: bool,
+    mode: phonetics::InputMode,
+) {
+    if !khinsiann && mode != phonetics::InputMode::Poj {
         return;
     }
     for cand in candidates {
+        let poj_roman = shows_poj_roman_in_hanji(mode, cand.is_custom);
         if let Some(hanji) = cand.hanji.as_mut() {
-            if let std::borrow::Cow::Owned(rendered) =
-                phonetics::api::render_hanji_khinsiann(hanji, &cand.canonical_tl, true)
-            {
+            if let std::borrow::Cow::Owned(rendered) = phonetics::api::render_hanji_display(
+                hanji,
+                &cand.canonical_tl,
+                khinsiann,
+                poj_roman,
+            ) {
                 *hanji = rendered;
             }
         }
@@ -281,7 +291,7 @@ pub(crate) fn assemble_candidates(
                     ctx,
                     fetch_partial_prefix_candidates,
                 );
-                apply_khinsiann_in_hanji(&mut partial, khinsiann_in_hanji);
+                apply_hanji_display(&mut partial, khinsiann_in_hanji, mode);
                 partial
             } else {
                 Vec::new()
@@ -341,7 +351,7 @@ pub(crate) fn assemble_candidates(
                     cand.roman = recase_roman(&cand.roman, seg, mode);
                 }
             }
-            apply_khinsiann_in_hanji(&mut c, khinsiann_in_hanji);
+            apply_hanji_display(&mut c, khinsiann_in_hanji, mode);
             // ---- Step 4: walker slot-0 prepend (all modes).
             // v3.5.8 S2 — whole-sentence walker. The synthesized
             // full-buffer best path is explicitly prepended at slot 0
@@ -601,7 +611,7 @@ pub(crate) fn assemble_candidates(
                         ctx,
                         fetch_partial_prefix_candidates_unbounded,
                     );
-                    apply_khinsiann_in_hanji(&mut ext, khinsiann_in_hanji);
+                    apply_hanji_display(&mut ext, khinsiann_in_hanji, mode);
                     // Borrowed key shape — `c` is not mutated during the
                     // retain on `ext`, so HashSet entries can hold &str
                     // slices into `c` and avoid per-keystroke String allocs.
@@ -655,7 +665,7 @@ pub(crate) fn assemble_candidates(
             if let Some(key) = crate::shadow::abbrev_query_key(raw, mode) {
                 let mut abbrev = lexicon::fetch_abbrev_candidates(&key, raw_len, ctx);
                 recase_all(&mut abbrev, raw, mode);
-                apply_khinsiann_in_hanji(&mut abbrev, khinsiann_in_hanji);
+                apply_hanji_display(&mut abbrev, khinsiann_in_hanji, mode);
                 retain_absent_from(&candidates, &mut abbrev);
                 abbrev.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
                 appended_blocks |= !abbrev.is_empty();
@@ -737,9 +747,10 @@ pub(crate) fn assemble_candidates(
         // (recased above), the walker slot-0 best candidate
         // inserted at index 0, and the partial-prefix branch — so
         // display AND the platform-formatted commit (both derive
-        // from `roman`) are POJ. `display_text` / `hanji` (the
-        // canonical commit + `user_frequency.db` key) are
-        // deliberately untouched. No-op for TL / English /
+        // from `roman`) are POJ. `display_text` (the canonical
+        // commit + `user_frequency.db` key) is deliberately
+        // untouched; `hanji` was rendered at Step 3
+        // (`apply_hanji_display`). No-op for TL / English /
         // (legacy-mapped) TPS.
         if mode == phonetics::InputMode::Poj {
             for cand in &mut candidates {

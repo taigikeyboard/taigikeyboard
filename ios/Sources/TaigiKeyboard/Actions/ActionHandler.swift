@@ -383,6 +383,9 @@ extension ActionHandler: AutocompleteContextUpdater {
         [
             "isNextWord": "true",
             "hanzi": prediction.hanji,
+            // The stored spelling the tap is counted under and NextWord learns;
+            // `hanzi` is the shown Hanji the document gets.
+            "displayText": prediction.displayText,
             // R5 pair-key (#7): canonical-TL reading for the
             // `(hanji, canonicalTl)` usage the engine counts.
             // `prediction.tl` is the engine-side canonical TL (only

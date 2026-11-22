@@ -29,6 +29,7 @@ mod continuous_typed_boundary;
 mod continuous_typed_separator;
 mod dictionary_model_cost;
 mod golden_fetch_at_pos;
+mod han_lo_poj_hanji;
 mod han_lo_slot0;
 mod intent_coverage;
 mod invariants;
