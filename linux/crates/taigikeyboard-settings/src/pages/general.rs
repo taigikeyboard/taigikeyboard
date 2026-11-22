@@ -1,4 +1,4 @@
-//! The General pane: input script, tone keys, the candidate window's two
+//! The General pane: input script, tone keys, Hàn-Lô lām, the candidate window's two
 //! switches, output script and its shape, auto-space, display language;
 //! then the version row and the reset row. Port of `GeneralSettingsView.swift`
 //! in the Windows pane's row order (USER 2026-09-21: the typing pipeline's).
@@ -43,6 +43,17 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         keys::TONE_INPUT_SCHEME,
         ToneInputScheme::label_key,
     );
+    // Hàn-Lô lām, right under Tone Keys (macOS / Web place it there too):
+    // greys where the engine ignores it (Romanization Only, TPS).
+    let han_lo_row = context.switch_row_in(
+        |row| group.add(row),
+        StringKey::SettingsHanLoMixed,
+        keys::IS_HAN_LO_MIXED_ENABLED,
+    );
+    han_lo_row.set_sensitive(context.document.allows_han_lo_mixed());
+    context.on_refresh(move |document| {
+        han_lo_row.set_sensitive(document.allows_han_lo_mixed());
+    });
     // Under Tone Keys, independent of it: both say what a letter types.
     context.switch_row(
         &group,

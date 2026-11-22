@@ -242,9 +242,14 @@
       "values": { "hanji": "漢字顯示輕聲（--）", "tailo": "Hàn-jī hián-sī khin-siann (--)", "poj": "Hàn-jī hián-sī khin-siaⁿ (--)", "en": "Neutral Tone in Hanji (--)", "ja": "漢字に軽声（--）を表示" }
     },
     "hanLoMixed": {
-      "comment": "Toggle label (Hàn-Lô lām), desktop General pane under Tone Keys: every dictionary word also offers its romanization as a candidate of its own, ranked and learned on its own and usable in the whole-sentence candidate. Disabled under Romanization Only and TPS. Prototype: macOS and Web so far.",
-      "scope": { "platforms": ["macos", "web"], "surfaces": ["host"] },
+      "comment": "Toggle label (Hàn-Lô lām): every dictionary word also offers its romanization as a candidate and a next-word prediction of its own, ranked and learned on its own and usable in the whole-sentence candidate. Desktop General pane under Tone Keys; mobile Typing section. Disabled under Romanization Only and TPS.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host"] },
       "values": { "hanji": "漢羅濫", "tailo": "Hàn-Lô lām", "poj": "Hàn-Lô lām", "en": "Romanized Words as Candidates", "ja": "ローマ字語も候補に" }
+    },
+    "hanLoMixedInfo": {
+      "comment": "Help text for the Hàn-Lô lām (romanized words as candidates) toggle.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "開啟了後，逐个詞攏會閣有一个羅馬字候選詞，會使單獨揀，嘛會佇整句候選內底出現，方便漢羅混寫。", "tailo": "Phah-khui liáu-āu, ta̍k ê sû lóng ē koh ū tsi̍t ê lô-má-jī hāu-suán sû, ē-tàng tan-to̍k kíng, mā ē tī tsíng-kù hāu-suán lāi-té tshut-hiān, hong-piān Hàn-Lô hūn-siá.", "poj": "Phah-khui liáu-āu, ta̍k ê sû lóng ē koh ū chi̍t ê lô-má-jī hāu-soán sû, ē-tàng tan-to̍k kéng, mā ē tī chéng-kù hāu-soán lāi-té chhut-hiān, hong-piān Hàn-Lô hūn-siá.", "en": "When on, every word also offers its romanization as a candidate of its own: pick it on its own, and the whole-sentence candidate can use it too, for mixed Hanji and romanization writing.", "ja": "オンにすると、各語にローマ字表記の候補も加わります。単独で選べるほか、文全体の候補にも使われ、漢字とローマ字の混在文を書きやすくなります。" }
     },
     "khinsiannInHanjiInfo": {
       "comment": "Help text for the neutral-tone in Hanji toggle.",

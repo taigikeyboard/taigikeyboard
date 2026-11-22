@@ -1388,11 +1388,13 @@ fn confirm_composition_then_insert(
 /// `Intent::CommitPrediction` (D1): the document text a NextWord prediction
 /// tap writes, resolved by the Continuous pick's resolver
 /// ([`resolve_commit_text`]), and its usage. The composition is left as it is
-/// (the snapshot answers it unchanged). No Hanji, no `canonical_text`, no
-/// script, a script the prediction lacks, or an empty document text is
-/// ignored: no usage. The usage is counted under `canonical_text`, the stored
-/// spelling, not the shown `hanji`; it carries no `hanji`, so counting it
-/// touches no learned phrase.
+/// (the snapshot answers it unchanged). Neither Hanji nor romanization, no
+/// `canonical_text`, no script, a script the prediction lacks, or an empty
+/// document text is ignored: no usage. A prediction without Hanji is a word
+/// written in romanization (Hàn-Lô lām, §42) and writes its romanization. The
+/// usage is counted under `canonical_text`, the stored spelling, not the
+/// shown `hanji`; it carries no `hanji`, so counting it touches no learned
+/// phrase.
 fn commit_prediction(
     state: &EngineState,
     script: Option<CommitScript>,
@@ -1402,9 +1404,10 @@ fn commit_prediction(
     canonical_text: String,
     config: &AppConfig,
 ) -> Applied {
+    let hanji = Some(hanji.as_str()).filter(|hanji| !hanji.is_empty());
     let resolved = script
-        .filter(|_| !hanji.is_empty() && !canonical_text.is_empty())
-        .and_then(|script| resolve_commit_text(script, roman, Some(&hanji), config))
+        .filter(|_| (hanji.is_some() || !roman.is_empty()) && !canonical_text.is_empty())
+        .and_then(|script| resolve_commit_text(script, roman, hanji, config))
         // A Hanji-only prediction led by its (absent) romanization — the swap
         // turned off between the strip and the tap — writes nothing.
         .filter(|resolved| !resolved.text.is_empty());

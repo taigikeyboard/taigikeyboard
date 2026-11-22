@@ -232,6 +232,8 @@
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ（SIÂᴺ）</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
     <string name="i18n_settings_khinsiannInHanji">漢字顯示輕聲（--）</string>
+    <string name="i18n_settings_hanLoMixed">漢羅濫</string>
+    <string name="i18n_settings_hanLoMixedInfo">開啟了後，逐个詞攏會閣有一个羅馬字候選詞，會使單獨揀，嘛會佇整句候選內底出現，方便漢羅混寫。</string>
     <string name="i18n_settings_khinsiannInHanjiInfo">開啟時，漢字輸出會照台羅詞彙加上輕聲符號（例：會記--得、--轉-去）。</string>
     <string name="i18n_settings_tpsOrMapsToER">or 對應 ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。</string>

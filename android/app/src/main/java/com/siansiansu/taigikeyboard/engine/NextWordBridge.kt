@@ -237,6 +237,7 @@ fun RustEngineBridge.nextwordPredictNext(
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isKhinsiannInHanjiEnabled: Boolean = false,
+    isHanLoMixedEnabled: Boolean = false,
 ): NextWordFilterResult {
     val builder = com.siansiansu.taigikeyboard.engine.proto.PredictNext
         .newBuilder()
@@ -260,6 +261,7 @@ fun RustEngineBridge.nextwordPredictNext(
                 candidateDisplayMode = candidateDisplayMode,
                 syllableSeparator = syllableSeparator,
                 isKhinsiannInHanjiEnabled = isKhinsiannInHanjiEnabled,
+                isHanLoMixedEnabled = isHanLoMixedEnabled,
             ),
     ) ?: return NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {

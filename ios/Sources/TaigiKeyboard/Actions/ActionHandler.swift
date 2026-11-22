@@ -358,16 +358,17 @@ extension ActionHandler: AutocompleteContextUpdater {
         _ predictions: [RustEngineBridge.NextWordEnginePrediction],
     ) -> [AutocompleteSuggestion] {
         predictions.map { prediction in
+            let roman = romanization(of: prediction)
             switch prediction.cellScript {
             case .hanji, .roman:
-                singleScriptCell(
+                return singleScriptCell(
                     showingHanji: prediction.cellScript == .hanji,
                     hanji: prediction.hanji,
-                    roman: prediction.subtitle != nil ? prediction.text : nil,
+                    roman: roman.isEmpty ? nil : roman,
                     sidechannels: predictionIdentity(prediction),
                 )
             case .paired, .UNRECOGNIZED:
-                AutocompleteSuggestion(
+                return AutocompleteSuggestion(
                     text: prediction.text,
                     title: prediction.text,
                     subtitle: prediction.subtitle,
@@ -397,8 +398,17 @@ extension ActionHandler: AutocompleteContextUpdater {
             // D1: the romanization the engine resolves the tap from — the
             // view swaps `text` / `subtitle` in swapped and TPS modes, so the
             // tap never reads them back. Empty for a Hanji-only prediction.
-            "roman": prediction.subtitle != nil ? prediction.text : "",
+            "roman": romanization(of: prediction),
         ]
+    }
+
+    /// The romanization a prediction tap is resolved from: `text` when the engine
+    /// shaped a subtitle, or when the prediction has no Hanji — Hàn-Lô lām's
+    /// word written in romanization, a romanization-only prediction whose `text`
+    /// the tap writes. Empty for a Hanji-only prediction.
+    // CROSS-PLATFORM INVARIANT — mirrors android/.../nextword/NextWordController.kt predictionWord.
+    static func romanization(of prediction: RustEngineBridge.NextWordEnginePrediction) -> String {
+        prediction.subtitle != nil || prediction.hanji.isEmpty ? prediction.text : ""
     }
 
     func resetNextWordSuggestions() {

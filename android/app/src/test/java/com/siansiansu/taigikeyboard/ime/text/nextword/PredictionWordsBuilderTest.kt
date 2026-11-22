@@ -160,4 +160,30 @@ class PredictionWordsBuilderTest {
         assertEquals("親chiâⁿ", pick.hanji)
         assertEquals("親tsiânn", pick.canonicalText)
     }
+
+    /**
+     * Hàn-Lô lām: a prediction without Hanji is a word written in romanization — a
+     * romanization-only word whose tap sends its romanization and is counted under
+     * its TL (`EnginePrediction.display_text`). Mirrors iOS
+     * `testPredictionPick_aRomanizationPredictionSendsItsRomanization`.
+     */
+    @Test
+    fun a_romanization_prediction_sends_its_romanization() {
+        val romanization =
+            prediction(
+                text = "chia̍h",
+                subtitle = null,
+                hanji = "",
+                displayText = "tsia̍h",
+                tl = "tsia̍h",
+            )
+        val word = buildPredictionWords(listOf(romanization)).single()
+        assertNull(word.hanji)
+        assertEquals("chia̍h", word.roman)
+        val pick = predictionPick(word)
+        assertEquals("chia̍h", pick.roman)
+        assertEquals("", pick.hanji)
+        assertEquals("tsia̍h", pick.canonicalText)
+        assertEquals("tsia̍h", pick.canonicalTl)
+    }
 }

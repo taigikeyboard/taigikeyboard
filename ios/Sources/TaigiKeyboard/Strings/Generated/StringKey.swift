@@ -230,6 +230,8 @@ enum StringKey: String {
     case settingsNasalMarkerUppercaseCapital = "i18n_settings_nasalMarkerUppercaseCapital"
     case settingsNasalMarkerUppercaseSmall = "i18n_settings_nasalMarkerUppercaseSmall"
     case settingsKhinsiannInHanji = "i18n_settings_khinsiannInHanji"
+    case settingsHanLoMixed = "i18n_settings_hanLoMixed"
+    case settingsHanLoMixedInfo = "i18n_settings_hanLoMixedInfo"
     case settingsKhinsiannInHanjiInfo = "i18n_settings_khinsiannInHanjiInfo"
     case settingsTpsOrMapsToER = "i18n_settings_tpsOrMapsToER"
     case settingsTpsOrMapsToERInfo = "i18n_settings_tpsOrMapsToERInfo"

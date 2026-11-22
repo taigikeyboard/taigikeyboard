@@ -91,6 +91,15 @@ interface EngineSettings {
      */
     val isKhinsiannInHanjiEnabled: Boolean
 
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isHanLoMixedEnabled.
+
+    /**
+     * Hàn-Lô lām (`AppConfig.han_lo_mixed`): every word also offers its romanization as a
+     * candidate and a next-word prediction of its own. The engine ignores it under
+     * Romanization Only and the TPS layout.
+     */
+    val isHanLoMixedEnabled: Boolean
+
     /**
      * The POJ marker options (double-tap folds + Nasal mark in POJ capitals, §53) bundled as a
      * live-read value so `ComposingState` / `ToneConverter` can stay

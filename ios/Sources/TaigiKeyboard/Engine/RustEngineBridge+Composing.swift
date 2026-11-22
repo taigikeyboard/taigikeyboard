@@ -510,6 +510,7 @@ public extension RustEngineBridge {
             syllableSeparator: settings.syllableSeparator,
             isTpsOrMappedToER: settings.isTpsOrMappedToER,
             isKhinsiannInHanjiEnabled: settings.isKhinsiannInHanjiEnabled,
+            isHanLoMixedEnabled: settings.isHanLoMixedEnabled,
             dictionarySources: dictionaryTogglesProto(DictionaryToggles(from: settings)),
             isCustomDictionaryDisabled: !settings.isCustomDictEnabled,
         )

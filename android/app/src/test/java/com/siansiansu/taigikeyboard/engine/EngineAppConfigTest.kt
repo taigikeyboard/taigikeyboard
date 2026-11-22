@@ -101,6 +101,7 @@ class EngineAppConfigTest {
         assertEquals(ProtoSyllableSeparator.SYLLABLE_SEPARATOR_HYPHEN, config.syllableSeparator)
         assertFalse(config.tpsOrMapsToEr)
         assertFalse(config.khinsiannInHanji)
+        assertFalse(config.hanLoMixed)
     }
 
     @Test
@@ -109,6 +110,14 @@ class EngineAppConfigTest {
         assertFalse(continuousAppConfig(backing).khinsiannInHanji)
         backing.isKhinsiannInHanjiEnabled = true
         assertTrue(continuousAppConfig(backing).khinsiannInHanji)
+    }
+
+    @Test
+    fun continuousAppConfig_forwardsHanLoMixed() {
+        val backing = StubEngineSettings()
+        assertFalse(continuousAppConfig(backing).hanLoMixed)
+        backing.isHanLoMixedEnabled = true
+        assertTrue(continuousAppConfig(backing).hanLoMixed)
     }
 
     // An unknown stored mode keeps each path's historical reading: composing TL, nextword POJ.

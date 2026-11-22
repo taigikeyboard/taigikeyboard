@@ -3799,6 +3799,42 @@
         }
       }
     },
+    "i18n_settings_hanLoMixed": {
+      "comment": "Toggle label (Hàn-Lô lām): every dictionary word also offers its romanization as a candidate and a next-word prediction of its own, ranked and learned on its own and usable in the whole-sentence candidate. Desktop General pane under Tone Keys; mobile Typing section. Disabled under Romanization Only and TPS.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Romanized Words as Candidates"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローマ字語も候補に"
+          }
+        }
+      }
+    },
+    "i18n_settings_hanLoMixedInfo": {
+      "comment": "Help text for the Hàn-Lô lām (romanized words as candidates) toggle.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When on, every word also offers its romanization as a candidate of its own: pick it on its own, and the whole-sentence candidate can use it too, for mixed Hanji and romanization writing."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにすると、各語にローマ字表記の候補も加わります。単独で選べるほか、文全体の候補にも使われ、漢字とローマ字の混在文を書きやすくなります。"
+          }
+        }
+      }
+    },
     "i18n_settings_inputMode": {
       "comment": "Settings row + sub-screen title for selecting the active input mode (mobile). The desktop General pane labels its TL / POJ picker inputScript instead.",
       "extractionState": "manual",

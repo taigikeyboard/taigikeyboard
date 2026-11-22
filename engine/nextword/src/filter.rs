@@ -110,13 +110,20 @@ pub(crate) fn filter(
     //     next word (continuous raw `taigi` vs normal canonical `tâi-gí`)
     //     so 台語 does not surface twice. Runs on MergedRow before shaping
     //     so the key is the raw `tl`, not the POJ-shaped display text.
-    let collapsed =
+    let mut collapsed =
         collapse_reading_variants(merged.into_values().collect(), config.khinsiann_in_hanji);
+
+    // 1c. Hàn-Lô lām (§42): each reading's romanization as a prediction of
+    //     its own, after the collapse so a reading is twinned once.
+    let roman_twins = config.lists_roman_twins();
+    if roman_twins {
+        collapsed = add_roman_twins(collapsed);
+    }
 
     // 2. shape via display rules + drop empty-roman rows in non-Hanji mode.
     let mut shaped: Vec<EnginePrediction> = collapsed
         .into_iter()
-        .filter_map(|m| shape_prediction(m, config))
+        .filter_map(|m| shape_prediction(m, config, roman_twins))
         .collect();
 
     // 3. sort desc by score (stable — equal scores preserve IndexMap
@@ -146,12 +153,22 @@ pub(crate) fn filter(
     // 5. Hanji with Romanization (§42): a prediction with romanization becomes a
     //    Hanji cell then a romanization cell, deduped per script; a Hanji-only
     //    prediction lists its Hanji cell alone. After the truncation, so the
-    //    limit counts predictions, not cells.
+    //    limit counts predictions, not cells. Under Hàn-Lô lām a Hanji
+    //    prediction is a Hanji cell only: its reading's romanization
+    //    prediction is the romanization cell.
     if config.splits_single_script_cells() {
         shaped = protos::split_single_script_cells(
             shaped,
             |p| &p.hanji,
-            |p| if p.subtitle.is_empty() { "" } else { &p.text },
+            |p| {
+                if p.hanji.is_empty() {
+                    &p.text
+                } else if roman_twins || p.subtitle.is_empty() {
+                    ""
+                } else {
+                    &p.text
+                }
+            },
             |p, script| p.set_cell_script(script),
         );
     }
@@ -272,11 +289,80 @@ fn select_canonical_row(
     Some(canonical)
 }
 
+/// How much less likely a reading's romanization is written than its most
+/// written Hanji: `e⁻¹`, the next-word image of the candidate list's
+/// `lexicon` `ROMAN_TWIN_COST_PENALTY` (1000 milli-nats of `−ln p`).
+const ROMAN_TWIN_SCORE_FACTOR: f64 = 0.367_879_441_171_442_3;
+
+/// A row whose stored spelling is all romanization (`kah`, a learned
+/// `tsia̍h`): a word written in romanization, identity `(TL, TL)`.
+fn is_romanization_word(row: &MergedRow) -> bool {
+    phonetics::api::is_roman_only_spelling(&row.hanji)
+}
+
+/// Hàn-Lô lām (§42, `AppConfig::lists_roman_twins`): every reading among the
+/// Hanji predictions also offers its romanization, a prediction whose
+/// identity is `(TL, TL)` — the pair a romanization pick is counted and
+/// learned under, so its learned score is its own. Its bundled prior is the
+/// reading's best Hanji prediction's capped dictionary score ×
+/// [`ROMAN_TWIN_SCORE_FACTOR`]; a romanization row already present (learned,
+/// or a bundled romanization word) is that reading's row, lifted to the prior
+/// when below it. Each new row follows its reading's first Hanji row, so an
+/// equal-score tie keeps it there.
+fn add_roman_twins(rows: Vec<MergedRow>) -> Vec<MergedRow> {
+    use std::collections::{HashMap, HashSet};
+
+    let mut prior: HashMap<String, f64> = HashMap::new();
+    for row in rows
+        .iter()
+        .filter(|row| !row.tl.is_empty() && !is_romanization_word(row))
+    {
+        let twin = row.dict_score.min(scorer::DICT_SCORE_CAP) * ROMAN_TWIN_SCORE_FACTOR;
+        prior
+            .entry(row.tl.clone())
+            .and_modify(|best| *best = best.max(twin))
+            .or_insert(twin);
+    }
+    let mut twinned: HashSet<String> = rows
+        .iter()
+        .filter(|row| is_romanization_word(row))
+        .map(|row| row.tl.clone())
+        .collect();
+    let mut out = Vec::with_capacity(rows.len() * 2);
+    for mut row in rows {
+        let Some(&twin) = prior.get(&row.tl) else {
+            out.push(row);
+            continue;
+        };
+        if is_romanization_word(&row) {
+            row.dict_score = row.dict_score.max(twin);
+            out.push(row);
+            continue;
+        }
+        let tl = row.tl.clone();
+        out.push(row);
+        if twinned.insert(tl.clone()) {
+            out.push(MergedRow {
+                hanji: tl.clone(),
+                tl,
+                dict_score: twin,
+                user_score: 0.0,
+                has_user_score: false,
+            });
+        }
+    }
+    out
+}
+
 fn has_separator(tl: &str) -> bool {
     tl.contains('-') || tl.contains(' ')
 }
 
-fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction> {
+fn shape_prediction(
+    m: MergedRow,
+    config: &AppConfig,
+    roman_twins: bool,
+) -> Option<EnginePrediction> {
     // The TPS layout renders predictions from TL, as it did while TPS arrived as `"tl"`.
     let use_tl = config.input_mode == "tl" || config.is_tps_layout();
     let mut roman = if use_tl {
@@ -292,18 +378,23 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     if !config.is_hanji_first && roman.is_empty() {
         return None;
     }
-    // The shown Hanji, its romanization runs in POJ wherever `roman` is;
-    // `display_text` keeps the stored spelling, the key a pick is counted
-    // under and NextWord learns.
-    let hanji =
+    // Hàn-Lô lām: a word written in romanization is a romanization-only
+    // prediction (no Hanji, no subtitle), like a romanization-only candidate;
+    // the tap writes `text`. Otherwise the shown Hanji, its romanization runs
+    // in POJ wherever `roman` is. `display_text` keeps the stored spelling,
+    // the key a pick is counted under and NextWord learns.
+    let hanji = if roman_twins && !roman.is_empty() && is_romanization_word(&m) {
+        String::new()
+    } else {
         phonetics::api::render_hanji_display(&m.hanji, &m.tl, config.khinsiann_in_hanji, !use_tl)
-            .into_owned();
+            .into_owned()
+    };
     let text = if roman.is_empty() {
         hanji.clone()
     } else {
         roman.clone()
     };
-    let subtitle = if roman.is_empty() {
+    let subtitle = if roman.is_empty() || hanji.is_empty() {
         String::new()
     } else {
         hanji.clone()
@@ -1351,6 +1442,125 @@ mod tests {
                 ("重", "tîng"),
                 ("重", "tāng"),
                 ("好", "hó"),
+            ]
+        );
+    }
+
+    fn han_lo(config: AppConfig) -> AppConfig {
+        AppConfig {
+            han_lo_mixed: true,
+            ..config
+        }
+    }
+
+    /// `(hanji, text, subtitle, display_text)` per prediction, list order.
+    fn shown(rows: Vec<RawNextWordPrediction>, config: &AppConfig) -> Vec<[String; 4]> {
+        filter(&PersistedState::default(), rows, 0, 1_000, 10, config)
+            .unwrap()
+            .predictions
+            .into_iter()
+            .map(|p| [p.hanji, p.text, p.subtitle, p.display_text])
+            .collect()
+    }
+
+    fn cell(hanji: &str, text: &str, subtitle: &str, display_text: &str) -> [String; 4] {
+        [hanji, text, subtitle, display_text].map(str::to_owned)
+    }
+
+    // Hàn-Lô lām: each reading's romanization is a prediction of its own,
+    // priced at e⁻¹ of its best Hanji's capped score — 食 100 → 36.8 sorts
+    // between 隻 40 and 𤆬 30. Off, nothing changes.
+    #[test]
+    fn han_lo_lists_each_readings_romanization_as_a_prediction() {
+        let rows = || {
+            vec![
+                dict_row("食", "tsia̍h", 100),
+                dict_row("隻", "tsiah", 40),
+                dict_row("𤆬", "tsia̍h", 30),
+            ]
+        };
+        let on = han_lo(config_tl_mode_hanji_first(true));
+        assert_eq!(
+            shown(rows(), &on),
+            vec![
+                cell("食", "tsia̍h", "食", "食"),
+                cell("隻", "tsiah", "隻", "隻"),
+                cell("", "tsia̍h", "", "tsia̍h"),
+                cell("𤆬", "tsia̍h", "𤆬", "𤆬"),
+                cell("", "tsiah", "", "tsiah"),
+            ]
+        );
+        assert_eq!(shown(rows(), &config_tl_mode_hanji_first(true)).len(), 3);
+        // Romanization Only already lists every word as its romanization.
+        let roman_only = han_lo(config_roman_only_display());
+        assert!(shown(rows(), &roman_only)
+            .iter()
+            .all(|[hanji, ..]| !hanji.is_empty()));
+    }
+
+    // A learned romanization (the `(TL, TL)` pair a romanization tap stores)
+    // is that reading's prediction with its own score, ahead of the Hanji it
+    // was learned instead of, and the reading gets no second one.
+    #[test]
+    fn han_lo_ranks_a_learned_romanization_on_its_own_score() {
+        let on = han_lo(config_tl_mode_hanji_first(true));
+        assert_eq!(
+            shown(
+                vec![
+                    dict_row("食", "tsia̍h", 100),
+                    user_row("tsia̍h", "tsia̍h", 1, 1_000),
+                ],
+                &on
+            ),
+            vec![
+                cell("", "tsia̍h", "", "tsia̍h"),
+                cell("食", "tsia̍h", "食", "食"),
+            ]
+        );
+    }
+
+    // POJ shows the romanization in POJ; the identity stays TL.
+    #[test]
+    fn han_lo_shows_the_romanization_in_poj_under_poj() {
+        let on = han_lo(config_poj_mode());
+        assert_eq!(
+            shown(vec![dict_row("食", "tsia̍h", 100)], &on),
+            vec![
+                cell("食", "chia̍h", "食", "食"),
+                cell("", "chia̍h", "", "tsia̍h"),
+            ]
+        );
+    }
+
+    // Hanji with Romanization: a Hanji prediction is a Hanji cell only, its
+    // reading's romanization prediction the romanization cell.
+    #[test]
+    fn han_lo_splits_hanji_predictions_into_hanji_cells_only() {
+        let on = AppConfig {
+            candidate_display_mode: CandidateDisplayMode::Combined as i32,
+            ..han_lo(config_tl_mode_hanji_first(true))
+        };
+        let cells: Vec<(String, CellScript)> = filter(
+            &PersistedState::default(),
+            vec![dict_row("食", "tsia̍h", 100)],
+            0,
+            0,
+            10,
+            &on,
+        )
+        .unwrap()
+        .predictions
+        .into_iter()
+        .map(|p| {
+            let script = p.cell_script();
+            (p.text, script)
+        })
+        .collect();
+        assert_eq!(
+            cells,
+            vec![
+                ("tsia̍h".to_owned(), CellScript::Hanji),
+                ("tsia̍h".to_owned(), CellScript::Roman),
             ]
         );
     }

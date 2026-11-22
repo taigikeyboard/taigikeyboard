@@ -44,6 +44,7 @@ internal fun appConfig(
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isTpsOrMappedToER: Boolean = false,
     isKhinsiannInHanjiEnabled: Boolean = false,
+    isHanLoMixedEnabled: Boolean = false,
     dictionarySources: ProtoDictionarySourceToggles? = null,
     // Invert of the Enable Custom Dictionary setting: the engine reads the
     // user's dictionary only with it on. Default `false` = read it.
@@ -65,6 +66,7 @@ internal fun appConfig(
         .setSyllableSeparator(syllableSeparator.toProto())
         .setTpsOrMapsToEr(isTpsOrMappedToER)
         .setKhinsiannInHanji(isKhinsiannInHanjiEnabled)
+        .setHanLoMixed(isHanLoMixedEnabled)
         .apply { if (dictionarySources != null) setDictionarySources(dictionarySources) }
         .setCustomDictionaryDisabled(isCustomDictionaryDisabled)
         .build()
@@ -105,6 +107,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
         syllableSeparator = settings.syllableSeparator,
         isTpsOrMappedToER = settings.isTpsOrMappedToER,
         isKhinsiannInHanjiEnabled = settings.isKhinsiannInHanjiEnabled,
+        isHanLoMixedEnabled = settings.isHanLoMixedEnabled,
         dictionarySources = dictionaryTogglesProto(DictionaryToggles.from(settings)),
         isCustomDictionaryDisabled = !settings.isCustomDictEnabled,
     )

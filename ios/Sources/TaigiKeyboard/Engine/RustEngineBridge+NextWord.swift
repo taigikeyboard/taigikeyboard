@@ -205,6 +205,7 @@ public extension RustEngineBridge {
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         syllableSeparator: SyllableSeparator = .hyphen,
         isKhinsiannInHanjiEnabled: Bool = false,
+        isHanLoMixedEnabled: Bool = false,
         generation: UInt64,
     ) -> NextWordFilterResult {
         var payload = Taigi_Engine_PredictNext()
@@ -227,6 +228,7 @@ public extension RustEngineBridge {
                 candidateDisplayMode: candidateDisplayMode,
                 syllableSeparator: syllableSeparator,
                 isKhinsiannInHanjiEnabled: isKhinsiannInHanjiEnabled,
+                isHanLoMixedEnabled: isHanLoMixedEnabled,
             ),
         ) else {
             return NextWordFilterResult(predictions: [], wasStale: false)

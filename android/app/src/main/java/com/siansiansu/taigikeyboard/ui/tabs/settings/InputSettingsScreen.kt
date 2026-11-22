@@ -83,6 +83,7 @@ fun InputSettingsScreen(
     // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(resetCounter) { mutableStateOf(prefs.storedOutputBothScripts) }
     var khinsiannInHanji by remember(resetCounter) { mutableStateOf(prefs.isKhinsiannInHanjiEnabled) }
+    var hanLoMixed by remember(resetCounter) { mutableStateOf(prefs.isHanLoMixedEnabled) }
     var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var syllableSeparator by remember(resetCounter) { mutableStateOf(prefs.syllableSeparator) }
     var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
@@ -245,6 +246,18 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             khinsiannInHanji = it
                             prefs.isKhinsiannInHanjiEnabled = it
+                        },
+                    )
+                    SettingsDivider()
+                    // Hàn-Lô lām: the engine ignores it under Romanization Only and the TPS layout.
+                    SwitchRow(
+                        label = L10n.settingsHanLoMixed,
+                        checked = hanLoMixed,
+                        infoText = L10n.settingsHanLoMixedInfo,
+                        enabled = candidateDisplayMode.showsHanji,
+                        onCheckedChange = {
+                            hanLoMixed = it
+                            prefs.isHanLoMixedEnabled = it
                         },
                     )
                     SettingsDivider()

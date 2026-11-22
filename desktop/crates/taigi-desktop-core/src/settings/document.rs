@@ -258,6 +258,18 @@ impl SettingsDocument {
                 .shows_hanji()
     }
 
+    /// Whether Hàn-Lô lām takes effect: a cell shows Hanji and the input mode
+    /// is a romanization — Romanization Only already lists every word as its
+    /// romanization, TPS never shows one (`AppConfig::lists_roman_twins`). The
+    /// settings rows grey out where this is false; the engine ignores the
+    /// stored switch there itself.
+    pub fn allows_han_lo_mixed(&self) -> bool {
+        !self.is_typing_tps()
+            && self
+                .choice::<CandidateDisplayMode>(&keys::CANDIDATE_DISPLAY_MODE)
+                .shows_hanji()
+    }
+
     /// Annotate in Brackets as the engine gets it: the stored switch where
     /// [`Self::allows_output_both_scripts`].
     pub fn effective_output_both_scripts(&self) -> bool {
@@ -773,6 +785,27 @@ mod tests {
             doc.bool(&keys::OUTPUT_BOTH_SCRIPTS),
             "stored value untouched"
         );
+    }
+
+    /// Hàn-Lô lām greys out under Romanization Only and TPS, as the engine
+    /// ignores it there.
+    #[test]
+    fn han_lo_mixed_is_allowed_where_cells_show_hanji_under_a_romanization() {
+        let mut doc = SettingsDocument::default();
+        assert!(doc.allows_han_lo_mixed());
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::Combined,
+        );
+        assert!(doc.allows_han_lo_mixed());
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.allows_han_lo_mixed());
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Poj);
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        assert!(!doc.allows_han_lo_mixed());
     }
 
     /// Under combined the candidate projection stays swapped while the
