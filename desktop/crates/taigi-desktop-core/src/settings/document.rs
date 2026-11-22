@@ -394,6 +394,7 @@ impl SettingsDocument {
             is_f_hyphen_enabled: input_mode != InputMode::Tps
                 && self.bool(&keys::IS_F_HYPHEN_ENABLED),
             is_khinsiann_in_hanji_enabled: self.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
+            is_han_lo_mixed_enabled: self.bool(&keys::IS_HAN_LO_MIXED_ENABLED),
             is_output_both_scripts: self.effective_output_both_scripts(),
         }
     }
@@ -948,6 +949,7 @@ mod tests {
         doc.set_bool(&keys::IS_C_AFFRICATE_ENABLED, true);
         doc.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
         doc.set_bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED, true);
+        doc.set_bool(&keys::IS_HAN_LO_MIXED_ENABLED, true);
         doc.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
 
         // trace: stored swap=false under the default SideBySide →
@@ -976,12 +978,15 @@ mod tests {
             is_c_affricate_enabled: true,
             is_f_hyphen_enabled: true,
             is_khinsiann_in_hanji_enabled: true,
+            is_han_lo_mixed_enabled: true,
             is_output_both_scripts: true,
         };
         assert_eq!(doc.engine_settings(), expected);
         doc.reset_general();
         assert!(!doc.contains(keys::IS_KHINSIANN_IN_HANJI_ENABLED.name));
         assert!(!doc.engine_settings().is_khinsiann_in_hanji_enabled);
+        assert!(!doc.contains(keys::IS_HAN_LO_MIXED_ENABLED.name));
+        assert!(!doc.engine_settings().is_han_lo_mixed_enabled);
     }
 
     #[test]

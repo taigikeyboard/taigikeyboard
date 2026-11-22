@@ -342,6 +342,11 @@ pub struct EngineSettings {
     /// Swift twin of the default: `EngineSettings.swift`
     /// `isKhinsiannInHanjiEnabled`.
     pub is_khinsiann_in_hanji_enabled: bool,
+    /// Hàn-Lô lām: every dictionary word also offers its romanization as a
+    /// word of its own (`AppConfig.han_lo_mixed`). Off by default. macOS
+    /// keeps a Swift twin of the default: `EngineSettings.swift`
+    /// `isHanLoMixedEnabled`.
+    pub is_han_lo_mixed_enabled: bool,
     /// Annotate in Brackets — `AppConfig.output_both_scripts`. The EFFECTIVE
     /// value (`SettingsDocument::effective_output_both_scripts`, the twin of mobile
     /// `effectiveOutputBothScripts` plus the TPS mask); the stored key stays untouched. Off by
@@ -378,6 +383,7 @@ impl EngineSettings {
             is_c_affricate_enabled: false,
             is_f_hyphen_enabled: false,
             is_khinsiann_in_hanji_enabled: false,
+            is_han_lo_mixed_enabled: false,
             is_output_both_scripts: false,
         }
     };

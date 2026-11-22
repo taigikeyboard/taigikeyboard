@@ -71,6 +71,12 @@ pub(crate) struct EdgeChoice {
     /// `(Hanji, canonical-TL)` identity (`AGENTS.md` Core Principle 6). Empty
     /// for a synthesized OOV edge, which has none.
     pub canonical_tl: String,
+    /// The chosen word's stored identity text (`RawCandidate.display_text`):
+    /// its Hanji as stored — a learned Han-Lo phrase in TL even when its
+    /// shown `hanji` is POJ — or its canonical TL for a romanization word.
+    /// Empty for a synthesized OOV edge. The slot-0 identity is joined from
+    /// these, so it does not change with the input mode.
+    pub display_text: String,
     /// `true` iff this edge resolved to a **lexicon-backed hit**: a
     /// `dict.bin` record (provider `Some(c)` branch) or a
     /// `custom_dictionary.db` entry (v3.5.8 S6 custom-precedence
@@ -333,6 +339,7 @@ mod tests {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
             canonical_tl: roman.to_owned(),
+            display_text: hanji.to_owned(),
             dict_hit: true,
             is_custom: false,
             walker_cost,
@@ -357,6 +364,7 @@ mod tests {
             roman: r.to_owned(),
             hanji: None,
             canonical_tl: String::new(),
+            display_text: String::new(),
             dict_hit: false,
             is_custom: false,
             walker_cost: 0,
@@ -375,6 +383,7 @@ mod tests {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
             canonical_tl: roman.to_owned(),
+            display_text: hanji.to_owned(),
             dict_hit: true,
             is_custom: true,
             walker_cost,

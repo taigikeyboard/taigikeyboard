@@ -253,6 +253,7 @@ fn handle_fetch_at_pos(
             .collect();
         ListedAbbreviations::new(basis, rows)
     });
+    let roman_twins = listed.roman_twins;
     let candidates: Vec<CandidateMessage> = listed
         .candidates
         .into_iter()
@@ -262,7 +263,15 @@ fn handle_fetch_at_pos(
         protos::split_single_script_cells(
             candidates,
             |c| c.hanji.as_deref().unwrap_or_default(),
-            |c| &c.roman,
+            // With roman twins a Hanji row draws no roman cell: its reading's
+            // roman-only row is that cell.
+            |c| {
+                if roman_twins && c.hanji.as_deref().is_some_and(|h| !h.is_empty()) {
+                    ""
+                } else {
+                    &c.roman
+                }
+            },
             |c, script| c.set_cell_script(script),
         )
     } else {
@@ -290,8 +299,19 @@ pub(crate) struct Listed {
     /// The Step 4d post-pass moved the one-word walker path ahead of
     /// one-syllable prefix picks (`continuous::assemble`).
     pub(crate) walker_moved: bool,
+    /// Every reading has its own roman-only row (`continuous::han_lo`), so
+    /// the §42 split draws Hanji rows as Hanji cells only.
+    pub(crate) roman_twins: bool,
     /// Hanji leaked into the buffer: an empty list, no cut.
     pub(crate) blocked: bool,
+}
+
+/// Whether this fetch lists Hàn-Lô lām romanization rows
+/// (`AppConfig::lists_roman_twins`): only a TL / POJ buffer, so a TPS-glyph
+/// buffer typed on a roman layout never offers one.
+pub(crate) fn lists_roman_twins(config: &AppConfig, mode: phonetics::InputMode) -> bool {
+    config.lists_roman_twins()
+        && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
 }
 
 /// The candidate list [`handle_fetch_at_pos`] encodes, plus the buffer it
@@ -338,6 +358,7 @@ pub(crate) fn listed_candidates(
             candidates: Vec::new(),
             literal_at: None,
             walker_moved: false,
+            roman_twins: false,
             blocked: true,
         });
     }
@@ -388,6 +409,8 @@ pub(crate) fn listed_candidates(
         config,
         shape,
     );
+    // Hàn-Lô lām: the lexicon gave every reading its romanization-only row.
+    let roman_twins = lists_roman_twins(config, mode);
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
     // (= the preedit WYSIWYG) as a roman-only candidate at index 0, so Hanji-romanization
@@ -413,10 +436,10 @@ pub(crate) fn listed_candidates(
             // so the literal is not duplicated; dict rows with hanji stay (a
             // `tâi`/台 dict candidate and a bare `tâi` commit differ — Codex
             // pre-impl F5).
-            candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
-            if config.is_single_script_display() {
-                adopt_collapsed_dict_identity(&mut literal, &candidates);
+            if roman_twins || config.is_single_script_display() {
+                adopt_collapsed_dict_identity(&mut literal, &candidates, roman_twins);
             }
+            candidates.retain(|c| !(c.hanji.is_none() && c.roman == literal.roman));
             candidates.insert(0, literal);
             literal_at = Some(0);
         }
@@ -450,6 +473,7 @@ pub(crate) fn listed_candidates(
         candidates,
         literal_at,
         walker_moved,
+        roman_twins,
         blocked: false,
     })
 }
@@ -484,10 +508,19 @@ fn dedupe_display_roman(candidates: &mut Vec<RawCandidate>) {
 /// dictionary word joins a compound run with the nailed prefix
 /// (`nailed::nailed_prefix`, `台` + literal `gí` → `tâi-gí`), exactly as the
 /// absorbed dictionary cell would have.
-fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCandidate]) {
+///
+/// With Hàn-Lô lām (`roman_twins`) — under any display it applies to — the
+/// Hanji rows keep their own cells and the literal absorbs the reading's
+/// romanization-only row instead, so it learns the romanization, never a
+/// Hanji word.
+fn adopt_collapsed_dict_identity(
+    literal: &mut RawCandidate,
+    candidates: &[RawCandidate],
+    roman_twins: bool,
+) {
     let Some(absorbed) = candidates
         .iter()
-        .find(|c| c.hanji.is_some() && c.roman == literal.roman)
+        .find(|c| c.hanji.is_some() != roman_twins && c.roman == literal.roman)
     else {
         return;
     };
@@ -847,6 +880,7 @@ mod tests {
             c_types_affricate: false,
             f_types_hyphen: false,
             khinsiann_in_hanji: false,
+            han_lo_mixed: false,
         }
     }
 

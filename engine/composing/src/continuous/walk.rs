@@ -233,6 +233,7 @@ pub(crate) fn walk_buffer(
                         roman: c.roman,
                         hanji: c.hanji,
                         canonical_tl: c.canonical_tl,
+                        display_text: c.display_text,
                         // S5 (Codex pre-impl Q2 BLOCK): explicit
                         // dict-hit flag — the `Some(c)` branch IS a
                         // dictionary record. The no-dict carve-out must
@@ -298,6 +299,7 @@ pub(crate) fn walk_buffer(
                         roman: toneless,
                         hanji: None,
                         canonical_tl: String::new(),
+                        display_text: String::new(),
                         dict_hit: false,
                         // S6: a synthesized OOV roman edge is not custom.
                         is_custom: false,
@@ -505,12 +507,11 @@ pub(super) fn walker_slot0(
             }
         };
     let raw_hanji: Option<String> = hanji_spelled.then(|| {
-        path.edges
-            .iter()
-            .zip(&path.choices)
-            .zip(&parts)
-            .map(|((&(s, e), choice), part)| edge_piece(s, e, choice, part))
-            .collect()
+        let mut out = String::new();
+        for ((&(s, e), choice), part) in path.edges.iter().zip(&path.choices).zip(&parts) {
+            push_sentence_piece(&mut out, &edge_piece(s, e, choice, part));
+        }
+        out
     });
     // The shown Hanji (`render_hanji_display`); `display_text` below keeps the
     // stored spellings. A custom edge's Hanji stays as the user saved it.
@@ -535,6 +536,9 @@ pub(super) fn walker_slot0(
                         .hyphen_runs
                         .iter()
                         .any(|&(b, run)| b == s && run >= 2);
+                if !khinsiann_before {
+                    push_romanized_word_space(&mut out, &piece);
+                }
                 phonetics::api::push_hanji_with_interword_khinsiann(
                     &mut out,
                     &piece,
@@ -569,7 +573,25 @@ pub(super) fn walker_slot0(
     // The fold drops the per-edge recase: a pick counted under `Kóng` would
     // rank nothing typed `kong`.
     let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
-    let display_text = raw_hanji.unwrap_or_else(|| canonical_tl.clone());
+    // The identity, joined from each edge's own (`EdgeChoice::display_text`):
+    // the stored Hanji, the canonical TL of a romanization word — so a
+    // sentence holding one is the same word under TL and POJ input. A
+    // synthesized OOV edge falls back to its folded roman.
+    let display_text = if hanji_spelled {
+        let mut out = String::new();
+        for (choice, part) in path.choices.iter().zip(&parts) {
+            let piece = match (&choice.hanji, choice.display_text.is_empty()) {
+                (_, false) => choice.display_text.clone(),
+                (Some(hanji), true) => hanji.clone(),
+                (None, true) if !choice.canonical_tl.is_empty() => choice.canonical_tl.clone(),
+                (None, true) => phonetics::api::canonical_tl_form(part, mode),
+            };
+            push_sentence_piece(&mut out, &piece);
+        }
+        out
+    } else {
+        canonical_tl.clone()
+    };
     // R5 pair-key (#7): walker synth keyed by (display_text,
     // canonical_tl); `get` returns the neutral default on a miss.
     // Normalize `--` on pure-Hanji words so custom `--` entries share
@@ -594,6 +616,25 @@ pub(super) fn walker_slot0(
         is_custom: path.choices.iter().any(|c| c.is_custom),
         edge_count: path.edges.len(),
     }
+}
+
+/// Two words in romanization meeting in the sentence's Hanji keep a word
+/// space between them (`我kap i食`), as the nailed commit spaces them
+/// (`nailed::has_word_space_boundary`); a romanized word beside Hanji is
+/// written against it (`我kap`).
+fn push_romanized_word_space(out: &mut String, piece: &str) {
+    if crate::commit_text::ends_in_romanization(out)
+        && crate::commit_text::starts_with_romanization(piece)
+    {
+        out.push(' ');
+    }
+}
+
+/// Appends one edge's piece to the sentence's Hanji, spaced by
+/// [`push_romanized_word_space`].
+fn push_sentence_piece(out: &mut String, piece: &str) {
+    push_romanized_word_space(out, piece);
+    out.push_str(piece);
 }
 
 #[cfg(test)]

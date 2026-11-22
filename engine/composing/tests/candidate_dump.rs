@@ -34,6 +34,12 @@
 //! # Show Typed Text First off (the default on every platform): no §34 literal
 //! DUMP_NO_LITERAL=1 DUMP_INPUTS="huh" \
 //!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
+//! # Candidate Display: DUMP_DISPLAY=combined (Hanji with Romanization) | roman
+//! DUMP_DISPLAY=combined DUMP_INPUTS="kah" \
+//!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
+//! # Hàn-Lô lām on (romanizations as words, in the list and the sentence)
+//! DUMP_HANLO=1 DUMP_INPUTS="guakahli" \
+//!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
 //! # many inputs, one per line, verbatim (keeps a TPS trailing space)
 //! DUMP_INPUTS_FILE=/tmp/inputs.txt DUMP_MODE=tps \
 //!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
@@ -115,13 +121,21 @@ fn dump_continuous_candidates() {
     // DUMP_BITMASK lets a run mimic the device's source-toggle filter
     // (e.g. dev on + itaigi off) — the source / variant bits 0-12, sent as
     // the config's switches. Default: every source.
-    let cfg = match std::env::var("DUMP_BITMASK")
+    let mut cfg = match std::env::var("DUMP_BITMASK")
         .ok()
         .and_then(|s| s.parse::<u32>().ok())
     {
         Some(bitmask) => config_with_sources(&mode, sources_from_bitmask(bitmask)),
         None => config(&mode),
     };
+    // DUMP_DISPLAY=combined|roman — Candidate Display (default side by side).
+    cfg.candidate_display_mode = match std::env::var("DUMP_DISPLAY").as_deref() {
+        Ok("combined") => protos::engine::CandidateDisplayMode::Combined as i32,
+        Ok("roman") => protos::engine::CandidateDisplayMode::RomanOnly as i32,
+        _ => cfg.candidate_display_mode,
+    };
+    // DUMP_HANLO=1 — Hàn-Lô lām: every word's romanization as a word of its own.
+    cfg.han_lo_mixed = std::env::var("DUMP_HANLO").is_ok_and(|v| v == "1");
 
     // DUMP_FREQ="更新:king-sin:10;羽:ú:10:7200000" — simulated
     // user_frequency rows `display:tl:count[:age_ms]`, default age 1 s.
@@ -186,7 +200,8 @@ fn dump_continuous_candidates() {
         );
         for (i, cand) in candidates.iter().enumerate() {
             println!(
-                "  [{i:>3}] end={} syll={} roman={:<16} hanji={} display={} tl={}",
+                "  [{i:>3}] {:<6} end={} syll={} roman={:<16} hanji={} display={} tl={}",
+                format!("{:?}", cand.cell_script()),
                 cand.consumed_span_end,
                 cand.syllable_count,
                 cand.roman,

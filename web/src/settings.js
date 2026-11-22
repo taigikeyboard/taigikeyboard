@@ -192,6 +192,7 @@ export class Settings {
       candidateTextSize,
       fontType,
       inputMode,
+      hanLoMixedEnabled,
       isTranslateSwapped,
       khinsiannInHanjiEnabled,
       outputBothScripts,
@@ -217,6 +218,9 @@ export class Settings {
     const isRomanOnly = candidateDisplayMode.value === "romanOnly";
     isTranslateSwapped.disabled = isRomanOnly;
     khinsiannInHanjiEnabled.disabled = isRomanOnly;
+    // Romanization Only already lists every word as its romanization, and TPS
+    // never shows one (`lists_roman_twins`).
+    hanLoMixedEnabled.disabled = isRomanOnly || isTyping;
     // TPS commits its Hanji as shown: brackets would land on picks only
     // (`allows_output_both_scripts`).
     outputBothScripts.disabled = isRomanOnly || isTyping;

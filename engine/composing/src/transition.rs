@@ -1609,23 +1609,44 @@ fn next_word_word_selected(
 /// separator, USER 2026-09-22). The cap counts
 /// the joined TL, not the segments' echoed `syllable_count` — that is
 /// platform input, and the TL is what the phrase stores.
+///
+/// Under Hàn-Lô lām (`AppConfig::lists_roman_twins`) a picked hanji-less
+/// segment — a word written in romanization — stands in the phrase as its
+/// canonical TL, as the whole-sentence candidate writes it (`我kap伊`), with a
+/// space between two romanized words (`我 kap i` reads `我kap i`); the phrase
+/// still needs one Hanji segment, since one in romanization alone is already
+/// its reading's romanization row.
 fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<LearnedEntry> {
     if nailed.len() < 2 {
         return None;
     }
+    let han_lo = config.lists_roman_twins();
     let mut hanji = String::new();
+    let mut any_hanji = false;
     for seg in nailed {
-        if !seg.is_picked {
+        if !seg.is_picked || seg.association_tl.is_empty() {
             return None;
         }
-        // `commit_continuous` stored an empty hanji as `None` already. The
-        // phrase stores the segment's stored spelling (`canonical_text`), not
-        // the shown Hanji, which POJ mode renders.
-        seg.hanji.as_deref()?;
-        if seg.association_tl.is_empty() {
-            return None;
+        // `commit_continuous` stored an empty hanji as `None` already. A
+        // Hanji piece is the segment's stored spelling (`canonical_text`),
+        // not the shown Hanji, which POJ mode renders.
+        let piece = match seg.hanji {
+            Some(_) => {
+                any_hanji = true;
+                phonetics::api::strip_khinsiann_hanji(&seg.canonical_text)
+            }
+            None if han_lo => seg.association_tl.clone(),
+            None => return None,
+        };
+        if crate::commit_text::ends_in_romanization(&hanji)
+            && crate::commit_text::starts_with_romanization(&piece)
+        {
+            hanji.push(' ');
         }
-        hanji.push_str(&phonetics::api::strip_khinsiann_hanji(&seg.canonical_text));
+        hanji.push_str(&piece);
+    }
+    if !any_hanji {
+        return None;
     }
     let canonical_tl = canonical_separators(&crate::nailed::learned_reading(nailed, config));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();

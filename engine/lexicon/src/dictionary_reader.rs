@@ -64,6 +64,8 @@ pub const NO_ROWID: u32 = 0;
 /// `IS_VARIANT_BIT` at bit 12. Drift causes silent filter divergence.
 pub const KAUTIAN_BIT: u16 = 1 << 0;
 pub const KHIIN_BIT: u16 = 1 << 9;
+/// LKK Han-Lo Recommended Characters (`dictionary/supplementary/lkk`).
+pub const LKK_BIT: u16 = 1 << 11;
 pub const VARIANT_BIT: u16 = 1 << 12;
 
 /// kautian subcollection subtag (dictionary.bin v3) — a SEPARATE u16 per

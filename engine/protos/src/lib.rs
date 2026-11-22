@@ -57,6 +57,15 @@ impl engine::AppConfig {
             && !self.is_tps_layout()
     }
 
+    /// Whether every dictionary word also lists its romanization as a word of
+    /// its own (Hàn-Lô lām, `han_lo_mixed`): on, except under Romanization
+    /// Only — where every cell is already the romanization — and on the TPS
+    /// layout, which never shows one. A TPS-glyph buffer on a roman layout is
+    /// excluded by the caller, which knows the buffer's mode.
+    pub fn lists_roman_twins(&self) -> bool {
+        self.han_lo_mixed && !self.is_roman_only_display() && !self.is_tps_layout()
+    }
+
     /// Whether the composition renders Hanji first: the swap, or the TPS
     /// layout (which shows Hanji / Bopomofo, never the romanization).
     pub fn renders_hanji_first(&self) -> bool {

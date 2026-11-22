@@ -367,6 +367,60 @@ fn a_hanji_less_segment_blocks_learning() {
     }
 }
 
+/// [`learn`] with Hàn-Lô lām on (`AppConfig.han_lo_mixed`).
+fn learn_han_lo(raw: &str, picks: &[Pick<'_>]) -> Option<LearnedEntry> {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let config = protos::engine::AppConfig {
+        han_lo_mixed: true,
+        ..config_tl()
+    };
+    let mut e = engine_in_continuous(raw);
+    let mut last = None;
+    for p in picks {
+        last = Some(e.apply_learning(pick(*p), &config));
+    }
+    last.expect("at least one pick").learned
+}
+
+// Hàn-Lô lām: a word picked in romanization stands in the phrase as its
+// canonical TL, as the whole-sentence candidate writes it.
+#[test]
+fn han_lo_learns_a_mixed_phrase() {
+    assert_eq!(
+        learn_han_lo(
+            "kikhilai",
+            &[(Some("記"), "kì", 2, 1), (None, "khí-lâi", 6, 2)]
+        ),
+        phrase("記khí-lâi", "kì khí-lâi")
+    );
+}
+
+// Two romanized words keep the word space between them.
+#[test]
+fn han_lo_spaces_two_romanized_words() {
+    assert_eq!(
+        learn_han_lo(
+            "kikhilai",
+            &[
+                (Some("記"), "kì", 2, 1),
+                (None, "khí", 3, 1),
+                (None, "lâi", 3, 1)
+            ]
+        ),
+        phrase("記khí lâi", "kì khí lâi")
+    );
+}
+
+// A phrase with no Hanji at all is its own romanization row already.
+#[test]
+fn han_lo_never_learns_an_all_romanized_phrase() {
+    assert_eq!(
+        learn_han_lo("kikhilai", &[(None, "kì", 2, 1), (None, "khí-lâi", 6, 2)]),
+        None
+    );
+}
+
 #[test]
 fn missing_canonical_tl_blocks_learning() {
     // Legacy caller / TPS-OOV: `association_tl` empty → no key to learn under.

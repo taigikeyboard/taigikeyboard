@@ -241,6 +241,11 @@
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "漢字顯示輕聲（--）", "tailo": "Hàn-jī hián-sī khin-siann (--)", "poj": "Hàn-jī hián-sī khin-siaⁿ (--)", "en": "Neutral Tone in Hanji (--)", "ja": "漢字に軽声（--）を表示" }
     },
+    "hanLoMixed": {
+      "comment": "Toggle label (Hàn-Lô lām), desktop General pane under Tone Keys: every dictionary word also offers its romanization as a candidate of its own, ranked and learned on its own and usable in the whole-sentence candidate. Disabled under Romanization Only and TPS. Prototype: macOS and Web so far.",
+      "scope": { "platforms": ["macos", "web"], "surfaces": ["host"] },
+      "values": { "hanji": "漢羅濫", "tailo": "Hàn-Lô lām", "poj": "Hàn-Lô lām", "en": "Romanized Words as Candidates", "ja": "ローマ字語も候補に" }
+    },
     "khinsiannInHanjiInfo": {
       "comment": "Help text for the neutral-tone in Hanji toggle.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

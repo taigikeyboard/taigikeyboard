@@ -392,6 +392,8 @@ pub(crate) fn convert(
                 tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps, None),
                 whole_buffer_key: None,
                 khinsiann_in_hanji: config.khinsiann_in_hanji,
+                // A TPS walk never offers a romanization.
+                roman_twins: false,
             };
             // The user's counts for every word an edge could take, the
             // custom and learned ones included: user weight both picks an

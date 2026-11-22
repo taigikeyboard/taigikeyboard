@@ -68,6 +68,7 @@ mod candidate;
 mod compound;
 mod edge;
 mod exact;
+mod han_lo;
 mod partial_prefix;
 mod reach;
 mod tone_pin;
@@ -378,6 +379,10 @@ pub struct ContinuousFetchCtx<'a> {
     /// output (`AppConfig.khinsiann_in_hanji`). Used for custom-vs-builtin
     /// displayed-Hanji collision checks.
     pub khinsiann_in_hanji: bool,
+    /// Hàn-Lô lām (`AppConfig::lists_roman_twins`, and the fetch's mode is
+    /// TL / POJ): every reading also offers its romanization as a word of its
+    /// own ([`han_lo`]). `false` = the dictionary rows as stored.
+    pub roman_twins: bool,
 }
 
 /// Span aliases for [`fetch_candidates_for_keys_with_barriers`]: `(start_byte, end_byte)`

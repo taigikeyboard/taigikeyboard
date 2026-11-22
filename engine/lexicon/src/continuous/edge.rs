@@ -114,12 +114,24 @@ pub fn best_candidate_for_key_with_barriers(
     if !custom.is_empty() {
         dedupe_by_roman_hanji_span(&mut homophones, ctx.khinsiann_in_hanji);
     }
+    // Hàn-Lô lām: each reading's romanization joins the pick as a word of its
+    // own. The edge stays priced as without it — `span_walker_cost` above, and
+    // the bigram on the word the Hanji pick would write — so a romanization
+    // changes the word an edge writes, never the segmentation.
+    let hanji_bigram_rowid = if ctx.roman_twins {
+        let at = context_free_winner(&homophones, consumed_span.1)?;
+        let rowid = homophones[at].rowid;
+        super::han_lo::add_roman_twins(&mut homophones, ctx);
+        Some(rowid)
+    } else {
+        None
+    };
     let (candidate, bigram_rowid) =
         pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
     Some(EdgeBest {
         candidate,
         span_walker_cost,
-        bigram_rowid,
+        bigram_rowid: hanji_bigram_rowid.unwrap_or(bigram_rowid),
     })
 }
 
@@ -152,11 +164,8 @@ fn pick_edge_word(
             CandidateSortKey::without_context(&facts, raw_len, i as u32)
         }
     };
-    let (baseline_index, syllable_count) = homophones
-        .iter()
-        .enumerate()
-        .min_by_key(|(i, homophone)| edge_key(*i, homophone, false))
-        .map(|(i, cand)| (i, cand.syllable_count))?;
+    let baseline_index = context_free_winner(&homophones, raw_len)?;
+    let syllable_count = homophones[baseline_index].syllable_count;
     let index = if context_free {
         baseline_index
     } else {
@@ -170,6 +179,17 @@ fn pick_edge_word(
     };
     let bigram_rowid = homophones[baseline_index].rowid;
     Some((homophones.into_iter().nth(index)?, bigram_rowid))
+}
+
+/// The index of the edge's context-free word among `homophones`.
+fn context_free_winner(homophones: &[RawCandidate], raw_len: u32) -> Option<usize> {
+    homophones
+        .iter()
+        .enumerate()
+        .min_by_key(|(i, cand)| {
+            CandidateSortKey::without_context(&cand.rank_facts(), raw_len, *i as u32)
+        })
+        .map(|(i, _)| i)
 }
 
 /// The words [`best_candidate_for_key_with_barriers`] picks the edge's word

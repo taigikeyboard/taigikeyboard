@@ -421,6 +421,7 @@ mod tests {
             roman: String::new(),
             hanji: None,
             canonical_tl: String::new(),
+            display_text: String::new(),
             dict_hit,
             is_custom: false,
             walker_cost,

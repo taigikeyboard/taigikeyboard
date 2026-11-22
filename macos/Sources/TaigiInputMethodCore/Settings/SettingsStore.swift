@@ -99,6 +99,11 @@ final class SettingsStore: @unchecked Sendable {
             name: "khinsiannInHanjiEnabled",
             defaultValue: EngineSettings.defaults.isKhinsiannInHanjiEnabled,
         )
+        /// Hàn-Lô lām — desktop-core `keys::IS_HAN_LO_MIXED_ENABLED`.
+        static let isHanLoMixedEnabled = SettingsKey(
+            name: "hanLoMixedEnabled",
+            defaultValue: EngineSettings.defaults.isHanLoMixedEnabled,
+        )
         /// Annotate in Brackets — desktop-core `keys::OUTPUT_BOTH_SCRIPTS`, the
         /// mobile spelling.
         static let isOutputBothScripts = SettingsKey(
@@ -655,6 +660,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isTpsKeyboardShown.name,
             Keys.isTelexGuideShown.name,
             Keys.toneInputScheme.name,
+            Keys.isHanLoMixedEnabled.name,
             Keys.isCAffricateEnabled.name,
             Keys.isFHyphenEnabled.name,
             Keys.isHanjiFirst.name,

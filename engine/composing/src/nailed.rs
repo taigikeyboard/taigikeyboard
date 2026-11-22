@@ -556,6 +556,7 @@ mod tests {
             c_types_affricate: false,
             f_types_hyphen: false,
             khinsiann_in_hanji: false,
+            han_lo_mixed: false,
         }
     }
 

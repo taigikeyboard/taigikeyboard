@@ -181,6 +181,7 @@ pub(crate) fn assemble_candidates(
     let force_lowercase_nasal_marker = config.force_lowercase_nasal_marker;
     let dedupe_commit_hanji = super::dedupe::should_dedupe_commit_hanji(config, mode);
     let khinsiann_in_hanji = config.khinsiann_in_hanji;
+    let roman_twins = crate::requests::lists_roman_twins(config, mode);
     LexiconHandle::with_state(|state| {
         let inv = state.syllable_inventory.as_ref();
         let prefix = state.prefix_index.as_ref();
@@ -232,6 +233,7 @@ pub(crate) fn assemble_candidates(
                     .then(|| build_partial_prefix_key(raw, mode).map(|(_, key)| key))
                     .flatten(),
                 khinsiann_in_hanji,
+                roman_twins,
             });
 
         // ---- Step 1: build keys + shadow/lattice (D1 fold).

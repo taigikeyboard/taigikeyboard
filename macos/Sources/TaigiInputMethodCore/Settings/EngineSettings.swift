@@ -190,6 +190,11 @@ struct EngineSettings: Sendable {
     /// Mirrors desktop-core `EngineSettings::is_khinsiann_in_hanji_enabled`, OFF.
     let isKhinsiannInHanjiEnabled: Bool
 
+    /// Hàn-Lô lām: every dictionary word also offers its romanization as a
+    /// candidate of its own. Mirrors desktop-core
+    /// `EngineSettings::is_han_lo_mixed_enabled`, OFF.
+    let isHanLoMixedEnabled: Bool
+
     /// Annotate in Brackets: a candidate commit writes both scripts,
     /// `Hanji (romanization)`. Mirrors desktop-core
     /// `EngineSettings::is_output_both_scripts`, OFF.
@@ -213,6 +218,7 @@ struct EngineSettings: Sendable {
         isCAffricateEnabled: false,
         isFHyphenEnabled: false,
         isKhinsiannInHanjiEnabled: false,
+        isHanLoMixedEnabled: false,
         isOutputBothScripts: false,
     )
 }
