@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
@@ -58,9 +60,10 @@ fun KeyPopupBox(state: PreviewState.Visible) {
                     style =
                         TextStyle(
                             color = Color(display.fgColorArgb),
-                            fontSize = popupTextSp,
                             textAlign = TextAlign.Center,
                         ),
+                    maxLines = 1,
+                    autoSize = shrinkToFit(popupTextSp),
                 )
             }
             Box(
@@ -207,16 +210,17 @@ private fun ExtendedCell(
             cell.label != null -> {
                 val fontFamily =
                     if (cell.useCustomTypeface) customFontFamily else FontFamily.Default
-                val textPx = display.popupTextSizePx * cell.textScale
+                val textSize = with(density) { (display.popupTextSizePx * cell.textScale).toSp() }
                 BasicText(
                     text = cell.label,
                     style =
                         TextStyle(
                             color = Color(display.fgColorArgb),
-                            fontSize = with(density) { textPx.toSp() },
                             fontFamily = fontFamily,
                             textAlign = TextAlign.Center,
                         ),
+                    maxLines = 1,
+                    autoSize = shrinkToFit(textSize),
                 )
             }
         }
@@ -247,3 +251,9 @@ private fun PopupBackground(
         content = content,
     )
 }
+
+/**
+ * One-line popup text at [fontSize], shrunk to fit its cell when wider (`……` is two full-width cells).
+ * The floor is relative, as the layout picker's `AutoSizeLabel` and iOS `minimumScaleFactor(0.5)`.
+ */
+private fun shrinkToFit(fontSize: TextUnit): TextAutoSize = TextAutoSize.StepBased(minFontSize = fontSize * 0.5f, maxFontSize = fontSize)

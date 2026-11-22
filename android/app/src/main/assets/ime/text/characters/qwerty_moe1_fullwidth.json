@@ -46,7 +46,7 @@
         { "code": 12290, "label": "。" },
         { "code": 65281, "label": "！" },
         { "code": 65311, "label": "？" },
-        { "code":  8230, "label": "…" }
+        { "code":     0, "label": "……" }
       ] },
       { "code":   40, "label": "(", "popup": [
         { "code": 65288, "label": "（" },

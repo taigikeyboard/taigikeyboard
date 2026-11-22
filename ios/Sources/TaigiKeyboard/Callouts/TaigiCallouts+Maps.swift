@@ -97,7 +97,7 @@ public extension TaigiCallouts {
         static let actions: [String: [String]] = [
             // Full-width keys (when isFullWidthPunctuation)
             "，": ["，", "、", "；", "："],
-            "。": ["。", "！", "？", "…"],
+            "。": ["。", "！", "？", "……"],
             // Half-width keys (when not isFullWidthPunctuation)
             ",": ["，", "、", "；", "："],
             ".": ["。", "！", "？", "…"],
@@ -119,7 +119,7 @@ public extension TaigiCallouts {
             // Comma (half-width)
             ",": ["，", "、", "；", "：", "（", "「"],
             // Period (full-width)
-            "。": ["。", "！", "？", "…", "）", "」"],
+            "。": ["。", "！", "？", "……", "）", "」"],
             // Period (half-width)
             ".": ["。", "！", "？", "…", "）", "」"],
             // Question mark (full-width)
@@ -179,7 +179,7 @@ public extension TaigiCallouts {
             "-": ["·", "–", "—", "﹏"],
             "—": ["─", "–"],
             "…": ["⋯", "‥"],
-            "⋯": ["…", "‥"],
+            "……": ["⋯", "…", "‥"],
             "$": ["€", "£", "¥", "¢", "₩"],
             "%": ["‰", "‱"],
             "#": ["＃", "№"],
