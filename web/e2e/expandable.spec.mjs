@@ -408,7 +408,9 @@ test("a mode change plays over a still copy that leaves no trace", async ({
   await expectCollapsed(page);
   await settled(page);
   const copy = { ids: 0, hidden: "true", pointer: "none", removed: true };
-  expect(await copies(page)).toEqual([copy, copy]);
+  // `settled` sees no animations once the last one finishes, but its
+  // `onfinish` (which removes the copy) and the observer run a task later.
+  await expect.poll(() => copies(page)).toEqual([copy, copy]);
   await expect(page.locator("[data-ghost]")).toHaveCount(0);
 });
 
