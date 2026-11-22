@@ -18,11 +18,12 @@ use lexicon::{ConsumedSpan, RawCandidate};
 /// in the **current candidate vector** at the moment this fn runs
 /// (post-sort, post whole-sentence prepend), so the prepended
 /// best-walk-path candidate at index 0 is never dropped. It is
-/// behavior-neutral whenever `hanji` is `Some`: the collision key
-/// pins the same hanji and `display_text` (the commit /
-/// `user_frequency.db` key) is that hanji for BOTH the custom and the
-/// `dict.bin` candidate, so which row survives cannot change what
-/// commits.
+/// behavior-neutral whenever `hanji` is `Some` and both rows store that
+/// spelling: `display_text` (the commit / `user_frequency.db` key) is that
+/// hanji for BOTH the custom and the `dict.bin` candidate. In POJ mode a
+/// custom row saved as `親chiâⁿ` and the dictionary's `親tsiânn` (shown as
+/// `親chiâⁿ`) also collide; the earlier row wins and its `display_text`
+/// is what the pick counts under.
 ///
 /// B-4 deliberately leaves `entry.roman` raw (the walker /
 /// `custom_toneless_key` need it in the user's native form so POJ-family

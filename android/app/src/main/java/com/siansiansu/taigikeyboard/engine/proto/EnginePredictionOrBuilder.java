@@ -49,11 +49,21 @@ public interface EnginePredictionOrBuilder extends
       getSubtitleBytes();
 
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    * @return The hanji.
    */
   java.lang.String getHanji();
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    * @return The bytes for hanji.
    */
@@ -102,4 +112,28 @@ public interface EnginePredictionOrBuilder extends
    * @return The cellScript.
    */
   com.siansiansu.taigikeyboard.engine.proto.CellScript getCellScript();
+
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   * @return The displayText.
+   */
+  java.lang.String getDisplayText();
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   * @return The bytes for displayText.
+   */
+  com.google.protobuf.ByteString
+      getDisplayTextBytes();
 }

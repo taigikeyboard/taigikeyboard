@@ -1,0 +1,10 @@
+{
+  "id": "s1079-poj-han-lo-hanji",
+  "source": "Discord #bugs report 2026-11-22 (screenshot): POJ mode `chhinchiaⁿ` listed the Han-Lo word as `親tsiânn`; its dictionary `poj` column reads `chhin-chiâⁿ`, so POJ shows and commits `親chiâⁿ`.",
+  "settings": { "romanization": "poj", "output": "hanji", "auto_space": false },
+  "steps": [
+    { "type": "text", "value": "chhinchiann" },
+    { "type": "pick", "hanji": "親chiâⁿ", "tl": "chhin-chiâⁿ" }
+  ],
+  "expect": { "committed": "親chiâⁿ" }
+}

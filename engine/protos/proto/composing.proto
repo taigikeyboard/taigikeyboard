@@ -269,15 +269,16 @@ message CommitContinuous {
   // is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
   // populated for hanji-present candidates too, NOT only hanji-absent.
   string association_tl = 5;
-  // Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-  // whenever the picked candidate carries hanji regardless of which script
-  // the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-  // Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-  // for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-  // a composition with any hanji-less segment is
-  // never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-  // F2: hanji is an explicit sidechannel, never inferred from
-  // `canonical_text` vs `association_tl`).
+  // The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+  // candidate carries hanji regardless of which script the document received
+  // (a Hanji with Romanization roman cell commits the same candidate). Its
+  // presence marks a Hanji pick (§50 learned phrases); the phrase and the
+  // usage store `canonical_text`, the stored spelling, since POJ mode shows
+  // a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+  // (§34 literal, OOV synth, roman-only custom row); a composition with any
+  // hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+  // (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+  // sidechannel, never inferred from `canonical_text` vs `association_tl`).
   optional string hanji = 6;
   // R5 — engine-owned commit resolution: the engine resolves the document
   // text from `roman`, `hanji` and the request's `AppConfig`
@@ -311,9 +312,9 @@ enum CommitScript {
 // write — a Hanji-only prediction once the swap is off) — the platform then
 // writes nothing. A split cell whose own script is missing commits the lead,
 // as a Continuous pick does (the phones' fail-open marker rule). With the
-// user-data stores open the engine counts the pick's usage under `(hanji,
-// canonical_tl)` itself (the platform sends no `RecordUsage` for it) and
-// touches no learned phrase. Stateless: the composition is left as it is
+// user-data stores open the engine counts the pick's usage under
+// `(canonical_text, canonical_tl)` itself (the platform sends no
+// `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
 // (a new generation still resets it, as for every request); NextWord
 // learning stays the platform's `WordSelected`.
 message CommitPrediction {
@@ -323,10 +324,13 @@ message CommitPrediction {
   // `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
   // syllable-separated); empty for a Hanji-only prediction.
   string       roman        = 2;
-  // `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+  // `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
   string       hanji        = 3;
   // `EnginePrediction.tl` — the canonical TL the usage is counted under.
   string       canonical_tl = 4;
+  // `EnginePrediction.display_text` — the key the usage is counted under.
+  // Empty → the commit is IGNORED.
+  string       canonical_text = 5;
 }
 
 // What a `CommitContinuous` (R5) or a `CommitPrediction` (D1) did — replaces

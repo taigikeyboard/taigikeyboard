@@ -25,6 +25,7 @@ public  final class EnginePrediction extends
     subtitle_ = "";
     hanji_ = "";
     tl_ = "";
+    displayText_ = "";
   }
   public static final int TEXT_FIELD_NUMBER = 1;
   private java.lang.String text_;
@@ -158,6 +159,11 @@ public  final class EnginePrediction extends
   public static final int HANJI_FIELD_NUMBER = 3;
   private java.lang.String hanji_;
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    * @return The hanji.
    */
@@ -166,6 +172,11 @@ public  final class EnginePrediction extends
     return hanji_;
   }
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    * @return The bytes for hanji.
    */
@@ -175,6 +186,11 @@ public  final class EnginePrediction extends
     return com.google.protobuf.ByteString.copyFromUtf8(hanji_);
   }
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    * @param value The hanji to set.
    */
@@ -185,6 +201,11 @@ public  final class EnginePrediction extends
     hanji_ = value;
   }
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    */
   private void clearHanji() {
@@ -192,6 +213,11 @@ public  final class EnginePrediction extends
     hanji_ = getDefaultInstance().getHanji();
   }
   /**
+   * <pre>
+   * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+   * POJ mode a Han-Lo word's romanization in POJ.
+   * </pre>
+   *
    * <code>string hanji = 3;</code>
    * @param value The bytes for hanji to set.
    */
@@ -354,6 +380,83 @@ public  final class EnginePrediction extends
   private void clearCellScript() {
 
     cellScript_ = 0;
+  }
+
+  public static final int DISPLAY_TEXT_FIELD_NUMBER = 7;
+  private java.lang.String displayText_;
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   * @return The displayText.
+   */
+  @java.lang.Override
+  public java.lang.String getDisplayText() {
+    return displayText_;
+  }
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   * @return The bytes for displayText.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDisplayTextBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(displayText_);
+  }
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   * @param value The displayText to set.
+   */
+  private void setDisplayText(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    displayText_ = value;
+  }
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   */
+  private void clearDisplayText() {
+
+    displayText_ = getDefaultInstance().getDisplayText();
+  }
+  /**
+   * <pre>
+   * The stored Hanji spelling: the key the pick is counted under and NextWord
+   * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+   * in every mode.
+   * </pre>
+   *
+   * <code>string display_text = 7;</code>
+   * @param value The bytes for displayText to set.
+   */
+  private void setDisplayTextBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    displayText_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.EnginePrediction parseFrom(
@@ -593,6 +696,11 @@ public  final class EnginePrediction extends
     }
 
     /**
+     * <pre>
+     * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+     * POJ mode a Han-Lo word's romanization in POJ.
+     * </pre>
+     *
      * <code>string hanji = 3;</code>
      * @return The hanji.
      */
@@ -601,6 +709,11 @@ public  final class EnginePrediction extends
       return instance.getHanji();
     }
     /**
+     * <pre>
+     * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+     * POJ mode a Han-Lo word's romanization in POJ.
+     * </pre>
+     *
      * <code>string hanji = 3;</code>
      * @return The bytes for hanji.
      */
@@ -610,6 +723,11 @@ public  final class EnginePrediction extends
       return instance.getHanjiBytes();
     }
     /**
+     * <pre>
+     * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+     * POJ mode a Han-Lo word's romanization in POJ.
+     * </pre>
+     *
      * <code>string hanji = 3;</code>
      * @param value The hanji to set.
      * @return This builder for chaining.
@@ -621,6 +739,11 @@ public  final class EnginePrediction extends
       return this;
     }
     /**
+     * <pre>
+     * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+     * POJ mode a Han-Lo word's romanization in POJ.
+     * </pre>
+     *
      * <code>string hanji = 3;</code>
      * @return This builder for chaining.
      */
@@ -630,6 +753,11 @@ public  final class EnginePrediction extends
       return this;
     }
     /**
+     * <pre>
+     * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
+     * POJ mode a Han-Lo word's romanization in POJ.
+     * </pre>
+     *
      * <code>string hanji = 3;</code>
      * @param value The bytes for hanji to set.
      * @return This builder for chaining.
@@ -803,6 +931,85 @@ public  final class EnginePrediction extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The stored Hanji spelling: the key the pick is counted under and NextWord
+     * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+     * in every mode.
+     * </pre>
+     *
+     * <code>string display_text = 7;</code>
+     * @return The displayText.
+     */
+    @java.lang.Override
+    public java.lang.String getDisplayText() {
+      return instance.getDisplayText();
+    }
+    /**
+     * <pre>
+     * The stored Hanji spelling: the key the pick is counted under and NextWord
+     * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+     * in every mode.
+     * </pre>
+     *
+     * <code>string display_text = 7;</code>
+     * @return The bytes for displayText.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDisplayTextBytes() {
+      return instance.getDisplayTextBytes();
+    }
+    /**
+     * <pre>
+     * The stored Hanji spelling: the key the pick is counted under and NextWord
+     * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+     * in every mode.
+     * </pre>
+     *
+     * <code>string display_text = 7;</code>
+     * @param value The displayText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDisplayText(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDisplayText(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The stored Hanji spelling: the key the pick is counted under and NextWord
+     * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+     * in every mode.
+     * </pre>
+     *
+     * <code>string display_text = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDisplayText() {
+      copyOnWrite();
+      instance.clearDisplayText();
+      return this;
+    }
+    /**
+     * <pre>
+     * The stored Hanji spelling: the key the pick is counted under and NextWord
+     * learns (`CommitPrediction.canonical_text`, `WordSelected.text`), the same
+     * in every mode.
+     * </pre>
+     *
+     * <code>string display_text = 7;</code>
+     * @param value The bytes for displayText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDisplayTextBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDisplayTextBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.EnginePrediction)
   }
   @java.lang.Override
@@ -825,10 +1032,11 @@ public  final class EnginePrediction extends
             "tl_",
             "score_",
             "cellScript_",
+            "displayText_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208\u0005\u0000\u0006\f";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u0208\u0005\u0000\u0006\f\u0007\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

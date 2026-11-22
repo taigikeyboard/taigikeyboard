@@ -65,7 +65,13 @@ data class NextWordDecideResult(
 data class NextWordEnginePrediction(
     val text: String,
     val subtitle: String?,
+    /** The Hanji as shown (POJ mode renders a Han-Lo word's romanization in POJ). */
     val hanji: String,
+    /**
+     * The stored Hanji spelling (`EnginePrediction.display_text`): the key a tap
+     * is counted under and NextWord learns.
+     */
+    val displayText: String,
     val tl: String,
     /** The §42 split cell this row is (`EnginePrediction.cell_script`). */
     val cellScript: CellScript = CellScript.CELL_SCRIPT_PAIRED,
@@ -270,6 +276,7 @@ fun RustEngineBridge.nextwordPredictNext(
             text = p.text,
             subtitle = if (p.subtitle.isEmpty()) null else p.subtitle,
             hanji = p.hanji,
+            displayText = p.displayText,
             tl = p.tl,
             cellScript = p.cellScript,
         )

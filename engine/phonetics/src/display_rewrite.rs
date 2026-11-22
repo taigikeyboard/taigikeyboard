@@ -1,7 +1,10 @@
 //! POJ ↔ TL display-level rewrite (iOS / Android `pojDisplayToTLDisplay` /
 //! `tlDisplayToPOJDisplay`) and the canonical TL commit form built on it.
 
+use std::borrow::Cow;
+
 use crate::api::{capitalize_first, InputMode, System};
+use crate::khinsiann::{is_roman_syllable_char, render_hanji_khinsiann};
 use crate::poj::to_poj;
 use crate::syllable::{
     is_stop_tone, normalize_to_tl, normalize_to_tl_keep_tl_finals, split_initial_final,
@@ -15,6 +18,78 @@ pub fn poj_display_to_tl_display(text: &str) -> String {
 
 pub fn tl_display_to_poj_display(text: &str) -> String {
     rewrite_display(text, System::Poj, false, DisplayCase::Keep)
+}
+
+/// A dictionary or learned word's Hanji as the candidate strip shows it: the
+/// khinsiann marks when `khinsiann` is on ([`render_hanji_khinsiann`]), its TL
+/// runs in POJ when `poj_roman` is on ([`tl_roman_in_hanji_to_poj`]). Neither
+/// changes the syllable count, so the order does not matter. Borrows when
+/// nothing changes.
+pub fn render_hanji_display<'a>(
+    hanji: &'a str,
+    canonical_tl: &str,
+    khinsiann: bool,
+    poj_roman: bool,
+) -> Cow<'a, str> {
+    let marked = render_hanji_khinsiann(hanji, canonical_tl, khinsiann);
+    if !poj_roman {
+        return marked;
+    }
+    match marked {
+        Cow::Borrowed(h) => tl_roman_in_hanji_to_poj(h),
+        Cow::Owned(h) => match tl_roman_in_hanji_to_poj(&h) {
+            Cow::Owned(rendered) => Cow::Owned(rendered),
+            Cow::Borrowed(_) => Cow::Owned(h),
+        },
+    }
+}
+
+/// The Hanji spelling as POJ mode shows it: every romanization run inside a
+/// Han-Lo spelling (`親tsiânn`, `lóo力`) rewritten TL → POJ (`親chiâⁿ`,
+/// `ló͘力`), Hanji, kana, separators and other characters as they are. The
+/// dictionary stores one spelling per word, its romanization in TL; this is
+/// presentation only — identity keys keep the TL spelling (Core Principle 6).
+///
+/// A run that only changes case (`OK` → `Ok`) or does not parse as a
+/// syllable (`iPhone`) stays as written. Borrows when nothing changes.
+pub fn tl_roman_in_hanji_to_poj(hanji: &str) -> Cow<'_, str> {
+    // Built only once a run changes: `hanji[..copied_to]` is already in it.
+    let mut out: Option<String> = None;
+    let mut copied_to = 0;
+    let mut run_start: Option<usize> = None;
+    let run_ends = hanji
+        .char_indices()
+        .map(|(idx, c)| (idx, is_roman_syllable_char(c)))
+        .chain(std::iter::once((hanji.len(), false)));
+    for (idx, in_run) in run_ends {
+        if in_run {
+            run_start.get_or_insert(idx);
+            continue;
+        }
+        let Some(start) = run_start.take() else {
+            continue;
+        };
+        let run = &hanji[start..idx];
+        let rewritten = rewrite_token(run, System::Poj, false, DisplayCase::Keep);
+        let case_only = rewritten
+            .chars()
+            .flat_map(char::to_lowercase)
+            .eq(run.chars().flat_map(char::to_lowercase));
+        if case_only {
+            continue;
+        }
+        let buf = out.get_or_insert_with(|| String::with_capacity(hanji.len() + 8));
+        buf.push_str(&hanji[copied_to..start]);
+        buf.push_str(&rewritten);
+        copied_to = idx;
+    }
+    match out {
+        None => Cow::Borrowed(hanji),
+        Some(mut buf) => {
+            buf.push_str(&hanji[copied_to..]);
+            Cow::Owned(buf)
+        }
+    }
 }
 
 /// v3.5.9 B-4 — mode-aware canonicalizer for the `user_frequency.db`
@@ -126,5 +201,44 @@ fn rewrite_token(token: &str, target: System, keep_tl_finals: bool, case: Displa
         capitalize_first(&assembled)
     } else {
         assembled
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Expected POJ runs are the production `dictionary.csv` `poj` column of
+    // the same rows (`lóo力` → `ló͘-la̍t`, `親tsiânn` → `chhin-chiâⁿ`, …).
+    #[test]
+    fn tl_runs_in_han_lo_spellings_render_as_poj() {
+        let cases = [
+            ("親tsiânn", "親chi\u{e2}\u{207f}"),
+            ("l\u{f3}o力", "l\u{f3}\u{358}力"),
+            ("Ph\u{f3}o-meh狗", "Ph\u{f3}\u{358}-meh狗"),
+            ("恬tsih-tsih", "恬chih-chih"),
+            ("ing暗", "eng暗"),
+            ("tso\u{30d}h--日", "cho\u{30d}h--日"),
+            (
+                "重hi\u{30d}nnh-hi\u{30d}nnh",
+                "重hi\u{30d}\u{207f}h-hi\u{30d}\u{207f}h",
+            ),
+            ("oo-m\u{fa} 卵", "o\u{358}-m\u{fa} 卵"),
+        ];
+        for (hanji, expected) in cases {
+            assert_eq!(tl_roman_in_hanji_to_poj(hanji), expected, "{hanji}");
+        }
+    }
+
+    #[test]
+    fn spellings_without_a_changed_run_are_borrowed() {
+        // `OK` parses (`ok`) but only its case would change; `iPhone` does not
+        // parse; `kah` is spelled alike in TL and POJ.
+        for hanji in ["親情", "OK球", "iPhone殼", "kah意", ""] {
+            assert!(
+                matches!(tl_roman_in_hanji_to_poj(hanji), Cow::Borrowed(h) if h == hanji),
+                "{hanji}"
+            );
+        }
     }
 }

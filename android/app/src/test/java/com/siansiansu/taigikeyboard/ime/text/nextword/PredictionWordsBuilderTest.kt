@@ -25,11 +25,13 @@ class PredictionWordsBuilderTest {
         text: String,
         subtitle: String?,
         hanji: String,
+        displayText: String = hanji,
         tl: String = text,
     ) = NextWordEnginePrediction(
         text = text,
         subtitle = subtitle,
         hanji = hanji,
+        displayText = displayText,
         tl = tl,
     )
 
@@ -121,11 +123,11 @@ class PredictionWordsBuilderTest {
     fun prediction_pick_reads_the_word_not_the_cell_text() {
         val unsplit = buildPredictionWords(predictions)
         assertEquals(
-            PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "tāng", "重", "tāng"),
+            PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "tāng", "重", "tāng", "重"),
             predictionPick(unsplit[3]),
         )
         assertEquals(
-            PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "", "去", ""),
+            PredictionPick(CommitScript.COMMIT_SCRIPT_LEAD, "", "去", "", "去"),
             predictionPick(unsplit[4]),
         )
 
@@ -136,5 +138,26 @@ class PredictionWordsBuilderTest {
         )
         // The Hanji cell carries the roman its Annotate in Brackets commit appends.
         split.forEach { assertEquals("tāng", it.roman) }
+    }
+
+    /**
+     * POJ mode shows a Han-Lo prediction's romanization in POJ (`親chiâⁿ`); the tap
+     * writes the shown Hanji and is counted under the stored spelling
+     * (`EnginePrediction.display_text`). Mirrors iOS
+     * `testPredictionPick_countsTheStoredSpellingNotTheShownHanji`.
+     */
+    @Test
+    fun prediction_pick_counts_the_stored_spelling_not_the_shown_hanji() {
+        val hanLo =
+            prediction(
+                text = "chhin-chiâⁿ",
+                subtitle = "親chiâⁿ",
+                hanji = "親chiâⁿ",
+                displayText = "親tsiânn",
+                tl = "tshin-tsiânn",
+            )
+        val pick = predictionPick(buildPredictionWords(listOf(hanLo)).single())
+        assertEquals("親chiâⁿ", pick.hanji)
+        assertEquals("親tsiânn", pick.canonicalText)
     }
 }

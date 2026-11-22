@@ -27,11 +27,18 @@ fn send(handle: &EngineHandle, method: Method, config: &AppConfig) -> Applied {
 }
 
 fn tap(script: CommitScript, roman: &str, hanji: &str) -> Method {
+    tap_shown(script, roman, hanji, hanji)
+}
+
+/// A tap on a prediction whose shown Hanji differs from its stored spelling
+/// (`EnginePrediction.display_text`).
+fn tap_shown(script: CommitScript, roman: &str, hanji: &str, canonical_text: &str) -> Method {
     Method::CommitPrediction(CommitPrediction {
         script: script as i32,
         roman: roman.into(),
         hanji: hanji.into(),
         canonical_tl: TL.into(),
+        canonical_text: canonical_text.into(),
     })
 }
 
@@ -158,6 +165,30 @@ fn a_written_prediction_counts_its_usage_without_a_learned_phrase() {
 }
 
 #[test]
+fn a_poj_han_lo_prediction_writes_the_shown_hanji_and_counts_the_stored_one() {
+    // trace: `shape_prediction` shows `親tsiânn` as `親chiâⁿ` in POJ mode
+    // (`tl_roman_in_hanji_to_poj`); the tap writes the shown Hanji and counts
+    // the stored spelling, so TL and POJ picks share one count.
+    let config = AppConfig {
+        input_mode: "poj".into(),
+        ..config(true, false, CandidateDisplayMode::SideBySide)
+    };
+    let applied = send(
+        &EngineHandle::new(),
+        tap_shown(CommitScript::Lead, "chhin-chiâⁿ", "親chiâⁿ", "親tsiânn"),
+        &config,
+    );
+    assert_eq!(
+        applied.response.commit.map(|commit| commit.document_text),
+        Some("親chiâⁿ".to_owned())
+    );
+    assert_eq!(
+        applied.usage.map(|usage| usage.display_text),
+        Some("親tsiânn".to_owned())
+    );
+}
+
+#[test]
 fn a_tap_the_engine_cannot_resolve_is_ignored_and_counts_nothing() {
     let roman_led = config(false, false, CandidateDisplayMode::SideBySide);
     let cases = [
@@ -165,6 +196,11 @@ fn a_tap_the_engine_cannot_resolve_is_ignored_and_counts_nothing() {
         (tap(CommitScript::Unspecified, TL, HANJI), roman_led.clone()),
         // No Hanji: a prediction always carries one (`filter.rs` drops the rest).
         (tap(CommitScript::Lead, TL, ""), roman_led.clone()),
+        // No stored spelling to count the pick under.
+        (
+            tap_shown(CommitScript::Lead, TL, HANJI, ""),
+            roman_led.clone(),
+        ),
         // A Hanji-only prediction once the swap is off: nothing to write.
         (tap(CommitScript::Lead, "", HANJI), roman_led),
         // A split cell whose script is missing under Romanization Only.

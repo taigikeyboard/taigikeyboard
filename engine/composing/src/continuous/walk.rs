@@ -1,7 +1,7 @@
 //! The whole-sentence walk and the slot-0 candidate it synthesizes.
 
 use super::edge::{edge_key_map, edge_lookup, learned_edge_key, rows_for_edge, EdgeLookup};
-use super::recase::{recase_roman, recase_tl_as_poj_display};
+use super::recase::{recase_roman, recase_tl_as_poj_display, shows_poj_roman_in_hanji};
 
 use crate::shadow::{
     custom_toneless_key, greedy_longest_syllabification, span_min_syllable_count,
@@ -472,19 +472,25 @@ pub(super) fn fetch_walker_slot0_inner(
             .map(|((&(s, e), choice), part)| edge_piece(s, e, choice, part))
             .collect()
     });
-    let hanji: Option<String> = if ctx.khinsiann_in_hanji {
+    // The shown Hanji (`render_hanji_display`); `display_text` below keeps the
+    // stored spellings. A custom edge's Hanji stays as the user saved it.
+    let hanji: Option<String> = if ctx.khinsiann_in_hanji || mode == phonetics::InputMode::Poj {
         hanji_spelled.then(|| {
             let mut out = String::new();
             for (edge_idx, ((&(s, e), choice), part)) in
                 path.edges.iter().zip(&path.choices).zip(&parts).enumerate()
             {
                 let piece = match &choice.hanji {
-                    Some(h) => {
-                        phonetics::api::render_hanji_khinsiann(h, &choice.canonical_tl, true)
-                    }
+                    Some(h) => phonetics::api::render_hanji_display(
+                        h,
+                        &choice.canonical_tl,
+                        ctx.khinsiann_in_hanji,
+                        shows_poj_roman_in_hanji(mode, choice.is_custom),
+                    ),
                     None => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
                 };
-                let khinsiann_before = edge_idx > 0
+                let khinsiann_before = ctx.khinsiann_in_hanji
+                    && edge_idx > 0
                     && continuous_keys
                         .hyphen_runs
                         .iter()

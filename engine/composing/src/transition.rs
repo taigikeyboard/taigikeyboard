@@ -167,7 +167,18 @@ pub(crate) fn apply(
             roman,
             hanji,
             canonical_tl,
-        } => return commit_prediction(state, script, &roman, hanji, canonical_tl, config),
+            canonical_text,
+        } => {
+            return commit_prediction(
+                state,
+                script,
+                &roman,
+                hanji,
+                canonical_tl,
+                canonical_text,
+                config,
+            )
+        }
         Intent::TelexKey { key } => telex_key(state, &key, config, frequency),
         Intent::TpsKey { key } => tps_key(state, &key, config, frequency),
         Intent::MoveCaret { direction } => move_caret(state, direction, config, frequency),
@@ -1267,10 +1278,13 @@ fn commit_continuous(
             &pick.association_tl,
         )
     });
+    // A Hanji pick touches its learned phrase under the stored spelling the
+    // pick echoes as `canonical_text`, not the shown `hanji` (POJ mode shows
+    // a Han-Lo word's romanization in POJ).
     let usage = Usage {
         display_text: pick.canonical_text.clone(),
         canonical_tl: pick.association_tl.clone(),
-        hanji,
+        hanji: hanji.as_ref().map(|_| pick.canonical_text.clone()),
         abbreviation,
     };
     let word_list_start = ListingBasis::start_of(&state.phase, config);
@@ -1417,25 +1431,28 @@ fn confirm_composition_then_insert(
 /// `Intent::CommitPrediction` (D1): the document text a NextWord prediction
 /// tap writes, resolved by the Continuous pick's resolver
 /// ([`resolve_commit_text`]), and its usage. The composition is left as it is
-/// (the snapshot answers it unchanged). No Hanji, no script, a script the
-/// prediction lacks, or an empty document text is ignored: no usage. The
-/// usage carries no `hanji`, so counting it touches no learned phrase.
+/// (the snapshot answers it unchanged). No Hanji, no `canonical_text`, no
+/// script, a script the prediction lacks, or an empty document text is
+/// ignored: no usage. The usage is counted under `canonical_text`, the stored
+/// spelling, not the shown `hanji`; it carries no `hanji`, so counting it
+/// touches no learned phrase.
 fn commit_prediction(
     state: &EngineState,
     script: Option<CommitScript>,
     roman: &str,
     hanji: String,
     canonical_tl: String,
+    canonical_text: String,
     config: &AppConfig,
 ) -> Applied {
     let resolved = script
-        .filter(|_| !hanji.is_empty())
+        .filter(|_| !hanji.is_empty() && !canonical_text.is_empty())
         .and_then(|script| resolve_commit_text(script, roman, Some(&hanji), config))
         // A Hanji-only prediction led by its (absent) romanization — the swap
         // turned off between the strip and the tap — writes nothing.
         .filter(|resolved| !resolved.text.is_empty());
     let usage = resolved.is_some().then_some(Usage {
-        display_text: hanji,
+        display_text: canonical_text,
         canonical_tl,
         hanji: None,
         abbreviation: false,
@@ -1654,12 +1671,14 @@ fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<Learne
         if !seg.is_picked {
             return None;
         }
-        // `commit_continuous` stored an empty hanji as `None` already.
-        let h = seg.hanji.as_deref()?;
+        // `commit_continuous` stored an empty hanji as `None` already. The
+        // phrase stores the segment's stored spelling (`canonical_text`), not
+        // the shown Hanji, which POJ mode renders.
+        seg.hanji.as_deref()?;
         if seg.association_tl.is_empty() {
             return None;
         }
-        hanji.push_str(&phonetics::api::strip_khinsiann_hanji(h));
+        hanji.push_str(&phonetics::api::strip_khinsiann_hanji(&seg.canonical_text));
     }
     let canonical_tl = canonical_separators(&crate::nailed::learned_reading(nailed, config));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();

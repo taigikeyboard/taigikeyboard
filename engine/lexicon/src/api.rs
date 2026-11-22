@@ -106,16 +106,24 @@ fn system_search_row(
     enabled_sources_bitmask: u32,
 ) -> DictionarySearchRow {
     let lookup_tl = row.roman;
-    let roman = if mode == InputMode::Poj {
-        phonetics::api::tl_display_to_poj_display(&lookup_tl)
+    let (roman, hanji) = if mode == InputMode::Poj {
+        (
+            phonetics::api::tl_display_to_poj_display(&lookup_tl),
+            row.hanji.map(
+                |hanji| match phonetics::api::tl_roman_in_hanji_to_poj(&hanji) {
+                    std::borrow::Cow::Owned(rendered) => rendered,
+                    std::borrow::Cow::Borrowed(_) => hanji,
+                },
+            ),
+        )
     } else {
-        lookup_tl.clone()
+        (lookup_tl.clone(), row.hanji)
     };
     DictionarySearchRow {
         id: Some(dictionary_search_row::Id::SystemId(row.id)),
         roman,
         lookup_tl,
-        hanji: row.hanji,
+        hanji,
         // `source_codes` reads the source bits only, so the filter's variant
         // and kautian-subcollection bits drop out.
         sources: source_codes(row.source_bitmask.unwrap_or(0) & enabled_sources_bitmask)

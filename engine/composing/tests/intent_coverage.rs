@@ -115,12 +115,14 @@ fn every_method_decodes_to_its_intent() {
                 roman: "tsu".into(),
                 hanji: "珠".into(),
                 canonical_tl: "tsu".into(),
+                canonical_text: "珠".into(),
             }),
             Intent::CommitPrediction {
                 script: Some(CommitScript::Roman),
                 roman: "tsu".into(),
                 hanji: "珠".into(),
                 canonical_tl: "tsu".into(),
+                canonical_text: "珠".into(),
             },
         ),
     ];

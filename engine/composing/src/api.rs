@@ -417,10 +417,13 @@ pub enum Intent {
         script: Option<CommitScript>,
         /// The prediction's display romanization; empty for Hanji-only.
         roman: String,
-        /// Identity and the Hanji half; empty ignores the tap.
+        /// The Hanji half, as shown; empty ignores the tap.
         hanji: String,
         /// The canonical TL the usage is counted under.
         canonical_tl: String,
+        /// The stored Hanji spelling the usage is counted under; empty ignores
+        /// the tap.
+        canonical_text: String,
     },
     /// Desktop Telex scheme — one tone letter applied
     /// to the pending tail (`telex::apply_telex_key`). Unknown keys and

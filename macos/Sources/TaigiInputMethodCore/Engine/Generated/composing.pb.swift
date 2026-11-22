@@ -635,15 +635,16 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   /// populated for hanji-present candidates too, NOT only hanji-absent.
   public var associationTl: String = String()
 
-  /// Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
-  /// whenever the picked candidate carries hanji regardless of which script
-  /// the document received (identity = the `(Hanji, canonical-TL)` pair, Core
-  /// Principle #6; a Hanji with Romanization roman cell commits the same candidate). Wire-absent
-  /// for a hanji-less pick (§34 literal, OOV synth, roman-only custom row);
-  /// a composition with any hanji-less segment is
-  /// never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
-  /// F2: hanji is an explicit sidechannel, never inferred from
-  /// `canonical_text` vs `association_tl`).
+  /// The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
+  /// candidate carries hanji regardless of which script the document received
+  /// (a Hanji with Romanization roman cell commits the same candidate). Its
+  /// presence marks a Hanji pick (§50 learned phrases); the phrase and the
+  /// usage store `canonical_text`, the stored spelling, since POJ mode shows
+  /// a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
+  /// (§34 literal, OOV synth, roman-only custom row); a composition with any
+  /// hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+  /// (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
+  /// sidechannel, never inferred from `canonical_text` vs `association_tl`).
   public var hanji: String {
     get {_hanji ?? String()}
     set {_hanji = newValue}
@@ -683,9 +684,9 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
 /// write — a Hanji-only prediction once the swap is off) — the platform then
 /// writes nothing. A split cell whose own script is missing commits the lead,
 /// as a Continuous pick does (the phones' fail-open marker rule). With the
-/// user-data stores open the engine counts the pick's usage under `(hanji,
-/// canonical_tl)` itself (the platform sends no `RecordUsage` for it) and
-/// touches no learned phrase. Stateless: the composition is left as it is
+/// user-data stores open the engine counts the pick's usage under
+/// `(canonical_text, canonical_tl)` itself (the platform sends no
+/// `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
 /// (a new generation still resets it, as for every request); NextWord
 /// learning stays the platform's `WordSelected`.
 public nonisolated struct Taigi_Engine_CommitPrediction: Sendable {
@@ -701,11 +702,15 @@ public nonisolated struct Taigi_Engine_CommitPrediction: Sendable {
   /// syllable-separated); empty for a Hanji-only prediction.
   public var roman: String = String()
 
-  /// `EnginePrediction.hanji` — identity and the Hanji half of the commit.
+  /// `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
   public var hanji: String = String()
 
   /// `EnginePrediction.tl` — the canonical TL the usage is counted under.
   public var canonicalTl: String = String()
+
+  /// `EnginePrediction.display_text` — the key the usage is counted under.
+  /// Empty → the commit is IGNORED.
+  public var canonicalText: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2000,7 +2005,7 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_CommitPrediction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitPrediction"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}script\0\u{1}roman\0\u{1}hanji\0\u{3}canonical_tl\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}script\0\u{1}roman\0\u{1}hanji\0\u{3}canonical_tl\0\u{3}canonical_text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2012,6 +2017,7 @@ nonisolated extension Taigi_Engine_CommitPrediction: SwiftProtobuf.Message, Swif
       case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.canonicalText) }()
       default: break
       }
     }
@@ -2030,6 +2036,9 @@ nonisolated extension Taigi_Engine_CommitPrediction: SwiftProtobuf.Message, Swif
     if !self.canonicalTl.isEmpty {
       try visitor.visitSingularStringField(value: self.canonicalTl, fieldNumber: 4)
     }
+    if !self.canonicalText.isEmpty {
+      try visitor.visitSingularStringField(value: self.canonicalText, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2038,6 +2047,7 @@ nonisolated extension Taigi_Engine_CommitPrediction: SwiftProtobuf.Message, Swif
     if lhs.roman != rhs.roman {return false}
     if lhs.hanji != rhs.hanji {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}
+    if lhs.canonicalText != rhs.canonicalText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
