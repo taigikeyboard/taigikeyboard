@@ -522,8 +522,8 @@ fn double_space_window_is_under_300_ms() {
 }
 
 /// Neutral tone (`--`): every syllable after it, up to the end of its word,
-/// gets the `·` prefix and keeps its own tone mark (reference §5.5; marker
-/// U+00B7 = `tps::KHINSIANN_DOT`, maintainer decision 2026-11-21).
+/// gets the `·` prefix and keeps its own tone mark (reference §5.5; the engine's
+/// marker U+00B7 = `tps::KHINSIANN_DOT`).
 #[test]
 fn tl_numeric_to_tps_marks_neutral_tone_syllables_to_word_end() {
     use phonetics::api::{tl_display_to_tps, tl_numeric_to_tps};

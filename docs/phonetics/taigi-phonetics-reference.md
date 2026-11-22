@@ -387,10 +387,20 @@ In connected speech, all syllables except the last one in a phrase undergo tone 
 - `--` replaces the hyphen position; no space before `--`.
 - Neutral tone syllables retain their original tone mark in TL notation.
 - TPS marks neutral tone at the beginning of each syllable, retaining the original tone mark.
-  - *Project decision (maintainer, 2026-11-21; the sources above name no character or scope):* the
-    marker is `·` U+00B7 (not `˙` U+02D9, the encode-safe tone-8 mark), and every syllable after
-    `--` up to the end of its word carries it: `thiann--tio̍h` → `ㄊㄧㆩ ·ㄉㄧㄛㆷ̇`,
-    `tsáu--tshut-khì` → `ㄗㄠˋ ·ㄘㄨㆵ ·ㄎㄧ˪`. Display only — TPS search keys carry no marker.
+  - The neutral mark is `˙` U+02D9, as in Taiwan Mandarin. Placement varies: after the final
+    (`ㄎㄧ˙`, 《國臺對照活用辭典》) or before the syllable, which keeps the original tone
+    (`˙ㄎㄧ˪`). Neutral tone and tone 8 share U+02D9 (tone 8 sits after the coda: `ㆷ˙`); TPS
+    is for annotation, and running text separates syllables with spaces, so the two do not
+    collide. Source: zi-hi.com 方音符號 (tones and Unicode sections), citing 中推會
+    《數位排版中注音符號調號定位方式》 for the tone-8 mark.
+  - *Project decision (maintainer, 2026-11-22; scope from 2026-11-21):* taigi-converter and the
+    kautian mirror write `˙` U+02D9 before the syllable, and every syllable after `--` up to the
+    end of its word carries it: `thiann--tio̍h` → `ㄊㄧㆩ ˙ㄉㄧㄛㆷ̇`, `tsáu--tshut-khì` →
+    `ㄗㄠˋ ˙ㄘㄨㆵ ˙ㄎㄧ˪`. Display only — TPS search keys carry no marker. TPS → TL gives every
+    neutral syllable its own `--` (`ㄐㄧㄚㆷ̇ ˙ㄐㄧㆵ̇ ˙ㄉㄧㆰˋ ˙ㄚˋ` → `tsia̍h--tsi̍t--tiám--á`), since
+    TPS cannot tell `-á` from `--ah`; a `˙` right after a syllable stays tone 8. The keyboard
+    engine still writes `·` U+00B7: its TPS keyboards type `˙` as the tone-8 key and treat `·`
+    as the joiner (`engine/phonetics/src/tps.rs` `KHINSIANN_DOT`).
 - TLPA classifies neutral tone as tone 0.
 
 ### 5.6 Special Tone Rules

@@ -197,16 +197,20 @@ def test_zhuyin_vowels_table_invariant_only_er_or_map_to_oe():
 
 
 def test_convert_tl_to_tps_keys_carry_no_neutral_marker():
-    # The converter marks neutral-tone syllables with `·` for display
-    # (`thiann--tio̍h` → `ㄊㄧㆩ ·ㄉㄧㄛㆷ̇`); TPS keys must not, so the bridge
+    # The converter marks neutral-tone syllables with `˙` (U+02D9) for display
+    # (`thiann--tio̍h` → `ㄊㄧㆩ ˙ㄉㄧㄛㆷ̇`); TPS keys must not, so the bridge
     # rewrites a mid-word `--` to `-` first. trace: th → ㄊ, iann → ㄧㆩ;
     # t → ㄉ, ioh → ㄧㄛㆷ, 8 → U+0307.
     assert convert_tl_to_tps_strict("thiann--tio̍h") == "ㄊㄧㆩ ㄉㄧㄛㆷ̇"
-    assert "·" not in convert_tl_to_tps_strict("tsáu--tshut-khì")
+    assert "\u02d9" not in convert_tl_to_tps_strict("tsáu--tshut-khì")
 
 
 def test_convert_tl_to_tps_word_initial_neutral_still_rejected():
-    # A word-initial `--` keeps today's behaviour: `·` residue → empty
+    # A word-initial `--` keeps today's behaviour: a syllable-initial `˙` → empty
     # `tps_num` for the row (31 lkk rows such as `--ah`).
-    with pytest.raises(TpsResidueError):
+    with pytest.raises(TpsResidueError, match="word-initial neutral"):
         convert_tl_to_tps_strict("--ê")
+    # trace: "m̄ --eh" → converter "ㆬ˫ ˙ㆤㆷ"; the `--` follows a space, so the
+    # mid-word rewrite skips it and the `\s˙` branch rejects it.
+    with pytest.raises(TpsResidueError, match="word-initial neutral"):
+        convert_tl_to_tps_strict("m̄ --eh")
