@@ -106,7 +106,7 @@ Slider range 0…4 in 0.5 steps (`App/Tabs/Theme/ThemeControlRows.swift` `ThemeS
 
 | Property | Range | Default |
 |----------|-------|---------|
-| Key height scale | 0.85–1.15 | 1.0 |
+| Key height scale | 0.85–1.40 | 1.0 |
 | Key font size scale | 0.85–1.15 | 1.0 |
 | Candidate text size scale | 0.85–1.15 | 1.0 |
 | Key corner radius | 0–15 pt/dp | 6 |

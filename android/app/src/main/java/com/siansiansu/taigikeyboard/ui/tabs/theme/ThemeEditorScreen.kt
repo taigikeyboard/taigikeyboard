@@ -104,10 +104,13 @@ import org.json.JSONObject
 // (GradientDirectionOverlay / PhotoPositionOverlay), not by form rows.
 // Mirrors iOS ThemeEditorView.
 
-// Slider ranges (mirror the Layout-tab appearance editor; shadow is editor-only).
+// Slider ranges (mirror iOS ThemeSliderRanges).
 private const val SCALE_MIN = 0.85f
 private const val SCALE_MAX = 1.15f
 private const val SCALE_STEP = 0.01f
+
+// Key height reaches past the text scales, for a keyboard as tall as Gboard's (#1024).
+private const val KEY_HEIGHT_SCALE_MAX = 1.40f
 private const val CORNER_RADIUS_MAX = 15f
 private const val CORNER_RADIUS_STEP = 0.5f
 private const val BORDER_WIDTH_MAX = 3f
@@ -405,7 +408,7 @@ fun ThemeEditorScreen(
                             label = L10n.themeKeyHeight,
                             value = draft.keyHeightScale,
                             valueFrom = SCALE_MIN,
-                            valueTo = SCALE_MAX,
+                            valueTo = KEY_HEIGHT_SCALE_MAX,
                             stepSize = SCALE_STEP,
                             defaultValue = ThemeAppearance.DEFAULT_KEY_HEIGHT_SCALE,
                             onValueChange = { if (it != draft.keyHeightScale) draft = draft.copy(keyHeightScale = it) },
