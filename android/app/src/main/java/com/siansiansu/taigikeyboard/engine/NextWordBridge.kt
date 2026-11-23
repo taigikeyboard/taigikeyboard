@@ -21,7 +21,6 @@ import com.siansiansu.taigikeyboard.ime.settings.SyllableSeparator
  */
 data class NextWordDecideResult(
     val effects: List<Effect>,
-    val currentGeneration: Long,
     val predictionsVisible: Boolean,
 ) {
     sealed class Effect {
@@ -44,15 +43,12 @@ data class NextWordDecideResult(
             val nowMs: Long,
         ) : Effect()
 
-        data class ClearPredictionsUI(
-            val generation: Long,
-        ) : Effect()
+        object ClearPredictionsUI : Effect()
     }
 
     companion object {
         val NOOP = NextWordDecideResult(
             effects = emptyList(),
-            currentGeneration = 0L,
             predictionsVisible = false,
         )
     }
@@ -353,7 +349,7 @@ internal fun synthDecideResult(proto: DecideResult): NextWordDecideResult {
             }
 
             eff.hasClearPredictionsUi() -> {
-                NextWordDecideResult.Effect.ClearPredictionsUI(eff.clearPredictionsUi.generation)
+                NextWordDecideResult.Effect.ClearPredictionsUI
             }
 
             else -> {
@@ -363,7 +359,6 @@ internal fun synthDecideResult(proto: DecideResult): NextWordDecideResult {
     }
     return NextWordDecideResult(
         effects = effects,
-        currentGeneration = proto.currentGeneration,
         predictionsVisible = proto.predictionsVisible,
     )
 }

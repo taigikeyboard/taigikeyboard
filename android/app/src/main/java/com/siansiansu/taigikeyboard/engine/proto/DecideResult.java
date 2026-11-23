@@ -155,32 +155,6 @@ public  final class DecideResult extends
     effects_.remove(index);
   }
 
-  public static final int CURRENT_GENERATION_FIELD_NUMBER = 2;
-  private long currentGeneration_;
-  /**
-   * <code>uint64 current_generation = 2;</code>
-   * @return The currentGeneration.
-   */
-  @java.lang.Override
-  public long getCurrentGeneration() {
-    return currentGeneration_;
-  }
-  /**
-   * <code>uint64 current_generation = 2;</code>
-   * @param value The currentGeneration to set.
-   */
-  private void setCurrentGeneration(long value) {
-
-    currentGeneration_ = value;
-  }
-  /**
-   * <code>uint64 current_generation = 2;</code>
-   */
-  private void clearCurrentGeneration() {
-
-    currentGeneration_ = 0L;
-  }
-
   public static final int PREDICTIONS_VISIBLE_FIELD_NUMBER = 3;
   private boolean predictionsVisible_;
   /**
@@ -455,34 +429,6 @@ public  final class DecideResult extends
     }
 
     /**
-     * <code>uint64 current_generation = 2;</code>
-     * @return The currentGeneration.
-     */
-    @java.lang.Override
-    public long getCurrentGeneration() {
-      return instance.getCurrentGeneration();
-    }
-    /**
-     * <code>uint64 current_generation = 2;</code>
-     * @param value The currentGeneration to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCurrentGeneration(long value) {
-      copyOnWrite();
-      instance.setCurrentGeneration(value);
-      return this;
-    }
-    /**
-     * <code>uint64 current_generation = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCurrentGeneration() {
-      copyOnWrite();
-      instance.clearCurrentGeneration();
-      return this;
-    }
-
-    /**
      * <code>bool predictions_visible = 3;</code>
      * @return The predictionsVisible.
      */
@@ -528,12 +474,11 @@ public  final class DecideResult extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "effects_",
             com.siansiansu.taigikeyboard.engine.proto.NextWordEffect.class,
-            "currentGeneration_",
             "predictionsVisible_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u001b\u0002\u0003" +
-              "\u0003\u0007";
+              "\u0000\u0002\u0000\u0000\u0001\u0003\u0002\u0000\u0001\u0000\u0001\u001b\u0003\u0007" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

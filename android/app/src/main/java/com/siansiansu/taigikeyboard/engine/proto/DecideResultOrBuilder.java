@@ -37,12 +37,6 @@ public interface DecideResultOrBuilder extends
   int getEffectsCount();
 
   /**
-   * <code>uint64 current_generation = 2;</code>
-   * @return The currentGeneration.
-   */
-  long getCurrentGeneration();
-
-  /**
    * <code>bool predictions_visible = 3;</code>
    * @return The predictionsVisible.
    */

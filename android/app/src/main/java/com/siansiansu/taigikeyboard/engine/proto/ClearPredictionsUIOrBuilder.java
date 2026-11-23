@@ -9,10 +9,4 @@ package com.siansiansu.taigikeyboard.engine.proto;
 public interface ClearPredictionsUIOrBuilder extends
     // @@protoc_insertion_point(interface_extends:taigi.engine.ClearPredictionsUI)
     com.google.protobuf.MessageLiteOrBuilder {
-
-  /**
-   * <code>uint64 generation = 1;</code>
-   * @return The generation.
-   */
-  long getGeneration();
 }

@@ -240,9 +240,7 @@ fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
     let effects: Vec<NextWordEffect> = if was_visible {
         vec![NextWordEffect {
             kind: Some(next_word_effect::Kind::ClearPredictionsUi(
-                ClearPredictionsUi {
-                    generation: state.current_generation,
-                },
+                ClearPredictionsUi {},
             )),
         }]
     } else {
@@ -269,9 +267,7 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
     if was_visible {
         effects.push(NextWordEffect {
             kind: Some(next_word_effect::Kind::ClearPredictionsUi(
-                ClearPredictionsUi {
-                    generation: new_generation,
-                },
+                ClearPredictionsUi {},
             )),
         });
     }
@@ -391,7 +387,6 @@ fn snapshot_into_decide_result(
 ) -> DecideResult {
     DecideResult {
         effects,
-        current_generation: state.current_generation,
         predictions_visible: state.predictions_visible,
     }
 }

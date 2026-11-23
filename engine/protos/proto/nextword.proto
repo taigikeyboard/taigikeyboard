@@ -23,7 +23,7 @@ import "lexicon.proto";
 // IME-session ID; engine resets state on mismatch BEFORE applying the
 // request, no effects from the drop). The engine ALSO maintains an
 // internal current_generation that bumps on every state-mutating intent;
-// it travels on QueryPredictions/ClearPredictionsUI effects so the
+// it travels on QueryPredictions effects so the
 // platform executor can drop async SQLite results that land after
 // state invalidation. See nextword-engine-boundary.md §3 + §13.6.
 
@@ -209,9 +209,13 @@ message NextWordResponse {
 message DecideResult {
   reserved 4;
   reserved "last_selected_word";
+  // Tag 2 was `current_generation`; no shell read it (removed 2026-11-23).
+  // The engine still checks it on `FilterPredictions.query_generation`, and
+  // `QueryPredictions.generation` carries it.
+  reserved 2;
+  reserved "current_generation";
 
   repeated NextWordEffect effects             = 1;  // ordered, executor runs sequentially
-  uint64                  current_generation  = 2;
   bool                    predictions_visible = 3;
 }
 
@@ -287,4 +291,8 @@ message QueryPredictions {
   int64  now_ms      = 4;
 }
 
-message ClearPredictionsUI { uint64 generation = 1; }
+// Tag 1 was `generation`; no shell read it (removed 2026-11-23).
+message ClearPredictionsUI {
+  reserved 1;
+  reserved "generation";
+}

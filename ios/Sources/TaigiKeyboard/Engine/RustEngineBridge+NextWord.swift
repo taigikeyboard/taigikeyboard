@@ -21,16 +21,14 @@ public extension RustEngineBridge {
             /// scoring see ONE consistent "now" per intent. Per
             /// `nextword-engine-boundary.md` §13.3.
             case queryPredictions(word: String, roman: String, generation: UInt64, nowMs: Int64)
-            case clearPredictionsUI(generation: UInt64)
+            case clearPredictionsUI
         }
 
         public let effects: [Effect]
-        public let currentGeneration: UInt64
         public let predictionsVisible: Bool
 
         public static let noop = NextWordDecideResult(
             effects: [],
-            currentGeneration: 0,
             predictionsVisible: false,
         )
     }
@@ -319,13 +317,12 @@ public extension RustEngineBridge {
                 return .cancelContextTimeout
             case let .queryPredictions(m):
                 return .queryPredictions(word: m.word, roman: m.roman, generation: m.generation, nowMs: m.nowMs)
-            case let .clearPredictionsUi_p(m):
-                return .clearPredictionsUI(generation: m.generation)
+            case .clearPredictionsUi_p:
+                return .clearPredictionsUI
             }
         }
         return NextWordDecideResult(
             effects: effects,
-            currentGeneration: proto.currentGeneration,
             predictionsVisible: proto.predictionsVisible,
         )
     }

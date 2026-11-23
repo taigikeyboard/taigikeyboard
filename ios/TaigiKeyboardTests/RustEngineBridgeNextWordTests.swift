@@ -33,28 +33,17 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     private static var nextEnvelopeGen: UInt64 = 100_000
     private var envelopeGen: UInt64 = 0
 
-    /// Snapshot of `state.current_generation` after the per-test ResetAll
-    /// baseline. Tests that previously asserted absolute generation values
-    /// (e.g. `==1`, `==2`, `==3`) now assert relative to this baseline so
-    /// they stay green across the bump-on-envelope-reset semantic the
-    /// Rust crate ships post-PR-#198.
-    private var baselineGen: UInt64 = 0
-
     override func setUp() {
         super.setUp()
         Self.nextEnvelopeGen &+= 1
         envelopeGen = Self.nextEnvelopeGen
-        // Baseline: ResetAll lands on a freshly-reset engine state and
-        // bumps `current_generation` by 1. The exact baseline value
-        // depends on the prior test's terminal state (envelope-reset is
-        // bump-not-zero per PR #198 fix).
+        // Baseline: ResetAll lands on a freshly-reset engine state.
         let baseline = RustEngineBridge.nextwordResetAll(
             nowMs: 0,
             mode: .tl,
             hanjiFirst: false,
             generation: envelopeGen,
         )
-        baselineGen = baseline.currentGeneration
         XCTAssertFalse(baseline.predictionsVisible)
     }
 
@@ -64,11 +53,10 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     // decide.rs` tests); it keeps them itself (roadmap P9b).
     func testWordSelected_bumpsGenerationAndBecomesTheContext() {
         let primed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        XCTAssertEqual(primed.currentGeneration, baselineGen &+ 1)
         XCTAssertEqual(queriedWords(primed), ["早"])
 
         let result = wordSelected(text: "安", roman: "an", nowMs: 5000)
-        XCTAssertEqual(result.currentGeneration, baselineGen &+ 2)
+        XCTAssertEqual(queriedGeneration(result), queriedGeneration(primed).map { $0 &+ 1 })
         XCTAssertEqual(queriedWords(result), ["安"])
     }
 
@@ -104,7 +92,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             requireRomanMode: true, hanjiFirst: true,
         )
         XCTAssertEqual(result.effects, [])
-        XCTAssertEqual(result.currentGeneration, baselineGen)
     }
 
     func testWordSelected_triggerPredictionFalse_recordsButSkipsQuery() {
@@ -126,8 +113,10 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     // MARK: - Decide: Backspace
 
     func testBackspace_emitsQueryPredictions() {
-        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
+        let primed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         let result = backspace(lastChar: "安", nowMs: 100)
+        // The backspace bumps the generation once, past the commit's query.
+        let expectedGeneration = queriedGeneration(primed).map { $0 &+ 1 }
 
         var sawQuery = false
         for effect in result.effects {
@@ -135,7 +124,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             case let .queryPredictions(word, roman, generation, _):
                 XCTAssertEqual(word, "安")
                 XCTAssertEqual(roman, "")
-                XCTAssertEqual(generation, result.currentGeneration)
+                XCTAssertEqual(generation, expectedGeneration)
                 sawQuery = true
             default: continue
             }
@@ -175,16 +164,19 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     }
 
     func testSetPredictionsVisible_doesNotBumpGeneration() {
-        let baselineGen = currentGen()
+        let before = currentGen()
         let result = RustEngineBridge.nextwordSetPredictionsVisible(
             true,
             mode: .tl,
             hanjiFirst: false,
             generation: envelopeGen,
         )
-        XCTAssertEqual(result.currentGeneration, baselineGen, "no generation bump")
         XCTAssertTrue(result.predictionsVisible)
         XCTAssertEqual(result.effects, [])
+        // The next bumping intent lands one past `before`: the visibility
+        // sync bumped nothing.
+        let next = backspace(lastChar: "安", nowMs: 100)
+        XCTAssertEqual(queriedGeneration(next), before &+ 1, "no generation bump")
     }
 
     // MARK: - Predict: stale drop
@@ -275,15 +267,26 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         )
     }
 
-    /// Current engine generation, read through `SetPredictionsVisible(false)` — the
-    /// one intent that echoes state without bumping the generation.
+    /// The generation a decision's prediction query carries — the engine's
+    /// generation right after that decision; `nil` without a query.
+    private func queriedGeneration(_ result: RustEngineBridge.NextWordDecideResult) -> UInt64? {
+        result.effects.lazy.compactMap { effect in
+            if case let .queryPredictions(_, _, generation, _) = effect {
+                return generation
+            }
+            return nil
+        }.first
+    }
+
+    /// Current engine generation, read off a commit's prediction query (the
+    /// commit itself bumps it, so this is the generation after it).
     private func currentGen() -> UInt64 {
-        RustEngineBridge.nextwordSetPredictionsVisible(
-            false,
-            mode: .tl,
-            hanjiFirst: false,
-            generation: envelopeGen,
-        ).currentGeneration
+        let committed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
+        guard let generation = queriedGeneration(committed) else {
+            XCTFail("a commit with triggerPrediction queries predictions")
+            return 0
+        }
+        return generation
     }
 
     /// Every bundled association source off, so `nextwordPredictNext` adds no

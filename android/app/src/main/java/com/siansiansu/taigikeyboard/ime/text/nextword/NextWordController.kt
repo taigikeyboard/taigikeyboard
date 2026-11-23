@@ -298,7 +298,7 @@ class NextWordController(
                 )
             }
 
-            is NextWordDecideResult.Effect.ClearPredictionsUI -> {
+            NextWordDecideResult.Effect.ClearPredictionsUI -> {
                 if (!isUiAlreadyCleared) onClearCandidates()
                 cachedPredictionsVisible = false
             }

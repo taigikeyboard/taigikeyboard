@@ -8,7 +8,7 @@ mod common;
 
 use common::{open_user_data, tl_config};
 use protos::engine::{
-    next_word_request, next_word_response, request, response, DecisionInput,
+    next_word_effect, next_word_request, next_word_response, request, response, DecisionInput,
     DictionarySourceToggles, EnginePrediction, NextWordRequest, PredictNext, WordSelected,
 };
 use std::time::{Duration, Instant};
@@ -28,21 +28,29 @@ fn nextword(method: next_word_request::Method) -> next_word_response::Result {
     nextword.result.expect("nextword result")
 }
 
-/// Commits `text` / `roman` at `now_ms`; answers the engine's generation.
+/// Commits `text` / `roman` at `now_ms`; answers the generation its
+/// prediction query carries.
 fn word_selected(text: &str, roman: &str, now_ms: i64) -> u64 {
     let next_word_response::Result::Decide(decided) =
         nextword(next_word_request::Method::WordSelected(WordSelected {
             text: text.to_owned(),
             roman: roman.to_owned(),
             require_roman_mode: false,
-            trigger_prediction: false,
+            trigger_prediction: true,
             input: Some(DecisionInput { now_ms }),
             preceding: Vec::new(),
         }))
     else {
         panic!("expected a decision");
     };
-    decided.current_generation
+    decided
+        .effects
+        .into_iter()
+        .find_map(|effect| match effect.kind {
+            Some(next_word_effect::Kind::QueryPredictions(query)) => Some(query.generation),
+            _ => None,
+        })
+        .expect("a prediction query")
 }
 
 fn predict(word: &str, roman: &str, generation: u64) -> Vec<EnginePrediction> {
