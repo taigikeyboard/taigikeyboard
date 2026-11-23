@@ -23,6 +23,7 @@ use phonetics::KeyFamily;
 use crate::common::{build_tkdb_v4, write_synthetic_fst};
 use test_support::{build_tkwa, engine_install_lock, write_temp};
 
+// INVARIANT_LEX_FILTER_BITMASK
 #[test]
 fn invariant_lex_filter_bitmask_three_layers() {
     // Layer 1: variant exclusion
@@ -75,6 +76,7 @@ fn invariant_lex_filter_bitmask_three_layers() {
     assert!(!DictionaryReader::passes_filter(dev_record, 0, &f3_dev_off));
 }
 
+// INVARIANT_LEX_BINARY_FORMAT
 #[test]
 fn invariant_lex_binary_format_rejects_bad_magic() {
     let bad = synth_dictionary_bin_with_version(b"BAD!", 2, &[]);
@@ -91,6 +93,7 @@ fn invariant_lex_binary_format_rejects_bad_version() {
     assert!(matches!(err, LexiconError::InvalidBinary(_)), "{err:?}");
 }
 
+// INVARIANT_LEX_FST_ROWID_PAYLOAD
 #[test]
 fn invariant_lex_fst_rowid_payload_round_trip() {
     let pairs: &[(&str, u32)] = &[
@@ -120,6 +123,7 @@ fn invariant_lex_fst_rowid_payload_round_trip() {
     assert_eq!(hanji_hits, vec![50]);
 }
 
+// INVARIANT_LEX_LOOKUP_ROWIDS_ORDER
 #[test]
 fn invariant_lex_lookup_rowids_order_preserves_insertion() {
     // D-12 parity correction toward Android: search.rs concatenates
@@ -347,6 +351,7 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
     );
 }
 
+// INVARIANT_LEX_ASSOC_BITMASK_FILTER
 /// Regression for v3.5.6 fix r3173013233 — `api::lookup_associations` previously
 /// hardcoded `u32::MAX` instead of plumbing `req.enabled_sources_bitmask`,
 /// which silently disabled the source-toggle filter for bundled bigram
@@ -398,6 +403,7 @@ fn lookup_associations_filters_before_limit() {
     assert_eq!(words, vec!["食"]);
 }
 
+// INVARIANT_LEX_API_BITMASK_HONORED
 /// Regression for v3.5.6 fix r3173440126 — the Tab3 search paths in
 /// `lexicon::api` once hardcoded `u32::MAX`, bypassing user
 /// dictionary-source toggles AND falsely forcing variant + khiin on. Drives
@@ -470,6 +476,7 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     assert!(rows("好", &taigitv).is_empty(), "Hanji, other mask");
 }
 
+// INVARIANT_LEX_INSTALL_PATH_VALIDATION
 #[test]
 fn invariant_lex_install_path_validation_rejects_nul() {
     let err = LexiconPaths::validated("/foo\0bar", "/dict.bin", "/assoc.bin", "", 1)
@@ -484,6 +491,7 @@ fn invariant_lex_install_path_validation_rejects_relative() {
     assert!(matches!(err, LexiconError::PathNotAbsolute(_)), "{err:?}");
 }
 
+// INVARIANT_LEX_INSTALL_SEARCH_SERIALIZATION
 #[test]
 fn invariant_lex_install_search_serialization_no_panic() {
     use std::sync::Arc;
