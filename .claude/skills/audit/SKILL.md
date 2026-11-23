@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Whole-repo maintainability audit — dead engine ops / bridges / fields, logic duplicated across platform twins (iOS↔Android, macOS↔iOS, Windows↔Linux), redundant fallbacks, layering violations, over-design, doc drift. Produces a ranked, file:line-cited report with estimated LOC and a draft round order. Use when asked to "audit", find dead code, assess architecture / maintenance cost, or before a large feature. Read-only on code — writes only its dated report under `docs/reports/`; never edits source, branches, builds or opens a round. Args: scope `engine` | `mobile` | `desktop` | `all` (default all). Diff-level quality is /simplify; bugs are /code-review; refactor behaviour-freeze is the refactor-reviewer agent.
+description: Whole-repo maintainability audit — dead engine ops / bridges / fields, logic duplicated across platform twins (iOS↔Android, macOS↔iOS, Windows↔Linux), redundant fallbacks, layering violations, over-design, doc drift, stale source comments. Produces a ranked, file:line-cited report with estimated LOC and a draft round order. Use when asked to "audit", find dead code, assess architecture / maintenance cost, or before a large feature. Read-only on code — writes only its dated report under `docs/reports/`; never edits source, branches, builds or opens a round. Args: scope `engine` | `mobile` | `desktop` | `all` (default all). Diff-level quality is /simplify; bugs are /code-review; refactor behaviour-freeze is the refactor-reviewer agent.
 disable-model-invocation: false
 ---
 
@@ -37,22 +37,25 @@ Give each agent the scope, its recipe and the § 3 verification rules; ask for `
 
 **R-drift · docs vs code.** `docs/architecture/system-overview.md`, `behavioral-invariants.md` platform sites, `docs/engine/migration-inventory.csv`, rule files: paths, symbols and counts that no longer match the tree.
 
+**R-comment · stale source comments.** A comment an agent trusts over the code steers later fixes and tests wrong, so a contradicted comment is worse than none. Scan comments in the scope's source that make a checkable claim: a path or symbol (`see foo.rs`, `` `fn_name` ``, `FooManager.bar`), an issue (`TODO(#N)`, `#N` — resolve pre-2026-09-07 numbers per `docs/architecture/pr-number-migration.md`), a value or count (`max 1.15`, `three platforms`), a counterpart (`Mirrors iOS`, `matches Android`, `same as X`). Flag (a) **stale** — the target is gone, renamed or the issue closed, or the claim contradicts the code it sits on → delete or correct; (b) **restating** — says what the next line already says → delete; (c) commented-out code and section banners → delete. A comment that explains a non-obvious *why* (platform limit, past incident) stays. Counterpart comments are checked here only for the counterpart's existence — whether the two sides still agree is § 3.5.
+
 ## 3. Verification — main session, before anything reaches the report
 
 1. **Callers are searched in every spelling.** Swift: `Type(`, `.init(`, `Type.init(`, `= .init(` at a typed declaration; Kotlin: `Type(`, extension-function calls without the receiver; Rust: `path::fn`, `use` re-exports; plus string op names in bridges (`op: "…"`). A missed `.init(` caller turns a "dead" deletion into a broken build.
 2. **Drift is only a finding when observable.** Trace each "iOS does X, Android does Y" to an input a user can type. Most alleged drifts turn out unreachable (the dictionary has no such word, the engine never emits the value, the branch is dead). Unreachable drift = dead-code cleanup, not a parity round.
 3. **High-severity rows are verified by hand** (grep / Read in the main session) and marked **verified**; the rest carry the agent's `file:line` and "re-grep before quoting".
 4. **LOC estimates exclude generated code** and are marked `~`.
-5. Follow `docs/contributing/cross-platform-alignment.md` §3b: an inline `Mirrors iOS` / `matches Android` / `CROSS-PLATFORM INVARIANT` comment means intended parity — divergence there is a bug candidate, reported as such.
+5. **A stale-comment row cites both lines** — the comment's `file:line` and the code or missing target that contradicts it. A comment whose claim cannot be checked is not a finding.
+6. Follow `docs/contributing/cross-platform-alignment.md` §3b: an inline `Mirrors iOS` / `matches Android` / `CROSS-PLATFORM INVARIANT` comment means intended parity — divergence there is a bug candidate, reported as such.
 
 ## 4. Report
 
 Write `docs/reports/<YYYY-MM-DD>-audit-<scope>.md` (English, dated snapshot — frozen afterwards):
 
 1. **Summary** — one paragraph: the biggest cost and the recommended first round.
-2. **Findings table** — `| Sev | Finding | Where (file:line) | Observable? | Est. LOC |`, High → Low. Sev: **High** = duplicated across platforms or dead surface > ~200 LOC; **Med** = single-platform dead code, drift, over-design; **Low** = naming, comments, doc drift.
+2. **Findings table** — `| Sev | Finding | Where (file:line) | Observable? | Est. LOC |`, High → Low. Sev: **High** = duplicated across platforms or dead surface > ~200 LOC; **Med** = single-platform dead code, drift, over-design, a stale comment that contradicts the code; **Low** = naming, restating comments, commented-out code, doc drift.
 3. **Justified-looking layers** — structure that looks heavy but earns its place (so the next audit does not re-flag it).
-4. **Draft round order** — unscheduled, each PR 200–500 LOC, with the round type (refactor / parity / bugfix) and its pre-gate. Observable drift goes to its own `parity:` PR (`cross-platform-alignment.md` §1b).
+4. **Draft round order** — unscheduled, each PR 200–500 LOC, with the round type (refactor / parity / bugfix) and its pre-gate. Observable drift goes to its own `parity:` PR (`cross-platform-alignment.md` §1b). R-comment rows batch into one comment-only `chore:` PR per platform area (no behavior change, Low tier).
 5. **Open USER decisions** — ranked, each with a recommendation.
 
 Then reply in chat with the summary, the top 3 rows, the report path, and one next action.
