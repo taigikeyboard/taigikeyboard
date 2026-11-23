@@ -263,9 +263,9 @@ pub(crate) fn build_continuous_keys(
 /// Model-B-consistent commit. S2's whole-sentence walker consumes
 /// the interior edges INTERNALLY (via
 /// [`build_shadow_lattice_with_barriers`] + `crate::lattice::walk_best`
-/// in `fetch_walker_slot0`) and emits one
+/// in `continuous::walk_buffer`) and emits one
 /// synthesized full-buffer best path explicitly prepended at slot 0
-/// by `handle_fetch_at_pos`; the user-facing commit span stays
+/// by `continuous::assemble_candidates`; the user-facing commit span stays
 /// `(0, end)`. Interior `台語`-style words remain reachable as the
 /// next path-step after the prefix is nailed (Codex pre-impl S2
 /// Q1c = option ii, 2026-05-16; `docs/releases/v3.5.8/plan.md` §整句 lattice + walker).
@@ -323,7 +323,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // for the reported bug (`ta`/`tsu` have no interior predecessor), but (c)
     // makes the rule provably never drop a phrase candidate. Display layer
     // only: the lattice keeps every edge, so the walker
-    // (`fetch_walker_slot0_inner`) + min-hop `span_min_syllable_count` still
+    // (`walk_buffer`) + min-hop `span_min_syllable_count` still
     // see every split (non-greedy `ta`+`nia` recovery, Codex PR #290 P1,
     // unaffected).
     //
@@ -857,7 +857,7 @@ pub(crate) fn span_min_syllable_count(
 /// derived form does not land in `[a-z]+` after canonicalization.
 ///
 /// MUST produce a key byte-identical to the one
-/// `continuous::fetch_walker_slot0_inner`'s edge provider builds for a
+/// `continuous::walk_buffer`'s edge provider builds for a
 /// syllable span (`{prefix}{toneless}`, the colon-carrying `tl:` / `poj:` /
 /// `tps:` prefix of `KeyFamily::for_input_mode(mode)`; v3.5.9 B-2 PR #309 promoted POJ to a
 /// first-class FST key family, pre-B-2 every key prefixed `tl:`).
@@ -878,7 +878,7 @@ pub(crate) fn span_min_syllable_count(
 /// edge key, so it simply stays a span-local candidate and never
 /// enters the walker.
 ///
-/// `mode` MUST be the same value `continuous::fetch_walker_slot0_inner`
+/// `mode` MUST be the same value `continuous::assemble_candidates`
 /// passes to [`build_shadow_lattice_with_barriers`] for this fetch: the canonicalize
 /// step is mode-gated — TL/English mode folds POJ→TL (`ch→ts`,
 /// `oa→ua`, ...) and emits `tl:`, POJ mode keeps POJ ASCII (no fold)

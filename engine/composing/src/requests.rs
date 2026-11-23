@@ -28,25 +28,20 @@ use crate::api::{
     CaretDirection, CommitScript, ComposingError, ContinuousPick, Engine, Intent,
     ListedAbbreviations, Phase, UserRows,
 };
-use crate::continuous::{
-    assemble_candidates, is_one_syllable_prefix_pick, retain_first_by_key, Assembled, ListShape,
-};
+use crate::continuous::{assemble_candidates, retain_first_by_key, Assembled, ListShape};
 use crate::derived::buffer_input_mode;
 use crate::WordListStart;
 use lexicon::dictionary_reader::NO_ROWID;
 use lexicon::{
     classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
-    COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX,
+    COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL,
 };
 use phonetics::api::roman_reading_eq;
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CellScript, CommitScript as WireCommitScript,
     ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,
 };
-use ranking::{
-    source_tier_rank, CandidateSortKey, CONTEXT_RANK_BUNDLED, CONTEXT_RANK_USER,
-    WALKER_COST_UNPRICED,
-};
+use ranking::WALKER_COST_UNPRICED;
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
 /// when `oneof method` is empty.
@@ -279,93 +274,29 @@ fn handle_fetch_at_pos(
     )
 }
 
-/// The open composition's cut and candidate order, for a shell that shows
-/// the mechanism. `None` when nothing is being composed. The candidate rows
-/// are [`listed_candidates`]: the same list the fetch sends.
-pub fn mechanism(
-    engine: &Engine,
-    now_ms: i64,
-    user_rows: &UserRows,
-    context: &ranking::ContextRanks,
-    literal_roman_candidate_disabled: bool,
-    config: &AppConfig,
-) -> Option<crate::explain::Mechanism> {
-    let listed = listed_candidates(
-        engine,
-        now_ms,
-        user_rows,
-        context,
-        literal_roman_candidate_disabled,
-        config,
-    )?;
-    let mut segmentation = if listed.blocked {
-        crate::continuous::Segmentation::default()
-    } else {
-        crate::continuous::explain_segmentation(
-            &listed.segment_raw,
-            &user_rows.frequency,
-            now_ms,
-            &user_rows.custom,
-            &listed.learned,
-            listed.mode,
-            context,
-            config,
-        )
-    };
-    if listed.shift > 0 {
-        if let Some(prefix) = listed.raw.get(..listed.shift as usize) {
-            if !prefix.is_empty() {
-                segmentation.syllables.insert(
-                    0,
-                    crate::continuous::BufferCut {
-                        text: prefix.to_owned(),
-                        gap: true,
-                    },
-                );
-                segmentation.words.insert(
-                    0,
-                    crate::continuous::WordCut {
-                        text: prefix.to_owned(),
-                        hanji: None,
-                        roman: String::new(),
-                        kind: "gap",
-                        user_row: false,
-                        picks: 0,
-                        weight: 0.0,
-                        khinsiann_before: false,
-                    },
-                );
-            }
-        }
-    }
-    Some(explain_mechanism(
-        &listed,
-        &segmentation,
-        &user_rows.frequency,
-        config,
-    ))
-}
-
-struct Listed {
+pub(crate) struct Listed {
     /// The string the shifted spans index.
-    raw: String,
+    pub(crate) raw: String,
     /// The string the walk and the syllable grid were built on.
-    segment_raw: String,
-    shift: u32,
-    mode: phonetics::InputMode,
-    learned: Vec<LearnedEntry>,
-    candidates: Vec<RawCandidate>,
-    literal_at: Option<usize>,
+    pub(crate) segment_raw: String,
+    pub(crate) shift: u32,
+    pub(crate) mode: phonetics::InputMode,
+    /// The fetch's keys and slot-0 cut (`Assembled::keys` / `synth`), for the
+    /// explain view.
+    pub(crate) keys: Option<crate::shadow::ContinuousKeys>,
+    pub(crate) synth: Option<crate::continuous::SynthCut>,
+    pub(crate) candidates: Vec<RawCandidate>,
+    pub(crate) literal_at: Option<usize>,
     /// The Step 4d post-pass moved the one-word walker path ahead of
     /// one-syllable prefix picks (`continuous::assemble`).
-    walker_moved: bool,
+    pub(crate) walker_moved: bool,
     /// Hanji leaked into the buffer: an empty list, no cut.
-    blocked: bool,
+    pub(crate) blocked: bool,
 }
 
 /// The candidate list [`handle_fetch_at_pos`] encodes, plus the buffer it
 /// was built from. `None` when the engine is not composing.
-fn listed_candidates(
+pub(crate) fn listed_candidates(
     engine: &Engine,
     now_ms: i64,
     user_rows: &UserRows,
@@ -402,7 +333,8 @@ fn listed_candidates(
             segment_raw: String::new(),
             shift: 0,
             mode: phonetics::InputMode::Tl,
-            learned: Vec::new(),
+            keys: None,
+            synth: None,
             candidates: Vec::new(),
             literal_at: None,
             walker_moved: false,
@@ -443,6 +375,8 @@ fn listed_candidates(
     let Assembled {
         mut candidates,
         walker_moved,
+        keys,
+        synth,
     } = assemble_candidates(
         raw,
         &user_rows.frequency,
@@ -511,202 +445,13 @@ fn listed_candidates(
         segment_raw: listed,
         shift,
         mode,
-        learned,
+        keys,
+        synth,
         candidates,
         literal_at,
         walker_moved,
         blocked: false,
     })
-}
-
-fn explain_mechanism(
-    listed: &Listed,
-    segmentation: &crate::continuous::Segmentation,
-    frequency: &ranking::FrequencyMap,
-    config: &AppConfig,
-) -> crate::explain::Mechanism {
-    use crate::explain::{CandidatePiece, WordPiece};
-    let sentence = sentence_hanji(&segmentation.words, config.khinsiann_in_hanji);
-    // One word is still the walker's path, but it is ranked with the rest
-    // (`continuous::assemble` Step 4), so it is an ordinary row: tagging it
-    // `sentence` would pull it back out of the twelve stages. A path of
-    // several words stays a sentence, and so does a one-word path the Step 4d
-    // post-pass moved ahead of one-syllable prefix picks — no sort field
-    // placed it, so it reads `path_over_prefix_pick` and the picks it passed
-    // `behind_path`.
-    let one_word = segmentation
-        .words
-        .iter()
-        .filter(|word| word.kind != "gap")
-        .count()
-        <= 1;
-    let raw_len = listed.raw.len() as u32;
-    let is_sentence = |candidate: &RawCandidate| {
-        sentence
-            .as_ref()
-            .is_some_and(|hanji| candidate.hanji.as_deref() == Some(hanji))
-    };
-    let path_moved = one_word && listed.walker_moved;
-    let sentence_at = if path_moved {
-        listed
-            .candidates
-            .iter()
-            .position(|candidate| is_sentence(candidate) && candidate.consumed_span.1 == raw_len)
-    } else if one_word {
-        None
-    } else {
-        listed.candidates.iter().position(is_sentence)
-    };
-    let mut previous: Option<CandidateSortKey> = None;
-    let mut behind_path = false;
-    let pieces: Vec<CandidatePiece> = listed
-        .candidates
-        .iter()
-        .enumerate()
-        .map(|(index, candidate)| {
-            let role = if listed.literal_at == Some(index) {
-                "literal"
-            } else if sentence_at == Some(index) {
-                "sentence"
-            } else {
-                "word"
-            };
-            behind_path = if role == "sentence" {
-                path_moved
-            } else {
-                behind_path && is_one_syllable_prefix_pick(candidate)
-            };
-            let key = CandidateSortKey::new(&candidate.rank_facts(), raw_len, index as u32);
-            let placed_by = match role {
-                "literal" => "literal",
-                "sentence" if path_moved => "path_over_prefix_pick",
-                "sentence" if previous.is_some() => "sentence_after",
-                "sentence" => "sentence",
-                _ if behind_path => "behind_path",
-                _ if !path_moved
-                    && sentence_at.is_some_and(|at| at > index)
-                    && previous.is_none() =>
-                {
-                    "picked_over_sentence"
-                }
-                _ => previous
-                    .as_ref()
-                    .map_or("lead", |ahead| ahead.deciding_field(&key)),
-            };
-            if role == "word" {
-                previous = Some(key);
-            }
-            let (start, end) = candidate.consumed_span;
-            let lookup_key = phonetics::api::learning_hanji_key(&candidate.display_text);
-            let picks = frequency.get(&lookup_key, &candidate.canonical_tl);
-            CandidatePiece {
-                hanji: candidate.hanji.clone(),
-                roman: candidate.roman.clone(),
-                before: slice_raw(&listed.raw, 0, start),
-                head: slice_raw(&listed.raw, start, end),
-                rest: slice_raw(&listed.raw, end, raw_len),
-                role,
-                placed_by,
-                preference: if candidate.user_weight > 0.0 {
-                    "picked"
-                } else if candidate.is_custom {
-                    "custom"
-                } else {
-                    "rest"
-                },
-                coverage: match candidate.coverage_kind {
-                    COVERAGE_KIND_PARTIAL_PREFIX => "prefix",
-                    COVERAGE_KIND_ABBREV => "abbreviation",
-                    _ => "full",
-                },
-                context: match candidate.context_rank {
-                    CONTEXT_RANK_USER => "learned",
-                    CONTEXT_RANK_BUNDLED => "bundled",
-                    _ => "none",
-                },
-                picks: picks.count,
-                syllables: candidate.syllable_count,
-                weight: candidate.user_weight,
-                last_used_ms: picks.last_used_ms,
-                tier: if end == raw_len { "whole" } else { "front" },
-                score: if candidate.score.is_finite() {
-                    candidate.score
-                } else {
-                    0.0
-                },
-                frequency: candidate.frequency,
-                walker_cost: (candidate.walker_cost != WALKER_COST_UNPRICED)
-                    .then_some(candidate.walker_cost),
-                coverage_bytes: end.saturating_sub(start),
-                source_rank: source_tier_rank(candidate.bitmask, candidate.is_custom),
-                sources: crate::explain::source_ids(candidate.bitmask, candidate.is_custom),
-                ranking_source: crate::explain::ranking_source(
-                    candidate.bitmask,
-                    candidate.is_custom,
-                ),
-            }
-        })
-        .collect();
-    crate::explain::Mechanism {
-        raw: listed.raw.clone(),
-        cut_by: if listed.blocked {
-            "none"
-        } else {
-            segmentation.cut_by
-        },
-        syllables: segmentation
-            .syllables
-            .iter()
-            .map(|cut| crate::explain::BufferPiece {
-                text: cut.text.clone(),
-                gap: cut.gap,
-            })
-            .collect(),
-        words: segmentation
-            .words
-            .iter()
-            .map(|word| WordPiece {
-                text: word.text.clone(),
-                hanji: word.hanji.clone(),
-                roman: word.roman.clone(),
-                kind: word.kind,
-                user_row: word.user_row,
-                picks: word.picks,
-                weight: word.weight,
-            })
-            .collect(),
-        candidates: pieces,
-    }
-}
-
-/// Hanji of the walker's whole-buffer path, including a path of one word.
-/// That row is inserted at slot 0 before the twelve stages, so the inspector
-/// keeps it out of the scored list. A path with a hanji-less edge has no
-/// single string to match.
-fn sentence_hanji(
-    words: &[crate::continuous::WordCut],
-    khinsiann_in_hanji: bool,
-) -> Option<String> {
-    let words: Vec<_> = words.iter().filter(|word| word.kind != "gap").collect();
-    if words.is_empty() || words.iter().any(|word| word.hanji.is_none()) {
-        return None;
-    }
-    let mut out = String::new();
-    for (idx, word) in words.iter().enumerate() {
-        let h = word.hanji.as_deref()?;
-        phonetics::api::push_hanji_with_interword_khinsiann(
-            &mut out,
-            h,
-            idx > 0 && khinsiann_in_hanji && word.khinsiann_before,
-        );
-    }
-    Some(out)
-}
-
-fn slice_raw(raw: &str, start: u32, end: u32) -> String {
-    raw.get(start as usize..end as usize)
-        .unwrap_or("")
-        .to_owned()
 }
 
 /// Romanization Only display dedupe (§44) — key = the **rendered roman alone**,

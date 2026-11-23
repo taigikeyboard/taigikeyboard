@@ -6,6 +6,7 @@ mod common;
 mod candidate_dump;
 mod continuous_context_rerank;
 mod cross_mode_parity;
+mod explain_slot0_cut_prod;
 mod hyphen_toned_span_prod;
 mod one_syllable_segment_prod;
 mod oov_syllable_synth_prod;

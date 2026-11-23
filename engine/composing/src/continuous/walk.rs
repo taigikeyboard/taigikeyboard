@@ -97,7 +97,7 @@ impl crate::lattice::WalkerBigram for DictionaryBigram<'_> {
 /// path spanning the shadow, each edge resolved to its custom, dictionary
 /// (with the learned rows competing) or OOV content. `None` when no edge
 /// chain spans the buffer. Shared by the slot-0 synthesis
-/// ([`fetch_walker_slot0_inner`]) and the preedit conversion
+/// ([`synth_cut`]) and the preedit conversion
 /// (`crate::conversion`), which present the same path differently.
 pub(crate) fn walk_buffer(
     continuous_keys: &crate::shadow::ContinuousKeys,
@@ -315,53 +315,55 @@ pub(crate) fn walk_buffer(
     path.filter(|path| !path.choices.is_empty())
 }
 
-/// v3.5.9 A2 — slot-0 whole-sentence walker inner. Pre-A2
-/// `fetch_walker_slot0`'s body minus the `LexiconHandle::with_state`
-/// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice_with_barriers`
-/// call (now built ONCE in the seam under **D1 fold** and passed in).
-/// Returns [`WalkerSlot0`]; the seam converts it to a `RawCandidate`.
-///
-/// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
-/// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
-/// sweep). `mode` is taken as a parameter rather than re-derived
-/// here so the single-source-of-truth invariant — same `mode` feeds
-/// `build_shadow_lattice_with_barriers` (seam) and `custom_toneless_key` (here) —
-/// cannot be silently broken by a future seam refactor.
-///
-/// Returns `None` when the synth must be suppressed (trailing-hyphen
-/// shadow short of raw, the walker cannot span the buffer, or a one-syllable
-/// all-OOV synth in TL/POJ that would repeat the §34 literal, #1030) — caller
-/// leaves the span-local list untouched (pre-S2 behavior preserved).
+/// The sentence cut the slot-0 synth reads: the walker's path over the whole
+/// buffer, and which spans of it are the words. One decision for every
+/// reader — the candidate list's slot 0 ([`walker_slot0`]) and the developer
+/// explain view (`continuous::segmentation`).
+pub(crate) struct SynthCut {
+    /// The lowest-cost path. Under [`SynthWords::Syllables`] its edges are
+    /// not the cut shown — only its edge count and custom flags are read.
+    pub path: crate::lattice::BestPath,
+    pub words: SynthWords,
+}
+
+/// Which spans of a [`SynthCut`] are its words.
+pub(crate) enum SynthWords {
+    /// A dictionary word lies on the path: each path edge is one word.
+    Edges,
+    /// No dictionary word anywhere on the path: the greedy-longest syllable
+    /// reading, as shadow spans.
+    Syllables(Vec<(usize, usize)>),
+}
+
+/// The slot-0 synth's cut for the buffer, or `None` when the synth is
+/// suppressed: a trailing hyphen leaves the shadow short of raw, the walker
+/// cannot span the buffer, the all-OOV reading cannot be syllabified, or it
+/// is one syllable in TL/POJ, which would repeat the §34 literal (#1030).
+/// The caller then leaves the span-local list untouched (pre-S2 behavior).
 ///
 /// `continuous_keys` is the seam's single `build_continuous_keys` result
 /// (shadow / lattice / barriers — the per-key vectors are the span-local
 /// fetch's, unused here); `ctx` is the same [`ContinuousFetchCtx`] the
 /// span-local fetch reads (`mode` / `custom` / `freq_map` / `now_ms` /
 /// `enabled_sources_bitmask` + the dictionary readers).
-pub(super) fn fetch_walker_slot0_inner(
-    raw: &str,
+pub(super) fn synth_cut(
     raw_len: u32,
     continuous_keys: &crate::shadow::ContinuousKeys,
     inv: &SyllableInventory,
     ctx: &ContinuousFetchCtx<'_>,
-) -> Option<WalkerSlot0> {
+) -> Option<SynthCut> {
     let crate::shadow::ContinuousKeys {
         shadow,
         shadow_to_raw_end,
         barriers,
         ..
     } = continuous_keys;
-    let ContinuousFetchCtx {
-        freq_map,
-        now_ms,
-        mode,
-        ..
-    } = *ctx;
+    let mode = ctx.mode;
     // Codex post-impl S2 P1: suppress the synth when a trailing
     // hyphen leaves the shadow short of the raw buffer (a
     // `(0, raw_len)` synth would mis-commit the pending `-`).
     // Cheap early-out before walking.
-    let consumed_span = synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len)?;
+    synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len)?;
     let path = walk_buffer(continuous_keys, inv, ctx)?;
 
     // v3.5.8 S5 (Codex pre-impl Q2, 2026-05-17) — no-dict carve-out.
@@ -380,7 +382,64 @@ pub(super) fn fetch_walker_slot0_inner(
     // sub-syllables (`ta i u an …`), reproducing the very
     // over-segmentation S5 removes, and contradicts the documented
     // `taiuantai → tai uan tai` expectation.
-    //
+    if path.choices.iter().any(|c| c.dict_hit) {
+        return Some(SynthCut {
+            path,
+            words: SynthWords::Edges,
+        });
+    }
+    match greedy_longest_syllabification(
+        shadow,
+        inv,
+        mode,
+        &crate::shadow::oov_reading_barriers(barriers, 0, shadow.len(), mode),
+    ) {
+        // #1030: a one-syllable synth (`huh`) only re-reads the typed text,
+        // which the §34 literal owns in TL/POJ (TPS has no literal).
+        Some(segs)
+            if segs.len() == 1
+                && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj) =>
+        {
+            None
+        }
+        Some(segs) if !segs.is_empty() => Some(SynthCut {
+            path,
+            words: SynthWords::Syllables(segs),
+        }),
+        // Cannot cleanly syllabify the buffer → leave the
+        // span-local list untouched (pre-S2 behavior, mirrors
+        // the synth_consumed_span trailing-hyphen suppression).
+        _ => None,
+    }
+}
+
+/// v3.5.9 A2 — the slot-0 whole-sentence candidate for a [`SynthCut`].
+/// Returns [`WalkerSlot0`]; the seam converts it to a `RawCandidate`.
+///
+/// v3.5.9 B-0c — `mode` comes from `ctx`, the same value that fed
+/// `build_shadow_lattice_with_barriers` (seam) and `custom_toneless_key`
+/// ([`walk_buffer`]), so the single-source-of-truth invariant cannot be
+/// silently broken by a future seam refactor.
+pub(super) fn walker_slot0(
+    raw: &str,
+    continuous_keys: &crate::shadow::ContinuousKeys,
+    ctx: &ContinuousFetchCtx<'_>,
+    cut: &SynthCut,
+) -> WalkerSlot0 {
+    let crate::shadow::ContinuousKeys {
+        shadow,
+        shadow_to_raw_end,
+        ..
+    } = continuous_keys;
+    let ContinuousFetchCtx {
+        freq_map,
+        now_ms,
+        mode,
+        ..
+    } = *ctx;
+    let SynthCut { path, words } = cut;
+    // `synth_cut` passed `synth_consumed_span`, so the synth spans the whole buffer.
+    let consumed_span = (0, raw.len() as u32);
     // v3.5.8 #288 (per-segment case-from-raw) composes with the
     // dict-hit branch: each chosen edge's canonical roman is recased
     // to mirror the user's raw input for that edge's own byte span
@@ -389,56 +448,37 @@ pub(super) fn fetch_walker_slot0_inner(
     // back to the raw buffer. The all-OOV carve-out stays unrecased — it
     // is a synthesized reading, not an edge the user typed a case intent
     // for; greedy-longest segments are independent of `path.edges`.
-    let any_dict = path.choices.iter().any(|c| c.dict_hit);
-    let (parts, syllable_count) = if any_dict {
-        let parts = path
-            .edges
-            .iter()
-            .zip(path.choices.iter())
-            .map(
-                |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
-                    Some(seg) => recase_roman(&c.roman, seg),
-                    None => c.roman.clone(),
-                },
-            )
-            .collect::<Vec<_>>();
-        let s = path
-            .choices
-            .iter()
-            .map(|c| u32::from(c.syllable_count))
-            .sum::<u32>()
-            .min(u32::from(u8::MAX)) as u8;
-        (parts, s)
-    } else {
-        match greedy_longest_syllabification(
-            shadow,
-            inv,
-            mode,
-            &crate::shadow::oov_reading_barriers(barriers, 0, shadow.len(), mode),
-        ) {
-            // #1030: a one-syllable synth (`huh`) only re-reads the typed text,
-            // which the §34 literal owns in TL/POJ (TPS has no literal).
-            Some(segs)
-                if segs.len() == 1
-                    && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj) =>
-            {
-                return None;
-            }
-            Some(segs) if !segs.is_empty() => {
-                // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
-                // synth strips Bopomofo tone marks per syllable; TL/POJ
-                // keep the byte-identical ASCII-digit drop.
-                let parts = segs
-                    .iter()
-                    .map(|&(s, e)| strip_tones_for_mode(&shadow[s..e], mode))
-                    .collect::<Vec<_>>();
-                let s = segs.len().min(u8::MAX as usize) as u8;
-                (parts, s)
-            }
-            // Cannot cleanly syllabify the buffer → leave the
-            // span-local list untouched (pre-S2 behavior, mirrors
-            // the synth_consumed_span trailing-hyphen suppression).
-            _ => return None,
+    let (parts, syllable_count) = match words {
+        SynthWords::Edges => {
+            let parts = path
+                .edges
+                .iter()
+                .zip(path.choices.iter())
+                .map(
+                    |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
+                        Some(seg) => recase_roman(&c.roman, seg),
+                        None => c.roman.clone(),
+                    },
+                )
+                .collect::<Vec<_>>();
+            let s = path
+                .choices
+                .iter()
+                .map(|c| u32::from(c.syllable_count))
+                .sum::<u32>()
+                .min(u32::from(u8::MAX)) as u8;
+            (parts, s)
+        }
+        SynthWords::Syllables(segs) => {
+            // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
+            // synth strips Bopomofo tone marks per syllable; TL/POJ
+            // keep the byte-identical ASCII-digit drop.
+            let parts = segs
+                .iter()
+                .map(|&(s, e)| strip_tones_for_mode(&shadow[s..e], mode))
+                .collect::<Vec<_>>();
+            let s = segs.len().min(u8::MAX as usize) as u8;
+            (parts, s)
         }
     };
     // §10.2 slot-0 word space. The separators the user typed are rendered
@@ -448,7 +488,7 @@ pub(super) fn fetch_walker_slot0_inner(
     // A roman-only dictionary word in the path keeps the sentence's Hanji: the
     // word stands in romanization (Han-Lo mixed, MOE `VT_MIXED`). An OOV edge
     // still leaves the whole path to the romanization.
-    let hanji_spelled = any_dict
+    let hanji_spelled = matches!(words, SynthWords::Edges)
         && path.choices.iter().any(|c| c.hanji.is_some())
         && path.choices.iter().all(|c| c.hanji.is_some() || c.dict_hit);
     let edge_piece =
@@ -536,7 +576,7 @@ pub(super) fn fetch_walker_slot0_inner(
     // frequency counts with plain Hanji rows.
     let lookup_key = phonetics::api::learning_hanji_key(&display_text);
     let user_weight = freq_map.get(&lookup_key, &canonical_tl).user_weight(now_ms);
-    Some(WalkerSlot0 {
+    WalkerSlot0 {
         consumed_span,
         syllable_count,
         display_text,
@@ -553,7 +593,7 @@ pub(super) fn fetch_walker_slot0_inner(
         // truthful flag keeps future ranking/dedupe changes sound.
         is_custom: path.choices.iter().any(|c| c.is_custom),
         edge_count: path.edges.len(),
-    })
+    }
 }
 
 #[cfg(test)]

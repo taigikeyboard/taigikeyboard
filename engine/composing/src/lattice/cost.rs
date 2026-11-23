@@ -90,7 +90,7 @@
 //! pre-impl S7 Q1 / RC0 Q2). For a buffer with **no dictionary hit
 //! anywhere** the min-cost path is still all-OOV; the user-facing
 //! per-syllable romanization is produced by an explicit carve-out in
-//! `continuous::fetch_walker_slot0_inner`, **outside** this cost function
+//! `continuous::synth_cut`, **outside** this cost function
 //! (Codex pre-impl S5 Q2) — the OOV pricing here only governs *path
 //! selection* (dict path vs OOV blob), never the rendered string.
 
@@ -161,7 +161,7 @@ const _: () = assert!(LETTER_COUNT_BIAS > 0.0 && SYLLABLE_COUNT_BIAS > 0.0);
 /// the full buffer — undercut a dict-covering path that accumulates a
 /// per-edge `ln(CORPUS/freq)` toll linearly in edge count. Past ~6
 /// dict edges the blob won → `any_dict == false` → the
-/// `continuous::fetch_walker_slot0_inner` carve-out rendered bare roman
+/// `continuous::synth_cut` carve-out rendered bare roman
 /// (`ginalangtsiahpngbesai → "gin a lang tsiah png be sai"` instead of
 /// 囡仔人食飯袂使; threshold exactly 6 syllables, reproduced against the
 /// real dictionary 2026-05-18). S7's `UNKNOWN_SYLLABLE_DECAY` only
@@ -305,7 +305,7 @@ fn user_entry_cost_cap(custom_word_cost: u16, user_weight_delta: f64) -> f64 {
 ///   for this edge's chosen candidate
 ///   (`ranking::decayed_user_weight_delta`, in `0.0..=4.0`; `0.0` =
 ///   no user history / never selected / bad clock = neutral). Computed
-///   caller-side (`continuous::fetch_walker_slot0_inner`). OOV edges always
+///   caller-side (`continuous::walk_buffer`). OOV edges always
 ///   carry `0.0` and take no discount. On a multi-syllable edge it
 ///   also caps the base cost at [`user_entry_cost_cap`] — one fresh
 ///   selection is the custom tier, so a selected phrase beats a

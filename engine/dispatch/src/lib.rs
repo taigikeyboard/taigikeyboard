@@ -56,11 +56,6 @@ pub fn register_dictionary_bytes(path: &std::path::Path, bytes: Vec<u8>) {
 /// before copying or decoding, so the cap stays in lock-step across the seams.
 pub const MAX_REQUEST_BYTES: usize = 64 * 1024 * 1024;
 
-/// The open composition's segmentation and candidate order, as JSON, or
-/// `None` when nothing is being composed. The same walk and the same sort
-/// the candidate list uses (`composing::requests::mechanism`). A shell that
-/// draws the mechanism calls this beside the key path; the key path itself
-/// is unchanged.
 /// Install a twelve-field comparison order for this thread. `fields` is a
 /// permutation of [`ranking::SORT_FIELDS`]. `false` leaves the current order
 /// in place. The web developer page is the caller; an official input method
@@ -75,6 +70,11 @@ pub fn reset_dev_sort_order() {
     ranking::reset_dev_sort_order();
 }
 
+/// The open composition's segmentation and candidate order, as JSON, or
+/// `None` when nothing is being composed. The same walk and the same sort
+/// the candidate list uses (`composing::explain::mechanism`). A shell that
+/// draws the mechanism calls this beside the key path; the key path itself
+/// is unchanged.
 pub fn explain_composition(
     config: &AppConfig,
     generation: u64,

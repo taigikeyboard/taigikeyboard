@@ -28,7 +28,7 @@ There is no composing-text cell in the candidate strip. Slot 0 is the engine's t
 | Element | Content | Source |
 |---|---|---|
 | Inline pre-edit (iOS `markedText`, Android `setComposingText`) | `Σ nailed[i].display_text` joined to the derived display of the pending `raw` by the word-boundary separator | `Phase::composing_display` = `nailed::nailed_prefix` + `Phase::raw_input` → `derived::derived_display` |
-| Candidate strip, slot 0 | Walker best path: roman line with word-boundary spaces, hanji line as-is | `continuous::fetch_walker_slot0_inner` |
+| Candidate strip, slot 0 | Walker best path: roman line with word-boundary spaces, hanji line as-is | `continuous::walker_slot0` |
 | Candidate strip, slot N ≥ 1 | Ranked candidates | [continuous-input-ranking.md](continuous-input-ranking.md) |
 
 **Pending tail.** `derived_display` applies POJ doubletap pre-processing, tone-mark rendering, NFC normalization and nasal-marker case. It does **not** syllabify, insert hyphens, match candidates or infer word boundaries; user-typed separators are kept (`goa2ai3li2` → `goáàilí`, behavioral-invariants §30). While a Hanji `conversion` is shown, the pre-edit carries the converted tail instead, and `composing_display` stays the text a commit writes.
