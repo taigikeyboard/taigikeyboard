@@ -14,7 +14,7 @@ import { translate } from "./i18n.js";
 const PAGE = 8;
 
 /**
- * The engine's built-in order, `ranking::SORT_FIELDS`.
+ * The engine's built-in order, `SORT_FIELDS` in `engine/ranking/src/sort_key.rs`.
  *
  * @type {Array<[string, StringKey, StringKey]>}
  */

@@ -93,7 +93,7 @@ Output the Other Script is inert under TPS wherever it is bound. Under TPS these
 
 ### D4 — What the list and the commit show
 
-One cell per candidate: Hanji when the row has one; otherwise the row's `roman` through the phonetics op `TlDisplayToTps`. Candidate Display has no effect, as in the engine's commit (`commit_text.rs:83-91`). Commits use `CommitScript::Lead`; the raw commit writes the glyphs as typed.
+One cell per candidate: Hanji when the row has one; otherwise the engine's `CandidateMessage.tps_text` (`composing/cell_content.rs`), rendered from the row's `roman`. Candidate Display has no effect, as in the engine's commit (`commit_text.rs:83-91`). Commits use `CommitScript::Lead`; the raw commit writes the glyphs as typed.
 
 Sites in `desktop/crates/taigi-desktop-core/src/` that assume a romanization and get a TPS arm:
 
@@ -106,7 +106,7 @@ Sites in `desktop/crates/taigi-desktop-core/src/` that assume a romanization and
 | `settings/document.rs:267-278` | Full-width punctuation effective value is on |
 | `keys/bindings.rs:96-99` | Slot labels are `1`–`9` |
 | engine `composing/src/commit_text.rs` `finalized_composition_resolution` | `CommitAsShown` under the TPS layout earns no auto space |
-| `engine/bridge.rs:115-123` | `tps_or_maps_to_er = true`, the mobile default (`ios/.../Settings/SharedSettings.swift:88`); the cell's `TlDisplayToTps` call passes the same value, so a cell and its commit agree |
+| `engine/bridge.rs:115-123` | `tps_or_maps_to_er = true`, the mobile default (`ios/.../Settings/SharedSettings.swift:88`); the engine renders the cell's `tps_text` with the same value, so a cell and its commit agree |
 
 ### D5 — Shortcuts and mode changes (U2)
 
