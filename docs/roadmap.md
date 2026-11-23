@@ -91,4 +91,5 @@ Closed by the maintainer; one line each.
 - Bigram P7 hanji-only sources, D7 two-word context (P6 walker term shipped 2026-10-30).
 - e2e drivers for macOS, Windows, Android, iOS.
 - Invariant-label PR2; naming batch C (persisted names stay frozen).
+- Engine audit 2026-11-23 R8, folding the keys-empty partial-prefix arm of `composing::continuous::assemble` into the Step 4b extension scan: traced 2026-11-24, not adopted. Removing the arm changes output: bare TPS initials list ~58 rows instead of 30 (the TPS single-glyph merge has no keys-non-empty test), custom / learned rows rank as FULL through the empty-keys span-local fetch, and English-mode `t-` loses its list to the trailing-hyphen gate. A clean removal needs three compensating guards for ~10 lines saved.
 - Shared Swift package for macOS + iOS — see [`architecture/maintainability-roadmap-2026-10.md`](architecture/maintainability-roadmap-2026-10.md) § Best practices alignment (deliberately not adopted).
