@@ -3800,7 +3800,7 @@
       }
     },
     "i18n_settings_hanLoMixed": {
-      "comment": "Toggle label (Hàn-Lô lām): every dictionary word also offers its romanization as a candidate and a next-word prediction of its own, ranked and learned on its own and usable in the whole-sentence candidate. Desktop General pane under Tone Keys; mobile Typing section. Disabled under Romanization Only and TPS.",
+      "comment": "Toggle label (Hàn-Lô lām): every dictionary word also offers its romanization as a candidate and a next-word prediction of its own, ranked and learned on its own and usable in the whole-sentence candidate. Desktop General pane under Tone Keys; mobile Typing section. Disabled under Romanization Only and TPS. Also in the keyboard's settings overlay on the phones.",
       "extractionState": "manual",
       "localizations": {
         "en": {
