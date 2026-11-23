@@ -232,7 +232,7 @@ enum GeneratedTaigiStrings {
         .settingsNasalMarkerUppercaseSmall: "ⁿ（SIÂⁿ）",
         .settingsKhinsiannInHanji: "漢字顯示輕聲（--）",
         .settingsHanLoMixed: "漢羅濫",
-        .settingsHanLoMixedInfo: "若開開，逐个詞攏會閣有羅馬字候選詞，方便漢羅濫寫。",
+        .settingsHanLoMixedInfo: "若開開，逐个詞攏會有羅馬字候選詞，方便漢羅濫寫。",
         .settingsKhinsiannInHanjiInfo: "開啟時，漢字輸出會照台羅詞彙加上輕聲符號（例：會記--得、--轉-去）。",
         .settingsTpsOrMapsToER: "or 對應 ㄜ",
         .settingsTpsOrMapsToERInfo: "開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。",
