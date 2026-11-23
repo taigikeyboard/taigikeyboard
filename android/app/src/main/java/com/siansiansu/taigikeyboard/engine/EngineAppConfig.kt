@@ -125,7 +125,7 @@ private val ENGINE_INPUT_MODES = setOf("tl", "poj", "tps", "english")
 /**
  * The engine `input_mode` for [this]. Android's enum has no TPS case (`"tps"`
  * settings collapse to [InputMode.TL] in `InputMode.fromPrefString`), which the
- * engine composes and cases exactly like `"tps"` (`phonetics::api::composing_mode`).
+ * engine composes exactly like `"tps"` (`phonetics::api::composing_mode`).
  */
 internal fun InputMode.engineInputMode(): String =
     when (this) {

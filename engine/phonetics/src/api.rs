@@ -71,7 +71,7 @@ pub fn parse_input_mode(mode: &str) -> InputMode {
     }
 }
 
-/// The mode a request composes and cases under: [`parse_input_mode`], except
+/// The mode a request composes under: [`parse_input_mode`], except
 /// that the TPS layout (`AppConfig::is_tps_layout`) reads as `Tl` — a
 /// Bopomofo-free TPS buffer (`-`, a lone tone mark) takes the TL tables, as it
 /// did while platforms sent TPS as `"tl"`. Bopomofo content still upgrades to

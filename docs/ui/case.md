@@ -44,7 +44,7 @@ iOS stores the setting in KeyboardKit's own `KeyboardSettings` (`isAutocapitaliz
 
 | Component | Location | Description |
 |-----------|----------|-------------|
-| Case-letter math (POJ/TL aware upper/lower, full-upper, candidate raising, nasal-marker case adjust) | Rust `engine/phonetics/src/case_transform.rs` | Cross-platform canonical |
+| Case-letter math (mode-independent upper/lower, full-upper, candidate raising, nasal-marker case adjust) | Rust `engine/phonetics/src/case_transform.rs` | Cross-platform canonical |
 | iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` |
 | Android bridge | `engine/CaseTransformBridge.kt` | Superset: `transformInputCase` + `toneCase` (per-char op by `ToneCaseKind`, `KeyLabelCaseCache` key labels) |
 | iOS shift / capslock state | KeyboardKit (managed) | Drives `LetterCase` value passed into bridge |

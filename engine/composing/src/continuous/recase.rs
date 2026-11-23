@@ -39,24 +39,20 @@ fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCa
 /// The raw span only derives the case intent, never sliced against the
 /// roman, so a toneless-ASCII raw vs tone-diacritic roman length mismatch
 /// is a non-issue (Codex pre-impl 2026-05-18).
-pub(super) fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> String {
-    phonetics::case_transform::raise_case(roman, raw_segment_letter_case(raw_seg), mode)
+pub(super) fn recase_roman(roman: &str, raw_seg: &str) -> String {
+    phonetics::case_transform::raise_case(roman, raw_segment_letter_case(raw_seg))
 }
 
 /// [`recase_roman`] over a whole batch that shares one raw segment. The
 /// case intent is derived once; a lowercase segment leaves every roman
 /// untouched, so the common path allocates nothing.
-pub(super) fn recase_all(
-    candidates: &mut [RawCandidate],
-    raw_seg: &str,
-    mode: phonetics::InputMode,
-) {
+pub(super) fn recase_all(candidates: &mut [RawCandidate], raw_seg: &str) {
     let case = raw_segment_letter_case(raw_seg);
     if case == phonetics::case_transform::LetterCase::Lowercased {
         return;
     }
     for candidate in candidates {
-        candidate.roman = phonetics::case_transform::raise_case(&candidate.roman, case, mode);
+        candidate.roman = phonetics::case_transform::raise_case(&candidate.roman, case);
     }
 }
 
@@ -94,11 +90,7 @@ pub(super) fn recase_tl_as_poj_display(roman: &str) -> String {
         .split_inclusive(['-', ' '])
         .zip(poj.split_inclusive(['-', ' ']))
     {
-        out.push_str(&phonetics::case_transform::match_case(
-            target,
-            source,
-            phonetics::InputMode::Poj,
-        ));
+        out.push_str(&phonetics::case_transform::match_case(target, source));
     }
     out
 }
@@ -204,16 +196,15 @@ mod tests {
 
     #[test]
     fn recase_roman_mirrors_raw_segment_case_tone_aware() {
-        let tl = phonetics::InputMode::Tl;
         // The motivating bug: dict roman is canonical lowercase; the
         // user's raw for each span drives the displayed case so a
         // continuous segment reads `Hit` / `tui`, not `Tui`.
-        assert_eq!(recase_roman("hit", "Hit", tl), "Hit");
-        assert_eq!(recase_roman("tui", "tui", tl), "tui");
+        assert_eq!(recase_roman("hit", "Hit"), "Hit");
+        assert_eq!(recase_roman("tui", "tui"), "tui");
         // Tone-diacritic roman, toneless ASCII raw (length mismatch is a
         // non-issue — raw only derives the case intent).
-        assert_eq!(recase_roman("tâi", "Tai", tl), "Tâi");
-        assert_eq!(recase_roman("tâi", "tai", tl), "tâi");
+        assert_eq!(recase_roman("tâi", "Tai"), "Tâi");
+        assert_eq!(recase_roman("tâi", "tai"), "tâi");
     }
 
     #[test]
@@ -221,11 +212,7 @@ mod tests {
         // User report 2026-09-19: custom entry `Keng-lâm Su-īⁿ` typed as
         // `klsi` came out `keng-lâm su-īⁿ`, and `Klsi` as `Keng-lâm su-īⁿ`.
         // Raw case only raises; the stored capitals stay.
-        let poj = phonetics::InputMode::Poj;
-        assert_eq!(
-            recase_roman("Keng-lâm Su-īⁿ", "Klsi", poj),
-            "Keng-lâm Su-īⁿ"
-        );
+        assert_eq!(recase_roman("Keng-lâm Su-īⁿ", "Klsi"), "Keng-lâm Su-īⁿ");
         // POJ display round-trip must not lower the stored `Su` either.
         assert_eq!(recase_tl_as_poj_display("Keng-lâm Su-īⁿ"), "Keng-lâm Su-īⁿ");
     }

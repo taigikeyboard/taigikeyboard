@@ -115,7 +115,7 @@ pub(crate) fn explain_segmentation(
                 .filter_map(|(&(start, end), choice)| {
                     let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
                     let text = raw.get(raw_start..raw_end)?.to_owned();
-                    let roman = recase_roman(&choice.roman, &text, mode);
+                    let roman = recase_roman(&choice.roman, &text);
                     let display = choice
                         .hanji
                         .clone()

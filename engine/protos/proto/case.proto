@@ -5,20 +5,13 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
-// Case-transform module — POJ/TL tone-letter case mapping for typed keys,
-// key labels and Caps Lock, with nasal marker case adjustment. Replaces iOS
-// `Input/CaseTransformer.swift` + `Input/ToneUtilities.swift`, and Android
-// `dictionary/ToneUtilities.kt`. (Candidates are cased by the engine itself,
-// from the user's own raw input — `composing::continuous`.)
+// Case-transform module — tone-letter casing for typed keys, key labels and
+// Caps Lock, with nasal marker case adjustment. (Candidates are cased by the
+// engine itself, from the user's own raw input — `composing::continuous`.)
 //
-// `AppConfig.input_mode` (envelope.proto) carries the per-request POJ/TL
-// mode; messages here do NOT re-specify mode per call — engine reads from
-// `config_snapshot` per the same convention as `phonetics.proto` ops.
-//
-// Canonical form for combining-mark round-trip: explicit POJ + TL
-// lowercase↔uppercase mapping tables (Android tables — Kotlin/Swift stdlib
-// case APIs do not round-trip combining sequences like `a̍`, `o̍͘`,
-// `n̂`, `m̀` reliably).
+// Casing keeps combining marks (`a̍` ↔ `A̍`, `o̍͘` ↔ `O̍͘`) and is the same in
+// every input mode; the POJ nasal marker pairs `ⁿ` ↔ `ᴺ`. Of the
+// `AppConfig` envelope only `force_lowercase_nasal_marker` is read.
 
 // =========================================================================
 // Shared enum
@@ -74,15 +67,11 @@ message CaseRequest {
 enum ToneCaseKind {
   // Unset — proto schema mismatch; answered with `FAIL_INVARIANT`.
   TONE_CASE_KIND_UNSPECIFIED     = 0;
-  // Uppercase a single char/grapheme using mode-aware tone tables; for a
-  // multi-char input (e.g. "tsh") only the first letter. Matches Android
-  // `ToneUtilities.uppercaseToneLetter` (`replaceFirstChar`).
+  // Uppercase the first char, keep the rest as typed ("tsh" → "Tsh").
   TONE_CASE_KIND_UPPERCASE_FIRST = 1;
-  // Uppercase ALL characters using mode-aware tone tables (Caps Lock).
-  // Matches Android `ToneUtilities.fullUppercaseToneLetter`.
+  // Uppercase every char (Caps Lock).
   TONE_CASE_KIND_UPPERCASE_ALL   = 2;
-  // Lowercase a single char/grapheme using mode-aware tone tables. Matches
-  // Android `ToneUtilities.lowercaseToneLetter`.
+  // Lowercase every char.
   TONE_CASE_KIND_LOWERCASE       = 3;
 }
 
@@ -95,8 +84,7 @@ message ToneCase {
 // Per-string compound request payloads
 // =========================================================================
 
-// `TransformInputCase` applies the LetterCase to `text` per
-// `CaseTransformer.transformForInput` semantics:
+// `TransformInputCase` applies the LetterCase to a keystroke `text`:
 // - LOWERCASED: lowercase per `TONE_CASE_KIND_LOWERCASE`
 // - UPPERCASED: first letter upper (`TONE_CASE_KIND_UPPERCASE_FIRST`), rest lower
 // - CAPS_LOCKED: full upper per `TONE_CASE_KIND_UPPERCASE_ALL`

@@ -125,7 +125,7 @@ Tags 4, 8 and 11 are reserved. Host API mapping per platform: [continuous-commit
 
 [`case.proto`](../../engine/protos/proto/case.proto) — `ToneCase` (per-char op picked by `ToneCaseKind`), `TransformInputCase`; one result, `CaseStringResult`.
 
-- Mode comes from `AppConfig.input_mode`; messages do not repeat it.
+- Casing ignores the input mode; of `AppConfig` only `force_lowercase_nasal_marker` is read.
 - `CaseStringResult` is local to `case.proto` (no coupling to `phonetics.proto`).
 - `LetterCase` has `LETTER_CASE_UNSPECIFIED = 0`; the engine treats it as lowercased.
 - Candidates are not cased over this slice — the engine cases each continuous candidate from the user's raw input (`composing::continuous::recase_roman`); these ops serve keystrokes, key labels and Caps Lock.
