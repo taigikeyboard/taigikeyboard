@@ -86,6 +86,10 @@ updates:
     labels:
       - dependencies
       - rust
+    ignore:
+      # Stays on the engine's rusqlite 0.41 (see /engine; #1083 closed).
+      - dependency-name: rusqlite
+        versions: [">=0.42"]
     groups:
       cargo-minor-and-patch:
         patterns:
