@@ -67,7 +67,7 @@ The cap is applied **before** the decay, so a huge stale count is not pinned hig
 | `FrequencyData { count: i32, last_used_ms: i64 }`, `FrequencyMap`, `user_freq_boost`, `decayed_user_weight_delta` | `engine/ranking/src/score.rs` |
 | `FrequencyMap` key | the `(display_text, canonical_tl)` pair (Core Principle #6); `get` falls back to the legacy `(display_text, "")` bucket, never sums |
 | Store | `user_frequency.db`, `UNIQUE(word, tl)` — `engine/userdata` `UserFrequencyStore` (`rows_for_words`) |
-| Write | `UserDataStores::record_usage` (`engine/userdata/src/stores.rs`): count + 1 and `last_used` = now for the pair; a Hanji pick also touches its learned phrase. A `CommitContinuous` is recorded by the engine itself; a platform `RecordUsage` covers other picks |
+| Write | `UserDataStores::record_usage` (`engine/userdata/src/stores.rs`): count + 1 and `last_used` = now for the pair; a Hanji pick also touches its learned phrase. The engine records every pick itself (`CommitContinuous`, `CommitPrediction`) |
 | Read | `fetch.rs` `candidate_frequency` → `ContinuousFetchCtx.freq_map` + `now_ms` |
 | Sort | `ranking::sort_by_candidate_key`, called from `engine/lexicon/src/continuous/` and Step 4d |
 
