@@ -146,8 +146,6 @@ fn intent_missing_method_returns_error() {
     assert!(result.is_err());
 }
 
-// ---- TelexKey (desktop Telex scheme) ---------------------------------------
-
 fn telex(
     engine: &mut Engine,
     key: &str,

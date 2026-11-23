@@ -250,7 +250,7 @@ pub(crate) fn walk_buffer(
                     })
                 }
                 // No dict hit: the edge's own toneless roman, SAME code
-                // path as a dict edge (`feedback_no_redundant_fallback`)
+                // path as a dict edge (no redundant fallback, `AGENTS.md`)
                 // but flagged `dict_hit: false`. A synthesized roman
                 // edge has no `user_frequency.db` history key so its
                 // walker user weight stays neutral
@@ -600,7 +600,6 @@ pub(super) fn walker_slot0(
 mod tests {
     use super::*;
 
-    // ----- v3.5.8 S2 — synth_consumed_span trailing-hyphen guard -----
     // (Codex post-impl S2 P1 regression). Production runs
     // `canonicalize_poj_shadow` then `build_hyphen_shadow`; for the
     // pure-ASCII inputs here canonicalize is identity (see the

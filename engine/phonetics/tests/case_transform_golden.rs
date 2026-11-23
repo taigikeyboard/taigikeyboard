@@ -4,10 +4,6 @@
 
 use phonetics::case_transform::{adjust_nasal_marker_case, transform_input_case, LetterCase};
 
-// =========================================================================
-// `transform_input_case` — POJ and TL tone letters
-// =========================================================================
-
 #[test]
 fn poj_uppercase_all_tone_letters() {
     let cases: &[(&str, &str)] = &[
@@ -238,10 +234,6 @@ fn poj_o_dot_lowercase() {
     }
 }
 
-// =========================================================================
-// Nasal marker case adjust
-// =========================================================================
-
 #[test]
 fn nasal_adjust_direct_call_promotes_lower_after_upper() {
     assert_eq!(adjust_nasal_marker_case("AN\u{207F}"), "AN\u{1D3A}");
@@ -262,10 +254,6 @@ fn input_caps_lock_is_deterministic() {
     assert_eq!(first, second);
     assert_eq!(first, "TÂI-GÍ");
 }
-
-// =========================================================================
-// Round-trip property — upper then lower restores every tone letter
-// =========================================================================
 
 #[test]
 fn tone_letter_round_trip_uppercase_then_lowercase_is_identity() {

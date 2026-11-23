@@ -268,7 +268,7 @@ public  final class CandidateMessage extends
    * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
    * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
    * recased per the typed segment), this stays the canonical TL the
-   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
    * `DictionaryRecord.tl` for dict-backed candidates, or
    * `phonetics::api::canonical_tl_form(native_roman, mode)` for
    * custom / walker-synth candidates. Snapshotted at candidate
@@ -294,7 +294,7 @@ public  final class CandidateMessage extends
    * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
    * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
    * recased per the typed segment), this stays the canonical TL the
-   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
    * `DictionaryRecord.tl` for dict-backed candidates, or
    * `phonetics::api::canonical_tl_form(native_roman, mode)` for
    * custom / walker-synth candidates. Snapshotted at candidate
@@ -321,7 +321,7 @@ public  final class CandidateMessage extends
    * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
    * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
    * recased per the typed segment), this stays the canonical TL the
-   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
    * `DictionaryRecord.tl` for dict-backed candidates, or
    * `phonetics::api::canonical_tl_form(native_roman, mode)` for
    * custom / walker-synth candidates. Snapshotted at candidate
@@ -349,7 +349,7 @@ public  final class CandidateMessage extends
    * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
    * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
    * recased per the typed segment), this stays the canonical TL the
-   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
    * `DictionaryRecord.tl` for dict-backed candidates, or
    * `phonetics::api::canonical_tl_form(native_roman, mode)` for
    * custom / walker-synth candidates. Snapshotted at candidate
@@ -374,7 +374,7 @@ public  final class CandidateMessage extends
    * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
    * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
    * recased per the typed segment), this stays the canonical TL the
-   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+   * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
    * `DictionaryRecord.tl` for dict-backed candidates, or
    * `phonetics::api::canonical_tl_form(native_roman, mode)` for
    * custom / walker-synth candidates. Snapshotted at candidate
@@ -909,7 +909,7 @@ public  final class CandidateMessage extends
      * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
      * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
      * recased per the typed segment), this stays the canonical TL the
-     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
      * `DictionaryRecord.tl` for dict-backed candidates, or
      * `phonetics::api::canonical_tl_form(native_roman, mode)` for
      * custom / walker-synth candidates. Snapshotted at candidate
@@ -935,7 +935,7 @@ public  final class CandidateMessage extends
      * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
      * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
      * recased per the typed segment), this stays the canonical TL the
-     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
      * `DictionaryRecord.tl` for dict-backed candidates, or
      * `phonetics::api::canonical_tl_form(native_roman, mode)` for
      * custom / walker-synth candidates. Snapshotted at candidate
@@ -962,7 +962,7 @@ public  final class CandidateMessage extends
      * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
      * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
      * recased per the typed segment), this stays the canonical TL the
-     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
      * `DictionaryRecord.tl` for dict-backed candidates, or
      * `phonetics::api::canonical_tl_form(native_roman, mode)` for
      * custom / walker-synth candidates. Snapshotted at candidate
@@ -991,7 +991,7 @@ public  final class CandidateMessage extends
      * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
      * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
      * recased per the typed segment), this stays the canonical TL the
-     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
      * `DictionaryRecord.tl` for dict-backed candidates, or
      * `phonetics::api::canonical_tl_form(native_roman, mode)` for
      * custom / walker-synth candidates. Snapshotted at candidate
@@ -1018,7 +1018,7 @@ public  final class CandidateMessage extends
      * v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
      * `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
      * recased per the typed segment), this stays the canonical TL the
-     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+     * `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
      * `DictionaryRecord.tl` for dict-backed candidates, or
      * `phonetics::api::canonical_tl_form(native_roman, mode)` for
      * custom / walker-synth candidates. Snapshotted at candidate

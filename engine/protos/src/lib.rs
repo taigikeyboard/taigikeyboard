@@ -78,9 +78,9 @@ impl engine::AppConfig {
     /// What replaces the dictionary's syllable hyphen in the rendered
     /// romanization (Syllable Separator, §49): `None` keeps the romanization
     /// as it is — Hyphen, the proto default, an unknown value, and always the
-    /// TPS layout, whose platform re-splits the candidate `roman` on `-` to
-    /// render Bopomofo; `Some("")` drops it (None); `Some(" ")` writes a space
-    /// (Space). Fed to `phonetics::api::syllable_joiner_display`.
+    /// TPS layout, whose Bopomofo cell text (`CandidateMessage.tps_text`) the
+    /// engine renders from the hyphenated `roman`; `Some("")` drops it (None);
+    /// `Some(" ")` writes a space (Space). Fed to `phonetics::api::syllable_joiner_display`.
     pub fn rendered_syllable_joiner(&self) -> Option<&'static str> {
         if self.is_tps_layout() {
             return None;

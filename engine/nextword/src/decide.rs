@@ -284,8 +284,7 @@ fn decide_set_predictions_visible(state: &mut PersistedState, visible: bool) -> 
 }
 
 /// Strict-`<` window check; non-negative lower bound rejects clock-skew /
-/// wrapping. Mirrors iOS `shouldRecordAssociation` /
-/// Android `shouldRecordAssociation`.
+/// wrapping.
 pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> bool {
     if state.last_selected_word.is_none() {
         return false;

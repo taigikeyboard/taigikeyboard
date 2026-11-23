@@ -295,7 +295,8 @@ pub fn encode_error(code: ErrorCode) -> Vec<u8> {
 }
 
 /// Wire byte for a `log::Level` as delivered to the platform logger sinks
-/// (`SwiftLoggerSink` / `RustLogger`): Error=0 … Trace=4. One table for both seams.
+/// (iOS `SwiftLoggerSink`, Android `RustEngineBridge.dispatchLog`): Error=0 …
+/// Trace=4. One table for both seams.
 #[must_use]
 pub fn log_level_to_byte(level: log::Level) -> u8 {
     match level {

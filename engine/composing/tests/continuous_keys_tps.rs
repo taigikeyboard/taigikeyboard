@@ -156,7 +156,7 @@ fn tps_lattice_empty_input_yields_no_keys() {
 /// v3.5.9 D / C-3b — Codex post-impl R3 regression pin. Restores the
 /// `build_keys_tps_caps_at_max_syllables` shape from the retired
 /// `build_keys_tps` in-crate test. With the unified shadow-lattice path
-/// the cap is enforced by `build_lattice`'s `max_syllables` arg
+/// the cap is enforced by `build_lattice_with_barriers`'s `max_syllables` arg
 /// (=`shadow::lattice::MAX_SYLLABLES` = 8) flowing into
 /// `syllabifier::tps::valid_span_endings_lowered`'s BFS depth.
 /// A buffer with `MAX_SYLLABLES + 1` well-formed TPS syllables must
@@ -193,7 +193,6 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     );
 }
 
-// ---- INVARIANT_TPS_DEFOLD_ENUMERATE (§35) ambiguity-aware segmentation ----
 //
 // Since the lattice-time ambiguity-resolution round, the KEY layer emits
 // only the user's LITERAL span text — reading resolution happens inside
@@ -416,7 +415,6 @@ fn longest_single_without_a_following_syllable_still_suppresses_the_prefix() {
     );
 }
 
-// ---- Hermetic TPS SyllableInventory builder -------------------------
 // Key derivation is TPS-specific (no phonotactic gating); the FST tail is
 // `common::inventory_from_keys`. Samples are pre-stripped Bopomofo syllables (with
 // or without tone mark trailing); each sample is emitted as a single

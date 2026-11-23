@@ -61,8 +61,6 @@ use lexicon::CustomEntry;
 use protos::engine::{AppConfig, DictionarySourceToggles, FetchAtPos};
 use test_support::{engine_install_lock, fst_entry, write_fst_set, write_temp};
 
-// --- golden-only fixture builder (union of every key family) ---------------
-
 /// `dictionary.fst` — union of every key family the golden matrix exercises,
 /// each derived the way `dictionary/build/create_fst.py` does in production:
 /// - `tl:<toneless_key>` (pre-B-2 path) plus the toned `tl:<tl_num>` family via
@@ -120,8 +118,6 @@ fn derive_poj_num(tl_display: &str) -> Option<String> {
     }
     (!out.is_empty()).then_some(out)
 }
-
-// --- the single union install fixture ------------------------------------
 
 /// Dictionary rows (grounding cited per row in the module docs). Order is
 /// load-bearing: rowid = 1-based index, shared by `dictionary.bin` and the
@@ -267,8 +263,6 @@ fn install_union_fixture() {
     let syllables_path = build_syllables_fst(SYLLABLE_SAMPLES);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
-
-// --- the matrix ----------------------------------------------------------
 
 struct Case {
     name: &'static str,
@@ -504,8 +498,6 @@ fn matrix() -> Vec<Case> {
         case("tps_notone_taiuantaigi", "ㄉㄞㄨㄢㄉㄞㆣㄧ", "tl"),
     ]
 }
-
-// --- driver + golden -----------------------------------------------------
 
 /// Drive one case through `Start → FetchAtPos` on a
 /// fresh `Engine` and format its candidate vector as a golden block.

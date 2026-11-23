@@ -337,7 +337,6 @@ fn custom_entry_sharing_the_abbreviated_word_shows_once() {
     );
 }
 
-// ---- Which picks count as abbreviation picks (`Usage::abbreviation`) ----
 //
 // A pick is an abbreviation pick when it names a row the last fetch listed
 // as a whole-buffer abbreviation (`COVERAGE_KIND_ABBREV`) for the same
@@ -527,8 +526,6 @@ fn a_pick_confirmed_with_a_literal_counts_as_the_row_does() {
     };
     assert_eq!(abbreviation(&mut engine, confirm, &config), Some(true));
 }
-
-// ---- The record through `EngineHandle` (generation, worker-thread fetch) ----
 
 /// The wire pick of 所以's whole-buffer row under `si`.
 fn sooi_pick(config: &AppConfig) -> Method {

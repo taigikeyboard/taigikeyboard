@@ -16,10 +16,6 @@ option java_multiple_files = true;
 // POJ oo/nn doubletap toggles. Engine never caches; live-read per call per
 // behavioral-invariants.md §11.
 
-// =========================================================================
-// Request envelope
-// =========================================================================
-
 message PhoneticsRequest {
   // Retired ops with no production caller (removed 2026-09-25 / 2026-09-30).
   reserved 10, 12, 14, 15, 16, 20, 21, 22, 23, 30;
@@ -55,18 +51,10 @@ message PhoneticsRequest {
   }
 }
 
-// =========================================================================
-// Phonetics core request payloads
-// =========================================================================
-
 // `GetToneVariations` is the init-bulk-pull op for callout tone variation
 // tables. Returns POJ + TL maps in one response. Caller caches once at
 // engine init (lazy / idempotent on platform side).
 message GetToneVariations {}
-
-// =========================================================================
-// Derivation request payloads
-// =========================================================================
 
 // Custom-dictionary search keys have no wire op: the WRITE side (the full
 // {tl, poj, tps} × {num, notone, abbrev} bundle for a stored roman) and the
@@ -75,10 +63,6 @@ message GetToneVariations {}
 // `derive_custom_query_key`), behind the user-data ops and the dictionary search.
 // The `DeriveCustomQueryKey` op (tag 23) went with its last caller, the
 // desktop settings search, on 2026-09-30.
-
-// =========================================================================
-// Platform text helpers
-// =========================================================================
 
 // `IsAttachingPunctuation` — whether `text`, whole, is a punctuation mark
 // that attaches to the preceding word under auto-space, so it swaps with the
@@ -125,10 +109,6 @@ message DoubleSpacePeriod {
 // `tai7-tsi3`). Answers `StringResult`; the URL itself is the platform's.
 message ExternalLookupDigitForm { string reading = 1; }
 
-// =========================================================================
-// Response envelope
-// =========================================================================
-
 message PhoneticsResponse {
   // Tag 12 was the top-level `optional_string_result` (only `RestoreTone`
   // returned it; removed 2026-09-25).
@@ -149,10 +129,6 @@ message PhoneticsResponse {
     ToneVariationsResult tone_variations_result = 14;
   }
 }
-
-// =========================================================================
-// Response payloads
-// =========================================================================
 
 message StringResult { string output = 1; }
 

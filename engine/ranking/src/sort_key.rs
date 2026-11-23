@@ -837,8 +837,6 @@ mod tests {
         assert_eq!(key.tier, 1);
     }
 
-    // ----- v3.5.8 Phase 9 Item 10 — `coverage_kind` dim -----
-
     #[test]
     fn coverage_kind_full_beats_partial_within_a_tier() {
         // Item 10: within one tier (both `end == raw_len`) and one

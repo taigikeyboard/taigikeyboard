@@ -7,7 +7,7 @@
 //! (`DictionarySearch`, `AppConfig.dictionary_sources`) resolves them here.
 //!
 //! Bit layout (must match `dictionary.bin` filter and
-//! `engine/lexicon/src/search.rs::build_filter` consumer):
+//! `engine/lexicon/src/dictionary_reader.rs::Filter::from_enabled_bitmask` consumer):
 //!
 //! ```text
 //!  0 = kautian   3 = sitbut   6 = kungge   9 = khiin   12 = variant
@@ -251,8 +251,6 @@ mod tests {
             );
         }
     }
-
-    // --- kautian subcollection wire ENCODE (Phase 3) ---
 
     /// DD5 zero-behaviour: absent sub-message ⇒ no high bits, engine skips the
     /// gate (legacy all-on). Mirrors a platform whose UI is not wired yet.

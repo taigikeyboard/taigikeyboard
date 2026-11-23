@@ -1,11 +1,11 @@
-//! TPS visual-dedup integration test — covers the bug where TPS input
+//! Same-commit-Hanji dedupe integration test — covers the bug where TPS input
 //! `ㄨㄢ` returned two `灣` candidates because two `dict.bin` rows
 //! (`灣/uan` and `灣/uân`) share the toneless TPS key `tps:ㄨㄢ` and the
 //! pre-sort `(roman, hanji, consumed_span)` dedupe legitimately keeps
-//! both for TL/POJ. TPS mode hides romanization (hanji-only UI), so
-//! `composing::continuous::dedupe_display_hanji_for_tps` collapses the
-//! visible duplicate. TL/POJ paths must NOT collapse — distinct
-//! romanizations are distinct rows in their UI.
+//! both. When every cell shows and commits plain Hanji — the TPS layout, or
+//! Hanji-first TL / POJ with Annotate in Brackets off —
+//! `composing::continuous::dedupe_same_commit_hanji` collapses the visible
+//! duplicate. Any display that shows the romanization keeps both rows.
 //!
 //! Hermetic install of `LexiconHandle` comes from `tests/common/mod.rs`
 //! (the `it` binary is one process whose singleton every module shares; the

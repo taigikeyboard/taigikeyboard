@@ -25,8 +25,6 @@ where
     assert_eq!(effect_kinds(effects), expected, "effect kinds (ordered)");
 }
 
-// ---- Enter ---------------------------------------------------------
-
 #[test]
 fn start_lands_in_continuous_with_nothing_nailed() {
     // R12: the first keystroke already composes in Continuous; there is no
@@ -51,8 +49,6 @@ fn start_lands_in_continuous_with_nothing_nailed() {
         other => panic!("expected Continuous, got {other:?}"),
     }
 }
-
-// ---- Mid-commit ----------------------------------------------------
 
 #[test]
 fn mid_commit_pushes_segment_and_emits_ordered_effects() {
@@ -132,8 +128,6 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
     assert_eq!(nailed[1].raw_span, (3, 4));
     assert_eq!(nailed[1].raw_text, "a");
 }
-
-// ---- Final commit --------------------------------------------------
 
 #[test]
 fn final_commit_exits_to_idle_emits_word_selected() {
@@ -222,8 +216,6 @@ fn final_commit_carries_nailed_segments_as_preceding() {
     assert_eq!(preceding, vec![("我", "guá"), ("欲", "beh")]);
 }
 
-// ---- CommitContinuous validation ----------------------------------
-
 #[test]
 fn commit_continuous_out_of_range_is_noop() {
     let mut e = engine_in_continuous("tsua");
@@ -308,8 +300,6 @@ fn commit_continuous_empty_display_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-// ---- Reset under Continuous ---------------------------------------
-
 #[test]
 fn reset_after_a_nail_discards_the_whole_composition() {
     // Model B (Codex risk (ii)): the nailed segment never reached the
@@ -354,8 +344,6 @@ fn reset_under_continuous_emits_the_abort_trio() {
     );
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
-
-// ---- Append / AppendHyphen under Continuous ---------
 
 #[test]
 fn append_under_continuous_extends_pending_only() {
@@ -419,8 +407,6 @@ fn append_hyphen_under_continuous_appends_dash() {
     };
     assert_eq!(raw, "tsua-");
 }
-
-// ---- DeleteBackward (folded backspace) under Continuous -----------
 
 #[test]
 fn delete_backward_under_continuous_drops_pending_char() {
@@ -598,8 +584,6 @@ fn delete_backward_under_continuous_with_empty_state_exits_to_idle() {
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
-// ---- Snapshot under Continuous -----
-
 #[test]
 fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_composition() {
     let mut e = engine_in_continuous("tsuagua");
@@ -626,7 +610,6 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
     assert!(resp.is_composing);
 }
 
-// ---- Continuous-phase routing of legacy text-bearing Intents -----
 //
 // Per Codex post-impl finding #3, the two Intents that carry user text
 // (`Start`, `CommitPreeditThenInsertExternal`) under
@@ -1045,7 +1028,6 @@ fn commit_preedit_then_insert_external_under_continuous_with_empty_external_is_n
     assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
 }
 
-// ---- Model B: text-bearing Intents with a NAILED prefix ----------
 // Codex post-impl P2: the zero-nailed cases above don't exercise the
 // Model-B "Σ nailed.display_text + …" combine. These pin §10.8 #9.
 
@@ -1176,8 +1158,6 @@ fn commit_raw_with_empty_tail_carries_earlier_nails_as_preceding() {
     assert_eq!(preceding, vec![("珠", "tsu")]);
 }
 
-// ---- Empty-Continuous invariant guards (Codex finding #2) --------
-
 #[test]
 fn empty_start_stays_idle() {
     // A composition is never empty in both pending and nailed: an empty
@@ -1193,8 +1173,6 @@ fn empty_start_stays_idle() {
     assert!(!resp.is_composing);
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
-
-// ---- NailedSegment public surface ------------------------------
 
 #[test]
 fn nailed_segment_public_fields_round_trip() {
@@ -1217,7 +1195,6 @@ fn nailed_segment_public_fields_round_trip() {
     assert!(seg.is_picked);
 }
 
-// ---- v3.5.8 Phase 9 Bug 1 (Option A) — swap-aware commit, Model B ----
 // `display_text` = swap/TPS/both-scripts marked-region string; `canonical_text`
 // = canonical key for NextWord. Empty canonical → falls back to display
 // (legacy callers). These pin: NailedSegment.display_text holds the swapped

@@ -755,8 +755,6 @@ fn clearing_one_learning_store_leaves_the_others_alone() {
     assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 1);
 }
 
-// ---- Learned phrases (§50) — `learned_phrases.db` --------------------------
-
 fn learned_store(directory: &tempfile::TempDir, limit: usize) -> LearnedPhraseStore {
     let store = LearnedPhraseStore::new(
         paths(directory).learned_phrases,

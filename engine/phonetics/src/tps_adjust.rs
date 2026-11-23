@@ -10,10 +10,6 @@ use crate::tps::fold_tps_glyph_alias;
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 
-// =========================================================================
-// Syllable-boundary set (used by adjustInitialKey)
-// =========================================================================
-
 /// The entering-tone stop codas: TL `p` `t` `k` `h` finals.
 const STOP_CODAS: [char; 4] = ['ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'];
 
@@ -65,10 +61,6 @@ static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
 fn is_syllable_boundary(c: char) -> bool {
     crate::tps::is_tps_tone_mark(c) || SYLLABLE_BOUNDARY_CHARS.contains(&fold_tps_glyph_alias(c))
 }
-
-// =========================================================================
-// Per-function adjustments (one per former `TPSInputAdjuster` step)
-// =========================================================================
 
 /// Returns context-adjusted TPS character for keys with dual initial/final
 /// forms. At syllable start → keep initial form. Not at syllable start →
@@ -274,10 +266,6 @@ fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
         _ => None,
     }
 }
-
-// =========================================================================
-// Entry point (`phonetics::tps_input_adjust`)
-// =========================================================================
 
 /// The adjusted `incoming` glyph against `raw_input` (the composition before
 /// the caret), plus the glyph to put in place of its last character when a

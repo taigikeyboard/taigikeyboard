@@ -456,7 +456,7 @@ pub(crate) fn listed_candidates(
 
 /// Romanization Only display dedupe (§44) — key = the **rendered roman alone**,
 /// first-seen wins (top-ranked sorted row, or the §34 literal when it is in
-/// the group). Mirror of `continuous::dedupe_display_hanji_for_tps` for the
+/// the group). Mirror of `continuous::dedupe_same_commit_hanji` for the
 /// other script; keys on the roman the user actually sees — the POJ
 /// presentation pass already ran.
 ///
@@ -559,7 +559,7 @@ fn literal_roman_candidate(
 /// Inventory-injected hermetic test seam for continuous-input key
 /// building: the same [`crate::shadow::build_continuous_keys`] that
 /// [`crate::continuous::assemble_candidates`] runs (barriers and typed
-/// hyphen runs included), so the `engine/composing/tests/build_keys_*.rs`
+/// hyphen runs included), so the `engine/composing/tests/continuous_keys_*.rs`
 /// integration tests pin production keys against a hermetic inventory
 /// without installing the global `LexiconHandle` singleton. Public
 /// (`#[doc(hidden)]`) for the test crate boundary; production callers
@@ -823,7 +823,6 @@ mod tests {
         );
     }
 
-    // ----- INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34) -----
     // Hanji-romanization fast input: TL/POJ + written tone → roman-only literal candidate
     // (= preedit WYSIWYG) injected at index 0. Tests assert the GATE +
     // self-consistency; the literal string is asserted against

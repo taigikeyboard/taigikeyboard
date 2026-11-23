@@ -186,7 +186,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
 
   public var method: Taigi_Engine_ComposingRequest.OneOf_Method? = nil
 
-  /// --- Text-input mutators (10s) ---
   public var start: Taigi_Engine_Start {
     get {
       if case .start(let v)? = method {return v}
@@ -243,7 +242,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .reset(newValue)}
   }
 
-  /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
   public var fetchAtPos: Taigi_Engine_FetchAtPos {
     get {
       if case .fetchAtPos(let v)? = method {return v}
@@ -336,7 +334,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
-    /// --- Text-input mutators (10s) ---
     case start(Taigi_Engine_Start)
     case append(Taigi_Engine_Append)
     case appendHyphen(Taigi_Engine_AppendHyphen)
@@ -344,7 +341,6 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     case commitRaw(Taigi_Engine_CommitRaw)
     case commitPreeditThenInsertExternal(Taigi_Engine_CommitPreeditThenInsertExternal)
     case reset(Taigi_Engine_Reset)
-    /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     case fetchAtPos(Taigi_Engine_FetchAtPos)
     case commitContinuous(Taigi_Engine_CommitContinuous)
     /// A NextWord prediction tap (D1): stateless, beside the Continuous pick.
@@ -631,7 +627,7 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   /// methods, TPS-OOV hanji-absent candidates with no dict
   /// TL) decodes as "" → engine falls back to the raw committed slice
   /// (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-  /// is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+  /// is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
   /// populated for hanji-present candidates too, NOT only hanji-absent.
   public var associationTl: String = String()
 
@@ -1038,7 +1034,7 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
   /// v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
   /// `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
   /// recased per the typed segment), this stays the canonical TL the
-  /// `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+  /// `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
   /// `DictionaryRecord.tl` for dict-backed candidates, or
   /// `phonetics::api::canonical_tl_form(native_roman, mode)` for
   /// custom / walker-synth candidates. Snapshotted at candidate

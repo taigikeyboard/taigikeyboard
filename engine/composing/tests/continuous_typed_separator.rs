@@ -187,7 +187,6 @@ fn typed_separator_follows_the_syllable_separator_setting() {
     assert_eq!(cells[0].1, "gua-si", "the literal keeps the typed hyphen");
 }
 
-// ---- A typed `-` inside a dictionary word (USER 2026-09-22, §55) ----
 // `pang-tang-lai` read 放重利 as the record stores it, `pàng tāng-lāi`
 // (a MOE dictionary phrase with a space); the user typed the hyphen, so the rendered
 // separator is the hyphen. Fixture: 放/pàng + 重利/tāng-lāi singles and the
@@ -259,7 +258,6 @@ fn typed_hyphen_replaces_the_records_space() {
     assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàng tāng lāi");
 }
 
-// ---- Segment-by-segment commit keeps the typed run (USER 2026-09-22) ----
 // `tng--lai` → pick 轉 → pick 來 committed `tńg-lâi`: the run folded into
 // 來's `raw_text` and the nailed-prefix join never read it (the compound
 // oracle then supplied its own `-`). Fixture: 轉/tńg + 來/lâi singles and

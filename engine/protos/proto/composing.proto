@@ -20,8 +20,9 @@ import "nextword.proto";
 //
 // Lifecycle: every request carries `Request.generation`. A mismatch from the
 // engine's last-seen generation drops state to Idle BEFORE applying the
-// request (no effects emitted from the drop). See
-// `docs/engine/composing-slice-plan.md §5b.2` for the full semantic table.
+// request (no effects emitted from the drop); a read-only `FetchAtPos` at a
+// stale generation answers the idle snapshot instead
+// (`docs/engine/rust-core-proto.md` §5, `docs/engine/composing.md`).
 
 message ComposingRequest {
   // Tag layout: text-input mutators in 10s, v3.5.8 continuous-input ops in
@@ -48,7 +49,6 @@ message ComposingRequest {
   reserved "replace_last";
 
   oneof method {
-    // --- Text-input mutators (10s) ---
     Start                           start                                = 10;
     Append                          append                               = 11;
     AppendHyphen                    append_hyphen                        = 12;
@@ -57,7 +57,6 @@ message ComposingRequest {
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
     Reset                           reset                                = 19;
 
-    // --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     FetchAtPos                      fetch_at_pos                         = 31;
     CommitContinuous                commit_continuous                    = 32;
     // A NextWord prediction tap (D1): stateless, beside the Continuous pick.
@@ -266,7 +265,7 @@ message CommitContinuous {
   // methods, TPS-OOV hanji-absent candidates with no dict
   // TL) decodes as "" → engine falls back to the raw committed slice
   // (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-  // is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+  // is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
   // populated for hanji-present candidates too, NOT only hanji-absent.
   string association_tl = 5;
   // The chosen `CandidateMessage.hanji` as shown, sent whenever the picked
@@ -550,7 +549,7 @@ message CandidateMessage {
   // v3.6.1 R2 — canonical TL romanization (identity sidechannel). Unlike
   // `roman` (field 8, the DISPLAY romanization — POJ-rendered in POJ mode,
   // recased per the typed segment), this stays the canonical TL the
-  // `(hanji, canonical-TL)` word identity is keyed on (Core Principle #7):
+  // `(hanji, canonical-TL)` word identity is keyed on (Core Principle #6):
   // `DictionaryRecord.tl` for dict-backed candidates, or
   // `phonetics::api::canonical_tl_form(native_roman, mode)` for
   // custom / walker-synth candidates. Snapshotted at candidate

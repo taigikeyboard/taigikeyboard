@@ -384,7 +384,6 @@ mod typed_tone_pin_tests {
         assert!(passes(Tl, "ho5onn", "hô-onn"));
     }
 
-    // ---- §52 typed `-` boundaries (USER 2026-09-22) ----
     fn passes_boundaries(
         mode: InputMode,
         typed: &str,

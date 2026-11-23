@@ -33,11 +33,11 @@ use lexicon::{ConsumedSpan, RawCandidate};
 /// when a render pass can make two identities look alike: POJ mode, a
 /// Syllable Separator joiner, or rendered typed separators — for plain
 /// TL/English the render is identity so the pre-render dedupe already
-/// settled every key. TPS has its own post-render visual collapse via
-/// [`dedupe_display_hanji_for_tps`] because the TPS UI hides romanization
-/// entirely (hanji-only display), so two `dict.bin` rows differing only
-/// in tone (e.g. `灣 / uan` vs `灣 / uân` at the same TPS-toneless key
-/// `ㄨㄢ`) survive the pre-render dedupe yet render identically.
+/// settled every key. A Hanji-only display (TPS, or Hanji-first without
+/// brackets) has its own post-render collapse, [`dedupe_same_commit_hanji`]:
+/// two `dict.bin` rows differing only in tone (e.g. `灣 / uan` vs `灣 / uân`
+/// at the same TPS-toneless key `ㄨㄢ`) survive the pre-render dedupe yet
+/// render identically there.
 pub(super) fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
     retain_first_by_key(candidates, |c| {
         Some((c.roman.clone(), c.hanji.clone(), c.consumed_span))

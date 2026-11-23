@@ -282,7 +282,6 @@ fn ascii_only_poj_spellings_skip_canonicalize() {
     );
 }
 
-// ---- POJ-mode ASCII canonicalize (B-2 first-class) ------------------
 // v3.5.9 B-2 promoted POJ to a first-class FST key family. POJ
 // continuous typing of toneless pure-ASCII POJ (`chiah`, `chhia`,
 // `goa`, `che`) now reaches the `poj:` family of `dictionary.fst` /

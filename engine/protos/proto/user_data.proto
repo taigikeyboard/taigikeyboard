@@ -141,7 +141,6 @@ message UserDataReset {
   repeated string failures = 5;
 }
 
-// ---- The custom-dictionary pages (roadmap P4) ----
 //
 // Every platform's Custom Dictionary page reads and edits the store through
 // these; "delete everything" is `ResetUserData.custom_dictionary`. What the
@@ -236,7 +235,6 @@ message ExportCustomCsv {}
 // The whole dictionary as `roman,hanji` lines, for the platform to save.
 message CustomCsvExported { bytes csv = 1; }
 
-// ---- The `.taigi` backup (roadmap P4b) ----
 //
 // Version 4 (`userdata/src/backup.rs`): the custom dictionary, frequency
 // counts, learned bigrams and learned phrases (§50), with each learned row's
@@ -278,7 +276,6 @@ message BackupImported {
   uint32 learned_phrases = 5;
 }
 
-// ---- The Learning Records pages (learning-records-page-roadmap) ----
 //
 // Every platform's Learning Records page lists what the keyboard learned,
 // corrects one row's count, deletes one row and adds one learned phrase to

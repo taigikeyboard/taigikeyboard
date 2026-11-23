@@ -74,10 +74,6 @@ public  final class NextWordRequest extends
 
   public static final int WORD_SELECTED_FIELD_NUMBER = 10;
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    */
   @java.lang.Override
@@ -85,10 +81,6 @@ public  final class NextWordRequest extends
     return methodCase_ == 10;
   }
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    */
   @java.lang.Override
@@ -99,10 +91,6 @@ public  final class NextWordRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.WordSelected.getDefaultInstance();
   }
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    */
   private void setWordSelected(com.siansiansu.taigikeyboard.engine.proto.WordSelected value) {
@@ -111,10 +99,6 @@ public  final class NextWordRequest extends
     methodCase_ = 10;
   }
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    */
   private void mergeWordSelected(com.siansiansu.taigikeyboard.engine.proto.WordSelected value) {
@@ -129,10 +113,6 @@ public  final class NextWordRequest extends
     methodCase_ = 10;
   }
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    */
   private void clearWordSelected() {
@@ -455,7 +435,6 @@ public  final class NextWordRequest extends
   public static final int FILTER_PREDICTIONS_FIELD_NUMBER = 20;
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -468,7 +447,6 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -484,7 +462,6 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -498,7 +475,6 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -518,7 +494,6 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -722,10 +697,6 @@ public  final class NextWordRequest extends
 
 
     /**
-     * <pre>
-     * --- State-mutating intents (10s) — return DecideResult ---
-     * </pre>
-     *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
      */
     @java.lang.Override
@@ -733,10 +704,6 @@ public  final class NextWordRequest extends
       return instance.hasWordSelected();
     }
     /**
-     * <pre>
-     * --- State-mutating intents (10s) — return DecideResult ---
-     * </pre>
-     *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
      */
     @java.lang.Override
@@ -744,10 +711,6 @@ public  final class NextWordRequest extends
       return instance.getWordSelected();
     }
     /**
-     * <pre>
-     * --- State-mutating intents (10s) — return DecideResult ---
-     * </pre>
-     *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
      */
     public Builder setWordSelected(com.siansiansu.taigikeyboard.engine.proto.WordSelected value) {
@@ -756,10 +719,6 @@ public  final class NextWordRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- State-mutating intents (10s) — return DecideResult ---
-     * </pre>
-     *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
      */
     public Builder setWordSelected(
@@ -769,10 +728,6 @@ public  final class NextWordRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- State-mutating intents (10s) — return DecideResult ---
-     * </pre>
-     *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
      */
     public Builder mergeWordSelected(com.siansiansu.taigikeyboard.engine.proto.WordSelected value) {
@@ -781,10 +736,6 @@ public  final class NextWordRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- State-mutating intents (10s) — return DecideResult ---
-     * </pre>
-     *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
      */
     public Builder clearWordSelected() {
@@ -1107,7 +1058,6 @@ public  final class NextWordRequest extends
 
     /**
      * <pre>
-     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1120,7 +1070,6 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1133,7 +1082,6 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1147,7 +1095,6 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1162,7 +1109,6 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1176,7 +1122,6 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
