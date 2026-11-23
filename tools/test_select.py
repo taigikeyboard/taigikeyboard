@@ -42,6 +42,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import doc_paths
+
 ROOT = Path(__file__).resolve().parent.parent
 
 PLATFORMS = (
@@ -106,6 +108,7 @@ NO_GATE_DIRS = {
 INVARIANT_PREFIXES = ("docs/", "tools/invariant_labels")
 INVARIANT_SUFFIXES = (".rs", ".kt", ".swift")
 AGENT_RULE_PATH_PREFIXES = (".claude/rules/", "docs/contributing/", "tools/agent_rule_paths")
+DOC_PATHS_GATE_PREFIX = "tools/doc_paths"
 
 
 @dataclass(frozen=True)
@@ -202,6 +205,7 @@ class Effects:
 DOCS_CHECKS = {
     "invariant-labels": Command("python3 tools/invariant_labels.py"),
     "agent-rule-paths": Command("python3 tools/agent_rule_paths.py"),
+    "doc-paths": Command("python3 tools/doc_paths.py"),
 }
 PYTHON_SUITES = {
     "dictionary": Command("python3 -m pytest tests -q", "dictionary"),
@@ -293,6 +297,10 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
             effects.docs_checks.add("invariant-labels")
         if path.startswith(AGENT_RULE_PATH_PREFIXES):
             effects.docs_checks.add("agent-rule-paths")
+        # CI runs doc-paths on every PR (a moved source file can kill a doc
+        # path); locally it runs when a living doc or the gate itself changes.
+        if doc_paths.is_living_doc(path) or path.startswith(DOC_PATHS_GATE_PREFIX):
+            effects.docs_checks.add("doc-paths")
         if path.endswith(".md"):
             continue
         top = path.split("/", 1)[0]
