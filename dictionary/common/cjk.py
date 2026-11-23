@@ -5,7 +5,7 @@ Ideographs; `dictionary.csv` carries 44 rows beyond Extension E (max
 U+30E6C), so every consumer must reach Extension G. `0x20000–0x3134F` also
 spans Extension I, the Compatibility Ideographs Supplement and the unassigned
 gaps; Extension H (U+31350) and later stay out. The engine's
-`lexicon::classification::CJK_RANGES` is the same table — its
+`phonetics::api::CJK_RANGES` is the same table — its
 `cjk_ranges_parity` test parses `CJK_RANGES` below, so keep it one
 `(0xLOW, 0xHIGH),` tuple per line.
 """

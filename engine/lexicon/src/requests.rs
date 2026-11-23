@@ -11,7 +11,7 @@ use protos::engine::{
 use crate::api;
 use crate::error::LexiconError;
 
-pub fn handle_install(req: InstallRequest) -> Result<LexiconResponse, LexiconError> {
+fn handle_install(req: InstallRequest) -> Result<LexiconResponse, LexiconError> {
     let resp = api::install(req)?;
     Ok(LexiconResponse {
         result: Some(LexResult::InstallResult(resp)),

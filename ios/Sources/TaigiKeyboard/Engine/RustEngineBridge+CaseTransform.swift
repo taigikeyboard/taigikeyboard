@@ -4,9 +4,9 @@ import SwiftProtobuf
 // MARK: - RustEngineBridge Case-Transform surface
 
 /// Case-transform extension for `RustEngineBridge`. Single FFI hop per
-/// typed key. Mode and Nasal mark in POJ capitals (§53) are forwarded
-/// via the envelope `AppConfig`; the double-tap folds are not (case-transform
-/// is independent of POJ preprocessing).
+/// typed key. Casing is the same in every input mode; the envelope
+/// `AppConfig` carries only Nasal mark in POJ capitals (§53), the one field
+/// the engine's case handler reads.
 public extension RustEngineBridge {
     // MARK: - Synthesized enum
 
@@ -25,13 +25,12 @@ public extension RustEngineBridge {
     static func transformInputCase(
         _ text: String,
         letterCase: CaseTransformLetterCase,
-        mode: InputMode,
         isNasalMarkerUppercaseEnabled: Bool,
     ) -> String {
         var payload = Taigi_Engine_TransformInputCase()
         payload.text = text
         payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
-        return caseStringDispatch(method: .transformInputCase(payload), op: "transformInputCase", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
+        return caseStringDispatch(method: .transformInputCase(payload), op: "transformInputCase", isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
     }
 
     // MARK: - Private dispatch helper
@@ -42,14 +41,12 @@ public extension RustEngineBridge {
     private static func caseStringDispatch(
         method: Taigi_Engine_CaseRequest.OneOf_Method,
         op: String,
-        mode: InputMode,
         isNasalMarkerUppercaseEnabled: Bool,
         fallback: String,
     ) -> String {
         guard let resp = caseDispatch(
             method: method,
             op: op,
-            mode: mode,
             isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
         ) else {
             return fallback
@@ -61,13 +58,10 @@ public extension RustEngineBridge {
         return r.output
     }
 
-    /// Case-transform dispatch — single FFI hop per word/char. Mode and
-    /// Nasal mark in POJ capitals are carried via the envelope `AppConfig`; the double-tap
-    /// folds are not, case-transform is independent of POJ preprocessing.
+    /// Case-transform dispatch — single FFI hop per word/char.
     private static func caseDispatch(
         method: Taigi_Engine_CaseRequest.OneOf_Method,
         op: String,
-        mode: InputMode,
         isNasalMarkerUppercaseEnabled: Bool,
     ) -> Taigi_Engine_CaseResponse? {
         var caseReq = Taigi_Engine_CaseRequest()
@@ -76,17 +70,7 @@ public extension RustEngineBridge {
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
         request.payload = .caseTransform(caseReq)
-        // Case-transform is independent of POJ doubletap preprocessing —
-        // pass an explicit folds-off snapshot so the engine `AppConfig`
-        // doesn't accidentally pick up unrelated state.
-        request.configSnapshot = appConfig(
-            mode: mode,
-            pojMarkers: PojMarkerOptions(
-                isDoubleTapOOEnabled: false,
-                isDoubleTapNNEnabled: false,
-                isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
-            ),
-        )
+        request.configSnapshot = caseAppConfig(isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled)
 
         guard let response = send(request, op: op) else { return nil }
         guard response.error == .ok else {
@@ -98,5 +82,14 @@ public extension RustEngineBridge {
             return nil
         }
         return payload
+    }
+
+    /// Only the field `phonetics::case_requests::handle` reads — the input
+    /// mode does not change casing. Inverted on the wire, as in `appConfig`
+    /// (proto default = the marker follows the case, §53).
+    internal static func caseAppConfig(isNasalMarkerUppercaseEnabled: Bool) -> Taigi_Engine_AppConfig {
+        var config = Taigi_Engine_AppConfig()
+        config.forceLowercaseNasalMarker = !isNasalMarkerUppercaseEnabled
+        return config
     }
 }

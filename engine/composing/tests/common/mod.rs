@@ -450,12 +450,32 @@ pub struct Fetch {
     pub context: ranking::ContextRanks,
 }
 
+/// Every kautian subcollection on — the default on every platform.
+pub fn all_kautian_subcollections() -> protos::engine::KautianSubcollectionToggles {
+    protos::engine::KautianSubcollectionToggles {
+        accent_lukang: true,
+        accent_sansia: true,
+        accent_taipak: true,
+        accent_gilan: true,
+        accent_tainan: true,
+        accent_kaohsiung: true,
+        accent_kinmen: true,
+        accent_makung: true,
+        accent_sintik: true,
+        accent_taichung: true,
+        name_appendix: true,
+        alt_reading: true,
+    }
+}
+
 /// The switches a fresh install has on every platform (desktop
 /// `DictionarySourceToggles::DEFAULT`; iOS / Android defaults agree):
-/// every other source (Taihoa and iTaigi among them) off.
+/// every kautian subcollection on, every other source (Taihoa and iTaigi
+/// among them) off.
 pub fn default_source_toggles() -> DictionarySourceToggles {
     DictionarySourceToggles {
         kautian: true,
+        kautian_subcollections: Some(all_kautian_subcollections()),
         taigitv: true,
         kungge: true,
         stti: true,

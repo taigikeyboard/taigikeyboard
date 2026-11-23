@@ -25,8 +25,7 @@ The platform resolves a path inside its own sandbox and calls, from test-build c
 
 | Platform | Call |
 |---|---|
-| iOS / macOS | not wired — the engine exports `e2e_trace_open(path)` (swift-bridge; returns false in a build without the feature), but no Swift code calls it |
-| Android | not wired — the JNI symbol `RustEngineBridge.e2eTraceOpen(path)` is exported with the feature, but no Kotlin `external fun` declares or calls it |
+| iOS / macOS / Android | no opener — the FFI crates export none (removed with no caller, engine audit 2026-11-23); re-add one with a mobile e2e driver. A build with the `e2e-trace` feature carries the trace code but never opens a file |
 | Linux | `taigi-linux-core` opens `$XDG_DATA_HOME/taigikeyboard/e2e-trace.jsonl` in `Runtime::probe` (features `taigi-linux-ffi/e2e-trace`, `taigikeyboard-ibus/e2e-trace`; `make -C linux build E2E=1`) |
 | Windows | not wired yet — no `e2e-trace` feature in `windows/` |
 

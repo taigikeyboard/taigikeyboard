@@ -1,4 +1,4 @@
-//! Parity between `phonetics::api::{align_hanji_syllables, khinsiann_hanji_display}`
+//! Parity between `phonetics::api::{align_hanji_syllables, render_hanji_khinsiann}`
 //! and `dictionary/common/cleanup.py` (`tokenize_hanji_syllables`, `format_khinsiann_hanji`),
 //! plus reachability checks for `--`-opening readings in the shipped dictionary.
 
@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 
 use lexicon::{TonePin, TypedBoundary};
-use phonetics::api::{align_hanji_syllables, khinsiann_hanji_display, strip_khinsiann_hanji};
+use phonetics::api::{align_hanji_syllables, render_hanji_khinsiann, strip_khinsiann_hanji};
 use test_support::{dictionary_csv_or_skip, dictionary_csv_path};
 
 fn repo_root() -> PathBuf {
@@ -93,7 +93,7 @@ fn rust_display_transform_reproduces_curated_lkk_entries() {
         if (hanzi.contains("--") || tl.contains("--")) && phonetics::api::is_hanji(hanzi) {
             let stripped = strip_khinsiann_hanji(hanzi);
             assert_eq!(
-                khinsiann_hanji_display(&stripped, tl),
+                render_hanji_khinsiann(&stripped, tl, true),
                 hanzi,
                 "lkk row ({hanzi:?}, {tl:?}) failed round-trip from {stripped:?}"
             );

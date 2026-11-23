@@ -420,8 +420,7 @@ pub struct DictionarySourceToggles {
     pub lkk: bool,
     /// Supplementary Word List (詞庫增補檔案).
     pub dev: bool,
-    /// Always populated: an absent subcollection message tells the engine to
-    /// skip the gate (`lexicon.proto` `DictionarySourceToggles.kautian_subcollections`).
+    /// Always sent; contract in `lexicon.proto` `DictionarySourceToggles`.
     pub kautian_subcollections: KautianSubcollections,
 }
 

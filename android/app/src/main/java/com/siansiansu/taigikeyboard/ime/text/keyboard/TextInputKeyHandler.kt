@@ -23,7 +23,6 @@ import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
-import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
@@ -501,12 +500,10 @@ internal class TextInputKeyHandler(
                 keyData.code.toChar().toString()
             }
 
-        val inputMode = InputMode.fromPrefString(prefs.inputMode)
         // Per-keystroke (not per-frame) — no cache needed; direct bridge call.
         val char = RustEngineBridge.transformInputCase(
             text = baseText,
             letterCase = LetterCase.from(caps = caps, capsLock = capsLock),
-            mode = inputMode,
             isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
         )
         // TPS keys go to the engine one key per op (`TpsKey`): it applies the

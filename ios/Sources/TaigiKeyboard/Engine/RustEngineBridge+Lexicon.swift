@@ -35,9 +35,7 @@ public extension RustEngineBridge {
         public let lkk: Bool
         public let dev: Bool
         /// kautian subcollection enable state (10 accents + name appendix).
-        /// iOS always populates this (the app ships the toggles), so the
-        /// `kautian_subcollections` proto message is always present and the engine
-        /// always runs the subcollection gate. Field order mirrors
+        /// Always sent; contract in `lexicon.proto` `DictionarySourceToggles`. Field order mirrors
         /// config.yaml `dialect_columns` / `KautianSubcollectionToggles` proto.
         public let kautianSubcoll: KautianSubcoll
 
@@ -141,8 +139,7 @@ public extension RustEngineBridge {
         togglesProto.khiin = toggles.khiin
         togglesProto.lkk = toggles.lkk
         togglesProto.dev = toggles.dev
-        // Always set the subcollection message (iOS ships the toggles) so the
-        // engine runs the gate; absence would signal legacy all-on (DD5).
+        // Always sent; contract in `lexicon.proto` `DictionarySourceToggles`.
         var subcollProto = Taigi_Engine_KautianSubcollectionToggles()
         subcollProto.accentLukang = toggles.kautianSubcoll.lukang
         subcollProto.accentSansia = toggles.kautianSubcoll.sansia

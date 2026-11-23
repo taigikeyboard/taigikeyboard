@@ -39,7 +39,9 @@ fn install_synthetic_lexicon() {
             bitmask,
             frequency,
             syllable_count: Some(tl.split('-').count() as u8),
-            kautian_subtag: Some(0),
+            // Main entry (subtag bit 0) on kautian rows, as every shipped one
+            // carries; 0 elsewhere (`create_dictionary_bin.py`).
+            kautian_subtag: Some(u16::from(bitmask & KAUTIAN_BIT != 0)),
             walker_cost: Some(walker_cost_from_fixture_frequency(frequency)),
             hanji,
             tl,

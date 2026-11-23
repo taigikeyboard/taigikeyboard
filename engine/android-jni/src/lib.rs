@@ -168,27 +168,6 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
     }
 }
 
-/// `external fun e2eTraceOpen(path: String): Boolean` — opens the
-/// test-build-only engine trace. Exported only with the `e2e-trace` feature
-/// (the Android `e2e` build type's `.so`); release `.so` files have neither
-/// the symbol nor the trace code (marker grep in `build-android-libs.sh`).
-#[cfg(feature = "e2e-trace")]
-#[no_mangle]
-pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_e2eTraceOpen<
-    'local,
->(
-    mut unowned: EnvUnowned<'local>,
-    _class: JClass<'local>,
-    path: jni::objects::JString<'local>,
-) -> jni::sys::jboolean {
-    let outcome = unowned
-        .with_env(|env| -> jni::errors::Result<bool> {
-            Ok(dispatch::trace::open(&path.try_to_string(env)?))
-        })
-        .into_outcome();
-    matches!(outcome, Outcome::Ok(true))
-}
-
 struct LoggerDispatch {
     vm: JavaVM,
     /// Global reference to the bridge class. Keeps the class alive so the

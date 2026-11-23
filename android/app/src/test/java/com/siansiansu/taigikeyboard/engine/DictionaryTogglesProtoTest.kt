@@ -60,7 +60,7 @@ class DictionaryTogglesProtoTest {
 
         val proto = dictionaryTogglesProto(DictionaryToggles.from(settings))
 
-        assertTrue("an absent message would switch the subcollection gate off", proto.hasKautianSubcollections())
+        assertTrue("an absent message would read as main only", proto.hasKautianSubcollections())
         assertFalse(proto.kautianSubcollections.accentGilan)
         assertTrue(proto.kautianSubcollections.accentLukang)
         assertTrue(proto.kautian)

@@ -109,6 +109,9 @@ fn leading_unit(syllable: &str) -> String {
 /// POJ display (`tsia̍h-pn̄g` → `chia̍h-pn̄g` → `chp`), as
 /// `dictionary/common/stages/abbrev.py` derives it from the `poj` column.
 /// Sibling of [`crate::tps_abbrev_from_tl`] for the third family.
+///
+/// Public only for the lexicon / composing integration-test fixtures.
+#[doc(hidden)]
 pub fn poj_abbrev_from_tl(tl: &str) -> String {
     derive_abbrev(&crate::api::tl_display_to_poj_display(tl))
 }

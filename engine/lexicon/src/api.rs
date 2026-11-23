@@ -9,7 +9,6 @@ use protos::engine::{
     InstallResponse,
 };
 
-use crate::classification;
 use crate::dictionary_filters::source_codes;
 // The source filter alone, for an engine composing request that carries the
 // toggles in its config (`AppConfig.dictionary_sources`).
@@ -55,7 +54,7 @@ pub fn dictionary_search(
     }
     let enabled_sources_bitmask = dictionary_filter_bitmask(&req.toggles.unwrap_or_default());
     let mode = phonetics::api::parse_input_mode(&req.input_mode);
-    let is_hanji_query = classification::is_hanji(&req.query);
+    let is_hanji_query = phonetics::api::is_hanji(&req.query);
     let found = with_search_readers(|prefix_index, dict| {
         if is_hanji_query {
             search::search_by_hanji(

@@ -63,7 +63,8 @@ fn install_synthetic_lexicon() {
             bitmask: KAUTIAN_BIT,
             frequency: freq,
             syllable_count: Some(syll),
-            kautian_subtag: Some(0),
+            // Main entry (subtag bit 0), as every shipped kautian row carries one.
+            kautian_subtag: Some(1),
             walker_cost: Some(walker_cost_from_fixture_frequency(freq)),
             hanji,
             tl,

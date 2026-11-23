@@ -123,18 +123,6 @@ internal fun engineInputMode(
 private val ENGINE_INPUT_MODES = setOf("tl", "poj", "tps", "english")
 
 /**
- * The engine `input_mode` for [this]. Android's enum has no TPS case (`"tps"`
- * settings collapse to [InputMode.TL] in `InputMode.fromPrefString`), which the
- * engine composes exactly like `"tps"` (`phonetics::api::composing_mode`).
- */
-internal fun InputMode.engineInputMode(): String =
-    when (this) {
-        InputMode.POJ -> "poj"
-        InputMode.TL -> "tl"
-        InputMode.ENGLISH -> "english"
-    }
-
-/**
  * `AppConfig.candidate_display_mode` (field 9). The engine collapses
  * same-roman candidate rows itself under ROMAN_ONLY (`handle_fetch_at_pos`
  * + nextword `filter`); every other request family ignores the field.

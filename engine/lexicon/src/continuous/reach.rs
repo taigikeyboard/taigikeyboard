@@ -103,7 +103,7 @@ pub(super) fn custom_abbreviation_matches(abbrev_key: &str, roman: &str) -> bool
 /// inside [`SyllableReach::syllable_ends`] is the same `starts_with` the three
 /// `matches_continuous_*_toneless_prefix_key` guards run earlier in
 /// `fetch_partial_prefix_candidates_unbounded`'s hydration loop,
-/// and `phonetics::tps_notone_prefix_boundary_tone` (§41) walks the same
+/// and `phonetics::tps_notone_boundary_tones` (§41) walks the same
 /// per-syllable accumulation to answer the adjacent question "does the typed
 /// body land ON a boundary, and at what tone". Folding them into one walk is
 /// the right end state, but it would tighten three shipped guards — they

@@ -54,7 +54,7 @@ impl LearnedPhraseStore {
     /// Android `LearnedPhraseService.MAX_ENTRIES`.
     pub const MAX_ENTRIES: usize = 2_000;
     /// Largest `learn_count` a row can carry.
-    pub const MAX_LEARN_COUNT: i64 = 1_000_000;
+    const MAX_LEARN_COUNT: i64 = 1_000_000;
     /// Rows per fetch (exact whole-buffer match; homophone phrases).
     pub const KEYSTROKE_LIMIT: usize = 5;
 

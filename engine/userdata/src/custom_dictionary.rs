@@ -519,7 +519,7 @@ impl CustomDictionaryStore {
     /// identical both stay (a repair never deletes a word). Each rewrite is
     /// conditional on the row still being the one read, so an edit made in
     /// between — or another process that already normalised — wins.
-    pub fn normalize_stored_rows_if_needed(&self) -> Result<(), CustomDictionaryError> {
+    fn normalize_stored_rows_if_needed(&self) -> Result<(), CustomDictionaryError> {
         type Columns = (String, String);
         let stale: Vec<(String, Columns, Columns)> = self
             .database

@@ -17,11 +17,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
  *
  * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcollections`
- * carries the user's per-subcollection enable state. PRESENCE of the
- * sub-message is the active sentinel — a platform that ships the toggles
- * sets it; any caller that leaves it absent (a platform whose UI is not
- * yet wired, NextWord) signals "no subcollection gating" and the engine
- * keeps the legacy all-on behaviour (wire bit 13 stays 0).
+ * carries the user's per-subcollection enable state. Contract: every shell
+ * sends it with the toggles; an absent message reads as the proto default
+ * (every optional subcollection off, main on).
  * `dictionary_filter_bitmask` owns the subtag bit packing so the layout lives in Rust only.
  * </pre>
  *
@@ -534,8 +532,8 @@ public  final class DictionarySourceToggles extends
   private com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles kautianSubcollections_;
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -546,8 +544,8 @@ public  final class DictionarySourceToggles extends
   }
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -558,8 +556,8 @@ public  final class DictionarySourceToggles extends
   }
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -571,8 +569,8 @@ public  final class DictionarySourceToggles extends
   }
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -591,8 +589,8 @@ public  final class DictionarySourceToggles extends
   }
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -697,11 +695,9 @@ public  final class DictionarySourceToggles extends
    * surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
    *
    * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcollections`
-   * carries the user's per-subcollection enable state. PRESENCE of the
-   * sub-message is the active sentinel — a platform that ships the toggles
-   * sets it; any caller that leaves it absent (a platform whose UI is not
-   * yet wired, NextWord) signals "no subcollection gating" and the engine
-   * keeps the legacy all-on behaviour (wire bit 13 stays 0).
+   * carries the user's per-subcollection enable state. Contract: every shell
+   * sends it with the toggles; an absent message reads as the proto default
+   * (every optional subcollection off, main on).
    * `dictionary_filter_bitmask` owns the subtag bit packing so the layout lives in Rust only.
    * </pre>
    *
@@ -1240,8 +1236,8 @@ public  final class DictionarySourceToggles extends
 
     /**
      * <pre>
-     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * kautian subcollection toggles — contract above. Only meaningful when
+     * `kautian = true`.
      * </pre>
      *
      * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -1252,8 +1248,8 @@ public  final class DictionarySourceToggles extends
     }
     /**
      * <pre>
-     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * kautian subcollection toggles — contract above. Only meaningful when
+     * `kautian = true`.
      * </pre>
      *
      * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -1264,8 +1260,8 @@ public  final class DictionarySourceToggles extends
     }
     /**
      * <pre>
-     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * kautian subcollection toggles — contract above. Only meaningful when
+     * `kautian = true`.
      * </pre>
      *
      * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -1277,8 +1273,8 @@ public  final class DictionarySourceToggles extends
       }
     /**
      * <pre>
-     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * kautian subcollection toggles — contract above. Only meaningful when
+     * `kautian = true`.
      * </pre>
      *
      * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -1291,8 +1287,8 @@ public  final class DictionarySourceToggles extends
     }
     /**
      * <pre>
-     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * kautian subcollection toggles — contract above. Only meaningful when
+     * `kautian = true`.
      * </pre>
      *
      * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -1304,8 +1300,8 @@ public  final class DictionarySourceToggles extends
     }
     /**
      * <pre>
-     * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-     * gate (legacy all-on). Only meaningful when `kautian = true`.
+     * kautian subcollection toggles — contract above. Only meaningful when
+     * `kautian = true`.
      * </pre>
      *
      * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>

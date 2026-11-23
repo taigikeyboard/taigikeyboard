@@ -375,22 +375,21 @@ row belongs to. `0` for non-kautian rows. A row may carry multiple classes
 has enabled.
 
 ```
-  bit  13      KAUTIAN_SUBCOLL_ACTIVE — control sentinel. 0 ⇒ engine SKIPS the
-               subcollection gate entirely (legacy / pre-UI default = all on,
-               zero behaviour change). A platform that has the toggles sets this.
+  bit  13      unused (was the "gate active" sentinel; removed 2026-11-24).
   bits 14..=26 subcollection enable mask, SAME 13-bit layout as the subtag.
   bits 27-31   reserved (unknown high bits ignored for forward-compat).
 ```
 
-`u32::MAX` (the all-enabled sentinel) carries bit 13 + every enable bit set, so
+`u32::MAX` (the all-enabled sentinel) carries every enable bit, so
 "all sources/subcollections on" stays consistent. Owner of the bit positions:
 `dictionary/common/source_bits.py::encode_kautian_subtag` +
 `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`).
 
-ENCODE: `dictionary_filter_bitmask` sets bit 13 + the enable mask from
-`DictionarySourceToggles.kautian_subcollections` (a nested message — PRESENCE
-is the active sentinel). Every platform always sends it; a caller that leaves
-it absent keeps the gate off = legacy all-on. The same mask gates the Tab3
+ENCODE: `dictionary_filter_bitmask` sets the enable mask from
+`DictionarySourceToggles.kautian_subcollections` (main always on); with the
+kautian source off the reader skips the gate. Contract: every shell
+always sends the message; an absent one reads as the proto default (main only).
+The same mask gates the Tab3
 dictionary-browse path and the keyboard fetch (`engine/composing/src/requests.rs`
 `source_filter_bitmask` resolves the request's `AppConfig.dictionary_sources`). NextWord filters with
 the source-only association mask, so subcollection toggles do not reach it.

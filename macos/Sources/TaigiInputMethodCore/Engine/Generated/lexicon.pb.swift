@@ -371,11 +371,9 @@ public nonisolated struct Taigi_Engine_InstallResponse: Sendable {
 /// surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
 ///
 /// kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcollections`
-/// carries the user's per-subcollection enable state. PRESENCE of the
-/// sub-message is the active sentinel — a platform that ships the toggles
-/// sets it; any caller that leaves it absent (a platform whose UI is not
-/// yet wired, NextWord) signals "no subcollection gating" and the engine
-/// keeps the legacy all-on behaviour (wire bit 13 stays 0).
+/// carries the user's per-subcollection enable state. Contract: every shell
+/// sends it with the toggles; an absent message reads as the proto default
+/// (every optional subcollection off, main on).
 /// `dictionary_filter_bitmask` owns the subtag bit packing so the layout lives in Rust only.
 public nonisolated struct Taigi_Engine_DictionarySourceToggles: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -460,8 +458,8 @@ public nonisolated struct Taigi_Engine_DictionarySourceToggles: @unchecked Senda
     set {_uniqueStorage()._dev = newValue}
   }
 
-  /// kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-  /// gate (legacy all-on). Only meaningful when `kautian = true`.
+  /// kautian subcollection toggles — contract above. Only meaningful when
+  /// `kautian = true`.
   public var kautianSubcollections: Taigi_Engine_KautianSubcollectionToggles {
     get {_storage._kautianSubcollections ?? Taigi_Engine_KautianSubcollectionToggles()}
     set {_uniqueStorage()._kautianSubcollections = newValue}
@@ -481,8 +479,7 @@ public nonisolated struct Taigi_Engine_DictionarySourceToggles: @unchecked Senda
 /// `KautianSubcollectionToggles` is the per-subcollection enable state for the
 /// kautian source (Phase 3). The main subcollection (main entry / headword) is
 /// NOT a field — it is always on whenever the kautian master toggle is on,
-/// so `dictionary_filter_bitmask` sets its subtag bit unconditionally when this
-/// message is present. Field tags map to the kautian subtag bit positions:
+/// so `dictionary_filter_bitmask` sets its subtag bit unconditionally. Field tags map to the kautian subtag bit positions:
 /// accent tag N → subtag bit N (config.yaml `dialect_columns` order), and
 /// `name_appendix` → subtag bit 11, `alt_reading` → subtag bit 12. Bit layout owner is Rust
 /// `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see

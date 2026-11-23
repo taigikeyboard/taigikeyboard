@@ -140,8 +140,7 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDicti
         khiin: toggles.khiin,
         lkk: toggles.lkk,
         dev: toggles.dev,
-        // Always sent: an absent subcollection message tells the engine to
-        // skip the gate and treat every subcollection as on.
+        // Always sent; contract in `lexicon.proto` `DictionarySourceToggles`.
         kautian_subcollections: Some(KautianSubcollectionToggles {
             accent_lukang: subcollections.accent_lukang,
             accent_sansia: subcollections.accent_sansia,

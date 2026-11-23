@@ -128,7 +128,7 @@ pub(crate) fn next_raw_span(nailed: &[NailedSegment], len: usize) -> (usize, usi
 impl Conversion {
     /// Byte offset in the pending raw where the last word ends; typing
     /// forward, what follows is the open reading.
-    pub fn closed_end(&self) -> usize {
+    fn closed_end(&self) -> usize {
         self.segments.last().map_or(0, |segment| segment.raw_span.1)
     }
 

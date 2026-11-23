@@ -22,7 +22,7 @@ const MAGIC: &[u8; 4] = b"TKWA";
 const HEADER_SIZE: usize = 20;
 const SUPPORTED_VERSION: u32 = 2;
 /// Separator inside a word key: `hanji\u{1}tl`.
-pub const WORD_KEY_SEPARATOR: char = '\u{1}';
+const WORD_KEY_SEPARATOR: char = '\u{1}';
 
 /// The word-namespace key for a committed word, as the writer encodes it
 /// (`dictionary/build/associations.py`): display-form TL, no normalisation.

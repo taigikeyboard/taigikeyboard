@@ -1,7 +1,7 @@
 //! Hanji detection — whether a text holds a CJK ideograph.
 //!
 //! - `is_hanji` — the Tab3 search short-circuit predicate (lexicon proto
-//!   dispatch, re-exported as `lexicon::classification`), the Continuous
+//!   dispatch, `phonetics::api::is_hanji`), the Continuous
 //!   fetch's Hanji check, and the Learning Records page's Add to Custom
 //!   Dictionary rule (`userdata`). Replaces iOS
 //!   `CandidateProcessor.isHanji` and Android `DictionarySearchViewModel`'s

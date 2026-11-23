@@ -1,10 +1,10 @@
-//! `lexicon::classification::CJK_RANGES` against the dictionary pipeline:
+//! `phonetics::api::CJK_RANGES` against the dictionary pipeline:
 //! the Rust table equals `dictionary/common/cjk.py`'s `CJK_RANGES`, and a
 //! shipped word beyond Extension E reaches the Hanji search
 //! (`INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`).
 
-use lexicon::classification::{is_hanji, CJK_RANGES};
 use lexicon::{EngineHandle, LexiconPaths};
+use phonetics::api::{is_hanji, CJK_RANGES};
 use test_support::{dictionary_cjk_py_path, engine_install_lock, ProductionArtifacts};
 
 /// The tuples of `cjk.py`'s top-level `CJK_RANGES = (` assignment, one
@@ -105,8 +105,7 @@ fn shipped_characters_beyond_extension_e_reach_the_hanji_search() {
     }
 }
 
-/// Every source and the variant characters on; no kautian subcollection
-/// gate (absent sub-message).
+/// Every source, every kautian subcollection and the variant characters on.
 fn all_sources_on() -> protos::engine::DictionarySourceToggles {
     protos::engine::DictionarySourceToggles {
         kautian: true,
@@ -122,6 +121,19 @@ fn all_sources_on() -> protos::engine::DictionarySourceToggles {
         khiin: true,
         lkk: true,
         dev: true,
-        kautian_subcollections: None,
+        kautian_subcollections: Some(protos::engine::KautianSubcollectionToggles {
+            accent_lukang: true,
+            accent_sansia: true,
+            accent_taipak: true,
+            accent_gilan: true,
+            accent_tainan: true,
+            accent_kaohsiung: true,
+            accent_kinmen: true,
+            accent_makung: true,
+            accent_sintik: true,
+            accent_taichung: true,
+            name_appendix: true,
+            alt_reading: true,
+        }),
     }
 }

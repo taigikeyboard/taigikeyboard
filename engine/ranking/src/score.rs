@@ -95,7 +95,7 @@ impl FrequencyData {
 
     /// The same weight over the abbreviation selections only — what an
     /// abbreviation hit ranks by.
-    pub fn abbreviation_weight(&self, now_ms: i64) -> f64 {
+    fn abbreviation_weight(&self, now_ms: i64) -> f64 {
         let count = u32::try_from(self.abbrev_count).unwrap_or(0);
         decayed_user_weight_delta(count, now_ms, self.abbrev_last_used_ms)
     }

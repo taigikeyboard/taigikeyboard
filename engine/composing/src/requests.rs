@@ -33,10 +33,10 @@ use crate::derived::buffer_input_mode;
 use crate::WordListStart;
 use lexicon::dictionary_reader::NO_ROWID;
 use lexicon::{
-    classification::is_hanji, ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory,
-    COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL,
+    ConsumedSpan, LearnedEntry, RawCandidate, SyllableInventory, COVERAGE_KIND_ABBREV,
+    COVERAGE_KIND_FULL,
 };
-use phonetics::api::roman_reading_eq;
+use phonetics::api::{is_hanji, roman_reading_eq};
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CellScript, CommitScript as WireCommitScript,
     ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,

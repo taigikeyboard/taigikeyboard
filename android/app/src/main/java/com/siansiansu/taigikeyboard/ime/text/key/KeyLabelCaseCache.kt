@@ -3,7 +3,6 @@ package com.siansiansu.taigikeyboard.ime.text.key
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind
 import com.siansiansu.taigikeyboard.engine.toneCase
-import com.siansiansu.taigikeyboard.ime.settings.InputMode
 
 /**
  * R3 mitigation for the case-transform Rust slice — KeyView render-path
@@ -15,7 +14,8 @@ import com.siansiansu.taigikeyboard.ime.settings.InputMode
  * switches, that's O(thousands) of hops per minute of typing.
  *
  * This object is a process-wide LRU keyed on
- * `(baseLabel, mode, caps, capsLock, isNasalMarkerUppercaseEnabled)`. The cache:
+ * `(baseLabel, caps, capsLock, isNasalMarkerUppercaseEnabled)` — casing is the
+ * same in every input mode. The cache:
  *   - holds at most ~256 entries (≈ 4 visible keysets × ~16 keys × 4
  *     case-state combos — generous slack)
  *   - evicts least-recently-used on insert past cap (LinkedHashMap
@@ -34,7 +34,6 @@ internal object KeyLabelCaseCache {
 
     private data class Key(
         val baseLabel: String,
-        val mode: InputMode,
         val caps: Boolean,
         val capsLock: Boolean,
         val isNasalMarkerUppercaseEnabled: Boolean,
@@ -53,12 +52,11 @@ internal object KeyLabelCaseCache {
      */
     fun getOrCompute(
         baseLabel: String,
-        mode: InputMode,
         caps: Boolean,
         capsLock: Boolean,
         isNasalMarkerUppercaseEnabled: Boolean,
     ): String {
-        val key = Key(baseLabel, mode, caps, capsLock, isNasalMarkerUppercaseEnabled)
+        val key = Key(baseLabel, caps, capsLock, isNasalMarkerUppercaseEnabled)
         cache[key]?.let { return it }
 
         val kind = when {
@@ -66,7 +64,7 @@ internal object KeyLabelCaseCache {
             caps -> ToneCaseKind.TONE_CASE_KIND_UPPERCASE_FIRST
             else -> ToneCaseKind.TONE_CASE_KIND_LOWERCASE
         }
-        val computed = RustEngineBridge.toneCase(baseLabel, kind, mode, isNasalMarkerUppercaseEnabled)
+        val computed = RustEngineBridge.toneCase(baseLabel, kind, isNasalMarkerUppercaseEnabled)
         cache[key] = computed
         return computed
     }
