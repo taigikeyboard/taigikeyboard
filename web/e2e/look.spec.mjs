@@ -359,9 +359,10 @@ test.describe("in Taipei", () => {
       "datetime",
       /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/,
     );
-    // trace: en-US with timeZoneName "short" in Asia/Taipei names it GMT+8.
+    // trace: en-US, hourCycle h23, timeZoneName "short" in Asia/Taipei →
+    // "11/23/2026, 19:20 GMT+8": no AM/PM, hour 00–23.
     await expect(time).toHaveText(
-      /^\d\d\/\d\d\/\d{4},\s\d\d:\d\d\s[AP]M\sGMT\+8$/,
+      /^\d\d\/\d\d\/\d{4},\s([01]\d|2[0-3]):\d\d\sGMT\+8$/,
     );
   });
 });

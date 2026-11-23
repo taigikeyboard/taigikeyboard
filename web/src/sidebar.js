@@ -22,7 +22,7 @@ function remember(state) {
 
 /**
  * The footer's build line: the commit the site was staged from, and when, in
- * the browser's locale and time zone.
+ * the browser's locale and time zone, on a 24-hour clock.
  *
  * @param {HTMLAnchorElement} commit
  * @param {HTMLTimeElement} time
@@ -38,6 +38,7 @@ export function drawBuild(commit, time) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     timeZoneName: "short",
   }).format(new Date(STAGED.time));
 }
