@@ -331,7 +331,7 @@ test("the editor takes the window's room left over", async ({ page }) => {
 test("the footer links to the website's sponsor section", async ({ page }) => {
   await open(page);
   const footer = page.locator("footer p");
-  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持 ❤️");
+  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持");
   await expect(footer.getByRole("link")).toHaveAttribute(
     "href",
     "https://taigikeyboard.tw/#sponsor",
