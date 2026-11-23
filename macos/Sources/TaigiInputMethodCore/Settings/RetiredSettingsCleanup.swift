@@ -35,7 +35,7 @@ enum RetiredSettingsCleanup {
         // a hand edit) is inert now.
         "associationRecordingEnabled",
         // Frequency Records, retired 2026-09-30: the toggle shipped in v3.6.5,
-        // and the engine counts every pick (`RecordUsage` tag 4 reserved).
+        // and the engine counts every pick.
         // (Annotate in Brackets, retired the same day, returned 2026-11-21 under
         // its old name `outputBothScripts`, so it is no longer swept.)
         "frequencyRecordingEnabled",

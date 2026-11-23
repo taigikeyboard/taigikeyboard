@@ -6,6 +6,10 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
+ * <pre>
+ * Tag 1 was `generation`; no shell read it (removed 2026-11-23).
+ * </pre>
+ *
  * Protobuf type {@code taigi.engine.ClearPredictionsUI}
  */
 @com.google.protobuf.Generated
@@ -16,32 +20,6 @@ public  final class ClearPredictionsUI extends
     ClearPredictionsUIOrBuilder {
   private ClearPredictionsUI() {
   }
-  public static final int GENERATION_FIELD_NUMBER = 1;
-  private long generation_;
-  /**
-   * <code>uint64 generation = 1;</code>
-   * @return The generation.
-   */
-  @java.lang.Override
-  public long getGeneration() {
-    return generation_;
-  }
-  /**
-   * <code>uint64 generation = 1;</code>
-   * @param value The generation to set.
-   */
-  private void setGeneration(long value) {
-
-    generation_ = value;
-  }
-  /**
-   * <code>uint64 generation = 1;</code>
-   */
-  private void clearGeneration() {
-
-    generation_ = 0L;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.ClearPredictionsUI parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -126,6 +104,10 @@ public  final class ClearPredictionsUI extends
   }
 
   /**
+   * <pre>
+   * Tag 1 was `generation`; no shell read it (removed 2026-11-23).
+   * </pre>
+   *
    * Protobuf type {@code taigi.engine.ClearPredictionsUI}
    */
   public static final class Builder extends
@@ -138,34 +120,6 @@ public  final class ClearPredictionsUI extends
       super(DEFAULT_INSTANCE);
     }
 
-
-    /**
-     * <code>uint64 generation = 1;</code>
-     * @return The generation.
-     */
-    @java.lang.Override
-    public long getGeneration() {
-      return instance.getGeneration();
-    }
-    /**
-     * <code>uint64 generation = 1;</code>
-     * @param value The generation to set.
-     * @return This builder for chaining.
-     */
-    public Builder setGeneration(long value) {
-      copyOnWrite();
-      instance.setGeneration(value);
-      return this;
-    }
-    /**
-     * <code>uint64 generation = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearGeneration() {
-      copyOnWrite();
-      instance.clearGeneration();
-      return this;
-    }
 
     // @@protoc_insertion_point(builder_scope:taigi.engine.ClearPredictionsUI)
   }
@@ -182,11 +136,9 @@ public  final class ClearPredictionsUI extends
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
-          java.lang.Object[] objects = new java.lang.Object[] {
-            "generation_",
-          };
+          java.lang.Object[] objects = null;
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0003";
+              "\u0000\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

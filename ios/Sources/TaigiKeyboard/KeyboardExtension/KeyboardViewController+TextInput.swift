@@ -46,8 +46,8 @@ extension KeyboardViewController {
         case .resetCandidateContext:
             state.autocompleteContext.reset()
         case let .nextWordDecided(result):
-            // The composition's next-word handshake (a commit's learning, a
-            // nail, an abort's clear), already applied by the engine in this
+            // The composition's next-word handshake (a commit's learning, an
+            // unnail's or abort's clear), already applied by the engine in this
             // same call; run its answer here, in the engine's order.
             actionHandler?.nextWordController.applyComposingDecision(result)
         }

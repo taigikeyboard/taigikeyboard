@@ -25,7 +25,7 @@ pub struct NailedSegment {
     pub raw_text: String,
     // v3.6.1 R2 — canonical TL romanization of the committed candidate
     // (the chosen `CandidateMessage.canonical_tl`). The NextWord
-    // `WordSelected` / `UpdateLastSelectedWord` `roman` arg is built from
+    // `WordSelected` `roman` (terminal or `preceding`) is built from
     // this (so the learned `prev_tl` / `next_tl` matches a normal
     // candidate commit), falling back to `raw_text` when empty (a picked
     // candidate with no canonical TL: TPS-OOV, hanji-absent). Kept SEPARATE from `raw_text`,

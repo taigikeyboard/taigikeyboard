@@ -21,9 +21,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * glyphs, not picked), nails the pick, walks the rest again with the caret at
  * its end, and never finalizes — also when the pick reaches the end of the
  * tail. `consumed_bytes` is the span end; a pick that does not end after the
- * anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
- * `ClearCandidates` (the window closes). The list a conversion answers is
- * always that word's, so a pick can only be of it.
+ * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window
+ * closes). The list a conversion answers is always that word's, so a pick can
+ * only be of it.
  *
  * **Platform contract**: when committing the user's tap on a candidate
  * returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -189,7 +189,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -213,7 +213,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -238,7 +238,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -264,7 +264,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -287,7 +287,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -449,10 +449,9 @@ public  final class CommitContinuous extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -467,10 +466,9 @@ public  final class CommitContinuous extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -486,10 +484,9 @@ public  final class CommitContinuous extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -503,10 +500,9 @@ public  final class CommitContinuous extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -522,10 +518,9 @@ public  final class CommitContinuous extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -711,9 +706,9 @@ public  final class CommitContinuous extends
    * glyphs, not picked), nails the pick, walks the rest again with the caret at
    * its end, and never finalizes — also when the pick reaches the end of the
    * tail. `consumed_bytes` is the span end; a pick that does not end after the
-   * anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-   * `ClearCandidates` (the window closes). The list a conversion answers is
-   * always that word's, so a pick can only be of it.
+   * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window
+   * closes). The list a conversion answers is always that word's, so a pick can
+   * only be of it.
    *
    * **Platform contract**: when committing the user's tap on a candidate
    * returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -881,7 +876,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -905,7 +900,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -930,7 +925,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -957,7 +952,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -982,7 +977,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -1145,10 +1140,9 @@ public  final class CommitContinuous extends
      * R5 — engine-owned commit resolution: the engine resolves the document
      * text from `roman`, `hanji` and the request's `AppConfig`
      * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-     * with the user-data stores open — records the pick's usage itself (the
-     * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-     * newer than the engine) is IGNORED. On the TPS layout the romanization
-     * written renders as Bopomofo.
+     * with the user-data stores open — records the pick's usage itself.
+     * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+     * layout the romanization written renders as Bopomofo.
      * </pre>
      *
      * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -1163,10 +1157,9 @@ public  final class CommitContinuous extends
      * R5 — engine-owned commit resolution: the engine resolves the document
      * text from `roman`, `hanji` and the request's `AppConfig`
      * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-     * with the user-data stores open — records the pick's usage itself (the
-     * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-     * newer than the engine) is IGNORED. On the TPS layout the romanization
-     * written renders as Bopomofo.
+     * with the user-data stores open — records the pick's usage itself.
+     * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+     * layout the romanization written renders as Bopomofo.
      * </pre>
      *
      * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -1184,10 +1177,9 @@ public  final class CommitContinuous extends
      * R5 — engine-owned commit resolution: the engine resolves the document
      * text from `roman`, `hanji` and the request's `AppConfig`
      * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-     * with the user-data stores open — records the pick's usage itself (the
-     * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-     * newer than the engine) is IGNORED. On the TPS layout the romanization
-     * written renders as Bopomofo.
+     * with the user-data stores open — records the pick's usage itself.
+     * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+     * layout the romanization written renders as Bopomofo.
      * </pre>
      *
      * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -1202,10 +1194,9 @@ public  final class CommitContinuous extends
      * R5 — engine-owned commit resolution: the engine resolves the document
      * text from `roman`, `hanji` and the request's `AppConfig`
      * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-     * with the user-data stores open — records the pick's usage itself (the
-     * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-     * newer than the engine) is IGNORED. On the TPS layout the romanization
-     * written renders as Bopomofo.
+     * with the user-data stores open — records the pick's usage itself.
+     * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+     * layout the romanization written renders as Bopomofo.
      * </pre>
      *
      * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -1222,10 +1213,9 @@ public  final class CommitContinuous extends
      * R5 — engine-owned commit resolution: the engine resolves the document
      * text from `roman`, `hanji` and the request's `AppConfig`
      * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-     * with the user-data stores open — records the pick's usage itself (the
-     * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-     * newer than the engine) is IGNORED. On the TPS layout the romanization
-     * written renders as Bopomofo.
+     * with the user-data stores open — records the pick's usage itself.
+     * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+     * layout the romanization written renders as Bopomofo.
      * </pre>
      *
      * <code>.taigi.engine.CommitScript script = 7;</code>

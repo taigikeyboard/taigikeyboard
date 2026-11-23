@@ -6,40 +6,15 @@
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, ExternalLookupDigitForm,
     IsAttachingPunctuation, IsSpacedPunctuation, PhoneticsRequest, PhoneticsResponse,
-    TlDisplayToTps, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
-
-/// The POJ spelling of a TL reading, for rendering results while the user
-/// is typing POJ.
-pub fn tl_to_poj(input: &str) -> Option<String> {
-    string_result(
-        phonetics_request::Method::TlToPoj(TlToPoj {
-            input: input.to_owned(),
-        }),
-        "tlToPoj",
-    )
-}
 
 /// How TPS spells the vowel `or`: ㄜ, as `er` — the mobile default
 /// (`ios/.../SharedSettings.swift` `tpsOrMapsToER`), and no desktop setting
 /// changes it. Sent as `AppConfig.tps_or_maps_to_er`, which the engine renders
 /// both a cell's `tps_text` and its commit with, so the two spell `or` alike.
 pub const TPS_OR_MAPS_TO_ER: bool = true;
-
-/// The TPS spelling of a display-form TL reading (the cell text itself arrives
-/// as `CandidateMessage.tps_text`). `or_maps_to_er` is `AppConfig.tps_or_maps_to_er`,
-/// so a cell and its commit spell `or` alike.
-pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> Option<String> {
-    string_result(
-        phonetics_request::Method::TlDisplayToTps(TlDisplayToTps {
-            text: text.to_owned(),
-            or_maps_to_er,
-        }),
-        "tlDisplayToTps",
-    )
-}
 
 /// The digit-tone spelling of a TL reading that the web dictionaries search
 /// by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every platform

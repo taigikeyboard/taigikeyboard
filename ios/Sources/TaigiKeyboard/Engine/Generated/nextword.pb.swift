@@ -159,16 +159,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .resetAll(newValue)}
   }
 
-  /// Continuous nail / unnail handshake — learns nothing and changes no
-  /// state (see the message below).
-  public var updateLastSelectedWord: Taigi_Engine_UpdateLastSelectedWord {
-    get {
-      if case .updateLastSelectedWord(let v)? = method {return v}
-      return Taigi_Engine_UpdateLastSelectedWord()
-    }
-    set {method = .updateLastSelectedWord(newValue)}
-  }
-
   /// Platform-driven UI visibility update. After the platform renders the
   /// result of an async predict() call (or clears it on empty result), it
   /// pushes the resulting visibility back to the engine via this intent so
@@ -217,9 +207,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     case contextTimeoutFired(Taigi_Engine_ContextTimeoutFired)
     case clearForNewComposing_p(Taigi_Engine_ClearForNewComposing)
     case resetAll(Taigi_Engine_ResetAll)
-    /// Continuous nail / unnail handshake — learns nothing and changes no
-    /// state (see the message below).
-    case updateLastSelectedWord(Taigi_Engine_UpdateLastSelectedWord)
     /// Platform-driven UI visibility update. After the platform renders the
     /// result of an async predict() call (or clears it on empty result), it
     /// pushes the resulting visibility back to the engine via this intent so
@@ -405,37 +392,6 @@ public nonisolated struct Taigi_Engine_ResetAll: Sendable {
   fileprivate var _input: Taigi_Engine_DecisionInput? = nil
 }
 
-/// Continuous-input nail / unnail handshake: the composing engine emits
-/// `Effect::NextWordUpdateLastSelectedWord` when `Phase::Continuous` lands (or
-/// a backspace pops) a segment, and `dispatch` applies it as this intent.
-/// Learns nothing and changes no state — a nailed segment is not in
-/// the document yet; the final commit's `WordSelected.preceding` carries it
-/// (behavioral-invariants §40 INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING).
-public nonisolated struct Taigi_Engine_UpdateLastSelectedWord: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var text: String = String()
-
-  public var roman: String = String()
-
-  public var input: Taigi_Engine_DecisionInput {
-    get {_input ?? Taigi_Engine_DecisionInput()}
-    set {_input = newValue}
-  }
-  /// Returns true if `input` has been explicitly set.
-  public var hasInput: Bool {self._input != nil}
-  /// Clears the value of `input`. Subsequent reads from it will return its default value.
-  public mutating func clearInput() {self._input = nil}
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-
-  fileprivate var _input: Taigi_Engine_DecisionInput? = nil
-}
-
 /// Platform → engine visibility sync. Pushes the prediction bar's visibility
 /// to state after platform rendering of an async predict() result. No effects,
 /// no generation bump; just state.predictions_visible = visible.
@@ -597,8 +553,6 @@ public nonisolated struct Taigi_Engine_DecideResult: Sendable {
   /// ordered, executor runs sequentially
   public var effects: [Taigi_Engine_NextWordEffect] = []
 
-  public var currentGeneration: UInt64 = 0
-
   public var predictionsVisible: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -759,12 +713,11 @@ public nonisolated struct Taigi_Engine_QueryPredictions: Sendable {
   public init() {}
 }
 
+/// Tag 1 was `generation`; no shell read it (removed 2026-11-23).
 public nonisolated struct Taigi_Engine_ClearPredictionsUI: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var generation: UInt64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -785,7 +738,7 @@ nonisolated extension Taigi_Engine_CellScript: SwiftProtobuf._ProtoNameProviding
 
 nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_all\0\u{3}update_last_selected_word\0\u{3}set_predictions_visible\0\u{4}\u{4}filter_predictions\0\u{4}\u{2}predict_next\0\u{b}boost_candidates\0\u{b}query_state\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_all\0\u{4}\u{2}set_predictions_visible\0\u{4}\u{4}filter_predictions\0\u{4}\u{2}predict_next\0\u{b}boost_candidates\0\u{b}query_state\0\u{b}update_last_selected_word\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}\u{c}\u{f}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -858,19 +811,6 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
           self.method = .resetAll(v)
         }
       }()
-      case 15: try {
-        var v: Taigi_Engine_UpdateLastSelectedWord?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .updateLastSelectedWord(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .updateLastSelectedWord(v)
-        }
-      }()
       case 16: try {
         var v: Taigi_Engine_SetPredictionsVisible?
         var hadOneofValue = false
@@ -940,10 +880,6 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
     case .resetAll?: try {
       guard case .resetAll(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
-    }()
-    case .updateLastSelectedWord?: try {
-      guard case .updateLastSelectedWord(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case .setPredictionsVisible?: try {
       guard case .setPredictionsVisible(let v)? = self.method else { preconditionFailure() }
@@ -1234,50 +1170,6 @@ nonisolated extension Taigi_Engine_ResetAll: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-nonisolated extension Taigi_Engine_UpdateLastSelectedWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".UpdateLastSelectedWord"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{1}input\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
-      case 3: try { try decoder.decodeSingularMessageField(value: &self._input) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
-    }
-    if !self.roman.isEmpty {
-      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
-    }
-    try { if let v = self._input {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_UpdateLastSelectedWord, rhs: Taigi_Engine_UpdateLastSelectedWord) -> Bool {
-    if lhs.text != rhs.text {return false}
-    if lhs.roman != rhs.roman {return false}
-    if lhs._input != rhs._input {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
 nonisolated extension Taigi_Engine_SetPredictionsVisible: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetPredictionsVisible"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}visible\0")
@@ -1531,7 +1423,7 @@ nonisolated extension Taigi_Engine_NextWordResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DecideResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{3}current_generation\0\u{3}predictions_visible\0\u{b}last_selected_word\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{4}\u{2}predictions_visible\0\u{b}last_selected_word\0\u{b}current_generation\0\u{c}\u{4}\u{1}\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1540,7 +1432,6 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.effects) }()
-      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.currentGeneration) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.predictionsVisible) }()
       default: break
       }
@@ -1551,9 +1442,6 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
     if !self.effects.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.effects, fieldNumber: 1)
     }
-    if self.currentGeneration != 0 {
-      try visitor.visitSingularUInt64Field(value: self.currentGeneration, fieldNumber: 2)
-    }
     if self.predictionsVisible != false {
       try visitor.visitSingularBoolField(value: self.predictionsVisible, fieldNumber: 3)
     }
@@ -1562,7 +1450,6 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
 
   public static func ==(lhs: Taigi_Engine_DecideResult, rhs: Taigi_Engine_DecideResult) -> Bool {
     if lhs.effects != rhs.effects {return false}
-    if lhs.currentGeneration != rhs.currentGeneration {return false}
     if lhs.predictionsVisible != rhs.predictionsVisible {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1861,29 +1748,18 @@ nonisolated extension Taigi_Engine_QueryPredictions: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_ClearPredictionsUI: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClearPredictionsUI"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}generation\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{b}generation\0\u{c}\u{1}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.generation) }()
-      default: break
-      }
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.generation != 0 {
-      try visitor.visitSingularUInt64Field(value: self.generation, fieldNumber: 1)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_ClearPredictionsUI, rhs: Taigi_Engine_ClearPredictionsUI) -> Bool {
-    if lhs.generation != rhs.generation {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

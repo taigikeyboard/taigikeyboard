@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use std::sync::{Arc, Once, OnceLock};
 
 use protos::engine::{
-    user_data_request, user_data_response, OpenUserData, UsageRecorded, UserDataJournal,
-    UserDataOpened, UserDataRequest, UserDataResponse,
+    user_data_request, user_data_response, OpenUserData, UserDataJournal, UserDataOpened,
+    UserDataRequest, UserDataResponse,
 };
 
 use crate::{JournalMode, RequestError, UserDataPaths, UserDataStores};
@@ -44,7 +44,7 @@ impl UserDataHandle {
         &HANDLE
     }
 
-    /// Answers one user-data request: `Open`, `RecordUsage`, or a page request.
+    /// Answers one user-data request: `Open` or a page request.
     pub fn handle(&self, request: &UserDataRequest) -> Result<UserDataResponse, RequestError> {
         let method = request
             .method
@@ -53,10 +53,6 @@ impl UserDataHandle {
         let result = match method {
             user_data_request::Method::Open(open) => {
                 user_data_response::Result::Opened(self.open(open)?)
-            }
-            user_data_request::Method::RecordUsage(usage) => {
-                self.record_usage(usage)?;
-                user_data_response::Result::UsageRecorded(UsageRecorded {})
             }
             page => Self::handle_page(self.settled_stores()?, page)?,
         };
@@ -108,14 +104,6 @@ impl UserDataHandle {
             finish_open(&opened.stores, &opened.initialized);
         }
         Ok(UserDataOpened {})
-    }
-
-    /// The open stores, or the refusal a request before the open gets. Never
-    /// blocks: for `RecordUsage`, sent from the key path, whose write queues
-    /// behind the open.
-    pub(crate) fn opened_stores(&self) -> Result<&UserDataStores, RequestError> {
-        self.stores()
-            .ok_or(RequestError::Invalid("user data is not open yet"))
     }
 
     /// The open stores once they have finished opening — for the pages'

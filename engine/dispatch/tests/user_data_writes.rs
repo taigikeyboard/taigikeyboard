@@ -1,6 +1,7 @@
 //! The engine writing its own user data (user-data-engine-roadmap P3c):
-//! once the platform opens the stores, `RecordUsage` counts a pick and
-//! touches a learned phrase, a final commit of hanji picks is learned, and
+//! once the platform opens the stores, a pick the engine resolves is counted
+//! (a Hanji pick touching its learned phrase), a final commit of hanji picks
+//! is learned, and
 //! the bigrams the next-word engine decides are recorded by the engine
 //! itself — never handed to the platform.
 //! Its own process: the user-data handle is process-wide.
@@ -8,12 +9,12 @@
 
 mod common;
 
-use common::{eventually, open_user_data, tl_config, user_data};
+use common::{eventually, open_user_data, tl_config};
 
 use protos::engine::{
-    composing_request, next_word_request, next_word_response, request, response, user_data_request,
-    CommitContinuous, CommitOutcome, CommitPrediction, CommitScript, ComposingRequest,
-    ComposingResponse, DecisionInput, NextWordRequest, RecordUsage, Response, Start, WordSelected,
+    composing_request, next_word_request, next_word_response, request, response, CommitContinuous,
+    CommitOutcome, CommitPrediction, CommitScript, ComposingRequest, ComposingResponse,
+    DecisionInput, NextWordRequest, Response, Start, WordSelected,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
 
@@ -106,10 +107,6 @@ fn roundtrip(generation: u64, payload: request::Payload) -> Response {
     common::roundtrip(tl_config(false), generation, payload)
 }
 
-fn record_usage(usage: RecordUsage) -> Response {
-    user_data(user_data_request::Method::RecordUsage(usage))
-}
-
 /// One commit handed to the next-word engine; answers its decision.
 fn word_selected(text: &str, roman: &str, now_ms: i64) {
     let response = roundtrip(
@@ -142,14 +139,6 @@ fn the_engine_writes_what_the_platforms_wrote() {
     // Before the open: the bigram the decision records has nowhere to go.
     word_selected("台", "tâi", 1_000);
     word_selected("灣", "uân", 2_000);
-    assert!(!matches!(
-        record_usage(RecordUsage {
-            display_text: "台灣".to_owned(),
-            ..RecordUsage::default()
-        })
-        .payload,
-        Some(response::Payload::UserData(_))
-    ));
     // An engine-resolved pick has nowhere to be counted either.
     compose_resolved("tsa", &[commit_resolved("tsá", Some("早"), "tsá", 3)]);
 
@@ -165,50 +154,6 @@ fn the_engine_writes_what_the_platforms_wrote() {
     open_user_data(directory.path());
     let reader = UserDataStores::at(paths.clone(), JournalMode::Delete);
     reader.open_blocking();
-
-    // A pick counts.
-    assert!(matches!(
-        record_usage(RecordUsage {
-            display_text: "台灣".to_owned(),
-            canonical_tl: "tâi-uân".to_owned(),
-        })
-        .payload,
-        Some(response::Payload::UserData(_))
-    ));
-    assert!(eventually(|| reader
-        .frequency
-        .rows_for_words(&["台灣".to_owned()])
-        .is_some_and(|rows| rows.len() == 1 && rows[0].tl == "tâi-uân")));
-
-    // A platform pick of a learned phrase counts it but does not touch it
-    // (§50): the touch belongs to the commits the engine resolves itself.
-    record_usage(RecordUsage {
-        display_text: "做進出口".to_owned(),
-        canonical_tl: "tsò tsìn-tshut-kháu".to_owned(),
-    });
-    // A later count landing proves the queue drained past the pick.
-    record_usage(RecordUsage {
-        display_text: "台北".to_owned(),
-        canonical_tl: "tâi-pak".to_owned(),
-    });
-    assert!(eventually(|| reader
-        .frequency
-        .rows_for_words(&["台北".to_owned()])
-        .is_some_and(|rows| rows.len() == 1)));
-    assert!(
-        reader
-            .frequency
-            .rows_for_words(&["做進出口".to_owned()])
-            .is_some_and(|rows| rows.len() == 1),
-        "every pick counts"
-    );
-    assert!(
-        reader
-            .learned_phrases
-            .all_rows()
-            .is_some_and(|rows| rows.iter().all(|row| row.learn_count == 1)),
-        "a platform pick names no Hanji, so no phrase is touched"
-    );
 
     // A final commit of hanji picks is learned into the engine's store (§50).
     composing(composing_request::Method::Start(Start {
@@ -266,9 +211,9 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
     );
     assert_eq!(frequency_row(reader, "飯"), Some(("pn̄g".to_owned(), 1)));
 
-    // The phrase learned earlier (`做進出口`, touched once by `RecordUsage`
-    // above): a Hanji-less pick of its reading counts the romanization and
-    // touches nothing; a pick of the phrase itself touches it.
+    // The phrase seeded on disk above (`做進出口`): a Hanji-less pick of its
+    // reading counts the romanization and touches nothing; a pick of the
+    // phrase itself touches it.
     let touched_before = learn_count(reader, "做進出口").expect("seeded phrase");
     let counted_before = frequency_row(reader, "做進出口").map_or(0, |(_, count)| count);
     let reading = "tsò tsìn-tshut-kháu";
@@ -312,7 +257,7 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
 
 /// D1: a NextWord prediction tap is counted by the engine under the
 /// prediction's `(hanji, canonical TL)` pair, and touches no learned phrase —
-/// as the platforms' `RecordUsage` for it did (no Hanji sent).
+/// as the platforms' own count of it did (no Hanji).
 fn prediction_taps_are_counted_by_the_engine(reader: &UserDataStores) {
     let tap = |hanji: &str, tl: &str| {
         composing_request::Method::CommitPrediction(CommitPrediction {

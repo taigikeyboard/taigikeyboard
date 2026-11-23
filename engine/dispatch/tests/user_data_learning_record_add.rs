@@ -8,12 +8,12 @@
 
 mod common;
 
-use common::{open_user_data, user_data};
+use common::{open_user_data, record_pick, user_data};
 
 use protos::engine::{
     response, user_data_request, user_data_response, AddLearningRecordToCustomDictionary,
     CustomDictionaryRefusal, ErrorCode, LearningRecord, LearningRecordKind, ListLearningRecords,
-    RecordUsage, Response,
+    Response,
 };
 use userdata::{JournalMode, UserDataHandle, UserDataPaths, UserDataStores};
 
@@ -59,15 +59,6 @@ fn added(response: Response) {
     }
 }
 
-fn record_usage(word: &str, tl: &str) {
-    answer(user_data(user_data_request::Method::RecordUsage(
-        RecordUsage {
-            display_text: word.into(),
-            canonical_tl: tl.into(),
-        },
-    )));
-}
-
 /// The custom entries a dictionary search finds for `query` — the lookup
 /// engine/dispatch joins into `DictionarySearch`.
 fn custom_words(query: &str) -> Vec<String> {
@@ -103,7 +94,7 @@ fn a_learned_phrase_is_added_and_goes_and_a_counted_word_is_refused() {
     }
     open_user_data(directory.path());
     // Picked again: the word is counted.
-    record_usage("台灣", "tâi-uân");
+    record_pick("台灣", "tâi-uân");
     let [counted] = listed(LearningRecordKind::Frequency).try_into().unwrap();
     let phrase = |text: &str| {
         listed(LearningRecordKind::LearnedPhrase)

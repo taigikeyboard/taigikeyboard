@@ -23,7 +23,7 @@ import "lexicon.proto";
 // IME-session ID; engine resets state on mismatch BEFORE applying the
 // request, no effects from the drop). The engine ALSO maintains an
 // internal current_generation that bumps on every state-mutating intent;
-// it travels on QueryPredictions/ClearPredictionsUI effects so the
+// it travels on QueryPredictions effects so the
 // platform executor can drop async SQLite results that land after
 // state invalidation. See nextword-engine-boundary.md §3 + §13.6.
 
@@ -36,6 +36,10 @@ message NextWordRequest {
   // caller and were removed 2026-09-25.
   reserved 21, 30;
   reserved "boost_candidates", "query_state";
+  // Tag 15 (`update_last_selected_word`) was the continuous nail / unnail
+  // handshake; it learned nothing and changed no state (removed 2026-11-23).
+  reserved 15;
+  reserved "update_last_selected_word";
 
   oneof method {
     // --- State-mutating intents (10s) — return DecideResult ---
@@ -44,9 +48,6 @@ message NextWordRequest {
     ContextTimeoutFired  context_timeout_fired   = 12;
     ClearForNewComposing clear_for_new_composing = 13;
     ResetAll             reset_all               = 14;
-    // Continuous nail / unnail handshake — learns nothing and changes no
-    // state (see the message below).
-    UpdateLastSelectedWord update_last_selected_word = 15;
 
     // Platform-driven UI visibility update. After the platform renders the
     // result of an async predict() call (or clears it on empty result), it
@@ -121,18 +122,6 @@ message ClearForNewComposing {
 // Full reset (sentence-end punctuation outside WordSelected, or empty doc).
 message ResetAll {
   DecisionInput input  = 1;
-}
-
-// Continuous-input nail / unnail handshake: the composing engine emits
-// `Effect::NextWordUpdateLastSelectedWord` when `Phase::Continuous` lands (or
-// a backspace pops) a segment, and `dispatch` applies it as this intent.
-// Learns nothing and changes no state — a nailed segment is not in
-// the document yet; the final commit's `WordSelected.preceding` carries it
-// (behavioral-invariants §40 INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING).
-message UpdateLastSelectedWord {
-  string text          = 1;
-  string roman         = 2;
-  DecisionInput input  = 3;
 }
 
 // Platform → engine visibility sync. Pushes the prediction bar's visibility
@@ -220,9 +209,13 @@ message NextWordResponse {
 message DecideResult {
   reserved 4;
   reserved "last_selected_word";
+  // Tag 2 was `current_generation`; no shell read it (removed 2026-11-23).
+  // The engine still checks it on `FilterPredictions.query_generation`, and
+  // `QueryPredictions.generation` carries it.
+  reserved 2;
+  reserved "current_generation";
 
   repeated NextWordEffect effects             = 1;  // ordered, executor runs sequentially
-  uint64                  current_generation  = 2;
   bool                    predictions_visible = 3;
 }
 
@@ -298,4 +291,8 @@ message QueryPredictions {
   int64  now_ms      = 4;
 }
 
-message ClearPredictionsUI { uint64 generation = 1; }
+// Tag 1 was `generation`; no shell read it (removed 2026-11-23).
+message ClearPredictionsUI {
+  reserved 1;
+  reserved "generation";
+}

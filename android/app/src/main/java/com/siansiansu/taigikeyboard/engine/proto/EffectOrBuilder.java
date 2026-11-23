@@ -77,17 +77,6 @@ public interface EffectOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext getResetCandidateContext();
 
   /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   * @return Whether the nextWordUpdateLastSelectedWord field is set.
-   */
-  boolean hasNextWordUpdateLastSelectedWord();
-  /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   * @return The nextWordUpdateLastSelectedWord.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord getNextWordUpdateLastSelectedWord();
-
-  /**
    * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
    * @return Whether the nextWordWordSelected field is set.
    */

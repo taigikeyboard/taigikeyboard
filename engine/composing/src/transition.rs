@@ -46,9 +46,8 @@ use protos::engine::effect;
 use protos::engine::AppConfig;
 use protos::engine::{
     ClearCandidates, ClearPreeditWithoutCommit, CommitOutcome, CommitTextReplacingPreedit,
-    CommittedWord, ComposingResponse, Effect, NextWordClearForNewComposing,
-    NextWordUpdateLastSelectedWord, NextWordWordSelected, RefreshCandidates, ResetCandidateContext,
-    UpdatePreedit,
+    CommittedWord, ComposingResponse, Effect, NextWordClearForNewComposing, NextWordWordSelected,
+    RefreshCandidates, ResetCandidateContext, UpdatePreedit,
 };
 
 /// Learned phrases (§50) — the longest composition the final commit turns
@@ -707,29 +706,20 @@ fn unnail_last(
         UnnailedCaret::BeforeIt => 0,
     };
     let new_pending = popped.raw_text + &tail;
-    // Unnail handshake. NextWord learns nothing from it and keeps its
-    // committed context (behavioral-invariants §40) — the popped segment can
-    // no longer reach NextWord at all, because only the final commit's
-    // `preceding` carries nailed segments. Applied by `dispatch` in this same
-    // call (roadmap E2); canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
-    // A segment nailed as shown is no word the user selected (B4): the
-    // handshake names only a picked one.
-    let nextword_correction = match nailed.last() {
-        Some(prev) if prev.is_picked => next_word_update_last_selected_word(
-            prev.canonical_text.clone(),
-            // R2: canonical TL (raw-slice fallback), as the commit path.
-            association_roman(&prev.association_tl, &prev.raw_text),
-        ),
-        _ => next_word_clear_for_new_composing(),
-    };
+    // Unnailing back to a picked segment tells NextWord nothing: it learns
+    // nothing from nailed segments and keeps its committed context
+    // (behavioral-invariants §40) — only the final commit's `preceding`
+    // carries them. Back to a segment nailed as shown, or to none, NextWord
+    // clears for a new composition (B4: such a segment is no word the user
+    // selected). Applied by `dispatch` in this same call (roadmap E2).
+    let mut effects = Vec::with_capacity(3);
+    if !matches!(nailed.last(), Some(prev) if prev.is_picked) {
+        effects.push(next_word_clear_for_new_composing());
+    }
     set_continuous_walked_afresh(state, new_pending, caret, nailed, config, frequency);
 
     let preedit = phase_preedit(&state.phase, config);
-    let effects = vec![
-        nextword_correction,
-        update_preedit(&preedit),
-        refresh_candidates(),
-    ];
+    effects.extend([update_preedit(&preedit), refresh_candidates()]);
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
@@ -754,8 +744,7 @@ fn commit_raw(state: &mut EngineState, config: &AppConfig) -> ComposingResponse 
 /// tail — in one `CommitTextReplacingPreedit`, because under Model B the
 /// nailed segments were never written to the document (they lived in the
 /// marked region). This replaces the single marked region with the literal
-/// finalized string. The per-nailed-segment NextWord associations already
-/// fired as `NextWordUpdateLastSelectedWord` at nail time; this emits the
+/// finalized string. Nailing told NextWord nothing; this emits the
 /// **single terminal** `NextWordWordSelected` for the last "word": the
 /// pending tail when one exists, else the last nailed segment.
 ///
@@ -945,15 +934,11 @@ fn nail_segment(
     }
     let mut new_nailed = nailed.clone();
     let new_pending = raw[consumed_bytes..].to_string();
-    // R2: the NextWord `roman` arg — canonical TL when the platform sent
-    // it, else the raw committed slice (legacy / TPS-OOV fallback). Used
-    // for whichever single effect this commit fires below (final OR mid).
-    let next_word_roman = association_roman(&association_tl, &raw[..consumed_bytes]);
     let segment = picked_segment(
         &new_nailed,
         raw[..consumed_bytes].to_string(),
         display_text,
-        canonical.clone(),
+        canonical,
         association_tl,
         hanji,
         syllable_count,
@@ -969,8 +954,9 @@ fn nail_segment(
         // Pending is empty here, so the whole composition is just the
         // nailed prefix (combined_display would append derived("") = "").
         let combined = nailed_prefix(&new_nailed, config);
-        // `nailed` = every segment before the one just pushed.
-        let terminal = next_word_terminal(canonical, next_word_roman, nailed);
+        // The segment just pushed is the picked terminal word; R2: its
+        // canonical TL (raw-slice fallback) is the NextWord `roman`.
+        let terminal = next_word_nailed_terminal(&new_nailed);
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed, config);
@@ -988,13 +974,7 @@ fn nail_segment(
     // to the end of the tail that is left.
     let caret = new_pending.len();
     set_continuous(state, new_pending, caret, new_nailed, config, frequency);
-    let response = nailed_response(
-        state,
-        config,
-        canonical,
-        next_word_roman,
-        refresh_candidates(),
-    );
+    let response = nailed_response(state, config, refresh_candidates());
     (response.into(), CommitOutcome::Nailed)
 }
 
@@ -1030,21 +1010,17 @@ fn picked_segment(
     }
 }
 
-/// The answer of a pick that keeps composing: the preedit, the nail
-/// handshake, then `list_effect` — what becomes of the candidate list.
+/// The answer of a pick that keeps composing: the preedit, then
+/// `list_effect` — what becomes of the candidate list. No next-word
+/// handshake: a nailed segment teaches nothing until the final commit's
+/// `preceding` carries it (behavioral-invariants §40).
 fn nailed_response(
     state: &EngineState,
     config: &AppConfig,
-    canonical_text: String,
-    next_word_roman: String,
     list_effect: Effect,
 ) -> ComposingResponse {
     let preedit = phase_preedit(&state.phase, config);
-    let effects = vec![
-        update_preedit(&preedit),
-        next_word_update_last_selected_word(canonical_text, next_word_roman),
-        list_effect,
-    ];
+    let effects = vec![update_preedit(&preedit), list_effect];
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
@@ -1159,12 +1135,11 @@ fn nail_pick_keeping_composition(
         new_nailed.push(segment);
     }
     let raw_text = raw[start..consumed_bytes].to_string();
-    let next_word_roman = association_roman(&association_tl, &raw_text);
     let segment = picked_segment(
         &new_nailed,
         raw_text,
         display_text,
-        canonical_text.clone(),
+        canonical_text,
         association_tl,
         hanji,
         syllable_count,
@@ -1173,13 +1148,7 @@ fn nail_pick_keeping_composition(
     let rest = raw[consumed_bytes..].to_string();
     let caret = rest.len();
     set_continuous_walked_afresh(state, rest, caret, new_nailed, config, frequency);
-    let response = nailed_response(
-        state,
-        config,
-        canonical_text,
-        next_word_roman,
-        clear_candidates(),
-    );
+    let response = nailed_response(state, config, clear_candidates());
     (response.into(), CommitOutcome::Nailed)
 }
 
@@ -1377,14 +1346,6 @@ fn confirm_composition_then_insert(
         );
         let mut resolution = finalized_composition_resolution(committed, config);
         resolution.leaves_trailing_auto_space = insert.leaves_trailing_auto_space;
-        // Preserve a partial pick's learning handshake, without exposing its
-        // transient preedit or refetch request to the host.
-        applied.response.effect.retain(|effect| {
-            matches!(
-                effect.kind,
-                Some(effect::Kind::NextWordUpdateLastSelectedWord(_))
-            )
-        });
         // A TPS pick can leave the composition all nailed with no raw tail.
         // Use normal confirmation learning: only fully picked compositions
         // teach words/phrases; unpicked segments or a pending tail teach none.
@@ -1396,9 +1357,9 @@ fn confirm_composition_then_insert(
             }
         }
         applied.learned = finished.learned;
-        applied.response.effect.extend(finished.response.effect);
+        // The host sees only the finished composition's effects, never the
+        // partial pick's transient preedit or refetch request.
         applied.response = ComposingResponse {
-            effect: applied.response.effect,
             commit: Some(resolution),
             ..finished.response
         };
@@ -1570,14 +1531,6 @@ pub(crate) fn association_roman(association_tl: &str, raw_text: &str) -> String 
         raw_text.to_owned()
     } else {
         association_tl.to_owned()
-    }
-}
-
-fn next_word_update_last_selected_word(text: String, roman: String) -> Effect {
-    Effect {
-        kind: Some(effect::Kind::NextWordUpdateLastSelectedWord(
-            NextWordUpdateLastSelectedWord { text, roman },
-        )),
     }
 }
 

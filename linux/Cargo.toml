@@ -35,7 +35,10 @@ tempfile = "3"
 # `taigi-desktop-core`'s `user-data` feature.
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
-# The settings tests build engine requests the pages never send (a pick).
+# Test-only edge: the long-horizon corpus encoders spell TL as POJ / TPS
+# through the engine's native converters (no wire op since 2026-11-23).
+phonetics = { path = "../engine/phonetics" }
+# The long-horizon tests build engine requests directly.
 prost = "0.14"
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }

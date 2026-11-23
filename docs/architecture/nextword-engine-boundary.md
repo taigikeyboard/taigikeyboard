@@ -11,14 +11,14 @@ Executors own the clock, the context-timeout timer, the main-thread hop and the 
 
 ## 2. Contract shape
 
-Each intent (`WordSelected`, `Backspace`, `ContextTimeoutFired`, `ClearForNewComposing`, `ResetAll`, `UpdateLastSelectedWord`, `SetPredictionsVisible`) carries a `DecisionInput` (`now_ms` + settings snapshot) and returns a `DecideResult`: `NextWordEffect`s to run in order, plus a state echo (`current_generation`, `predictions_visible`). Effects:
+Each intent (`WordSelected`, `Backspace`, `ContextTimeoutFired`, `ClearForNewComposing`, `ResetAll`, `SetPredictionsVisible`) carries a `DecisionInput` (`now_ms` + settings snapshot) and returns a `DecideResult`: `NextWordEffect`s to run in order, plus a state echo (`predictions_visible`). Effects:
 
 | Effect | Executor does |
 |---|---|
 | `RescheduleContextTimeout(after_ms)` | cancel the one stored timer, start a new one; on fire send `ContextTimeoutFired` |
 | `CancelContextTimeout` | cancel the timer |
 | `QueryPredictions(word, roman, generation, now_ms)` | send `PredictNext` off the main thread (§2.4) |
-| `ClearPredictionsUI(generation)` | clear the prediction row |
+| `ClearPredictionsUI` | clear the prediction row |
 
 The engine records bigrams itself; there is no record effect (tags 3 / 4 reserved).
 
@@ -67,7 +67,7 @@ The timer is one `Job` on `TaigiKeyboard.serviceScope` (cancelled in `onDestroy`
 
 ### 13.6 Generation
 
-`current_generation` is a wrapping `Long` on the bridge (`UInt64` on iOS). The query coroutine also checks the envelope generation after the engine call and returns if the IME session changed.
+`QueryPredictions.generation` (the engine's `current_generation`) is a wrapping `Long` on the bridge (`UInt64` on iOS). The query coroutine also checks the envelope generation after the engine call and returns if the IME session changed.
 
 ### 13.10 Prediction values
 

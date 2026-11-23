@@ -2767,6 +2767,7 @@ dependencies = [
  "dispatch 0.1.0",
  "log",
  "os_pipe",
+ "phonetics",
  "prost",
  "protos",
  "rustix 1.1.6",
@@ -2829,13 +2830,10 @@ dependencies = [
 name = "taigikeyboard-settings"
 version = "3.9.0"
 dependencies = [
- "dispatch 0.1.0",
  "gio",
  "gtk4",
  "libadwaita",
  "log",
- "prost",
- "protos",
  "taigi-desktop-core",
  "taigi-desktop-storage",
  "taigi-linux-platform",

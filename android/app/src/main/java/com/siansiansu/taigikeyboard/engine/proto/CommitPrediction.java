@@ -17,9 +17,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * writes nothing. A split cell whose own script is missing commits the lead,
  * as a Continuous pick does (the phones' fail-open marker rule). With the
  * user-data stores open the engine counts the pick's usage under
- * `(canonical_text, canonical_tl)` itself (the platform sends no
- * `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
- * (a new generation still resets it, as for every request); NextWord
+ * `(canonical_text, canonical_tl)` itself and touches no learned phrase.
+ * Stateless: the composition is left as it is (a new generation still
+ * resets it, as for every request); NextWord
  * learning stays the platform's `WordSelected`.
  * </pre>
  *
@@ -478,9 +478,9 @@ public  final class CommitPrediction extends
    * writes nothing. A split cell whose own script is missing commits the lead,
    * as a Continuous pick does (the phones' fail-open marker rule). With the
    * user-data stores open the engine counts the pick's usage under
-   * `(canonical_text, canonical_tl)` itself (the platform sends no
-   * `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
-   * (a new generation still resets it, as for every request); NextWord
+   * `(canonical_text, canonical_tl)` itself and touches no learned phrase.
+   * Stateless: the composition is left as it is (a new generation still
+   * resets it, as for every request); NextWord
    * learning stays the platform's `WordSelected`.
    * </pre>
    *

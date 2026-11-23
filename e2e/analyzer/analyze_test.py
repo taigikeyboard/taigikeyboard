@@ -162,9 +162,9 @@ class ScenarioFileTests(unittest.TestCase):
 class MethodNameTests(unittest.TestCase):
     def test_names_come_from_the_repo_protos(self) -> None:
         names = analyze.load_method_names(analyze.REPO_ROOT / "engine" / "protos" / "proto")
-        # trace: phonetics.proto PhoneticsRequest `tl_to_poj = 13`;
+        # trace: phonetics.proto PhoneticsRequest `is_attaching_punctuation = 40`;
         # composing.proto ComposingRequest `fetch_at_pos = 31`.
-        self.assertEqual(names[("phonetics", 13)], "tl_to_poj")
+        self.assertEqual(names[("phonetics", 40)], "is_attaching_punctuation")
         self.assertEqual(names[("composing", 31)], "fetch_at_pos")
 
 

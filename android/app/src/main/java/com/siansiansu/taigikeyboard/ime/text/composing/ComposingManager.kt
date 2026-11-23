@@ -69,7 +69,7 @@ class ComposingManager(
     private val settingsProvider: EngineSettingsProvider,
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
     // Runs the composition's next-word decision (`ComposingTransition.Effect.NextWordDecided`: the
-    // engine applied the commit's, nail's or abort's next-word handshake in the composing call) on
+    // engine applied the commit's, unnail's or abort's next-word handshake in the composing call) on
     // `NextWordController`, at its place in the effect list. A no-op for tests and non-IME callers.
     private val nextWordRouter: (NextWordDecideResult) -> Unit = {},
     // The next-word envelope (`NextWordController.requestContext`) sent with every request that
@@ -370,8 +370,8 @@ class ComposingManager(
      * The engine resolves the document text, counts the pick (R5), and
      * answers what the pick did — the outcome callers gate the auto space and
      * the strip refresh on. **Model B** (§10): mid-commit (nail) emits
-     * `[UpdatePreedit(whole composition), NextWordDecided (the nail),
-     * RefreshCandidates]` and stays Continuous; final-commit
+     * `[UpdatePreedit(whole composition), RefreshCandidates]` and stays
+     * Continuous; final-commit
      * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit
      * (whole composition), ClearCandidates, ResetCandidateContext,
      * NextWordDecided]` and exits Continuous; a stale generation or a

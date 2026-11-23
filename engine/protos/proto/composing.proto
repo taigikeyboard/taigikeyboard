@@ -231,9 +231,9 @@ message FetchAtPos {
 // glyphs, not picked), nails the pick, walks the rest again with the caret at
 // its end, and never finalizes — also when the pick reaches the end of the
 // tail. `consumed_bytes` is the span end; a pick that does not end after the
-// anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-// `ClearCandidates` (the window closes). The list a conversion answers is
-// always that word's, so a pick can only be of it.
+// anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window
+// closes). The list a conversion answers is always that word's, so a pick can
+// only be of it.
 //
 // **Platform contract**: when committing the user's tap on a candidate
 // returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -258,7 +258,7 @@ message CommitContinuous {
   // v3.6.1 R2 — canonical TL romanization of the committed candidate
   // (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
   // recase passes rewrite `roman`). Becomes the `roman` arg of the
-  // NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+  // NextWord `WordSelected` effect so the
   // learned association `prev_tl` / `next_tl` is the same canonical TL a
   // normal (non-continuous) candidate commit records — fixing the
   // continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -283,10 +283,9 @@ message CommitContinuous {
   // R5 — engine-owned commit resolution: the engine resolves the document
   // text from `roman`, `hanji` and the request's `AppConfig`
   // (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-  // with the user-data stores open — records the pick's usage itself (the
-  // platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-  // newer than the engine) is IGNORED. On the TPS layout the romanization
-  // written renders as Bopomofo.
+  // with the user-data stores open — records the pick's usage itself.
+  // `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+  // layout the romanization written renders as Bopomofo.
   CommitScript script = 7;
   // The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
   // rendered / recased / syllable-separated — the display romanization, never the
@@ -313,9 +312,9 @@ enum CommitScript {
 // writes nothing. A split cell whose own script is missing commits the lead,
 // as a Continuous pick does (the phones' fail-open marker rule). With the
 // user-data stores open the engine counts the pick's usage under
-// `(canonical_text, canonical_tl)` itself (the platform sends no
-// `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
-// (a new generation still resets it, as for every request); NextWord
+// `(canonical_text, canonical_tl)` itself and touches no learned phrase.
+// Stateless: the composition is left as it is (a new generation still
+// resets it, as for every request); NextWord
 // learning stays the platform's `WordSelected`.
 message CommitPrediction {
   // `COMMIT_SCRIPT_LEAD`, or the §42 split cell's own script.
@@ -421,9 +420,10 @@ message TpsKey { string key = 1; }
 // a TPS tail): a step over a converted word moves past the whole word, and a
 // step left from the start of the tail with a segment nailed re-opens that
 // segment — its glyphs go back in front of the tail, the caret before them —
-// answering as `DeleteBackward`'s un-nail does (NextWord handshake,
-// `UpdatePreedit`, `RefreshCandidates`). START never re-opens: it stops at the
-// tail's start. A tail the request converts and the phase holds no conversion
+// answering as `DeleteBackward`'s un-nail does (`UpdatePreedit`,
+// `RefreshCandidates`, after `NextWordClearForNewComposing` when the segment
+// left last was nailed as shown or none is left). START never re-opens: it
+// stops at the tail's start. A tail the request converts and the phase holds no conversion
 // for is walked first, and that new conversion is answered with
 // `UpdatePreedit` even when the caret does not move.
 message MoveCaret { CaretDirection direction = 1; }
@@ -604,6 +604,10 @@ message Effect {
   // single-segment Composing phase's backspace-to-empty branch (R12).
   reserved 4;
   reserved "delete_backward_from_document";
+  // Tag 8 (`next_word_update_last_selected_word`) was the nail / unnail
+  // handshake; NextWord learned nothing from it (removed 2026-11-23).
+  reserved 8;
+  reserved "next_word_update_last_selected_word";
   oneof kind {
     UpdatePreedit                  update_preedit                       = 1;
     ClearPreeditWithoutCommit      clear_preedit_without_commit         = 2;
@@ -611,7 +615,6 @@ message Effect {
     ClearCandidates                clear_candidates                     = 5;
     RefreshCandidates              refresh_candidates                   = 6;
     ResetCandidateContext          reset_candidate_context              = 7;
-    NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
     // A handshake the engine applied (`next_word_context` set): the executor
@@ -627,16 +630,6 @@ message CommitTextReplacingPreedit { string text = 1; }
 message ClearCandidates            {}
 message RefreshCandidates          {}
 message ResetCandidateContext      {}
-
-// Mid-commit handshake during continuous-input. Maps to
-// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
-// platform side. `text` is the committed segment's display (e.g., "紙"),
-// `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
-// `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
-// learns nothing from it — a nailed segment is not in the document yet;
-// the final commit's `NextWordWordSelected.preceding` carries it
-// (behavioral-invariants §40). Platforms read it as the nail signal.
-message NextWordUpdateLastSelectedWord { string text = 1; string roman = 2; }
 
 // Final-commit handshake during continuous-input. Maps to
 // `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,

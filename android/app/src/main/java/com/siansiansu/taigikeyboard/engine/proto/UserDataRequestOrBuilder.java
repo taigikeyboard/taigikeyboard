@@ -33,17 +33,6 @@ public interface UserDataRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.ResetUserData getReset();
 
   /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   * @return Whether the recordUsage field is set.
-   */
-  boolean hasRecordUsage();
-  /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   * @return The recordUsage.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.RecordUsage getRecordUsage();
-
-  /**
    * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
    * @return Whether the listCustomEntries field is set.
    */

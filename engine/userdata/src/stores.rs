@@ -93,9 +93,8 @@ impl UserDataStores {
     }
 
     /// One pick: counted under the `(display_text, canonical_tl)` pair and,
-    /// for a Hanji pick, a learned phrase taken whole touched (§50). The one
-    /// write both a `RecordUsage` request (never with a Hanji) and an
-    /// engine-resolved commit make. Queued and best-effort: a failed write
+    /// for a Hanji pick, a learned phrase taken whole touched (§50). The write
+    /// every engine-resolved commit makes. Queued and best-effort: a failed write
     /// is logged by the store.
     /// `abbreviation`: the pick was a whole-buffer abbreviation hit, counted
     /// apart as well ([`UserFrequencyStore::record_abbreviation`]).

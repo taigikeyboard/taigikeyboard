@@ -171,8 +171,8 @@ fn a_tail_of_tone_marks_after_a_pick_keeps_composing() {
 
 // Un-nailing back to a segment nailed as shown names no selected word.
 // trace: pick 絲 at the end → 死 (not picked) 絲, empty tail; Backspace
-// un-nails 絲, leaving 死 last: the handshake is Clear, not
-// UpdateLastSelectedWord.
+// un-nails 絲, leaving 死 last: the handshake is Clear (back to a picked
+// segment there would be none).
 #[test]
 fn unnailing_back_to_an_unpicked_segment_names_no_word() {
     let _lock = engine_install_lock();
@@ -207,11 +207,7 @@ fn a_pick_nails_the_words_before_it_as_shown_and_keeps_composing() {
     assert_eq!(caret_utf16(response), 2);
     assert_eq!(
         effect_kinds(&response.effect),
-        vec![
-            "UpdatePreedit",
-            "NextWordUpdateLastSelectedWord",
-            "ClearCandidates"
-        ]
+        vec!["UpdatePreedit", "ClearCandidates"]
     );
     assert_eq!(
         nailed_shown(&engine),

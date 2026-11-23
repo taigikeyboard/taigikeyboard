@@ -12,7 +12,7 @@
 use protos::engine::{
     effect, next_word_request, next_word_response, AppConfig, ClearForNewComposing,
     ComposingResponse, DecideResult, DecisionInput, Effect, NextWordContext, NextWordRequest,
-    UpdateLastSelectedWord, WordSelected,
+    WordSelected,
 };
 
 /// Replaces each handshake in `response` with the decision the next-word
@@ -58,11 +58,7 @@ pub(crate) fn drop_unapplied(response: &mut ComposingResponse) {
 fn is_handshake(effect: &Effect) -> bool {
     matches!(
         effect.kind,
-        Some(
-            effect::Kind::NextWordWordSelected(_)
-                | effect::Kind::NextWordUpdateLastSelectedWord(_)
-                | effect::Kind::NextWordClearForNewComposing(_)
-        )
+        Some(effect::Kind::NextWordWordSelected(_) | effect::Kind::NextWordClearForNewComposing(_))
     )
 }
 
@@ -81,13 +77,6 @@ fn next_word_request(effect: Effect, now_ms: i64) -> Result<NextWordRequest, Eff
                 trigger_prediction: selected.trigger_prediction,
                 input,
                 preceding: selected.preceding,
-            })
-        }
-        Some(effect::Kind::NextWordUpdateLastSelectedWord(nailed)) => {
-            next_word_request::Method::UpdateLastSelectedWord(UpdateLastSelectedWord {
-                text: nailed.text,
-                roman: nailed.roman,
-                input,
             })
         }
         Some(effect::Kind::NextWordClearForNewComposing(_)) => {

@@ -43,8 +43,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * keys already fold both glyphs to `nn`.
  *
  * 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
- * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
- * `TlDisplayToTps` takes as `or_maps_to_er`). Under
+ * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the
+ * `or_maps_to_er` flag of `phonetics::api::tl_display_to_tps`). Under
  * `"tps"` the engine composes with the TL tables and applies the TPS fold
  * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
  * `engine/protos/src/lib.rs`), so `is_hanji_first` and
@@ -906,8 +906,8 @@ public  final class AppConfig extends
    * keys already fold both glyphs to `nn`.
    *
    * 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
-   * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
-   * `TlDisplayToTps` takes as `or_maps_to_er`). Under
+   * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the
+   * `or_maps_to_er` flag of `phonetics::api::tl_display_to_tps`). Under
    * `"tps"` the engine composes with the TL tables and applies the TPS fold
    * itself (`AppConfig::renders_hanji_first` / `rendered_syllable_joiner` in
    * `engine/protos/src/lib.rs`), so `is_hanji_first` and

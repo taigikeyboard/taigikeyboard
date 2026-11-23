@@ -52,17 +52,17 @@ There is no composing-text cell in the candidate strip. Slot 0 is the engine's t
 
 | Trigger | Effect |
 |---|---|
-| Tap, pending tail remains (**nail**) | No document write. The engine resolves the segment text and appends a `NailedSegment`; the host gets one `UpdatePreedit` of the whole composition plus the nail's next-word handshake (`NextWordUpdateLastSelectedWord`, answered to the platform as `NextWordDecided`) |
+| Tap, pending tail remains (**nail**) | No document write. The engine resolves the segment text and appends a `NailedSegment`; the host gets one `UpdatePreedit` of the whole composition and no next-word handshake |
 | Tap consuming the rest (**final-commit**) | One `CommitTextReplacingPreedit` of the whole composition, exit to Idle, one terminal `NextWordWordSelected` (answered as `NextWordDecided`) |
 | Enter | One `CommitTextReplacingPreedit` of `Phase::composing_display` (nailed prefix + derived tail), exit to Idle |
 
-The **engine** formats the committed text: the platform sends `CommitContinuous.script` with the pick's `roman` / `hanji`, and `composing::commit_text` resolves the swap / TPS / both-scripts string under the live `AppConfig` (behavioral-invariants §23 / §28), answering `ComposingResponse.commit` (`CommitResolution`). With the user-data stores open, the engine also records the pick's usage itself (`UserDataStores::record_usage`); the platform sends no `RecordUsage` for it.
+The **engine** formats the committed text: the platform sends `CommitContinuous.script` with the pick's `roman` / `hanji`, and `composing::commit_text` resolves the swap / TPS / both-scripts string under the live `AppConfig` (behavioral-invariants §23 / §28), answering `ComposingResponse.commit` (`CommitResolution`). With the user-data stores open, the engine also records the pick's usage itself (`UserDataStores::record_usage`).
 
 `CommitContinuous.canonical_text` (= `hanji.unwrap_or(roman)`) is the key frequency and NextWord learn under, so learning is mode-independent. An empty `canonical_text`, or `COMMIT_SCRIPT_UNSPECIFIED`, makes the commit **ignored**: no state change, no usage, `CommitOutcome::IGNORED` ([`composing.proto`](../../engine/protos/proto/composing.proto) `CommitContinuous`; `transition.rs` `commit_continuous`).
 
 **Clarification β.** Enter commits the whole composition, not the pending tail: nailed segments were never in the document.
 
-NextWord learns only at the hard finalize: `NextWordWordSelected` carries the nailed segments as `preceding` and the composition is learned as one sequence (behavioral-invariants §40 `INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING`). `NextWordUpdateLastSelectedWord` still fires per nail and `engine/dispatch` applies it in the same call (it learns nothing; the platform reads the nail from `ContinuousCommitOutcome.Nailed`); an abandoned composition teaches nothing.
+NextWord learns only at the hard finalize: `NextWordWordSelected` carries the nailed segments as `preceding` and the composition is learned as one sequence (behavioral-invariants §40 `INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING`). A nail sends NextWord nothing (the platform reads the nail from `ContinuousCommitOutcome.Nailed`); an abandoned composition teaches nothing.
 
 For the Show Typed Text First literal, `roman` mirrors the permissive preedit while `display_text` / `canonical_tl` keep the learning key computed before permissive rendering (§34): `a1i1` and `ai1` both commit `ai` but keep separate keys.
 

@@ -208,26 +208,6 @@ fn every_layout_glyph_begins_a_composition_the_engine_takes() {
 }
 
 #[test]
-fn tl_display_to_tps_spells_a_reading_in_tps() {
-    // trace: phonetics `tl_display_to_tps` — `ka` → ㄍㄚ; `kò` (tone 3) →
-    // ㄍㄛ˪; `or` follows the flag (ㄜ when it maps to `er`).
-    assert_eq!(
-        engine::tl_display_to_tps("ka", true).as_deref(),
-        Some("ㄍㄚ")
-    );
-    assert_eq!(
-        engine::tl_display_to_tps("kò", true).as_deref(),
-        Some("ㄍㄛ˪")
-    );
-    // trace: tps.rs `to_zhuyin` — vowel `or` is ㄜ, or ㄛ when the flag is off.
-    assert_eq!(engine::tl_display_to_tps("or", true).as_deref(), Some("ㄜ"));
-    assert_eq!(
-        engine::tl_display_to_tps("or", false).as_deref(),
-        Some("ㄛ")
-    );
-}
-
-#[test]
 fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     let _engine = engine();
     let settings = EngineSettings::default();
@@ -321,8 +301,8 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
         commit.is_composing,
         "Model B: a nailed segment stays in the composition"
     );
-    // The nail handshake, applied by the engine.
-    assert!(commit.effects.contains(&Effect::NextWordDecided));
+    // A nail tells NextWord nothing (behavioral-invariants §40).
+    assert!(!commit.effects.contains(&Effect::NextWordDecided));
     assert!(
         !commit
             .effects

@@ -47,12 +47,12 @@ Panic catching, the request-size cap, locking, the error channel and the other e
 
 | Tag | Slice | `.proto` | Request message | Ops |
 |---|---|---|---|---|
-| 10 | Phonetics | `phonetics.proto` | `PhoneticsRequest` | 7 |
-| 11 | Composing | `composing.proto` | `ComposingRequest` | 15 |
-| 12 | Lexicon | `lexicon.proto` | `LexiconRequest` | 6 |
-| 13 | NextWord | `nextword.proto` | `NextWordRequest` | 9 |
-| 14 | Case | `case.proto` | `CaseRequest` (field `case_transform` — `case` is a Swift keyword) | 4 |
-| 15 | User data | `user_data.proto` | `UserDataRequest` | 15 |
+| 10 | Phonetics | `phonetics.proto` | `PhoneticsRequest` | 6 |
+| 11 | Composing | `composing.proto` | `ComposingRequest` | 16 |
+| 12 | Lexicon | `lexicon.proto` | `LexiconRequest` | 2 |
+| 13 | NextWord | `nextword.proto` | `NextWordRequest` | 8 |
+| 14 | Case | `case.proto` | `CaseRequest` (field `case_transform` — `case` is a Swift keyword) | 2 |
+| 15 | User data | `user_data.proto` | `UserDataRequest` | 13 |
 
 Each slice dispatches on its own `oneof method` and answers through `oneof result` (Composing: a `ComposingResponse`). Removed ops keep their tags and names `reserved`.
 
@@ -61,7 +61,7 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 ## 5. Generations — two counters, two owners
 
 - **Envelope generation** (`Request.generation`) — platform-owned, one value per input context; the platform bumps it when the editor session changes (`ComposingManager.bumpGeneration`; next word: iOS `NextWordController.bumpEnvelopeGeneration`, Android `NextWordController.resetContext`). Rust never echoes it (the e2e trace logs the request's value, `docs/architecture/e2e-trace-schema.md`). A mutating composing / next-word request whose generation differs from the last one silently resets that engine's state before applying (no effects from the reset, `engine/composing/src/handle.rs`); a read-only query (`FetchAtPos`) at a stale generation answers the idle snapshot. Phonetics is stateless and ignores it.
-- **NextWord query generation** (`current_generation`) — engine-owned (`engine/nextword`); every invalidating intent bumps it, it travels on `QueryPredictions` / `ClearPredictionsUI`, and `FilterPredictions` answers `was_stale` when the query's generation no longer matches (`docs/architecture/nextword-engine-boundary.md` §3).
+- **NextWord query generation** (`current_generation`) — engine-owned (`engine/nextword`); every invalidating intent bumps it, it travels on `QueryPredictions`, and `FilterPredictions` answers `was_stale` when the query's generation no longer matches (`docs/architecture/nextword-engine-boundary.md` §3).
 
 ---
 
@@ -74,15 +74,14 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 
 ## 7. Phonetics slice
 
-[`phonetics.proto`](../../engine/protos/proto/phonetics.proto) — 10 ops:
+[`phonetics.proto`](../../engine/protos/proto/phonetics.proto) — 6 ops:
 
 | Family | Ops | Result |
 |---|---|---|
-| Core | `TlToPoj`, `GetToneVariations` | `StringResult`, `ToneVariationsResult` |
-| TPS | `TlDisplayToTps` | `StringResult` |
+| Core | `GetToneVariations` | `ToneVariationsResult` |
 | Platform text helpers | `IsAttachingPunctuation`, `IsJoinerPunctuation`, `IsSpacedPunctuation`, `DoubleSpacePeriod`, `ExternalLookupDigitForm` | `BoolResult`, `StringResult` |
 
-- Each op has its own payload message (e.g. `TlDisplayToTps` takes `text` + `or_maps_to_er`).
+- Each op has its own payload message (e.g. `DoubleSpacePeriod` takes `text_before_caret`, `millis_since_plain_space` and `full_width`). TL → POJ and TL → TPS have no wire op: composing renders both in-process.
 - Pure and stateless: `phonetics::requests::handle(req)` takes no `AppConfig`. Display tone normalization is not a wire op — `composing::derived` calls `phonetics::api::normalize_tone` in-process.
 - The Rust phonetics crate is the only implementation; platforms keep no mirror.
 
@@ -90,13 +89,13 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 
 ## 8. Composing slice
 
-[`composing.proto`](../../engine/protos/proto/composing.proto) — `ComposingRequest.oneof method`, 15 ops:
+[`composing.proto`](../../engine/protos/proto/composing.proto) — `ComposingRequest.oneof method`, 16 ops:
 
 | Tags | Group | Ops |
 |---|---|---|
 | 10–19 | Text-input mutators | `Start`, `Append`, `AppendHyphen`, `DeleteBackward`, `CommitRaw`, `CommitPreeditThenInsertExternal`, `Reset` |
 | 31–32, 34 | Continuous input | `FetchAtPos` (read-only), `CommitContinuous`, `CommitPrediction` (a NextWord prediction tap) |
-| 40–44 | Desktop keys (`TpsKey` from every platform) | `TelexKey`, `MoveCaret`, `TpsKey`, `CommitAsShown`, `CommitAsTyped` |
+| 40–45 | Desktop keys (`TpsKey` from every platform) | `TelexKey`, `MoveCaret`, `TpsKey`, `CommitAsShown`, `CommitAsTyped`, `ConfirmCompositionThenInsert` |
 
 `ComposingResponse`: `preedit` (1: `raw_input`, `display_text`, `caret_utf16`), ordered `effect` list (2), `is_composing` (4), `continuous` (5, `FetchAtPos` only), `commit` (6, `CommitResolution` for a `CommitContinuous`, `CommitPrediction`, `ConfirmCompositionThenInsert`, or a finalizing `CommitRaw` / `CommitAsShown`: outcome, document text, `wrote_romanization`, `earns_auto_space`).
 
@@ -110,12 +109,11 @@ Each slice dispatches on its own `oneof method` and answers through `oneof resul
 | 5 | `ClearCandidates` | Candidate strip |
 | 6 | `RefreshCandidates` | Candidate strip |
 | 7 | `ResetCandidateContext` | Candidate strip |
-| 8 | `NextWordUpdateLastSelectedWord` | `engine/dispatch` only — applied as its `NextWordRequest` under `ComposingRequest.next_word_context`, never reaches a platform |
-| 9 | `NextWordWordSelected` | `engine/dispatch` only |
+| 9 | `NextWordWordSelected` | `engine/dispatch` only — applied as its `NextWordRequest` under `ComposingRequest.next_word_context`, never reaches a platform |
 | 10 | `NextWordClearForNewComposing` | `engine/dispatch` only |
 | 12 | `NextWordDecided` (`DecideResult`) | NextWord executor — the handshake's decision, in the handshake's place |
 
-Tags 4 and 11 are reserved. Host API mapping per platform: [continuous-commit-and-display.md §10.6](continuous-commit-and-display.md#106-effects--host-api).
+Tags 4, 8 and 11 are reserved. Host API mapping per platform: [continuous-commit-and-display.md §10.6](continuous-commit-and-display.md#106-effects--host-api).
 
 - Effects are platform-neutral — no `InputConnection`, `UITextDocumentProxy`, KeyboardKit or Compose types.
 - The candidate-control effects must stay on the wire: they are how composing tells the platform strip to clear, refetch or reset its context.

@@ -13,8 +13,8 @@
 //! the in-flight query's generation). NO effects emitted from the drop.
 //!
 //! Distinct from `PersistedState.current_generation` (engine-internal,
-//! per-intent monotonic, returned via `DecideResult.current_generation`
-//! and re-checked on `FilterPredictions.query_generation`). Both axes use
+//! per-intent monotonic, carried by `QueryPredictions.generation` and
+//! re-checked on `FilterPredictions.query_generation`). Both axes use
 //! `wrapping_add(1)`; `u64::MAX + 1 = 0` is a fresh current value, NOT a
 //! reset.
 

@@ -175,7 +175,7 @@ class SmartbarManager(
 
     /**
      * Run the composition's next-word decision (`ComposingTransition.Effect.NextWordDecided`:
-     * the engine applied the commit's, nail's or abort's next-word handshake in the
+     * the engine applied the commit's, unnail's or abort's next-word handshake in the
      * composing call) on the underlying [NextWordController]. Wired into
      * [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager] via its
      * `nextWordRouter` constructor parameter.

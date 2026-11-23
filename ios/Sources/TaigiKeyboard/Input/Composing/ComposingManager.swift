@@ -184,7 +184,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// The engine resolves the document text, counts the pick (R5), and
     /// answers what the pick did — the outcome callers gate the auto space on.
     /// Model B mid-commit (nail) emits `[UpdatePreedit(whole composition),
-    /// NextWordDecided (the nail), RefreshCandidates]` and stays
+    /// RefreshCandidates]` and stays
     /// Continuous; final-commit (`consumedBytes >= pending.utf8.count`)
     /// emits `[CommitTextReplacingPreedit(whole composition),
     /// ClearCandidates, ResetCandidateContext, NextWordDecided]`

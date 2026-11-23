@@ -130,3 +130,15 @@ pub fn wait_for_association_rows(
     );
     rows
 }
+
+/// Counts one pick of `(word, tl)` through the write every engine-resolved
+/// commit makes (`UserDataStores::record_usage`), on the process's open
+/// stores — the test seed for a learned count.
+#[cfg(feature = "user-data")]
+#[allow(dead_code)]
+pub fn record_pick(word: &str, tl: &str) {
+    userdata::UserDataHandle::instance()
+        .stores()
+        .expect("user data open")
+        .record_usage(word, tl, None, false);
+}

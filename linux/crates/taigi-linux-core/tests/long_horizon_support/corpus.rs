@@ -4,13 +4,14 @@
 
 use std::path::{Path, PathBuf};
 
+use phonetics::api::{tl_display_to_poj_display, tl_display_to_tps};
 use prost::Message;
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, ExternalLookupDigitForm,
     PhoneticsRequest, Request, Response,
 };
 use serde::Deserialize;
-use taigi_desktop_core::engine::{tl_display_to_tps, tl_to_poj, TPS_OR_MAPS_TO_ER};
+use taigi_desktop_core::engine::TPS_OR_MAPS_TO_ER;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct RawCorpusItem {
@@ -382,9 +383,7 @@ fn split_trailing_tone(syl: &str) -> (String, Option<u8>) {
 }
 
 fn derive_poj_ascii_keys(toneless_tl: &str) -> String {
-    let Some(poj) = tl_to_poj(toneless_tl) else {
-        return toneless_tl.to_owned();
-    };
+    let poj = tl_display_to_poj_display(toneless_tl);
     let mut ascii = String::with_capacity(poj.len() + 2);
     for ch in poj.chars() {
         match ch {
@@ -419,9 +418,7 @@ fn derive_tps_strokes(display_tl: &str) -> Vec<TpsStroke> {
         }
         // Convert each original syllable separately: the display converter joins
         // syllables with spaces; `part` holds no `--`, so no neutral `˙` (phonetics/api.rs).
-        let Some(tps_text) = tl_display_to_tps(part, TPS_OR_MAPS_TO_ER) else {
-            return Vec::new();
-        };
+        let tps_text = tl_display_to_tps(part, TPS_OR_MAPS_TO_ER);
         let mut last_was_tone = false;
         for ch in tps_text.chars() {
             // Rule 4 in docs/phonetics/tps-auto-correct-rules.md: the layout

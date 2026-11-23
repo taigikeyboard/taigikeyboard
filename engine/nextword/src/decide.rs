@@ -7,7 +7,7 @@
 //! the three rules it used to branch on were drift rather than design.
 //!
 //! Generation bump rule: every state-mutating intent bumps
-//! `current_generation` (`UpdateLastSelectedWord` mutates nothing, §40).
+//! `current_generation`.
 //! Wrapping add — `u64::MAX + 1 = 0` is a fresh value.
 
 use crate::api::{Association, Decided, Intent, PersistedState};
@@ -60,10 +60,6 @@ pub(crate) fn decide(state: &mut PersistedState, intent: Intent, config: &AppCon
         Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state).into(),
         Intent::ClearForNewComposing { now_ms: _ } => decide_clear_for_new_composing(state).into(),
         Intent::ResetAll { now_ms: _ } => reset_and_clear_predictions(state).into(),
-        // Nail / unnail: nothing is committed yet, so nothing is learned and
-        // the committed context stays (§40); the final commit's `preceding`
-        // carries the nailed segments.
-        Intent::UpdateLastSelectedWord { .. } => result_unchanged(state).into(),
         Intent::SetPredictionsVisible { visible } => {
             decide_set_predictions_visible(state, visible).into()
         }
@@ -244,9 +240,7 @@ fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
     let effects: Vec<NextWordEffect> = if was_visible {
         vec![NextWordEffect {
             kind: Some(next_word_effect::Kind::ClearPredictionsUi(
-                ClearPredictionsUi {
-                    generation: state.current_generation,
-                },
+                ClearPredictionsUi {},
             )),
         }]
     } else {
@@ -273,9 +267,7 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
     if was_visible {
         effects.push(NextWordEffect {
             kind: Some(next_word_effect::Kind::ClearPredictionsUi(
-                ClearPredictionsUi {
-                    generation: new_generation,
-                },
+                ClearPredictionsUi {},
             )),
         });
     }
@@ -395,7 +387,6 @@ fn snapshot_into_decide_result(
 ) -> DecideResult {
     DecideResult {
         effects,
-        current_generation: state.current_generation,
         predictions_visible: state.predictions_visible,
     }
 }
@@ -940,8 +931,8 @@ mod tests {
 
     #[test]
     fn hyphenated_single_word_teaches_no_compound_on_either_entry_point() {
-        // trace: 台語 is one word; neither the terminal WordSelected nor the
-        // mid-commit UpdateLastSelectedWord may split it into tâi → gí.
+        // trace: 台語 is one word; neither the terminal word nor a `preceding`
+        // word of WordSelected may split it into tâi → gí.
         for intent in both_word_positions("tâi-gí") {
             let mut state = PersistedState::default();
             let result = decide(&mut state, intent, &config(false));
@@ -1036,42 +1027,6 @@ mod tests {
                 next_tl: String::new(),
             }]
         );
-    }
-
-    // INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING: a nail / unnail learns
-    // nothing and leaves the committed context, its time and the generation
-    // alone — so an abandoned composition teaches nothing and the next commit
-    // still follows 我 inside 我's own window.
-    #[test]
-    fn update_last_selected_word_learns_nothing_and_keeps_context() {
-        let mut state = PersistedState {
-            current_generation: 7,
-            ..after_gua()
-        };
-        let decided = decide(
-            &mut state,
-            Intent::UpdateLastSelectedWord {
-                text: "早安 台灣".to_owned(),
-                roman: "tsá-an tâi-uân".to_owned(),
-                now_ms: 5_000,
-            },
-            &config(false),
-        );
-        assert!(decided.associations.is_empty());
-        assert_eq!(state.current_generation, 7);
-        assert_eq!(state.last_selected_word.as_deref(), Some("我"));
-        assert_eq!(state.last_selection_time_ms, 0);
-        let _ = decide(
-            &mut state,
-            Intent::ClearForNewComposing { now_ms: 6_000 },
-            &config(false),
-        );
-        let next = decide(
-            &mut state,
-            commit("好", "hó", Vec::new(), 10_000),
-            &config(true),
-        );
-        assert!(next.associations.is_empty(), "我's window closed at 10 s");
     }
 
     // INVARIANT_NEXTWORD_GENERATION_BUMPS_ON_INVALIDATING_INTENTS (nextword-engine-boundary.md §10)

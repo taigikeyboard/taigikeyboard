@@ -88,7 +88,7 @@ The cross-platform behavior contract every Rust slice and platform change must p
 
 **Why**: the engine freely rewrites the same syllable across both scripts for UI display and dictionary lookup. Any lossy step silently rewrites user data.
 
-**Scope**: Rust `engine/phonetics` (`syllable.rs`, `tl.rs`, `poj.rs`, `api::poj_display_to_tl_display` / `tl_display_to_poj_display`). Reached through the `TlToPoj` op (desktop-core `engine::tl_to_poj`) and inside the lexicon `DictionarySearch`; POJ→TL runs in-process only. `phonetics::normalize_to_tl` is Rust-internal.
+**Scope**: Rust `engine/phonetics` (`syllable.rs`, `tl.rs`, `poj.rs`, `api::poj_display_to_tl_display` / `tl_display_to_poj_display`). Reached in-process — composing's POJ rendering and the lexicon `DictionarySearch` (no wire op since 2026-11-23); POJ→TL runs in-process only. `phonetics::normalize_to_tl` is Rust-internal.
 
 **Corner cases that must hold**:
 - Tone 1 and tone 4 with no trailing digit round-trip (numeric tone preserved only during composition, not in display forms).
@@ -615,7 +615,7 @@ This protects genuine polyphonic Hanji (Core Principle #6).
 A continuous-input candidate commit records the **candidate's canonical TL** as the NextWord association romanization (`prev_tl` / `next_tl`), identical to a span-local candidate commit — NOT the raw typed slice (`taigi`), which would split `user_association.db` rows by form.
 
 - **Identity carrier** — each continuous candidate carries `CandidateMessage.canonical_tl`, snapshotted at construction BEFORE the recase / POJ-render passes rewrite `roman`: `DictionaryRecord.tl` for dict-backed candidates; `phonetics::api::canonical_tl_form(native_roman, mode)` for custom / walker-synth candidates. Populated for hanji-present candidates too — `(hanji, canonical-TL)` is the word identity (Core Principle #6).
-- **Round-trip** — the platform stores `canonical_tl` on the candidate's tap metadata and forwards it as `CommitContinuous.association_tl`. `commit_continuous` stores it on `NailedSegment.association_tl` and uses it as the `roman` of the `WordSelected` effect — the terminal word's and each `preceding` segment's (§40) — and of the `UpdateLastSelectedWord` nail / unnail handshake.
+- **Round-trip** — the platform stores `canonical_tl` on the candidate's tap metadata and forwards it as `CommitContinuous.association_tl`. `commit_continuous` stores it on `NailedSegment.association_tl` and uses it as the `roman` of the `WordSelected` effect — the terminal word's and each `preceding` segment's (§40).
 - **Fallback** — when `association_tl` is empty (a caller that sends none, or a TPS-OOV hanji-absent candidate with no recoverable dict TL), the engine uses the raw committed slice. `NailedSegment.raw_text` stays the sole authority for span / unnail mechanics; `association_tl` is never overloaded onto `raw_text` or `display_text`.
 - **Display untouched** — `canonical_tl` is never consulted for the document commit (that is `display_text`).
 
@@ -677,7 +677,7 @@ User-selection frequency is keyed by the **`(display_text, canonical_tl)` PAIR**
 
 **Scope**: engine `ranking` (`FrequencyMap`) + `lexicon::continuous` + `composing::continuous` read the pair key; engine `userdata` owns storage, write, migration and backup; `dispatch` builds the map. Platforms report no picks.
 
-**Platform sites**: proto `RecordUsage.canonical_tl` (`user_data.proto`). Engine `ranking/src/score.rs` (`FrequencyMap`), `lexicon/src/continuous/`, `composing/src/continuous/`, `userdata/src/frequency.rs`, `userdata/src/backup.rs`, `userdata/src/requests.rs` (`record_usage`), `dispatch/src/fetch.rs` (`candidate_frequency`), `composing/src/transition.rs` `commit_continuous` / `commit_prediction` (`Applied.usage`; the desktops have no prediction strip).
+**Platform sites**: proto `CommitContinuous.association_tl` / `CommitPrediction.canonical_tl` (`composing.proto`). Engine `ranking/src/score.rs` (`FrequencyMap`), `lexicon/src/continuous/`, `composing/src/continuous/`, `userdata/src/frequency.rs`, `userdata/src/backup.rs`, `userdata/src/stores.rs` (`record_usage`), `dispatch/src/fetch.rs` (`candidate_frequency`), `composing/src/transition.rs` `commit_continuous` / `commit_prediction` (`Applied.usage`; the desktops have no prediction strip).
 
 **Tests**: engine `ranking/src/score.rs` (`frequency_map_pair_key_separates_homograph_readings`, `frequency_map_legacy_empty_tl_is_tolerant_fallback`, `frequency_map_missing_pair_is_neutral_cold_start`); `engine/userdata/tests/stores.rs::recording_counts_the_pair_and_reads_back_by_word`; `engine/userdata/tests/takeover.rs` `a_pre_pair_key_frequency_table_keeps_its_rows_ids_and_counts` + `a_pair_key_frequency_table_left_at_version_zero_is_not_rebuilt`; `engine/dispatch/tests/user_data_writes.rs::the_engine_writes_what_the_platforms_wrote` + `engine_resolved_picks_are_counted_by_the_engine`, `user_data_reads.rs::engine_reads_answer_what_the_same_rows_answer`. Dogfood **S15**.
 
@@ -949,11 +949,11 @@ The rules, all in `engine/nextword/src/decide.rs`:
 
 - **Every adjacent pair inside the commit is learned** (`欲 → 食`, `食 → 飯`), once per occurrence (`好 好 好` teaches `好 → 好` twice), whatever time the nails took.
 - **The 10 s window gates only the link to the previous commit** (`我 → 欲`), measured from that commit's own time; a nail never refreshes it.
-- **A nail or unnail learns nothing and changes no context.** `UpdateLastSelectedWord` is an acknowledgement. A composition abandoned after nails teaches nothing and leaves the context it started from.
+- **A nail or unnail learns nothing and changes no context.** A nail sends NextWord nothing; an unnail sends only a clear, when it lands on a segment nailed as shown or on none. A composition abandoned after nails teaches nothing and leaves the context it started from.
 - Per-word rules apply to each word: compound pairs, the noise gate, a sentence end or clause mark breaks the chain (a commit ending in one clears the context), a symbol does not.
 - **Scope**: the final candidate pick and Enter (`composing/src/transition.rs` `commit_continuous` / `commit_raw_continuous`). Commit-then-insert-external finalizes the nailed prefix with `NextWordClearForNewComposing` and learns nothing.
 
-**Tests**: `nextword/src/decide.rs` — `commit_learns_every_adjacent_pair_of_its_sequence`, `commit_outside_window_still_learns_its_own_pairs`, `commit_repeated_word_learns_each_occurrence`, `commit_sentence_end_and_clause_mark_both_break_chain`, `commit_ending_in_clause_mark_clears_context`, `commit_ending_in_symbol_keeps_last_word_as_context`, `update_last_selected_word_learns_nothing_and_keeps_context`; `composing/tests/continuous_phase.rs` — `final_commit_carries_nailed_segments_as_preceding`, `commit_raw_under_continuous_after_mid_commit_commits_whole_composition`. `preceding` reaches next word verbatim: every platform has the engine apply the handshake in the composing call (`dispatch/src/next_word_handshake.rs`, `dispatch/tests/composing_next_word.rs`).
+**Tests**: `nextword/src/decide.rs` — `commit_learns_every_adjacent_pair_of_its_sequence`, `commit_outside_window_still_learns_its_own_pairs`, `commit_repeated_word_learns_each_occurrence`, `commit_sentence_end_and_clause_mark_both_break_chain`, `commit_ending_in_clause_mark_clears_context`, `commit_ending_in_symbol_keeps_last_word_as_context`; `composing/tests/continuous_phase.rs` — `final_commit_carries_nailed_segments_as_preceding`, `commit_raw_under_continuous_after_mid_commit_commits_whole_composition`. `preceding` reaches next word verbatim: every platform has the engine apply the handshake in the composing call (`dispatch/src/next_word_handshake.rs`, `dispatch/tests/composing_next_word.rs`).
 
 ## §41 — TPS keyboard space pins the unmarked tone (1 open rime / 4 stop coda)
 
