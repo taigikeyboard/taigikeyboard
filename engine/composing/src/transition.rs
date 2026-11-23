@@ -712,17 +712,14 @@ fn unnail_last(
     // carries them. Back to a segment nailed as shown, or to none, NextWord
     // clears for a new composition (B4: such a segment is no word the user
     // selected). Applied by `dispatch` in this same call (roadmap E2).
-    let nextword_clear = match nailed.last() {
-        Some(prev) if prev.is_picked => None,
-        _ => Some(next_word_clear_for_new_composing()),
-    };
+    let mut effects = Vec::with_capacity(3);
+    if !matches!(nailed.last(), Some(prev) if prev.is_picked) {
+        effects.push(next_word_clear_for_new_composing());
+    }
     set_continuous_walked_afresh(state, new_pending, caret, nailed, config, frequency);
 
     let preedit = phase_preedit(&state.phase, config);
-    let effects = nextword_clear
-        .into_iter()
-        .chain([update_preedit(&preedit), refresh_candidates()])
-        .collect();
+    effects.extend([update_preedit(&preedit), refresh_candidates()]);
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
@@ -937,15 +934,11 @@ fn nail_segment(
     }
     let mut new_nailed = nailed.clone();
     let new_pending = raw[consumed_bytes..].to_string();
-    // R2: the NextWord `roman` arg — canonical TL when the platform sent
-    // it, else the raw committed slice (TPS-OOV fallback). Only a final
-    // commit's terminal `WordSelected` below uses it; a nail sends none.
-    let next_word_roman = association_roman(&association_tl, &raw[..consumed_bytes]);
     let segment = picked_segment(
         &new_nailed,
         raw[..consumed_bytes].to_string(),
         display_text,
-        canonical.clone(),
+        canonical,
         association_tl,
         hanji,
         syllable_count,
@@ -961,8 +954,9 @@ fn nail_segment(
         // Pending is empty here, so the whole composition is just the
         // nailed prefix (combined_display would append derived("") = "").
         let combined = nailed_prefix(&new_nailed, config);
-        // `nailed` = every segment before the one just pushed.
-        let terminal = next_word_terminal(canonical, next_word_roman, nailed);
+        // The segment just pushed is the picked terminal word; R2: its
+        // canonical TL (raw-slice fallback) is the NextWord `roman`.
+        let terminal = next_word_nailed_terminal(&new_nailed);
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed, config);
@@ -1352,9 +1346,6 @@ fn confirm_composition_then_insert(
         );
         let mut resolution = finalized_composition_resolution(committed, config);
         resolution.leaves_trailing_auto_space = insert.leaves_trailing_auto_space;
-        // Drop a partial pick's transient preedit and refetch request: the
-        // host sees only the finished composition's effects.
-        applied.response.effect.clear();
         // A TPS pick can leave the composition all nailed with no raw tail.
         // Use normal confirmation learning: only fully picked compositions
         // teach words/phrases; unpicked segments or a pending tail teach none.
@@ -1366,9 +1357,9 @@ fn confirm_composition_then_insert(
             }
         }
         applied.learned = finished.learned;
-        applied.response.effect.extend(finished.response.effect);
+        // The host sees only the finished composition's effects, never the
+        // partial pick's transient preedit or refetch request.
         applied.response = ComposingResponse {
-            effect: applied.response.effect,
             commit: Some(resolution),
             ..finished.response
         };

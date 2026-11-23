@@ -21,8 +21,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * glyphs, not picked), nails the pick, walks the rest again with the caret at
  * its end, and never finalizes — also when the pick reaches the end of the
  * tail. `consumed_bytes` is the span end; a pick that does not end after the
- * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
- * always that word's, so a pick can only be of it.
+ * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window
+ * closes). The list a conversion answers is always that word's, so a pick can
+ * only be of it.
  *
  * **Platform contract**: when committing the user's tap on a candidate
  * returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -705,8 +706,9 @@ public  final class CommitContinuous extends
    * glyphs, not picked), nails the pick, walks the rest again with the caret at
    * its end, and never finalizes — also when the pick reaches the end of the
    * tail. `consumed_bytes` is the span end; a pick that does not end after the
-   * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
-   * always that word's, so a pick can only be of it.
+   * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window
+   * closes). The list a conversion answers is always that word's, so a pick can
+   * only be of it.
    *
    * **Platform contract**: when committing the user's tap on a candidate
    * returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen

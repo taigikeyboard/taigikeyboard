@@ -595,8 +595,9 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
 /// glyphs, not picked), nails the pick, walks the rest again with the caret at
 /// its end, and never finalizes — also when the pick reaches the end of the
 /// tail. `consumed_bytes` is the span end; a pick that does not end after the
-/// anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
-/// always that word's, so a pick can only be of it.
+/// anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window
+/// closes). The list a conversion answers is always that word's, so a pick can
+/// only be of it.
 ///
 /// **Platform contract**: when committing the user's tap on a candidate
 /// returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -831,8 +832,8 @@ public nonisolated struct Taigi_Engine_TpsKey: Sendable {
 /// segment — its glyphs go back in front of the tail, the caret before them —
 /// answering as `DeleteBackward`'s un-nail does (`UpdatePreedit`,
 /// `RefreshCandidates`, after `NextWordClearForNewComposing` when the segment
-/// left last was nailed as shown or none is left). START never re-opens: it stops at the
-/// tail's start. A tail the request converts and the phase holds no conversion
+/// left last was nailed as shown or none is left). START never re-opens: it
+/// stops at the tail's start. A tail the request converts and the phase holds no conversion
 /// for is walked first, and that new conversion is answered with
 /// `UpdatePreedit` even when the caret does not move.
 public nonisolated struct Taigi_Engine_MoveCaret: Sendable {

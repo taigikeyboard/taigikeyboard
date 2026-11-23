@@ -26,8 +26,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * segment — its glyphs go back in front of the tail, the caret before them —
  * answering as `DeleteBackward`'s un-nail does (`UpdatePreedit`,
  * `RefreshCandidates`, after `NextWordClearForNewComposing` when the segment
- * left last was nailed as shown or none is left). START never re-opens: it stops at the
- * tail's start. A tail the request converts and the phase holds no conversion
+ * left last was nailed as shown or none is left). START never re-opens: it
+ * stops at the tail's start. A tail the request converts and the phase holds no conversion
  * for is walked first, and that new conversion is answered with
  * `UpdatePreedit` even when the caret does not move.
  * </pre>
@@ -189,8 +189,8 @@ public  final class MoveCaret extends
    * segment — its glyphs go back in front of the tail, the caret before them —
    * answering as `DeleteBackward`'s un-nail does (`UpdatePreedit`,
    * `RefreshCandidates`, after `NextWordClearForNewComposing` when the segment
-   * left last was nailed as shown or none is left). START never re-opens: it stops at the
-   * tail's start. A tail the request converts and the phase holds no conversion
+   * left last was nailed as shown or none is left). START never re-opens: it
+   * stops at the tail's start. A tail the request converts and the phase holds no conversion
    * for is walked first, and that new conversion is answered with
    * `UpdatePreedit` even when the caret does not move.
    * </pre>

@@ -211,8 +211,9 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
     );
     assert_eq!(frequency_row(reader, "飯"), Some(("pn̄g".to_owned(), 1)));
 
-    // The phrase seeded on disk above (`做進出口`): a Hanji-less pick of its reading counts the romanization and
-    // touches nothing; a pick of the phrase itself touches it.
+    // The phrase seeded on disk above (`做進出口`): a Hanji-less pick of its
+    // reading counts the romanization and touches nothing; a pick of the
+    // phrase itself touches it.
     let touched_before = learn_count(reader, "做進出口").expect("seeded phrase");
     let counted_before = frequency_row(reader, "做進出口").map_or(0, |(_, count)| count);
     let reading = "tsò tsìn-tshut-kháu";

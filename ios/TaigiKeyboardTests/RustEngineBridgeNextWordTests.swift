@@ -50,13 +50,14 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     // MARK: - Decide: WordSelected
 
     // Which bigrams a commit records is the engine's (`engine/nextword/src/
-    // decide.rs` tests); it keeps them itself (roadmap P9b).
-    func testWordSelected_bumpsGenerationAndBecomesTheContext() {
+    // decide.rs` tests), and so are its generation bumps
+    // (`generation_bumps_on_invalidating_intents`); it keeps them itself
+    // (roadmap P9b).
+    func testWordSelected_becomesTheContext() {
         let primed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         XCTAssertEqual(queriedWords(primed), ["早"])
 
         let result = wordSelected(text: "安", roman: "an", nowMs: 5000)
-        XCTAssertEqual(queriedGeneration(result), queriedGeneration(primed).map { $0 &+ 1 })
         XCTAssertEqual(queriedWords(result), ["安"])
     }
 
@@ -113,18 +114,15 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     // MARK: - Decide: Backspace
 
     func testBackspace_emitsQueryPredictions() {
-        let primed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
+        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         let result = backspace(lastChar: "安", nowMs: 100)
-        // The backspace bumps the generation once, past the commit's query.
-        let expectedGeneration = queriedGeneration(primed).map { $0 &+ 1 }
 
         var sawQuery = false
         for effect in result.effects {
             switch effect {
-            case let .queryPredictions(word, roman, generation, _):
+            case let .queryPredictions(word, roman, _, _):
                 XCTAssertEqual(word, "安")
                 XCTAssertEqual(roman, "")
-                XCTAssertEqual(generation, expectedGeneration)
                 sawQuery = true
             default: continue
             }
@@ -163,8 +161,9 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertTrue(sawClear, "ClearForNewComposing must emit clearPredictionsUI when predictions_visible=true")
     }
 
-    func testSetPredictionsVisible_doesNotBumpGeneration() {
-        let before = currentGen()
+    // No generation bump either: pinned by `engine/nextword/src/decide.rs`
+    // (`set_predictions_visible_updates_state_without_bump_or_effects`).
+    func testSetPredictionsVisible_echoesVisibilityWithoutEffects() {
         let result = RustEngineBridge.nextwordSetPredictionsVisible(
             true,
             mode: .tl,
@@ -173,10 +172,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         )
         XCTAssertTrue(result.predictionsVisible)
         XCTAssertEqual(result.effects, [])
-        // The next bumping intent lands one past `before`: the visibility
-        // sync bumped nothing.
-        let next = backspace(lastChar: "安", nowMs: 100)
-        XCTAssertEqual(queriedGeneration(next), before &+ 1, "no generation bump")
     }
 
     // MARK: - Predict: stale drop
@@ -188,7 +183,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     /// `engine/dispatch/tests/user_data_reads.rs`); this pins the bridge's
     /// decode of a stale answer.
     func testPredict_staleQueryGenerationReturnsWasStale() {
-        let gen = currentGen()
+        let gen = generationAfterACommit()
         let result = RustEngineBridge.nextwordPredictNext(
             word: "早",
             roman: "tsá",
@@ -267,26 +262,15 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         )
     }
 
-    /// The generation a decision's prediction query carries — the engine's
-    /// generation right after that decision; `nil` without a query.
-    private func queriedGeneration(_ result: RustEngineBridge.NextWordDecideResult) -> UInt64? {
-        result.effects.lazy.compactMap { effect in
-            if case let .queryPredictions(_, _, generation, _) = effect {
-                return generation
-            }
-            return nil
-        }.first
-    }
-
-    /// Current engine generation, read off a commit's prediction query (the
-    /// commit itself bumps it, so this is the generation after it).
-    private func currentGen() -> UInt64 {
+    /// Commits 早 and answers the engine generation right after it, read off
+    /// the commit's prediction query.
+    private func generationAfterACommit() -> UInt64 {
         let committed = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        guard let generation = queriedGeneration(committed) else {
-            XCTFail("a commit with triggerPrediction queries predictions")
-            return 0
+        for case let .queryPredictions(_, _, generation, _) in committed.effects {
+            return generation
         }
-        return generation
+        XCTFail("a commit with triggerPrediction queries predictions")
+        return 0
     }
 
     /// Every bundled association source off, so `nextwordPredictNext` adds no
