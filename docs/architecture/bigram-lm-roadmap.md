@@ -122,7 +122,7 @@ Not planned (YAGNI). If one-word context proves limiting, it returns as its own 
 3. Hanji-only sources (P7) — not adopted.
 4. Clause punctuation `，、；：,;:` — breaks the bundled chain and the next-word context (`behavioral-invariants.md` §40).
 5. Source priority — `DICT_SCORE_CAP` = 250, clamp (§8 "equal count" → "always").
-6. `lexicon::classification::is_hanji` reads `CJK_RANGES`, the same table as `dictionary/common/cjk.py` (parity test `lexicon/tests/cjk_ranges_parity.rs`; `behavioral-invariants.md` §15).
+6. `phonetics::api::is_hanji` reads `CJK_RANGES`, the same table as `dictionary/common/cjk.py` (parity test `lexicon/tests/cjk_ranges_parity.rs`; `behavioral-invariants.md` §15).
 
 ## Techniques not in this roadmap
 

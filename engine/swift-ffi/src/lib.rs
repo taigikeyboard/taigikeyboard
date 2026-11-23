@@ -29,12 +29,6 @@ use std::sync::{Mutex, Once, OnceLock};
 // benign FAIL_INVARIANT response rather than panicking. Production app code
 // never references this symbol; the test target does.
 //
-// `e2e_trace_open`: opens the test-build-only engine trace at `path`.
-// Always in the bridge (swift-bridge cannot cfg bridge items, as with
-// `panic_for_test`); without the `e2e-trace` feature its definition just
-// returns false and the library holds no trace code. Only `E2E_TRACE` Swift
-// builds call it.
-//
 // `SwiftLoggerSink`: Swift class registered through `install_logger_sink`
 // that receives every `log::Record`. The Swift side maps `level` to the
 // `LoggerBackend` protocol method (`error`, `warning`, `info`, `debug`).
@@ -45,7 +39,6 @@ mod ffi {
         fn install_logger_sink(sink: SwiftLoggerSink);
         fn set_log_level(level: u8);
         fn panic_for_test() -> Vec<u8>;
-        fn e2e_trace_open(path: String) -> bool;
     }
 
     extern "Swift" {
@@ -130,16 +123,6 @@ fn panic_for_test() -> Vec<u8> {
         }
     }))
     .unwrap_or_else(|_| encode_error(ErrorCode::FailInternal))
-}
-
-#[cfg(feature = "e2e-trace")]
-fn e2e_trace_open(path: String) -> bool {
-    catch_unwind(AssertUnwindSafe(|| dispatch::trace::open(&path))).unwrap_or(false)
-}
-
-#[cfg(not(feature = "e2e-trace"))]
-fn e2e_trace_open(_path: String) -> bool {
-    false
 }
 
 /// Wrapper that lets a `SwiftLoggerSink` cross the `Send + Sync` boundary.

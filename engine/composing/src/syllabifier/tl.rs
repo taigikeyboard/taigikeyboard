@@ -44,6 +44,10 @@ const MAX_SYLLABLE_BYTES: usize = 10;
 /// unit edge costs is also the minimum depth. Time: O(n × MAX_SYLLABLE_BYTES)
 /// FST lookups, each O(syllable_len). Allocation: one
 /// `to_ascii_lowercase` pass on `input`.
+///
+/// Public only for the `tests/syllabifier_tl.rs` oracle; no production
+/// caller.
+#[doc(hidden)]
 pub fn valid_span_endings(
     input: &str,
     pos: usize,

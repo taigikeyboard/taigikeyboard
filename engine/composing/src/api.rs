@@ -247,6 +247,9 @@ impl Phase {
     ///
     /// [`has_word_space_boundary`]: crate::nailed::has_word_space_boundary
     /// [`nailed_prefix`]: crate::nailed::nailed_prefix
+    ///
+    /// Public only for `tests/raw_input_pending_tail.rs`.
+    #[doc(hidden)]
     pub fn composing_display(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),

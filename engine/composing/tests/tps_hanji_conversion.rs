@@ -508,7 +508,8 @@ fn a_changed_source_filter_is_not_served_the_old_words() {
     let response = tps_key(&mut engine, "ㄒ", &every_dictionary_off);
     assert_eq!(display(&response), "ㄒㄧˋㄒ");
     let conversion = conversion_of(&engine).expect("the closed reading is still walked");
-    assert_eq!(conversion.enabled_sources_bitmask, 0);
+    // Every source bit off (the subcollection mask above bit 13 is always encoded).
+    assert_eq!(conversion.enabled_sources_bitmask & 0x1FFF, 0);
     assert_eq!(conversion.segments[0].display_text, "ㄒㄧˋ");
 }
 

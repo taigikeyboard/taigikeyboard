@@ -1,9 +1,8 @@
 //! Hanji neutral-tone (`--` / `-`) aligner, display transform, and stripper.
 //!
 //! Builtin pure-Hanji dictionary entries store plain Hanji without `--` or `-`
-//! neutral-tone markers. When `khinsiann_in_hanji` is enabled, [`khinsiann_hanji_display`]
-//! (and its borrowed fast-path wrapper [`render_hanji_khinsiann`]) aligns each
-//! Hanji/Han-Lo syllable against `canonical_tl` and injects LKK / BONG報 style
+//! neutral-tone markers. When `khinsiann_in_hanji` is enabled, [`render_hanji_khinsiann`]
+//! aligns each Hanji/Han-Lo syllable against `canonical_tl` and injects LKK / BONG報 style
 //! neutral-tone markers (`--` for neutral boundaries, `-` for subsequent
 //! syllables inside a neutral tail, reset on word spaces).
 //!
@@ -187,13 +186,6 @@ pub fn render_hanji_khinsiann<'a>(
     }
 }
 
-/// Apply LKK / BONG報 neutral-tone hyphenation (`--` and `-`) to `hanji` using
-/// `canonical_tl`. Returns `hanji` unchanged if it already contains `--`, if
-/// `canonical_tl` has no `--`, or if 1:1 syllable alignment fails.
-pub fn khinsiann_hanji_display(hanji: &str, canonical_tl: &str) -> String {
-    render_hanji_khinsiann(hanji, canonical_tl, true).into_owned()
-}
-
 /// Append `segment` to an assembled Hanji sentence buffer `out`, inserting `"--"`
 /// between words when `khinsiann_before` is true and neither side already has a
 /// boundary hyphen.
@@ -256,6 +248,11 @@ pub fn strip_khinsiann_hanji(hanji: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [`render_hanji_khinsiann`] with the `--` / `-` markers on.
+    fn khinsiann_hanji_display(hanji: &str, canonical_tl: &str) -> String {
+        render_hanji_khinsiann(hanji, canonical_tl, true).into_owned()
+    }
 
     #[test]
     fn display_transform_matches_lkk_bong_rule() {

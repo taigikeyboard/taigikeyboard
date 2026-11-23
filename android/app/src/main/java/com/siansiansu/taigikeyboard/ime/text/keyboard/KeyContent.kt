@@ -33,7 +33,6 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyLabelCaseCache
@@ -595,7 +594,6 @@ internal fun computeKeyLetter(
     val label = if (baseLabel == "nn" && inputMode == "poj") "ⁿ" else baseLabel
     return KeyLabelCaseCache.getOrCompute(
         label,
-        InputMode.fromPrefString(inputMode),
         caps,
         capsLock,
         isNasalMarkerUppercaseEnabled,

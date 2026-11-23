@@ -142,8 +142,8 @@ public interface DictionarySourceTogglesOrBuilder extends
 
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
@@ -152,8 +152,8 @@ public interface DictionarySourceTogglesOrBuilder extends
   boolean hasKautianSubcollections();
   /**
    * <pre>
-   * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
-   * gate (legacy all-on). Only meaningful when `kautian = true`.
+   * kautian subcollection toggles — contract above. Only meaningful when
+   * `kautian = true`.
    * </pre>
    *
    * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>

@@ -1,9 +1,8 @@
 // Case-transform ops — extensions on RustEngineBridge that delegate char/string case handling
 // (including POJ/TL tone-mark case mapping) to Rust `phonetics::case_transform`; iOS counterpart is
 // `RustEngineBridge+CaseTransform.swift`. Single FFI hop per per-char or per-string case operation.
-// Mode and ⁿ-becomes-ᴺ-in-capitals (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
-// of POJ doubletap preprocessing so the fold fields are left off. The `LetterCase` indicator is defined
-// below.
+// Casing is the same in every input mode; the envelope `AppConfig` carries only ⁿ-becomes-ᴺ-in-capitals (§53),
+// the one field the engine's case handler reads. The `LetterCase` indicator is defined below.
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -13,8 +12,6 @@ import com.siansiansu.taigikeyboard.engine.proto.CaseResponse
 import com.siansiansu.taigikeyboard.engine.proto.ToneCase
 import com.siansiansu.taigikeyboard.engine.proto.ToneCaseKind
 import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
-import com.siansiansu.taigikeyboard.ime.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 
 private const val TAG = "CaseTransformBridge"
@@ -63,7 +60,6 @@ enum class LetterCase(
 fun RustEngineBridge.toneCase(
     input: String,
     kind: ToneCaseKind,
-    mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = ToneCase
@@ -74,7 +70,6 @@ fun RustEngineBridge.toneCase(
     return caseStringDispatch(
         CaseRequest.newBuilder().setToneCase(payload).build(),
         op = "toneCase($kind)",
-        mode = mode,
         isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = input,
     )
@@ -90,7 +85,6 @@ fun RustEngineBridge.toneCase(
 fun RustEngineBridge.transformInputCase(
     text: String,
     letterCase: LetterCase,
-    mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = TransformInputCase
@@ -101,7 +95,6 @@ fun RustEngineBridge.transformInputCase(
     return caseStringDispatch(
         CaseRequest.newBuilder().setTransformInputCase(payload).build(),
         op = "transformInputCase",
-        mode = mode,
         isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = text,
     )
@@ -114,11 +107,10 @@ fun RustEngineBridge.transformInputCase(
 private fun caseStringDispatch(
     caseRequest: CaseRequest,
     op: String,
-    mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
     fallback: String,
 ): String {
-    val resp = caseDispatch(caseRequest, op, mode, isNasalMarkerUppercaseEnabled) ?: return fallback
+    val resp = caseDispatch(caseRequest, op, isNasalMarkerUppercaseEnabled) ?: return fallback
     if (!resp.hasStringResult()) {
         RustEngineBridge.backend.w(TAG, "[$op] missing string_result")
         return fallback
@@ -129,28 +121,21 @@ private fun caseStringDispatch(
 private fun caseDispatch(
     caseRequest: CaseRequest,
     op: String,
-    mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): CaseResponse? {
     val response = RustEngineBridge.dispatch(op) {
-        setConfigSnapshot(caseAppConfig(mode, isNasalMarkerUppercaseEnabled))
+        setConfigSnapshot(caseAppConfig(isNasalMarkerUppercaseEnabled))
         setCaseTransform(caseRequest)
     } ?: return null
     return if (response.hasCaseTransform()) response.caseTransform else null
 }
 
-// The one canonical factory, folds off: case-transform never preprocesses `oo` / `nn`.
-private fun caseAppConfig(
-    mode: InputMode,
-    isNasalMarkerUppercaseEnabled: Boolean,
-): AppConfig =
-    appConfig(
-        inputMode = mode.engineInputMode(),
-        pojMarkers = PojMarkerOptions(
-            isDoubleTapOOEnabled = false,
-            isDoubleTapNNEnabled = false,
-            isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
-        ),
-    )
+// Only the field `phonetics::case_requests::handle` reads — the input mode does not change casing.
+// Inverted on the wire, as in `appConfig` (proto default = the marker follows the case, §53).
+internal fun caseAppConfig(isNasalMarkerUppercaseEnabled: Boolean): AppConfig =
+    AppConfig
+        .newBuilder()
+        .setForceLowercaseNasalMarker(!isNasalMarkerUppercaseEnabled)
+        .build()
 
 // endregion

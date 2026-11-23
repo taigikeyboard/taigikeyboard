@@ -14,7 +14,7 @@ impl UserDataCSV {
     /// Splits one CSV line into its fields. A doubled quote inside a quoted
     /// field is one literal quote; an unbalanced quote leaves the rest of the
     /// line quoted rather than erroring.
-    pub fn parse_line(line: &str) -> Vec<String> {
+    fn parse_line(line: &str) -> Vec<String> {
         let mut fields = Vec::new();
         let mut current = String::new();
         let mut is_inside_quotes = false;

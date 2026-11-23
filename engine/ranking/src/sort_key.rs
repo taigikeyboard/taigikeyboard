@@ -10,7 +10,7 @@ use crate::{source_tier_rank, CONTEXT_RANK_NONE};
 /// The twelve comparison fields, in the order [`CandidateSortKey`] uses when
 /// [`set_dev_sort_order`] has not been called. Names are what
 /// [`CandidateSortKey::deciding_field`] returns.
-pub const SORT_FIELDS: [&str; 12] = [
+const SORT_FIELDS: [&str; 12] = [
     "tier",
     "preference_class",
     "coverage_kind",

@@ -47,7 +47,9 @@
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use protos::engine::DictionarySourceToggles;
 
-use crate::common::{config, config_with_sources, fetch_at_pos_response, Fetch, Selected};
+use crate::common::{
+    all_kautian_subcollections, config, config_with_sources, fetch_at_pos_response, Fetch, Selected,
+};
 use lexicon::{CustomEntry, LearnedEntry};
 
 const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";
@@ -197,8 +199,8 @@ fn dump_continuous_candidates() {
 }
 
 /// The switches whose `dictionary_filter_bitmask` is `bitmask`'s source /
-/// variant bits 0-12 (`lexicon::dictionary_filters` layout); the kautian
-/// subcollection region is not modelled.
+/// variant bits 0-12 (`lexicon::dictionary_filters` layout), with every kautian
+/// subcollection on (the platform default).
 fn sources_from_bitmask(bitmask: u32) -> DictionarySourceToggles {
     let on = |bit: u32| bitmask & (1 << bit) != 0;
     DictionarySourceToggles {
@@ -215,6 +217,6 @@ fn sources_from_bitmask(bitmask: u32) -> DictionarySourceToggles {
         dev: on(10),
         lkk: on(11),
         variant: on(12),
-        kautian_subcollections: None,
+        kautian_subcollections: Some(all_kautian_subcollections()),
     }
 }

@@ -50,9 +50,7 @@ data class DictionaryToggles(
 ) {
     /**
      * kautian subcollection enable state (10 accents + name appendix).
-     * Android always populates this (the app ships the toggles), so the
-     * `kautian_subcollections` proto message is always present and the engine
-     * always runs the subcollection gate. Field order mirrors config.yaml
+     * Always sent; contract in `lexicon.proto` `DictionarySourceToggles`. Field order mirrors config.yaml
      * `dialect_columns` / proto `KautianSubcollectionToggles`.
      * Mirrors iOS `RustEngineBridge.DictionaryToggles.KautianSubcoll`.
      */
@@ -199,9 +197,7 @@ internal fun dictionaryTogglesProto(toggles: DictionaryToggles): ProtoDictionary
         .setKhiin(toggles.khiin)
         .setLkk(toggles.lkk)
         .setDev(toggles.dev)
-        // Always set the subcollection message (Android ships the toggles)
-        // so the engine runs the gate; absence would signal legacy all-on
-        // (DD5). Mirrors iOS RustEngineBridge togglesProto mapping.
+        // Always sent; contract in `lexicon.proto` `DictionarySourceToggles`. Mirrors iOS RustEngineBridge togglesProto mapping.
         .setKautianSubcollections(
             KautianSubcollectionToggles
                 .newBuilder()

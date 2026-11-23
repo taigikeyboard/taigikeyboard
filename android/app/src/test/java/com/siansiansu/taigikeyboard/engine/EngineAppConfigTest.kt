@@ -1,5 +1,6 @@
 package com.siansiansu.taigikeyboard.engine
 
+import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
@@ -119,5 +120,15 @@ class EngineAppConfigTest {
         assertEquals("tl", engineInputMode("klingon", unknownAs = "tl"))
         assertEquals("poj", engineInputMode("", unknownAs = "poj"))
         assertEquals("tl", continuousAppConfig(StubEngineSettings(inputMode = "klingon")).inputMode)
+    }
+
+    /** The case ops send only the nasal-marker switch, inverted on the wire as in `appConfig`. */
+    @Test
+    fun caseAppConfig_carriesOnlyTheInvertedNasalMarkerSwitch() {
+        assertTrue(
+            "ⁿ becomes ᴺ OFF is inverted on the wire",
+            caseAppConfig(isNasalMarkerUppercaseEnabled = false).forceLowercaseNasalMarker,
+        )
+        assertEquals(AppConfig.getDefaultInstance(), caseAppConfig(isNasalMarkerUppercaseEnabled = true))
     }
 }

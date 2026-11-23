@@ -90,4 +90,12 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         settings.isKhinsiannInHanjiEnabled = true
         XCTAssertTrue(RustEngineBridge.continuousAppConfig(settings).khinsiannInHanji)
     }
+
+    /// The case ops send only the nasal-marker switch, inverted on the wire as in `appConfig`.
+    func testCaseAppConfig_carriesOnlyTheInvertedNasalMarkerSwitch() {
+        let off = RustEngineBridge.caseAppConfig(isNasalMarkerUppercaseEnabled: false)
+        XCTAssertTrue(off.forceLowercaseNasalMarker, "ⁿ becomes ᴺ OFF is inverted on the wire")
+        let on = RustEngineBridge.caseAppConfig(isNasalMarkerUppercaseEnabled: true)
+        XCTAssertEqual(on, Taigi_Engine_AppConfig(), "nothing but the nasal-marker switch is set")
+    }
 }

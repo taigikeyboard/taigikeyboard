@@ -83,15 +83,12 @@ pub const KAUTIAN_SUBTAG_ACCENT_COUNT: usize = 10;
 pub const KAUTIAN_SUBTAG_NAME_BIT: u16 = 11;
 pub const KAUTIAN_SUBTAG_ALT_READING_BIT: u16 = 12;
 
-/// Wire layout: the user's kautian subcollection ENABLE bits ride the high
-/// region of `enabled_sources_bitmask` (u32). bit 13 = active sentinel — when
-/// 0 the engine SKIPS subcollection gating entirely (legacy / pre-UI default
-/// = all subcollections on, zero behaviour change). bits 14..=26 = enable mask
-/// in the SAME 13-bit layout as the subtag, so the filter test is one AND.
-/// `u32::MAX` (the all-enabled sentinel) also carries bit 13 set; a real
-/// platform mask (Phase 3 `dictionary_filter_bitmask`) sets bit 13 + the 13 bits
-/// explicitly and MUST never equal `u32::MAX`.
-pub const WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT: u32 = 1 << 13;
+/// Layout: the user's kautian subcollection ENABLE bits ride the high region
+/// of `enabled_sources_bitmask` (u32): bits 14..=26 = enable mask in the SAME
+/// 13-bit layout as the subtag, so the filter test is one AND. Bit 13 is
+/// unused (it was the "gate active" sentinel; every shell now sends the
+/// subcollection toggles). `u32::MAX` (the all-enabled sentinel) carries every
+/// enable bit; a mask from `dictionary_filter_bitmask` never equals it.
 pub const WIRE_KAUTIAN_SUBCOLL_SHIFT: u32 = 14;
 pub const WIRE_KAUTIAN_SUBCOLL_MASK: u32 = KAUTIAN_SUBTAG_USED_MASK as u32;
 
@@ -162,9 +159,6 @@ pub struct Filter {
     pub all_enabled: bool,
     /// Per-source enable bitmask (12 bits, low-order = source bit).
     pub enabled_mask: u16,
-    /// kautian subcollection filtering active (wire bit 13). False ⇒ skip the
-    /// subcollection gate entirely (legacy / all-on, zero behaviour change).
-    pub kautian_subcoll_active: bool,
     /// Enabled kautian subcollections — 13-bit mask, SAME layout as the record
     /// subtag (main | accent[10] | name | alt_reading).
     pub kautian_subcoll_mask: u16,
@@ -185,8 +179,6 @@ impl Filter {
             khiin: (enabled_sources_bitmask & (1 << 9)) != 0,
             all_enabled: enabled_sources_bitmask == u32::MAX,
             enabled_mask: (enabled_sources_bitmask & 0x0FFF) as u16,
-            kautian_subcoll_active: (enabled_sources_bitmask & WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT)
-                != 0,
             kautian_subcoll_mask: ((enabled_sources_bitmask >> WIRE_KAUTIAN_SUBCOLL_SHIFT)
                 & WIRE_KAUTIAN_SUBCOLL_MASK) as u16,
         }
@@ -434,19 +426,20 @@ impl DictionaryReader {
 
     /// kautian subcollection gate (DD6) — the SINGLE source of truth for both
     /// the filter (below) and the emitted `source_bitmask` (ranking tier) at
-    /// every call site. When subcollection filtering is active AND this is a
+    /// every call site. When the kautian source is enabled AND this is a
     /// kautian-source row, the kautian bit (bit 0) is CLEARED unless at least
     /// one of the row's subcollections (main / accent / name / alt_reading) is enabled. Other
     /// source bits are never touched, so a multi-source row stays visible via
     /// its other sources and inherits the other source's ranking tier. Rows
-    /// without the kautian bit, and the legacy/all-on case (`!active`), pass
-    /// through unchanged.
+    /// without the kautian bit pass through unchanged, and so does every row
+    /// while the kautian source is off: the source-OR drops kautian-only rows
+    /// then, and a multi-source row keeps its kautian ranking tier.
     pub fn effective_source_bitmask(
         record_bitmask: u16,
         record_subtag: u16,
         filter: &Filter,
     ) -> u16 {
-        if !filter.kautian_subcoll_active || (record_bitmask & KAUTIAN_BIT) == 0 {
+        if (filter.enabled_mask & KAUTIAN_BIT) == 0 || (record_bitmask & KAUTIAN_BIT) == 0 {
             return record_bitmask;
         }
         if (record_subtag & filter.kautian_subcoll_mask) != 0 {
@@ -506,50 +499,45 @@ mod tests {
     // Low source bits: kautian (0) + dev (10, always-on).
     const SRC_KAUTIAN_DEV: u32 = (1 << 0) | (1 << 10);
 
-    /// Build a wire `enabled_sources_bitmask`: low source bits plus an
-    /// optionally-active subcollection mask in the high region.
-    fn wire(source_bits: u32, subcoll_active: bool, subcoll_mask: u16) -> u32 {
-        let mut m = source_bits;
-        if subcoll_active {
-            m |= WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT;
-        }
-        m |= (subcoll_mask as u32 & WIRE_KAUTIAN_SUBCOLL_MASK) << WIRE_KAUTIAN_SUBCOLL_SHIFT;
-        m
+    /// Build an `enabled_sources_bitmask`: low source bits plus the
+    /// subcollection enable mask in the high region.
+    fn wire(source_bits: u32, subcoll_mask: u16) -> u32 {
+        source_bits
+            | (subcoll_mask as u32 & WIRE_KAUTIAN_SUBCOLL_MASK) << WIRE_KAUTIAN_SUBCOLL_SHIFT
     }
 
     #[test]
     fn from_enabled_bitmask_decodes_subcoll_high_bits() {
-        // Legacy (no high bits): inactive, mask 0, low-bit decode unaffected.
+        // No high bits: mask 0, low-bit decode unaffected.
         let f = Filter::from_enabled_bitmask(SRC_KAUTIAN_DEV);
-        assert!(!f.kautian_subcoll_active);
         assert_eq!(f.kautian_subcoll_mask, 0);
         assert_eq!(f.enabled_mask, (1 << 0) | (1 << 10));
 
-        // Active + main|name enabled.
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_MAIN | SUB_NAME));
-        assert!(f.kautian_subcoll_active);
+        // main|name enabled.
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, SUB_MAIN | SUB_NAME));
         assert_eq!(f.kautian_subcoll_mask, SUB_MAIN | SUB_NAME);
 
-        // u32::MAX → all_enabled + active + every subcollection bit.
+        // u32::MAX → all_enabled + every subcollection bit.
         let f = Filter::from_enabled_bitmask(u32::MAX);
         assert!(f.all_enabled);
-        assert!(f.kautian_subcoll_active);
         assert_eq!(f.kautian_subcoll_mask, WIRE_KAUTIAN_SUBCOLL_MASK as u16);
     }
 
     #[test]
-    fn effective_bitmask_legacy_passthrough() {
-        let f = Filter::from_enabled_bitmask(SRC_KAUTIAN_DEV);
+    fn effective_bitmask_passes_through_with_kautian_off() {
+        // kautian source off: a multi-source row keeps its kautian tier bit
+        // whatever the subcollection mask says.
+        let f = Filter::from_enabled_bitmask(u32::from(TAIGITV));
         assert_eq!(
-            DictionaryReader::effective_source_bitmask(KAUTIAN_BIT, sub_accent(0), &f),
-            KAUTIAN_BIT
+            DictionaryReader::effective_source_bitmask(KAUTIAN_BIT | TAIGITV, sub_accent(0), &f),
+            KAUTIAN_BIT | TAIGITV
         );
     }
 
     #[test]
     fn effective_bitmask_drops_kautian_when_subcoll_disabled() {
-        // Active, only main enabled; accent-only kautian row → kautian cleared.
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_MAIN));
+        // Only main enabled; accent-only kautian row → kautian cleared.
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, SUB_MAIN));
         assert_eq!(
             DictionaryReader::effective_source_bitmask(KAUTIAN_BIT, sub_accent(0), &f),
             0
@@ -564,7 +552,7 @@ mod tests {
     #[test]
     fn effective_bitmask_multi_source_keeps_other_source() {
         // DD6: kautian dropped, taigitv preserved.
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_MAIN));
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, SUB_MAIN));
         assert_eq!(
             DictionaryReader::effective_source_bitmask(KAUTIAN_BIT | TAIGITV, sub_accent(0), &f),
             TAIGITV
@@ -573,7 +561,7 @@ mod tests {
 
     #[test]
     fn effective_bitmask_non_kautian_untouched() {
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_MAIN));
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, SUB_MAIN));
         assert_eq!(
             DictionaryReader::effective_source_bitmask(TAIGITV, 0, &f),
             TAIGITV
@@ -581,20 +569,8 @@ mod tests {
     }
 
     #[test]
-    fn passes_filter_legacy_unchanged_behaviour() {
-        // Legacy mask: accent-only kautian row passes (no gating) — zero
-        // behaviour change until the platform sends the active sentinel.
-        let f = Filter::from_enabled_bitmask(SRC_KAUTIAN_DEV);
-        assert!(DictionaryReader::passes_filter(
-            KAUTIAN_BIT,
-            sub_accent(0),
-            &f
-        ));
-    }
-
-    #[test]
     fn passes_filter_main_only_drops_accent_keeps_headword() {
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_MAIN));
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, SUB_MAIN));
         assert!(!DictionaryReader::passes_filter(
             KAUTIAN_BIT,
             sub_accent(0),
@@ -611,7 +587,7 @@ mod tests {
 
     #[test]
     fn passes_filter_accent_enabled_matches_accent_row() {
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, sub_accent(3)));
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, sub_accent(3)));
         assert!(DictionaryReader::passes_filter(
             KAUTIAN_BIT,
             sub_accent(3),
@@ -626,7 +602,7 @@ mod tests {
 
     #[test]
     fn passes_filter_name_enabled_matches_name_row() {
-        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, true, SUB_NAME));
+        let f = Filter::from_enabled_bitmask(wire(SRC_KAUTIAN_DEV, SUB_NAME));
         assert!(DictionaryReader::passes_filter(KAUTIAN_BIT, SUB_NAME, &f));
         assert!(!DictionaryReader::passes_filter(KAUTIAN_BIT, SUB_MAIN, &f));
     }
@@ -636,7 +612,7 @@ mod tests {
         // kautian + taigitv + dev enabled; only main subcollection on; row is
         // an accent-only kautian|taigitv entry → survives via taigitv (DD6).
         let src = (1 << 0) | (1 << 1) | (1 << 10);
-        let f = Filter::from_enabled_bitmask(wire(src, true, SUB_MAIN));
+        let f = Filter::from_enabled_bitmask(wire(src, SUB_MAIN));
         assert!(DictionaryReader::passes_filter(
             KAUTIAN_BIT | TAIGITV,
             sub_accent(0),

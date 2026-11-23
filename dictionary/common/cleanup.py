@@ -176,7 +176,7 @@ def tokenize_tl_syllables(text: str) -> tuple[list[tuple[str, str]], str]:
 def format_khinsiann_hanji(hanji: str, canonical_tl: str) -> str:
     """Apply LKK/BONG-style neutral-tone `--`/`-` markers to `hanji` aligned with `canonical_tl`.
 
-    Mirrors `phonetics::api::khinsiann_hanji_display` in `engine/phonetics/src/khinsiann.rs`,
+    Mirrors `phonetics::api::render_hanji_khinsiann` (markers on) in `engine/phonetics/src/khinsiann.rs`,
     kept equal by `khinsiann_pipeline_parity` in `engine/lexicon/tests/prod.rs`.
     """
     if not hanji or "--" in hanji or "--" not in canonical_tl:

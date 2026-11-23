@@ -10,8 +10,8 @@
 //! exclusively in `engine/mmap-host`.
 
 pub mod api;
+#[doc(hidden)]
 pub mod association_reader;
-pub mod classification;
 mod continuous;
 mod dictionary_filters;
 pub mod dictionary_reader;
@@ -23,7 +23,7 @@ pub mod requests;
 pub mod search;
 mod syllable_inventory;
 mod tps_pattern;
-pub mod walker_model;
+mod walker_model;
 
 const _: fn() = || {
     fn assert_send<T: Send>() {}
@@ -42,3 +42,4 @@ pub use error::LexiconError;
 pub use handle::EngineHandle;
 pub use paths::LexiconPaths;
 pub use syllable_inventory::SyllableInventory;
+pub use walker_model::WalkerModel;

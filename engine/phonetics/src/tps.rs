@@ -422,9 +422,12 @@ fn tps_notone_from_numeric_token(numeric_token: &str) -> String {
         .collect()
 }
 
-/// A3 (§41) — the numeric tone of the TL syllable whose fused TPS notone
-/// prefix ends EXACTLY at `notone_prefix`, or `None` when no syllable
-/// boundary lands there.
+/// A3 (§41) / §17 case 4 — the numeric tone of the TL syllable ending
+/// exactly at each of `ends` (ascending byte offsets into `notone_body`),
+/// in ONE walk of `record_tl`, or `None` when any end is 0, lands
+/// mid-syllable, runs past the reading, or the reading's surface up to it
+/// is not `notone_body`'s. `notone_body` may run past the last end — a
+/// partial-prefix extension's matched key does.
 ///
 /// This is the alignment primitive the space-pinned tone filter needs: a
 /// TPS keyboard space closes the syllable the user just typed, so the
@@ -432,26 +435,12 @@ fn tps_notone_from_numeric_token(numeric_token: &str) -> String {
 /// same point AND the syllable ending there carries the tone the space
 /// means (1 for an open rime, 4 for a stop coda — the two tones TPS
 /// writes with no mark). Callers own the tone predicate; this fn only
-/// answers "which syllable does the typed prefix end on, and what is its
-/// tone".
+/// answers "which syllable does each close end on, and what is its tone".
 ///
 /// Accepts the C-3a or→er dialect variant of the accumulated prefix for
 /// the same reason [`matches_continuous_tps_toneless_key`] does: a user
 /// typing the ㄛ form reaches the row through `tps_notone_var`, so a
 /// primary-only comparison would reject a legitimate hit.
-pub fn tps_notone_prefix_boundary_tone(record_tl: &str, notone_prefix: &str) -> Option<char> {
-    tps_notone_boundary_tones(record_tl, notone_prefix, [notone_prefix.len()])?
-        .first()
-        .copied()
-}
-
-/// §17 case 4 — [`tps_notone_prefix_boundary_tone`] for several syllable
-/// closes in ONE walk of `record_tl`: the tone of the syllable ending
-/// exactly at each of `ends` (ascending byte offsets into `notone_body`),
-/// or `None` when any end is 0, lands mid-syllable, runs past the reading,
-/// or the reading's surface up to it is not `notone_body`'s (or→er variant
-/// accepted, as there). `notone_body` may run past the last end — a
-/// partial-prefix extension's matched key does.
 pub fn tps_notone_boundary_tones(
     record_tl: &str,
     notone_body: &str,
@@ -831,6 +820,14 @@ fn is_pt_or_k_stop(tl: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    /// [`tps_notone_boundary_tones`] for the single close at the end of
+    /// `notone_prefix`.
+    fn tps_notone_prefix_boundary_tone(record_tl: &str, notone_prefix: &str) -> Option<char> {
+        tps_notone_boundary_tones(record_tl, notone_prefix, [notone_prefix.len()])?
+            .first()
+            .copied()
+    }
+
     // A3 (§41) — `tps_notone_prefix_boundary_tone` unit pins. Traces:
     //   "si"    → to_tone_number "si1"    → notone ㄒㄧ,   tone 1 (open rime, unmarked)
     //   "sī"    → to_tone_number "si7"    → notone ㄒㄧ,   tone 7 (marked)

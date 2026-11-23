@@ -26,7 +26,6 @@ extension ActionHandler {
         let processedChar = RustEngineBridge.transformInputCase(
             char,
             letterCase: currentCase.asLetterCase,
-            mode: settings.inputMode,
             isNasalMarkerUppercaseEnabled: settings.isNasalMarkerUppercaseEnabled,
         )
 

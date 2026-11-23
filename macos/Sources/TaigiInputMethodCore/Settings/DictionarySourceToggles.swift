@@ -41,10 +41,7 @@ struct DictionarySourceToggles: Sendable {
     /// Supplementary Word List.
     let dev: Bool
 
-    /// Always populated, never absent: the engine reads an absent
-    /// subcollection message as "legacy all-on" and skips the gate entirely
-    /// (`lexicon.proto:452-454`). macOS ships all twelve toggles, so it must
-    /// always ask for the gate to run.
+    /// Always sent; contract in `lexicon.proto` `DictionarySourceToggles`.
     let kautianSubcollections: KautianSubcollections
 
     /// The per-subcollection state of the kautian source. Order mirrors
