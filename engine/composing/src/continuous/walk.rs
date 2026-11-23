@@ -320,7 +320,6 @@ pub(crate) fn walk_buffer(
 /// reader — the candidate list's slot 0 ([`walker_slot0`]) and the developer
 /// explain view (`continuous::segmentation`).
 pub(crate) struct SynthCut {
-    pub consumed_span: ConsumedSpan,
     /// The lowest-cost path. Under [`SynthWords::Syllables`] its edges are
     /// not the cut shown — only its edge count and custom flags are read.
     pub path: crate::lattice::BestPath,
@@ -364,7 +363,7 @@ pub(super) fn synth_cut(
     // hyphen leaves the shadow short of the raw buffer (a
     // `(0, raw_len)` synth would mis-commit the pending `-`).
     // Cheap early-out before walking.
-    let consumed_span = synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len)?;
+    synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len)?;
     let path = walk_buffer(continuous_keys, inv, ctx)?;
 
     // v3.5.8 S5 (Codex pre-impl Q2, 2026-05-17) — no-dict carve-out.
@@ -385,7 +384,6 @@ pub(super) fn synth_cut(
     // `taiuantai → tai uan tai` expectation.
     if path.choices.iter().any(|c| c.dict_hit) {
         return Some(SynthCut {
-            consumed_span,
             path,
             words: SynthWords::Edges,
         });
@@ -405,7 +403,6 @@ pub(super) fn synth_cut(
             None
         }
         Some(segs) if !segs.is_empty() => Some(SynthCut {
-            consumed_span,
             path,
             words: SynthWords::Syllables(segs),
         }),
@@ -440,12 +437,9 @@ pub(super) fn walker_slot0(
         mode,
         ..
     } = *ctx;
-    let SynthCut {
-        consumed_span,
-        path,
-        words,
-    } = cut;
-    let consumed_span = *consumed_span;
+    let SynthCut { path, words } = cut;
+    // `synth_cut` passed `synth_consumed_span`, so the synth spans the whole buffer.
+    let consumed_span = (0, raw.len() as u32);
     // v3.5.8 #288 (per-segment case-from-raw) composes with the
     // dict-hit branch: each chosen edge's canonical roman is recased
     // to mirror the user's raw input for that edge's own byte span
@@ -454,7 +448,6 @@ pub(super) fn walker_slot0(
     // back to the raw buffer. The all-OOV carve-out stays unrecased — it
     // is a synthesized reading, not an edge the user typed a case intent
     // for; greedy-longest segments are independent of `path.edges`.
-    let any_dict = matches!(words, SynthWords::Edges);
     let (parts, syllable_count) = match words {
         SynthWords::Edges => {
             let parts = path
@@ -495,7 +488,7 @@ pub(super) fn walker_slot0(
     // A roman-only dictionary word in the path keeps the sentence's Hanji: the
     // word stands in romanization (Han-Lo mixed, MOE `VT_MIXED`). An OOV edge
     // still leaves the whole path to the romanization.
-    let hanji_spelled = any_dict
+    let hanji_spelled = matches!(words, SynthWords::Edges)
         && path.choices.iter().any(|c| c.hanji.is_some())
         && path.choices.iter().all(|c| c.hanji.is_some() || c.dict_hit);
     let edge_piece =

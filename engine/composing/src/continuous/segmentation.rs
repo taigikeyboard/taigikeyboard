@@ -121,9 +121,9 @@ pub(crate) fn explain_segmentation(
                 })
                 .collect(),
         ),
-        SynthWords::Syllables(segs) => (
-            "syllables",
-            segs.iter()
+        SynthWords::Syllables(segs) => {
+            let words: Vec<WordCut> = segs
+                .iter()
                 .filter_map(|&(start, end)| {
                     let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
                     let text = raw.get(raw_start..raw_end)?.to_owned();
@@ -139,11 +139,19 @@ pub(crate) fn explain_segmentation(
                         khinsiann_before: false,
                     })
                 })
-                .collect(),
-        ),
+                .collect();
+            (
+                if words.is_empty() {
+                    "none"
+                } else {
+                    "syllables"
+                },
+                words,
+            )
+        }
     };
     Segmentation {
-        cut_by: if words.is_empty() { "none" } else { cut_by },
+        cut_by,
         syllables,
         words,
     }
