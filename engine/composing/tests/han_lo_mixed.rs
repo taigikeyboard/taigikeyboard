@@ -75,12 +75,19 @@ fn install_fixture() {
             syll: 1,
             freq: 10,
         },
+        Row {
+            toneless_key: "ah",
+            hanji: "",
+            tl: "--ah",
+            syll: 1,
+            freq: 10,
+        },
     ];
     let source = |row: &Row| if row.hanji.is_empty() { LKK } else { KAUTIAN };
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v4_sourced(&rows, source));
     let fst_path = build_dictionary_fst(&rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["gua2", "tsiah8", "tsiah4", "kah4"]);
+    let syllables_path = build_syllables_fst(&["gua2", "tsiah8", "tsiah4", "kah4", "ah4"]);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
@@ -319,6 +326,19 @@ fn the_sentence_spaces_two_romanized_words() {
     assert_eq!(
         sentence("guatsiahkah", &on, picked("tsia̍h", "tsia̍h")).as_deref(),
         Some("我tsia̍h kah")
+    );
+}
+
+// A romanized word opening with the neutral-tone mark (`--ah`) is written
+// against the romanization before it, not spaced from it.
+#[test]
+fn the_sentence_joins_a_khinsiann_romanization_without_a_space() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    assert_eq!(
+        sentence("guatsiahah", &on, picked("tsia̍h", "tsia̍h")).as_deref(),
+        Some("我tsia̍h--ah")
     );
 }
 

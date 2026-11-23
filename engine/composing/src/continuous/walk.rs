@@ -620,12 +620,11 @@ pub(super) fn walker_slot0(
 
 /// Two words in romanization meeting in the sentence's Hanji keep a word
 /// space between them (`我kap i食`), as the nailed commit spaces them
-/// (`nailed::has_word_space_boundary`); a romanized word beside Hanji is
-/// written against it (`我kap`).
+/// (`nailed::has_word_space_boundary`); a romanized word beside Hanji, or
+/// one opening with the neutral-tone mark (`tsia̍h--ah`), is written against
+/// it (`我kap`).
 fn push_romanized_word_space(out: &mut String, piece: &str) {
-    if crate::commit_text::ends_in_romanization(out)
-        && crate::commit_text::starts_with_romanization(piece)
-    {
+    if crate::commit_text::spaces_romanized_words(out, piece) {
         out.push(' ');
     }
 }

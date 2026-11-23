@@ -1641,9 +1641,7 @@ fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<Learne
             None if han_lo => seg.association_tl.clone(),
             None => return None,
         };
-        if crate::commit_text::ends_in_romanization(&hanji)
-            && crate::commit_text::starts_with_romanization(&piece)
-        {
+        if crate::commit_text::spaces_romanized_words(&hanji, &piece) {
             hanji.push(' ');
         }
         hanji.push_str(&piece);
