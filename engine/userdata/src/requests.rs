@@ -1,7 +1,6 @@
 //! The user-data requests after the open — the pages' (list, save, delete,
-//! CSV and backup import / export, reset) and the key path's
-//! `RecordUsage` — answered from the stores [`UserDataHandle`] opened, and
-//! the dictionary search's custom-entry lookup.
+//! CSV and backup import / export, reset) — answered from the stores
+//! [`UserDataHandle`] opened, and the dictionary search's custom-entry lookup.
 //! `engine/dispatch` routes `UserDataRequest` here and maps [`RequestError`]
 //! to the wire's error code.
 
@@ -13,8 +12,7 @@ use protos::engine::{
     CustomDictionaryRefusal, CustomEntries, CustomEntryDeleted, CustomEntrySaved, ImportBackup,
     ImportCustomCsv, LearningRecord, LearningRecordAddedToCustomDictionary, LearningRecordDeleted,
     LearningRecordKind, LearningRecordOrder, LearningRecordSaved, LearningRecords,
-    ListCustomEntries, ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry,
-    UserDataReset,
+    ListCustomEntries, ListLearningRecords, ResetUserData, SaveCustomEntry, UserDataReset,
 };
 
 use crate::paging::{last_page_offset, saturated_u32};
@@ -38,8 +36,8 @@ pub enum RequestError {
 }
 
 impl UserDataHandle {
-    /// A page's request — everything but the open and the key path's
-    /// `RecordUsage` — answered from stores that have finished opening.
+    /// A page's request — everything but the open — answered from stores
+    /// that have finished opening.
     pub(crate) fn handle_page(
         stores: &UserDataStores,
         method: &user_data_request::Method,
@@ -101,7 +99,7 @@ impl UserDataHandle {
                 )?)
             }
             // Answered by `handle` before a page request is looked at.
-            Method::Open(_) | Method::RecordUsage(_) => {
+            Method::Open(_) => {
                 return Err(RequestError::Invalid("not a page request"));
             }
         })
@@ -321,19 +319,6 @@ impl UserDataHandle {
         })
     }
 
-    /// One commit counted from outside the engine. No platform sends it since
-    /// the engine counts every pick itself (Android's English-pick sender went
-    /// in G4); tests seed counts with it. It names no Hanji: the learned-phrase
-    /// touch (§50) belongs to the commits the engine resolves itself.
-    pub(crate) fn record_usage(&self, usage: &RecordUsage) -> Result<(), RequestError> {
-        let stores = self.opened_stores()?;
-        if usage.display_text.is_empty() {
-            return Err(RequestError::Invalid("usage without a display text"));
-        }
-        stores.record_usage(&usage.display_text, &usage.canonical_tl, None, false);
-        Ok(())
-    }
-
     fn reset(
         stores: &UserDataStores,
         reset: &ResetUserData,
@@ -492,25 +477,6 @@ mod tests {
         assert_eq!(
             csv_refusal(&CustomDictionaryCSVError::TooManyRows { limit: 1 }),
             CustomDictionaryRefusal::Full
-        );
-    }
-
-    #[test]
-    fn a_usage_without_a_display_text_is_refused() {
-        let directory = tempfile::tempdir().unwrap();
-        let handle = UserDataHandle::new();
-        handle.handle(&open_request(directory.path())).unwrap();
-
-        assert_eq!(
-            handle
-                .handle(&UserDataRequest {
-                    method: Some(user_data_request::Method::RecordUsage(RecordUsage {
-                        canonical_tl: "tâi-uân".into(),
-                        ..RecordUsage::default()
-                    })),
-                })
-                .unwrap_err(),
-            RequestError::Invalid("usage without a display text")
         );
     }
 
@@ -1223,13 +1189,10 @@ mod tests {
         handle.handle(&request).unwrap();
         // trace: the stores are published before the answer, so this pick
         // queues behind the open on the frequency store's worker.
-        call(
-            &handle,
-            user_data_request::Method::RecordUsage(RecordUsage {
-                display_text: "台灣".into(),
-                canonical_tl: "tâi-uân".into(),
-            }),
-        );
+        handle
+            .stores()
+            .unwrap()
+            .record_usage("台灣", "tâi-uân", None, false);
 
         // A page request waits for the open to finish.
         assert_eq!(

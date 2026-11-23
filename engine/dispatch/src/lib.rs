@@ -444,18 +444,17 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_returns_fail_invariant_for_record_usage_before_open() {
-        // trace: lib unit tests never open the process's handle, so
-        // `RecordUsage` meets "user data is not open yet".
+    fn dispatch_returns_fail_invariant_for_a_page_request_before_open() {
+        // trace: lib unit tests never open the process's handle, so a page
+        // request meets "user data is not open yet" (`settled_stores`).
         let error = user_data_error(
             12,
             protos::engine::UserDataRequest {
-                method: Some(protos::engine::user_data_request::Method::RecordUsage(
-                    protos::engine::RecordUsage {
-                        display_text: "台灣".into(),
-                        canonical_tl: "tâi-uân".into(),
-                    },
-                )),
+                method: Some(
+                    protos::engine::user_data_request::Method::ListLearningRecords(
+                        protos::engine::ListLearningRecords::default(),
+                    ),
+                ),
             },
         );
         assert_eq!(error, ErrorCode::FailInvariant as i32);

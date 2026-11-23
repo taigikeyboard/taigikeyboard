@@ -22,7 +22,6 @@ public  final class UserDataResponse extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     OPENED(1),
     RESET(2),
-    USAGE_RECORDED(3),
     CUSTOM_ENTRIES(4),
     CUSTOM_ENTRY_SAVED(5),
     CUSTOM_ENTRY_DELETED(6),
@@ -51,7 +50,6 @@ public  final class UserDataResponse extends
       switch (value) {
         case 1: return OPENED;
         case 2: return RESET;
-        case 3: return USAGE_RECORDED;
         case 4: return CUSTOM_ENTRIES;
         case 5: return CUSTOM_ENTRY_SAVED;
         case 6: return CUSTOM_ENTRY_DELETED;
@@ -179,56 +177,6 @@ public  final class UserDataResponse extends
    */
   private void clearReset() {
     if (resultCase_ == 2) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int USAGE_RECORDED_FIELD_NUMBER = 3;
-  /**
-   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-   */
-  @java.lang.Override
-  public boolean hasUsageRecorded() {
-    return resultCase_ == 3;
-  }
-  /**
-   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.UsageRecorded getUsageRecorded() {
-    if (resultCase_ == 3) {
-       return (com.siansiansu.taigikeyboard.engine.proto.UsageRecorded) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.UsageRecorded.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-   */
-  private void setUsageRecorded(com.siansiansu.taigikeyboard.engine.proto.UsageRecorded value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-   */
-  private void mergeUsageRecorded(com.siansiansu.taigikeyboard.engine.proto.UsageRecorded value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 3 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.UsageRecorded.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.UsageRecorded.newBuilder((com.siansiansu.taigikeyboard.engine.proto.UsageRecorded) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-   */
-  private void clearUsageRecorded() {
-    if (resultCase_ == 3) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -990,54 +938,6 @@ public  final class UserDataResponse extends
     }
 
     /**
-     * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-     */
-    @java.lang.Override
-    public boolean hasUsageRecorded() {
-      return instance.hasUsageRecorded();
-    }
-    /**
-     * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.UsageRecorded getUsageRecorded() {
-      return instance.getUsageRecorded();
-    }
-    /**
-     * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-     */
-    public Builder setUsageRecorded(com.siansiansu.taigikeyboard.engine.proto.UsageRecorded value) {
-      copyOnWrite();
-      instance.setUsageRecorded(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-     */
-    public Builder setUsageRecorded(
-        com.siansiansu.taigikeyboard.engine.proto.UsageRecorded.Builder builderForValue) {
-      copyOnWrite();
-      instance.setUsageRecorded(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-     */
-    public Builder mergeUsageRecorded(com.siansiansu.taigikeyboard.engine.proto.UsageRecorded value) {
-      copyOnWrite();
-      instance.mergeUsageRecorded(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.UsageRecorded usage_recorded = 3;</code>
-     */
-    public Builder clearUsageRecorded() {
-      copyOnWrite();
-      instance.clearUsageRecorded();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.CustomEntries custom_entries = 4;</code>
      */
     @java.lang.Override
@@ -1585,7 +1485,6 @@ public  final class UserDataResponse extends
             "resultCase_",
             com.siansiansu.taigikeyboard.engine.proto.UserDataOpened.class,
             com.siansiansu.taigikeyboard.engine.proto.UserDataReset.class,
-            com.siansiansu.taigikeyboard.engine.proto.UsageRecorded.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomEntries.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomEntrySaved.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomEntryDeleted.class,
@@ -1599,9 +1498,9 @@ public  final class UserDataResponse extends
             com.siansiansu.taigikeyboard.engine.proto.LearningRecordAddedToCustomDictionary.class,
           };
           java.lang.String info =
-              "\u0000\u000e\u0001\u0000\u0001\u000f\u000e\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
-              "\t<\u0000\n<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
+              "\u0000\r\u0001\u0000\u0001\u000f\r\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0004" +
+              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000\f<\u0000" +
+              "\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

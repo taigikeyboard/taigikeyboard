@@ -7,12 +7,12 @@
 
 mod common;
 
-use common::{open_user_data, user_data};
+use common::{open_user_data, record_pick, user_data};
 
 use protos::engine::{
     response, user_data_request, user_data_response, DeleteLearningRecord, ErrorCode,
-    LearningRecord, LearningRecordKind, LearningRecords, ListLearningRecords, RecordUsage,
-    Response, SetLearningRecordCount,
+    LearningRecord, LearningRecordKind, LearningRecords, ListLearningRecords, Response,
+    SetLearningRecordCount,
 };
 
 fn answer(response: Response) -> user_data_response::Result {
@@ -51,12 +51,7 @@ fn only_record() -> LearningRecord {
 fn a_counted_pick_is_listed_edited_and_deleted_over_the_wire() {
     let directory = tempfile::tempdir().unwrap();
     open_user_data(directory.path());
-    answer(user_data(user_data_request::Method::RecordUsage(
-        RecordUsage {
-            display_text: "台灣".into(),
-            canonical_tl: "tâi-uân".into(),
-        },
-    )));
+    record_pick("台灣", "tâi-uân");
 
     let record = only_record();
     assert_eq!(

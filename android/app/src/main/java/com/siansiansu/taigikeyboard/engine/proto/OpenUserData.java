@@ -7,8 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Opens the stores for this process, once. Every other request but
- * `RecordUsage` waits until the open has finished (a page must not read a
+ * Opens the stores for this process, once. Every other request waits
+ * until the open has finished (a page must not read a
  * dictionary still being taken over). Absolute file paths: one
  * directory everywhere except Android, whose `user_association.db` lives in
  * `filesDir`. The stores are in use from the moment this is handled: a pick
@@ -337,8 +337,8 @@ public  final class OpenUserData extends
 
   /**
    * <pre>
-   * Opens the stores for this process, once. Every other request but
-   * `RecordUsage` waits until the open has finished (a page must not read a
+   * Opens the stores for this process, once. Every other request waits
+   * until the open has finished (a page must not read a
    * dictionary still being taken over). Absolute file paths: one
    * directory everywhere except Android, whose `user_association.db` lives in
    * `filesDir`. The stores are in use from the moment this is handled: a pick

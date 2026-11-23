@@ -22,7 +22,6 @@ public  final class UserDataRequest extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     OPEN(1),
     RESET(2),
-    RECORD_USAGE(3),
     LIST_CUSTOM_ENTRIES(4),
     SAVE_CUSTOM_ENTRY(5),
     DELETE_CUSTOM_ENTRY(6),
@@ -51,7 +50,6 @@ public  final class UserDataRequest extends
       switch (value) {
         case 1: return OPEN;
         case 2: return RESET;
-        case 3: return RECORD_USAGE;
         case 4: return LIST_CUSTOM_ENTRIES;
         case 5: return SAVE_CUSTOM_ENTRY;
         case 6: return DELETE_CUSTOM_ENTRY;
@@ -179,56 +177,6 @@ public  final class UserDataRequest extends
    */
   private void clearReset() {
     if (methodCase_ == 2) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int RECORD_USAGE_FIELD_NUMBER = 3;
-  /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   */
-  @java.lang.Override
-  public boolean hasRecordUsage() {
-    return methodCase_ == 3;
-  }
-  /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.RecordUsage getRecordUsage() {
-    if (methodCase_ == 3) {
-       return (com.siansiansu.taigikeyboard.engine.proto.RecordUsage) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.RecordUsage.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   */
-  private void setRecordUsage(com.siansiansu.taigikeyboard.engine.proto.RecordUsage value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   */
-  private void mergeRecordUsage(com.siansiansu.taigikeyboard.engine.proto.RecordUsage value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 3 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.RecordUsage.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.RecordUsage.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RecordUsage) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 3;
-  }
-  /**
-   * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-   */
-  private void clearRecordUsage() {
-    if (methodCase_ == 3) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -990,54 +938,6 @@ public  final class UserDataRequest extends
     }
 
     /**
-     * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-     */
-    @java.lang.Override
-    public boolean hasRecordUsage() {
-      return instance.hasRecordUsage();
-    }
-    /**
-     * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.RecordUsage getRecordUsage() {
-      return instance.getRecordUsage();
-    }
-    /**
-     * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-     */
-    public Builder setRecordUsage(com.siansiansu.taigikeyboard.engine.proto.RecordUsage value) {
-      copyOnWrite();
-      instance.setRecordUsage(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-     */
-    public Builder setRecordUsage(
-        com.siansiansu.taigikeyboard.engine.proto.RecordUsage.Builder builderForValue) {
-      copyOnWrite();
-      instance.setRecordUsage(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-     */
-    public Builder mergeRecordUsage(com.siansiansu.taigikeyboard.engine.proto.RecordUsage value) {
-      copyOnWrite();
-      instance.mergeRecordUsage(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.RecordUsage record_usage = 3;</code>
-     */
-    public Builder clearRecordUsage() {
-      copyOnWrite();
-      instance.clearRecordUsage();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.ListCustomEntries list_custom_entries = 4;</code>
      */
     @java.lang.Override
@@ -1585,7 +1485,6 @@ public  final class UserDataRequest extends
             "methodCase_",
             com.siansiansu.taigikeyboard.engine.proto.OpenUserData.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetUserData.class,
-            com.siansiansu.taigikeyboard.engine.proto.RecordUsage.class,
             com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries.class,
             com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry.class,
             com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry.class,
@@ -1599,9 +1498,9 @@ public  final class UserDataRequest extends
             com.siansiansu.taigikeyboard.engine.proto.AddLearningRecordToCustomDictionary.class,
           };
           java.lang.String info =
-              "\u0000\u000e\u0001\u0000\u0001\u000f\u000e\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
-              "\t<\u0000\n<\u0000\f<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
+              "\u0000\r\u0001\u0000\u0001\u000f\r\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0004" +
+              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000\f<\u0000" +
+              "\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

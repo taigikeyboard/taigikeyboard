@@ -282,10 +282,9 @@ message CommitContinuous {
   // R5 — engine-owned commit resolution: the engine resolves the document
   // text from `roman`, `hanji` and the request's `AppConfig`
   // (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-  // with the user-data stores open — records the pick's usage itself (the
-  // platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-  // newer than the engine) is IGNORED. On the TPS layout the romanization
-  // written renders as Bopomofo.
+  // with the user-data stores open — records the pick's usage itself.
+  // `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+  // layout the romanization written renders as Bopomofo.
   CommitScript script = 7;
   // The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
   // rendered / recased / syllable-separated — the display romanization, never the
@@ -312,9 +311,9 @@ enum CommitScript {
 // writes nothing. A split cell whose own script is missing commits the lead,
 // as a Continuous pick does (the phones' fail-open marker rule). With the
 // user-data stores open the engine counts the pick's usage under
-// `(canonical_text, canonical_tl)` itself (the platform sends no
-// `RecordUsage` for it) and touches no learned phrase. Stateless: the composition is left as it is
-// (a new generation still resets it, as for every request); NextWord
+// `(canonical_text, canonical_tl)` itself and touches no learned phrase.
+// Stateless: the composition is left as it is (a new generation still
+// resets it, as for every request); NextWord
 // learning stays the platform's `WordSelected`.
 message CommitPrediction {
   // `COMMIT_SCRIPT_LEAD`, or the §42 split cell's own script.

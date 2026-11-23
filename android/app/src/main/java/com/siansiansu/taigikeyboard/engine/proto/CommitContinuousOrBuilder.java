@@ -153,10 +153,9 @@ public interface CommitContinuousOrBuilder extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -168,10 +167,9 @@ public interface CommitContinuousOrBuilder extends
    * R5 — engine-owned commit resolution: the engine resolves the document
    * text from `roman`, `hanji` and the request's `AppConfig`
    * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
-   * with the user-data stores open — records the pick's usage itself (the
-   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
-   * newer than the engine) is IGNORED. On the TPS layout the romanization
-   * written renders as Bopomofo.
+   * with the user-data stores open — records the pick's usage itself.
+   * `UNSPECIFIED` (or a script newer than the engine) is IGNORED. On the TPS
+   * layout the romanization written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
