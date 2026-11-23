@@ -477,7 +477,7 @@ fn lab_rows(
         custom: Vec::new(),
         learned: Vec::new(),
     };
-    composing::requests::mechanism(
+    composing::explain::mechanism(
         engine,
         NOW_MS,
         &rows,

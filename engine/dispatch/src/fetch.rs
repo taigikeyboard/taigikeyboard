@@ -4,7 +4,8 @@
 //! roadmap P3b, brainstorm R5, §56. Without user data (the stores not open
 //! yet, or a build without them) the bundled context ranks one pass alone.
 
-use composing::requests::{fetch_at_pos_intent, mechanism, query_listing};
+use composing::explain::mechanism;
+use composing::requests::{fetch_at_pos_intent, query_listing};
 use composing::{ConversionFrequency, Engine, EngineHandle, UserRows};
 use protos::engine::{AppConfig, ComposingResponse, FetchAtPos};
 use ranking::{ContextRanks, FrequencyMap, CONTEXT_RANK_USER};
