@@ -22,8 +22,8 @@
 //!
 //! The walker is **pure and shadow-space native**. It never looks at
 //! the dictionary, the raw byte space, or proto types: the caller
-//! (`continuous::walk_buffer`, which holds `LexiconHandle`
-//! state) injects an `edge_choice` provider that maps a shadow edge
+//! (`continuous::walk_buffer`, run inside `assemble_candidates`'s
+//! `LexiconHandle` scope) injects an `edge_choice` provider that maps a shadow edge
 //! `(start, end)` to its best content. This keeps the
 //! composing↔lexicon boundary clean and reuses the lexicon candidate
 //! construction instead of duplicating it (Codex pre-impl S2 Q1b).

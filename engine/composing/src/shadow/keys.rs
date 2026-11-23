@@ -263,9 +263,9 @@ pub(crate) fn build_continuous_keys(
 /// Model-B-consistent commit. S2's whole-sentence walker consumes
 /// the interior edges INTERNALLY (via
 /// [`build_shadow_lattice_with_barriers`] + `crate::lattice::walk_best`
-/// in `fetch_walker_slot0`) and emits one
+/// in `continuous::walk_buffer`) and emits one
 /// synthesized full-buffer best path explicitly prepended at slot 0
-/// by `handle_fetch_at_pos`; the user-facing commit span stays
+/// by `continuous::assemble_candidates`; the user-facing commit span stays
 /// `(0, end)`. Interior `台語`-style words remain reachable as the
 /// next path-step after the prefix is nailed (Codex pre-impl S2
 /// Q1c = option ii, 2026-05-16; `docs/releases/v3.5.8/plan.md` §整句 lattice + walker).
@@ -878,7 +878,7 @@ pub(crate) fn span_min_syllable_count(
 /// edge key, so it simply stays a span-local candidate and never
 /// enters the walker.
 ///
-/// `mode` MUST be the same value `continuous::walk_buffer`
+/// `mode` MUST be the same value `continuous::assemble_candidates`
 /// passes to [`build_shadow_lattice_with_barriers`] for this fetch: the canonicalize
 /// step is mode-gated — TL/English mode folds POJ→TL (`ch→ts`,
 /// `oa→ua`, ...) and emits `tl:`, POJ mode keeps POJ ASCII (no fold)

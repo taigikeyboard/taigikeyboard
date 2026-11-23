@@ -1,12 +1,11 @@
 //! The developer explain view's sentence cut is the slot-0 walker synth's —
 //! the same rule, the same gates (#1030 one-syllable suppression, the
-//! trailing-hyphen gate, a word list's one-word filter). When the list
+//! trailing-hyphen gate). When the list
 //! carries no synth the view shows no cut; when it does, the view's words
 //! are that synth's.
 
 use crate::common::{config, continuous_engine, production_lexicon_ready};
 use composing::api::UserRows;
-use protos::engine::AppConfig;
 
 /// What the view shows for one buffer.
 #[derive(Debug)]
@@ -18,17 +17,18 @@ struct Explained {
     first: Option<(Option<String>, String)>,
 }
 
-/// The view for `raw` under `config`, Show Typed Text First off (the §34
+/// The view for `raw` under `mode`, Show Typed Text First off (the §34
 /// literal would otherwise lead every TL / POJ list).
-fn explained_with(config: &AppConfig, raw: &str) -> Explained {
-    let engine = continuous_engine(config, raw);
+fn explained(raw: &str, mode: &str) -> Explained {
+    let config = config(mode);
+    let engine = continuous_engine(&config, raw);
     let view = composing::explain::mechanism(
         &engine,
         0,
         &UserRows::default(),
         &ranking::ContextRanks::default(),
         true,
-        config,
+        &config,
     )
     .expect("a composition is open");
     Explained {
@@ -39,10 +39,6 @@ fn explained_with(config: &AppConfig, raw: &str) -> Explained {
             .first()
             .map(|row| (row.hanji.clone(), row.roman.clone())),
     }
-}
-
-fn explained(raw: &str, mode: &str) -> Explained {
-    explained_with(&config(mode), raw)
 }
 
 /// The list leads with the synth the view shows: its words joined by the
@@ -75,7 +71,7 @@ fn explain_cut_is_the_slot0_synth_cut() {
     }
     // trace: `huh` is a syllable only inside `goo-lú-huh` → one OOV edge,
     // all-OOV carve-out, one greedy segment → #1030 suppresses the synth in
-    // TL / POJ; the list leads with 芳苑鄉 / 風雨學 (prefix rows) and never
+    // TL / POJ; the list leads with 芳苑鄉 / 風雨學 (abbreviation rows, Step 4c) and never
     // offers the `huh` reading. Before R3 the view showed `syllables ["huh"]`.
     for mode in ["tl", "poj"] {
         let got = explained("huh", mode);

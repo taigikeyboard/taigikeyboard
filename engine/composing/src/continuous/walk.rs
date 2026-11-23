@@ -347,7 +347,7 @@ pub(crate) enum SynthWords {
 /// fetch's, unused here); `ctx` is the same [`ContinuousFetchCtx`] the
 /// span-local fetch reads (`mode` / `custom` / `freq_map` / `now_ms` /
 /// `enabled_sources_bitmask` + the dictionary readers).
-pub(crate) fn synth_cut(
+pub(super) fn synth_cut(
     raw_len: u32,
     continuous_keys: &crate::shadow::ContinuousKeys,
     inv: &SyllableInventory,
