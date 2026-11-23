@@ -62,13 +62,13 @@ POJ ↔ TL display conversion: `phonetics::api::poj_display_to_tl_display` / `tl
 
 | Concern | Location |
 |---------|----------|
-| Tone mark tables (POJ + TL combining-mark lookup) | Rust `phonetics::tables`, `phonetics::case_tables` |
+| Tone mark tables (POJ + TL combining-mark lookup) | Rust `phonetics::tables` |
 | Numeric-tone → tone-mark | Rust `phonetics::api::to_tone_marks` |
 | Tone-mark → numeric | Rust `phonetics::api::to_tone_number` |
 | POJ doubletap preprocess (`oo`→`o͘`, `nn`→`ⁿ`) | Rust `phonetics::api::normalize_tone` (internally calls crate-private `preprocess_for_normalize_tone`) |
 | Nasal-marker case adjust (`ⁿ` ↔ `ᴺ`) | Rust `phonetics::case_transform::adjust_nasal_marker_case` |
 | Lookup-side Unicode prep (NFD + nasal → `nn`, dot → `o`) | Rust `phonetics::normalization::taigi_unicode_base_form` |
-| Tone-letter case mapping (POJ/TL aware upper/lower) | Rust `phonetics::case_transform` |
+| Tone-letter case mapping (stdlib upper/lower, mode-independent) | Rust `phonetics::case_transform` |
 | Bridge surface (iOS) | `Engine/RustEngineBridge+Phonetics.swift` + `RustEngineBridge+CaseTransform.swift` |
 | Bridge surface (Android) | `engine/PhoneticsBridge.kt` + `CaseTransformBridge.kt` |
 | Tone-variant long-press callouts (POJ / TL tone maps) | iOS `TaigiToneMaps` in `Callouts/TaigiCallouts+Maps.swift`, used by `TaigiCallouts+Builder.swift` (UI only; tone math via Rust) |

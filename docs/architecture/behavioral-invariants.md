@@ -240,18 +240,18 @@ Retired; live candidate ranking is the Continuous `FetchAtPos` sort key — see 
 
 ## 9. Case transformation
 
-**Invariant**: case transformation (`transform_input_case` for keystrokes; `raise_case` / `match_case` for candidates, inside the engine) is platform-neutral. Given the same inputs, every platform emits byte-identical output. The functions do not read global settings — callers forward `inputMode` explicitly.
+**Invariant**: case transformation (`transform_input_case` for keystrokes; `raise_case` / `match_case` for candidates, inside the engine) is platform-neutral. Given the same inputs, every platform emits byte-identical output. The functions do not read global settings or the input mode: tone letters case through the Rust stdlib, which keeps combining marks, plus the `ⁿ` ↔ `ᴺ` pair.
 
 **Why**: candidate capitalization is visible on every keystroke. Divergence means the keyboard feels inconsistent between devices.
 
 **Scope**: Rust `engine/phonetics::case_transform` (canonical). Keystrokes bridged via `RustEngineBridge.transformInputCase`; candidates are cased by the engine itself (`composing::continuous` `recase_roman`). No platform-side case transformer exists.
 
 **Corner cases**:
-- Uppercase TPS syllables do not exist; `inputMode == .tps` → no-op.
-- `.english` mode passes through without romanization-specific adjustments.
+- TPS bopomofo has no case; stdlib casing leaves it unchanged.
+- Every input mode (POJ, TL, TPS, English) cases the same way.
 - **Candidate casing only raises letters** (`raise_case`, behind `recase_roman`): CapsLock → all upper, shifted first key → first letter upper, plain lowercase → the roman **as stored**. A custom entry keeps its own capitals: `klsi` / `Klsi` → `Keng-lâm Su-īⁿ`, `KLSI` → `KENG-LÂM SU-Īᴺ` (marker per §53). Only the keystroke path `transform_input_case` lowercases. The POJ render (`recase_tl_as_poj_display`, step 5) re-raises **per `-` / space token with `match_case`**, never from a whole-string `LetterCase`: the rewriter title-cases each token and can shrink it (`NN` → `ⁿ`), and the stored lowercase `ⁿ` would make a whole-string read misclassify Caps Lock `KENG-LÂM SU-Īⁿ` as title case (`engine/composing/tests/nasal_marker_case.rs::caps_lock_keeps_a_custom_entry_with_a_nasal_marker_all_caps_in_poj_mode`).
-- **Caps Lock raises every letter, Shift only the first — keys and callouts too**: the tone-letter table stores first-letter upper (TL `óo` → `Óo`), so `full_uppercase_tone_string` raises the rest on a table hit — Caps Lock `óo` → `ÓO`, Shift `Óo`. The callout tables carry both shapes: `Oo` / `Ng` (Shift) and `OO` / `NG` (Caps Lock), `phonetics::tone_variations`. Tests: `case_transform.rs` `caps_lock_raises_every_letter_of_a_tl_oo_table_entry` / `shift_keeps_a_tl_oo_table_entry_first_letter_only`, `tone_variations.rs` tests.
-- The engine API takes no auto-cap flag (`case_transform.rs` accepts only `LetterCase` + `InputMode`); platforms read auto-cap for logging only.
+- **Caps Lock raises every letter, Shift only the first — keys and callouts too**: `full_uppercase_tone_string` raises every letter, `uppercase_tone_char` only the first — Caps Lock `óo` → `ÓO`, Shift `Óo`. The callout tables carry both shapes: `Oo` / `Ng` (Shift) and `OO` / `NG` (Caps Lock), `phonetics::tone_variations`. Tests: `case_transform.rs` `caps_lock_raises_every_letter_of_tl_oo` / `shift_raises_only_the_first_letter_of_tl_oo`, `tone_variations.rs` tests.
+- The engine API takes no auto-cap flag (`case_transform.rs` accepts only `LetterCase`); platforms read auto-cap for logging only.
 
 **Test labels**:
 - `INVARIANT_case_transformer_is_deterministic`

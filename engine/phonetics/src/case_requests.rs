@@ -1,14 +1,14 @@
 //! Case-transform request handler.
 //!
 //! Routes `taigi.engine.CaseRequest` oneof variants to the corresponding
-//! `case_transform` functions, builds a `CaseResponse`. Mode is
-//! the envelope's `api::composing_mode` — the TPS layout cases
-//! with the TL tables, as it did while TPS arrived as `"tl"`.
+//! `case_transform` functions, builds a `CaseResponse`. The input mode
+//! does not affect casing; only `force_lowercase_nasal_marker` is read
+//! from the envelope.
 //!
 //! Returns `None` for an empty `method` oneof or an unset `ToneCase.kind`
 //! (the top-level dispatch converts that to `ErrorCode::FailInvariant`).
 //! Otherwise always returns `Some(CaseResponse)` — the case ops are
-//! infallible by construction (table lookups + stdlib casing).
+//! infallible by construction (stdlib casing + the nasal-marker pair).
 
 use crate::case_transform::{
     full_uppercase_tone_string, lowercase_tone_char, transform_input_case, uppercase_tone_char,
@@ -85,7 +85,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_uppercase_tone_char_uses_mode_table() {
+    fn dispatch_uppercase_tone_char_raises_tone_letter() {
         let req = CaseRequest {
             method: Some(tone_case("á", ToneCaseKind::UppercaseFirst)),
         };
@@ -103,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_lowercase_tone_char_uses_table() {
+    fn dispatch_lowercase_tone_char_lowers_tone_letter() {
         let req = CaseRequest {
             method: Some(tone_case("Á", ToneCaseKind::Lowercase)),
         };
@@ -141,33 +141,14 @@ mod tests {
         assert_eq!(unwrap_string(resp), "\u{207f}");
     }
 
-    /// The TPS layout (`"tps"`) cases with the TL tables, exactly as `"tl"`
-    /// does — every op, including `a̋`, which only TL maps.
+    /// TL tone 9 (`a̋`, combining U+030B) keeps its mark through the wire.
     #[test]
-    fn dispatch_tps_layout_cases_like_tl() {
-        let letter_case = protos::engine::LetterCase::CapsLocked as i32;
-        let methods = [
-            tone_case("a̋", ToneCaseKind::UppercaseFirst),
-            tone_case("tshiâⁿ", ToneCaseKind::UppercaseAll),
-            tone_case("Á", ToneCaseKind::Lowercase),
-            Method::TransformInputCase(TransformInputCase {
-                text: "tsh".to_string(),
-                letter_case,
-            }),
-        ];
-        for method in methods {
-            let req = CaseRequest {
-                method: Some(method),
-            };
-            let tl = handle(&req, &config_for("tl")).expect("response present");
-            let tps = handle(&req, &config_for("tps")).expect("response present");
-            assert_eq!(tps, tl, "{req:?}");
-        }
+    fn dispatch_uppercase_keeps_tl_tone_nine_mark() {
         let req = CaseRequest {
             method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
         };
-        let tps = handle(&req, &config_for("tps")).expect("response present");
-        assert_eq!(unwrap_string(tps), "A̋");
+        let resp = handle(&req, &config_for("tl")).expect("response present");
+        assert_eq!(unwrap_string(resp), "A̋");
     }
 
     #[test]
@@ -195,34 +176,5 @@ mod tests {
         };
         let resp = handle(&req, &config_for("poj")).expect("response present");
         assert_eq!(unwrap_string(resp), "á");
-    }
-
-    /// Verify the dispatch parses InputMode from envelope correctly:
-    /// passing TL config to a POJ-only mapping (`a̋` exists in TL but not
-    /// in POJ) routes through the TL table and returns the TL mapping.
-    #[test]
-    fn dispatch_reads_mode_from_envelope() {
-        let req = CaseRequest {
-            method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
-        };
-        let tl_resp = handle(&req, &config_for("tl")).expect("response present");
-        assert_eq!(unwrap_string(tl_resp), "A̋");
-
-        // POJ table lacks `a̋` → falls back to stdlib uppercase
-        // (NFC-preserved combining mark may not round-trip; assert that
-        // we at least return SOMETHING and the dispatch didn't panic).
-        let poj_resp = handle(&req, &config_for("poj")).expect("response present");
-        let poj_out = unwrap_string(poj_resp);
-        assert!(!poj_out.is_empty());
-    }
-
-    #[test]
-    fn dispatch_unknown_input_mode_string_defaults_to_tl() {
-        // composing_mode contract: anything not "poj"/"english" → TL.
-        let req = CaseRequest {
-            method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
-        };
-        let resp = handle(&req, &config_for("xxx")).expect("response present");
-        assert_eq!(unwrap_string(resp), "A̋");
     }
 }

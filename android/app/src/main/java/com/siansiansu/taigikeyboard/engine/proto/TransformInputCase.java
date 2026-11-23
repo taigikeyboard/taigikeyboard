@@ -7,8 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `TransformInputCase` applies the LetterCase to `text` per
- * `CaseTransformer.transformForInput` semantics:
+ * `TransformInputCase` applies the LetterCase to a keystroke `text`:
  * - LOWERCASED: lowercase per `TONE_CASE_KIND_LOWERCASE`
  * - UPPERCASED: first letter upper (`TONE_CASE_KIND_UPPERCASE_FIRST`), rest lower
  * - CAPS_LOCKED: full upper per `TONE_CASE_KIND_UPPERCASE_ALL`
@@ -200,8 +199,7 @@ public  final class TransformInputCase extends
 
   /**
    * <pre>
-   * `TransformInputCase` applies the LetterCase to `text` per
-   * `CaseTransformer.transformForInput` semantics:
+   * `TransformInputCase` applies the LetterCase to a keystroke `text`:
    * - LOWERCASED: lowercase per `TONE_CASE_KIND_LOWERCASE`
    * - UPPERCASED: first letter upper (`TONE_CASE_KIND_UPPERCASE_FIRST`), rest lower
    * - CAPS_LOCKED: full upper per `TONE_CASE_KIND_UPPERCASE_ALL`

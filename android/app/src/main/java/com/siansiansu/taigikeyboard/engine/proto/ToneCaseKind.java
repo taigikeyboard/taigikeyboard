@@ -27,9 +27,7 @@ public enum ToneCaseKind
   TONE_CASE_KIND_UNSPECIFIED(0),
   /**
    * <pre>
-   * Uppercase a single char/grapheme using mode-aware tone tables; for a
-   * multi-char input (e.g. "tsh") only the first letter. Matches Android
-   * `ToneUtilities.uppercaseToneLetter` (`replaceFirstChar`).
+   * Uppercase the first char, keep the rest as typed ("tsh" → "Tsh").
    * </pre>
    *
    * <code>TONE_CASE_KIND_UPPERCASE_FIRST = 1;</code>
@@ -37,8 +35,7 @@ public enum ToneCaseKind
   TONE_CASE_KIND_UPPERCASE_FIRST(1),
   /**
    * <pre>
-   * Uppercase ALL characters using mode-aware tone tables (Caps Lock).
-   * Matches Android `ToneUtilities.fullUppercaseToneLetter`.
+   * Uppercase every char (Caps Lock).
    * </pre>
    *
    * <code>TONE_CASE_KIND_UPPERCASE_ALL = 2;</code>
@@ -46,8 +43,7 @@ public enum ToneCaseKind
   TONE_CASE_KIND_UPPERCASE_ALL(2),
   /**
    * <pre>
-   * Lowercase a single char/grapheme using mode-aware tone tables. Matches
-   * Android `ToneUtilities.lowercaseToneLetter`.
+   * Lowercase every char.
    * </pre>
    *
    * <code>TONE_CASE_KIND_LOWERCASE = 3;</code>
@@ -66,9 +62,7 @@ public enum ToneCaseKind
   public static final int TONE_CASE_KIND_UNSPECIFIED_VALUE = 0;
   /**
    * <pre>
-   * Uppercase a single char/grapheme using mode-aware tone tables; for a
-   * multi-char input (e.g. "tsh") only the first letter. Matches Android
-   * `ToneUtilities.uppercaseToneLetter` (`replaceFirstChar`).
+   * Uppercase the first char, keep the rest as typed ("tsh" → "Tsh").
    * </pre>
    *
    * <code>TONE_CASE_KIND_UPPERCASE_FIRST = 1;</code>
@@ -76,8 +70,7 @@ public enum ToneCaseKind
   public static final int TONE_CASE_KIND_UPPERCASE_FIRST_VALUE = 1;
   /**
    * <pre>
-   * Uppercase ALL characters using mode-aware tone tables (Caps Lock).
-   * Matches Android `ToneUtilities.fullUppercaseToneLetter`.
+   * Uppercase every char (Caps Lock).
    * </pre>
    *
    * <code>TONE_CASE_KIND_UPPERCASE_ALL = 2;</code>
@@ -85,8 +78,7 @@ public enum ToneCaseKind
   public static final int TONE_CASE_KIND_UPPERCASE_ALL_VALUE = 2;
   /**
    * <pre>
-   * Lowercase a single char/grapheme using mode-aware tone tables. Matches
-   * Android `ToneUtilities.lowercaseToneLetter`.
+   * Lowercase every char.
    * </pre>
    *
    * <code>TONE_CASE_KIND_LOWERCASE = 3;</code>

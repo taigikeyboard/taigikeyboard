@@ -1,17 +1,11 @@
-//! Golden-case integration tests for `phonetics::case_transform`.
-//!
-//! Ports the comprehensive table-driven cases from
-//! the pre-Rust iOS case-transformer tests into Rust; the per-platform
-//! algorithm tests were deleted in the Path G platform rewiring commits.
-//!
-//! The platform-side tests post-rewire become thin bridge round-trip
-//! tests verifying FFI plumbing, NOT algorithm correctness — that
-//! responsibility lives here.
+//! Golden tone-letter cases for `phonetics::case_transform`: every POJ and TL
+//! tone letter, combining marks included, cases without losing its marks.
+//! The platform bridge tests only check FFI plumbing.
 
 use phonetics::case_transform::{adjust_nasal_marker_case, transform_input_case, LetterCase};
 
 // =========================================================================
-// CaseTransformer.transformForInput — POJ tone-letter golden table
+// `transform_input_case` — POJ and TL tone letters
 // =========================================================================
 
 #[test]
@@ -261,8 +255,8 @@ fn nasal_adjust_direct_call_demotes_upper_after_lower() {
 // INVARIANT_CASE_TRANSFORMER_IS_DETERMINISTIC (behavioral-invariants.md §9)
 #[test]
 fn input_caps_lock_is_deterministic() {
-    // trace: CapsLocked → `full_uppercase_tone_string`; `tâi-gí` is no
-    // table key, so the stdlib upper — same output on every call.
+    // trace: CapsLocked → `full_uppercase_tone_string` → stdlib upper,
+    // same output on every call.
     let first = transform_input_case("tâi-gí", LetterCase::CapsLocked);
     let second = transform_input_case("tâi-gí", LetterCase::CapsLocked);
     assert_eq!(first, second);
@@ -270,14 +264,13 @@ fn input_caps_lock_is_deterministic() {
 }
 
 // =========================================================================
-// Round-trip property — every table entry must invert cleanly
+// Round-trip property — upper then lower restores every tone letter
 // =========================================================================
 
 #[test]
-fn poj_table_round_trip_uppercase_then_lowercase_is_identity() {
-    // Sample of POJ table entries spanning all vowel groups + nasal +
-    // combining-mark forms. For each: lower → upper via tone_char →
-    // lower via tone_char must equal the original lower.
+fn tone_letter_round_trip_uppercase_then_lowercase_is_identity() {
+    // POJ and TL tone letters across every vowel group, nasal and
+    // combining-mark form: CapsLocked then Lowercased restores each.
     let lowers: &[&str] = &[
         // a-group
         "á", "à", "â", "ǎ", "ā", "a̍", "ă", // e-group
@@ -286,33 +279,15 @@ fn poj_table_round_trip_uppercase_then_lowercase_is_identity() {
         "ó", "ô", "o̍", "ó͘", "ô͘", "o̍͘", // u-group
         "ú", "û", "u̍", // n-group
         "ń", "n̂", "n̍", // m-group
-        "ḿ", "m̂", "m̍",
+        "ḿ", "m̂", "m̍", // TL tone 9 (˝) + doubled-vowel oo
+        "a̋", "e̋", "i̋", "ő", "ű", "óo", "ôo", "o̍o", "őo",
     ];
     for lower in lowers {
         let upper = transform_input_case(lower, LetterCase::CapsLocked);
         let back = transform_input_case(&upper, LetterCase::Lowercased);
         assert_eq!(
             &back, lower,
-            "POJ round-trip broke for '{}' — went '{}' → '{}'",
-            lower, upper, back
-        );
-    }
-}
-
-#[test]
-fn tl_table_round_trip_uppercase_then_lowercase_is_identity() {
-    let lowers: &[&str] = &[
-        // TL-specific tone-9 (˝)
-        "a̋", "e̋", "i̋", "ő", "ű", // TL doubled-vowel form
-        "óo", "ôo", "o̍o", "őo", // shared tone letters
-        "á", "é", "í", "ó", "ú",
-    ];
-    for lower in lowers {
-        let upper = transform_input_case(lower, LetterCase::CapsLocked);
-        let back = transform_input_case(&upper, LetterCase::Lowercased);
-        assert_eq!(
-            &back, lower,
-            "TL round-trip broke for '{}' — went '{}' → '{}'",
+            "round-trip broke for '{}' — went '{}' → '{}'",
             lower, upper, back
         );
     }
