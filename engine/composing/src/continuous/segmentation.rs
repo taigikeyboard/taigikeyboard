@@ -1,10 +1,9 @@
 //! How the pending buffer is read and cut, from the slot-0 walk.
 
 use super::recase::{recase_roman, shows_poj_roman_in_hanji};
-use super::walk::walk_buffer;
+use super::walk::{SynthCut, SynthWords};
 
-use crate::shadow::{build_continuous_keys, greedy_longest_syllabification, strip_tones_for_mode};
-use lexicon::{ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry};
+use crate::shadow::{strip_tones_for_mode, ContinuousKeys};
 use ranking::FrequencyMap;
 
 /// One piece of the typed buffer, in order. `gap` is the stretch the
@@ -32,7 +31,8 @@ pub(crate) struct WordCut {
 
 /// How the pending buffer is read and cut. `cut_by` is `walker` (a dictionary
 /// path won), `syllables` (nothing in the dictionary covers it, so the
-/// reading stays split) or `none`.
+/// reading stays split) or `none` (the list carries no slot-0 synth: an
+/// unfinished buffer, or a synth the walker suppressed).
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Segmentation {
     pub cut_by: &'static str,
@@ -50,66 +50,33 @@ impl Default for Segmentation {
     }
 }
 
-/// The syllable grid and the sentence cut for `raw`, from the same walk the
-/// candidate list's slot 0 uses. An unfinished buffer has syllables (or
-/// neither) and no word cut. The arguments are the fetch's own, the same
-/// set [`assemble_candidates`] takes.
-///
-/// [`assemble_candidates`]: super::assemble::assemble_candidates
-#[allow(clippy::too_many_arguments)]
+/// The syllable grid and the sentence cut for `raw`, read off the fetch that
+/// listed it (`Assembled::keys` / `Assembled::synth`): the view shows the cut
+/// slot 0 was built from, or none when the list carries no synth (an
+/// unfinished buffer, a suppressed synth, a several-word path in a word
+/// list). It never walks the buffer itself.
 pub(crate) fn explain_segmentation(
     raw: &str,
+    keys: Option<&ContinuousKeys>,
+    synth: Option<&SynthCut>,
     freq_map: &FrequencyMap,
-    now_ms: i64,
-    custom: &[CustomEntry],
-    learned: &[LearnedEntry],
     mode: phonetics::InputMode,
-    context: &ranking::ContextRanks,
-    config: &protos::engine::AppConfig,
+    khinsiann_in_hanji: bool,
 ) -> Segmentation {
-    let enabled_sources_bitmask = crate::requests::source_filter_bitmask(config);
-    let khinsiann_in_hanji = config.khinsiann_in_hanji;
-    LexiconHandle::with_state(|state| {
-        let Some(inv) = state.syllable_inventory.as_ref() else {
-            return Ok(Segmentation::default());
+    let Some(keys) = keys else {
+        return Segmentation::default();
+    };
+    let syllables = cuts_from_shadow(raw, &keys.shadow_to_raw_end, &keys.one_syllable_segments);
+    let Some(SynthCut { path, words, .. }) = synth else {
+        return Segmentation {
+            syllables,
+            ..Segmentation::default()
         };
-        let keys = build_continuous_keys(raw, inv, mode);
-        let syllables = cuts_from_shadow(raw, &keys.shadow_to_raw_end, &keys.one_syllable_segments);
-        let Some(prefix) = state.prefix_index.as_ref() else {
-            return Ok(Segmentation {
-                syllables,
-                ..Segmentation::default()
-            });
-        };
-        let Some(dict) = state.dictionary.as_ref() else {
-            return Ok(Segmentation {
-                syllables,
-                ..Segmentation::default()
-            });
-        };
-        let ctx = ContinuousFetchCtx {
-            enabled_sources_bitmask,
-            freq_map,
-            now_ms,
-            context,
-            custom,
-            learned,
-            prefix_index: prefix,
-            dict,
-            mode,
-            tone_pin: crate::shadow::whole_buffer_tone_pin(raw, mode, Some(inv)),
-            whole_buffer_key: None,
-            khinsiann_in_hanji,
-        };
-        let Some(path) = walk_buffer(&keys, inv, &ctx) else {
-            return Ok(Segmentation {
-                syllables,
-                ..Segmentation::default()
-            });
-        };
-        if path.choices.iter().any(|choice| choice.dict_hit) {
-            let words = path
-                .edges
+    };
+    let (cut_by, words): (&'static str, Vec<WordCut>) = match words {
+        SynthWords::Edges => (
+            "walker",
+            path.edges
                 .iter()
                 .zip(&path.choices)
                 .filter_map(|(&(start, end), choice)| {
@@ -152,50 +119,34 @@ pub(crate) fn explain_segmentation(
                         khinsiann_before,
                     })
                 })
-                .collect();
-            return Ok(Segmentation {
-                cut_by: "walker",
-                syllables,
-                words,
-            });
-        }
-        let barriers =
-            crate::shadow::oov_reading_barriers(&keys.barriers, 0, keys.shadow.len(), mode);
-        let Some(segs) = greedy_longest_syllabification(&keys.shadow, inv, mode, &barriers) else {
-            return Ok(Segmentation {
-                syllables,
-                ..Segmentation::default()
-            });
-        };
-        let words: Vec<WordCut> = segs
-            .iter()
-            .filter_map(|&(start, end)| {
-                let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
-                let text = raw.get(raw_start..raw_end)?.to_owned();
-                let roman = strip_tones_for_mode(&keys.shadow[start..end], mode);
-                Some(WordCut {
-                    text,
-                    hanji: None,
-                    roman,
-                    kind: "reading",
-                    user_row: false,
-                    picks: 0,
-                    weight: 0.0,
-                    khinsiann_before: false,
+                .collect(),
+        ),
+        SynthWords::Syllables(segs) => (
+            "syllables",
+            segs.iter()
+                .filter_map(|&(start, end)| {
+                    let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
+                    let text = raw.get(raw_start..raw_end)?.to_owned();
+                    let roman = strip_tones_for_mode(&keys.shadow[start..end], mode);
+                    Some(WordCut {
+                        text,
+                        hanji: None,
+                        roman,
+                        kind: "reading",
+                        user_row: false,
+                        picks: 0,
+                        weight: 0.0,
+                        khinsiann_before: false,
+                    })
                 })
-            })
-            .collect();
-        Ok(Segmentation {
-            cut_by: if words.is_empty() {
-                "none"
-            } else {
-                "syllables"
-            },
-            syllables,
-            words,
-        })
-    })
-    .unwrap_or_default()
+                .collect(),
+        ),
+    };
+    Segmentation {
+        cut_by: if words.is_empty() { "none" } else { cut_by },
+        syllables,
+        words,
+    }
 }
 
 fn raw_bounds(map: &[usize], start: usize, end: usize) -> Option<(usize, usize)> {

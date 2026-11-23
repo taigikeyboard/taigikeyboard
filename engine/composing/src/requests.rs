@@ -281,7 +281,10 @@ pub(crate) struct Listed {
     pub(crate) segment_raw: String,
     pub(crate) shift: u32,
     pub(crate) mode: phonetics::InputMode,
-    pub(crate) learned: Vec<LearnedEntry>,
+    /// The fetch's keys and slot-0 cut (`Assembled::keys` / `synth`), for the
+    /// explain view.
+    pub(crate) keys: Option<crate::shadow::ContinuousKeys>,
+    pub(crate) synth: Option<crate::continuous::SynthCut>,
     pub(crate) candidates: Vec<RawCandidate>,
     pub(crate) literal_at: Option<usize>,
     /// The Step 4d post-pass moved the one-word walker path ahead of
@@ -330,7 +333,8 @@ pub(crate) fn listed_candidates(
             segment_raw: String::new(),
             shift: 0,
             mode: phonetics::InputMode::Tl,
-            learned: Vec::new(),
+            keys: None,
+            synth: None,
             candidates: Vec::new(),
             literal_at: None,
             walker_moved: false,
@@ -371,6 +375,8 @@ pub(crate) fn listed_candidates(
     let Assembled {
         mut candidates,
         walker_moved,
+        keys,
+        synth,
     } = assemble_candidates(
         raw,
         &user_rows.frequency,
@@ -439,7 +445,8 @@ pub(crate) fn listed_candidates(
         segment_raw: listed,
         shift,
         mode,
-        learned,
+        keys,
+        synth,
         candidates,
         literal_at,
         walker_moved,

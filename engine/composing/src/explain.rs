@@ -162,13 +162,11 @@ pub fn mechanism(
     } else {
         crate::continuous::explain_segmentation(
             &listed.segment_raw,
+            listed.keys.as_ref(),
+            listed.synth.as_ref(),
             &user_rows.frequency,
-            now_ms,
-            &user_rows.custom,
-            &listed.learned,
             listed.mode,
-            context,
-            config,
+            config.khinsiann_in_hanji,
         )
     };
     if listed.shift > 0 {

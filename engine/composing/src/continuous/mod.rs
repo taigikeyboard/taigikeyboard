@@ -94,4 +94,4 @@ pub(crate) use assemble::{assemble_candidates, is_one_syllable_prefix_pick, Asse
 pub(crate) use dedupe::retain_first_by_key;
 pub(crate) use edge::{edge_homophone_words, edge_toneless_bodies};
 pub(crate) use segmentation::{explain_segmentation, BufferCut, Segmentation, WordCut};
-pub(crate) use walk::{synth_consumed_span, walk_buffer};
+pub(crate) use walk::{synth_consumed_span, walk_buffer, SynthCut};

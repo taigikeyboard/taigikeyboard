@@ -330,14 +330,14 @@
       }
     },
     "inspectorNoCut": {
-      "comment": "Inspector when the buffer is not a whole syllable yet, so there is no word cut.",
+      "comment": "Inspector when there is no word cut: the buffer is not a whole syllable yet, or the engine offers no reading cut over the whole input.",
       "scope": { "platforms": ["web"], "surfaces": ["host"] },
       "values": {
-        "hanji": "這段猶未有完整的音節，所以猶未斷詞。下面若有，是打到一半的詞。",
-        "tailo": "Tsit tuānn iáu-bē ū uân-tsíng ê im-chat, sóo-í iáu-bē tuànn-sû. Ē-bīn nā ū, sī phah kàu puànn-lōo ê sû.",
-        "poj": "Chit toāⁿ iáu-bē ū oân-chéng ê im-chat, só͘-í iáu-bē toàn-sû. Ē-bīn nā ū, sī phah kàu pòaⁿ-lō͘ ê sû.",
-        "en": "This is not a whole syllable yet, so nothing is cut into words. Rows below, if any, are words the typing is heading toward.",
-        "ja": "まだ音節が揃っていないので、単語には切っていません。下に出るのは途中の語です。"
+        "hanji": "這段猶未斷詞。可能是猶未有完整的音節，抑是引擎無共規段切做詞。下面若有，是會當選的詞。",
+        "tailo": "Tsit tuānn iáu-bē tuànn-sû. Khó-lîng sī iáu-bē ū uân-tsíng ê im-chat, ia̍h-sī ian-jín bô kā kui tuānn tshiat tsò sû. Ē-bīn nā ū, sī ē-tàng suán ê sû.",
+        "poj": "Chit toāⁿ iáu-bē toàn-sû. Khó-lêng sī iáu-bē ū oân-chéng ê im-chat, ia̍h-sī en-jín bô kā kui toāⁿ chhiat chò sû. Ē-bīn nā ū, sī ē-tàng soán ê sû.",
+        "en": "Nothing here is cut into words yet. The typing may not be a whole syllable, or the engine does not cut the whole input into words. Rows below, if any, are words you can pick.",
+        "ja": "ここはまだ単語に切っていません。音節が揃っていないか、エンジンが入力全体を単語に切らなかったためです。下に出るのは選べる語です。"
       }
     },
     "inspectorCutWalker": {
