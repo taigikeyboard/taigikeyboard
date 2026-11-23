@@ -99,7 +99,7 @@ Per-source stage order:
 `./build.sh` then runs 9 steps from `output/dictionary.csv`:
 `merge_csv` → `create_dictionary_bin` → `create_fst` → `create_syllables_fst`
 → `create_association_bin` → `verify_poj_integrity` → `version_snapshot` →
-`tools/verify_known_keys` → `deploy.sh`. Steps 1–8 run in one Python process
+`tools/verify_known_keys.py` → `deploy.sh`. Steps 1–8 run in one Python process
 (`build/run.py`), so the CSV is parsed once. Every binary writer reads
 `dictionary.csv` through `build/dictionary_records.py`;
 `create_dictionary_bin` also reads `shared/data/word_unigrams.tsv` (walker cost,

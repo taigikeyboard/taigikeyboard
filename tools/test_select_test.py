@@ -6,7 +6,9 @@ import subprocess
 import unittest
 
 import test_select
-from test_select import ROOT, Command
+from test_select import DOCS_CHECKS, ROOT, Command
+
+DOC_PATHS_CHECK = DOCS_CHECKS["doc-paths"]
 
 
 class SelectorTestCase(unittest.TestCase):
@@ -264,21 +266,31 @@ class PlatformSelectionTests(SelectorTestCase):
             [Command("python3 -m unittest analyze_test", "e2e/analyzer")],
         )
 
-    def test_docs_only_is_admin_lane_plus_invariant_labels(self) -> None:
+    def test_docs_only_is_admin_lane_plus_doc_gates(self) -> None:
         selection = self.select(
             "docs/architecture/behavioral-invariants.md", "README.md"
         )
 
         self.assertEqual(
             selection.commands,
-            {"docs-checks": [Command("python3 tools/invariant_labels.py")]},
+            {
+                "docs-checks": [
+                    Command("python3 tools/invariant_labels.py"),
+                    DOC_PATHS_CHECK,
+                ]
+            },
         )
         self.assertIn(test_select.ADMIN_LANE_NOTE, selection.notes)
 
-    def test_rule_pointers_and_contributing_guides_run_the_path_gate(self) -> None:
+    def test_rule_pointers_and_contributing_guides_run_the_path_gates(self) -> None:
         self.assertEqual(
             self.select(".claude/rules/i18n.md").commands,
-            {"docs-checks": [Command("python3 tools/agent_rule_paths.py")]},
+            {
+                "docs-checks": [
+                    Command("python3 tools/agent_rule_paths.py"),
+                    DOC_PATHS_CHECK,
+                ]
+            },
         )
         self.assertEqual(
             self.select("docs/contributing/README.md").commands,
@@ -286,14 +298,24 @@ class PlatformSelectionTests(SelectorTestCase):
                 "docs-checks": [
                     Command("python3 tools/invariant_labels.py"),
                     Command("python3 tools/agent_rule_paths.py"),
+                    DOC_PATHS_CHECK,
                 ]
             },
         )
 
-    def test_changelog_only_runs_nothing(self) -> None:
+    def test_frozen_snapshot_skips_the_doc_paths_gate(self) -> None:
+        self.assertEqual(
+            self.select("docs/reports/2026-11-13-audit-all.md").commands,
+            {"docs-checks": [Command("python3 tools/invariant_labels.py")]},
+        )
+
+    def test_changelog_plus_claude_md_runs_only_doc_paths(self) -> None:
         selection = self.select("changelog/3.6.10.md", "CLAUDE.md")
 
-        self.assertEqual(selection.commands, {})
+        self.assertEqual(
+            selection.commands,
+            {"docs-checks": [DOC_PATHS_CHECK]},
+        )
         self.assertIn(test_select.ADMIN_LANE_NOTE, selection.notes)
 
     def test_unknown_top_level_dir_is_unmapped(self) -> None:

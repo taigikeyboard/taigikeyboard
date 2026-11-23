@@ -33,7 +33,7 @@ Create `taigikeyboard/web` and the token before this workflow reaches `main`, or
 
 ## Workflow
 
-`.github/workflows/deploy.yml` in `taigikeyboard/web`. Keep the tool steps in line with `.github/workflows/web.yml`.
+[`.github/workflows/deploy.yml`](https://github.com/taigikeyboard/web/blob/main/.github/workflows/deploy.yml) in `taigikeyboard/web`. Keep the tool steps in line with `.github/workflows/web.yml`.
 
 ```yaml
 name: Deploy
