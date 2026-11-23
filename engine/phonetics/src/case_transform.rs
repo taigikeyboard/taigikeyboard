@@ -29,31 +29,33 @@ pub(crate) const NASAL_UPPER: char = '\u{1D3A}'; // ᴺ
 /// Uppercase the first char of `input` and keep the rest as typed
 /// (`tsh` → `Tsh`, `a̍` → `A̍`); a lone `ⁿ` becomes `ᴺ`.
 pub fn uppercase_tone_char(input: &str) -> String {
-    if input == "\u{207F}" {
-        return "\u{1D3A}".to_string();
+    if is_lone(input, NASAL_LOWER) {
+        return NASAL_UPPER.to_string();
     }
-    let mut chars = input.chars();
-    match chars.next() {
-        Some(first) => first.to_uppercase().chain(chars).collect(),
-        None => String::new(),
-    }
+    crate::api::capitalize_first(input)
 }
 
 /// Uppercase every char of `input` (Caps Lock, USER 2026-09-25: "shouldn't
 /// caps-lock make it all upper case?" → `óo` → `ÓO`); a lone `ⁿ` becomes `ᴺ`.
 pub fn full_uppercase_tone_string(input: &str) -> String {
-    if input == "\u{207F}" {
-        return "\u{1D3A}".to_string();
+    if is_lone(input, NASAL_LOWER) {
+        return NASAL_UPPER.to_string();
     }
     input.to_uppercase()
 }
 
 /// Lowercase every char of `input`; a lone `ᴺ` becomes `ⁿ`.
 pub fn lowercase_tone_char(input: &str) -> String {
-    if input == "\u{1D3A}" {
-        return "\u{207F}".to_string();
+    if is_lone(input, NASAL_UPPER) {
+        return NASAL_LOWER.to_string();
     }
     input.to_lowercase()
+}
+
+/// `input` is exactly the one char `marker`.
+fn is_lone(input: &str, marker: char) -> bool {
+    let mut chars = input.chars();
+    chars.next() == Some(marker) && chars.next().is_none()
 }
 
 // =========================================================================
@@ -162,30 +164,31 @@ pub fn lowercase_nasal_markers(text: &str) -> String {
 // Internal helpers
 // =========================================================================
 
-/// Uppercase the literal first character (via `uppercase_tone_char`),
-/// lowercase the rest (per-char, so a `ᴺ` in the tail becomes `ⁿ`). Used by
-/// the `transform_input_case` `Uppercased` path.
+/// Uppercase the literal first character, lowercase the rest (per char, so a
+/// `ᴺ` in the tail becomes `ⁿ`). Used by the `transform_input_case`
+/// `Uppercased` path.
 fn capitalize_first_letter(text: &str) -> String {
     let mut chars = text.chars();
-    let Some(first) = chars.next() else {
-        return String::new();
-    };
-    let first_upper = uppercase_tone_char(&first.to_string());
-    let rest: String = chars.collect();
-    let rest_lower = to_lowercase_per_char(&rest);
-    first_upper + &rest_lower
+    let mut result = String::with_capacity(text.len());
+    if let Some(first) = chars.next() {
+        push_upper(first, &mut result);
+    }
+    for ch in chars {
+        push_lower(ch, &mut result);
+    }
+    result
 }
 
-/// Find the first LETTER in `text` and uppercase it (via
-/// `uppercase_tone_char`); every other char passes through as stored.
-/// DISTINCT from `capitalize_first_letter` above — this skips leading
-/// non-letters (e.g. "-gí" → "-Gí" not "-gí") and never lowers the rest.
+/// Find the first LETTER in `text` and uppercase it; every other char passes
+/// through as stored. DISTINCT from `capitalize_first_letter` above — this
+/// skips leading non-letters (e.g. "-gí" → "-Gí" not "-gí") and never lowers
+/// the rest.
 fn uppercase_first_letter_in_text(text: &str) -> String {
     let mut result = String::with_capacity(text.len());
     let mut is_first_letter = true;
     for ch in text.chars() {
         if ch.is_alphabetic() && is_first_letter {
-            result.push_str(&uppercase_tone_char(&ch.to_string()));
+            push_upper(ch, &mut result);
             is_first_letter = false;
         } else {
             result.push(ch);
@@ -207,19 +210,29 @@ pub fn match_case(target: &str, source: &str) -> String {
             continue;
         }
         match source_letters.next() {
-            Some(src) if src.is_uppercase() => {
-                result.push_str(&uppercase_tone_char(&ch.to_string()));
-            }
+            Some(src) if src.is_uppercase() => push_upper(ch, &mut result),
             _ => result.push(ch),
         }
     }
     result
 }
 
-fn to_lowercase_per_char(text: &str) -> String {
-    text.chars()
-        .map(|ch| lowercase_tone_char(&ch.to_string()))
-        .collect()
+/// One char through [`uppercase_tone_char`], appended to `out`.
+fn push_upper(ch: char, out: &mut String) {
+    if ch == NASAL_LOWER {
+        out.push(NASAL_UPPER);
+    } else {
+        out.extend(ch.to_uppercase());
+    }
+}
+
+/// One char through [`lowercase_tone_char`], appended to `out`.
+fn push_lower(ch: char, out: &mut String) {
+    if ch == NASAL_UPPER {
+        out.push(NASAL_LOWER);
+    } else {
+        out.extend(ch.to_lowercase());
+    }
 }
 
 #[cfg(test)]

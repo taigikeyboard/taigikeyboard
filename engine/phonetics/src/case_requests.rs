@@ -71,13 +71,6 @@ mod tests {
         })
     }
 
-    fn config_for(mode: &str) -> AppConfig {
-        AppConfig {
-            input_mode: mode.to_string(),
-            ..AppConfig::default()
-        }
-    }
-
     fn unwrap_string(resp: CaseResponse) -> String {
         match resp.result.expect("result present") {
             protos::engine::case_response::Result::StringResult(s) => s.output,
@@ -89,7 +82,7 @@ mod tests {
         let req = CaseRequest {
             method: Some(tone_case("á", ToneCaseKind::UppercaseFirst)),
         };
-        let resp = handle(&req, &config_for("poj")).expect("response present");
+        let resp = handle(&req, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(resp), "Á");
     }
 
@@ -98,7 +91,7 @@ mod tests {
         let req = CaseRequest {
             method: Some(tone_case("tsh", ToneCaseKind::UppercaseAll)),
         };
-        let resp = handle(&req, &config_for("tl")).expect("response present");
+        let resp = handle(&req, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(resp), "TSH");
     }
 
@@ -107,7 +100,7 @@ mod tests {
         let req = CaseRequest {
             method: Some(tone_case("Á", ToneCaseKind::Lowercase)),
         };
-        let resp = handle(&req, &config_for("poj")).expect("response present");
+        let resp = handle(&req, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(resp), "á");
     }
 
@@ -119,7 +112,7 @@ mod tests {
                 letter_case: protos::engine::LetterCase::CapsLocked as i32,
             })),
         };
-        let resp = handle(&req, &config_for("tl")).expect("response present");
+        let resp = handle(&req, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(resp), "TSH");
     }
 
@@ -131,11 +124,11 @@ mod tests {
         let marker_key = CaseRequest {
             method: Some(tone_case("\u{207f}", ToneCaseKind::UppercaseFirst)),
         };
-        let default = handle(&marker_key, &config_for("poj")).expect("response present");
+        let default = handle(&marker_key, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(default), "\u{1d3a}");
         let lowercase = AppConfig {
             force_lowercase_nasal_marker: true,
-            ..config_for("poj")
+            ..AppConfig::default()
         };
         let resp = handle(&marker_key, &lowercase).expect("response present");
         assert_eq!(unwrap_string(resp), "\u{207f}");
@@ -147,7 +140,7 @@ mod tests {
         let req = CaseRequest {
             method: Some(tone_case("a̋", ToneCaseKind::UppercaseFirst)),
         };
-        let resp = handle(&req, &config_for("tl")).expect("response present");
+        let resp = handle(&req, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(resp), "A̋");
     }
 
@@ -156,13 +149,13 @@ mod tests {
         let req = CaseRequest {
             method: Some(tone_case("a", ToneCaseKind::Unspecified)),
         };
-        assert!(handle(&req, &config_for("tl")).is_none());
+        assert!(handle(&req, &AppConfig::default()).is_none());
     }
 
     #[test]
     fn dispatch_returns_none_for_missing_method() {
         let req = CaseRequest { method: None };
-        assert!(handle(&req, &config_for("tl")).is_none());
+        assert!(handle(&req, &AppConfig::default()).is_none());
     }
 
     #[test]
@@ -174,7 +167,7 @@ mod tests {
                 letter_case: 0,
             })),
         };
-        let resp = handle(&req, &config_for("poj")).expect("response present");
+        let resp = handle(&req, &AppConfig::default()).expect("response present");
         assert_eq!(unwrap_string(resp), "á");
     }
 }
