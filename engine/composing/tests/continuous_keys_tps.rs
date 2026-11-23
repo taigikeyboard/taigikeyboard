@@ -193,6 +193,7 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     );
 }
 
+// INVARIANT_TPS_DEFOLD_ENUMERATE (§35): ambiguity-aware segmentation.
 //
 // Since the lattice-time ambiguity-resolution round, the KEY layer emits
 // only the user's LITERAL span text — reading resolution happens inside

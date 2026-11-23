@@ -823,6 +823,7 @@ mod tests {
         );
     }
 
+    // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34).
     // Hanji-romanization fast input: TL/POJ + written tone → roman-only literal candidate
     // (= preedit WYSIWYG) injected at index 0. Tests assert the GATE +
     // self-consistency; the literal string is asserted against
