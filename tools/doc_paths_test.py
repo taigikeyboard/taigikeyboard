@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 import doc_paths
 
@@ -94,6 +97,20 @@ class DeadPathsTests(unittest.TestCase):
     def test_ignored_and_submodule_paths_pass(self) -> None:
         text = "`engine/target/debug` `taigi-converter/src/index.js` [c](taigi-converter/README.md)"
         self.assertEqual(dead("AGENTS.md", text, frozenset({"engine/target/debug"})), [])
+
+
+class IgnoredPathsTests(unittest.TestCase):
+    def test_a_directory_only_rule_matches_an_absent_directory(self) -> None:
+        # CI never builds the ignored output, so the directory is absent there.
+        with tempfile.TemporaryDirectory() as repo:
+            subprocess.run(["git", "init", "-q", repo], check=True)
+            Path(repo, ".gitignore").write_text("build/out/\n", encoding="utf-8")
+            self.assertEqual(
+                doc_paths.ignored_paths({"build/out", "build/kept"}, Path(repo)), {"build/out"}
+            )
+
+    def test_no_paths_runs_no_git(self) -> None:
+        self.assertEqual(doc_paths.ignored_paths(set(), Path("/nonexistent")), set())
 
 
 class LivingDocTests(unittest.TestCase):

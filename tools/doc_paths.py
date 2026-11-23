@@ -53,10 +53,10 @@ NOT_A_PATH = re.compile(r"[*?{}<>$\[\]|\s,=()]|\.\.\.|…|[A-Z]+\.[A-Z]+\.[A-Z]+
 SUFFIX = re.compile(r"(::.*|:L?\d.*|#.*)$")
 
 
-def git(*args: str, stdin: str = "") -> list[str]:
+def git(*args: str, stdin: str = "", repo: Path = ROOT) -> list[str]:
     """NUL-separated git output, so non-ASCII names come back unquoted."""
     result = subprocess.run(
-        ["git", "-C", str(ROOT), "-c", "core.excludesFile=/dev/null", *args, "-z"],
+        ["git", "-C", str(repo), "-c", "core.excludesFile=/dev/null", *args, "-z"],
         input=stdin,
         capture_output=True,
         text=True,
@@ -146,6 +146,19 @@ def dead_paths(
     ]
 
 
+def ignored_paths(paths: set[str], repo: Path = ROOT) -> set[str]:
+    """The paths a .gitignore rule matches, whether or not they exist on disk.
+
+    A directory-only rule (`build/out/`) matches a bare path only when that
+    directory exists, so a built tree and a clean CI checkout disagree; each
+    path is also asked with a trailing `/`.
+    """
+    if not paths:
+        return set()
+    queries = "\0".join(f"{path}\0{path}/" for path in paths)
+    return {hit.rstrip("/") for hit in git("check-ignore", "--no-index", "--stdin", stdin=queries, repo=repo)}
+
+
 def main() -> int:
     # `<mode> <object> <stage>\t<path>`; mode 160000 is a submodule.
     entries = [entry.split("\t", 1) for entry in git("ls-files", "--stage")]
@@ -158,9 +171,7 @@ def main() -> int:
         if file.exists():  # deleted in the worktree but still in the index
             doc_refs.append((doc, references(doc, file.read_text(encoding="utf-8"), top_dirs)))
     unresolved = {path for _, refs in doc_refs for _, paths, _ in refs for path in paths} - tracked
-    ignored = set()
-    if unresolved:
-        ignored = set(git("check-ignore", "--no-index", "--stdin", stdin="\0".join(unresolved)))
+    ignored = ignored_paths(unresolved)
     failures = dead_paths(doc_refs, tracked, ignored, submodules)
     if not failures:
         print(f"✓ {sum(len(refs) for _, refs in doc_refs)} doc paths exist")
