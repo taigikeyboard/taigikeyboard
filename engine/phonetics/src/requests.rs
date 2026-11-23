@@ -16,7 +16,7 @@
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables` provide the
 //!   foundational helpers reused here.
 
-use crate::api::{tl_display_to_poj_display, tl_display_to_tps, PhoneticsError};
+use crate::api::PhoneticsError;
 use crate::tone_variations;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
@@ -40,18 +40,8 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
     };
 
     let result = match method {
-        // --- Phonetics core ---
-        Method::TlToPoj(payload) => PhonResult::StringResult(StringResult {
-            output: tl_display_to_poj_display(&payload.input),
-        }),
         Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
 
-        // --- TPS ---
-        Method::TlDisplayToTps(payload) => PhonResult::StringResult(StringResult {
-            output: tl_display_to_tps(&payload.text, payload.or_maps_to_er),
-        }),
-
-        // --- Platform text helpers ---
         Method::IsAttachingPunctuation(payload) => PhonResult::BoolResult(BoolResult {
             value: crate::api::is_attaching_punctuation(&payload.text),
         }),

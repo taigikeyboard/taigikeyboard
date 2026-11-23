@@ -30,8 +30,7 @@ pub use external_lookup::{chhoe_url, moe_url};
 pub use lexicon::{install as lexicon_install, DictionarySource, LexiconInstallStats};
 pub use nextword::{character_typed as nextword_character_typed, reset_all as nextword_reset_all};
 pub use phonetics::{
-    is_attaching_punctuation, is_spaced_punctuation, tl_display_to_tps, tl_to_poj,
-    TPS_OR_MAPS_TO_ER,
+    is_attaching_punctuation, is_spaced_punctuation, TPS_OR_MAPS_TO_ER,
 };
 pub use transition::{
     CommitResult, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,

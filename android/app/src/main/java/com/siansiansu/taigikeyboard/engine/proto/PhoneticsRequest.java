@@ -20,9 +20,7 @@ public  final class PhoneticsRequest extends
   private java.lang.Object method_;
   public enum MethodCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    TL_TO_POJ(13),
     GET_TONE_VARIATIONS(18),
-    TL_DISPLAY_TO_TPS(33),
     IS_ATTACHING_PUNCTUATION(40),
     EXTERNAL_LOOKUP_DIGIT_FORM(41),
     IS_JOINER_PUNCTUATION(42),
@@ -43,9 +41,7 @@ public  final class PhoneticsRequest extends
 
     public static MethodCase forNumber(int value) {
       switch (value) {
-        case 13: return TL_TO_POJ;
         case 18: return GET_TONE_VARIATIONS;
-        case 33: return TL_DISPLAY_TO_TPS;
         case 40: return IS_ATTACHING_PUNCTUATION;
         case 41: return EXTERNAL_LOOKUP_DIGIT_FORM;
         case 42: return IS_JOINER_PUNCTUATION;
@@ -70,76 +66,6 @@ public  final class PhoneticsRequest extends
   private void clearMethod() {
     methodCase_ = 0;
     method_ = null;
-  }
-
-  public static final int TL_TO_POJ_FIELD_NUMBER = 13;
-  /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   */
-  @java.lang.Override
-  public boolean hasTlToPoj() {
-    return methodCase_ == 13;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj() {
-    if (methodCase_ == 13) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TlToPoj) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.TlToPoj.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   */
-  private void setTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 13;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   */
-  private void mergeTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 13 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.TlToPoj.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.TlToPoj.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlToPoj) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 13;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   */
-  private void clearTlToPoj() {
-    if (methodCase_ == 13) {
-      methodCase_ = 0;
-      method_ = null;
-    }
   }
 
   public static final int GET_TONE_VARIATIONS_FIELD_NUMBER = 18;
@@ -192,80 +118,10 @@ public  final class PhoneticsRequest extends
     }
   }
 
-  public static final int TL_DISPLAY_TO_TPS_FIELD_NUMBER = 33;
-  /**
-   * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   */
-  @java.lang.Override
-  public boolean hasTlDisplayToTps() {
-    return methodCase_ == 33;
-  }
-  /**
-   * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps getTlDisplayToTps() {
-    if (methodCase_ == 33) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   */
-  private void setTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 33;
-  }
-  /**
-   * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   */
-  private void mergeTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 33 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 33;
-  }
-  /**
-   * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   */
-  private void clearTlDisplayToTps() {
-    if (methodCase_ == 33) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int IS_ATTACHING_PUNCTUATION_FIELD_NUMBER = 40;
   /**
    * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -276,7 +132,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -290,7 +146,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -302,7 +158,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -320,7 +176,7 @@ public  final class PhoneticsRequest extends
   }
   /**
    * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -642,78 +498,6 @@ public  final class PhoneticsRequest extends
 
 
     /**
-     * <pre>
-     * --- Phonetics core (2 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-     */
-    @java.lang.Override
-    public boolean hasTlToPoj() {
-      return instance.hasTlToPoj();
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (2 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj() {
-      return instance.getTlToPoj();
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (2 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-     */
-    public Builder setTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
-      copyOnWrite();
-      instance.setTlToPoj(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (2 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-     */
-    public Builder setTlToPoj(
-        com.siansiansu.taigikeyboard.engine.proto.TlToPoj.Builder builderForValue) {
-      copyOnWrite();
-      instance.setTlToPoj(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (2 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-     */
-    public Builder mergeTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
-      copyOnWrite();
-      instance.mergeTlToPoj(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (2 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-     */
-    public Builder clearTlToPoj() {
-      copyOnWrite();
-      instance.clearTlToPoj();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
      */
     @java.lang.Override
@@ -763,79 +547,7 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- TPS (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-     */
-    @java.lang.Override
-    public boolean hasTlDisplayToTps() {
-      return instance.hasTlDisplayToTps();
-    }
-    /**
-     * <pre>
-     * --- TPS (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps getTlDisplayToTps() {
-      return instance.getTlDisplayToTps();
-    }
-    /**
-     * <pre>
-     * --- TPS (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-     */
-    public Builder setTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
-      copyOnWrite();
-      instance.setTlDisplayToTps(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-     */
-    public Builder setTlDisplayToTps(
-        com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.Builder builderForValue) {
-      copyOnWrite();
-      instance.setTlDisplayToTps(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-     */
-    public Builder mergeTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
-      copyOnWrite();
-      instance.mergeTlDisplayToTps(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- TPS (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-     */
-    public Builder clearTlDisplayToTps() {
-      copyOnWrite();
-      instance.clearTlDisplayToTps();
-      return this;
-    }
-
-    /**
-     * <pre>
-     * --- Platform text helpers (40s) ---
+     * Platform text helpers (40s)
      * </pre>
      *
      * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -846,7 +558,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Platform text helpers (40s) ---
+     * Platform text helpers (40s)
      * </pre>
      *
      * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -857,7 +569,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Platform text helpers (40s) ---
+     * Platform text helpers (40s)
      * </pre>
      *
      * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -869,7 +581,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Platform text helpers (40s) ---
+     * Platform text helpers (40s)
      * </pre>
      *
      * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -882,7 +594,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Platform text helpers (40s) ---
+     * Platform text helpers (40s)
      * </pre>
      *
      * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -894,7 +606,7 @@ public  final class PhoneticsRequest extends
     }
     /**
      * <pre>
-     * --- Platform text helpers (40s) ---
+     * Platform text helpers (40s)
      * </pre>
      *
      * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -1115,9 +827,7 @@ public  final class PhoneticsRequest extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "method_",
             "methodCase_",
-            com.siansiansu.taigikeyboard.engine.proto.TlToPoj.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
-            com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.class,
             com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
             com.siansiansu.taigikeyboard.engine.proto.IsJoinerPunctuation.class,
@@ -1125,8 +835,8 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.DoubleSpacePeriod.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\r,\b\u0000\u0000\u0000\r<\u0000\u0012<\u0000!<\u0000(<\u0000" +
-              ")<\u0000*<\u0000+<\u0000,<\u0000";
+              "\u0000\u0006\u0001\u0000\u0012,\u0006\u0000\u0000\u0000\u0012<\u0000(<\u0000)<\u0000" +
+              "*<\u0000+<\u0000,<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -8,8 +8,8 @@ option java_multiple_files = true;
 // Phonetics module — POJ ↔ TL ↔ TPS spelling conversion, tone representation,
 // syllable structure, Unicode normalization, phonological auto-correct.
 //
-// 10 ops live in PhoneticsRequest.method oneof; each op returns its natural
-// shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
+// Ops live in the PhoneticsRequest.method oneof; each op returns its natural
+// shape via the PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
 // `oneof method` design + khiin-rs single-entry-point dispatch.
 //
 // AppConfig (envelope.proto) carries per-request live snapshot — input mode,
@@ -38,16 +38,15 @@ message PhoneticsRequest {
   // 2026-11-17).
   reserved 34, 35;
   reserved "is_tps_tone_mark", "tps_input_adjust";
+  // TL → POJ and TL display → TPS: no production sender; composing renders
+  // both in-process (removed 2026-11-23).
+  reserved 13, 33;
+  reserved "tl_to_poj", "tl_display_to_tps";
 
   oneof method {
-    // --- Phonetics core (2 ops) ---
-    TlToPoj tl_to_poj = 13;
     GetToneVariations get_tone_variations = 18;
 
-    // --- TPS (1 op) ---
-    TlDisplayToTps tl_display_to_tps = 33;
-
-    // --- Platform text helpers (40s) ---
+    // Platform text helpers (40s)
     IsAttachingPunctuation is_attaching_punctuation = 40;
     ExternalLookupDigitForm external_lookup_digit_form = 41;
     IsJoinerPunctuation is_joiner_punctuation = 42;
@@ -59,8 +58,6 @@ message PhoneticsRequest {
 // =========================================================================
 // Phonetics core request payloads
 // =========================================================================
-
-message TlToPoj { string input = 1; }
 
 // `GetToneVariations` is the init-bulk-pull op for callout tone variation
 // tables. Returns POJ + TL maps in one response. Caller caches once at
@@ -78,17 +75,6 @@ message GetToneVariations {}
 // `derive_custom_query_key`), behind the user-data ops and the dictionary search.
 // The `DeriveCustomQueryKey` op (tag 23) went with its last caller, the
 // desktop settings search, on 2026-09-30.
-
-// =========================================================================
-// TPS request payloads
-// =========================================================================
-
-// `TlDisplayToTps` input is display form with diacritics (e.g. "hóo").
-// Replaces iOS `TLToTPS.convertFromDisplay` / Android `TPSConverter.toTPSFromDisplay`.
-message TlDisplayToTps {
-  string text = 1;
-  bool or_maps_to_er = 2;
-}
 
 // =========================================================================
 // Platform text helpers

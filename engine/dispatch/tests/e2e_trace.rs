@@ -4,7 +4,7 @@
 
 use prost::Message;
 use protos::engine::phonetics_request::Method;
-use protos::engine::{request, PhoneticsRequest, Request, TlToPoj};
+use protos::engine::{request, IsAttachingPunctuation, PhoneticsRequest, Request};
 
 #[test]
 fn process_request_writes_header_and_request_event() {
@@ -12,14 +12,15 @@ fn process_request_writes_header_and_request_event() {
     let _ = std::fs::remove_file(&path);
     assert!(dispatch::trace::open(path.to_str().unwrap()));
 
-    // trace: payload = phonetics (Request field 10), method = tl_to_poj
-    // (PhoneticsRequest field 13, phonetics.proto) → domain "phonetics", tag 13.
+    // trace: payload = phonetics (Request field 10), method =
+    // is_attaching_punctuation (PhoneticsRequest field 40, phonetics.proto) →
+    // domain "phonetics", tag 40.
     let bytes = Request {
         id: 42,
         generation: 9,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            method: Some(Method::TlToPoj(TlToPoj {
-                input: "ká".into()
+            method: Some(Method::IsAttachingPunctuation(IsAttachingPunctuation {
+                text: "?".into()
             })),
         })),
         ..Default::default()
@@ -46,7 +47,7 @@ fn process_request_writes_header_and_request_event() {
             r#""req_id":42"#,
             r#""generation":9"#,
             r#""domain":"phonetics""#,
-            r#""method_tag":13"#,
+            r#""method_tag":40"#,
             r#""error":0"#,
         ],
     );

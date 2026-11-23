@@ -11,25 +11,6 @@ public interface PhoneticsRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   * @return Whether the tlToPoj field is set.
-   */
-  boolean hasTlToPoj();
-  /**
-   * <pre>
-   * --- Phonetics core (2 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
-   * @return The tlToPoj.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj();
-
-  /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
    * @return Whether the getToneVariations field is set.
    */
@@ -42,26 +23,7 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   * @return Whether the tlDisplayToTps field is set.
-   */
-  boolean hasTlDisplayToTps();
-  /**
-   * <pre>
-   * --- TPS (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
-   * @return The tlDisplayToTps.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps getTlDisplayToTps();
-
-  /**
-   * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
@@ -70,7 +32,7 @@ public interface PhoneticsRequestOrBuilder extends
   boolean hasIsAttachingPunctuation();
   /**
    * <pre>
-   * --- Platform text helpers (40s) ---
+   * Platform text helpers (40s)
    * </pre>
    *
    * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
