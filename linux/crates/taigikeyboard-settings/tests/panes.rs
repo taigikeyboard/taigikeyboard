@@ -404,11 +404,10 @@ fn seed_picks() {
     );
 }
 
-/// trace: 食飯 picked twice and 啉茶 once (word frequency, the default
+/// trace: 食飯 counted twice and 啉茶 once (word frequency, the default
 /// kind, most used first) → rows 食飯 (2), 啉茶 (1); 啉茶 set to 9 → it
 /// leads; 食飯 deleted → one row left (set and delete through the engine;
 /// the page's dialogs are device dogfood); the kind picker → phrases, none.
-/// The engine's list waits behind the queued picks on the same store writer.
 fn the_learning_records_list_what_the_keyboard_learned(window: &Rc<SettingsWindow>) {
     use taigikeyboard_settings::pages::learning_records::LearningRecordsPage;
     user_data::clear_learning_records().expect("empty the learning stores");

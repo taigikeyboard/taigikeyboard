@@ -949,7 +949,7 @@ The rules, all in `engine/nextword/src/decide.rs`:
 
 - **Every adjacent pair inside the commit is learned** (`欲 → 食`, `食 → 飯`), once per occurrence (`好 好 好` teaches `好 → 好` twice), whatever time the nails took.
 - **The 10 s window gates only the link to the previous commit** (`我 → 欲`), measured from that commit's own time; a nail never refreshes it.
-- **A nail or unnail learns nothing and changes no context.** Neither sends NextWord anything (an unnail back to a segment nailed as shown clears for a new composition). A composition abandoned after nails teaches nothing and leaves the context it started from.
+- **A nail or unnail learns nothing and changes no context.** A nail sends NextWord nothing; an unnail sends only a clear, when it lands on a segment nailed as shown or on none. A composition abandoned after nails teaches nothing and leaves the context it started from.
 - Per-word rules apply to each word: compound pairs, the noise gate, a sentence end or clause mark breaks the chain (a commit ending in one clears the context), a symbol does not.
 - **Scope**: the final candidate pick and Enter (`composing/src/transition.rs` `commit_continuous` / `commit_raw_continuous`). Commit-then-insert-external finalizes the nailed prefix with `NextWordClearForNewComposing` and learns nothing.
 

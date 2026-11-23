@@ -24,8 +24,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * a TPS tail): a step over a converted word moves past the whole word, and a
  * step left from the start of the tail with a segment nailed re-opens that
  * segment — its glyphs go back in front of the tail, the caret before them —
- * answering as `DeleteBackward`'s un-nail does (NextWord handshake,
- * `UpdatePreedit`, `RefreshCandidates`). START never re-opens: it stops at the
+ * answering as `DeleteBackward`'s un-nail does (`UpdatePreedit`,
+ * `RefreshCandidates`, after `NextWordClearForNewComposing` when the segment
+ * left last was nailed as shown or none is left). START never re-opens: it stops at the
  * tail's start. A tail the request converts and the phase holds no conversion
  * for is walked first, and that new conversion is answered with
  * `UpdatePreedit` even when the caret does not move.
@@ -186,8 +187,9 @@ public  final class MoveCaret extends
    * a TPS tail): a step over a converted word moves past the whole word, and a
    * step left from the start of the tail with a segment nailed re-opens that
    * segment — its glyphs go back in front of the tail, the caret before them —
-   * answering as `DeleteBackward`'s un-nail does (NextWord handshake,
-   * `UpdatePreedit`, `RefreshCandidates`). START never re-opens: it stops at the
+   * answering as `DeleteBackward`'s un-nail does (`UpdatePreedit`,
+   * `RefreshCandidates`, after `NextWordClearForNewComposing` when the segment
+   * left last was nailed as shown or none is left). START never re-opens: it stops at the
    * tail's start. A tail the request converts and the phase holds no conversion
    * for is walked first, and that new conversion is answered with
    * `UpdatePreedit` even when the caret does not move.

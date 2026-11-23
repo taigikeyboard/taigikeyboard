@@ -26,8 +26,8 @@ public extension RustEngineBridge {
             case refreshCandidates
             case resetCandidateContext
             /// The composition's next-word handshake, applied by the engine in this
-            /// same call (the request's `nextWordContext`): a commit's learning, a
-            /// nail, or an abort's clear. `NextWordController.applyComposingDecision`
+            /// same call (the request's `nextWordContext`): a commit's learning, or
+            /// an unnail's or abort's clear. `NextWordController.applyComposingDecision`
             /// runs it at this position, as every other `DecideResult`.
             case nextWordDecided(NextWordDecideResult)
         }

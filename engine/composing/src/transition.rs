@@ -938,8 +938,8 @@ fn nail_segment(
     let mut new_nailed = nailed.clone();
     let new_pending = raw[consumed_bytes..].to_string();
     // R2: the NextWord `roman` arg — canonical TL when the platform sent
-    // it, else the raw committed slice (legacy / TPS-OOV fallback). Used
-    // for whichever single effect this commit fires below (final OR mid).
+    // it, else the raw committed slice (TPS-OOV fallback). Only a final
+    // commit's terminal `WordSelected` below uses it; a nail sends none.
     let next_word_roman = association_roman(&association_tl, &raw[..consumed_bytes]);
     let segment = picked_segment(
         &new_nailed,

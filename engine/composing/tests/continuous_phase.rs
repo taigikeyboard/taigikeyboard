@@ -482,9 +482,9 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
 }
 
 #[test]
-fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
-    // Two nailed segments → pop the latter → nextword's last_selected_word
-    // should now correct to the segment behind, not clear.
+fn delete_backward_pop_to_a_picked_segment_emits_no_nextword_effect() {
+    // Two nailed segments → pop the latter → the segment behind was picked,
+    // so NextWord hears nothing (not a clear).
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {

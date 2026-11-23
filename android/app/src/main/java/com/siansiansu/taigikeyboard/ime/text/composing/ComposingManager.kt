@@ -69,7 +69,7 @@ class ComposingManager(
     private val settingsProvider: EngineSettingsProvider,
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
     // Runs the composition's next-word decision (`ComposingTransition.Effect.NextWordDecided`: the
-    // engine applied the commit's, nail's or abort's next-word handshake in the composing call) on
+    // engine applied the commit's, unnail's or abort's next-word handshake in the composing call) on
     // `NextWordController`, at its place in the effect list. A no-op for tests and non-IME callers.
     private val nextWordRouter: (NextWordDecideResult) -> Unit = {},
     // The next-word envelope (`NextWordController.requestContext`) sent with every request that
