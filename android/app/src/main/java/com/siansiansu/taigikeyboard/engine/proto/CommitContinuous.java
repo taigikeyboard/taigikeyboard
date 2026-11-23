@@ -21,8 +21,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * glyphs, not picked), nails the pick, walks the rest again with the caret at
  * its end, and never finalizes — also when the pick reaches the end of the
  * tail. `consumed_bytes` is the span end; a pick that does not end after the
- * anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
- * `ClearCandidates` (the window closes). The list a conversion answers is
+ * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
  * always that word's, so a pick can only be of it.
  *
  * **Platform contract**: when committing the user's tap on a candidate
@@ -189,7 +188,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -213,7 +212,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -238,7 +237,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -264,7 +263,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -287,7 +286,7 @@ public  final class CommitContinuous extends
    * v3.6.1 R2 — canonical TL romanization of the committed candidate
    * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
    * recase passes rewrite `roman`). Becomes the `roman` arg of the
-   * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+   * NextWord `WordSelected` effect so the
    * learned association `prev_tl` / `next_tl` is the same canonical TL a
    * normal (non-continuous) candidate commit records — fixing the
    * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -711,8 +710,7 @@ public  final class CommitContinuous extends
    * glyphs, not picked), nails the pick, walks the rest again with the caret at
    * its end, and never finalizes — also when the pick reaches the end of the
    * tail. `consumed_bytes` is the span end; a pick that does not end after the
-   * anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-   * `ClearCandidates` (the window closes). The list a conversion answers is
+   * anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
    * always that word's, so a pick can only be of it.
    *
    * **Platform contract**: when committing the user's tap on a candidate
@@ -881,7 +879,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -905,7 +903,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -930,7 +928,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -957,7 +955,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -982,7 +980,7 @@ public  final class CommitContinuous extends
      * v3.6.1 R2 — canonical TL romanization of the committed candidate
      * (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
      * recase passes rewrite `roman`). Becomes the `roman` arg of the
-     * NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+     * NextWord `WordSelected` effect so the
      * learned association `prev_tl` / `next_tl` is the same canonical TL a
      * normal (non-continuous) candidate commit records — fixing the
      * continuous-vs-normal `next_tl` fragmentation (raw typed slice

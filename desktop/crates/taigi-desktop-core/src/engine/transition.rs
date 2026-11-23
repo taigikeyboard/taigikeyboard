@@ -81,8 +81,7 @@ impl Effect {
             // A request carrying `NextWordContext` gets these back applied,
             // as `NextWordDecided`, and the desktop always sends it: one here
             // means its learning was skipped.
-            effect::Kind::NextWordUpdateLastSelectedWord(_)
-            | effect::Kind::NextWordWordSelected(_)
+            effect::Kind::NextWordWordSelected(_)
             | effect::Kind::NextWordClearForNewComposing(_) => {
                 log::error!("composing answer carried an unapplied next-word handshake");
                 return None;
@@ -203,8 +202,8 @@ mod tests {
     use super::*;
     use protos::engine::{
         ClearCandidates, ClearPreeditWithoutCommit, CommitTextReplacingPreedit, ComposingResponse,
-        DecideResult, NextWordClearForNewComposing, NextWordUpdateLastSelectedWord,
-        NextWordWordSelected, RefreshCandidates, ResetCandidateContext, UpdatePreedit,
+        DecideResult, NextWordClearForNewComposing, NextWordWordSelected, RefreshCandidates,
+        ResetCandidateContext, UpdatePreedit,
     };
 
     #[test]
@@ -279,12 +278,6 @@ mod tests {
                 wire(effect::Kind::RefreshCandidates(RefreshCandidates {})),
                 wire(effect::Kind::ResetCandidateContext(
                     ResetCandidateContext {},
-                )),
-                wire(effect::Kind::NextWordUpdateLastSelectedWord(
-                    NextWordUpdateLastSelectedWord {
-                        text: "台".into(),
-                        roman: "tâi".into(),
-                    },
                 )),
                 wire(effect::Kind::NextWordWordSelected(NextWordWordSelected {
                     text: "語".into(),

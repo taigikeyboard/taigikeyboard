@@ -72,14 +72,8 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
 
     // Model B: mid-commit emits NO CommitTextReplacingPreedit — it only
     // re-renders the combined marked region (nailed prefix + new pending).
-    assert_kinds(
-        &resp.effect,
-        [
-            "UpdatePreedit",
-            "NextWordUpdateLastSelectedWord",
-            "RefreshCandidates",
-        ],
-    );
+    // No next-word handshake: a nail teaches nothing (§40).
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
 
     let state = e.snapshot_state();
     let Phase::Continuous { raw, nailed, .. } = state.phase else {
@@ -101,11 +95,6 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
         unreachable!();
     };
     assert_eq!(up.display, "珠a");
-    let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[1].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    assert_eq!(nw.text, "珠");
-    assert_eq!(nw.roman, "tsu");
 }
 
 #[test]
@@ -528,24 +517,10 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
     e.apply(Intent::DeleteBackward, &config_tl()); // pending = ""
 
     // Model B: unnail "仔" — ZERO DeleteBackwardFromDocument. The remaining
-    // nailed "珠" makes the nextword correction an UpdateLastSelectedWord
-    // (not a clear), then UpdatePreedit(combined) + RefreshCandidates.
+    // nailed "珠" was picked, so NextWord hears nothing (not a clear): just
+    // UpdatePreedit(combined) + RefreshCandidates.
     let resp = e.apply(Intent::DeleteBackward, &config_tl());
-    assert_kinds(
-        &resp.effect,
-        [
-            "NextWordUpdateLastSelectedWord",
-            "UpdatePreedit",
-            "RefreshCandidates",
-        ],
-    );
-    // The NextWordUpdateLastSelectedWord payload should reflect "珠" / "tsu",
-    // the segment still nailed in the marked region.
-    let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[0].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    assert_eq!(nw.text, "珠");
-    assert_eq!(nw.roman, "tsu");
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
 
     let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
@@ -1251,7 +1226,7 @@ fn nailed_segment_public_fields_round_trip() {
 // finalize's whole-composition write.
 
 #[test]
-fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
+fn bug1_mid_commit_marks_display_and_nails_canonical() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::CommitContinuous {
@@ -1265,30 +1240,18 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
         },
         &config_tl(),
     );
-    // Model B mid-commit: [UpdatePreedit(combined), NextWordUpdateLastSelectedWord,
-    // RefreshCandidates] — NO CommitTextReplacingPreedit.
-    assert_kinds(
-        &resp.effect,
-        [
-            "UpdatePreedit",
-            "NextWordUpdateLastSelectedWord",
-            "RefreshCandidates",
-        ],
-    );
+    // Model B mid-commit: [UpdatePreedit(combined), RefreshCandidates] — NO
+    // CommitTextReplacingPreedit, no next-word handshake.
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     let Kind::UpdatePreedit(up) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
     };
     // Combined = swapped "tāi-uân" + derived("a") = "tāi-uâna".
     assert_eq!(up.display, "tāi-uân a");
-    let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[1].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    assert_eq!(nw.text, "臺灣");
-    // R2: NextWord roman = the candidate's canonical TL (association_tl),
-    // NOT the raw typed slice "tsu". This is the write-side fix that keeps
-    // continuous-input `prev_tl`/`next_tl` aligned with a normal commit.
-    assert_eq!(nw.roman, "tâi-uân");
 
+    // The segment keeps the canonical key and, per R2, the canonical TL
+    // (not the raw typed slice "tsu") that the final commit's `preceding`
+    // hands NextWord, aligned with a normal commit's `prev_tl` / `next_tl`.
     let Phase::Continuous { nailed, .. } = e.snapshot_state().phase else {
         panic!("still Continuous");
     };
@@ -1328,10 +1291,10 @@ fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
 }
 
 #[test]
-fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
+fn bug1_backspace_pop_keeps_canonical_no_document_delete() {
     // seg0 multi-char swapped display. Model B: unnailing seg1 emits ZERO
     // DeleteBackwardFromDocument (nailed segments were never in the
-    // document); the NextWord correction still targets seg0's canonical.
+    // document) and no next-word handshake; seg0 keeps its canonical key.
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
@@ -1363,24 +1326,17 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
     e.apply(Intent::DeleteBackward, &config_tl());
 
     let resp = e.apply(Intent::DeleteBackward, &config_tl());
-    // Model B: unnail of seg1 — ZERO DeleteBackwardFromDocument, then the
-    // nextword correction (seg0 still nailed) + UpdatePreedit + autocomplete.
-    assert_kinds(
-        &resp.effect,
-        [
-            "NextWordUpdateLastSelectedWord",
-            "UpdatePreedit",
-            "RefreshCandidates",
-        ],
-    );
-    // Correction targets seg0 — canonical, not the swapped display string.
-    let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[0].kind.as_ref().unwrap() else {
-        unreachable!();
+    // Model B: unnail of seg1 — ZERO DeleteBackwardFromDocument; seg0 was
+    // picked, so no next-word handshake: UpdatePreedit + autocomplete.
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
+    // seg0 keeps its canonical key and TL (R2), not the swapped display or
+    // the raw slice "tsu".
+    let Phase::Continuous { nailed, .. } = e.snapshot_state().phase else {
+        panic!("still Continuous");
     };
-    assert_eq!(nw.text, "臺灣");
-    // R2: the backspace correction re-establishes seg0's context with its
-    // canonical TL (association_tl), not the raw slice "tsu".
-    assert_eq!(nw.roman, "tâi-uân");
+    assert_eq!(nailed.len(), 1);
+    assert_eq!(nailed[0].canonical_text, "臺灣");
+    assert_eq!(nailed[0].association_tl, "tâi-uân");
     // Unnailing seg1 restores its raw_text "a" (consumed_bytes=1 from
     // pending "agua") as the new pending; combined = seg0 display "tāi-uân"
     // + derived("a") = "tāi-uâna".

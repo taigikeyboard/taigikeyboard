@@ -75,27 +75,6 @@ public interface NextWordRequestOrBuilder extends
 
   /**
    * <pre>
-   * Continuous nail / unnail handshake — learns nothing and changes no
-   * state (see the message below).
-   * </pre>
-   *
-   * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
-   * @return Whether the updateLastSelectedWord field is set.
-   */
-  boolean hasUpdateLastSelectedWord();
-  /**
-   * <pre>
-   * Continuous nail / unnail handshake — learns nothing and changes no
-   * state (see the message below).
-   * </pre>
-   *
-   * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
-   * @return The updateLastSelectedWord.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord getUpdateLastSelectedWord();
-
-  /**
-   * <pre>
    * Platform-driven UI visibility update. After the platform renders the
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so

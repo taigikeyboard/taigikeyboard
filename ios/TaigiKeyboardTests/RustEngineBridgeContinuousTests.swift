@@ -61,14 +61,13 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
     }
 
-    // MARK: - CommitContinuous mid-commit carries the nail's next-word decision
+    // MARK: - CommitContinuous mid-commit tells NextWord nothing
 
-    func testCommitContinuous_PartialConsume_CarriesTheNailDecision() {
+    func testCommitContinuous_PartialConsume_CarriesNoNextWordDecision() {
         // Multi-syllable buffer; consume only the leading syllable so the
-        // engine stays in Continuous (mid-commit branch). The nail's
-        // next-word handshake (UpdateLastSelectedWord, NOT WordSelected — the
-        // user is composing a sentence, not finalizing) is applied under the
-        // envelope and answered in place as the decision.
+        // engine stays in Continuous (mid-commit branch). A nail teaches
+        // NextWord nothing — the final commit's `preceding` carries the
+        // segment (behavioral-invariants §40) — so no decision comes back.
         var context = Taigi_Engine_NextWordContext()
         context.generation = envelopeGen
         context.nowMs = 1_000_000
@@ -89,9 +88,9 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             }
             return false
         }
-        XCTAssertTrue(
+        XCTAssertFalse(
             hasDecision,
-            "Mid-commit carries the nail's next-word decision; got \(commit.effects)",
+            "Mid-commit carries no next-word decision; got \(commit.effects)",
         )
     }
 

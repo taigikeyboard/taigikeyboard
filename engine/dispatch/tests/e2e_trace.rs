@@ -20,7 +20,7 @@ fn process_request_writes_header_and_request_event() {
         generation: 9,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {
             method: Some(Method::IsAttachingPunctuation(IsAttachingPunctuation {
-                text: "?".into()
+                text: "?".into(),
             })),
         })),
         ..Default::default()

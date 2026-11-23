@@ -49,7 +49,6 @@ public  final class Effect extends
     CLEAR_CANDIDATES(5),
     REFRESH_CANDIDATES(6),
     RESET_CANDIDATE_CONTEXT(7),
-    NEXT_WORD_UPDATE_LAST_SELECTED_WORD(8),
     NEXT_WORD_WORD_SELECTED(9),
     NEXT_WORD_CLEAR_FOR_NEW_COMPOSING(10),
     NEXT_WORD_DECIDED(12),
@@ -74,7 +73,6 @@ public  final class Effect extends
         case 5: return CLEAR_CANDIDATES;
         case 6: return REFRESH_CANDIDATES;
         case 7: return RESET_CANDIDATE_CONTEXT;
-        case 8: return NEXT_WORD_UPDATE_LAST_SELECTED_WORD;
         case 9: return NEXT_WORD_WORD_SELECTED;
         case 10: return NEXT_WORD_CLEAR_FOR_NEW_COMPOSING;
         case 12: return NEXT_WORD_DECIDED;
@@ -394,56 +392,6 @@ public  final class Effect extends
    */
   private void clearResetCandidateContext() {
     if (kindCase_ == 7) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
-  }
-
-  public static final int NEXT_WORD_UPDATE_LAST_SELECTED_WORD_FIELD_NUMBER = 8;
-  /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   */
-  @java.lang.Override
-  public boolean hasNextWordUpdateLastSelectedWord() {
-    return kindCase_ == 8;
-  }
-  /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord getNextWordUpdateLastSelectedWord() {
-    if (kindCase_ == 8) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord) kind_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   */
-  private void setNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
-    java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 8;
-  }
-  /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   */
-  private void mergeNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 8 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 8;
-  }
-  /**
-   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-   */
-  private void clearNextWordUpdateLastSelectedWord() {
-    if (kindCase_ == 8) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -1045,54 +993,6 @@ public  final class Effect extends
     }
 
     /**
-     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-     */
-    @java.lang.Override
-    public boolean hasNextWordUpdateLastSelectedWord() {
-      return instance.hasNextWordUpdateLastSelectedWord();
-    }
-    /**
-     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord getNextWordUpdateLastSelectedWord() {
-      return instance.getNextWordUpdateLastSelectedWord();
-    }
-    /**
-     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-     */
-    public Builder setNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
-      copyOnWrite();
-      instance.setNextWordUpdateLastSelectedWord(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-     */
-    public Builder setNextWordUpdateLastSelectedWord(
-        com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.Builder builderForValue) {
-      copyOnWrite();
-      instance.setNextWordUpdateLastSelectedWord(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-     */
-    public Builder mergeNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
-      copyOnWrite();
-      instance.mergeNextWordUpdateLastSelectedWord(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
-     */
-    public Builder clearNextWordUpdateLastSelectedWord() {
-      copyOnWrite();
-      instance.clearNextWordUpdateLastSelectedWord();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
      */
     @java.lang.Override
@@ -1290,15 +1190,13 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.class,
             com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.class,
-            com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.class,
             com.siansiansu.taigikeyboard.engine.proto.DecideResult.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\u0001\f\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000\f<\u0000" +
-              "";
+              "\u0000\t\u0001\u0000\u0001\f\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\t<\u0000\n<\u0000\f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

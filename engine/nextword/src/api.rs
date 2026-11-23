@@ -17,8 +17,7 @@ pub(crate) struct PersistedState {
     pub last_selected_roman: Option<String>,
     pub last_selection_time_ms: i64,
     pub predictions_visible: bool,
-    /// Monotonic counter bumped on every state-mutating intent (except
-    /// `UpdateLastSelectedWord` per audit §5 #5). The platform tags
+    /// Monotonic counter bumped on every state-mutating intent. The platform tags
     /// in-flight prediction queries with the generation at dispatch time;
     /// a mismatch at query resolution drops the result. Wraps via
     /// `wrapping_add` — `u64::MAX + 1 = 0` is a fresh current value, NOT
@@ -26,11 +25,8 @@ pub(crate) struct PersistedState {
     pub current_generation: u64,
 }
 
-/// Decoded intent set. Mirrors iOS `NextWordIntent` / Android
-/// `NextWordIntent` 1:1, plus `UpdateLastSelectedWord` — Android-only when it
-/// was added (audit §5 #5 / Codex v1 P1), now also emitted by iOS's
-/// continuous-input mid-commit handshake and by macOS. Decoded from
-/// `protos::engine::NextWordRequest::method` inside `requests::handle`.
+/// Decoded intent set, from `protos::engine::NextWordRequest::method` inside
+/// `requests::handle`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Intent {
     /// Candidate selected — main platform write path; may record an association and predict.
@@ -52,14 +48,6 @@ pub(crate) enum Intent {
     ClearForNewComposing { now_ms: i64 },
     /// Full reset — same as the context timeout, clearing all state.
     ResetAll { now_ms: i64 },
-    /// Continuous-input nail / unnail handshake. Learns nothing and leaves
-    /// the committed context alone — a nailed segment is not in the document
-    /// yet; the final commit's `WordSelected.preceding` carries it (§40).
-    UpdateLastSelectedWord {
-        text: String,
-        roman: String,
-        now_ms: i64,
-    },
     /// Platform-driven UI visibility sync. Mutates `state.predictions_visible` only;
     /// no effects, no generation bump. Called by the platform after
     /// rendering the result of an async predict() so subsequent clear/reset

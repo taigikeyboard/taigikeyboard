@@ -301,8 +301,8 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
         commit.is_composing,
         "Model B: a nailed segment stays in the composition"
     );
-    // The nail handshake, applied by the engine.
-    assert!(commit.effects.contains(&Effect::NextWordDecided));
+    // A nail tells NextWord nothing (behavioral-invariants §40).
+    assert!(!commit.effects.contains(&Effect::NextWordDecided));
     assert!(
         !commit
             .effects

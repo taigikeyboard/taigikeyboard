@@ -312,10 +312,10 @@ fn a_reopen_keeps_the_segments_before_the_last() {
 
     step(&mut engine, CaretDirection::Left, &config);
     let response = step(&mut engine, CaretDirection::Left, &config);
-    assert_eq!(
-        effect_kinds(&response.effect)[0],
-        "NextWordUpdateLastSelectedWord"
-    );
+    // Re-opening back to a picked segment sends NextWord nothing.
+    assert!(!effect_kinds(&response.effect)
+        .iter()
+        .any(|kind| kind.starts_with("NextWord")));
     assert_eq!(display(&response), "是死詩");
     assert_eq!(caret_utf16(&response), 1);
     assert_eq!(nailed(&engine).len(), 1);

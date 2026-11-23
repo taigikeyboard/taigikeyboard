@@ -27,7 +27,6 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
             EffectKind::ClearCandidates(_) => "clearCandidates",
             EffectKind::RefreshCandidates(_) => "refreshCandidates",
             EffectKind::ResetCandidateContext(_) => "resetCandidateContext",
-            EffectKind::NextWordUpdateLastSelectedWord(_) => "nextWordUpdateLastSelectedWord",
             EffectKind::NextWordWordSelected(_) => "nextWordWordSelected",
             EffectKind::NextWordClearForNewComposing(_) => "nextWordClearForNewComposing",
             EffectKind::NextWordDecided(_) => "nextWordDecided",

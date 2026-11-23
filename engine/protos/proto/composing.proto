@@ -231,8 +231,7 @@ message FetchAtPos {
 // glyphs, not picked), nails the pick, walks the rest again with the caret at
 // its end, and never finalizes — also when the pick reaches the end of the
 // tail. `consumed_bytes` is the span end; a pick that does not end after the
-// anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-// `ClearCandidates` (the window closes). The list a conversion answers is
+// anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
 // always that word's, so a pick can only be of it.
 //
 // **Platform contract**: when committing the user's tap on a candidate
@@ -258,7 +257,7 @@ message CommitContinuous {
   // v3.6.1 R2 — canonical TL romanization of the committed candidate
   // (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
   // recase passes rewrite `roman`). Becomes the `roman` arg of the
-  // NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+  // NextWord `WordSelected` effect so the
   // learned association `prev_tl` / `next_tl` is the same canonical TL a
   // normal (non-continuous) candidate commit records — fixing the
   // continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -604,6 +603,10 @@ message Effect {
   // single-segment Composing phase's backspace-to-empty branch (R12).
   reserved 4;
   reserved "delete_backward_from_document";
+  // Tag 8 (`next_word_update_last_selected_word`) was the nail / unnail
+  // handshake; NextWord learned nothing from it (removed 2026-11-23).
+  reserved 8;
+  reserved "next_word_update_last_selected_word";
   oneof kind {
     UpdatePreedit                  update_preedit                       = 1;
     ClearPreeditWithoutCommit      clear_preedit_without_commit         = 2;
@@ -611,7 +614,6 @@ message Effect {
     ClearCandidates                clear_candidates                     = 5;
     RefreshCandidates              refresh_candidates                   = 6;
     ResetCandidateContext          reset_candidate_context              = 7;
-    NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
     // A handshake the engine applied (`next_word_context` set): the executor
@@ -627,16 +629,6 @@ message CommitTextReplacingPreedit { string text = 1; }
 message ClearCandidates            {}
 message RefreshCandidates          {}
 message ResetCandidateContext      {}
-
-// Mid-commit handshake during continuous-input. Maps to
-// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
-// platform side. `text` is the committed segment's display (e.g., "紙"),
-// `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
-// `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
-// learns nothing from it — a nailed segment is not in the document yet;
-// the final commit's `NextWordWordSelected.preceding` carries it
-// (behavioral-invariants §40). Platforms read it as the nail signal.
-message NextWordUpdateLastSelectedWord { string text = 1; string roman = 2; }
 
 // Final-commit handshake during continuous-input. Maps to
 // `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,

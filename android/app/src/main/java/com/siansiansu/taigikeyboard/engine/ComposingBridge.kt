@@ -649,8 +649,7 @@ private fun synthComposing(proto: ComposingResponse): ComposingTransition {
 
             // Composing-to-engine handshakes: the engine applies or drops them
             // before answering, so one here is an engine bug.
-            eff.hasNextWordUpdateLastSelectedWord() ||
-                eff.hasNextWordWordSelected() ||
+            eff.hasNextWordWordSelected() ||
                 eff.hasNextWordClearForNewComposing() -> {
                 RustEngineBridge.backend.e(
                     "RustEngineBridge",

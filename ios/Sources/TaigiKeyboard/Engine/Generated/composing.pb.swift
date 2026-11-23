@@ -595,8 +595,7 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
 /// glyphs, not picked), nails the pick, walks the rest again with the caret at
 /// its end, and never finalizes — also when the pick reaches the end of the
 /// tail. `consumed_bytes` is the span end; a pick that does not end after the
-/// anchor is ignored. Effects: `UpdatePreedit`, `NextWordUpdateLastSelectedWord`,
-/// `ClearCandidates` (the window closes). The list a conversion answers is
+/// anchor is ignored. Effects: `UpdatePreedit`, `ClearCandidates` (the window closes). The list a conversion answers is
 /// always that word's, so a pick can only be of it.
 ///
 /// **Platform contract**: when committing the user's tap on a candidate
@@ -623,7 +622,7 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   /// v3.6.1 R2 — canonical TL romanization of the committed candidate
   /// (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
   /// recase passes rewrite `roman`). Becomes the `roman` arg of the
-  /// NextWord `WordSelected` / `UpdateLastSelectedWord` effects so the
+  /// NextWord `WordSelected` effect so the
   /// learned association `prev_tl` / `next_tl` is the same canonical TL a
   /// normal (non-continuous) candidate commit records — fixing the
   /// continuous-vs-normal `next_tl` fragmentation (raw typed slice
@@ -1146,14 +1145,6 @@ public nonisolated struct Taigi_Engine_Effect: Sendable {
     set {kind = .resetCandidateContext(newValue)}
   }
 
-  public var nextWordUpdateLastSelectedWord: Taigi_Engine_NextWordUpdateLastSelectedWord {
-    get {
-      if case .nextWordUpdateLastSelectedWord(let v)? = kind {return v}
-      return Taigi_Engine_NextWordUpdateLastSelectedWord()
-    }
-    set {kind = .nextWordUpdateLastSelectedWord(newValue)}
-  }
-
   public var nextWordWordSelected: Taigi_Engine_NextWordWordSelected {
     get {
       if case .nextWordWordSelected(let v)? = kind {return v}
@@ -1189,7 +1180,6 @@ public nonisolated struct Taigi_Engine_Effect: Sendable {
     case clearCandidates_p(Taigi_Engine_ClearCandidates)
     case refreshCandidates(Taigi_Engine_RefreshCandidates)
     case resetCandidateContext(Taigi_Engine_ResetCandidateContext)
-    case nextWordUpdateLastSelectedWord(Taigi_Engine_NextWordUpdateLastSelectedWord)
     case nextWordWordSelected(Taigi_Engine_NextWordWordSelected)
     case nextWordClearForNewComposing(Taigi_Engine_NextWordClearForNewComposing)
     /// A handshake the engine applied (`next_word_context` set): the executor
@@ -1262,28 +1252,6 @@ public nonisolated struct Taigi_Engine_ResetCandidateContext: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// Mid-commit handshake during continuous-input. Maps to
-/// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
-/// platform side. `text` is the committed segment's display (e.g., "紙"),
-/// `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
-/// `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
-/// learns nothing from it — a nailed segment is not in the document yet;
-/// the final commit's `NextWordWordSelected.preceding` carries it
-/// (behavioral-invariants §40). Platforms read it as the nail signal.
-public nonisolated struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var text: String = String()
-
-  public var roman: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2431,7 +2399,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Effect"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{4}\u{2}clear_candidates\0\u{3}refresh_candidates\0\u{3}reset_candidate_context\0\u{3}next_word_update_last_selected_word\0\u{3}next_word_word_selected\0\u{3}next_word_clear_for_new_composing\0\u{4}\u{2}next_word_decided\0\u{b}phrase_learned\0\u{b}delete_backward_from_document\0\u{c}\u{b}\u{1}\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{4}\u{2}clear_candidates\0\u{3}refresh_candidates\0\u{3}reset_candidate_context\0\u{4}\u{2}next_word_word_selected\0\u{3}next_word_clear_for_new_composing\0\u{4}\u{2}next_word_decided\0\u{b}phrase_learned\0\u{b}delete_backward_from_document\0\u{b}next_word_update_last_selected_word\0\u{c}\u{b}\u{1}\u{c}\u{4}\u{1}\u{c}\u{8}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2517,19 +2485,6 @@ nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf.
           self.kind = .resetCandidateContext(v)
         }
       }()
-      case 8: try {
-        var v: Taigi_Engine_NextWordUpdateLastSelectedWord?
-        var hadOneofValue = false
-        if let current = self.kind {
-          hadOneofValue = true
-          if case .nextWordUpdateLastSelectedWord(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .nextWordUpdateLastSelectedWord(v)
-        }
-      }()
       case 9: try {
         var v: Taigi_Engine_NextWordWordSelected?
         var hadOneofValue = false
@@ -2603,10 +2558,6 @@ nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf.
     case .resetCandidateContext?: try {
       guard case .resetCandidateContext(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
-    }()
-    case .nextWordUpdateLastSelectedWord?: try {
-      guard case .nextWordUpdateLastSelectedWord(let v)? = self.kind else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     }()
     case .nextWordWordSelected?: try {
       guard case .nextWordWordSelected(let v)? = self.kind else { preconditionFailure() }
@@ -2768,41 +2719,6 @@ nonisolated extension Taigi_Engine_ResetCandidateContext: SwiftProtobuf.Message,
   }
 
   public static func ==(lhs: Taigi_Engine_ResetCandidateContext, rhs: Taigi_Engine_ResetCandidateContext) -> Bool {
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_NextWordUpdateLastSelectedWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".NextWordUpdateLastSelectedWord"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.text.isEmpty {
-      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
-    }
-    if !self.roman.isEmpty {
-      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_NextWordUpdateLastSelectedWord, rhs: Taigi_Engine_NextWordUpdateLastSelectedWord) -> Bool {
-    if lhs.text != rhs.text {return false}
-    if lhs.roman != rhs.roman {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

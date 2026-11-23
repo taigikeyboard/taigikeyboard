@@ -646,7 +646,7 @@ public extension RustEngineBridge {
                 return .nextWordDecided(synthDecideResult(decided))
             // Composing-to-engine handshakes: the engine applies or drops them
             // before answering, so one here is an engine bug.
-            case .nextWordUpdateLastSelectedWord, .nextWordWordSelected, .nextWordClearForNewComposing:
+            case .nextWordWordSelected, .nextWordClearForNewComposing:
                 LoggerFactory.make(category: "RustEngineBridge")
                     .error("composing answer carried an unapplied next-word handshake")
                 return nil

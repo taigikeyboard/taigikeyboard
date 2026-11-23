@@ -64,18 +64,6 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
                 .ok_or(NextWordError::MissingDecisionInput)?;
             DecodedRequest::Decide(Intent::ResetAll { now_ms })
         }
-        Method::UpdateLastSelectedWord(m) => {
-            let now_ms = m
-                .input
-                .as_ref()
-                .map(|i| i.now_ms)
-                .ok_or(NextWordError::MissingDecisionInput)?;
-            DecodedRequest::Decide(Intent::UpdateLastSelectedWord {
-                text: m.text,
-                roman: m.roman,
-                now_ms,
-            })
-        }
         Method::SetPredictionsVisible(m) => {
             DecodedRequest::Decide(Intent::SetPredictionsVisible { visible: m.visible })
         }

@@ -561,7 +561,6 @@ pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
             Kind::ClearCandidates(_) => "ClearCandidates",
             Kind::RefreshCandidates(_) => "RefreshCandidates",
             Kind::ResetCandidateContext(_) => "ResetCandidateContext",
-            Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
             Kind::NextWordWordSelected(_) => "NextWordWordSelected",
             Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
             Kind::NextWordDecided(_) => "NextWordDecided",

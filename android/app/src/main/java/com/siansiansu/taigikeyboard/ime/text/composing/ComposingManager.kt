@@ -370,8 +370,8 @@ class ComposingManager(
      * The engine resolves the document text, counts the pick (R5), and
      * answers what the pick did — the outcome callers gate the auto space and
      * the strip refresh on. **Model B** (§10): mid-commit (nail) emits
-     * `[UpdatePreedit(whole composition), NextWordDecided (the nail),
-     * RefreshCandidates]` and stays Continuous; final-commit
+     * `[UpdatePreedit(whole composition), RefreshCandidates]` and stays
+     * Continuous; final-commit
      * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit
      * (whole composition), ClearCandidates, ResetCandidateContext,
      * NextWordDecided]` and exits Continuous; a stale generation or a
