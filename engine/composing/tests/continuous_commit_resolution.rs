@@ -516,6 +516,28 @@ fn typed_neutral_run_after_hanji_survives_only_before_roman_pick() {
 }
 
 #[test]
+fn an_untyped_neutral_tone_pick_attaches_to_the_romanization_before_it() {
+    // trace: `hoah` = hó (2 bytes) + the dictionary's hanji-less `--ah`
+    // (2 bytes, no `-` typed). The piece carries its own `--`, so the
+    // commit writes no word space in front of it.
+    let config = config_tl();
+    let handle = continuous("hoah", 1, &config);
+    send(
+        &handle,
+        1,
+        pick(CommitScript::Lead, "hó", Some("好"), "hó", 2),
+        &config,
+    );
+    let result = send(
+        &handle,
+        1,
+        pick(CommitScript::Lead, "--ah", None, "--ah", 2),
+        &config,
+    );
+    assert_eq!(commit_text(&result.response).as_deref(), Some("hó--ah"));
+}
+
+#[test]
 fn a_one_syllable_reading_of_the_same_buffer_is_no_abbreviation_pick() {
     // trace: `si` read as 是 `sī` — one syllable, never an abbreviation.
     let config = config_tl();

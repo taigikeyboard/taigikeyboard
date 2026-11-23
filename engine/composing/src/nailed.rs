@@ -224,9 +224,10 @@ fn push_inter_segment_boundary(
 
 /// The boundary in front of `next` (§51). A rendering that opens with
 /// `-` / `·` (or, under TPS, `˙`) is a dictionary khinsiann piece or a §34
-/// literal carrying its own separator, so a typed run adds nothing to it — except the Space
-/// joiner in front of a rendered `·`, which separates syllables, not marks
-/// the neutral tone (`hōo ·guá`).
+/// literal carrying its own separator, typed or not (`hoah` → hó + `--ah` →
+/// `hó--ah`), so neither the default boundary nor a typed run adds to it —
+/// except the Space joiner in front of a rendered `·`, which separates
+/// syllables, not marks the neutral tone (`hōo ·guá`).
 fn push_boundary(
     s: &mut String,
     next: &NailedSegment,
@@ -235,12 +236,13 @@ fn push_boundary(
     syllable_joiner: Option<&str>,
 ) {
     let run = typed_separator_run(&next.raw_text);
-    if run.is_empty() {
-        s.push_str(default);
-        return;
-    }
     let rendered = text.of(next);
     if rendered.starts_with('-') {
+        return;
+    }
+    let opens_with_dot = phonetics::api::opens_with_neutral_mark(rendered);
+    if run.is_empty() && !opens_with_dot {
+        s.push_str(default);
         return;
     }
     // `syllable_joiner`: `None` = the Hyphen setting (write the run as typed);
@@ -249,7 +251,6 @@ fn push_boundary(
     // neutral-tone dot, so it takes the joiner alone — the half of
     // `phonetics::api::syllable_joiner_display`'s rule that a piece rendered
     // on its own cannot see.
-    let opens_with_dot = phonetics::api::opens_with_neutral_mark(rendered);
     match syllable_joiner {
         None if opens_with_dot => {}
         None => s.push_str(run),
@@ -1129,6 +1130,27 @@ mod tests {
     }
 
     #[test]
+    fn an_untyped_khinsiann_piece_attaches_to_the_romanization_before_it() {
+        // `hoah` → hó + the dictionary's `--ah`: no `-` was typed, yet the
+        // piece carries its own separator, so no word space goes in front
+        // of it — under every joiner, and in the learned reading too.
+        let render = |display: &str, text, joiner| {
+            let n = [seg_dc("hó", "hó", 1), seg_raw(display, "--ah", "ah")];
+            nailed_prefix_with_oracle(&n, text, false, joiner, |_, _, _| false)
+        };
+        assert_eq!(render("--ah", SegmentText::Display, None), "hó--ah");
+        assert_eq!(render("·ah", SegmentText::Display, Some(" ")), "hó ·ah");
+        assert_eq!(render("·ah", SegmentText::Display, Some("")), "hó·ah");
+        assert_eq!(render("--ah", SegmentText::AssociationTl, None), "hó--ah");
+        // Control: an ordinary romanized word still takes the word space.
+        let n = [seg_dc("hó", "hó", 1), seg_raw("ah", "ah", "ah")];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, SegmentText::Display, false, None, |_, _, _| false),
+            "hó ah"
+        );
+    }
+
+    #[test]
     fn typed_run_is_not_doubled_when_the_segment_already_carries_it() {
         // A dictionary khinsiann piece, a §34 literal, and their None-mode
         // `·` forms open with their own separator.
@@ -1148,14 +1170,15 @@ mod tests {
                 && h == "轉來"),
             "tńg--lâi"
         );
-        // No run typed: a self-separated segment keeps today's boundary.
+        // No run typed: a self-separated segment still carries its own
+        // boundary, so no word space goes in front of it.
         let n = [
             seg_dc("kì", "記", 1),
             seg_raw("--khí-lâi", "起來", "khilai"),
         ];
         assert_eq!(
             nailed_prefix_with_oracle(&n, SegmentText::Display, false, None, |_, _, _| false),
-            "kì --khí-lâi"
+            "kì--khí-lâi"
         );
         // A continuation segment (`tai-`) already ends the boundary.
         let n = [seg_dc("tai-", "台", 1), seg_raw("uan", "灣", "-uan")];
