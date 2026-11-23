@@ -56,8 +56,7 @@ enum class LetterCase(
 // region Per-char helper
 
 /**
- * Replaces `ToneUtilities.uppercaseToneLetter` / `fullUppercaseToneLetter` / `lowercaseToneLetter`.
- * Cases `input` via the mode's tone table per `kind` (proto `ToneCaseKind`): `UPPERCASE_FIRST`
+ * Cases `input` per `kind` (proto `ToneCaseKind`, same in every mode): `UPPERCASE_FIRST`
  * uppercases only the first character, `UPPERCASE_ALL` the whole string (CapsLock path),
  * `LOWERCASE` lowercases, including the ᴺ→ⁿ nasal-marker shortcut.
  */
