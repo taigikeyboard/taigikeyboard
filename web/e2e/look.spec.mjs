@@ -331,11 +331,40 @@ test("the editor takes the window's room left over", async ({ page }) => {
 test("the footer links to the website's sponsor section", async ({ page }) => {
   await open(page);
   const footer = page.locator("footer p");
-  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持 ❤️");
+  await expect(footer).toHaveText("© 2026 Bîn-hiân · 贊助支持");
   await expect(footer.getByRole("link")).toHaveAttribute(
     "href",
     "https://taigikeyboard.tw/#sponsor",
   );
+});
+
+test.describe("in Taipei", () => {
+  test.use({ locale: "en-US", timezoneId: "Asia/Taipei" });
+
+  test("the footer names the staged commit and time in the browser's zone", async ({
+    page,
+  }) => {
+    await open(page);
+    const commit = page.locator("#build-commit");
+    await expect(commit).toHaveText(/^[0-9a-f]{7,}$/);
+    const short = await commit.textContent();
+    await expect(commit).toHaveAttribute(
+      "href",
+      new RegExp(
+        `^https://github\\.com/taigikeyboard/taigikeyboard/commit/${short}[0-9a-f]*$`,
+      ),
+    );
+    const time = page.locator("#build-time");
+    await expect(time).toHaveAttribute(
+      "datetime",
+      /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/,
+    );
+    // trace: en-US, hourCycle h23, timeZoneName "short" in Asia/Taipei →
+    // "11/23/2026, 19:20 GMT+8": no AM/PM, hour 00–23.
+    await expect(time).toHaveText(
+      /^\d\d\/\d\d\/\d{4},\s([01]\d|2[0-3]):\d\d\sGMT\+8$/,
+    );
+  });
 });
 
 test("the footer rests at the sidebar's foot, then below its sections", async ({

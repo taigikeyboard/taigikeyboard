@@ -4,7 +4,7 @@
 > **Keywords**: `web`, `GitHub Pages`, `Cloudflare`, `deploy`
 > **Status**: Active. Plan and decisions: `web-roadmap.md`.
 
-The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigikeyboard/web` repository, which holds only the workflow below and no built files. The web version has no version number: it is a beta that follows `main`, and the build hash in `assets-manifest.json` is its identity.
+The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigikeyboard/web` repository, which holds only the workflow below and no built files. The web version has no version number: it is a beta that follows `main`, and the build hash in `assets-manifest.json` is its identity. The sidebar footer names the commit the site was staged from and when; the deploy stages right before it publishes, so that time stands for the deploy's.
 
 ## Deploy
 

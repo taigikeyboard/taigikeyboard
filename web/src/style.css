@@ -1108,9 +1108,15 @@ footer a:hover {
   text-decoration: none;
 }
 
-footer p {
+footer p,
+.build-info {
   margin: 0.25rem 0 0;
   text-align: center;
+}
+
+.build-info {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* The official site's Issues icons, in the footer's quiet colour. */

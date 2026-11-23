@@ -1,9 +1,11 @@
 // The last step of `make site`: compresses the dictionaries into the staged site
-// under content-hashed names, lists them for the page, writes the service
+// under content-hashed names, lists them for the page, names the commit and the
+// staging time for the sidebar's footer, writes the service
 // worker's `assets-manifest.json`, and stamps `sw.js` with the build, because a
 // browser looks for a new version by comparing the bytes of that one file.
 //   node scripts/stage-assets.mjs <site> <dictionaries>
 
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
@@ -81,6 +83,23 @@ const dictionaries = readdirSync(dictionarySources).sort().map(stageDictionary);
 writeFileSync(
   join(site, "generated/dictionaries.js"),
   `export const DICTIONARIES = ${JSON.stringify(dictionaries)};\n`,
+);
+
+// The commit and the moment it was staged, for the sidebar's footer. The deploy
+// stages right before it publishes, so the time stands for the deploy's.
+// `%h` keeps git's own abbreviation length, as the repository's logs show it.
+const [commit, short] = execFileSync("git", ["log", "-1", "--format=%H %h"], {
+  encoding: "utf8",
+})
+  .trim()
+  .split(" ");
+writeFileSync(
+  join(site, "generated/build.js"),
+  `export const STAGED = ${JSON.stringify({
+    commit,
+    short,
+    time: new Date().toISOString(),
+  })};\n`,
 );
 
 const staged = stagedFiles()

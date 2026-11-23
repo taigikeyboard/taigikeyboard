@@ -14,7 +14,7 @@ import { hostPlatform } from "./platform.js";
 import { wireSave } from "./save.js";
 import { Settings } from "./settings.js";
 import { drawShortcuts } from "./shortcuts.js";
-import { Sidebar } from "./sidebar.js";
+import { drawBuild, Sidebar } from "./sidebar.js";
 import { Surface } from "./surface.js";
 import { TelexGuide } from "./telex_guide.js";
 import { TpsKeyboard } from "./tps_keyboard.js";
@@ -93,6 +93,7 @@ const sidebar = new Sidebar(
   requireElement("sidebar-toggle"),
   requireElement("sidebar"),
 );
+drawBuild(requireElement("build-commit"), requireElement("build-time"));
 const settings = new Settings(
   /** @type {HTMLFormElement} */ (requireElement("settings")),
   changeSettings,
