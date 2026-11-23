@@ -4,7 +4,6 @@
 //! Consumed by `lexicon::continuous` and `composing` (the Continuous
 //! `FetchAtPos` path, the only production ranking path).
 
-// ---------------------------------------------------------------------------
 // v3.5.8 Phase 9.1 — Continuous-input source rank table.
 //
 // Lower rank = higher priority in the lexicographic continuous sort_key
@@ -15,7 +14,6 @@
 // kungge). Drift between this table and
 // `dictionary/common/source_bits.py` bit positions is a
 // cross-platform invariant violation.
-// ---------------------------------------------------------------------------
 
 const CONTINUOUS_SOURCE_BITS: &[(u16, u8)] = &[
     (1 << 0, 1), // kautian
@@ -114,7 +112,7 @@ impl FrequencyData {
 }
 
 /// Per-candidate user-frequency map keyed by the
-/// `(display_text, canonical_tl)` PAIR identity (Core Principle #7;
+/// `(display_text, canonical_tl)` PAIR identity (Core Principle #6;
 /// v3.6.1 R5). `display_text` = `hanji` if non-empty else `roman` (same
 /// key the platform writes to `user_frequency.db` on commit and the
 /// Continuous-input [`RawCandidate::display_text`] carries);
@@ -346,10 +344,6 @@ mod tests {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // v3.5.8 Phase 5 — calculate_continuous_score
-    // -----------------------------------------------------------------------
-
     #[test]
     fn continuous_score_single_syllable_baseline() {
         // syll=1 → bias = 1.0; user_freq_boost = 1.0 → score == freq.
@@ -389,10 +383,6 @@ mod tests {
         assert!(quad > pair);
     }
 
-    // -----------------------------------------------------------------------
-    // v3.5.8 Phase 9.1 — source_tier_rank
-    // -----------------------------------------------------------------------
-
     #[test]
     fn source_tier_rank_is_custom_short_circuits() {
         // `is_custom=true` overrides any bitmask content with rank 0.
@@ -412,10 +402,6 @@ mod tests {
         // Kautian + kungge → kautian (entry-order first match).
         assert_eq!(source_tier_rank(KAUTIAN_BIT | KUNGGE_BIT, false), 1);
     }
-
-    // -----------------------------------------------------------------------
-    // v3.5.8 Phase 9.3a — user_freq_boost
-    // -----------------------------------------------------------------------
 
     #[test]
     fn user_freq_boost_count_zero_returns_one() {
@@ -459,7 +445,7 @@ mod tests {
     // INVARIANT_USER_FREQ_PAIR_KEY (behavioral-invariants.md §28)
     #[test]
     fn frequency_map_pair_key_separates_homograph_readings() {
-        // R5 / Core Principle #7: polyphonic character — same hanji 重, two readings
+        // R5 / Core Principle #6: polyphonic character — same hanji 重, two readings
         // tîng (重複) vs tāng (重量) — keep SEPARATE buckets. The
         // pre-R5 hanji-only key merged them.
         let mut map = FrequencyMap::new();
@@ -511,10 +497,6 @@ mod tests {
             CONTINUOUS_DEFAULT_SOURCE_RANK
         );
     }
-
-    // -----------------------------------------------------------------------
-    // v3.5.8 S3 — decayed_user_weight_delta (Gap B → G2)
-    // -----------------------------------------------------------------------
 
     #[test]
     fn decayed_delta_zero_when_never_selected_or_count_zero() {

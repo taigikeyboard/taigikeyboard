@@ -197,7 +197,7 @@ public  final class CommitContinuous extends
    * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
    * populated for hanji-present candidates too, NOT only hanji-absent.
    * </pre>
    *
@@ -221,7 +221,7 @@ public  final class CommitContinuous extends
    * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
    * populated for hanji-present candidates too, NOT only hanji-absent.
    * </pre>
    *
@@ -246,7 +246,7 @@ public  final class CommitContinuous extends
    * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
    * populated for hanji-present candidates too, NOT only hanji-absent.
    * </pre>
    *
@@ -272,7 +272,7 @@ public  final class CommitContinuous extends
    * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
    * populated for hanji-present candidates too, NOT only hanji-absent.
    * </pre>
    *
@@ -295,7 +295,7 @@ public  final class CommitContinuous extends
    * methods, TPS-OOV hanji-absent candidates with no dict
    * TL) decodes as "" → engine falls back to the raw committed slice
    * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-   * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+   * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
    * populated for hanji-present candidates too, NOT only hanji-absent.
    * </pre>
    *
@@ -884,7 +884,7 @@ public  final class CommitContinuous extends
      * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
      * populated for hanji-present candidates too, NOT only hanji-absent.
      * </pre>
      *
@@ -908,7 +908,7 @@ public  final class CommitContinuous extends
      * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
      * populated for hanji-present candidates too, NOT only hanji-absent.
      * </pre>
      *
@@ -933,7 +933,7 @@ public  final class CommitContinuous extends
      * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
      * populated for hanji-present candidates too, NOT only hanji-absent.
      * </pre>
      *
@@ -960,7 +960,7 @@ public  final class CommitContinuous extends
      * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
      * populated for hanji-present candidates too, NOT only hanji-absent.
      * </pre>
      *
@@ -985,7 +985,7 @@ public  final class CommitContinuous extends
      * methods, TPS-OOV hanji-absent candidates with no dict
      * TL) decodes as "" → engine falls back to the raw committed slice
      * (`pending[..consumed_bytes]`), preserving pre-R2 behavior. Identity
-     * is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
+     * is the `(hanji, canonical-TL)` pair (Core Principle #6), so this is
      * populated for hanji-present candidates too, NOT only hanji-absent.
      * </pre>
      *

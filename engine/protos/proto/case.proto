@@ -13,23 +13,14 @@ option java_multiple_files = true;
 // every input mode; the POJ nasal marker pairs `ⁿ` ↔ `ᴺ`. Of the
 // `AppConfig` envelope only `force_lowercase_nasal_marker` is read.
 
-// =========================================================================
-// Shared enum
-// =========================================================================
-
-// Three-state shift / case indicator used by the engine layer.
-// Mirrors iOS `LetterCase` enum + Android (`caps` + `capsLock` boolean
-// pair adapted at the bridge call site).
+// Three-state shift / case indicator. Android adapts its `caps` + `capsLock`
+// pair at the bridge (`CaseTransformBridge`).
 enum LetterCase {
   LETTER_CASE_UNSPECIFIED = 0;
   LETTER_CASE_LOWERCASED  = 1;
   LETTER_CASE_UPPERCASED  = 2;  // one-shot shift — first letter upper, rest lower
   LETTER_CASE_CAPS_LOCKED = 3;  // every letter upper
 }
-
-// =========================================================================
-// Request envelope
-// =========================================================================
 
 message CaseRequest {
   // Tag 21 was `capitalize_candidate` (no production caller; removed
@@ -57,10 +48,6 @@ message CaseRequest {
   }
 }
 
-// =========================================================================
-// Per-char request payload
-// =========================================================================
-
 // Which per-char op `ToneCase` applies. Not `LetterCase`: `UPPERCASE_FIRST`
 // leaves the rest of `input` as it is, where `LETTER_CASE_UPPERCASED`
 // (`TransformInputCase`) lowercases it.
@@ -80,10 +67,6 @@ message ToneCase {
   ToneCaseKind kind  = 2;
 }
 
-// =========================================================================
-// Per-string compound request payloads
-// =========================================================================
-
 // `TransformInputCase` applies the LetterCase to a keystroke `text`:
 // - LOWERCASED: lowercase per `TONE_CASE_KIND_LOWERCASE`
 // - UPPERCASED: first letter upper (`TONE_CASE_KIND_UPPERCASE_FIRST`), rest lower
@@ -92,10 +75,6 @@ message TransformInputCase {
   string     text        = 1;
   LetterCase letter_case = 2;
 }
-
-// =========================================================================
-// Response envelope
-// =========================================================================
 
 message CaseResponse {
   oneof result {

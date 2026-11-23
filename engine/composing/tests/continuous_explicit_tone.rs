@@ -248,7 +248,6 @@ fn closed_tone8_syllable_does_not_trail_its_shorter_prefix_family() {
     );
 }
 
-// ----- B2 (§17 TPS) — explicit-tone filtering for TPS Bopomofo input -----
 //
 // TPS tones are Bopomofo diacritic scalars, not ASCII digits, so #367 left
 // TPS on the unconditional toneless strip — every tone of a syllable surfaced

@@ -207,10 +207,6 @@ fn find<'a>(
         })
 }
 
-// ---------------------------------------------------------------------------
-// Case 1 — `tsua` (roadmap §Phase 5 line 339)
-// ---------------------------------------------------------------------------
-
 #[test]
 fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     // Three rowids:
@@ -294,10 +290,6 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     );
 }
 
-// ---------------------------------------------------------------------------
-// Case 2 — `taigikhipuann` (roadmap §Phase 5 line 340)
-// ---------------------------------------------------------------------------
-
 #[test]
 fn taigikhipuann_surfaces_long_reach_4_syllable_word() {
     // Endings simulate the syllabifier reaching:
@@ -355,10 +347,6 @@ fn taigikhipuann_surfaces_long_reach_4_syllable_word() {
     assert!((quad.score - 6.5).abs() < 1e-4);
 }
 
-// ---------------------------------------------------------------------------
-// Case 3 — `taixyz` (roadmap §Phase 5 line 341)
-// ---------------------------------------------------------------------------
-
 #[test]
 fn taixyz_emits_only_single_syllable_when_endings_capped() {
     // Syllabifier stops after `tai` because `xyz` has no valid TL initial
@@ -410,10 +398,6 @@ fn taixyz_emits_only_single_syllable_when_endings_capped() {
         "decoy entry leaked into result: {out:#?}"
     );
 }
-
-// ---------------------------------------------------------------------------
-// Defensive guards
-// ---------------------------------------------------------------------------
 
 #[test]
 fn empty_endings_yields_empty() {
@@ -597,7 +581,6 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
 // new contract is covered end-to-end in
 // `engine/lexicon/tests/user_freq_plumb.rs`.
 
-// ---------------------------------------------------------------------------
 // v3.5.8 Phase 9.1 — Regression matrix (`taiuantaigi` / `e` / `taixyz`)
 // pinned by `docs/releases/v3.5.8/plan.md` § Phase 9 — 回歸守護矩陣.
 //
@@ -606,7 +589,6 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
 // ranking.md` §3.1): single-char freq orders of magnitude above
 // multi-syllable phrases. The CandidateSortKey must surface the full-buffer
 // phrase in slot #1 regardless of that disparity.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
@@ -960,9 +942,6 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
     assert_eq!(mixed[0].hanji.as_deref(), Some("iáu是"));
 }
 
-// ---------------------------------------------------------------------------
-// v3.5.8 Phase 9 Item 10 — partial-prefix engine path
-// ---------------------------------------------------------------------------
 //
 // Pins `docs/engine/continuous-candidate-display.md` §15.3.D + §15.5
 // behaviour: when the syllabifier returns no valid ending, the engine
@@ -1533,12 +1512,10 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
     assert_eq!(out[0].coverage_kind, COVERAGE_KIND_FULL);
 }
 
-// ---------------------------------------------------------------------------
 // v3.5.8 Phase 9 Item 12 — custom_dictionary.db merge + (roman, hanji)
 // dedupe end-to-end through `fetch_candidates_for_keys_with_barriers`. Spec
 // `docs/engine/continuous-commit-and-display.md` §10.10 +
 // `docs/engine/continuous-candidate-display.md` §15.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn item12_custom_only_entry_surfaces_full_buffer() {
@@ -1729,8 +1706,6 @@ fn item12_empty_custom_is_noop() {
     assert!(!out[0].is_custom);
     assert_eq!(out[0].display_text, "台語");
 }
-
-// ----- v3.5.8 S2 — best_candidate_for_key_with_barriers (whole-sentence walker seam) -----
 
 #[test]
 fn best_candidate_for_key_returns_highest_score_on_collision() {
@@ -2336,14 +2311,12 @@ fn best_candidate_for_key_none_when_key_absent() {
     );
 }
 
-// ---------------------------------------------------------------------------
 // v3.5.8 RC1 — `tl_abbrev` acronym collision must not surface in
 // continuous span-local / walker fetch. Motivating bug: typing
 // `ginalangtsiahpngbesai` surfaced 外夷 (`guā-î`) because its
 // `tl_abbrev == "gi"` shares the `tl:gi` FST key with 語 (`gí`,
 // real toneless "gi"). Normal-mode `lexicon::search` keeps acronym
 // matching; continuous must not.
-// ---------------------------------------------------------------------------
 
 #[test]
 fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {

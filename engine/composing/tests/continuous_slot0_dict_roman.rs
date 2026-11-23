@@ -22,7 +22,7 @@
 //! 予/hōo + 我/guá make the walker's min-cost path the 予+我 SPLIT (synth
 //! hanji 予我, synth roman `hōo guá`), exactly as production does. 戶外's
 //! tone-7 `guā` differs from the synth's tone-2 `guá`, so it must NOT be
-//! promoted (Core Principle #7 word identity).
+//! promoted (Core Principle #6 word identity).
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 

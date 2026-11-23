@@ -118,7 +118,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
 
   public var method: Taigi_Engine_NextWordRequest.OneOf_Method? = nil
 
-  /// --- State-mutating intents (10s) — return DecideResult ---
   public var wordSelected: Taigi_Engine_WordSelected {
     get {
       if case .wordSelected(let v)? = method {return v}
@@ -176,7 +175,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .setPredictionsVisible(newValue)}
   }
 
-  /// --- Pure post-query helpers (20s) ---
   /// Pure post-query filter+merge+sort+limit — return FilterResult
   /// (handles stale-gen drop).
   public var filterPredictions: Taigi_Engine_FilterPredictions {
@@ -201,7 +199,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Method: Equatable, Sendable {
-    /// --- State-mutating intents (10s) — return DecideResult ---
     case wordSelected(Taigi_Engine_WordSelected)
     case backspace(Taigi_Engine_Backspace)
     case contextTimeoutFired(Taigi_Engine_ContextTimeoutFired)
@@ -217,7 +214,6 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     /// result already won the race; later intents will bump as usual).
     /// Returns DecideResult with empty effects + snapshot of state.
     case setPredictionsVisible(Taigi_Engine_SetPredictionsVisible)
-    /// --- Pure post-query helpers (20s) ---
     /// Pure post-query filter+merge+sort+limit — return FilterResult
     /// (handles stale-gen drop).
     case filterPredictions(Taigi_Engine_FilterPredictions)

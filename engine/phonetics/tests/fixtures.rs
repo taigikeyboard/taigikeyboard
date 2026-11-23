@@ -9,7 +9,6 @@
 
 use phonetics::{normalize_to_tl, strip_tone_mark, to_poj, to_tl};
 
-// MARK: - strip_tone_mark — covers all 7 tones + no-mark + trailing digit.
 // SOURCE: phonetics.test.js and the former iOS / Android phonetics tests — identical cases across all three.
 
 #[test]
@@ -35,7 +34,7 @@ fn strip_tone_mark_splits_every_tone_mark_and_digit() {
     }
 }
 
-// MARK: - normalize_to_tl. SOURCE: former iOS phonetics tests (`testNormalizeToTL_cases`).
+// normalize_to_tl. SOURCE: former iOS phonetics tests (`testNormalizeToTL_cases`).
 
 #[test]
 fn normalize_to_tl_cases() {
@@ -64,7 +63,7 @@ fn normalize_to_tl_cases() {
 // `engine/phonetics/src/syllable.rs` `#[cfg(test)] mod tests` (these are
 // `pub(crate)` helpers; integration tests can't reach them).
 
-// MARK: - to_tl. SOURCE: tl.test.js + former iOS phonetics tests (`testToTL_*`).
+// to_tl. SOURCE: tl.test.js + former iOS phonetics tests (`testToTL_*`).
 
 #[test]
 fn to_tl_all_tones() {
@@ -122,7 +121,7 @@ fn to_tl_complex_iang() {
     assert_eq!(to_tl("k", "iang", "5"), "ki\u{00e2}ng");
 }
 
-// MARK: - to_poj. SOURCE: poj.test.js + former iOS phonetics tests (`testToPOJ_*`).
+// to_poj. SOURCE: poj.test.js + former iOS phonetics tests (`testToPOJ_*`).
 
 #[test]
 fn to_poj_initial_conversion() {
@@ -170,7 +169,7 @@ fn to_poj_non_ts_initial_unchanged() {
     assert_eq!(to_poj("h", "a", "2"), "h\u{00e1}");
 }
 
-// MARK: - `au` coda regression — user report 2026-08-28 (落 rendered `lau̍h`).
+// `au` coda regression — user report 2026-08-28 (落 rendered `lau̍h`).
 // The closed-syllable "mark the second vowel" rule is a POJ orthographic
 // exception owned by `oa` / `oe` alone; `au` keeps its `a` nucleus before a
 // coda. Canonical: taigi-converter `tests/poj.test.js` "auh keeps mark on a".
@@ -207,7 +206,6 @@ fn to_poj_ui_keeps_mark_on_u() {
     assert_eq!(to_poj("ts", "ui", "2"), "ch\u{00fa}i");
 }
 
-// MARK: - dialectal `ere` / `iri` trailing-vowel placement.
 // Canonical taigi-converter `d990cb9`; MOE manual rule (5)4(6) "ere marks the
 // latter e, e.g. erê" — mirrored on the TL side by `place_tl_tone_mark`.
 
@@ -223,7 +221,7 @@ fn to_poj_iri_marks_trailing_vowel() {
     assert_eq!(to_poj("p", "irinn", "5"), "pir\u{00ee}\u{207f}");
 }
 
-// MARK: - P2 regression — Codex PR #183 discussion r3143646949.
+// P2 regression — Codex PR #183 discussion r3143646949.
 // place_poj_tone_mark suffix lookahead must decode the next Unicode scalar,
 // not cast a single byte. Previously, finals like the POJ form of TL `uannh`
 // (which is `oa\u{207f}h`) hit the multi-byte ⁿ at byte position 2 and the

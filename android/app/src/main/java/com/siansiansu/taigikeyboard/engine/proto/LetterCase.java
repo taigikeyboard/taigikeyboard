@@ -7,9 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Three-state shift / case indicator used by the engine layer.
- * Mirrors iOS `LetterCase` enum + Android (`caps` + `capsLock` boolean
- * pair adapted at the bridge call site).
+ * Three-state shift / case indicator. Android adapts its `caps` + `capsLock`
+ * pair at the bridge (`CaseTransformBridge`).
  * </pre>
  *
  * Protobuf enum {@code taigi.engine.LetterCase}

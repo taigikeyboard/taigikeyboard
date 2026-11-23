@@ -149,8 +149,6 @@ fn idle_phase_raw_input_is_empty() {
     assert_eq!(engine.snapshot_state().phase.raw_input(&config_tl()), "");
 }
 
-// ---- Item-3 safety blockers (Codex post-impl review 2026-05-13) ----------
-
 /// Append after mid-commit: Item 3's Enter must commit the *new* pending tail
 /// (`raw` after the second keystroke), not anything cached from the pre-commit
 /// raw or the segment that was already nailed. If `Phase::raw_input` ever drifts

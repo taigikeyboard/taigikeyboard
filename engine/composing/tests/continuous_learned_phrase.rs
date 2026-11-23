@@ -40,8 +40,6 @@ use crate::common::{
 use lexicon::{CustomEntry, LearnedEntry};
 use test_support::{engine_install_lock, write_temp};
 
-// ---- Learning ---------------------------------------------------------------
-
 /// One `CommitContinuous`: `(hanji, canonical_tl, consumed_bytes, syllable_count)`.
 type Pick<'a> = (Option<&'a str>, &'a str, usize, u8);
 
@@ -569,8 +567,6 @@ fn a_compound_needs_the_reading_the_user_picked() {
         (phrase("查某", "tsa-bóo"), Some("tsa-bóo".into()))
     );
 }
-
-// ---- Recall -----------------------------------------------------------------
 
 fn fixture_rows() -> Vec<Row> {
     vec![

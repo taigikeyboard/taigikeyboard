@@ -42,7 +42,6 @@ message NextWordRequest {
   reserved "update_last_selected_word";
 
   oneof method {
-    // --- State-mutating intents (10s) — return DecideResult ---
     WordSelected         word_selected           = 10;
     Backspace            backspace               = 11;
     ContextTimeoutFired  context_timeout_fired   = 12;
@@ -60,7 +59,6 @@ message NextWordRequest {
     // Returns DecideResult with empty effects + snapshot of state.
     SetPredictionsVisible set_predictions_visible = 16;
 
-    // --- Pure post-query helpers (20s) ---
     // Pure post-query filter+merge+sort+limit — return FilterResult
     // (handles stale-gen drop).
     FilterPredictions    filter_predictions      = 20;

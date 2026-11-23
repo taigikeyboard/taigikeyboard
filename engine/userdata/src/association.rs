@@ -21,7 +21,7 @@ const ROW_COLUMNS: &str =
 const LIST_ORDER: &str = "count DESC, last_used DESC, prev_word ASC, next_word ASC";
 
 /// One learned bigram. `previous_tl` / `next_tl` are canonical TL — the
-/// identity axis of Core Principle #7.
+/// identity axis of Core Principle #6.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AssociationPair {
     pub previous: String,

@@ -593,8 +593,6 @@ mod tests {
         assert_eq!(strip_ascii_tone_digits("tai-bak"), "tai-bak");
     }
 
-    // ----- v3.5.8 Phase 9 Item 8 — hyphen-shadow contract pins -----
-
     #[test]
     fn build_hyphen_shadow_no_hyphen_is_identity() {
         let (shadow, map) = build_hyphen_shadow("taibak");
@@ -669,8 +667,6 @@ mod tests {
         assert_eq!(map, vec![0, 1, 2, 3, 5, 6, 7]);
     }
 
-    // ----- TPS syllable-separator space strip (build_separator_shadow) -----
-
     #[test]
     fn build_separator_shadow_tps_strips_space_and_maps_to_raw() {
         // `ㄍㄠ ㄉㄞ` (kau-tai with the keyboard's tone-1 / boundary
@@ -731,8 +727,6 @@ mod tests {
         assert_eq!(map, vec![0, 3, 3, 3, 6, 6, 6, 9, 9, 9]);
         assert_eq!(map[map.len() - 1], kat.len(), "full span maps to raw len");
     }
-
-    // ----- v3.5.8 Phase 9 Item 9 — canonicalize_poj_shadow contract pins -----
 
     #[test]
     fn canonicalize_poj_shadow_pure_ascii_is_identity_fast_path() {

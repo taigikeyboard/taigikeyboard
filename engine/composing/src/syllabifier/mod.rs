@@ -24,7 +24,7 @@
 //! panic on partial UTF-8 or out-of-range `pos`; see each entry's
 //! `pos` validation contract.
 //!
-//! Direction-first alignment (AGENTS.md Core Principle #6 + Codex
+//! Direction-first alignment (AGENTS.md Core Principle #5 + Codex
 //! pre-impl 2026-05-27): TL+POJ+TPS now share one segmenter shape,
 //! matching librime DAG (`references/librime/src/rime/algo/syllabifier.cc`),
 //! khiin-rs DP over known words

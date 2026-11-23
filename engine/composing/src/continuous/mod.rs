@@ -65,10 +65,9 @@
 //! once at the head of `fetch_walker_slot0`. A2 hoists ONE `LexiconHandle::
 //! with_state` scope into [`assemble_candidates`] and calls
 //! `build_shadow_lattice_with_barriers(raw, inv, mode)` exactly once. Byte-identical
-//! under the mobile-IME lifecycle invariant — `EngineHandle::install` is
-//! reachable only from `lexicon::api::install_engine` (mobile bridge
-//! startup) plus the two test fixtures (`lexicon/tests/parity.rs`,
-//! `composing/tests/golden_fetch_at_pos.rs`), never from a composing
+//! under the IME lifecycle invariant — in production `EngineHandle::install`
+//! is reachable only from `lexicon::api::install` (the `LexiconRequest.install`
+//! op a shell sends at startup), plus test fixtures, never from a composing
 //! `FetchAtPos`. Re-grep `EngineHandle::install` reachability whenever
 //! touching this seam.
 //!

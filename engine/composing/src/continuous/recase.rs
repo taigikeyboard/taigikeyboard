@@ -102,7 +102,6 @@ mod tests {
     use lexicon::COVERAGE_KIND_FULL;
     use ranking::WALKER_COST_UNPRICED;
 
-    // ----- v3.5.8 2A — per-segment case-from-raw -----
     #[test]
     fn raw_segment_letter_case_maps_typed_intent() {
         use phonetics::case_transform::LetterCase;
@@ -120,8 +119,6 @@ mod tests {
         assert_eq!(raw_segment_letter_case("123"), LetterCase::Lowercased);
         assert_eq!(raw_segment_letter_case(""), LetterCase::Lowercased);
     }
-
-    // ----- v3.5.8 — POJ-display render of the continuous candidate roman -----
 
     #[test]
     fn recase_tl_as_poj_display_rewrites_oo_and_nn() {

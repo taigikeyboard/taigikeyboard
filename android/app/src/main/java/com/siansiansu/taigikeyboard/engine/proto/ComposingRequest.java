@@ -91,10 +91,6 @@ public  final class ComposingRequest extends
 
   public static final int START_FIELD_NUMBER = 10;
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   @java.lang.Override
@@ -102,10 +98,6 @@ public  final class ComposingRequest extends
     return methodCase_ == 10;
   }
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   @java.lang.Override
@@ -116,10 +108,6 @@ public  final class ComposingRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.Start.getDefaultInstance();
   }
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   private void setStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -128,10 +116,6 @@ public  final class ComposingRequest extends
     methodCase_ = 10;
   }
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   private void mergeStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -146,10 +130,6 @@ public  final class ComposingRequest extends
     methodCase_ = 10;
   }
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   private void clearStart() {
@@ -461,10 +441,6 @@ public  final class ComposingRequest extends
 
   public static final int FETCH_AT_POS_FIELD_NUMBER = 31;
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   @java.lang.Override
@@ -472,10 +448,6 @@ public  final class ComposingRequest extends
     return methodCase_ == 31;
   }
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   @java.lang.Override
@@ -486,10 +458,6 @@ public  final class ComposingRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.getDefaultInstance();
   }
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   private void setFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -498,10 +466,6 @@ public  final class ComposingRequest extends
     methodCase_ = 31;
   }
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   private void mergeFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -516,10 +480,6 @@ public  final class ComposingRequest extends
     methodCase_ = 31;
   }
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   private void clearFetchAtPos() {
@@ -1171,10 +1131,6 @@ public  final class ComposingRequest extends
 
 
     /**
-     * <pre>
-     * --- Text-input mutators (10s) ---
-     * </pre>
-     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     @java.lang.Override
@@ -1182,10 +1138,6 @@ public  final class ComposingRequest extends
       return instance.hasStart();
     }
     /**
-     * <pre>
-     * --- Text-input mutators (10s) ---
-     * </pre>
-     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     @java.lang.Override
@@ -1193,10 +1145,6 @@ public  final class ComposingRequest extends
       return instance.getStart();
     }
     /**
-     * <pre>
-     * --- Text-input mutators (10s) ---
-     * </pre>
-     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder setStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -1205,10 +1153,6 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- Text-input mutators (10s) ---
-     * </pre>
-     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder setStart(
@@ -1218,10 +1162,6 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- Text-input mutators (10s) ---
-     * </pre>
-     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder mergeStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -1230,10 +1170,6 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- Text-input mutators (10s) ---
-     * </pre>
-     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder clearStart() {
@@ -1531,10 +1467,6 @@ public  final class ComposingRequest extends
     }
 
     /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     @java.lang.Override
@@ -1542,10 +1474,6 @@ public  final class ComposingRequest extends
       return instance.hasFetchAtPos();
     }
     /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     @java.lang.Override
@@ -1553,10 +1481,6 @@ public  final class ComposingRequest extends
       return instance.getFetchAtPos();
     }
     /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder setFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -1565,10 +1489,6 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder setFetchAtPos(
@@ -1578,10 +1498,6 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder mergeFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -1590,10 +1506,6 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder clearFetchAtPos() {

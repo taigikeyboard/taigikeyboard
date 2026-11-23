@@ -309,8 +309,6 @@ fn move_caret(
     resp
 }
 
-// ---- Helpers ------------------------------------------------------
-
 // Pending-tail edits around the caret. `caret` is a char boundary in
 // `0..=raw.len()`; each returns the new buffer and the new caret.
 
@@ -850,8 +848,6 @@ fn exit_to_idle(state: &mut EngineState, effects: Vec<Effect>) -> ComposingRespo
 fn noop(state: &EngineState, config: &AppConfig) -> ComposingResponse {
     snapshot(state, config)
 }
-
-// ---- Continuous-phase helpers --------------------------------------
 
 /// `Intent::Start { text }` arriving while in `Phase::Continuous`. Codex
 /// post-impl finding #3: silently dropping `text` would lose user input.
@@ -1445,8 +1441,6 @@ fn append_continuous(
     let (new_pending, caret) = insert_at_caret(&pending, caret, ch);
     step_continuous(state, new_pending, caret, nailed, config, frequency)
 }
-
-// ---- Effect constructors ------------------------------------------
 
 fn update_preedit(preedit: &Preedit) -> Effect {
     Effect {

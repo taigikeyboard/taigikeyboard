@@ -8,9 +8,7 @@ use protos::engine::{
 };
 use thiserror::Error;
 
-/// Long-lived state the engine mutates. Mirrors iOS
-/// `NextWordPersistedState` / Android `NextWordPersistedState` 1:1
-/// pre-migration.
+/// Long-lived state the engine mutates.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct PersistedState {
     pub last_selected_word: Option<String>,

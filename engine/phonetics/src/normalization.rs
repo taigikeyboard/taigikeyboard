@@ -19,10 +19,6 @@ use crate::tables::COMBINING_TO_TONE_NUM;
 use crate::tps;
 use unicode_normalization::UnicodeNormalization;
 
-// ===========================================================================
-// InputNormalizer (full pipeline → trie-query key)
-// ===========================================================================
-
 /// The trie-query key normalizer (in-process; no wire op) — full pipeline:
 /// 1. TPS preprocess (if input contains TPS) via `from_zhuyin`.
 /// 2. Lowercase.
@@ -100,7 +96,7 @@ fn normalize_syllable(syllable: &str, add_default_tone: bool) -> String {
     out
 }
 
-/// Mirrors iOS `TaigiUnicode.nfdPreprocessed`: NFD-decompose, then convert
+/// NFD-decompose, then convert
 /// `ⁿ` → `nn` and `o͘` → `oo` so the trie key uses ASCII-only forms.
 fn trie_key_unicode_form(text: &str) -> String {
     let with_nasal = text.replace(['\u{207f}', '\u{1d3a}'], "nn");
@@ -110,10 +106,6 @@ fn trie_key_unicode_form(text: &str) -> String {
         .replace("o\u{0358}", "oo")
         .replace("O\u{0358}", "Oo")
 }
-
-// ===========================================================================
-// Lookup NFD preprocessing (taigi_unicode_base_form)
-// ===========================================================================
 
 /// Apply Taigi-specific Unicode preprocessing for external dictionary
 /// lookup + ranking comparison-base form:

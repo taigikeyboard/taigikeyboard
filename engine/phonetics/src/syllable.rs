@@ -583,7 +583,7 @@ fn parse_syllable(text: &str) -> Option<(String, String, String)> {
 mod tests {
     use super::*;
 
-    // MARK: - is_stop_tone. SOURCE: phonetics.test.js + iOS + Android.
+    // is_stop_tone. SOURCE: phonetics.test.js + iOS + Android.
 
     #[test]
     fn is_stop_tone_cases() {
@@ -597,7 +597,7 @@ mod tests {
         assert!(is_stop_tone("annh"));
     }
 
-    // MARK: - split_initial_final. SOURCE: the former iOS / Android phonetics
+    // split_initial_final. SOURCE: the former iOS / Android phonetics
     // tests — both add cases beyond JS.
 
     #[test]
@@ -632,7 +632,7 @@ mod tests {
         assert!(split_initial_final("xyz").is_none());
     }
 
-    // MARK: - parse_syllable. SOURCE: phonetics.test.js + iOS + Android.
+    // parse_syllable. SOURCE: phonetics.test.js + iOS + Android.
 
     #[test]
     fn parse_syllable_simple() {
@@ -685,7 +685,6 @@ mod tests {
         assert!(parse_syllable("xyz").is_none());
     }
 
-    // MARK: - canonicalize_syllable / is_valid_syllable.
     // SOURCE: dictionary.csv tl_num samples — exercises the POJ→TL
     // normalization path because real CSV rows still carry POJ-shaped
     // fragments like `chiau2`, `choa7`, `eng1`, plus non-ASCII forms
@@ -824,7 +823,7 @@ mod tests {
         // list is applied at: it fires across a syllable seam and loses real
         // keys (滷卵 `lo͘nng` → `loonng` → `lonng`; 可惡 `khooⁿ` → `khonn`).
         // The per-syllable list keeps it — `canonical_tl_form` relies on it to
-        // hold the cross-mode identity (Core Principle #7) together.
+        // hold the cross-mode identity (Core Principle #6) together.
         assert!(
             !TL_ENCODING_RULES.iter().any(|(find, _)| *find == "oonn"),
             "TL_ENCODING_RULES is applied whole-buffer and must not fold across a syllable seam",

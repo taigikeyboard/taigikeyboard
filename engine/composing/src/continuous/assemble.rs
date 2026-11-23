@@ -379,7 +379,7 @@ pub(crate) fn assemble_candidates(
             // shadow path). The unified `valid_span_endings_lowered`
             // dispatcher routes TPS through its own inventory-gated
             // scanner inside the same `build_shadow_lattice_with_barriers` /
-            // `build_lattice` call, so the walker sees a real DAG and
+            // `build_lattice_with_barriers` call, so the walker sees a real DAG and
             // can emit a slot-0 whole-sentence best path for TPS too.
             //
             // A2 D1 fold: the walker receives the pre-built
@@ -448,7 +448,7 @@ pub(crate) fn assemble_candidates(
                         //   `consumed_span` → a real whole-buffer dict word.
                         // * `roman_reading_eq` → `hōo guá` matches
                         //   `hōo--guá` (予我) but NOT `hōo-guā` (戶外,
-                        //   tone 7 ≠ tone 2) — respects Core Principle #7
+                        //   tone 7 ≠ tone 2) — respects Core Principle #6
                         //   word identity (Hanji + canonical romanization).
                         // * `!slot0_cand.is_custom` → never replace a
                         //   custom-influenced walker path with a non-custom

@@ -46,10 +46,6 @@ use crate::common::Fetch;
 use crate::common::{config, fetch_at_pos_response};
 use test_support::production_artifact;
 
-// ---------------------------------------------------------------------------
-// Production artifact + lexicon install (once per test process).
-// ---------------------------------------------------------------------------
-
 /// Install the production lexicon exactly once. Returns `false` (and the
 /// callers soft-skip) when artifacts are absent — mirrors `candidate_dump.rs`;
 /// the repo runs tests locally with artifacts present (no GitHub CI).
@@ -101,10 +97,6 @@ fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
         .filter_map(|c| c.hanji)
         .collect()
 }
-
-// ---------------------------------------------------------------------------
-// dictionary.csv — sampled parity cases.
-// ---------------------------------------------------------------------------
 
 struct Case {
     hanji: String,
@@ -181,10 +173,6 @@ fn sampled_cases() -> Vec<Case> {
     out
 }
 
-// ---------------------------------------------------------------------------
-// A — complete-syllable cross-mode Hanji-set parity (CI).
-// ---------------------------------------------------------------------------
-
 #[test]
 fn cross_mode_candidate_hanji_parity() {
     if !lexicon_ready() {
@@ -235,12 +223,10 @@ fn cross_mode_candidate_hanji_parity() {
     }
 }
 
-// ---------------------------------------------------------------------------
-// B — dev dump: print three-mode Hanji sets + MATCH/MISMATCH for given words.
+// Dev dump: print three-mode Hanji sets + MATCH/MISMATCH for given words.
 // Generates verified device-dogfood sheets + investigates reported diverges.
 //   PARITY_WORDS=我,水,樹 cargo test -p composing --test prod \
 //     -- --ignored --nocapture dump_cross_mode_parity
-// ---------------------------------------------------------------------------
 
 #[test]
 #[ignore = "dev — set PARITY_WORDS=漢,字 and run with --ignored --nocapture"]

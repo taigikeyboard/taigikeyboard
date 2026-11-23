@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn edges_accessor_returns_left_anchored_first() {
-        // `build_lattice` sorts edges so left-anchored (`start == 0`)
+        // `build_lattice_with_barriers` sorts edges so left-anchored (`start == 0`)
         // come first in ascending-`end` order — the ordering-neutral
         // flatten contract.
         let lattice = Lattice {

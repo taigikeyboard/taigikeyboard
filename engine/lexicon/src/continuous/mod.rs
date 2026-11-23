@@ -35,7 +35,7 @@
 //!   bits 0..=11 = per-source enables, `u32::MAX` = all sources on.
 //! - User-frequency input is plumbed through [`ContinuousFetchCtx`] —
 //!   `freq_map` (`FrequencyData` keyed by the `(display_text,
-//!   canonical_tl)` PAIR identity, Core Principle #7) plus `now_ms`
+//!   canonical_tl)` PAIR identity, Core Principle #6) plus `now_ms`
 //!   (platform epoch-ms). The engine derives `user_freq_boost(count)` per
 //!   candidate inside `record_to_candidate` / `custom_entry_to_candidate`
 //!   using `BOOST_ALPHA` / `MAX_BOOST` from `ranking::score`; the
@@ -170,7 +170,7 @@ pub struct RawCandidate {
     pub hanji: Option<String>,
     /// v3.6.1 R2 — canonical TL romanization, the identity sidechannel
     /// for the `(hanji, canonical-TL)` word-identity pair (Core
-    /// Principle #7). Unlike [`roman`] (the DISPLAY romanization that
+    /// Principle #6). Unlike [`roman`] (the DISPLAY romanization that
     /// `requests::handle_fetch_at_pos` recases per typed segment and
     /// rewrites TL→POJ in POJ mode), this stays the canonical TL:
     /// `DictionaryRecord.tl` for `dict.bin` hits ([`record_to_candidate`]),
@@ -329,7 +329,7 @@ pub struct ContinuousFetchCtx<'a> {
     /// `u32::MAX` = every source); tests narrow it to verify filter behaviour.
     pub enabled_sources_bitmask: u32,
     /// User-selection snapshot keyed by the `(display_text, canonical_tl)`
-    /// pair (Core Principle #7). Empty map + `now_ms = 0` is the
+    /// pair (Core Principle #6). Empty map + `now_ms = 0` is the
     /// cold-start neutral.
     pub freq_map: &'a FrequencyMap,
     /// Platform epoch-ms wall clock at fetch time.

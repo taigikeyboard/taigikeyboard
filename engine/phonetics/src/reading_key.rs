@@ -30,7 +30,7 @@ pub fn stored_roman_mode(roman: &str, mode: InputMode) -> InputMode {
 /// **Tone-INSENSITIVE** — unlike [`roman_reading_eq`] (which is
 /// separator-insensitive but tone-PRESERVING), this folds tones away so
 /// `tāng` (重量) and `tàng` both key to `tang`; the caller is responsible
-/// for keeping genuinely distinct readings (Core Principle #7) apart by
+/// for keeping genuinely distinct readings (Core Principle #6) apart by
 /// only collapsing when a single canonical target exists.
 ///
 /// **Residual** — folds ENCODING glyphs, not spelling families. The POJ
@@ -122,7 +122,7 @@ mod tests {
     }
 
     // trace: 重/tāng (重量) and 重/tàng are genuinely distinct readings
-    // (Core Principle #7) but tone-INSENSITIVE folding maps both to "tang".
+    // (Core Principle #6) but tone-INSENSITIVE folding maps both to "tang".
     // The key intentionally collides; the nextword caller must NOT collapse
     // such a bare single-syllable group (no separator → no canonical target).
     #[test]

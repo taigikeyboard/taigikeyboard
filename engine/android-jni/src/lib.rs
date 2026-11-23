@@ -27,8 +27,6 @@ const BRIDGE_CLASS: &JNIStr = jni_str!("com/siansiansu/taigikeyboard/engine/Rust
 const DISPATCH_METHOD: &JNIStr = jni_str!("dispatchLog");
 const DISPATCH_SIG: MethodSignature = jni_sig!("(ILjava/lang/String;Ljava/lang/String;)V");
 
-// MARK: - JNI exports
-
 /// `external fun processRequestBytes(bytes: ByteArray): ByteArray` declared on
 /// `com.siansiansu.taigikeyboard.engine.RustEngineBridge`.
 #[no_mangle]
@@ -191,8 +189,6 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
     matches!(outcome, Outcome::Ok(true))
 }
 
-// MARK: - Logger glue
-
 struct LoggerDispatch {
     vm: JavaVM,
     /// Global reference to the bridge class. Keeps the class alive so the
@@ -261,8 +257,6 @@ impl log::Log for PlatformLogger {
 
     fn flush(&self) {}
 }
-
-// MARK: - Error encoding helpers
 
 /// Encode `code` as a `Response`, allocate a `JByteArray`, and return the raw
 /// `jbyteArray`. Used inside `with_env` closures.

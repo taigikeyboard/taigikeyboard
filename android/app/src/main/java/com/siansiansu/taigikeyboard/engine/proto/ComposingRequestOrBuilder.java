@@ -11,19 +11,11 @@ public interface ComposingRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    * @return Whether the start field is set.
    */
   boolean hasStart();
   /**
-   * <pre>
-   * --- Text-input mutators (10s) ---
-   * </pre>
-   *
    * <code>.taigi.engine.Start start = 10;</code>
    * @return The start.
    */
@@ -96,19 +88,11 @@ public interface ComposingRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.Reset getReset();
 
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    * @return Whether the fetchAtPos field is set.
    */
   boolean hasFetchAtPos();
   /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    * @return The fetchAtPos.
    */

@@ -20,9 +20,8 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
-/// Three-state shift / case indicator used by the engine layer.
-/// Mirrors iOS `LetterCase` enum + Android (`caps` + `capsLock` boolean
-/// pair adapted at the bridge call site).
+/// Three-state shift / case indicator. Android adapts its `caps` + `capsLock`
+/// pair at the bridge (`CaseTransformBridge`).
 public nonisolated enum Taigi_Engine_LetterCase: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0

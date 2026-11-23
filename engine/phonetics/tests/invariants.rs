@@ -48,10 +48,8 @@ fn invariant_nasal_marker_variants_collapse_on_parse() {
     assert_eq!(via_superscript, via_literal_nn);
 }
 
-// =========================================================================
 // INVARIANT_ROMAN_NASAL_OO_ALIAS_IS_SYLLABLE_LOCAL
 // `docs/architecture/behavioral-invariants.md` §45
-// =========================================================================
 
 /// The alternate `o͘ⁿ` / `oonn` spelling of the nasal final may only be
 /// rewritten inside ONE syllable. Across a seam the same letters are an `oo`
@@ -97,7 +95,7 @@ fn invariant_roman_nasal_oo_alias_is_syllable_local() {
 /// (滷卵 `lo͘nng` → `loonng` → `lonng`), so `TL_ENCODING_RULES` — the list the
 /// search shadow applies to a whole buffer — must never carry it. The
 /// per-syllable list keeps it, because `canonical_tl_form` needs it to hold the
-/// cross-mode identity together (Core Principle #7).
+/// cross-mode identity together (Core Principle #6).
 #[test]
 fn invariant_roman_nasal_oo_alias_never_folds_whole_buffer() {
     assert!(

@@ -134,8 +134,6 @@ pub fn tps_toneless_edge_key(body: &str) -> CustomSearchKey {
     }
 }
 
-// ---- WRITE helpers ------------------------------------------------------
-
 fn push_latin_family(keys: &mut Vec<CustomSearchKey>, family: KeyFamily, display: &str) {
     push_key(
         keys,
@@ -189,8 +187,6 @@ fn dedup_nonempty(keys: Vec<CustomSearchKey>) -> Vec<CustomSearchKey> {
         .filter(|k| seen.insert((k.family, k.form, k.key.clone())))
         .collect()
 }
-
-// ---- Shared key shaping -------------------------------------------------
 
 /// Lowercase a latin numeric form, take its base form, and drop hyphen +
 /// space so it fuses to the stored `*:num` key shape (e.g. `guá-sī` →

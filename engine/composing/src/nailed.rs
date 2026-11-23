@@ -85,8 +85,8 @@ pub(crate) fn has_word_space_boundary(left: &str, right: &str, output_both_scrip
 /// Inter-segment boundary policy:
 /// - boundary after a hyphen-continuation segment (`tai-`, `s` ends
 ///   with `-`): emit **nothing** and skip the compound check for the
-///   segment that follows (mirrors the platform
-///   `appendAutoSpaceIfApplicable` `endsWith("-")` guard);
+///   segment that follows (the same trailing-`-` rule as the
+///   engine's `commit_text::should_append_space`);
 /// - else, find the **longest run** `[j, j+n)` (`n >= 2`) starting at
 ///   the current position such that every member is an eligible single-syllable
 ///   romanization segment AND `is_compound(Σ canonical_text, Σ association_tl, n)`
@@ -595,8 +595,8 @@ mod tests {
     #[test]
     fn trailing_hyphen_segment_suppresses_the_following_space() {
         // A hyphen-continuation segment (`tai-`) is mid-word; no space
-        // after it even between romanization segments (mirrors the platform
-        // `appendAutoSpaceIfApplicable` `endsWith("-")` rule).
+        // after it even between romanization segments (the trailing-`-` rule
+        // of `commit_text::should_append_space`).
         let n = [seg("tai-"), seg("uan")];
         assert_eq!(nailed_prefix(&n, &cfg("tl", false, false)), "tai-uan");
     }
@@ -680,7 +680,6 @@ mod tests {
         }
     }
 
-    // ---- §10.2 dictionary-compound hyphen join (longest-match) ----
     // `nailed_prefix_with_oracle` is the pure join; these pin the
     // separator policy against a hermetic compound oracle (the live
     // lexicon-backed path is locked in `engine/lexicon/tests/
@@ -964,7 +963,6 @@ mod tests {
         assert_eq!(nailed_prefix(&n, &cfg("tl", true, false)), "tsa bóo");
     }
 
-    // ---- typed separator run at a boundary (USER 2026-09-22) ----
     // The `-` run typed before a pick folds into that pick's `raw_text`;
     // the boundary in front of it renders the run, whatever the oracle
     // or the word space would have emitted.

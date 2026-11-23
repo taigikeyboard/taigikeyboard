@@ -922,7 +922,6 @@ mod tests {
         );
     }
 
-    // --- read-layer reading-variant collapse (v3.6.1 R1) ----------------
     // Pins behavioral-invariants.md §24 INVARIANT_NEXTWORD_READ_LAYER_DEDUP.
 
     // trace: continuous raw next_tl "taigi" (no separator) + normal canonical
@@ -1055,7 +1054,7 @@ mod tests {
         assert_eq!(
             result.predictions.len(),
             3,
-            "ambiguous polyphone group must not collapse (Core Principle #7)",
+            "ambiguous polyphone group must not collapse (Core Principle #6)",
         );
     }
 

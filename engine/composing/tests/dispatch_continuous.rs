@@ -99,8 +99,6 @@ fn permissive_tones_keep_preview_candidate_and_all_commits_identical() {
     }
 }
 
-// ---- Decode tests --------------------------------------------------------
-
 #[test]
 fn fetch_at_pos_right_after_the_first_keystroke_answers_candidates() {
     // R12: the first keystroke's fetch already finds a composition. Before,
@@ -330,7 +328,6 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
     }
 }
 
-// ---- Optional-presence contract for `ContinuousResponse` -----------------
 // Per `composing.proto:152-161`, only `FetchAtPos` populates the
 // `continuous` carrier — the other 3 continuous-input methods MUST keep
 // it absent so platform consumers don't accidentally re-render the
@@ -390,7 +387,6 @@ fn reset_response_omits_continuous_carrier() {
     );
 }
 
-// ---- Empty-composition precondition at the dispatch layer -----------------
 // Phase 4 transition tests cover this; mirror at dispatch boundary so a
 // future intent-decode rename can't silently relax the precondition.
 // (Codex post-impl finding.)

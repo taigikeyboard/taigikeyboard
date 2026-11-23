@@ -58,8 +58,6 @@ fn lifecycle_engine_reset_is_idempotent() {
     assert!(r2.effect.is_empty());
 }
 
-// --- Read-only intents never reset on a generation mismatch ----------------
-
 fn req_fetch_at_pos() -> ComposingRequest {
     req(Method::FetchAtPos(FetchAtPos::default()))
 }

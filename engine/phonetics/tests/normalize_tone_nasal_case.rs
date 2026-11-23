@@ -1,9 +1,9 @@
 //! `api::normalize_tone` integration tests for in-band nasal-marker case
 //! agreement: the case of the POJ nasal marker (ⁿ U+207F vs ᴺ U+1D3A)
 //! must agree with the case of the preceding letter on the way out of
-//! `normalize_tone`. The standalone `adjust_nasal_marker_case` unit
-//! tests live alongside the helper in `engine/phonetics/src/case_adjust.rs`;
-//! these tests pin the rule end-to-end through the public API.
+//! `normalize_tone`. The `adjust_nasal_marker_case` unit tests live beside
+//! the helper in `engine/phonetics/src/case_transform.rs`; these tests pin
+//! the rule end-to-end through the public API.
 
 use phonetics::api::normalize_tone;
 use protos::engine::AppConfig;
@@ -69,11 +69,9 @@ fn normalize_tone_mixed_case_per_marker_resolution() {
     );
 }
 
-// -------------------------------------------------------------------------
 // Typed case survives tone placement letter by letter (Discord report
 // 2026-09-14: Caps Lock `SIANN5` showed `Siâⁿ`). Permissive placement
 // preserves each typed letter's case while adding its combining tone mark.
-// -------------------------------------------------------------------------
 
 #[test]
 fn normalize_tone_poj_keeps_every_typed_capital() {
@@ -152,10 +150,8 @@ fn normalize_tone_tl_keeps_every_typed_capital() {
     }
 }
 
-// -------------------------------------------------------------------------
 // ⁿ becomes ᴺ in capitals OFF (`AppConfig.force_lowercase_nasal_marker`, USER 2026-09-22, §53):
 // the marker is always `ⁿ`, whatever the case of the letters before it.
-// -------------------------------------------------------------------------
 
 fn poj_doubletap_lowercase_nasal() -> AppConfig {
     AppConfig {

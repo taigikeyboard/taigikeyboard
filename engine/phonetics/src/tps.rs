@@ -9,10 +9,8 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
 
-// ---------------------------------------------------------------------------
 // Lookup tables — ported 1:1 from `taigi-converter/src/zhuyin.js`. Order is
 // significant: longer keys appear first so `tsh` matches before `t`.
-// ---------------------------------------------------------------------------
 
 pub(crate) const ZHUYIN_INITIALS: &[(&str, &str)] = &[
     ("tshi", "\u{3111}\u{3127}"),

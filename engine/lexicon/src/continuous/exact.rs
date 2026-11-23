@@ -156,7 +156,7 @@ pub(super) fn exact_candidates_for_key(
 /// # v3.5.8 Phase 9.3a — user-frequency plumb
 ///
 /// `freq_map` is the user-selection snapshot keyed by the
-/// `(display_text, canonical_tl)` pair (Core Principle #7), built once
+/// `(display_text, canonical_tl)` pair (Core Principle #6), built once
 /// per fetch from the engine's `user_frequency.db` rows
 /// (`composing::UserRows.frequency`). `now_ms` is the platform's
 /// epoch-ms wall clock at fetch time. `record_to_candidate` looks

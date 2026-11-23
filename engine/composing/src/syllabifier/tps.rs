@@ -14,7 +14,7 @@
 //! garbage-Bopomofo filter (a malformed span has no inventory hit and
 //! produces no edge).
 //!
-//! Direction-first alignment per AGENTS.md Core Principle #6 + Codex
+//! Direction-first alignment per AGENTS.md Core Principle #5 + Codex
 //! pre-impl 2026-05-27: TL, POJ, TPS now share one segmenter shape,
 //! matching librime DAG (`references/librime/src/rime/algo/syllabifier.cc`),
 //! khiin-rs DP over known words

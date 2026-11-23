@@ -97,8 +97,8 @@ fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
 /// Anything outside the range is treated as `Off` (defensive — keeps an
 /// integer typo from accidentally enabling trace).
 ///
-/// NOT the same as `SwiftLoggerSink`'s callback bytes (`dispatch::log_level_to_byte` /
-/// Swift constants `levelError=0..levelTrace=4`). Off is reserved here
+/// NOT the same as `SwiftLoggerSink`'s callback bytes (`dispatch::log_level_to_byte`: Error=0 … Trace=4;
+/// Swift names `levelError` / `levelWarn` / `levelInfo`). Off is reserved here
 /// because callers can disable; the callback never receives Off.
 fn set_log_level(level: u8) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
@@ -141,8 +141,6 @@ fn e2e_trace_open(path: String) -> bool {
 fn e2e_trace_open(_path: String) -> bool {
     false
 }
-
-// -- Logger glue ---------------------------------------------------------
 
 /// Wrapper that lets a `SwiftLoggerSink` cross the `Send + Sync` boundary.
 ///

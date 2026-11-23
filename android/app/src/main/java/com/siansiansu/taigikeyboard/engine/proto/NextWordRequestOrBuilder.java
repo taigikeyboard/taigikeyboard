@@ -11,19 +11,11 @@ public interface NextWordRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    * @return Whether the wordSelected field is set.
    */
   boolean hasWordSelected();
   /**
-   * <pre>
-   * --- State-mutating intents (10s) — return DecideResult ---
-   * </pre>
-   *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
    * @return The wordSelected.
    */
@@ -110,7 +102,6 @@ public interface NextWordRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -121,7 +112,6 @@ public interface NextWordRequestOrBuilder extends
   boolean hasFilterPredictions();
   /**
    * <pre>
-   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>

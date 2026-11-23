@@ -12,15 +12,6 @@ option java_multiple_files = true;
 // Ops live in the LexiconRequest.method oneof. Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
 // (engine::dispatch) routes by Request.payload tag and then per-module
 // dispatch routes by oneof method.
-//
-// Out of slice (no version commitment):
-// - Capitalization (`capitalize`, `startsWithRomanLetter`) — kept platform
-//   per audit § 3 (Android does not have these in CandidateProcessor;
-//   moving them to Rust would change Android behavior)
-
-// =========================================================================
-// Request envelope
-// =========================================================================
 
 message LexiconRequest {
   // Tag 10 was `process_candidates` (legacy linear ranking, no production
@@ -43,10 +34,6 @@ message LexiconRequest {
     DictionarySearchRequest   dictionary_search     = 19;  // Manage Dictionaries search, one call
   }
 }
-
-// =========================================================================
-// Request payloads
-// =========================================================================
 
 // `InstallRequest` is the (idempotent) lexicon read-path bootstrap. The
 // platform passes absolute Bundle / filesDir paths; engine opens mmap'd
@@ -122,10 +109,6 @@ message DictionarySearchRow {
   repeated DictionarySourceCode sources = 6;
 }
 
-// =========================================================================
-// Response envelope
-// =========================================================================
-
 message LexiconResponse {
   reserved 10, 12, 13, 14, 15, 16, 17, 18;
   reserved "process_candidates_result", "search_result", "classify_input_result",
@@ -138,20 +121,12 @@ message LexiconResponse {
   }
 }
 
-// =========================================================================
-// Response payloads
-// =========================================================================
-
 // `InstallResponse` carries diagnostic counts. Platform diagnostic surfaces
 // log these to confirm install success.
 message InstallResponse {
   uint64 dictionary_record_count   = 1;
   uint64 prefix_index_entry_count  = 2;
 }
-
-// =========================================================================
-// Shared value types
-// =========================================================================
 
 // `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
 // preferences the engine resolves into its source filter

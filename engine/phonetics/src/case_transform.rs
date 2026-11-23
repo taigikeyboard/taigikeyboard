@@ -9,9 +9,9 @@
 
 use std::borrow::Cow;
 
-/// Three-state shift / case indicator. Mirrors iOS `LetterCase` enum and
-/// adapts Android's `(caps: Bool, capsLock: Bool)` pair at the bridge call
-/// site (CapsLock=true → CapsLocked; caps=true → Uppercased; else Lowercased).
+/// Three-state shift / case indicator, the wire `LetterCase` (`case.proto`).
+/// Android adapts its `(caps, capsLock)` pair in `CaseTransformBridge`
+/// (capsLock → CapsLocked; caps → Uppercased; else Lowercased).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LetterCase {
     Lowercased,
@@ -21,10 +21,6 @@ pub enum LetterCase {
 
 pub(crate) const NASAL_LOWER: char = '\u{207F}'; // ⁿ
 pub(crate) const NASAL_UPPER: char = '\u{1D3A}'; // ᴺ
-
-// =========================================================================
-// Per-char (single grapheme cluster) helpers
-// =========================================================================
 
 /// Uppercase the first char of `input` and keep the rest as typed
 /// (`tsh` → `Tsh`, `a̍` → `A̍`); a lone `ⁿ` becomes `ᴺ`.
@@ -57,10 +53,6 @@ fn is_lone(input: &str, marker: char) -> bool {
     let mut chars = input.chars();
     chars.next() == Some(marker) && chars.next().is_none()
 }
-
-// =========================================================================
-// Per-string compound transforms
-// =========================================================================
 
 /// Apply `letter_case` to a keystroke `text`:
 /// - `Lowercased`: lowercase via `lowercase_tone_char`
@@ -95,10 +87,6 @@ pub fn raise_case(text: &str, letter_case: LetterCase) -> String {
     }
 }
 
-// =========================================================================
-// Nasal marker
-// =========================================================================
-
 /// Adjust nasal marker (`ⁿ`/`ᴺ`) case to match the preceding letter.
 ///
 /// - Input without either marker is returned unchanged.
@@ -106,7 +94,6 @@ pub fn raise_case(text: &str, letter_case: LetterCase) -> String {
 ///   letter scanned. Non-letter characters between the marker and the prior
 ///   letter (digits, punctuation) do not reset the carried case.
 ///
-/// Re-homed from the former `case_adjust.rs::adjust_nasal_marker_case`.
 /// Called in-band by `apply_nasal_marker_case` (the last step of
 /// `api::normalize_tone`), and through it by the candidate casing in
 /// `composing::continuous`.
@@ -159,10 +146,6 @@ pub fn apply_nasal_marker_case(text: &str, force_lowercase: bool) -> Cow<'_, str
 pub fn lowercase_nasal_markers(text: &str) -> String {
     text.replace(NASAL_UPPER, "\u{207F}")
 }
-
-// =========================================================================
-// Internal helpers
-// =========================================================================
 
 /// Uppercase the literal first character, lowercase the rest (per char, so a
 /// `ᴺ` in the tail becomes `ⁿ`). Used by the `transform_input_case`
@@ -239,7 +222,6 @@ fn push_lower(ch: char, out: &mut String) {
 mod tests {
     use super::*;
 
-    // -----------------------------------------------------------------
     #[test]
     fn apply_nasal_marker_case_follows_the_switch_and_borrows_when_unchanged() {
         assert_eq!(
@@ -265,9 +247,6 @@ mod tests {
         ));
     }
 
-    // adjust_nasal_marker_case — moved from case_adjust.rs verbatim
-    // -----------------------------------------------------------------
-
     #[test]
     fn nasal_passthrough_when_no_marker() {
         assert_eq!(adjust_nasal_marker_case(""), "");
@@ -292,10 +271,6 @@ mod tests {
     fn nasal_no_letter_yet_defaults_lower() {
         assert_eq!(adjust_nasal_marker_case("\u{1D3A}"), "\u{207F}");
     }
-
-    // -----------------------------------------------------------------
-    // Per-char helpers
-    // -----------------------------------------------------------------
 
     #[test]
     fn uppercase_tone_char_keeps_combining_marks() {
@@ -345,10 +320,6 @@ mod tests {
         assert_eq!(lowercase_tone_char("\u{1D3A}"), "\u{207F}");
     }
 
-    // -----------------------------------------------------------------
-    // transform_input_case
-    // -----------------------------------------------------------------
-
     #[test]
     fn transform_input_caps_lock_uppercases_all() {
         assert_eq!(transform_input_case("tsh", LetterCase::CapsLocked), "TSH");
@@ -364,10 +335,8 @@ mod tests {
         assert_eq!(transform_input_case("Tsh", LetterCase::Lowercased), "tsh");
     }
 
-    // -----------------------------------------------------------------
     // Stored capitals survive (user report 2026-09-19: custom entry
     // `Keng-lâm Su-īⁿ` under abbreviation `klsi`)
-    // -----------------------------------------------------------------
 
     const CUSTOM: &str = "Keng-lâm Su-īⁿ";
 

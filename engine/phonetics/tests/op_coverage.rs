@@ -12,7 +12,6 @@ use protos::engine::{
     PhoneticsResponse, StringResult, ToneVariationsResult,
 };
 
-// ---------------- helpers ----------------
 //
 // Domain-level tests: drive `phonetics::requests::handle` directly and
 // assert against `Result<PhoneticsResponse>`. Envelope concerns
@@ -94,10 +93,6 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         khinsiann_in_hanji: false,
     }
 }
-
-// ============================================================
-// Phonetics core
-// ============================================================
 
 // `api::normalize_tone` — live via `composing::derived`; the retired
 // `NormalizeTone` op no longer carries it, so these call it directly.
@@ -270,10 +265,6 @@ fn external_lookup_digit_form_folds_o_dot_and_nasal_marker() {
         assert_eq!(string_result(&resp), expected, "{reading:?}");
     }
 }
-
-// ============================================================
-// TPS
-// ============================================================
 
 // `api::contains_tps` — live via composing / custom_search / nextword; the
 // retired `ContainsTps` op no longer carries it, so these call it directly.

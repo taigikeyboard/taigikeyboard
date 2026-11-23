@@ -76,7 +76,7 @@ fn fold_double_o(input: &str) -> String {
     result
 }
 
-/// Mirrors iOS ToneConverter `convertNasalDoubleN`: vowel + "nn" → vowel + "ⁿ".
+/// Vowel + "nn" → vowel + "ⁿ".
 fn convert_nasal_double_n(input: &str) -> String {
     const NASAL_VOWELS: &str = "aeiouAEIOU";
     let chars: Vec<char> = input.chars().collect();

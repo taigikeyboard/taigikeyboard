@@ -23,8 +23,6 @@ use phonetics::KeyFamily;
 use crate::common::{build_tkdb_v4, write_synthetic_fst};
 use test_support::{build_tkwa, engine_install_lock, write_temp};
 
-// --- INVARIANT_LEX_FILTER_BITMASK ---------------------------------------
-
 #[test]
 fn invariant_lex_filter_bitmask_three_layers() {
     // Layer 1: variant exclusion
@@ -77,8 +75,6 @@ fn invariant_lex_filter_bitmask_three_layers() {
     assert!(!DictionaryReader::passes_filter(dev_record, 0, &f3_dev_off));
 }
 
-// --- INVARIANT_LEX_BINARY_FORMAT ---------------------------------------
-
 #[test]
 fn invariant_lex_binary_format_rejects_bad_magic() {
     let bad = synth_dictionary_bin_with_version(b"BAD!", 2, &[]);
@@ -94,8 +90,6 @@ fn invariant_lex_binary_format_rejects_bad_version() {
     let err = DictionaryReader::open(&path).expect_err("bad version must fail");
     assert!(matches!(err, LexiconError::InvalidBinary(_)), "{err:?}");
 }
-
-// --- INVARIANT_LEX_FST_ROWID_PAYLOAD -----------------------------------
 
 #[test]
 fn invariant_lex_fst_rowid_payload_round_trip() {
@@ -126,8 +120,6 @@ fn invariant_lex_fst_rowid_payload_round_trip() {
     assert_eq!(hanji_hits, vec![50]);
 }
 
-// --- INVARIANT_LEX_LOOKUP_ROWIDS_ORDER ---------------------------------
-
 #[test]
 fn invariant_lex_lookup_rowids_order_preserves_insertion() {
     // D-12 parity correction toward Android: search.rs concatenates
@@ -157,8 +149,6 @@ fn invariant_lex_lookup_rowids_order_preserves_insertion() {
         "fst byte-sort order across prefix scan"
     );
 }
-
-// --- TPS three-index read path (C-1) -----------------------------------
 
 /// `SearchParams { family: KeyFamily::Tps }` now hits the `tps:` FST family
 /// directly. Pins the C-0 emit shape (literal Bopomofo + tone mark) +
@@ -306,8 +296,6 @@ fn tps_input_mode_tone8_substitution_matches_build_pipeline_key() {
     );
 }
 
-// --- C-3a TPS er↔or build-time dual-emit -------------------------------
-
 /// PR C-3a moved the runtime `tps_or_mapped_to_er` expansion into the
 /// build pipeline: each `er`/`or` row emits `tps:` keys for BOTH the
 /// ㄜ (U+311C, bridge default) and ㄛ (U+311B, toggle-OFF variant)
@@ -359,8 +347,6 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
     );
 }
 
-// --- INVARIANT_LEX_ASSOC_BITMASK_FILTER --------------------------------
-
 /// Regression for v3.5.6 fix r3173013233 — `api::lookup_associations` previously
 /// hardcoded `u32::MAX` instead of plumbing `req.enabled_sources_bitmask`,
 /// which silently disabled the source-toggle filter for bundled bigram
@@ -411,8 +397,6 @@ fn lookup_associations_filters_before_limit() {
         .collect();
     assert_eq!(words, vec!["食"]);
 }
-
-// --- INVARIANT_LEX_API_BITMASK_HONORED ---------------------------------
 
 /// Regression for v3.5.6 fix r3173440126 — the Tab3 search paths in
 /// `lexicon::api` once hardcoded `u32::MAX`, bypassing user
@@ -486,8 +470,6 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     assert!(rows("好", &taigitv).is_empty(), "Hanji, other mask");
 }
 
-// --- INVARIANT_LEX_INSTALL_PATH_VALIDATION -----------------------------
-
 #[test]
 fn invariant_lex_install_path_validation_rejects_nul() {
     let err = LexiconPaths::validated("/foo\0bar", "/dict.bin", "/assoc.bin", "", 1)
@@ -501,8 +483,6 @@ fn invariant_lex_install_path_validation_rejects_relative() {
         .expect_err("relative rejected");
     assert!(matches!(err, LexiconError::PathNotAbsolute(_)), "{err:?}");
 }
-
-// --- INVARIANT_LEX_INSTALL_SEARCH_SERIALIZATION ------------------------
 
 #[test]
 fn invariant_lex_install_search_serialization_no_panic() {
@@ -547,8 +527,6 @@ fn invariant_lex_install_search_serialization_no_panic() {
         h.join().expect("thread joins without panic");
     }
 }
-
-// --- helpers -----------------------------------------------------------
 
 /// Convenience wrapper: emits a v4 TKDB binary with `syllable_count = 1` and
 /// `kautian_subtag = 0` on every row. Callers that assert on syllable_count or
@@ -601,8 +579,6 @@ fn build_minimal_install_fixture(prefix: &str) -> (PathBuf, PathBuf, PathBuf) {
 fn synth_association_bin() -> Vec<u8> {
     build_tkwa(2, &[])
 }
-
-// --- with_state readers do not serialize against each other -------------------
 
 /// A composing `Append` on the IME main thread renders its display through
 /// `with_state` (compound-hyphen oracle) while a worker-thread candidate

@@ -64,7 +64,7 @@ pub(crate) fn build_shadow_lattice_with_barriers(
     lattice_from_canonical_with_barriers(&canonical, &canonical_to_raw_end, inv, mode)
 }
 
-/// [`lattice_from_canonical`] plus the merged barrier set: every shadow
+/// Builds the lattice over the canonical shadow with the merged barrier set: every shadow
 /// byte offset where a user separator (TPS space) or compound hyphen was
 /// stripped. Barriers gate the §35 ambiguity expansion — a single
 /// syllable may not cross one, and the glyph before one is Final-only —
