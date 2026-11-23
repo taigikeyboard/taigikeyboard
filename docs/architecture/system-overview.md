@@ -63,7 +63,7 @@ graph TB
     domains -. mmap read-only .-> artifacts
 ```
 
-User-writable state is four SQLite files, **owned by the engine crate `userdata`** on every platform (`rusqlite`): `user_frequency.db` (schema v2), `user_association.db` (v6), `custom_dictionary.db` (stamped ≥ 4), `learned_phrases.db` (`behavioral-invariants.md` §50). The platforms name the files and send the picks; the engine reads, ranks and writes. Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8. Settings: iOS / Android keep their own stores and send `AppConfig` per request; Windows / Linux keep `settings.json` in `taigi-desktop-storage`; macOS keeps UserDefaults and sends a per-request snapshot (`taigi-macos-ffi` `settings.rs`).
+User-writable state is four SQLite files, **owned by the engine crate `userdata`** on every platform (`rusqlite`): `user_frequency.db` (schema v3), `user_association.db` (v7), `custom_dictionary.db` (stamped ≥ 4), `learned_phrases.db` (`behavioral-invariants.md` §50). The platforms name the files and send the picks; the engine reads, ranks and writes. Details: [`data-artifacts-portability.md`](data-artifacts-portability.md) §4–8. Settings: iOS / Android keep their own stores and send `AppConfig` per request; Windows / Linux keep `settings.json` in `taigi-desktop-storage`; macOS keeps UserDefaults and sends a per-request snapshot (`taigi-macos-ffi` `settings.rs`).
 
 | Platform | Shell | Engine hop | Candidate UI | Settings UI | Dogfood gate |
 |---|---|---|---|---|---|

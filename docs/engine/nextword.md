@@ -33,7 +33,7 @@
 - Fields: bitmask (u16), count (u32), next_word, next_tl
 - Bitmask filter replaces SQL WHERE for dictionary source filtering
 
-**User learning** — `user_association.db` (SQLite, writable, schema v6, `engine/userdata/src/association.rs`)
+**User learning** — `user_association.db` (SQLite, writable, schema v7, `engine/userdata/src/association.rs`)
 
 ```sql
 CREATE TABLE user_association (

@@ -23,9 +23,9 @@ Tone categories and marks: [`../phonetics/taigi-phonetics-reference.md` §5.1](.
 
 | Input | rawInput | Display (TL) | Display (POJ) |
 |-------|----------|--------------|----------------|
-| `gua1` | `gua1` | `gua1` | `gua1` |
+| `gua1` | `gua1` | `gua` | `gua` |
 | `gua2` | `gua2` | `guá` | `guá` |
-| `at4` | `at4` | `at4` | `at4` |
+| `at4` | `at4` | `at` | `at` |
 | `hoo2` | `hoo2` | `hóo` | `hó͘` |
 | `phiann` | `phiann` | `phiann` | `phiaⁿ` |
 

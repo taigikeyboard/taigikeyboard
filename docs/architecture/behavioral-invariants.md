@@ -169,18 +169,18 @@ The cross-platform behavior contract every Rust slice and platform change must p
 **Invariant**: two distinct dedup passes exist and must run in the documented order:
 
 1. **Engine dedup** runs *before* sorting — the Continuous pre-sort dedupe on `(hanji, consumed_span)` + (`roman` or the word identity `canonical_tl`, Core Principle #6). Removes true duplicates, including a custom row whose stored roman differs from the dictionary's only in form (NFD import, POJ or digit-tone spelling: `li2` must not list 李 twice).
-2. **Display dedup** runs *after* sorting, only in TPS mode. Key = `(hanzi, consumed_span)` to preserve legitimate distinct partial vs full-buffer surfaces. Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
+2. **Display dedup** runs *after* sorting, whenever every cell displays and commits plain Hanji alone (`AppConfig::commits_plain_hanji`: Annotate in Brackets off AND either a TPS buffer / TPS layout or a Hanji-first paired display that is not single-script). Key = `(hanzi, consumed_span)` to preserve legitimate distinct partial vs full-buffer surfaces. Keeps the highest-ranked entry per hanzi (entries without hanzi are always kept).
 
 Reversing or merging these two passes changes ordering. Running display dedup before sort drops higher-ranked entries.
 
-**Why**: the TPS keyboard hides romanization; visually identical hanzi with different roman forms is confusing, but the ranked winner must be retained.
+**Why**: when a cell shows and commits only Hanji (the TPS keyboard, or Hanji-first without brackets), visually identical hanzi with different roman forms commit the same text and are confusing, but the ranked winner must be retained.
 
 **Scope**:
-- `engine/composing::continuous::dedupe_display_hanji_for_tps`, gated on `mode == InputMode::Tps` in `assemble_candidates`, after the walker slot-0 prepend + POJ presentation pass. Two `dict.bin` rows sharing the toneless TPS key (`灣/uan` + `灣/uân` at `tps:ㄨㄢ`) survive the pre-sort dedupe — distinct tones are distinct words — and only collapse here.
-- **Candidate Display = Romanization Only (§44) is the mirror-image display pass for TL/POJ**, `composing::requests::dedupe_display_roman`, keyed on the **rendered roman alone**. It runs in `requests::handle_fetch_at_pos` AFTER the §34 literal prepend — not inside `assemble_candidates`, because the literal is inserted later and a pass there would leave `台/tâi` beside the bare literal `tâi`. Under Romanization Only an entry without hanji (the §34 literal, a roman-only custom entry) DOES participate and, being first-seen, survives; "entries without hanzi are always kept" holds for the TPS pass only. Both display passes: after sort, first-seen wins.
+- `engine/composing::continuous::dedupe_same_commit_hanji`, gated on `should_dedupe_commit_hanji` (→ `AppConfig::commits_plain_hanji`) in `assemble_candidates`, after the walker slot-0 prepend + POJ presentation pass. Two `dict.bin` rows sharing the toneless TPS key (`灣/uan` + `灣/uân` at `tps:ㄨㄢ`) survive the pre-sort dedupe — distinct tones are distinct words — and only collapse here.
+- **Candidate Display = Romanization Only (§44) is the mirror-image display pass for TL/POJ**, `composing::requests::dedupe_display_roman`, keyed on the **rendered roman alone**. It runs in `requests::handle_fetch_at_pos` AFTER the §34 literal prepend — not inside `assemble_candidates`, because the literal is inserted later and a pass there would leave `台/tâi` beside the bare literal `tâi`. Under Romanization Only an entry without hanji (the §34 literal, a roman-only custom entry) DOES participate and, being first-seen, survives; "entries without hanzi are always kept" holds for the same-commit-Hanji pass only. Both display passes: after sort, first-seen wins.
 
 **Test labels**:
-- `dedupe_display_hanji_for_tps_collapses_same_hanji_same_span` + `tps_input_collapses_duplicate_hanji` (`engine/composing/tests/tps_display_dedup.rs`)
+- `dedupe_same_commit_hanji_collapses_same_hanji_same_span` (`engine/composing/src/continuous/dedupe.rs`) + `tps_input_collapses_duplicate_hanji`, `hanji_first_tl_collapses_same_commit_hanji_when_brackets_off` (`engine/composing/tests/tps_display_dedup.rs`)
 
 ---
 

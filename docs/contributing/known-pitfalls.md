@@ -20,7 +20,7 @@ Technical rules distilled from past incidents. The dated narratives that produce
 
 ## Design
 
-- Read the module's entry point (`api.rs` / `requests.rs`) before proposing integration; `engine/nextword` only filters / scores what the platform feeds, it fetches nothing.
+- Read the module's entry point (`api.rs` / `requests.rs`) before proposing integration; `engine/nextword` only filters / scores the rows it is fed and fetches nothing — the platform's `PredictNext` is expanded with the lexicon lookup and user rows in `engine/dispatch/src/predict.rs` before it reaches nextword.
 - Cite best practices from `docs/references/mainstream-ime-comparison.md` first. Proven cites: `references/khiin-rs/khiin/src/buffer/buffer_mgr.rs` (commit-and-resegment), `references/librime/src/rime/...` (segment status state machine), `references/aiongtaigi-sushi` / `references/florisboard` (IME window / inset).
 
 ## Phonetics

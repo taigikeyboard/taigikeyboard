@@ -20,6 +20,8 @@ The Continuous-input engine is the single candidate source on every platform. On
 | `roman` | 8 | Display romanization: TL, or POJ-rendered in POJ mode, recased to the typed span. Always present |
 | `hanji` | 9 | `optional string`: absent = roman-only candidate (no Hanji exists), distinct from a present empty string |
 | `canonical_tl` | 10 | Canonical TL identity (Core Principle #6), sent back as `CommitContinuous.association_tl` |
+| `tps_text` | 11 | Under the TPS layout: the one-script cell text — the Hanji, or a Hanji-less candidate's `roman` rendered as Bopomofo. Empty otherwise. Display only |
+| `cell_script` | 12 | The §42 split cell this row is (`HANJI` / `ROMAN`), or `PAIRED`; under a split one candidate appears as up to two rows sharing every identity field |
 
 Tags 1, 5, 6, 7 are reserved. `roman` and `hanji` are display sidechannels; the engine resolves the committed text from them ([continuous-commit-and-display.md §10.3](continuous-commit-and-display.md#103-commit-contract)). Duplicates collapse on `(reading, hanji, consumed_span)` (§10.10 there).
 

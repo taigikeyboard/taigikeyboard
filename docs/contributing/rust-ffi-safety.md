@@ -26,7 +26,7 @@ Every exported function (`#[no_mangle]` / `extern "system"` / `#[swift_bridge::b
 
 ### 1.3 Thread safety — `Mutex<Engine>`, never raw pointer + `&mut`
 
-Engine state is `Send + !Sync`; the platform may call concurrently (IME thread, settings push, background refresh). The singleton holds `Mutex<Engine>` and locks it per request — platforms never receive a raw `*mut Engine`, and casting back via `&mut *(ptr as *mut Engine)` is forbidden. `RwLock` is not part of the contract. Failure mode blocked: khiin-rs casts the raw pointer back to `&mut Engine` with no synchronization (`references/khiin-rs/android/rust/src/lib.rs:64`, `references/khiin-rs/swift/bridge/src/lib.rs:51-52`), so two platform calls can alias one `&mut`.
+Engine state is `Send + !Sync`; the platform may call concurrently (IME thread, settings push, background refresh). Each stateful crate's singleton holds `Mutex<Engine>` (`composing`, `nextword`) or, for the read-mostly lexicon, `RwLock` (`engine/lexicon/src/handle.rs`: `install` the only writer) and locks it per request — platforms never receive a raw `*mut Engine`, and casting back via `&mut *(ptr as *mut Engine)` is forbidden. Failure mode blocked: khiin-rs casts the raw pointer back to `&mut Engine` with no synchronization (`references/khiin-rs/android/rust/src/lib.rs:64`, `references/khiin-rs/swift/bridge/src/lib.rs:51-52`), so two platform calls can alias one `&mut`.
 
 ### 1.4 Request size cap
 
@@ -80,7 +80,7 @@ mod syllable;
 | Layer | Type vocabulary | Visibility |
 |---|---|---|
 | `phonetics`, `lexicon`, `composing`, `nextword`, `userdata` (domain) | **Request façade** (`requests.rs`) takes / returns `protos::engine::*` directly. Native-Rust helpers (CLI / test convenience functions) may exist alongside but never grow into a parallel mirror tier. | Implementation modules `mod`-private; one or two `pub mod` façades; `pub use` only for genuine cross-crate symbols. |
-| `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation, except cross-domain composition only `dispatch` can do (`predict.rs` expands nextword `PredictNext` with a lexicon lookup into `FilterPredictions`; `user_data/with_stores.rs` feeds the `userdata` stores' rows into `composing` / `nextword` / `lexicon` requests). |
+| `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation, except cross-domain composition only `dispatch` can do (`predict.rs` expands nextword `PredictNext` with a lexicon lookup into `FilterPredictions`; `next_word_handshake.rs` turns a composing response's next-word effects into `NextWordRequest`s in the same call; `fetch.rs` + `context.rs` rank a `FetchAtPos` with the user rows and the bundled previous-word context; `user_data/with_stores.rs` feeds the `userdata` stores' rows into `composing` / `nextword` / `lexicon` requests). |
 | `swift-ffi`, `android-jni` | Bytes in, bytes out across the FFI seam. `catch_unwind` per §1.2. | Calls `dispatch::process_request` directly. |
 
 **What this rule excludes.** Native-Rust input/output structs that mirror proto messages, `From<NativeFoo> for protos::engine::Foo` impls, separate per-op entry points in dispatch (`dispatch::process_phonetics`, `dispatch::process_ranking`, …) — all banned. They show up in candidate refactors and they are always extra work for no end-user benefit.

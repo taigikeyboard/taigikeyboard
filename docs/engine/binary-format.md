@@ -106,7 +106,7 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 - `tl_len > 0` for every record (TL is required; hanzi may be absent).
 - `hanzi == ""` is encoded as `hanzi_len == 0` and yields `None` in the reader, **not** an empty string.
 - UTF-8 must be valid; the Rust reader returns `None` for the whole record on `from_utf8` failure for either `tl` or `hanzi` (when `hanzi_len > 0`).
-- Record bytes are not aligned; the Rust reader uses unaligned little-endian reads via `byteorder::LE`.
+- Record bytes are not aligned; the Rust reader uses unaligned little-endian reads (`u32::from_le_bytes` and friends on byte slices).
 
 ### 1.4 Validation performed by reader (Rust `engine/lexicon::dictionary_reader`)
 
@@ -253,7 +253,7 @@ The abbreviation face has its own family per romanization (`behavioral-invariant
 | Concern | Location |
 |---|---|
 | fst load + range/prefix search | Rust `engine/lexicon::prefix_index::PrefixIndex` |
-| mmap unsafe boundary | Rust `engine/mmap-host::MmapHandle` (only crate not `forbid unsafe_code`) |
+| mmap unsafe boundary | Rust `engine/mmap-host::MmapHandle` (the only engine domain crate allowed `unsafe_code`; the FFI crates `swift-ffi` / `android-jni` are the others) |
 | Lookup orchestration | Rust `engine/lexicon::search::search` |
 | Platform bridge (dictionary search page) | iOS `RustEngineBridge.dictionarySearch` (`RustEngineBridge+Lexicon.swift`); Android `RustEngineBridge.dictionarySearch` (`LexiconBridge.kt`) |
 
@@ -410,7 +410,7 @@ When ANY of the following changes, ALL listed files MUST be updated in the same 
 | Key prefix list (`tl:` / `poj:` / `tps:`, `tl-abbrev:` / `poj-abbrev:` / `tps-abbrev:`, `hanzi:`) | build script (`create_fst.py`), Rust `phonetics::KeyFamily`, this doc |
 | `syllables.fst` families + canonicalizers (§3.5) | `create_syllables_fst.py`, `fst-builder` `syllables.rs`, Rust `phonetics::canonicalize_*syllable`, `engine/lexicon::syllable_inventory`, this doc |
 | Magic bytes (`TKDB` / `TKWA`) | build script, Rust readers, this doc |
-| File version (`dictionary.bin = 4`, `association.bin = 2`) | build script, Rust readers, this doc |
+| File version (`dictionary.bin = 6`, `association.bin = 2`) | build script, Rust readers, this doc |
 | Endianness (little-endian) | build script, Rust readers |
 
 ### 5.1 No-checksum acknowledgement
@@ -435,7 +435,7 @@ Steps, inputs and outputs: [`dictionary/README.md` § Pipeline](../../dictionary
 
 1. Sort `association.bin` keys by raw UTF-8 byte order ascending, and each key's entries by `count` DESC.
 2. Emit `dictionary.fst` and `syllables.fst` via `engine/build-helpers/fst-builder`, keys carrying the family prefix (`tl:` / `poj:` / `tps:` / `*-abbrev:` / `hanzi:`).
-3. Use bit positions exactly per §4, magic bytes per §1 / §2, version `4` for `dictionary.bin` and `2` for `association.bin`.
+3. Use bit positions exactly per §4, magic bytes per §1 / §2, version `6` for `dictionary.bin` and `2` for `association.bin`.
 4. Include every key form (TL / POJ / TPS numeric + toneless under the phonetic family, each abbreviation under its `*-abbrev:` family) plus `hanzi:` keys for reverse lookup.
 
 ---
