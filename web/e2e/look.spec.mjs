@@ -338,6 +338,34 @@ test("the footer links to the website's sponsor section", async ({ page }) => {
   );
 });
 
+test.describe("in Taipei", () => {
+  test.use({ locale: "en-US", timezoneId: "Asia/Taipei" });
+
+  test("the footer names the staged commit and time in the browser's zone", async ({
+    page,
+  }) => {
+    await open(page);
+    const commit = page.locator("#build-commit");
+    await expect(commit).toHaveText(/^[0-9a-f]{7,}$/);
+    const short = await commit.textContent();
+    await expect(commit).toHaveAttribute(
+      "href",
+      new RegExp(
+        `^https://github\\.com/taigikeyboard/taigikeyboard/commit/${short}[0-9a-f]*$`,
+      ),
+    );
+    const time = page.locator("#build-time");
+    await expect(time).toHaveAttribute(
+      "datetime",
+      /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/,
+    );
+    // trace: en-US with timeZoneName "short" in Asia/Taipei names it GMT+8.
+    await expect(time).toHaveText(
+      /^\d\d\/\d\d\/\d{4},\s\d\d:\d\d\s[AP]M\sGMT\+8$/,
+    );
+  });
+});
+
 test("the footer rests at the sidebar's foot, then below its sections", async ({
   page,
 }) => {

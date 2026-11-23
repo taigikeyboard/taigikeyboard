@@ -1,7 +1,10 @@
 // Wide screens dock the sidebar, closed unless a past visit opened it (`prepaint.js`
 // restores that), and slide it in and out; narrow ones open it as a popover drawer.
 
+import { STAGED } from "./generated/build.js";
+
 const STORAGE_KEY = "taigi.sidebar";
+const COMMIT_URL = "https://github.com/taigikeyboard/taigikeyboard/commit/";
 // The breakpoint of the docked `@media` block in style.css.
 const wideScreen = window.matchMedia("(min-width: 50rem)");
 
@@ -15,6 +18,28 @@ function remember(state) {
   } catch {
     // Private windows may refuse. The sidebar stays as it is for this tab.
   }
+}
+
+/**
+ * The footer's build line: the commit the site was staged from, and when, in
+ * the browser's locale and time zone.
+ *
+ * @param {HTMLAnchorElement} commit
+ * @param {HTMLTimeElement} time
+ * @returns {void}
+ */
+export function drawBuild(commit, time) {
+  commit.textContent = STAGED.short;
+  commit.href = COMMIT_URL + STAGED.commit;
+  time.dateTime = STAGED.time;
+  time.textContent = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(new Date(STAGED.time));
 }
 
 export class Sidebar {
