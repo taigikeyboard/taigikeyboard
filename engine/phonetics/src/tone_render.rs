@@ -285,7 +285,7 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
     };
     // Letter by letter, so Caps Lock `SIANN5` → `SIÂⁿ` (nasal marker re-cased
     // to `ᴺ` by `adjust_nasal_marker_case` afterwards), not `Siâⁿ`.
-    match_case(&placed, &base, mode)
+    match_case(&placed, &base)
 }
 
 /// Convert tone-marked text to numeric-tone form. Mirrors `toToneNumber` in

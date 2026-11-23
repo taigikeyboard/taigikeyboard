@@ -9,7 +9,6 @@
 //! responsibility lives here.
 
 use phonetics::case_transform::{adjust_nasal_marker_case, transform_input_case, LetterCase};
-use phonetics::InputMode;
 
 // =========================================================================
 // CaseTransformer.transformForInput — POJ tone-letter golden table
@@ -76,7 +75,7 @@ fn poj_uppercase_all_tone_letters() {
         ("m̋", "M̋"),
     ];
     for (input, expected) in cases {
-        let got = transform_input_case(input, LetterCase::Uppercased, InputMode::Poj);
+        let got = transform_input_case(input, LetterCase::Uppercased);
         assert_eq!(
             &got, expected,
             "POJ upper '{}' expected '{}', got '{}'",
@@ -139,7 +138,7 @@ fn poj_lowercase_all_tone_letters() {
         ("M̋", "m̋"),
     ];
     for (input, expected) in cases {
-        let got = transform_input_case(input, LetterCase::Lowercased, InputMode::Poj);
+        let got = transform_input_case(input, LetterCase::Lowercased);
         assert_eq!(
             &got, expected,
             "POJ lower '{}' expected '{}', got '{}'",
@@ -167,7 +166,7 @@ fn tl_uppercase_specific_tone_letters() {
         ("őo", "Őo"),
     ];
     for (input, expected) in cases {
-        let got = transform_input_case(input, LetterCase::Uppercased, InputMode::Tl);
+        let got = transform_input_case(input, LetterCase::Uppercased);
         assert_eq!(
             &got, expected,
             "TL upper '{}' expected '{}', got '{}'",
@@ -193,7 +192,7 @@ fn tl_lowercase_specific_tone_letters() {
         ("Őo", "őo"),
     ];
     for (input, expected) in cases {
-        let got = transform_input_case(input, LetterCase::Lowercased, InputMode::Tl);
+        let got = transform_input_case(input, LetterCase::Lowercased);
         assert_eq!(
             &got, expected,
             "TL lower '{}' expected '{}', got '{}'",
@@ -215,7 +214,7 @@ fn poj_o_dot_uppercase() {
         ("ŏ͘", "Ŏ͘"),
     ];
     for (input, expected) in cases {
-        let got = transform_input_case(input, LetterCase::Uppercased, InputMode::Poj);
+        let got = transform_input_case(input, LetterCase::Uppercased);
         assert_eq!(
             &got, expected,
             "POJ o-dot upper '{}' expected '{}', got '{}'",
@@ -236,7 +235,7 @@ fn poj_o_dot_lowercase() {
         ("Ŏ͘", "ŏ͘"),
     ];
     for (input, expected) in cases {
-        let got = transform_input_case(input, LetterCase::Lowercased, InputMode::Poj);
+        let got = transform_input_case(input, LetterCase::Lowercased);
         assert_eq!(
             &got, expected,
             "POJ o-dot lower '{}' expected '{}', got '{}'",
@@ -264,8 +263,8 @@ fn nasal_adjust_direct_call_demotes_upper_after_lower() {
 fn input_caps_lock_is_deterministic() {
     // trace: CapsLocked → `full_uppercase_tone_string`; `tâi-gí` is no
     // table key, so the stdlib upper — same output on every call.
-    let first = transform_input_case("tâi-gí", LetterCase::CapsLocked, InputMode::Poj);
-    let second = transform_input_case("tâi-gí", LetterCase::CapsLocked, InputMode::Poj);
+    let first = transform_input_case("tâi-gí", LetterCase::CapsLocked);
+    let second = transform_input_case("tâi-gí", LetterCase::CapsLocked);
     assert_eq!(first, second);
     assert_eq!(first, "TÂI-GÍ");
 }
@@ -290,8 +289,8 @@ fn poj_table_round_trip_uppercase_then_lowercase_is_identity() {
         "ḿ", "m̂", "m̍",
     ];
     for lower in lowers {
-        let upper = transform_input_case(lower, LetterCase::CapsLocked, InputMode::Poj);
-        let back = transform_input_case(&upper, LetterCase::Lowercased, InputMode::Poj);
+        let upper = transform_input_case(lower, LetterCase::CapsLocked);
+        let back = transform_input_case(&upper, LetterCase::Lowercased);
         assert_eq!(
             &back, lower,
             "POJ round-trip broke for '{}' — went '{}' → '{}'",
@@ -309,8 +308,8 @@ fn tl_table_round_trip_uppercase_then_lowercase_is_identity() {
         "á", "é", "í", "ó", "ú",
     ];
     for lower in lowers {
-        let upper = transform_input_case(lower, LetterCase::CapsLocked, InputMode::Tl);
-        let back = transform_input_case(&upper, LetterCase::Lowercased, InputMode::Tl);
+        let upper = transform_input_case(lower, LetterCase::CapsLocked);
+        let back = transform_input_case(&upper, LetterCase::Lowercased);
         assert_eq!(
             &back, lower,
             "TL round-trip broke for '{}' — went '{}' → '{}'",

@@ -397,7 +397,7 @@ pub(super) fn fetch_walker_slot0_inner(
             .zip(path.choices.iter())
             .map(
                 |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
-                    Some(seg) => recase_roman(&c.roman, seg, mode),
+                    Some(seg) => recase_roman(&c.roman, seg),
                     None => c.roman.clone(),
                 },
             )

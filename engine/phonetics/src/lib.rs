@@ -10,8 +10,9 @@
 pub mod api;
 pub mod requests;
 
+#[cfg(test)]
+mod case_legacy;
 mod case_requests;
-mod case_tables;
 pub mod case_transform;
 mod custom_search;
 mod derivation;

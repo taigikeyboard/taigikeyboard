@@ -348,7 +348,7 @@ pub(crate) fn assemble_candidates(
             for cand in &mut c {
                 let (cs, ce) = cand.consumed_span;
                 if let Some(seg) = raw.get(cs as usize..ce as usize) {
-                    cand.roman = recase_roman(&cand.roman, seg, mode);
+                    cand.roman = recase_roman(&cand.roman, seg);
                 }
             }
             apply_hanji_display(&mut c, khinsiann_in_hanji, mode);
@@ -664,7 +664,7 @@ pub(crate) fn assemble_candidates(
         if let Some(ctx) = lex_ctx.as_ref() {
             if let Some(key) = crate::shadow::abbrev_query_key(raw, mode) {
                 let mut abbrev = lexicon::fetch_abbrev_candidates(&key, raw_len, ctx);
-                recase_all(&mut abbrev, raw, mode);
+                recase_all(&mut abbrev, raw);
                 apply_hanji_display(&mut abbrev, khinsiann_in_hanji, mode);
                 retain_absent_from(&candidates, &mut abbrev);
                 abbrev.truncate(PARTIAL_PREFIX_OUTPUT_CAP);

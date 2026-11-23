@@ -60,7 +60,7 @@ pub(super) fn fetch_via_lexicon_partial_inner(
     // first syllable boundary (e.g. typing `T` → keys.is_empty() arm,
     // unrecased; then `Ta` → else-arm + Step 4b, recased).
     if let Some(seg) = raw.get(..raw_len as usize) {
-        recase_all(&mut out, seg, mode);
+        recase_all(&mut out, seg);
     }
     out
 }

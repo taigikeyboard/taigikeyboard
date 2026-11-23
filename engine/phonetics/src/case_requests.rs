@@ -10,7 +10,6 @@
 //! Otherwise always returns `Some(CaseResponse)` — the case ops are
 //! infallible by construction (table lookups + stdlib casing).
 
-use crate::api::composing_mode;
 use crate::case_transform::{
     full_uppercase_tone_string, lowercase_tone_char, transform_input_case, uppercase_tone_char,
     LetterCase,
@@ -20,17 +19,16 @@ use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult, Ton
 
 pub fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseResponse> {
     let method = request.method.as_ref()?;
-    let mode = composing_mode(config);
 
     let output = match method {
         Method::ToneCase(req) => match req.kind() {
-            ToneCaseKind::UppercaseFirst => uppercase_tone_char(&req.input, mode),
-            ToneCaseKind::UppercaseAll => full_uppercase_tone_string(&req.input, mode),
-            ToneCaseKind::Lowercase => lowercase_tone_char(&req.input, mode),
+            ToneCaseKind::UppercaseFirst => uppercase_tone_char(&req.input),
+            ToneCaseKind::UppercaseAll => full_uppercase_tone_string(&req.input),
+            ToneCaseKind::Lowercase => lowercase_tone_char(&req.input),
             ToneCaseKind::Unspecified => return None,
         },
         Method::TransformInputCase(req) => {
-            transform_input_case(&req.text, proto_to_letter_case(req.letter_case()), mode)
+            transform_input_case(&req.text, proto_to_letter_case(req.letter_case()))
         }
     };
     // ⁿ becomes ᴺ in capitals OFF (§53): the raise-only ops write `ᴺ` after a capital; fold
