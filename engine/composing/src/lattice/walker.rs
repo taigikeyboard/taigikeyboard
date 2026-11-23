@@ -22,7 +22,7 @@
 //!
 //! The walker is **pure and shadow-space native**. It never looks at
 //! the dictionary, the raw byte space, or proto types: the caller
-//! (`continuous::fetch_walker_slot0_inner`, which holds `LexiconHandle`
+//! (`continuous::walk_buffer`, which holds `LexiconHandle`
 //! state) injects an `edge_choice` provider that maps a shadow edge
 //! `(start, end)` to its best content. This keeps the
 //! composing↔lexicon boundary clean and reuses the lexicon candidate
@@ -120,7 +120,7 @@ pub(crate) struct EdgeChoice {
     /// v3.5.8 S3 — time-decayed user-frequency boost delta for this
     /// edge's chosen candidate (`ranking::decayed_user_weight_delta`,
     /// `0.0..=4.0`). `0.0` for a no-dict edge or one with no user
-    /// history. Computed caller-side in `continuous::fetch_walker_slot0_inner`
+    /// history. Computed caller-side in `continuous::walk_buffer`
     /// so the walker stays pure and shadow-space native (Codex pre-impl
     /// S3 Q4d seam). Applied as a log-space cost discount in
     /// [`edge_cost`] (Codex pre-impl S5 Q3). Closes Continuous-input
@@ -175,7 +175,7 @@ pub(crate) struct BestPath {
 /// sorted, so this is deterministic. No edge-count tiebreak: the S2
 /// "more edges wins" lever existed only to force the no-dict
 /// per-syllable split, which S5 moves to the explicit
-/// `continuous::fetch_walker_slot0_inner` carve-out — keeping it here would
+/// `continuous::synth_cut` carve-out — keeping it here would
 /// re-introduce the over-segmentation pressure min-cost exists to
 /// remove (Codex pre-impl S5 Q5, 2026-05-17).
 pub(crate) fn walk_best<B: WalkerBigram>(
@@ -458,7 +458,7 @@ mod tests {
         // reached directly from 0 before the (6,9) relaxation — is
         // kept. The user-facing per-syllable romanization is NOT
         // produced here; it is the explicit
-        // `continuous::fetch_walker_slot0_inner` carve-out (Codex pre-impl S5
+        // `continuous::synth_cut` carve-out (Codex pre-impl S5
         // Q2). This pins that an all-OOV buffer still resolves to the
         // fewest-edge blob (which the carve-out then renders
         // per-syllable) under the RC0 BIG-per-char model.
@@ -485,7 +485,7 @@ mod tests {
         // Under RC0 the blob costs
         // `8 * OOV_PER_CHAR_PENALTY ≈ 8e10`, dwarfing the `ln`-scale
         // dict path, so the walker picks the dict path → `any dict_hit`
-        // true → `continuous::fetch_walker_slot0_inner` renders hanji, never
+        // true → `continuous::walker_slot0` renders hanji, never
         // bare `"tai uan ta"`.
         let lat = lattice(vec![(0, 6), (0, 8), (6, 8)]);
         let path = walk(&lat, 8, |s, e| match (s, e) {

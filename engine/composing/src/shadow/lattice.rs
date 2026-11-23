@@ -49,7 +49,7 @@ pub(crate) struct ShadowLattice {
 /// DAG, the stripped-separator / hyphen barrier set in shadow coordinates
 /// (§35) and the `--` subset of it (§52). Shared by [`build_continuous_keys`] (left-anchored projection —
 /// byte-identical to pre-S1, the S1 pinning tests guard this)
-/// and `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker), so the
+/// and `continuous::walk_buffer` (S2 whole-sentence walker), so the
 /// shadow + offset map + DAG are constructed exactly once per fetch and
 /// the consumers cannot drift.
 ///

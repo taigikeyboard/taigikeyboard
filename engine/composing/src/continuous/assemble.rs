@@ -3,7 +3,7 @@
 use super::dedupe::{dedupe_rendered_continuous, dedupe_same_commit_hanji, retain_absent_from};
 use super::partial_prefix::fetch_via_lexicon_partial_inner;
 use super::recase::{recase_all, recase_roman, recase_tl_as_poj_display, shows_poj_roman_in_hanji};
-use super::walk::{fetch_walker_slot0_inner, synth_consumed_span};
+use super::walk::{synth_consumed_span, synth_cut, walker_slot0};
 
 use crate::shadow::{build_continuous_keys, build_partial_prefix_key};
 use lexicon::dictionary_reader::NO_ROWID;
@@ -381,9 +381,9 @@ pub(crate) fn assemble_candidates(
                 if let (Some(continuous_keys), Some(inv), Some(ctx)) =
                     (continuous_keys.as_ref(), inv, lex_ctx.as_ref())
                 {
-                    if let Some(slot0) =
-                        fetch_walker_slot0_inner(raw, raw_len, continuous_keys, inv, ctx)
-                            .filter(|slot0| shape == ListShape::Sentence || slot0.edge_count == 1)
+                    if let Some(slot0) = synth_cut(raw_len, continuous_keys, inv, ctx)
+                        .filter(|cut| shape == ListShape::Sentence || cut.path.edges.len() == 1)
+                        .map(|cut| walker_slot0(raw, continuous_keys, ctx, &cut))
                     {
                         let composed_from_edges = slot0.edge_count >= 2;
                         // R2 identity sidechannel: read the canonical TL the
@@ -412,7 +412,7 @@ pub(crate) fn assemble_candidates(
                         };
                         // `hoogua` bug (2026-06-02): the walker synth
                         // joins per-syllable canonical romans with a
-                        // SPACE (`fetch_walker_slot0_inner` ~`.join(" ")`).
+                        // SPACE (`walker_slot0` ~`.join(" ")`).
                         // For a genuine multi-word reading (台語齒盤) that
                         // space-join IS the desired display. But when the
                         // synth's full-buffer `(hanji, span)` coincides
@@ -560,7 +560,7 @@ pub(crate) fn assemble_candidates(
             // Step 4b must NOT emit a `(0, raw_len)`-span candidate that
             // would mis-commit the pending `-`. Mirrors the walker
             // slot-0 trailing-hyphen suppression at
-            // `fetch_walker_slot0_inner`'s `synth_consumed_span?`
+            // `synth_cut`'s `synth_consumed_span?`
             // early-out, same contract.
             //
             // **Recase.** Recase is centralized in
@@ -578,7 +578,7 @@ pub(crate) fn assemble_candidates(
             // `dedupe_by_roman_hanji_span` pre-sort, but that does not
             // span batches. A partial-prefix hit on the same dict row
             // already present in the FULL block (walker slot-0 recases
-            // edge-by-edge in `fetch_walker_slot0_inner`; span-local
+            // edge-by-edge in `walker_slot0`; span-local
             // recases here at Step 3) normalizes to the same `(roman,
             // hanji, consumed_span)` triple, or carries the same
             // `(canonical_tl, hanji, consumed_span)` identity, and collapses.
@@ -623,7 +623,7 @@ pub(crate) fn assemble_candidates(
                     //
                     // Known divergence (Codex post-impl SHIP-WITH-FIXES
                     // 2026-05-29): walker slot-0 joins per-edge-recased
-                    // syllables with a space (see [`fetch_walker_slot0_inner`]),
+                    // syllables with a space (see [`walker_slot0`]),
                     // whereas `ext` recases the full raw segment as one
                     // string. For multi-edge walker paths with mixed-case
                     // per-syllable intent like `TaIGi`, walker produces

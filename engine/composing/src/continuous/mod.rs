@@ -24,7 +24,7 @@
 //! 3. Per-candidate recase loop (`recase_roman` over each
 //!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
 //!    untouched).
-//! 4. `fetch_walker_slot0_inner(..) → Some(slot0)`: span-aware
+//! 4. `synth_cut(..) → Some(cut)` → `walker_slot0(.., &cut)`: span-aware
 //!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then
 //!    `insert(0, ..)`. The walker returns a [`WalkerSlot0`] and the seam
 //!    converts it to a `RawCandidate` (slot 0 is an explicit prepend, not

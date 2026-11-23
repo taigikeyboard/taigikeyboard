@@ -22,7 +22,7 @@ pub(crate) use lattice::{build_shadow_lattice_with_barriers, ShadowLattice};
 /// instead of (no-op) ASCII digits, producing a key body that matches the
 /// `tps:<tps_notone>` family. Used by every shadow-derived key / roman
 /// emit site: `left_anchored_keys_and_restrictions`, the walker edge key in
-/// `composing::continuous::fetch_walker_slot0_inner`, the walker's
+/// `composing::continuous::walk_buffer`, the walker's
 /// no-dict roman synth, `custom_toneless_key`, and `build_partial_prefix_key`.
 ///
 /// TL/POJ/English: ASCII-digit strip — byte-identical to the legacy

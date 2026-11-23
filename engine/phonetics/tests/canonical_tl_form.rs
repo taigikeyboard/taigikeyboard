@@ -43,7 +43,7 @@ fn cross_mode_oov_shadow_writes_identical_freq_key() {
     // POJ mode (`chiah goa`) and TL mode (`tsiah gua`) must produce
     // the SAME canonical-TL commit key. This is what closes the
     // hanji-absent user-frequency split for the walker greedy-longest
-    // OOV synth path (`composing::continuous::fetch_walker_slot0_inner`
+    // OOV synth path (`composing::continuous::walker_slot0`
     // OOV branch).
     let poj_oov = canonical_tl_form("chiah goa", InputMode::Poj);
     let tl_oov = canonical_tl_form("tsiah gua", InputMode::Tl);
