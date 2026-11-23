@@ -1323,24 +1323,32 @@ fn bug1_backspace_pop_keeps_canonical_no_document_delete() {
 }
 
 #[test]
-fn bug1_empty_canonical_falls_back_to_display_text() {
-    // Backward-compat: legacy callers send no canonical_text → engine uses
-    // display_text for both document AND NextWord (pre-Bug-1 behavior).
+fn empty_canonical_roman_pick_is_ignored() {
+    // trace: `transition::commit_continuous` filters the script out when
+    // `canonical_text` is empty (no fallback to `roman`), so
+    // `resolve_commit_text` never runs → `commit_resolution(Ignored, None)`
+    // on a noop: no effects, the composition untouched.
     let mut e = engine_in_continuous("tsu");
     let resp = e.apply(
         Intent::CommitContinuous {
-            canonical_text: "珠".to_string(),
+            canonical_text: String::new(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
             script: Some(CommitScript::Roman),
-            roman: "珠".to_string(),
+            roman: "tsu".to_string(),
         },
         &config_tl(),
     );
-    let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    assert_eq!(nw.text, "珠");
+    assert_eq!(
+        resp.commit.map(|commit| commit.outcome),
+        Some(CommitOutcome::Ignored as i32)
+    );
+    assert!(
+        resp.effect.is_empty(),
+        "got {:?}",
+        effect_kinds(&resp.effect)
+    );
+    assert!(resp.is_composing, "the composition is untouched");
 }

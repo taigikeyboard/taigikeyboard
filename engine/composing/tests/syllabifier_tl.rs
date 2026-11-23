@@ -103,9 +103,10 @@ fn max_syllables_zero_returns_empty() {
 
 #[test]
 fn max_syllables_one_excludes_chain_endings() {
-    // tsua: depth 1 = {3 (tsu), 4 (tsua)} — chain tsu+a (depth 2) is capped out.
-    let inv = build_inventory(&["tsu1", "tsua7", "a2"]);
-    assert_eq!(valid_span_endings("tsua", 0, &inv, MODE, 1), vec![3, 4]);
+    // trace: taibak depth 1 = {3 (tai)}; the chain tai+bak (depth 2) reaches
+    // 6 and is capped out — the cap-2 sibling below returns [3, 6].
+    let inv = build_inventory(&["tai5", "bak4"]);
+    assert_eq!(valid_span_endings("taibak", 0, &inv, MODE, 1), vec![3]);
 }
 
 #[test]

@@ -137,34 +137,38 @@ mod tests {
     use lexicon::COVERAGE_KIND_FULL;
     use ranking::WALKER_COST_UNPRICED;
 
+    fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
+        RawCandidate {
+            rowid: NO_ROWID,
+            consumed_span: span,
+            syllable_count: 1,
+            display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
+            roman: roman.to_string(),
+            hanji: hanji.map(String::from),
+            canonical_tl: roman.to_string(),
+            score: 0.0,
+            frequency: 0,
+            walker_cost: WALKER_COST_UNPRICED,
+            bitmask: 0,
+            user_weight: 0.0,
+            context_rank: ranking::CONTEXT_RANK_NONE,
+            coverage_kind: COVERAGE_KIND_FULL,
+            is_custom: false,
+        }
+    }
+
     #[test]
     fn dedupe_rendered_continuous_drops_post_render_collision_keeping_first() {
-        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32), is_custom: bool) -> RawCandidate {
-            RawCandidate {
-                rowid: NO_ROWID,
-                consumed_span: span,
-                syllable_count: 1,
-                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
-                roman: roman.to_string(),
-                hanji: hanji.map(String::from),
-                canonical_tl: roman.to_string(),
-                score: 0.0,
-                frequency: 0,
-                walker_cost: WALKER_COST_UNPRICED,
-                bitmask: 0,
-                user_weight: 0.0,
-                context_rank: ranking::CONTEXT_RANK_NONE,
-                coverage_kind: COVERAGE_KIND_FULL,
-                is_custom,
-            }
-        }
         // Post-render: a custom entry stored `gô͘` and a dict.bin entry
         // stored `gôo`; both already rendered to `gô͘` here, same hanji
         // + span ⇒ a visible duplicate. First-wins keeps index 0 so the
         // prepended whole-sentence best candidate is never dropped.
         let mut collide = vec![
-            mk("gô\u{0358}", Some("鵝"), (0, 6), false), // dict, rendered
-            mk("gô\u{0358}", Some("鵝"), (0, 6), true),  // custom, rendered
+            mk("gô\u{0358}", Some("鵝"), (0, 6)), // dict, rendered
+            RawCandidate {
+                is_custom: true, // custom, rendered
+                ..mk("gô\u{0358}", Some("鵝"), (0, 6))
+            },
         ];
         dedupe_rendered_continuous(&mut collide);
         assert_eq!(collide.len(), 1);
@@ -175,10 +179,10 @@ mod tests {
         // Distinct on ANY of (roman, hanji, consumed_span) ⇒ untouched
         // (the S2 same-word-different-span invariant survives).
         let mut keep = vec![
-            mk("go\u{0358}", Some("鵝"), (0, 6), false),
-            mk("go\u{0358}", Some("吳"), (0, 6), false), // different hanji
-            mk("go\u{0358}", Some("鵝"), (0, 3), false), // different span
-            mk("sa\u{207f}", None, (0, 6), false),       // different roman
+            mk("go\u{0358}", Some("鵝"), (0, 6)),
+            mk("go\u{0358}", Some("吳"), (0, 6)), // different hanji
+            mk("go\u{0358}", Some("鵝"), (0, 3)), // different span
+            mk("sa\u{207f}", None, (0, 6)),       // different roman
         ];
         let before = keep.len();
         dedupe_rendered_continuous(&mut keep);
@@ -187,25 +191,6 @@ mod tests {
 
     #[test]
     fn dedupe_same_commit_hanji_collapses_same_hanji_same_span() {
-        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
-            RawCandidate {
-                rowid: NO_ROWID,
-                consumed_span: span,
-                syllable_count: 1,
-                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
-                roman: roman.to_string(),
-                hanji: hanji.map(String::from),
-                canonical_tl: roman.to_string(),
-                score: 0.0,
-                frequency: 0,
-                walker_cost: WALKER_COST_UNPRICED,
-                bitmask: 0,
-                user_weight: 0.0,
-                context_rank: ranking::CONTEXT_RANK_NONE,
-                coverage_kind: COVERAGE_KIND_FULL,
-                is_custom: false,
-            }
-        }
         // TPS `ㄨㄢ` (灣/uan + 灣/uân) or TL Hanji-first (轉去/tńg--khì +
         // 轉去/tńg-khì): same hanji, same span, different roman ⇒ first-wins.
         let mut visible_dup = vec![mk("uan", Some("灣"), (0, 6)), mk("uân", Some("灣"), (0, 6))];
@@ -216,25 +201,6 @@ mod tests {
 
     #[test]
     fn dedupe_same_commit_hanji_keeps_distinct_spans() {
-        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
-            RawCandidate {
-                rowid: NO_ROWID,
-                consumed_span: span,
-                syllable_count: 1,
-                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
-                roman: roman.to_string(),
-                hanji: hanji.map(String::from),
-                canonical_tl: roman.to_string(),
-                score: 0.0,
-                frequency: 0,
-                walker_cost: WALKER_COST_UNPRICED,
-                bitmask: 0,
-                user_weight: 0.0,
-                context_rank: ranking::CONTEXT_RANK_NONE,
-                coverage_kind: COVERAGE_KIND_FULL,
-                is_custom: false,
-            }
-        }
         // Same hanji at different `consumed_span` is a legitimate partial
         // vs full-buffer surface — must NOT collapse (mirrors the S2
         // invariant pinned by `lexicon::dedupe_by_roman_hanji_span`).
@@ -250,25 +216,6 @@ mod tests {
 
     #[test]
     fn dedupe_same_commit_hanji_passes_through_none_and_empty_hanji() {
-        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {
-            RawCandidate {
-                rowid: NO_ROWID,
-                consumed_span: span,
-                syllable_count: 1,
-                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
-                roman: roman.to_string(),
-                hanji: hanji.map(String::from),
-                canonical_tl: roman.to_string(),
-                score: 0.0,
-                frequency: 0,
-                walker_cost: WALKER_COST_UNPRICED,
-                bitmask: 0,
-                user_weight: 0.0,
-                context_rank: ranking::CONTEXT_RANK_NONE,
-                coverage_kind: COVERAGE_KIND_FULL,
-                is_custom: false,
-            }
-        }
         // Hanji-absent rows render as TPS / roman in the UI and are
         // unique by roman — always survive regardless of repetition on
         // any other axis.

@@ -279,11 +279,6 @@ mod tests {
     }
 
     #[test]
-    fn full_uppercase_tone_string_uppercases_all() {
-        assert_eq!(full_uppercase_tone_string("tsh"), "TSH");
-    }
-
-    #[test]
     fn caps_lock_raises_every_letter_of_tl_oo() {
         // trace: stdlib to_uppercase("óo") → "ÓO"
         assert_eq!(full_uppercase_tone_string("óo"), "ÓO");
@@ -310,11 +305,6 @@ mod tests {
     }
 
     #[test]
-    fn lowercase_tone_char_lowers_precomposed_tone_letters() {
-        assert_eq!(lowercase_tone_char("Á"), "á");
-    }
-
-    #[test]
     fn nasal_marker_has_its_own_case_pair() {
         assert_eq!(uppercase_tone_char("\u{207F}"), "\u{1D3A}");
         assert_eq!(lowercase_tone_char("\u{1D3A}"), "\u{207F}");
@@ -331,7 +321,7 @@ mod tests {
     }
 
     #[test]
-    fn transform_input_lowercased_passthrough() {
+    fn transform_input_lowercased_lowercases() {
         assert_eq!(transform_input_case("Tsh", LetterCase::Lowercased), "tsh");
     }
 

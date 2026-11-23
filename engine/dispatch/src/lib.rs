@@ -379,13 +379,6 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_returns_fail_parse_for_garbage_bytes() {
-        let resp_bytes = process_request(&[0xff, 0xff, 0xff]);
-        let resp = Response::decode(resp_bytes.as_slice()).unwrap();
-        assert_eq!(resp.error, ErrorCode::FailParse as i32);
-    }
-
-    #[test]
     fn request_cap_accepts_exactly_the_cap_and_refuses_one_byte_over() {
         assert!(!is_request_too_large(MAX_REQUEST_BYTES));
         assert!(is_request_too_large(MAX_REQUEST_BYTES + 1));

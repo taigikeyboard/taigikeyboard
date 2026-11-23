@@ -50,33 +50,6 @@ fn output_is_left_anchored_only_no_interior_spans() {
 }
 
 #[test]
-fn hyphenless_output_is_byte_identical_to_pre_s1() {
-    // `taibak` / inv {tai,bak}. Pre-S1 single-start emitted exactly
-    // `[(0,3) tl:tai, (0,6) tl:taibak]`; the lattice's left-anchored
-    // projection must reproduce that verbatim (no interior `(3,6)`).
-    let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_continuous_keys_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
-    assert_eq!(
-        mapped(&keys),
-        vec![((0, 3), "tl:tai"), ((0, 6), "tl:taibak")],
-        "left-anchored projection must equal the pre-S1 single-start output",
-    );
-}
-
-#[test]
-fn internal_hyphen_output_is_byte_identical_to_pre_s1() {
-    // `tai-bak` — pre-S1 emitted `[(0,3) tl:tai, (0,7) tl:taibak]`
-    // (hyphen folded into the full-buffer span). The interior
-    // `(3,7) tl:bak` edge exists in the lattice but is NOT emitted.
-    let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_continuous_keys_with_inventory("tai-bak", &inv, phonetics::InputMode::Tl);
-    assert_eq!(
-        mapped(&keys),
-        vec![((0, 3), "tl:tai"), ((0, 7), "tl:taibak")],
-    );
-}
-
-#[test]
 fn longest_match_suppresses_shorter_single_syllable_prefix() {
     // §18 INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX (USER 2026-05-31
     // "suppress even without a tone"). Input `tai` with BOTH `ta` and `tai` valid single

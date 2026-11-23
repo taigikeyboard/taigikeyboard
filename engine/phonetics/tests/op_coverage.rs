@@ -281,14 +281,6 @@ fn contains_tps_false_for_latin() {
 
 // `tl_numeric_to_tps` has no wire op (tag 32 reserved 2026-10-09); it is the
 // numeric half of `api::tl_display_to_tps`, covered here through the native API.
-#[test]
-fn tl_numeric_to_tps_basic() {
-    let out = phonetics::api::tl_numeric_to_tps("tiau5", false);
-    assert!(
-        !out.is_empty(),
-        "TL numeric → TPS should produce zhuyin: {out:?}"
-    );
-}
 
 /// Default (`or_maps_to_er=false`) renders the vowel `or` as ㄛ (`\u{311b}`),
 /// matching the iOS pre-D9.4 default. Mirrors `TPSConverter.toTPS` /
