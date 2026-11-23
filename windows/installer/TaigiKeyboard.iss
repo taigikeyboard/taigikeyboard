@@ -270,7 +270,7 @@ end;
 //
 // Known holders, for the record: the TSF DLL is mapped as an image by every
 // host that loaded it; `Dictionaries\*` are mmap'd by engine/lexicon
-// (dictionary_reader.rs:160, association_reader.rs:64); `Fonts\*` go through
+// (`DictionaryReader::open`, `AssociationReader::open`); `Fonts\*` go through
 // DirectWrite AddFontFile (ui/render.rs:296-322); the Windows App Runtime and
 // its locale resources belong to the settings window, which StopSettingsWindow
 // kills first but could relaunch a moment later.

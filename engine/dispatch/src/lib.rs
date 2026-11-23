@@ -57,7 +57,8 @@ pub fn register_dictionary_bytes(path: &std::path::Path, bytes: Vec<u8>) {
 pub const MAX_REQUEST_BYTES: usize = 64 * 1024 * 1024;
 
 /// Install a twelve-field comparison order for this thread. `fields` is a
-/// permutation of [`ranking::SORT_FIELDS`]. `false` leaves the current order
+/// permutation of the built-in stage names (`ranking/src/sort_key.rs`
+/// `SORT_FIELDS`). `false` leaves the current order
 /// in place. The web developer page is the caller; an official input method
 /// never sets one, and another thread keeps the field order of
 /// [`ranking::CandidateSortKey`].
@@ -65,7 +66,8 @@ pub fn set_dev_sort_order(fields: &[&str]) -> bool {
     ranking::set_dev_sort_order(fields)
 }
 
-/// Restore this thread's comparison to [`ranking::SORT_FIELDS`].
+/// Restore this thread's comparison to the built-in order
+/// (`ranking/src/sort_key.rs` `SORT_FIELDS`).
 pub fn reset_dev_sort_order() {
     ranking::reset_dev_sort_order();
 }
