@@ -2,7 +2,7 @@
 
 Under TPS (方音符號, the i18n `en` label "Phonetic Symbols") on macOS, Windows and Linux, the preedit shows the predicted Hanji while the user types, and ↓ opens the candidates of the word at the caret — the way the Zhuyin input methods work. This is arm B of U8 in [`desktop-tps-roadmap.md`](desktop-tps-roadmap.md); arm A (the preedit stays glyphs, D7) is what P1–P6 of that roadmap built.
 
-Status: shipped (H-P1–H-P5 merged). The behaviour contract is [`behavioral-invariants.md`](behavioral-invariants.md) §59.
+Status: shipped (H-P1–H-P5 merged). The behaviour contract is [`behavioral-invariants.md`](behavioral-invariants.md) §59. Paths: `C/` = `engine/composing/src/`, `core/` = `desktop/crates/taigi-desktop-core/src/`.
 
 Not next-word prediction. The desktops never suggest a word after a commit (maintainer, 2026-10-03), and nothing here changes that: this converts the glyphs being composed, before any commit. TL and POJ are untouched (U8).
 
@@ -48,11 +48,8 @@ As built in H-P1 (`engine/composing/src/conversion.rs`):
 - The walk runs inside the mutation, under the composing mutex, in one read of the lexicon for the boundary and the path. `Phase::Continuous` holds the result beside `raw` and `caret`, so replacing the phase replaces it.
 - The closed part is walked as a buffer of its own, with its trailing separator, so the §41 pin holds and a tail the whole-buffer walk cannot span still converts what is closed. The boundary comes from the whole tail's lattice: a boundary that what follows makes invalid (a tone mark typed after a separator) is not closed.
 - A conversion is shown and re-used only for the source filter it was walked with; a request that asks for another filter, or for none, gets the glyphs, and the next mutation walks again.
-- A conversion existed only while the caret was at the end of the tail; H-P2 replaced this with the caret by word (H3, As built in H-P2).
-- The walk is neutral — no user frequency, no previous-word context. H-P3 adds the user's rows with the frequency lookup of H5.
-- A segment keeps its raw span and its displayed text. The Hanji and the canonical TL of H2 arrive in H-P3 with the pick that reads them.
+- The walk takes no previous-word context; the user's counts enter through H5's frequency lookup.
 - A tone mark typed after a reading its own mark already closed (`ㄒㄧˋ` then `ˊ`) shows that word as glyphs again: the whole tail's lattice refuses a syllable end followed by a tone mark, as the candidate list does. Kept as it is (maintainer, 2026-10-05); Backspace restores the word.
-- `CommitRaw` and `CommitContinuous` keep their behaviour: the conversion changes what the preedit shows, not what a commit writes, until H-P3.
 
 Why state rather than a fetch answer the caller hands back: a fetch runs on a clone of the engine (`C/handle.rs:13-22`), so a conversion returned by one would have to be carried back by every commit and checked against a revision the engine does not have — the caret, the nails or the context can change under equal raw text. Held in the engine, there is nothing to go stale, the commits need no payload, and the open reading is spliced into a conversion the engine still has.
 
@@ -92,8 +89,6 @@ As built in H-P3 (`engine/composing/src/conversion.rs`, `transition.rs`, `reques
 - The list's context word is the converted word ending at its start, or the segment nailed before the listed text (for the last nailed segment's list, the one before it), when it is a word: picked, or carrying a canonical TL. Glyphs before the start cut the context, and the committed context applies only when the list starts the composition (`ListContext`).
 
 ### H5 — Engine surface
-
-Names and wire shapes are settled in each phase's pre-implementation review; the contract is:
 
 | Piece | Contract |
 |---|---|
@@ -177,7 +172,6 @@ A glyph of an open reading costs less than a TL key does today — no walk. A ke
 - The switch (H5) is set only when the stored input mode is TPS. Without it the engine takes none of the new paths.
 - Classifier and executor edits stay inside the TPS branch (`core/keys/intent.rs:206-213`, `:352-396`; `core/composing/intent_executor.rs:76-101`). A shared function gains behaviour only behind the switch or the TPS arm.
 - No TL or POJ test expectation changes in any phase — engine goldens, desktop-core tests, the three shells' session tests. A diff that edits one is a finding, not an update.
-- Each phase's PR runs the TL and POJ suites of every touched platform and says so; each dogfood item opens with a TL and a POJ sentence typed as before.
 
 ## Phase labels (cited from code)
 
@@ -212,7 +206,7 @@ Deliberately not adopted:
 - **A setting that keeps the glyph preedit** — McBopomofo's Plain Bopomofo (`KeyHandler.mm:548-571`), vChewing's `useSCPCTypingMode`. Not chosen (B3): one path under TPS.
 - **Learning from a commit** — not chosen (B4).
 - **A separate decaying override model** (`McBopomofo/Source/Engine/UserOverrideModel.cpp:232-298`) — the engine's user frequency already feeds the walker.
-- **The conversion returned by a fetch and carried back by the caller** — the first draft of this plan; see H2 and Reviews.
+- **The conversion returned by a fetch and carried back by the caller** — the first draft of this plan; see H2.
 - **A fetch after every TPS key, as TL does** — two writes to the host per key (glyphs, then Hanji), and a walk per glyph.
 - **Per-segment underlines** (`khiin-rs/windows/ime/src/tip/composition_mgr.rs:140-166`) — three shells and four wire formats for a cue the Zhuyin input methods do not draw.
 - **Tab rotating the candidate in place** (`KeyHandler.mm:817-891`) — Tab is bound to a navigation row here.

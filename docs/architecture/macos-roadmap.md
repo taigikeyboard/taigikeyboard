@@ -52,10 +52,7 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   OUT_DIR discovery asks cargo (`--message-format=json`,
   `build-script-executed`) replaying the caller's exact argv, fail-closed on
   anything but one unique match — newest-by-mtime picked the `panic-injector`
-  fingerprint for a cached release build. Also noted: `xcodebuild -create-xcframework`
-  orders `AvailableLibraries` nondeterministically, so the committed iOS
-  `Info.plist` can churn between otherwise identical builds — compare it
-  semantically, do not treat a slice-order flip as a real diff.
+  fingerprint for a cached release build.
 - **D2 Project format** — SwiftPM executable + `macos/scripts/bundle-app.sh`
   script-assembled `.app` (khiin-rs osx pattern); NOT an Xcode project (pbxproj
   is user-only, hook-enforced). Info.plist committed with concrete values
@@ -63,7 +60,7 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   (mandatory `.inputmethod.` third segment). Mach-register temporary exception
   entitlement required if sandboxed. Ad-hoc codesign for local dev; Developer-ID
   signing + notarization ship as `macos/scripts/release-app.sh`, run by
-  `.github/workflows/macos-build.yml` since the release train's phase 4. azooKey-Desktop `pkgbuild.sh` was the
+  `.github/workflows/macos-build.yml`. azooKey-Desktop `pkgbuild.sh` was the
   pipeline reference; what was and was not adopted from it, and why, lives in
   `docs/architecture/macos-release.md`.
   The package is a library (`TaigiInputMethodCore`) plus
@@ -86,8 +83,8 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   D3 for the composing state: the Swift ComposingManager is gone; `ComposingBackend`
   sends session requests to desktop-core and replays its effects. What stands: thin
   per-session `IMKInputController`; process-wide `ComposingSessionCoordinator` owning
-  the session tokens (engine composing state is a process singleton (engine composing state is a process singleton,
-  `engine/composing/src/handle.rs:21-56`; per-controller counters would collide
+  the session tokens (engine composing state is a process singleton,
+  `engine/composing/src/handle.rs` `EngineHandle`; per-controller counters would collide
   across clients). Effect vocabulary = existing cross-platform
   proto effects; attributed marked text (underline + markedClauseSegment);
   `commitComposition` without `super`; **`recognizedEvents = .keyDown` ONLY**
@@ -122,7 +119,7 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   page start / highlight / slot 1 always agree.
 - **D5 Settings** — in-process SwiftUI window (activate-before-show +
   programmatic Edit menu); opened from IMK `menu()` AND a recorded chord (default
-  `⌃⌘S`, `ShortcutActions.swift:31-33`; Cmd+, belongs to the host app).
+  `⌃⌘S`, `ShortcutActions.swift` `openLastSettingsPane`; Cmd+, belongs to the host app).
   `UserDefaults.standard`, read live; the key-path subset is sent to desktop-core as a
   snapshot (`macos-desktop-core-roadmap.md` D5). Four points:
   (1) **The settings chord is a `keyEquivalent` on the IMK menu item, not a branch
@@ -172,8 +169,8 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
     a macOS word (`tâi-gí`, `hōo--guá`), a space is only emitted between
     segments the walker calls separate words. `compound_association_pairs`
     emits nothing when the Hanji and romanization sides split into different
-    counts, rather than padding an empty TL onto a real word (Core Principle
-    #7). `is_noise_text` is "contains no letter" rather than a third
+    counts, rather than padding an empty TL onto a real word (AGENTS.md Core
+    Principle #6, word identity). `is_noise_text` is "contains no letter" rather than a third
     punctuation table.
   - Learning is **write-and-rank for frequency, write-only for associations**:
     macOS has no idle candidate surface, and putting one on screen means
@@ -189,14 +186,13 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
     user data leaving the device through iCloud.
 - **D8 Dictionary artifacts** — read from the repo-root `assets/dictionaries/` (read-only)
   at bundle time with fail-fast existence/non-empty validation. That directory is
-  the single committed copy all four platforms package from; `dictionary/build/deploy.sh`
+  the single committed copy every platform packages from; `dictionary/build/deploy.sh`
   writes it.
-- **D9 Proto codegen** — `gen-macos-protos` writes to an independent output dir
-  `macos/Sources/TaigiInputMethodCore/Engine/Generated/` (committed). Both macOS steps
-  run inside root `make build` only — no per-platform shortcut targets: regenerating one
-  platform's artefacts from shared sources is what leaves the others stale against the
-  same commit.
-  Building macOS ≠ releasing it — release stays user-gated.
+- **D9 Proto codegen** — `engine/scripts/gen-macos-protos.sh` writes to an independent output dir
+  `macos/Sources/TaigiInputMethodCore/Engine/Generated/` (committed). It runs inside
+  `make protos` beside the iOS / Android bindings, never alone: regenerating one
+  platform's bindings from shared sources is what leaves the others stale against the
+  same commit. Root `make build` also runs `make macos-libs`.
 - **D10 Dev loop** — `macos/Makefile`: build → bundle (+ plutil lint,
   codesign --verify, arch check) → install (delete-before-kill, kill by
   bundle-ID/PID, `lsregister -f -R -trusted`, re-login hint only on
@@ -226,8 +222,7 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   from the controller-side `CandidateListModel` into the panel behind the
   `CandidatePresenter` seam (`show` / `navigate` / `selectedCandidateIndex` /
   `candidateIndex(forSlot:)` / `hide`), every entry owner-token guarded; the
-  panel is the single selection authority, `isShowingCandidates` stays
-  `!fetchedCandidates.isEmpty`. Pure geometry (`HorizontalPageLayout`,
+  panel is the single selection authority. Pure geometry (`HorizontalPageLayout`,
   `ExpandedGridLayout`, `CandidatePanelPositioning`, `ScreenLookup`) is
   value-typed and unit-tested; AppKit layout / scroll / animation are
   dogfood-gated. Presentation keys (`candidateLayout`,

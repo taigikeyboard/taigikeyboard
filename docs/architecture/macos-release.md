@@ -116,9 +116,9 @@ described above cannot happen there.
 
 ## Cutting a release
 
-The monthly cut (`desktop-train.yml`) calls `macos-build.yml`'s build for the
-staged commit and signs the package in its own `sign-and-beta` job (composite `macos-sign-attach`, shared
-with `macos-build.yml`); a hotfix (`make desktop-patch PLATFORM=macos`) or a
+The monthly cut (`desktop-train.yml`) calls `macos-build.yml` with `build_only`
+and signs the package in its own `sign-and-beta` job, so a cut asks for one
+approval for signing and the beta together; a hotfix (`make desktop-patch PLATFORM=macos`) or a
 manual full stage (`make desktop-release`) on any machine dispatches
 `.github/workflows/macos-build.yml` with the staged commit
 (`desktop-release.md`). Two jobs on two `macos-26` runners, Xcode pinned
@@ -130,10 +130,8 @@ through `DEVELOPER_DIR` (an image update cannot change the SDK a release links):
 | `release` | the `release` environment: both `.p12`, the `.p8`, a write token | on a fresh VM, compiles nothing: before the checkout, refuses a staged commit that is not on `main` (its scripts will hold the keys); joins the draft (`join_desktop_draft`); imports both `.p12` (non-exportable) into a temporary keychain with Apple's two Developer ID intermediates and writes the `.p8`; `release-app.sh` with no GitHub token; removes the keychain and the key; then `publish-release.sh` with the token, which joins the draft again — refusing one a newer staging run re-created on another commit, never moving it — and attaches the package |
 
 The `release` job's steps are the composite action
-`.github/actions/macos-sign-attach`. The monthly train (`desktop-train.yml`)
-calls this workflow with `build_only` and runs the same action in its
-`sign-and-beta` job, so a cut asks for one approval for signing and the beta
-together.
+`.github/actions/macos-sign-attach`, which the train's `sign-and-beta` job runs
+too.
 
 **Why two jobs:** the build executes third-party code — every crate's build
 script and proc macro, every SwiftPM package. In one job, such code could leave
@@ -147,8 +145,7 @@ A rejected notarization keeps its log as the `macos-notarization` artifact.
 
 Re-staging the same commit while an earlier macOS run is still building fails
 the later run's read-back (a re-signed package has other bytes than the one
-already attached); wait for the earlier run to finish, then stage again — the
-same recovery as the Linux half.
+already attached); wait for the earlier run to finish, then stage again.
 
 A pull request touching the workflow or the release scripts runs the `build`
 job alone.

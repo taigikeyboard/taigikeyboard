@@ -2,7 +2,7 @@
 
 > **Type**: Reference (design record)
 > **Keywords**: `linux`, `IBus`, `Fcitx5`, `D-Bus`, `zbus`, `GTK4`, `libadwaita`, `desktop`, `engine reuse`, `macOS parity`, `Windows parity`
-> **Status**: implemented; first-machine dogfood passed. Fcitx5 is the primary frontend, the IBus engine the second (§ L1).
+> **Status**: Done — shipped in the desktop train (packages: `linux-release.md`). Fcitx5 is the primary frontend, the IBus engine the second (§ L1).
 > **Siblings**: `macos-roadmap.md`, `windows-roadmap.md` (the crates this platform reuses). Release flow: `linux-release.md`.
 > **Behaviour oracle**: desktop-core and its tests, for all three desktops (`macos-desktop-core-roadmap.md` D8). "macOS is the oracle" wording and macOS `file:line` cites below predate that.
 
@@ -33,8 +33,9 @@ changes (proto, i18n, release tooling) name every platform they touch.
 Everything below the shells is shared. The Fcitx5 shell
 is `linux/fcitx5/libtaigikeyboard.so` (C++ `InputMethodEngineV3` over the `taigi-linux-ffi` C ABI
 over `taigi-linux-core`); the IBus shell is `ibus-engine-taigikeyboard` (zbus over the same
-`taigi-linux-core`). The diagram draws the IBus process; the Fcitx5 addon
-replaces its top box with `fcitx5` (in-process addon, `keyEvent` → FFI → `Emit`s → input panel).
+`taigi-linux-core`). Both shells spawn `taigikeyboard-popup` (crate `taigikeyboard-popup`,
+an X11 window) for the candidate list (§ L4). The diagram draws the IBus process; the Fcitx5 addon
+replaces its top box with `fcitx5` (in-process addon, `keyEvent` → FFI → `Emit`s → preedit + popup).
 
 ```
 Application (GTK / Qt / Chromium / Electron / terminal) ── IBus client module (im-module / Wayland text-input)
@@ -58,10 +59,10 @@ Application (GTK / Qt / Chromium / Electron / terminal) ── IBus client modul
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │ desktop/ workspace (moved from windows/, § L2): taigi-desktop-core (pure; settings model,│
 │   engine bridge, composing orchestration, key intent table, shortcuts, strings) ·        │
-│   taigi-desktop-storage (rusqlite freq v2 / assoc v6 / custom v4 / learned v1,           │
-│   settings.json file store + revision, CSV)                                             │
+│   taigi-desktop-storage (settings.json file store + revision, atomic replace)           │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
-│ engine/ crates by path (dispatch, protos, composing, lexicon, phonetics, nextword)       │
+│ engine/ crates by path (dispatch, protos, composing, lexicon, phonetics, nextword,       │
+│   userdata — the four user DBs + CSV)                                                    │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
         │ spawn `taigikeyboard-settings --pane …` (also ibus-setup's "Preferences" via <setup>)
         ▼
@@ -75,7 +76,8 @@ Application (GTK / Qt / Chromium / Electron / terminal) ── IBus client modul
 Runtime data: $XDG_CONFIG_HOME/taigikeyboard/settings.json ·
 $XDG_DATA_HOME/taigikeyboard/{user_frequency.db, user_association.db, custom_dictionary.db,
 learned_phrases.db}. Install: ${prefix}/libexec/ibus-engine-taigikeyboard,
-${prefix}/bin/taigikeyboard-settings, ${prefix}/share/ibus/component/taigikeyboard.xml,
+${prefix}/bin/taigikeyboard-settings, ${prefix}/bin/taigikeyboard-popup,
+${libdir}/fcitx5/libtaigikeyboard.so, ${prefix}/share/ibus/component/taigikeyboard.xml,
 ${prefix}/share/taigikeyboard/dictionaries/*, ${prefix}/share/applications/…desktop, icons.
 ```
 
@@ -105,9 +107,9 @@ introspection XML and the `serialize` functions were read, not remembered).
     there is no Rust binding worth pinning): `FCITX_ADDON_FACTORY_V2`, an
     `InputMethodEngineV3` whose `keyEvent` hands `rawKey().sym()` / keycode / states to the
     FFI and replays the reply — `inputPanel().setClientPreedit(Text)` with
-    `TextFormatFlag::Underline` + `setCursor`, `commitString`, `deleteSurroundingText`, a
-    `CommonCandidateList` (`setLabels`, `setPageSize`, `setLayoutHint`, `setGlobalCursorIndex`,
-    `CandidateWord::select` = highlight + commit through the FFI) — then `updatePreedit()` +
+    `TextFormatFlag::Underline` + `setCursor`, `commitString`, `deleteSurroundingText`, the
+    candidate page handed to `taigikeyboard-popup` with the framework's candidate list
+    cleared (§ L4; popup clicks come back through the FFI) — then `updatePreedit()` +
     `updateUserInterface(InputPanel)`; `reset` / `deactivate` end the session. What is on
     screen is written first wherever IBus writes it under `PREEDIT_COMMIT`: Fcitx5 writes the
     client preedit on focus loss (5.1.7 `instance.cpp:1037`) and fcitx5-gtk before a Reset
@@ -208,7 +210,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   carries the desktop train's version alongside `windows/Cargo.toml`
   (`tools/release_notes.py` `set-versions` / `check-versions`), its own `Makefile`
   (`test` = native `cargo test`, `fmt`, `lint`), and the generated i18n Rust
-  (`tools/i18n/generate.py` `WINDOWS_STRINGS_DIR` → `desktop/crates/taigi-desktop-core/src/strings`).
+  (`tools/i18n/i18n_lib.py` `WINDOWS_STRINGS_DIR` → `desktop/crates/taigi-desktop-core/src/strings`).
   The Windows `Makefile` `HOST_TESTABLE` roster drops the two crates (tested in
   `desktop/`); `check-gnu` still compiles them for the gnu target through the graph.
   **Doc comments inside the moved crates keep their macOS `file:line` citations** and
@@ -230,27 +232,23 @@ introspection XML and the `serialize` functions were read, not remembered).
   builds the crate natively, so a pane can be opened on the Mac for a visual smoke before
   any Linux dogfood — the gate WinUI never had. Window: `default_size(760, 560)`, frame
   not persisted (same named divergence as Windows W17).
-- **L4 Candidates = the framework's panel (platform-adapted presentation).** On Fcitx5 the
-  `CommonCandidateList` in the input panel (classic UI / kimpanel, themed by the user), on IBus
-  the daemon's lookup table — both fed from the same `Emit::LookupTable`. IBus
-  clients do not expose a caret rectangle to a process that owns no window, Wayland
-  forbids self-positioned popups without layer-shell, and every IBus engine (rime, mozc,
-  chewing, anthy) lets the panel draw. So: `UpdateLookupTable` with the
-  `MAX_DISPLAY_CANDIDATES`-capped list the Windows layouts hold, `labels` = the slot-key
-  set the Shortcuts pane records (`CandidateSlotKeySet`), `page_size` = that cap, `cursor_pos`
-  = the highlighted slot, `orientation` from `candidateLayout` (horizontal →
-  `HORIZONTAL`; vertical and expandable → `VERTICAL` — the expandable grid has no panel
-  equivalent). The preedit is `UpdatePreeditText` with one `UNDERLINE_SINGLE` attribute
-  over the whole text, `cursor_pos` = the caret the `UpdatePreedit` effect carries, mode
-  `IBUS_ENGINE_PREEDIT_COMMIT` (a focus loss commits what is typed, as the Mac's
-  `commitComposition` does; Windows leaves the text as the host left it — `session/mod.rs`
-  `composition_terminated`). `CandidateClicked` selects the slot, never commits
-  (`CandidateItemView.swift:47-48` — identical semantics); `PageUp` / `PageDown` /
-  `CursorUp` / `CursorDown` from the panel run the same `CandidateNavigation` intents the
-  keys do. The candidate list is **not** the framework panel's. Both shells spawn
-  `taigikeyboard-popup` and clear the framework list, so classic UI and GNOME's popup
-  do not draw a second one; the preedit stays on the panel, and every other input
-  method keeps the user's current UI. A horizontal cell stacks the two scripts,
+- **L4 Candidates = an own popup window over the shared lookup-table model (platform-adapted
+  presentation).** The first design let the framework draw the list (Fcitx5's
+  `CommonCandidateList`, the IBus daemon's lookup table), as every IBus engine (rime, mozc,
+  chewing, anthy) does; #839 replaced that with an own window: both shells
+  now spawn `taigikeyboard-popup` (winit + softbuffer + cosmic-text) and clear the framework
+  list — the IBus shell sends an empty `UpdateLookupTable` so GNOME Shell does not draw a
+  second one. The preedit stays the framework's, and every other input method keeps the
+  user's current UI. What the window draws is the core's `Emit::LookupTable`: the
+  `MAX_DISPLAY_CANDIDATES`-capped page, `labels` = the slot-key set the Shortcuts pane
+  records (`CandidateSlotKeySet`), `page_size` = that cap, the cursor = the highlighted slot.
+  The preedit is one underline over the whole text, the caret the `UpdatePreedit` effect
+  carries, IBus mode `IBUS_ENGINE_PREEDIT_COMMIT` (a focus loss commits what is typed, as the
+  Mac's `commitComposition` does; Windows leaves the text as the host left it —
+  `session/mod.rs` `composition_terminated`). A popup click selects the slot, never commits
+  (`CandidateItemView.swift:47-48` — identical semantics); IBus `CandidateClicked` and
+  `PageUp` / `PageDown` / `CursorUp` / `CursorDown` run the same `CandidateNavigation`
+  intents the keys do. A horizontal cell stacks the two scripts,
   centered on each other. The leading line of the current mode takes the primary
   size and the other line the secondary size (`hanjiFontSize` / `romanFontSize`,
   12–48 px; the stored names stay, the rows read Primary Text Size / Secondary
@@ -291,7 +289,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   key. A vertical cell keeps them on one line. The
   window is override-redirect X11, placed under the caret (`InputContext::cursorRect`,
   IBus `SetCursorLocation`). A Wayland session cannot place it the same way, so it
-  may not sit on the caret there. Appearance rows the window does not honour stay
+  may not sit on the caret there (named; no layer-shell). Appearance rows the window does not honour stay
   **not shown**: the light / dark mode and the single Candidate Text Size (§ L3). The Manage
   Typefaces pane is **not shown** either
   (a family is chosen from the fonts fontconfig already sees, not from a library
@@ -301,9 +299,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   `Candidate Window Layout` offers Horizontal, Vertical, Horizontal Expandable and
   Vertical Expandable — the popup measures and draws expandable grids through
   `taigi-linux-core` `list_layout.rs`, with collapsed-row width stability from
-  desktop-core `ExpandableListModel` (PR #894). IBus framework lists stay
-  cleared; and
-  `Candidate Display Mode` stays. The candidate window
+  desktop-core `ExpandableListModel` (PR #894); `Candidate Display Mode` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
   The §34 literal cell is keyless as on macOS / Windows (the window draws the label the
   core sends, and an empty label takes no column). The auto-space swap (§23) needs the client's surrounding text
@@ -311,8 +307,8 @@ introspection XML and the `serialize` functions were read, not remembered).
   the mark after the space, as typed (logged, named). The delete is blind, so the swap first
   checks that the client's surrounding text reports a space before a collapsed caret (IBus
   `SetSurroundingText`, asked for on `FocusIn`; Fcitx5 `surroundingText()`, read per key; #866). The Telex guide (Windows draws a card, macOS a panel) is shown
-  as a lookup table of guide rows with no labels and a non-visible cursor, while `telexGuideShown` is on
-  and neither candidates nor the picker hold the table: the framework has one table, so the guide gives way
+  as a table of guide rows with no labels and no highlight, while `telexGuideShown` is on
+  and neither candidates nor the picker hold the table: there is one table, so the guide gives way
   while candidates are up and returns when they go (#684, named divergence). The symbol picker (`toggle_symbol_picker`) is a lookup table of the
   symbols with the slot-key labels and the category name as auxiliary text — both
   platform-adapted presentation of the same core models (`keys::telex_guide_rows`,
@@ -371,9 +367,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   IBus has no equivalent and only the symbol changes (named divergence). GNOME Shell reads
   an IBus engine's indicator text from the property whose key is `InputMode`, and only a
   `symbol` of one or two characters (`js/ui/status/keyboard.js`, GNOME 46): the menu root's key is therefore `InputMode`, its `symbol`
-  `ModeIndicator::symbol` (`台` / `Ts` / `白` / `Ch` / `方`), its `label` the full `mode_label`. The same
-  panel fills an empty label list with `1…9, 0` (`ibusCandidatePopup.js`), so the IBus shell
-  sends one space per position for the label-less Telex guide.
+  `ModeIndicator::symbol` (`台` / `Ts` / `白` / `Ch` / `方`), its `label` the full `mode_label`.
 - **L7 Data locations (XDG).** `settings.json` under `$XDG_CONFIG_HOME/taigikeyboard/`
   (`~/.config/taigikeyboard/`), the four databases under `$XDG_DATA_HOME/taigikeyboard/`
   (`~/.local/share/taigikeyboard/`); named divergence from Windows' single
@@ -387,7 +381,7 @@ introspection XML and the `serialize` functions were read, not remembered).
   it for a development tree (`make -C linux run-engine`). The four bundled typefaces go to
   `${prefix}/share/fonts/{truetype,opentype}/taigikeyboard/` as system-wide fallbacks
   (`𧉟` U+2725F has no glyph in Noto CJK; all four bundled faces have it) and as
-  choices in the framework's font picker (L4); the panel draws in the font picked there.
+  choices in the Appearance pane's family rows (L4).
 - **L8 Settings launcher.** The engine spawns `${prefix}/bin/taigikeyboard-settings` with
   the shared `taigi-desktop-core::settings::launch` contract (`--pane <raw>`; `--check-now`
   / `--check-updates` / `--prewarm` are Windows-only and rejected on Linux with a readable
@@ -412,34 +406,34 @@ introspection XML and the `serialize` functions were read, not remembered).
   links no `taigi-desktop-update` — no TLS stack in the package. The General pane keeps the
   running version and a Download link to taigikeyboard.tw. No build flag either: there is
   nothing to switch off. Spawned children stay reaped on a thread (`launcher::spawn_detached`).
-- **L11 Packaging + release.** `make -C linux install PREFIX=/usr DESTDIR=` installs the two
-  binaries, the component XML (rendered with the prefix), the dictionaries, a
-  `tw.taigikeyboard.Settings.desktop` entry + icon, and prints the `ibus restart`
-  reminder; `uninstall` reverses it and keeps `$XDG_*/taigikeyboard`. A `.deb` is packed by
-  `dpkg-deb` over that same install layout (`make -C linux deb`: `make install DESTDIR`,
-  `packaging/control.in`, `Depends` from `dpkg-shlibdeps` + `fcitx5 | ibus`; both shells in
-  one package, as `fcitx5-chewing` + `ibus-chewing` come from one source; not
-  `cargo-deb` — a second asset list would drift from `make install`) — on the
-  GitHub-hosted Ubuntu runner (`.github/workflows/linux-build.yml`, mirror of
-  `windows-build.yml`: built on every PR; a `main` `workflow_dispatch` from
-  `tools/release/stage-desktop.sh` attaches the `.deb` + SHA-256 to the `desktop-<version>` DRAFT,
-  never over an existing asset and never on a publish — `linux-release.md`). No signing
-  (no Linux-side equivalent of Authenticode / notarization is expected of a `.deb`
-  downloaded from a project page; apt-repository signing is outside this slice). Version
-  source of truth stays `windows/Cargo.toml`; `make version-desktop x.y.z` moves
-  `desktop/Cargo.toml` and `linux/Cargo.toml` with it. **RPM / Flatpak / AUR are not in
-  this slice** (Flatpak cannot host an IBus engine at all).
+- **L11 Packaging + release.** One `make -C linux install PREFIX=/usr DESTDIR=` layout
+  (both shells, the settings window, the popup, the component XML rendered with the prefix,
+  dictionaries, typefaces, a `tw.taigikeyboard.Settings.desktop` entry + icons; `uninstall`
+  keeps `$XDG_*/taigikeyboard`) is the single asset list every package is packed from —
+  `.deb` via `dpkg-deb`, `.rpm`, Arch `.pkg.tar.zst` — never a second build or a second
+  asset list (`cargo-deb` rejected: it would drift from `make install`). Both shells in one
+  package, as `fcitx5-chewing` + `ibus-chewing` come from one source. Built on GitHub-hosted
+  runners by `.github/workflows/linux-build.yml` and attached to the `desktop-<version>`
+  DRAFT, never over an existing asset (`linux-release.md` owns artifacts, paths per
+  distribution and the CI half). No signing (no Linux-side equivalent of Authenticode /
+  notarization is expected of a package downloaded from a project page; apt-repository
+  signing is not done). Version source of truth stays `windows/Cargo.toml`;
+  `make version-desktop` moves `desktop/Cargo.toml` and `linux/Cargo.toml` with it.
+  **Flatpak / Snap / AppImage are not offered** (a sandboxed bundle cannot register with
+  the host's Fcitx5 / IBus).
 - **L12 Verification without a Linux machine.** Per PR, `make linux-check` from the repo
-  root: `cargo test` for `desktop/` (native, the moved crates' existing tests),
-  `cargo clippy --workspace --all-targets -- -D warnings` for `linux/` natively on the Mac
-  (`zbus` and gtk4-rs both build on macOS; libadwaita from Homebrew), a REAL cross build
-  of the engine binary for `x86_64-unknown-linux-gnu` through `cargo zigbuild` (zig ships
-  the C toolchain the bundled SQLite's build script needs — plain `cargo check` stops
-  there; `mise install`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, nightly
-  and on dispatch) adds what the Mac cannot: a real
-  `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, the **Fcitx5 addon
+  root (`linux/Makefile` `check`; step list in `docs/contributing/linux-guidelines.md`
+  § Host gates prove compilation): native `cargo test` + clippy for `linux/` (`zbus` and
+  gtk4-rs both build on macOS; libadwaita from Homebrew), a REAL cross build of the IBus
+  engine and the FFI library for x86_64 and aarch64 `unknown-linux-gnu` through
+  `cargo zigbuild` (zig ships the C toolchain the bundled SQLite's build script needs —
+  plain `cargo check` stops there; `mise install`), a clang syntax check of the Fcitx5
+  addon against the 5.1.7 headers when a clone is present (`check-cpp`), `cargo fmt --
+  --check`, and the i18n check; `desktop/` is gated by `make desktop-check`. CI
+  (`linux-build.yml`, the nightly's call and on dispatch — not per PR) adds what the Mac
+  cannot: a real Linux build of the binaries with the distro's GTK, the **Fcitx5 addon
   built with CMake against `fcitx5-modules-dev`** (the only place it compiles before the VM),
-  `cargo test` of the whole `linux/` workspace, the `.deb` (`make deb`, contents asserted), and an **IBus daemon smoke**: `dbus-run-session`
+  `cargo test` of the whole `linux/` workspace, the packages (contents asserted), and an **IBus daemon smoke**: `dbus-run-session`
   → `ibus-daemon --daemonize --panel disable` with the component XML installed into a
   temporary `IBUS_COMPONENT_PATH`, then `ibus list-engine | grep taigikeyboard` and
   `ibus engine taigikeyboard` — proof that the daemon can spawn the engine and complete
@@ -465,7 +459,7 @@ introspection XML and the `serialize` functions were read, not remembered).
 
 | Behaviour | macOS | Windows | Linux | Class |
 |---|---|---|---|---|
-| Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | own X11 popup; horizontal stacks the two scripts | platform-adapted presentation |
+| Candidate window | own `NSPanel`, 4 layouts | own D2D popup, 4 layouts | own X11 popup, 4 layouts; horizontal stacks the two scripts | platform-adapted presentation |
 | Appearance rows Candidate Text Size / Candidate Window Size / Font | yes | yes | primary and secondary sizes, two families, padding, radius, highlight fill, color theme (custom reveals four colors); not the shared text-size or light/dark | platform-adapted presentation |
 | Manage Fonts pane | selects the candidate typeface | selects the candidate typeface | hidden; families come from fontconfig | unsupported host capability |
 | Focus loss mid-composition | client commits | text stays as host left it | daemon commits (`PREEDIT_COMMIT`) | platform-adapted |
@@ -479,13 +473,13 @@ introspection XML and the `serialize` functions were read, not remembered).
 | MOE dictionary off: its eleven accent rows | shown, greyed | shown, greyed | shown, greyed (mirrors the other desktops) | identical semantics |
 | Sidebar icons | SF Symbols | Fluent | Adwaita symbolic (`preferences-system`, `applications-graphics`, `input-keyboard`, `emblem-documents`, `x-office-address-book`, `document-open-recent`, `help-about`) | identical semantics |
 | Custom Dictionary table | two columns Romanization / Hanji, double-click edits | two columns, ✎ edits | two columns, double-click or ✎ edits | identical semantics |
-| Release flow | `make desktop-release` stages the `.pkg` | the `.exe` on the same draft | the `.deb` on the same draft (`linux-build.yml` `attach`); announce writes `_data/linux_release.json` (download buttons only, no appcast, § L10) | identical semantics |
+| Release flow | the `.pkg` on the `desktop-<version>` draft | the `.exe` on the same draft | the `.deb` / `.rpm` / Arch packages on the same draft (`linux-build.yml`); announce writes the `_data/linux*_release.json` files (download buttons only, no appcast, § L10) | identical semantics |
 
 ## Best practices alignment (references)
 
 | Mainstream practice | Source | This plan (phase) |
 |---|---|---|
-| Engine as a separate process the daemon spawns from a component XML; panel draws preedit + candidates | ibus `src/ibusfactory.c`, `src/ibusengine.c`; rime `ibus-rime`, mozc `unix/ibus/` | L1, L4 |
+| Engine as a separate process the daemon spawns from a component XML; panel draws the preedit | ibus `src/ibusfactory.c`, `src/ibusengine.c`; rime `ibus-rime`, mozc `unix/ibus/` | L1, L4 |
 | Serialisable wire tuples `(sa{sv}…)` in a fixed field order kept for compatibility | ibus `src/ibusserializable.c:277`, `src/ibusenginedesc.c` ("The serialized order should be kept") | L1 |
 | Shell-independent core tested natively, thin platform shells | `windows-roadmap.md` W1, `references/ChiaKey` `ChiaKeyCore` facade | L2, L13 |
 | Blind authoring gated by cross-target checks + hosted runner | `windows-roadmap.md` W13 | L12 |
@@ -494,11 +488,10 @@ introspection XML and the `serialize` functions were read, not remembered).
 | libadwaita preference widgets for an IME's settings | GNOME Settings, `ibus-setup` (GTK), `ibus-anthy` setup dialog | L3 |
 | Lazy engine init on first consumed key | rakukan `factory.rs:413-419`; Windows `Runtime::prepare_for_first_key` | L13 |
 
-**Deliberately not adopted**: an own GTK candidate popup (unpositionable under Wayland;
-no IBus engine does it); libibus FFI bindings (C toolchain on the host, GObject
+**Deliberately not adopted**: a GTK candidate popup (the own window is winit / X11,
+§ L4 — it still cannot be placed on the caret under Wayland); libibus FFI bindings (C toolchain on the host, GObject
 ownership across FFI, and nothing the D-Bus surface lacks); Qt settings window (second toolkit; the IBus panel is GTK);
 any update check, manual or automatic, and a build flag to switch one off (§ L10: nothing to switch); Flatpak (cannot host an IBus engine); a `linux/` crate
-that depends on `../windows/crates/…` (wrong shape, § L2). **YAGNI**: surrounding-text
-capability (nothing in the key table reads the document); handwriting methods answer
+that depends on `../windows/crates/…` (wrong shape, § L2). **YAGNI**: handwriting methods answer
 `()`; `ForwardKeyEvent` is unused (a key the engine does not consume is answered `false`
 and the client processes it itself).

@@ -2,7 +2,7 @@
 
 > **Type**: Design record
 > **Keywords**: `bigram`, `language model`, `next-word`, `association.bin`, `taigi-corpus`, `lattice`, `walker`, `prediction`
-> **Status**: P3–P6 shipped (P6 reopened and merged 2026-10-30, #563–#565: a segmentation error was reported, `ue5` → `有的` over `鞋`; D6 is a penalty-only conditional term in the walker); P7 not adopted; D7 cut. Unscheduled leftovers are in § Techniques not in this roadmap.
+> **Status**: Done — P3–P6 shipped (D6 merged 2026-10-30, #563–#565); P7 not adopted; D7 cut. Unscheduled leftovers are in § Techniques not in this roadmap.
 
 ---
 
@@ -48,18 +48,18 @@
 ### D4 — Engine next-word adopts the word key (techniques 1 + 8)
 
 - `predict.rs::filter_request`: key = `(predict.word, canonical TL of predict.roman)` → word-key lookup; **backoff** to the last-grapheme character key only when the word key returns nothing. This is the n-gram model's own lower-order backoff, not the "A fails → fall back to B" anti-pattern. **Empty roman → character key** always (hanji-only commits arrive with an empty roman).
-- The backoff lives in the lexicon (`search::assoc_lookup`, its `previous_tl` argument); dispatch never builds keys. The reader filters by source while reading (`AssociationReader::lookup` takes the `AssocFilter`), so a key whose head comes from disabled sources is not starved.
+- The backoff lives in the lexicon (`lexicon::api::lookup_associations`, its `previous_tl` argument); dispatch never builds keys. The reader filters by source while reading (`AssociationReader::lookup` takes the `AssocFilter`), so a key whose head comes from disabled sources is not starved.
 - Lost continuous pairs (technique 2): the final commit carries the nailed segments (`NextWordWordSelected.preceding` / `WordSelected.preceding`, `CommittedWord`), applied verbatim by `engine/dispatch` in the composing call; NextWord learns the whole commit as one sequence; nails learn nothing (`behavioral-invariants.md` §40 `INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING`). Recording at nail time would learn reversed pairs (an unnail would have to take the pair back) and pairs from abandoned compositions. The 10 s window gates only the link to the previous commit.
 - `DICT_SCORE_CAP` caps each prediction's **summed** dictionary contribution, after the `(hanzi, tl)` merge and the reading-variant fold. §24 `INVARIANT_NEXTWORD_WORD_KEY_BACKOFF` pins the backoff order.
 
 ### D5 — Composing re-rank by previous word (technique 7)
 
 - **Engine-side snapshot, no proto field**: `nextword::EngineHandle::context_snapshot(now_ms) -> Option<(hanji, tl)>` takes the `nextword` mutex, applies `decide::committed_context` (the 10 s association window), clones two fields and releases the lock before returning. Inside a composition the list follows the word of the composition before it — the converted word ending where it starts, else the last nailed segment; glyphs cut the context (`composing::Engine::pending_snapshot` → `PendingSnapshot.context: ListContext`, `engine/composing/src/api.rs`). `dispatch` calls it before taking the composing lock — never nested, so no lock-order cycle. The snapshot is advisory; the composing generation check still governs the response. Both entry points (`handle_composing` and the user-data path) see the same `prev`.
-- `dispatch::fetch` (`ranking_inputs`, over `dispatch::context`) turns the previous word into `ranking::ContextRanks` (user bigrams over bundled `assoc_lookup` continuations) and passes it into the fetch (`Intent::FetchAtPos.context` → `ContinuousFetchCtx.context`); the lexicon stamps `RawCandidate.context_rank`. Desktops without user-data stores get the bundled context through the same module.
+- `dispatch::fetch` (`ranking_inputs`, over `dispatch::context`) turns the previous word into `ranking::ContextRanks` (user bigrams over bundled `lookup_associations` continuations, `dispatch::context::bundled_continuations`) and passes it into the fetch (`Intent::FetchAtPos.context` → `ContinuousFetchCtx.context`); the lexicon stamps `RawCandidate.context_rank`. Desktops without user-data stores get the bundled context through the same module.
 - `CandidateSortKey.context_rank` (user hit 0 < bundled hit 1 < none 2) sits below `coverage_kind` / `tier` / `user_weight` and above `score`, so the bonus is bounded by construction. Slot 0 is the walker's word, so the walker's per-edge pick (`lexicon::pick_edge_word`) uses the same key, restricted to homophones with the context-free winner's `syllable_count`.
 - Segmentation is untouched, **proven by cost identity**: `edge_cost` reads only `span_walker_cost` (pick-independent), the pick's `syllable_count` (held equal) and `user_weight` (equal, since `context_rank` sits below it) — `behavioral-invariants.md` §56 `INVARIANT_CONTINUOUS_CONTEXT_RERANK`.
 
-### D6 — Penalty-only conditional bigram in the lattice walker (reopened 2026-10-30)
+### D6 — Penalty-only conditional bigram in the lattice walker
 
 **Trigger** (v3.9.0 fix list row 2, `docs/roadmap.md`): the unigram walker lets two hyper-frequent single-syllable words undercut one mid-frequency word. TL `ue5` → slot 0 `有的` (`ū`+`ê`) over `鞋`; `khikhi` → `去去` over `起去` (TL and POJ). Costs (`cost.rs::edge_cost`, `word_unigrams.tsv`): `有` 4.496 + `的` 4.173 = 8.669 < `鞋` 10.024 / 2^0.2 = 8.726; `去`+`去` 8.768 < `起去` 9.273. Negative control: POJ `oe5` (`ôe` is one syllable, no split edge) and `taiuan` → `台灣`.
 
@@ -83,7 +83,7 @@ base(e)   = max(−ln p_uni(e), −ln p(pick(e) | pick(prev edge)))           # 
 
 The full conditional makes frequent collocations (`攏→是`) cheaper than their unigrams, so it splits words the gold set keeps whole. Penalty-only can only raise a multi-edge path's cost: word→split flips = 0 by construction, split→word = 96 (台視, 唬人, 受教, 有價, 彼个, 來路); 2 gold items change, both toward gold.
 
-**Identity is a proof obligation.** The walker state becomes `(offset, incoming edge)`; each edge keeps today's single `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). The P6.3 PR proves (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` (named `cost.rs` / `walker.rs` cases + golden dumps); (b) with data, a single-edge path's cost never changes. `/code-review` mandatory.
+**Identity invariant.** The walker state is `(offset, incoming edge)`; each edge keeps one `EdgeBest` pick (no top-N alternatives, so custom / learned / `user_weight_delta` pricing is untouched). With an empty bigram table every walk returns the unigram walker's edges, choices and cost; with data, a single-edge path's cost never changes (proofs under Engine (P6.3)).
 
 **Data.** `association.bin` v2 keeps the top 30 continuations with count ≥ 2 per key (`associations.py` `WORD_TOP_K` / `WORD_MIN_COUNT`), so its counts cannot give `C(w₁)`, `N(w₁)` or an unseen-vs-pruned answer. The walker needs every seen pair (283 234 pairs over 22 046 previous words today) as raw counts, so `p_uni` stays the runtime edge price under the user's source toggles.
 
@@ -113,7 +113,7 @@ Not planned (YAGNI). If one-word context proves limiting, it returns as its own 
 | P4a | Next-word word-key lookup + character backoff + `DICT_SCORE_CAP` (D4) |
 | P4b | Lost continuous pairs: final commit carries `preceding` (D4) |
 | P5 | Composing re-rank by previous word (D5) |
-| P6 | Walker penalty-only bigram (D6), four PRs: P6.0 this rewrite · P6.1 `walker_gold.py bigram` simulator + report · P6.2 pair-count artifact + lexicon reader · P6.3 walker state + penalty + identity proof + prod regressions (`ue5`, `khikhi`) |
+| P6 | Walker penalty-only bigram (D6), four PRs: P6.0 design · P6.1 `walker_gold.py bigram` simulator + report · P6.2 pair-count artifact + lexicon reader · P6.3 walker state + penalty + identity proof + prod regressions (`ue5`, `khikhi`) |
 | P7 | Hanji-only sources via dictionary max-match — not adopted; the paired sources are the corpus |
 
 ## USER decisions

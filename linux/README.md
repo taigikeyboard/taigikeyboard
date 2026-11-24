@@ -39,7 +39,7 @@ for both shipping targets (x86_64, aarch64) through `cargo zigbuild`. These gate
 compiles; they do not prove behaviour. The CI job
 (`.github/workflows/linux-build.yml`, nightly and on manual dispatch — not per
 pull request) adds a real Ubuntu build, the test run
-and an `ibus-daemon` smoke; the dogfood run-book in the roadmap owns the rest.
+and an `ibus-daemon` smoke; real-device dogfood owns the rest.
 
 ## System packages
 

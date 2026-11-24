@@ -51,7 +51,7 @@ The bottom padding of the keyboard body equals `max(navigationBars.bottom, manda
 
 ### `INVARIANT_keyboard_navbar_dismiss_bug_stays_resolved`
 
-Opening the IME in Discord, Chrome, and any default `WRAP_CONTENT`-host app does not cause an "open then immediately dismiss" cycle. This is the regression surface for the 3-element IME-window hazard (`onConfigureWindow` overridden to `MATCH_PARENT × MATCH_PARENT` + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE`). `InputView.onApplyWindowInsets` derives the `WindowInsets`-based bottom padding declaratively (see `INVARIANT_keyboard_navbar_inset_padding_factor`), applied through the Compose `KeyboardImeRoot`.
+Opening the IME in Discord, Chrome, and any default `WRAP_CONTENT`-host app does not cause an "open then immediately dismiss" cycle. This is the regression surface for the 3-element IME-window hazard (`onConfigureWindow` overridden to `MATCH_PARENT × MATCH_PARENT` + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE`). The keyboard body's bottom padding is derived declaratively from Compose `WindowInsets` in `KeyboardImeRoot`; `InputView.onApplyWindowInsets` applies the same factor to the emoji `media_input` root only (see `INVARIANT_keyboard_navbar_inset_padding_factor`).
 
 ### `INVARIANT_keyboard_action_cancel_unconditional_cleanup`
 
@@ -75,7 +75,7 @@ A keyboard press is initiated only on `ACTION_DOWN` / `ACTION_POINTER_DOWN`. If 
 
 ### `INVARIANT_keyboard_body_layout_published_before_compose_mount`
 
-`TextInputManager.onRegisterInputView` publishes a non-empty `KeyboardUiState` (layout + appearance + active mode, via the synchronous `KeyboardUiCoordinator.ensureLayoutLoadedNow`) **before** calling `KeyboardUiCoordinator.mountKeyboardComposeView`. `mountKeyboardComposeView` runs `setContent` on the already-attached `InputView`, which can create the keyboard body's **first composition synchronously**; that composition must read a populated `KeyboardUiState` so `KeyboardImeRoot` renders a non-empty `KeyboardSurface` at the IME window's first measure. If the publish ran after the mount (or asynchronously), the first composition sees `KeyboardUiState.EMPTY`, the `wrap_content` input view measures to smartbar-only height, and the late async publish does not reliably re-grow the IME window — the intermittent cold-open "keyboard body collapses to a smartbar-only sliver" symptom. `onStartInputView` mirrors the guarantee for the register-before-`onStartInputView` lifecycle order by calling `ensureLayoutLoadedNow(keyboardMode)` before `setActiveKeyboardMode`, so the editor-specific mode (NUMERIC / PHONE / …) is published synchronously too. The first `ensureLayoutLoadedNow` per mode does one bounded synchronous layout compute (small `assets/layouts/*.json` read + Moshi parse, ~KB-scale); warm reopens cache-hit and do no I/O. Aligns with FlorisBoard / khiin-rs, which build the input view synchronously before returning it from `onCreateInputView`.
+`TextInputManager.onRegisterInputView` publishes a non-empty `KeyboardUiState` (layout + appearance + active mode, via the synchronous `KeyboardUiCoordinator.ensureLayoutLoadedNow`) **before** calling `KeyboardUiCoordinator.mountKeyboardComposeView`. `mountKeyboardComposeView` runs `setContent` on the already-attached `InputView`, which can create the keyboard body's **first composition synchronously**; that composition must read a populated `KeyboardUiState` so `KeyboardImeRoot` renders a non-empty `KeyboardSurface` at the IME window's first measure. If the publish ran after the mount (or asynchronously), the first composition sees `KeyboardUiState.EMPTY`, the `wrap_content` input view measures to smartbar-only height, and the late async publish does not reliably re-grow the IME window — the intermittent cold-open "keyboard body collapses to a smartbar-only sliver" symptom. `onStartInputView` mirrors the guarantee for the register-before-`onStartInputView` lifecycle order by calling `ensureLayoutLoadedNow(keyboardMode)` before `setActiveKeyboardMode`, so the editor-specific mode (NUMERIC / PHONE / …) is published synchronously too. The first `ensureLayoutLoadedNow` per mode does one bounded synchronous layout compute (small `assets/ime/text/**/*.json` read + Moshi parse, ~KB-scale); warm reopens cache-hit and do no I/O. Aligns with FlorisBoard / khiin-rs, which build the input view synchronously before returning it from `onCreateInputView`.
 
 ### Tests
 
@@ -87,7 +87,5 @@ A keyboard press is initiated only on `ACTION_DOWN` / `ACTION_POINTER_DOWN`. If 
 
 ## Cross-references
 
-- Parent doc (cross-platform invariants §1–§60): `behavioral-invariants.md`.
+- Parent doc (cross-platform invariants): `behavioral-invariants.md`.
 - Architectural context for the dismiss-bug class: `incident-log.md` and `docs/contributing/known-pitfalls.md` (platform-default IME insets; reference `references/aiongtaigi-sushi` / `references/florisboard`).
-- Layout solver pinned tests: `KeyboardLayoutSolverTest` (Android JVM unit).
-- AOSP LatinIME parity reference: `PointerTracker.onMoveEvent` (no MOVE-driven press promotion).

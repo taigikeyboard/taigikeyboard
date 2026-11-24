@@ -24,7 +24,7 @@ Two consequences shaped every decision below:
    host (§ W13). A Windows box (MSVC Rust, no .NET) now builds and smoke-runs the TIP and
    the settings window; the macOS host keeps the fast type-check.
 
-## Architecture (approved, revised per Codex 2026-08-29)
+## Architecture
 
 ```
 Host app (Notepad / Word / Chrome / …) — one process each, possibly several TSF contexts
@@ -35,7 +35,7 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
 │    ITfDisplayAttributeProvider + ITfThreadMgrEventSink + ITfThreadFocusSink +      │
 │    ITfLangBarItemButton (+ITfLangBarItem, ITfSource)                               │
 │  EditSession closure wrapper · composition per CONTEXT · preserved keys            │
-│  CandidateWindow (Win32 popup, Direct2D + DirectWrite, 3 layouts) + UI-less        │
+│  CandidateWindow (Win32 popup, Direct2D + DirectWrite, 4 layouts) + UI-less        │
 │    ITfCandidateListUIElement contract · ModeFlash                                  │
 ├────────────────────────────────────────────────────────────────────────────────────┤
 │ taigi-desktop-core   (pure, host-testable, unsafe_code = forbid, NO C deps)        │
@@ -44,26 +44,29 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
 │  candidate models (layouts / metrics<TextMeasurer> / positioning) · AutoSpace ·    │
 │  FullWidthPunctuation · shortcuts model · settings MODEL + revision · NextWord      │
 │  learner · engine bridge (prost envelope → dispatch::process_request) · i18n       │
-│ taigi-desktop-storage (rusqlite: freq v2 / assoc v6 / custom v3 · settings.json   │
-│  file store · CSV)          taigi-windows-update (manifest · download · Authenticode)│
+│ taigi-desktop-storage (settings.json file store · font library · atomic replace)   │
+│ taigi-desktop-update (manifest · check)  taigi-windows-update (download · Authenticode)│
 ├────────────────────────────────────────────────────────────────────────────────────┤
-│ engine/ crates by path (dispatch, protos, composing, lexicon, phonetics, nextword)  │
+│ engine/ crates by path (dispatch, protos, composing, lexicon, phonetics, nextword,  │
+│  userdata — the user DBs + CSV)                                                     │
 └────────────────────────────────────────────────────────────────────────────────────┘
         │ ShellExecuteW("TaigiKeyboardSettings.exe")            ▲ settings.json (revision)
         ▼                                                       │
 ┌────────────────────────────────────────────────────────────────┴───────────────────┐
 │ TaigiKeyboardSettings.exe (crate taigi-windows-settings, WinUI 3 via windows-reactor│
 │  — WinUI 3 since the W17-C cutover) · self-contained Windows App Runtime beside it  │
-│  NavigationView: General / Appearance / Shortcuts / Custom Dictionary /             │
-│  Dictionary Sources (+ pinned search)                                               │
+│  NavigationView: General / Appearance / Shortcuts / Dictionary Sources (+ pinned    │
+│  search) / Custom Dictionary / Learning Records / Fonts / About (`SettingsPane`)    │
 │  custom-dict CRUD + CSV · shortcut recorder (WH_KEYBOARD thread hook) · update      │
 │  check/download/verify/install · `--check-updates` headless (per-user scheduled task)│
 │  The TSF DLL never links or loads WinUI (artifact-inspected, W17).                  │
 └────────────────────────────────────────────────────────────────────────────────────┘
 Runtime data: %APPDATA%\TaigiKeyboard\{settings.json, user_frequency.db,
-user_association.db, custom_dictionary.db}; install dir %ProgramFiles%\TaigiKeyboard\
-{TaigiKeyboard.dll (x64), TaigiKeyboard32.dll (x86, beside it — windows-release.md),
-TaigiKeyboardSettings.exe + the Windows App Runtime files (W17), Dictionaries\*, Fonts\*}.
+user_association.db, custom_dictionary.db, learned_phrases.db}; install dir
+%ProgramFiles%\TaigiKeyboard\{TaigiKeyboard.dll (x64), TaigiKeyboard32.dll (x86) and on
+Arm64 TaigiKeyboardArm64.dll + the TaigiKeyboard64X.dll forwarder (windows-release.md
+§ Architectures), TaigiKeyboardSettings.exe + the Windows App Runtime files (W17),
+Dictionaries\*, Fonts\*}.
 ```
 
 ## Design decisions (W1–W17, grounded in code; Codex verdict per item)
@@ -80,8 +83,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   CHANGES — split the shell-independent code by dependency class**, so the host-native
   test and MSVC-check promises hold: `taigi-desktop-core` (pure models, composing
   orchestration, proto bridge, candidate geometry, shortcut semantics, settings model;
-  `unsafe_code = forbid`, no C deps), `taigi-desktop-storage` (rusqlite stores — in engine `userdata` since user-data-engine-roadmap P1,
-  settings file store, CSV), `taigi-windows-update` (download, Authenticode, toast; the manifest + check moved to `desktop/crates/taigi-desktop-update` on 2026-09-24 for Linux),
+  `unsafe_code = forbid`, no C deps), `taigi-desktop-storage` (settings file store; the
+  rusqlite stores and CSV moved to engine `userdata`, `user-data-engine-roadmap.md`), `taigi-windows-update` (download, Authenticode, toast; the manifest + check moved to `desktop/crates/taigi-desktop-update` on 2026-09-24 for Linux),
   `taigi-windows-tsf` (cdylib `TaigiKeyboard.dll`, `unsafe` with `// SAFETY:` per
   `rust-ffi-safety.md` §3), `taigi-windows-settings` (bin `TaigiKeyboardSettings.exe`).
   Every ABI entry (COM method, exported fn) is a `catch_unwind` boundary; no `RefCell`
@@ -158,7 +161,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   restores the host's context on drop, unwinding included. `WM_DPICHANGED` re-anchors to the caret on
   the new monitor (the OS's suggested frame only when the caret is on no monitor), and a
   caret rect from a host that is not per-monitor aware is mapped through
-  `LogicalToPhysicalPointForPerMonitorDPI` before use. The three layouts, metrics, paging,
+  `LogicalToPhysicalPointForPerMonitorDPI` before use. The layouts, metrics, paging,
   grid, positioning and index-label rules are the macOS pure models ported verbatim
   (`Candidates/HorizontalPageLayout.swift`, `ExpandedGridLayout.swift`,
   `CandidateMetrics.swift`, `CandidatePanelPositioning.swift`) with their test
@@ -272,20 +275,18 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   explicit 32/64-bit registry views and the matching `regsvr32` binary per architecture
   (PIME `installer.nsi:299-303,633-650`), uninstall reverses, settings exe stopped
   first, "switch input method → sign out → sign in" guidance when a host still holds
-  the DLL (rakukan `iss:317-335`). **Architectures (Codex): x64 is v1; x86 (WOW64
-  hosts) ships once x64 registration/uninstall is proven on a real box; ARM64 is a
-  built target but not published without a native smoke test.** Arm64 support:
-  #721, through an Arm64X forwarder (`windows-arm64-roadmap.md`). Release =
+  the DLL (rakukan `iss:317-335`). **Architectures**: x64, x86 (WOW64 hosts) and
+  Arm64 (#721, through an Arm64X forwarder, `windows-arm64-roadmap.md`) all ship in one
+  installer (`windows-release.md` § Architectures). Release =
   `windows/scripts/release-app.sh` (bash via Git Bash, mirroring
   `macos/scripts/release-app.sh`): clean-tree preflight → cargo release builds → `iscc`
   → optional `signtool` (env-gated) → SHA-256 → `windows/scripts/publish-release.sh`
-  (mirror of the macOS publisher: the shared `desktop-<version>` GitHub release
-  in this repo, anonymous read-back checks, then the ONE committed file
-  `_data/windows_release.json` — the site renders `appcast/windows.json` from it —
-  poll live). Root `make windows-release`,
-  `make windows-check`. Version source of truth = `windows/Cargo.toml`
+  (stages the installer on the shared `desktop-<version>` draft; the announcement
+  writes `_data/windows_release.json`, from which the site renders
+  `appcast/windows.json` — `desktop-release.md`). Releases are built by the
+  GitHub-hosted `windows-build.yml`; `make windows-release` is the by-hand path. Version source of truth = `windows/Cargo.toml`
   `[workspace.package] version`; `tools/release_notes.py` `set-versions` /
-  `check-versions` extended so `make version-desktop x.y.z` moves macOS + Windows together
+  `check-versions` extended so `make version-desktop` moves every desktop together
   (the desktop train; iOS + Android are the separately numbered mobile train — USER 2026-08-29).
 - **W9 Update check** — manifest `https://taigikeyboard.tw/appcast/windows.json`, the
   macOS wire schema unchanged (`macos/updates/README.md` § Wire format). **Codex: REFUTE
@@ -333,51 +334,46 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `desktopGeneralTab`, mechanical across JSON + generated Swift + macOS call sites (78
   keys), verified by `swift build` on this Mac. Every desktop key is scoped to both
   platforms. `tools/i18n/check.py` gates the generated Rust byte-for-byte
-  automatically; `windows/Makefile` runs it before build.
-- **W12 Proto** — `PLATFORM_WINDOWS = 4` in `engine/protos/proto/envelope.proto`
-  (nextword rejected `PLATFORM_UNSPECIFIED`; `platform_id`, the `Platform` enum and that rejection were removed 2026-10-09 (round A1b));
-  `make build` regenerates the committed iOS/Android/macOS protos
-  (`rust-migration-policy.md` §4 triple-touch). Its own PR (Codex: keep the mechanical
-  regen apart from the i18n migration).
-- **W13 Verification without a Windows machine** — per PR, `make windows-check`:
-  `cargo test` for core / storage / update (host-native), `cargo clippy --workspace
-  --all-targets --target x86_64-pc-windows-gnu -- -D warnings` (full graph incl.
-  rusqlite via mingw), `cargo check --target x86_64-pc-windows-msvc` for the crates
-  with no C dependency (core, update, tsf-without-storage features are NOT separable —
-  so msvc covers core + update; Codex: state this honestly), `cargo fmt --check`, and a
-  **GNU release link of the DLL followed by an export-table check**
-  (`x86_64-w64-mingw32-objdump -p` must list `DllGetClassObject`, `DllCanUnloadNow`,
-  `DllRegisterServer`, `DllUnregisterServer` unmangled). Spikes proved on 2026-08-29
-  that `windows` 0.62 `#[implement]` COM, rusqlite bundled and eframe 0.31 all check on
-  this Mac. **Codex strongly recommends a GitHub Actions Windows runner** (MSVC build,
-  `regsvr32` in an isolated runner, settings-exe process smoke, Inno compile) as a v1
-  gate. Adopted later: `.github/workflows/windows-build.yml` builds the installer on a
-  GitHub-hosted runner for `desktop-*` tags + dispatch; `make windows-check` stays the manual host gate. What `cargo check` cannot catch is listed in
-  `docs/contributing/windows-guidelines.md` § TSF / COM discipline.
+  automatically; `windows/Makefile` `test` runs it first.
+- **W12 Proto** — superseded: Windows once added `PLATFORM_WINDOWS` to
+  `engine/protos/proto/envelope.proto` (nextword rejected `PLATFORM_UNSPECIFIED`); the
+  `Platform` enum, `platform_id` and that rejection were removed 2026-10-09, so the
+  envelope carries no platform.
+- **W13 Verification without a Windows machine** — per PR, `make windows-check`
+  (`windows/Makefile` `check`; the step list is `docs/contributing/windows-guidelines.md`
+  § Host gates prove compilation): native tests for the host-testable crates, gnu clippy
+  over the full graph (rusqlite via mingw), `cargo check` on the MSVC targets for the
+  crates with no C dependency (Codex: state honestly that msvc covers only those), the
+  GNU release link of the DLL with an export-table check (`DllGetClassObject`,
+  `DllCanUnloadNow`, `DllRegisterServer`, `DllUnregisterServer` unmangled), `check-box`,
+  and `cargo fmt --check`. **Codex recommended a GitHub Actions Windows runner** as a
+  gate; adopted as `.github/workflows/windows-build.yml`, which builds and smoke-tests
+  the installer on GitHub-hosted runners for every release (dispatch, the monthly train,
+  the nightly) — `make windows-check` stays the per-PR host gate. What `cargo check`
+  cannot catch is listed in `docs/contributing/windows-guidelines.md` § TSF / COM discipline.
   **W17 amendment (2026-08-30)**: `windows-reactor-setup`'s build script refuses the
   gnu target (`unsupported target environment: gnu`, spike), while `windows-reactor`
   itself type-checks on it. So the settings crate's build script stages the runtime
   only for MSVC and the gnu `cargo check` stays a type-check; the REAL gate for the
-  settings crate is `make check-box` = `ssh win cargo clippy -p taigi-windows-settings
-  --all-targets -- -D warnings` on the MSVC box, folded into `make windows-check`
+  settings crate is `make check-box` (`windows/scripts/check-box.sh`: clippy, tests and
+  a build of the settings + platform crates, plus the i686 / aarch64 TSF checks, on the
+  MSVC box over ssh), folded into `make windows-check`
   (Codex Q4: an unreachable box is a gate FAILURE, never a silent skip; the daily gate
   now depends on that box — the only clean alternative is Windows CI, user-gated).
-- **W14 Toolchain** — `windows/rust-toolchain.toml`: stable + `x86_64-pc-windows-msvc`
-  (v1 ship), `i686-pc-windows-msvc`, `aarch64-pc-windows-msvc` (prepared — listed, not
-  built by the release script) + `x86_64-pc-windows-gnu` (host check). `+crt-static`
+- **W14 Toolchain** — `windows/rust-toolchain.toml`: a pinned Rust release +
+  `x86_64-pc-windows-msvc`, `i686-pc-windows-msvc`, `aarch64-pc-windows-msvc` (all three
+  ship) + `x86_64-pc-windows-gnu` (host check only). `+crt-static`
   for the MSVC DLL and exe, verified per artifact by the release script's import-table
   check (`dumpbin /dependents`: no `vcruntime*.dll` / `msvcp*.dll` imports).
-  **W17 amendment**: `windows-reactor` needs rust-version 1.95 (box has 1.98, edition
-  2024). The no-VC-runtime gate covers OUR two binaries only; the Windows App Runtime
+  **W17 amendment**: `windows-reactor` sets the workspace's `rust-version` floor (1.95,
+  edition 2024). The no-VC-runtime gate covers OUR two binaries only; the Windows App Runtime
   DLLs staged beside the exe are Microsoft's (they import the system UCRT
   `api-ms-win-crt-*`, no `vcruntime140` — string-inspected on the box) and are never
   judged by it.
-- **W15 UI framework for settings — SUPERSEDED by W17 (2026-08-30)**. History: PR7/PR8/#641/#645
-  shipped an eframe/egui `=0.31.1` window (system faces prepended, DWM accent, dark
-  caption, then a Fluent-token restyle in #645). USER 2026-08-30 after seeing it run:
-  "egui is ugly, drop the egui approach … make the win settings menu native windows UI components, modern win style". The egui
-  code stays on `main` until the W17 cutover PR deletes it; its named limitations (no
-  Mica, no high contrast, egui IME path, accesskit tree) die with it.
+- **W15 UI framework for settings — SUPERSEDED by W17 (2026-08-30)**. The first settings
+  window was eframe/egui; USER 2026-08-30 after seeing it run: "egui is ugly, drop the
+  egui approach … make the win settings menu native windows UI components, modern win
+  style". The egui code was deleted at the W17-C cutover.
 - **W17 Settings window on WinUI 3 via `windows-reactor`** (Codex ANALYSIS-ONLY
   2026-08-30: GO WITH CHANGES, all folded in). Framework = `windows-reactor` 0.100
   (microsoft/windows-rs `crates/libs/reactor`, pure-Rust declarative WinUI 3:
@@ -393,14 +389,13 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   box. Flip-to-C# triggers (Codex Q1): reconciliation/state loss that cannot be
   worked around, unreliable native `TextBox` IME / UIA / `ContentDialog` focus /
   `NavigationView` lifetime on the box, upstream churn forcing a fork. A missing
-  property on one control is NOT a trigger. **Spike 2026-08-30 on the box**: both
-  reactor samples build in 1m57s and run; self-contained runtime = 65 MB / 42 files +
-  3 MB exe.
+  property on one control is NOT a trigger. Spike 2026-08-30: self-contained runtime =
+  65 MB / 42 files + 3 MB exe.
   **Deployment = self-contained** (Codex Q2): `windows_reactor_setup::as_self_contained()`
   in the settings crate's `build.rs` (MSVC only; skipped on the gnu host check) stages
   the `Microsoft.WindowsAppSDK.Runtime` 2.4.0 files beside the exe and embeds the
   activatable-class app manifest via `/MANIFEST:EMBED` (coexists with the rc-embedded
-  icon + VERSIONINFO — verified in PR A0). `release-app.sh` copies the runtime files to
+  icon + VERSIONINFO). `release-app.sh` copies the runtime files to
   staging; `.iss` installs them into `{app}` beside the exe; uninstall removes them
   (user data untouched). No Windows App Runtime install, no MSIX provisioning, offline
   install, deterministic version; the installer grows ~25–35 MB compressed.
@@ -459,8 +454,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   close / drop; a recording generation discards stale presses. Bare-press names come
   from `ToUnicodeEx` with the W5 rules (HKL, dead keys, surrogates, AltGr) — shared with
   the TSF crate's `key_translation`, not a weaker copy; chords use the VK table. The
-  decision stays `keys::evaluate_press` (core, untouched). The old egui limitations
-  (keypad `+`, Win key, AltGr) are re-classified against the hook in PR B1.
+  decision stays `keys::evaluate_press` (core, untouched).
   **W17-B1 contracts** (Codex ANALYSIS-ONLY 2026-08-31: GO WITH CHANGES on all seven
   forks; four of them were behaviour bugs in the plan, all folded in):
   (a) **Tab is reported but NOT swallowed** — `evaluate_press` answers a bare Tab with
@@ -484,11 +478,9 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   wakes it. The thread-local state is read with `try_borrow_mut` (a re-entrant callback
   passes the key through rather than panicking) and its borrow is never held across the
   delivery closure or across Win32; the recording generation lives in the message that
-  closure sends, not in the platform. **OPEN, and the first dogfood question of W17-B**:
-  whether `WH_KEYBOARD` sees the keys of a WinUI 3 XAML island at all, or whether input
-  arrives through the CoreMessaging dispatcher queue — if it does not, the fallback is
-  `WH_GETMESSAGE` or the App SDK's `InputKeyboardSource` / `PreTranslateKeyboardSource`.
-  Nothing else in W17-B depends on which.
+  closure sends, not in the platform. The open question of W17-B — whether
+  `WH_KEYBOARD` sees a WinUI 3 window's keys at all — was answered yes: the hook takes
+  the presses before the XAML tree does (`taigi-windows-platform` `keyboard_hook.rs`).
   **Behaviour freeze** (Codex Q7): every `settings.json` write, store call, the
   one-work-slot rule, CSV codec, the `Offer` machine, `--check-updates`, the launcher
   contract stay byte-for-byte. Named observable changes: window frame not persisted;
@@ -500,9 +492,8 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   headless `--check-updates` run) now needs the runtime files beside it; second launch
   with a different `--pane` must still switch + foreground the existing window
   (single-instance mutex kept, activation re-verified).
-  **Gate**: § W13 amendment (`make check-box`). Each PR: builds on the box, launches
-  headless without crashing (ssh session 0 cannot show a window), USER screenshots on
-  the box's console.
+  **Gate**: § W13 amendment (`make check-box`); every pane is mounted headlessly by
+  `winui::pane_planning` (`windows-guidelines.md`).
 - **W16 Docs** — this roadmap = design decisions;
   `docs/architecture/windows-release.md` = operator procedure. **PR10 contract for PR9's
   code** (Codex): sign `TaigiKeyboardSettings.exe` and every installer with the SAME
@@ -546,7 +537,7 @@ registration, desktop toast requirements).
 | D2D/DWrite render factory, DC render target, RECREATE_TARGET handling | khiin `ui/render_factory.rs`, `candidate_window.rs:379-420` → ours `taigi-windows-tsf/src/ui/render.rs` | W4 |
 | `GetTextExt` on collapsed selection + three-tier fallback | rakukan `on_compose.rs:29-43`; khiin `composition_utils.rs:31-69` | W4 |
 | `ITfUIElement` / `ITfCandidateListUIElement` for UI-less hosts | khiin `tip/candidate_list_ui.rs:54-59,160-174` → ours `taigi-windows-tsf/src/ui/candidate_list_element.rs` | W4/PR6 |
-| Lang-bar button `GUID_LBI_INPUTMODE`, `InitMenu` / `AddMenuItem` | rakukan `language_bar.rs:21-46`, `factory.rs:1145-1231` | W6 |
+| Lang-bar button `GUID_LBI_INPUTMODE`, a button whose `OnClick` draws its own popup menu (the taskbar indicator never drives `InitMenu`) | rakukan `language_bar.rs:21-23`; mozc `tip_lang_bar.cc:196-240` | W6 |
 | Settings exe launched from DLL directory | rakukan `tsf/settings_launcher.rs` | W1 |
 | Config reload by mtime poll | rakukan `engine/config.rs:330-443` | W10 |
 | Inno Setup, `regsvr32 /s` in `[Run]`, DLL-locked rollback + sign-out guidance | rakukan `rakukan_installer.iss:120-158, 290-370` | W8 |
@@ -562,7 +553,7 @@ registration, desktop toast requirements).
 | `panic = "abort"` in the DLL | rakukan `Cargo.toml:55-59` | Every COM entry is a `catch_unwind` boundary per `docs/contributing/rust-ffi-safety.md` §1.2; abort would take the host down. |
 | TIP spawning the updater from a keystroke | (own first draft) | Codex W9: host policy / security products / process ancestry. Scheduled task instead. |
 | Ctrl+Alt **composing** bindings | (own first draft) | Codex F7: AltGr conflict on non-US layouts — a composing binding stands for as long as it is bound. The GLOBAL tier does allow Ctrl+Alt (USER 2026-08-31): those chords answer only while this TIP is selected, and they are what carries the Mac's ⌃⌘ roster over. |
-| `GUID_TFCAT_TIPCAP_COMLESS`, `IMMERSIVESUPPORT` | khiin/rakukan register all seven | Codex W6: declaring capabilities the TIP does not have. |
+| `GUID_TFCAT_TIPCAP_COMLESS` | khiin/rakukan register all seven | Codex W6: declaring a capability the TIP does not have. (`IMMERSIVESUPPORT` was refused here too and is declared since 2026-09-05 — W6.) |
 | HKLM → HKCU `CTF\TIP` registry copy | rakukan `rakukan_installer.iss:134-138` | Uninstall deletes the whole HKCU TIP key — other IMEs' settings. Dogfood decides if Windows 11 needs anything. |
 | `MessageBox` in `DllRegisterServer`, `panic!` in edit sessions, advising a second sink object | khiin `dll.rs:173-180`, `edit_session.rs:32`, `key_event_sink.rs:87-88` | Live bugs, not patterns. |
 | Threads spawned from `DllMain` | rakukan `lib.rs:127-130` | Loader lock. |

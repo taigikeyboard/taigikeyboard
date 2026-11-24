@@ -9,13 +9,13 @@
 ## Summary
 
 - Engine binaries (the iOS / macOS xcframeworks with their swift-bridge wrappers, `jniLibs/*.so`) are **generated** by `make build` and gitignored (`.gitignore` § Rust shared-core platform artifacts).
-- The platform proto bindings `make build` regenerates (`make protos`: Java under `android/app/src/main/java/…/engine/proto/`, `.pb.swift` under `ios/…/Engine/Generated/` and `macos/…/Generated/`) are **committed**, so only a `.proto` change needs protoc 36.2.
-- The dictionary artifacts (`assets/dictionaries/`) and the typefaces (`assets/fonts/font/`) are **committed** and packaged natively by all five platforms.
+- The platform proto bindings `make build` regenerates (`make protos`: Java under `android/app/src/main/java/…/engine/proto/`, `.pb.swift` under `ios/…/Engine/Generated/` and `macos/…/{Engine,DesktopCore}/Generated/`) are **committed**, so only a `.proto` change needs protoc 36.2.
+- The dictionary artifacts (`assets/dictionaries/`) and the typefaces (`assets/fonts/font/`) are **committed** and packaged by every platform, the web builds included.
 - Commands per platform and the stale-artifact gate: [`../BUILDING.md`](../BUILDING.md) §4–5 (condensed in `AGENTS.md` § Build & Test). This file holds the rationale and the timings.
 
 ## Typefaces
 
-All five platforms package `assets/fonts/font/` (Android through a `res` source dir in `android/app/build.gradle.kts`, the other four by copying it — Linux at `make -C linux install`), so nothing has to be staged before a build.
+Every platform packages `assets/fonts/font/` (Android through a `res` source dir in `android/app/build.gradle.kts`, the native desktops and iOS by copying it — Linux at `make -C linux install`; the web page subsets it to `woff2` in `web/Makefile`), so nothing has to be staged before a build.
 
 ## Submodule
 
@@ -23,7 +23,7 @@ Clone with `--recurse-submodules`, or run `git submodule update --init --recursi
 
 ## Dictionary artifacts
 
-All five platforms package `assets/dictionaries/` the same way as the typefaces (Android through an `assets` source dir, iOS through an Xcode synchronized folder, macOS and Windows by copying it, Linux at `make -C linux install`).
+Every platform packages `assets/dictionaries/` the same way as the typefaces (Android through an `assets` source dir, iOS through an Xcode synchronized folder, macOS and Windows by copying it, Linux at `make -C linux install`, the web page, ChromeOS and the browser extension in their `web/Makefile` staging targets).
 
 They stay committed by maintainer decision (the `dictionary/` tree and its outputs are left as they are), not because of a technical limit: `make dict` reproduces them from a clean checkout. `dictionary/build.sh` writes them into `dictionary/output/`, where the four shipped files are untracked scratch (`dictionary.csv` and `walker_lm_stats.txt` there stay tracked), and its deploy step copies them to `assets/dictionaries/`.
 
@@ -37,8 +37,6 @@ Ignored files survive `git checkout`, so bootstrapping is one pass per machine, 
 | --- | --- | --- |
 | `make dict` | **~2 min** | `run.sh` 67 s across the nine per-source pipelines (`kautian` 26 s, `taihoa` 10 s; `extract` 15 s and `merge` 8 s dominate), then `build.sh` 53 s (`merge_csv` 16 s, `create_association_bin` + verify 13 s, `create_syllables_fst` 11 s, `create_fst` 7 s, `create_dictionary_bin` + verify 5 s) |
 | `make build` | **5.1 s warm** | sequential (`protos` → `ios-libs` → `android-libs` → `macos-libs`); every cargo invocation reports `Finished` in 0.03–0.08 s against a warm target dir. A cold build compiles the engine for every shipped target and takes minutes. |
-
-`make dict` must finish before `make build` when dictionary sources moved.
 
 ## Six Cargo workspaces (deliberate)
 
@@ -56,4 +54,4 @@ Revisit when a shared dependency has to be bumped by hand in more than one lockf
 
 ## A release rebuilds first
 
-`/release-mobile` and `/release-desktop` run `make i18n` + `make build` themselves (and `make dict` when dictionary sources moved): the engine binaries a platform links are generated and gitignored, so nothing else can prove the shipped artifact was built from the commit being released.
+`/release-mobile` and `/release-desktop` (a desktop patch) run `make i18n` + `make build` themselves (and `make dict` when dictionary sources moved), and the monthly desktop train builds every package on GitHub-hosted runners from the release commit (`desktop-release.md`): the engine binaries a platform links are generated and gitignored, so nothing else can prove the shipped artifact was built from the commit being released.

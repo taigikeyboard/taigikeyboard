@@ -18,7 +18,7 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Trace before assert
 
-- **PR #310** (`ad085b3b`) — a test oracle assumed `to_tl` adds default tone diacritics; `engine/phonetics/src/tables.rs:43-47` returns "" for tones 1/4. Two false BLOCKs raised against the wrong oracle. Same round: grep of `tables.rs` showed uppercase `TH`/`IN`/`OR` parse as valid finals, so an "unconditional fold is safe" pre-impl claim was false.
+- **PR #310** (`ad085b3b`) — a test oracle assumed `to_tl` adds default tone diacritics; `engine/phonetics/src/tables.rs` `tl_tone_mark` returns "" for tones 1/4. Two false BLOCKs raised against the wrong oracle. Same round: grep of `tables.rs` showed uppercase `TH`/`IN`/`OR` parse as valid finals, so an "unconditional fold is safe" pre-impl claim was false.
 - **2026-05-31 `tai5`→`ta` prefix collision** (S5 / `INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`) — the masking test built its inventory as `build_inventory(&["tai5"])`; `ta` was never in the fixture, so the production collision could not fire. Produced the fixture rule. The first fix attempt in `syllabifier::valid_span_endings` reintroduced the PR #290 `span_min_syllable_count("tania")` regression — produced the fix-location rule.
 
 ### UI event tests bypassing OS dispatch
@@ -31,7 +31,7 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Verify hard-prerequisite claims
 
-- **PR #270 → slim-down `27c8672c`** (2026-05-14) — memory + Codex agreed a `(roman, hanji)` ranker dedupe was a hard prerequisite; `dictionary/build/merge_csv.py:107` `groupby((hanzi, _tl_key))` already enforced uniqueness. ~155 LOC + 9 tests reverted.
+- **PR #270 → slim-down `27c8672c`** (2026-05-14) — memory + Codex agreed a `(roman, hanji)` ranker dedupe was a hard prerequisite; `dictionary/build/merge_csv.py` `_dedup_sources` (`group_by(["hanzi", "_tl_key"])`) already enforced uniqueness. ~155 LOC + 9 tests reverted.
 
 ### Workaround circuit-breaker
 
@@ -51,7 +51,7 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Grounded in code
 
-- **v3.5.8 continuous-input plan** — drafted a `nextword` integration assuming it fetches bigram predictions; `engine/nextword/src/api.rs:42-84` showed it only filters / scores what the platform feeds. One read flipped direction and reasoning.
+- **v3.5.8 continuous-input plan** — drafted a `nextword` integration assuming it fetches bigram predictions; `engine/nextword/src/api.rs` showed it only filters / scores what the platform feeds. One read flipped direction and reasoning.
 
 - **2026-09-18 iPad external keyboard (PRs #77 / #78 / #80 / #83, reverted)** — three PRs built hardware-key composing on `UIInputViewController.pressesBegan`, with "iPadOS delivers `pressesBegan` to the extension" listed only as an unverified dogfood assumption. Real-iPad dogfood: hardware keys reach the host as plain ASCII; the extension never receives `UIPress` events (iPadOS routes them to the host app's responder chain only — the same limit every third-party keyboard has, e.g. PTT iOS 2023-07-24"iPad not accepting third-party input methods on the (hardware) keyboard has long been criticised"). USER: "why didn't you tell me at the planning stage that it couldn't be done?" / "iOS doesn't support external keyboards for third-party input methods; revert the external-keyboard features". A platform-capability assumption that the whole plan rests on gets a 20-line spike PR on device BEFORE the plan, not a dogfood row after it.
 

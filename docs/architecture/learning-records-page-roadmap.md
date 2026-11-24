@@ -1,6 +1,6 @@
 # Learning Records page — roadmap
 
-> **Status**: shipped on all five platforms. Since round A1b only the `FREQUENCY` and `LEARNED_PHRASE` kinds exist (`LearningRecordKind.ASSOCIATION` and `LearningRecord.previous_text` / `previous_tl` left the wire); the proto sketch below is the P1 design.
+> **Status**: Done — shipped on iOS, Android, macOS, Windows and Linux (P1–P13). The web version has no page; it only clears the learning stores.
 
 A settings page, on all five platforms, that lists what the keyboard has learned from the user, lets them correct one row's count and delete one row. "Delete Learning Records" (empties every learning store) lives on the same page.
 
@@ -32,18 +32,17 @@ One page, **Learning Records**, with a kind switch:
 New `UserDataRequest` methods (tags 12–14), answered by `engine/userdata`:
 
 ```proto
-enum LearningRecordKind { FREQUENCY = 0; LEARNED_PHRASE = 1; ASSOCIATION = 2; }
+enum LearningRecordKind { FREQUENCY = 0; LEARNED_PHRASE = 1; }   // 2 (association) reserved
 enum LearningRecordOrder { MOST_USED = 0; MOST_RECENT = 1; }
 
 message LearningRecord {
   LearningRecordKind kind = 1;
   int64 id = 2;              // the store's row id — a page handle, not identity
-  string text = 3;           // word / phrase Hanji / next word
+  string text = 3;           // word / phrase Hanji
   string tl = 4;             // canonical TL of `text`
-  string previous_text = 5;  // association only
-  string previous_tl = 6;    // association only
-  int64 count = 7;
+  int64 count = 7;           // 5 / 6 (association previous word) reserved
   int64 last_used_ms = 8;
+  bool can_add_to_custom_dictionary = 9;
 }
 message ListLearningRecords { kind, filter, limit, offset, order }   → LearningRecords { records, total, matching_total, offset }
 message SetLearningRecordCount { record, count }                     → LearningRecordSaved { optional record }
@@ -52,14 +51,14 @@ message DeleteLearningRecord { record }                              → Learnin
 
 - Paging contract = `ListCustomEntries`: the offset is pulled back to the last page that exists (`engine/userdata/src/paging.rs`, shared). Unlike it, `total`, `matching_total`, the offset clamp and the rows are read in ONE read transaction (the page statement counts both itself: one scan per page), `limit` 0 is refused rather than read as "everything" (a store holds up to 50 000 rows; a page asks for the rows it shows, and a phone re-reading its listed rows asks for all of them in one read), and every order ends in `id` so two pages never share or skip a row at a tie.
 - **Identity guard.** A mutation carries the whole `LearningRecord` the page listed; the SQL matches `id` AND the row's identity columns (`(word, tl)`; `(hanzi, roman)`). `learned_phrases.id` is a plain `INTEGER PRIMARY KEY`, so a deleted id can be reused — a stale dialog must not edit the phrase that took it. No match (evicted, deleted, reused) answers "no record" / `removed = false`, which the page reports as "this record is gone" and reloads.
-- `SetLearningRecordCount` clamps to `1..=1 000 000` (the learned-phrase ceiling, `learned_phrases.rs:43`) and keeps `last_used` — an edit is not a use. One `UPDATE … SET count = ? … RETURNING` statement.
-- **Concurrent keyboard writes**: each process has its own writer queue (`database.rs:358-385`), so the order is the database's commit order — a set overwrites the increments before it, later picks add to it, and a deleted row is learned again on the next pick. No cross-process flush protocol.
+- `SetLearningRecordCount` clamps to `1..=1 000 000` (the learned-phrase ceiling, `learned_phrases.rs`) and keeps `last_used` — an edit is not a use. One `UPDATE … SET count = ? … RETURNING` statement.
+- **Concurrent keyboard writes**: each process has its own writer queue (`database.rs`), so the order is the database's commit order — a set overwrites the increments before it, later picks add to it, and a deleted row is learned again on the next pick. No cross-process flush protocol.
 - Deleting a learned phrase deletes its search keys in the same transaction. No `VACUUM` per row.
-- The filter escapes `%` / `_` / `\` as the custom dictionary's does (`custom_dictionary.rs:520-524`); a NULL association TL lists as `''` and the guard compares `COALESCE(tl, '')`.
+- The filter escapes `%` / `_` / `\` as the custom dictionary's does (`custom_dictionary.rs`); the guard compares `COALESCE(tl, '')`.
 - Word identity stays the `(Hanji, canonical TL)` pair (Core Principle #6): the row id only addresses a row the page already listed; no lookup, dedup or merge keys on it.
 - Unknown `kind` / `order` values are refused (`FAIL_INVARIANT`, as every refused user-data request).
 - Backup format unchanged.
-- **Add (P7, tag 15; renamed and widened to frequency rows in P8, narrowed back to learned phrases in P12)** — `AddLearningRecordToCustomDictionary { record }` → `LearningRecordAddedToCustomDictionary { refusal, detail }`. A row `can_add_to_custom_dictionary` refuses is `FAIL_INVARIANT` (decided again from `text` / `tl`, never from the request's flag). `CustomDictionaryStore::add_unless_stored` adds `(roman = record.tl, hanji = record.text)` unless an entry with that Hanji already reads the same once both romans fold to canonical TL (`canonical_tl_form(_, Tl)` — a stored POJ `góa / 我` is `guá / 我`; Core Principle #6); check, cap and write share one transaction, and a stored word is no refusal even at the cap. Then the learned phrase is deleted as `DeleteLearningRecord` deletes it (a row already gone is not a failure); a frequency row never gets here (P12). Two files, no shared transaction: a refused or failed add keeps the phrase; a delete that fails after the add is a store error, and the retry finds the word stored and deletes the phrase. After a phrase's move the custom word offers the whole phrase, as the learned phrase did (`lexicon/src/continuous/candidate.rs:275`). P11 adds `optional string roman = 2; optional string hanji = 3;` — the word as the user edited it; absent, the record's own `tl` / `text`. Both are trimmed and checked as `SaveCustomEntry` checks its fields (an empty roman is `EMPTY_ROMAN`, an empty Hanji files a roman-only word), the edited word goes through the same `add_unless_stored`, and `can_add_to_custom_dictionary` is still decided from the record — an edited Hanji does not make a romanization pick addable. An edit that only changes case lands on the stored word (`canonical_tl_form` ignores case): nothing new is filed, the phrase is forgotten, and the receipt is the one an unedited add of a stored word gives. A retry after a failed delete re-opens the sheet on the row's own word, not the edit.
+- **Add (P7, tag 15; renamed and widened to frequency rows in P8, narrowed back to learned phrases in P12)** — `AddLearningRecordToCustomDictionary { record }` → `LearningRecordAddedToCustomDictionary { refusal, detail }`. A row `can_add_to_custom_dictionary` refuses is `FAIL_INVARIANT` (decided again from `text` / `tl`, never from the request's flag). `CustomDictionaryStore::add_unless_stored` adds `(roman = record.tl, hanji = record.text)` unless an entry with that Hanji already reads the same once both romans fold to canonical TL (`canonical_tl_form(_, Tl)` — a stored POJ `góa / 我` is `guá / 我`; Core Principle #6); check, cap and write share one transaction, and a stored word is no refusal even at the cap. Then the learned phrase is deleted as `DeleteLearningRecord` deletes it (a row already gone is not a failure); a frequency row never gets here (P12). Two files, no shared transaction: a refused or failed add keeps the phrase; a delete that fails after the add is a store error, and the retry finds the word stored and deletes the phrase. After a phrase's move the custom word offers the whole phrase, as the learned phrase did. P11 adds `optional string roman = 2; optional string hanji = 3;` — the word as the user edited it; absent, the record's own `tl` / `text`. Both are trimmed and checked as `SaveCustomEntry` checks its fields (an empty roman is `EMPTY_ROMAN`, an empty Hanji files a roman-only word), the edited word goes through the same `add_unless_stored`, and `can_add_to_custom_dictionary` is still decided from the record — an edited Hanji does not make a romanization pick addable. An edit that only changes case lands on the stored word (`canonical_tl_form` ignores case): nothing new is filed, the phrase is forgotten, and the receipt is the one an unedited add of a stored word gives. A retry after a failed delete re-opens the sheet on the row's own word, not the edit.
 
 ### Platforms
 
@@ -67,8 +66,8 @@ message DeleteLearningRecord { record }                              → Learnin
 |---|---|---|
 | iOS | Dictionary tab → "Keyboard Data": one Learning Records row after Custom Dictionary, opening a subpage with two rows, Word Frequency and Phrases (maintainer dogfood 2026-10-03: one item per kind, no kind picker; 2026-10-05: group them under Learning Records, matching desktop) | `LearningRecordsMenuView` → `LearningRecordsView(kind:)` + view model over `UserDataClient`; order menu row, list, bottom `SearchBar`, swipe delete, alert edit — the Custom Dictionary idiom, but engine-paged (100 rows, load more at the end; a re-read of the listed rows is one engine read) with the filter sent to the engine as typed |
 | Android | Dictionary settings → "Keyboard Data": the same Learning Records row and subpage | `LearningRecordsMenuActivity` / `Screen` → `LearningRecordsActivity` (kind as intent extra) / `Screen` / `ViewModel`; order card, `FilterSearchBar`, dialog edit; same engine paging as iOS |
-| macOS | sidebar pane after Custom Dictionary (`SettingsSplitView.swift:13`) | `LearningRecordsPage` on `UserDataPageChrome` (`UserDataFilterField`, `Table`, `UserDataListPager`) |
-| Windows / Linux | sidebar pane after Custom Dictionary (`settings/choices.rs:316`) | shared model `desktop-core/src/settings/learning_records.rs` (reusing the `Listing` paging / settle logic) + one page file per toolkit |
+| macOS | sidebar pane after Custom Dictionary (`SettingsSplitView.swift` `learningRecords`) | `LearningRecordsPage` on `UserDataPageChrome` (`UserDataFilterField`, `Table`, `UserDataListPager`) |
+| Windows / Linux | sidebar pane after Custom Dictionary (`settings/choices.rs` `SettingsPane::LearningRecords`) | shared model `desktop-core/src/settings/learning_records.rs` (reusing the `Listing` paging / settle logic) + one page file per toolkit |
 
 Every page: a change of kind, order or filter invalidates a load still in flight; "record is gone", "could not read" and "nothing learned yet" are three different states.
 
@@ -76,7 +75,7 @@ Every page: a change of kind, order or filter invalidates a load still in flight
 
 - `desktop-core/src/settings/listing.rs` — the paged, filtered list (`Listing<Row: ListedRow>`, `LoadRequest`, `JobOutcome`, page size 10, filter settle, overlay delay), lifted out of `custom_dictionary.rs` so Custom Dictionary and Learning Records share it; `custom_dictionary::Listing` is now `Listing<CustomDictionaryEntry>`.
 - `desktop-core/src/settings/learning_records.rs` — kinds (frequency, phrases), orders, labels, the count note, the jobs (a row already gone is a notice, not a failure), the last-used day label.
-- `SettingsPane::LearningRecords` (`learningRecords`) exists from P2; it joins `SettingsPane::SIDEBAR` with the Windows page in P3 (the Windows window asserts its pane table equals that roster). Linux lists it from P2 (its own `SIDEBAR`).
+- `SettingsPane::LearningRecords` (`learningRecords`) is in `SettingsPane::SIDEBAR` (the Windows window asserts its pane table equals that roster); Linux lists it in its own `SIDEBAR`.
 - Desktop page: kind + order pickers over the Custom Dictionary table shape (filter, 4 columns — reading, word, count, last used — ✎ / − verbs, pager). Edit = count dialog; delete = immediate, as one custom word's delete is; Add to Custom Dictionary = Custom Dictionary's Add Word dialog over the row's word (P11), the one dialog builder each toolkit's `custom_dictionary.rs` exports (`entry_dialog` on Linux, `word_dialog` on Windows; `CustomDictionaryEntrySheet` on macOS).
 
 ### Strings

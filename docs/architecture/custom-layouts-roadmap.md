@@ -1,6 +1,6 @@
 # Custom Layouts — Roadmap
 
-> **Type**: Planning (feature)
+> **Type**: Design record (roadmap done)
 > **Keywords**: `custom layout`, `layout editor`, `romanization keyboard`, `Layout tab`
 > **Status**: Done — phases 1–4 and follow-up fixes #511 / #513 / #514 merged; device dogfood passed 2026-10-18
 
@@ -33,10 +33,10 @@ CustomLayout { id: UUID, name, base: KeyboardLayoutType, script: tl|poj,
 // keys: nil = removed; functionKeys missing in a record = base order; hasEmojiKey missing = true
 ```
 
-- **Base-relative.** `keys` replaces, in reading order, every `.char` key outside the digit row of the base table `base × script` (iPhone variant), taking the whole `KeyDef` of the moved key so full-width forms travel with it (`LayoutConverter.swift:40` reads `fullWidth` per key): the base's own key first (MOE1 `(` stays half-width), else the catalog — the deduplicated `.char` keys of the symbol page and the romanization tables, no second punctuation table. `functionKeys` fills the function keys the same way, each row keeping the base row's set (checked on load). The digit row and each key's width stay the base's. The globe key is not stored: the keyboard puts it right after 123. The email / URL key replaces a bottom-row `,`, else goes right before space — on every built-in romanization / English row that is right after emoji, as before (`applyInputTypeKey`; TPS returns before it). A removed key leaves its row; a row left empty leaves the keyboard.
-- **Seam.** `CustomLayoutService.selectAlphabeticLayout` picks `base × script` for an active custom layout (not the live mode — Lohankha TL and POJ differ in key count, `TaigiLayouts.swift:35-55`), substitutes, then runs `applyInputTypeKey` as for built-ins. Globe insertion (`TaigiLayouts.swift:8-12`) and the 文/A drop (`LayoutConverter.swift:17`) touch no `.char` key. `applyInputTypeKey` swaps the bottom-row `,` for `@` / `/` or inserts before space — on a custom layout it follows wherever `,` and space ended up, same rule.
-- **Same key positions in TL and POJ.** Only the board is frozen; tone callouts and `nn` display still follow the live mode (`TaigiCallouts+Builder.swift:59`, `ButtonTextProvider.swift:166`). English and TPS keep their own tables (`CustomLayoutService.swift:80-90`).
-- **Label-keyed behaviour follows the key.** MOE callouts (`TaigiCallouts+Builder.swift:35-49`), MOE hints (`ButtonTextProvider.swift:51,90`), MOE2 font (`ButtonFontProvider.swift:45`), 文/A width (`LayoutConverter.swift:102-104`) read the base id + label; shift, `-`, `oo`/`nn` handling read the typed string (`ActionHandler+KeyActions.swift:26,70,134`, `engine/phonetics/src/tone_render.rs` `preprocess_for_normalize_tone`).
+- **Base-relative.** `keys` replaces, in reading order, every `.char` key outside the digit row of the base table `base × script` (iPhone variant), taking the whole `KeyDef` of the moved key so full-width forms travel with it (`LayoutConverter.swift` reads `fullWidth` per key): the base's own key first (MOE1 `(` stays half-width), else the catalog — the deduplicated `.char` keys of the symbol page and the romanization tables, no second punctuation table. `functionKeys` fills the function keys the same way, each row keeping the base row's set (checked on load). The digit row and each key's width stay the base's. The globe key is not stored: the keyboard puts it right after 123. The email / URL key replaces a bottom-row `,`, else goes right before space — on every built-in romanization / English row that is right after emoji, as before (`applyInputTypeKey`; TPS returns before it). A removed key leaves its row; a row left empty leaves the keyboard.
+- **Seam.** `CustomLayoutService.selectAlphabeticLayout` picks `base × script` for an active custom layout (not the live mode — Lohankha TL and POJ differ in key count, `TaigiLayouts.swift`), substitutes, then runs `applyInputTypeKey` as for built-ins. Globe insertion (`TaigiLayouts.swift`) and the 文/A drop (`LayoutConverter.swift`) touch no `.char` key. `applyInputTypeKey` swaps the bottom-row `,` for `@` / `/` or inserts before space — on a custom layout it follows wherever `,` and space ended up, same rule.
+- **Same key positions in TL and POJ.** Only the board is frozen; tone callouts and `nn` display still follow the live mode (`TaigiCallouts+Builder.swift`, `ButtonTextProvider.swift`). English and TPS keep their own tables (`CustomLayoutService.swift`).
+- **Label-keyed behaviour follows the key.** MOE callouts (`TaigiCallouts+Builder.swift`), MOE hints (`ButtonTextProvider.swift`), MOE2 font (`ButtonFontProvider.swift`), 文/A width (`LayoutConverter.swift`) read the base id + label; shift, `-`, `oo`/`nn` handling read the typed string (`ActionHandler+KeyActions.swift`, `engine/phonetics/src/tone_render.rs` `preprocess_for_normalize_tone`).
 - **Places** — the editor selects a `Place`: a slot of `keys` or of `functionKeys`. The emoji key is whichever function slot holds it; `hasEmojiKey` false hides it.
 - **Spare tray** = letters (`a`–`z`, `o͘`, `ee`, `-`, every multi-letter key of the romanization tables, the finals) − keys on the board, then symbols (both symbol pages, then the built-in long-press entries). Symbols keep their long-press callouts (`SymbolCallouts`, keyed by label).
 - **Validation on load** — non-TPS base, `keys.count` = the base table's slot count, every placed key in the catalog, no duplicates. An invalid record is dropped, never rendered.
@@ -50,7 +50,7 @@ Same record and JSON; per-platform tables. Android keeps its layout JSON: `Layou
 - **Seam** — `LayoutManager.mergeLayouts` substitutes after the merge and before extended popups (keyed by label, so tone popups follow the key): each place takes the base's own `KeyData` for that label in the current width (MOE1 `(` stays half-width), else the catalog's. Inline popups move with the key. Removed keys and the emoji key (`hasEmojiKey` false) leave their row; an empty row leaves the keyboard. `@` / `/` go right after a bottom-row `,` (which then hides in email / URL fields), else right before space; the existing globe pass puts the globe after 123. The main table follows the record's script, not the live mode.
 - **Storage** — DataStore `keyboard__user_layouts` (JSON list, per-record decode, invalid records dropped) and `keyboard__selected_custom_layout_id`; write plans in `CustomLayoutSelection` (pure, beside `TpsCascade`). Settings reset keeps the list. `allowBackup="false"` already keeps DataStore out of OS backup.
 - **Refresh** — `TaigiKeyboard` collects `PrefHelper.observeLetterLayout()` (stored layout + active record, from one emission, decoded off the main thread) and reloads the letter layout once per change. The Theme-tab preview keys its layout on the active record.
-- **Editor (2b)** — editing ops on `CustomLayout` (pure, return a copy; function-row checks take the `BaseTable`); `CustomLayoutTables` adds `fresh`, the tray pools and the drawn rows (`editorRows` keeps every place, a removed one flagged; `previewRows` is the keyboard's view), numbered from the same pieces `substitute` reads. `LayoutKeyGrid` (Compose, `ime/text/layout/`) draws the board, the cards and the picker cards; widths come from the keyboard's own slot fractions (`KeyboardLayoutSolver.slotFraction`). `LayoutEditorActivity` hosts the editor full screen, as `ThemeEditorActivity`. The card menu and the name dialog are the theme ones, moved to `ui/components/` (`GalleryCardMenu`, `NameDialog`).
+- **Editor (2b)** — editing ops on `CustomLayout` (pure, return a copy; function-row checks take the `BaseTable`); `CustomLayoutTables` adds `fresh`, the tray pools and the drawn rows (`editorRows` keeps every place, a removed one flagged; `previewRows` is the keyboard's view), numbered from the same pieces `substitute` reads. `LayoutKeyGrid` (Compose, `ime/text/layout/`) draws the board, the cards and the picker cards; widths come from the keyboard's own slot fractions (`KeyboardLayoutSolver.slotFraction`). `LayoutEditorActivity` hosts the editor full screen, as `ThemeEditorActivity`. The card menu and the name dialog are the theme ones, moved to `ui/components/` (`GalleryCardMenu` in `GalleryCard.kt`, `NameDialog`).
 
 ## Selection contract
 
@@ -62,27 +62,27 @@ Per-script memory (#650): Tâi-lô and Pe̍h-ōe-jī each keep a selection (`tlL
 |---|---|
 | Built-in card / overlay / TPS card (`setKeyboardLayoutType`) | cleared, even for the same base |
 | Apply custom | `setKeyboardLayoutType(base)` (clears), then id set |
-| Input-mode TPS enter / leave (`setInputMode`, writes defaults directly, `SharedSettings.swift:238-253`) | kept; `layoutBeforeTps` = base, so leaving resumes it |
+| Input-mode TPS enter / leave (`setInputMode`, writes defaults directly, `SharedSettings.swift`) | kept; `layoutBeforeTps` = base, so leaving resumes it |
 | Settings reset | cleared; saved layouts stay |
 | Delete the active layout (also while TPS / English) | cleared; base stays |
-| Save in the editor | save-and-apply (theme editor pattern, `ThemeEditorViewModel.swift:58-75`), so an edited base never mismatches |
+| Save in the editor | save-and-apply (theme editor pattern, `ThemeEditorViewModel.swift`), so an edited base never mismatches |
 
-The resolver honours the id only when the stored layout matches `custom.base` (a guard, not a fallback). Built-in checkmarks require no custom id (`LayoutTab.swift:107`, `LayoutSelectionOverlay.swift:83`).
+The resolver honours the id only when the stored layout matches `custom.base` (a guard, not a fallback). Built-in checkmarks require no custom id (`LayoutTab.swift`, `LayoutSelectionOverlay.swift`).
 
 ## Keyboard refresh
 
-The layout is built once per keyboard view (`KeyboardViewController.swift:167`) and `syncSettings` only resets autocomplete on a layout-type change (`KeyboardViewController+Setup.swift:178-184`). `syncSettings` compares the active custom layout (`activeCustomLayout`, the whole record): a switch, an edit or a TPS suspend calls `KeyboardContext.notifyDisplayChange()`, the path the Candidate Display change already uses to re-run the layout build (`KeyboardViewController+Setup.swift`), so an open overlay is not torn down and composition is not reset. Built-in switching is unchanged. A host-app edit reaches the extension on its next `viewDidAppear` → `syncSettings` (`KeyboardViewController.swift:142-153`).
+The layout is built once per keyboard view (`KeyboardViewController.swift`) and `syncSettings` only resets autocomplete on a layout-type change (`KeyboardViewController+Setup.swift`). `syncSettings` compares the active custom layout (`activeCustomLayout`, the whole record): a switch, an edit or a TPS suspend calls `KeyboardContext.notifyDisplayChange()`, the path the Candidate Display change already uses to re-run the layout build (`KeyboardViewController+Setup.swift`), so an open overlay is not torn down and composition is not reset. Built-in switching is unchanged. A host-app edit reaches the extension on its next `viewDidAppear` → `syncSettings` (`KeyboardViewController.swift`).
 
 ## Storage
 
-`UserLayoutStore`, mirroring `UserThemeStore`: `user_layouts.json` in the App Group, written atomically, excluded from OS backup (`behavioral-invariants.md` §29), cap 5, a revision counter in defaults, a revision-keyed cache in `SharedSettings` (as `SharedSettings.swift:617-630`). Add / update / delete return success; the UI applies or closes only on success. Not in `.taigi` backup (themes are not either). No generic store: theme seed / carry-over logic (`UserThemeStore.swift:38-73`) has no layout counterpart.
+`UserLayoutStore`, mirroring `UserThemeStore`: `user_layouts.json` in the App Group, written atomically, excluded from OS backup (`behavioral-invariants.md` §29), cap 5, a revision counter in defaults, a revision-keyed cache in `SharedSettings` (as `SharedSettings.swift`). Add / update / delete return success; the UI applies or closes only on success. Not in `.taigi` backup (themes are not either). No generic store: theme seed / carry-over logic (`UserThemeStore.swift`) has no layout counterpart.
 
 ## UI
 
 - **Editor** (`App/Tabs/Layout/`) — base chips · a drawn key grid (selected key filled; removed places dashed; the digit row inert) · spare tray (the removed emoji key, letters, symbols) · action row (swap, undo, delete). A new layout is named and given its use (Universal / Tâi-lô / Pe̍h-ōe-jī) in a dialog on the Layout tab before the editor opens; it starts from the active custom layout's base, else the stored built-in (PhahTaigi while the layout is TPS), in the script its use names (Universal: the active layout's script, else the current romanization script, TL unless POJ). Base switch and undo clear the selection and keep the use; Back discards the draft. Save stores a new layout directly; an edit's Save asks for the name and use again. A universal layout's built-in tone lists hold both scripts' marks (both tone-9 marks). Keys are buttons with selected traits for VoiceOver; function keys are named by their Unicode symbols (⇧ ⌫ ⏎ ␣ 😊), a removed place by `settings.syllableSeparatorNone`.
 - **Grid view** (`Layout/`, compiled into app and extension) — takes rows, selection and a tap callback; drawn small as the card preview on the Layout tab and in the in-keyboard picker. No screenshot asset, no KeyboardKit view.
 - **Cards** — card menu Apply / Edit / Delete (existing keys). At the cap the create card hides, as on the Theme tab.
-- **i18n** — new (iOS scope now, Android joins in phase 2): `layout.editorTitleNew` ("New Layout"; also the blank-name fallback and the name placeholder), `layout.nameHeader` ("Layout Name"). Edit mode titles the editor with the layout's name. `layout.comingSoon` loses its iOS scope in phase 1 and is deleted in phase 2 (Android still reads it, `LayoutScreen.kt:137`).
+- **i18n** — new (iOS scope now, Android joins in phase 2): `layout.editorTitleNew` ("New Layout"; also the blank-name fallback and the name placeholder), `layout.nameHeader` ("Layout Name"). Edit mode titles the editor with the layout's name. `layout.comingSoon` was deleted in phase 2.
 
 ## Phases
 
@@ -94,14 +94,14 @@ The layout is built once per keyboard view (`KeyboardViewController.swift:167`) 
 | 3 | iOS + Android — tray finals (16 keys, frequency order) | Merged (#508) |
 | 4 | iOS + Android — tray `ee` after `o͘` | Merged (#510) |
 
-Phase 1 checks: same-base custom ↔ built-in switch, custom A → B, active edit with a base change, TPS via mode and via card, delete while suspended, reset, globe, email / URL fields, full-width punctuation, shift, callouts, Theme-tab keyboard preview (`KeyboardPreviewPanel.swift:28` also calls `CustomLayoutService`).
+The Theme-tab keyboard preview (`KeyboardPreviewPanel.swift`) also calls `CustomLayoutService`.
 
 ## Best practices alignment
 
 | Mainstream practice | Source | This plan |
 |---|---|---|
-| A custom layout starts from a preset base | `references/azooKey/MainApp/Customize/EditingGridFitCustardView.swift:379-420` (base Custard selection) | Base chips (phases 1–2) |
-| User-made items persisted beside settings, capped, shown on a gallery shelf | `ios/.../Theme/UserThemeStore.swift:17-110`, `ThemePickerView.swift:33-51` | Same store shape and shelf (phase 1) |
+| A custom layout starts from a preset base | `references/azooKey/MainApp/Customize/EditingGridFitCustardView.swift` (base Custard selection) | Base chips (phases 1–2) |
+| User-made items persisted beside settings, capped, shown on a gallery shelf | `ios/.../Theme/UserThemeStore.swift`, `ThemePickerView.swift` | Same store shape and shelf (phase 1) |
 
 Rules: `code-review-rules.md` §2 (reuse theme shelf / card / store pattern), §4 (no generic layout DSL); `AGENTS.md` Core Principle 2 (same model, per-platform tables).
 
@@ -110,7 +110,7 @@ Rules: `code-review-rules.md` §2 (reuse theme shelf / card / store pattern), §
 - Moving function keys across rows or onto character places — rows would overflow (`⇧` 1.5, `↵` 1.75 keys wide) and Android builds them from separate modifier files.
 - Free per-key text entry, adding keys or rows, key widths, removing function keys other than emoji — needs validation and warning copy (a board with no ⌫ or ↵); swap + tray + remove keeps the editor free of errors.
 - Tone-marked vowels (`á à â ā a̍ …`) in the tray — tones are typed as digits or chosen by long-press; a precomposed vowel as composing input is unverified in the engine.
-- An engine-owned layout model — the engine has no notion of layouts (`engine/composing/src/requests.rs:360` is a comment); built-in tables stay per platform (Swift tables / Android JSON).
+- An engine-owned layout model — the engine knows only whether the TPS layout is on (`AppConfig::is_tps_layout`); built-in tables stay per platform (Swift tables / Android JSON).
 - A generic user-item store shared with themes (see Storage).
 - Custom TPS layouts — TPS is bound 1:1 to its input mode.
 - Layout export / sharing (CustardKit format) and `.taigi` backup.

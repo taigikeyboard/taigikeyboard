@@ -8,7 +8,7 @@ The site lives at `https://taigikeyboard.tw/web/`, a project page of the `taigik
 
 ## Deploy
 
-`.github/workflows/web.yml` deploys hourly at minute 17 (drawn at random, after GitHub dropped most runs at the crowded minute 0 and the site went 38 hours without a deploy; GitHub may still start a scheduled run late or skip it): it runs its gates on `main`'s head and, when they pass, starts a deploy, which builds `main`'s head again (a commit pushed between the two goes out ungated). An hour in which no web path (the workflow's own `paths` list) changed since the last successful scheduled run's head deploys nothing, so a docs-only commit rebuilds nothing. A push to `main` runs the gates only. A manual run (Actions → Web → Run workflow, on `main`) runs the gates and, when they pass, deploys `main`'s head whether or not it moved. CI runs Playwright in Chromium only; `make web-e2e` on a Mac runs all three engines.
+`.github/workflows/web.yml` deploys hourly at minute 17 (drawn at random, after GitHub dropped most runs at the crowded minute 0 and the site went 38 hours without a deploy; GitHub may still start a scheduled run late or skip it): it runs its gates on `main`'s head and, when they pass, starts a deploy, which builds `main`'s head again (a commit pushed between the two goes out ungated). An hour in which no web path (the workflow's own `paths` list) changed since the last successful scheduled run's head deploys nothing, so a docs-only commit rebuilds nothing. A push to `main` runs the gates only. A manual run (Actions → Web → Run workflow, on `main`) runs the gates and, when they pass, deploys `main`'s head whether or not it moved. CI runs Playwright in Chromium only, over the staged site and the staged browser extension; `make web-e2e` on a Mac runs the site in all three engines.
 
 The CI job builds and stages the site on the host, then runs the Chromium tests in the official `mcr.microsoft.com/playwright:v<version>-noble` image. The version comes from the installed `@playwright/test` package, pinned by `web/package-lock.json`. Browsers and their system libraries are already in that image, so the browser gate does not run apt against Ubuntu mirrors. Local `make web-e2e` still installs browsers on the host.
 
@@ -24,7 +24,7 @@ Secret:
 |---|---|---|
 | this repository, environment `web-deploy` (deploys from `main` only, no reviewer) | `WEB_DEPLOY_TOKEN` | Fine-grained token, `taigikeyboard/web` only, Actions: write. It expires: a deploy job that fails on `gh workflow run` usually means this |
 
-Create `taigikeyboard/web` and the token before this workflow reaches `main`, or every deploy job fails.
+Without `taigikeyboard/web` or a valid token, every deploy job fails.
 
 ## Cloudflare
 

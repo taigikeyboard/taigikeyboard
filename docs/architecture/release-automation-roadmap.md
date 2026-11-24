@@ -22,27 +22,11 @@ Decisions (maintainer, 2026-11-12):
 - **D3 Writing to `main`** — a GitHub App on the `main` ruleset's bypass list pushes the release commit. Its token also publishes the draft, which matters: a release published with `GITHUB_TOKEN` does not fire `desktop-announce.yml` (GitHub suppresses workflow events caused by `GITHUB_TOKEN`).
 - **D4 Hold + hotfix** — a repository variable `RELEASE_HOLD` stops the train; a hotfix is a patch staged by hand with `/release-desktop <platform>` as today.
 - Version scheme: CalVer `YYYY.M.P`, no zero-padded month (decided earlier, memory `project_release_train`).
-- **D5 Approval gate** (maintainer, 2026-11-14: "I'd rather approve; at least the build no longer has to run on my machine") — the `release` environment has the maintainer as required reviewer again, so every job that reads release secrets (cut push, macOS signing, beta, publish, announcement — which also mints the Chrome Web Store token) waits for one click. Reason: maintainers may merge their own pull requests without approval (ruleset bypass, kept on purpose), so the branch gate alone would let a merged workflow read the secrets. Schedules still start the train; phases 5–6 should group the secret-using jobs into as few runs as possible to keep the clicks few. Phase 5: two approvals per cut (`cut`, `sign-and-beta`), maintainer 2026-11-14.
+- **D5 Approval gate** (maintainer, 2026-11-14: "I'd rather approve; at least the build no longer has to run on my machine") — the `release` environment has the maintainer as required reviewer again, so every job that reads release secrets (cut push, macOS signing, beta, publish, announcement — which also mints the Chrome Web Store token) waits for one click. Reason: maintainers may merge their own pull requests without approval (ruleset bypass, kept on purpose), so the branch gate alone would let a merged workflow read the secrets. Schedules still start the train; the secret-using jobs are grouped to keep the clicks few: two approvals per cut (`cut`, `sign-and-beta`) and two on the 5th (maintainer 2026-11-14).
 
-## Today (grounded in code)
-
-| Step | Today | Where |
-|---|---|---|
-| Version | `make version-desktop X.Y.Z` → `release_notes.py set-versions --train desktop`; refuses a downgrade | `Makefile:271`, `tools/release_notes.py:614` |
-| macOS build number | `MAJOR*10000 + MINOR*100 + PATCH`; minor / patch ≤ 99. CalVer `2026.12.0` → `20261200` > `30900` (3.9.0), so the upgrade order holds | `tools/release_notes.py:468` |
-| Changelog | Written by an agent from `git log <base>..HEAD` during `/release-desktop` (up to 3.9.0) | `.claude/skills/release-desktop/SKILL.md` § 2, § 4 |
-| Stage | `make desktop-release` on the maintainer's Mac: `make macos-release` locally (Developer ID identities from the login keychain, `notarytool` keychain profile), Windows / Linux / ChromeOS dispatched to hosted runners | `tools/release/stage-desktop.sh:93-165`, `macos/scripts/release-app.sh:174-187` |
-| Beta | `desktop-beta.yml` dispatched at the end of a stage | `tools/release/stage-desktop.sh:203` |
-| Publish | The maintainer presses **Publish release** | `docs/architecture/desktop-release.md` § The flow |
-| Announce | `release: published` → `desktop-announce.yml` | `.github/workflows/desktop-announce.yml:15-17` |
-| Chrome Web Store | Automatic upload + submit for review in the announcement (ChromeOS 2026-11-16, browser extension 2026-11-17) | `docs/architecture/chromeos-release.md` § Upload |
-| Homebrew | Manual edit of `Casks/taigikeyboard.rb` in `taigikeyboard/homebrew-tap` | `docs/architecture/desktop-release.md` § The flow |
-
-The macOS half is the only one bound to a person's machine; every other half already runs on hosted runners. (Baseline before phase 4, kept as the plan's starting point; phase 4 moved the macOS half to `macos-build.yml`.)
+The flow as it runs today: [`desktop-release.md` § The flow](desktop-release.md#the-flow).
 
 ## Phases
-
-One phase = one PR unless marked admin.
 
 | # | Phase | Change | Needs from the maintainer | Status |
 |---|---|---|---|---|
@@ -56,13 +40,9 @@ One phase = one PR unless marked admin.
 | 7 | Homebrew | `desktop-announce.yml`: once the announcement succeeded for a release carrying a macOS `.pkg`, the same (already approved) job runs `tools/release/bump-cask.sh` (cask `version` + `sha256` through the contents API) with an App token limited to `homebrew-tap` contents, minted as the job's first step so the App key never shares a job with repository code; then `cask-audit` (no secret, `macos-26`) runs `brew audit --cask --strict --online`. Push first, audit after: a separate approved job would be a third approval on the 5th (maintainer 2026-11-14). An announce or audit failure posts to Discord. The Chrome Web Store upload stayed manual here (D1, maintainer 2026-11-14); automated 2026-11-16 in the same job, after the cask | — (the App already reaches `homebrew-tap`, phase 3) | Merged #921 + fix #922; verified 2026-11-14 (cask 3.9.0, audit green, run 43591499881) |
 | 8 | Hand-off docs | `desktop-release.md` § The flow rewritten around the schedule (phases 5–7) + § Hold, hotfix, re-stage; `/release-desktop` narrowed to a hotfix patch; platform docs and announcement comments name the schedule; memory `feedback_release_manual_by_user` replaced | — | Merged #923 |
 
-Order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Phases 1 and 2 need nothing from the maintainer and come first; 3 and 4 wait on credentials. Until phase 4 merges, the cut cannot run unattended (the macOS half needs the Mac); until phase 6 merges, publishing stays a button press.
-
 ## Hold and hotfix (D4)
 
-The procedure (hold, resume, re-stage, hotfix) and the tree-version rule live in [`desktop-release.md` § Hold, hotfix, re-stage](desktop-release.md#hold-hotfix-re-stage) since phase 8; `/release-desktop` stages only the hotfix patch.
-
-A fix while the month's draft is staged (between the 1st and the 5th) goes onto `main`, then `gh workflow run desktop-train.yml` re-stages the draft from `main`'s tip (the tree already carries `YYYY.M.0`, so no version commit and only the signing approval). A separate patch would number below the tree's `YYYY.M.0`, which the downgrade guard refuses (phase 5, 2026-11-14).
+The procedure (hold, resume, re-stage, hotfix) and the tree-version rule: [`desktop-release.md` § Hold, hotfix, re-stage](desktop-release.md#hold-hotfix-re-stage). A fix while the month's draft is staged re-stages rather than patches, because a patch would number below the tree's `YYYY.M.0`, which the downgrade guard refuses.
 
 Empty month: the generated notes list every merged pull request, Dependabot's included, and do not filter by path, so a month with only dependency bumps or mobile changes still cuts (D2: no label-based filtering).
 
@@ -75,7 +55,7 @@ Empty month: the generated notes list every merged pull request, Dependabot's in
 | App installation token for automation that must bypass branch protection or trigger workflows | GitHub docs: "Triggering a workflow from a workflow" (`GITHUB_TOKEN` events do not start runs); `actions/create-github-app-token` | Phase 3 |
 | Temporary keychain + notarytool API key for CI signing | Apple notarytool `--key/--key-id/--issuer`; GitHub docs "Installing an Apple certificate on macOS runners" | Phase 4 |
 
-Rules: `planning.md` § Persistent hand-off (this doc + memory), § No redundant fallback (phase 4 replaces the local macOS half rather than keeping both paths); `round-workflow.md` § Codex review sandwich — phases 3–6 are High tier (release tooling, credentials).
+Rules: `planning.md` § Persistent hand-off (this doc + memory), § No redundant fallback (phase 4 replaces the local macOS half rather than keeping both paths); `round-workflow.md` § Review sandwich — phases 3–6 are High tier (release tooling, credentials).
 
 Deliberately not adopted:
 

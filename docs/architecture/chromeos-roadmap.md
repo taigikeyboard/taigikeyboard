@@ -1,8 +1,8 @@
 # ChromeOS — Roadmap
 
-> **Type**: Planning (forward-looking)
+> **Type**: Design record + roadmap
 > **Keywords**: `chromeos`, `chrome.input.ime`, `input_components`, `manifest v3`, `service worker`, `wasm`, `linux-chromeos`, `chromeos flex`, `utm`, `rosetta`
-> **Status**: Accepted 2026-11-07, decisions D1–D5 settled. Phase 0 done (issue #759). Phase 1 passed 2026-11-07 (台語 typed in `linux-chromeos` on the Mac; offscreen-document keepalive, § Spike result). Phases 2–4 merged (#765, #766, #767); Phase 5 done: 3.9.0 published on the Chrome Web Store by hand (maintainer 2026-11-16). Phase 6 (real ChromeOS) waits for the maintainer.
+> **Status**: Phases 0–5 done (issue #759); 3.9.0 is on the Chrome Web Store. Phase 6 (real ChromeOS) waits for the maintainer. Decisions D1–D5. Current rules for `web/chromeos/`: `docs/contributing/web-guidelines.md` § ChromeOS input method; release: `chromeos-release.md`.
 > **Siblings**: `web-roadmap.md` (the wasm engine this reuses), `windows-arm64-roadmap.md` (same VM-first pattern).
 
 ---
@@ -48,14 +48,14 @@ Options page (extension page): the web sidebar's settings form
 
 ### Emit → `chrome.input.ime` (grounded in code)
 
-`web/crates/taigi-web/src/reply.rs:214-253` turns each `Emit` into a `WireEmit`. The glue maps them:
+`web/crates/taigi-web/src/reply.rs` turns each `Emit` into a `WireEmit`; `web/chromeos/calls.js` maps them:
 
 | `WireEmit` | `chrome.input.ime` | Note |
 |---|---|---|
 | `preedit { text, caret }` | `setComposition({ contextID, text, cursor })` | |
 | `clearPreedit` | `clearComposition` | |
 | `commit { text }` | `commitText` | |
-| `deleteSurrounding { offset, count }` | `deleteSurroundingText({ engineID, contextID, offset, length })` | Auto-space swap. Verify offset units (UTF-16) in Phase 2 |
+| `deleteSurrounding { offset, count }` | `deleteSurroundingText({ engineID, contextID, offset, length })` | Auto-space swap |
 | `lookupTable` / `hideLookupTable` | `setCandidates` + `setCandidateWindowProperties({ visible, vertical, pageSize, cursorVisible, currentCandidateIndex, … })` | The system draws the window: vertical or horizontal list only (D4) |
 | `announceMode` | `chrome.notifications` at the bottom right, cleared after 2 s (McBopomofoWeb's choice, `src/chromeos_ime.ts` `toggleAlphabetMode`); the tray menu row (`setMenuItems`) names the mode after `modeChanged` | The manifest `indicator` is fixed; the candidate window's auxiliary text was tried and dropped (maintainer 2026-11-14: wanted it at the bottom right, as on the page) |
 | `openSettings` | `chrome.runtime.openOptionsPage()` | |
@@ -65,11 +65,11 @@ Options page (extension page): the web sidebar's settings form
 
 ### Key mapping (grounded in code)
 
-`taigi-web` already reads a browser key as `BrowserKey { key, code, shift, ctrl, alt, meta, repeat }` (`web/crates/taigi-web/src/key.rs:66-74`) and turns it into the core's `KeyEventSnapshot`. `chrome.input.ime.KeyboardEvent` carries `type`, `key`, `code`, `shiftKey`, `ctrlKey`, `altKey`, `altgrKey`, `capsLock`. So the glue fills `BrowserKey` and reuses `key.rs` unchanged. To settle in Phase 1: how the Search (Launcher) key arrives (`meta` has no field), whether key repeat is visible, and which `platform` string the session gets (`Session::new` accepts `macos` / `windows` / `linux`, `bindings.rs:89-98`; ChromeOS keyboards are PC layout, so `linux` is the starting guess).
+`taigi-web` already reads a browser key as `BrowserKey { key, code, shift, ctrl, alt, meta, repeat }` (`web/crates/taigi-web/src/key.rs`) and turns it into the core's `KeyEventSnapshot`. `chrome.input.ime.KeyboardEvent` carries `type`, `key`, `code`, `shiftKey`, `ctrlKey`, `altKey`, `altgrKey`, `capsLock`. So the glue (`calls.js`) fills `BrowserKey` and reuses `key.rs` unchanged: no Meta (Search) and no repeat flag, and the session's platform is `linux` (ChromeOS keyboards are PC layout, and the field confirms the preedit on blur as Linux frameworks do; `worker.js` `PLATFORM`).
 
 ### Service-worker lifetime
 
-An MV3 worker stops after about 30 s without events. An `onKeyEvent` wakes it, but the first key after that waits for wasm instantiation (2.3 MB) and dictionary install (29.6 MB in linear memory, web spike numbers in `web-roadmap.md` § Spike results). McBopomofoWeb keeps its worker alive with a port opened from a tab content script every 295 s (`references/McBopomofoWeb/src/chromeos_ime.ts:839-881`). That needs `<all_urls>` host permission and `scripting`, which review flags. Phase 1 measures the cold first key on the test environment; the decision (accept cold start, keepalive, or an offscreen document holding the engine) waits for the number.
+An MV3 worker stops after about 30 s without events, and a key does not wake a stopped IME worker. McBopomofoWeb keeps its worker alive with a port opened from a tab content script (`references/McBopomofoWeb/src/chromeos_ime.ts:839-881`), which needs `<all_urls>` host permission and `scripting`. Chosen instead: an offscreen-document keepalive (§ Spike result).
 
 ## Test environments
 
@@ -89,23 +89,15 @@ Rosetta for Linux runs dynamically linked x86_64 binaries only when the guest ha
 
 ## Phases
 
-One PR per phase; each starts after the previous one merges. No version is assigned.
-
 | # | Phase | Content | Status |
 |---|---|---|---|
 | 0 | Roadmap | This document; issue #759 | Done 2026-11-07 |
 | 1 | Spike (no merge) | **1a environment**: E1 on the Mac (fall back to E1b); E2 timeboxed. **1b capability**: a minimal unpacked MV3 IME extension (`input_components` + `onKeyEvent` + `setComposition` / `commitText`) types into the snapshot's browser and a Files rename box. **1c engine**: load `taigi-web` wasm + dictionaries in the worker, type `tai5gi2` + Space → 台語; measure cold first key after the worker stops, warm p50 / p99, worker memory. Record results here. **Hard gate**: if no environment loads an IME extension, stop and ask about E3 / E4 | **Passed 2026-11-07** (§ Spike result) |
 | 2 | Extension shell | New source dir (D2), manifest, worker glue (key mapping, Emit mapping, `keyEventHandled`), dictionaries packaged, build target + lint in `Makefile`, unit tests for the mapping; `taigi-web` gains `endSession` / `beginSession` (the field confirms the preedit on blur, Linux's model); offscreen keepalive | Merged #765 `77f99ee8c` 2026-11-08 |
-| 3 | Settings | Options page cut at build time from the web page's settings form (`chromeos/options-form.mjs`: rows ChromeOS cannot honour hidden, expandable layouts removed, drift fails the build); same document `taigi.settings` and same i18n keys, in `chrome.storage.sync` so it follows the account; worker reads it at start, follows changes (composition written first), saves chord writes; `openSettings` opens the page. No `_locales`: the name 台語齒盤 is the same in every language | Merged #766 `73a742207` 2026-11-08 |
+| 3 | Settings | Options page cut at build time from the web page's settings form (`chromeos/options-form.mjs`: rows ChromeOS cannot honour hidden, expandable layouts removed, drift fails the build); same document `taigi.settings` and same i18n keys, in `chrome.storage.sync` so it follows the account; worker reads it at start, follows changes (composition written first), saves chord writes; `openSettings` opens the page. The store name and summary later came from `_locales` (`chromeos-release.md` § Store listing) | Merged #766 `73a742207` 2026-11-08 |
 | 4 | Learning | The worker runs the page's `learning.js` unchanged (IndexedDB + Web Lock both work in a service worker; the worker is the extension's only learner), saving after each commit. Every engine call goes through `run`: a trap ends the session for that worker, which then stops keeping itself alive so the next focus starts a new worker (a worker cannot import a fresh copy of the glue) | Merged #767 `8bd2b7db9` 2026-11-08 |
 | 5 | Packaging + store | `chromeos-release.md`: build, version, store listing, privacy fields, screenshots. On the desktop train since 2026-11-12: `chromeos-build.yml` builds the zip onto the desktop draft, `make version-desktop` sets its version. Developer account and first upload were the maintainer's; later versions are uploaded and submitted by the announcement (2026-11-16) | Done: 3.9.0 published on the store by hand (maintainer 2026-11-16) |
 | 6 | Real-OS check | E3 (or E4): install the packaged build, type in Chrome, Docs, Files, an Android app, a Linux app | Pending |
-
-### Verification
-
-- Phase 1: results table here (environment, what loaded, cold / warm key times).
-- Phases 2–4: `make web-check` stays green (shared crate); new extension target's tests; manual typing in E1 / E1b.
-- Phase 6: real ChromeOS, maintainer.
 
 ### Spike result (2026-11-07)
 
@@ -142,10 +134,9 @@ Not verified: whether real ChromeOS wakes a stopped IME worker on a key (`linux-
 ## Risks
 
 - **`linux-chromeos` is not ChromeOS.** Stub services, X11 key path (Chromium notes Caps Lock must be set by hand there, `ui/base/ime/ash/input_method_ash.cc`). E3 before release.
-- **Cold first key** after the worker stops (above).
-- **Shortcut collisions**: ChromeOS owns Ctrl+Space (switch input method) and many Search / Ctrl+Alt chords; the default Ctrl+Alt table (`keys/shortcut_actions.rs`) needs a check in Phase 1.
-- **Store review** of the `input` permission and any host permission.
-- **Chrome extension #655** was dropped by the maintainer 2026-11-07. That was a browser extension for web pages on all OSes; this is a ChromeOS input method that ships through the same store. Distinct on purpose; the maintainer raised ChromeOS 2026-11-07.
+- **Worker lifetime on real ChromeOS**: the keepalive is verified only in `linux-chromeos` (§ Spike result).
+- **Shortcut collisions**: ChromeOS owns Ctrl+Space (switch input method) and many Search / Ctrl+Alt chords; the default Ctrl+Alt table (`keys/shortcut_actions.rs`) is unchecked against them on a real device.
+- **The browser extension** (`browser-extension.md`, issue #864) is a separate product: it types into web pages on every OS and ships as its own store item. Distinct on purpose.
 
 ## Best practices alignment
 
@@ -161,4 +152,4 @@ Not verified: whether real ChromeOS wakes a stopped IME worker on a key (`linux-
 - **Android IME as the ChromeOS keyboard** — tablet mode only (above).
 - **Fcitx5 / IBus in the Linux container (Crostini)** — reaches only Linux apps, needs Linux enabled, and is the existing Linux build.
 - **A JS rewrite of the engine** (McBopomofoWeb's route) — we already have the engine in wasm.
-- **Keepalive by default** — needs `<all_urls>`; only if Phase 1's cold-start number calls for it.
+- **Content-script keepalive** (McBopomofoWeb's) — needs `scripting` + `<all_urls>` and works only while an http(s) tab is open; the offscreen document replaces it.

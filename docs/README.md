@@ -49,12 +49,12 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 | `architecture/manual-release-notes.md` | Release trains, version numbers, store notes | Active |
 | `architecture/incident-log.md` | Incidents behind the rules in `contributing/known-pitfalls.md` | Reference |
 | `architecture/pr-number-migration.md` | Resolving `#NNN` written before 2026-09-07 | Reference |
-| `architecture/maintainability-roadmap-2026-10.md` | 2026-10-09 audit follow-up — H, A1a, A1b, A2, D1, D2 merged; paused by the maintainer | Active |
-| `architecture/web-roadmap.md` | Web version — Rust engine in WASM behind a browser shell; phases 0–8, decisions D1–D6 | Active |
+| `architecture/maintainability-roadmap-2026-10.md` | 2026-10-09 audit follow-up — done 2026-11-20 | Done |
+| `architecture/web-roadmap.md` | Web version — Rust engine in WASM behind a browser shell; phases 0–8, decisions D1–D9 | Done |
 | `architecture/chromeos-roadmap.md` | ChromeOS input method — MV3 `chrome.input.ime` extension over the web wasm engine; VM test environments (issue #759) | Active |
 | `architecture/browser-extension.md` | Browser extension — the web wasm engine in a content script, typing into websites' own fields; per-site access, per-tab mode, shared learning (issue #864) | Active |
 | `architecture/custom-layouts-roadmap.md` | Mobile custom romanization layouts — phases 1–4 merged, iOS + Android | Done |
-| `architecture/e2e-testing-roadmap.md` | End-to-end test system — Linux automated, other platforms manual | Active |
+| `architecture/e2e-testing-roadmap.md` | End-to-end test system — Linux automated, other platforms manual | Reference |
 | `architecture/macos-roadmap.md` | macOS IME design decisions D1–D11 | Done |
 | `architecture/macos-desktop-core-roadmap.md` | macOS key path on the shared `taigi-desktop-core` — D1–D9, parity decisions | Done |
 | `architecture/windows-roadmap.md` | Windows TSF IME design W1–W17 | Done |
@@ -65,6 +65,11 @@ Status: **Active** = living contract, kept in sync with the code · **Reference*
 | `architecture/user-data-engine-roadmap.md` | User-data stores moved into `engine/userdata` — U1–U11 | Done |
 | `architecture/unified-word-frequency-roadmap.md` | E1 unified word frequency for the walker | Done |
 | `architecture/bigram-lm-roadmap.md` | Cross-word bigram model — D1–D7, not-adopted list | Done |
+| `architecture/release-automation-roadmap.md` | Desktop release train automation — cut on the 1st, publish on the 5th, `RELEASE_HOLD` | Done |
+| `architecture/windows-arm64-roadmap.md` | Windows on Arm64 — Arm64X forwarder, universal installer | Done |
+| `architecture/linux-arm64-roadmap.md` | Linux arm64 packages on an Arm runner | Active |
+| `architecture/bracket-annotation-roadmap.md` | Annotate in Brackets on every platform — D1–D4 | Done |
+| `architecture/khiunnkhau-contrib-roadmap.md` | Accent-variation contribution — superseded by the community-dictionary repository; D1–D7 kept | Superseded |
 
 ## `ui/` — app and keyboard UI
 

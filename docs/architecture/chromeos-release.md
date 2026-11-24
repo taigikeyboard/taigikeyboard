@@ -2,7 +2,7 @@
 
 > **Type**: Release flow
 > **Keywords**: `chromeos`, `chrome web store`, `extension`, `input method`
-> **Status**: On the desktop train since 2026-11-12; 3.9.0 published on the store by hand (maintainer 2026-11-16). From the next release on, the announcement uploads the zip and submits it for review through the store's API (§ Upload). Plan and decisions: `chromeos-roadmap.md`.
+> **Status**: Active. On the desktop train; 3.9.0, the first version, was uploaded by hand, and every later one is uploaded and submitted by the announcement (§ Upload). Plan and decisions: `chromeos-roadmap.md`.
 
 The ChromeOS input method ships as one Chrome Web Store item, an MV3 extension built from `web/chromeos/` over the web version's wasm. On a Chromebook the store's "Add to Chrome" is the installer; the store updates it.
 
@@ -64,11 +64,9 @@ In the Google Cloud console or `gcloud`, with `PROJECT_ID` a project of the main
 
 7. `gh workflow run release-identity.yml` and approve the `release` environment (by hand: `CWS_ACCESS_TOKEN=$(gcloud auth print-access-token --impersonate-service-account=<email> --scopes=https://www.googleapis.com/auth/chromewebstore) CWS_PUBLISHER_ID=… CWS_ITEM_ID=… tools/release/chrome-web-store.sh status chromeos`, which needs `roles/iam.serviceAccountTokenCreator` on the service account for your account). The `chrome-web-store` job prints each item's published and submitted versions; it uploads nothing. A failed token mint points at steps 1–4; a 403 from the store at the Chrome Web Store API (step 1) or step 5; a 404 at the two ids in step 6. The job prints Google's error body.
 
-## First upload
+## Store item
 
-1. Chrome Web Store developer account (one-time registration fee) under the maintainer's Google account.
-2. Developer Dashboard → New item → upload the zip.
-3. Store listing, privacy and distribution as below, then submit for review.
+Created by hand under the maintainer's developer account for 3.9.0. The announcement never touches the fields below; they are the record of what the Dashboard holds.
 
 ### Store listing
 
@@ -104,12 +102,3 @@ The candidate window over a text field, and the settings page (Display Language 
 
 - Users add it in Settings → Keyboard and inputs → Input methods → Add input methods. The manifest files it under Chinese (Traditional, Taiwan) (`language: zh-TW`); where ChromeOS shows it in that list is not verified on a real device.
 - Phase 6 of the roadmap (real ChromeOS, Flex from USB) checks the published build.
-
-## Timing
-
-Maintainer 2026-11-08: "no rush to release; handle it when releasing v3.9.0 together with the other desktops". The first upload goes out with the desktop v3.9.0 release, as version 3.9.0. That draft was staged before ChromeOS joined the train, so the 3.9.0 zip is built by hand (`make -C web chromeos`); later versions come from the draft. 3.9.0 is published on the store (maintainer 2026-11-16).
-
-## Open (maintainer)
-
-- Whether the website's download page gets a ChromeOS link.
-- Store listing description text (short and neutral, as the other stores').

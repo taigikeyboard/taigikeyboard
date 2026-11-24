@@ -1,6 +1,6 @@
 # Data Artifact Portability Audit
 
-How the data artifacts that back the IME are produced, stored and consumed on iOS and Android (§1–§7) and on macOS / Windows / Linux (§8), plus the decision register. An inventory of constraints, not a design doc.
+How the data artifacts that back the IME are produced, stored and consumed on iOS and Android (§1–§7) and on macOS / Windows / Linux / Web (§8), plus the decision register. An inventory of constraints, not a design doc.
 
 - **Current state**: the dictionary read path is Rust `engine/lexicon`; the four SQLite user-data stores are Rust `engine/userdata` on every platform. §4–§8 describe the engine stores; the native shapes they took over are named only where they still matter (migration, downgrade).
 - **Scope**: shipped and runtime artifacts whose byte layout or schema crosses platforms. UI assets (keyboard layouts, fonts, images), persisted preferences (`SharedSettings` / DataStore blobs), and logs are out of scope.
@@ -17,19 +17,19 @@ How the data artifacts that back the IME are produced, stored and consumed on iO
 | `custom_dictionary.db` (SQLite) | **Shipped in Rust** | Rust `engine/userdata::CustomDictionaryStore` (`custom_dictionary.rs`) |
 | `learned_phrases.db` (SQLite) | **Shipped in Rust** | Rust `engine/userdata::LearnedPhraseStore` (`learned_phrases.rs`; shape in `behavioral-invariants.md` §50) |
 
-Per `docs/contributing/rust-migration-policy.md` §6, the writable user-data DBs are engine-owned: the platform supplies the directory (`OpenUserData`), the journal mode and the UI, and reaches the stores only through `UserDataRequest` ops (Windows / Linux settings apps also in-process). The engine takes over the files each platform's native store wrote (shape-detecting migration, `<file>.pre-engine` copy, `PRAGMA application_id`; `user-data-engine-roadmap.md` U7 / U8). The three read-only assets are byte-identical across iOS and Android and are consumed by the Rust crate via `mmap-host`.
+Per `docs/contributing/rust-migration-policy.md` §6, the writable user-data DBs are engine-owned: the platform supplies the directory (`OpenUserData`), the journal mode and the UI, and reaches the stores only through `UserDataRequest` ops (Windows / Linux settings apps also in-process). The engine takes over the files each platform's native store wrote (shape-detecting migration, `<file>.pre-engine` copy, `PRAGMA application_id`; `user-data-engine-roadmap.md` U7 / U8). The four read-only assets (the three above plus `syllables.fst`) are byte-identical on every platform (one committed copy in `assets/dictionaries/`) and are consumed by the Rust crates via `mmap-host`.
 
 ---
 
 ## 1. `dictionary.fst` — Burntsushi fst prefix index
 
-Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`, `hanzi:` plus toneless / abbrev / numeric variants) mapped to rowids.
+Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`, `tps:`, `hanzi:` plus toneless / abbrev / numeric variants) mapped to rowids.
 
 ### Pipeline
 
 - **Producer**: `dictionary/build/create_fst.py` shells to the Rust binary `engine/build-helpers/fst-builder`. Value layout: rowid packed in the low 32 bits of the `u64` value; high bits reserved.
-- **Shipped path**: the repo-root `assets/dictionaries/`, committed once. iOS reads it through an Xcode synchronized folder and Android through an assets source dir, both without a copy; macOS (`macos/scripts/bundle-app.sh`) and Windows (`windows/scripts/release-app.sh`) copy from it at package time.
-- **Size**: ~9.1 MB, byte-identical on both platforms (same build, same file).
+- **Shipped path**: the repo-root `assets/dictionaries/`, committed once. iOS reads it through an Xcode synchronized folder and Android through an assets source dir, both without a copy; macOS (`macos/scripts/bundle-app.sh`), Windows (`windows/scripts/release-app.sh`), Linux (`linux/Makefile` `install-common`) and the web builds (`web/Makefile`) copy from it at package time.
+- **Size**: ~15 MB, byte-identical on every platform (same build, same file).
 
 ### Reader
 
@@ -38,7 +38,7 @@ Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`,
 | iOS | `RustEngineBridge.dictionarySearch` (dictionary search page) and the composing `FetchAtPos` → Rust `engine/lexicon` |
 | Android | `LexiconBridge.kt` `dictionarySearch` and the composing `FetchAtPos` → same Rust crate |
 
-Rust `engine/lexicon::prefix_index::PrefixIndex` opens the file via `mmap-host` (the only crate not `forbid(unsafe_code)`) and exposes `Map::range` / `Map::get` for prefix scans + exact lookup.
+Rust `engine/lexicon::prefix_index::PrefixIndex` opens the file via `mmap-host` (the only non-FFI engine crate allowed `unsafe`; on wasm it serves registered bytes instead of a map) and exposes `Map::range` / `Map::get` for prefix scans + exact lookup.
 
 ---
 
@@ -209,7 +209,7 @@ The unreleased v9 `origin` / `learn_count` columns (learned phrases parked in th
 
 ## Update / delivery
 
-Dictionary updates today: `dictionary.fst` + `dictionary.bin` + `association.bin` are regenerated by the Python build pipeline (the fst step shells to Rust `engine/build-helpers/fst-builder`) and shipped in the app bundle (iOS) / assets (Android). No OTA channel exists. `build_ts` in `dictionary.bin` and `association.bin` is the only version signal readers expose.
+Dictionary updates today: `dictionary.fst` + `dictionary.bin` + `association.bin` are regenerated by the Python build pipeline (the fst step shells to Rust `engine/build-helpers/fst-builder`) and shipped inside every platform's package. No OTA channel exists. `build_ts` in `dictionary.bin` and `association.bin` is the only version signal readers expose.
 
 **Invariants the delivery mechanism must preserve**:
 
@@ -228,7 +228,7 @@ Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.
 |---|---|---|
 | D1 | MARISA lib strategy | Rust-native `fst` (§1). |
 | D2 | `dictionary.bin` + `association.bin` UTF-8 error policy | "hanzi-optional, tl-required"; an invalid record reads as `None` (§2). |
-| D3 | `dictionary.bin` + `association.bin` version policy | `dictionary.bin` `version` = 4, `association.bin` = 2; the Rust readers reject a mismatch at open, `dictionary.bin` v1–v3 with an explicit rebuild message. |
+| D3 | `dictionary.bin` + `association.bin` version policy | `dictionary.bin` `version` = 6, `association.bin` = 2; the Rust readers reject a mismatch at open, `dictionary.bin` v1–v5 with an explicit rebuild message (`dictionary_reader.rs` `SUPPORTED_VERSION`). |
 | D4 | One bitmask definition | Constants in Rust `engine/lexicon` (`KHIIN_BIT`, `VARIANT_BIT`); platform `EnabledDictionaries` DTOs mirror the layout for UI toggles only. |
 | D5 | `custom_dictionary` version namespaces | No unified number: the engine migrates by shape across the Android, iOS and desktop namespaces, re-derives every entry once, and raises the stamp to 4 without ever lowering it (§6). |
 | D6 | Custom-dictionary key derivation | `engine/phonetics/src/derivation.rs`, called in-process by `engine/userdata` (§6). |
@@ -270,15 +270,15 @@ The copier, `TaigiKeyboardApplication.installLexiconEngine`, keeps one stamp for
 
 1. **Read-only artifacts** — installing a new APK bumps `BuildConfig.VERSION_CODE`. On next boot `TaigiKeyboardApplication.installLexiconEngine` detects a stale stamp and overwrites `{filesDir}/dictionary.fst`, `{filesDir}/dictionary.bin`, `{filesDir}/association.bin`, `{filesDir}/syllables.fst` with the new asset bytes. **Partial-copy semantics** — the copier writes through `FileOutputStream(destFile)` (no append, no tmp-and-rename), which truncates the destination to 0 bytes on open. An interruption mid-stream (process kill, I/O error, power loss) leaves the target truncated. On the next boot Rust readers fail their magic / version / fst-header checks; `RustEngineBridge.lexiconInstall` returns `null` and `CompositionRoot.lexiconReady` completes exceptionally. Recovery paths: (a) a version-bump boot always re-runs the copy because `currentAppVersion > lastCopiedVersion`; (b) a same-`VERSION_CODE` boot with a truncated-but-present destination is **not** auto-repaired today — leaving the keyboard degraded until app-data clear or reinstall. No OTA channel.
 2. **User SQLite DBs** — `user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db` (and the `<file>.pre-engine` copies the first engine takeover leaves beside them) all persist across APK replacement (both `filesDir` and `databases/` survive app update). Uninstalling the app is the only way to lose them. Schema migrations run in the engine on the first open after update per §7.3.
-3. **DataStore** — the main `Preferences<Preferences>` file is `{filesDir}/datastore/taigi_keyboard_prefs.preferences_pb` (declared at `PreferenceKeys.kt:17`). A second DataStore `{filesDir}/datastore/emoji_preferences.preferences_pb` holds the emoji skin-tone selection (`EmojiPreferences.kt:18`). Both persist across APK replacement. `PrefHelper.migrateFromSharedPreferences` (`PrefHelper.kt:919`) pulls legacy Android `PreferenceManager` SharedPreferences values forward exactly once, gated on a DataStore-empty check.
+3. **DataStore** — the main `Preferences<Preferences>` file is `{filesDir}/datastore/taigi_keyboard_prefs.preferences_pb` (declared at `PreferenceKeys.kt:17`). A second DataStore `{filesDir}/datastore/emoji_preferences.preferences_pb` holds the emoji skin-tone selection (`EmojiPreferences.kt:18`). Both persist across APK replacement. `PrefHelper.migrateFromSharedPreferences` (`PrefHelper.kt:921`) pulls legacy Android `PreferenceManager` SharedPreferences values forward exactly once, gated on a DataStore-empty check.
 
 DataStore blobs are listed for completeness only; they are not candidates for engine ownership (see *Out of scope*).
 
 ---
 
-## 8. macOS / Windows / Linux stores
+## 8. macOS / Windows / Linux / Web stores
 
-The desktops run the same engine stores as the phones (`engine/userdata`, the same schemas and stamps as §4–§6: `user_frequency` **v3**, `user_association` **v7**, `custom_dictionary` **v4**, `learned_phrases` **v2**, and the same `LearningCapacity` caps of 20 000 / 50 000 rows): macOS under `~/Library/Application Support/<bundle id>/`, opened with the `DELETE` journal at launch (`RustEngineBridge+UserData.swift`); Windows under `%APPDATA%\TaigiKeyboard\` and Linux under `$XDG_DATA_HOME/taigikeyboard`, opened with WAL (`taigi-desktop-core` `engine/user_data.rs`). The Windows / Linux settings apps read the custom dictionary in-process through the same `userdata` API. All three desktops export and import `.taigi` backups on the Learning Records pane (Windows / Linux: `taigi-desktop-core` `settings/learning_records.rs`; macOS: its Swift twin `LearningRecordsPageModel`; `docs/engine/custom-dictionary.md` § `.taigi` Backup). Desktop databases stay inside Time Machine / roaming-profile scope — the iOS OS-backup exclusion (`behavioral-invariants.md` §29) is not mirrored.
+The desktops run the same engine stores as the phones (`engine/userdata`, the same schemas and stamps as §4–§6: `user_frequency` **v3**, `user_association` **v7**, `custom_dictionary` **v4**, `learned_phrases` **v2**, and the same `LearningCapacity` caps of 20 000 / 50 000 rows): macOS under `~/Library/Application Support/<bundle id>/` with the `DELETE` journal, Windows under `%APPDATA%\TaigiKeyboard\` and Linux under `$XDG_DATA_HOME/taigikeyboard` with WAL — all three opened at launch by `taigi-desktop-core` (`runtime.rs` → `engine/user_data.rs` `open`, journal per `DesktopPlatform`). The web builds open the same stores in SQLite's memory VFS under `/taigi`; the page keeps their bytes (`taigi-web` `bindings.rs` `user_data_files` / `import_user_data`). The Windows / Linux settings apps read the custom dictionary in-process through the same `userdata` API. All three desktops export and import `.taigi` backups on the Learning Records pane (Windows / Linux: `taigi-desktop-core` `settings/learning_records.rs`; macOS: its Swift twin `LearningRecordsPageModel`; `docs/engine/custom-dictionary.md` § `.taigi` Backup). Desktop databases stay inside Time Machine / roaming-profile scope — the iOS OS-backup exclusion (`behavioral-invariants.md` §29) is not mirrored.
 
 ---
 

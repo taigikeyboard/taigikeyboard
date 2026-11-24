@@ -109,12 +109,12 @@ Registration, measured with `regsvr32` and a registry dump:
   the other. Both services use the SAME CLSID, which is what Microsoft's TSF
   guidance asks for: one logical input method, one entry in the language list.
 - `HKLM\SOFTWARE\Microsoft\CTF\TIP\{…}` — the profile, its description and
-  icon, and the four categories — is SHARED, and mirrored into both views.
+  icon, and the categories (`registration.rs` `CATEGORIES`) — is SHARED, and mirrored into both views.
   The **last** registration wins: registering the 32-bit service after the
   64-bit one left the profile's description naming the 32-bit DLL. So the
   order has to be 32-bit first, 64-bit last.
-- Unregistering EITHER architecture removes that shared profile and all four
-  categories from BOTH views while the other's `InprocServer32` stays — an
+- Unregistering EITHER architecture removes that shared profile and every
+  category from BOTH views while the other's `InprocServer32` stays — an
   input method registered with COM and absent from the language list. The
   pair is one transaction, and a rollback has to back up and restore both.
   The installer does: `RegisterEverything` and `RestorePreviousVersion`
@@ -203,9 +203,9 @@ which is the shape `windows/scripts/release-app.sh` already has.
 ## One-time machine setup
 
 A Windows machine (or VM) with Git Bash (`cygpath`, `sha256sum`, and — on the
-publishing path only — `base64` and `curl`), PowerShell (reads the built files'
-VERSIONINFO and signature back), Python 3 (publishing only: it validates the
-manifest JSON), GNU **make** (`winget install ezwinports.make` — Git for Windows
+`--publish` path only, where `release-app.sh` checks for them — `base64`,
+`curl` and Python 3), PowerShell (reads the built files' VERSIONINFO and
+signature back), GNU **make** (`winget install ezwinports.make` — Git for Windows
 does not ship it, and every `make` target below needs it), `protoc` (the engine's
 `protos` crate runs prost-build), and:
 
@@ -233,11 +233,11 @@ does not ship it, and every `make` target below needs it), `protoc` (the engine'
    installer signed with the same leaf (see *Notes*). `TIMESTAMP_URL`
    overrides the RFC 3161 server (default DigiCert). `signtool.exe` in item 3
    is needed only on this path.
-5. **`gh`** authenticated to an account that can write this repository (the
-   release) and the website repository, `taigikeyboard/taigikeyboard.github.io`
-   (the download button's data file).
+5. **`gh`** authenticated to an account that can write this repository's
+   releases (staging only; the site's data file is the announcement's,
+   `desktop-release.md`).
 6. **A clone whose `origin` is this repository, with HEAD committed clean and
-   already pushed.** Publishing tags the commit the box is sitting on, so it
+   already pushed.** Staging names the commit the box is sitting on for the tag, so it
    refuses a dirty tree and a HEAD that is not an ancestor of `origin/main` —
    the release clone on the box is what § Cutting a release below assumes, and it must have fetched the commit being
    released rather than a local-only one.
@@ -294,8 +294,8 @@ What `windows/scripts/release-app.sh` does, in order:
    and its SHA-256. Only a DIRTY tree stamps a qualifier (`-dirty`) into the
    name, so a throwaway cannot be mistaken for a release; an unsigned
    installer is publishable and keeps the plain name.
-9. **Publish** — `windows/scripts/publish-release.sh` (below), with
-   `--allow-unsigned` passed down when the build was `--skip-sign`.
+9. **Stage** — `windows/scripts/publish-release.sh` (below) uploads it to the
+   draft, with `--allow-unsigned` passed down when the build was `--skip-sign`.
 
 Flags: `make windows-release` passes `--force --publish`. `--publish` still
 refuses `--allow-dirty` (a published installer must be reproducible from a
@@ -336,10 +336,12 @@ every process of every user and `regsvr32` writes HKLM. In order:
   into `windows/installer/Messages.iss` — the installer is never edited for
   wording. Tâi-lô / POJ have no Inno base language (the macOS Installer
   cannot show them either); the app itself offers all five.
-- **Files** — `TaigiKeyboard.dll` and `TaigiKeyboard32.dll` side by side,
-  `TaigiKeyboardSettings.exe` with the Windows App Runtime files beside it
-  (W17), `Dictionaries\`, `Fonts\`, `update-check-task.xml`.
-- **Registration** — `regsvr32 /s` on the DLL (the DLL's `DllRegisterServer`
+- **Files** — `TaigiKeyboard.dll` and `TaigiKeyboard32.dll` side by side
+  (plus `TaigiKeyboardArm64.dll` and the `TaigiKeyboard64X.dll` forwarder on an
+  Arm64 machine), `TaigiKeyboardSettings.exe` with the Windows App Runtime
+  files beside it (W17; the Arm64 build on Arm64), `Dictionaries\`, `Fonts\`,
+  `update-check-task.xml`.
+- **Registration** — `regsvr32 /s` on each service DLL, x86 first (each DLL's `DllRegisterServer`
   registers the CLSID, the `0x0404` profile, the categories and the
   display-attribute provider — roadmap W7). Run from `[Code]`, not `[Run]`:
   Inno ignores a `[Run]` entry's exit code, so a registration that fails is
