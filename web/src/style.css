@@ -1075,17 +1075,22 @@ summary:focus-visible {
 /* Shift glyph top right, bare glyph below, as the desktop panels draw a cap; the
    top half is the Shift layer. */
 .tps-cap {
+  /* The cap's width stops at a twelfth of the window while text sizes grow
+     with the reader's font size: the glyphs take the smaller of the two, so
+     two of them sit side by side inside a phone's cap at any text size. */
+  --tps-cap-inset: min(0.1875rem, var(--tps-cap) / 10);
+  --tps-cap-room: calc(var(--tps-cap) - 2 * var(--tps-cap-inset) - 2px);
   display: grid;
   grid-template: auto 1fr / 1fr 1fr;
   flex: none;
   width: var(--tps-cap);
   height: var(--tps-cap-height);
-  padding: 0.125rem 0.1875rem;
+  padding: 0.125rem var(--tps-cap-inset);
   border-radius: 6px;
   background: var(--card);
   box-shadow: inset 0 0 0 1px var(--hairline);
   color: var(--text);
-  font-size: 0.6875rem;
+  font-size: min(0.6875rem, var(--tps-cap-room) / 2);
   line-height: 1.2;
   transition: none;
 }
@@ -1105,7 +1110,7 @@ summary:focus-visible {
 .tps-cap span:last-child {
   grid-column: 1 / -1;
   align-self: center;
-  font-size: 1rem;
+  font-size: min(1rem, var(--tps-cap-room));
   text-align: center;
 }
 
