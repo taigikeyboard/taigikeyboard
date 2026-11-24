@@ -74,6 +74,15 @@ make deb                         # or: the .deb, from the same install layout (t
 ```
 
 Then add 台語齒盤 (language `nan`) in `fcitx5-configtool` (Fcitx5) or the desktop's input-source settings (IBus).
+
+On GNOME under Wayland, use IBus — GNOME's own framework. GNOME gives Fcitx5
+only window-relative caret coordinates from a Wayland app (the GTK module sets
+`RelativeRect`), and tells no other process where that window sits, so the
+candidate window cannot be placed under the caret: it lands over the text
+field. Fcitx5's own panel has the same limit; upstream's answer is the Kimpanel
+GNOME Shell extension, which draws Fcitx5's list instead of this candidate
+window. On an X11 session (the dogfood setup: KDE Plasma on X11) apps report
+screen coordinates, and Fcitx5 places the window under the caret.
 Packaged installs, per-distribution paths and where user data lives:
 [`../docs/INSTALL.md`](../docs/INSTALL.md) § Linux and
 [`../docs/architecture/linux-release.md`](../docs/architecture/linux-release.md).
