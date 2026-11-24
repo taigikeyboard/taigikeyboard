@@ -22,7 +22,7 @@ final class UserDataClientTests: XCTestCase {
     /// A request the engine refuses — here, any page request before the
     /// open — is a failure the page can report, not an empty dictionary.
     func testARequestTheEngineRefuses_isAFailure() {
-        XCTAssertThrowsError(try EngineUserDataClient().list(filter: "", limit: 10, offset: 0)) {
+        XCTAssertThrowsError(try EngineUserDataClient().list(filter: "", limit: 10, offset: 0, inputMode: .tl)) {
             XCTAssertEqual($0 as? UserDataClientError, .engineUnavailable(op: "customDictionaryList"))
         }
     }

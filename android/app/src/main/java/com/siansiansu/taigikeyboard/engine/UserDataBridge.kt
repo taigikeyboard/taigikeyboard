@@ -68,12 +68,16 @@ fun RustEngineBridge.customDictionaryList(
     filter: String,
     limit: Int,
     offset: Int,
+    inputMode: String,
+    isTpsOrMappedToER: Boolean,
 ): CustomEntries? {
     val list = ListCustomEntries
         .newBuilder()
         .setFilter(filter)
         .setLimit(limit)
         .setOffset(offset)
+        .setInputMode(inputMode)
+        .setTpsOrMapsToEr(isTpsOrMappedToER)
         .build()
     return userData("customDictionaryList") { setListCustomEntries(list) }
         ?.takeIf { it.hasCustomEntries() }

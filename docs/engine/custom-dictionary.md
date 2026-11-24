@@ -180,6 +180,12 @@ None. A fresh install starts with an empty custom dictionary on every platform.
 
 ## UI
 
+### The list's romanization
+
+Every platform's list shows each entry's romanization in the input mode in force, whichever spelling was saved: the platform sends `ListCustomEntries.input_mode` (and `tps_or_maps_to_er`), and the engine fills `CustomDictionaryEntry.display_roman` (`phonetics::api::custom_display_roman`). TL and TPS read a Latin spelling as TL, so a TL special final stays (`téng`); POJ reads it as POJ. English shows the saved spelling, and so does TPS for a row Bopomofo cannot spell (`iPhone`, `páh`). The edit form still starts from the saved `roman`, the filter still matches the saved spelling and the Hanji, and the Manage Dictionaries search keeps its own rendering.
+
+A mode switch respells the rows on screen on macOS (`@AppStorage` change), Linux (the window's refresh) and Windows (the one-second settings beat); iOS and Android respell them at the page's next load.
+
 ### iOS (`CustomDictionaryView`)
 - List with swipe-to-delete, add/edit modal sheet
 - Import/Export buttons with help icon

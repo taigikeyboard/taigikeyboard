@@ -5,7 +5,13 @@ import XCTest
 /// overrides only the requests the code under test should make. The test
 /// process never opens the engine's user data (it shares the app's engine).
 class UserDataClientStub: UserDataClient, @unchecked Sendable {
-    func listCustomEntries(filter _: String, limit _: UInt32, offset _: UInt32) async throws -> CustomDictionaryPage {
+    func listCustomEntries(
+        filter _: String,
+        limit _: UInt32,
+        offset _: UInt32,
+        inputMode _: InputMode,
+        isTpsOrMappedToER _: Bool,
+    ) async throws -> CustomDictionaryPage {
         XCTFail("unused")
         return CustomDictionaryPage(entries: [], total: 0, matchingTotal: 0, offset: 0)
     }

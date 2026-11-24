@@ -102,6 +102,8 @@ final class CustomDictionaryViewModel: ObservableObject {
                 filter: filter,
                 limit: LearningRecordsViewModel.pageSize,
                 offset: UInt32(clamping: entries.count),
+                inputMode: settings.inputMode,
+                isTpsOrMappedToER: settings.isTpsOrMappedToER,
             )
             guard generation == self.generation else { return }
             isLoadingNextPage = false
@@ -160,6 +162,8 @@ final class CustomDictionaryViewModel: ObservableObject {
                     filter: filter,
                     limit: UInt32(clamping: rowCount),
                     offset: 0,
+                    inputMode: settings.inputMode,
+                    isTpsOrMappedToER: settings.isTpsOrMappedToER,
                 )
                 guard generation == self.generation else { return }
                 entries = page.entries

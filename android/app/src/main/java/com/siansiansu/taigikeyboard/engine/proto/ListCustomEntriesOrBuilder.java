@@ -33,4 +33,38 @@ public interface ListCustomEntriesOrBuilder extends
    * @return The offset.
    */
   int getOffset();
+
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   * @return The inputMode.
+   */
+  java.lang.String getInputMode();
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   * @return The bytes for inputMode.
+   */
+  com.google.protobuf.ByteString
+      getInputModeBytes();
+
+  /**
+   * <pre>
+   * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 5;</code>
+   * @return The tpsOrMapsToEr.
+   */
+  boolean getTpsOrMapsToEr();
 }

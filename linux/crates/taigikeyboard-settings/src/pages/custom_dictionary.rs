@@ -32,11 +32,11 @@ use taigi_desktop_core::settings::custom_dictionary::{
     delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
     save_entry_job, Listing,
 };
-use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
 };
 use taigi_desktop_core::settings::presentation::PageMessage;
+use taigi_desktop_core::settings::{keys, InputMode};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
 #[derive(Default)]
@@ -88,6 +88,8 @@ pub struct CustomDictionaryPage {
     /// Set while `render` selects a row, so the list's own handler does not
     /// read it back as the user's choice.
     is_rendering: Cell<bool>,
+    /// The settings input mode the rows' romanization is spelled in.
+    input_mode: Cell<InputMode>,
 }
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
@@ -105,6 +107,17 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     }
     let dictionary = CustomDictionaryPage::new(&context, page);
     dictionary.load();
+    // Another input mode respells every row: list the page again.
+    let weak = Rc::downgrade(&dictionary);
+    context.on_refresh(move |document| {
+        let Some(dictionary) = weak.upgrade() else {
+            return;
+        };
+        let input_mode = document.choice(&keys::INPUT_MODE);
+        if dictionary.input_mode.replace(input_mode) != input_mode {
+            dictionary.load();
+        }
+    });
     context.retain(dictionary);
     context
 }
@@ -205,6 +218,7 @@ impl CustomDictionaryPage {
             job_slot: context.job_slot.clone(),
             state: RefCell::new(State::default()),
             is_rendering: Cell::new(false),
+            input_mode: Cell::new(context.document.choice(&keys::INPUT_MODE)),
             widgets: Widgets {
                 entries,
                 filter,
@@ -377,9 +391,10 @@ impl CustomDictionaryPage {
     fn load(self: &Rc<Self>) {
         let request = self.state.borrow_mut().listing.begin_load();
         let generation = request.generation;
+        let input_mode = self.input_mode.get();
         let weak = Rc::downgrade(self);
         jobs::spawn(
-            move || fetch(&request),
+            move || fetch(&request, input_mode),
             move |outcome| {
                 let Some(page) = weak.upgrade() else { return };
                 let outcome = outcome.unwrap_or_else(|| Err(LOAD_DID_NOT_FINISH.to_owned()));
@@ -524,7 +539,7 @@ impl CustomDictionaryPage {
                 rows: listing
                     .rows
                     .iter()
-                    .map(|row| (row.roman.clone(), row.hanji.clone()))
+                    .map(|row| (row.display_roman.clone(), row.hanji.clone()))
                     .collect(),
                 selected_index: listing.selected_index(),
                 count: listing.count_label(),

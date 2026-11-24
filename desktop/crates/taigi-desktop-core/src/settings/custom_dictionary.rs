@@ -11,6 +11,7 @@ use super::presentation::PageMessage;
 use crate::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
 };
+use crate::settings::InputMode;
 use crate::strings::StringKey;
 use std::path::Path;
 
@@ -87,9 +88,10 @@ impl ListedRow for CustomDictionaryEntry {
     }
 }
 
-/// The dictionary page `request` asks for.
-pub fn fetch(request: &LoadRequest) -> Result<CustomDictionaryPage, String> {
-    user_data::list_custom_page(&request.filter, request.page, PAGE_SIZE)
+/// The dictionary page `request` asks for, each row's `display_roman`
+/// spelled in `mode` (the settings input mode).
+pub fn fetch(request: &LoadRequest, mode: InputMode) -> Result<CustomDictionaryPage, String> {
+    user_data::list_custom_page(&request.filter, request.page, PAGE_SIZE, mode)
         .map_err(|error| error.to_string())
 }
 
@@ -111,6 +113,7 @@ mod tests {
             id: id.to_owned(),
             roman: "tsia̍h".to_owned(),
             hanji: "食".to_owned(),
+            ..CustomDictionaryEntry::default()
         }
     }
 

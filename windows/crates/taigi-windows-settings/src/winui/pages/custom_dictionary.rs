@@ -32,9 +32,9 @@ use taigi_desktop_core::settings::custom_dictionary::{
     delete_all_job, delete_entry_job, export_file_name, export_job, fetch, import_job,
     save_entry_job, Listing,
 };
-use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
+use taigi_desktop_core::settings::{keys, InputMode};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
@@ -87,7 +87,9 @@ struct EditingRow {
 #[derive(Default)]
 pub struct CustomDictionaryModel {
     listing: Listing,
-    is_first_load_requested: bool,
+    /// The input mode the rows' romanization is spelled in; `None` until
+    /// the page is first shown, which is when it first loads.
+    input_mode: Option<InputMode>,
     /// Which rows the list on screen holds, so the selection index reaches
     /// XAML a render after the rows it counts do (`list_selection`).
     settled: SettledRows,
@@ -109,15 +111,19 @@ impl CustomDictionaryModel {
     }
 }
 
-/// Starts the first load, once, when the page is first shown.
+/// Starts the first load when the page is first shown, and loads again
+/// under another input mode (picked on General, or switched by the
+/// keyboard while the page is open), so the rows spell their romanization
+/// in the mode in force.
 pub fn ensure_loaded(
     model: &mut CustomDictionaryModel,
+    input_mode: InputMode,
     context: &ComponentContext<SettingsWindow>,
 ) {
-    if model.is_first_load_requested {
+    if model.input_mode == Some(input_mode) {
         return;
     }
-    model.is_first_load_requested = true;
+    model.input_mode = Some(input_mode);
     load(model, context);
 }
 
@@ -261,7 +267,7 @@ pub fn update(
         }
         Message::RowsApplied(rows) => model.settled.report(rows),
         Message::Reload => {
-            if model.is_first_load_requested {
+            if model.input_mode.is_some() {
                 load(model, context);
             }
         }
@@ -270,11 +276,15 @@ pub fn update(
 
 /// Starts a load of the page on screen (`list_pager::spawn_load`).
 fn load(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
+    // Never shown: the first show loads.
+    let Some(input_mode) = model.input_mode else {
+        return;
+    };
     let request = model.listing.begin_load();
     list_pager::spawn_load(
         context,
         request.generation,
-        move || fetch(&request),
+        move || fetch(&request, input_mode),
         |generation, outcome| WindowMessage::CustomDictionary(Message::Loaded(generation, outcome)),
     );
 }
@@ -406,7 +416,7 @@ fn entry_table(
                         .column_spacing(TABLE_COLUMN_GAP)
                         .children((
                             TextBlock::new()
-                                .text(row.roman.clone())
+                                .text(row.display_roman.clone())
                                 .opacity(SECONDARY_OPACITY)
                                 .grid_column(0),
                             TextBlock::new().text(row.hanji.clone()).grid_column(1),

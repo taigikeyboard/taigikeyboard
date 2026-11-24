@@ -798,7 +798,7 @@ function refreshCustomWords() {
     ...listing.entries.map((entry) => {
       const item = document.createElement("li");
       const roman = document.createElement("span");
-      roman.textContent = entry.roman;
+      roman.textContent = entry.displayRoman;
       const hanji = document.createElement("span");
       hanji.textContent = entry.hanji;
       const remove = document.createElement("button");

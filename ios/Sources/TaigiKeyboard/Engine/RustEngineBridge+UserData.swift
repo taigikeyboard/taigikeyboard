@@ -47,12 +47,21 @@ extension RustEngineBridge {
 
     // MARK: - Custom dictionary
 
-    /// One page of the entries `filter` matches, newest edit first.
-    static func customDictionaryList(filter: String, limit: UInt32, offset: UInt32) -> Taigi_Engine_CustomEntries? {
+    /// One page of the entries `filter` matches, newest edit first, each
+    /// `displayRoman` spelled in `inputMode` (an `AppConfig.input_mode` string).
+    static func customDictionaryList(
+        filter: String,
+        limit: UInt32,
+        offset: UInt32,
+        inputMode: String,
+        isTpsOrMappedToER: Bool,
+    ) -> Taigi_Engine_CustomEntries? {
         var list = Taigi_Engine_ListCustomEntries()
         list.filter = filter
         list.limit = limit
         list.offset = offset
+        list.inputMode = inputMode
+        list.tpsOrMapsToEr = isTpsOrMappedToER
         guard case let .customEntries(entries)? = userDataResult(
             .listCustomEntries(list),
             op: "customDictionaryList",

@@ -29,7 +29,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     /// What `importCSV` adds to the store.
     var rowsToImport: [CustomDictionaryRow] = []
 
-    func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow> {
+    func list(filter: String, limit: Int, offset: Int, inputMode _: InputMode) throws -> UserDataListing<CustomDictionaryRow> {
         try lock.withLock {
             lastCustomFilter = filter
             if failsCustomReads {

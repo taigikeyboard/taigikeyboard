@@ -541,8 +541,13 @@ mod tests {
 
         // A page request queues behind the background open, so its answer
         // means the stores are open.
-        taigi_desktop_core::engine::user_data::list_custom_entries("", 1, 0)
-            .expect("the user data opened");
+        taigi_desktop_core::engine::user_data::list_custom_entries(
+            "",
+            1,
+            0,
+            taigi_desktop_core::settings::InputMode::Tl,
+        )
+        .expect("the user data opened");
         for store in [
             "user_frequency.db",
             "user_association.db",

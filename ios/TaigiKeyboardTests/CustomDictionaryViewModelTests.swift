@@ -62,7 +62,13 @@ final class CustomDictionaryViewModelTests: XCTestCase {
             waiting.forEach { $0.resume() }
         }
 
-        override func listCustomEntries(filter: String, limit: UInt32, offset: UInt32) async throws -> CustomDictionaryPage {
+        override func listCustomEntries(
+            filter: String,
+            limit: UInt32,
+            offset: UInt32,
+            inputMode _: InputMode,
+            isTpsOrMappedToER _: Bool,
+        ) async throws -> CustomDictionaryPage {
             // The answer is cut on arrival, so a parked request answers what
             // it asked even after the test moved on.
             let answer: CustomDictionaryPage? = lock.withLock {

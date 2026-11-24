@@ -10,19 +10,25 @@ import Foundation
 struct CustomDictionaryEntry: Identifiable, Equatable, Sendable {
     /// Stable across edits: the engine stores an edit under the same id.
     let id: String
+    /// The romanization as saved — what an edit starts from.
     var roman: String
     var hanji: String
+    /// `roman` in the input mode the list was read under (the engine's
+    /// rendering); empty for an entry no list answered.
+    var displayRoman: String
 
-    init(id: String = UUID().uuidString, roman: String, hanji: String) {
+    init(id: String = UUID().uuidString, roman: String, hanji: String, displayRoman: String = "") {
         self.id = id
         self.roman = roman
         self.hanji = hanji
+        self.displayRoman = displayRoman
     }
 
-    /// The list row: a romanization-only word shows its romanization alone.
+    /// The list row, in the list's input mode: a romanization-only word
+    /// shows its romanization alone.
     /// Twin of Android `CustomDictionaryWord.listLabel`.
     var listLabel: String {
-        hanji.isEmpty ? roman : "\(roman) → \(hanji)"
+        hanji.isEmpty ? displayRoman : "\(displayRoman) → \(hanji)"
     }
 }
 

@@ -120,7 +120,10 @@ impl UserDataHandle {
         let rows = phonetics::api::derive_custom_query_key(query, input_mode)
             .map(|key| stores.custom_dictionary.rows_matching(&key, limit))
             .unwrap_or_default();
-        Ok(rows.iter().map(custom_dictionary_entry).collect())
+        Ok(rows
+            .iter()
+            .map(|row| custom_dictionary_entry(row, String::new()))
+            .collect())
     }
 
     fn list_custom_entries(
@@ -145,8 +148,19 @@ impl UserDataHandle {
         let entries = dictionary
             .rows(&list.filter, limit, offset)
             .map_err(store_error)?;
+        let mode = phonetics::api::parse_input_mode(&list.input_mode);
         Ok(CustomEntries {
-            entries: entries.iter().map(custom_dictionary_entry).collect(),
+            entries: entries
+                .iter()
+                .map(|row| {
+                    let display_roman = phonetics::api::custom_display_roman(
+                        &row.roman,
+                        mode,
+                        list.tps_or_maps_to_er,
+                    );
+                    custom_dictionary_entry(row, display_roman)
+                })
+                .collect(),
             total: saturated_u32(total),
             matching_total: saturated_u32(matching_total),
             offset: saturated_u32(offset),
@@ -203,7 +217,9 @@ impl UserDataHandle {
         let stored = dictionary.row(&row.id).map_err(store_error)?;
         Ok(CustomEntrySaved {
             refusal: CustomDictionaryRefusal::None as i32,
-            entry: stored.as_ref().map(custom_dictionary_entry),
+            entry: stored
+                .as_ref()
+                .map(|row| custom_dictionary_entry(row, String::new())),
             detail: String::new(),
         })
     }
@@ -385,11 +401,17 @@ fn required_roman(roman: &str) -> Option<&str> {
     Some(roman.trim()).filter(|roman| !roman.is_empty())
 }
 
-fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
+/// The stored row as saved; `display_roman` is the list's rendering, empty
+/// in every other answer.
+fn custom_dictionary_entry(
+    row: &CustomDictionaryRow,
+    display_roman: String,
+) -> CustomDictionaryEntry {
     CustomDictionaryEntry {
         id: row.id.clone(),
         roman: row.roman.clone(),
         hanji: row.hanji.clone(),
+        display_roman,
     }
 }
 
@@ -558,6 +580,7 @@ mod tests {
                 filter: filter.into(),
                 limit: 50,
                 offset: 0,
+                ..Default::default()
             }),
         ) {
             user_data_response::Result::CustomEntries(entries) => entries,
@@ -1048,6 +1071,7 @@ mod tests {
                 filter: String::new(),
                 limit: 2,
                 offset: 10,
+                ..Default::default()
             }),
         ) {
             user_data_response::Result::CustomEntries(entries) => entries,
@@ -1063,12 +1087,50 @@ mod tests {
                 filter: String::new(),
                 limit: 0,
                 offset: 0,
+                ..Default::default()
             }),
         ) {
             user_data_response::Result::CustomEntries(entries) => entries,
             other => panic!("expected entries, got {other:?}"),
         };
         assert_eq!(everything.entries.len(), 3, "limit 0 lists every match");
+    }
+
+    // trace: reading "tâi-uân" (phonetics custom_display_roman): POJ uân→oân;
+    // TPS t=ㄉ ai=ㄞ 5=ˊ · uan=ㄨㄢ 5=ˊ. `roman` stays as saved in every mode.
+    #[test]
+    fn a_list_renders_each_entry_in_the_input_mode() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let saved = save(&handle, None, "tâi-uân", "台灣");
+        assert_eq!(
+            saved.entry.unwrap().display_roman,
+            "",
+            "only a list renders"
+        );
+
+        for (input_mode, shown) in [
+            ("tl", "tâi-uân"),
+            ("poj", "tâi-oân"),
+            ("tps", "ㄉㄞˊ ㄨㄢˊ"),
+            ("english", "tâi-uân"),
+            ("", "tâi-uân"),
+        ] {
+            let answer = match call(
+                &handle,
+                user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                    input_mode: input_mode.into(),
+                    tps_or_maps_to_er: true,
+                    ..Default::default()
+                }),
+            ) {
+                user_data_response::Result::CustomEntries(entries) => entries,
+                other => panic!("expected entries, got {other:?}"),
+            };
+            assert_eq!(answer.entries[0].display_roman, shown, "{input_mode:?}");
+            assert_eq!(answer.entries[0].roman, "tâi-uân", "{input_mode:?}");
+        }
     }
 
     #[test]

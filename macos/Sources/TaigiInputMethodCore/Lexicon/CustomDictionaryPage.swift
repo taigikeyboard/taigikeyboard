@@ -23,6 +23,9 @@ final class CustomDictionaryPageModel {
 
     var message: UserDataPageMessage?
 
+    /// The input mode the rows' romanization is spelled in.
+    var inputMode = SettingsStore.Keys.inputMode.defaultValue
+
     /// The table's selection, held by the list so a load drops it once its
     /// row is off screen (`UserDataPagedList.selectedID`).
     var selectedRowID: CustomDictionaryRow.ID? {
@@ -51,10 +54,10 @@ final class CustomDictionaryPageModel {
     /// Reloads the page on screen.
     func load() async {
         let load = list.beginLoad()
-        let (filter, offset) = (filter, load.offset)
+        let (filter, offset, inputMode) = (filter, load.offset, inputMode)
         do {
             let listing = try await UserDataRequests.run(on: client) {
-                try $0.list(filter: filter, limit: UserDataListMetrics.pageSize, offset: offset)
+                try $0.list(filter: filter, limit: UserDataListMetrics.pageSize, offset: offset, inputMode: inputMode)
             }
             list.land(listing, from: load)
         } catch {
@@ -185,6 +188,8 @@ struct CustomDictionaryPage: View {
     @State private var editing: CustomDictionaryRow?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.inputMode.name)
+    private var inputMode = SettingsStore.Keys.inputMode.defaultValue
 
     init(client: any UserDataClient) {
         _model = State(initialValue: CustomDictionaryPageModel(client: client))
@@ -220,6 +225,14 @@ struct CustomDictionaryPage: View {
         }
         .formStyle(.grouped)
         .reloadWhenFilterSettles(model.filter) { await model.loadFirstPage() }
+        // Before the first load (the filter's, above, waits to settle); a
+        // later switch — the keyboard's toggle while the pane is open —
+        // respells the rows on screen.
+        .onAppear { model.inputMode = inputMode }
+        .onChange(of: inputMode) { _, mode in
+            model.inputMode = mode
+            Task { await model.load() }
+        }
         .sheet(item: $editing) { row in
             CustomDictionaryEntrySheet(row: row, isNew: row.roman.isEmpty) { edited in
                 Task { await model.save(edited) }
@@ -241,7 +254,7 @@ struct CustomDictionaryPage: View {
     private var entryTable: some View {
         Table(model.list.rows, selection: $model.selectedRowID) {
             TableColumn(language.string(.dictionaryRomanLabel)) { row in
-                Text(row.roman)
+                Text(row.displayRoman)
                     .foregroundStyle(.secondary)
             }
             TableColumn(language.string(.dictionaryHanziLabel)) { row in

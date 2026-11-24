@@ -16,6 +16,13 @@ pub fn poj_display_to_tl_display(text: &str) -> String {
     rewrite_display(text, System::Tl, false, DisplayCase::Keep)
 }
 
+/// [`poj_display_to_tl_display`] that keeps the TL special finals `eng` /
+/// `ek` literal (as [`canonical_tl_form`] does in TL mode): for a spelling
+/// read as TL, where `téng` is TL's own final, not POJ's `eng` (TL `ing`).
+pub(crate) fn tl_display_keeping_tl_finals(text: &str) -> String {
+    rewrite_display(text, System::Tl, true, DisplayCase::Keep)
+}
+
 pub fn tl_display_to_poj_display(text: &str) -> String {
     rewrite_display(text, System::Poj, false, DisplayCase::Keep)
 }

@@ -23,11 +23,19 @@ public interface CustomDictionaryEntryOrBuilder extends
       getIdBytes();
 
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    * @return The roman.
    */
   java.lang.String getRoman();
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    * @return The bytes for roman.
    */
@@ -45,4 +53,28 @@ public interface CustomDictionaryEntryOrBuilder extends
    */
   com.google.protobuf.ByteString
       getHanjiBytes();
+
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   * @return The displayRoman.
+   */
+  java.lang.String getDisplayRoman();
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   * @return The bytes for displayRoman.
+   */
+  com.google.protobuf.ByteString
+      getDisplayRomanBytes();
 }

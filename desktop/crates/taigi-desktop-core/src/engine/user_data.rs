@@ -23,6 +23,7 @@ pub use protos::engine::{
 
 use super::bridge::{record_failure, roundtrip};
 use crate::platform::DesktopPlatform;
+use crate::settings::InputMode;
 
 /// Opens the engine's stores over `directory` — the desktop's one-directory
 /// layout, under `platform`'s journal (U3, [`journal`]). Cheap enough for a
@@ -99,11 +100,13 @@ pub enum UserDataError {
 
 /// One page of the custom dictionary, newest edit first: `filter` as a
 /// substring of the romanization or Hanji, `limit` rows from `offset`
-/// (pulled back to the last page that exists).
+/// (pulled back to the last page that exists), each entry's
+/// `display_roman` spelled in `mode`.
 pub fn list_custom_entries(
     filter: &str,
     limit: usize,
     offset: usize,
+    mode: InputMode,
 ) -> Result<CustomEntries, UserDataError> {
     let op = "customDictionaryList";
     match page_request(
@@ -111,6 +114,8 @@ pub fn list_custom_entries(
             filter: filter.to_owned(),
             limit: clamped(limit),
             offset: clamped(offset),
+            input_mode: mode.wire().to_owned(),
+            tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
         }),
         op,
     )? {
@@ -159,8 +164,9 @@ pub(crate) fn list_custom_page(
     filter: &str,
     page: usize,
     page_size: usize,
+    mode: InputMode,
 ) -> Result<CustomDictionaryPage, UserDataError> {
-    let listing = list_custom_entries(filter, page_size, page * page_size)?;
+    let listing = list_custom_entries(filter, page_size, page * page_size, mode)?;
     Ok(CustomDictionaryPage::served(
         listing.offset,
         page_size,
