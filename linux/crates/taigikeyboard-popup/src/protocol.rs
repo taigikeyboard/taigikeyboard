@@ -187,6 +187,19 @@ pub enum Event {
     Page { forward: bool },
 }
 
+/// What the window tells its parent about itself, on the same stdout as
+/// [`Event`] but never handed to a shell: the screen under the caret, in px
+/// before scale, so the session packs a row no wider than it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "event", rename_all = "lowercase")]
+pub enum Notice {
+    Screen { width: u32, height: u32 },
+}
+
+/// Room left at each screen edge, px before scale: the window's gap from the
+/// caret, kept from the monitor's edges too.
+pub const SCREEN_MARGIN_PX: f32 = 4.0;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -222,5 +235,17 @@ mod tests {
         assert!(!line.contains('\n'));
         let back: Command = serde_json::from_str(&line).expect("parse");
         assert_eq!(back, command);
+    }
+
+    #[test]
+    fn a_screen_notice_is_not_an_event() {
+        let line = serde_json::to_string(&Notice::Screen {
+            width: 640,
+            height: 400,
+        })
+        .expect("serialize");
+        assert_eq!(line, r#"{"event":"screen","width":640,"height":400}"#);
+        assert!(serde_json::from_str::<Event>(&line).is_err());
+        assert!(serde_json::from_str::<Notice>(r#"{"event":"page","forward":true}"#).is_err());
     }
 }

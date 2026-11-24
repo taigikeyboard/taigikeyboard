@@ -15,8 +15,8 @@ use std::thread;
 use taigikeyboard_popup::paint;
 use taigikeyboard_popup::text::{self, Fonts};
 use taigikeyboard_popup::{
-    arrange, paint_chrome, px, watch_appearance, Arrangement, Caret, Command, Event, Hit, Show,
-    SystemAppearance, Target,
+    arrange, paint_chrome, px, watch_appearance, Arrangement, Caret, Command, Event, Fit, Hit,
+    Notice, Show, SystemAppearance, Target, SCREEN_MARGIN_PX,
 };
 use winit::application::ApplicationHandler;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -25,6 +25,9 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::window::{Window, WindowId, WindowLevel};
 
 const GAP_PX: f32 = 4.0;
+
+/// A monitor: its origin and size, physical px.
+type Monitor = (PhysicalPosition<i32>, PhysicalSize<u32>);
 
 fn main() -> ExitCode {
     let mut builder = EventLoop::<UserEvent>::with_user_event();
@@ -93,6 +96,11 @@ struct App {
     placed: Option<PhysicalPosition<i32>>,
     placed_size: Option<PhysicalSize<u32>>,
     appearance: Option<SystemAppearance>,
+    /// The first row a vertical list taller than its room shows; kept while
+    /// the page stays the same so the rows scroll only with the cursor.
+    first_row: usize,
+    /// The screen last reported to the parent ([`Notice::Screen`]).
+    reported_screen: Option<(u32, u32)>,
 }
 
 impl Default for App {
@@ -114,6 +122,8 @@ impl Default for App {
             placed: None,
             placed_size: None,
             appearance: None,
+            first_row: 0,
+            reported_screen: None,
         }
     }
 }
@@ -155,6 +165,11 @@ impl ApplicationHandler<UserEvent> for App {
         };
         self.window = Some(window);
         self.surface = Some(surface);
+        // The session packs its first rows before any caret arrives.
+        let primary = event_loop
+            .primary_monitor()
+            .map(|monitor| (monitor.position(), monitor.size()));
+        self.report_screen(primary);
         let pending = std::mem::take(&mut self.pending);
         for command in pending {
             self.apply(event_loop, command);
@@ -214,6 +229,13 @@ impl App {
             }
             Command::Show { body } => {
                 self.caret = body.caret;
+                if self
+                    .page
+                    .as_ref()
+                    .is_none_or(|page| page.cells != body.cells)
+                {
+                    self.first_row = 0;
+                }
                 self.page = Some(*body);
                 self.relayout(event_loop);
                 if let Some(window) = &self.window {
@@ -245,7 +267,11 @@ impl App {
             .unwrap_or(1.0);
         self.fonts
             .set_families(&page.chrome.hanji_family, &page.chrome.roman_family);
-        let arrangement = arrange(&page, &self.fonts, scale);
+        let monitor = monitor_for(event_loop, self.caret);
+        self.report_screen(monitor);
+        let fit = fit_for(self.caret, monitor, scale, self.first_row);
+        let arrangement = arrange(&page, &self.fonts, scale, fit);
+        self.first_row = arrangement.first_row;
         let size = PhysicalSize::new(px(arrangement.width), px(arrangement.height));
         if self.placed_size != Some(size) {
             if let Some(window) = &self.window {
@@ -269,9 +295,8 @@ impl App {
         };
         let size = PhysicalSize::new(px(arrangement.width), px(arrangement.height));
         let scale = window.scale_factor() as f32;
-        let gap = (GAP_PX * scale).round().max(1.0) as i32;
         let monitor = monitor_for(event_loop, self.caret);
-        let origin = held_origin(self.placed, place_at(self.caret, size, monitor, gap));
+        let origin = held_origin(self.placed, place_at(self.caret, size, monitor, scale));
         if self.placed == Some(origin) {
             return;
         }
@@ -290,11 +315,33 @@ impl App {
             Target::Cell(position) => Event::Click { position },
             Target::Page { forward } => Event::Page { forward },
         };
-        if let Ok(line) = serde_json::to_string(&event) {
-            let mut stdout = std::io::stdout().lock();
-            let _ = writeln!(stdout, "{line}");
-            let _ = stdout.flush();
+        write_line(serde_json::to_string(&event));
+    }
+
+    /// Tells the parent the size of `monitor` in px before scale, when it
+    /// changed, so the session packs rows that fit it.
+    fn report_screen(&mut self, monitor: Option<Monitor>) {
+        let Some((_, size)) = monitor else {
+            return;
+        };
+        let scale = self
+            .window
+            .as_ref()
+            .map(|window| window.scale_factor())
+            .filter(|scale| scale.is_finite() && *scale > 0.0)
+            .unwrap_or(1.0);
+        let screen = (
+            (f64::from(size.width) / scale).floor() as u32,
+            (f64::from(size.height) / scale).floor() as u32,
+        );
+        if self.reported_screen == Some(screen) {
+            return;
         }
+        self.reported_screen = Some(screen);
+        write_line(serde_json::to_string(&Notice::Screen {
+            width: screen.0,
+            height: screen.1,
+        }));
     }
 
     fn paint(&mut self) {
@@ -340,6 +387,14 @@ impl App {
     }
 }
 
+fn write_line(line: serde_json::Result<String>) {
+    if let Ok(line) = line {
+        let mut stdout = std::io::stdout().lock();
+        let _ = writeln!(stdout, "{line}");
+        let _ = stdout.flush();
+    }
+}
+
 fn hit_at(arrangement: &Arrangement, x: f32, y: f32) -> Option<&Hit> {
     arrangement
         .hits
@@ -348,10 +403,7 @@ fn hit_at(arrangement: &Arrangement, x: f32, y: f32) -> Option<&Hit> {
         .find(|hit| x >= hit.x && y >= hit.y && x < hit.x + hit.w && y < hit.y + hit.h)
 }
 
-fn monitor_for(
-    event_loop: &ActiveEventLoop,
-    caret: Caret,
-) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
+fn monitor_for(event_loop: &ActiveEventLoop, caret: Caret) -> Option<Monitor> {
     let contains = |origin: PhysicalPosition<i32>, size: PhysicalSize<u32>| {
         caret.x >= origin.x
             && caret.y >= origin.y
@@ -379,19 +431,55 @@ fn held_origin(
     }
 }
 
+/// The gap from the caret and the margin from the monitor's edges, whole
+/// physical px.
+fn spacing(scale: f32) -> (i32, i32) {
+    let whole = |value: f32| (value * scale).round().max(1.0) as i32;
+    (whole(GAP_PX), whole(SCREEN_MARGIN_PX))
+}
+
+/// The room under and over `caret` on `monitor`, physical px.
+fn vertical_room(caret: Caret, (origin, size): Monitor, scale: f32) -> (i32, i32) {
+    let (gap, margin) = spacing(scale);
+    let bottom = origin.y.saturating_add(size.height as i32) - margin;
+    let below = bottom - caret.y.saturating_add(caret.h).saturating_add(gap);
+    let above = caret.y.saturating_sub(gap) - (origin.y + margin);
+    (below, above)
+}
+
+/// The room [`place_at`] can give the window: the monitor's width less its
+/// margins, and the roomier side of the caret. No monitor: unbounded.
+fn fit_for(caret: Caret, monitor: Option<Monitor>, scale: f32, first_row: usize) -> Fit {
+    let Some(monitor) = monitor else {
+        return Fit {
+            first_row,
+            ..Fit::UNBOUNDED
+        };
+    };
+    let (_, margin) = spacing(scale);
+    let (below, above) = vertical_room(caret, monitor, scale);
+    Fit {
+        width: (monitor.1.width as i32 - margin * 2).max(1) as f32,
+        height: below.max(above).max(1) as f32,
+        first_row,
+    }
+}
+
+/// Under the caret when the window fits there, else over it, else on the
+/// roomier side — never back over the caret's line. Kept on the monitor.
 fn place_at(
     caret: Caret,
     window: PhysicalSize<u32>,
-    monitor: Option<(PhysicalPosition<i32>, PhysicalSize<u32>)>,
-    gap: i32,
+    monitor: Option<Monitor>,
+    scale: f32,
 ) -> PhysicalPosition<i32> {
+    let (gap, margin) = spacing(scale);
+    let below_y = caret.y.saturating_add(caret.h).saturating_add(gap);
     let mut x = caret.x;
-    let mut y = caret.y.saturating_add(caret.h).saturating_add(gap);
     let Some((origin, size)) = monitor else {
-        return PhysicalPosition::new(x, y);
+        return PhysicalPosition::new(x, below_y);
     };
     let right = origin.x.saturating_add(size.width as i32);
-    let bottom = origin.y.saturating_add(size.height as i32);
     let window_w = window.width as i32;
     let window_h = window.height as i32;
     if x.saturating_add(window_w) > right {
@@ -400,17 +488,15 @@ fn place_at(
     if x < origin.x {
         x = origin.x;
     }
-    if y.saturating_add(window_h) > bottom {
-        let above = caret.y.saturating_sub(gap).saturating_sub(window_h);
-        y = if above >= origin.y {
-            above
-        } else {
-            bottom.saturating_sub(window_h)
-        };
-    }
-    if y < origin.y {
-        y = origin.y;
-    }
+    let (below, above) = vertical_room(caret, (origin, size), scale);
+    let above_y = caret.y.saturating_sub(gap).saturating_sub(window_h);
+    let y = if window_h <= below {
+        below_y
+    } else if window_h <= above || above > below {
+        above_y.max(origin.y + margin)
+    } else {
+        below_y
+    };
     PhysicalPosition::new(x, y)
 }
 
@@ -433,5 +519,51 @@ mod tests {
             held_origin(None, PhysicalPosition::new(110, 200)),
             PhysicalPosition::new(110, 200)
         );
+    }
+
+    const MONITOR: Monitor = (PhysicalPosition::new(0, 0), PhysicalSize::new(1280, 800));
+
+    fn caret_at(y: i32) -> Caret {
+        Caret {
+            x: 100,
+            y,
+            w: 2,
+            h: 30,
+        }
+    }
+
+    fn covers_caret(origin: PhysicalPosition<i32>, height: u32, caret: Caret) -> bool {
+        origin.y < caret.y + caret.h && origin.y + height as i32 > caret.y
+    }
+
+    /// L2: a window taller than either side of the caret fell back to the
+    /// screen's bottom edge, over the caret's line. The fit now caps it at the
+    /// roomier side, where it is placed.
+    #[test]
+    fn a_tall_window_takes_the_roomier_side_and_never_covers_the_caret() {
+        // trace: caret 300..330, gap 4, margin 4: below = 796 - 334 = 462,
+        // above = 296 - 4 = 292.
+        let caret = caret_at(300);
+        let fit = fit_for(caret, Some(MONITOR), 1.0, 0);
+        assert_eq!(fit.height, 462.0);
+        assert_eq!(fit.width, 1272.0);
+        let origin = place_at(caret, PhysicalSize::new(300, 462), Some(MONITOR), 1.0);
+        assert_eq!(origin.y, 334);
+        assert!(!covers_caret(origin, 462, caret));
+
+        // trace: caret 600..630: below = 796 - 634 = 162, above = 596 - 4 = 592.
+        let low = caret_at(600);
+        let fit = fit_for(low, Some(MONITOR), 1.0, 0);
+        assert_eq!(fit.height, 592.0);
+        let origin = place_at(low, PhysicalSize::new(300, 592), Some(MONITOR), 1.0);
+        assert_eq!(origin.y, 4);
+        assert!(!covers_caret(origin, 592, low));
+    }
+
+    #[test]
+    fn a_window_that_fits_below_stays_below() {
+        let caret = caret_at(300);
+        let origin = place_at(caret, PhysicalSize::new(300, 200), Some(MONITOR), 1.0);
+        assert_eq!(origin, PhysicalPosition::new(100, 334));
     }
 }
