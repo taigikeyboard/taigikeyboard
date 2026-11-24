@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `linux`, `arm64`, `aarch64`, `deb`, `rpm`, `ubuntu-24.04-arm`, `desktop train`
-> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc) and 1 (packaging by architecture) done; Phases 2–4 pending.
+> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc), 1 (packaging by architecture) and 2 (CI on the Arm runner) done; Phases 3–4 pending.
 > **Siblings**: `linux-release.md` (packages, layout, CI half of a desktop release), `windows-arm64-roadmap.md` (the Windows precedent), `desktop-release.md`.
 
 ---
@@ -15,19 +15,19 @@
 
 ## Current state (grounded in code, 2026-11-24)
 
-The code is architecture-neutral; only packaging and release name x86_64.
+The code is architecture-neutral; only packaging and release name x86_64. The table is the snapshot before Phase 1; rows marked *(Phase n)* are resolved.
 
 - CI builds natively without `--target` (`.github/workflows/linux-build.yml` "cargo build --release" step), so an Arm runner builds the same commands unchanged.
 - An arm64 build already ran: the UTM arm64 Ubuntu dogfood VM builds from source with `make install`, and the GNOME + IBus dogfood pass ran there. Fcitx5 on arm64 has never run.
 
 | Location | Hardcoded |
 |---|---|
-| `linux/packaging/control.in:3`, `linux/packaging/shlibdeps-control:7` | `Architecture: amd64` |
-| `linux/packaging/taigikeyboard.spec.in:16` | `ExclusiveArch: x86_64` |
+| `linux/packaging/control.in:3`, `linux/packaging/shlibdeps-control:7` | `Architecture: amd64` *(Phase 1)* |
+| `linux/packaging/taigikeyboard.spec.in:16` | `ExclusiveArch: x86_64` *(Phase 1)* |
 | `linux/packaging/PKGBUILD.in:12` | `arch=('x86_64')` (stays; no Arch arm64) |
-| `linux/Makefile:20,267,299,304,311` | `LINUX_TARGET`, the three package file names, `RPMS/x86_64/` |
-| `.github/actions/setup-protoc/action.yml:27` | protoc digest for Linux/X64 only — an Arm runner fails here |
-| `.github/workflows/linux-build.yml` | every job on `ubuntu-24.04`; amd64 control check; `x86_64-linux-gnu` addon path in install-check |
+| `linux/Makefile:20,267,299,304,311` | `LINUX_TARGET`, the three package file names, `RPMS/x86_64/` *(Phase 1)* |
+| `.github/actions/setup-protoc/action.yml:27` | protoc digest for Linux/X64 only — an Arm runner fails here *(Phase 2)* |
+| `.github/workflows/linux-build.yml` | every job on `ubuntu-24.04`; amd64 control check; `x86_64-linux-gnu` addon path in install-check *(Phase 2)* |
 | `tools/release/lib/desktop-release.sh:50-52,233` | asset names, expected-asset list |
 | `tools/release/announce-release.sh:196`, `tools/release/nightly-release.sh:53-55` | announce and nightly asset tables |
 | `docs/INSTALL.md`, website repository | download buttons |
@@ -53,9 +53,7 @@ Phase 3 touches release tooling → High tier (full review sandwich).
 
 ## Unverified
 
-- GitHub-hosted Arm runner availability and quota for this public repository — check current GitHub docs before Phase 2.
-- `fedora:44` aarch64 image building the package on the Arm runner.
-- Fcitx5 on arm64.
+- Fcitx5 and IBus on a real arm64 desktop session (Phase 4). CI already proves the rest on `ubuntu-24.04-arm` (generally available and free for public repositories, GitHub changelog 2025-08-07): run 45317118454 built both arm64 packages, `fedora:44` aarch64 included, and the arm64 install checks had Fcitx5 load the addon and IBus spawn the engine.
 
 ## Best practices alignment
 
