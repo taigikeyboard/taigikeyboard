@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Dictionary build entry point — every run is a full rebuild + deploy.
-# Pipeline (steps 1-8 in one process, build/run.py):
+# Pipeline (steps 1-9 in one process, build/run.py; step 10 here):
 #   1. merge_csv              - merge source CSVs (drop stats -> .build_stats.json)
 #   2. create_dictionary_bin  - dictionary.bin (binary mmap)
 #   3. create_fst             - dictionary.fst prefix index (tl:/poj:/tps:/hanzi:)
@@ -10,7 +10,8 @@
 #   6. verify_poj_integrity   - fail-fast POJ invariant gate
 #   7. version_snapshot       - drop summary + word-keys.tsv diff vs previous release tag
 #   8. verify_known_keys      - fst fixture check (known keys such as poj:chi2)
-#   9. deploy                 - copy into assets/dictionaries/, which every platform packages (incl. syllables.fst)
+#   9. alignment_report       - Hanji/TL alignment report
+#  10. deploy                 - copy into assets/dictionaries/, which every platform packages (incl. syllables.fst)
 #
 # RELEASE_VERSION=vX.Y.Z (or $1) sets step 7's diff base to the newest tag strictly below it;
 # unset compares against the newest release tag. Step 7 writes the committed

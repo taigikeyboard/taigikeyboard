@@ -1,6 +1,6 @@
 // Site access and the typing mode, which are two things: a site is enabled
 // for good, typing is on per tab and starts off
-// (docs/architecture/browser-extension.md § Tabs).
+// (docs/architecture/browser-extension.md § D5).
 
 import {
   A,
