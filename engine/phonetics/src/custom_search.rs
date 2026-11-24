@@ -27,8 +27,8 @@ use crate::derivation::{derive_abbrev, derive_notone};
 use crate::display_rewrite::tl_display_keeping_tl_finals;
 use crate::key_family::KeyFamily;
 use crate::tps::{
-    from_zhuyin, is_tps_tone_mark, normalize_tps_lookup_scalar, tps_abbrev_from_tl,
-    tps_notone_from_tl, tps_notone_or_variant, tps_num_from_tl,
+    from_zhuyin, is_tps_tone_mark, normalize_tps_lookup_scalar, tl_syllable_tokens,
+    tps_abbrev_from_tl, tps_notone_from_tl, tps_notone_or_variant, tps_num_from_tl,
 };
 use std::collections::HashSet;
 
@@ -105,6 +105,14 @@ pub fn custom_display_roman(roman: &str, mode: InputMode, or_maps_to_er: bool) -
         InputMode::Tl => reading(),
         InputMode::Poj => tl_display_to_poj_display(&reading()),
         InputMode::Tps => {
+            // A number token (`2`, `2.`) is no syllable; converting it would read
+            // the lone digit as a tone and leave a bare mark (`2` → `ˋ`).
+            let has_number_token = tl_syllable_tokens(roman).any(|token| {
+                token.chars().any(|c| c.is_ascii_digit()) && !token.chars().any(char::is_alphabetic)
+            });
+            if has_number_token {
+                return roman.to_owned();
+            }
             let tps = tl_display_to_tps(&reading(), or_maps_to_er);
             // Latin left over is a token Bopomofo could not spell.
             if tps.chars().any(|c| c.is_ascii_alphanumeric()) {
@@ -596,6 +604,35 @@ mod tests {
         for saved in ["páh", "iPhone tsin hó"] {
             assert_eq!(custom_display_roman(saved, InputMode::Tps, true), saved);
         }
+    }
+
+    // A standalone number is not a syllable: `tl_display_to_tps` would read a
+    // lone digit as a tone and leave a bare mark (`"2"` → `ˋ`), so TPS shows the
+    // saved spelling, as it does for `7-11` and `101`.
+    #[test]
+    fn display_roman_tps_keeps_a_standalone_number() {
+        for saved in [
+            "2",
+            "tsit 2",
+            "Tâi-gí 2",
+            "tsi̍t-pah 5",
+            "tsit-2",
+            "tsit 2.",
+            "7-11",
+            "Tâi-uân 101",
+        ] {
+            assert_eq!(custom_display_roman(saved, InputMode::Tps, true), saved);
+        }
+    }
+
+    // trace: a digit-free symbol token stays in place and the syllables still
+    // convert: tâi = t ㄉ ai ㄞ 5 ˊ, gí = g ㆣ i ㄧ 2 ˋ, `!` passes through.
+    #[test]
+    fn display_roman_tps_converts_around_a_symbol_token() {
+        assert_eq!(
+            custom_display_roman("tâi-gí !", InputMode::Tps, true),
+            "ㄉㄞˊ ㆣㄧˋ !"
+        );
     }
 
     // trace: TL special final `eng` [ɛŋ] (reference §3.2.6) stays in TL, as
