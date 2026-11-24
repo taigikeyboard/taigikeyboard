@@ -188,6 +188,8 @@ summary:focus-visible {
 
 #sidebar {
   inset: 0 auto 0 0;
+  /* Its rows lay out by its width against the text size. */
+  container: sidebar / inline-size;
   width: min(var(--sidebar-width), 85vw);
   height: 100%;
   max-height: none;
@@ -341,8 +343,17 @@ summary:focus-visible {
   font-size: 0.8125rem;
 }
 
-.setting select {
+/* The value keeps its own width, up to 60% of the row: a long label wraps
+   beside it rather than squeeze the value to its chevron at a large text
+   size, and breaks a word only when the word alone is wider than its room
+   (Firefox reads the stacking query's `em` before the text size). */
+.setting:has(> select) > span {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.setting select {
+  flex-shrink: 0;
   max-width: 60%;
   padding: 0.25rem 1.125rem 0.25rem 0.25rem;
   border: 0;
@@ -355,6 +366,20 @@ summary:focus-visible {
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* A sidebar narrow for its text size (a phone at a large text size) stacks a
+   value under its label, at the row's end, rather than squeeze either. */
+@container sidebar (max-width: 13em) {
+  .setting:has(> select) {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .setting > select {
+    max-width: 100%;
+    margin-left: auto;
+  }
 }
 
 .setting select:hover {

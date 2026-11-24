@@ -73,6 +73,39 @@ test("a narrow window opens the sidebar as a drawer", async ({ page }) => {
   await expect(editor).toBeVisible();
 });
 
+// A phone's drawer at a large text size: each value keeps room to be read,
+// and no row runs past the drawer.
+test("the drawer's values stay readable at a large text size", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await open(page);
+  await toggle(page).click();
+  for (const size of ["100%", "125%", "200%"]) {
+    await page.evaluate((size) => {
+      document.documentElement.style.fontSize = size;
+    }, size);
+    const rows = await page.evaluate(() =>
+      [...document.querySelectorAll(".setting:has(> select)")].map((row) => {
+        const box = row.getBoundingClientRect();
+        const value = /** @type {HTMLSelectElement} */ (
+          row.querySelector("select")
+        );
+        const valueBox = value.getBoundingClientRect();
+        return {
+          name: value.name,
+          squeezed: valueBox.width < 2 * value.offsetHeight,
+          pastRow: valueBox.right > box.right + 0.5,
+        };
+      }),
+    );
+    expect(
+      rows.filter((row) => row.squeezed || row.pastRow),
+      size,
+    ).toEqual([]);
+  }
+});
+
 test("every section starts folded and unfolds on a click", async ({ page }) => {
   await open(page, { folded: true });
   const moe = page.locator('input[name="moeDictEnabled"]');
