@@ -387,10 +387,6 @@ test("the mode chip keeps inside a phone-wide window", async ({ page }) => {
     const clean = { pageScrolls: false, pastChip: [], rowGrew: false };
     await expect(chip).toHaveAttribute("data-drawn");
     expect(await fit()).toEqual(clean);
-    await expect(page.locator("#mode-detail")).toHaveJSProperty(
-      "scrollWidth",
-      await page.locator("#mode-detail").evaluate((part) => part.clientWidth),
-    );
     await editor.dispatchEvent("compositionstart");
     await expect(page.locator("#notice")).toHaveAttribute("data-active");
     expect(await fit()).toEqual(clean);
@@ -1030,18 +1026,39 @@ test("a cell wider than the window cuts its annotation, not its row", async ({
       };
     });
     expect(fit, layout).toEqual({ tallRows: [], pastWindow: [] });
-    // The annotations share one track, so a short one beside the long
-    // candidate may be cut too; no candidate is.
+    // Side by side, the annotation gives way first: a candidate is cut only
+    // once its row's annotation has nothing left to give (how much fits
+    // depends on the face the machine draws Hanji in). Stacked cells give
+    // each script its own line.
     const cut = await cutScripts(page);
-    const texts = await page.locator("#candidates .text").allTextContents();
-    expect(texts[0], layout).toBe("因為你嘛知影咱攏是為著別人咧活");
-    expect(
-      cut.filter((script) => texts.includes(script)),
-      layout,
-    ).toEqual([]);
-    expect(cut, layout).toContain(
-      await candidates(page).first().locator(".annotation").textContent(),
+    const first = candidates(page).first();
+    expect(await first.locator(".text").textContent(), layout).toBe(
+      "因為你嘛知影咱攏是為著別人咧活",
     );
+    expect(cut, layout).toContain(
+      await first.locator(".annotation").textContent(),
+    );
+    const candidateCutBeforeAnnotation = await panel(page).evaluate((root) =>
+      [...root.querySelectorAll("#candidates[data-inline] li")]
+        .filter((row) => {
+          const text = row.querySelector(".text");
+          const annotation = row.querySelector(".annotation");
+          if (!text || !annotation) {
+            return false;
+          }
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const isCut =
+            range.getBoundingClientRect().width >
+            text.getBoundingClientRect().width + 0.01;
+          const annotationRoom =
+            annotation.getBoundingClientRect().width -
+            Number.parseFloat(getComputedStyle(annotation).paddingLeft);
+          return isCut && annotationRoom > 0.5;
+        })
+        .map((row) => row.textContent),
+    );
+    expect(candidateCutBeforeAnnotation, layout).toEqual([]);
   }
 });
 

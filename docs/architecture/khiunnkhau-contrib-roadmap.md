@@ -2,7 +2,7 @@
 
 > **Type**: Design record (superseded)
 > **Keywords**: `腔口差`, `accent variations`, `contribution`, `issue form`, `GitHub App`, `khpoo`, `齒盤補充辭典`
-> **Status**: Superseded 2026-11-20 — accent variation is collected in the separate `taigikeyboard/community-dictionary` repository instead (its own roadmap). Only Phase 1 (#873, the khpoo append check) was built and stays; the intake workflow, issue form and site (Phases 2–3) were never built. Kept for decisions D1–D7, which `dictionary/LICENSE` and `verify_khpoo_append.py` cite.
+> **Status**: Superseded 2026-11-20 — accent variation is collected in the separate `taigikeyboard/community-dictionary` repository instead (its own roadmap). Only Phase 1 (#873, the khpoo append check) was built and stays; the intake workflow, issue form and site (Phases 2–3) were never built. Kept for decisions D1–D7; `verify_khpoo_append.py` cites D6.
 
 ## Goal
 
@@ -17,7 +17,7 @@ Decisions (maintainer, 2026-11-12):
 - **D5 Data destination** — append to `dictionary/sources/supplementary/khpoo/data/raw/khpoo.csv`. Entries ship as 齒盤補充辭典 (source bit 8) through the existing khpoo pipeline; no new data file, no new source bit, no engine or platform change. The accent and the reason are not in the data (the file has two columns); they are recorded as commit trailers and in the PR body.
 
 - **D6 TL, reviewed by hand** — the romanization field asks for Tâi-lô only (label and placeholder say so). Whether the TL is correct is decided by the maintainer's review of the PR: only entries that pass review are merged. No automated TL validator in the site or in CI — the reviewer is the gate, and a machine check would add a second, possibly disagreeing, definition of TL.
-- **D7 Licence of contributed rows** — Apache-2.0, like `dev` (`dictionary/LICENSE`). khpoo's original rows stay **Unverified**; contributed rows are identified by their `Accent:` commit trailer. The form carries a required consent checkbox. Recorded in `dictionary/LICENSE` and `dictionary/docs/SOURCES.md`.
+- **D7 Licence of contributed rows** — Apache-2.0, like `dev`, with a required consent checkbox on the form. Never in effect: no row was contributed and the clause was removed from `dictionary/LICENSE` and `dictionary/docs/SOURCES.md`.
 
 ## Phase 1 — checks (built)
 
