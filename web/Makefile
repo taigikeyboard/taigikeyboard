@@ -25,7 +25,7 @@ FONTS := target/fonts
 VENDOR := target/vendor
 ICONS := ../ios/Sources/TaigiKeyboard/App/Assets/Assets.xcassets/AppIcon.appiconset
 
-.PHONY: help bindgen-version i18n-check build site site-stage chromeos extension extension-stage extension-fixtures extension-e2e serve test smoke e2e check-live typecheck lint lint-rust-biome fmt check clean
+.PHONY: help bindgen-version i18n-check build site site-stage chromeos extension extension-stage extension-fixtures extension-e2e serve test smoke e2e layout-sim check-live typecheck lint lint-rust-biome fmt check clean
 
 help:
 	@echo "Web version — dev loop"
@@ -38,6 +38,7 @@ help:
 	@echo "  make chromeos - Stage the ChromeOS input method into $(CHROMEOS)/ and zip it"
 	@echo "  make extension - Stage the browser extension into $(EXTENSION)/ and zip it"
 	@echo "  make extension-e2e - Load the staged extension in Chromium and type through it"
+	@echo "  make layout-sim - Type corpus sentences, assert the candidate window layout (BROWSERS, VIEWS, LAYOUTS)"
 	@echo "  make check-live - Hash the live files against their manifest"
 	@echo "  make typecheck - TypeScript checkJs (--noEmit) over all handwritten JS"
 	@echo "  make lint    - clippy -D warnings, typecheck, biome, fmt --check"
@@ -181,6 +182,13 @@ E2E_BROWSERS := $(if $(CI),chromium,chromium firefox webkit)
 e2e: site node_modules/.package-lock.json
 	npx playwright install $(if $(CI),--with-deps) $(E2E_BROWSERS)
 	npx playwright test $(addprefix --project=,$(E2E_BROWSERS))
+
+# The layout simulation (.claude/skills/layout/SKILL.md): not in CI. VIEWS and
+# LAYOUTS reach the spec from the environment; output in test-results/layout-sim/.
+BROWSERS ?= chromium firefox webkit
+layout-sim: site node_modules/.package-lock.json
+	npx playwright install $(BROWSERS)
+	npx playwright test --config layout-sim/playwright.config.mjs $(addprefix --project=,$(BROWSERS))
 
 # The deploy runs the same script with its build (docs/architecture/web-release.md).
 # By hand, from Taiwan, this times the download from there.

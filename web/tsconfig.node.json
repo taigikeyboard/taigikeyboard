@@ -15,6 +15,7 @@
     "scripts/**/*.mjs",
     "tests/**/*.mjs",
     "e2e/**/*.mjs",
+    "layout-sim/**/*.mjs",
     "extension/e2e/**/*.mjs",
     "types/shared.d.ts",
     "types/globals.d.ts",
