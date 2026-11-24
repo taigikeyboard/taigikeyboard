@@ -112,7 +112,7 @@ maintainer's Mac.
   `libFcitx5Core`) and `ibus` is optional. Arch is rolling: a package built
   against one Fcitx5 may need a rebuild after its ABI moves.
 
-CI installs each of the three into a FRESH container of its distribution
+CI installs each of the three — and the arm64 `.deb` / aarch64 `.rpm` — into a FRESH container of its distribution
 (`install-check`, one matrix, the same checks for every format — no build
 dependency around to hide a missing runtime one): files in place, every
 linked library resolved, `ibus-daemon` spawning the engine from the installed

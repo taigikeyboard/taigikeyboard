@@ -301,7 +301,7 @@ jobs:
           - runner: ubuntu-24.04-arm
             rpm_arch: aarch64
             artifact: linux-rpm-arm64
-            sums: SHA256SUMS-rpm-aarch64
+            sums: SHA256SUMS-rpm-arm64
     steps:
       - name: Install build dependencies
         run: |
