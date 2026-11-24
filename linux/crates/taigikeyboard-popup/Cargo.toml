@@ -19,7 +19,7 @@ default = ["window"]
 # The rasterizer the window and the settings sample share. No windowing
 # crate, so the settings process can draw the same pixels.
 text = ["dep:cosmic-text", "dep:fontdb"]
-window = ["text", "dep:winit", "dep:softbuffer", "dep:zbus"]
+window = ["text", "dep:winit", "dep:softbuffer", "dep:zbus", "dep:x11rb"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -31,6 +31,11 @@ fontdb = { version = "0.16", optional = true }
 # Desktop portal, so the Default theme can follow color-scheme and the accent.
 # The engine links this crate without `window`, and does not pull zbus in.
 zbus = { workspace = true, optional = true, features = ["blocking-api"] }
+
+# The work area (`_NET_WORKAREA`): the screen less the desktop's panels and
+# dock, which winit does not expose. The version winit already locks.
+[target.'cfg(target_os = "linux")'.dependencies]
+x11rb = { version = "0.13", optional = true }
 
 [lib]
 path = "src/lib.rs"

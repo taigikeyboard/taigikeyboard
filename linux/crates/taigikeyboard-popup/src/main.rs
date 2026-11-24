@@ -422,7 +422,103 @@ fn monitor_for(event_loop: &ActiveEventLoop, caret: Caret) -> Option<Monitor> {
         .available_monitors()
         .find(|monitor| contains(monitor.position(), monitor.size()));
     let monitor = found.or_else(|| event_loop.primary_monitor())?;
-    Some((monitor.position(), monitor.size()))
+    Some(usable((monitor.position(), monitor.size()), work_area()))
+}
+
+/// `monitor` cut to the desktop's work area, as macOS keeps a panel inside
+/// `visibleFrame`: the window never sits under a top bar or a dock. The
+/// whole monitor when there is no work area or they do not overlap.
+fn usable(monitor: Monitor, work_area: Option<Monitor>) -> Monitor {
+    let Some((area_origin, area_size)) = work_area else {
+        return monitor;
+    };
+    let (origin, size) = monitor;
+    let left = origin.x.max(area_origin.x);
+    let top = origin.y.max(area_origin.y);
+    let right = (origin.x + size.width as i32).min(area_origin.x + area_size.width as i32);
+    let bottom = (origin.y + size.height as i32).min(area_origin.y + area_size.height as i32);
+    if right <= left || bottom <= top {
+        return monitor;
+    }
+    (
+        PhysicalPosition::new(left, top),
+        PhysicalSize::new((right - left) as u32, (bottom - top) as u32),
+    )
+}
+
+/// The X11 work area of the current desktop (`_NET_WORKAREA`, EWMH), in
+/// root-window px. One connection for the life of the window; the property
+/// is read again each time, since a dock that hides changes it.
+#[cfg(target_os = "linux")]
+fn work_area() -> Option<Monitor> {
+    use std::sync::OnceLock;
+    use x11rb::connection::Connection;
+    use x11rb::protocol::xproto::{AtomEnum, ConnectionExt};
+    use x11rb::rust_connection::RustConnection;
+
+    struct Root {
+        connection: RustConnection,
+        window: u32,
+        work_area: u32,
+        current_desktop: u32,
+    }
+    static ROOT: OnceLock<Option<Root>> = OnceLock::new();
+    let root = ROOT
+        .get_or_init(|| {
+            let (connection, screen) = x11rb::connect(None).ok()?;
+            let window = connection.setup().roots.get(screen)?.root;
+            let atom = |name: &str| {
+                connection
+                    .intern_atom(false, name.as_bytes())
+                    .ok()?
+                    .reply()
+                    .ok()
+                    .map(|reply| reply.atom)
+            };
+            let work_area = atom("_NET_WORKAREA")?;
+            let current_desktop = atom("_NET_CURRENT_DESKTOP")?;
+            Some(Root {
+                connection,
+                window,
+                work_area,
+                current_desktop,
+            })
+        })
+        .as_ref()?;
+    let cardinals = |property: u32, offset: u32, length: u32| {
+        let reply = root
+            .connection
+            .get_property(
+                false,
+                root.window,
+                property,
+                AtomEnum::CARDINAL,
+                offset,
+                length,
+            )
+            .ok()?
+            .reply()
+            .ok()?;
+        let values: Vec<u32> = reply.value32()?.collect();
+        Some(values)
+    };
+    // GNOME's XWayland publishes no current desktop: the first area.
+    let desktop = cardinals(root.current_desktop, 0, 1)
+        .and_then(|values| values.first().copied())
+        .unwrap_or(0);
+    let area = cardinals(root.work_area, desktop * 4, 4)?;
+    let [x, y, width, height] = area[..] else {
+        return None;
+    };
+    Some((
+        PhysicalPosition::new(x as i32, y as i32),
+        PhysicalSize::new(width, height),
+    ))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn work_area() -> Option<Monitor> {
+    None
 }
 
 /// Candidate navigation reports a caret a few pixels off the one the window
@@ -591,5 +687,19 @@ mod tests {
             1.0,
         );
         assert_eq!(origin.y, 4);
+    }
+
+    #[test]
+    fn the_work_area_cuts_the_monitor() {
+        // trace: GNOME on the VM publishes 66, 32, 1214 × 768 (dock, top bar).
+        let area = (PhysicalPosition::new(66, 32), PhysicalSize::new(1214, 768));
+        assert_eq!(usable(MONITOR, Some(area)), area);
+        assert_eq!(usable(MONITOR, None), MONITOR);
+        // A work area on another monitor leaves this one whole.
+        let elsewhere = (
+            PhysicalPosition::new(1280, 0),
+            PhysicalSize::new(1920, 1080),
+        );
+        assert_eq!(usable(MONITOR, Some(elsewhere)), MONITOR);
     }
 }
