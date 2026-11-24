@@ -15,6 +15,8 @@ open class StubUserDataClient : UserDataClient {
         filter: String,
         limit: Int,
         offset: Int,
+        inputMode: String,
+        isTpsOrMappedToER: Boolean,
     ): CustomDictionaryPage = error("unused")
 
     override suspend fun save(word: CustomDictionaryWord): Unit = error("unused")

@@ -74,8 +74,15 @@ struct UserDataRefused: LocalizedError {
 /// never open the user data (the test process shares the app's engine).
 protocol UserDataClient: Sendable {
     /// One page of the words `filter` matches, newest edit first; the engine
-    /// trims the filter and cuts the page. `limit` is at least 1.
-    func listCustomEntries(filter: String, limit: UInt32, offset: UInt32) async throws -> CustomDictionaryPage
+    /// trims the filter and cuts the page, and spells each row's
+    /// `displayRoman` in `inputMode`. `limit` is at least 1.
+    func listCustomEntries(
+        filter: String,
+        limit: UInt32,
+        offset: UInt32,
+        inputMode: InputMode,
+        isTpsOrMappedToER: Bool,
+    ) async throws -> CustomDictionaryPage
     /// A refusal (a full dictionary, an unsearchable romanization) throws
     /// `UserDataRefused` in the engine's words.
     func save(_ entry: CustomDictionaryEntry) async throws
@@ -131,9 +138,21 @@ struct EngineUserDataClient: UserDataClient {
     /// side too so a huge file is refused before it is read into memory.
     static let maxImportFileBytes = 5 * 1024 * 1024
 
-    func listCustomEntries(filter: String, limit: UInt32, offset: UInt32) async throws -> CustomDictionaryPage {
+    func listCustomEntries(
+        filter: String,
+        limit: UInt32,
+        offset: UInt32,
+        inputMode: InputMode,
+        isTpsOrMappedToER: Bool,
+    ) async throws -> CustomDictionaryPage {
         let page = try await engine("customDictionaryList") {
-            RustEngineBridge.customDictionaryList(filter: filter, limit: limit, offset: offset)
+            RustEngineBridge.customDictionaryList(
+                filter: filter,
+                limit: limit,
+                offset: offset,
+                inputMode: inputMode.rawValue,
+                isTpsOrMappedToER: isTpsOrMappedToER,
+            )
         }
         return CustomDictionaryPage(
             entries: page.entries.map(CustomDictionaryEntry.init),
@@ -284,6 +303,6 @@ struct EngineUserDataClient: UserDataClient {
 
 extension CustomDictionaryEntry {
     init(_ entry: Taigi_Engine_CustomDictionaryEntry) {
-        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji)
+        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji, displayRoman: entry.displayRoman)
     }
 }

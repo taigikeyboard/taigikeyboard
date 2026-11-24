@@ -169,7 +169,7 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
         XCTAssertEqual(model.list.rows.map(\.id), [2])
         XCTAssertEqual(model.list.countLabel, "1")
-        let custom = try client.list(filter: "", limit: 10, offset: 0).rows
+        let custom = try client.list(filter: "", limit: 10, offset: 0, inputMode: .tl).rows
         XCTAssertEqual(custom.map(\.roman), ["ji1"])
         XCTAssertEqual(custom.map(\.hanji), ["字1"])
         XCTAssertFalse(model.activity.isWorking)
@@ -187,7 +187,7 @@ final class LearningRecordsPageTests: XCTestCase {
 
         XCTAssertEqual(model.message, .done(.dictionaryLearningRecordsAddedToCustomDictionary))
         XCTAssertTrue(model.list.rows.isEmpty)
-        let custom = try client.list(filter: "", limit: 10, offset: 0).rows
+        let custom = try client.list(filter: "", limit: 10, offset: 0, inputMode: .tl).rows
         XCTAssertEqual(custom.map(\.roman), ["Ji-1"])
         XCTAssertEqual(custom.map(\.hanji), ["字一"])
     }

@@ -161,8 +161,8 @@ pub fn is_word_material(c: char) -> bool {
 // op: the read side answers the dictionary search's custom entries (the
 // `DeriveCustomQueryKey` op went with its last caller on 2026-09-30).
 pub use crate::custom_search::{
-    custom_search_reading, derive_custom_query_key, derive_custom_search_keys,
-    tps_toneless_edge_key, CustomSearchKey,
+    custom_display_roman, custom_search_reading, derive_custom_query_key,
+    derive_custom_search_keys, tps_toneless_edge_key, CustomSearchKey,
 };
 
 pub use crate::display_rewrite::{

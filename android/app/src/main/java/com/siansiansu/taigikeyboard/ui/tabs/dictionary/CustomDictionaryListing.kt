@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryPage
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettingsProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -34,12 +35,14 @@ data class CustomDictionaryListState(
 
 /**
  * The custom dictionary list, filtered and paged by the engine as on the
- * desktop. A newer request cancels the one in flight, a filter's settle delay
+ * desktop, each row's romanization spelled in the input mode [settings] holds
+ * at the read. A newer request cancels the one in flight, a filter's settle delay
  * included, and a cancelled request never lands, so the newest filter wins.
  */
 class CustomDictionaryListing(
     private val scope: CoroutineScope,
     private val userData: UserDataClient,
+    private val settings: EngineSettingsProvider,
     private val onReadFailed: (Exception) -> Unit,
 ) {
     private val _state = MutableStateFlow(CustomDictionaryListState())
@@ -94,7 +97,8 @@ class CustomDictionaryListing(
         offset: Int,
     ): CustomDictionaryPage? =
         try {
-            userData.listCustomEntries(filter, limit, offset)
+            val current = settings.current
+            userData.listCustomEntries(filter, limit, offset, current.inputMode, current.isTpsOrMappedToER)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

@@ -172,8 +172,13 @@ message CustomDictionaryEntry {
   reserved "created_at", "updated_at";
 
   string id = 1;
+  // The romanization as the user saved it — what an edit starts from.
   string roman = 2;
   string hanji = 3;
+  // `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+  // Bopomofo; English keeps the saved spelling) — what a list row shows.
+  // Filled by the list only; empty in every other answer.
+  string display_roman = 6;
 }
 
 // A page of the dictionary, newest edit first. `filter` matches romanization
@@ -183,6 +188,12 @@ message ListCustomEntries {
   string filter = 1;
   uint32 limit = 2;
   uint32 offset = 3;
+  // The settings input mode, spelled as `AppConfig.input_mode`
+  // (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+  // spelling each entry's `display_roman` is rendered in.
+  string input_mode = 4;
+  // `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+  bool tps_or_maps_to_er = 5;
 }
 
 message CustomEntries {

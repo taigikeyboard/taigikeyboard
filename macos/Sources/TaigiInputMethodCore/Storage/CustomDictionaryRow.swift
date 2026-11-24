@@ -21,16 +21,22 @@ struct CustomDictionaryRow: Equatable, Sendable, Identifiable {
     /// UUID rather than the `(roman, hanji)` pair because editing either
     /// column must keep the row's identity.
     let id: String
+    /// The romanization as saved — what an edit starts from.
     var roman: String
     var hanji: String
+    /// `roman` in the input mode the list was read under (the engine's
+    /// rendering) — what the table shows; empty for a row no list answered.
+    var displayRoman: String
 
     init(
         id: String = UUID().uuidString,
         roman: String,
         hanji: String,
+        displayRoman: String = "",
     ) {
         self.id = id
         self.roman = roman
         self.hanji = hanji
+        self.displayRoman = displayRoman
     }
 }

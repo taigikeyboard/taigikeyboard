@@ -22,6 +22,7 @@ public  final class CustomDictionaryEntry extends
     id_ = "";
     roman_ = "";
     hanji_ = "";
+    displayRoman_ = "";
   }
   public static final int ID_FIELD_NUMBER = 1;
   private java.lang.String id_;
@@ -73,6 +74,10 @@ public  final class CustomDictionaryEntry extends
   public static final int ROMAN_FIELD_NUMBER = 2;
   private java.lang.String roman_;
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    * @return The roman.
    */
@@ -81,6 +86,10 @@ public  final class CustomDictionaryEntry extends
     return roman_;
   }
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    * @return The bytes for roman.
    */
@@ -90,6 +99,10 @@ public  final class CustomDictionaryEntry extends
     return com.google.protobuf.ByteString.copyFromUtf8(roman_);
   }
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    * @param value The roman to set.
    */
@@ -100,6 +113,10 @@ public  final class CustomDictionaryEntry extends
     roman_ = value;
   }
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    */
   private void clearRoman() {
@@ -107,6 +124,10 @@ public  final class CustomDictionaryEntry extends
     roman_ = getDefaultInstance().getRoman();
   }
   /**
+   * <pre>
+   * The romanization as the user saved it — what an edit starts from.
+   * </pre>
+   *
    * <code>string roman = 2;</code>
    * @param value The bytes for roman to set.
    */
@@ -161,6 +182,83 @@ public  final class CustomDictionaryEntry extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     hanji_ = value.toStringUtf8();
+
+  }
+
+  public static final int DISPLAY_ROMAN_FIELD_NUMBER = 6;
+  private java.lang.String displayRoman_;
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   * @return The displayRoman.
+   */
+  @java.lang.Override
+  public java.lang.String getDisplayRoman() {
+    return displayRoman_;
+  }
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   * @return The bytes for displayRoman.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDisplayRomanBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(displayRoman_);
+  }
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   * @param value The displayRoman to set.
+   */
+  private void setDisplayRoman(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    displayRoman_ = value;
+  }
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   */
+  private void clearDisplayRoman() {
+
+    displayRoman_ = getDefaultInstance().getDisplayRoman();
+  }
+  /**
+   * <pre>
+   * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+   * Bopomofo; English keeps the saved spelling) — what a list row shows.
+   * Filled by the list only; empty in every other answer.
+   * </pre>
+   *
+   * <code>string display_roman = 6;</code>
+   * @param value The bytes for displayRoman to set.
+   */
+  private void setDisplayRomanBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    displayRoman_ = value.toStringUtf8();
 
   }
 
@@ -315,6 +413,10 @@ public  final class CustomDictionaryEntry extends
     }
 
     /**
+     * <pre>
+     * The romanization as the user saved it — what an edit starts from.
+     * </pre>
+     *
      * <code>string roman = 2;</code>
      * @return The roman.
      */
@@ -323,6 +425,10 @@ public  final class CustomDictionaryEntry extends
       return instance.getRoman();
     }
     /**
+     * <pre>
+     * The romanization as the user saved it — what an edit starts from.
+     * </pre>
+     *
      * <code>string roman = 2;</code>
      * @return The bytes for roman.
      */
@@ -332,6 +438,10 @@ public  final class CustomDictionaryEntry extends
       return instance.getRomanBytes();
     }
     /**
+     * <pre>
+     * The romanization as the user saved it — what an edit starts from.
+     * </pre>
+     *
      * <code>string roman = 2;</code>
      * @param value The roman to set.
      * @return This builder for chaining.
@@ -343,6 +453,10 @@ public  final class CustomDictionaryEntry extends
       return this;
     }
     /**
+     * <pre>
+     * The romanization as the user saved it — what an edit starts from.
+     * </pre>
+     *
      * <code>string roman = 2;</code>
      * @return This builder for chaining.
      */
@@ -352,6 +466,10 @@ public  final class CustomDictionaryEntry extends
       return this;
     }
     /**
+     * <pre>
+     * The romanization as the user saved it — what an edit starts from.
+     * </pre>
+     *
      * <code>string roman = 2;</code>
      * @param value The bytes for roman to set.
      * @return This builder for chaining.
@@ -412,6 +530,85 @@ public  final class CustomDictionaryEntry extends
       return this;
     }
 
+    /**
+     * <pre>
+     * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+     * Bopomofo; English keeps the saved spelling) — what a list row shows.
+     * Filled by the list only; empty in every other answer.
+     * </pre>
+     *
+     * <code>string display_roman = 6;</code>
+     * @return The displayRoman.
+     */
+    @java.lang.Override
+    public java.lang.String getDisplayRoman() {
+      return instance.getDisplayRoman();
+    }
+    /**
+     * <pre>
+     * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+     * Bopomofo; English keeps the saved spelling) — what a list row shows.
+     * Filled by the list only; empty in every other answer.
+     * </pre>
+     *
+     * <code>string display_roman = 6;</code>
+     * @return The bytes for displayRoman.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDisplayRomanBytes() {
+      return instance.getDisplayRomanBytes();
+    }
+    /**
+     * <pre>
+     * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+     * Bopomofo; English keeps the saved spelling) — what a list row shows.
+     * Filled by the list only; empty in every other answer.
+     * </pre>
+     *
+     * <code>string display_roman = 6;</code>
+     * @param value The displayRoman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDisplayRoman(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setDisplayRoman(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+     * Bopomofo; English keeps the saved spelling) — what a list row shows.
+     * Filled by the list only; empty in every other answer.
+     * </pre>
+     *
+     * <code>string display_roman = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDisplayRoman() {
+      copyOnWrite();
+      instance.clearDisplayRoman();
+      return this;
+    }
+    /**
+     * <pre>
+     * `roman` rendered in `ListCustomEntries.input_mode` (TL / POJ / TPS
+     * Bopomofo; English keeps the saved spelling) — what a list row shows.
+     * Filled by the list only; empty in every other answer.
+     * </pre>
+     *
+     * <code>string display_roman = 6;</code>
+     * @param value The bytes for displayRoman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDisplayRomanBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setDisplayRomanBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CustomDictionaryEntry)
   }
   @java.lang.Override
@@ -431,10 +628,11 @@ public  final class CustomDictionaryEntry extends
             "id_",
             "roman_",
             "hanji_",
+            "displayRoman_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208";
+              "\u0000\u0004\u0000\u0000\u0001\u0006\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0006\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

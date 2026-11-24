@@ -98,9 +98,11 @@ impl WebSession {
     }
 
     /// The custom dictionary, newest edit first, as `{ "entries": [{ "id",
-    /// "roman", "hanji" }] }`.
+    /// "roman", "displayRoman", "hanji" }] }`: `roman` as saved,
+    /// `displayRoman` in the settings input mode.
     pub(crate) fn list_custom_entries(&self) -> Result<String, String> {
-        let listing = taigi_desktop_core::engine::user_data::list_custom_entries("", 200, 0)
+        let mode = self.runtime.settings.current().engine_settings().input_mode;
+        let listing = taigi_desktop_core::engine::user_data::list_custom_entries("", 200, 0, mode)
             .map_err(|error| error.to_string())?;
         let entries: Vec<serde_json::Value> = listing
             .entries
@@ -109,6 +111,7 @@ impl WebSession {
                 serde_json::json!({
                     "id": entry.id,
                     "roman": entry.roman,
+                    "displayRoman": entry.display_roman,
                     "hanji": entry.hanji,
                 })
             })
@@ -121,8 +124,13 @@ impl WebSession {
     pub(crate) fn save_custom_entry(&mut self, roman: &str, hanji: &str) -> Result<String, String> {
         let roman = roman.trim();
         let hanji = hanji.trim();
-        let stored = taigi_desktop_core::engine::user_data::list_custom_entries(roman, 50, 0)
-            .map_err(|error| error.to_string())?;
+        let stored = taigi_desktop_core::engine::user_data::list_custom_entries(
+            roman,
+            50,
+            0,
+            taigi_desktop_core::settings::InputMode::Tl,
+        )
+        .map_err(|error| error.to_string())?;
         let already = stored
             .entries
             .iter()

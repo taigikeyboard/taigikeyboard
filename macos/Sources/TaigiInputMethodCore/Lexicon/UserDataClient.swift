@@ -59,7 +59,9 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
 /// process shares one engine, and an open there would reach every later
 /// fetch in the run.
 protocol UserDataClient: Sendable {
-    func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow>
+    /// One page of the words `filter` matches, each row's `displayRoman`
+    /// spelled in `inputMode`.
+    func list(filter: String, limit: Int, offset: Int, inputMode: InputMode) throws -> UserDataListing<CustomDictionaryRow>
     func save(_ row: CustomDictionaryRow) throws
     func delete(id: String) throws
     /// Empties the custom dictionary.
@@ -111,11 +113,18 @@ struct EngineUserDataClient: UserDataClient {
     /// here too so a huge file is refused before it is read into memory.
     static let maxImportFileBytes = 5 * 1024 * 1024
 
-    func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow> {
+    /// How TPS spells the vowel `or`: ㄜ. No desktop setting changes it.
+    /// CROSS-PLATFORM INVARIANT — desktop-core's `TPS_OR_MAPS_TO_ER`
+    /// (`engine/phonetics.rs`), which the engine config sends.
+    static let isTpsOrMappedToER = true
+
+    func list(filter: String, limit: Int, offset: Int, inputMode: InputMode) throws -> UserDataListing<CustomDictionaryRow> {
         guard let page = RustEngineBridge.customDictionaryList(
             filter: filter,
             limit: limit,
             offset: offset,
+            inputMode: inputMode.rawValue,
+            isTpsOrMappedToER: Self.isTpsOrMappedToER,
         ) else { throw UserDataClientError.engineUnavailable(op: "customDictionaryList") }
         return UserDataListing(
             rows: page.entries.map(CustomDictionaryRow.init),
@@ -289,7 +298,7 @@ struct EngineUserDataClient: UserDataClient {
 
 extension CustomDictionaryRow {
     init(_ entry: Taigi_Engine_CustomDictionaryEntry) {
-        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji)
+        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji, displayRoman: entry.displayRoman)
     }
 }
 

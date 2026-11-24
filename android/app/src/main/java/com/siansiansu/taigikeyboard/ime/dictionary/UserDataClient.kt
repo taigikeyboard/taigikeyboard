@@ -33,12 +33,15 @@ import java.util.UUID
 data class CustomDictionaryWord(
     /** Stable across edits: the engine stores an edit under the same id. */
     val id: String = UUID.randomUUID().toString(),
+    /** The romanization as saved — what an edit starts from. */
     val roman: String,
     val hanji: String,
+    /** [roman] in the input mode the list was read under (the engine's rendering); empty for a word no list answered. */
+    val displayRoman: String = "",
 ) {
-    /** The list row: a romanization-only word shows its romanization alone. Twin of iOS `CustomDictionaryEntry.listLabel`. */
+    /** The list row, in the list's input mode: a romanization-only word shows its romanization alone. Twin of iOS `CustomDictionaryEntry.listLabel`. */
     val listLabel: String
-        get() = if (hanji.isEmpty()) roman else "$roman → $hanji"
+        get() = if (hanji.isEmpty()) displayRoman else "$displayRoman → $hanji"
 }
 
 /** One page of the custom dictionary list, as the engine cut it. */
@@ -98,11 +101,16 @@ sealed class UserDataException(
  * tests, which cannot load the engine.
  */
 interface UserDataClient {
-    /** One page of the words [filter] matches, newest edit first; the engine trims [filter] and cuts the page. [limit] is at least 1. */
+    /**
+     * One page of the words [filter] matches, newest edit first; the engine trims [filter], cuts the page and spells each
+     * row's [CustomDictionaryWord.displayRoman] in [inputMode] (an `AppConfig.input_mode` string). [limit] is at least 1.
+     */
     suspend fun listCustomEntries(
         filter: String,
         limit: Int,
         offset: Int,
+        inputMode: String,
+        isTpsOrMappedToER: Boolean,
     ): CustomDictionaryPage
 
     suspend fun save(word: CustomDictionaryWord)
@@ -175,8 +183,13 @@ object EngineUserDataClient : UserDataClient {
         filter: String,
         limit: Int,
         offset: Int,
+        inputMode: String,
+        isTpsOrMappedToER: Boolean,
     ): CustomDictionaryPage {
-        val page = engine("customDictionaryList") { RustEngineBridge.customDictionaryList(filter, limit, offset) }
+        val page =
+            engine("customDictionaryList") {
+                RustEngineBridge.customDictionaryList(filter, limit, offset, inputMode, isTpsOrMappedToER)
+            }
         return CustomDictionaryPage(
             words = page.entriesList.map(::word),
             total = page.total,
@@ -269,5 +282,5 @@ object EngineUserDataClient : UserDataClient {
         request: () -> T?,
     ): T = withContext(Dispatchers.IO) { request() } ?: throw UserDataException.EngineUnavailable(op)
 
-    private fun word(entry: CustomDictionaryEntry) = CustomDictionaryWord(id = entry.id, roman = entry.roman, hanji = entry.hanji)
+    private fun word(entry: CustomDictionaryEntry) = CustomDictionaryWord(id = entry.id, roman = entry.roman, hanji = entry.hanji, displayRoman = entry.displayRoman)
 }

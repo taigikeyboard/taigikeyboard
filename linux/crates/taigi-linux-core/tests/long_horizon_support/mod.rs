@@ -174,9 +174,10 @@ pub fn sync_user_data_workers() -> UserDataCounts {
     )
     .map(|p| p.total_count)
     .unwrap_or(0);
-    let custom = user_data::list_custom_entries("", 1, 0)
-        .map(|c| c.total as usize)
-        .unwrap_or(0);
+    let custom =
+        user_data::list_custom_entries("", 1, 0, taigi_desktop_core::settings::InputMode::Tl)
+            .map(|c| c.total as usize)
+            .unwrap_or(0);
     // Count association entries in the exported `.taigi` JSON backup.
     let associations = serde_json::from_slice::<serde_json::Value>(&backup_bytes)
         .ok()

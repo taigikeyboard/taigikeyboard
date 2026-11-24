@@ -366,20 +366,31 @@ impl SettingsWindow {
 
     /// What a pane needs the first time it is shown: Custom Dictionary and
     /// Learning Records fetch their first page, Manage Fonts reads the
-    /// user's font folder. Each once.
+    /// user's font folder. Each once — Custom Dictionary again under another
+    /// input mode ([`Self::follow_input_mode`]).
     ///
     /// Manage Fonts reads even in a read-only launch: the folder is the user's
     /// own, and a window that cannot WRITE the selection can still say which
     /// typefaces are there.
     fn enter_pane(&mut self, context: &ComponentContext<Self>) {
-        if self.pane == SettingsPane::CustomDictionary && !self.settings.is_read_only() {
-            pages::custom_dictionary::ensure_loaded(&mut self.custom_dictionary, context);
-        }
+        self.follow_input_mode(context);
         if self.pane == SettingsPane::LearningRecords && !self.settings.is_read_only() {
             pages::learning_records::ensure_loaded(&mut self.learning_records, context);
         }
         if self.pane == SettingsPane::FontManagement {
             pages::font_management::on_enter(&mut self.font_management, self.settings.document());
+        }
+    }
+
+    /// Custom Dictionary's rows, spelled in the input mode in force: loads
+    /// the pane on screen on its first show and again after a mode switch.
+    fn follow_input_mode(&mut self, context: &ComponentContext<Self>) {
+        if self.pane == SettingsPane::CustomDictionary && !self.settings.is_read_only() {
+            pages::custom_dictionary::ensure_loaded(
+                &mut self.custom_dictionary,
+                self.settings.document().choice(&keys::INPUT_MODE),
+                context,
+            );
         }
     }
 
@@ -575,6 +586,8 @@ impl Component for SettingsWindow {
                     return;
                 }
                 self.settings.refresh();
+                // A mode the keyboard switched while the page is open.
+                self.follow_input_mode(context);
                 self.updates.poll(&mut self.settings);
                 // Reactor exposes no activation event, so the beat is
                 // where a row the user walked away from is released

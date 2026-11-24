@@ -426,8 +426,9 @@ impl SettingsWindow {
     }
 
     /// Custom Dictionary's list, reloaded: another page (Learning Records'
-    /// add or backup restore) wrote into the store it lists. The page loads once, when
-    /// it is built, and would otherwise keep the rows it read before.
+    /// add or backup restore) wrote into the store it lists. The page loads when it is
+    /// built and when the input mode changes, and would otherwise keep the rows it read
+    /// before.
     pub fn reload_custom_dictionary(&self) {
         for page in self.pages.borrow().iter() {
             if let Some(dictionary) = page.state::<pages::custom_dictionary::CustomDictionaryPage>()

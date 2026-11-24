@@ -164,7 +164,10 @@ export interface WireShortcuts {
 
 export interface CustomEntry {
   id: string;
+  /** The romanization as saved. */
   roman: string;
+  /** `roman` in the settings input mode, for the list row. */
+  displayRoman: string;
   hanji: string;
 }
 

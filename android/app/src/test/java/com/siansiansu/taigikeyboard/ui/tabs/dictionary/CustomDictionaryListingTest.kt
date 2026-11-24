@@ -3,6 +3,8 @@ package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryPage
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
 import com.siansiansu.taigikeyboard.ime.dictionary.StubUserDataClient
+import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettingsProvider
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.TestScope
@@ -25,6 +27,8 @@ class CustomDictionaryListingTest {
         val filter: String,
         val limit: Int,
         val offset: Int,
+        val inputMode: String = "tl",
+        val isTpsOrMappedToER: Boolean = false,
     )
 
     private class FakeDictionary(
@@ -41,8 +45,10 @@ class CustomDictionaryListingTest {
             filter: String,
             limit: Int,
             offset: Int,
+            inputMode: String,
+            isTpsOrMappedToER: Boolean,
         ): CustomDictionaryPage {
-            calls += ListCall(filter, limit, offset)
+            calls += ListCall(filter, limit, offset, inputMode, isTpsOrMappedToER)
             failure?.let { throw it }
             if (holdsAnswers) return CompletableDeferred<CustomDictionaryPage>().also { held += it }.await()
             return page(filter, limit, offset)
@@ -61,7 +67,29 @@ class CustomDictionaryListingTest {
 
     private fun words(count: Int) = (0 until count).map { CustomDictionaryWord(id = "$it", roman = "word$it", hanji = "字") }
 
-    private fun TestScope.listing(fake: FakeDictionary) = CustomDictionaryListing(this, fake) {}
+    private fun TestScope.listing(
+        fake: FakeDictionary,
+        settings: StubEngineSettings = StubEngineSettings(),
+    ) = CustomDictionaryListing(this, fake, StubEngineSettingsProvider(settings)) {}
+
+    @Test
+    fun `asks each read in the input mode the settings hold then`() =
+        runTest {
+            val fake = FakeDictionary(words(3))
+            val settings = StubEngineSettings(inputMode = "poj")
+            val list = listing(fake, settings)
+            list.refresh()
+            advanceUntilIdle()
+            settings.inputMode = "tps"
+            settings.isTpsOrMappedToER = true
+            list.refresh()
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf("poj" to false, "tps" to true),
+                fake.calls.map { it.inputMode to it.isTpsOrMappedToER },
+            )
+        }
 
     @Test
     fun `lists one page, then every row a page at a time`() =
@@ -212,7 +240,7 @@ class CustomDictionaryListingTest {
         runTest {
             val fake = FakeDictionary(words(150))
             val failures = mutableListOf<Exception>()
-            val list = CustomDictionaryListing(this, fake) { failures += it }
+            val list = CustomDictionaryListing(this, fake, StubEngineSettingsProvider(StubEngineSettings())) { failures += it }
             list.refresh()
             advanceUntilIdle()
 

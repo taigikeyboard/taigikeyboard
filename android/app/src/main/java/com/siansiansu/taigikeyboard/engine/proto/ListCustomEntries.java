@@ -22,6 +22,7 @@ public  final class ListCustomEntries extends
     ListCustomEntriesOrBuilder {
   private ListCustomEntries() {
     filter_ = "";
+    inputMode_ = "";
   }
   public static final int FILTER_FIELD_NUMBER = 1;
   private java.lang.String filter_;
@@ -120,6 +121,121 @@ public  final class ListCustomEntries extends
   private void clearOffset() {
 
     offset_ = 0;
+  }
+
+  public static final int INPUT_MODE_FIELD_NUMBER = 4;
+  private java.lang.String inputMode_;
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   * @return The inputMode.
+   */
+  @java.lang.Override
+  public java.lang.String getInputMode() {
+    return inputMode_;
+  }
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   * @return The bytes for inputMode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getInputModeBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(inputMode_);
+  }
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   * @param value The inputMode to set.
+   */
+  private void setInputMode(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    inputMode_ = value;
+  }
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   */
+  private void clearInputMode() {
+
+    inputMode_ = getDefaultInstance().getInputMode();
+  }
+  /**
+   * <pre>
+   * The settings input mode, spelled as `AppConfig.input_mode`
+   * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+   * spelling each entry's `display_roman` is rendered in.
+   * </pre>
+   *
+   * <code>string input_mode = 4;</code>
+   * @param value The bytes for inputMode to set.
+   */
+  private void setInputModeBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    inputMode_ = value.toStringUtf8();
+
+  }
+
+  public static final int TPS_OR_MAPS_TO_ER_FIELD_NUMBER = 5;
+  private boolean tpsOrMapsToEr_;
+  /**
+   * <pre>
+   * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 5;</code>
+   * @return The tpsOrMapsToEr.
+   */
+  @java.lang.Override
+  public boolean getTpsOrMapsToEr() {
+    return tpsOrMapsToEr_;
+  }
+  /**
+   * <pre>
+   * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 5;</code>
+   * @param value The tpsOrMapsToEr to set.
+   */
+  private void setTpsOrMapsToEr(boolean value) {
+
+    tpsOrMapsToEr_ = value;
+  }
+  /**
+   * <pre>
+   * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 5;</code>
+   */
+  private void clearTpsOrMapsToEr() {
+
+    tpsOrMapsToEr_ = false;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries parseFrom(
@@ -330,6 +446,125 @@ public  final class ListCustomEntries extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The settings input mode, spelled as `AppConfig.input_mode`
+     * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+     * spelling each entry's `display_roman` is rendered in.
+     * </pre>
+     *
+     * <code>string input_mode = 4;</code>
+     * @return The inputMode.
+     */
+    @java.lang.Override
+    public java.lang.String getInputMode() {
+      return instance.getInputMode();
+    }
+    /**
+     * <pre>
+     * The settings input mode, spelled as `AppConfig.input_mode`
+     * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+     * spelling each entry's `display_roman` is rendered in.
+     * </pre>
+     *
+     * <code>string input_mode = 4;</code>
+     * @return The bytes for inputMode.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getInputModeBytes() {
+      return instance.getInputModeBytes();
+    }
+    /**
+     * <pre>
+     * The settings input mode, spelled as `AppConfig.input_mode`
+     * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+     * spelling each entry's `display_roman` is rendered in.
+     * </pre>
+     *
+     * <code>string input_mode = 4;</code>
+     * @param value The inputMode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setInputMode(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setInputMode(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The settings input mode, spelled as `AppConfig.input_mode`
+     * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+     * spelling each entry's `display_roman` is rendered in.
+     * </pre>
+     *
+     * <code>string input_mode = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearInputMode() {
+      copyOnWrite();
+      instance.clearInputMode();
+      return this;
+    }
+    /**
+     * <pre>
+     * The settings input mode, spelled as `AppConfig.input_mode`
+     * (`tl` / `poj` / `tps` / `english`; anything else reads as TL): the
+     * spelling each entry's `display_roman` is rendered in.
+     * </pre>
+     *
+     * <code>string input_mode = 4;</code>
+     * @param value The bytes for inputMode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setInputModeBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setInputModeBytes(value);
+      return this;
+    }
+
+    /**
+     * <pre>
+     * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+     * </pre>
+     *
+     * <code>bool tps_or_maps_to_er = 5;</code>
+     * @return The tpsOrMapsToEr.
+     */
+    @java.lang.Override
+    public boolean getTpsOrMapsToEr() {
+      return instance.getTpsOrMapsToEr();
+    }
+    /**
+     * <pre>
+     * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+     * </pre>
+     *
+     * <code>bool tps_or_maps_to_er = 5;</code>
+     * @param value The tpsOrMapsToEr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTpsOrMapsToEr(boolean value) {
+      copyOnWrite();
+      instance.setTpsOrMapsToEr(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * `AppConfig.tps_or_maps_to_er`, for a TPS rendering.
+     * </pre>
+     *
+     * <code>bool tps_or_maps_to_er = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTpsOrMapsToEr() {
+      copyOnWrite();
+      instance.clearTpsOrMapsToEr();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ListCustomEntries)
   }
   @java.lang.Override
@@ -349,10 +584,12 @@ public  final class ListCustomEntries extends
             "filter_",
             "limit_",
             "offset_",
+            "inputMode_",
+            "tpsOrMapsToEr_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208\u0005\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -29,7 +29,7 @@ class CustomDictionaryViewModel(
     private val userData: UserDataClient = root.userData
 
     private val listing =
-        CustomDictionaryListing(viewModelScope, userData) { e ->
+        CustomDictionaryListing(viewModelScope, userData, prefs) { e ->
             root.logger.w(TAG, "[CUSTOM-DICT] list failed: ${e.message}", e)
         }
     val list: StateFlow<CustomDictionaryListState> = listing.state
