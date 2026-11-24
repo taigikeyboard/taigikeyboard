@@ -697,6 +697,33 @@ for (const [candidateLayout, name] of [
   });
 }
 
+// A phone at Extra Large: the chevron column is whole pixels on both sides,
+// so the paged row leaves it its room inside the window.
+test("the page arrows stay inside a phone-wide window", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const layout of ["horizontal", "expandable"]) {
+    const editor = await open(page, {
+      settings: { candidateLayout: layout, candidateTextSize: "23" },
+      docked: false,
+    });
+    await editor.pressSequentially("tsit");
+    await expect(page.locator("#page-arrows")).toBeVisible();
+    const fit = await panel(page).evaluate((root) => {
+      const list = /** @type {HTMLElement} */ (root.querySelector("#list"));
+      const arrows = /** @type {HTMLElement} */ (
+        root.querySelector("#page-arrows")
+      );
+      return {
+        pastWindow:
+          arrows.getBoundingClientRect().right >
+          root.getBoundingClientRect().right,
+        listScrolls: list.scrollWidth > list.clientWidth,
+      };
+    });
+    expect(fit, layout).toEqual({ pastWindow: false, listScrolls: false });
+  }
+});
+
 test("a Horizontal list follows a window that narrowed at the next key", async ({
   page,
 }) => {
@@ -980,32 +1007,49 @@ test("a cell wider than the window cuts its annotation, not its row", async ({
   }
 });
 
-/// A candidate alone wider than the window: it ends inside the row's padding,
-/// where the unfolded column ends it too.
+/**
+ * How far each drawn script of each cell runs into its cell's end padding.
+ * @param {Page} page
+ */
+const paddingOverruns = (page) =>
+  panel(page).evaluate((root) =>
+    [...root.querySelectorAll("#candidates li")].flatMap((row) => {
+      const end =
+        row.getBoundingClientRect().right -
+        Number.parseFloat(getComputedStyle(row).paddingRight);
+      return [...row.querySelectorAll(".text, .annotation")]
+        .map((part) => part.getBoundingClientRect())
+        .filter((box) => box.width > 0 && box.right > end + 0.5)
+        .map((box) => box.right - end);
+    }),
+  );
+
+/// A candidate alone wider than the window: every script ends inside its
+/// row's padding, collapsed and unfolded.
 test("a candidate wider than the window stops at the row's padding", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   for (const layout of ["vertical", "verticalExpandable"]) {
-    const editor = await open(page, {
-      settings: { candidateLayout: layout, candidateTextSize: "23" },
-      docked: false,
-    });
-    await editor.pressSequentially(
-      "inuilimatsaiiannlanlongsiuitiohpatlanglehuah",
-    );
-    await expect(candidates(page).first()).toBeVisible();
-    const overrun = await candidates(page)
-      .first()
-      .evaluate((row) => {
-        const end =
-          row.getBoundingClientRect().right -
-          Number.parseFloat(getComputedStyle(row).paddingRight);
-        return [...row.querySelectorAll(".text, .annotation")]
-          .map((part) => part.getBoundingClientRect())
-          .filter((box) => box.width > 0 && box.right > end + 0.5)
-          .map((box) => box.right - end);
+    for (const size of ["17", "23"]) {
+      const editor = await open(page, {
+        settings: { candidateLayout: layout, candidateTextSize: size },
+        docked: false,
       });
-    expect(overrun, layout).toEqual([]);
+      await editor.pressSequentially(
+        "inuilimatsaiiannlanlongsiuitiohpatlanglehuah",
+      );
+      await expect(candidates(page).first()).toBeVisible();
+      expect(await paddingOverruns(page), `${layout} ${size}`).toEqual([]);
+      if (layout === "verticalExpandable") {
+        await editor.press("ArrowRight");
+        await expect(page.locator("#candidates")).toHaveAttribute("data-grid");
+        await settled(page);
+        expect(
+          await paddingOverruns(page),
+          `${layout} ${size} unfolded`,
+        ).toEqual([]);
+      }
+    }
   }
 });

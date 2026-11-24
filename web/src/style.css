@@ -857,7 +857,8 @@ summary:focus-visible {
   flex: none;
   flex-direction: column;
   justify-content: center;
-  width: calc(var(--candidate-size) * 1.5);
+  /* Whole pixels, as `layout.rs` `chrome_width` reserves it. */
+  width: round(up, var(--candidate-size) * 1.5, 1px);
 }
 
 .page-arrows[hidden] {
