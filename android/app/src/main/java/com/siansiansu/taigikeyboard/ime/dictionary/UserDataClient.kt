@@ -282,6 +282,5 @@ object EngineUserDataClient : UserDataClient {
         request: () -> T?,
     ): T = withContext(Dispatchers.IO) { request() } ?: throw UserDataException.EngineUnavailable(op)
 
-    private fun word(entry: CustomDictionaryEntry) =
-        CustomDictionaryWord(id = entry.id, roman = entry.roman, hanji = entry.hanji, displayRoman = entry.displayRoman)
+    private fun word(entry: CustomDictionaryEntry) = CustomDictionaryWord(id = entry.id, roman = entry.roman, hanji = entry.hanji, displayRoman = entry.displayRoman)
 }
