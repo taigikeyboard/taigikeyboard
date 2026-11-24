@@ -25,6 +25,7 @@ runs:
         version="$(sed -n 's/^protoc = "\(.*\)"$/\1/p' mise.toml)"
         case "$version/$RUNNER_OS/$RUNNER_ARCH" in
           36.2/Linux/X64)   asset=linux-x86_64; sha=121f6c7afe1d4d0e3ea6aab9432038599250134cbf4474cb1167d2c7decd4278 ;;
+          36.2/Linux/ARM64) asset=linux-aarch_64; sha=8b8f18bd2b30346efbc698dd5a73dd7c805f3ef8380f6dfc95c768f3f1852f6a ;;
           36.2/macOS/ARM64) asset=osx-aarch_64; sha=9cd98a532c5c5e0c4161314de0225de27e4c8a323917b6ea7b1b714d3ae23466 ;;
           *) echo "::error::no protoc digest for '$version' on $RUNNER_OS/$RUNNER_ARCH — add it to .github/actions/setup-protoc"; exit 1 ;;
         esac

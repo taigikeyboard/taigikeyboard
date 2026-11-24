@@ -130,7 +130,9 @@ the way `windows-build.yml` is the Windows half:
   calls it, and on `workflow_dispatch` — never per pull request: the pre-PR gate for a Linux
   change is `make linux-check` locally (or a manual dispatch). Every run
   builds the three packages and keeps them as workflow artifacts (`linux-deb`,
-  `linux-rpm`, `linux-arch`), checks the expected paths are inside the `.deb`,
+  `linux-rpm`, `linux-arch`) — plus the arm64 `.deb` and aarch64 `.rpm` from the
+  `ubuntu-24.04-arm` runner (`linux-deb-arm64`, `linux-rpm-arm64`; not yet attached
+  to a release, `linux-arm64-roadmap.md` Phase 3) — checks the expected paths are inside the `.deb`,
   that the addon file is the one the `.conf` names, and the desktop entry
   (`desktop-file-validate`). Nothing reaches a draft; the build job can only
   read.
