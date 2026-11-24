@@ -88,24 +88,29 @@ test("the drawer's values stay readable at a large text size", async ({
   await toggle(page).click();
   for (const size of ["100%", "125%", "200%"]) {
     await setRootTextSize(page, size);
-    const rows = await page.evaluate(() =>
-      [...document.querySelectorAll(".setting:has(> select)")].map((row) => {
-        const box = row.getBoundingClientRect();
-        const value = /** @type {HTMLSelectElement} */ (
-          row.querySelector("select")
-        );
-        const valueBox = value.getBoundingClientRect();
-        return {
-          name: value.name,
-          squeezed: valueBox.width < 2 * value.offsetHeight,
-          pastRow: valueBox.right > box.right + 0.5,
-        };
-      }),
-    );
-    expect(
-      rows.filter((row) => row.squeezed || row.pastRow),
-      size,
-    ).toEqual([]);
+    // Polled: the drawer may still be sliding in, and its rows relaying out.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            [...document.querySelectorAll(".setting:has(> select)")]
+              .map((row) => {
+                const box = row.getBoundingClientRect();
+                const value = /** @type {HTMLSelectElement} */ (
+                  row.querySelector("select")
+                );
+                const valueBox = value.getBoundingClientRect();
+                return {
+                  name: value.name,
+                  squeezed: valueBox.width < 2 * value.offsetHeight,
+                  pastRow: valueBox.right > box.right + 0.5,
+                };
+              })
+              .filter((row) => row.squeezed || row.pastRow),
+          ),
+        { message: size },
+      )
+      .toEqual([]);
   }
 });
 
@@ -956,6 +961,8 @@ const cutScripts = (page) =>
 /// sizes is as wide as the model measured, so any length drawn wider than the
 /// model's cuts its widest script.
 test("no script is cut at any size in any layout", async ({ page }) => {
+  // Sixty compositions in five sizes: past the default under a loaded runner.
+  test.setTimeout(90_000);
   /** @type {Array<[string, string | null]>} */
   const layouts = [
     ["vertical", null],
