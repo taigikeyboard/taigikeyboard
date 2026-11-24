@@ -12,13 +12,16 @@ Linux artifact is and how it is built.
 
 ## The artifacts
 
-Three x86_64 packages, each with its `.sha256`, attached to the
-`desktop-<version>` draft beside the macOS `.pkg` and the Windows `.exe`:
+Five packages — three x86_64, and the `.deb` and `.rpm` again for arm64 —
+each with its `.sha256`, attached to the `desktop-<version>` draft beside the
+macOS `.pkg` and the Windows `.exe`:
 
 | Asset | For | Built on |
 |---|---|---|
 | `taigikeyboard_<version>_amd64.deb` | Ubuntu 24.04+ / Debian 13+ / Mint 22+ / Pop!_OS 24.04+ | `ubuntu-24.04` runner |
+| `taigikeyboard_<version>_arm64.deb` | Ubuntu 24.04+ / Debian 13+ on arm64 | `ubuntu-24.04-arm` runner |
 | `taigikeyboard-<version>-1.x86_64.rpm` | Fedora 44+ | `fedora:44` container |
+| `taigikeyboard-<version>-1.aarch64.rpm` | Fedora 44+ on aarch64 | `fedora:44` container on the Arm runner |
 | `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | Arch Linux and its rolling derivatives (`pacman -U`) | `archlinux:latest` container |
 
 The floor is the settings window's GTK 4.12 / libadwaita 1.5: Ubuntu 22.04 and
@@ -131,8 +134,7 @@ the way `windows-build.yml` is the Windows half:
   change is `make linux-check` locally (or a manual dispatch). Every run
   builds the three packages and keeps them as workflow artifacts (`linux-deb`,
   `linux-rpm`, `linux-arch`) — plus the arm64 `.deb` and aarch64 `.rpm` from the
-  `ubuntu-24.04-arm` runner (`linux-deb-arm64`, `linux-rpm-arm64`; not yet attached
-  to a release, `linux-arm64-roadmap.md` Phase 3) — checks the expected paths are inside the `.deb`,
+  `ubuntu-24.04-arm` runner (`linux-deb-arm64`, `linux-rpm-arm64`) — checks the expected paths are inside the `.deb`,
   that the addon file is the one the `.conf` names, and the desktop entry
   (`desktop-file-validate`). Nothing reaches a draft; the build job can only
   read.
@@ -141,8 +143,8 @@ the way `windows-build.yml` is the Windows half:
   beside the Windows run, with the staged commit as `source_sha`, and waits;
   every job checks out that commit; the `attach` job (the only one that can
   write) runs only with a `source_sha`, refuses a published release
-  or a draft targeting another commit, and uploads the `.deb`, the `.rpm`
-  and the Arch `.pkg.tar.zst`, each with its `.sha256`, to the
+  or a draft targeting another commit, and uploads the five packages (x86_64 and arm64 `.deb` /
+  `.rpm`, the Arch `.pkg.tar.zst`), each with its `.sha256`, to the
   `desktop-<version>` draft `stage-desktop.sh` created — never
   over an asset already there. A dispatch from any other ref, or without
   `source_sha`, only builds. The monthly train (`desktop-train.yml`) calls the
@@ -164,12 +166,14 @@ nothing, manually or automatically; the General pane shows the running version
 and a Download link to taigikeyboard.tw, the panel menu has no Check for Updates row, the
 `update*` settings keys stay unwritten and `taigi-desktop-update` is not linked
 (no TLS stack in the package). The announcement (`tools/release/announce-release.sh`)
-still writes `_data/linux_release.json`, `_data/linux_rpm_release.json` and
-`_data/linux_arch_release.json` (version, download URL, `sha256`, release page)
+still writes `_data/linux_release.json`, `_data/linux_rpm_release.json`,
+`_data/linux_arch_release.json` and the arm64 `_data/linux_arm64_release.json`
+/ `_data/linux_rpm_arm64_release.json` (version, download URL, `sha256`, release page)
 in the same website commit as the other two — the landing page's Linux
 buttons read them — but there is no appcast and nothing to poll. A release
 missing one format leaves that file on its previous version, so the site
-splits the Linux button into three only when all three name the same tag. The
+splits the Linux button into three only when all three name the same tag, and
+adds each arm64 button only when its file names that tag too. The
 website shows that button only while its `enable_linux_download` is `true`;
 that switch hides the entry point, not the asset, which is public the moment
 the release is published.

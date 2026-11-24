@@ -181,7 +181,7 @@ make desktop-patch PLATFORM=<platform>
 ```
 
 It creates a clean draft `desktop-<target>` on this commit and dispatches that
-platform's hosted build onto it (Linux: `.deb`, `.rpm` and Arch together;
+platform's hosted build onto it (Linux: the x86_64 and arm64 `.deb` / `.rpm` and Arch together;
 macOS: signed + notarized on the runner, waiting for the `release`
 environment approval). What each step checks:
 `docs/architecture/desktop-release.md` § The flow, § What staging checks. An

@@ -191,10 +191,13 @@ fi
 # No manifest to wait for: nothing installed polls for a Linux package, and the
 # Chrome Web Store updates the ChromeOS input method and the browser extension.
 # Their data still matters: the landing page's rows show the version.
-# One triple per format: platform label, asset name, site data path.
+# One triple per format: platform label (no space — the `platforms` output
+# below splits on it), asset name, site data path.
 for unpolled_format in \
     "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
+    "Linux-arm64|$LINUX_ARM64_ASSET|$LINUX_ARM64_SITE_PATH" \
     "Fedora|$LINUX_RPM_ASSET|$LINUX_RPM_SITE_PATH" \
+    "Fedora-aarch64|$LINUX_RPM_ARM64_ASSET|$LINUX_RPM_ARM64_SITE_PATH" \
     "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH" \
     "ChromeOS|$CHROMEOS_ASSET|$CHROMEOS_SITE_PATH" \
     "Extension|$EXTENSION_ASSET|$EXTENSION_SITE_PATH"; do
@@ -209,7 +212,7 @@ for unpolled_format in \
 done
 
 [[ ${#site_files[@]} -gt 0 ]] ||
-    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET, $CHROMEOS_ASSET, $EXTENSION_ASSET — there is nothing to announce"
+    fail "$DESKTOP_TAG carries none of ${DESKTOP_ASSETS[*]} — there is nothing to announce"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. A manifest published before its download is reachable

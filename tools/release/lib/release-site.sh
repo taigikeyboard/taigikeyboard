@@ -17,7 +17,9 @@ WINDOWS_SITE_PATH="_data/windows_release.json"
 # Linux has site data but no manifest: a `.deb` is not updated in place
 # (docs/architecture/linux-release.md § No in-app update).
 LINUX_SITE_PATH="_data/linux_release.json"
+LINUX_ARM64_SITE_PATH="_data/linux_arm64_release.json"
 LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
+LINUX_RPM_ARM64_SITE_PATH="_data/linux_rpm_arm64_release.json"
 LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
 # ChromeOS and the browser extension have site data but no manifest: the
 # Chrome Web Store updates them.

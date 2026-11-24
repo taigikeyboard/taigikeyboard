@@ -28,7 +28,9 @@ of the same commit, so do not stage a hotfix at that hour.
 | `TaigiKeyboard-nightly.pkg` | Unsigned. macOS blocks the first open; go to **System Settings → Privacy & Security → Open Anyway**. The Installer does not carry the download's quarantine onto the installed input method |
 | `TaigiKeyboard-nightly.exe` | Unsigned, like the current release installer; SmartScreen asks once |
 | `taigikeyboard-nightly_amd64.deb` | `sudo apt install --reinstall ./taigikeyboard-nightly_amd64.deb`. Without `--reinstall`, apt skips a package whose version is already installed |
+| `taigikeyboard-nightly_arm64.deb` | The arm64 build of the `.deb` above; install it the same way |
 | `taigikeyboard-nightly.x86_64.rpm` | `sudo dnf reinstall ./taigikeyboard-nightly.x86_64.rpm` (or `install` when it is not installed) |
+| `taigikeyboard-nightly.aarch64.rpm` | The aarch64 build of the `.rpm` above; install it the same way |
 | `taigikeyboard-nightly-x86_64.pkg.tar.zst` | `sudo pacman -U` reads the package metadata, not the file name, and reinstalls the same version |
 | `TaigiKeyboard-nightly-chromeos.zip` | Unzip it, then use **Load unpacked** in `chrome://extensions` with Developer mode on. The manifest has no `key`, so this copy gets its own extension ID: its settings and learned words are separate from the store copy |
 | `TaigiKeyboard-nightly-extension.zip` | The browser extension, desktop Chrome only (`browser-extension.md`; the store copy is § Release there). Unzip it, then **Load unpacked** in `chrome://extensions` with Developer mode on. Nothing updates it: to take a newer night, unzip over the same folder and press **Reload** on its card. The manifest has no `key`, so Chrome derives the ID from the folder's path; the same folder keeps the ID, and with it the sites already granted and the learned words, while a new folder starts from nothing |
@@ -58,7 +60,7 @@ verified.
 Everything stays inside free tiers (checked 2026-11-14):
 
 - GitHub Actions: the repository is public, so standard hosted runners and artifact storage cost nothing.
-- R2 free tier: 10 GB-month of storage, 1M Class A operations, 10M Class B operations, and free egress, counted per account. The fixed names keep about 310 MB stored. Uploads take about 65 Class A operations a night (files over 8 MB go up in multipart), which is about 2,000 a month.
+- R2 free tier: 10 GB-month of storage, 1M Class A operations, 10M Class B operations, and free egress, counted per account. The fixed names keep about 410 MB stored. Uploads take about 85 Class A operations a night (files over 8 MB go up in multipart), which is about 2,600 a month.
 - A night whose `main` has not changed builds nothing.
 
 ## Trying it

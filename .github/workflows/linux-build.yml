@@ -599,7 +599,7 @@ jobs:
           merge-multiple: true
           path: linux/target
 
-      - name: Attach the three packages to the draft release
+      - name: Attach the Linux packages to the draft release
         working-directory: linux
         env:
           GH_TOKEN: ${{ github.token }}
@@ -630,7 +630,9 @@ jobs:
           cd target
           # The names tools/release/lib/desktop-release.sh looks for (LINUX_*_ASSET).
           for package in "taigikeyboard_${version}_amd64.deb" \
+                         "taigikeyboard_${version}_arm64.deb" \
                          "taigikeyboard-${version}-1.x86_64.rpm" \
+                         "taigikeyboard-${version}-1.aarch64.rpm" \
                          "taigikeyboard-${version}-1-x86_64.pkg.tar.zst"; do
             test -f "$package" || { echo "::error::$package was not built"; exit 1; }
             sha256sum "$package" > "$package.sha256"
