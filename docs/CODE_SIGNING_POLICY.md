@@ -8,7 +8,7 @@ user can verify for themselves.
 | Platform | Artifact | Status |
 | --- | --- | --- |
 | Windows | `TaigiKeyboard-<version>.exe` (Inno Setup installer), `TaigiKeyboard.dll`, `TaigiKeyboard32.dll`, `TaigiKeyboardArm64.dll`, `TaigiKeyboard64X.dll` (Arm64X forwarder), `TaigiKeyboardSettings.exe` (x64 and Arm64 builds) | **Unsigned.** Integrity rests on the SHA-256 digest published in the update manifest. |
-| Linux | `taigikeyboard_<version>_amd64.deb`, `taigikeyboard-<version>-1.x86_64.rpm`, `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | **Unsigned.** Integrity rests on the `.sha256` attached beside each package on the release (`docs/architecture/linux-release.md`). |
+| Linux | `taigikeyboard_<version>_amd64.deb`, `taigikeyboard_<version>_arm64.deb`, `taigikeyboard-<version>-1.x86_64.rpm`, `taigikeyboard-<version>-1.aarch64.rpm`, `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | **Unsigned.** Integrity rests on the `.sha256` attached beside each package on the release (`docs/architecture/linux-release.md`). |
 | macOS | `TaigiKeyboard-<version>.pkg` | Signed and notarized with an Apple Developer ID. |
 | iOS / Android | App Store / Google Play builds | Signed by the respective store pipeline. |
 

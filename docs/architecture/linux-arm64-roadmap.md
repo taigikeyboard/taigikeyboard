@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `linux`, `arm64`, `aarch64`, `deb`, `rpm`, `ubuntu-24.04-arm`, `desktop train`
-> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc), 1 (packaging by architecture) and 2 (CI on the Arm runner, #1103) done; Phases 3–4 pending.
+> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc), 1 (packaging by architecture), 2 (CI on the Arm runner, #1103) and 3 (release tooling) done; Phase 4 pending.
 > **Siblings**: `linux-release.md` (packages, layout, CI half of a desktop release), `windows-arm64-roadmap.md` (the Windows precedent), `desktop-release.md`.
 
 ---
@@ -28,9 +28,9 @@ The code is architecture-neutral; only packaging and release name x86_64. The ta
 | `linux/Makefile:20,267,299,304,311` | `LINUX_TARGET`, the three package file names, `RPMS/x86_64/` *(Phase 1)* |
 | `.github/actions/setup-protoc/action.yml:27` | protoc digest for Linux/X64 only — an Arm runner fails here *(Phase 2)* |
 | `.github/workflows/linux-build.yml` | every job on `ubuntu-24.04`; amd64 control check; `x86_64-linux-gnu` addon path in install-check *(Phase 2)* |
-| `tools/release/lib/desktop-release.sh:50-52,233` | asset names, expected-asset list |
-| `tools/release/announce-release.sh:196`, `tools/release/nightly-release.sh:53-55` | announce and nightly asset tables |
-| `docs/INSTALL.md`, website repository | download buttons |
+| `tools/release/lib/desktop-release.sh:50-52,233` | asset names, expected-asset list *(Phase 3)* |
+| `tools/release/announce-release.sh:196`, `tools/release/nightly-release.sh:53-55` | announce and nightly asset tables *(Phase 3)* |
+| `docs/INSTALL.md`, website repository | download buttons *(Phase 3)* |
 
 ## Phases
 
@@ -49,10 +49,11 @@ Phase 3 touches release tooling → High tier (full review sandwich).
 ## Open questions (maintainer)
 
 1. ~~Package set~~ — decided 2026-11-24: `.deb` + `.rpm` arm64, no Arch arm64. The arm64 CI legs gate the release and the nightly (no `continue-on-error`).
-2. Website buttons: two more buttons, or an architecture picker.
+2. ~~Website buttons~~ — decided 2026-11-24: two more buttons (arm64 `.deb`, aarch64 `.rpm`), no architecture picker.
 
 ## Unverified
 
+- Phase 3's release paths have not run: dry runs skip the `attach` job and the nightly publish, so the five-package attach, `check-assets` / `check-publish`, the beta mirror, the arm64 announcement and the arm64 nightly upload first run on the next train cut and the next `main` nightly.
 - Fcitx5 and IBus on a real arm64 desktop session (Phase 4). CI already proves the rest on `ubuntu-24.04-arm` (generally available and free for public repositories, GitHub changelog 2025-08-07): run 45317118454 built both arm64 packages, `fedora:44` aarch64 included, and the arm64 install checks had Fcitx5 load the addon and IBus spawn the engine.
 
 ## Best practices alignment

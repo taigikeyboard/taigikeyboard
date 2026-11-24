@@ -46,9 +46,13 @@ WINDOWS_ASSET="TaigiKeyboard-$SHORT_VERSION.exe"
 # Each Linux format in its own distribution's file-name convention, which is
 # what `linux/Makefile`'s `deb` / `rpm` / `arch` targets write: Debian
 # (name_version_arch.deb), Fedora (name-version-release.arch.rpm), Arch
-# (name-version-rel-arch.pkg.tar.zst).
+# (name-version-rel-arch.pkg.tar.zst). The `.deb` and `.rpm` come in x86_64 and
+# arm64, each named by its format's own architecture field (Debian `arm64`, RPM
+# `aarch64`); Arch is x86_64 only (docs/architecture/linux-arm64-roadmap.md).
 LINUX_ASSET="taigikeyboard_${SHORT_VERSION}_amd64.deb"
+LINUX_ARM64_ASSET="taigikeyboard_${SHORT_VERSION}_arm64.deb"
 LINUX_RPM_ASSET="taigikeyboard-${SHORT_VERSION}-1.x86_64.rpm"
+LINUX_RPM_ARM64_ASSET="taigikeyboard-${SHORT_VERSION}-1.aarch64.rpm"
 LINUX_ARCH_ASSET="taigikeyboard-${SHORT_VERSION}-1-x86_64.pkg.tar.zst"
 # The ChromeOS input method's Chrome Web Store package, built by
 # `.github/workflows/chromeos-build.yml` (`make -C web chromeos`); the store,
@@ -73,7 +77,9 @@ DESKTOP_ASSET_ROWS=(
     "$MACOS_ASSET|macOS"
     "$WINDOWS_ASSET|Windows"
     "$LINUX_ASSET|Linux (.deb)"
+    "$LINUX_ARM64_ASSET|Linux arm64 (.deb)"
     "$LINUX_RPM_ASSET|Fedora (.rpm)"
+    "$LINUX_RPM_ARM64_ASSET|Fedora aarch64 (.rpm)"
     "$LINUX_ARCH_ASSET|Arch"
     "$CHROMEOS_ASSET|ChromeOS"
     "$EXTENSION_ASSET|Browser extension"
@@ -230,7 +236,8 @@ require_staged_assets() {
         case "$platform" in
             macos) expected+=("$MACOS_ASSET") ;;
             windows) expected+=("$WINDOWS_ASSET") ;;
-            linux) expected+=("$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET") ;;
+            linux) expected+=("$LINUX_ASSET" "$LINUX_ARM64_ASSET" "$LINUX_RPM_ASSET"
+                              "$LINUX_RPM_ARM64_ASSET" "$LINUX_ARCH_ASSET") ;;
             chromeos) expected+=("$CHROMEOS_ASSET") ;;
             extension) expected+=("$EXTENSION_ASSET") ;;
             *) fail "unknown platform '$platform'" ;;

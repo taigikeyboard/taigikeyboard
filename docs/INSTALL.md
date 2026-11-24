@@ -41,13 +41,15 @@ See the [Windows setup screenshots](../media/screenshots/install/README.md#windo
 
 ## Linux
 
-x86_64 only. Works with Fcitx5 or IBus.
+x86_64 and arm64 (Arch Linux: x86_64 only). Works with Fcitx5 or IBus. Check your architecture with `uname -m`: `x86_64`, or `aarch64` for arm64.
 
-| Distribution | Package | Install |
-| --- | --- | --- |
-| Ubuntu 24.04+, Debian 13+, Mint 22+, Pop!_OS 24.04+ | `taigikeyboard_<version>_amd64.deb` | `sudo apt install ./taigikeyboard_<version>_amd64.deb` |
-| Fedora 44+ | `taigikeyboard-<version>-1.x86_64.rpm` | `sudo dnf install ./taigikeyboard-<version>-1.x86_64.rpm` |
-| Arch Linux | `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U taigikeyboard-<version>-1-x86_64.pkg.tar.zst` |
+| Distribution | Architecture | Package | Install |
+| --- | --- | --- | --- |
+| Ubuntu 24.04+, Debian 13+, Mint 22+, Pop!_OS 24.04+ | x86_64 | `taigikeyboard_<version>_amd64.deb` | `sudo apt install ./taigikeyboard_<version>_amd64.deb` |
+| Ubuntu 24.04+, Debian 13+ | arm64 | `taigikeyboard_<version>_arm64.deb` | `sudo apt install ./taigikeyboard_<version>_arm64.deb` |
+| Fedora 44+ | x86_64 | `taigikeyboard-<version>-1.x86_64.rpm` | `sudo dnf install ./taigikeyboard-<version>-1.x86_64.rpm` |
+| Fedora 44+ | arm64 | `taigikeyboard-<version>-1.aarch64.rpm` | `sudo dnf install ./taigikeyboard-<version>-1.aarch64.rpm` |
+| Arch Linux | x86_64 | `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | `sudo pacman -U taigikeyboard-<version>-1-x86_64.pkg.tar.zst` |
 
 Ubuntu 22.04 and Debian 12 are too old (the settings window needs GTK 4.12 and libadwaita 1.5).
 
