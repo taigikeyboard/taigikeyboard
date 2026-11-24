@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import {
   candidates,
   commitWord,
+  current,
   emptyBox,
   expectState,
   expectText,
@@ -14,12 +15,16 @@ import {
   open,
   panel,
   preedit,
+  setRootTextSize,
   settled,
   TIER,
   toggle,
 } from "./helpers.mjs";
 
 /** @typedef {import("@playwright/test").Page} Page */
+
+/** A sentence typed as one word (a Discord report): wider than a phone. */
+const SENTENCE = "inuilimatsaiiannlanlongsiuitiohpatlanglehuah";
 
 /**
  * The reset button of the section holding the `row` selector.
@@ -71,6 +76,42 @@ test("a narrow window opens the sidebar as a drawer", async ({ page }) => {
   await expect(inputMode(page)).toBeHidden();
   await expect(toggle(page)).toHaveAttribute("aria-expanded", "false");
   await expect(editor).toBeVisible();
+});
+
+// A phone's drawer at a large text size: each value keeps room to be read,
+// and no row runs past the drawer.
+test("the drawer's values stay readable at a large text size", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await open(page);
+  await toggle(page).click();
+  for (const size of ["100%", "125%", "200%"]) {
+    await setRootTextSize(page, size);
+    // Polled: the drawer may still be sliding in, and its rows relaying out.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() =>
+            [...document.querySelectorAll(".setting:has(> select)")]
+              .map((row) => {
+                const box = row.getBoundingClientRect();
+                const value = /** @type {HTMLSelectElement} */ (
+                  row.querySelector("select")
+                );
+                const valueBox = value.getBoundingClientRect();
+                return {
+                  name: value.name,
+                  squeezed: valueBox.width < 2 * value.offsetHeight,
+                  pastRow: valueBox.right > box.right + 0.5,
+                };
+              })
+              .filter((row) => row.squeezed || row.pastRow),
+          ),
+        { message: size },
+      )
+      .toEqual([]);
+  }
 });
 
 test("every section starts folded and unfolds on a click", async ({ page }) => {
@@ -312,6 +353,44 @@ test("a window that fits the page does not scroll", async ({ page }) => {
     return { scrollHeight, clientHeight };
   });
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
+});
+
+// A phone at 200%: the mode chip takes the room the empty load slot gives up,
+// and words it still cannot hold end in an ellipsis inside it, so the page
+// never scrolls sideways.
+test("the mode chip keeps inside a phone-wide window", async ({ page }) => {
+  for (const width of [180, 360]) {
+    await page.setViewportSize({ width, height: 600 });
+    const editor = await open(page, { docked: false });
+    const chip = page.locator("#mode-line");
+    /**
+     * `rowGrew`: the row under the editor passed its own height, which a
+     * squeezed hidden child wrapping would do.
+     * @returns {Promise<{ pageScrolls: boolean, pastChip: string[], rowGrew: boolean }>}
+     */
+    const fit = () =>
+      chip.evaluate((line) => {
+        const box = line.getBoundingClientRect();
+        const row = /** @type {HTMLElement} */ (line.parentElement);
+        return {
+          rowGrew:
+            row.getBoundingClientRect().height >
+            Number.parseFloat(getComputedStyle(row).minHeight) + 0.5,
+          pageScrolls:
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+          pastChip: [...line.children]
+            .filter((part) => part.getBoundingClientRect().right > box.right)
+            .map((part) => part.id),
+        };
+      });
+    const clean = { pageScrolls: false, pastChip: [], rowGrew: false };
+    await expect(chip).toHaveAttribute("data-drawn");
+    expect(await fit()).toEqual(clean);
+    await editor.dispatchEvent("compositionstart");
+    await expect(page.locator("#notice")).toHaveAttribute("data-active");
+    expect(await fit()).toEqual(clean);
+  }
 });
 
 test("the editor takes the window's room left over", async ({ page }) => {
@@ -633,6 +712,33 @@ for (const [candidateLayout, name] of [
   });
 }
 
+// A phone at Extra Large: the chevron column is whole pixels on both sides,
+// so the paged row leaves it its room inside the window.
+test("the page arrows stay inside a phone-wide window", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const layout of ["horizontal", "expandable"]) {
+    const editor = await open(page, {
+      settings: { candidateLayout: layout, candidateTextSize: "23" },
+      docked: false,
+    });
+    await editor.pressSequentially("tsit");
+    await expect(page.locator("#page-arrows")).toBeVisible();
+    const fit = await panel(page).evaluate((root) => {
+      const list = /** @type {HTMLElement} */ (root.querySelector("#list"));
+      const arrows = /** @type {HTMLElement} */ (
+        root.querySelector("#page-arrows")
+      );
+      return {
+        pastWindow:
+          arrows.getBoundingClientRect().right >
+          root.getBoundingClientRect().right,
+        listScrolls: list.scrollWidth > list.clientWidth,
+      };
+    });
+    expect(fit, layout).toEqual({ pastWindow: false, listScrolls: false });
+  }
+});
+
 test("a Horizontal list follows a window that narrowed at the next key", async ({
   page,
 }) => {
@@ -699,6 +805,45 @@ test("the composition sits on the caret's line, clear of the list", async ({
     expect(isClear, `line ${line}`).toBe(true);
     expect(list.bottom).toBeLessThanOrEqual(box.bottom + 1);
     await editor.press("Escape");
+  }
+});
+
+// A phone at 200% zoom: a column taller than the editor fits on no side of the
+// composition, so it takes the taller side and scrolls there, never over it.
+test("a column no side holds scrolls beside the composition, not over it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 180, height: 400 });
+  for (const word of ["tsiahpa", SENTENCE]) {
+    const editor = await open(page, { docked: false });
+    await editor.pressSequentially(word);
+    await expect(candidates(page).first()).toBeVisible();
+    const fit = await page.evaluate(() => {
+      const box = (/** @type {string} */ id) =>
+        /** @type {HTMLElement} */ (
+          document.getElementById(id)
+        ).getBoundingClientRect();
+      const composition = box("preedit");
+      const list = box("panel");
+      const editorBox = box("editor");
+      return {
+        overlaps:
+          list.right > composition.x &&
+          list.x < composition.right &&
+          list.bottom > composition.y + 1 &&
+          list.y < composition.bottom - 1,
+        pastEditor: list.bottom > editorBox.bottom + 1,
+      };
+    });
+    expect(fit, word).toEqual({ overlaps: false, pastEditor: false });
+    await expect(current(page)).toBeInViewport();
+    // Walking the capped list scrolls the list, never the page under it.
+    const before = await page.evaluate(() => window.scrollY);
+    for (let step = 0; step < 8; step += 1) {
+      await editor.press("ArrowDown");
+    }
+    await expect(current(page)).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY), word).toBe(before);
   }
 });
 
@@ -786,22 +931,34 @@ test("the selection keeps one inset and the text stays inside the corners", asyn
   expect([...insets]).toHaveLength(1);
 });
 
-/** @param {Page} page */
-const wrappedScripts = (page) =>
+/**
+ * The scripts whose text runs past their own box, by its range: a script that
+ * keeps one line and is drawn narrower than its text ends in an ellipsis. The
+ * range, not `scrollWidth`, which a box clipped on one axis does not report
+ * alike in every engine.
+ * @param {Page} page
+ */
+const cutScripts = (page) =>
   panel(page).evaluate((root) =>
-    [...root.querySelectorAll("li > span")]
+    [...root.querySelectorAll("li > span:is(.text, .annotation)")]
       .filter((part) => {
         const range = document.createRange();
         range.selectNodeContents(part);
-        return range.getClientRects().length > 1;
+        const text = range.getBoundingClientRect();
+        const box = part.getBoundingClientRect();
+        return (
+          range.getClientRects().length > 1 || text.width > box.width + 0.01
+        );
       })
       .map((part) => part.textContent),
   );
 
-/// Every script of every cell on one line, collapsed and unfolded: a cell the
-/// model sizes is as wide as the model measured, so any length drawn wider
-/// than the model's wraps its widest script.
-test("no script wraps at any size in any layout", async ({ page }) => {
+/// Every script of every cell whole, collapsed and unfolded: a cell the model
+/// sizes is as wide as the model measured, so any length drawn wider than the
+/// model's cuts its widest script.
+test("no script is cut at any size in any layout", async ({ page }) => {
+  // Sixty compositions in five sizes: past the default under a loaded runner.
+  test.setTimeout(90_000);
   /** @type {Array<[string, string | null]>} */
   const layouts = [
     ["vertical", null],
@@ -810,19 +967,145 @@ test("no script wraps at any size in any layout", async ({ page }) => {
     ["verticalExpandable", "ArrowRight"],
   ];
   for (const [layout, unfoldKey] of layouts) {
+    // `kong` and `tsit`: annotations a Gecko layout unit from their box.
     for (const size of ["13", "15", "17", "20", "23"]) {
       const editor = await open(page, {
         settings: { candidateLayout: layout, candidateTextSize: size },
       });
-      await editor.pressSequentially("tsiahpa");
+      for (const word of ["tsiahpa", "kong", "tsit"]) {
+        // The last word's list goes with its composition: nothing is written.
+        for (
+          let step = 0;
+          step < 3 && (await candidates(page).count());
+          step++
+        ) {
+          await editor.press("Escape");
+        }
+        await expect(candidates(page)).toHaveCount(0);
+        await editor.pressSequentially(word);
+        await expect(candidates(page).first()).toBeVisible();
+        const at = `${layout} ${size} ${word}`;
+        expect(await cutScripts(page), at).toEqual([]);
+        if (unfoldKey) {
+          await editor.press(unfoldKey);
+          await expect(page.locator("#candidates")).toHaveAttribute(
+            "data-grid",
+          );
+          await settled(page);
+          expect(await cutScripts(page), `${at} unfolded`).toEqual([]);
+        }
+      }
+    }
+  }
+});
+
+/// A cell wider than the window (a Discord report: a sentence typed as one
+/// word): each cell keeps its height inside the panel, the candidate whole
+/// and the annotation cut with an ellipsis, as macOS truncates it.
+test("a cell wider than the window cuts its annotation, not its row", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const layout of ["vertical", "verticalExpandable", "expandable"]) {
+    const editor = await open(page, {
+      settings: { candidateLayout: layout },
+      docked: false,
+    });
+    await editor.pressSequentially(SENTENCE);
+    await expect(candidates(page).first()).toBeVisible();
+    const fit = await panel(page).evaluate((root) => {
+      const window = root.getBoundingClientRect();
+      const rows = [...root.querySelectorAll("#candidates li")];
+      return {
+        tallRows: rows
+          .filter((row) => row.scrollHeight > row.clientHeight)
+          .map((row) => row.textContent),
+        pastWindow: [...root.querySelectorAll("#candidates li > span")]
+          .filter((part) => part.getBoundingClientRect().right > window.right)
+          .map((part) => part.textContent),
+      };
+    });
+    expect(fit, layout).toEqual({ tallRows: [], pastWindow: [] });
+    // Side by side, the annotation gives way first: a candidate is cut only
+    // once its row's annotation has nothing left to give (how much fits
+    // depends on the face the machine draws Hanji in). Stacked cells give
+    // each script its own line.
+    const cut = await cutScripts(page);
+    const first = candidates(page).first();
+    expect(await first.locator(".text").textContent(), layout).toBe(
+      "因為你嘛知影咱攏是為著別人咧活",
+    );
+    expect(cut, layout).toContain(
+      await first.locator(".annotation").textContent(),
+    );
+    const candidateCutBeforeAnnotation = await panel(page).evaluate((root) =>
+      [...root.querySelectorAll("#candidates[data-inline] li")]
+        .filter((row) => {
+          const text = row.querySelector(".text");
+          const annotation = row.querySelector(".annotation");
+          if (!text || !annotation) {
+            return false;
+          }
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const isCut =
+            range.getBoundingClientRect().width >
+            text.getBoundingClientRect().width + 0.01;
+          const annotationRoom =
+            annotation.getBoundingClientRect().width -
+            Number.parseFloat(getComputedStyle(annotation).paddingLeft);
+          return isCut && annotationRoom > 0.5;
+        })
+        .map((row) => row.textContent),
+    );
+    expect(candidateCutBeforeAnnotation, layout).toEqual([]);
+  }
+});
+
+/**
+ * How far each drawn script of each cell runs into its cell's end padding.
+ * @param {Page} page
+ */
+const paddingOverruns = (page) =>
+  panel(page).evaluate((root) =>
+    [...root.querySelectorAll("#candidates li")].flatMap((row) => {
+      const end =
+        row.getBoundingClientRect().right -
+        Number.parseFloat(getComputedStyle(row).paddingRight);
+      // A script cut to nothing draws nothing: its gap is padding alone.
+      return [...row.querySelectorAll(".text, .annotation")]
+        .filter(
+          (part) =>
+            part.getBoundingClientRect().width >
+            Number.parseFloat(getComputedStyle(part).paddingLeft),
+        )
+        .map((part) => part.getBoundingClientRect())
+        .filter((box) => box.right > end + 0.5)
+        .map((box) => box.right - end);
+    }),
+  );
+
+/// A candidate alone wider than the window: every script ends inside its
+/// row's padding, collapsed and unfolded.
+test("a candidate wider than the window stops at the row's padding", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const layout of ["vertical", "verticalExpandable"]) {
+    for (const size of ["17", "23"]) {
+      const editor = await open(page, {
+        settings: { candidateLayout: layout, candidateTextSize: size },
+        docked: false,
+      });
+      await editor.pressSequentially(SENTENCE);
       await expect(candidates(page).first()).toBeVisible();
-      expect(await wrappedScripts(page), `${layout} ${size}`).toEqual([]);
-      if (unfoldKey) {
-        await editor.press(unfoldKey);
+      expect(await paddingOverruns(page), `${layout} ${size}`).toEqual([]);
+      if (layout === "verticalExpandable") {
+        await editor.press("ArrowRight");
         await expect(page.locator("#candidates")).toHaveAttribute("data-grid");
         await settled(page);
         expect(
-          await wrappedScripts(page),
+          await paddingOverruns(page),
           `${layout} ${size} unfolded`,
         ).toEqual([]);
       }

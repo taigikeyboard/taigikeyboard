@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   candidates,
+  current,
   expectText,
   open,
   panel,
@@ -29,8 +30,6 @@ const LONG_LIST = "ti";
 const list = (page) => page.locator("#candidates");
 /** @param {Page} page */
 const unfold = (page) => page.locator("#unfold");
-/** @param {Page} page */
-const current = (page) => page.locator('#candidates li[aria-current="true"]');
 
 /**
  * @param {Page} page
@@ -269,6 +268,30 @@ test("the grid stays inside the editor", async ({ page }) => {
   const g = /** @type {NonNullable<typeof grid>} */ (grid);
   const b = /** @type {NonNullable<typeof box>} */ (box);
   expect(g.y + g.height).toBeLessThanOrEqual(b.y + b.height);
+});
+
+// A phone-wide window fits fewer than six columns: the grid unfolds as many
+// as fit, never wider than the panel that clips it.
+test("a narrow window unfolds a grid no wider than the panel", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const size of ["17", "23"]) {
+    const editor = await open(page, {
+      settings: { ...ROW, candidateTextSize: size },
+      docked: false,
+    });
+    await editor.pressSequentially(LONG_LIST);
+    await editor.press("ArrowDown");
+    await expectExpanded(page);
+    await settled(page);
+    const fit = await panel(page).evaluate((root) => ({
+      panel: root.clientWidth,
+      grid: /** @type {HTMLElement} */ (root.querySelector("#candidates"))
+        .scrollWidth,
+    }));
+    expect(fit.grid, size).toBeLessThanOrEqual(fit.panel);
+  }
 });
 
 test("a key during the unfold is not lost", async ({ page }) => {

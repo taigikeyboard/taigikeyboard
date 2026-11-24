@@ -188,6 +188,8 @@ summary:focus-visible {
 
 #sidebar {
   inset: 0 auto 0 0;
+  /* Its rows lay out by its width against the text size. */
+  container: sidebar / inline-size;
   width: min(var(--sidebar-width), 85vw);
   height: 100%;
   max-height: none;
@@ -341,8 +343,17 @@ summary:focus-visible {
   font-size: 0.8125rem;
 }
 
-.setting select {
+/* A long label wraps beside the value rather than squeeze it to its chevron
+   at a large text size (the value keeps at least 5em, or half the row), and
+   breaks a word only when the word alone is wider than its room (Firefox
+   reads the stacking query's `em` before the text size). */
+.setting:has(> select) > span {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.setting select {
+  min-width: min(5em, 50%);
   max-width: 60%;
   padding: 0.25rem 1.125rem 0.25rem 0.25rem;
   border: 0;
@@ -355,6 +366,20 @@ summary:focus-visible {
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+}
+
+/* A sidebar narrow for its text size (a phone at a large text size) stacks a
+   value under its label, at the row's end, rather than squeeze either. */
+@container sidebar (max-width: 13em) {
+  .setting:has(> select) {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .setting > select {
+    max-width: 100%;
+    margin-left: auto;
+  }
 }
 
 .setting select:hover {
@@ -420,15 +445,24 @@ summary:focus-visible {
   accent-color: var(--accent);
 }
 
+/* On a narrow window the slot gives the mode chip its room first: once the
+   dictionaries are in it draws nothing. Its hidden children keep one line,
+   clipped, so a squeezed slot never grows the row. */
 #load-slot {
   display: grid;
+  flex-shrink: 100;
+  overflow-x: clip;
+  grid-template-columns: minmax(0, auto);
   align-items: center;
   justify-items: start;
+  min-width: 0;
   margin-right: auto;
 }
 
 #load-slot > * {
   grid-area: 1 / 1;
+  max-width: 100%;
+  white-space: nowrap;
   visibility: hidden;
 }
 
@@ -648,6 +682,19 @@ summary:focus-visible {
   font-size: var(--candidate-annotation);
 }
 
+/* Every script keeps one line: one its cell cannot hold ends in an ellipsis
+   rather than wrap past the cell's fixed height (`byTruncatingTail` on
+   macOS, DirectWrite's trimming sign on Windows). */
+.candidates li > :is(.text, .annotation) {
+  /* `clip` on the line's axis only: a mark above or below the line box
+     still draws, and a track narrower than the text can still take it. */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* A cell with one script keeps its line in the middle of a two-line row. */
 .candidates li:not(:has(.annotation)) .text {
   grid-row: 1 / -1;
@@ -662,9 +709,14 @@ summary:focus-visible {
   grid-column: 1 / -1;
 }
 
+/* A column wider than the window gives way from the annotation first: the
+   annotation's track takes only the room the candidates leave
+   (`CandidateItemView.swift`'s compression resistance). It keeps the row's
+   end padding, which a subgrid row draws inside its last track, so a
+   candidate wider than the window stops where the unfolded column stops it. */
 .candidates[data-vertical] {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto minmax(var(--candidate-padding-x), 1fr);
 }
 
 /* Rows share their columns, so every annotation starts at one x. */
@@ -709,9 +761,6 @@ summary:focus-visible {
   align-content: start;
   height: var(--candidate-window);
   padding-bottom: var(--candidate-peek);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
   background:
     repeating-linear-gradient(
       transparent 0 var(--candidate-item),
@@ -720,7 +769,16 @@ summary:focus-visible {
     0 0 / 100% var(--candidate-grid) no-repeat local;
 }
 
-.candidates[data-grid]::-webkit-scrollbar {
+/* The grid, and a column no side of the composition holds, scroll in what
+   they are given (`Panel.#fitList`), with no scrollbar: a classic one takes a
+   width the model has no number for. */
+.candidates:is([data-grid], [data-vertical]) {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.candidates:is([data-grid], [data-vertical])::-webkit-scrollbar {
   display: none;
 }
 
@@ -771,7 +829,11 @@ summary:focus-visible {
 .candidates[data-inline] li .annotation {
   grid-area: auto / 3;
   justify-self: start;
-  margin-left: var(--candidate-annotation-gap);
+  /* Padding, not a margin: the box keeps `max-width: 100%`, which a
+     subtracted gap rounds a Gecko layout unit under the text, cutting a
+     short annotation that fits. */
+  box-sizing: border-box;
+  padding-left: var(--candidate-annotation-gap);
 }
 
 .candidates[data-inline] li[data-literal] .text {
@@ -802,7 +864,8 @@ summary:focus-visible {
   flex: none;
   flex-direction: column;
   justify-content: center;
-  width: calc(var(--candidate-size) * 1.5);
+  /* Whole pixels, as `layout.rs` `chrome_width` reserves it. */
+  width: round(up, var(--candidate-size) * 1.5, 1px);
 }
 
 .page-arrows[hidden] {
@@ -917,7 +980,21 @@ summary:focus-visible {
   font-weight: 600;
 }
 
+/* A chip narrower than its words (a phone at a large text size) cuts them
+   with an ellipsis, the input script before the mode, rather than push past
+   the window and scroll the page sideways. */
+#mode-line > span {
+  min-width: 0;
+  overflow-x: clip;
+  text-overflow: ellipsis;
+}
+
+#mode-line > #mode-detail {
+  flex-shrink: 100;
+}
+
 #mode-line .separator {
+  flex: none;
   opacity: 0.5;
 }
 
@@ -1031,17 +1108,22 @@ summary:focus-visible {
 /* Shift glyph top right, bare glyph below, as the desktop panels draw a cap; the
    top half is the Shift layer. */
 .tps-cap {
+  /* The cap's width stops at a twelfth of the window while text sizes grow
+     with the reader's font size: the glyphs take the smaller of the two, so
+     two of them sit side by side inside a phone's cap at any text size. */
+  --tps-cap-inset: min(0.1875rem, var(--tps-cap) / 10);
+  --tps-cap-room: calc(var(--tps-cap) - 2 * var(--tps-cap-inset) - 2px);
   display: grid;
   grid-template: auto 1fr / 1fr 1fr;
   flex: none;
   width: var(--tps-cap);
   height: var(--tps-cap-height);
-  padding: 0.125rem 0.1875rem;
+  padding: 0.125rem var(--tps-cap-inset);
   border-radius: 6px;
   background: var(--card);
   box-shadow: inset 0 0 0 1px var(--hairline);
   color: var(--text);
-  font-size: 0.6875rem;
+  font-size: min(0.6875rem, var(--tps-cap-room) / 2);
   line-height: 1.2;
   transition: none;
 }
@@ -1061,7 +1143,7 @@ summary:focus-visible {
 .tps-cap span:last-child {
   grid-column: 1 / -1;
   align-self: center;
-  font-size: 1rem;
+  font-size: min(1rem, var(--tps-cap-room));
   text-align: center;
 }
 

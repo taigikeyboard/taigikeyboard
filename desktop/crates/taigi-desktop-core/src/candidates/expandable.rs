@@ -92,7 +92,8 @@ pub struct ExpandableGeometryInput<'a> {
     /// How many candidates the collapsed list shows and an unfolded column
     /// stacks — one per slot key (`CandidateSlotKeySet::page_size`).
     pub page_size: usize,
-    /// Columns in an unfolded row. `0` keeps [`ExpandableListModel::EXPANDED_COLUMN_COUNT`].
+    /// Columns in an unfolded row. `0`: [`ExpandableListModel::EXPANDED_COLUMN_COUNT`],
+    /// or as many as the window fits at the base width when that is fewer.
     pub row_columns: usize,
 }
 
@@ -304,7 +305,13 @@ impl ExpandableListModel {
         {
             CollapsedLayout::Row => {
                 let columns = if geometry.row_columns == 0 {
-                    Self::EXPANDED_COLUMN_COUNT
+                    // As many as the screen fits at the narrowest column, as
+                    // an unfolded column pages (`expanded_columns`): a window
+                    // narrower than six never draws a grid wider than itself.
+                    Self::EXPANDED_COLUMN_COUNT.min(Self::columns_that_fit(
+                        geometry.maximum_window_width - geometry.scroller_width,
+                        geometry.base_width,
+                    ))
                 } else {
                     geometry.row_columns.max(1)
                 };
@@ -509,9 +516,7 @@ impl ExpandableListModel {
         let width = width.max(collapsed_width);
         let columns = count.div_ceil(geometry.page_size.max(1));
         let fit = |chrome: f32| {
-            let fit = ((geometry.maximum_window_width - chrome) / width)
-                .floor()
-                .max(1.0) as usize;
+            let fit = Self::columns_that_fit(geometry.maximum_window_width - chrome, width);
             Self::COLUMNS_PER_PAGE.min(fit).min(columns).max(1)
         };
         // A list that fits one page needs no chevron column to make room for.
@@ -522,6 +527,11 @@ impl ExpandableListModel {
             fit(geometry.chrome_width)
         };
         (width, columns_per_page, primary_column_width)
+    }
+
+    /// How many `column_width` columns `budget` holds, at least one.
+    fn columns_that_fit(budget: f32, column_width: f32) -> usize {
+        (budget / column_width).floor().max(1.0) as usize
     }
 
     /// `rows` items with a separator between each two.
@@ -592,7 +602,7 @@ impl ExpandableListModel {
         self.count > self.collapsed_cells.len()
     }
 
-    /// The grid's columns: six under a row, a page of columns beside a
+    /// The grid's columns: up to six under a row, a page of columns beside a
     /// column — the same on every page, so paging never resizes the window.
     pub fn grid_width(&self) -> f32 {
         self.column_width * self.grid.column_count as f32
@@ -1419,6 +1429,27 @@ mod tests {
             640.0 - 15.0,
             "capped at the screen minus the scroller"
         );
+    }
+
+    #[test]
+    fn a_screen_narrower_than_six_columns_unfolds_fewer() {
+        let narrow = |maximum_window_width: f32| {
+            ExpandableListModel::new(
+                &[5.0; 20],
+                ExpandableGeometryInput {
+                    maximum_window_width,
+                    ..geometry()
+                },
+            )
+        };
+        // trace: budget 640 − 15 fits 62 base widths of 10: six columns.
+        assert_eq!(narrow(640.0).grid().column_count, 6);
+        // trace: budget 60 − 15 = 45 fits 4 base widths of 10.
+        let m = narrow(60.0);
+        assert_eq!(m.grid().column_count, 4);
+        assert!(m.grid_width() <= 60.0 - 15.0, "{}", m.grid_width());
+        // trace: a budget under one base width still keeps one column.
+        assert_eq!(narrow(20.0).grid().column_count, 1);
     }
 
     #[test]

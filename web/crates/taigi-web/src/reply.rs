@@ -157,7 +157,7 @@ pub(crate) struct WireLayout {
     /// The half row a scrolling grid shows under its last full one.
     peek: f32,
     scroll_y: f32,
-    /// The grid's column count: six under a row, a page beside a column.
+    /// The grid's column count: up to six under a row, a page beside a column.
     columns: usize,
     /// Where an unfolded column's annotations start; `None` for a row.
     primary_column: Option<f32>,

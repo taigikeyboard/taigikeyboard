@@ -10,6 +10,7 @@ import {
   open,
   panel,
   preedit,
+  setRootTextSize,
   TIER,
   textOf,
 } from "./helpers.mjs";
@@ -179,6 +180,39 @@ test("a key lights its cap for a moment", async ({ page }) => {
   await editor.press("8");
   await expect(cap(page, "ㄚ")).toHaveAttribute("data-lit");
   await expect(cap(page, "ㄚ")).not.toHaveAttribute("data-lit");
+});
+
+// A phone-wide cap stops at a twelfth of the window while the reader's font
+// size grows the text: every glyph keeps a pixel clear of its cap's edges.
+test("a phone's caps hold their glyphs at a large text size", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await open(page, { settings: typingTps, docked: false });
+  for (const size of ["100%", "125%", "200%"]) {
+    // The root size a browser's default font setting would give.
+    await setRootTextSize(page, size);
+    const tight = await keyPanel(page).evaluate((root) =>
+      [...root.querySelectorAll(".tps-cap span")]
+        .filter((part) => part.textContent !== "")
+        .filter((part) => {
+          const range = document.createRange();
+          range.selectNodeContents(part);
+          const text = range.getBoundingClientRect();
+          const box = /** @type {Element} */ (
+            part.parentElement
+          ).getBoundingClientRect();
+          return (
+            text.left < box.left + 1 ||
+            text.right > box.right - 1 ||
+            text.top < box.top ||
+            text.bottom > box.bottom
+          );
+        })
+        .map((part) => part.textContent),
+    );
+    expect(tight, size).toEqual([]);
+  }
 });
 
 test("the caps are out of the tab order", async ({ page, browserName }) => {

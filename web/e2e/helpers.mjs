@@ -188,6 +188,19 @@ export const preedit = (page) => page.locator("#preedit");
 /** @param {Page} page */
 export const candidates = (page) => page.locator("#candidates li");
 /** @param {Page} page */
+export const current = (page) =>
+  page.locator('#candidates li[aria-current="true"]');
+
+/**
+ * Sets the root font size a browser's default text-size setting would give.
+ * @param {Page} page
+ * @param {string} size
+ */
+export const setRootTextSize = (page, size) =>
+  page.evaluate((size) => {
+    document.documentElement.style.fontSize = size;
+  }, size);
+/** @param {Page} page */
 export const inputMode = (page) => page.locator('select[name="inputMode"]');
 /** @param {Page} page */
 export const panel = (page) => page.locator("#panel");

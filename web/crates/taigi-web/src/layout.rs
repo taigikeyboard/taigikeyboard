@@ -119,9 +119,11 @@ struct MeasuredCells {
 }
 
 impl MeasuredCells {
-    /// `#page-arrows`' width.
+    /// `#page-arrows`' width, whole pixels as the stylesheet rounds it: a
+    /// fractional column left the row's budget a fraction the page floor
+    /// (`page_starts_and_floor`) rounds up past the window.
     fn chrome_width(&self) -> f32 {
-        self.metrics.candidate_font_size() * CHEVRON_COLUMN_RATIO
+        (self.metrics.candidate_font_size() * CHEVRON_COLUMN_RATIO).ceil()
     }
 }
 
