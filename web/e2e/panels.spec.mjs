@@ -10,6 +10,7 @@ import {
   open,
   panel,
   preedit,
+  setRootTextSize,
   TIER,
   textOf,
 } from "./helpers.mjs";
@@ -190,9 +191,7 @@ test("a phone's caps hold their glyphs at a large text size", async ({
   await open(page, { settings: typingTps, docked: false });
   for (const size of ["100%", "125%", "200%"]) {
     // The root size a browser's default font setting would give.
-    await page.evaluate((size) => {
-      document.documentElement.style.fontSize = size;
-    }, size);
+    await setRootTextSize(page, size);
     const tight = await keyPanel(page).evaluate((root) =>
       [...root.querySelectorAll(".tps-cap span")]
         .filter((part) => part.textContent !== "")

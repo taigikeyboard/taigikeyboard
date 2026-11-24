@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   candidates,
+  current,
   expectText,
   open,
   panel,
@@ -29,8 +30,6 @@ const LONG_LIST = "ti";
 const list = (page) => page.locator("#candidates");
 /** @param {Page} page */
 const unfold = (page) => page.locator("#unfold");
-/** @param {Page} page */
-const current = (page) => page.locator('#candidates li[aria-current="true"]');
 
 /**
  * @param {Page} page

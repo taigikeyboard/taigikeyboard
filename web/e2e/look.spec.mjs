@@ -6,6 +6,7 @@ import { expect, test } from "@playwright/test";
 import {
   candidates,
   commitWord,
+  current,
   emptyBox,
   expectState,
   expectText,
@@ -15,11 +16,15 @@ import {
   panel,
   preedit,
   settled,
+  setRootTextSize,
   TIER,
   toggle,
 } from "./helpers.mjs";
 
 /** @typedef {import("@playwright/test").Page} Page */
+
+/** A sentence typed as one word (a Discord report): wider than a phone. */
+const SENTENCE = "inuilimatsaiiannlanlongsiuitiohpatlanglehuah";
 
 /**
  * The reset button of the section holding the `row` selector.
@@ -82,9 +87,7 @@ test("the drawer's values stay readable at a large text size", async ({
   await open(page);
   await toggle(page).click();
   for (const size of ["100%", "125%", "200%"]) {
-    await page.evaluate((size) => {
-      document.documentElement.style.fontSize = size;
-    }, size);
+    await setRootTextSize(page, size);
     const rows = await page.evaluate(() =>
       [...document.querySelectorAll(".setting:has(> select)")].map((row) => {
         const box = row.getBoundingClientRect();
@@ -376,23 +379,16 @@ test("the mode chip keeps inside a phone-wide window", async ({ page }) => {
             .map((part) => part.id),
         };
       });
+    const clean = { pageScrolls: false, pastChip: [], rowGrew: false };
     await expect(chip).toHaveAttribute("data-drawn");
-    expect(await fit()).toEqual({
-      pageScrolls: false,
-      pastChip: [],
-      rowGrew: false,
-    });
+    expect(await fit()).toEqual(clean);
     await expect(page.locator("#mode-detail")).toHaveJSProperty(
       "scrollWidth",
       await page.locator("#mode-detail").evaluate((part) => part.clientWidth),
     );
     await editor.dispatchEvent("compositionstart");
     await expect(page.locator("#notice")).toHaveAttribute("data-active");
-    expect(await fit()).toEqual({
-      pageScrolls: false,
-      pastChip: [],
-      rowGrew: false,
-    });
+    expect(await fit()).toEqual(clean);
   }
 });
 
@@ -817,7 +813,7 @@ test("a column no side holds scrolls beside the composition, not over it", async
   page,
 }) => {
   await page.setViewportSize({ width: 180, height: 400 });
-  for (const word of ["tsiahpa", "inuilimatsaiiannlanlongsiuitiohpatlanglehuah"]) {
+  for (const word of ["tsiahpa", SENTENCE]) {
     const editor = await open(page, { docked: false });
     await editor.pressSequentially(word);
     await expect(candidates(page).first()).toBeVisible();
@@ -840,7 +836,7 @@ test("a column no side holds scrolls beside the composition, not over it", async
     });
     expect(fit, word).toEqual({ overlaps: false, pastEditor: false });
     await expect(
-      page.locator('#candidates li[aria-current="true"]'),
+      current(page),
     ).toBeInViewport();
     // Walking the capped list scrolls the list, never the page under it.
     const before = await page.evaluate(() => window.scrollY);
@@ -848,7 +844,7 @@ test("a column no side holds scrolls beside the composition, not over it", async
       await editor.press("ArrowDown");
     }
     await expect(
-      page.locator('#candidates li[aria-current="true"]'),
+      current(page),
     ).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY), word).toBe(before);
   }
@@ -964,7 +960,6 @@ const cutScripts = (page) =>
 /// sizes is as wide as the model measured, so any length drawn wider than the
 /// model's cuts its widest script.
 test("no script is cut at any size in any layout", async ({ page }) => {
-  test.setTimeout(180_000);
   /** @type {Array<[string, string | null]>} */
   const layouts = [
     ["vertical", null],
@@ -975,10 +970,15 @@ test("no script is cut at any size in any layout", async ({ page }) => {
   for (const [layout, unfoldKey] of layouts) {
     // `kong` and `tsit`: annotations a Gecko layout unit from their box.
     for (const size of ["13", "15", "17", "20", "23"]) {
+      const editor = await open(page, {
+        settings: { candidateLayout: layout, candidateTextSize: size },
+      });
       for (const word of ["tsiahpa", "kong", "tsit"]) {
-        const editor = await open(page, {
-          settings: { candidateLayout: layout, candidateTextSize: size },
-        });
+        // The last word's list goes with its composition: nothing is written.
+        for (let step = 0; step < 3 && (await candidates(page).count()); step++) {
+          await editor.press("Escape");
+        }
+        await expect(candidates(page)).toHaveCount(0);
         await editor.pressSequentially(word);
         await expect(candidates(page).first()).toBeVisible();
         const at = `${layout} ${size} ${word}`;
@@ -1002,7 +1002,6 @@ test("no script is cut at any size in any layout", async ({ page }) => {
 test("a cell wider than the window cuts its annotation, not its row", async ({
   page,
 }) => {
-  const SENTENCE = "inuilimatsaiiannlanlongsiuitiohpatlanglehuah";
   await page.setViewportSize({ width: 360, height: 800 });
   for (const layout of ["vertical", "verticalExpandable", "expandable"]) {
     const editor = await open(page, {
@@ -1074,9 +1073,7 @@ test("a candidate wider than the window stops at the row's padding", async ({
         settings: { candidateLayout: layout, candidateTextSize: size },
         docked: false,
       });
-      await editor.pressSequentially(
-        "inuilimatsaiiannlanlongsiuitiohpatlanglehuah",
-      );
+      await editor.pressSequentially(SENTENCE);
       await expect(candidates(page).first()).toBeVisible();
       expect(await paddingOverruns(page), `${layout} ${size}`).toEqual([]);
       if (layout === "verticalExpandable") {

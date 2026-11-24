@@ -717,11 +717,6 @@ summary:focus-visible {
 .candidates[data-vertical] {
   display: grid;
   grid-template-columns: auto auto minmax(var(--candidate-padding-x), 1fr);
-  /* A column no side of the composition holds scrolls in what it is given
-     (`Panel.#fitList`), with no scrollbar, as the grid. */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
 }
 
 /* Rows share their columns, so every annotation starts at one x. */
@@ -766,15 +761,21 @@ summary:focus-visible {
   align-content: start;
   height: var(--candidate-window);
   padding-bottom: var(--candidate-peek);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
   background:
     repeating-linear-gradient(
       transparent 0 var(--candidate-item),
       var(--hairline) 0 calc(var(--candidate-item) + 1px)
     )
     0 0 / 100% var(--candidate-grid) no-repeat local;
+}
+
+/* The grid, and a column no side of the composition holds, scroll in what
+   they are given (`Panel.#fitList`), with no scrollbar: a classic one takes a
+   width the model has no number for. */
+.candidates:is([data-grid], [data-vertical]) {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
 
 .candidates:is([data-grid], [data-vertical])::-webkit-scrollbar {

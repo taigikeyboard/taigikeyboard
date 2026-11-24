@@ -723,15 +723,14 @@ export class Panel {
       // which a panel still at the last key's place would send down.
       const cell = list.querySelector('[aria-current="true"]');
       if (cell) {
-        const top =
-          cell.getBoundingClientRect().top -
-          list.getBoundingClientRect().top +
-          list.scrollTop;
-        const bottom = top + cell.getBoundingClientRect().height;
-        if (top < list.scrollTop) {
-          list.scrollTop = top;
-        } else if (bottom > list.scrollTop + list.clientHeight) {
-          list.scrollTop = bottom - list.clientHeight;
+        const cellBox = cell.getBoundingClientRect();
+        const listTop = list.getBoundingClientRect().top;
+        const above = cellBox.top - listTop;
+        const below = cellBox.bottom - listTop - list.clientHeight;
+        if (above < 0) {
+          list.scrollTop += above;
+        } else if (below > 0) {
+          list.scrollTop += below;
         }
       }
     }
