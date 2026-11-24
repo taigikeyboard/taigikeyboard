@@ -246,6 +246,7 @@ static POPUP_TARGET: Mutex<Option<OwnedObjectPath>> = Mutex::new(None);
 /// it. A second `block_on` from this thread is the same shape as `Destroy`:
 /// the daemon's executor is already running on the main thread.
 pub fn watch_popup(connection: Connection) {
+    popup::start();
     let _ = std::thread::Builder::new()
         .name("taigi-popup".into())
         .spawn(move || loop {

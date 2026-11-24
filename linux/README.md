@@ -83,6 +83,7 @@ field. Fcitx5's own panel has the same limit; upstream's answer is the Kimpanel
 GNOME Shell extension, which draws Fcitx5's list instead of this candidate
 window. On an X11 session (the dogfood setup: KDE Plasma on X11) apps report
 screen coordinates, and Fcitx5 places the window under the caret.
+
 Packaged installs, per-distribution paths and where user data lives:
 [`../docs/INSTALL.md`](../docs/INSTALL.md) § Linux and
 [`../docs/architecture/linux-release.md`](../docs/architecture/linux-release.md).

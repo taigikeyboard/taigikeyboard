@@ -99,8 +99,8 @@ struct App {
     /// The first row a vertical list taller than its room shows; kept while
     /// the page stays the same so the rows scroll only with the cursor.
     first_row: usize,
-    /// The screen last reported to the parent ([`Notice::Screen`]).
-    reported_screen: Option<(u32, u32)>,
+    /// The screen width last reported to the parent ([`Notice::Screen`]).
+    reported_screen: Option<u32>,
 }
 
 impl Default for App {
@@ -223,9 +223,10 @@ impl App {
     fn apply(&mut self, event_loop: &ActiveEventLoop, command: Command) {
         match command {
             Command::Hide => self.hide(),
+            // The room depends on the caret, so a move lays the page out again.
             Command::Move { caret } => {
                 self.caret = caret;
-                self.place(event_loop);
+                self.relayout(event_loop);
             }
             Command::Show { body } => {
                 self.caret = body.caret;
@@ -257,6 +258,8 @@ impl App {
     }
 
     fn relayout(&mut self, event_loop: &ActiveEventLoop) {
+        let monitor = monitor_for(event_loop, self.caret);
+        self.report_screen(monitor);
         let Some(page) = self.page.clone() else {
             return;
         };
@@ -267,8 +270,6 @@ impl App {
             .unwrap_or(1.0);
         self.fonts
             .set_families(&page.chrome.hanji_family, &page.chrome.roman_family);
-        let monitor = monitor_for(event_loop, self.caret);
-        self.report_screen(monitor);
         let fit = fit_for(self.caret, monitor, scale, self.first_row);
         let arrangement = arrange(&page, &self.fonts, scale, fit);
         self.first_row = arrangement.first_row;
@@ -318,7 +319,7 @@ impl App {
         write_line(serde_json::to_string(&event));
     }
 
-    /// Tells the parent the size of `monitor` in px before scale, when it
+    /// Tells the parent the width of `monitor` in px before scale, when it
     /// changed, so the session packs rows that fit it.
     fn report_screen(&mut self, monitor: Option<Monitor>) {
         let Some((_, size)) = monitor else {
@@ -330,18 +331,12 @@ impl App {
             .map(|window| window.scale_factor())
             .filter(|scale| scale.is_finite() && *scale > 0.0)
             .unwrap_or(1.0);
-        let screen = (
-            (f64::from(size.width) / scale).floor() as u32,
-            (f64::from(size.height) / scale).floor() as u32,
-        );
+        let screen = (f64::from(size.width) / scale).floor() as u32;
         if self.reported_screen == Some(screen) {
             return;
         }
         self.reported_screen = Some(screen);
-        write_line(serde_json::to_string(&Notice::Screen {
-            width: screen.0,
-            height: screen.1,
-        }));
+        write_line(serde_json::to_string(&Notice::Screen { width: screen }));
     }
 
     fn paint(&mut self) {
@@ -466,7 +461,9 @@ fn fit_for(caret: Caret, monitor: Option<Monitor>, scale: f32, first_row: usize)
 }
 
 /// Under the caret when the window fits there, else over it, else on the
-/// roomier side — never back over the caret's line. Kept on the monitor.
+/// roomier side. A window [`fit_for`] sized never covers the caret's line;
+/// an unfolded grid, which takes no fit, may. Kept inside the monitor's
+/// margins.
 fn place_at(
     caret: Caret,
     window: PhysicalSize<u32>,
@@ -482,11 +479,11 @@ fn place_at(
     let right = origin.x.saturating_add(size.width as i32);
     let window_w = window.width as i32;
     let window_h = window.height as i32;
-    if x.saturating_add(window_w) > right {
-        x = right.saturating_sub(window_w);
+    if x.saturating_add(window_w) > right - margin {
+        x = (right - margin).saturating_sub(window_w);
     }
-    if x < origin.x {
-        x = origin.x;
+    if x < origin.x + margin {
+        x = origin.x + margin;
     }
     let (below, above) = vertical_room(caret, (origin, size), scale);
     let above_y = caret.y.saturating_sub(gap).saturating_sub(window_h);

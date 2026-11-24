@@ -971,8 +971,9 @@ struct Scale {
 }
 
 /// The candidate size the window pads are tuned at (`hanjiFontSize`'s
-/// default). Above it the gaps between the two scripts grow with the text,
-/// as `candidate_annotation_gap` does on macOS and Windows.
+/// default). Above it the gaps between the two scripts grow with the text
+/// (macOS and Windows scale `candidate_annotation_gap` with the candidate
+/// size); below it they keep the pad.
 const BASE_TEXT_PX: f32 = 16.0;
 
 impl Scale {
@@ -1089,6 +1090,12 @@ fn layout_cell(
             let (ann, ann_w) = truncate(ann, ann_px, ann_hanji, ann_w, room, measure);
             (text, text_w, Some(ann), ann_w)
         }
+        Some(ann) if text_w + annotation_gap + ann_w <= room => (
+            Cow::Borrowed(cell.text.as_str()),
+            text_w,
+            Some(Cow::Borrowed(ann)),
+            ann_w,
+        ),
         Some(ann) => {
             let ann_room = room - text_w - annotation_gap;
             if ann_room >= measure.size(ELLIPSIS, ann_px, ann_hanji).0 {
@@ -1231,7 +1238,8 @@ const ELLIPSIS: &str = "…";
 
 /// `text` (`width` wide at `px`) cut at the end to fit `room`, an ellipsis
 /// after what is left, and its new width. A cut never separates a letter from
-/// its combining mark (POJ o͘, a decomposed tone mark), and drops the space
+/// its combining mark (POJ o͘, a decomposed tone mark) or a Hanji from its
+/// variation selector, and drops the space
 /// it would leave before the ellipsis. Nothing fits: the ellipsis alone.
 fn truncate<'a>(
     text: &'a str,
@@ -1275,7 +1283,14 @@ fn truncate<'a>(
 fn is_combining(scalar: char) -> bool {
     matches!(
         scalar as u32,
-        0x0300..=0x036F | 0x1AB0..=0x1AFF | 0x1DC0..=0x1DFF | 0x20D0..=0x20FF | 0xFE20..=0xFE2F
+        0x0300..=0x036F
+            | 0x1AB0..=0x1AFF
+            | 0x1DC0..=0x1DFF
+            | 0x200D
+            | 0x20D0..=0x20FF
+            | 0xFE00..=0xFE0F
+            | 0xFE20..=0xFE2F
+            | 0xE0100..=0xE01EF
     )
 }
 
@@ -2239,5 +2254,19 @@ mod tests {
         held.first_row = bottom.first_row;
         let up = arrange(&rows_page(9, 7), &Mono, 1.0, held);
         assert_eq!(up.first_row, bottom.first_row);
+    }
+
+    #[test]
+    fn visible_rows_handles_its_edges() {
+        let rows = [10.0; 5];
+        // Everything fits; no cursor; a stale first row past the end.
+        assert_eq!(visible_rows(&rows, 2.0, 100.0, None, 0), (0, 5));
+        assert_eq!(visible_rows(&rows, 2.0, 22.0, None, 9), (4, 1));
+        // No room still shows the cursor's row.
+        assert_eq!(visible_rows(&rows, 2.0, 0.0, Some(3), 0), (3, 1));
+        assert_eq!(visible_rows(&[], 2.0, 0.0, None, 0), (0, 0));
+        // trace: two rows take 10 + 2 + 10 = 22; the cursor on row 4 brings
+        // rows 3..=4.
+        assert_eq!(visible_rows(&rows, 2.0, 22.0, Some(4), 0), (3, 2));
     }
 }

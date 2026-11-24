@@ -132,12 +132,23 @@ pub fn move_to(caret: Caret) {
     let _ = client.send(&Command::Move { caret });
 }
 
+/// Starts the window before the first list, so its screen report
+/// ([`Notice::Screen`]) reaches the session in time to pack that list. Each
+/// shell calls it once, where it starts watching the window.
+pub fn start() {
+    if let Some(client) = client() {
+        client.ensure();
+    }
+}
+
 /// The read end Fcitx5 watches. Valid for the life of the process; the
 /// caller does not close it. Made non-blocking, so [`poll_one`] never waits.
+/// Starts the window too ([`start`]).
 pub fn notify_fd() -> i32 {
     let Some(client) = client() else {
         return -1;
     };
+    client.ensure();
     let reader = client
         .reader
         .lock()
@@ -657,7 +668,7 @@ fn read_stdout(
             Ok(0) | Err(_) => break,
             Ok(_) => {}
         }
-        if let Ok(Notice::Screen { width, .. }) = serde_json::from_str::<Notice>(line.trim()) {
+        if let Ok(Notice::Screen { width }) = serde_json::from_str::<Notice>(line.trim()) {
             SCREEN_WIDTH.store(width, Ordering::Relaxed);
             continue;
         }
