@@ -719,9 +719,21 @@ export class Panel {
     const excess = this.#root.offsetHeight - room;
     if (excess > 0) {
       list.style.maxHeight = `${list.offsetHeight - excess}px`;
-      list
-        .querySelector('[aria-current="true"]')
-        ?.scrollIntoView({ block: "nearest" });
+      // The list's own scroll only: `scrollIntoView` also scrolls the page,
+      // which a panel still at the last key's place would send down.
+      const cell = list.querySelector('[aria-current="true"]');
+      if (cell) {
+        const top =
+          cell.getBoundingClientRect().top -
+          list.getBoundingClientRect().top +
+          list.scrollTop;
+        const bottom = top + cell.getBoundingClientRect().height;
+        if (top < list.scrollTop) {
+          list.scrollTop = top;
+        } else if (bottom > list.scrollTop + list.clientHeight) {
+          list.scrollTop = bottom - list.clientHeight;
+        }
+      }
     }
   }
 

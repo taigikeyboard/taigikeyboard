@@ -351,31 +351,49 @@ test("a window that fits the page does not scroll", async ({ page }) => {
 // and words it still cannot hold end in an ellipsis inside it, so the page
 // never scrolls sideways.
 test("the mode chip keeps inside a phone-wide window", async ({ page }) => {
-  await page.setViewportSize({ width: 180, height: 600 });
-  const editor = await open(page, { docked: false });
-  const chip = page.locator("#mode-line");
-  /** @returns {Promise<{ pageScrolls: boolean, pastChip: string[] }>} */
-  const fit = () =>
-    chip.evaluate((line) => {
-      const box = line.getBoundingClientRect();
-      return {
-        pageScrolls:
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth,
-        pastChip: [...line.children]
-          .filter((part) => part.getBoundingClientRect().right > box.right)
-          .map((part) => part.id),
-      };
+  for (const width of [180, 360]) {
+    await page.setViewportSize({ width, height: 600 });
+    const editor = await open(page, { docked: false });
+    const chip = page.locator("#mode-line");
+    /**
+     * `rowGrew`: the row under the editor passed its own height, which a
+     * squeezed hidden child wrapping would do.
+     * @returns {Promise<{ pageScrolls: boolean, pastChip: string[], rowGrew: boolean }>}
+     */
+    const fit = () =>
+      chip.evaluate((line) => {
+        const box = line.getBoundingClientRect();
+        const row = /** @type {HTMLElement} */ (line.parentElement);
+        return {
+          rowGrew:
+            row.getBoundingClientRect().height >
+            Number.parseFloat(getComputedStyle(row).minHeight) + 0.5,
+          pageScrolls:
+            document.documentElement.scrollWidth >
+            document.documentElement.clientWidth,
+          pastChip: [...line.children]
+            .filter((part) => part.getBoundingClientRect().right > box.right)
+            .map((part) => part.id),
+        };
+      });
+    await expect(chip).toHaveAttribute("data-drawn");
+    expect(await fit()).toEqual({
+      pageScrolls: false,
+      pastChip: [],
+      rowGrew: false,
     });
-  await expect(chip).toHaveAttribute("data-drawn");
-  expect(await fit()).toEqual({ pageScrolls: false, pastChip: [] });
-  await expect(page.locator("#mode-detail")).toHaveJSProperty(
-    "scrollWidth",
-    await page.locator("#mode-detail").evaluate((part) => part.clientWidth),
-  );
-  await editor.dispatchEvent("compositionstart");
-  await expect(page.locator("#notice")).toHaveAttribute("data-active");
-  expect(await fit()).toEqual({ pageScrolls: false, pastChip: [] });
+    await expect(page.locator("#mode-detail")).toHaveJSProperty(
+      "scrollWidth",
+      await page.locator("#mode-detail").evaluate((part) => part.clientWidth),
+    );
+    await editor.dispatchEvent("compositionstart");
+    await expect(page.locator("#notice")).toHaveAttribute("data-active");
+    expect(await fit()).toEqual({
+      pageScrolls: false,
+      pastChip: [],
+      rowGrew: false,
+    });
+  }
 });
 
 test("the editor takes the window's room left over", async ({ page }) => {
@@ -824,6 +842,15 @@ test("a column no side holds scrolls beside the composition, not over it", async
     await expect(
       page.locator('#candidates li[aria-current="true"]'),
     ).toBeInViewport();
+    // Walking the capped list scrolls the list, never the page under it.
+    const before = await page.evaluate(() => window.scrollY);
+    for (let step = 0; step < 8; step += 1) {
+      await editor.press("ArrowDown");
+    }
+    await expect(
+      page.locator('#candidates li[aria-current="true"]'),
+    ).toBeInViewport();
+    expect(await page.evaluate(() => window.scrollY), word).toBe(before);
   }
 });
 
@@ -927,7 +954,7 @@ const cutScripts = (page) =>
         const text = range.getBoundingClientRect();
         const box = part.getBoundingClientRect();
         return (
-          range.getClientRects().length > 1 || text.width > box.width + 0.5
+          range.getClientRects().length > 1 || text.width > box.width + 0.01
         );
       })
       .map((part) => part.textContent),
@@ -937,6 +964,7 @@ const cutScripts = (page) =>
 /// sizes is as wide as the model measured, so any length drawn wider than the
 /// model's cuts its widest script.
 test("no script is cut at any size in any layout", async ({ page }) => {
+  test.setTimeout(180_000);
   /** @type {Array<[string, string | null]>} */
   const layouts = [
     ["vertical", null],
@@ -945,20 +973,24 @@ test("no script is cut at any size in any layout", async ({ page }) => {
     ["verticalExpandable", "ArrowRight"],
   ];
   for (const [layout, unfoldKey] of layouts) {
+    // `kong` and `tsit`: annotations a Gecko layout unit from their box.
     for (const size of ["13", "15", "17", "20", "23"]) {
-      const editor = await open(page, {
-        settings: { candidateLayout: layout, candidateTextSize: size },
-      });
-      await editor.pressSequentially("tsiahpa");
-      await expect(candidates(page).first()).toBeVisible();
-      expect(await cutScripts(page), `${layout} ${size}`).toEqual([]);
-      if (unfoldKey) {
-        await editor.press(unfoldKey);
-        await expect(page.locator("#candidates")).toHaveAttribute("data-grid");
-        await settled(page);
-        expect(await cutScripts(page), `${layout} ${size} unfolded`).toEqual(
-          [],
-        );
+      for (const word of ["tsiahpa", "kong", "tsit"]) {
+        const editor = await open(page, {
+          settings: { candidateLayout: layout, candidateTextSize: size },
+        });
+        await editor.pressSequentially(word);
+        await expect(candidates(page).first()).toBeVisible();
+        const at = `${layout} ${size} ${word}`;
+        expect(await cutScripts(page), at).toEqual([]);
+        if (unfoldKey) {
+          await editor.press(unfoldKey);
+          await expect(page.locator("#candidates")).toHaveAttribute(
+            "data-grid",
+          );
+          await settled(page);
+          expect(await cutScripts(page), `${at} unfolded`).toEqual([]);
+        }
       }
     }
   }
@@ -1017,9 +1049,15 @@ const paddingOverruns = (page) =>
       const end =
         row.getBoundingClientRect().right -
         Number.parseFloat(getComputedStyle(row).paddingRight);
+      // A script cut to nothing draws nothing: its gap is padding alone.
       return [...row.querySelectorAll(".text, .annotation")]
+        .filter(
+          (part) =>
+            part.getBoundingClientRect().width >
+            Number.parseFloat(getComputedStyle(part).paddingLeft),
+        )
         .map((part) => part.getBoundingClientRect())
-        .filter((box) => box.width > 0 && box.right > end + 0.5)
+        .filter((box) => box.right > end + 0.5)
         .map((box) => box.right - end);
     }),
   );

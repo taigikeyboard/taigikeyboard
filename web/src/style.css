@@ -343,17 +343,17 @@ summary:focus-visible {
   font-size: 0.8125rem;
 }
 
-/* The value keeps its own width, up to 60% of the row: a long label wraps
-   beside it rather than squeeze the value to its chevron at a large text
-   size, and breaks a word only when the word alone is wider than its room
-   (Firefox reads the stacking query's `em` before the text size). */
+/* A long label wraps beside the value rather than squeeze it to its chevron
+   at a large text size (the value keeps at least 5em, or half the row), and
+   breaks a word only when the word alone is wider than its room (Firefox
+   reads the stacking query's `em` before the text size). */
 .setting:has(> select) > span {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .setting select {
-  flex-shrink: 0;
+  min-width: min(5em, 50%);
   max-width: 60%;
   padding: 0.25rem 1.125rem 0.25rem 0.25rem;
   border: 0;
@@ -446,10 +446,12 @@ summary:focus-visible {
 }
 
 /* On a narrow window the slot gives the mode chip its room first: once the
-   dictionaries are in it draws nothing. */
+   dictionaries are in it draws nothing. Its hidden children keep one line,
+   clipped, so a squeezed slot never grows the row. */
 #load-slot {
   display: grid;
   flex-shrink: 100;
+  overflow-x: clip;
   grid-template-columns: minmax(0, auto);
   align-items: center;
   justify-items: start;
@@ -460,6 +462,7 @@ summary:focus-visible {
 #load-slot > * {
   grid-area: 1 / 1;
   max-width: 100%;
+  white-space: nowrap;
   visibility: hidden;
 }
 
@@ -825,8 +828,11 @@ summary:focus-visible {
 .candidates[data-inline] li .annotation {
   grid-area: auto / 3;
   justify-self: start;
-  margin-left: var(--candidate-annotation-gap);
-  max-width: calc(100% - var(--candidate-annotation-gap));
+  /* Padding, not a margin: the box keeps `max-width: 100%`, which a
+     subtracted gap rounds a Gecko layout unit under the text, cutting a
+     short annotation that fits. */
+  box-sizing: border-box;
+  padding-left: var(--candidate-annotation-gap);
 }
 
 .candidates[data-inline] li[data-literal] .text {

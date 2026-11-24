@@ -92,7 +92,8 @@ pub struct ExpandableGeometryInput<'a> {
     /// How many candidates the collapsed list shows and an unfolded column
     /// stacks — one per slot key (`CandidateSlotKeySet::page_size`).
     pub page_size: usize,
-    /// Columns in an unfolded row. `0` keeps [`ExpandableListModel::EXPANDED_COLUMN_COUNT`].
+    /// Columns in an unfolded row. `0`: [`ExpandableListModel::EXPANDED_COLUMN_COUNT`],
+    /// or as many as the window fits at the base width when that is fewer.
     pub row_columns: usize,
 }
 
@@ -597,7 +598,7 @@ impl ExpandableListModel {
         self.count > self.collapsed_cells.len()
     }
 
-    /// The grid's columns: six under a row, a page of columns beside a
+    /// The grid's columns: up to six under a row, a page of columns beside a
     /// column — the same on every page, so paging never resizes the window.
     pub fn grid_width(&self) -> f32 {
         self.column_width * self.grid.column_count as f32
