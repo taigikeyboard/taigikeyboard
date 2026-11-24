@@ -271,6 +271,30 @@ test("the grid stays inside the editor", async ({ page }) => {
   expect(g.y + g.height).toBeLessThanOrEqual(b.y + b.height);
 });
 
+// A phone-wide window fits fewer than six columns: the grid unfolds as many
+// as fit, never wider than the panel that clips it.
+test("a narrow window unfolds a grid no wider than the panel", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  for (const size of ["17", "23"]) {
+    const editor = await open(page, {
+      settings: { ...ROW, candidateTextSize: size },
+      docked: false,
+    });
+    await editor.pressSequentially(LONG_LIST);
+    await editor.press("ArrowDown");
+    await expectExpanded(page);
+    await settled(page);
+    const fit = await panel(page).evaluate((root) => ({
+      panel: root.clientWidth,
+      grid: /** @type {HTMLElement} */ (root.querySelector("#candidates"))
+        .scrollWidth,
+    }));
+    expect(fit.grid, size).toBeLessThanOrEqual(fit.panel);
+  }
+});
+
 test("a key during the unfold is not lost", async ({ page }) => {
   const editor = await open(page, { settings: ROW });
   await editor.pressSequentially(LONG_LIST);

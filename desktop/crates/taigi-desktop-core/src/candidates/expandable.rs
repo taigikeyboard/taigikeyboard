@@ -304,7 +304,12 @@ impl ExpandableListModel {
         {
             CollapsedLayout::Row => {
                 let columns = if geometry.row_columns == 0 {
-                    Self::EXPANDED_COLUMN_COUNT
+                    // As many as the screen fits at the narrowest column, as
+                    // an unfolded column pages (`expanded_columns`): a window
+                    // narrower than six never draws a grid wider than itself.
+                    let budget = geometry.maximum_window_width - geometry.scroller_width;
+                    let fit = (budget / geometry.base_width).floor().max(1.0) as usize;
+                    Self::EXPANDED_COLUMN_COUNT.min(fit)
                 } else {
                     geometry.row_columns.max(1)
                 };
@@ -1419,6 +1424,27 @@ mod tests {
             640.0 - 15.0,
             "capped at the screen minus the scroller"
         );
+    }
+
+    #[test]
+    fn a_screen_narrower_than_six_columns_unfolds_fewer() {
+        let narrow = |maximum_window_width: f32| {
+            ExpandableListModel::new(
+                &[5.0; 20],
+                ExpandableGeometryInput {
+                    maximum_window_width,
+                    ..geometry()
+                },
+            )
+        };
+        // trace: budget 640 − 15 fits 62 base widths of 10: six columns.
+        assert_eq!(narrow(640.0).grid().column_count, 6);
+        // trace: budget 60 − 15 = 45 fits 4 base widths of 10.
+        let m = narrow(60.0);
+        assert_eq!(m.grid().column_count, 4);
+        assert!(m.grid_width() <= 60.0 - 15.0, "{}", m.grid_width());
+        // trace: a budget under one base width still keeps one column.
+        assert_eq!(narrow(20.0).grid().column_count, 1);
     }
 
     #[test]
