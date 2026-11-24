@@ -314,6 +314,37 @@ test("a window that fits the page does not scroll", async ({ page }) => {
   expect(scrollHeight).toBeLessThanOrEqual(clientHeight);
 });
 
+// A phone at 200%: the mode chip takes the room the empty load slot gives up,
+// and words it still cannot hold end in an ellipsis inside it, so the page
+// never scrolls sideways.
+test("the mode chip keeps inside a phone-wide window", async ({ page }) => {
+  await page.setViewportSize({ width: 180, height: 600 });
+  const editor = await open(page, { docked: false });
+  const chip = page.locator("#mode-line");
+  /** @returns {Promise<{ pageScrolls: boolean, pastChip: string[] }>} */
+  const fit = () =>
+    chip.evaluate((line) => {
+      const box = line.getBoundingClientRect();
+      return {
+        pageScrolls:
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth,
+        pastChip: [...line.children]
+          .filter((part) => part.getBoundingClientRect().right > box.right)
+          .map((part) => part.id),
+      };
+    });
+  await expect(chip).toHaveAttribute("data-drawn");
+  expect(await fit()).toEqual({ pageScrolls: false, pastChip: [] });
+  await expect(page.locator("#mode-detail")).toHaveJSProperty(
+    "scrollWidth",
+    await page.locator("#mode-detail").evaluate((part) => part.clientWidth),
+  );
+  await editor.dispatchEvent("compositionstart");
+  await expect(page.locator("#notice")).toHaveAttribute("data-active");
+  expect(await fit()).toEqual({ pageScrolls: false, pastChip: [] });
+});
+
 test("the editor takes the window's room left over", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   const editor = await open(page);

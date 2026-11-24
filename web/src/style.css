@@ -420,15 +420,21 @@ summary:focus-visible {
   accent-color: var(--accent);
 }
 
+/* On a narrow window the slot gives the mode chip its room first: once the
+   dictionaries are in it draws nothing. */
 #load-slot {
   display: grid;
+  flex-shrink: 100;
+  grid-template-columns: minmax(0, auto);
   align-items: center;
   justify-items: start;
+  min-width: 0;
   margin-right: auto;
 }
 
 #load-slot > * {
   grid-area: 1 / 1;
+  max-width: 100%;
   visibility: hidden;
 }
 
@@ -941,7 +947,21 @@ summary:focus-visible {
   font-weight: 600;
 }
 
+/* A chip narrower than its words (a phone at a large text size) cuts them
+   with an ellipsis, the input script before the mode, rather than push past
+   the window and scroll the page sideways. */
+#mode-line > span {
+  min-width: 0;
+  overflow-x: clip;
+  text-overflow: ellipsis;
+}
+
+#mode-line > #mode-detail {
+  flex-shrink: 100;
+}
+
 #mode-line .separator {
+  flex: none;
   opacity: 0.5;
 }
 
