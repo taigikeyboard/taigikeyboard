@@ -66,6 +66,7 @@ jobs:
           workspaces: |
             linux -> target
             desktop -> target
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build + install the test-mode IME into a private prefix
         run: make -C linux install E2E=1 PREFIX="$RUNNER_TEMP/prefix"

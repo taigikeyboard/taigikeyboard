@@ -62,7 +62,9 @@ jobs:
   build:
     name: build + test + ibus smoke (${{ matrix.deb_arch }})
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    # 45, not 30: the x64 runner's apt mirror has spent 14-25 min on the
+    # dependency download (2026-11-24), cancelling an otherwise green run.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -102,6 +104,7 @@ jobs:
           workspaces: |
             linux -> target
             desktop -> target
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo clippy (linux workspace)
         working-directory: linux
@@ -277,6 +280,7 @@ jobs:
         with:
           key: msrv
           workspaces: linux -> target
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo check --all-targets
         run: cargo check --manifest-path linux/Cargo.toml --workspace --all-targets --locked
@@ -326,6 +330,7 @@ jobs:
         with:
           key: fedora
           workspaces: linux -> target
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build the .rpm
         run: make -C linux rpm
