@@ -1026,9 +1026,10 @@ test("a cell wider than the window cuts its annotation, not its row", async ({
       };
     });
     expect(fit, layout).toEqual({ tallRows: [], pastWindow: [] });
-    // The annotation gives way first: a candidate is cut only once its row's
-    // annotation has nothing left to give (how much fits depends on the
-    // face the machine draws Hanji in).
+    // Side by side, the annotation gives way first: a candidate is cut only
+    // once its row's annotation has nothing left to give (how much fits
+    // depends on the face the machine draws Hanji in). Stacked cells give
+    // each script its own line.
     const cut = await cutScripts(page);
     const first = candidates(page).first();
     expect(await first.locator(".text").textContent(), layout).toBe(
@@ -1038,7 +1039,7 @@ test("a cell wider than the window cuts its annotation, not its row", async ({
       await first.locator(".annotation").textContent(),
     );
     const candidateCutBeforeAnnotation = await panel(page).evaluate((root) =>
-      [...root.querySelectorAll("#candidates li")]
+      [...root.querySelectorAll("#candidates[data-inline] li")]
         .filter((row) => {
           const text = row.querySelector(".text");
           const annotation = row.querySelector(".annotation");
