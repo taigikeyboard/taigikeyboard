@@ -129,7 +129,7 @@ impl TonePin {
     /// to canonical TL first — the same fold `custom_entry_to_candidate`
     /// applies for the identity key. TPS mode's identity fold leaves the
     /// Latin roman as stored, so there the pin reads the same
-    /// [`phonetics::api::custom_search_reading`] the TPS search keys and
+    /// [`phonetics::api::custom_tps_reading`] the TPS search keys and
     /// [`custom_reach`] are derived from. The fold is skipped when nothing
     /// is pinned, including for a stored roman opening with `--`.
     ///
@@ -139,10 +139,24 @@ impl TonePin {
             return true;
         }
         let reading = match mode {
-            phonetics::InputMode::Tps => phonetics::api::custom_search_reading(roman),
+            phonetics::InputMode::Tps => phonetics::api::custom_tps_reading(roman),
             _ => phonetics::api::canonical_tl_form(roman, mode),
         };
         self.admits(None, &reading)
+    }
+
+    /// [`TonePin::admits`] for a `learned_phrases.db` row, whose reading is
+    /// already canonical TL. Under TPS the pin reads the same
+    /// [`phonetics::api::custom_tps_reading`] the row's `tps:` key is filed
+    /// under, so a number token (`tâi-pak 101`) is no syllable here either.
+    pub fn admits_learned(&self, canonical_tl: &str, mode: phonetics::InputMode) -> bool {
+        match self {
+            TonePin::None => true,
+            _ if mode == phonetics::InputMode::Tps => {
+                self.admits(None, &phonetics::api::custom_tps_reading(canonical_tl))
+            }
+            _ => self.admits(None, canonical_tl),
+        }
     }
 }
 
@@ -227,7 +241,8 @@ fn is_unmarked_tps_tone(tone: char) -> bool {
 /// the word they typed.
 ///
 /// `reading` is a canonical TL reading — `DictionaryRecord.tl` for a
-/// dictionary hit, `CustomEntry.roman` for a custom entry.
+/// dictionary hit, the TPS reading of a custom or learned row
+/// ([`phonetics::api::custom_tps_reading`]) for a user row.
 fn reading_passes_tps_closes(tps_body: &str, closes: &[TpsClose], reading: &str) -> bool {
     let body = match tps_body.strip_prefix(KeyFamily::Tps.prefix()) {
         Some(body) => body,
@@ -263,7 +278,7 @@ fn reading_passes_tps_closes(tps_body: &str, closes: &[TpsClose], reading: &str)
 #[cfg(test)]
 mod typed_tone_pin_tests {
     use super::{reading_passes_typed_tones, TonePin, TpsClose, TpsCloseKind, TypedBoundary};
-    use phonetics::InputMode::{self, Poj, Tl};
+    use phonetics::InputMode::{self, Poj, Tl, Tps};
 
     fn passes(mode: InputMode, typed: &str, reading: &str) -> bool {
         reading_passes_typed_tones(mode, typed, &[], &[], reading)
@@ -296,6 +311,24 @@ mod typed_tone_pin_tests {
         };
         assert!(pin('2').admits(Some("tps:ㆣㄨㄚ"), "--guá"));
         assert!(!pin('7').admits(Some("tps:ㆣㄨㄚ"), "--guá"));
+    }
+
+    // trace: `Tâi-pak 101 tuā-lâu` under TPS reads `Tâi-pak-tuā-lâu`
+    // (custom_tps_reading drops `101`): ㄉㄞ 6 · ㄅㄚㆻ 15 · ㄉㄨㄚ 24 · ㄌㄠ 30,
+    // so a typed ˊ (tone 5) closing at 30 lands on lâu. Before, `101` added
+    // `01` to the face and no syllable ended at 30.
+    #[test]
+    fn tps_pin_skips_a_number_token_of_a_user_row() {
+        let body = "ㄉㄞㄅㄚㆻㄉㄨㄚㄌㄠ";
+        let pin = TonePin::TpsTyped {
+            body: body.into(),
+            closes: vec![TpsClose {
+                body_end: body.len(),
+                kind: TpsCloseKind::Marked('5'),
+            }],
+        };
+        assert!(pin.admits_custom("Tâi-pak 101 tuā-lâu", Tps));
+        assert!(pin.admits_learned("tâi-pak 101 tuā-lâu", Tps));
     }
 
     // §17 case 3 — the reported shape. Faces via `poj_num_syllable_ends_from_tl`:

@@ -61,7 +61,7 @@ pub(super) fn edge_key_map<'a, T>(
 /// folds a multi-word dictionary TL's space (`iā sī`) into the hyphen it is
 /// between syllables. Under TPS input the same pipeline keys it by its
 /// Bopomofo face, through the derivation `learned_phrases.db` files its
-/// `tps:notone` key with (`custom_search_reading`), so the row the store
+/// `tps:notone` key with (`custom_tps_reading`), so the row the store
 /// returns for an edge lands on that edge.
 pub(super) fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<String> {
     match mode {

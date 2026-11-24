@@ -96,7 +96,7 @@ pub(super) fn merge_custom_dedupe_sort(
     // the default rank), so a learned pair that the dictionary also carries
     // is listed once, from the dictionary.
     for entry in ctx.learned {
-        if !ctx.tone_pin.admits(None, &entry.canonical_tl) {
+        if !ctx.tone_pin.admits_learned(&entry.canonical_tl, ctx.mode) {
             continue;
         }
         out.push(learned_entry_to_candidate(
