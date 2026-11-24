@@ -971,9 +971,10 @@ struct Scale {
 }
 
 /// The candidate size the window pads are tuned at (`hanjiFontSize`'s
-/// default). Above it the gaps between the two scripts grow with the text
-/// (macOS and Windows scale `candidate_annotation_gap` with the candidate
-/// size); below it they keep the pad.
+/// default, and `BASE_CANDIDATE_FONT_SIZE` in `taigi-desktop-core`
+/// `candidates/metrics.rs`). Above it the gaps between the two scripts grow
+/// with the text, as macOS and Windows scale `candidate_annotation_gap` by
+/// candidate size / 16; below it they keep the pad.
 const BASE_TEXT_PX: f32 = 16.0;
 
 impl Scale {
@@ -1272,11 +1273,7 @@ fn truncate<'a>(
             high = middle - 1;
         }
     }
-    let (candidate, width) = if low == 0 {
-        (ELLIPSIS.to_owned(), measure.size(ELLIPSIS, px, hanji).0)
-    } else {
-        shortened(cuts[low - 1])
-    };
+    let (candidate, width) = shortened(if low == 0 { 0 } else { cuts[low - 1] });
     (Cow::Owned(candidate), width)
 }
 

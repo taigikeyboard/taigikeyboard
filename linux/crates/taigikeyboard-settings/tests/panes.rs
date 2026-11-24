@@ -615,7 +615,6 @@ fn pump_until(mut done: impl FnMut() -> bool) {
     }
 }
 
-/// The first descendant of type `T`, depth first.
 /// L4: at GNOME's text scale 2.0 (Xft DPI 192) the window's minimum width
 /// was 1334 px — the Learning Records heading line, four equal columns no
 /// narrower than the unbroken "Romanization" — so it ran off a 1280 px
@@ -639,6 +638,7 @@ fn the_window_fits_a_1280_px_screen_at_double_text_size(window: &Rc<SettingsWind
     eprintln!("panes: window fits a 1280 px screen at text scale 2.0");
 }
 
+/// The first descendant of type `T`, depth first.
 fn find_first<T: IsA<gtk::Widget>>(root: &gtk::Widget) -> Option<T> {
     find_all::<T>(root).into_iter().next()
 }

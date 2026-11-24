@@ -196,8 +196,8 @@ pub enum Notice {
     Screen { width: u32 },
 }
 
-/// Room left at each screen edge, px before scale: the window's gap from the
-/// caret, kept from the monitor's edges too.
+/// Room the window leaves at each screen edge, px before scale. The popup
+/// places inside it; the session subtracts it when it packs a row.
 pub const SCREEN_MARGIN_PX: f32 = 4.0;
 
 #[cfg(test)]

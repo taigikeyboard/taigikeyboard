@@ -133,8 +133,9 @@ pub fn move_to(caret: Caret) {
 }
 
 /// Starts the window before the first list, so its screen report
-/// ([`Notice::Screen`]) reaches the session in time to pack that list. Each
-/// shell calls it once, where it starts watching the window.
+/// ([`Notice::Screen`]) reaches the session in time to pack that list. The
+/// IBus shell calls it where it starts watching the window; Fcitx5 starts it
+/// through [`notify_fd`].
 pub fn start() {
     if let Some(client) = client() {
         client.ensure();

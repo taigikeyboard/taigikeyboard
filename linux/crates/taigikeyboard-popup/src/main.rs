@@ -101,6 +101,9 @@ struct App {
     first_row: usize,
     /// The screen width last reported to the parent ([`Notice::Screen`]).
     reported_screen: Option<u32>,
+    /// The room and scale the shown arrangement was laid out for: a caret
+    /// move that keeps both only moves the window.
+    laid_for: Option<(Fit, f32)>,
 }
 
 impl Default for App {
@@ -124,6 +127,7 @@ impl Default for App {
             appearance: None,
             first_row: 0,
             reported_screen: None,
+            laid_for: None,
         }
     }
 }
@@ -223,7 +227,8 @@ impl App {
     fn apply(&mut self, event_loop: &ActiveEventLoop, command: Command) {
         match command {
             Command::Hide => self.hide(),
-            // The room depends on the caret, so a move lays the page out again.
+            // The room depends on the caret: a move that changes it lays the
+            // page out again.
             Command::Move { caret } => {
                 self.caret = caret;
                 self.relayout(event_loop);
@@ -238,6 +243,7 @@ impl App {
                     self.first_row = 0;
                 }
                 self.page = Some(*body);
+                self.laid_for = None;
                 self.relayout(event_loop);
                 if let Some(window) = &self.window {
                     window.set_visible(true);
@@ -252,6 +258,7 @@ impl App {
         self.arrangement = None;
         self.placed = None;
         self.placed_size = None;
+        self.laid_for = None;
         if let Some(window) = &self.window {
             window.set_visible(false);
         }
@@ -263,16 +270,18 @@ impl App {
         let Some(page) = self.page.clone() else {
             return;
         };
-        let scale = self
-            .window
-            .as_ref()
-            .map(|window| window.scale_factor() as f32)
-            .unwrap_or(1.0);
+        let scale = self.scale();
+        let fit = fit_for(self.caret, monitor, scale, self.first_row);
+        if self.laid_for == Some((fit, scale)) {
+            self.place(monitor);
+            return;
+        }
         self.fonts
             .set_families(&page.chrome.hanji_family, &page.chrome.roman_family);
-        let fit = fit_for(self.caret, monitor, scale, self.first_row);
         let arrangement = arrange(&page, &self.fonts, scale, fit);
         self.first_row = arrangement.first_row;
+        let first_row = arrangement.first_row;
+        self.laid_for = Some((Fit { first_row, ..fit }, scale));
         let size = PhysicalSize::new(px(arrangement.width), px(arrangement.height));
         if self.placed_size != Some(size) {
             if let Some(window) = &self.window {
@@ -281,13 +290,22 @@ impl App {
             }
         }
         self.arrangement = Some(arrangement);
-        self.place(event_loop);
+        self.place(monitor);
         if let Some(window) = &self.window {
             window.request_redraw();
         }
     }
 
-    fn place(&mut self, event_loop: &ActiveEventLoop) {
+    /// The window's scale factor; 1 before the window exists.
+    fn scale(&self) -> f32 {
+        self.window
+            .as_ref()
+            .map(|window| window.scale_factor() as f32)
+            .filter(|scale| scale.is_finite() && *scale > 0.0)
+            .unwrap_or(1.0)
+    }
+
+    fn place(&mut self, monitor: Option<Monitor>) {
         let Some(window) = self.window.clone() else {
             return;
         };
@@ -295,9 +313,10 @@ impl App {
             return;
         };
         let size = PhysicalSize::new(px(arrangement.width), px(arrangement.height));
-        let scale = window.scale_factor() as f32;
-        let monitor = monitor_for(event_loop, self.caret);
-        let origin = held_origin(self.placed, place_at(self.caret, size, monitor, scale));
+        let origin = held_origin(
+            self.placed,
+            place_at(self.caret, size, monitor, self.scale()),
+        );
         if self.placed == Some(origin) {
             return;
         }
@@ -325,13 +344,7 @@ impl App {
         let Some((_, size)) = monitor else {
             return;
         };
-        let scale = self
-            .window
-            .as_ref()
-            .map(|window| window.scale_factor())
-            .filter(|scale| scale.is_finite() && *scale > 0.0)
-            .unwrap_or(1.0);
-        let screen = (f64::from(size.width) / scale).floor() as u32;
+        let screen = (size.width as f32 / self.scale()).floor() as u32;
         if self.reported_screen == Some(screen) {
             return;
         }
@@ -490,10 +503,14 @@ fn place_at(
     let y = if window_h <= below {
         below_y
     } else if window_h <= above || above > below {
-        above_y.max(origin.y + margin)
+        above_y
     } else {
         below_y
     };
+    // An unfolded grid takes no fit and can outgrow both sides; it still
+    // stays on the monitor.
+    let bottom = origin.y.saturating_add(size.height as i32) - margin;
+    let y = y.min(bottom - window_h).max(origin.y + margin);
     PhysicalPosition::new(x, y)
 }
 
@@ -562,5 +579,17 @@ mod tests {
         let caret = caret_at(300);
         let origin = place_at(caret, PhysicalSize::new(300, 200), Some(MONITOR), 1.0);
         assert_eq!(origin, PhysicalPosition::new(100, 334));
+    }
+
+    #[test]
+    fn a_window_taller_than_the_monitor_stays_on_it() {
+        // An unfolded grid takes no fit: 1000 px on an 800 px monitor.
+        let origin = place_at(
+            caret_at(300),
+            PhysicalSize::new(300, 1000),
+            Some(MONITOR),
+            1.0,
+        );
+        assert_eq!(origin.y, 4);
     }
 }
