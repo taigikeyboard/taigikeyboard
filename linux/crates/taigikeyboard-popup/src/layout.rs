@@ -228,21 +228,10 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         cell: cell_pad,
         gap,
         line: line_gap,
-        script: script_gap,
+        ..
     } = pads(page.chrome.padding, scale);
-    let label_px = LABEL_PX * scale;
-    let primary = page.hanji_px.max(1) as f32 * scale;
-    let secondary = page.roman_px.max(1) as f32 * scale;
-
-    let style = Scale {
-        primary,
-        secondary,
-        hanji_leads: page.hanji_leads,
-        label_px,
-        cell_pad,
-        gap,
-        script_gap,
-    };
+    let style = Scale::of(cell_style(page), scale);
+    let label_px = style.label_px;
     // Vertical rows share one key column. A horizontal cell is drawn at the
     // width the row was packed to (`row_widths`), so the cells fill the
     // window the session sized from them.
@@ -449,24 +438,11 @@ fn remap_expandable_hits(page: &Show, hits: &mut [Hit]) {
 fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     let view = page.expandable.as_ref().expect("expanded");
     let Pads {
-        window: pad,
-        cell: cell_pad,
-        gap,
-        script: script_gap,
-        ..
+        window: pad, gap, ..
     } = pads(page.chrome.padding, scale);
-    let label_px = LABEL_PX * scale;
-    let primary = page.hanji_px.max(1) as f32 * scale;
-    let secondary = page.roman_px.max(1) as f32 * scale;
-    let style = Scale {
-        primary,
-        secondary,
-        hanji_leads: page.hanji_leads,
-        label_px,
-        cell_pad,
-        gap,
-        script_gap,
-    };
+    let style = Scale::of(cell_style(page), scale);
+    let label_px = style.label_px;
+    let primary = style.primary;
     // A column keeps the two scripts on one line. A row stacks them.
     let inline = view.axis == 1;
     // Only the columns a cell reaches: a trailing empty column (the last
@@ -877,8 +853,16 @@ struct Scale {
     label_px: f32,
     cell_pad: f32,
     gap: f32,
+    /// Between the two scripts of a stacked (horizontal) cell.
     script_gap: f32,
+    /// Between the text and the annotation of a one-line (vertical) cell.
+    annotation_gap: f32,
 }
+
+/// The candidate size the window pads are tuned at (`hanjiFontSize`'s
+/// default). Above it the gaps between the two scripts grow with the text,
+/// as `candidate_annotation_gap` does on macOS and Windows.
+const BASE_TEXT_PX: f32 = 16.0;
 
 impl Scale {
     fn of(cell_style: CellStyle, scale: f32) -> Self {
@@ -888,6 +872,8 @@ impl Scale {
             script: script_gap,
             ..
         } = pads(cell_style.padding, scale);
+        let text_ratio =
+            (cell_style.hanji_px.max(cell_style.roman_px) as f32 / BASE_TEXT_PX).max(1.0);
         Self {
             primary: cell_style.hanji_px.max(1) as f32 * scale,
             secondary: cell_style.roman_px.max(1) as f32 * scale,
@@ -895,7 +881,8 @@ impl Scale {
             label_px: LABEL_PX * scale,
             cell_pad,
             gap,
-            script_gap,
+            script_gap: script_gap * text_ratio,
+            annotation_gap: gap * text_ratio,
         }
     }
 }
@@ -949,7 +936,7 @@ fn layout_cell(
         cell_pad,
         gap,
         script_gap,
-        ..
+        annotation_gap,
     } = *style;
     let (label_w, label_h) = if label.is_empty() {
         (0.0, 0.0)
@@ -1009,7 +996,7 @@ fn layout_cell(
     let (block_w, block_h) = if stacked {
         (text_w.max(ann_w), text_h + script_gap + ann_h)
     } else if annotation.is_some() {
-        (text_w + gap + ann_w, ascent + descent)
+        (text_w + annotation_gap + ann_w, ascent + descent)
     } else {
         (text_w, ascent + descent)
     };
@@ -1076,7 +1063,7 @@ fn layout_cell(
         if let Some(text) = annotation {
             glyphs.push(Glyph {
                 text: text.to_owned(),
-                x: block_x + text_w + gap,
+                x: block_x + text_w + annotation_gap,
                 y: cell_pad + ascent - ann_base,
                 w: ann_w,
                 h: ann_h,
@@ -1288,8 +1275,41 @@ mod tests {
         assert!(text.hanji);
         assert!(!annotation.hanji);
         assert!(annotation.y > text.y);
-        // Default window pad is 4, and the script gap equals that pad.
-        assert!((annotation.y - (text.y + text.h) - pads(4, 1.0).script).abs() < 0.01);
+        // trace: default window pad 4 = the script gap at 16 px; the page's
+        // larger size is 20 px, so the gap grows to 4 × 20 / 16 = 5.
+        assert!((annotation.y - (text.y + text.h) - 5.0).abs() < 0.01);
+    }
+
+    /// L6: at 48 px the Hanji and the romanization of a vertical row sat the
+    /// fixed 4 px pad apart. The gap now grows with the text: 4 px up to the
+    /// 16 px default, 4 × 48 / 16 = 12 px at 48.
+    #[test]
+    fn the_gap_between_the_scripts_grows_with_the_text() {
+        let gap_at = |px: u32, vertical: bool| {
+            let mut shown = page(
+                vertical,
+                true,
+                vec![Cell {
+                    text: "一".into(),
+                    annotation: Some("tsit".into()),
+                }],
+            );
+            shown.hanji_px = px;
+            shown.roman_px = px;
+            let layout = arrange(&shown, &Mono, 1.0);
+            let text = role(&layout, Role::Text);
+            let annotation = role(&layout, Role::Annotation);
+            if vertical {
+                annotation.x - (text.x + text.w)
+            } else {
+                annotation.y - (text.y + text.h)
+            }
+        };
+        assert!((gap_at(13, true) - 4.0).abs() < 0.01);
+        assert!((gap_at(16, true) - 4.0).abs() < 0.01);
+        assert!((gap_at(48, true) - 12.0).abs() < 0.01);
+        assert!((gap_at(16, false) - 4.0).abs() < 0.01);
+        assert!((gap_at(48, false) - 12.0).abs() < 0.01);
     }
 
     #[test]
