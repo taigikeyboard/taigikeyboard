@@ -15,8 +15,8 @@ import {
   open,
   panel,
   preedit,
-  settled,
   setRootTextSize,
+  settled,
   TIER,
   toggle,
 } from "./helpers.mjs";
@@ -835,17 +835,13 @@ test("a column no side holds scrolls beside the composition, not over it", async
       };
     });
     expect(fit, word).toEqual({ overlaps: false, pastEditor: false });
-    await expect(
-      current(page),
-    ).toBeInViewport();
+    await expect(current(page)).toBeInViewport();
     // Walking the capped list scrolls the list, never the page under it.
     const before = await page.evaluate(() => window.scrollY);
     for (let step = 0; step < 8; step += 1) {
       await editor.press("ArrowDown");
     }
-    await expect(
-      current(page),
-    ).toBeInViewport();
+    await expect(current(page)).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY), word).toBe(before);
   }
 });
@@ -975,7 +971,11 @@ test("no script is cut at any size in any layout", async ({ page }) => {
       });
       for (const word of ["tsiahpa", "kong", "tsit"]) {
         // The last word's list goes with its composition: nothing is written.
-        for (let step = 0; step < 3 && (await candidates(page).count()); step++) {
+        for (
+          let step = 0;
+          step < 3 && (await candidates(page).count());
+          step++
+        ) {
           await editor.press("Escape");
         }
         await expect(candidates(page)).toHaveCount(0);
