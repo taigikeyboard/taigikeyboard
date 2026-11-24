@@ -69,6 +69,7 @@ fn main() -> ExitCode {
     the_learning_records_list_what_the_keyboard_learned(&window);
     the_read_only_window_writes_nothing(&application);
     the_tps_key_panel_toggles_and_closes_when_tps_is_left(&application);
+    the_window_fits_a_1280_px_screen_at_double_text_size(&window);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
 }
@@ -615,6 +616,29 @@ fn pump_until(mut done: impl FnMut() -> bool) {
 }
 
 /// The first descendant of type `T`, depth first.
+/// L4: at GNOME's text scale 2.0 (Xft DPI 192) the window's minimum width
+/// was 1334 px — the Learning Records heading line, four equal columns no
+/// narrower than the unbroken "Romanization" — so it ran off a 1280 px
+/// screen on every pane. The minimum now leaves room for the screen's dock.
+fn the_window_fits_a_1280_px_screen_at_double_text_size(window: &Rc<SettingsWindow>) {
+    const SCREEN_WIDTH: i32 = 1280;
+    const DOCK_WIDTH: i32 = 66;
+    let settings = gtk::Settings::default().expect("GTK settings");
+    let base_dpi = settings.gtk_xft_dpi();
+    settings.set_gtk_xft_dpi(96 * 1024 * 2);
+    let root: gtk::Widget = window.window().clone().upcast();
+    for pane in BUILT {
+        window.show_pane(pane);
+        let (minimum, _, _, _) = root.measure(gtk::Orientation::Horizontal, -1);
+        assert!(
+            minimum <= SCREEN_WIDTH - DOCK_WIDTH,
+            "{pane:?}: minimum width {minimum} px at text scale 2.0"
+        );
+    }
+    settings.set_gtk_xft_dpi(base_dpi);
+    eprintln!("panes: window fits a 1280 px screen at text scale 2.0");
+}
+
 fn find_first<T: IsA<gtk::Widget>>(root: &gtk::Widget) -> Option<T> {
     find_all::<T>(root).into_iter().next()
 }
