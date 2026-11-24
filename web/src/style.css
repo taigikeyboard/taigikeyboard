@@ -648,6 +648,19 @@ summary:focus-visible {
   font-size: var(--candidate-annotation);
 }
 
+/* Every script keeps one line: one its cell cannot hold ends in an ellipsis
+   rather than wrap past the cell's fixed height (`byTruncatingTail` on
+   macOS, DirectWrite's trimming sign on Windows). */
+.candidates li > :is(.text, .annotation) {
+  /* `clip` on the line's axis only: a mark above or below the line box
+     still draws, and a track narrower than the text can still take it. */
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* A cell with one script keeps its line in the middle of a two-line row. */
 .candidates li:not(:has(.annotation)) .text {
   grid-row: 1 / -1;
@@ -662,9 +675,19 @@ summary:focus-visible {
   grid-column: 1 / -1;
 }
 
+/* A column wider than the window gives way from the annotation first: the
+   annotation's track takes only the room the candidates leave
+   (`CandidateItemView.swift`'s compression resistance). It keeps the row's
+   end padding, which a subgrid row draws inside its last track, so a
+   candidate wider than the window stops where the unfolded column stops it. */
 .candidates[data-vertical] {
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto minmax(var(--candidate-padding-x), 1fr);
+  /* A column no side of the composition holds scrolls in what it is given
+     (`Panel.#fitList`), with no scrollbar, as the grid. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
 
 /* Rows share their columns, so every annotation starts at one x. */
@@ -720,7 +743,7 @@ summary:focus-visible {
     0 0 / 100% var(--candidate-grid) no-repeat local;
 }
 
-.candidates[data-grid]::-webkit-scrollbar {
+.candidates:is([data-grid], [data-vertical])::-webkit-scrollbar {
   display: none;
 }
 
@@ -772,6 +795,7 @@ summary:focus-visible {
   grid-area: auto / 3;
   justify-self: start;
   margin-left: var(--candidate-annotation-gap);
+  max-width: calc(100% - var(--candidate-annotation-gap));
 }
 
 .candidates[data-inline] li[data-literal] .text {

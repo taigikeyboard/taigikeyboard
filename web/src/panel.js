@@ -674,7 +674,7 @@ export class Panel {
       editor.clientHeight,
       window.innerHeight - editor.getBoundingClientRect().top,
     );
-    this.#fitGrid(room);
+    this.#fitList(room);
     const root = this.#root;
     const below = line + height;
     const above = line - root.offsetHeight;
@@ -686,8 +686,16 @@ export class Panel {
       if (above < 0) {
         const after = start + preedit.offsetWidth + LIST_GAP;
         const before = start - root.offsetWidth - LIST_GAP;
-        listLeft = after <= roomRight ? after : Math.max(0, before);
-        listTop = Math.max(0, Math.min(line, room - root.offsetHeight));
+        if (after <= roomRight || before >= 0) {
+          listLeft = after <= roomRight ? after : before;
+          listTop = Math.max(0, Math.min(line, room - root.offsetHeight));
+        } else {
+          // No side holds the whole list: the taller side takes it, and the
+          // list scrolls in what that side has.
+          const roomBelow = room - below;
+          this.#fitList(Math.max(roomBelow, line));
+          listTop = roomBelow >= line ? below : line - root.offsetHeight;
+        }
       }
     }
     root.style.left = `${listLeft}px`;
@@ -696,17 +704,18 @@ export class Panel {
   }
 
   /**
-   * The model's five rows and a half can pass a short editor, which would
-   * cover Copy and Clear: the grid takes what there is and scrolls.
+   * The model's five rows and a half, or a column, can pass a short editor or
+   * the room beside the composition: the list takes what there is and
+   * scrolls. A row is one line, and never has to.
    * @param {number} room
    * @returns {void}
    */
-  #fitGrid(room) {
+  #fitList(room) {
     const list = this.#candidates;
-    if (!list.hasAttribute("data-grid")) {
+    list.style.removeProperty("max-height");
+    if (!list.matches("[data-grid], [data-vertical]")) {
       return;
     }
-    list.style.removeProperty("max-height");
     const excess = this.#root.offsetHeight - room;
     if (excess > 0) {
       list.style.maxHeight = `${list.offsetHeight - excess}px`;
