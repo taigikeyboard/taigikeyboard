@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `linux`, `arm64`, `aarch64`, `deb`, `rpm`, `ubuntu-24.04-arm`, `desktop train`
-> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc), 1 (packaging by architecture) and 2 (CI on the Arm runner) done; Phases 3–4 pending.
+> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc), 1 (packaging by architecture) and 2 (CI on the Arm runner, #1103) done; Phases 3–4 pending.
 > **Siblings**: `linux-release.md` (packages, layout, CI half of a desktop release), `windows-arm64-roadmap.md` (the Windows precedent), `desktop-release.md`.
 
 ---
@@ -10,7 +10,7 @@
 ## Summary
 
 - **Goal**: Arm64 Linux machines (Ubuntu / Debian / Fedora on aarch64) install a released Taigi Keyboard package instead of building from source.
-- **Packages**: `taigikeyboard_<version>_arm64.deb` and `taigikeyboard-<version>-1.aarch64.rpm` beside the existing x86_64 three. No Arch arm64 package: the official `archlinux` container image is x86_64-only and Arch Linux ARM is a separate distribution (recommended default, to be confirmed by the maintainer before Phase 3).
+- **Packages**: `taigikeyboard_<version>_arm64.deb` and `taigikeyboard-<version>-1.aarch64.rpm` beside the existing x86_64 three. No Arch arm64 package: the official `archlinux` container image is x86_64-only and Arch Linux ARM is a separate distribution (maintainer decision 2026-11-24).
 - **Cost**: ~150–250 hand-written lines over three PRs plus one website PR; no engine or platform-code change expected.
 
 ## Current state (grounded in code, 2026-11-24)
@@ -48,7 +48,7 @@ Phase 3 touches release tooling → High tier (full review sandwich).
 
 ## Open questions (maintainer)
 
-1. Package set: `.deb` + `.rpm` arm64 (recommended), `.deb` only, or also Arch arm64 on an unofficial image.
+1. ~~Package set~~ — decided 2026-11-24: `.deb` + `.rpm` arm64, no Arch arm64. The arm64 CI legs gate the release and the nightly (no `continue-on-error`).
 2. Website buttons: two more buttons, or an architecture picker.
 
 ## Unverified
