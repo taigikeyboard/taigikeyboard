@@ -4,5 +4,5 @@ Priority: optional
 Maintainer: TaigiKeyboard <info@taigikeyboard.tw>
 
 Package: taigikeyboard
-Architecture: amd64
+Architecture: @ARCH@
 Description: Taiwanese (Tâi-gí) input method

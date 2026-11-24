@@ -13,7 +13,7 @@ Summary:        Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engi
 # The dictionary data keeps per-source terms (dictionary/LICENSE).
 License:        Apache-2.0 AND OFL-1.1 AND LicenseRef-taigikeyboard-dictionary
 URL:            https://taigikeyboard.tw
-ExclusiveArch:  x86_64
+ExclusiveArch:  x86_64 aarch64
 Requires:       (fcitx5 or ibus)
 Requires:       fontconfig
 

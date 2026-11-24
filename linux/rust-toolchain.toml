@@ -3,8 +3,8 @@
 channel = "1.100.0"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
-# x86_64-unknown-linux-gnu — the shipping target; `make linux-check` on the
-# macOS host `cargo check`s the engine + platform crates for it (no linker
-# needed). The settings crate (GTK) is checked natively on the host instead
+# The shipping targets (x86_64 and aarch64); `make linux-check` on the macOS
+# host cross-builds the engine + platform crates for each through
+# `cargo zigbuild`. The settings crate (GTK) is checked natively on the host instead
 # (docs/architecture/linux-roadmap.md L12).
-targets = ["x86_64-unknown-linux-gnu"]
+targets = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]

@@ -17,7 +17,10 @@ export PATH := $(shell sh ../tools/mise-path-prefix.sh)$(HOME)/.cargo/bin:$(PATH
 # bash, not sh: the `deb` recipe uses `set -o pipefail` (dash has none).
 SHELL := /bin/bash
 
-LINUX_TARGET := x86_64-unknown-linux-gnu
+# The shipping targets: x86_64 and arm64 packages are each built natively on
+# their own architecture (docs/architecture/linux-arm64-roadmap.md); the host
+# gate cross-builds both.
+LINUX_TARGETS := x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
 # `cargo zigbuild` cross-links the engine from macOS; on a Linux host plain
 # cargo does the same thing natively. PATH is restated because make 3.81 (macOS)
 # does not pass its exports to $(shell).
@@ -93,7 +96,7 @@ help:
 	@echo "  make check           - The gate: i18n check + native tests + clippy + cross build + fmt --check"
 	@echo "  make test            - Native tests for the workspace"
 	@echo "  make lint            - clippy -D warnings, all targets, native"
-	@echo "  make check-target    - Build the engine for $(LINUX_TARGET) (cargo zigbuild on macOS)"
+	@echo "  make check-target    - Build the engine for $(LINUX_TARGETS) (cargo zigbuild on macOS)"
 	@echo "  make check-cpp       - Syntax-check the Fcitx5 addon against ../references/fcitx5 headers (macOS host; skipped when the clone is absent)"
 	@echo "  make i18n-check      - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt             - cargo fmt"
@@ -104,8 +107,8 @@ help:
 	@echo "  make install-ibus    - (Linux) like install but just for the ibus frontend"
 	@echo "  make install-common  - (Linux) like install but just for files common to both frontends; INSTALL_FONTS=0 = skip fonts and their license files"
 	@echo "  make uninstall       - (Linux) remove what install put there; user data stays"
-	@echo "  make deb             - (Linux) build target/taigikeyboard_<version>_amd64.deb from the install layout (dpkg-deb)"
-	@echo "  make rpm             - (Fedora) build target/taigikeyboard-<version>-1.x86_64.rpm from the install layout (rpmbuild)"
+	@echo "  make deb             - (Linux) build target/taigikeyboard_<version>_<amd64|arm64>.deb from the install layout (dpkg-deb)"
+	@echo "  make rpm             - (Fedora) build target/taigikeyboard-<version>-1.<x86_64|aarch64>.rpm from the install layout (rpmbuild)"
 	@echo "  make arch            - (Arch, non-root) build target/taigikeyboard-<version>-1-x86_64.pkg.tar.zst from the install layout (makepkg)"
 	@echo "  make run-engine      - (Linux) run the IBus engine from this tree against a running ibus-daemon (RUST_LOG=debug, repo dictionaries)"
 	@echo "  make run-settings    - Open the settings window from this tree (macOS host too: GTK + libadwaita from Homebrew); PANE=about picks a pane"
@@ -122,11 +125,13 @@ test: i18n-check
 lint:
 	cargo clippy --workspace --all-targets -- -D warnings
 
-# The IBus engine and the FFI static library for the shipping target. A real
+# The IBus engine and the FFI static library for each shipping target. A real
 # build, not `cargo check`: the bundled SQLite's build script compiles C for
 # the target, which needs a C toolchain for it — zig's, on macOS.
 check-target:
-	$(CROSS_CARGO) -p taigikeyboard-ibus -p taigi-linux-ffi --target $(LINUX_TARGET)
+	for target in $(LINUX_TARGETS); do \
+	  $(CROSS_CARGO) -p taigikeyboard-ibus -p taigi-linux-ffi --target $$target || exit 1; \
+	done
 
 check: test lint check-target check-cpp
 	cargo fmt -- --check
@@ -263,8 +268,13 @@ uninstall:
 # would let an older distribution install a package whose GLib / libadwaita
 # symbols it lacks — plus the framework alternative the control template
 # names (`fcitx5 | ibus`).
+#
+# The package is for the host's architecture (amd64 / arm64): the binaries
+# are native builds, never cross-built (docs/architecture/linux-arm64-roadmap.md).
+# Recursive `=`: dpkg exists only where `deb` runs.
 DEB_ROOT := target/deb/root
-DEB_FILE := target/taigikeyboard_$(VERSION)_amd64.deb
+DEB_ARCH = $(shell dpkg --print-architecture)
+DEB_FILE = target/taigikeyboard_$(VERSION)_$(DEB_ARCH).deb
 deb:
 	$(refuse_unpackageable)
 	rm -rf target/deb
@@ -273,12 +283,12 @@ deb:
 	# dpkg-shlibdeps wants a SOURCE-style debian/control beside what it scans
 	# (a Source stanza, then the package); the shipped control is the binary
 	# one, so a minimal source control lives in packaging/.
-	cp packaging/shlibdeps-control target/deb/debian/control
+	sed -e 's#@ARCH@#$(DEB_ARCH)#g' packaging/shlibdeps-control > target/deb/debian/control
 	set -o pipefail; cd target/deb && dpkg-shlibdeps -O \
 	  root/usr/bin/taigikeyboard-settings root/usr/bin/taigikeyboard-popup root/usr/libexec/ibus-engine-taigikeyboard root/usr/lib/*/fcitx5/libtaigikeyboard.so \
 	  | sed -e 's/^shlibs:Depends=//' > shlibs.txt
 	test -s target/deb/shlibs.txt
-	sed -e 's#@VERSION@#$(VERSION)#g' -e "s#@SHLIBS@#$$(cat target/deb/shlibs.txt)#" packaging/control.in > $(DEB_ROOT)/DEBIAN/control
+	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@ARCH@#$(DEB_ARCH)#g' -e "s#@SHLIBS@#$$(cat target/deb/shlibs.txt)#" packaging/control.in > $(DEB_ROOT)/DEBIAN/control
 	dpkg-deb --build --root-owner-group $(DEB_ROOT) $(DEB_FILE)
 	dpkg-deb --info $(DEB_FILE)
 	@echo "built $(DEB_FILE)"
@@ -294,14 +304,16 @@ endef
 
 # The Fedora package: the same staged install, packed by rpmbuild from
 # packaging/taigikeyboard.spec.in (rpm's ELF scan writes the library Requires,
-# as dpkg-shlibdeps does for the .deb). Run on Fedora (the CI container).
+# as dpkg-shlibdeps does for the .deb). Run on Fedora (the CI container), for
+# the host's architecture (x86_64 / aarch64; the spec's ExclusiveArch).
 RPM_DIR := target/rpm
-RPM_FILE := target/taigikeyboard-$(VERSION)-1.x86_64.rpm
+RPM_ARCH = $(shell uname -m)
+RPM_FILE = target/taigikeyboard-$(VERSION)-1.$(RPM_ARCH).rpm
 rpm:
 	$(refuse_unpackageable)
 	$(call stage_and_render,$(RPM_DIR),packaging/taigikeyboard.spec.in,$(RPM_DIR)/taigikeyboard.spec,fedora)
 	rpmbuild -bb --define "_topdir $(CURDIR)/$(RPM_DIR)" $(RPM_DIR)/taigikeyboard.spec
-	cp $(RPM_DIR)/RPMS/x86_64/taigikeyboard-$(VERSION)-1.x86_64.rpm $(RPM_FILE)
+	cp $(RPM_DIR)/RPMS/$(RPM_ARCH)/$(notdir $(RPM_FILE)) $(RPM_FILE)
 	rpm -qip $(RPM_FILE)
 	@echo "built $(RPM_FILE)"
 
