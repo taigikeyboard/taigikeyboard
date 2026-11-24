@@ -2,7 +2,7 @@
 
 > **Type**: Planning (forward-looking)
 > **Keywords**: `linux`, `arm64`, `aarch64`, `deb`, `rpm`, `ubuntu-24.04-arm`, `desktop train`
-> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phase 0 (this doc) done; Phases 1–4 pending.
+> **Status**: Accepted 2026-11-24 (maintainer: "do it"). Phases 0 (this doc) and 1 (packaging by architecture) done; Phases 2–4 pending.
 > **Siblings**: `linux-release.md` (packages, layout, CI half of a desktop release), `windows-arm64-roadmap.md` (the Windows precedent), `desktop-release.md`.
 
 ---

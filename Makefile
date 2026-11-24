@@ -167,7 +167,7 @@ macos-rust-check:
 
 # The Linux input method's host gate (docs/architecture/linux-roadmap.md L12):
 # native tests + clippy for `linux/` (zbus + GTK build on macOS), a cross
-# build of the engine for x86_64-unknown-linux-gnu via cargo-zigbuild, fmt,
+# build of the engine for x86_64- and aarch64-unknown-linux-gnu via cargo-zigbuild, fmt,
 # i18n check. Compilation proof only; behaviour is the dogfood run-book's.
 linux-check:
 	$(MAKE) -C linux check
