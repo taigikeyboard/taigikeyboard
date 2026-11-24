@@ -1,5 +1,5 @@
 // One learned history for the whole profile, whichever tab and site it was
-// learned on (docs/architecture/browser-extension.md § Learning). The word is
+// learned on (docs/architecture/browser-extension.md § D6). The word is
 // the web page's (`web/e2e/learning.spec.mjs`).
 
 import {

@@ -94,8 +94,8 @@ pub fn run() -> gtk::glib::ExitCode {
 }
 
 /// The panes the sidebar lists on Linux, in order: the Mac's roster minus
-/// Manage Fonts — the framework's panel draws the candidates in its own font,
-/// set in Fcitx5 / IBus, and the bundled typefaces install as system fonts
+/// Manage Fonts — the candidate popup picks a family from the fonts fontconfig
+/// already sees, and the bundled typefaces install as system fonts
 /// (roadmap L4, L7).
 pub const SIDEBAR: [SettingsPane; 6] = [
     SettingsPane::General,

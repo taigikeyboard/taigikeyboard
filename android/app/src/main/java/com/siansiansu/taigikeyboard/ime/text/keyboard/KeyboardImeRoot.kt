@@ -162,8 +162,7 @@ private fun KeyboardSurface(
  * Replicates the legacy inset math that ran inside the imperative
  * `setOnApplyWindowInsetsListener` block:
  * `bottom = max(navigationBars, mandatorySystemGestures, systemGestures) × 0.9f`.
- * The 0.9× factor is preserved verbatim from
- * `TaigiKeyboard.onCreateInputView::adjustedHeight = (navBarHeight * 0.90f)` —
+ * The 0.9× factor is kept from that legacy math and
  * pins `INVARIANT_keyboard_navbar_inset_padding_factor`.
  */
 @Composable
