@@ -2,6 +2,7 @@
 //! for custom entries and partial-prefix extensions.
 
 use super::toneless_match::{tps_face_starts_with, with_tps_or_variant, KeyFace};
+use phonetics::KeyFamily;
 
 /// Where a `custom_dictionary.db` entry stands against the typed whole-buffer
 /// key — the dictionary's own rules applied to a word the user added
@@ -37,7 +38,8 @@ pub(super) fn fused_custom_typed_key(typed_key: &str) -> String {
 /// store's search keys were derived from, so a row the store matched is
 /// judged on the same surface (not the identity fold
 /// `canonical_tl_form`, which keeps a TL-literal `eng` the search keys
-/// fold).
+/// fold). A TPS key reads [`phonetics::api::custom_tps_reading`], the
+/// number-token-free surface the TPS search keys come from.
 ///
 /// Fail-closed where [`SyllableReach::admits`] fails open: a face that does
 /// not cover the typed body is exactly what the store's loose prefix query
@@ -47,7 +49,12 @@ pub(super) fn custom_reach(fused_key: &str, roman: &str) -> CustomReach {
         return CustomReach::Unreached;
     };
     let body = &fused_key[reach.family.len()..];
-    let reading = phonetics::api::custom_search_reading(roman).to_lowercase();
+    let reading = if reach.family == KeyFamily::Tps.prefix() {
+        phonetics::api::custom_tps_reading(roman)
+    } else {
+        phonetics::api::custom_search_reading(roman)
+    }
+    .to_lowercase();
     let Some(ends) = reach.syllable_ends(body, &reading) else {
         return CustomReach::Unreached;
     };
@@ -237,5 +244,21 @@ impl<'a> SyllableReach<'a> {
             }
         }
         face.starts_with(matched_body).then_some(face_ends)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // trace: typed `ㄉㄞˊㆣㄧˋ` fuses to `tps:ㄉㄞˊㆣㄧˋ`. `Tâi-gí 2` reads as
+    // `Tâi-gí` under TPS (custom_tps_reading drops `2`), so the tone-marked
+    // face ends at the typed body's end. Before, the `2` added a trailing `ˋ`
+    // syllable the input never reached.
+    #[test]
+    fn custom_reach_tps_skips_a_number_token() {
+        let fused = fused_custom_typed_key("tps:ㄉㄞˊㆣㄧˋ");
+        assert_eq!(custom_reach(&fused, "Tâi-gí 2"), CustomReach::Exact);
+        assert_eq!(custom_reach(&fused, "Tâi-gí"), CustomReach::Exact);
     }
 }

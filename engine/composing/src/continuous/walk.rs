@@ -207,7 +207,7 @@ pub(crate) fn walk_buffer(
             });
             let learned_for_edge =
                 rows_for_edge(&learned_map, &custom_key, |entry: &LearnedEntry| {
-                    edge_tone_pin.admits(None, &entry.canonical_tl)
+                    edge_tone_pin.admits_learned(&entry.canonical_tl, mode)
                 });
             match best_candidate_for_key_with_barriers(
                 &dict_key,

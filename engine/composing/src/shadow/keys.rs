@@ -903,7 +903,7 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
         // TPS user types for it, and the dictionary's own `tps:` face
         // (`phonetics::tps_notone_from_tl`). A Bopomofo row keys as typed.
         InputMode::Tps if phonetics::api::stored_roman_mode(roman, mode) == InputMode::Tl => {
-            phonetics::tps_notone_from_tl(&phonetics::api::custom_search_reading(roman))
+            phonetics::tps_notone_from_tl(&phonetics::api::custom_tps_reading(roman))
         }
         InputMode::Tps => roman.to_owned(),
         InputMode::Tl | InputMode::Poj | InputMode::English => roman.replace(' ', "-"),
@@ -1415,7 +1415,7 @@ mod tests {
 
     #[test]
     fn custom_toneless_key_tps_keys_a_latin_reading_by_its_bopomofo_face() {
-        // trace: 陳三 `Tân Sann` → custom_search_reading (TL, unchanged) →
+        // trace: 陳三 `Tân Sann` → custom_tps_reading (TL, unchanged) →
         // tps_notone_from_tl → `ㄉㄢㄙㆩ`; the typed `ㄉㄢˊㄙㆩ` strips its ˊ
         // to the same body. POJ `Tân Saⁿ` folds to the same TL first.
         let typed = custom_toneless_key("ㄉㄢˊㄙㆩ", InputMode::Tps);
@@ -1423,6 +1423,18 @@ mod tests {
         assert_eq!(custom_toneless_key("Tân Sann", InputMode::Tps), typed);
         assert_eq!(custom_toneless_key("tân-sann", InputMode::Tps), typed);
         assert_eq!(custom_toneless_key("Tân Saⁿ", InputMode::Tps), typed);
+    }
+
+    #[test]
+    fn custom_toneless_key_tps_skips_a_number_token() {
+        // trace: `Tâi-uân 101` → custom_tps_reading drops `101` → `Tâi-uân` →
+        // tps_notone_from_tl → `ㄉㄞㄨㄢ` (t ㄉ ai ㄞ · u ㄨ an ㄢ). Without the
+        // drop the face was `ㄉㄞㄨㄢ01`, failed the Bopomofo body gate, and the
+        // row never reached the walker.
+        let typed = custom_toneless_key("ㄉㄞˊㄨㄢˊ", InputMode::Tps);
+        assert_eq!(typed.as_deref(), Some("tps:ㄉㄞㄨㄢ"));
+        assert_eq!(custom_toneless_key("Tâi-uân 101", InputMode::Tps), typed);
+        assert_eq!(custom_toneless_key("123", InputMode::Tps), None);
     }
 
     #[test]

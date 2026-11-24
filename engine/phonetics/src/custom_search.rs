@@ -58,15 +58,16 @@ pub fn derive_custom_search_keys(roman: &str) -> Vec<CustomSearchKey> {
     let mut keys = Vec::new();
     push_latin_family(&mut keys, KeyFamily::Tl, &tl);
     push_latin_family(&mut keys, KeyFamily::Poj, &poj);
-    push_tps_family(&mut keys, &tl);
+    push_tps_family(&mut keys, &without_number_tokens(&tl));
     dedup_nonempty(keys)
 }
 
-/// The TL reading every search key of a stored custom-dictionary roman is
-/// derived from — the mode-independent surface the engine also measures a
+/// The TL reading the TL / POJ search keys of a stored custom-dictionary
+/// roman are derived from, and the surface the engine measures a TL / POJ
 /// custom entry's syllables on, so a row the store matched is judged on the
-/// same reading. A Bopomofo dirty-row (the DB schema does not forbid one)
-/// folds via `from_zhuyin`; a POJ / TL latin display folds via
+/// same reading (TPS reads [`custom_tps_reading`]). A Bopomofo dirty-row (the
+/// DB schema does not forbid one) folds via `from_zhuyin`; a POJ / TL latin
+/// display folds via
 /// `poj_display_to_tl_display` (identity for TL input — it only rewrites
 /// ch→ts / oa→ua etc.).
 pub fn custom_search_reading(roman: &str) -> String {
@@ -75,6 +76,27 @@ pub fn custom_search_reading(roman: &str) -> String {
     } else {
         poj_display_to_tl_display(roman)
     }
+}
+
+/// [`custom_search_reading`] as TPS measures it: without its number tokens,
+/// which Bopomofo cannot spell (`Tâi-gí 2` → `Tâi-gí`). The TPS search keys,
+/// and the engine's TPS reach, tone pin and walker edge key of a custom entry,
+/// all read this one surface, so a row the store matched is judged on it.
+pub fn custom_tps_reading(roman: &str) -> String {
+    without_number_tokens(&custom_search_reading(roman))
+}
+
+/// `reading` minus its number tokens, syllables hyphen-joined. Every TPS
+/// consumer splits on the syllable separators first, so the kept separator
+/// kind does not matter; a reading with no number token comes back unchanged.
+fn without_number_tokens(reading: &str) -> String {
+    if !tl_syllable_tokens(reading).any(is_number_token) {
+        return reading.to_owned();
+    }
+    tl_syllable_tokens(reading)
+        .filter(|token| !is_number_token(token))
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 /// A stored custom-dictionary roman as the Custom Dictionary list shows it
@@ -105,12 +127,7 @@ pub fn custom_display_roman(roman: &str, mode: InputMode, or_maps_to_er: bool) -
         InputMode::Tl => reading(),
         InputMode::Poj => tl_display_to_poj_display(&reading()),
         InputMode::Tps => {
-            // A number token (`2`, `2.`) is no syllable; converting it would read
-            // the lone digit as a tone and leave a bare mark (`2` → `ˋ`).
-            let has_number_token = tl_syllable_tokens(roman).any(|token| {
-                token.chars().any(|c| c.is_ascii_digit()) && !token.chars().any(char::is_alphabetic)
-            });
-            if has_number_token {
+            if tl_syllable_tokens(roman).any(is_number_token) {
                 return roman.to_owned();
             }
             let tps = tl_display_to_tps(&reading(), or_maps_to_er);
@@ -122,6 +139,14 @@ pub fn custom_display_roman(roman: &str, mode: InputMode, or_maps_to_er: bool) -
             }
         }
     }
+}
+
+/// A token with a digit and no letter (`2`, `2.`, `101`) is no syllable. TPS
+/// conversion would read its lone digit as a tone and leave a bare mark
+/// (`2` → `ˋ`), so the TPS search keys skip it and the TPS list shows the
+/// whole saved spelling.
+fn is_number_token(token: &str) -> bool {
+    token.chars().any(|c| c.is_ascii_digit()) && !token.chars().any(char::is_alphabetic)
 }
 
 /// READ side — single family-native key for the current input + mode. `None`
@@ -315,6 +340,29 @@ mod tests {
             query_hits_stored(&stored, &q_poj),
             "POJ query must find POJ-stored entry"
         );
+    }
+
+    // trace: a number token is no syllable, so the TPS keys skip it rather than
+    // read the digit as a tone. "Tâi-gí 2": tâi = t ㄉ ai ㄞ 5 ˊ, gí = g ㆣ i ㄧ 2 ˋ
+    // → num "ㄉㄞˊㆣㄧˋ" (not "ㄉㄞˊㆣㄧˋˋ"), notone "ㄉㄞㆣㄧ", abbrev "ㄉㆣ".
+    // "Tâi-uân 101": uân = u ㄨ an ㄢ 5 ˊ → notone "ㄉㄞㄨㄢ" (not "ㄉㄞㄨㄢ01").
+    // "2" and "7-11" leave no TPS key, so a lone `ˋ` query does not find "2".
+    #[test]
+    fn tps_keys_skip_a_number_token() {
+        let stored = derive_custom_search_keys("Tâi-gí 2");
+        assert!(has(&stored, "tps", FORM_NUM, "ㄉㄞˊㆣㄧˋ"));
+        assert!(has(&stored, "tps", FORM_NOTONE, "ㄉㄞㆣㄧ"));
+        assert!(has(&stored, "tps", FORM_ABBREV, "ㄉㆣ"));
+        assert!(!has(&stored, "tps", FORM_NUM, "ㄉㄞˊㆣㄧˋˋ"));
+
+        let stored = derive_custom_search_keys("Tâi-uân 101");
+        assert!(has(&stored, "tps", FORM_NOTONE, "ㄉㄞㄨㄢ"));
+        assert!(!has(&stored, "tps", FORM_NOTONE, "ㄉㄞㄨㄢ01"));
+
+        for saved in ["2", "7-11"] {
+            let stored = derive_custom_search_keys(saved);
+            assert!(stored.iter().all(|k| k.family != "tps"), "{saved}");
+        }
     }
 
     // trace: roman="tsiah" (TL). canonical TL = "tsiah"; poj = "chiah".
