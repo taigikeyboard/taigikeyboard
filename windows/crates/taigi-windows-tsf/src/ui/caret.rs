@@ -115,14 +115,11 @@ unsafe fn to_physical(rect: RECT, host: Option<HWND>) -> RECT {
     }
 }
 
-/// The anchor for a composition from its `start` and `end` caret probes:
-/// the end caret's rectangle, its top raised to the start's when a wrapped
-/// preedit puts the start on an earlier line. A window below still hangs
-/// from the end caret's line; a flipped one goes above the first line —
-/// anchored on the last line alone, it covered the lines above (WIN1).
-/// Either probe alone is the anchor, the end preferred. A host that answers
-/// every range with the caret's line (an IMM32 host through CUAS, such as a
-/// WinForms `RichTextBox`) gets the end caret's line, as before.
+/// The end caret's rectangle, its top raised to the start's when a wrapped
+/// preedit starts on an earlier line, so a flipped window clears every line
+/// (WIN1); either probe alone as-is, the end preferred. A host answering
+/// every range with the caret's line (IMM32 through CUAS, e.g. WinForms
+/// `RichTextBox`) still anchors to that line.
 fn composition_anchor(start: Option<RECT>, end: Option<RECT>) -> Option<RECT> {
     match (start, end) {
         (Some(start), Some(end)) => Some(RECT {
@@ -180,34 +177,36 @@ mod tests {
         }
     }
 
-    fn edges(rect: Option<RECT>) -> Option<(i32, i32, i32, i32)> {
-        rect.map(|rect| (rect.left, rect.top, rect.right, rect.bottom))
-    }
-
     #[test]
     fn a_wrapped_composition_raises_the_end_caret_to_its_first_line() {
         // trace: start on line 1 (top 100), end on line 3 (top 140) at x 30:
         // end's column and bottom (160), start's top (100).
         let anchor = composition_anchor(Some(line(400, 100)), Some(line(30, 140)));
-        assert_eq!(edges(anchor), Some((30, 100, 31, 160)));
+        assert_eq!(
+            anchor,
+            Some(RECT {
+                top: 100,
+                ..line(30, 140)
+            })
+        );
     }
 
     #[test]
     fn a_one_line_composition_keeps_the_end_caret() {
         let anchor = composition_anchor(Some(line(10, 100)), Some(line(60, 100)));
-        assert_eq!(edges(anchor), Some((60, 100, 61, 120)));
+        assert_eq!(anchor, Some(line(60, 100)));
     }
 
     #[test]
     fn either_probe_alone_is_the_anchor() {
         assert_eq!(
-            edges(composition_anchor(None, Some(line(60, 140)))),
-            Some((60, 140, 61, 160))
+            composition_anchor(None, Some(line(60, 140))),
+            Some(line(60, 140))
         );
         assert_eq!(
-            edges(composition_anchor(Some(line(10, 100)), None)),
-            Some((10, 100, 11, 120))
+            composition_anchor(Some(line(10, 100)), None),
+            Some(line(10, 100))
         );
-        assert_eq!(edges(composition_anchor(None, None)), None);
+        assert_eq!(composition_anchor(None, None), None);
     }
 }
