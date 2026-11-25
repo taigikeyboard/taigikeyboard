@@ -739,3 +739,65 @@ fn a_learned_romanized_phrase_waits_while_the_switch_is_off() {
     };
     assert!(!hanji(&roman_first).contains(&Some("我tsia̍h".to_owned())));
 }
+
+// A learned Han-Lo phrase follows the typed case like the sentence it was
+// learned from: its romanized words are raised with the romanization
+// (`GUATSIAH` → `我TSIA̍H`, `Tsiahlai` → `Tsia̍h來`), and a Hanji-first phrase
+// has no letter to capitalize. Its identity (`display_text`) stays the stored
+// form.
+#[test]
+fn a_learned_han_lo_phrase_follows_the_typed_case() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let fetch = || Fetch {
+        learned: vec![
+            LearnedEntry {
+                hanji: "我tsia̍h".into(),
+                canonical_tl: "guá tsia̍h".into(),
+            },
+            LearnedEntry {
+                hanji: "tsia̍h來".into(),
+                canonical_tl: "tsia̍h lâi".into(),
+            },
+        ],
+        ..Fetch::default()
+    };
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let learned = |raw: &str, stored: &str| -> (Option<String>, String) {
+        let listed = rows(raw, &on, fetch());
+        let row = listed
+            .iter()
+            .find(|(_, _, display_text)| display_text == stored)
+            .unwrap_or_else(|| panic!("the learned row {stored} for {raw}: {listed:?}"));
+        (row.0.clone(), row.1.clone())
+    };
+    assert_eq!(learned("guatsiah", "我tsia̍h").0.as_deref(), Some("我tsia̍h"));
+    assert_eq!(learned("GUATSIAH", "我tsia̍h").0.as_deref(), Some("我TSIA̍H"));
+    assert_eq!(learned("Guatsiah", "我tsia̍h").0.as_deref(), Some("我tsia̍h"));
+    assert_eq!(learned("Tsiahlai", "tsia̍h來").0.as_deref(), Some("Tsia̍h來"));
+    assert_eq!(learned("TSIAHLAI", "tsia̍h來").0.as_deref(), Some("TSIA̍H來"));
+    // The whole-sentence row the learned phrase wins.
+    assert_eq!(
+        sentence("GUATSIAH", &on, fetch()).as_deref(),
+        Some("我TSIA̍H")
+    );
+    assert_eq!(
+        sentence("Tsiahlai", &on, fetch()).as_deref(),
+        Some("Tsia̍h來")
+    );
+    // POJ: raised after the POJ rewrite of the stored TL.
+    let poj = AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
+    };
+    let listed = fetch_at_pos_response(&poj, "GOACHIAH", fetch())
+        .continuous
+        .map(|c| c.candidates)
+        .unwrap_or_default();
+    let row = listed
+        .iter()
+        .find(|c| c.display_text == "我tsia̍h")
+        .unwrap_or_else(|| panic!("the learned row: {listed:?}"));
+    assert_eq!(row.hanji.as_deref(), Some("我CHIA̍H"));
+}

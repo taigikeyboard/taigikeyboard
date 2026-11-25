@@ -43,6 +43,29 @@ pub(super) fn recase_roman(roman: &str, raw_seg: &str) -> String {
     phonetics::case_transform::raise_case(roman, raw_segment_letter_case(raw_seg))
 }
 
+/// The romanized words of a Han-Lo `hanji` (`我tsia̍h`, `tsia̍h來`, a learned
+/// Hàn-Lô lām phrase) raised to the case typed for its span, as its romanization
+/// is by [`recase_roman`] and a romanization edge of the sentence is. A Hanji
+/// character has no case, and capitalize-first stops at it: `Guatsiah` leaves
+/// `我tsia̍h`, `GUATSIAH` writes `我TSIA̍H`, `Tsiahlai` writes `Tsia̍h來`.
+/// Run on the shown spelling (after `render_hanji_display`, whose POJ rewrite
+/// reads lowercase TL); `display_text` keeps the stored one. Borrows when the
+/// spelling has no lowercase letter to raise or the segment is lowercase.
+pub(super) fn recase_hanji<'a>(hanji: &'a str, raw_seg: &str) -> std::borrow::Cow<'a, str> {
+    let case = raw_segment_letter_case(raw_seg);
+    if case == phonetics::case_transform::LetterCase::Lowercased
+        || !hanji.chars().any(char::is_lowercase)
+    {
+        return std::borrow::Cow::Borrowed(hanji);
+    }
+    let raised = phonetics::case_transform::raise_case(hanji, case);
+    if raised == hanji {
+        std::borrow::Cow::Borrowed(hanji)
+    } else {
+        std::borrow::Cow::Owned(raised)
+    }
+}
+
 /// [`recase_roman`] over a whole batch that shares one raw segment. The
 /// case intent is derived once; a lowercase segment leaves every roman
 /// untouched, so the common path allocates nothing.

@@ -1,7 +1,9 @@
 //! The whole-sentence walk and the slot-0 candidate it synthesizes.
 
 use super::edge::{edge_key_map, edge_lookup, learned_edge_key, rows_for_edge, EdgeLookup};
-use super::recase::{recase_roman, recase_tl_as_poj_display, shows_poj_roman_in_hanji};
+use super::recase::{
+    recase_hanji, recase_roman, recase_tl_as_poj_display, shows_poj_roman_in_hanji,
+};
 
 use crate::shadow::{
     custom_toneless_key, greedy_longest_syllabification, span_min_syllable_count,
@@ -653,6 +655,21 @@ pub(crate) fn sentence_hanji(
                     shows_poj_roman_in_hanji(mode, choice.is_custom),
                 ),
                 _ => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
+            };
+            // A Han-Lo edge's romanized words (a learned Hàn-Lô lām
+            // phrase, `啥mih`) in the case typed for the edge, as a
+            // romanization edge's `part` already is.
+            let piece = match (
+                &choice.hanji,
+                shadow_to_raw_end.get(s).zip(shadow_to_raw_end.get(e)),
+            ) {
+                (Some(_), Some((&start, &end))) => {
+                    match recase_hanji(&piece, raw.get(start..end).unwrap_or("")) {
+                        std::borrow::Cow::Owned(raised) => std::borrow::Cow::Owned(raised),
+                        std::borrow::Cow::Borrowed(_) => piece,
+                    }
+                }
+                _ => piece,
             };
             // The `-` run typed in front of this edge.
             let typed_run = if edge_idx > 0 {
