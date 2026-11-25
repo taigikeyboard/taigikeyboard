@@ -108,7 +108,6 @@ class TextInputManager(
         onLayoutChanged = { pushAppearance() },
         onActiveModeChanged = {
             smartbarManager.activeContainer = smartbarManager.preferredContainer
-            textViewGroup?.post { measureAndUpdateKeyboardHeight() }
         },
     )
 
@@ -263,9 +262,10 @@ class TextInputManager(
             )
         smartbarManager.registerOneHandedMenuOverlayView(oneHandedMenuOverlay)
 
-        textViewGroup?.post {
-            measureAndUpdateKeyboardHeight()
-        }
+        // Read at each overlay show, not snapshotted: the keyboard body's navigation-bar padding
+        // lands after the first layout.
+        val contentView: android.view.View? = inputView.findViewById(R.id.text_input_content)
+        smartbarManager.keyboardHeightProvider = { contentView?.height ?: 0 }
     }
 
     override fun onDestroy() {
@@ -388,15 +388,6 @@ class TextInputManager(
      *  full appearance push covers any subset of keys at no extra cost. */
     fun invalidateAllKeys() {
         pushAppearance()
-    }
-
-    private fun measureAndUpdateKeyboardHeight() {
-        val viewGroup = textViewGroup ?: return
-        val contentView = viewGroup.findViewById<android.view.View>(R.id.text_input_content)
-        if (contentView?.measuredHeight ?: 0 > 0) {
-            val height = contentView.measuredHeight
-            smartbarManager.setKeyboardHeight(height)
-        }
     }
 
     /**

@@ -6,6 +6,7 @@ package com.siansiansu.taigikeyboard.ime.text.keyboard
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.view.inputmethod.EditorInfo
 import androidx.annotation.DrawableRes
@@ -253,6 +254,7 @@ private fun LabelContent(
             textAlign = Paint.Align.CENTER
         }
     }
+    val inkRect = remember { Rect() }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
@@ -262,19 +264,14 @@ private fun LabelContent(
         val baseTextSize = h * 0.58f * fontSizeScale
         labelPaint.typeface = typeface
         labelPaint.textSize = scaleTextSizeForKey(data, label, baseTextSize)
-        // A one-line label wider than the key face (`……` is two full-width cells) shrinks to
-        // fit, as iOS `minimumScaleFactor`.
-        val maxLabelWidth = w * 0.9f
-        val labelWidth = if (label.contains('\n')) 0f else labelPaint.measureText(label)
-        val perKeyTextSize =
-            if (labelWidth > maxLabelWidth) labelPaint.textSize * maxLabelWidth / labelWidth else labelPaint.textSize
-
-        labelPaint.textSize = perKeyTextSize
+        // A one-line label keeps its side margins (`……` is two full-width cells, `?123` on a
+        // narrow key), shrinking to fit as iOS `minimumScaleFactor` does.
+        if (!label.contains('\n')) fitLabelToKey(labelPaint, label, w, h)
         labelPaint.color = labelColorArgb
         labelPaint.alpha = if (mode == KeyboardMode.CHARACTERS && data.code == KeyCode.SPACE) 120 else 255
 
         val centerX = w / 2.0f
-        val centerY = h / 2.0f + (perKeyTextSize - labelPaint.descent()) / 2.0f
+        val centerY = h / 2.0f + (labelPaint.textSize - labelPaint.descent()) / 2.0f
 
         val isTpsWithPopup = keyboardLayoutType == "tps" && data.isTpsGlyphWithPopup()
 
@@ -283,21 +280,27 @@ private fun LabelContent(
             if (isTpsWithPopup) {
                 // Main glyph at bottom (smaller); popup callouts on top.
                 labelPaint.textSize = baseTextSize * 0.78f
-                val topY = h * 0.28f
+                fitLabelToKey(labelPaint, label, w, h)
                 val bottomY = h * 0.80f
                 hintPaint.color = labelPaint.color
                 hintPaint.alpha = 130
                 hintPaint.typeface = labelPaint.typeface
+                val labelInkTop = bottomY + inkBounds(labelPaint, label, inkRect).top
                 if (data.popup.size >= 2) {
                     hintPaint.textSize = baseTextSize * 0.48f
-                    val padding = w * 0.12f
-                    hintPaint.textAlign = Paint.Align.LEFT
-                    nativeCanvas.drawText(data.popup[0].label, padding, topY, hintPaint)
-                    hintPaint.textAlign = Paint.Align.RIGHT
-                    nativeCanvas.drawText(data.popup[1].label, w - padding, topY, hintPaint)
+                    val left = data.popup[0].label
+                    val right = data.popup[1].label
+                    // The pair must also fit between the side insets: shrink before placing.
+                    shrinkToWidth(hintPaint, left + right, KeyLabelGeometry.maxLabelWidth(w, h) - h * KeyLabelGeometry.HINT_PAIR_GAP)
+                    val topY = fitHintAboveLabel(hintPaint, listOf(left, right), h, labelInkTop, inkRect)
+                    val (leftX, rightX) =
+                        KeyLabelGeometry.hintPairCentres(centerX, h, hintPaint.measureText(left), hintPaint.measureText(right))
                     hintPaint.textAlign = Paint.Align.CENTER
+                    nativeCanvas.drawText(left, leftX, topY, hintPaint)
+                    nativeCanvas.drawText(right, rightX, topY, hintPaint)
                 } else {
                     hintPaint.textSize = baseTextSize * 0.52f
+                    val topY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label), h, labelInkTop, inkRect)
                     hintPaint.textAlign = Paint.Align.CENTER
                     nativeCanvas.drawText(data.popup[0].label, centerX, topY, hintPaint)
                 }
@@ -308,7 +311,7 @@ private fun LabelContent(
                 nativeCanvas.drawText(lines[0], centerX, centerY * 0.70f, labelPaint)
                 nativeCanvas.drawText(lines[1], centerX, centerY * 1.30f, labelPaint)
             } else {
-                nativeCanvas.drawText(label, centerX, centerY, labelPaint)
+                drawCentred(nativeCanvas, label, centerX, centerY, labelPaint, inkRect)
             }
 
             // TPS punctuation hint (e.g., "。" hint above "，").
@@ -323,7 +326,9 @@ private fun LabelContent(
                 hintPaint.alpha = 130
                 hintPaint.typeface = labelPaint.typeface
                 hintPaint.textAlign = Paint.Align.CENTER
-                nativeCanvas.drawText(data.popup[0].label, centerX, h * 0.28f, hintPaint)
+                val labelInkTop = centerY + inkBounds(labelPaint, label, inkRect).top
+                val hintY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label), h, labelInkTop, inkRect)
+                drawCentred(nativeCanvas, data.popup[0].label, centerX, hintY, hintPaint, inkRect)
             }
 
             // Tone diacritics + MOE1/MOE2 punctuation hints. Skipped for TPS.
@@ -342,13 +347,99 @@ private fun LabelContent(
                     hintPaint.alpha = if (isMoe1TextHint) 150 else 100
                     hintPaint.typeface = Typeface.DEFAULT
                     hintPaint.textAlign = Paint.Align.CENTER
-                    val moe1HintFactor = if (data.code == 45) 0.35f else 0.40f
-                    val hintY = h * if (isMoe1TextHint) moe1HintFactor else 0.66f
+                    val hintY =
+                        if (isMoe1TextHint) {
+                            h * if (data.code == 45) 0.35f else 0.40f
+                        } else {
+                            // The tone mark's ink, not a fixed baseline, sits right above the digit's ink.
+                            // Fitted from every mark, so the row shares one scale and one baseline.
+                            val labelInkTop = centerY + inkBounds(labelPaint, label, inkRect).top
+                            fitHintAboveLabel(hintPaint, TONE_HINT_GLYPHS, h, labelInkTop, inkRect, hugLabel = true)
+                        }
                     nativeCanvas.drawText(hint, centerX, hintY, hintPaint)
                 }
             }
         }
     }
+}
+
+/**
+ * Caps [paint] so [label] keeps its side margins: one glyph by the key width alone
+ * ([KeyLabelGeometry.maxGlyphTextSize], the same for every glyph), several by their advance.
+ */
+private fun fitLabelToKey(
+    paint: Paint,
+    label: String,
+    keyWidth: Float,
+    keyHeight: Float,
+) {
+    if (label.codePointCount(0, label.length) == 1) {
+        paint.textSize = minOf(paint.textSize, KeyLabelGeometry.maxGlyphTextSize(keyWidth, keyHeight))
+    } else {
+        shrinkToWidth(paint, label, KeyLabelGeometry.maxLabelWidth(keyWidth, keyHeight))
+    }
+}
+
+/** Draws [text] centred on [centerX]: by its ink for full-width punctuation, else by its advance. */
+private fun drawCentred(
+    canvas: android.graphics.Canvas,
+    text: String,
+    centerX: Float,
+    baseline: Float,
+    paint: Paint,
+    scratch: Rect,
+) {
+    if (!KeyLabelGeometry.centresByInk(text)) {
+        canvas.drawText(text, centerX, baseline, paint)
+        return
+    }
+    inkBounds(paint, text, scratch)
+    val align = paint.textAlign
+    paint.textAlign = Paint.Align.LEFT
+    canvas.drawText(text, KeyLabelGeometry.inkCentredX(centerX, scratch.left.toFloat(), scratch.right.toFloat()), baseline, paint)
+    paint.textAlign = align
+}
+
+/** Shrinks [paint] so [text]'s advance is at most [maxWidth]; never enlarges. */
+private fun shrinkToWidth(
+    paint: Paint,
+    text: String,
+    maxWidth: Float,
+) {
+    val width = paint.measureText(text)
+    if (width > maxWidth) paint.textSize *= maxWidth / width
+}
+
+/** [text]'s ink bounds at [paint]'s current size, relative to its baseline (written into [out]). */
+private fun inkBounds(
+    paint: Paint,
+    text: String,
+    out: Rect,
+): Rect = out.also { paint.getTextBounds(text, 0, text.length, it) }
+
+/**
+ * Shrinks [paint] (when needed) so the hints' shared ink fits above the label
+ * ([KeyLabelGeometry.hintAboveLabel]) and returns their common baseline.
+ */
+private fun fitHintAboveLabel(
+    paint: Paint,
+    hints: List<String>,
+    keyHeight: Float,
+    labelInkTop: Float,
+    scratch: Rect,
+    hugLabel: Boolean = false,
+): Float {
+    // Seeded from the glyphs, not the baseline: a tone mark's ink floats well above it.
+    var inkTop = Int.MAX_VALUE
+    var inkBottom = Int.MIN_VALUE
+    for (hint in hints) {
+        inkBounds(paint, hint, scratch)
+        inkTop = minOf(inkTop, scratch.top)
+        inkBottom = maxOf(inkBottom, scratch.bottom)
+    }
+    val fit = KeyLabelGeometry.hintAboveLabel(keyHeight, labelInkTop, inkTop.toFloat(), inkBottom.toFloat(), hugLabel)
+    paint.textSize *= fit.scale
+    return fit.baseline
 }
 
 /** Keys that switch between the letter and symbol keyboards ("123", "ABC", "#+="). */
@@ -667,6 +758,10 @@ private fun resolveBackgroundColor(
 
 // Tone hint diacritics for number keys — direct port of legacy
 // `KeyView.toneHints`. POJ + TL share all but tone 9.
+// Tone 9: POJ uses breve (˘ U+02D8); TL uses double prime (ʺ U+02BA).
+private const val TONE_9_POJ = "˘"
+private const val TONE_9_TL = "ʺ"
+
 private val toneHints = mapOf(
     49 to "ˊ", // 1 (no mark, drawn as space placeholder downstream)
     50 to "ˊ", // 2  ˊ MODIFIER LETTER ACUTE ACCENT
@@ -676,6 +771,9 @@ private val toneHints = mapOf(
     55 to "ˉ", // 7  ˉ MODIFIER LETTER MACRON
     56 to "ˈ", // 8  ˈ MODIFIER LETTER VERTICAL LINE
 )
+
+/** Every tone mark a number key can show; the row is fitted from all of them together. */
+private val TONE_HINT_GLYPHS = toneHints.values.distinct() + listOf(TONE_9_POJ, TONE_9_TL)
 
 /** No tone marks for "0", "1", "4" — render space for layout consistency. */
 private val noToneHintCodes = setOf(48, 49, 52)
@@ -687,7 +785,7 @@ internal fun toneHintForCode(
     if (inputMode == "english") return null
     if (code == 57) {
         // Tone 9: POJ uses breve (˘ U+02D8); TL uses double prime (ʺ U+02BA).
-        return if (inputMode == "poj") "˘" else "ʺ"
+        return if (inputMode == "poj") TONE_9_POJ else TONE_9_TL
     }
     if (noToneHintCodes.contains(code)) return " "
     return toneHints[code]

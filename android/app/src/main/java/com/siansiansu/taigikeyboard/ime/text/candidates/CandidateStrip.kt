@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,7 +99,14 @@ fun TaigiCandidateStrip(
     val paddingPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_padding) }
     val marginPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_margin) }
     val candidateFontSizes =
-        remember(display.smartbarHeightPx, display.textSizeScale, paddingPx, marginPx, contentHasSubtitles) {
+        remember(
+            display.smartbarHeightPx,
+            display.textSizeScale,
+            paddingPx,
+            marginPx,
+            contentHasSubtitles,
+            configuration,
+        ) {
             computeCandidateFontSizes(
                 smartbarHeightPx = display.smartbarHeightPx,
                 paddingPx = paddingPx,
@@ -279,24 +287,12 @@ private fun CandidateCell(
         ) {
             BasicText(
                 text = titleText,
-                style =
-                    TextStyle(
-                        color = titleColor,
-                        fontSize = titleSp.sp,
-                        fontFamily = fontFamily,
-                        textAlign = TextAlign.Center,
-                    ),
+                style = candidateLineStyle(titleSp, titleColor, fontFamily),
             )
             if (showSubtitle) {
                 BasicText(
                     text = subtitleText!!,
-                    style =
-                        TextStyle(
-                            color = subtitleColor,
-                            fontSize = subtitleSp.sp,
-                            fontFamily = fontFamily,
-                            textAlign = TextAlign.Center,
-                        ),
+                    style = candidateLineStyle(subtitleSp, subtitleColor, fontFamily),
                     modifier = Modifier.padding(top = with(density) { (marginPx * 2).toDp() }),
                 )
             }
@@ -364,6 +360,37 @@ private fun EnglishDivider(color: Color) {
     )
 }
 
+/**
+ * Line box of every strip / expanded-grid candidate line, as a multiple of its font size.
+ * Applied as an explicit `lineHeight` by [candidateLineStyle], so the line box does not grow
+ * with a taller fallback font (the System font's CJK fallback alone is ~1.45×), and
+ * [computeCandidateFontSizes] sizes text for exactly this box.
+ */
+internal const val CANDIDATE_LINE_HEIGHT_FACTOR = 1.15f
+
+/** One candidate line at [fontSp] in a fixed [CANDIDATE_LINE_HEIGHT_FACTOR] line box, glyphs centred in it. */
+internal fun candidateLineStyle(
+    fontSp: Float,
+    color: Color,
+    fontFamily: FontFamily,
+): TextStyle =
+    TextStyle(
+        color = color,
+        fontSize = fontSp.sp,
+        fontFamily = fontFamily,
+        textAlign = TextAlign.Center,
+        lineHeight = (fontSp * CANDIDATE_LINE_HEIGHT_FACTOR).sp,
+        // Tight + Trim.Both: the single line box is exactly lineHeight. Fixed / Minimum (or an
+        // untrimmed Tight edge) pad it back up to the fallback font's preferred height, which is
+        // the overflow being prevented.
+        lineHeightStyle =
+            LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both, LineHeightStyle.Mode.Tight),
+    )
+
+/**
+ * Title / subtitle sizes (sp) whose stacked line boxes, paddings and gap fit the strip height.
+ * There is no lower bound: a floor would push the stack past the strip and clip it.
+ */
 internal fun computeCandidateFontSizes(
     smartbarHeightPx: Int,
     paddingPx: Int,
@@ -374,19 +401,25 @@ internal fun computeCandidateFontSizes(
     contentHasSubtitles: Boolean,
 ): Pair<Float, Float> {
     val scaledDensity = density * fontScale
-    val verticalPaddingPx = paddingPx * 2 / 3
+    // Mirrors CandidateCell: inner vertical padding paddingPx / 3 per side, outer
+    // marginPx * 2 per side, subtitle top padding marginPx * 2.
+    val verticalPaddingPx = paddingPx / 3 * 2
     val verticalMarginPx = marginPx * 4
-    val subtitleGapPx = 2 * density
+    val subtitleGapPx = if (contentHasSubtitles) marginPx * 2 else 0
+    // Each line box is rounded up to a whole pixel (LineHeightStyleSpan ceil), at most 1 px a line.
+    val lineRoundingPx = if (contentHasSubtitles) 2 else 1
     val availablePx =
-        (smartbarHeightPx - verticalPaddingPx - verticalMarginPx - subtitleGapPx)
-            .coerceAtLeast(20f * density)
-    val lineHeightFactor = 1.15f
+        (smartbarHeightPx - verticalPaddingPx - verticalMarginPx - subtitleGapPx - lineRoundingPx)
+            .coerceAtLeast(0)
+            .toFloat()
     // §42: subtitle-free content sizes the title for ONE line — the full
-    // available height, same clamps; mixed lists keep the 58/42 split.
+    // available height, same cap; mixed lists keep the 58/42 split.
     val titleShare = if (contentHasSubtitles) 0.58f else 1.0f
-    val titlePx = availablePx * titleShare * textSizeScale / lineHeightFactor
-    val subtitlePx = availablePx * 0.42f * textSizeScale / lineHeightFactor
-    val titleSp = (titlePx / scaledDensity).coerceIn(10f, 21f)
-    val subtitleSp = (subtitlePx / scaledDensity).coerceIn(8f, 16f)
+    val titleFitSp = availablePx * titleShare / CANDIDATE_LINE_HEIGHT_FACTOR / scaledDensity
+    val subtitleFitSp = availablePx * 0.42f / CANDIDATE_LINE_HEIGHT_FACTOR / scaledDensity
+    // The theme's text-size scale (0.85–1.15) shrinks freely but enlarges only up to the fit.
+    val scale = minOf(textSizeScale, 1f)
+    val titleSp = minOf(titleFitSp * scale, 21f)
+    val subtitleSp = minOf(subtitleFitSp * scale, 16f)
     return Pair(titleSp, subtitleSp)
 }

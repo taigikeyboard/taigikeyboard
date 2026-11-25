@@ -377,6 +377,14 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         onCreateInputView()?.let { setInputView(it) }
     }
 
+    /**
+     * Never fullscreen. The framework's landscape extract mode put a transparent, unthemed
+     * extract editor over the status bar and the app (the keyboard window paints no extract
+     * area). The keyboard docks below the app's own field in every orientation, as AOSP
+     * LatinIME (`config_use_fullscreen_mode` false) and Trime (`references/trime`) do.
+     */
+    override fun onEvaluateFullscreenMode(): Boolean = false
+
     @SuppressLint("InflateParams")
     override fun onCreateInputView(): View? {
         compositionRoot.logger.i(TAG, "onCreateInputView()")
