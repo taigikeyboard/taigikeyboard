@@ -6,6 +6,7 @@
 import {
   A,
   candidates,
+  chip,
   commitWord,
   expect,
   openTyping,
@@ -62,6 +63,36 @@ test("commits in a row and punctuation all reach the message that is sent", asyn
   // The emptied box takes the next commit.
   await commitWord(page);
   await expect.poll(() => text(page)).toBe("台灣");
+});
+
+test("the chip follows the box when sending a message shrinks it", async ({
+  context,
+  worker,
+  page,
+}) => {
+  await openTyping(context, worker, page, SLATE, EDITOR);
+  const box = page.locator(EDITOR);
+  const heightOf = async () => (await box.boundingBox())?.height ?? 0;
+  const oneLine = await heightOf();
+  // Enough text to wrap: the box grows a line.
+  for (let i = 0; i < 20; i++) {
+    await commitWord(page);
+  }
+  await expect.poll(heightOf).toBeGreaterThan(oneLine);
+  // Sent with no key the engine takes after it: only the box's own resize
+  // can move the chip.
+  await page.keyboard.press("Enter");
+  await expect.poll(heightOf).toBe(oneLine);
+  // Under the box's right end, `CHIP_GAP` (4 px) below it (`overlay.js`).
+  await expect
+    .poll(async () => {
+      const field = await box.boundingBox();
+      const drawn = await chip(page).boundingBox();
+      return field && drawn
+        ? Math.round(drawn.y - (field.y + field.height))
+        : null;
+    })
+    .toBe(4);
 });
 
 test("a commit replaces the selection", async ({ context, worker, page }) => {
