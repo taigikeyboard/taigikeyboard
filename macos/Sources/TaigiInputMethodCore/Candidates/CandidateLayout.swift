@@ -26,4 +26,14 @@ enum CandidateLayout: String, CaseIterable, Sendable {
         case .vertical, .verticalExpandable: .inline
         }
     }
+
+    /// The Candidate Window Layout picker's label for this layout.
+    var labelKey: StringKey {
+        switch self {
+        case .horizontal: .desktopCandidateLayoutHorizontal
+        case .vertical: .desktopCandidateLayoutVertical
+        case .expandable: .desktopCandidateLayoutExpandable
+        case .verticalExpandable: .desktopCandidateLayoutVerticalExpandable
+        }
+    }
 }

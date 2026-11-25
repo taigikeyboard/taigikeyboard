@@ -30,6 +30,14 @@ enum ToneInputScheme: String, CaseIterable, Sendable {
     var slotKeySet: CandidateSlotKeySet {
         self == .telex ? .digits : .bareKeys
     }
+
+    /// The Tone Keys picker's label for this scheme.
+    var labelKey: StringKey {
+        switch self {
+        case .standard: .settingsToneSchemeStandard
+        case .telex: .settingsToneSchemeTelex
+        }
+    }
 }
 
 /// Which keys the candidate window draws beside its nine slots.

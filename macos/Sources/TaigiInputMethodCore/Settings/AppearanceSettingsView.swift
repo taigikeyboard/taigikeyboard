@@ -40,39 +40,59 @@ struct AppearanceSettingsView: View {
             // row under it: three named, mutually exclusive choices are a
             // pop-up menu (Apple HIG, Pop-up Buttons).
             Section {
-                Picker(language.string(.desktopAppearanceTab), selection: $appearanceMode) {
+                Picker(selection: $appearanceMode) {
                     Text(language.string(AppearanceMode.light.labelKey)).tag(AppearanceMode.light)
                     Text(language.string(AppearanceMode.dark.labelKey)).tag(AppearanceMode.dark)
                     Text(language.string(AppearanceMode.auto.labelKey)).tag(AppearanceMode.auto)
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .desktopAppearanceTab,
+                        selectedOptionKey: appearanceMode.labelKey,
+                    )
                 }
-                Picker(language.string(.desktopCandidateWindowLayout), selection: $candidateLayout) {
-                    Text(language.string(.desktopCandidateLayoutExpandable)).tag(CandidateLayout.expandable)
-                    Text(language.string(.desktopCandidateLayoutVerticalExpandable))
+                Picker(selection: $candidateLayout) {
+                    Text(language.string(CandidateLayout.expandable.labelKey)).tag(CandidateLayout.expandable)
+                    Text(language.string(CandidateLayout.verticalExpandable.labelKey))
                         .tag(CandidateLayout.verticalExpandable)
-                    Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
-                    Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
+                    Text(language.string(CandidateLayout.horizontal.labelKey)).tag(CandidateLayout.horizontal)
+                    Text(language.string(CandidateLayout.vertical.labelKey)).tag(CandidateLayout.vertical)
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .desktopCandidateWindowLayout,
+                        selectedOptionKey: candidateLayout.labelKey,
+                    )
                 }
                 // One pop-up sizes the whole window — text and air together —
                 // over five named steps, beside the window layout it sizes
                 // (USER 2026-09-23: one knob, five steps; a pop-up like the
                 // rows around it, not a slider).
-                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateSize) {
+                Picker(selection: $candidateSize) {
                     ForEach(CandidateSizeChoice.allCases, id: \.self) { size in
                         Text(language.string(size.labelKey)).tag(size)
                     }
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .desktopCandidateWindowSize,
+                        selectedOptionKey: candidateSize.labelKey,
+                    )
                 }
                 // What each cell shows, after the window rows: both
                 // scripts side by side (today's rendering), each script as its
                 // own adjacent cell, or the romanization alone. Bound like the rows around
                 // it — the open bar re-renders on the write
                 // (`TaigiInputController`), the next one reads it live.
-                Picker(language.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
+                Picker(selection: $candidateDisplayMode) {
                     Text(language.string(.settingsCandidateDisplayModeSideBySide))
                         .tag(CandidateDisplayMode.sideBySide)
                     Text(language.string(.settingsCandidateDisplayModeCombined))
                         .tag(CandidateDisplayMode.combined)
                     Text(language.string(.settingsCandidateDisplayModeRomanOnly))
                         .tag(CandidateDisplayMode.romanOnly)
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .settingsCandidateDisplayMode,
+                        selectedOptionKey: candidateDisplayMode.displayNameKey,
+                    )
                 }
             }
 
