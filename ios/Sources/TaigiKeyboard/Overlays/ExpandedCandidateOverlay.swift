@@ -26,7 +26,7 @@ struct ExpandedCandidateOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            candidateGridContent
+            candidateGridContent(containerWidth: geometry.size.width)
                 .frame(
                     maxWidth: .infinity,
                     minHeight: geometry.size.height,
@@ -38,10 +38,12 @@ struct ExpandedCandidateOverlay: View {
 
     // MARK: - Row Layout
 
-    private var arrangedRows: [[ExpandedCandidateRowLayout.RowItem]] {
+    /// Rows packed into the overlay's own width — the keyboard view's, which a landscape iPhone
+    /// insets by the safe area and a floating iPad keyboard narrows, so never the screen's.
+    private func arrangedRows(containerWidth: CGFloat) -> [[ExpandedCandidateRowLayout.RowItem]] {
         let controlPanelWidth: CGFloat = 60
         let horizontalPadding: CGFloat = 16 // 8 left + 8 right
-        let availableWidth = UIScreen.main.bounds.width - controlPanelWidth - horizontalPadding
+        let availableWidth = max(0, containerWidth - controlPanelWidth - horizontalPadding)
 
         return ExpandedCandidateRowLayout.arrangeRows(
             suggestions: suggestions,
@@ -61,10 +63,10 @@ struct ExpandedCandidateOverlay: View {
 
     // MARK: - Main Content
 
-    private var candidateGridContent: some View {
+    private func candidateGridContent(containerWidth: CGFloat) -> some View {
         ScrollViewReader { proxy in
             ZStack {
-                candidateScrollContent
+                candidateScrollContent(containerWidth: containerWidth)
                 controlButtonPanel(proxy: proxy)
             }
         }
@@ -81,8 +83,8 @@ struct ExpandedCandidateOverlay: View {
 
     // MARK: - Scroll Content
 
-    private var candidateScrollContent: some View {
-        let rows = arrangedRows
+    private func candidateScrollContent(containerWidth: CGFloat) -> some View {
+        let rows = arrangedRows(containerWidth: containerWidth)
         // §42: whether any cell in the grid renders a subtitle — computed ONCE
         // per render here (not per cell) and passed down so single-line cells
         // only reserve the second line when the content actually has one

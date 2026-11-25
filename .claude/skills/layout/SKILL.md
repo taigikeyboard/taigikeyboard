@@ -211,7 +211,7 @@ xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -dest
 | `key-text-follows-system-size` | a key label or candidate grows with the system text size (every font is fixed-size) |
 | `popup-past-screen` / `popup-entry-cut` / `popup-entries-overlap` / `popup-off-key` | as §5.6 |
 
-Owning files, under `ios/Sources/TaigiKeyboard/`: `Candidates/Views/CandidateView.swift`, `Candidates/Views/CandidateButtonView.swift`, `Overlays/ExpandedCandidateOverlay.swift`, `Overlays/ExpandedCandidateRowLayout.swift`, `Overlays/SymbolSelectionOverlay.swift`, `Styling/KeyLabelLayout.swift`, `Styling/KeyHintStack.swift`, `Styling/KeyboardFonts.swift`. Known, not a new finding: `ExpandedCandidateOverlay` takes its width from `UIScreen.main.bounds` (wrong in an iPad floating keyboard).
+Owning files, under `ios/Sources/TaigiKeyboard/`: `Candidates/Views/CandidateView.swift`, `Candidates/Views/CandidateButtonView.swift`, `Overlays/ExpandedCandidateOverlay.swift`, `Overlays/ExpandedCandidateRowLayout.swift`, `Overlays/SymbolSelectionOverlay.swift`, `Styling/KeyLabelLayout.swift`, `Styling/KeyHintStack.swift`, `Styling/KeyboardFonts.swift`.
 
 ### 6.7 Report
 
