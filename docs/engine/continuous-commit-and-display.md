@@ -44,7 +44,7 @@ There is no composing-text cell in the candidate strip. Slot 0 is the engine's t
 
 查 `tsa` + 某 renders `tsa-bóo`; 查 `tshâ` + 某 renders `tshâ bóo`; 俺 + 娘 renders `án niâ` while Taihoa (the only source of 俺娘 `án-niâ`) is off, as the walker renders the same sentence (#772). Hanji-less or reading-less segments never match. Derived on every render; no state.
 
-**Per-segment case.** A candidate's `roman` is recased to the user's typed bytes for its own span (`continuous::recase_roman`; `Hittui` → `Hit`, `tui`). The engine is the only casing source; `display_text` and `hanji` are untouched.
+**Per-segment case.** A candidate's `roman` is recased to the user's typed bytes for its own span (`continuous::recase_roman`; `Hittui` → `Hit`, `tui`). So are the Taigi romanized words of a dictionary or learned Han-Lo `hanji` (`continuous::recase_hanji` over `phonetics::api::raise_taigi_roman_case_in_hanji`; `GUATSIAH` → `我TSIA̍H`, `Tsiahlai` → `Tsia̍h來`), on the shown spelling after the POJ render, per edge on the whole-sentence row; a custom word's Hanji and a non-Taigi word (`iPhone`) stay as written. The engine is the only casing source; `display_text` is untouched.
 
 **Segmented rendering.** A dual-script candidate's roman line carries word-boundary spaces (`goa ai-li`); its hanji line is the dictionary hanji with no added spaces (`我愛你`). A roman-only candidate shows the roman line only.
 

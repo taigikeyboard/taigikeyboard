@@ -15,7 +15,7 @@ One `FetchAtPos` is answered by `composing::continuous::assemble_candidates` ([`
 |---|---|---|
 | 1 | Syllabify the pending `raw` and build the left-anchored FST keys (all modes: TL / POJ / TPS / English) | `shadow::build_continuous_keys` |
 | 2 | No key → whole-buffer partial-prefix scan; else span-local exact fetch per key | `fetch_via_lexicon_partial_inner` / `lexicon::fetch_candidates_for_keys_with_barriers` |
-| 3 | Recase each candidate's `roman` to the user's typed segment | `recase_roman` |
+| 3 | Recase each candidate's `roman`, and the Taigi romanized words of its Han-Lo `hanji`, to the user's typed segment | `recase_roman`, `recase_hanji` |
 | 4 | Prepend the whole-sentence walker's best path at slot 0. A path of several words is not sort-compared (only step 4d's picked extension can displace it); a one-word path joins the step 4d sort like any other row (a word picked through the abbreviation `kip` can pass 級), then step 4d's post-pass places it | `synth_cut` → `walker_slot0` |
 | 4b | Whole-input prefix-extension scan (`COVERAGE_KIND_PARTIAL_PREFIX`) | `fetch_via_lexicon_partial_inner` |
 | 4c | Whole-buffer abbreviation lookup | `continuous/assemble.rs` Step 4c |

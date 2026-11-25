@@ -166,8 +166,8 @@ pub use crate::custom_search::{
 };
 
 pub use crate::display_rewrite::{
-    canonical_tl_form, poj_display_to_tl_display, render_hanji_display, tl_display_to_poj_display,
-    tl_roman_in_hanji_to_poj,
+    canonical_tl_form, poj_display_to_tl_display, raise_taigi_roman_case_in_hanji,
+    render_hanji_display, tl_display_to_poj_display, tl_roman_in_hanji_to_poj,
 };
 pub use crate::hanji::{is_hanji, is_roman_only_spelling, CJK_RANGES};
 pub use crate::khinsiann::{

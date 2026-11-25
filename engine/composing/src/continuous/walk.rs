@@ -656,15 +656,17 @@ pub(crate) fn sentence_hanji(
                 ),
                 _ => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
             };
-            // A Han-Lo edge's romanized words (a learned Hàn-Lô lām
+            // A Han-Lo edge's Taigi romanized words (a learned Hàn-Lô lām
             // phrase, `啥mih`) in the case typed for the edge, as a
-            // romanization edge's `part` already is.
+            // romanization edge's `part` already is; a custom edge's Hanji
+            // stays as saved.
             let piece = match (
                 &choice.hanji,
                 shadow_to_raw_end.get(s).zip(shadow_to_raw_end.get(e)),
             ) {
                 (Some(_), Some((&start, &end))) => {
-                    match recase_hanji(&piece, raw.get(start..end).unwrap_or("")) {
+                    let seg = raw.get(start..end).unwrap_or("");
+                    match recase_hanji(&piece, seg, choice.is_custom) {
                         std::borrow::Cow::Owned(raised) => std::borrow::Cow::Owned(raised),
                         std::borrow::Cow::Borrowed(_) => piece,
                     }

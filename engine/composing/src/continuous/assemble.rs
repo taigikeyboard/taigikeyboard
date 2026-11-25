@@ -125,22 +125,30 @@ fn apply_hanji_display(
     mode: phonetics::InputMode,
 ) {
     let renders = khinsiann || mode == phonetics::InputMode::Poj;
+    // A buffer typed without a capital has no case to raise: the common path
+    // stays a render-only (or no-op) pass.
+    let recases = raw.chars().any(char::is_uppercase);
+    if !renders && !recases {
+        return;
+    }
     for cand in candidates {
-        let poj_roman = shows_poj_roman_in_hanji(mode, cand.is_custom);
-        let (start, end) = cand.consumed_span;
-        let seg = raw.get(start as usize..end as usize).unwrap_or("");
-        if let Some(hanji) = cand.hanji.as_mut() {
-            if renders {
-                if let std::borrow::Cow::Owned(rendered) = phonetics::api::render_hanji_display(
-                    hanji,
-                    &cand.canonical_tl,
-                    khinsiann,
-                    poj_roman,
-                ) {
-                    *hanji = rendered;
-                }
+        let Some(hanji) = cand.hanji.as_mut() else {
+            continue;
+        };
+        if renders {
+            if let std::borrow::Cow::Owned(rendered) = phonetics::api::render_hanji_display(
+                hanji,
+                &cand.canonical_tl,
+                khinsiann,
+                shows_poj_roman_in_hanji(mode, cand.is_custom),
+            ) {
+                *hanji = rendered;
             }
-            if let std::borrow::Cow::Owned(raised) = recase_hanji(hanji, seg) {
+        }
+        if recases {
+            let (start, end) = cand.consumed_span;
+            let seg = raw.get(start as usize..end as usize).unwrap_or("");
+            if let std::borrow::Cow::Owned(raised) = recase_hanji(hanji, seg, cand.is_custom) {
                 *hanji = raised;
             }
         }

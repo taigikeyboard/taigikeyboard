@@ -1,6 +1,6 @@
 //! How the pending buffer is read and cut, from the slot-0 walk.
 
-use super::recase::{recase_roman, shows_poj_roman_in_hanji};
+use super::recase::{recase_hanji, recase_roman, shows_poj_roman_in_hanji};
 use super::walk::{edge_romans, sentence_hanji, SynthCut, SynthWords};
 
 use crate::shadow::{strip_tones_for_mode, ContinuousKeys};
@@ -101,14 +101,15 @@ pub(crate) fn explain_segmentation(
                         .unwrap_or_else(|| choice.canonical_tl.clone());
                     let lookup_key = phonetics::api::learning_hanji_key(&display);
                     let picks = freq_map.get(&lookup_key, &choice.canonical_tl);
+                    // As the sentence row shows the word (`sentence_hanji`).
                     let hanji = choice.hanji.as_deref().map(|h| {
-                        phonetics::api::render_hanji_display(
+                        let rendered = phonetics::api::render_hanji_display(
                             h,
                             &choice.canonical_tl,
                             khinsiann_in_hanji,
                             shows_poj_roman_in_hanji(mode, choice.is_custom),
-                        )
-                        .into_owned()
+                        );
+                        recase_hanji(&rendered, &text, choice.is_custom).into_owned()
                     });
                     let khinsiann_before = keys
                         .hyphen_runs

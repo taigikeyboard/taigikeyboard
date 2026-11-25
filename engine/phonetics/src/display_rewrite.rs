@@ -4,6 +4,7 @@
 use std::borrow::Cow;
 
 use crate::api::{capitalize_first, InputMode, System};
+use crate::case_transform::{full_uppercase_tone_string, raise_case, LetterCase};
 use crate::khinsiann::{is_roman_syllable_char, render_hanji_khinsiann};
 use crate::poj::to_poj;
 use crate::syllable::{
@@ -97,6 +98,75 @@ pub fn tl_roman_in_hanji_to_poj(hanji: &str) -> Cow<'_, str> {
             Cow::Owned(buf)
         }
     }
+}
+
+/// A Han-Lo spelling's romanized words raised to `letter_case`, the typed case
+/// of its span: the runs [`tl_roman_in_hanji_to_poj`] reads, and of those only
+/// the ones that parse as a Taigi syllable (TL or POJ) — `iPhone`, `macOS` and
+/// every Hanji, kana or separator stay as written.
+///
+/// - `CapsLocked` raises every Taigi run: `我tsia̍h` → `我TSIA̍H`,
+///   `iPhone tsia̍h` → `iPhone TSIA̍H`.
+/// - `Uppercased` capitalizes the spelling's first letter only when it opens a
+///   Taigi run: `tsia̍h來` → `Tsia̍h來`; a leading Hanji (`我tsia̍h`) or
+///   non-Taigi word (`iPhone來`) stops it, so no later word is capitalized.
+/// - `Lowercased` changes nothing.
+///
+/// Presentation only, run on the shown spelling (after the POJ rewrite, which
+/// reads lowercase TL). Borrows when nothing changes.
+pub fn raise_taigi_roman_case_in_hanji(hanji: &str, letter_case: LetterCase) -> Cow<'_, str> {
+    if letter_case == LetterCase::Lowercased || !hanji.chars().any(char::is_lowercase) {
+        return Cow::Borrowed(hanji);
+    }
+    // The first letter (a Hanji counts) decides capitalize-first; past it,
+    // only Caps Lock raises anything.
+    let first_letter = hanji.char_indices().find(|(_, c)| c.is_alphabetic());
+    let mut out: Option<String> = None;
+    let mut copied_to = 0;
+    let mut run_start: Option<usize> = None;
+    let run_ends = hanji
+        .char_indices()
+        .map(|(idx, c)| (idx, is_roman_syllable_char(c)))
+        .chain(std::iter::once((hanji.len(), false)));
+    for (idx, in_run) in run_ends {
+        if in_run {
+            run_start.get_or_insert(idx);
+            continue;
+        }
+        let Some(start) = run_start.take() else {
+            continue;
+        };
+        let run = &hanji[start..idx];
+        let raised = match letter_case {
+            LetterCase::CapsLocked => full_uppercase_tone_string(run),
+            LetterCase::Uppercased if first_letter.map(|(at, _)| at) == Some(start) => {
+                raise_case(run, LetterCase::Uppercased)
+            }
+            _ => continue,
+        };
+        if raised == run || !parses_as_taigi_syllable(run) {
+            continue;
+        }
+        let buf = out.get_or_insert_with(|| String::with_capacity(hanji.len() + 8));
+        buf.push_str(&hanji[copied_to..start]);
+        buf.push_str(&raised);
+        copied_to = idx;
+    }
+    match out {
+        None => Cow::Borrowed(hanji),
+        Some(mut buf) => {
+            buf.push_str(&hanji[copied_to..]);
+            Cow::Owned(buf)
+        }
+    }
+}
+
+/// Whether `token` (one romanization run, tone mark and all) splits into a TL
+/// initial and final once POJ-shaped spellings fold onto TL — the parse
+/// [`rewrite_token`] converts, and leaves a token as written without.
+fn parses_as_taigi_syllable(token: &str) -> bool {
+    let (bare, _) = strip_tone_mark(token);
+    !bare.is_empty() && split_initial_final(&normalize_to_tl(&bare.to_lowercase())).is_some()
 }
 
 /// v3.5.9 B-4 — mode-aware canonicalizer for the `user_frequency.db`
@@ -217,6 +287,38 @@ mod tests {
 
     // Expected POJ runs are the production `dictionary.csv` `poj` column of
     // the same rows (`lóo力` → `ló͘-la̍t`, `親tsiânn` → `chhin-chiâⁿ`, …).
+    #[test]
+    fn taigi_runs_in_han_lo_spellings_follow_the_typed_case() {
+        use LetterCase::{CapsLocked, Lowercased, Uppercased};
+        let cases = [
+            // Caps Lock: every Taigi run, TL or POJ; Hanji stay.
+            ("我tsia̍h", CapsLocked, "我TSIA̍H"),
+            ("親tsiânn仔", CapsLocked, "親TSIÂNN仔"),
+            ("親chi\u{e2}\u{207f}", CapsLocked, "親CHI\u{c2}\u{207f}"),
+            ("恬tsih-tsih", CapsLocked, "恬TSIH-TSIH"),
+            ("l\u{f3}\u{358}力", CapsLocked, "L\u{d3}\u{358}力"),
+            // A non-Taigi word stays as written, the Taigi run beside it rises.
+            ("iPhone殼", CapsLocked, "iPhone殼"),
+            ("iPhone tsia̍h", CapsLocked, "iPhone TSIA̍H"),
+            ("macOS", CapsLocked, "macOS"),
+            // Capitalize-first: only a spelling that opens with a Taigi run.
+            ("tsia̍h來", Uppercased, "Tsia̍h來"),
+            ("我tsia̍h", Uppercased, "我tsia̍h"),
+            ("iPhone tsia̍h", Uppercased, "iPhone tsia̍h"),
+            ("啥mih", Uppercased, "啥mih"),
+            // Lowercase and pure Hanji: nothing to do.
+            ("tsia̍h來", Lowercased, "tsia̍h來"),
+            ("我愛你", CapsLocked, "我愛你"),
+        ];
+        for (hanji, case, expected) in cases {
+            let raised = raise_taigi_roman_case_in_hanji(hanji, case);
+            assert_eq!(raised, expected, "{hanji} {case:?}");
+            if hanji == expected {
+                assert!(matches!(raised, Cow::Borrowed(_)), "{hanji} borrows");
+            }
+        }
+    }
+
     #[test]
     fn tl_runs_in_han_lo_spellings_render_as_poj() {
         let cases = [
