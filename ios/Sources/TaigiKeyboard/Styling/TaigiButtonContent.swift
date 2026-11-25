@@ -11,9 +11,7 @@ private enum ButtonContentLayout {
     static let tpsSingleHintFontSize: CGFloat = 13
     static let tpsMainFontSize: CGFloat = 19
     static let tpsHintOpacity: Double = 0.45
-    static let tpsVStackSpacing: CGFloat = -1
     static let tpsHintHorizontalPadding: CGFloat = 3
-    static let tpsVerticalPadding: CGFloat = 2
 
     // Standard hint layout (tone diacritics above key label); hint sizes are at the
     // reference label size and scale with the actual one.
@@ -90,30 +88,20 @@ struct TaigiButtonContent<StandardContent: View>: View {
 
     /// TPS layout: callout hint(s) on top, main text below.
     /// Two hints are spread left/right; a single hint is centered.
+    /// Both hints and label fit the key height with font-proportional gaps (`KeyLabelLayout`).
     private func tpsHintContent(text: String, hint: String) -> some View {
         let hints = hint.split(separator: " ").map(String.init)
-        return VStack(spacing: ButtonContentLayout.tpsVStackSpacing) {
-            if hints.count >= 2 {
-                HStack {
-                    Text(hints[0])
-                        .font(.system(size: ButtonContentLayout.tpsHintFontSize))
-                        .opacity(ButtonContentLayout.tpsHintOpacity)
-                    Spacer()
-                    Text(hints[1])
-                        .font(.system(size: ButtonContentLayout.tpsHintFontSize))
-                        .opacity(ButtonContentLayout.tpsHintOpacity)
-                }
-                .padding(.horizontal, ButtonContentLayout.tpsHintHorizontalPadding)
-            } else {
-                Text(hint)
-                    .font(.system(size: ButtonContentLayout.tpsSingleHintFontSize))
-                    .opacity(ButtonContentLayout.tpsHintOpacity)
-            }
-            Text(text)
-                .font(.system(size: ButtonContentLayout.tpsMainFontSize))
-        }
-        .lineLimit(1)
-        .padding(.vertical, ButtonContentLayout.tpsVerticalPadding)
+        let hintSize = hints.count >= 2 ? ButtonContentLayout.tpsHintFontSize : ButtonContentLayout.tpsSingleHintFontSize
+        return KeyHintStack(
+            hints: Array(hints.prefix(2)),
+            label: text,
+            labelFont: .systemFont(ofSize: ButtonContentLayout.tpsMainFontSize),
+            hintFont: .systemFont(ofSize: hintSize),
+            labelReference: "ㄅ",
+            hintReference: "ㄅ",
+            hintSideInsetRatio: ButtonContentLayout.tpsHintHorizontalPadding / ButtonContentLayout.tpsMainFontSize,
+            hintOpacity: ButtonContentLayout.tpsHintOpacity,
+        )
     }
 
     /// Standard hint layout: tone diacritic or text hint above the key label.

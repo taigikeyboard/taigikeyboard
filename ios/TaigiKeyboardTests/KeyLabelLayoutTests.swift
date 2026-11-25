@@ -84,6 +84,26 @@ final class KeyLabelLayoutTests: XCTestCase {
         }
     }
 
+    /// TPS keys (19 pt bopomofo under 12 pt hints): the stack is centred, so the hint row
+    /// keeps the same distance from the key top as the label from the bottom (it sat
+    /// 2–3 pt from the top under the old fixed 2 pt padding).
+    func testPlace_tpsKey_hintRowCentredAwayFromKeyTop() {
+        let labelFont = UIFont.systemFont(ofSize: 19)
+        let labelInk = KeyLabelLayout.ink(of: "ㄅ", font: labelFont)
+        for keyHeight in [CGFloat(38), 42] {
+            let placement = KeyLabelLayout.place(KeyLabelLayout.Input(
+                keyHeight: keyHeight,
+                labelFontSize: 19,
+                labelInk: labelInk,
+                hintBand: KeyLabelLayout.ink(of: "ㄅ", font: .systemFont(ofSize: 12)).height,
+            ))
+            let bottomMargin = keyHeight - (placement.labelBaseline + labelInk.descent * placement.labelScale)
+            XCTAssertEqual(placement.labelScale, 1, "TPS label keeps its size on a portrait key")
+            XCTAssertEqual(placement.hintBandTop, bottomMargin, accuracy: 0.01, "stack centred in a \(keyHeight) pt key")
+            XCTAssertGreaterThan(placement.hintBandTop, 3, "hint row crowds the key top in a \(keyHeight) pt key")
+        }
+    }
+
     func testInk_whitespaceHasNoInk() {
         XCTAssertEqual(KeyLabelLayout.ink(of: " ", font: .systemFont(ofSize: 20)), .init(ascent: 0, descent: 0))
     }
