@@ -6,6 +6,7 @@ package com.siansiansu.taigikeyboard.ime.text.keyboard
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.view.inputmethod.EditorInfo
 import androidx.annotation.DrawableRes
@@ -253,6 +254,7 @@ private fun LabelContent(
             textAlign = Paint.Align.CENTER
         }
     }
+    val inkRect = remember { Rect() }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
@@ -283,13 +285,14 @@ private fun LabelContent(
             if (isTpsWithPopup) {
                 // Main glyph at bottom (smaller); popup callouts on top.
                 labelPaint.textSize = baseTextSize * 0.78f
-                val topY = h * 0.28f
                 val bottomY = h * 0.80f
                 hintPaint.color = labelPaint.color
                 hintPaint.alpha = 130
                 hintPaint.typeface = labelPaint.typeface
+                val labelInkTop = bottomY + inkBounds(labelPaint, label, inkRect).top
                 if (data.popup.size >= 2) {
                     hintPaint.textSize = baseTextSize * 0.48f
+                    val topY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label, data.popup[1].label), h, labelInkTop, inkRect)
                     val padding = w * 0.12f
                     hintPaint.textAlign = Paint.Align.LEFT
                     nativeCanvas.drawText(data.popup[0].label, padding, topY, hintPaint)
@@ -298,6 +301,7 @@ private fun LabelContent(
                     hintPaint.textAlign = Paint.Align.CENTER
                 } else {
                     hintPaint.textSize = baseTextSize * 0.52f
+                    val topY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label), h, labelInkTop, inkRect)
                     hintPaint.textAlign = Paint.Align.CENTER
                     nativeCanvas.drawText(data.popup[0].label, centerX, topY, hintPaint)
                 }
@@ -323,7 +327,9 @@ private fun LabelContent(
                 hintPaint.alpha = 130
                 hintPaint.typeface = labelPaint.typeface
                 hintPaint.textAlign = Paint.Align.CENTER
-                nativeCanvas.drawText(data.popup[0].label, centerX, h * 0.28f, hintPaint)
+                val labelInkTop = centerY + inkBounds(labelPaint, label, inkRect).top
+                val hintY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label), h, labelInkTop, inkRect)
+                nativeCanvas.drawText(data.popup[0].label, centerX, hintY, hintPaint)
             }
 
             // Tone diacritics + MOE1/MOE2 punctuation hints. Skipped for TPS.
@@ -349,6 +355,37 @@ private fun LabelContent(
             }
         }
     }
+}
+
+/** [text]'s ink bounds at [paint]'s current size, relative to its baseline (written into [out]). */
+private fun inkBounds(
+    paint: Paint,
+    text: String,
+    out: Rect,
+): Rect = out.also { paint.getTextBounds(text, 0, text.length, it) }
+
+/**
+ * Shrinks [paint] (when needed) so the hints' shared ink fits above the label
+ * ([KeyLabelGeometry.hintAboveLabel]) and returns their common baseline.
+ */
+private fun fitHintAboveLabel(
+    paint: Paint,
+    hints: List<String>,
+    keyHeight: Float,
+    labelInkTop: Float,
+    scratch: Rect,
+): Float {
+    // Seeded from the glyphs, not the baseline: a tone mark's ink floats well above it.
+    var inkTop = Int.MAX_VALUE
+    var inkBottom = Int.MIN_VALUE
+    for (hint in hints) {
+        inkBounds(paint, hint, scratch)
+        inkTop = minOf(inkTop, scratch.top)
+        inkBottom = maxOf(inkBottom, scratch.bottom)
+    }
+    val fit = KeyLabelGeometry.hintAboveLabel(keyHeight, labelInkTop, inkTop.toFloat(), inkBottom.toFloat())
+    paint.textSize *= fit.scale
+    return fit.baseline
 }
 
 /** Keys that switch between the letter and symbol keyboards ("123", "ABC", "#+="). */
