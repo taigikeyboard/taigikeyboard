@@ -956,9 +956,11 @@ fn nail_segment(
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed, config);
+        let learned_counts_as_picked = learned.is_some() && holds_a_romanized_pick(&new_nailed);
         let applied = Applied {
             response: finalize(state, combined, terminal),
             learned,
+            learned_counts_as_picked,
             usage: None,
         };
         return (applied, CommitOutcome::Finalized);
@@ -1172,9 +1174,11 @@ fn commit_as_shown(state: &mut EngineState, config: &AppConfig) -> Applied {
     } else {
         (next_word_clear_for_new_composing(), None)
     };
+    let learned_counts_as_picked = learned.is_some() && holds_a_romanized_pick(nailed);
     Applied {
         response: finalize_composition(state, text, terminal, config),
         learned,
+        learned_counts_as_picked,
         usage: None,
     }
 }
@@ -1422,6 +1426,7 @@ fn commit_prediction(
     Applied {
         response,
         learned: None,
+        learned_counts_as_picked: false,
         usage,
     }
 }
@@ -1597,6 +1602,13 @@ fn next_word_word_selected(
             preceding,
         })),
     }
+}
+
+/// Whether a composition [`learned_phrase`] learned holds a word picked in
+/// romanization (a hanji-less segment, which it admits only under Hàn-Lô
+/// lām): [`Applied::learned_counts_as_picked`].
+fn holds_a_romanized_pick(nailed: &[NailedSegment]) -> bool {
+    nailed.iter().any(|seg| seg.hanji.is_none())
 }
 
 /// Learned phrases (§50) — the `(Hanji, canonical-TL)` pair a final

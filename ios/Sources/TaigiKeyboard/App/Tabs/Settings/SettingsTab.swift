@@ -155,14 +155,15 @@ struct SettingsTab: View {
                         settings.isKhinsiannInHanjiEnabled = newValue
                     }
 
-                    // Hàn-Lô lām: the engine ignores it under Romanization Only and the TPS layout.
+                    // Romanization candidates: the engine ignores it under Romanization Only and on TPS,
+                    // so it greys there, as on the desktops (`SettingsDocument::allows_han_lo_mixed`).
                     Toggle(isOn: $hanLoMixedEnabled) {
                         HStack {
                             Text(lang.string(.settingsHanLoMixed))
                             SettingInfoButton(description: lang.string(.settingsHanLoMixedInfo))
                         }
                     }
-                    .disabled(!candidateDisplayMode.showsHanji)
+                    .disabled(!candidateDisplayMode.showsHanji || selectedInputMode == .tps)
                     .onChange(of: hanLoMixedEnabled) { _, newValue in
                         settings.isHanLoMixedEnabled = newValue
                     }

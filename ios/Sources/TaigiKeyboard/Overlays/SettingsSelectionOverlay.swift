@@ -111,11 +111,12 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.isKhinsiannInHanjiEnabled = $0
                     }
                     .disabled(!candidateDisplayMode.showsHanji)
-                    // Hàn-Lô lām: the engine ignores it under Romanization Only and the TPS layout.
+                    // Romanization candidates: the engine ignores it under Romanization Only and on TPS,
+                    // so it greys there, as on the desktops (`SettingsDocument::allows_han_lo_mixed`).
                     settingsToggle(lang.string(.settingsHanLoMixed), isOn: $hanLoMixedEnabled) {
                         SharedSettings.shared.isHanLoMixedEnabled = $0
                     }
-                    .disabled(!candidateDisplayMode.showsHanji)
+                    .disabled(!candidateDisplayMode.showsHanji || SharedSettings.shared.inputMode == .tps)
                     menuPickerRow(
                         lang.string(.settingsSyllableSeparator),
                         selection: $syllableSeparator,

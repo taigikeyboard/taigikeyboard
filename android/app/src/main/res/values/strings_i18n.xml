@@ -232,7 +232,7 @@
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ（SIÂᴺ）</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
     <string name="i18n_settings_khinsiannInHanji">漢字顯示輕聲（--）</string>
-    <string name="i18n_settings_hanLoMixed">漢羅濫</string>
+    <string name="i18n_settings_hanLoMixed">羅馬字候選項</string>
     <string name="i18n_settings_hanLoMixedInfo">若開開，逐个詞攏會有羅馬字候選詞，方便漢羅濫寫。</string>
     <string name="i18n_settings_khinsiannInHanjiInfo">開啟時，漢字輸出會照台羅詞彙加上輕聲符號（例：會記--得、--轉-去）。</string>
     <string name="i18n_settings_tpsOrMapsToER">or 對應 ㄜ</string>

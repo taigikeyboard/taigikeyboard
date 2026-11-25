@@ -210,9 +210,14 @@ fn explain_mechanism(
     config: &AppConfig,
 ) -> Mechanism {
     let sentence = segmentation.sentence_hanji.as_deref().map(|hanji| {
-        // The row as listed: Step 5 recases its nasal markers (§53).
+        // The row as listed: Step 5 renders the Syllable Separator (§49) on
+        // its romanized words and recases its nasal markers (§53).
+        let joined = match config.rendered_syllable_joiner() {
+            Some(joiner) => phonetics::api::syllable_joiner_in_hanji(hanji, joiner),
+            None => std::borrow::Cow::Borrowed(hanji),
+        };
         phonetics::case_transform::apply_nasal_marker_case(
-            hanji,
+            &joined,
             config.force_lowercase_nasal_marker,
         )
         .into_owned()

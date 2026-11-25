@@ -1472,9 +1472,11 @@ mod tests {
         );
     }
 
+    /// Hanji first, as Pairing lists romanization twins only then.
     fn han_lo(config: AppConfig) -> AppConfig {
         AppConfig {
             han_lo_mixed: true,
+            is_hanji_first: true,
             ..config
         }
     }

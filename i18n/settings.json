@@ -242,12 +242,12 @@
       "values": { "hanji": "漢字顯示輕聲（--）", "tailo": "Hàn-jī hián-sī khin-siann (--)", "poj": "Hàn-jī hián-sī khin-siaⁿ (--)", "en": "Neutral Tone in Hanji (--)", "ja": "漢字に軽声（--）を表示" }
     },
     "hanLoMixed": {
-      "comment": "Toggle label (Hàn-Lô lām): every dictionary word also offers its romanization as a candidate and a next-word prediction of its own, ranked and learned on its own and usable in the whole-sentence candidate. Desktop General pane under Tone Keys; mobile Typing section. Disabled under Romanization Only and TPS. Also in the keyboard's settings overlay on the phones.",
+      "comment": "Toggle label (romanization candidates, engine `han_lo_mixed`): every dictionary word also offers its romanization as a candidate and a next-word prediction of its own, ranked and learned on its own and usable in the whole-sentence candidate. Named apart from the Candidate Display mode 漢羅濫 (Hanji with Romanization). Desktop General pane under Tone Keys; mobile Typing section. Disabled under Romanization Only and TPS on every platform. Also in the keyboard's settings overlay on the phones.",
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux", "web"], "surfaces": ["host", "extension"] },
-      "values": { "hanji": "漢羅濫", "tailo": "Hàn-Lô lām", "poj": "Hàn-Lô lām", "en": "Romanized Words as Candidates", "ja": "ローマ字語も候補に" }
+      "values": { "hanji": "羅馬字候選項", "tailo": "Lô-má-jī hāu-suán-hāng", "poj": "Lô-má-jī hāu-soán-hāng", "en": "Romanized Words as Candidates", "ja": "ローマ字語も候補に" }
     },
     "hanLoMixedInfo": {
-      "comment": "Help text for the Hàn-Lô lām (romanized words as candidates) toggle.",
+      "comment": "Help text for the romanization candidates toggle (engine `han_lo_mixed`).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "若開開，逐个詞攏會有羅馬字候選詞，方便漢羅濫寫。", "tailo": "Nā khui--khui, ta̍k ê sû lóng ē ū lô-má-jī hāu-suán-sû, hong-piān Hàn-Lô lām-siá", "poj": "Nā khui--khui, ta̍k ê sû lóng ē ū lô-má-jī hāu-soán-sû, hong-piān Hàn-Lô lām-siá", "en": "When on, every word also offers its romanization as a candidate of its own: pick it on its own, and the whole-sentence candidate can use it too, for mixed Hanji and romanization writing.", "ja": "オンにすると、各語にローマ字表記の候補も加わります。単独で選べるほか、文全体の候補にも使われ、漢字とローマ字の混在文を書きやすくなります。" }
     },

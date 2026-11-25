@@ -131,9 +131,63 @@ pub fn push_syllable_joiner_run(out: &mut String, run_len: usize, joiner: &str) 
     }
 }
 
+/// Syllable Separator (§49) on a Han-Lo spelling's romanized words (`我tâi-gí`,
+/// `記--khí-lâi`): each `-` run in front of a romanization syllable is
+/// rendered by [`push_syllable_joiner_run`] — `joiner` between two romanized
+/// syllables (`我tâigí` under None, `我tâi gí` under Space), nothing but its
+/// neutral-tone dots after Hanji or at the start (`記·khílâi`, `講·leh`), as a
+/// nailed commit renders the same picks. A run before Hanji (the khinsiann
+/// marker `好--矣`) stays as written. Borrows when there is no `-`.
+pub fn syllable_joiner_in_hanji<'a>(hanji: &'a str, joiner: &str) -> std::borrow::Cow<'a, str> {
+    use crate::khinsiann::is_roman_syllable_char;
+    if !hanji.contains('-') {
+        return std::borrow::Cow::Borrowed(hanji);
+    }
+    let mut out = String::with_capacity(hanji.len());
+    let mut chars = hanji.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '-' {
+            out.push(c);
+            continue;
+        }
+        let mut run_len = 1;
+        while chars.next_if_eq(&'-').is_some() {
+            run_len += 1;
+        }
+        if !chars
+            .peek()
+            .is_some_and(|&next| is_roman_syllable_char(next))
+        {
+            out.extend(std::iter::repeat_n('-', run_len));
+            continue;
+        }
+        let after_roman = out.chars().last().is_some_and(is_roman_syllable_char);
+        push_syllable_joiner_run(&mut out, run_len, if after_roman { joiner } else { "" });
+    }
+    std::borrow::Cow::Owned(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn syllable_joiner_in_hanji_renders_the_romanized_words_only() {
+        let none = |hanji| syllable_joiner_in_hanji(hanji, "").into_owned();
+        let space = |hanji| syllable_joiner_in_hanji(hanji, " ").into_owned();
+        assert_eq!(none("我tâi-gí"), "我tâigí");
+        assert_eq!(space("我tâi-gí"), "我tâi gí");
+        assert_eq!(none("我tsia̍h--ah"), "我tsia̍h\u{00b7}ah");
+        assert_eq!(space("我tsia̍h--ah"), "我tsia̍h \u{00b7}ah");
+        // After Hanji, only the neutral-tone dot.
+        assert_eq!(space("記--khí-lâi"), "記\u{00b7}khí lâi");
+        // Hanji khinsiann markers stay; no hyphen borrows.
+        assert_eq!(none("好--矣"), "好--矣");
+        assert!(matches!(
+            syllable_joiner_in_hanji("我kah", ""),
+            std::borrow::Cow::Borrowed(_)
+        ));
+    }
 
     #[test]
     fn syllable_joiner_display_none_drops_hyphens_and_dots_the_khinsiann_marker() {

@@ -215,7 +215,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercaseCapital: "ᴺ（SIÂᴺ）",
         .settingsNasalMarkerUppercaseSmall: "ⁿ（SIÂⁿ）",
         .settingsKhinsiannInHanji: "漢字顯示輕聲（--）",
-        .settingsHanLoMixed: "漢羅濫",
+        .settingsHanLoMixed: "羅馬字候選項",
         .themeCustomFont: "字型設定",
         .themeEditorResetAll: "恢復預設設定",
     ]
@@ -863,7 +863,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercaseCapital: "ᴺ (SIÂᴺ)",
         .settingsNasalMarkerUppercaseSmall: "ⁿ (SIÂⁿ)",
         .settingsKhinsiannInHanji: "Hàn-jī hián-sī khin-siann (--)",
-        .settingsHanLoMixed: "Hàn-Lô lām",
+        .settingsHanLoMixed: "Lô-má-jī hāu-suán-hāng",
         .themeCustomFont: "Jī-hîng siat-tīng",
         .themeEditorResetAll: "Hue-ho̍k ī-siat siat-tīng",
     ]
@@ -1079,7 +1079,7 @@ enum GeneratedStrings {
         .settingsNasalMarkerUppercaseCapital: "ᴺ (SIÂᴺ)",
         .settingsNasalMarkerUppercaseSmall: "ⁿ (SIÂⁿ)",
         .settingsKhinsiannInHanji: "Hàn-jī hián-sī khin-siaⁿ (--)",
-        .settingsHanLoMixed: "Hàn-Lô lām",
+        .settingsHanLoMixed: "Lô-má-jī hāu-soán-hāng",
         .themeCustomFont: "Jī-hêng siat-tēng",
         .themeEditorResetAll: "Hoe-ho̍k ī-siat siat-tēng",
     ]

@@ -60,12 +60,15 @@ impl engine::AppConfig {
     /// Whether every dictionary word also lists its romanization as a word of
     /// its own (Hàn-Lô lām, `han_lo_mixed`): on a TL / POJ layout only — never
     /// on the TPS layout, which never shows one, nor in English input — and
-    /// never under Romanization Only, where every cell is already the
-    /// romanization. A TPS-glyph buffer on a roman layout is excluded by the
-    /// caller, which knows the buffer's mode.
+    /// never where a cell already commits the romanization: Romanization Only,
+    /// and Pairing led by the romanization (the swap off), whose `tsia̍h / 食`
+    /// cell writes `tsia̍h` already. Hanji with Romanization lists them in either
+    /// order, its cells being one script each. A TPS-glyph buffer on a roman
+    /// layout is excluded by the caller, which knows the buffer's mode.
     pub fn lists_roman_twins(&self) -> bool {
         self.han_lo_mixed
             && !self.is_roman_only_display()
+            && (self.is_hanji_first || self.is_single_script_display())
             && !self.is_tps_layout()
             // English input (`phonetics::api::parse_input_mode`'s spellings).
             && !matches!(self.input_mode.as_str(), "english" | "English" | "EN")
@@ -164,7 +167,7 @@ pub fn split_single_script_cells<T: Clone>(
 
 #[cfg(test)]
 mod tests {
-    use super::engine::{AppConfig, SyllableSeparator};
+    use super::engine::{AppConfig, CandidateDisplayMode, SyllableSeparator};
 
     fn config(input_mode: &str, swapped: bool) -> AppConfig {
         AppConfig {
@@ -194,14 +197,22 @@ mod tests {
     fn roman_twins_list_on_a_tl_or_poj_layout_only() {
         let han_lo = |mode: &str| AppConfig {
             han_lo_mixed: true,
-            ..config(mode, false)
+            ..config(mode, true)
         };
         assert!(han_lo("tl").lists_roman_twins());
         assert!(han_lo("poj").lists_roman_twins());
         for mode in ["tps", "english", "English", "EN"] {
             assert!(!han_lo(mode).lists_roman_twins(), "{mode:?}");
         }
-        assert!(!config("tl", false).lists_roman_twins());
+        assert!(!config("tl", true).lists_roman_twins());
+        // Pairing led by the romanization: its cell already writes it.
+        let roman_first = |display: CandidateDisplayMode| AppConfig {
+            han_lo_mixed: true,
+            candidate_display_mode: display as i32,
+            ..config("tl", false)
+        };
+        assert!(!roman_first(CandidateDisplayMode::SideBySide).lists_roman_twins());
+        assert!(roman_first(CandidateDisplayMode::Combined).lists_roman_twins());
     }
 
     #[test]
@@ -248,7 +259,6 @@ mod tests {
 
     #[test]
     fn commits_plain_hanji_requires_brackets_off_and_paired_hanji_or_tps() {
-        use super::engine::CandidateDisplayMode;
         let mk =
             |mode: &str, swapped: bool, brackets: bool, disp: CandidateDisplayMode| AppConfig {
                 input_mode: mode.to_owned(),
@@ -271,7 +281,6 @@ mod tests {
 
     #[test]
     fn only_hanji_with_romanization_off_the_tps_layout_splits() {
-        use super::engine::CandidateDisplayMode;
         let display = |input_mode: &str, mode: CandidateDisplayMode| AppConfig {
             candidate_display_mode: mode as i32,
             ..config(input_mode, false)

@@ -373,6 +373,7 @@ fn learn_han_lo(raw: &str, picks: &[Pick<'_>]) -> Option<LearnedEntry> {
     install(&fixture_rows(), FIXTURE_SYLLABLES);
     let config = protos::engine::AppConfig {
         han_lo_mixed: true,
+        is_hanji_first: true,
         ..config_tl()
     };
     let mut e = engine_in_continuous(raw);
@@ -441,6 +442,36 @@ fn han_lo_keeps_the_typed_separator_in_the_hanji() {
     }
 }
 
+// A phrase holding a word picked in romanization is counted once as picked
+// (the user wrote that mixed form on purpose); one of Hanji picks alone is not.
+#[test]
+fn han_lo_counts_a_mixed_phrase_as_picked() {
+    let counts = |picks: &[Pick<'_>]| {
+        let _lock = engine_install_lock();
+        install(&fixture_rows(), FIXTURE_SYLLABLES);
+        let config = protos::engine::AppConfig {
+            han_lo_mixed: true,
+            is_hanji_first: true,
+            ..config_tl()
+        };
+        let mut e = engine_in_continuous("kikhilai");
+        let mut last = None;
+        for p in picks {
+            last = Some(e.apply_learning(pick(*p), &config));
+        }
+        let last = last.expect("a pick");
+        (last.learned.is_some(), last.learned_counts_as_picked)
+    };
+    assert_eq!(
+        counts(&[(Some("記"), "kì", 2, 1), (None, "khí-lâi", 6, 2)]),
+        (true, true)
+    );
+    assert_eq!(
+        counts(&[(Some("記"), "kì", 2, 1), (Some("起來"), "khí-lâi", 6, 2)]),
+        (true, false)
+    );
+}
+
 // A §34 literal or typo no dictionary word reads never learns, even beside
 // a Hanji pick.
 #[test]
@@ -458,6 +489,7 @@ fn han_lo_learns_nothing_romanized_in_english_input() {
     install(&fixture_rows(), FIXTURE_SYLLABLES);
     let config = protos::engine::AppConfig {
         han_lo_mixed: true,
+        is_hanji_first: true,
         input_mode: "english".into(),
         ..config_tl()
     };

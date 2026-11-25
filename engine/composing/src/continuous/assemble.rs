@@ -794,7 +794,8 @@ pub(crate) fn assemble_candidates(
             }
         }
         // Syllable Separator (§49) — same presentation seam, same field:
-        // only `roman`, for dictionary, custom and walker rows alike;
+        // `roman` (and the romanized words of a Han-Lo `hanji`), for
+        // dictionary, custom and walker rows alike;
         // `display_text` / `canonical_tl` keep the dictionary form. After
         // the POJ render (which splits on `-`), before the rendered
         // dedupe (which keys on what the cell shows) and before the §34
@@ -804,6 +805,17 @@ pub(crate) fn assemble_candidates(
             for cand in &mut candidates {
                 if cand.roman.contains('-') {
                     cand.roman = phonetics::api::syllable_joiner_display(&cand.roman, joiner);
+                }
+                // The romanized words a Han-Lo spelling writes (`我tâi-gí`,
+                // a Hàn-Lô lām sentence or learned phrase, `啥mih`) follow
+                // the same setting, as the nailed commit of the same picks
+                // renders them; its Hanji and their khinsiann markers stay.
+                if let Some(hanji) = &cand.hanji {
+                    if let std::borrow::Cow::Owned(rendered) =
+                        phonetics::api::syllable_joiner_in_hanji(hanji, joiner)
+                    {
+                        cand.hanji = Some(rendered);
+                    }
                 }
             }
         }

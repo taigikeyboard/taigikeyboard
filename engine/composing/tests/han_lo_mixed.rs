@@ -121,9 +121,12 @@ fn install_fixture() {
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
+/// Hanji first, as Pairing lists romanization twins only then
+/// (`AppConfig::lists_roman_twins`).
 fn config(display: CandidateDisplayMode, han_lo_mixed: bool) -> AppConfig {
     AppConfig {
         han_lo_mixed,
+        is_hanji_first: true,
         ..config_with_display_mode("tl", display as i32)
     }
 }
@@ -418,6 +421,7 @@ fn a_learned_han_lo_phrase_shows_in_poj_under_poj() {
     };
     let poj = AppConfig {
         han_lo_mixed: true,
+        is_hanji_first: true,
         ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
     };
     let listed = fetch_at_pos_response(&poj, "goachiah", fetch.clone())
@@ -449,6 +453,7 @@ fn the_sentence_writes_a_romanization_in_poj_under_poj() {
     install_fixture();
     let poj = AppConfig {
         han_lo_mixed: true,
+        is_hanji_first: true,
         ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
     };
     let row = fetch_at_pos_response(&poj, "goachiah", picked("tsia̍h", "tsia̍h"))
@@ -522,6 +527,7 @@ fn the_sentence_hanji_follows_the_nasal_marker_case() {
     install_fixture();
     let poj = |force_lowercase_nasal_marker| AppConfig {
         han_lo_mixed: true,
+        is_hanji_first: true,
         force_lowercase_nasal_marker,
         ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
     };
@@ -643,5 +649,54 @@ fn a_bundled_context_keeps_the_lkk_romanization_ahead() {
         hanji_and_roman(&listed)[0],
         (Some("甲"), "kah"),
         "{listed:?}"
+    );
+}
+
+// Pairing led by the romanization: a cell already writes `tsia̍h`, so no
+// romanization twin is listed (`AppConfig::lists_roman_twins`).
+#[test]
+fn roman_first_pairing_lists_no_romanization_rows() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let roman_first = AppConfig {
+        is_hanji_first: false,
+        ..config(CandidateDisplayMode::SideBySide, true)
+    };
+    let listed = rows("tsiah", &roman_first, Fetch::default());
+    assert!(
+        listed.iter().skip(1).all(|(hanji, _, _)| hanji.is_some()),
+        "{listed:?}"
+    );
+}
+
+// Syllable Separator: the romanized words of the sentence's Hanji follow it
+// as its romanization does (`我tsia̍h·ah` under None), as the nailed commit of
+// the same picks writes them.
+#[test]
+fn the_sentence_hanji_follows_the_syllable_separator() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let separated = |separator: protos::engine::SyllableSeparator| AppConfig {
+        syllable_separator: separator as i32,
+        ..config(CandidateDisplayMode::SideBySide, true)
+    };
+    let fetch = || picked("tsia̍h", "tsia̍h");
+    assert_eq!(
+        sentence_row(
+            "guatsiahah",
+            &separated(protos::engine::SyllableSeparator::None),
+            fetch()
+        )
+        .0,
+        Some("我tsia̍h\u{00b7}ah".to_owned())
+    );
+    assert_eq!(
+        sentence_row(
+            "guatsiahah",
+            &separated(protos::engine::SyllableSeparator::Hyphen),
+            fetch()
+        )
+        .0,
+        Some("我tsia̍h--ah".to_owned())
     );
 }

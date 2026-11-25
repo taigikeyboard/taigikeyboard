@@ -308,6 +308,12 @@ pub struct UserRows {
 pub struct Applied {
     pub response: ComposingResponse,
     pub learned: Option<lexicon::LearnedEntry>,
+    /// The `learned` phrase holds a word picked in romanization (Hàn-Lô lām,
+    /// `我` + `tsia̍h`): the user wrote that mixed form on purpose, so it is
+    /// counted once as picked too, and the next composition of its reading
+    /// leads with it (§50). A phrase of Hanji picks alone is not: it stays
+    /// behind the dictionary until picked.
+    pub learned_counts_as_picked: bool,
     /// Set by a `CommitContinuous` that nailed or finalized (R5).
     pub usage: Option<Usage>,
 }
@@ -317,6 +323,7 @@ impl From<ComposingResponse> for Applied {
         Self {
             response,
             learned: None,
+            learned_counts_as_picked: false,
             usage: None,
         }
     }

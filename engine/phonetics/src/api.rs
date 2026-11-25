@@ -177,7 +177,7 @@ pub use crate::khinsiann::{
 pub use crate::reading_key::{roman_reading_eq, stored_roman_mode, toneless_reading_key};
 pub use crate::separators::{
     opens_with_neutral_mark, push_syllable_joiner_run, render_typed_separators,
-    syllable_joiner_display,
+    syllable_joiner_display, syllable_joiner_in_hanji,
 };
 pub use crate::tone_render::{
     consumed_tone_digit_offsets, literal_learning_text, normalize_tone, to_tone_marks,

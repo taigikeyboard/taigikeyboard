@@ -11,8 +11,8 @@ mod common;
 use common::{open_user_data, production_lexicon_ready, tl_config};
 
 use protos::engine::{
-    composing_request, request, response, AppConfig, CandidateMessage, ComposingRequest,
-    FetchAtPos, Reset, Start,
+    composing_request, request, response, AppConfig, CandidateMessage, CommitContinuous,
+    CommitScript, ComposingRequest, FetchAtPos, Reset, Start,
 };
 use userdata::{CustomDictionaryRow, JournalMode, UserDataPaths, UserDataStores};
 
@@ -65,11 +65,20 @@ fn sentence(config: &AppConfig, raw: &str) -> Option<String> {
         .and_then(|candidate| candidate.hanji)
 }
 
+// One test: the user-data handle opens once per process, and the scenarios
+// share the one composing engine.
 #[test]
-fn the_sentence_reads_the_users_data_inside_the_buffer() {
+fn the_engine_reads_and_learns_the_users_data_inside_the_buffer() {
     if !production_lexicon_ready() {
         return;
     }
+    // Outlives both scenarios: the engine keeps writing into it.
+    let directory = tempfile::tempdir().unwrap();
+    the_sentence_reads_the_users_data_inside_the_buffer(directory.path());
+    a_mixed_phrase_leads_the_next_composition();
+}
+
+fn the_sentence_reads_the_users_data_inside_the_buffer(directory: &std::path::Path) {
     let han_lo = AppConfig {
         han_lo_mixed: true,
         ..tl_config(true)
@@ -78,11 +87,7 @@ fn the_sentence_reads_the_users_data_inside_the_buffer() {
     let neutral_uhootsinghu = sentence(&han_lo, "uhootsinghu");
     let neutral_mtsaiiann = sentence(&tl_config(true), "guamtsaiiann");
 
-    let directory = tempfile::tempdir().unwrap();
-    let stores = UserDataStores::at(
-        UserDataPaths::in_directory(directory.path()),
-        JournalMode::Delete,
-    );
+    let stores = UserDataStores::at(UserDataPaths::in_directory(directory), JournalMode::Delete);
     stores.open_blocking();
     // `tsia̍h` picked as a romanization, on its own.
     for _ in 0..3 {
@@ -100,7 +105,7 @@ fn the_sentence_reads_the_users_data_inside_the_buffer() {
     // Flush the queued writes before the engine opens the same files.
     stores.frequency.all_rows();
     drop(stores);
-    open_user_data(directory.path());
+    open_user_data(directory);
 
     // The pick counts inside the sentence (review #1): `tsia̍h` is no
     // candidate of the neutral list for `guatsiah`, yet its count is read.
@@ -123,4 +128,70 @@ fn the_sentence_reads_the_users_data_inside_the_buffer() {
         .iter()
         .filter(|candidate| candidate.consumed_span_end as usize == "guamtsaiiann".len())
         .all(|candidate| candidate.hanji.as_deref() != Some("m̄知影")));
+}
+
+/// The list fetched for the open composition.
+fn fetched(config: &AppConfig) -> Vec<CandidateMessage> {
+    match composing(
+        config,
+        composing_request::Method::FetchAtPos(FetchAtPos {
+            now_ms: NOW_MS,
+            ..FetchAtPos::default()
+        }),
+    ) {
+        response::Payload::Composing(composing) => {
+            composing.continuous.expect("candidates").candidates
+        }
+        other => panic!("composing answered {other:?}"),
+    }
+}
+
+/// Picks `candidate`, as a tap on its cell does.
+fn pick(config: &AppConfig, candidate: &CandidateMessage) {
+    composing(
+        config,
+        composing_request::Method::CommitContinuous(CommitContinuous {
+            consumed_bytes: candidate.consumed_span_end,
+            syllable_count: candidate.syllable_count,
+            canonical_text: candidate.display_text.clone(),
+            association_tl: candidate.canonical_tl.clone(),
+            hanji: candidate.hanji.clone(),
+            script: CommitScript::Lead as i32,
+            roman: candidate.roman.clone(),
+        }),
+    );
+}
+
+// A mixed phrase written once — `kóng` picked in romanization, then 話 —
+// leads the next composition of its reading (review trade-off 1): the user
+// wrote that form on purpose, so it is counted once as picked.
+fn a_mixed_phrase_leads_the_next_composition() {
+    let han_lo = AppConfig {
+        han_lo_mixed: true,
+        ..tl_config(true)
+    };
+    let raw = "kongue";
+    let neutral = listed(&han_lo, raw);
+    assert_ne!(
+        neutral.get(1).and_then(|row| row.hanji.as_deref()),
+        Some("kóng話")
+    );
+    let candidates = fetched(&han_lo);
+    let kong = candidates
+        .iter()
+        .find(|c| c.hanji.is_none() && c.canonical_tl == "kóng")
+        .unwrap_or_else(|| panic!("the `kóng` romanization: {candidates:?}"));
+    pick(&han_lo, kong);
+    let candidates = fetched(&han_lo);
+    let ue = candidates
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some("話"))
+        .unwrap_or_else(|| panic!("話: {candidates:?}"));
+    pick(&han_lo, ue);
+    // The queued writes land before the next fetch reads them.
+    assert!(common::eventually(|| {
+        listed(&han_lo, raw)
+            .get(1)
+            .is_some_and(|row| row.hanji.as_deref() == Some("kóng話"))
+    }));
 }
