@@ -86,11 +86,21 @@ Per platform, on top of that:
 | Platform | Install |
 | --- | --- |
 | Android | JDK 17; Android SDK with platform 36; NDK r25+ (`sdkmanager`) |
-| iOS / macOS | Xcode (iOS 17 / macOS 14 deployment targets) |
+| iOS / macOS | Xcode 26.6 (Swift 6.3.3) or newer (iOS 17 / macOS 14 deployment targets) — see below |
 | Windows gate on macOS | `brew install mingw-w64` — see [`windows/README.md`](../windows/README.md) |
 | Windows DLL | Windows 10 1809+ x64 with MSVC — see [`architecture/windows-release.md`](architecture/windows-release.md) |
 | Linux | the packages in [`linux/README.md`](../linux/README.md) § System packages |
 | Dictionary | Python 3.13+ with `python3 -m pip install -r dictionary/requirements.txt pytest`; Node 22+ for `taigi-converter/` (provided by `mise install`) |
+
+**Minimum Xcode = the Xcode CI builds with.** The oldest supported Xcode is the
+one `DEVELOPER_DIR` pins in `.github/workflows/macos-build.yml`, because that is
+the only version CI ever compiles the Swift with; anything older is untested,
+and an older Swift type checker can reject code a newer one accepts. Each Swift
+target enforces it at compile time: `ios/Sources/TaigiKeyboard/Engine/ToolchainFloor.swift`
+and `macos/Sources/TaigiInputMethodCore/Bootstrap/ToolchainFloor.swift` stop an
+older Xcode with `TaigiKeyboard needs Xcode 26.6 (Swift 6.3.3) or newer`. When
+CI moves to a newer Xcode, raise both files, this section and the
+troubleshooting row in § Build setup in the same pull request.
 
 ## 3. One-time setup
 
@@ -201,6 +211,7 @@ by macOS, so inspect the history soon after an incident.
 | `protoc version drift — SKIPPING platform proto regeneration` | protoc is not 36.2 | `mise install`, or install protoc 36.2; harmless unless you changed a `.proto` |
 | `mise cannot read mise.toml` | the file changed since you last trusted it | `mise trust`, then `mise install` for any new pin |
 | `protoc-gen-swift not found` | swift-protobuf missing | `mise install`, or install the version in `macos/Package.resolved` |
+| `TaigiKeyboard needs Xcode 26.6 (Swift 6.3.3) or newer` | the selected Xcode is older | install Xcode 26.6+ and `sudo xcode-select -s` it (or set `DEVELOPER_DIR`); then delete `macos/.build` and the project's DerivedData so no artifact built by the old Swift is reused |
 | `cargo-ndk not found` | Android native build without cargo-ndk | `mise install`, or `cargo install cargo-ndk --locked` |
 | `gitleaks is not installed` | `make scan-secrets` / the hook without gitleaks | `mise install`, or install gitleaks 8.30.1 — the version `.gitleaks-scanned` records |
 | rustup downloads Apple / Android targets on Linux | `engine/rust-toolchain.toml` target list | `RUSTUP_TOOLCHAIN=$(tools/rust-toolchain.sh)` for engine-only work |

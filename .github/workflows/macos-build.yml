@@ -55,6 +55,8 @@ env:
   # Pinned, not the image default, so a runner image update cannot change the
   # SDK a release links against. macos-26 carries GA Xcode 26.x only;
   # KeyboardShortcuts needs Swift 6.2+ (macos.yml says why).
+  # This pin is also the minimum Xcode contributors need: raise the
+  # ToolchainFloor.swift guards and docs/BUILDING.md § 2 with it.
   DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
 
 jobs:

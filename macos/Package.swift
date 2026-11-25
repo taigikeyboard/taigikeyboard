@@ -16,8 +16,9 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.28.0"),
         // Exact pin: the USER-approved first non-Apple dependency stays
         // byte-reproducible. Its 3.x manifest is swift-tools 6.2, so resolving
-        // this package now needs a Swift 6.2+ toolchain even though our own
-        // manifest says 6.0.
+        // this package needs Swift 6.2+ even though our own manifest says 6.0;
+        // the build itself needs Swift 6.3.3+
+        // (Sources/TaigiInputMethodCore/Bootstrap/ToolchainFloor.swift).
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts.git", exact: "3.1.0"),
     ],
     targets: [
