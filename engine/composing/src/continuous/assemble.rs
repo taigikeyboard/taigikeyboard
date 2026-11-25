@@ -170,6 +170,7 @@ pub(crate) fn assemble_candidates(
     now_ms: i64,
     custom: &[CustomEntry],
     learned: &[LearnedEntry],
+    edge_rows: (&[CustomEntry], &[LearnedEntry]),
     mode: phonetics::InputMode,
     context: &ranking::ContextRanks,
     config: &protos::engine::AppConfig,
@@ -389,9 +390,31 @@ pub(crate) fn assemble_candidates(
             // `prefix`/`dict` from the single seam `with_state`
             // scope — no second `build_shadow_lattice_with_barriers` per fetch.
             {
-                if let (Some(continuous_keys), Some(inv), Some(ctx)) =
+                if let (Some(continuous_keys), Some(inv), Some(list_ctx)) =
                     (continuous_keys.as_ref(), inv, lex_ctx.as_ref())
                 {
+                    // The walk also meets the user rows filed under its inner
+                    // edges (`UserRows::edge_custom` / `edge_learned`), which
+                    // the list never shows: a row of the list covers the
+                    // whole buffer.
+                    let (edge_custom, edge_learned) = edge_rows;
+                    let walker_custom: Vec<CustomEntry>;
+                    let walker_learned: Vec<LearnedEntry>;
+                    let walker_ctx;
+                    let ctx = if edge_custom.is_empty() && edge_learned.is_empty() {
+                        list_ctx
+                    } else {
+                        walker_custom = custom.iter().chain(edge_custom).cloned().collect();
+                        walker_learned = learned.iter().chain(edge_learned).cloned().collect();
+                        walker_ctx = ContinuousFetchCtx {
+                            custom: &walker_custom,
+                            learned: &walker_learned,
+                            tone_pin: list_ctx.tone_pin.clone(),
+                            whole_buffer_key: list_ctx.whole_buffer_key.clone(),
+                            ..*list_ctx
+                        };
+                        &walker_ctx
+                    };
                     synth = synth_cut(raw_len, continuous_keys, inv, ctx)
                         .filter(|cut| shape == ListShape::Sentence || cut.path.edges.len() == 1);
                     if let Some(slot0) = synth

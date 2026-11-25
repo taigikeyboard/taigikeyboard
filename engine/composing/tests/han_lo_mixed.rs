@@ -568,6 +568,7 @@ fn the_lab_tags_a_mixed_sentence_as_the_sentence() {
         frequency: crate::common::frequency_map(vec![selected("tsia̍h", "tsia̍h", 3, 1_000)]),
         custom: Vec::new(),
         learned: Vec::new(),
+        ..Default::default()
     };
     let lab: Vec<(String, &str)> = composing::explain::mechanism(
         &engine,

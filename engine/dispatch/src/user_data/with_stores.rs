@@ -101,10 +101,10 @@ pub(super) struct StoredRows<'a> {
 }
 
 impl ConversionFrequency for StoredRows<'_> {
-    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> UserRows {
+    fn rows_for_edge_keys(&self, edge_keys: &[String], mode: phonetics::InputMode) -> UserRows {
         let query_keys: Vec<_> = edge_keys
             .iter()
-            .map(|body| phonetics::api::tps_toneless_edge_key(body))
+            .map(|body| phonetics::api::toneless_edge_key(body, mode))
             .collect();
         let custom = if self.config.custom_dictionary_disabled {
             Vec::new()
@@ -412,7 +412,7 @@ mod tests {
                 stores: &stores,
                 config,
             }
-            .rows_for_edge_keys(&keys)
+            .rows_for_edge_keys(&keys, phonetics::InputMode::Tps)
         };
         let hanji = |rows: &UserRows| -> Vec<String> {
             rows.custom

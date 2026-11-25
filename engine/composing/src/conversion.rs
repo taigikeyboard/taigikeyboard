@@ -42,8 +42,9 @@ use crate::shadow::{
 /// mutation's request.
 pub trait ConversionFrequency {
     /// The custom-dictionary rows and learned phrases filed under any of the
-    /// toneless TPS `edge_keys` (`ㄉㄢㄙㆩ`); `frequency` is not read.
-    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> crate::api::UserRows;
+    /// toneless `edge_keys` of `mode`'s family (`ㄉㄢㄙㆩ`, `mtsaiiann`), as
+    /// `custom` / `learned`; `frequency` and the `edge_*` rows are not read.
+    fn rows_for_edge_keys(&self, edge_keys: &[String], mode: InputMode) -> crate::api::UserRows;
     /// The learned rows for `words`, keyed by the `(word, canonical TL)`
     /// pair the ranking reads.
     fn rows_for_words(&self, words: &[String]) -> ranking::FrequencyMap;
@@ -374,8 +375,10 @@ pub(crate) fn convert(
             // previous-word context.
             let user_rows = frequency
                 .map(|frequency| {
-                    frequency
-                        .rows_for_edge_keys(&edge_toneless_bodies(&continuous_keys, InputMode::Tps))
+                    frequency.rows_for_edge_keys(
+                        &edge_toneless_bodies(&continuous_keys, InputMode::Tps),
+                        InputMode::Tps,
+                    )
                 })
                 .unwrap_or_default();
             let mut ctx = ContinuousFetchCtx {

@@ -220,7 +220,7 @@ impl LearnedPhraseStore {
     }
 
     /// [`rows_matching`](Self::rows_matching) for each of `query_keys` — a
-    /// TPS walk's edge bodies — each phrase once, in one read: the store
+    /// walk's edge bodies — each phrase once, in one read: the store
     /// answers every key or none.
     pub fn rows_matching_any(
         &self,

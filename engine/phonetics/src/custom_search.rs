@@ -195,15 +195,23 @@ pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSe
     })
 }
 
-/// READ side — the stored `tps:notone` key a toneless TPS walker edge body
-/// (`ㄉㄢㄙㆩ`) equals. The body is already the fused toneless face the
-/// write side stores (`tps_notone_from_tl`, plus its ㄜ→ㄛ variant row), so
-/// it is matched whole, never as a prefix.
-pub fn tps_toneless_edge_key(body: &str) -> CustomSearchKey {
+/// READ side — the stored `notone` key a toneless walker edge body of
+/// `mode`'s family equals, matched whole, never as a prefix. A TPS body
+/// (`ㄉㄢㄙㆩ`) is already the fused toneless face the write side stores
+/// (`tps_notone_from_tl`, plus its ㄜ→ㄛ variant row); a TL / POJ body
+/// (`mtsaiiann`, `chiah`) folds through the same [`derive_notone`] the write
+/// side's `tl:` / `poj:` `notone` keys do. English reads as TL, as
+/// [`derive_custom_query_key`] does.
+pub fn toneless_edge_key(body: &str, mode: InputMode) -> CustomSearchKey {
+    let (family, key) = match mode {
+        InputMode::Tps => (KeyFamily::Tps, body.to_owned()),
+        InputMode::Poj => (KeyFamily::Poj, derive_notone(body)),
+        InputMode::Tl | InputMode::English => (KeyFamily::Tl, derive_notone(body)),
+    };
     CustomSearchKey {
-        family: KeyFamily::Tps.tag(),
+        family: family.tag(),
         form: FORM_NOTONE,
-        key: body.to_owned(),
+        key,
     }
 }
 

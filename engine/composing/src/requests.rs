@@ -327,16 +327,21 @@ pub(crate) fn lists_roman_twins(config: &AppConfig, mode: phonetics::InputMode) 
         && matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj)
 }
 
-/// The candidate list [`handle_fetch_at_pos`] encodes, plus the buffer it
-/// was built from. `None` when the engine is not composing.
-pub(crate) fn listed_candidates(
-    engine: &Engine,
-    now_ms: i64,
-    user_rows: &UserRows,
-    context: &ranking::ContextRanks,
-    literal_roman_candidate_disabled: bool,
-    config: &AppConfig,
-) -> Option<Listed> {
+/// The buffer a fetch of `engine` lists from now — the pending tail, or the
+/// stretch a word list starts at — and how it is read. `None` when the
+/// engine is not composing.
+struct ListingBuffer {
+    /// The whole pending tail.
+    tail: String,
+    /// The listed buffer.
+    listed: String,
+    /// Where `listed` starts in `tail` (`0` for the last nailed segment's list).
+    list_start: usize,
+    shape: ListShape,
+    mode: phonetics::InputMode,
+}
+
+fn listing_buffer(engine: &Engine, config: &AppConfig) -> Option<ListingBuffer> {
     let state = engine.snapshot_state();
     let Phase::Continuous {
         raw: tail, nailed, ..
@@ -352,6 +357,140 @@ pub(crate) fn listed_candidates(
     let (listed, list_start) = word_list_start
         .unwrap_or(WordListStart::InTail(0))
         .listed(nailed, tail);
+    // v3.5.9 D / C-3b — mode upgrade: the buffer's content, not the
+    // config, decides TPS. Any Bopomofo char (`phonetics::contains_tps`,
+    // the same detection `derived::derived_display` uses) makes the fetch
+    // `InputMode::Tps`, whatever `input_mode` says; a Bopomofo-free buffer
+    // composes under `composing_mode`, which reads the TPS layout
+    // (`input_mode = "tps"`, the only TPS wire — the engine ships inside
+    // each app) as TL. So a TPS buffer that opens with `-` or a lone tone
+    // mark takes the TL tables until its first Bopomofo glyph.
+    //
+    // Single-source mode flow into `assemble_candidates`: the seam
+    // derives every TPS-gated branch from `mode == InputMode::Tps`
+    // internally — pre-C-3b had a parallel `is_tps: bool` arg that
+    // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
+    // of truth). Dropping the bool eliminates split-brain risk. The whole
+    // tail decides, also for a list starting inside it; the last nailed
+    // segment's list reads that segment too (the tail after a pick may be
+    // empty or tone marks only).
+    let mode = match word_list_start {
+        Some(WordListStart::LastNailed) => buffer_input_mode(&listed, config),
+        _ => buffer_input_mode(tail, config),
+    };
+    Some(ListingBuffer {
+        tail: tail.clone(),
+        listed,
+        list_start,
+        shape,
+        mode,
+    })
+}
+
+/// The toneless body of every edge of the sentence walk a fetch of `engine`
+/// makes now, and the mode they are keyed in — what the dispatch layer reads
+/// the custom words and learned phrases filed inside the buffer with
+/// (`UserRows::edge_custom` / `edge_learned`), so `m̄知影` meets its edge in
+/// `guamtsaiiann`. `None` when not composing, or for a buffer the fetch
+/// blocks (Hanji leaked in).
+pub fn walker_edge_keys(
+    engine: &Engine,
+    config: &AppConfig,
+) -> Option<(Vec<String>, phonetics::InputMode)> {
+    let ListingBuffer { listed, mode, .. } = listing_buffer(engine, config)?;
+    if listed.is_empty() || is_hanji(&listed) {
+        return None;
+    }
+    lexicon::EngineHandle::with_state(|state| {
+        Ok(state.syllable_inventory.as_ref().map(|inv| {
+            let keys = crate::shadow::build_continuous_keys(&listed, inv, mode);
+            crate::continuous::edge_toneless_bodies(&keys, mode)
+        }))
+    })
+    .ok()
+    .flatten()
+    .map(|bodies| (bodies, mode))
+}
+
+/// Every word the sentence walk of a fetch of `engine` could write on any of
+/// its edges — the dictionary's homophones (under Hàn-Lô lām each reading's
+/// romanization too) and the words of `user_rows`' custom entries and learned
+/// phrases, the inner edges' included — deduplicated: the words whose user
+/// counts can change the sentence, which the dispatch layer reads before the
+/// fetch it ranks with (a picked `tsia̍h` inside `guatsiah`, a picked 予
+/// inside `uhootsinghu`). Empty when not composing.
+pub fn walker_edge_words(engine: &Engine, user_rows: &UserRows, config: &AppConfig) -> Vec<String> {
+    let Some(ListingBuffer { listed, mode, .. }) = listing_buffer(engine, config) else {
+        return Vec::new();
+    };
+    if listed.is_empty() || is_hanji(&listed) {
+        return Vec::new();
+    }
+    let custom: Vec<lexicon::CustomEntry> = user_rows
+        .custom
+        .iter()
+        .chain(&user_rows.edge_custom)
+        .cloned()
+        .collect();
+    let learned: Vec<LearnedEntry> = user_rows
+        .learned
+        .iter()
+        .chain(&user_rows.edge_learned)
+        .cloned()
+        .collect();
+    let mut words = lexicon::EngineHandle::with_state(|state| {
+        let (Some(inv), Some(prefix_index), Some(dict)) = (
+            state.syllable_inventory.as_ref(),
+            state.prefix_index.as_ref(),
+            state.dictionary.as_ref(),
+        ) else {
+            return Ok(Vec::new());
+        };
+        let keys = crate::shadow::build_continuous_keys(&listed, inv, mode);
+        let ctx = lexicon::ContinuousFetchCtx {
+            enabled_sources_bitmask: source_filter_bitmask(config),
+            freq_map: &ranking::FrequencyMap::new(),
+            now_ms: 0,
+            context: ranking::ContextRanks::empty(),
+            custom: &custom,
+            learned: &learned,
+            prefix_index,
+            dict,
+            mode,
+            tone_pin: crate::shadow::whole_buffer_tone_pin(&listed, mode, Some(inv)),
+            whole_buffer_key: None,
+            khinsiann_in_hanji: config.khinsiann_in_hanji,
+            roman_twins: lists_roman_twins(config, mode),
+        };
+        Ok(crate::continuous::edge_homophone_words(&keys, &ctx))
+    })
+    .unwrap_or_default();
+    let mut seen: std::collections::HashSet<String> = words.iter().cloned().collect();
+    let user_words = custom
+        .iter()
+        .map(|entry| entry.word(mode))
+        .chain(learned.iter().map(|entry| entry.hanji.clone()));
+    words.extend(user_words.filter(|word| seen.insert(word.clone())));
+    words
+}
+
+/// The candidate list [`handle_fetch_at_pos`] encodes, plus the buffer it
+/// was built from. `None` when the engine is not composing.
+pub(crate) fn listed_candidates(
+    engine: &Engine,
+    now_ms: i64,
+    user_rows: &UserRows,
+    context: &ranking::ContextRanks,
+    literal_roman_candidate_disabled: bool,
+    config: &AppConfig,
+) -> Option<Listed> {
+    let ListingBuffer {
+        tail,
+        listed,
+        list_start,
+        shape,
+        mode,
+    } = listing_buffer(engine, config)?;
     let raw = listed.as_str();
     // v3.5.8 Phase 9 Item 11 — hanji guard (§15.3.E). The only input
     // modes are TL/POJ/TPS romanization; CJK never legitimately enters
@@ -375,27 +514,6 @@ pub(crate) fn listed_candidates(
             blocked: true,
         });
     }
-    // v3.5.9 D / C-3b — mode upgrade: the buffer's content, not the
-    // config, decides TPS. Any Bopomofo char (`phonetics::contains_tps`,
-    // the same detection `derived::derived_display` uses) makes the fetch
-    // `InputMode::Tps`, whatever `input_mode` says; a Bopomofo-free buffer
-    // composes under `composing_mode`, which reads the TPS layout
-    // (`input_mode = "tps"`, the only TPS wire — the engine ships inside
-    // each app) as TL. So a TPS buffer that opens with `-` or a lone tone
-    // mark takes the TL tables until its first Bopomofo glyph.
-    //
-    // Single-source mode flow into `assemble_candidates`: the seam
-    // derives every TPS-gated branch from `mode == InputMode::Tps`
-    // internally — pre-C-3b had a parallel `is_tps: bool` arg that
-    // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
-    // of truth). Dropping the bool eliminates split-brain risk. The whole
-    // tail decides, also for a list starting inside it; the last nailed
-    // segment's list reads that segment too (the tail after a pick may be
-    // empty or tone marks only).
-    let mode = match word_list_start {
-        Some(WordListStart::LastNailed) => buffer_input_mode(raw, config),
-        _ => buffer_input_mode(tail, config),
-    };
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
     let learned = first_learned_per_reading(&user_rows.learned);
@@ -417,6 +535,10 @@ pub(crate) fn listed_candidates(
         now_ms,
         &user_rows.custom,
         &learned,
+        (
+            &user_rows.edge_custom,
+            &first_learned_per_reading(&user_rows.edge_learned),
+        ),
         mode,
         context,
         config,

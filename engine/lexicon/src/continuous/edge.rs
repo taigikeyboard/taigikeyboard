@@ -217,8 +217,10 @@ fn context_free_winner(homophones: &[RawCandidate], raw_len: u32) -> Option<usiz
 /// The words [`best_candidate_for_key_with_barriers`] picks the edge's word
 /// among — every dictionary row under `key` that passes the edge's source,
 /// tone-pin and barrier filters — as their `display_text`, the word half of
-/// the `(display_text, canonical_tl)` pair user frequency is keyed on. A
-/// Hanji conversion reads the user's counts for these before its walk.
+/// the `(display_text, canonical_tl)` pair user frequency is keyed on, and
+/// under Hàn-Lô lām (`ctx.roman_twins`) each Hanji row's romanization word
+/// (its canonical TL) too. A Hanji conversion and a fetch's sentence walk
+/// read the user's counts for these before their walk.
 pub fn homophone_words_for_key(
     key: &str,
     tps_final_only: &[usize],
@@ -235,7 +237,15 @@ pub fn homophone_words_for_key(
         consumed_span,
         &filter,
         ctx,
-        |cand| words.push(cand.display_text),
+        |cand| {
+            // Hàn-Lô lām: the reading's romanization word, identity
+            // `(canonical-TL, canonical-TL)` (`han_lo::add_roman_twins`).
+            let twin = (ctx.roman_twins
+                && cand.hanji.as_deref().is_some_and(|hanji| !hanji.is_empty()))
+            .then(|| cand.canonical_tl.clone());
+            words.push(cand.display_text);
+            words.extend(twin);
+        },
     );
     words
 }

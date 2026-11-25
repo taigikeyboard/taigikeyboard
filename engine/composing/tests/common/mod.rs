@@ -447,6 +447,10 @@ pub struct Fetch {
     pub frequency: Vec<Selected>,
     pub custom: Vec<CustomEntry>,
     pub learned: Vec<LearnedEntry>,
+    /// The rows the dispatch layer reads under the sentence walk's inner
+    /// edges (`UserRows::edge_custom` / `edge_learned`).
+    pub edge_custom: Vec<CustomEntry>,
+    pub edge_learned: Vec<LearnedEntry>,
     pub context: ranking::ContextRanks,
 }
 
@@ -520,6 +524,8 @@ impl Fetch {
                 frequency,
                 custom: self.custom,
                 learned: self.learned,
+                edge_custom: self.edge_custom,
+                edge_learned: self.edge_learned,
             },
             context: self.context,
         }
