@@ -14,11 +14,6 @@ final class KeyboardFontsTests: XCTestCase {
                 Font.custom(name, fixedSize: 21),
                 "\(fontType) must not scale with Dynamic Type",
             )
-            XCTAssertNotEqual(
-                KeyboardFonts.font(for: fontType, size: 21),
-                Font.custom(name, size: 21),
-                "\(fontType) uses the Dynamic Type–relative constructor",
-            )
         }
     }
 

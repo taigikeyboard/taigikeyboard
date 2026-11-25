@@ -88,7 +88,18 @@ enum KeyLabelLayout {
 
     /// Glyph-path bounds of `text` in `font` (CoreText applies the same font fallback
     /// SwiftUI's `Text` does). Whitespace-only text has no ink.
+    /// Cached: a keyboard re-measures the same few glyph / font pairs on every render.
     static func ink(of text: String, font: UIFont) -> Ink {
+        let key = "\(font.fontName)|\(font.pointSize)|\(text)" as NSString
+        if let cached = inkCache.object(forKey: key) {
+            return cached.ink
+        }
+        let ink = measureInk(of: text, font: font)
+        inkCache.setObject(InkBox(ink), forKey: key)
+        return ink
+    }
+
+    private static func measureInk(of text: String, font: UIFont) -> Ink {
         guard !text.trimmingCharacters(in: .whitespaces).isEmpty else {
             return Ink(ascent: 0, descent: 0)
         }
@@ -96,4 +107,18 @@ enum KeyLabelLayout {
         let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
         return Ink(ascent: bounds.maxY, descent: -bounds.minY)
     }
+
+    private final class InkBox {
+        let ink: Ink
+        init(_ ink: Ink) {
+            self.ink = ink
+        }
+    }
+
+    /// NSCache is thread-safe and evicts under memory pressure (extension 64 MB cap).
+    private nonisolated(unsafe) static let inkCache: NSCache<NSString, InkBox> = {
+        let cache = NSCache<NSString, InkBox>()
+        cache.countLimit = 512
+        return cache
+    }()
 }

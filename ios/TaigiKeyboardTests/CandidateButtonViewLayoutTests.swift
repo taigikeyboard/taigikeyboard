@@ -39,23 +39,14 @@ final class CandidateButtonViewLayoutTests: XCTestCase {
         .background(Color.white)
         .candidateTheme(theme)
 
-        let renderer = ImageRenderer(content: bar)
-        renderer.scale = 1
-        let image = try XCTUnwrap(renderer.cgImage)
-        let width = image.width, height = image.height
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
-        let context = try XCTUnwrap(CGContext(
-            data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
-        ))
-        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        let rows = (0 ..< height).filter { y in
-            (0 ..< width).contains { x in
-                let i = (y * width + x) * 4
-                return pixels[i] > 200 && pixels[i + 1] < 60 && pixels[i + 2] < 60
+        let pixels = try RenderedPixels(bar, scale: 1)
+        let rows = (0 ..< pixels.height).filter { y in
+            (0 ..< pixels.width).contains { x in
+                let (red, green, blue) = pixels.rgb(x: x, y: y)
+                return red > 200 && green < 60 && blue < 60
             }
         }
-        return (rows, height, theme)
+        return (rows, pixels.height, theme)
     }
 
     func testHighlight_staysInsideBarWithGap() throws {

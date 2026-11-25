@@ -26,35 +26,25 @@ final class ButtonFontProviderTests: XCTestCase {
         )
     }
 
-    func testButtonKeyboardFont_customFonts_areFixedSize() {
-        let context = KeyboardContext(settings: KeyboardSettings())
-        for fontType in FontType.allCases {
-            guard let name = fontType.customFontName else { continue }
-            let provider = ButtonFontProvider(keyboardContext: context, settings: snapshot(fontType: fontType))
-            for action in [KeyboardAction.character("W"), .character("2"), .character("tsh")] {
-                let font = provider.buttonKeyboardFont(for: action)
-                let size = font.fixedSize
-                XCTAssertNotNil(size, "\(fontType) \(action) must be fixed-size, got \(font.type)")
-                XCTAssertEqual(font, KeyboardFont.custom(name, fixedSize: size ?? 0, weight: .regular))
-            }
-        }
-    }
-
-    /// `KeyHintStack` measures with `buttonUIFont`; it must be the font `buttonKeyboardFont` renders.
-    func testButtonUIFont_matchesKeyboardFontSize() {
+    /// Custom fonts are fixed-size (a Dynamic Type–relative `.custom` fails the switch), and
+    /// `buttonUIFont`, which `KeyHintStack` measures with, is the font `buttonKeyboardFont` renders.
+    func testButtonFonts_fixedSizeAndUIFontMatches() {
         let context = KeyboardContext(settings: KeyboardSettings())
         for fontType in FontType.allCases {
             let provider = ButtonFontProvider(keyboardContext: context, settings: snapshot(fontType: fontType))
-            for action in [KeyboardAction.character("2"), .character("tsh"), .character(",")] {
+            for action in [KeyboardAction.character("W"), .character("2"), .character("tsh"), .character(",")] {
                 let uiFont = provider.buttonUIFont(for: action)
-                switch provider.buttonKeyboardFont(for: action).type {
+                let font = provider.buttonKeyboardFont(for: action)
+                switch font.type {
                 case let .customFixed(name, size):
+                    XCTAssertEqual(font, KeyboardFont.custom(name, fixedSize: size, weight: .regular))
                     XCTAssertEqual(uiFont.fontName, name)
                     XCTAssertEqual(uiFont.pointSize, size)
                 case let .system(size):
+                    XCTAssertEqual(fontType, .system, "custom font fell back to System")
                     XCTAssertEqual(uiFont.pointSize, size)
                 default:
-                    XCTFail("\(fontType) \(action): unexpected font type")
+                    XCTFail("\(fontType) \(action): not fixed-size, got \(font.type)")
                 }
             }
         }

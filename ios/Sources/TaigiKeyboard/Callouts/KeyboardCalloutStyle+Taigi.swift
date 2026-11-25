@@ -9,13 +9,12 @@ extension KeyboardCalloutStyle {
     /// action, 32pt input). Single source for the keyboard extension and the
     /// appearance-editor preview, so the two never drift.
     static func taigi(for fontType: FontType) -> KeyboardCalloutStyle {
-        guard let fontName = fontType.customFontName else {
+        guard let actionFont = KeyboardFonts.keyboardFont(for: fontType, size: 20, weight: .regular),
+              let inputFont = KeyboardFonts.keyboardFont(for: fontType, size: 32, weight: .light)
+        else {
             return .standard
         }
-        return KeyboardCalloutStyle(
-            actionItemFont: KeyboardFont.custom(fontName, fixedSize: 20, weight: .regular),
-            inputItemFont: KeyboardFont.custom(fontName, fixedSize: 32, weight: .light),
-        )
+        return KeyboardCalloutStyle(actionItemFont: actionFont, inputItemFont: inputFont)
     }
 
     /// Paints the callout from the theme's `calloutFill` (the key fill, or the background a

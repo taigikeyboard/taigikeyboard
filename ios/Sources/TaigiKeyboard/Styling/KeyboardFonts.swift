@@ -1,3 +1,4 @@
+import KeyboardKit
 import SwiftUI
 import UIKit
 
@@ -39,6 +40,12 @@ enum KeyboardFonts {
             return Font.custom(name, fixedSize: size)
         }
         return Font.system(size: size)
+    }
+
+    /// The KeyboardKit twin of `font(for:size:)` for keys and callouts; nil for System, whose
+    /// KeyboardKit default (`.system(size:)` with its per-key weight) callers keep.
+    static func keyboardFont(for fontType: FontType, size: CGFloat, weight: KeyboardFont.FontWeight) -> KeyboardFont? {
+        fontType.customFontName.map { KeyboardFont.custom($0, fixedSize: size, weight: weight) }
     }
 
     /// UIKit UIFont based on the user's font setting.

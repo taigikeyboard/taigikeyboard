@@ -34,12 +34,14 @@ struct KeyHintStack: View {
                 labelInk: KeyLabelLayout.ink(of: labelReference, font: labelFont),
                 hintBand: KeyLabelLayout.ink(of: hintReference, font: hintFont).height,
             ))
-            let scaledHintFont = hintFont.withSize(hintFont.pointSize * placement.hintScale)
-            let sideInset = labelFont.pointSize * placement.labelScale * hintSideInsetRatio
-            // A spread pair gets half the key each, so the two never overlap on a narrow key.
-            let hintWidth = hints.count > 1 ? max(0, geometry.size.width / 2 - sideInset) : geometry.size.width
-            let sharedHintBaseline = placement.hintInkBottom
-                - KeyLabelLayout.ink(of: hintReference, font: scaledHintFont).descent
+            let isPair = hints.count > 1
+            let sideInset = isPair ? labelFont.pointSize * placement.labelScale * hintSideInsetRatio : 0
+            let hint = HintStyle(
+                font: hintFont.withSize(hintFont.pointSize * placement.hintScale),
+                // A spread pair gets half the key each, so the two never overlap on a narrow key.
+                maxWidth: isPair ? max(0, geometry.size.width / 2 - sideInset) : geometry.size.width,
+                inkBottom: placement.hintInkBottom,
+            )
 
             // One overlay per text on a key-sized base: an overlay never resizes its base,
             // so each baseline lands exactly where placed (a ZStack would grow to the union
@@ -52,38 +54,37 @@ struct KeyHintStack: View {
                         .lineLimit(1)
                         .alignmentGuide(.top) { $0[.firstTextBaseline] - placement.labelBaseline }
                 }
-                .overlay(alignment: hints.count > 1 ? .topLeading : .top) {
-                    if let hint = hints.first {
-                        hintText(hint, font: scaledHintFont, maxWidth: hintWidth, placement: placement, sharedBaseline: sharedHintBaseline)
-                            .padding(.leading, hints.count > 1 ? sideInset : 0)
+                .overlay(alignment: isPair ? .topLeading : .top) {
+                    if let first = hints.first {
+                        hintText(first, style: hint).padding(.leading, sideInset)
                     }
                 }
                 .overlay(alignment: .topTrailing) {
-                    if hints.count > 1 {
-                        hintText(hints[1], font: scaledHintFont, maxWidth: hintWidth, placement: placement, sharedBaseline: sharedHintBaseline)
-                            .padding(.trailing, sideInset)
+                    if isPair {
+                        hintText(hints[1], style: hint).padding(.trailing, sideInset)
                     }
                 }
         }
     }
 
-    private func hintText(
-        _ hint: String,
-        font: UIFont,
-        maxWidth: CGFloat,
-        placement: KeyLabelLayout.Placement,
-        sharedBaseline: CGFloat,
-    ) -> some View {
-        let baseline = alignsEachHintByInk
-            ? placement.hintInkBottom - KeyLabelLayout.ink(of: hint, font: font).descent
-            : sharedBaseline
+    private struct HintStyle {
+        let font: UIFont
+        let maxWidth: CGFloat
+        /// Where the hint ink bottom sits, from the key top.
+        let inkBottom: CGFloat
+    }
+
+    private func hintText(_ hint: String, style: HintStyle) -> some View {
+        // Diacritics sit on their own ink bottom; text hints share the reference glyph's baseline.
+        let inkGlyph = alignsEachHintByInk ? hint : hintReference
+        let baseline = style.inkBottom - KeyLabelLayout.ink(of: inkGlyph, font: style.font).descent
         return Text(hint)
-            .font(Font(font))
+            .font(Font(style.font))
             .foregroundColor(hintColor)
             .opacity(hintOpacity)
             .lineLimit(1)
             .minimumScaleFactor(Self.hintMinimumScaleFactor)
-            .frame(maxWidth: maxWidth)
+            .frame(maxWidth: style.maxWidth)
             .alignmentGuide(.top) { $0[.firstTextBaseline] - baseline }
     }
 }

@@ -12,17 +12,8 @@ final class KeyHintStackRenderTests: XCTestCase {
 
     /// Dark-ink mask of the rendered view, [row][column] at `scale` pixels per point.
     private func inkMask(_ view: some View, width: CGFloat, height: CGFloat) throws -> [[Bool]] {
-        let renderer = ImageRenderer(content: view.frame(width: width, height: height).background(Color.white))
-        renderer.scale = scale
-        let image = try XCTUnwrap(renderer.cgImage)
-        let w = image.width, h = image.height
-        var pixels = [UInt8](repeating: 0, count: w * h * 4)
-        let context = try XCTUnwrap(CGContext(
-            data: &pixels, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
-            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue,
-        ))
-        context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
-        return (0 ..< h).map { y in (0 ..< w).map { x in pixels[(y * w + x) * 4] < 200 } }
+        let pixels = try RenderedPixels(view.frame(width: width, height: height).background(Color.white), scale: scale)
+        return (0 ..< pixels.height).map { y in (0 ..< pixels.width).map { x in pixels.rgb(x: x, y: y).0 < 200 } }
     }
 
     func testToneKey_landscapeHeight_inkStaysInsideWithMargin() throws {

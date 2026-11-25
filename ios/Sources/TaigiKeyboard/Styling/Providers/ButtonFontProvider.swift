@@ -25,26 +25,19 @@ final class ButtonFontProvider {
 
     /// Returns the KeyboardFont for the given action, combining user font choice with adjusted size.
     func buttonKeyboardFont(for action: KeyboardAction) -> KeyboardFont {
-        let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
-        let fontSize = adjustedFontSize(for: action, baseFontSize: baseFontSize)
-
-        // FontType.customFontName returns nil for .system, PostScript name for custom fonts.
-        // Fixed size like `.system(size:)`: `custom(_:size:)` follows Dynamic Type and outgrows the key.
-        if let name = settings.fontType.customFontName {
-            return KeyboardFont.custom(name, fixedSize: fontSize, weight: .regular)
-        }
-        return KeyboardFont.system(size: fontSize)
+        let size = fontSize(for: action)
+        return KeyboardFonts.keyboardFont(for: settings.fontType, size: size, weight: .regular) ?? .system(size: size)
     }
 
     /// The same font as `buttonKeyboardFont(for:)`, as a UIFont for glyph measurement
     /// (`KeyHintStack`).
     func buttonUIFont(for action: KeyboardAction) -> UIFont {
-        let fontSize = adjustedFontSize(for: action, baseFontSize: action.standardButtonFontSize(for: keyboardContext))
-        return KeyboardFonts.uiFont(for: settings.fontType, size: fontSize)
+        KeyboardFonts.uiFont(for: settings.fontType, size: fontSize(for: action))
     }
 
-    /// Adjusts font size: applies user scale, and shrinks multi-char keys to fit.
-    private func adjustedFontSize(for action: KeyboardAction, baseFontSize: CGFloat) -> CGFloat {
+    /// KeyboardKit's standard size with the user scale, shrunk for multi-char keys to fit.
+    private func fontSize(for action: KeyboardAction) -> CGFloat {
+        let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
         let userScale = settings.keyFontSizeScale
 
         guard case let .character(char) = action else {
