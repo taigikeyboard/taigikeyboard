@@ -15,7 +15,9 @@ import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -139,5 +141,19 @@ class CandidateOverlayLayoutTest {
         setGrid(words)
         val tops = words.map { rule.onNodeWithText(it.roman, useUnmergedTree = true).getBoundsInRoot().top }
         assertTrue("subtitle tops differ: $tops", tops.all { (it - tops[0]).value.let { d -> d in -0.5f..0.5f } })
+    }
+
+    // A11: the row divider kept a 62 dp end inset from before the list reserved the 68 dp
+    // control lane, so it stopped well short of the row's last cell.
+    @Test
+    fun rowDivider_spansTheRow() {
+        val words = (0 until 30).map { TaigiWord(it, "tsit$it", "字$it") }
+        setGrid(words)
+        val rootWidth = rule.onRoot().getBoundsInRoot().right
+        // Row lane = root - 68 dp control lane; the row and divider keep 2 dp at each side.
+        val rowRight = rootWidth - 68.dp - 2.dp
+        val divider = rule.onAllNodesWithTag(ROW_DIVIDER_TEST_TAG, useUnmergedTree = true)[0].getBoundsInRoot()
+        assertTrue("divider ends at ${divider.right}, row at $rowRight", (rowRight - divider.right).value in -0.5f..0.5f)
+        assertTrue("divider starts at ${divider.left}", (divider.left - 2.dp).value in -0.5f..0.5f)
     }
 }

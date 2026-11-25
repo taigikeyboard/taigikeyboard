@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.ParagraphIntrinsics
 import androidx.compose.ui.text.font.FontFamily
@@ -79,6 +80,8 @@ private const val SUBTITLE_TEXT_SIZE_SP = 19f
 private const val MINIMUM_CELL_WIDTH_DP = 44f
 private const val CELL_HORIZONTAL_PADDING_DP = 20f
 
+internal const val ROW_DIVIDER_TEST_TAG = "candidateRowDivider"
+
 // Right reserved width fed to the row packer: 60dp control panel + 8dp gap + 4dp row margins.
 private const val RIGHT_RESERVED_DP = 72f
 
@@ -92,8 +95,6 @@ private val CellVerticalPadding = 7.dp
 private val CellHorizontalPadding = 8.dp
 private val RowHorizontalMargin = 2.dp
 private val RowVerticalMargin = 1.dp
-private val DividerStartInset = 2.dp
-private val DividerEndInset = 62.dp
 
 private val ControlPanelWidth = 60.dp
 private val ControlButtonCorner = 8.dp
@@ -331,7 +332,10 @@ private fun CandidateRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(start = DividerStartInset, end = DividerEndInset)
+                        // Spans the row like its cells; the LazyColumn content padding already keeps
+                        // it out of the control-panel lane.
+                        .padding(horizontal = RowHorizontalMargin)
+                        .testTag(ROW_DIVIDER_TEST_TAG)
                         .height(1.dp)
                         .background(colors.divider),
             )
