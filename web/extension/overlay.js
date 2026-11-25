@@ -27,6 +27,11 @@ export class Overlay {
    * @type {Element | null}
    */
   #chipAnchor = null;
+  /**
+   * Watches the anchor's size: a site can resize its field on its own (a chat
+   * box that empties on send), with no key or scroll to move the chip.
+   */
+  #anchorResize = new ResizeObserver(() => this.placeChip());
   /** @type {Panel} */
   panel;
   /**
@@ -169,6 +174,13 @@ export class Overlay {
    * @returns {void}
    */
   showChip(anchor, state, text) {
+    // Only on a new anchor: `observe` reports the size once more each time.
+    if (anchor !== this.#chipAnchor) {
+      this.#anchorResize.disconnect();
+      if (anchor) {
+        this.#anchorResize.observe(anchor);
+      }
+    }
     this.#chipAnchor = anchor;
     this.#chip.dataset.state = state;
     this.#chip.textContent = text;
@@ -178,6 +190,7 @@ export class Overlay {
 
   /** @returns {void} */
   hideChip() {
+    this.#anchorResize.disconnect();
     this.#chipAnchor = null;
     this.#chip.hidden = true;
   }
