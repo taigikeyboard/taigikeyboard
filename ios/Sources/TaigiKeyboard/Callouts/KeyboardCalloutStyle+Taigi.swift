@@ -13,8 +13,8 @@ extension KeyboardCalloutStyle {
             return .standard
         }
         return KeyboardCalloutStyle(
-            actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
-            inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
+            actionItemFont: KeyboardFont.custom(fontName, fixedSize: 20, weight: .regular),
+            inputItemFont: KeyboardFont.custom(fontName, fixedSize: 32, weight: .light),
         )
     }
 

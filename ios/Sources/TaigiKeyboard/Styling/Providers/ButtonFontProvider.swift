@@ -27,9 +27,10 @@ final class ButtonFontProvider {
         let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
         let fontSize = adjustedFontSize(for: action, baseFontSize: baseFontSize)
 
-        // FontType.customFontName returns nil for .system, PostScript name for custom fonts
+        // FontType.customFontName returns nil for .system, PostScript name for custom fonts.
+        // Fixed size like `.system(size:)`: `custom(_:size:)` follows Dynamic Type and outgrows the key.
         if let name = settings.fontType.customFontName {
-            return KeyboardFont.custom(name, size: fontSize, weight: .regular)
+            return KeyboardFont.custom(name, fixedSize: fontSize, weight: .regular)
         }
         return KeyboardFont.system(size: fontSize)
     }
