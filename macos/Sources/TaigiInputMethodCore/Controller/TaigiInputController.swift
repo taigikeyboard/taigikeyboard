@@ -562,13 +562,15 @@ public final class TaigiInputController: IMKInputController {
             // flips only the punctuation width (desktop-core `effective_full_width_punctuation`).
             guard settings.candidateDisplayMode.allowsSwapToggle else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
-            // commits, never which candidates exist, so the list on screen is
-            // still the right one — re-rendered, selection kept. Dismissing
-            // here read as the window vanishing (real device, 2026-08-21).
-            // (The Candidate Display picker is the setting that DOES change which
-            // candidates exist — see `representCandidates(refetch:)`.)
+            // commits, so the list on screen is re-rendered, selection kept.
+            // Dismissing here read as the window vanishing (real device,
+            // 2026-08-21). With romanized words as candidates under side by
+            // side it also changes which candidates exist, so the list is
+            // fetched again and the selection follows its word
+            // (`swapChangesTheList`, `CandidateListUpdate.selectedIndex`).
+            let refetch = settings.swapChangesTheList
             settings.storedIsHanjiFirst.toggle()
-            representCandidates(refetch: false)
+            representCandidates(refetch: refetch)
             // Flashed even over an open list, as the display-mode cycle is
             // (USER 2026-10-31): the menu-bar icon is one static mark (D5),
             // and a re-rendered list does not name what a commit now writes.
@@ -636,6 +638,7 @@ public final class TaigiInputController: IMKInputController {
     private func windowContent(_ list: CandidateListUpdate) -> CandidateWindowContent {
         CandidateWindowContent(
             cells: list.cells,
+            selectedIndex: list.selectedIndex,
             // The set the user chose — the only keys that pick. A rebind
             // cannot strand a stale hint: reaching the shortcut pane moves
             // focus off the client, and `finishComposition` takes the bar

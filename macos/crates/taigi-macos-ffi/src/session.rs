@@ -15,8 +15,8 @@
 //! with each request (`PanelState`) and is read, never kept.
 
 use taigi_desktop_core::composing::{
-    insert_symbol, perform_intent, represent_list, CandidateSource, ComposingEffectExecutor,
-    ComposingManager, ContextToken, IntentSurface,
+    insert_symbol, perform_intent, represent_list_following, CandidateSource,
+    ComposingEffectExecutor, ComposingManager, ContextToken, IntentSurface,
 };
 use taigi_desktop_core::engine::Effect as EngineEffect;
 use taigi_desktop_core::keys::{
@@ -265,8 +265,20 @@ impl Session {
                     return false;
                 }
                 let settings = runtime.settings.current();
-                represent_list(&settings, manager, candidates, request.refetch);
+                let selected = surface.selected_index().unwrap_or(0);
+                let following = represent_list_following(
+                    &settings,
+                    manager,
+                    candidates,
+                    request.refetch,
+                    selected,
+                );
                 surface.list_changed(candidates);
+                // A list fetched again tells the window where its selection
+                // went: the same word, which may sit on another cell now.
+                if request.refetch {
+                    surface.select_changed_list(following);
+                }
                 false
             },
         )
@@ -375,6 +387,20 @@ impl<'a> RecordingSurface<'a> {
         });
     }
 
+    /// Puts the selection of the list the last `CandidatesChanged` showed on
+    /// `cell` (`CandidatesChanged.selected_index`).
+    fn select_changed_list(&mut self, cell: Option<usize>) {
+        let Some(cell) = cell.and_then(|cell| u32::try_from(cell).ok()) else {
+            return;
+        };
+        if let Some(Effect {
+            effect: Some(effect::Effect::CandidatesChanged(list)),
+        }) = self.effects.last_mut()
+        {
+            list.selected_index = Some(cell);
+        }
+    }
+
     /// The recorded effects, with the list's anchor filled in: a
     /// `CandidatesChanged` carries where on screen its list belongs, which
     /// the surface cannot read while the executor holds the manager. Every
@@ -479,6 +505,8 @@ impl IntentSurface for RecordingSurface<'_> {
             leads_with_literal_roman: list.leads_with_literal_roman(),
             // Filled in by `finish`.
             anchor_end_utf16: 0,
+            // A refetched represent's only (`select_changed_list`).
+            selected_index: None,
         }));
     }
 
@@ -1298,6 +1326,51 @@ mod tests {
             }
         );
         assert_eq!(after.anchor_end_utf16, 2);
+    }
+
+    /// Side by side with romanized words as candidates: the swap refetches
+    /// (Roman-first lists no romanization twin) and the reply puts the
+    /// selection on its word — 隻, after the `tsiah` and `tsia̍h` twins,
+    /// moves up past both. A represent that only re-renders sets none.
+    #[test]
+    fn a_refetched_represent_keeps_the_selection_on_its_word() {
+        let (_engine, shell) = engine_shell();
+        let han_lo = |hanji_first: bool| {
+            vec![
+                boolean("hanLoMixedEnabled", true),
+                text("candidateDisplayMode", "sideBySide"),
+                boolean("isTranslateSwapped", hanji_first),
+            ]
+        };
+        let typist = Typist::activated(shell, han_lo(true));
+        let before = shown_list(&typist.type_text("tsiah"));
+        // Hanji-first: a Hanji cell leads with its Hanji, a romanization twin
+        // stands alone.
+        let twin = before
+            .cells
+            .iter()
+            .position(|cell| cell.text == "tsia\u{30d}h" && cell.annotation.is_none())
+            .expect("the tsia̍h romanization twin");
+        let after_twin = &before.cells[twin + 1];
+        let hanji = after_twin
+            .annotation
+            .as_ref()
+            .map(|_| after_twin.text.clone());
+        let reply = typist
+            .with_settings(han_lo(false))
+            .represent(true, list(Some(twin as u32 + 1)));
+        let after = shown_list(&reply);
+        let selected = after.selected_index.expect("a followed selection") as usize;
+        // Roman-first: the Hanji is the annotation now, and the word moved
+        // up past every twin taken away before it (`tsiah`, `tsia̍h`).
+        assert!(selected <= twin, "moved up with the twins gone");
+        assert_eq!(after.cells[selected].annotation, hanji);
+        let repainted = shown_list(
+            &typist
+                .with_settings(han_lo(false))
+                .represent(false, list(Some(0))),
+        );
+        assert_eq!(repainted.selected_index, None);
     }
 
     /// trace (2026-10-02 dictionaries): Candidate Display → Romanization

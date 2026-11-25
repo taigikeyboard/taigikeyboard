@@ -18,6 +18,12 @@ import AppKit
 struct CandidateWindowContent: Equatable, Sendable {
     let cells: [CandidateCellContent]
 
+    /// An in-place update only (`updateCells`): the cell the selection moves
+    /// to — the same word on a list fetched again under new settings. Nil
+    /// keeps the selection on its index; a fresh list (`show`) always starts
+    /// on its first cell.
+    var selectedIndex: Int?
+
     /// Which keys pick the candidates — what the window draws beside each
     /// cell (`CandidateIndexLabel`). Carried with the content rather than read
     /// by the window, so the keys drawn are the ones the keystroke that

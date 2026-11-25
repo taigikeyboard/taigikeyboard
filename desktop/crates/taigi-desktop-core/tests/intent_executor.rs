@@ -9,8 +9,8 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
     insert_symbol, pass_through_may_consume, pass_through_may_swap, perform_intent, represent_list,
-    CandidateSource, ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface,
-    SystemClock,
+    represent_list_following, CandidateSource, ComposingEffectExecutor, ComposingManager,
+    EngineNextWord, IntentSurface, SystemClock,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
@@ -19,7 +19,10 @@ use taigi_desktop_core::keys::{
     KeyEventSnapshot, KeyModifiers, TpsKeyCapIndex,
 };
 use taigi_desktop_core::platform::DesktopPlatform;
-use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, StaticSettingsProvider};
+use taigi_desktop_core::settings::{
+    keys, CandidateDisplayMode, InputMode, SettingsDocument, SettingsProvider,
+    StaticSettingsProvider,
+};
 
 /// One lock, one lexicon install: the engine is one per process.
 fn engine_lock() -> MutexGuard<'static, ()> {
@@ -854,6 +857,103 @@ fn a_switch_re_presents_an_open_list_and_never_opens_one() {
         true
     ));
     assert!(rig.list.is_empty());
+}
+
+/// A settings provider a test can switch mid-composition, as the swap chord
+/// does to the shells' live document.
+#[derive(Default)]
+struct SwitchableSettings(Mutex<Arc<SettingsDocument>>);
+
+impl SwitchableSettings {
+    fn set(&self, document: SettingsDocument) {
+        *self.0.lock().unwrap() = Arc::new(document);
+    }
+}
+
+impl SettingsProvider for SwitchableSettings {
+    fn current(&self) -> Arc<SettingsDocument> {
+        Arc::clone(&self.0.lock().unwrap())
+    }
+}
+
+// Side by side with romanized words as candidates: the Hanji/romanization
+// swap fetches the list again (the twins are listed only when the Hanji
+// leads), and the selection stays on its word — or, for a twin the swap took
+// away, moves to the cell that took its place.
+#[test]
+fn the_swap_keeps_the_selection_on_its_word_across_a_refetch() {
+    let _engine = engine_lock();
+    let document = |hanji_first: bool| {
+        let mut document = SettingsDocument::default();
+        document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
+        document.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::SideBySide,
+        );
+        document.set_bool(&keys::IS_HAN_LO_MIXED_ENABLED, true);
+        document.set_bool(&keys::IS_HANJI_FIRST, hanji_first);
+        document
+    };
+    let provider = Arc::new(SwitchableSettings::default());
+    let compose = |hanji_first: bool| {
+        provider.set(document(hanji_first));
+        let mut manager = ComposingManager::new(
+            Arc::clone(&provider) as Arc<dyn SettingsProvider>,
+            Box::new(EngineNextWord),
+            Arc::new(SystemClock),
+            fresh_generation(),
+        );
+        let mut list = CandidateSource::default();
+        let mut surface = Surface::default();
+        for letter in "tsiah".chars() {
+            let text = letter.to_string();
+            let key = KeyEventSnapshot::text(&text, KeyModifiers::NONE);
+            perform_intent(
+                &ComposingKeyIntent::Input(text),
+                &key,
+                &document(hanji_first),
+                &mut manager,
+                &mut list,
+                &mut surface,
+            );
+        }
+        (manager, list)
+    };
+    let word = |list: &CandidateSource, cell: usize| {
+        let (candidate, _) = list.resolve(cell, false).expect("a cell");
+        (candidate.display_text.clone(), candidate.hanji.is_some())
+    };
+    let find = |list: &CandidateSource, display: &str, hanji: bool| {
+        (0..list.len())
+            .find(|&cell| word(list, cell) == (display.to_owned(), hanji))
+            .unwrap_or_else(|| panic!("{display} (hanji {hanji}) listed"))
+    };
+
+    // On the word after the `tsia̍h` twin: the swap takes the twin away, so
+    // the word moves up a cell — the selection moves with it.
+    let (mut manager, mut list) = compose(true);
+    let after_twin = find(&list, "tsia̍h", false) + 1;
+    let moved = word(&list, after_twin);
+    provider.set(document(false));
+    let cell =
+        represent_list_following(&document(false), &mut manager, &mut list, true, after_twin)
+            .expect("a list");
+    assert_eq!(cell, after_twin - 1, "the word moved up with the twin gone");
+    assert_eq!(word(&list, cell), moved);
+
+    // On the `tsia̍h` romanization twin: Roman-first lists none, so the
+    // selection goes to the cell that followed it.
+    let (mut manager, mut list) = compose(true);
+    let twin = find(&list, "tsia̍h", false);
+    let (next, _) = word(&list, twin + 1);
+    provider.set(document(false));
+    let cell = represent_list_following(&document(false), &mut manager, &mut list, true, twin)
+        .expect("a list");
+    assert!(
+        (0..list.len()).all(|cell| word(&list, cell) != ("tsia̍h".to_owned(), false)),
+        "Roman-first lists no twin"
+    );
+    assert_eq!(word(&list, cell).0, next);
 }
 
 // MARK: - TPS (desktop-tps-roadmap.md § D3, O1; Hanji conversion arm B)

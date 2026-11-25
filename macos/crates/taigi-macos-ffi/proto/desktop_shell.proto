@@ -330,6 +330,11 @@ message CandidatesChanged {
   // marked text, except under TPS, where it is the caret: the list there is
   // usually the word before it.
   uint32 anchor_end_utf16 = 3;
+  // A Represent's list fetched again only: the cell the selection follows to
+  // — the same word, or a neighbour when the new list lacks it
+  // (`CandidateSource::cell_following`). Unset: the window keeps its
+  // selection on its index, as for a list re-rendered in place.
+  optional uint32 selected_index = 4;
 }
 
 message CandidateCell {

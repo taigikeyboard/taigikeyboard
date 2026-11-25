@@ -365,18 +365,36 @@ pub fn represent_list(
     list: &mut CandidateSource,
     refetch: bool,
 ) -> bool {
+    represent_list_following(settings, manager, list, refetch, 0).is_some()
+}
+
+/// [`represent_list`], answering where the selection on cell `selected`
+/// goes: the same cell when the list is only re-rendered, the cell showing
+/// the same word when it was fetched again
+/// ([`CandidateSource::cell_following`] — a word the new list lacks hands it
+/// to a neighbour). `None` when no list is left to show.
+pub fn represent_list_following(
+    settings: &SettingsDocument,
+    manager: &mut ComposingManager,
+    list: &mut CandidateSource,
+    refetch: bool,
+    selected: usize,
+) -> Option<usize> {
     if manager.is_tps_composition() {
         list.clear();
     }
     if list.is_empty() {
-        return false;
+        return None;
     }
-    if refetch {
+    let selected = if refetch {
+        let previous = list.clone();
         refresh_list(settings, manager, list);
+        list.cell_following(&previous, selected)
     } else {
         list.refresh_presentation(manager);
-    }
-    !list.is_empty()
+        selected.min(list.len().saturating_sub(1))
+    };
+    (!list.is_empty()).then_some(selected)
 }
 
 fn refresh(

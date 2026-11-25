@@ -843,6 +843,15 @@ final class SettingsStore: @unchecked Sendable {
         set { userDefaults.set(newValue, forKey: Keys.isHanjiFirst.name) }
     }
 
+    /// Whether the Hanji/romanization swap changes which candidates exist, not
+    /// only how they draw: side by side with romanized words as candidates in
+    /// effect, whose romanization twins are listed only when the Hanji leads
+    /// (`AppConfig::lists_roman_twins`). Mirrors desktop-core
+    /// `global_action::swap_changes_the_list`, which the other desktops run.
+    var swapChangesTheList: Bool {
+        candidateDisplayMode == .sideBySide && bool(Keys.isHanLoMixedEnabled) && inputMode != .tps
+    }
+
     /// Whether committing a word auto-inserts a trailing space. Read by the
     /// controller's commit paths, never by the engine.
     var isAutoSpaceEnabled: Bool {

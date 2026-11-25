@@ -186,17 +186,23 @@ impl CandidatePresenter {
         }
     }
 
-    /// Same list, new rendering; the window stays where it is.
+    /// Same list, new rendering; the window stays where it is. `select`
+    /// moves the selection to that cell (a list fetched again), otherwise it
+    /// stays on its index.
     pub fn update_cells(
         &mut self,
         content: CandidateWindowContent,
         settings: &SettingsDocument,
         owner: ContextToken,
+        select: Option<usize>,
     ) {
         if self.owner != Some(owner) {
             return;
         }
-        let frame = self.content.borrow_mut().update_cells(content, settings);
+        let frame = self
+            .content
+            .borrow_mut()
+            .update_cells(content, settings, select);
         self.update_ui_element();
         if let (Some(frame), Some(window), false) = (
             frame,
