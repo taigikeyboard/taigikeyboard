@@ -1,6 +1,6 @@
 ---
 name: layout
-description: Run the layout test (版面測試) — type real corpus sentences word by word on the staged web page, the Android emulator, the iOS simulator (iPhone + iPad), the Windows box, the Linux VMs (IBus + Fcitx5) or, when named, macOS; check the candidate window / strip, expanded grid, symbol picker and key faces after every word across each platform's matrix (viewports, devices, orientations, candidate layouts, sizes, fonts, scales), screenshot each failure, and publish the findings. Use when asked to "run the layout test", 「跑 <平台> 的版面測試」, 「版面測試」, or to check that candidates and key labels never overlap, clip or overflow. Args: a platform (`web` `android` `ios` `windows` `linux` `macos`) and optionally its matrix filters. Reports findings; never opens a fix round itself.
+description: Run the layout test (版面測試) — type real corpus sentences word by word on the staged web page, the Android emulator, the iOS simulator (iPhone + iPad), the Windows box, the Linux VMs (IBus + Fcitx5), the browser extension on its fixture sites or, when named, macOS (ChromeOS is out of scope: the system draws its candidate window); check the candidate window / strip, expanded grid, symbol picker and key faces after every word across each platform's matrix (viewports, devices, orientations, candidate layouts, sizes, fonts, scales), screenshot each failure, and publish the findings. Use when asked to "run the layout test", 「跑 <平台> 的版面測試」, 「版面測試」, or to check that candidates and key labels never overlap, clip or overflow. Args: a platform (`web` `android` `ios` `windows` `linux` `macos` `extension`) and optionally its matrix filters. Reports findings; never opens a fix round itself.
 disable-model-invocation: false
 ---
 
@@ -16,6 +16,9 @@ Born from the 2026-11-24 cross-platform layout audit. Every platform is covered:
 | Windows | agent-driven run on the maintainer's Windows box + `taigi-windows-tsf` tests | §7 |
 | Linux | agent-driven run on the Linux VMs (IBus + Fcitx5) + popup tests | §8 |
 | macOS | in-process render of the real candidate window from a temporary test — **only when the maintainer names macOS** | §9 |
+| Browser extension | agent-driven Playwright run of the staged extension on the extension fixtures | §10 |
+
+ChromeOS is out of scope: `chrome.input.ime.setCandidates` hands the candidate window to the system (vertical or horizontal only, `docs/architecture/chromeos-roadmap.md` D4), and its options page is cut from the web page's settings form (`web/scripts/stage-chromeos.mjs`), so it has no layout of its own.
 
 Every platform uses the §1 sentences, the §3 verdict rules and the §4 report. Accessibility text sizes (Web `ROOT_TEXT_SIZE`, iOS accessibility sizes, Windows Text size, GNOME text scale 2.0) run only when the maintainer names them. Run at most two heavy platforms at once (simulator, emulator, VM, Playwright): the Mac's load spikes and the emulator ANRs.
 
@@ -299,3 +302,37 @@ Settings are `UserDefaults.standard` keys with the desktop spellings (`SettingsS
 ### 9.2 Matrix and kinds
 
 Layout (4, expandables folded and opened) × size `13` / `17` / `23` × font (5) × document position (middle, near the bottom of the visible frame, near the right edge — move the stand-in window). Kinds as §7.4; design: an over-wide cell truncated with "…" (`byTruncatingTail`). Known divergence, not a new finding: `CandidatePanelPositioning.swift` clamps to the full `visibleFrame` with no 12-point edge margin (Windows has one). Owning files: `macos/Sources/TaigiInputMethodCore/Candidates/`. Report as §4, a table per layout (rows: font × size × position).
+
+## 10. Browser extension
+
+The extension draws the page's own candidate panel (`panel.js`, `style.css` with `:root` → `:host`, plus `web/extension/overlay.css`) in a shadow tree over a website (`docs/architecture/browser-extension.md`). §1 covers the panel's CSS; this run covers what only the extension adds: placement against a site's field (`web/extension/field.js` `visibleBox`), system fonts only, the editors' DOM, and the chip. No harness script: you write a temporary spec and read every screenshot.
+
+### 10.1 Run
+
+1. `make -C web extension extension-fixtures` (stages `web/target/extension/` and `web/target/extension-fixtures/`; `make -C web build` first on a clean tree).
+2. Write a temporary `web/extension/e2e/layout-sim.spec.mjs` (never committed; delete it at the end) on `web/extension/e2e/helpers.mjs`: `test` (the extension in a persistent context, its `worker`), `openTyping(context, worker, page, url, selector)`, `overlay` / `preedit` / `candidates` / `chip`. Settings go in before `openTyping`: `worker.evaluate(() => chrome.storage.sync.set({ "taigi.settings": JSON.stringify({ revision: 1, values: { candidateLayout, candidateTextSize } }) }))` (pattern: `strict.spec.mjs`). Type the §1 sentences as §1 does (toneless words, arrows on the second word of a clause, Space, Enter), read the sentences from the corpus at run time the way `web/layout-sim/sentences.mjs` does, and screenshot the page after every word.
+3. `npx playwright test --config web/extension/playwright.config.mjs layout-sim` — port 4174, output `web/test-results/extension/`. Same port and `test-results/` cautions as §1: never run `make -C web e2e` or `extension-e2e` alongside.
+
+### 10.2 Matrix
+
+| Axis | Values |
+|---|---|
+| Fixture (field) | `fields.html` (textarea, input, contenteditable) · `codemirror5.html` · `codemirror6.html` · `lexical.html` · `quill.html` · `slate.html` · `strict.html` (wasm2js fallback) |
+| Viewport | desktop 1280×800 · phone 360×800 |
+| Candidate layout | `vertical` · `horizontal` · `expandable` · `verticalExpandable` |
+| Size (`candidateTextSize`) | `13` · `17` · `23` |
+| Field position | top of the viewport · scrolled so the field sits at the bottom · right edge |
+
+Chromium only (the extension's gate). Other browsers run only when named.
+
+### 10.3 Kinds
+
+§2's kinds, measured against the site's field instead of the page's editor, plus:
+
+| Kind | Means |
+|---|---|
+| `panel-covers-field-text` | the panel covers the composition or the field's text around the caret |
+| `chip-covers-field-text` / `chip-off-field` | the mode chip covers the field's text, or is not beside the field it names |
+| `panel-font-tofu` | a candidate draws as tofu in the system fonts (font coverage, report apart from layout) |
+
+Design, not defects: inside a `<dialog>.showModal()` the panel draws under the dialog (top layer, known limitation); no TPS key panel or Telex guide. Owning files: `web/extension/overlay.js`, `overlay.css`, `field.js`, plus §3's web files. Report as §4, a table per fixture (rows: viewport × layout × size).
