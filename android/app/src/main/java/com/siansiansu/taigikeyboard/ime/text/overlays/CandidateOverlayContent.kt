@@ -5,14 +5,13 @@
 
 package com.siansiansu.taigikeyboard.ime.text.overlays
 
-import android.graphics.Paint
-import android.util.TypedValue
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -30,8 +29,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,10 +43,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.ParagraphIntrinsics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,6 +71,7 @@ import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.ceil
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 private const val ITEMS_PER_PAGE = 20
@@ -102,9 +104,8 @@ private val PageButtonSize = 45.dp
 /**
  * Expanded candidate grid + right control panel.
  *
- * Row breaks are computed by [CandidateRowLayout.arrangeRows] from android [Paint] pixel
- * measurement — kept identical to the legacy View so wrapping does not shift. Two-line cell
- * widths are measured as max(roman, hanji) so toggling translate swaps text without reflowing
+ * Row breaks are computed by [CandidateRowLayout.arrangeRows] from Compose text measurement in
+ * the cells' own title style. Two-line cell widths are measured as max(roman, hanji) so toggling translate swaps text without reflowing
  * the grid; single-line mixed/COMBINED cells measure their rendered title (see [measureCellWidth]).
  *
  * @param resetKey bumped on each overlay show(); re-arms click protection and resets scroll/page.
@@ -132,7 +133,6 @@ fun CandidateOverlayContent(
     bottomInset: Dp = computeBottomInsetPadding(),
 ) {
     val context = LocalContext.current
-    val fontScale = LocalConfiguration.current.fontScale
     val colors = rememberCandidateOverlayColors(resetKey, candidateTextColor, firstCandidateColor, pressedColor, controlPressedColor)
     val fontFamily = remember(typeface) { FontFamily(ComposeTypeface(typeface)) }
 
@@ -144,36 +144,20 @@ fun CandidateOverlayContent(
     }
 
     val displayMetrics = context.resources.displayMetrics
-    // Static per session (screen width / density / dimen) — remember so show/translate recompositions
+    // Static per session (density / dimen) — remember so show/translate recompositions
     // don't redo the resource lookup + arithmetic.
-    val availableWidthPx =
-        remember(context) { displayMetrics.widthPixels - (RIGHT_RESERVED_DP * displayMetrics.density + 0.5f).toInt() }
+    val rightReservedPx = remember(context) { (RIGHT_RESERVED_DP * displayMetrics.density + 0.5f).toInt() }
     val spacingPx = remember(context) { context.resources.getDimensionPixelSize(R.dimen.smartbar_button_margin) }
     val minCellWidthPx = remember(context) { (MINIMUM_CELL_WIDTH_DP * displayMetrics.density + 0.5f).toInt() }
     val cellPaddingPx = remember(context) { (CELL_HORIZONTAL_PADDING_DP * displayMetrics.density + 0.5f).toInt() }
 
-    // Paint pipeline mirrors the legacy CandidateOverlayView measurement (typeface + sp sizes).
-    val primaryPaint = remember(typeface, fontScale) { measurementPaint(typeface, PRIMARY_TEXT_SIZE_SP, displayMetrics) }
-    val subtitlePaint = remember(typeface, fontScale) { measurementPaint(typeface, SUBTITLE_TEXT_SIZE_SP, displayMetrics) }
-
-    // Rows do NOT depend on isHanjiFirst: two-line cell width is max(roman, hanji) and
-    // COMBINED single-line titles are swap-invariant, so a swap never reflows. They DO depend
-    // on candidateDisplayMode: a mixed cell — marked split cell or an unmarked (hanji-led)
-    // row (§42 second exception) — measures its rendered single-line title.
-    val rows =
-        remember(suggestions, isTPSLayout, typeface, candidateDisplayMode) {
-            CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->
-                measureCellWidth(
-                    word,
-                    isTPSLayout,
-                    candidateDisplayMode,
-                    primaryPaint,
-                    subtitlePaint,
-                    minCellWidthPx,
-                    cellPaddingPx,
-                )
-            }
-        }
+    // Cells are measured with the exact title style they render with, so measure and render
+    // cannot drift. ParagraphIntrinsics gives the one-line width without laying the text out;
+    // widths are kept across suggestion updates (titles repeat keystroke to keystroke).
+    val fontFamilyResolver = LocalFontFamilyResolver.current
+    val density = LocalDensity.current
+    val titleStyle = remember(fontFamily) { gridLineStyle(PRIMARY_TEXT_SIZE_SP, fontFamily) }
+    val titleWidths = remember(titleStyle, density, fontFamilyResolver) { HashMap<String, Int>() }
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -186,11 +170,6 @@ fun CandidateOverlayContent(
         listState.scrollToItem(0)
     }
 
-    fun rowIndexFor(suggestionIndex: Int): Int {
-        if (rows.isEmpty() || suggestions.isEmpty()) return 0
-        return minOf((suggestionIndex.toFloat() / suggestions.size * rows.size).toInt(), rows.size - 1)
-    }
-
     // Custom theme: paint the theme surface as an opaque backdrop so the overlay stays
     // continuous with the painted keyboard. The overlay is a SIBLING of the painted
     // text_input_content (not a child), so it must paint the surface itself — a
@@ -198,13 +177,38 @@ fun CandidateOverlayContent(
     // falls back to the solid `?smartbar_bgColor` chrome. This overlay spans the full
     // keyboard, so no top inset is needed (the offset panels pass smartbar height). The surface
     // runs under the navigation bar like the keyboard's; the grid and controls stop above it.
-    Box(
+    BoxWithConstraints(
         modifier =
             modifier
                 .fillMaxSize()
                 .themeBackground(surface, colors.background)
                 .padding(bottom = bottomInset),
     ) {
+        // Rows pack into the overlay's own width (the IME window can be narrower than the
+        // screen, e.g. beside a landscape navigation bar), less the control lane.
+        val availableWidthPx = constraints.maxWidth - rightReservedPx
+
+        // Rows do NOT depend on isHanjiFirst: two-line cell width is max(roman, hanji), both at
+        // the title size, and COMBINED single-line titles are swap-invariant, so a swap never
+        // reflows. They DO depend on candidateDisplayMode: a mixed cell — marked split cell or an
+        // unmarked (hanji-led) row (§42 second exception) — measures its rendered single-line title.
+        val rows =
+            remember(suggestions, isTPSLayout, titleStyle, candidateDisplayMode, density, fontFamilyResolver, availableWidthPx) {
+                val titleWidth = { text: String ->
+                    titleWidths.getOrPut(text) {
+                        ceil(ParagraphIntrinsics(text, titleStyle, emptyList(), density, fontFamilyResolver).maxIntrinsicWidth).toInt()
+                    }
+                }
+                CandidateRowLayout.arrangeRows(suggestions, availableWidthPx, spacingPx) { word ->
+                    measureCellWidth(word, isTPSLayout, candidateDisplayMode, titleWidth, minCellWidthPx, cellPaddingPx)
+                }
+            }
+
+        fun rowIndexFor(suggestionIndex: Int): Int {
+            if (rows.isEmpty() || suggestions.isEmpty()) return 0
+            return minOf((suggestionIndex.toFloat() / suggestions.size * rows.size).toInt(), rows.size - 1)
+        }
+
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -393,24 +397,21 @@ private fun CandidateCell(
                     cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
                 )
 
-            Text(
+            // BasicText with a full style: M3 Text would merge LocalTextStyle (bodyLarge's 0.5sp
+            // letter spacing), which the row measurement does not see. Ellipsis only when a
+            // single candidate is wider than the whole row.
+            BasicText(
                 text = primary,
-                color = colors.primary,
-                fontSize = PRIMARY_TEXT_SIZE_SP.sp,
-                fontFamily = fontFamily,
+                style = gridLineStyle(PRIMARY_TEXT_SIZE_SP, fontFamily, colors.primary),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
             )
             if (subtitle != null) {
-                Text(
+                BasicText(
                     text = subtitle,
-                    color = colors.subtitle,
-                    fontSize = SUBTITLE_TEXT_SIZE_SP.sp,
-                    fontFamily = fontFamily,
+                    style = gridLineStyle(SUBTITLE_TEXT_SIZE_SP, fontFamily, colors.subtitle),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
@@ -562,32 +563,30 @@ private fun rememberCandidateOverlayColors(
     }
 }
 
-// --- Measurement (android Paint — preserves the legacy pixel row breaks exactly) ---
+// --- Text style + measurement ---
 
-private fun measurementPaint(
-    typeface: android.graphics.Typeface,
-    textSizeSp: Float,
-    displayMetrics: android.util.DisplayMetrics,
-): Paint =
-    Paint().apply {
-        isAntiAlias = true
-        this.typeface = typeface
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, textSizeSp, displayMetrics)
-    }
+/** One grid line: [fontSp] in [fontFamily], centred. The row measurement and the cells share it. */
+private fun gridLineStyle(
+    fontSp: Float,
+    fontFamily: FontFamily,
+    color: Color = Color.Unspecified,
+): TextStyle = TextStyle(color = color, fontSize = fontSp.sp, fontFamily = fontFamily, textAlign = TextAlign.Center)
 
+/**
+ * Cell width for the row packer: the widest line the cell can show, measured at the title
+ * size by [titleWidth] (the rendered title style), plus padding.
+ */
 private fun measureCellWidth(
     word: TaigiWord,
     isTPSLayout: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
-    primaryPaint: Paint,
-    subtitlePaint: Paint,
+    titleWidth: (String) -> Int,
     minCellWidthPx: Int,
     cellPaddingPx: Int,
 ): Int {
     if (isTPSLayout) {
         val title = if (!word.hanji.isNullOrEmpty()) word.hanji else word.tpsText
-        val titleWidth = primaryPaint.measureText(title)
-        return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
+        return maxOf(minCellWidthPx, titleWidth(title) + cellPaddingPx)
     }
     // §42 mixed cells — marked split cells AND the unmarked COMBINED row (a NextWord
     // prediction, hanji-led) — render ONE script at the title font. Derive the
@@ -605,9 +604,10 @@ private fun measureCellWidth(
                 isHanjiFirst = false,
                 cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
             ).title
-        return maxOf(minCellWidthPx, (primaryPaint.measureText(title) + cellPaddingPx + 0.5f).toInt())
+        return maxOf(minCellWidthPx, titleWidth(title) + cellPaddingPx)
     }
-    val romanWidth = primaryPaint.measureText(word.roman)
-    val hanjiWidth = if (!word.hanji.isNullOrEmpty()) subtitlePaint.measureText(word.hanji) else 0f
-    return maxOf(minCellWidthPx, (maxOf(romanWidth, hanjiWidth) + cellPaddingPx + 0.5f).toInt())
+    // Either script can be the title (the 文/A swap must not reflow), so both are measured at
+    // the title size; the subtitle size is smaller.
+    val hanjiWidth = if (!word.hanji.isNullOrEmpty()) titleWidth(word.hanji) else 0
+    return maxOf(minCellWidthPx, maxOf(titleWidth(word.roman), hanjiWidth) + cellPaddingPx)
 }
