@@ -212,6 +212,7 @@ by macOS, so inspect the history soon after an incident.
 | `mise cannot read mise.toml` | the file changed since you last trusted it | `mise trust`, then `mise install` for any new pin |
 | `protoc-gen-swift not found` | swift-protobuf missing | `mise install`, or install the version in `macos/Package.resolved` |
 | `TaigiKeyboard needs Xcode 26.6 (Swift 6.3.3) or newer` | the selected Xcode is older | install Xcode 26.6+ and `sudo xcode-select -s` it (or set `DEVELOPER_DIR`); then delete `macos/.build` and the project's DerivedData so no artifact built by the old Swift is reused |
+| `cannot find 'AutocompleteEngineCollection' in scope` (or another missing KeyboardKit symbol after a package update) | Xcode reused a precompiled module from `DerivedData` built against an older KeyboardKit version | delete the project's `DerivedData/.../SourcePackages` and `Build/Intermediates.noindex/SwiftExplicitPrecompiledModules` (or **Product → Clean Build Folder**), then run `xcodebuild -resolvePackageDependencies -project ios/TaigiKeyboard.xcodeproj` |
 | `cargo-ndk not found` | Android native build without cargo-ndk | `mise install`, or `cargo install cargo-ndk --locked` |
 | `gitleaks is not installed` | `make scan-secrets` / the hook without gitleaks | `mise install`, or install gitleaks 8.30.1 — the version `.gitleaks-scanned` records |
 | rustup downloads Apple / Android targets on Linux | `engine/rust-toolchain.toml` target list | `RUSTUP_TOOLCHAIN=$(tools/rust-toolchain.sh)` for engine-only work |
