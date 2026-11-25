@@ -2,6 +2,7 @@
 
 import { expect, test } from "@playwright/test";
 
+import { CAPTIONS, STRINGS } from "../src/generated/strings.js";
 import {
   commitWord,
   expectText,
@@ -198,4 +199,130 @@ test("a chord's write keeps the font and the language", async ({ page }) => {
   await expect(firstSection(page)).toHaveText("一般");
   // trace: desktop.menuSettings ja.
   await expect(toggle(page)).toHaveAttribute("title", "台湾語キーボードの設定");
+});
+
+/** @type {ReadonlyArray<readonly [string, string]>} */
+const CAPTIONED_GENERAL_ROWS = [
+  ["toneInputScheme", "settings.toneSchemeStandardInfo"],
+  ["hanLoMixedEnabled", "settings.hanLoMixedInfo"],
+  ["literalRomanCandidateEnabled", "desktop.literalRomanCandidateInfo"],
+  ["outputBothScripts", "settings.outputBothScriptsInfo"],
+  ["khinsiannInHanjiEnabled", "settings.khinsiannInHanjiInfo"],
+  ["syllableSeparator", "settings.syllableSeparatorInfo"],
+  ["autoSpaceEnabled", "settings.autoSpaceInfo"],
+];
+
+/**
+ * @param {Page} page
+ * @param {string} name
+ */
+const settingRow = (page, name) =>
+  page.locator("#settings .setting", {
+    has: page.locator(`[name="${name}"]`),
+  });
+
+/**
+ * @param {keyof typeof STRINGS} lang
+ * @param {string} key
+ * @returns {string}
+ */
+function stringFor(lang, key) {
+  return /** @type {Record<string, string>} */ (STRINGS[lang])[key];
+}
+
+test("General settings show inline captions and swap Tone Keys live", async ({
+  page,
+}) => {
+  expect(Object.keys(CAPTIONS)).toHaveLength(8);
+  await open(page, { settings: { displayLanguage: "en" } });
+
+  for (const [name, captionKey] of CAPTIONED_GENERAL_ROWS) {
+    const note = settingRow(page, name).locator("span[data-i18n] > small");
+    await expect(note).toHaveCount(1);
+    await expect(note).toHaveText(stringFor("en", captionKey));
+  }
+  for (const name of [
+    "inputMode",
+    "cAffricateEnabled",
+    "displayLanguage",
+    "candidateLayout",
+  ]) {
+    await expect(
+      settingRow(page, name).locator("span[data-i18n] > small"),
+    ).toHaveCount(0);
+  }
+
+  const toneNote = settingRow(page, "toneInputScheme").locator(
+    "span[data-i18n] > small",
+  );
+  await setting(page, "toneInputScheme").selectOption("telex");
+  await expect(toneNote).toHaveCount(1);
+  await expect(toneNote).toHaveText(
+    stringFor("en", "settings.toneSchemeTelexInfo"),
+  );
+
+  await setting(page, "toneInputScheme").selectOption("standard");
+  await expect(toneNote).toHaveText(
+    stringFor("en", "settings.toneSchemeStandardInfo"),
+  );
+
+  await setting(page, "toneInputScheme").selectOption("telex");
+  await expect(toneNote).toHaveText(
+    stringFor("en", "settings.toneSchemeTelexInfo"),
+  );
+  await page
+    .locator(".sidebar-section", { has: setting(page, "toneInputScheme") })
+    .getByRole("button", { name: "Reset to Defaults" })
+    .click();
+  await expect(toneNote).toHaveText(
+    stringFor("en", "settings.toneSchemeStandardInfo"),
+  );
+  await expect(setting(page, "displayLanguage")).toHaveValue("en");
+});
+
+test("inline captions update across all five display languages", async ({
+  page,
+}) => {
+  await open(page, { settings: { displayLanguage: "en" } });
+  for (const lang of /** @type {const} */ ([
+    "hanji",
+    "tailo",
+    "poj",
+    "ja",
+    "en",
+  ])) {
+    await setting(page, "displayLanguage").selectOption(lang);
+    for (const [name, captionKey] of CAPTIONED_GENERAL_ROWS) {
+      await expect(
+        settingRow(page, name).locator("span[data-i18n] > small"),
+      ).toHaveText(stringFor(lang, captionKey));
+    }
+    await setting(page, "toneInputScheme").selectOption("telex");
+    await expect(
+      settingRow(page, "toneInputScheme").locator("span[data-i18n] > small"),
+    ).toHaveText(stringFor(lang, "settings.toneSchemeTelexInfo"));
+    await setting(page, "toneInputScheme").selectOption("standard");
+  }
+});
+
+test("disabled captioned rows dim both label and caption", async ({ page }) => {
+  await open(page, {
+    settings: { displayLanguage: "en", candidateDisplayMode: "romanOnly" },
+  });
+  for (const name of [
+    "hanLoMixedEnabled",
+    "outputBothScripts",
+    "khinsiannInHanjiEnabled",
+  ]) {
+    const row = settingRow(page, name);
+    await expect(row.locator("input")).toBeDisabled();
+    const opacity = await row
+      .locator("span[data-i18n]")
+      .evaluate((el) => Number.parseFloat(getComputedStyle(el).opacity));
+    expect(opacity).toBeLessThan(1);
+  }
+  const enabledOpacity = await settingRow(page, "autoSpaceEnabled")
+    .locator("span[data-i18n]")
+    .evaluate((el) => Number.parseFloat(getComputedStyle(el).opacity));
+  expect(enabledOpacity).toBe(1);
 });
