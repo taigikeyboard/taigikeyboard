@@ -96,8 +96,9 @@ struct App {
     placed: Option<PhysicalPosition<i32>>,
     placed_size: Option<PhysicalSize<u32>>,
     appearance: Option<SystemAppearance>,
-    /// The first row a vertical list taller than its room shows; kept while
-    /// the page stays the same so the rows scroll only with the cursor.
+    /// The first row a vertical list or an unfolded grid taller than its
+    /// room shows; kept while the page stays the same so the rows scroll only
+    /// with the cursor.
     first_row: usize,
     /// The screen width last reported to the parent ([`Notice::Screen`]).
     reported_screen: Option<u32>,
@@ -570,9 +571,9 @@ fn fit_for(caret: Caret, monitor: Option<Monitor>, scale: f32, first_row: usize)
 }
 
 /// Under the caret when the window fits there, else over it, else on the
-/// roomier side. A window [`fit_for`] sized never covers the caret's line;
-/// an unfolded grid, which takes no fit, may. Kept inside the monitor's
-/// margins.
+/// roomier side. A window [`fit_for`] sized never covers the caret's line,
+/// unless the room is shorter than one row (a list always shows one). Kept
+/// inside the monitor's margins.
 fn place_at(
     caret: Caret,
     window: PhysicalSize<u32>,
@@ -603,7 +604,7 @@ fn place_at(
     } else {
         below_y
     };
-    // An unfolded grid takes no fit and can outgrow both sides; it still
+    // A window taller than both sides (a room shorter than one row) still
     // stays on the monitor.
     let bottom = origin.y.saturating_add(size.height as i32) - margin;
     let y = y.min(bottom - window_h).max(origin.y + margin);
@@ -679,7 +680,7 @@ mod tests {
 
     #[test]
     fn a_window_taller_than_the_monitor_stays_on_it() {
-        // An unfolded grid takes no fit: 1000 px on an 800 px monitor.
+        // A row taller than the room: 1000 px on an 800 px monitor.
         let origin = place_at(
             caret_at(300),
             PhysicalSize::new(300, 1000),

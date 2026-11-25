@@ -59,17 +59,19 @@ pub struct Arrangement {
     pub highlight: Option<Rect>,
     pub glyphs: Vec<Glyph>,
     pub hits: Vec<Hit>,
-    /// The first row a vertical list shows when the whole page is taller
-    /// than [`Fit::height`]; 0 otherwise. Hand it back as the next
+    /// The first row a vertical list or an unfolded grid shows when the whole
+    /// page is taller than [`Fit::height`]; 0 for a list that fits, the
+    /// model's scrolled row for a grid that fits. Hand it back as the next
     /// [`Fit::first_row`] so the rows scroll only when the cursor leaves them.
     pub first_row: usize,
 }
 
 /// The room the window has on screen, in px after scale: the caret's monitor
 /// less a margin, and for the height the roomier side of the caret. A cell
-/// wider than the room ends in an ellipsis; a vertical list taller than it
-/// shows the rows around the cursor, from `first_row` when the cursor is
-/// among them.
+/// wider than the room ends in an ellipsis, and an unfolded grid's columns
+/// share it; a vertical list or an unfolded grid taller than it shows the
+/// rows around the cursor, from `first_row` when the cursor is among them.
+/// An unfolded row of several cells keeps the model's packing.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Fit {
     pub width: f32,
@@ -257,7 +259,7 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32, fit: Fit) -> Arr
         1.0
     };
     if page.expandable.as_ref().is_some_and(|view| view.mode == 1) {
-        return arrange_expandable(page, measure, scale);
+        return arrange_expandable(page, measure, scale, fit);
     }
     let Pads {
         window: pad,
@@ -541,12 +543,147 @@ fn remap_expandable_hits(page: &Show, hits: &mut [Hit]) {
     }
 }
 
-fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
+/// Which grid rows an unfolded list shows: from `first`, `count` whole rows
+/// and a `peek` of the next one.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Window {
+    first: usize,
+    count: usize,
+    peek: f32,
+}
+
+/// `count` rows of `row_body` with `separator` between them.
+fn rows_height(count: usize, (row_body, separator): (f32, f32)) -> f32 {
+    count as f32 * row_body + count.saturating_sub(1) as f32 * separator
+}
+
+/// The model's viewport `model` when it fits `room`; else as many whole rows
+/// of `rows` as fit, kept around the cursor row the way a vertical list keeps
+/// its rows ([`visible_rows`]), the peek only when it still fits after them
+/// and rows follow. At least one row, so a room shorter than a row still
+/// overflows it.
+fn grid_window(
+    rows: usize,
+    model: Window,
+    metrics: (f32, f32),
+    room: f32,
+    cursor_row: Option<usize>,
+    previous: usize,
+) -> Window {
+    if rows_height(model.count, metrics) + model.peek <= room + 0.5 {
+        return model;
+    }
+    let heights = vec![metrics.0; rows];
+    let (first, count) = visible_rows(&heights, metrics.1, room, cursor_row, previous);
+    let fits_peek = rows_height(count, metrics) + model.peek <= room + 0.5;
+    Window {
+        first,
+        count,
+        peek: if first + count < rows && fits_peek {
+            model.peek
+        } else {
+            0.0
+        },
+    }
+}
+
+/// An unfolded grid's rows on screen: the [`grid_window`] of the model's
+/// rows (`row_of` each of `cell_count` cells) inside `fit`, its scroll
+/// offset, and the y its last shown row (or peek) ends at.
+struct GridRows {
+    first: usize,
+    scroll: f32,
+    bottom: f32,
+}
+
+impl GridRows {
+    fn new(
+        page: &Show,
+        cell_count: usize,
+        row_of: impl Fn(usize) -> usize,
+        metrics: (f32, f32),
+        peeks: bool,
+        fit: Fit,
+        pad: f32,
+    ) -> Self {
+        let view = page.expandable.as_ref().expect("expanded");
+        let rows = (0..cell_count).map(&row_of).max().map_or(1, |row| row + 1);
+        let visible = if view.visible_rows == 0 {
+            rows
+        } else {
+            (view.visible_rows as usize).clamp(1, rows)
+        };
+        let scroll_rows = if view.row_height > 0 {
+            (view.scroll_y as f32 / view.row_height as f32).round() as usize
+        } else {
+            0
+        };
+        // A row peeks the next line so the list reads as scrollable.
+        let peek = if peeks && rows > visible {
+            metrics.0 * 0.5
+        } else {
+            0.0
+        };
+        let cursor_row = page
+            .cursor
+            .map(|cursor| cursor as usize)
+            .filter(|&index| index < cell_count)
+            .map(&row_of);
+        // Fewer rows than the model's viewport when the screen has no room
+        // for them, so the grid never covers the caret line.
+        let window = grid_window(
+            rows,
+            Window {
+                first: scroll_rows,
+                count: visible,
+                peek,
+            },
+            metrics,
+            fit.height - pad * 2.0,
+            cursor_row,
+            fit.first_row,
+        );
+        Self {
+            first: window.first,
+            scroll: window.first as f32 * (metrics.0 + metrics.1),
+            bottom: pad + rows_height(window.count, metrics) + window.peek,
+        }
+    }
+
+    /// Whole rows only: at zero padding a centred-cell test would let a row
+    /// just outside the viewport draw (and take clicks) at its edge.
+    fn shows(&self, row_top: f32, row_body: f32, pad: f32) -> bool {
+        row_top + row_body > pad && row_top < self.bottom
+    }
+}
+
+/// The width each column may take so their sum fits `room`: the widest
+/// columns give way first, down to one shared cap. `None` when they fit. A
+/// cap below a cell's own chrome (padding and key column) still leaves that
+/// chrome, so a very narrow room with many columns can stay over it.
+fn column_cap(widths: &[f32], room: f32) -> Option<f32> {
+    if widths.iter().sum::<f32>() <= room + 0.5 {
+        return None;
+    }
+    let mut sorted = widths.to_vec();
+    sorted.sort_by(f32::total_cmp);
+    let mut left = room.max(0.0);
+    for (index, width) in sorted.iter().enumerate() {
+        let share = left / (sorted.len() - index) as f32;
+        if *width > share {
+            return Some(share);
+        }
+        left -= width;
+    }
+    None
+}
+
+fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32, fit: Fit) -> Arrangement {
     let view = page.expandable.as_ref().expect("expanded");
     let Pads {
         window: pad, gap, ..
     } = pads(page.chrome.padding, scale);
-    let style = Scale::of(cell_style(page), scale);
+    let mut style = Scale::of(cell_style(page), scale);
     let label_px = style.label_px;
     let primary = style.primary;
     // A column keeps the two scripts on one line. A row stacks them.
@@ -566,25 +703,12 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
         .unwrap_or(1)
         .clamp(1, view.grid_columns.max(1)) as usize;
     if !inline {
-        return arrange_expanded_row(page, &style, measure, scale);
+        return arrange_expanded_row(page, &style, measure, scale, fit);
     }
     // Every vertical-expandable cell reserves the key column, including rows
     // that are not numbered yet, so a column does not jump when its numbers
     // appear.
     let label_slot = label_column(page, label_px, measure);
-    let mut cells = Vec::new();
-    for (index, cell) in page.cells.iter().enumerate() {
-        let label = page.labels.get(index).map(String::as_str).unwrap_or("");
-        cells.push(layout_cell(
-            cell,
-            label,
-            index as u32,
-            inline,
-            label_slot,
-            &style,
-            measure,
-        ));
-    }
     let span_of = |index: usize| view.column_spans.get(index).copied().unwrap_or(1).max(1) as usize;
     let start_of = |index: usize| {
         view.column_starts
@@ -592,31 +716,75 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
             .copied()
             .unwrap_or((index % columns) as u32) as usize
     };
+    let row_of = |index: usize| {
+        view.row_indexes
+            .get(index)
+            .copied()
+            .unwrap_or((index / columns) as u32) as usize
+    };
+    let lay_cell = |index: usize, style: &Scale| {
+        let label = page.labels.get(index).map(String::as_str).unwrap_or("");
+        let cell = &page.cells[index];
+        layout_cell(
+            cell,
+            label,
+            index as u32,
+            inline,
+            label_slot,
+            style,
+            measure,
+        )
+    };
     // Each vertical-expandable column is as wide as its own widest cell.
-    let mut column_widths = vec![0.0_f32; columns];
-    for (index, cell) in cells.iter().enumerate() {
-        let start = start_of(index).min(columns.saturating_sub(1));
-        let span = span_of(index).min(columns - start).max(1);
-        if span == 1 {
-            column_widths[start] = column_widths[start].max(cell.w);
-        }
-    }
-    for (index, cell) in cells.iter().enumerate() {
-        let start = start_of(index).min(columns.saturating_sub(1));
-        let span = span_of(index).min(columns - start).max(1);
-        if span == 1 {
-            continue;
-        }
-        let covered: f32 = column_widths[start..start + span].iter().sum();
-        if cell.w > covered {
-            let extra = (cell.w - covered) / span as f32;
-            for width in &mut column_widths[start..start + span] {
-                *width += extra;
+    let widths_of = |cells: &[LaidCell]| {
+        let mut column_widths = vec![0.0_f32; columns];
+        for (index, cell) in cells.iter().enumerate() {
+            let start = start_of(index).min(columns.saturating_sub(1));
+            let span = span_of(index).min(columns - start).max(1);
+            if span == 1 {
+                column_widths[start] = column_widths[start].max(cell.w);
             }
         }
-    }
-    for width in &mut column_widths {
-        *width = width.max(1.0);
+        for (index, cell) in cells.iter().enumerate() {
+            let start = start_of(index).min(columns.saturating_sub(1));
+            let span = span_of(index).min(columns - start).max(1);
+            if span == 1 {
+                continue;
+            }
+            let covered: f32 = column_widths[start..start + span].iter().sum();
+            if cell.w > covered {
+                let extra = (cell.w - covered) / span as f32;
+                for width in &mut column_widths[start..start + span] {
+                    *width += extra;
+                }
+            }
+        }
+        for width in &mut column_widths {
+            *width = width.max(1.0);
+        }
+        column_widths
+    };
+    let mut cells: Vec<LaidCell> = (0..page.cells.len())
+        .map(|index| lay_cell(index, &style))
+        .collect();
+    let mut column_widths = widths_of(&cells);
+    // The columns share the screen's room: an over-wide column (a sentence
+    // candidate) ends its cells in an ellipsis rather than pushing the
+    // window past the edge. Only the cells over the cap change.
+    let arrow_w = if page.has_next {
+        arrow_span(label_px, measure)
+    } else {
+        0.0
+    };
+    let arrow_column = if page.has_next { gap + arrow_w } else { 0.0 };
+    if let Some(cap) = column_cap(&column_widths, fit.width - pad * 2.0 - arrow_column) {
+        style.max_cell_w = cap;
+        for (index, cell) in cells.iter_mut().enumerate() {
+            if cell.w > cap {
+                *cell = lay_cell(index, &style);
+            }
+        }
+        column_widths = widths_of(&cells);
     }
     let mut column_x = Vec::with_capacity(columns + 1);
     column_x.push(0.0);
@@ -628,57 +796,27 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
     // the column unfolds.
     let separator = pads(page.chrome.padding, scale).line * 2.0;
     let pitch = row_body + separator;
-    let row_count = cells
-        .iter()
-        .enumerate()
-        .map(|(index, _)| {
-            view.row_indexes
-                .get(index)
-                .copied()
-                .unwrap_or((index / columns) as u32)
-        })
-        .max()
-        .map(|row| row as usize + 1)
-        .unwrap_or(0)
-        .max(1);
-    let visible = if view.visible_rows == 0 {
-        row_count
-    } else {
-        (view.visible_rows as usize).clamp(1, row_count)
-    };
-    let scroll_rows = if view.row_height > 0 {
-        (view.scroll_y as f32 / view.row_height as f32).round() as usize
-    } else {
-        0
-    };
-    let scroll = scroll_rows as f32 * pitch;
-    // A row peeks the next line so the list reads as scrollable. A column
-    // keeps the height it had before it unfolded.
-    let peek = if view.axis == 0 && row_count > visible {
-        row_body * 0.5
-    } else {
-        0.0
-    };
+    // A column keeps the height it had before it unfolded: no peek.
+    let grid = GridRows::new(
+        page,
+        cells.len(),
+        row_of,
+        (row_body, separator),
+        false,
+        fit,
+        pad,
+    );
     let mut glyphs = Vec::new();
     let mut hits = Vec::new();
     let mut highlight = None;
-    let grid_bottom =
-        pad + visible as f32 * row_body + visible.saturating_sub(1) as f32 * separator + peek;
     for (index, cell) in cells.iter().enumerate() {
         let start = start_of(index).min(columns.saturating_sub(1));
         let span = span_of(index).min(columns - start).max(1);
-        let row = view
-            .row_indexes
-            .get(index)
-            .copied()
-            .unwrap_or((index / columns) as u32) as f32;
         let x = pad + column_x[start];
         let slot_w = column_x[start + span] - column_x[start];
-        let row_top = pad + row * pitch - scroll;
+        let row_top = pad + row_of(index) as f32 * pitch - grid.scroll;
         let top = row_top + (row_body - cell.h).max(0.0) / 2.0;
-        // Whole rows: at zero padding a centred-cell test would let the row
-        // just outside the viewport draw (and take clicks) at its edge.
-        if row_top + row_body <= pad || row_top >= grid_bottom {
+        if !grid.shows(row_top, row_body, pad) {
             continue;
         }
         shift_cell(cell, x, top, &mut glyphs, &mut hits);
@@ -706,10 +844,9 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
             highlight = Some(band);
         }
     }
-    let height = grid_bottom + pad;
+    let height = grid.bottom + pad;
     let mut width = pad * 2.0 + column_x[columns];
     if page.has_next {
-        let arrow_w = arrow_span(label_px, measure);
         place_arrow(
             &mut glyphs,
             &mut hits,
@@ -729,7 +866,7 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
                 x: pad,
                 y: pad,
                 w: column_x[columns],
-                h: grid_bottom - pad,
+                h: grid.bottom - pad,
             };
             grow_highlight(
                 cell,
@@ -739,7 +876,7 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
         }),
         glyphs,
         hits,
-        first_row: 0,
+        first_row: grid.first,
     };
     remap_expandable_hits(page, &mut arrangement.hits);
     arrangement
@@ -753,11 +890,19 @@ fn arrange_expanded_row(
     style: &Scale,
     measure: &impl Measure,
     scale: f32,
+    fit: Fit,
 ) -> Arrangement {
     let view = page.expandable.as_ref().expect("expanded");
     let Pads {
         window: pad, gap, ..
     } = pads(page.chrome.padding, scale);
+    // A cell wider than the screen's room (a sentence candidate) ends in an
+    // ellipsis, as it does in the collapsed row.
+    let room = (fit.width - pad * 2.0).max(0.0);
+    let style = &Scale {
+        max_cell_w: room,
+        ..*style
+    };
     // Every cell reserves the key column, numbered or not, so a row does not
     // shift right when the keys move onto it.
     let row = RowCell::new(cell_style(page), measure, scale);
@@ -766,7 +911,7 @@ fn arrange_expanded_row(
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
         let mut laid = layout_cell(cell, label, index as u32, false, key, style, measure);
-        row.widen(&mut laid, cell, measure, f32::INFINITY);
+        row.widen(&mut laid, cell, measure, room);
         cells.push(laid);
     }
     let row_body = cells
@@ -776,14 +921,18 @@ fn arrange_expanded_row(
     let separator = scale;
     let pitch = row_body + separator;
     // The model decides the rows (navigation and keys read them); each row
-    // here only lays its cells end to end from the left.
+    // here only lays its cells end to end from the left. The screen decides
+    // how many of them show ([`GridRows`]).
     let row_of = |index: usize| view.row_indexes.get(index).copied().unwrap_or(0) as usize;
-    let scroll_rows = if view.row_height > 0 {
-        (view.scroll_y as f32 / view.row_height as f32).round() as usize
-    } else {
-        0
-    };
-    let scroll = scroll_rows as f32 * pitch;
+    let grid = GridRows::new(
+        page,
+        cells.len(),
+        row_of,
+        (row_body, separator),
+        true,
+        fit,
+        pad,
+    );
     let mut glyphs = Vec::new();
     let mut hits = Vec::new();
     let mut highlight = None;
@@ -795,39 +944,29 @@ fn arrange_expanded_row(
             row = row_of(index);
             x = pad;
         }
-        let top = pad + row as f32 * pitch - scroll + (row_body - cell.h).max(0.0) / 2.0;
+        let row_top = pad + row as f32 * pitch - grid.scroll;
+        widest_row = widest_row.max(x + cell.w - pad);
+        if !grid.shows(row_top, row_body, pad) {
+            x += cell.w + gap;
+            continue;
+        }
+        let top = row_top + (row_body - cell.h).max(0.0) / 2.0;
         shift_cell(cell, x, top, &mut glyphs, &mut hits);
         if page.cursor == Some(index as u32) {
             // The row's full body, as in the collapsed row.
             highlight = Some(Rect {
                 x,
-                y: pad + row as f32 * pitch - scroll,
+                y: row_top,
                 w: cell.w,
                 h: row_body,
             });
         }
-        widest_row = widest_row.max(x + cell.w - pad);
         x += cell.w + gap;
     }
-    let wrap = widest_row.max(page.min_content_width as f32 * scale);
-    let row_count = cells
-        .iter()
-        .enumerate()
-        .map(|(index, _)| row_of(index) + 1)
-        .max()
-        .unwrap_or(1);
-    let visible = if view.visible_rows == 0 {
-        row_count
-    } else {
-        (view.visible_rows as usize).clamp(1, row_count)
-    };
-    let peek = if row_count > visible {
-        row_body * 0.5
-    } else {
-        0.0
-    };
-    let height =
-        pad + visible as f32 * row_body + visible.saturating_sub(1) as f32 * separator + peek + pad;
+    // The grid's width floor (the model's full row) gives way to the screen
+    // as the collapsed row's does.
+    let wrap = widest_row.max((page.min_content_width as f32 * scale).min(room));
+    let height = grid.bottom + pad;
     let width = pad * 2.0 + wrap;
     let mut arrangement = Arrangement {
         width,
@@ -847,7 +986,7 @@ fn arrange_expanded_row(
         }),
         glyphs,
         hits,
-        first_row: 0,
+        first_row: grid.first,
     };
     remap_expandable_hits(page, &mut arrangement.hits);
     arrangement
@@ -2265,5 +2404,165 @@ mod tests {
         // trace: two rows take 10 + 2 + 10 = 22; the cursor on row 4 brings
         // rows 3..=4.
         assert_eq!(visible_rows(&rows, 2.0, 22.0, Some(4), 0), (3, 2));
+    }
+
+    /// An unfolded grid of `count` short cells: a row grid two cells a row
+    /// (axis 0), or a column grid three columns a row (axis 1), its model
+    /// showing `visible` rows from the top.
+    fn unfolded(axis: u8, count: usize, visible: u32) -> Show {
+        let cells = (0..count)
+            .map(|_| Cell {
+                text: "人".into(),
+                annotation: Some("lâng".into()),
+            })
+            .collect();
+        let mut shown = page(axis == 1, true, cells);
+        let per_row = if axis == 0 { 2 } else { 3 };
+        shown.expandable = Some(ExpandableView {
+            absolute_indices: (0..count as u32).collect(),
+            mode: 1,
+            axis,
+            column_width: 80,
+            grid_columns: per_row,
+            scroll_y: 0,
+            row_indexes: (0..count as u32).map(|index| index / per_row).collect(),
+            column_starts: (0..count as u32).map(|index| index % per_row).collect(),
+            column_spans: vec![1; count],
+            visible_rows: visible,
+            row_height: 40,
+        });
+        shown
+    }
+
+    #[test]
+    fn an_unfolded_grid_with_room_draws_as_without_a_fit() {
+        for axis in [0, 1] {
+            let shown = unfolded(axis, 12, 3);
+            assert_eq!(
+                arrange(&shown, &Mono, 1.0, fit(10_000.0, 10_000.0)),
+                arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED),
+                "axis {axis}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unfolded_grid_taller_than_the_room_shows_the_rows_around_the_cursor() {
+        for axis in [0, 1] {
+            let mut shown = unfolded(axis, 12, 6);
+            let full = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
+            // trace: room for two or more rows but not all of them.
+            let height = (full.height * 0.75).floor();
+            // The last cell: its row is the grid's last.
+            shown.cursor = Some(11);
+            let layout = arrange(&shown, &Mono, 1.0, fit(10_000.0, height));
+            assert!(
+                layout.height <= height,
+                "axis {axis}: {} > {height}",
+                layout.height
+            );
+            assert!(layout.first_row > 0, "axis {axis}: scrolled to the cursor");
+            let band = layout.highlight.expect("the cursor row is drawn");
+            assert!(band.y >= 0.0 && band.y + band.h <= layout.height + 0.5);
+            let cell_hits = layout
+                .hits
+                .iter()
+                .filter(|hit| matches!(hit.target, Target::Cell(_)));
+            for hit in cell_hits {
+                assert!(
+                    hit.y >= 0.0 && hit.y + hit.h <= layout.height + 0.5,
+                    "axis {axis}: {hit:?}"
+                );
+            }
+            // One row back keeps the window, as a vertical list does.
+            let first_row = layout.first_row;
+            shown.cursor = Some(if axis == 0 { 9 } else { 8 });
+            let back = arrange(
+                &shown,
+                &Mono,
+                1.0,
+                Fit {
+                    first_row,
+                    ..fit(10_000.0, height)
+                },
+            );
+            assert_eq!(back.first_row, first_row, "axis {axis}");
+        }
+    }
+
+    #[test]
+    fn an_unfolded_grid_fits_the_room_at_scale_two() {
+        let shown = unfolded(0, 12, 6);
+        let full = arrange(&shown, &Mono, 2.0, Fit::UNBOUNDED);
+        let height = (full.height / 2.0).floor();
+        let layout = arrange(&shown, &Mono, 2.0, fit(10_000.0, height));
+        assert!(layout.height <= height, "{} > {height}", layout.height);
+    }
+
+    #[test]
+    fn a_sentence_cell_in_an_unfolded_row_ends_in_an_ellipsis_within_the_room() {
+        let mut shown = unfolded(0, 4, 5);
+        // The sentence alone on its row, as the model packs a cell wider
+        // than a full row (a row of several cells is the packer's to fit).
+        if let Some(view) = shown.expandable.as_mut() {
+            view.row_indexes = vec![0, 1, 1, 2];
+        }
+        shown.cells[0] = Cell {
+            text: "看著個阿爸坐佇客廳的膨椅盹龜".into(),
+            annotation: Some("khuànn-tio̍h in a-pah tsē tī kheh-thiann ê phòng-í tuh-ku".into()),
+        };
+        shown.min_content_width = 2_000;
+        assert!(arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED).width > 200.0);
+        // trace: Mono romanization 52 chars × 10 px × 0.5 = 260 > the room.
+        let layout = arrange(&shown, &Mono, 1.0, fit(200.0, 10_000.0));
+        assert!(layout.width <= 200.0, "{} > 200", layout.width);
+        assert!(layout
+            .glyphs
+            .iter()
+            .any(|glyph| glyph.text.ends_with(ELLIPSIS)));
+    }
+
+    #[test]
+    fn unfolded_columns_with_a_sentence_cell_share_the_room() {
+        let mut shown = unfolded(1, 9, 3);
+        shown.has_next = true;
+        shown.cells[0] = Cell {
+            text: "看著個阿爸坐佇客廳的膨椅盹龜".into(),
+            annotation: Some("khuànn-tio̍h in a-pah tsē tī kheh-thiann ê phòng-í tuh-ku".into()),
+        };
+        assert!(arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED).width > 400.0);
+        let layout = arrange(&shown, &Mono, 1.0, fit(400.0, 10_000.0));
+        assert!(layout.width <= 400.0, "{} > 400", layout.width);
+        assert!(layout
+            .glyphs
+            .iter()
+            .any(|glyph| glyph.text.ends_with(ELLIPSIS)));
+    }
+
+    #[test]
+    fn grid_window_keeps_the_peek_only_when_it_fits_after_whole_rows() {
+        // trace: rows 20 tall, gap 2, peek 10, cursor on row 0. Room 24: one
+        // row (20; two need 42) and 20 + 10 > 24 drops the peek. Room 48: two
+        // rows (42), 52 > 48 drops it. Room 55: two rows and 52 fits.
+        let model = Window {
+            first: 0,
+            count: 5,
+            peek: 10.0,
+        };
+        let window = |room| {
+            let shown = grid_window(6, model, (20.0, 2.0), room, Some(0), 0);
+            (shown.first, shown.count, shown.peek)
+        };
+        assert_eq!(window(24.0), (0, 1, 0.0));
+        assert_eq!(window(48.0), (0, 2, 0.0));
+        assert_eq!(window(55.0), (0, 2, 10.0));
+    }
+
+    #[test]
+    fn column_cap_shrinks_the_widest_columns_to_one_share() {
+        // trace: 50 + 100 + 300 = 450 > 300; after the 50 column, 250 is
+        // left for two columns, 125 each — 100 fits, so 150 caps the third.
+        assert_eq!(column_cap(&[50.0, 100.0, 300.0], 300.0), Some(150.0));
+        assert_eq!(column_cap(&[50.0, 100.0], 300.0), None);
     }
 }
