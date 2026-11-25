@@ -1,15 +1,15 @@
 import SwiftUI
 import UIKit
 
-/// Font utilities for the keyboard extension and main app.
+/// Font utilities for the keyboard extension. Every font is fixed-size (no Dynamic Type).
 ///
 /// Two font resolution paths exist due to KeyboardKit's architecture:
 /// - **Key rendering**: `ButtonFontProvider` (per-render `SettingsSnapshot`, called via `TaigiButtonContent`)
 /// - **Toolbar / candidate UI**: `globalFont` / `globalUIFont` below (reads `SharedSettings.shared` directly,
-///   because these are called from ~15 SwiftUI views outside KeyboardKit's key pipeline)
+///   because these are called from SwiftUI views outside KeyboardKit's key pipeline)
 ///
-/// Both paths resolve the same user-selected font (System / Open Huninn / Iansui)
-/// using `FontType.customFontName` as the shared font-name source.
+/// Both paths resolve the same user-selected font using `FontType.customFontName` as the
+/// shared font-name source.
 ///
 /// Callers (keyboard extension only): `CandidateButtonView`, `CandidateCellHelper`,
 /// `CandidateSuggestionsRow`, `ToolShortcutsToolbar`, `ExpandedCandidateOverlay` + its grid
@@ -44,8 +44,13 @@ enum KeyboardFonts {
     /// UIKit UIFont based on the user's font setting.
     /// Used where UIKit measurement is needed (e.g. candidate cell width calculation).
     static func globalUIFont(size: CGFloat) -> UIFont {
-        if let name = SharedSettings.shared.fontType.customFontName {
-            return UIFont(name: name, size: size) ?? UIFont.systemFont(ofSize: size)
+        uiFont(for: SharedSettings.shared.fontType, size: size)
+    }
+
+    /// The UIFont twin of `font(for:size:)` (same face, same fixed size) for measurement.
+    static func uiFont(for fontType: FontType, size: CGFloat) -> UIFont {
+        if let name = fontType.customFontName, let font = UIFont(name: name, size: size) {
+            return font
         }
         return UIFont.systemFont(ofSize: size)
     }

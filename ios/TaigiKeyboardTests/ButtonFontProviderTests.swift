@@ -40,6 +40,26 @@ final class ButtonFontProviderTests: XCTestCase {
         }
     }
 
+    /// `KeyHintStack` measures with `buttonUIFont`; it must be the font `buttonKeyboardFont` renders.
+    func testButtonUIFont_matchesKeyboardFontSize() {
+        let context = KeyboardContext(settings: KeyboardSettings())
+        for fontType in FontType.allCases {
+            let provider = ButtonFontProvider(keyboardContext: context, settings: snapshot(fontType: fontType))
+            for action in [KeyboardAction.character("2"), .character("tsh"), .character(",")] {
+                let uiFont = provider.buttonUIFont(for: action)
+                switch provider.buttonKeyboardFont(for: action).type {
+                case let .customFixed(name, size):
+                    XCTAssertEqual(uiFont.fontName, name)
+                    XCTAssertEqual(uiFont.pointSize, size)
+                case let .system(size):
+                    XCTAssertEqual(uiFont.pointSize, size)
+                default:
+                    XCTFail("\(fontType) \(action): unexpected font type")
+                }
+            }
+        }
+    }
+
     func testCalloutStyle_customFonts_areFixedSize() {
         for fontType in FontType.allCases {
             guard fontType.customFontName != nil else { continue }

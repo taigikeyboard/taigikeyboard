@@ -93,7 +93,7 @@ struct TaigiButtonContent<StandardContent: View>: View {
         let hints = hint.split(separator: " ").map(String.init)
         let hintSize = hints.count >= 2 ? ButtonContentLayout.tpsHintFontSize : ButtonContentLayout.tpsSingleHintFontSize
         return KeyHintStack(
-            hints: Array(hints.prefix(2)),
+            hints: hints,
             label: text,
             labelFont: .systemFont(ofSize: ButtonContentLayout.tpsMainFontSize),
             hintFont: .systemFont(ofSize: hintSize),
@@ -121,6 +121,7 @@ struct TaigiButtonContent<StandardContent: View>: View {
             labelReference: "0",
             // Tallest glyph of each set: tone 8's vertical line / an exclamation mark.
             hintReference: isText ? "!" : "ˈ",
+            alignsEachHintByInk: !isText,
             hintColor: keyTextColor,
             hintOpacity: ButtonContentLayout.hintOpacity,
         )

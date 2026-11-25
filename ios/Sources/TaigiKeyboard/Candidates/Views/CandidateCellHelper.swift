@@ -16,7 +16,9 @@ enum CandidateCellHelper {
     /// `additionalInfo` key carrying a Continuous candidate's TPS cell text
     /// (`CandidateMessage.tps_text`). Mirrors Android `TaigiWord.MetadataKeys.TPS_TEXT`.
     static let tpsTextKey = "tpsText"
-    private static let cellHorizontalPadding: CGFloat = 20
+    /// Total side room measured into a grid cell; `ExpandedCandidateGridCell` pads its text by half
+    /// on each side so a width-clamped cell still truncates inside its highlight.
+    static let cellHorizontalPadding: CGFloat = 20
 
     // MARK: - Display text
 

@@ -101,9 +101,8 @@ struct CandidateButtonView: View {
             }
             .padding(.horizontal, style.itemStyle.horizontalPadding)
             .padding(.vertical, style.itemStyle.verticalPadding)
-            // Fill the bar height so the highlight is sized by the bar, not by the text:
-            // the old -4 pt outset + 5 pt downward offset pushed its bottom past the bar's
-            // clip edge.
+            // Fill the bar height so the highlight is sized by the bar (inset below), not by
+            // the text, and always fits inside the bar's clip.
             .frame(maxHeight: .infinity)
         }
         .background(

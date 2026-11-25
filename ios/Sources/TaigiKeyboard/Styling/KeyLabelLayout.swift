@@ -10,7 +10,7 @@ import UIKit
 /// between System and the bundled CJK fonts). The stack is centred in the key; when the
 /// key is too short (landscape) the hint shrinks first, then the whole stack scales.
 ///
-/// Used by: `TaigiButtonContent` (`standardHintContent`, `tpsHintContent`).
+/// Used by: `KeyHintStack`.
 enum KeyLabelLayout {
     /// Ink extent of a glyph run relative to its baseline (y grows downward on screen).
     struct Ink: Equatable {
@@ -45,8 +45,6 @@ enum KeyLabelLayout {
         var labelBaseline: CGFloat
         /// Where the bottom of each hint's ink sits, from the key top.
         var hintInkBottom: CGFloat
-        /// Top of the reserved hint band, from the key top.
-        var hintBandTop: CGFloat
     }
 
     /// Gap between hint ink and label ink, as a fraction of the label font size.
@@ -83,7 +81,6 @@ enum KeyLabelLayout {
             hintScale: scale * hintScale,
             labelBaseline: labelInkTop + scale * input.labelInk.ascent,
             hintInkBottom: labelInkTop - scale * gap,
-            hintBandTop: top,
         )
     }
 
@@ -98,10 +95,5 @@ enum KeyLabelLayout {
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font]))
         let bounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
         return Ink(ascent: bounds.maxY, descent: -bounds.minY)
-    }
-
-    /// Baseline that puts the bottom of `ink` at `inkBottom`.
-    static func baseline(for ink: Ink, inkBottom: CGFloat) -> CGFloat {
-        inkBottom - ink.descent
     }
 }

@@ -17,11 +17,16 @@ final class KeyLabelLayoutTests: XCTestCase {
         )
     }
 
+    /// Top of the reserved hint band, from the key top.
+    private func bandTop(_ placement: KeyLabelLayout.Placement, band: CGFloat) -> CGFloat {
+        placement.hintInkBottom - band * placement.hintScale
+    }
+
     private func assertInsideKey(_ input: KeyLabelLayout.Input, file: StaticString = #filePath, line: UInt = #line) {
         let placement = KeyLabelLayout.place(input)
         let margin = input.labelFontSize * KeyLabelLayout.edgeRatio * placement.labelScale
         let labelInkBottom = placement.labelBaseline + input.labelInk.descent * placement.labelScale
-        XCTAssertGreaterThanOrEqual(placement.hintBandTop, margin - 0.01, "hint above the key top margin", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(bandTop(placement, band: input.hintBand), margin - 0.01, "hint above the key top margin", file: file, line: line)
         XCTAssertLessThanOrEqual(labelInkBottom, input.keyHeight - margin + 0.01, "label below the key bottom margin", file: file, line: line)
         let labelInkTop = placement.labelBaseline - input.labelInk.ascent * placement.labelScale
         XCTAssertEqual(
@@ -39,7 +44,7 @@ final class KeyLabelLayoutTests: XCTestCase {
         let placement = KeyLabelLayout.place(input(keyHeight: 37))
         XCTAssertEqual(placement.labelScale, 1)
         XCTAssertEqual(placement.hintScale, 1)
-        XCTAssertEqual(placement.hintBandTop, (37 - 26.56) / 2, accuracy: 0.01)
+        XCTAssertEqual(bandTop(placement, band: 7), (37 - 26.56) / 2, accuracy: 0.01)
         assertInsideKey(input(keyHeight: 37))
     }
 
@@ -69,20 +74,21 @@ final class KeyLabelLayoutTests: XCTestCase {
     /// every bundled font (it was ~1 pt with GenYoGothic / Open Huninn).
     func testPlace_realFonts_toneHintClearsDigit() {
         let hintFont = UIFont.systemFont(ofSize: 20)
+        let band = KeyLabelLayout.ink(of: "ˈ", font: hintFont).height
         for fontType in FontType.allCases {
-            let labelFont = fontType.customFontName.flatMap { UIFont(name: $0, size: 23) } ?? .systemFont(ofSize: 23)
-            if fontType != .system, labelFont.fontName == UIFont.systemFont(ofSize: 23).fontName {
-                continue
+            if let name = fontType.customFontName {
+                XCTAssertNotNil(UIFont(name: name, size: 23), "\(fontType) is not registered in the test host")
             }
+            let labelFont = KeyboardFonts.uiFont(for: fontType, size: 23)
             let placement = KeyLabelLayout.place(KeyLabelLayout.Input(
                 keyHeight: 37,
                 labelFontSize: 23,
                 labelInk: KeyLabelLayout.ink(of: "0", font: labelFont),
-                hintBand: KeyLabelLayout.ink(of: "ˈ", font: hintFont).height,
+                hintBand: band,
             ))
             let digitInkTop = placement.labelBaseline - KeyLabelLayout.ink(of: "8", font: labelFont).ascent
             XCTAssertGreaterThanOrEqual(digitInkTop - placement.hintInkBottom, 2, "\(fontType): tone hint crowds the digit")
-            XCTAssertGreaterThanOrEqual(placement.hintBandTop, 2.3, "\(fontType): hint crowds the key top")
+            XCTAssertGreaterThanOrEqual(bandTop(placement, band: band), 2.3, "\(fontType): hint crowds the key top")
         }
     }
 
@@ -93,16 +99,17 @@ final class KeyLabelLayoutTests: XCTestCase {
         let labelFont = UIFont.systemFont(ofSize: 19)
         let labelInk = KeyLabelLayout.ink(of: "ㄅ", font: labelFont)
         for keyHeight in [CGFloat(38), 42] {
+            let band = KeyLabelLayout.ink(of: "ㄅ", font: .systemFont(ofSize: 12)).height
             let placement = KeyLabelLayout.place(KeyLabelLayout.Input(
                 keyHeight: keyHeight,
                 labelFontSize: 19,
                 labelInk: labelInk,
-                hintBand: KeyLabelLayout.ink(of: "ㄅ", font: .systemFont(ofSize: 12)).height,
+                hintBand: band,
             ))
             let bottomMargin = keyHeight - (placement.labelBaseline + labelInk.descent * placement.labelScale)
             XCTAssertEqual(placement.labelScale, 1, "TPS label keeps its size on a portrait key")
-            XCTAssertEqual(placement.hintBandTop, bottomMargin, accuracy: 0.01, "stack centred in a \(keyHeight) pt key")
-            XCTAssertGreaterThan(placement.hintBandTop, 3, "hint row crowds the key top in a \(keyHeight) pt key")
+            XCTAssertEqual(bandTop(placement, band: band), bottomMargin, accuracy: 0.01, "stack centred in a \(keyHeight) pt key")
+            XCTAssertGreaterThan(bandTop(placement, band: band), 3, "hint row crowds the key top in a \(keyHeight) pt key")
         }
     }
 

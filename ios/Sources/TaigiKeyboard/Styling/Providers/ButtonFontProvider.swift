@@ -40,10 +40,7 @@ final class ButtonFontProvider {
     /// (`KeyHintStack`).
     func buttonUIFont(for action: KeyboardAction) -> UIFont {
         let fontSize = adjustedFontSize(for: action, baseFontSize: action.standardButtonFontSize(for: keyboardContext))
-        if let name = settings.fontType.customFontName, let font = UIFont(name: name, size: fontSize) {
-            return font
-        }
-        return UIFont.systemFont(ofSize: fontSize)
+        return KeyboardFonts.uiFont(for: settings.fontType, size: fontSize)
     }
 
     /// Adjusts font size: applies user scale, and shrinks multi-char keys to fit.
