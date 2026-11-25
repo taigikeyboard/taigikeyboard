@@ -1,5 +1,6 @@
 import Foundation
 import KeyboardKit
+import UIKit
 
 /// Button font provider — resolves the KeyboardFont for each key.
 ///
@@ -7,7 +8,7 @@ import KeyboardKit
 /// KeyboardKit's standard size, user scale, and layout-specific adjustments.
 ///
 /// Created by: `TaigiKeyboardView.RenderProviders`
-/// Queried by: `TaigiButtonContent.standardHintContent` and `textOnlyContent`
+/// Queried by: `TaigiButtonContent.standardHintContent` (via `buttonUIFont`) and `textOnlyContent`
 /// Also called by: `TaigiKeyboardView.coreKeyboard` (keyboardButtonStyle closure)
 /// Depends on: `SettingsSnapshot`, `KeyboardContext`
 final class ButtonFontProvider {
@@ -33,6 +34,16 @@ final class ButtonFontProvider {
             return KeyboardFont.custom(name, fixedSize: fontSize, weight: .regular)
         }
         return KeyboardFont.system(size: fontSize)
+    }
+
+    /// The same font as `buttonKeyboardFont(for:)`, as a UIFont for glyph measurement
+    /// (`KeyHintStack`).
+    func buttonUIFont(for action: KeyboardAction) -> UIFont {
+        let fontSize = adjustedFontSize(for: action, baseFontSize: action.standardButtonFontSize(for: keyboardContext))
+        if let name = settings.fontType.customFontName, let font = UIFont(name: name, size: fontSize) {
+            return font
+        }
+        return UIFont.systemFont(ofSize: fontSize)
     }
 
     /// Adjusts font size: applies user scale, and shrinks multi-char keys to fit.
