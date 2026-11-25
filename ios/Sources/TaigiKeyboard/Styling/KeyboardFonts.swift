@@ -1,19 +1,21 @@
+import KeyboardKit
 import SwiftUI
 import UIKit
 
-/// Font utilities for the keyboard extension and main app.
+/// Font utilities for the keyboard extension. Every font is fixed-size (no Dynamic Type).
 ///
 /// Two font resolution paths exist due to KeyboardKit's architecture:
 /// - **Key rendering**: `ButtonFontProvider` (per-render `SettingsSnapshot`, called via `TaigiButtonContent`)
 /// - **Toolbar / candidate UI**: `globalFont` / `globalUIFont` below (reads `SharedSettings.shared` directly,
-///   because these are called from ~15 SwiftUI views outside KeyboardKit's key pipeline)
+///   because these are called from SwiftUI views outside KeyboardKit's key pipeline)
 ///
-/// Both paths resolve the same user-selected font (System / Open Huninn / Iansui)
-/// using `FontType.customFontName` as the shared font-name source.
+/// Both paths resolve the same user-selected font using `FontType.customFontName` as the
+/// shared font-name source.
 ///
-/// Callers: `CandidateView`, `CandidateCellHelper`, `ExpandedCandidateOverlay`,
-/// `SymbolSelectionOverlay`, `SettingsSelectionOverlay`, `TaigiButtonContent` (space label),
-/// `AppStyle`, `TaigiKeyboardApp`, `KeyboardPreviewPanel`
+/// Callers (keyboard extension only): `CandidateButtonView`, `CandidateCellHelper`,
+/// `CandidateSuggestionsRow`, `ToolShortcutsToolbar`, `ExpandedCandidateOverlay` + its grid
+/// cell and control button, `OneHandedModeViews`, `SymbolSelectionOverlay`,
+/// `SettingsSelectionOverlay`, `TaigiButtonContent` (space label)
 enum KeyboardFonts {
     /// PostScript font name for jf-openhuninn (粉圓)
     static let openHuninnFontName = "jf-openhuninn-2.1"
@@ -27,17 +29,35 @@ enum KeyboardFonts {
     /// SwiftUI Font based on the user's font setting.
     /// Used by toolbar buttons and candidate views (not keyboard keys).
     static func globalFont(size: CGFloat) -> Font {
-        if let name = SharedSettings.shared.fontType.customFontName {
-            return Font.custom(name, size: size)
+        font(for: SharedSettings.shared.fontType, size: size)
+    }
+
+    /// A custom font at a fixed size, like `Font.system(size:)`: `Font.custom(_:size:)`
+    /// would scale with Dynamic Type and outgrow the fixed-height candidate bar (and the
+    /// `globalUIFont` width measurement), which System never does.
+    static func font(for fontType: FontType, size: CGFloat) -> Font {
+        if let name = fontType.customFontName {
+            return Font.custom(name, fixedSize: size)
         }
         return Font.system(size: size)
+    }
+
+    /// The KeyboardKit twin of `font(for:size:)` for keys and callouts; nil for System, whose
+    /// KeyboardKit default (`.system(size:)` with its per-key weight) callers keep.
+    static func keyboardFont(for fontType: FontType, size: CGFloat, weight: KeyboardFont.FontWeight) -> KeyboardFont? {
+        fontType.customFontName.map { KeyboardFont.custom($0, fixedSize: size, weight: weight) }
     }
 
     /// UIKit UIFont based on the user's font setting.
     /// Used where UIKit measurement is needed (e.g. candidate cell width calculation).
     static func globalUIFont(size: CGFloat) -> UIFont {
-        if let name = SharedSettings.shared.fontType.customFontName {
-            return UIFont(name: name, size: size) ?? UIFont.systemFont(ofSize: size)
+        uiFont(for: SharedSettings.shared.fontType, size: size)
+    }
+
+    /// The UIFont twin of `font(for:size:)` (same face, same fixed size) for measurement.
+    static func uiFont(for fontType: FontType, size: CGFloat) -> UIFont {
+        if let name = fontType.customFontName, let font = UIFont(name: name, size: size) {
+            return font
         }
         return UIFont.systemFont(ofSize: size)
     }

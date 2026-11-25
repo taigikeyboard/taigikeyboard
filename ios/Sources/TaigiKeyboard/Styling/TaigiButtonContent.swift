@@ -11,17 +11,14 @@ private enum ButtonContentLayout {
     static let tpsSingleHintFontSize: CGFloat = 13
     static let tpsMainFontSize: CGFloat = 19
     static let tpsHintOpacity: Double = 0.45
-    static let tpsVStackSpacing: CGFloat = -1
     static let tpsHintHorizontalPadding: CGFloat = 3
-    static let tpsVerticalPadding: CGFloat = 2
 
-    // Standard hint layout (tone diacritics above key label)
+    // Standard hint layout (tone diacritics above key label); hint sizes are at the
+    // reference label size and scale with the actual one.
     static let textHintFontSize: CGFloat = 10
     static let diacriticHintFontSize: CGFloat = 20
+    static let hintReferenceLabelFontSize: CGFloat = 23
     static let hintOpacity: Double = 0.5
-    static let hintVStackSpacing: CGFloat = -4
-    static let hintFrameHeight: CGFloat = 10
-    static let textHintOffsetY: CGFloat = 2
 
     /// Text-only key
     static let minimumScaleFactor: CGFloat = 0.7
@@ -91,49 +88,43 @@ struct TaigiButtonContent<StandardContent: View>: View {
 
     /// TPS layout: callout hint(s) on top, main text below.
     /// Two hints are spread left/right; a single hint is centered.
+    /// Both hints and label fit the key height with font-proportional gaps (`KeyLabelLayout`).
     private func tpsHintContent(text: String, hint: String) -> some View {
         let hints = hint.split(separator: " ").map(String.init)
-        return VStack(spacing: ButtonContentLayout.tpsVStackSpacing) {
-            if hints.count >= 2 {
-                HStack {
-                    Text(hints[0])
-                        .font(.system(size: ButtonContentLayout.tpsHintFontSize))
-                        .opacity(ButtonContentLayout.tpsHintOpacity)
-                    Spacer()
-                    Text(hints[1])
-                        .font(.system(size: ButtonContentLayout.tpsHintFontSize))
-                        .opacity(ButtonContentLayout.tpsHintOpacity)
-                }
-                .padding(.horizontal, ButtonContentLayout.tpsHintHorizontalPadding)
-            } else {
-                Text(hint)
-                    .font(.system(size: ButtonContentLayout.tpsSingleHintFontSize))
-                    .opacity(ButtonContentLayout.tpsHintOpacity)
-            }
-            Text(text)
-                .font(.system(size: ButtonContentLayout.tpsMainFontSize))
-        }
-        .lineLimit(1)
-        .padding(.vertical, ButtonContentLayout.tpsVerticalPadding)
+        let hintSize = hints.count >= 2 ? ButtonContentLayout.tpsHintFontSize : ButtonContentLayout.tpsSingleHintFontSize
+        return KeyHintStack(
+            hints: hints,
+            label: text,
+            labelFont: .systemFont(ofSize: ButtonContentLayout.tpsMainFontSize),
+            hintFont: .systemFont(ofSize: hintSize),
+            labelReference: "ㄅ",
+            hintReference: "ㄅ",
+            hintSideInsetRatio: ButtonContentLayout.tpsHintHorizontalPadding / ButtonContentLayout.tpsMainFontSize,
+            hintOpacity: ButtonContentLayout.tpsHintOpacity,
+        )
     }
 
     /// Standard hint layout: tone diacritic or text hint above the key label.
     /// Text hints (punctuation) use a smaller font; standalone diacritics (tone marks) use a larger font.
+    /// Both scale with the label font and fit the key height (`KeyLabelLayout`).
     private func standardHintContent(text: String, hint: String) -> some View {
         let isText = textProvider.isTextHint(for: action)
-        let hintFontSize = isText ? ButtonContentLayout.textHintFontSize : ButtonContentLayout.diacriticHintFontSize
-        let offsetY = isText ? ButtonContentLayout.textHintOffsetY : textProvider.hintOffsetY(for: action)
+        let labelFont = fontProvider.buttonUIFont(for: action)
+        let hintBaseSize = isText ? ButtonContentLayout.textHintFontSize : ButtonContentLayout.diacriticHintFontSize
+        let hintSize = hintBaseSize * labelFont.pointSize / ButtonContentLayout.hintReferenceLabelFontSize
 
-        return VStack(spacing: ButtonContentLayout.hintVStackSpacing) {
-            Text(hint)
-                .font(.system(size: hintFontSize))
-                .foregroundColor(keyTextColor.opacity(ButtonContentLayout.hintOpacity))
-                .frame(height: ButtonContentLayout.hintFrameHeight)
-                .offset(y: offsetY)
-            Text(text)
-                .font(fontProvider.buttonKeyboardFont(for: action).font)
-        }
-        .lineLimit(1)
+        return KeyHintStack(
+            hints: [hint],
+            label: text,
+            labelFont: labelFont,
+            hintFont: .systemFont(ofSize: hintSize),
+            labelReference: "0",
+            // Tallest glyph of each set: tone 8's vertical line / an exclamation mark.
+            hintReference: isText ? "!" : "ˈ",
+            alignsEachHintByInk: !isText,
+            hintColor: keyTextColor,
+            hintOpacity: ButtonContentLayout.hintOpacity,
+        )
     }
 
     /// Text-only key without hint. Shrinks to fit if needed.

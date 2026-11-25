@@ -1,5 +1,6 @@
 import Foundation
 import KeyboardKit
+import UIKit
 
 /// Button font provider — resolves the KeyboardFont for each key.
 ///
@@ -7,7 +8,7 @@ import KeyboardKit
 /// KeyboardKit's standard size, user scale, and layout-specific adjustments.
 ///
 /// Created by: `TaigiKeyboardView.RenderProviders`
-/// Queried by: `TaigiButtonContent.standardHintContent` and `textOnlyContent`
+/// Queried by: `TaigiButtonContent.standardHintContent` (via `buttonUIFont`) and `textOnlyContent`
 /// Also called by: `TaigiKeyboardView.coreKeyboard` (keyboardButtonStyle closure)
 /// Depends on: `SettingsSnapshot`, `KeyboardContext`
 final class ButtonFontProvider {
@@ -24,18 +25,19 @@ final class ButtonFontProvider {
 
     /// Returns the KeyboardFont for the given action, combining user font choice with adjusted size.
     func buttonKeyboardFont(for action: KeyboardAction) -> KeyboardFont {
-        let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
-        let fontSize = adjustedFontSize(for: action, baseFontSize: baseFontSize)
-
-        // FontType.customFontName returns nil for .system, PostScript name for custom fonts
-        if let name = settings.fontType.customFontName {
-            return KeyboardFont.custom(name, size: fontSize, weight: .regular)
-        }
-        return KeyboardFont.system(size: fontSize)
+        let size = fontSize(for: action)
+        return KeyboardFonts.keyboardFont(for: settings.fontType, size: size, weight: .regular) ?? .system(size: size)
     }
 
-    /// Adjusts font size: applies user scale, and shrinks multi-char keys to fit.
-    private func adjustedFontSize(for action: KeyboardAction, baseFontSize: CGFloat) -> CGFloat {
+    /// The same font as `buttonKeyboardFont(for:)`, as a UIFont for glyph measurement
+    /// (`KeyHintStack`).
+    func buttonUIFont(for action: KeyboardAction) -> UIFont {
+        KeyboardFonts.uiFont(for: settings.fontType, size: fontSize(for: action))
+    }
+
+    /// KeyboardKit's standard size with the user scale, shrunk for multi-char keys to fit.
+    private func fontSize(for action: KeyboardAction) -> CGFloat {
+        let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
         let userScale = settings.keyFontSizeScale
 
         guard case let .character(char) = action else {

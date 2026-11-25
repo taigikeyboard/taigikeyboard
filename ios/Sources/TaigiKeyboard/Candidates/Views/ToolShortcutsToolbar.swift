@@ -48,7 +48,6 @@ struct ToolShortcutsToolbar: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .offset(y: 7)
         .accessibilityLabel(lang.string(.keyboardToggleToolbar))
     }
 
@@ -81,7 +80,6 @@ struct ToolShortcutsToolbar: View {
                 action: onSettingsTap,
             )
         }
-        .offset(y: 7)
     }
 
     private func inputModeButton(mode: InputMode, label: String) -> some View {

@@ -88,6 +88,7 @@ struct ExpandedCandidateGridCell: View {
                     SubtitleSpacer(fontSize: theme.secondaryFontSize)
                 }
             }
+            .padding(.horizontal, CandidateCellHelper.cellHorizontalPadding / 2)
             .padding(.vertical, CandidateViewModels.UI.expandedButtonVerticalPadding)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             .background(

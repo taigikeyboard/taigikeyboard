@@ -23,7 +23,10 @@ enum ExpandedCandidateRowLayout {
         var currentRowWidth: CGFloat = 0
 
         for (index, suggestion) in suggestions.enumerated() {
-            let cellWidth = measureCellWidth(suggestion)
+            // A candidate wider than the grid takes the whole row and tail-truncates
+            // (`ExpandedCandidateGridCell`); unclamped, its `minWidth` frame widened the row
+            // past the screen and pushed the control column off it.
+            let cellWidth = min(measureCellWidth(suggestion), availableWidth)
             let spacingNeeded = currentRow.isEmpty ? 0 : itemSpacing
 
             if !currentRow.isEmpty, (currentRowWidth + spacingNeeded + cellWidth) > availableWidth {

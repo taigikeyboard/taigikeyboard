@@ -52,16 +52,6 @@ final class ButtonTextProvider {
         return Self.moePunctuationHints[char] != nil
     }
 
-    /// Vertical offset for tone hint diacritics above number keys.
-    /// ˈ (U+02C8, tone 8) sits lower than other diacritics, so it uses a smaller offset
-    /// to keep visual distance from the key label consistent.
-    func hintOffsetY(for action: KeyboardAction) -> CGFloat {
-        if case let .character(char) = action, char == "8" {
-            return 3
-        }
-        return 6
-    }
-
     // MARK: - Hint Text
 
     /// Returns the hint text displayed above a key label:
