@@ -20,7 +20,7 @@ Born from the 2026-11-24 cross-platform layout audit. Every platform is covered:
 
 ChromeOS is out of scope: `chrome.input.ime.setCandidates` hands the candidate window to the system (vertical or horizontal only, `docs/architecture/chromeos-roadmap.md` D4), and its options page is cut from the web page's settings form (`web/scripts/stage-chromeos.mjs`), so it has no layout of its own.
 
-Every platform uses the §1 sentences, the §3 verdict rules and the §4 report. Accessibility text sizes (Web `ROOT_TEXT_SIZE`, iOS accessibility sizes, Windows Text size, GNOME text scale 2.0) run only when the maintainer names them. Run at most two heavy platforms at once (simulator, emulator, VM, Playwright): the Mac's load spikes and the emulator ANRs.
+Every platform uses the §1 sentences, the §3 verdict rules and the §4 report. Accessibility text sizes (Web `ROOT_TEXT_SIZE`, iOS accessibility sizes, Windows Text size, GNOME text scale 2.0) run only when the maintainer names them. **One platform at a time** (maintainer 2026-11-25): finish a platform — its run, its report, its restore — before starting the next, and never start a simulator, emulator, VM or Playwright run beside another; the Mac's load spikes and the emulator ANRs. Within a platform, run its tests and its screenshot pass one after the other too.
 
 ## 1. Run
 
