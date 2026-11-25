@@ -19,19 +19,22 @@ internal object KeyLabelGeometry {
     /**
      * Places a hint above the label inside the band from the top inset down to [HINT_GAP] above
      * the label's ink top. The hint's ink (`inkTop` / `inkBottom` relative to the baseline,
-     * negative up, at its nominal size) hugs the band's top, so a row of hints shares one line
-     * whatever glyph sits below, and shrinks to fit a shorter band.
+     * negative up, at its nominal size) shrinks to fit a shorter band. It hugs the band's top
+     * (so a row of hints shares one line whatever glyph sits below), or with [hugLabel] its
+     * bottom (a tone mark sits right above its digit, as an accent does).
      */
     fun hintAboveLabel(
         keyHeight: Float,
         labelInkTop: Float,
         inkTop: Float,
         inkBottom: Float,
+        hugLabel: Boolean = false,
     ): Fit {
         val bandTop = keyHeight * EDGE_INSET
         val band = (labelInkTop - keyHeight * HINT_GAP - bandTop).coerceAtLeast(0f)
         val inkHeight = inkBottom - inkTop
         val scale = if (inkHeight <= 0f) 1f else minOf(1f, band / inkHeight)
-        return Fit(scale, bandTop - inkTop * scale)
+        val inkTopY = if (hugLabel) bandTop + band - inkHeight * scale else bandTop
+        return Fit(scale, inkTopY - inkTop * scale)
     }
 }

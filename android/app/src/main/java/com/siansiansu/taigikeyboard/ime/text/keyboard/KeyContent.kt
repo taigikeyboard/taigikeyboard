@@ -348,8 +348,15 @@ private fun LabelContent(
                     hintPaint.alpha = if (isMoe1TextHint) 150 else 100
                     hintPaint.typeface = Typeface.DEFAULT
                     hintPaint.textAlign = Paint.Align.CENTER
-                    val moe1HintFactor = if (data.code == 45) 0.35f else 0.40f
-                    val hintY = h * if (isMoe1TextHint) moe1HintFactor else 0.66f
+                    val hintY =
+                        if (isMoe1TextHint) {
+                            h * if (data.code == 45) 0.35f else 0.40f
+                        } else {
+                            // The tone mark's ink, not a fixed baseline, sits right above the digit's ink.
+                            // Fitted from every mark, so the row shares one scale and one baseline.
+                            val labelInkTop = centerY + inkBounds(labelPaint, label, inkRect).top
+                            fitHintAboveLabel(hintPaint, TONE_HINT_GLYPHS, h, labelInkTop, inkRect, hugLabel = true)
+                        }
                     nativeCanvas.drawText(hint, centerX, hintY, hintPaint)
                 }
             }
@@ -374,6 +381,7 @@ private fun fitHintAboveLabel(
     keyHeight: Float,
     labelInkTop: Float,
     scratch: Rect,
+    hugLabel: Boolean = false,
 ): Float {
     // Seeded from the glyphs, not the baseline: a tone mark's ink floats well above it.
     var inkTop = Int.MAX_VALUE
@@ -383,7 +391,7 @@ private fun fitHintAboveLabel(
         inkTop = minOf(inkTop, scratch.top)
         inkBottom = maxOf(inkBottom, scratch.bottom)
     }
-    val fit = KeyLabelGeometry.hintAboveLabel(keyHeight, labelInkTop, inkTop.toFloat(), inkBottom.toFloat())
+    val fit = KeyLabelGeometry.hintAboveLabel(keyHeight, labelInkTop, inkTop.toFloat(), inkBottom.toFloat(), hugLabel)
     paint.textSize *= fit.scale
     return fit.baseline
 }
@@ -704,6 +712,10 @@ private fun resolveBackgroundColor(
 
 // Tone hint diacritics for number keys — direct port of legacy
 // `KeyView.toneHints`. POJ + TL share all but tone 9.
+// Tone 9: POJ uses breve (˘ U+02D8); TL uses double prime (ʺ U+02BA).
+private const val TONE_9_POJ = "˘"
+private const val TONE_9_TL = "ʺ"
+
 private val toneHints = mapOf(
     49 to "ˊ", // 1 (no mark, drawn as space placeholder downstream)
     50 to "ˊ", // 2  ˊ MODIFIER LETTER ACUTE ACCENT
@@ -713,6 +725,9 @@ private val toneHints = mapOf(
     55 to "ˉ", // 7  ˉ MODIFIER LETTER MACRON
     56 to "ˈ", // 8  ˈ MODIFIER LETTER VERTICAL LINE
 )
+
+/** Every tone mark a number key can show; the row is fitted from all of them together. */
+private val TONE_HINT_GLYPHS = toneHints.values.distinct() + listOf(TONE_9_POJ, TONE_9_TL)
 
 /** No tone marks for "0", "1", "4" — render space for layout consistency. */
 private val noToneHintCodes = setOf(48, 49, 52)
@@ -724,7 +739,7 @@ internal fun toneHintForCode(
     if (inputMode == "english") return null
     if (code == 57) {
         // Tone 9: POJ uses breve (˘ U+02D8); TL uses double prime (ʺ U+02BA).
-        return if (inputMode == "poj") "˘" else "ʺ"
+        return if (inputMode == "poj") TONE_9_POJ else TONE_9_TL
     }
     if (noToneHintCodes.contains(code)) return " "
     return toneHints[code]

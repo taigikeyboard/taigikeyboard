@@ -29,6 +29,27 @@ class KeyLabelGeometryTest {
         assertEquals(24f, fit.baseline, eps)
     }
 
+    // A8: number-row tone marks were drawn at a fixed baseline (0.66 h) in a font 1.3× the label;
+    // on short tablet keys the mark touched both the key top and the digit.
+    @Test
+    fun toneMark_hugsTheDigit_withAGap_andClearsTheTop() {
+        // trace: h = 100, digit ink top 32 → band [12, 26] = 14; acute ink -70..-58 (12 tall)
+        // fits at scale 1; ink bottom at 26 → ink top 14 → baseline = 14 + 70 = 84.
+        val fit = KeyLabelGeometry.hintAboveLabel(100f, 32f, inkTop = -70f, inkBottom = -58f, hugLabel = true)
+        assertEquals(1f, fit.scale, eps)
+        assertEquals(84f, fit.baseline, eps)
+        assertEquals("ink bottom = digit top - gap", 26f, fit.baseline - 58f, eps)
+    }
+
+    @Test
+    fun toneMark_onAShortKey_shrinksInsteadOfTouching() {
+        // trace: band = 24 - 6 - 12 = 6; ink 12 tall → scale 0.5; ink bottom at 18, top at 12.
+        val fit = KeyLabelGeometry.hintAboveLabel(100f, 24f, inkTop = -70f, inkBottom = -58f, hugLabel = true)
+        assertEquals(0.5f, fit.scale, eps)
+        assertEquals(12f, fit.baseline - 70f * fit.scale, eps)
+        assertEquals(18f, fit.baseline - 58f * fit.scale, eps)
+    }
+
     @Test
     fun hint_marginsScaleWithTheKey() {
         // Doubling the key (and so the text, sized from h) doubles every distance.
