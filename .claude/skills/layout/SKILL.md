@@ -1,12 +1,23 @@
 ---
 name: layout
-description: Run the layout test (版面測試) — type real corpus sentences word by word, on the staged web page (viewports × candidate layouts × candidate text sizes) or on the Android keyboard in an emulator (devices × orientations × fonts × font scales), check the candidate window / strip, expanded grid, symbol picker and key faces after every word, screenshot each failure, and publish the findings. Use when asked to "run the layout test", 「跑 Web 的版面測試」, 「跑 Android 的版面測試」, 「版面測試」, or to check that candidates and key labels never overlap, clip or overflow. Args: a platform (`web` or `android`) and optionally its matrix filters. Reports findings; never opens a fix round itself.
+description: Run the layout test (版面測試) — type real corpus sentences word by word on the staged web page, the Android emulator, the iOS simulator (iPhone + iPad), the Windows box, the Linux VMs (IBus + Fcitx5) or, when named, macOS; check the candidate window / strip, expanded grid, symbol picker and key faces after every word across each platform's matrix (viewports, devices, orientations, candidate layouts, sizes, fonts, scales), screenshot each failure, and publish the findings. Use when asked to "run the layout test", 「跑 <平台> 的版面測試」, 「版面測試」, or to check that candidates and key labels never overlap, clip or overflow. Args: a platform (`web` `android` `ios` `windows` `linux` `macos`) and optionally its matrix filters. Reports findings; never opens a fix round itself.
 disable-model-invocation: false
 ---
 
 # Layout test
 
-Born from the 2026-11-24 cross-platform layout audit. Web: an automated harness, `web/layout-sim/` (§1–§4). Android: an agent-driven emulator procedure plus the layout instrumented tests (§5). Another platform joins this skill after its own layout fix round.
+Born from the 2026-11-24 cross-platform layout audit. Every platform is covered:
+
+| Platform | How | Section |
+|---|---|---|
+| Web | automated harness `web/layout-sim/` | §1–§4 |
+| Android | agent-driven emulator + layout instrumented tests | §5 |
+| iOS | agent-driven simulator (iPhone + iPad) + layout unit tests | §6 |
+| Windows | agent-driven run on the maintainer's Windows box + `taigi-windows-tsf` tests | §7 |
+| Linux | agent-driven run on the Linux VMs (IBus + Fcitx5) + popup tests | §8 |
+| macOS | in-process render of the real candidate window from a temporary test — **only when the maintainer names macOS** | §9 |
+
+Every platform uses the §1 sentences, the §3 verdict rules and the §4 report. Accessibility text sizes (Web `ROOT_TEXT_SIZE`, iOS accessibility sizes, Windows Text size, GNOME text scale 2.0) run only when the maintainer names them. Run at most two heavy platforms at once (simulator, emulator, VM, Playwright): the Mac's load spikes and the emulator ANRs.
 
 ## 1. Run
 
@@ -132,3 +143,159 @@ The thresholds are the ones `android/app/src/main/java/com/siansiansu/taigikeybo
 ### 5.7 Report
 
 As §4, with the table per device × orientation instead of per browser (rows: font × font scale), the failed instrumented tests listed with their message, and each defect traced to its file under `android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/` (`candidates/CandidateStrip.kt`, `overlays/`, `keyboard/KeyContent.kt`).
+
+## 6. iOS
+
+No harness script and no UI-test target: you drive the simulator, read every screenshot, and run the layout unit tests per device.
+
+### 6.1 Safety
+
+- Simulators only; a real iPhone / iPad is out of scope. Never alongside a running Android emulator session (§ intro).
+- Screenshots go to the scratchpad. Restore what you changed at the end: `xcrun simctl ui <udid> content_size large`, portrait, the keyboard settings back to their defaults (§6.2).
+
+### 6.2 Setup
+
+1. Build and install: `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboard -destination id=<udid> -derivedDataPath <scratchpad>/ios-dd build`, then `xcrun simctl install <udid> <app>`; the stale-artifact gate in `AGENTS.md` applies.
+2. Enable the keyboard on every new simulator: Settings → General → Keyboard → Keyboards → Add New Keyboard → TaigiKeyboard, then Allow Full Access — without Full Access the extension cannot read the App Group settings. Drive Settings and the app with Maestro (`maestro --device <udid> test f.yaml`, `maestro hierarchy` for bounds).
+3. Settings live in the App Group suite `group.com.siansiansu.TaigiKeyboard` (`ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift`): `fontType` (`system` `openHuninn` `iansui` `genYoMin` `genYoGothic`), `keyboardLayoutType` (`phahTaigi` `qwerty` `moe1` `moe2` `tps`), `inputMode` (`tl`), `candidateTextSizeScale` / `keyFontSizeScale` (Double, 1.0), `candidateDisplayMode` (`sideBySide`), `displayLanguage` (`en` for the longest labels), `oneHandedMode`. Set them through the app's own Settings tab: `simctl spawn … defaults write` writes a file the extension does not read. Writing the group-container plist directly is unverified — spike it on one key (≤20 lines, relaunch the keyboard, screenshot) before relying on it.
+4. Host field: a tiny SwiftUI app with a `TextField` focused from `.task` (built with `swiftc -target arm64-apple-ios17.0-simulator -parse-as-library`, an `Info.plist` with `UIApplicationSceneManifest`, `codesign -s -`) brings the keyboard up without taps; any app with a text field works. After a reinstall a stale extension process can show the old layout: relaunch the host before trusting a shot.
+5. Typing: tap the key centres (`maestro` `tapOn: point:`), found once per device × orientation × layout from a screenshot; the extension's keys are not in the hierarchy. Screenshot with `xcrun simctl io <udid> screenshot`.
+
+### 6.3 Matrix
+
+| Axis | Values |
+|---|---|
+| Device | iPhone SE · iPhone 17 · iPhone 17 Pro Max · iPad (11″) · iPad Pro 13″ (create missing ones with `xcrun simctl create`; names from `xcrun simctl list devicetypes`) |
+| Orientation | portrait, landscape (Maestro `setOrientation`) |
+| Font (`fontType`) | `system` · `openHuninn` · `iansui` · `genYoMin` · `genYoGothic` |
+| System text size (`xcrun simctl ui <udid> content_size`) | `large` · `extra-extra-extra-large` |
+| Keyboard layout (`keyboardLayoutType`, key faces only) | `phahTaigi` · `qwerty` (POJ) · `moe1` · `moe2` · `tps` |
+
+100 combinations of device × orientation × font × text size; the maintainer may name filters (`ios se,ipad landscape system`). Candidate / key size scales other than 1.0 and one-handed mode run only when named.
+
+### 6.4 Per combination
+
+As §5.4: the sentences on `phahTaigi` with a candidate-bar screenshot after each word; once per clause the expanded candidate grid (top and scrolled to the end); the symbol picker once (tabs, grid end); one key-face screenshot per keyboard layout plus the number row.
+
+### 6.5 Unit tests
+
+Once per run (they render with fixed sizes, not per device):
+
+```sh
+xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,id=<udid>' test \
+  -only-testing:TaigiKeyboardTests/ExpandedCandidateRowLayoutTests -only-testing:TaigiKeyboardTests/CandidateButtonViewLayoutTests \
+  -only-testing:TaigiKeyboardTests/KeyboardFontsTests -only-testing:TaigiKeyboardTests/ButtonFontProviderTests \
+  -only-testing:TaigiKeyboardTests/KeyLabelLayoutTests -only-testing:TaigiKeyboardTests/KeyHintStackRenderTests \
+  -only-testing:TaigiKeyboardTests/OneHandedModeTests
+```
+
+### 6.6 What to check in each screenshot
+
+| Kind | Means |
+|---|---|
+| `bar-candidate-cut` | a bar candidate's Hanji or romanization is cut by the bar, or its highlight crosses the bar edge |
+| `bar-row-off-centre` | the candidate row (text, +, chevron) is visibly off the bar's vertical centre |
+| `grid-row-past-screen` | an expanded-grid row or the control column extends past the screen side |
+| `grid-cell-cut` / `grid-row-under-home-indicator` | as §5.6 `grid-cell-cut` / `grid-row-under-navbar`, with the home-indicator band |
+| `symbol-tab-wrapped` | as §5.6 |
+| `key-label-near-edge` / `key-hint-near-top` / `key-hint-touches-label` / `key-label-off-centre` | as §5.6 |
+| `key-text-follows-system-size` | a key label or candidate grows with the system text size (every font is fixed-size) |
+
+Owning files, under `ios/Sources/TaigiKeyboard/`: `Candidates/Views/CandidateView.swift`, `Candidates/Views/CandidateButtonView.swift`, `Overlays/ExpandedCandidateOverlay.swift`, `Overlays/ExpandedCandidateRowLayout.swift`, `Overlays/SymbolSelectionOverlay.swift`, `Styling/KeyLabelLayout.swift`, `Styling/KeyHintStack.swift`, `Styling/KeyboardFonts.swift`. Known, not a new finding: `ExpandedCandidateOverlay` takes its width from `UIScreen.main.bounds` (wrong in an iPad floating keyboard).
+
+### 6.7 Report
+
+As §4, a table per device × orientation (rows: font × text size), failed unit tests with their message.
+
+## 7. Windows
+
+The candidate window is a TSF window drawn by the DLL, so the run happens on the maintainer's Windows box (`ssh win`); the Mac only orchestrates. The box is a test device: its user data may be cleared and the dev registration may stay.
+
+### 7.1 Safety
+
+- Input must come from the logged-in session, never session 0 (ssh): run the driver as a scheduled task (`schtasks /Create … /IT`, or `Register-ScheduledTask` with an `Interactive` principal) under **pythonw.exe** (python.exe opens a console that steals focus).
+- The driver clicks its own host window and aborts when the foreground window is not its own, **before every key** — keys once landed in the maintainer's own Notepad tab. Never type into a window you did not open.
+- Binary gate: a host that mapped the old DLL never sees a rebuild. After an install, test only in a host started after it; check with `Get-Process | Where-Object { $_.Modules.ModuleName -contains 'TaigiKeyboard.dll' }`.
+- Scripts sent over ssh are ASCII-only `.ps1` / `.py` files run by path; `ssh win "…"` returns 0 even when the command failed — read the output.
+
+### 7.2 Setup
+
+1. On the box's main clone (check its branch first): `git pull`, then `powershell -NoProfile -ExecutionPolicy Bypass -File windows\scripts\install-dev.ps1 install` (cold build 5–8 min; `reload` when only the DLL changed and `dictionary/` did not).
+2. Settings: `%APPDATA%\TaigiKeyboard\settings.json`, live-reloaded. Merge the keys, raise top-level `revision` by one, replace the file atomically; pass the changes in a file, never quoted over ssh. Keys (`desktop/crates/taigi-desktop-core/src/settings/keys.rs`, `choices.rs`): `candidateLayout` (`vertical` `horizontal` `expandable` `verticalExpandable`), `candidateTextSize` (`"13"` `"15"` `"17"` `"20"` `"23"`), `fontType` (`system` `openHuninn` `iansui` `genYoMin` `genYoGothic`), `candidateDisplayMode` (`sideBySide`), `inputMode` (`tl`).
+3. Driver (Python on the box): DPI-aware (`SetProcessDpiAwareness(2)`, else `GetWindowRect` and the grab miss), `SendInput` with VK + `MapVirtualKeyW` scan codes, Pillow `ImageGrab`. Activate the TIP with `ITfInputProcessorProfileMgr::ActivateProfile` — `TF_IPPMF_FORSESSION` for another process's window. Find the candidate window by class `TaigiKeyboardCandidates` (`windows/crates/taigi-windows-tsf/src/ui/presenter.rs`) **and** `GetWindowThreadProcessId` = the host's pid: every TIP host owns one.
+4. Hosts: a WPF `TextBox` (a TSF host) and a WinForms `RichTextBox` (IMM32 via CUAS) — both a few lines of PowerShell. Tk is an IMM32 host whose output is not TSF's: never judge there.
+
+### 7.3 Matrix
+
+| Axis | Values |
+|---|---|
+| Host | WPF `TextBox` · WinForms `RichTextBox` |
+| Candidate layout | `vertical` · `horizontal` · `expandable` (folded and opened) · `verticalExpandable` (folded and opened) |
+| Size (`candidateTextSize`) | `13` · `17` · `23` |
+| Font (`fontType`) | `system` · `openHuninn` · `iansui` · `genYoMin` · `genYoGothic` |
+| Caret position | middle · bottom (window flips above) · right edge · bottom-right |
+
+Display scale other than the box's own runs only when named (changing it needs a sign-out).
+
+### 7.4 Per combination and tests
+
+The sentences, a window capture after each word plus a capture of the host around the caret (the window against the composition); a clause long enough to wrap the preedit near the bottom. Unit tests once per run, on the box: `cargo test -p taigi-windows-tsf` (in no CI gate — this run is their check).
+
+| Kind | Means |
+|---|---|
+| `panel-covers-composition` | the window covers any line of the composition, wrapped lines included |
+| `panel-past-work-area` / `panel-at-screen-edge` | the window extends past the work area, or sits closer than 12 DIP to a screen side |
+| `candidate-cut` / `script-past-cell` / `row-taller-than-box` | as §2 |
+| `poj-dot-touches-tone` | POJ o͘'s dot collides with a tone mark |
+
+Known, not a new finding: a WinForms `RichTextBox` answers every range with the caret line, so a wrapped preedit there can still be covered (host limitation); the System face's row height ratio (WIN4, deferred by the maintainer 2026-11-25). Owning files: `windows/crates/taigi-windows-tsf/src/ui/caret.rs`, `candidate_window.rs`, plus `desktop/crates/taigi-desktop-core/src/candidates/`. Report as §4, a table per host × layout (rows: font × size × caret position).
+
+## 8. Linux
+
+The candidate window is `taigikeyboard-popup` (ours, X11 / XWayland) for both IBus and Fcitx5. The run happens on the Linux VMs.
+
+### 8.1 Safety
+
+- VMs only. `utm-linux` (Ubuntu GNOME, Wayland, IBus) on this Mac; the VirtualBox KDE VM (X11, Fcitx5) on the Windows box, `ssh -J win -p 2222 taigi@127.0.0.1` — it does not boot while the box's Memory Integrity is on (maintainer's decision to turn it off).
+- Never `fcitx5 --replace` on the GNOME VM: it kills ibus-daemon and GNOME resets the input sources. Fcitx5 beside IBus = `fcitx5 -d --disable=ibusfrontend,xim,waylandim,kimpanel` and the app started with `GDK_BACKEND=x11 GTK_IM_MODULE=fcitx` + `XAUTHORITY=/run/user/1000/.mutter-Xwaylandauth.*`.
+- `pkill -f <pattern>` over ssh matches the ssh shell itself: `pkill -f "[t]aigikeyboard-popup"`.
+- Restore at the end: `gsettings set org.gnome.desktop.interface text-scaling-factor 1.0`, the settings file as found.
+
+### 8.2 Setup
+
+1. On the VM's checkout: build as the user, then `sudo env PATH=$PATH HOME=$HOME RUSTUP_HOME=$HOME/.rustup CARGO_HOME=$HOME/.cargo make -C linux install`, then `ibus restart` (GNOME then routes keys nowhere until **Super+Space twice**) or `fcitx5 -r`.
+2. Settings: `~/.config/taigikeyboard/settings.json` (same merge + `revision` rule as §7.2). Linux sizes the window in px, not `candidateTextSize`: `hanjiFontSize` / `romanFontSize` (12–48), typefaces `hanjiFontFamily` / `romanFontFamily` (fontconfig family, empty = system sans); `candidateLayout`, `candidateDisplayMode`, `inputMode` as §7.2.
+3. Typing and shots: the e2e drivers (`e2e/drivers/linux/desktop.py`, uinput) or the VM's `~/kb.py` + `~/vt.sh` (`t:` text, `k:` chord, `s:<name>` → `gnome-screenshot`); read committed text with `zenity --entry`. After a text-scale change restart the popup (`pkill -f "[t]aigikeyboard-popup"`).
+
+### 8.3 Matrix
+
+| Axis | Values |
+|---|---|
+| Frontend | IBus (GNOME VM) · Fcitx5 (KDE VM, or beside IBus on the GNOME VM, X11 client) |
+| Candidate layout | `vertical` · `horizontal` · `expandable` · `verticalExpandable` |
+| Size (`hanjiFontSize` = `romanFontSize`) | `13` · `23` · `48` |
+| Typeface (`hanjiFontFamily`) | empty (system sans) · each bundled family `fc-list` shows |
+| Text scale (`text-scaling-factor`) | `1.0` (`2.0` only when named — accessibility range) |
+| Caret position | middle · bottom · right edge |
+
+Plus the settings window once (at text scale 2.0 when named: no page wider than the screen, headings ellipsized).
+
+### 8.4 Tests and kinds
+
+Once per run, on the Mac: `cargo test -p taigikeyboard-popup -p taigi-linux-core`, `cargo test -p taigikeyboard-settings --test panes`. Check kinds: §7.4's, with `panel-past-work-area` = past monitor ∩ `_NET_WORKAREA` (GNOME top bar and dock). Design, not defects: an over-wide cell ending in "…"; a vertical list scrolling around the cursor when taller than the screen. Known, not a new finding: Fcitx5 on GNOME Wayland (GTK native client) gets a window-relative rect and can cover the field — documented in `linux/README.md`. Owning files: `linux/crates/taigikeyboard-popup/src/main.rs` (placement, `Fit`), `layout.rs`. Report as §4, a table per frontend × layout (rows: size × typeface × caret position).
+
+## 9. macOS
+
+Only when the maintainer names macOS. No IME install: installing the dev build replaces the input method the maintainer is typing with. Instead render the real candidate window in-process, the way `macos/Tests/TaigiInputMethodCoreTests/ManualScreenshotTests.swift` does (real controller, real engine, a stand-in document window, `screencapture` of its region).
+
+### 9.1 Run
+
+1. Copy `ManualScreenshotTests.swift` to a temporary `macos/Tests/TaigiInputMethodCoreTests/LayoutSimTests.swift` (never committed; delete it at the end), class `LayoutSimTests`, env `TAIGI_LAYOUT_SHOTS`. Replace its scenes with the matrix below; each scene types one §1 sentence word by word through `controller.handle(TestFixtures.keyDownEvent…)`, `syncDocument()` after every key, captures after every word, and presses the arrows once per clause.
+2. `TAIGI_LAYOUT_SHOTS=<scratchpad>/macos-shots swift test --package-path macos --filter LayoutSimTests`. The terminal needs Screen Recording permission; shots come out at the main display's scale. `make macos-libs` first when `desktop/` / `macos/crates/` changed (stale-artifact gate).
+3. Also `swift test --package-path macos --filter 'CandidatePanelPositioningTests|CandidateMetricsTests|ExpandedGridLayoutTests|HorizontalPageLayoutTests|CandidateElasticWidthTests|VerticalExpandableCandidatePanelTests'`.
+
+Settings are `UserDefaults.standard` keys with the desktop spellings (`SettingsStore.Keys`): `candidateLayout`, `candidateTextSize` (Swift `Keys.candidateSize`; `"13"` … `"23"`), `fontType`, `candidateDisplayMode`, `inputMode`. The test restores every key it touches (`clearSettingRestoredAtTeardown`).
+
+### 9.2 Matrix and kinds
+
+Layout (4, expandables folded and opened) × size `13` / `17` / `23` × font (5) × document position (middle, near the bottom of the visible frame, near the right edge — move the stand-in window). Kinds as §7.4; design: an over-wide cell truncated with "…" (`byTruncatingTail`). Known divergence, not a new finding: `CandidatePanelPositioning.swift` clamps to the full `visibleFrame` with no 12-point edge margin (Windows has one). Owning files: `macos/Sources/TaigiInputMethodCore/Candidates/`. Report as §4, a table per layout (rows: font × size × position).
