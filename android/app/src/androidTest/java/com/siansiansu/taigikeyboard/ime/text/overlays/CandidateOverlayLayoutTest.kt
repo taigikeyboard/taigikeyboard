@@ -129,4 +129,15 @@ class CandidateOverlayLayoutTest {
             assertFalse("\"$text\" is ellipsized", layout.isLineEllipsized(0))
         }
     }
+
+    // A10: a title drawn by a fallback font has a taller line box, so its cell grew and its
+    // centred text sat ~10 px lower than the neighbours' in the same row.
+    @Test
+    fun cellsInARow_shareTheSubtitleLine_whenATitleUsesAFallbackFont() {
+        // "字" falls back to the CJK font (taller line); "AB" stays in the Latin face.
+        val words = listOf(TaigiWord(0, "ji0", "字"), TaigiWord(1, "ab1", "AB"), TaigiWord(2, "ji2", "字"))
+        setGrid(words)
+        val tops = words.map { rule.onNodeWithText(it.roman, useUnmergedTree = true).getBoundsInRoot().top }
+        assertTrue("subtitle tops differ: $tops", tops.all { (it - tops[0]).value.let { d -> d in -0.5f..0.5f } })
+    }
 }

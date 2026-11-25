@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,13 +49,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.ParagraphIntrinsics
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
@@ -63,6 +61,7 @@ import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateRowLayout
 import com.siansiansu.taigikeyboard.ime.text.candidates.candidateCellBackground
 import com.siansiansu.taigikeyboard.ime.text.candidates.candidateCellText
+import com.siansiansu.taigikeyboard.ime.text.candidates.candidateLineStyle
 import com.siansiansu.taigikeyboard.ime.text.keyboard.computeBottomInsetPadding
 import com.siansiansu.taigikeyboard.ime.text.smartbar.KeyboardChromeColors
 import com.siansiansu.taigikeyboard.ime.text.smartbar.iconRes
@@ -156,7 +155,7 @@ fun CandidateOverlayContent(
     // widths are kept across suggestion updates (titles repeat keystroke to keystroke).
     val fontFamilyResolver = LocalFontFamilyResolver.current
     val density = LocalDensity.current
-    val titleStyle = remember(fontFamily) { gridLineStyle(PRIMARY_TEXT_SIZE_SP, fontFamily) }
+    val titleStyle = remember(fontFamily) { candidateLineStyle(PRIMARY_TEXT_SIZE_SP, Color.Unspecified, fontFamily) }
     val titleWidths = remember(titleStyle, density, fontFamilyResolver) { HashMap<String, Int>() }
 
     val listState = rememberLazyListState()
@@ -304,6 +303,9 @@ private fun CandidateRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    // One height for every cell in the row (its tallest), so a short cell's text
+                    // centres on the same line as its neighbours'.
+                    .height(IntrinsicSize.Min)
                     .padding(horizontal = RowHorizontalMargin, vertical = RowVerticalMargin),
         ) {
             row.forEachIndexed { cellIndex, item ->
@@ -368,6 +370,7 @@ private fun CandidateCell(
             Modifier
                 .width(cellWidth)
                 .heightIn(min = CellMinHeight)
+                .fillMaxHeight()
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -402,14 +405,14 @@ private fun CandidateCell(
             // single candidate is wider than the whole row.
             BasicText(
                 text = primary,
-                style = gridLineStyle(PRIMARY_TEXT_SIZE_SP, fontFamily, colors.primary),
+                style = candidateLineStyle(PRIMARY_TEXT_SIZE_SP, colors.primary, fontFamily),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (subtitle != null) {
                 BasicText(
                     text = subtitle,
-                    style = gridLineStyle(SUBTITLE_TEXT_SIZE_SP, fontFamily, colors.subtitle),
+                    style = candidateLineStyle(SUBTITLE_TEXT_SIZE_SP, colors.subtitle, fontFamily),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
@@ -563,14 +566,7 @@ private fun rememberCandidateOverlayColors(
     }
 }
 
-// --- Text style + measurement ---
-
-/** One grid line: [fontSp] in [fontFamily], centred. The row measurement and the cells share it. */
-private fun gridLineStyle(
-    fontSp: Float,
-    fontFamily: FontFamily,
-    color: Color = Color.Unspecified,
-): TextStyle = TextStyle(color = color, fontSize = fontSp.sp, fontFamily = fontFamily, textAlign = TextAlign.Center)
+// --- Measurement ---
 
 /**
  * Cell width for the row packer: the widest line the cell can show, measured at the title
