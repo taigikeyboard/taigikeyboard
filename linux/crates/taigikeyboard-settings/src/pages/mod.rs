@@ -910,12 +910,19 @@ pub(crate) fn table_line<const N: usize>(texts: [&str; N], is_heading: bool) -> 
         .margin_start(TABLE_INSET)
         .margin_end(TABLE_INSET)
         .build();
+    // Every cell ellipsizes, headings too: the columns are equal, so one
+    // unbroken heading would set the window's minimum width to N times its
+    // own (Romanization at text scale 2.0 pushed the window past a 1280 px
+    // screen).
     for text in texts {
-        let cell = gtk::Label::builder().label(text).xalign(0.0);
+        let cell = gtk::Label::builder()
+            .label(text)
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End);
         line.append(&if is_heading {
             cell.css_classes(["heading"]).build()
         } else {
-            cell.ellipsize(gtk::pango::EllipsizeMode::End).build()
+            cell.build()
         });
     }
     if is_heading {

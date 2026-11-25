@@ -15,13 +15,15 @@ mod system_color;
 pub mod text;
 
 pub use layout::{
-    arrange, pads, px, row_widths, Arrangement, CellStyle, Glyph, Hit, Measure, Pads, Rect, Role,
-    RowWidths, Target,
+    arrange, pads, px, row_chrome_width, row_widths, Arrangement, CellStyle, Fit, Glyph, Hit,
+    Measure, Pads, Rect, Role, RowWidths, Target,
 };
 pub use paint::{
     capped_radius, fill_clipped, fill_round, highlight_radii, mix, pack, stroke_round,
 };
 #[cfg(feature = "window")]
 pub use portal::watch_appearance;
-pub use protocol::{Caret, Cell, Chrome, Command, Event, ExpandableView, Show};
+pub use protocol::{
+    Caret, Cell, Chrome, Command, Event, ExpandableView, Notice, Show, SCREEN_MARGIN_PX,
+};
 pub use system_color::{paint_chrome, SystemAppearance};

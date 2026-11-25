@@ -15,8 +15,8 @@ use std::thread;
 use taigikeyboard_popup::paint;
 use taigikeyboard_popup::text::{self, Fonts};
 use taigikeyboard_popup::{
-    arrange, paint_chrome, px, watch_appearance, Arrangement, Caret, Command, Event, Hit, Show,
-    SystemAppearance, Target,
+    arrange, paint_chrome, px, watch_appearance, Arrangement, Caret, Command, Event, Fit, Hit,
+    Notice, Show, SystemAppearance, Target, SCREEN_MARGIN_PX,
 };
 use winit::application::ApplicationHandler;
 use winit::dpi::{PhysicalPosition, PhysicalSize};
@@ -25,6 +25,9 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::window::{Window, WindowId, WindowLevel};
 
 const GAP_PX: f32 = 4.0;
+
+/// A monitor: its origin and size, physical px.
+type Monitor = (PhysicalPosition<i32>, PhysicalSize<u32>);
 
 fn main() -> ExitCode {
     let mut builder = EventLoop::<UserEvent>::with_user_event();
@@ -93,6 +96,14 @@ struct App {
     placed: Option<PhysicalPosition<i32>>,
     placed_size: Option<PhysicalSize<u32>>,
     appearance: Option<SystemAppearance>,
+    /// The first row a vertical list taller than its room shows; kept while
+    /// the page stays the same so the rows scroll only with the cursor.
+    first_row: usize,
+    /// The screen width last reported to the parent ([`Notice::Screen`]).
+    reported_screen: Option<u32>,
+    /// The room and scale the shown arrangement was laid out for: a caret
+    /// move that keeps both only moves the window.
+    laid_for: Option<(Fit, f32)>,
 }
 
 impl Default for App {
@@ -114,6 +125,9 @@ impl Default for App {
             placed: None,
             placed_size: None,
             appearance: None,
+            first_row: 0,
+            reported_screen: None,
+            laid_for: None,
         }
     }
 }
@@ -155,6 +169,11 @@ impl ApplicationHandler<UserEvent> for App {
         };
         self.window = Some(window);
         self.surface = Some(surface);
+        // The session packs its first rows before any caret arrives.
+        let primary = event_loop
+            .primary_monitor()
+            .map(|monitor| (monitor.position(), monitor.size()));
+        self.report_screen(primary);
         let pending = std::mem::take(&mut self.pending);
         for command in pending {
             self.apply(event_loop, command);
@@ -208,13 +227,23 @@ impl App {
     fn apply(&mut self, event_loop: &ActiveEventLoop, command: Command) {
         match command {
             Command::Hide => self.hide(),
+            // The room depends on the caret: a move that changes it lays the
+            // page out again.
             Command::Move { caret } => {
                 self.caret = caret;
-                self.place(event_loop);
+                self.relayout(event_loop);
             }
             Command::Show { body } => {
                 self.caret = body.caret;
+                if self
+                    .page
+                    .as_ref()
+                    .is_none_or(|page| page.cells != body.cells)
+                {
+                    self.first_row = 0;
+                }
                 self.page = Some(*body);
+                self.laid_for = None;
                 self.relayout(event_loop);
                 if let Some(window) = &self.window {
                     window.set_visible(true);
@@ -229,23 +258,30 @@ impl App {
         self.arrangement = None;
         self.placed = None;
         self.placed_size = None;
+        self.laid_for = None;
         if let Some(window) = &self.window {
             window.set_visible(false);
         }
     }
 
     fn relayout(&mut self, event_loop: &ActiveEventLoop) {
+        let monitor = monitor_for(event_loop, self.caret);
+        self.report_screen(monitor);
         let Some(page) = self.page.clone() else {
             return;
         };
-        let scale = self
-            .window
-            .as_ref()
-            .map(|window| window.scale_factor() as f32)
-            .unwrap_or(1.0);
+        let scale = self.scale();
+        let fit = fit_for(self.caret, monitor, scale, self.first_row);
+        if self.laid_for == Some((fit, scale)) {
+            self.place(monitor);
+            return;
+        }
         self.fonts
             .set_families(&page.chrome.hanji_family, &page.chrome.roman_family);
-        let arrangement = arrange(&page, &self.fonts, scale);
+        let arrangement = arrange(&page, &self.fonts, scale, fit);
+        self.first_row = arrangement.first_row;
+        let first_row = arrangement.first_row;
+        self.laid_for = Some((Fit { first_row, ..fit }, scale));
         let size = PhysicalSize::new(px(arrangement.width), px(arrangement.height));
         if self.placed_size != Some(size) {
             if let Some(window) = &self.window {
@@ -254,13 +290,22 @@ impl App {
             }
         }
         self.arrangement = Some(arrangement);
-        self.place(event_loop);
+        self.place(monitor);
         if let Some(window) = &self.window {
             window.request_redraw();
         }
     }
 
-    fn place(&mut self, event_loop: &ActiveEventLoop) {
+    /// The window's scale factor; 1 before the window exists.
+    fn scale(&self) -> f32 {
+        self.window
+            .as_ref()
+            .map(|window| window.scale_factor() as f32)
+            .filter(|scale| scale.is_finite() && *scale > 0.0)
+            .unwrap_or(1.0)
+    }
+
+    fn place(&mut self, monitor: Option<Monitor>) {
         let Some(window) = self.window.clone() else {
             return;
         };
@@ -268,10 +313,10 @@ impl App {
             return;
         };
         let size = PhysicalSize::new(px(arrangement.width), px(arrangement.height));
-        let scale = window.scale_factor() as f32;
-        let gap = (GAP_PX * scale).round().max(1.0) as i32;
-        let monitor = monitor_for(event_loop, self.caret);
-        let origin = held_origin(self.placed, place_at(self.caret, size, monitor, gap));
+        let origin = held_origin(
+            self.placed,
+            place_at(self.caret, size, monitor, self.scale()),
+        );
         if self.placed == Some(origin) {
             return;
         }
@@ -290,11 +335,21 @@ impl App {
             Target::Cell(position) => Event::Click { position },
             Target::Page { forward } => Event::Page { forward },
         };
-        if let Ok(line) = serde_json::to_string(&event) {
-            let mut stdout = std::io::stdout().lock();
-            let _ = writeln!(stdout, "{line}");
-            let _ = stdout.flush();
+        write_line(serde_json::to_string(&event));
+    }
+
+    /// Tells the parent the width of `monitor` in px before scale, when it
+    /// changed, so the session packs rows that fit it.
+    fn report_screen(&mut self, monitor: Option<Monitor>) {
+        let Some((_, size)) = monitor else {
+            return;
+        };
+        let screen = (size.width as f32 / self.scale()).floor() as u32;
+        if self.reported_screen == Some(screen) {
+            return;
         }
+        self.reported_screen = Some(screen);
+        write_line(serde_json::to_string(&Notice::Screen { width: screen }));
     }
 
     fn paint(&mut self) {
@@ -340,6 +395,14 @@ impl App {
     }
 }
 
+fn write_line(line: serde_json::Result<String>) {
+    if let Ok(line) = line {
+        let mut stdout = std::io::stdout().lock();
+        let _ = writeln!(stdout, "{line}");
+        let _ = stdout.flush();
+    }
+}
+
 fn hit_at(arrangement: &Arrangement, x: f32, y: f32) -> Option<&Hit> {
     arrangement
         .hits
@@ -348,10 +411,7 @@ fn hit_at(arrangement: &Arrangement, x: f32, y: f32) -> Option<&Hit> {
         .find(|hit| x >= hit.x && y >= hit.y && x < hit.x + hit.w && y < hit.y + hit.h)
 }
 
-fn monitor_for(
-    event_loop: &ActiveEventLoop,
-    caret: Caret,
-) -> Option<(PhysicalPosition<i32>, PhysicalSize<u32>)> {
+fn monitor_for(event_loop: &ActiveEventLoop, caret: Caret) -> Option<Monitor> {
     let contains = |origin: PhysicalPosition<i32>, size: PhysicalSize<u32>| {
         caret.x >= origin.x
             && caret.y >= origin.y
@@ -362,7 +422,103 @@ fn monitor_for(
         .available_monitors()
         .find(|monitor| contains(monitor.position(), monitor.size()));
     let monitor = found.or_else(|| event_loop.primary_monitor())?;
-    Some((monitor.position(), monitor.size()))
+    Some(usable((monitor.position(), monitor.size()), work_area()))
+}
+
+/// `monitor` cut to the desktop's work area, as macOS keeps a panel inside
+/// `visibleFrame`: the window never sits under a top bar or a dock. The
+/// whole monitor when there is no work area or they do not overlap.
+fn usable(monitor: Monitor, work_area: Option<Monitor>) -> Monitor {
+    let Some((area_origin, area_size)) = work_area else {
+        return monitor;
+    };
+    let (origin, size) = monitor;
+    let left = origin.x.max(area_origin.x);
+    let top = origin.y.max(area_origin.y);
+    let right = (origin.x + size.width as i32).min(area_origin.x + area_size.width as i32);
+    let bottom = (origin.y + size.height as i32).min(area_origin.y + area_size.height as i32);
+    if right <= left || bottom <= top {
+        return monitor;
+    }
+    (
+        PhysicalPosition::new(left, top),
+        PhysicalSize::new((right - left) as u32, (bottom - top) as u32),
+    )
+}
+
+/// The X11 work area of the current desktop (`_NET_WORKAREA`, EWMH), in
+/// root-window px. One connection for the life of the window; the property
+/// is read again each time, since a dock that hides changes it.
+#[cfg(target_os = "linux")]
+fn work_area() -> Option<Monitor> {
+    use std::sync::OnceLock;
+    use x11rb::connection::Connection;
+    use x11rb::protocol::xproto::{AtomEnum, ConnectionExt};
+    use x11rb::rust_connection::RustConnection;
+
+    struct Root {
+        connection: RustConnection,
+        window: u32,
+        work_area: u32,
+        current_desktop: u32,
+    }
+    static ROOT: OnceLock<Option<Root>> = OnceLock::new();
+    let root = ROOT
+        .get_or_init(|| {
+            let (connection, screen) = x11rb::connect(None).ok()?;
+            let window = connection.setup().roots.get(screen)?.root;
+            let atom = |name: &str| {
+                connection
+                    .intern_atom(false, name.as_bytes())
+                    .ok()?
+                    .reply()
+                    .ok()
+                    .map(|reply| reply.atom)
+            };
+            let work_area = atom("_NET_WORKAREA")?;
+            let current_desktop = atom("_NET_CURRENT_DESKTOP")?;
+            Some(Root {
+                connection,
+                window,
+                work_area,
+                current_desktop,
+            })
+        })
+        .as_ref()?;
+    let cardinals = |property: u32, offset: u32, length: u32| {
+        let reply = root
+            .connection
+            .get_property(
+                false,
+                root.window,
+                property,
+                AtomEnum::CARDINAL,
+                offset,
+                length,
+            )
+            .ok()?
+            .reply()
+            .ok()?;
+        let values: Vec<u32> = reply.value32()?.collect();
+        Some(values)
+    };
+    // GNOME's XWayland publishes no current desktop: the first area.
+    let desktop = cardinals(root.current_desktop, 0, 1)
+        .and_then(|values| values.first().copied())
+        .unwrap_or(0);
+    let area = cardinals(root.work_area, desktop * 4, 4)?;
+    let [x, y, width, height] = area[..] else {
+        return None;
+    };
+    Some((
+        PhysicalPosition::new(x as i32, y as i32),
+        PhysicalSize::new(width, height),
+    ))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn work_area() -> Option<Monitor> {
+    None
 }
 
 /// Candidate navigation reports a caret a few pixels off the one the window
@@ -379,38 +535,78 @@ fn held_origin(
     }
 }
 
+/// The gap from the caret and the margin from the monitor's edges, whole
+/// physical px.
+fn spacing(scale: f32) -> (i32, i32) {
+    let whole = |value: f32| (value * scale).round().max(1.0) as i32;
+    (whole(GAP_PX), whole(SCREEN_MARGIN_PX))
+}
+
+/// The room under and over `caret` on `monitor`, physical px.
+fn vertical_room(caret: Caret, (origin, size): Monitor, scale: f32) -> (i32, i32) {
+    let (gap, margin) = spacing(scale);
+    let bottom = origin.y.saturating_add(size.height as i32) - margin;
+    let below = bottom - caret.y.saturating_add(caret.h).saturating_add(gap);
+    let above = caret.y.saturating_sub(gap) - (origin.y + margin);
+    (below, above)
+}
+
+/// The room [`place_at`] can give the window: the monitor's width less its
+/// margins, and the roomier side of the caret. No monitor: unbounded.
+fn fit_for(caret: Caret, monitor: Option<Monitor>, scale: f32, first_row: usize) -> Fit {
+    let Some(monitor) = monitor else {
+        return Fit {
+            first_row,
+            ..Fit::UNBOUNDED
+        };
+    };
+    let (_, margin) = spacing(scale);
+    let (below, above) = vertical_room(caret, monitor, scale);
+    Fit {
+        width: (monitor.1.width as i32 - margin * 2).max(1) as f32,
+        height: below.max(above).max(1) as f32,
+        first_row,
+    }
+}
+
+/// Under the caret when the window fits there, else over it, else on the
+/// roomier side. A window [`fit_for`] sized never covers the caret's line;
+/// an unfolded grid, which takes no fit, may. Kept inside the monitor's
+/// margins.
 fn place_at(
     caret: Caret,
     window: PhysicalSize<u32>,
-    monitor: Option<(PhysicalPosition<i32>, PhysicalSize<u32>)>,
-    gap: i32,
+    monitor: Option<Monitor>,
+    scale: f32,
 ) -> PhysicalPosition<i32> {
+    let (gap, margin) = spacing(scale);
+    let below_y = caret.y.saturating_add(caret.h).saturating_add(gap);
     let mut x = caret.x;
-    let mut y = caret.y.saturating_add(caret.h).saturating_add(gap);
     let Some((origin, size)) = monitor else {
-        return PhysicalPosition::new(x, y);
+        return PhysicalPosition::new(x, below_y);
     };
     let right = origin.x.saturating_add(size.width as i32);
-    let bottom = origin.y.saturating_add(size.height as i32);
     let window_w = window.width as i32;
     let window_h = window.height as i32;
-    if x.saturating_add(window_w) > right {
-        x = right.saturating_sub(window_w);
+    if x.saturating_add(window_w) > right - margin {
+        x = (right - margin).saturating_sub(window_w);
     }
-    if x < origin.x {
-        x = origin.x;
+    if x < origin.x + margin {
+        x = origin.x + margin;
     }
-    if y.saturating_add(window_h) > bottom {
-        let above = caret.y.saturating_sub(gap).saturating_sub(window_h);
-        y = if above >= origin.y {
-            above
-        } else {
-            bottom.saturating_sub(window_h)
-        };
-    }
-    if y < origin.y {
-        y = origin.y;
-    }
+    let (below, above) = vertical_room(caret, (origin, size), scale);
+    let above_y = caret.y.saturating_sub(gap).saturating_sub(window_h);
+    let y = if window_h <= below {
+        below_y
+    } else if window_h <= above || above > below {
+        above_y
+    } else {
+        below_y
+    };
+    // An unfolded grid takes no fit and can outgrow both sides; it still
+    // stays on the monitor.
+    let bottom = origin.y.saturating_add(size.height as i32) - margin;
+    let y = y.min(bottom - window_h).max(origin.y + margin);
     PhysicalPosition::new(x, y)
 }
 
@@ -433,5 +629,77 @@ mod tests {
             held_origin(None, PhysicalPosition::new(110, 200)),
             PhysicalPosition::new(110, 200)
         );
+    }
+
+    const MONITOR: Monitor = (PhysicalPosition::new(0, 0), PhysicalSize::new(1280, 800));
+
+    fn caret_at(y: i32) -> Caret {
+        Caret {
+            x: 100,
+            y,
+            w: 2,
+            h: 30,
+        }
+    }
+
+    fn covers_caret(origin: PhysicalPosition<i32>, height: u32, caret: Caret) -> bool {
+        origin.y < caret.y + caret.h && origin.y + height as i32 > caret.y
+    }
+
+    /// L2: a window taller than either side of the caret fell back to the
+    /// screen's bottom edge, over the caret's line. The fit now caps it at the
+    /// roomier side, where it is placed.
+    #[test]
+    fn a_tall_window_takes_the_roomier_side_and_never_covers_the_caret() {
+        // trace: caret 300..330, gap 4, margin 4: below = 796 - 334 = 462,
+        // above = 296 - 4 = 292.
+        let caret = caret_at(300);
+        let fit = fit_for(caret, Some(MONITOR), 1.0, 0);
+        assert_eq!(fit.height, 462.0);
+        assert_eq!(fit.width, 1272.0);
+        let origin = place_at(caret, PhysicalSize::new(300, 462), Some(MONITOR), 1.0);
+        assert_eq!(origin.y, 334);
+        assert!(!covers_caret(origin, 462, caret));
+
+        // trace: caret 600..630: below = 796 - 634 = 162, above = 596 - 4 = 592.
+        let low = caret_at(600);
+        let fit = fit_for(low, Some(MONITOR), 1.0, 0);
+        assert_eq!(fit.height, 592.0);
+        let origin = place_at(low, PhysicalSize::new(300, 592), Some(MONITOR), 1.0);
+        assert_eq!(origin.y, 4);
+        assert!(!covers_caret(origin, 592, low));
+    }
+
+    #[test]
+    fn a_window_that_fits_below_stays_below() {
+        let caret = caret_at(300);
+        let origin = place_at(caret, PhysicalSize::new(300, 200), Some(MONITOR), 1.0);
+        assert_eq!(origin, PhysicalPosition::new(100, 334));
+    }
+
+    #[test]
+    fn a_window_taller_than_the_monitor_stays_on_it() {
+        // An unfolded grid takes no fit: 1000 px on an 800 px monitor.
+        let origin = place_at(
+            caret_at(300),
+            PhysicalSize::new(300, 1000),
+            Some(MONITOR),
+            1.0,
+        );
+        assert_eq!(origin.y, 4);
+    }
+
+    #[test]
+    fn the_work_area_cuts_the_monitor() {
+        // trace: GNOME on the VM publishes 66, 32, 1214 × 768 (dock, top bar).
+        let area = (PhysicalPosition::new(66, 32), PhysicalSize::new(1214, 768));
+        assert_eq!(usable(MONITOR, Some(area)), area);
+        assert_eq!(usable(MONITOR, None), MONITOR);
+        // A work area on another monitor leaves this one whole.
+        let elsewhere = (
+            PhysicalPosition::new(1280, 0),
+            PhysicalSize::new(1920, 1080),
+        );
+        assert_eq!(usable(MONITOR, Some(elsewhere)), MONITOR);
     }
 }

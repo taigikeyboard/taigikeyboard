@@ -7,6 +7,8 @@
 //! of each row starts at the same x. The window multiplies every px by its
 //! scale and then asks a [`Measure`].
 
+use std::borrow::Cow;
+
 use crate::protocol::{Cell, Show};
 
 /// What one line occupies. `px` is the size it was measured at.
@@ -57,6 +59,30 @@ pub struct Arrangement {
     pub highlight: Option<Rect>,
     pub glyphs: Vec<Glyph>,
     pub hits: Vec<Hit>,
+    /// The first row a vertical list shows when the whole page is taller
+    /// than [`Fit::height`]; 0 otherwise. Hand it back as the next
+    /// [`Fit::first_row`] so the rows scroll only when the cursor leaves them.
+    pub first_row: usize,
+}
+
+/// The room the window has on screen, in px after scale: the caret's monitor
+/// less a margin, and for the height the roomier side of the caret. A cell
+/// wider than the room ends in an ellipsis; a vertical list taller than it
+/// shows the rows around the cursor, from `first_row` when the cursor is
+/// among them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Fit {
+    pub width: f32,
+    pub height: f32,
+    pub first_row: usize,
+}
+
+impl Fit {
+    pub const UNBOUNDED: Self = Self {
+        width: f32::INFINITY,
+        height: f32::INFINITY,
+        first_row: 0,
+    };
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -148,6 +174,14 @@ pub fn row_widths(cells: &[Cell], cell_style: CellStyle, measure: &impl Measure)
     }
 }
 
+/// What a horizontal row's window adds around its cells, in px before scale:
+/// the pad on both sides and the page-arrow column. The session subtracts it
+/// from the screen to know how wide a row of cells may pack.
+pub fn row_chrome_width(padding_px: u32, measure: &impl Measure) -> f32 {
+    let Pads { window, gap, .. } = pads(padding_px, 1.0);
+    window * 2.0 + gap + arrow_span(LABEL_PX, measure)
+}
+
 /// A select key wider than any digit: every row cell reserves the widest key
 /// any slot set prints, so a cell keeps its width whatever key it carries.
 const KEY_LABEL_SAMPLES: [&str; 4] = ["8", "w", "m", ";"];
@@ -196,9 +230,10 @@ impl RowCell {
     }
 
     /// Widens `laid` (`cell` laid out at scale) to its row width, less the
-    /// gap. The key stays left; the scripts stay centered in what it leaves.
-    fn widen(&self, laid: &mut LaidCell, cell: &Cell, measure: &impl Measure) {
-        let target = (self.width(cell, measure) - self.style.gap) * self.scale;
+    /// gap, never past `max_w`. The key stays left; the scripts stay centered
+    /// in what it leaves.
+    fn widen(&self, laid: &mut LaidCell, cell: &Cell, measure: &impl Measure, max_w: f32) {
+        let target = ((self.width(cell, measure) - self.style.gap) * self.scale).min(max_w);
         let extra = target - laid.w;
         if extra <= 0.0 {
             return;
@@ -213,8 +248,9 @@ impl RowCell {
     }
 }
 
-/// Lays `page` out at `scale`. Sizes on the page are px before scale.
-pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
+/// Lays `page` out at `scale`, inside `fit`. Sizes on the page are px before
+/// scale.
+pub fn arrange(page: &Show, measure: &impl Measure, scale: f32, fit: Fit) -> Arrangement {
     let scale = if scale.is_finite() && scale > 0.0 {
         scale
     } else {
@@ -228,21 +264,25 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         cell: cell_pad,
         gap,
         line: line_gap,
-        script: script_gap,
+        ..
     } = pads(page.chrome.padding, scale);
-    let label_px = LABEL_PX * scale;
-    let primary = page.hanji_px.max(1) as f32 * scale;
-    let secondary = page.roman_px.max(1) as f32 * scale;
-
-    let style = Scale {
-        primary,
-        secondary,
-        hanji_leads: page.hanji_leads,
-        label_px,
-        cell_pad,
-        gap,
-        script_gap,
+    let mut style = Scale::of(cell_style(page), scale);
+    let label_px = style.label_px;
+    // The column a page arrow takes beside the cells: a paged plain row keeps
+    // it on every page (so the first and last pages are as wide as the middle
+    // ones), a collapsed vertical-expandable list shows its `›` there.
+    let min_w = page.min_content_width as f32 * scale;
+    let arrow_column = if page.vertical {
+        page.expandable.is_some() && page.has_next
+    } else {
+        page.has_prev || page.has_next || (min_w > 0.0 && page.expandable.is_none())
     };
+    let arrow_w = if arrow_column {
+        gap + arrow_span(label_px, measure)
+    } else {
+        0.0
+    };
+    style.max_cell_w = (fit.width - pad * 2.0 - arrow_w).max(0.0);
     // Vertical rows share one key column. A horizontal cell is drawn at the
     // width the row was packed to (`row_widths`), so the cells fill the
     // window the session sized from them.
@@ -265,7 +305,7 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             measure,
         );
         if let Some(row) = &row {
-            row.widen(&mut laid, cell, measure);
+            row.widen(&mut laid, cell, measure, style.max_cell_w);
         }
         cells.push(laid);
     }
@@ -279,12 +319,8 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     let row_h = content_h;
 
     if !page.vertical {
-        let min_w = page.min_content_width as f32 * scale;
-        // A paged plain row keeps its arrow column on every page, so the
-        // first and last pages are as wide as the middle ones. Like the macOS
-        // window, the only paging chrome is one trailing up/down column —
-        // the Up / Down keys turn the page.
-        let reserve_arrows = min_w > 0.0 && page.expandable.is_none();
+        // Like the macOS window, the only paging chrome is one trailing
+        // up/down column — the Up / Down keys turn the page.
         let arrow_h = row_h.max(label_px + cell_pad * 2.0);
         let cells_left = x;
         for cell in &cells {
@@ -307,9 +343,9 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         }
         // `min_content_width` is the cells' own extent; the arrows sit after.
         if x - cells_left < min_w {
-            x = cells_left + min_w;
+            x = cells_left + min_w.min(style.max_cell_w);
         }
-        if page.has_prev || page.has_next || reserve_arrows {
+        if arrow_column {
             x += gap;
             place_page_column(
                 &mut glyphs,
@@ -336,6 +372,7 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }),
             glyphs,
             hits,
+            first_row: 0,
         };
         remap_expandable_hits(page, &mut arrangement.hits);
         arrangement
@@ -343,7 +380,21 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
         // Twice the stacked-script line gap, so vertical rows are not flush.
         let row_gap = line_gap * 2.0;
         let mut width = cells.iter().map(|cell| cell.w).fold(0.0_f32, f32::max);
-        for cell in &cells {
+        // A plain paged list keeps its arrow row under the cells.
+        let arrow_row = page.expandable.is_none() && (page.has_prev || page.has_next);
+        let arrow_row_h = if arrow_row { label_px + cell_pad } else { 0.0 };
+        let heights: Vec<f32> = cells.iter().map(|cell| cell.h).collect();
+        let cursor_row = page
+            .cursor
+            .and_then(|cursor| cells.iter().position(|cell| cell.index == cursor));
+        let (first_row, row_count) = visible_rows(
+            &heights,
+            row_gap,
+            fit.height - pad * 2.0 - arrow_row_h,
+            cursor_row,
+            fit.first_row,
+        );
+        for cell in &cells[first_row..first_row + row_count] {
             shift_cell(cell, x, y, &mut glyphs, &mut hits);
             if page.cursor == Some(cell.index) {
                 highlight = Some(Rect {
@@ -427,10 +478,54 @@ pub fn arrange(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
             }),
             glyphs,
             hits,
+            first_row,
         };
         remap_expandable_hits(page, &mut arrangement.hits);
         arrangement
     }
+}
+
+/// Which rows of a vertical list fit `room`: `(first, count)`. All of them
+/// when they fit; else from `previous` while the cursor stays among the rows
+/// shown, scrolled just far enough to bring it back when it leaves them.
+fn visible_rows(
+    heights: &[f32],
+    row_gap: f32,
+    room: f32,
+    cursor: Option<usize>,
+    previous: usize,
+) -> (usize, usize) {
+    let fitting_from = |first: usize| {
+        let mut used = 0.0_f32;
+        let mut count = 0;
+        for height in &heights[first..] {
+            let next = used
+                + if count == 0 {
+                    *height
+                } else {
+                    row_gap + height
+                };
+            if count > 0 && next > room {
+                break;
+            }
+            used = next;
+            count += 1;
+        }
+        count
+    };
+    if heights.is_empty() || fitting_from(0) == heights.len() {
+        return (0, heights.len());
+    }
+    let mut first = previous.min(heights.len() - 1);
+    if let Some(cursor) = cursor {
+        if cursor < first {
+            first = cursor;
+        }
+        while first < cursor && first + fitting_from(first) <= cursor {
+            first += 1;
+        }
+    }
+    (first, fitting_from(first))
 }
 
 fn remap_expandable_hits(page: &Show, hits: &mut [Hit]) {
@@ -449,24 +544,11 @@ fn remap_expandable_hits(page: &Show, hits: &mut [Hit]) {
 fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrangement {
     let view = page.expandable.as_ref().expect("expanded");
     let Pads {
-        window: pad,
-        cell: cell_pad,
-        gap,
-        script: script_gap,
-        ..
+        window: pad, gap, ..
     } = pads(page.chrome.padding, scale);
-    let label_px = LABEL_PX * scale;
-    let primary = page.hanji_px.max(1) as f32 * scale;
-    let secondary = page.roman_px.max(1) as f32 * scale;
-    let style = Scale {
-        primary,
-        secondary,
-        hanji_leads: page.hanji_leads,
-        label_px,
-        cell_pad,
-        gap,
-        script_gap,
-    };
+    let style = Scale::of(cell_style(page), scale);
+    let label_px = style.label_px;
+    let primary = style.primary;
     // A column keeps the two scripts on one line. A row stacks them.
     let inline = view.axis == 1;
     // Only the columns a cell reaches: a trailing empty column (the last
@@ -657,6 +739,7 @@ fn arrange_expandable(page: &Show, measure: &impl Measure, scale: f32) -> Arrang
         }),
         glyphs,
         hits,
+        first_row: 0,
     };
     remap_expandable_hits(page, &mut arrangement.hits);
     arrangement
@@ -683,7 +766,7 @@ fn arrange_expanded_row(
     for (index, cell) in page.cells.iter().enumerate() {
         let label = page.labels.get(index).map(String::as_str).unwrap_or("");
         let mut laid = layout_cell(cell, label, index as u32, false, key, style, measure);
-        row.widen(&mut laid, cell, measure);
+        row.widen(&mut laid, cell, measure, f32::INFINITY);
         cells.push(laid);
     }
     let row_body = cells
@@ -764,6 +847,7 @@ fn arrange_expanded_row(
         }),
         glyphs,
         hits,
+        first_row: 0,
     };
     remap_expandable_hits(page, &mut arrangement.hits);
     arrangement
@@ -877,8 +961,21 @@ struct Scale {
     label_px: f32,
     cell_pad: f32,
     gap: f32,
+    /// Between the two scripts of a stacked (horizontal) cell.
     script_gap: f32,
+    /// Between the text and the annotation of a one-line (vertical) cell.
+    annotation_gap: f32,
+    /// The widest a cell may be drawn; past it the scripts end in an
+    /// ellipsis. Unbounded unless the window's [`Fit`] says otherwise.
+    max_cell_w: f32,
 }
+
+/// The candidate size the window pads are tuned at (`hanjiFontSize`'s
+/// default, and `BASE_CANDIDATE_FONT_SIZE` in `taigi-desktop-core`
+/// `candidates/metrics.rs`). Above it the gaps between the two scripts grow
+/// with the text, as macOS and Windows scale `candidate_annotation_gap` by
+/// candidate size / 16; below it they keep the pad.
+const BASE_TEXT_PX: f32 = 16.0;
 
 impl Scale {
     fn of(cell_style: CellStyle, scale: f32) -> Self {
@@ -888,6 +985,8 @@ impl Scale {
             script: script_gap,
             ..
         } = pads(cell_style.padding, scale);
+        let text_ratio =
+            (cell_style.hanji_px.max(cell_style.roman_px) as f32 / BASE_TEXT_PX).max(1.0);
         Self {
             primary: cell_style.hanji_px.max(1) as f32 * scale,
             secondary: cell_style.roman_px.max(1) as f32 * scale,
@@ -895,7 +994,9 @@ impl Scale {
             label_px: LABEL_PX * scale,
             cell_pad,
             gap,
-            script_gap,
+            script_gap: script_gap * text_ratio,
+            annotation_gap: gap * text_ratio,
+            max_cell_w: f32::INFINITY,
         }
     }
 }
@@ -949,7 +1050,8 @@ fn layout_cell(
         cell_pad,
         gap,
         script_gap,
-        ..
+        annotation_gap,
+        max_cell_w,
     } = *style;
     let (label_w, label_h) = if label.is_empty() {
         (0.0, 0.0)
@@ -979,9 +1081,41 @@ fn layout_cell(
         None => (0.0, false, 0.0, 0.0),
     };
     let label_gap = if slot > 0.0 { gap } else { 0.0 };
+    // A cell wider than `max_cell_w` keeps one line per script and ends it in
+    // an ellipsis (macOS `byTruncatingTail`): a stacked pair cuts each line to
+    // the room, a one-line row lets the annotation give way first.
+    let room = max_cell_w - (cell_pad * 2.0 + slot + label_gap);
+    let (text, text_w, annotation, ann_w) = match annotation {
+        Some(ann) if !vertical => {
+            let (text, text_w) = truncate(&cell.text, text_px, text_hanji, text_w, room, measure);
+            let (ann, ann_w) = truncate(ann, ann_px, ann_hanji, ann_w, room, measure);
+            (text, text_w, Some(ann), ann_w)
+        }
+        Some(ann) if text_w + annotation_gap + ann_w <= room => (
+            Cow::Borrowed(cell.text.as_str()),
+            text_w,
+            Some(Cow::Borrowed(ann)),
+            ann_w,
+        ),
+        Some(ann) => {
+            let ann_room = room - text_w - annotation_gap;
+            if ann_room >= measure.size(ELLIPSIS, ann_px, ann_hanji).0 {
+                let (ann, ann_w) = truncate(ann, ann_px, ann_hanji, ann_w, ann_room, measure);
+                (Cow::Borrowed(cell.text.as_str()), text_w, Some(ann), ann_w)
+            } else {
+                let (text, text_w) =
+                    truncate(&cell.text, text_px, text_hanji, text_w, room, measure);
+                (text, text_w, None, 0.0)
+            }
+        }
+        None => {
+            let (text, text_w) = truncate(&cell.text, text_px, text_hanji, text_w, room, measure);
+            (text, text_w, None, 0.0)
+        }
+    };
     let stacked = !vertical && annotation.is_some();
-    let text_base = measure.baseline(&cell.text, text_px, text_hanji);
-    let ann_base = match annotation {
+    let text_base = measure.baseline(&text, text_px, text_hanji);
+    let ann_base = match annotation.as_deref() {
         Some(text) => measure.baseline(text, ann_px, ann_hanji),
         None => 0.0,
     };
@@ -1009,7 +1143,7 @@ fn layout_cell(
     let (block_w, block_h) = if stacked {
         (text_w.max(ann_w), text_h + script_gap + ann_h)
     } else if annotation.is_some() {
-        (text_w + gap + ann_w, ascent + descent)
+        (text_w + annotation_gap + ann_w, ascent + descent)
     } else {
         (text_w, ascent + descent)
     };
@@ -1041,7 +1175,7 @@ fn layout_cell(
     let block_y = cell_pad + (inner_h - block_h) / 2.0;
     if stacked {
         glyphs.push(Glyph {
-            text: cell.text.clone(),
+            text: text.to_string(),
             x: block_x + (block_w - text_w) / 2.0,
             y: block_y,
             w: text_w,
@@ -1050,7 +1184,7 @@ fn layout_cell(
             role: Role::Text,
             hanji: text_hanji,
         });
-        if let Some(text) = annotation {
+        if let Some(text) = annotation.as_deref() {
             glyphs.push(Glyph {
                 text: text.to_owned(),
                 x: block_x + (block_w - ann_w) / 2.0,
@@ -1064,7 +1198,7 @@ fn layout_cell(
         }
     } else {
         glyphs.push(Glyph {
-            text: cell.text.clone(),
+            text: text.to_string(),
             x: block_x,
             y: cell_pad + ascent - text_base,
             w: text_w,
@@ -1073,10 +1207,10 @@ fn layout_cell(
             role: Role::Text,
             hanji: text_hanji,
         });
-        if let Some(text) = annotation {
+        if let Some(text) = annotation.as_deref() {
             glyphs.push(Glyph {
                 text: text.to_owned(),
-                x: block_x + text_w + gap,
+                x: block_x + text_w + annotation_gap,
                 y: cell_pad + ascent - ann_base,
                 w: ann_w,
                 h: ann_h,
@@ -1099,6 +1233,62 @@ fn layout_cell(
             target: Target::Cell(index),
         },
     }
+}
+
+const ELLIPSIS: &str = "…";
+
+/// `text` (`width` wide at `px`) cut at the end to fit `room`, an ellipsis
+/// after what is left, and its new width. A cut never separates a letter from
+/// its combining mark (POJ o͘, a decomposed tone mark) or a Hanji from its
+/// variation selector, and drops the space
+/// it would leave before the ellipsis. Nothing fits: the ellipsis alone.
+fn truncate<'a>(
+    text: &'a str,
+    px: f32,
+    hanji: bool,
+    width: f32,
+    room: f32,
+    measure: &impl Measure,
+) -> (Cow<'a, str>, f32) {
+    if width <= room {
+        return (Cow::Borrowed(text), width);
+    }
+    let cuts: Vec<usize> = text
+        .char_indices()
+        .filter(|&(index, scalar)| index > 0 && !is_combining(scalar))
+        .map(|(index, _)| index)
+        .collect();
+    let shortened = |cut: usize| {
+        let candidate = format!("{}{ELLIPSIS}", text[..cut].trim_end());
+        let width = measure.size(&candidate, px, hanji).0;
+        (candidate, width)
+    };
+    // The longest prefix that fits: widths grow with the prefix.
+    let (mut low, mut high) = (0, cuts.len());
+    while low < high {
+        let middle = (low + high).div_ceil(2);
+        if shortened(cuts[middle - 1]).1 <= room {
+            low = middle;
+        } else {
+            high = middle - 1;
+        }
+    }
+    let (candidate, width) = shortened(if low == 0 { 0 } else { cuts[low - 1] });
+    (Cow::Owned(candidate), width)
+}
+
+fn is_combining(scalar: char) -> bool {
+    matches!(
+        scalar as u32,
+        0x0300..=0x036F
+            | 0x1AB0..=0x1AFF
+            | 0x1DC0..=0x1DFF
+            | 0x200D
+            | 0x20D0..=0x20FF
+            | 0xFE00..=0xFE0F
+            | 0xFE20..=0xFE2F
+            | 0xE0100..=0xE01EF
+    )
 }
 
 /// Whether one line is Hanji script, and so takes the Hanji typeface. A
@@ -1279,6 +1469,7 @@ mod tests {
             ),
             &Mono,
             1.0,
+            Fit::UNBOUNDED,
         );
         let text = role(&layout, Role::Text);
         let annotation = role(&layout, Role::Annotation);
@@ -1288,8 +1479,41 @@ mod tests {
         assert!(text.hanji);
         assert!(!annotation.hanji);
         assert!(annotation.y > text.y);
-        // Default window pad is 4, and the script gap equals that pad.
-        assert!((annotation.y - (text.y + text.h) - pads(4, 1.0).script).abs() < 0.01);
+        // trace: default window pad 4 = the script gap at 16 px; the page's
+        // larger size is 20 px, so the gap grows to 4 × 20 / 16 = 5.
+        assert!((annotation.y - (text.y + text.h) - 5.0).abs() < 0.01);
+    }
+
+    /// L6: at 48 px the Hanji and the romanization of a vertical row sat the
+    /// fixed 4 px pad apart. The gap now grows with the text: 4 px up to the
+    /// 16 px default, 4 × 48 / 16 = 12 px at 48.
+    #[test]
+    fn the_gap_between_the_scripts_grows_with_the_text() {
+        let gap_at = |px: u32, vertical: bool| {
+            let mut shown = page(
+                vertical,
+                true,
+                vec![Cell {
+                    text: "一".into(),
+                    annotation: Some("tsit".into()),
+                }],
+            );
+            shown.hanji_px = px;
+            shown.roman_px = px;
+            let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
+            let text = role(&layout, Role::Text);
+            let annotation = role(&layout, Role::Annotation);
+            if vertical {
+                annotation.x - (text.x + text.w)
+            } else {
+                annotation.y - (text.y + text.h)
+            }
+        };
+        assert!((gap_at(13, true) - 4.0).abs() < 0.01);
+        assert!((gap_at(16, true) - 4.0).abs() < 0.01);
+        assert!((gap_at(48, true) - 12.0).abs() < 0.01);
+        assert!((gap_at(16, false) - 4.0).abs() < 0.01);
+        assert!((gap_at(48, false) - 12.0).abs() < 0.01);
     }
 
     #[test]
@@ -1314,7 +1538,7 @@ mod tests {
         );
         // "10" is twice as wide as "1" under Mono, the way "w" is wider than "1".
         shown.labels = vec!["1".into(), "10".into(), String::new()];
-        let layout = arrange(&shown, &Mono, 1.0);
+        let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
         let labels: Vec<_> = layout
             .glyphs
             .iter()
@@ -1346,6 +1570,7 @@ mod tests {
             ),
             &Mono,
             1.0,
+            Fit::UNBOUNDED,
         );
         let text = role(&layout, Role::Text);
         let annotation = role(&layout, Role::Annotation);
@@ -1367,6 +1592,7 @@ mod tests {
             ),
             &Mono,
             1.0,
+            Fit::UNBOUNDED,
         );
         let roman = arrange(
             &page(
@@ -1379,6 +1605,7 @@ mod tests {
             ),
             &Mono,
             1.0,
+            Fit::UNBOUNDED,
         );
         assert_eq!(role(&hanji, Role::Text).px, 20.0);
         assert!(role(&hanji, Role::Text).hanji);
@@ -1401,6 +1628,7 @@ mod tests {
             ),
             &Mono,
             1.0,
+            Fit::UNBOUNDED,
         );
         let lines: Vec<_> = swapped
             .glyphs
@@ -1426,6 +1654,7 @@ mod tests {
             ),
             &Mono,
             1.0,
+            Fit::UNBOUNDED,
         );
         let text = role(&layout, Role::Text);
         let annotation = role(&layout, Role::Annotation);
@@ -1446,7 +1675,7 @@ mod tests {
             }],
         );
         shown.chrome.highlight_fill = 100;
-        let layout = arrange(&shown, &Mono, 1.0);
+        let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
         let highlight = layout.highlight.expect("highlight");
         assert_eq!(highlight.x, 0.0);
         assert_eq!(highlight.y, 0.0);
@@ -1474,7 +1703,7 @@ mod tests {
     fn a_row_draws_its_cells_at_the_packed_widths() {
         let shown = page(false, true, short_cells());
         let pad = pads(shown.chrome.padding, 1.0).window;
-        let layout = arrange(&shown, &Mono, 1.0);
+        let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
         assert_eq!(layout.width, pad * 2.0 + packed_extent(&shown) as f32);
     }
 
@@ -1489,7 +1718,7 @@ mod tests {
             ..ExpandableView::default()
         });
         for scale in [1.0, 1.25, 2.0] {
-            let layout = arrange(&shown, &Mono, scale);
+            let layout = arrange(&shown, &Mono, scale, Fit::UNBOUNDED);
             let highlight = layout.highlight.expect("highlight");
             assert!(
                 (highlight.x + highlight.w - layout.width).abs() < 0.01,
@@ -1516,7 +1745,7 @@ mod tests {
             ],
         );
         shown.chrome.highlight_fill = 100;
-        let layout = arrange(&shown, &Mono, 1.0);
+        let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
         let highlight = layout.highlight.expect("highlight");
         assert_eq!(highlight.x, 0.0);
         assert_eq!(highlight.y, 0.0);
@@ -1567,7 +1796,7 @@ mod tests {
             visible_rows: 2,
             row_height: 40,
         });
-        let layout = arrange(&shown, &Mono, 1.0);
+        let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
         let texts: Vec<_> = layout
             .glyphs
             .iter()
@@ -1621,9 +1850,11 @@ mod tests {
                 row_height: 40,
             });
             shown.chrome.highlight_fill = 0;
-            let bare = arrange(&shown, &Mono, 1.0).highlight.expect("highlight");
+            let bare = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED)
+                .highlight
+                .expect("highlight");
             shown.chrome.highlight_fill = 100;
-            let layout = arrange(&shown, &Mono, 1.0);
+            let layout = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
             let full = layout.highlight.expect("highlight");
             // The top-left cell's fill reaches the window edge, as collapsed.
             assert_eq!((full.x, full.y), (0.0, 0.0), "axis {axis}");
@@ -1640,8 +1871,8 @@ mod tests {
                         .collect();
                     hits[1].y - hits[0].y
                 };
-                let unfolded = arrange(&shown, &Mono, 1.0);
-                let folded = arrange(&collapsed, &Mono, 1.0);
+                let unfolded = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
+                let folded = arrange(&collapsed, &Mono, 1.0, Fit::UNBOUNDED);
                 assert!((pitch(&unfolded) - pitch(&folded)).abs() < 0.5);
             }
         }
@@ -1682,8 +1913,8 @@ mod tests {
             visible_rows: 2,
             row_height: 40,
         });
-        let before = arrange(&folded, &Mono, 1.0);
-        let after = arrange(&unfolded, &Mono, 1.0);
+        let before = arrange(&folded, &Mono, 1.0, Fit::UNBOUNDED);
+        let after = arrange(&unfolded, &Mono, 1.0, Fit::UNBOUNDED);
         assert!((before.height - after.height).abs() < 0.5);
         let full = after.highlight.expect("highlight");
         assert!((full.x + full.w - after.width).abs() < 0.01);
@@ -1711,7 +1942,7 @@ mod tests {
             axis: 1,
             ..ExpandableView::default()
         });
-        let layout = arrange(&folded, &Mono, 1.0);
+        let layout = arrange(&folded, &Mono, 1.0, Fit::UNBOUNDED);
         let cells_right = layout
             .hits
             .iter()
@@ -1731,7 +1962,7 @@ mod tests {
         assert!(full.x + full.w <= arrow.x, "the fill leaves the arrow be");
         // Without overflow there is no arrow and the fill meets the edge.
         folded.has_next = false;
-        let plain = arrange(&folded, &Mono, 1.0);
+        let plain = arrange(&folded, &Mono, 1.0, Fit::UNBOUNDED);
         assert!(plain
             .hits
             .iter()
@@ -1784,10 +2015,12 @@ mod tests {
             row_height: 40,
         });
         shown.cursor = Some(0);
-        let layout = arrange(&shown, &TallHanji, 1.0);
+        let layout = arrange(&shown, &TallHanji, 1.0, Fit::UNBOUNDED);
         let short = layout.highlight.expect("cursor");
         shown.cursor = Some(1);
-        let tall = arrange(&shown, &TallHanji, 1.0).highlight.expect("cursor");
+        let tall = arrange(&shown, &TallHanji, 1.0, Fit::UNBOUNDED)
+            .highlight
+            .expect("cursor");
         let pad = pads(shown.chrome.padding, 1.0).window;
         assert!(
             (short.y - pad).abs() < 0.01,
@@ -1828,7 +2061,7 @@ mod tests {
         last.min_content_width = 300;
         let widths: Vec<f32> = [first, middle, last]
             .iter()
-            .map(|shown| arrange(shown, &Mono, 1.0).width)
+            .map(|shown| arrange(shown, &Mono, 1.0, Fit::UNBOUNDED).width)
             .collect();
         assert_eq!(widths[0], widths[1]);
         assert_eq!(widths[1], widths[2]);
@@ -1846,9 +2079,13 @@ mod tests {
         };
         let mut shown = page(false, true, vec![two_line, roman_only]);
         shown.chrome.highlight_fill = 0;
-        let tall = arrange(&shown, &Mono, 1.0).highlight.expect("cursor");
+        let tall = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED)
+            .highlight
+            .expect("cursor");
         shown.cursor = Some(1);
-        let short = arrange(&shown, &Mono, 1.0).highlight.expect("cursor");
+        let short = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED)
+            .highlight
+            .expect("cursor");
         assert_eq!(short.y, tall.y);
         assert_eq!(short.h, tall.h);
     }
@@ -1875,9 +2112,158 @@ mod tests {
         );
         let mut loose = tight.clone();
         loose.chrome.padding = 16;
-        let tight = arrange(&tight, &Mono, 1.0);
-        let loose = arrange(&loose, &Mono, 1.0);
+        let tight = arrange(&tight, &Mono, 1.0, Fit::UNBOUNDED);
+        let loose = arrange(&loose, &Mono, 1.0, Fit::UNBOUNDED);
         assert!(loose.width > tight.width);
         assert!(loose.height > tight.height);
+    }
+
+    fn fit(width: f32, height: f32) -> Fit {
+        Fit {
+            width,
+            height,
+            first_row: 0,
+        }
+    }
+
+    fn long_cell() -> Cell {
+        Cell {
+            text: "一上台語的聲袂大米款黃接相見入".into(),
+            annotation: Some("tsit siōng tâi-gí ê siann bē tāi bí khuán n̂g tsiap sio-kìnn".into()),
+        }
+    }
+
+    /// Every text and annotation line ends inside the window's pad.
+    fn assert_inside(layout: &Arrangement, pad: f32) {
+        for glyph in &layout.glyphs {
+            assert!(
+                glyph.x + glyph.w <= layout.width - pad + 0.01,
+                "{:?} ends at {} in a {} window",
+                glyph.text,
+                glyph.x + glyph.w,
+                layout.width
+            );
+        }
+    }
+
+    /// L1: a horizontal cell wider than the screen was drawn whole and ran off
+    /// its right edge. Both lines now end in an ellipsis inside the window.
+    #[test]
+    fn a_cell_wider_than_the_screen_ends_in_an_ellipsis() {
+        let shown = page(false, true, vec![long_cell()]);
+        let whole = arrange(&shown, &Mono, 1.0, Fit::UNBOUNDED);
+        // trace: Mono = chars × px / 2: text 15 × 20 / 2 = 150, past a 140 window.
+        assert!(whole.width > 140.0);
+        let layout = arrange(&shown, &Mono, 1.0, fit(140.0, 600.0));
+        assert!(layout.width <= 140.0, "window {}", layout.width);
+        assert_inside(&layout, pads(4, 1.0).window);
+        assert!(role(&layout, Role::Text).text.ends_with('…'));
+        assert!(role(&layout, Role::Annotation).text.ends_with('…'));
+        // The highlight stays inside the window too.
+        let highlight = layout.highlight.expect("highlight");
+        assert!(highlight.x + highlight.w <= layout.width);
+    }
+
+    /// L2 (the first row at tsf 1.0): a vertical row wider than the screen.
+    /// The annotation gives way first; when even the text does not fit, the
+    /// annotation goes and the text ends in an ellipsis.
+    #[test]
+    fn a_vertical_row_lets_the_annotation_give_way_first() {
+        let shown = page(true, true, vec![long_cell()]);
+        // trace: Mono = chars × px / 2. Text 15 × 20 / 2 = 150; the room
+        // leaves it whole and cuts the annotation.
+        let layout = arrange(&shown, &Mono, 1.0, fit(260.0, 600.0));
+        assert!(layout.width <= 260.0);
+        assert_inside(&layout, pads(4, 1.0).window);
+        assert_eq!(role(&layout, Role::Text).text, long_cell().text);
+        assert!(role(&layout, Role::Annotation).text.ends_with('…'));
+
+        let narrow = arrange(&shown, &Mono, 1.0, fit(120.0, 600.0));
+        assert!(narrow.width <= 120.0);
+        assert_inside(&narrow, pads(4, 1.0).window);
+        assert!(role(&narrow, Role::Text).text.ends_with('…'));
+        assert!(narrow
+            .glyphs
+            .iter()
+            .all(|glyph| glyph.role != Role::Annotation));
+    }
+
+    #[test]
+    fn a_cut_keeps_a_letter_with_its_combining_mark() {
+        // POJ "o͘" is o + U+0358: no cut may leave the o without its dot.
+        let text = "ho͘ho͘ho͘ho͘ho͘ho͘";
+        for room in 1..40 {
+            let (cut, _) = truncate(text, 10.0, false, 1000.0, room as f32 * 5.0, &Mono);
+            let kept = cut.trim_end_matches('…');
+            assert!(text.starts_with(kept));
+            assert!(
+                !text[kept.len()..].starts_with('\u{0358}'),
+                "{cut:?} split o͘"
+            );
+        }
+    }
+
+    fn rows_page(count: usize, cursor: u32) -> Show {
+        let cells = (0..count)
+            .map(|index| Cell {
+                text: format!("字{index}"),
+                annotation: Some("lâi".into()),
+            })
+            .collect();
+        let mut shown = page(true, true, cells);
+        shown.cursor = Some(cursor);
+        shown
+    }
+
+    fn shown_rows(layout: &Arrangement) -> Vec<String> {
+        layout
+            .glyphs
+            .iter()
+            .filter(|glyph| glyph.role == Role::Text)
+            .map(|glyph| glyph.text.clone())
+            .collect()
+    }
+
+    /// L2: a vertical list taller than the screen only moved and ran past the
+    /// bottom. It now shows the rows that fit, around the cursor, and scrolls
+    /// only when the cursor leaves them.
+    #[test]
+    fn a_vertical_list_taller_than_its_room_shows_the_rows_around_the_cursor() {
+        let whole = arrange(&rows_page(9, 0), &Mono, 1.0, Fit::UNBOUNDED);
+        let room = whole.height * 0.5;
+        let top = arrange(&rows_page(9, 0), &Mono, 1.0, fit(600.0, room));
+        assert!(top.height <= room, "{} > {room}", top.height);
+        let visible = shown_rows(&top).len();
+        assert!((2..9).contains(&visible), "{visible} rows");
+        assert_eq!(top.first_row, 0);
+        assert_eq!(shown_rows(&top)[0], "字0");
+
+        // The cursor on the last row scrolls it into view, at the bottom.
+        let bottom = arrange(&rows_page(9, 8), &Mono, 1.0, fit(600.0, room));
+        assert_eq!(bottom.first_row, 9 - visible);
+        assert_eq!(shown_rows(&bottom).last().map(String::as_str), Some("字8"));
+        let highlight = bottom.highlight.expect("highlight");
+        assert!(highlight.y + highlight.h <= bottom.height);
+        assert!(bottom.hits.iter().all(|hit| hit.y + hit.h <= bottom.height));
+
+        // Back up one row: still on screen, so the rows stay put.
+        let mut held = fit(600.0, room);
+        held.first_row = bottom.first_row;
+        let up = arrange(&rows_page(9, 7), &Mono, 1.0, held);
+        assert_eq!(up.first_row, bottom.first_row);
+    }
+
+    #[test]
+    fn visible_rows_handles_its_edges() {
+        let rows = [10.0; 5];
+        // Everything fits; no cursor; a stale first row past the end.
+        assert_eq!(visible_rows(&rows, 2.0, 100.0, None, 0), (0, 5));
+        assert_eq!(visible_rows(&rows, 2.0, 22.0, None, 9), (4, 1));
+        // No room still shows the cursor's row.
+        assert_eq!(visible_rows(&rows, 2.0, 0.0, Some(3), 0), (3, 1));
+        assert_eq!(visible_rows(&[], 2.0, 0.0, None, 0), (0, 0));
+        // trace: two rows take 10 + 2 + 10 = 22; the cursor on row 4 brings
+        // rows 3..=4.
+        assert_eq!(visible_rows(&rows, 2.0, 22.0, Some(4), 0), (3, 2));
     }
 }

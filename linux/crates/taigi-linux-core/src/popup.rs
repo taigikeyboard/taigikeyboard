@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command as Process, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 
@@ -20,7 +20,7 @@ use taigi_desktop_core::session::{EngineState, LookupTableContent};
 use taigi_desktop_core::settings::{keys, SettingsDocument};
 use taigi_linux_platform::{paths::POPUP_BINARY_NAME, InstallLayout};
 pub use taigikeyboard_popup::{Caret, Event};
-use taigikeyboard_popup::{Cell, Chrome, Command, ExpandableView, Show};
+use taigikeyboard_popup::{Cell, Chrome, Command, ExpandableView, Notice, Show};
 
 /// Primary and secondary sizes, typefaces and colors for one page. The
 /// primary size is `hanji_px` (settings key `hanjiFontSize`).
@@ -132,12 +132,24 @@ pub fn move_to(caret: Caret) {
     let _ = client.send(&Command::Move { caret });
 }
 
+/// Starts the window before the first list, so its screen report
+/// ([`Notice::Screen`]) reaches the session in time to pack that list. The
+/// IBus shell calls it where it starts watching the window; Fcitx5 starts it
+/// through [`notify_fd`].
+pub fn start() {
+    if let Some(client) = client() {
+        client.ensure();
+    }
+}
+
 /// The read end Fcitx5 watches. Valid for the life of the process; the
 /// caller does not close it. Made non-blocking, so [`poll_one`] never waits.
+/// Starts the window too ([`start`]).
 pub fn notify_fd() -> i32 {
     let Some(client) = client() else {
         return -1;
     };
+    client.ensure();
     let reader = client
         .reader
         .lock()
@@ -480,6 +492,16 @@ fn read_available(client: &Host) {
 
 static CLIENT: OnceLock<Option<Host>> = OnceLock::new();
 
+/// The width of the screen under the caret, px before scale, as the window
+/// last reported it ([`Notice::Screen`]); 0 until it has.
+static SCREEN_WIDTH: AtomicU32 = AtomicU32::new(0);
+
+/// The screen width the window last reported, px before scale. `None` before
+/// the window has started.
+pub fn screen_width() -> Option<u32> {
+    Some(SCREEN_WIDTH.load(Ordering::Relaxed)).filter(|width| *width > 0)
+}
+
 impl Host {
     fn open() -> Option<Self> {
         let (reader, writer) = match os_pipe::pipe() {
@@ -646,6 +668,10 @@ fn read_stdout(
         match std::io::BufRead::read_line(&mut lines, &mut line) {
             Ok(0) | Err(_) => break,
             Ok(_) => {}
+        }
+        if let Ok(Notice::Screen { width }) = serde_json::from_str::<Notice>(line.trim()) {
+            SCREEN_WIDTH.store(width, Ordering::Relaxed);
+            continue;
         }
         let Ok(event) = serde_json::from_str::<Event>(line.trim()) else {
             continue;

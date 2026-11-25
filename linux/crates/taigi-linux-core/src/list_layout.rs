@@ -16,7 +16,9 @@ use taigi_desktop_core::settings::{
     keys, CandidateFontSelection, CandidateLayout, SettingsDocument,
 };
 use taigikeyboard_popup::text::Fonts;
-use taigikeyboard_popup::{row_widths, Cell, CellStyle, Measure, RowWidths};
+use taigikeyboard_popup::{
+    row_chrome_width, row_widths, Cell, CellStyle, Measure, RowWidths, SCREEN_MARGIN_PX,
+};
 
 /// The core's base paddings at macOS's chrome ratio 0.7, not macOS's own
 /// paddings (`CandidateChrome::MACOS`, which Web draws).
@@ -36,6 +38,8 @@ struct Measured {
 trait TextRuler: Debug + Send + Sync {
     fn measure(&self, runs: &[(&str, f32)]) -> Option<Measured>;
     fn size(&self, text: &str, px: f32, hanji: bool) -> Option<(f32, f32)>;
+    /// The screen the window is on, px before scale; `None` until known.
+    fn screen_width(&self) -> Option<f32>;
 }
 
 struct PopupTextRuler {
@@ -75,6 +79,10 @@ impl TextRuler for PopupTextRuler {
     fn size(&self, text: &str, px: f32, hanji: bool) -> Option<(f32, f32)> {
         let fonts = self.fonts.lock().ok()?;
         Some(Measure::size(&*fonts, text, px, hanji))
+    }
+
+    fn screen_width(&self) -> Option<f32> {
+        crate::popup::screen_width().map(|width| width as f32)
     }
 }
 
@@ -138,8 +146,9 @@ impl PopupListLayout {
 }
 
 impl PopupListLayout {
-    /// The widths the popup draws a stacked row at (`row_widths`), capped at
-    /// a full row — so packing agrees with what the window actually shows.
+    /// The widths the popup draws a stacked row at (`row_widths`), each
+    /// capped at the fullest row (within the screen's `room`, when given) —
+    /// so packing agrees with what the window shows.
     /// Whole px, each with the gap after it, floored at the slot: nine short
     /// cells fill a row exactly, and the row packer and the unfolded grid
     /// (one px per column) break at the same cell.
@@ -147,6 +156,7 @@ impl PopupListLayout {
         &self,
         cells: &[CandidateCellContent],
         settings: &SettingsDocument,
+        room: Option<f32>,
     ) -> Option<RowWidths> {
         let hanji_px = settings.i64(&keys::HANJI_FONT_SIZE).clamp(
             *keys::CANDIDATE_FONT_PX_RANGE.start(),
@@ -156,10 +166,7 @@ impl PopupListLayout {
             *keys::CANDIDATE_FONT_PX_RANGE.start(),
             *keys::CANDIDATE_FONT_PX_RANGE.end(),
         ) as u32;
-        let padding = settings.i64(&keys::CANDIDATE_WINDOW_PADDING).clamp(
-            *keys::CANDIDATE_CHROME_PX_RANGE.start(),
-            *keys::CANDIDATE_CHROME_PX_RANGE.end(),
-        ) as u32;
+        let padding = padding_of(settings);
         let cell_style = CellStyle {
             hanji_px,
             roman_px,
@@ -179,13 +186,38 @@ impl PopupListLayout {
             slot,
             gap,
         } = row_widths(&row_cells, cell_style, &measure);
-        // A word wider than a full row packs as one; the popup draws it whole.
-        let budget = HorizontalPageLayout::row_budget(slot, PAGE_SIZE_HINT);
+        // A word wider than the budget packs as one row at the budget.
+        let budget = capped_row(slot, PAGE_SIZE_HINT, room);
         for width in &mut widths {
             *width = width.min(budget);
         }
         Some(RowWidths { widths, slot, gap })
     }
+
+    /// How wide a plain horizontal row of cells may be on the screen: the
+    /// screen less the window's margins and chrome. `None` until the window
+    /// has reported its screen.
+    fn screen_room(&self, settings: &SettingsDocument) -> Option<f32> {
+        let screen = self.ruler.screen_width()?;
+        let chrome = row_chrome_width(padding_of(settings), &RulerMeasure(&*self.ruler));
+        Some((screen - SCREEN_MARGIN_PX * 2.0 - chrome).floor())
+    }
+}
+
+/// The widest a row packs to: `page_size` short cells, and no wider than
+/// `room`, so a large text size takes more pages instead of running off the
+/// screen. The popup draws the same row inside the same screen, a word wider
+/// than it ending in an ellipsis.
+fn capped_row(slot: f32, page_size: usize, room: Option<f32>) -> f32 {
+    let full_row = HorizontalPageLayout::row_budget(slot, page_size);
+    room.map_or(full_row, |room| full_row.min(room.max(slot)))
+}
+
+fn padding_of(settings: &SettingsDocument) -> u32 {
+    settings.i64(&keys::CANDIDATE_WINDOW_PADDING).clamp(
+        *keys::CANDIDATE_CHROME_PX_RANGE.start(),
+        *keys::CANDIDATE_CHROME_PX_RANGE.end(),
+    ) as u32
 }
 
 /// The fullest slot set; a row is never wider than this many short cells.
@@ -203,17 +235,12 @@ impl ListLayout for PopupListLayout {
         {
             return None;
         }
-        let RowWidths { widths, slot, gap } = self.visual_row_widths(cells, settings)?;
-        // The same budget a collapsed horizontal-expandable row packs to, so
-        // the two modes keep one window width once the list runs past a row.
+        let room = self.screen_room(settings);
+        let RowWidths { widths, slot, gap } = self.visual_row_widths(cells, settings, room)?;
+        let budget = capped_row(slot, page_size, room);
         // The floor is the cells' extent only: the window adds the arrows
         // itself.
-        let packed = HorizontalPageLayout::pack(
-            &widths,
-            slot,
-            HorizontalPageLayout::row_budget(slot, page_size),
-            page_size,
-        );
+        let packed = HorizontalPageLayout::pack(&widths, slot, budget, page_size);
         Some(packed.page_starts_and_floor(cells.len(), page_size, gap))
     }
 
@@ -271,7 +298,10 @@ impl ListLayout for PopupListLayout {
             .map(|cell| metrics.measure_annotation(cell.annotation.as_deref(), &answers))
             .collect();
         if layout == CandidateLayout::Expandable {
-            let RowWidths { widths, slot, .. } = self.visual_row_widths(cells, settings)?;
+            // A full row of short cells, not capped at the screen: the
+            // unfolded grid's columns come from the same full-row baseline in
+            // `taigi-desktop-core` (`expandable.rs`).
+            let RowWidths { widths, slot, .. } = self.visual_row_widths(cells, settings, None)?;
             let budget = HorizontalPageLayout::row_budget(slot, page_size);
             let chrome = metrics.candidate_font_size() * CHEVRON_COLUMN_RATIO;
             return Some(ExpandableListModel::new(
@@ -339,8 +369,10 @@ mod tests {
     use taigi_desktop_core::candidates::ExpandableAxis;
     use taigi_desktop_core::session::PAGE_SIZE;
 
+    /// Half an em per character, on a screen of the given width (px before
+    /// scale) or an unknown one.
     #[derive(Debug)]
-    struct FixedRuler;
+    struct FixedRuler(Option<f32>);
 
     impl TextRuler for FixedRuler {
         fn measure(&self, runs: &[(&str, f32)]) -> Option<Measured> {
@@ -356,6 +388,17 @@ mod tests {
         fn size(&self, text: &str, px: f32, _hanji: bool) -> Option<(f32, f32)> {
             Some((text.chars().count() as f32 * px * 0.5, px))
         }
+
+        fn screen_width(&self) -> Option<f32> {
+            self.0
+        }
+    }
+
+    fn settings_at_48(layout: CandidateLayout) -> SettingsDocument {
+        let mut settings = settings_with(layout);
+        settings.set_i64(&keys::HANJI_FONT_SIZE, 48);
+        settings.set_i64(&keys::ROMAN_FONT_SIZE, 48);
+        settings
     }
 
     fn settings_with(layout: CandidateLayout) -> SettingsDocument {
@@ -366,7 +409,7 @@ mod tests {
 
     #[test]
     fn horizontal_is_not_measured() {
-        let layout = PopupListLayout::new(Arc::new(FixedRuler));
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(None)));
         let cells = vec![CandidateCellContent::new("a", None)];
         assert!(layout
             .layout(&cells, &SettingsDocument::default(), PAGE_SIZE)
@@ -375,7 +418,7 @@ mod tests {
 
     #[test]
     fn horizontal_expandable_builds_a_row_model() {
-        let layout = PopupListLayout::new(Arc::new(FixedRuler));
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(None)));
         let cells = vec![CandidateCellContent::new("台", Some("tâi".into())); 20];
         let model = layout
             .layout(
@@ -390,7 +433,7 @@ mod tests {
 
     #[test]
     fn nine_short_cells_fill_the_collapsed_row_and_every_unfolded_row() {
-        let layout = PopupListLayout::new(Arc::new(FixedRuler));
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(None)));
         let mut cells = vec![CandidateCellContent::new("你", Some("lí".into())); 9];
         cells.push(CandidateCellContent::new(
             "這是很長很長的詞",
@@ -418,7 +461,7 @@ mod tests {
 
     #[test]
     fn a_long_word_ends_its_own_row_and_leaves_the_short_row_full() {
-        let layout = PopupListLayout::new(Arc::new(FixedRuler));
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(None)));
         let mut cells = vec![CandidateCellContent::new("字", None); 9];
         cells.push(CandidateCellContent::new("這是很長很長的詞條", None));
         cells.extend(vec![CandidateCellContent::new("字", None); 3]);
@@ -447,7 +490,7 @@ mod tests {
     fn cells_past_the_packer_take_equal_pages() {
         // Cells past MAX_DISPLAY_CANDIDATES take equal pages, not one long
         // last page.
-        let layout = PopupListLayout::new(Arc::new(FixedRuler));
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(None)));
         let count = taigi_desktop_core::candidates::MAX_DISPLAY_CANDIDATES + 20;
         let cells = vec![CandidateCellContent::new("字", None); count];
         let (starts, _) = layout
@@ -459,5 +502,137 @@ mod tests {
             .expect("horizontal");
         let last = *starts.last().expect("starts");
         assert!(count - last <= PAGE_SIZE);
+    }
+
+    /// L1: at 48 px a row of nine short cells packed to nine slots, wider than
+    /// a 640 px screen (1280 px at text scale 2.0). The row now packs to the
+    /// screen less its margins and chrome, and takes more pages.
+    #[test]
+    fn a_row_packs_no_wider_than_the_screen() {
+        let settings = settings_at_48(CandidateLayout::Horizontal);
+        // The slot cell itself, so an unbounded row holds exactly nine.
+        let cells = vec![CandidateCellContent::new("字", Some("lâi".into())); 18];
+        let unbounded = PopupListLayout::new(Arc::new(FixedRuler(None)));
+        let (starts, _) = unbounded
+            .horizontal_page_starts(&cells, &settings, PAGE_SIZE)
+            .expect("horizontal");
+        assert_eq!(starts[1], PAGE_SIZE);
+
+        const SCREEN: f32 = 640.0;
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(Some(SCREEN))));
+        let (starts, _) = layout
+            .horizontal_page_starts(&cells, &settings, PAGE_SIZE)
+            .expect("horizontal");
+        let per_page = starts[1];
+        assert!(per_page < PAGE_SIZE, "{per_page} cells on the first page");
+        let RowWidths { widths, gap, .. } = layout
+            .visual_row_widths(&cells, &settings, layout.screen_room(&settings))
+            .expect("widths");
+        let row: f32 = widths[..per_page].iter().sum::<f32>() - gap;
+        let chrome = row_chrome_width(padding_of(&settings), &RulerMeasure(&FixedRuler(None)));
+        assert!(
+            row + chrome + SCREEN_MARGIN_PX * 2.0 <= SCREEN,
+            "row {row} + chrome {chrome}"
+        );
+    }
+
+    /// L1: a word wider than the screen packs as its own row, capped at the
+    /// screen's room; the popup draws it at that width with an ellipsis.
+    #[test]
+    fn a_word_wider_than_the_screen_is_capped_at_its_room() {
+        let settings = settings_at_48(CandidateLayout::Horizontal);
+        let long = CandidateCellContent::new(
+            "一上台語的聲袂大米款黃接相見入",
+            Some("tsit siōng tâi-gí ê siann bē tāi bí khuán n̂g tsiap sio-kìnn ji̍p".into()),
+        );
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(Some(640.0))));
+        let RowWidths { widths, .. } = layout
+            .visual_row_widths(&[long], &settings, layout.screen_room(&settings))
+            .expect("widths");
+        let chrome = row_chrome_width(padding_of(&settings), &RulerMeasure(&FixedRuler(None)));
+        assert!(widths[0] <= 640.0 - SCREEN_MARGIN_PX * 2.0 - chrome);
+    }
+
+    /// The horizontal-expandable model keeps its full-row budget: its unfolded
+    /// columns come from `taigi-desktop-core`'s full-row baseline, so capping
+    /// only the collapsed row would break the two rows at different cells.
+    #[test]
+    fn the_expandable_row_is_not_capped_at_the_screen() {
+        let settings = settings_at_48(CandidateLayout::Expandable);
+        let cells = vec![CandidateCellContent::new("字", Some("lâi".into())); 30];
+        let model_on = |ruler: Arc<dyn TextRuler>| {
+            let mut model = PopupListLayout::new(ruler)
+                .layout(&cells, &settings, PAGE_SIZE)
+                .expect("model");
+            let collapsed = model.collapsed_cells().len();
+            model.expand();
+            (collapsed, model.grid().rows[0].len())
+        };
+        let unbounded = model_on(Arc::new(FixedRuler(None)));
+        assert_eq!(unbounded, (PAGE_SIZE, PAGE_SIZE));
+        assert_eq!(model_on(Arc::new(FixedRuler(Some(640.0)))), unbounded);
+    }
+
+    /// The session packs and the popup draws one row inside one screen: at
+    /// either scale no packed cell is cut and the window fits the screen.
+    #[test]
+    fn a_packed_row_draws_whole_inside_its_screen() {
+        use taigikeyboard_popup::{arrange, Caret, Cell, Chrome, Fit, Show};
+        const SCREEN: f32 = 640.0;
+        let settings = settings_at_48(CandidateLayout::Horizontal);
+        let cells: Vec<CandidateCellContent> = ["人", "台灣", "字", "生理", "兄弟仔", "字"]
+            .iter()
+            .cycle()
+            .take(24)
+            .map(|text| CandidateCellContent::new(*text, Some("lâng".into())))
+            .collect();
+        let layout = PopupListLayout::new(Arc::new(FixedRuler(Some(SCREEN))));
+        let (starts, floor) = layout
+            .horizontal_page_starts(&cells, &settings, PAGE_SIZE)
+            .expect("horizontal");
+        let page_cells: Vec<Cell> = cells[starts[0]..starts[1]]
+            .iter()
+            .map(|cell| Cell {
+                text: cell.text.clone(),
+                annotation: cell.annotation.clone(),
+            })
+            .collect();
+        let show = Show {
+            labels: (1..=page_cells.len()).map(|key| key.to_string()).collect(),
+            cells: page_cells,
+            cursor: Some(0),
+            vertical: false,
+            has_prev: false,
+            has_next: true,
+            hanji_px: 48,
+            roman_px: 48,
+            hanji_leads: true,
+            min_content_width: floor,
+            expandable: None,
+            chrome: Chrome {
+                padding: padding_of(&settings),
+                ..Chrome::default()
+            },
+            caret: Caret {
+                x: 0,
+                y: 0,
+                w: 0,
+                h: 0,
+            },
+        };
+        for scale in [1.0_f32, 2.0] {
+            let width = (SCREEN - SCREEN_MARGIN_PX * 2.0) * scale;
+            let fit = Fit {
+                width,
+                height: 2000.0,
+                first_row: 0,
+            };
+            let drawn = arrange(&show, &RulerMeasure(&FixedRuler(None)), scale, fit);
+            assert!(drawn.width <= width + 1.0, "scale {scale}: {}", drawn.width);
+            assert!(
+                drawn.glyphs.iter().all(|glyph| !glyph.text.ends_with('…')),
+                "scale {scale}: a packed cell was cut"
+            );
+        }
     }
 }
