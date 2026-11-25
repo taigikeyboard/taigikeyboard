@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ime.text.keyboard.computeBottomInsetPadding
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
 import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
@@ -96,6 +97,8 @@ fun LayoutOverlayContent(
     onLayoutSelected: (String) -> Unit,
     onCustomLayoutSelected: (CustomLayout) -> Unit,
     modifier: Modifier = Modifier,
+    /** Navigation-bar inset the keyboard body pads by; the overlay covers that band too. */
+    bottomInset: Dp = computeBottomInsetPadding(),
 ) {
     // Key on resetKey (monotonic per show()), NOT the selection: the composition survives hide/show,
     // and selectedKey can return to a PRIOR value (e.g. TPS cascade restoring the pre-TPS layout),
@@ -118,6 +121,8 @@ fun LayoutOverlayContent(
             modifier
                 .fillMaxSize()
                 .themeBackground(appearance.surface, appearance.solidBackground, topInsetPx)
+                // The surface runs under the navigation bar like the keyboard's; the rows stop above it.
+                .padding(bottom = bottomInset)
                 .verticalScroll(rememberScrollState())
                 .padding(top = 10.dp, bottom = 4.dp),
     ) {

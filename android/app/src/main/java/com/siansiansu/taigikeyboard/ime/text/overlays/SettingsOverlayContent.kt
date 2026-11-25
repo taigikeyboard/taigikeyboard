@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
@@ -44,6 +45,7 @@ import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.settings.candidateDisplayModeOptions
 import com.siansiansu.taigikeyboard.ime.settings.nasalMarkerStyleOptions
 import com.siansiansu.taigikeyboard.ime.settings.syllableSeparatorOptions
+import com.siansiansu.taigikeyboard.ime.text.keyboard.computeBottomInsetPadding
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -62,6 +64,8 @@ fun SettingsOverlayContent(
     refreshTrigger: Int,
     onDismiss: () -> Unit,
     onOpenApp: () -> Unit,
+    /** Navigation-bar inset the keyboard body pads by; the overlay covers that band too. */
+    bottomInset: Dp = computeBottomInsetPadding(),
 ) {
     val scope = rememberCoroutineScope()
 
@@ -119,6 +123,8 @@ fun SettingsOverlayContent(
             Modifier
                 .fillMaxSize()
                 .themeBackground(appearance.surface, appearance.solidBackground, topInsetPx)
+                // The surface runs under the navigation bar like the keyboard's; the rows stop above it.
+                .padding(bottom = bottomInset)
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 8.dp),
     ) {

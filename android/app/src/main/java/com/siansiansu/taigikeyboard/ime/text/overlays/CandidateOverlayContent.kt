@@ -14,6 +14,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -61,6 +62,7 @@ import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.text.candidates.CandidateRowLayout
 import com.siansiansu.taigikeyboard.ime.text.candidates.candidateCellBackground
 import com.siansiansu.taigikeyboard.ime.text.candidates.candidateCellText
+import com.siansiansu.taigikeyboard.ime.text.keyboard.computeBottomInsetPadding
 import com.siansiansu.taigikeyboard.ime.text.smartbar.KeyboardChromeColors
 import com.siansiansu.taigikeyboard.ime.text.smartbar.iconRes
 import com.siansiansu.taigikeyboard.ime.theme.ThemeSurface
@@ -126,6 +128,8 @@ fun CandidateOverlayContent(
     onCollapse: () -> Unit,
     onTranslateToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Navigation-bar inset the keyboard body pads by; the overlay covers that band too. */
+    bottomInset: Dp = computeBottomInsetPadding(),
 ) {
     val context = LocalContext.current
     val fontScale = LocalConfiguration.current.fontScale
@@ -192,8 +196,15 @@ fun CandidateOverlayContent(
     // text_input_content (not a child), so it must paint the surface itself — a
     // transparent overlay would reveal the transparent IME window. The adaptive default
     // falls back to the solid `?smartbar_bgColor` chrome. This overlay spans the full
-    // keyboard, so no top inset is needed (the offset panels pass smartbar height).
-    Box(modifier = modifier.fillMaxSize().themeBackground(surface, colors.background)) {
+    // keyboard, so no top inset is needed (the offset panels pass smartbar height). The surface
+    // runs under the navigation bar like the keyboard's; the grid and controls stop above it.
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .themeBackground(surface, colors.background)
+                .padding(bottom = bottomInset),
+    ) {
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -430,7 +441,7 @@ private fun ControlPanel(
             iconPadding = 12.dp,
             onClick = onCollapse,
         )
-        Spacer(Modifier.height(3.dp))
+        FlexibleGap(3.dp)
         ControlButton(
             iconRes = R.drawable.ic_arrow_triangle_up,
             contentDescription = stringRes(StringKey.COMMON_PAGE_PREVIOUS),
@@ -439,7 +450,7 @@ private fun ControlPanel(
             iconPadding = 10.dp,
             onClick = onPageUp,
         )
-        Spacer(Modifier.height(16.dp))
+        FlexibleGap(16.dp)
         ControlButton(
             iconRes = R.drawable.ic_arrow_triangle_down,
             contentDescription = stringRes(StringKey.COMMON_PAGE_NEXT),
@@ -449,7 +460,7 @@ private fun ControlPanel(
             onClick = onPageDown,
         )
         if (showTranslate) {
-            Spacer(Modifier.height(25.dp))
+            FlexibleGap(25.dp)
             ControlButton(
                 iconRes = R.drawable.ic_translate,
                 contentDescription = stringRes(StringKey.COMMON_TOGGLE_TRANSLATE_SWAPPED),
@@ -461,6 +472,15 @@ private fun ControlPanel(
             )
         }
     }
+}
+
+/**
+ * A gap of up to [max] between control buttons. The gaps give way, in proportion, when the
+ * overlay is too short for the full column (landscape, short keys), so the buttons keep their size.
+ */
+@Composable
+private fun ColumnScope.FlexibleGap(max: Dp) {
+    Spacer(Modifier.weight(max.value).heightIn(max = max))
 }
 
 @Composable
