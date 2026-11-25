@@ -478,6 +478,9 @@ function apply(reply) {
     }
     watchField();
     place();
+    // Again once editors that reconcile their DOM in a microtask (Lexical)
+    // have moved the caret; a fold or unfold this reply started makes the
+    // panel wait for its end (`Panel.place`).
     if (panel.isShown) {
       queueMicrotask(place);
     }

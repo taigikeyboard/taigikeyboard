@@ -103,6 +103,12 @@ export class Panel {
   /** @type {Animation[]} */
   #unfolding = [];
   /**
+   * The last point `place` was asked for while a mode change played, placed
+   * once it ends; `null` when none waits.
+   * @type {CaretPoint | null}
+   */
+  #placeAfterUnfold = null;
+  /**
    * That copy while the change plays: the drawings the new mode does not have.
    * @type {HTMLElement | null}
    */
@@ -467,7 +473,7 @@ export class Panel {
    * fading in on the grid or out with it. Tracks carry frames; only their
    * differences are used, so every drawing moves relative to where the
    * page drew it. After `place`: an animation changes what `offsetHeight`
-   * reads.
+   * reads, so a `place` while it plays waits for its end.
    * @returns {void}
    */
   #startUnfold() {
@@ -507,7 +513,11 @@ export class Panel {
     );
     window.onfinish = () => {
       if (this.#unfolding[0] === window) {
+        const point = this.#placeAfterUnfold;
         this.#endUnfold();
+        if (point) {
+          this.place(point);
+        }
       }
     };
     this.#unfolding = [window];
@@ -617,7 +627,9 @@ export class Panel {
 
   /**
    * Stops a mode change mid-way or once played: every drawing back to where
-   * the page put it, the copy gone.
+   * the page put it, the copy gone. A `place` left waiting is dropped: the
+   * callers that stop a change mid-way (`showTable`, `hideTable`) are
+   * followed by their own `place`, or leave the panel hidden.
    * @returns {void}
    */
   #endUnfold() {
@@ -625,6 +637,7 @@ export class Panel {
       animation.cancel();
     }
     this.#unfolding = [];
+    this.#placeAfterUnfold = null;
     this.#ghost?.remove();
     this.#ghost = null;
     this.#list.style.removeProperty("width");
@@ -653,11 +666,18 @@ export class Panel {
    * The composition on the caret's own line, over the text there, and the list
    * under that line, or above it, or beside it where neither has the room: it
    * never covers the composition, Copy or Clear. A caret scrolled out of view
-   * leaves both at the editor's edge.
+   * leaves both at the editor's edge. While a fold or unfold plays, the
+   * window's size is the animation's, so the last point asked for waits for
+   * its end (`#startUnfold`).
    * @param {CaretPoint} point
    * @returns {void}
    */
-  place({ left, top, lineHeight }) {
+  place(point) {
+    if (this.#unfolding.length > 0) {
+      this.#placeAfterUnfold = point;
+      return;
+    }
+    const { left, top, lineHeight } = point;
     const editor = this.#editor;
     const preedit = this.#preedit;
     const lineTop = Math.max(0, Math.min(top, editor.clientHeight));

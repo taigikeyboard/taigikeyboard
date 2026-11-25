@@ -420,6 +420,39 @@ export const candidates = (page) => overlay(page).locator("#candidates li");
 export const chip = (page) => overlay(page).locator("#chip");
 
 /**
+ * Waits until the panel plays no animation, a fold or unfold's included
+ * (`web/e2e/helpers.mjs` `settled`, child animations counted too).
+ * @param {Page} page
+ * @returns {Promise<void>}
+ */
+export const settled = (page) =>
+  expect
+    .poll(() =>
+      overlay(page)
+        .locator("#panel")
+        .evaluate((root) => root.getAnimations({ subtree: true }).length),
+    )
+    .toBe(0);
+
+/**
+ * Settings the next `openTyping` starts with. Stored before the tab opens: a
+ * write into an open tab reaches it through `chrome.storage.onChanged` some
+ * time after `set` resolves.
+ * @param {Worker} worker
+ * @param {Record<string, unknown>} values
+ * @returns {Promise<void>}
+ */
+export function storeSettings(worker, values) {
+  return worker.evaluate(
+    (values) =>
+      chrome.storage.sync.set({
+        "taigi.settings": JSON.stringify({ revision: 1, values }),
+      }),
+    values,
+  );
+}
+
+/**
  * `page` on `url`, typing on, its field `selector` focused.
  * @param {BrowserContext} context
  * @param {Worker} worker
