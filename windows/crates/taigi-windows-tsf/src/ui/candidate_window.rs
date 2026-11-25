@@ -450,16 +450,18 @@ impl CandidateWindow {
 
     /// New cells in place (the Hanji/romanization flip, a display-mode change): re-packed
     /// and re-measured, the height reflowed for content that gained or lost
-    /// its annotations, selection kept on its absolute index.
+    /// its annotations, selection kept on its absolute index — or moved to
+    /// `select`, the cell its word sits on in a list fetched again.
     pub fn update_cells(
         &mut self,
         content: CandidateWindowContent,
         settings: &SettingsDocument,
+        select: Option<usize>,
     ) -> Option<WindowFrame> {
         if self.cells.is_empty() || content.cells.is_empty() {
             return None;
         }
-        let kept = self.selected_index()?;
+        let kept = select.or(self.selected_index())?;
         let CandidateWindowContent {
             cells,
             slot_key_set,

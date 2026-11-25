@@ -476,6 +476,7 @@ fn lab_rows(
         frequency: frequency_map(picks),
         custom: Vec::new(),
         learned: Vec::new(),
+        ..Default::default()
     };
     composing::explain::mechanism(
         engine,

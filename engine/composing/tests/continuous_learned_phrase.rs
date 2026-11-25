@@ -367,6 +367,156 @@ fn a_hanji_less_segment_blocks_learning() {
     }
 }
 
+/// [`learn`] with Hàn-Lô lām on (`AppConfig.han_lo_mixed`).
+fn learn_han_lo(raw: &str, picks: &[Pick<'_>]) -> Option<LearnedEntry> {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let config = protos::engine::AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        ..config_tl()
+    };
+    let mut e = engine_in_continuous(raw);
+    let mut last = None;
+    for p in picks {
+        last = Some(e.apply_learning(pick(*p), &config));
+    }
+    last.expect("at least one pick").learned
+}
+
+// Hàn-Lô lām: a word picked in romanization stands in the phrase as its
+// canonical TL, as the whole-sentence candidate writes it.
+#[test]
+fn han_lo_learns_a_mixed_phrase() {
+    assert_eq!(
+        learn_han_lo(
+            "kikhilai",
+            &[(Some("記"), "kì", 2, 1), (None, "khí-lâi", 6, 2)]
+        ),
+        phrase("記khí-lâi", "kì khí-lâi")
+    );
+}
+
+// Two romanized words keep the word space between them.
+#[test]
+fn han_lo_spaces_two_romanized_words() {
+    assert_eq!(
+        learn_han_lo(
+            "kikhilai",
+            &[
+                (Some("記"), "kì", 2, 1),
+                (None, "khí", 3, 1),
+                (None, "lâi", 3, 1)
+            ]
+        ),
+        phrase("記khí lâi", "kì khí lâi")
+    );
+}
+
+// A phrase with no Hanji at all is its own romanization row already.
+#[test]
+fn han_lo_never_learns_an_all_romanized_phrase() {
+    assert_eq!(
+        learn_han_lo("kikhilai", &[(None, "kì", 2, 1), (None, "khí-lâi", 6, 2)]),
+        None
+    );
+}
+
+// The separator the user typed in front of a romanized word stays in the
+// phrase's Hanji, as in its reading.
+#[test]
+fn han_lo_keeps_the_typed_separator_in_the_hanji() {
+    for (raw, consumed, hanji, tl) in [
+        ("ki--khilai", 8, "記--khí-lâi", "kì--khí-lâi"),
+        ("ki-khilai", 7, "記-khí-lâi", "kì-khí-lâi"),
+        ("kikhilai", 6, "記khí-lâi", "kì khí-lâi"),
+    ] {
+        assert_eq!(
+            learn_han_lo(
+                raw,
+                &[(Some("記"), "kì", 2, 1), (None, "khí-lâi", consumed, 2)]
+            ),
+            phrase(hanji, tl),
+            "raw {raw:?}"
+        );
+    }
+}
+
+// A phrase holding a word picked in romanization is counted once as picked
+// (the user wrote that mixed form on purpose); one of Hanji picks alone is not.
+#[test]
+fn han_lo_counts_a_mixed_phrase_as_picked() {
+    let counts = |picks: &[Pick<'_>]| {
+        let _lock = engine_install_lock();
+        install(&fixture_rows(), FIXTURE_SYLLABLES);
+        let config = protos::engine::AppConfig {
+            han_lo_mixed: true,
+            is_hanji_first: true,
+            ..config_tl()
+        };
+        let mut e = engine_in_continuous("kikhilai");
+        let mut last = None;
+        for p in picks {
+            last = Some(e.apply_learning(pick(*p), &config));
+        }
+        let last = last.expect("a pick");
+        (last.learned.is_some(), last.learned_counts_as_picked)
+    };
+    assert_eq!(
+        counts(&[(Some("記"), "kì", 2, 1), (None, "khí-lâi", 6, 2)]),
+        (true, true)
+    );
+    assert_eq!(
+        counts(&[(Some("記"), "kì", 2, 1), (Some("起來"), "khí-lâi", 6, 2)]),
+        (true, false)
+    );
+}
+
+// A §34 literal or typo no dictionary word reads never learns, even beside
+// a Hanji pick.
+#[test]
+fn han_lo_never_learns_a_literal_no_word_reads() {
+    assert_eq!(
+        learn_han_lo("kiasdf", &[(Some("記"), "kì", 2, 1), (None, "asdf", 6, 1)]),
+        None
+    );
+}
+
+// English input never lists romanizations, so never learns one either.
+#[test]
+fn han_lo_learns_nothing_romanized_in_english_input() {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let config = protos::engine::AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        input_mode: "english".into(),
+        ..config_tl()
+    };
+    let mut e = engine_in_continuous("kikhilai");
+    e.apply_learning(pick((Some("記"), "kì", 2, 1)), &config);
+    let last = e.apply_learning(pick((None, "khí-lâi", 6, 2)), &config);
+    assert_eq!(last.learned, None);
+}
+
+// Bopomofo typed on a TL / POJ layout is a TPS buffer, which lists no
+// romanization, so a hanji-less pick there learns no Hàn-Lô lām phrase —
+// the composition's mode decides, as its fetches do.
+#[test]
+fn han_lo_learns_nothing_romanized_in_a_tps_buffer() {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let config = protos::engine::AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        ..config_tl()
+    };
+    let mut e = engine_in_continuous("ㄍㄧ˪ㄎㄧˋㄌㄞˊ");
+    e.apply_learning(pick((Some("記"), "kì", 8, 1)), &config);
+    let last = e.apply_learning(pick((None, "khí-lâi", 16, 2)), &config);
+    assert_eq!(last.learned, None);
+}
+
 #[test]
 fn missing_canonical_tl_blocks_learning() {
     // Legacy caller / TPS-OOV: `association_tl` empty → no key to learn under.

@@ -99,6 +99,11 @@ final class SettingsStore: @unchecked Sendable {
             name: "khinsiannInHanjiEnabled",
             defaultValue: EngineSettings.defaults.isKhinsiannInHanjiEnabled,
         )
+        /// Hàn-Lô lām — desktop-core `keys::IS_HAN_LO_MIXED_ENABLED`.
+        static let isHanLoMixedEnabled = SettingsKey(
+            name: "hanLoMixedEnabled",
+            defaultValue: EngineSettings.defaults.isHanLoMixedEnabled,
+        )
         /// Annotate in Brackets — desktop-core `keys::OUTPUT_BOTH_SCRIPTS`, the
         /// mobile spelling.
         static let isOutputBothScripts = SettingsKey(
@@ -655,6 +660,7 @@ final class SettingsStore: @unchecked Sendable {
             Keys.isTpsKeyboardShown.name,
             Keys.isTelexGuideShown.name,
             Keys.toneInputScheme.name,
+            Keys.isHanLoMixedEnabled.name,
             Keys.isCAffricateEnabled.name,
             Keys.isFHyphenEnabled.name,
             Keys.isHanjiFirst.name,
@@ -835,6 +841,15 @@ final class SettingsStore: @unchecked Sendable {
     var storedIsHanjiFirst: Bool {
         get { bool(Keys.isHanjiFirst) }
         set { userDefaults.set(newValue, forKey: Keys.isHanjiFirst.name) }
+    }
+
+    /// Whether the Hanji/romanization swap changes which candidates exist, not
+    /// only how they draw: side by side with romanized words as candidates in
+    /// effect, whose romanization twins are listed only when the Hanji leads
+    /// (`AppConfig::lists_roman_twins`). Mirrors desktop-core
+    /// `global_action::swap_changes_the_list`, which the other desktops run.
+    var swapChangesTheList: Bool {
+        candidateDisplayMode == .sideBySide && bool(Keys.isHanLoMixedEnabled) && inputMode != .tps
     }
 
     /// Whether committing a word auto-inserts a trailing space. Read by the

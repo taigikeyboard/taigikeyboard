@@ -240,6 +240,7 @@ final class NextWordController {
                     candidateDisplayMode: settings.candidateDisplayMode,
                     syllableSeparator: settings.syllableSeparator,
                     isKhinsiannInHanjiEnabled: settings.isKhinsiannInHanjiEnabled,
+                    isHanLoMixedEnabled: settings.isHanLoMixedEnabled,
                     generation: envelope,
                 )
             }.value

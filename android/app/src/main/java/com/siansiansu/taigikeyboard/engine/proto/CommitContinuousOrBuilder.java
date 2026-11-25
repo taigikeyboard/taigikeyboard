@@ -100,8 +100,11 @@ public interface CommitContinuousOrBuilder extends
    * presence marks a Hanji pick (§50 learned phrases); the phrase and the
    * usage store `canonical_text`, the stored spelling, since POJ mode shows
    * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
-   * (§34 literal, OOV synth, roman-only custom row); a composition with any
-   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (§34 literal, OOV synth, roman-only custom row, a Hàn-Lô lām
+   * romanization); a composition with a hanji-less segment is never learned,
+   * except under Hàn-Lô lām, where a hanji-less segment whose reading is a
+   * dictionary word stands in the phrase as its romanization (§50) and the
+   * phrase still needs one Hanji segment. proto3 `optional` so absent ≠ empty
    * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
    * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
@@ -118,8 +121,11 @@ public interface CommitContinuousOrBuilder extends
    * presence marks a Hanji pick (§50 learned phrases); the phrase and the
    * usage store `canonical_text`, the stored spelling, since POJ mode shows
    * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
-   * (§34 literal, OOV synth, roman-only custom row); a composition with any
-   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (§34 literal, OOV synth, roman-only custom row, a Hàn-Lô lām
+   * romanization); a composition with a hanji-less segment is never learned,
+   * except under Hàn-Lô lām, where a hanji-less segment whose reading is a
+   * dictionary word stands in the phrase as its romanization (§50) and the
+   * phrase still needs one Hanji segment. proto3 `optional` so absent ≠ empty
    * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
    * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>
@@ -136,8 +142,11 @@ public interface CommitContinuousOrBuilder extends
    * presence marks a Hanji pick (§50 learned phrases); the phrase and the
    * usage store `canonical_text`, the stored spelling, since POJ mode shows
    * a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
-   * (§34 literal, OOV synth, roman-only custom row); a composition with any
-   * hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+   * (§34 literal, OOV synth, roman-only custom row, a Hàn-Lô lām
+   * romanization); a composition with a hanji-less segment is never learned,
+   * except under Hàn-Lô lām, where a hanji-less segment whose reading is a
+   * dictionary word stands in the phrase as its romanization (§50) and the
+   * phrase still needs one Hanji segment. proto3 `optional` so absent ≠ empty
    * (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
    * sidechannel, never inferred from `canonical_text` vs `association_tl`).
    * </pre>

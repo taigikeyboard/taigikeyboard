@@ -189,13 +189,43 @@ fn a_poj_han_lo_prediction_writes_the_shown_hanji_and_counts_the_stored_one() {
 }
 
 #[test]
+fn a_romanization_prediction_writes_its_romanization_and_counts_its_tl() {
+    // trace: Hàn-Lô lām — `filter.rs` `shape_prediction` gives a word written
+    // in romanization no Hanji and `display_text` = its TL; `lead` writes the
+    // romanization under every output script, never in brackets.
+    for config in [
+        config(true, false, CandidateDisplayMode::SideBySide),
+        config(true, true, CandidateDisplayMode::SideBySide),
+        config(false, false, CandidateDisplayMode::SideBySide),
+    ] {
+        let applied = send(
+            &EngineHandle::new(),
+            tap_shown(CommitScript::Lead, TL, "", TL),
+            &config,
+        );
+        assert_eq!(
+            applied.response.commit.map(|commit| commit.document_text),
+            Some(TL.to_owned()),
+            "{config:?}"
+        );
+        let expected = Usage {
+            display_text: TL.into(),
+            canonical_tl: TL.into(),
+            hanji: None,
+            abbreviation: false,
+        };
+        assert_eq!(applied.usage, Some(expected), "{config:?}");
+    }
+}
+
+#[test]
 fn a_tap_the_engine_cannot_resolve_is_ignored_and_counts_nothing() {
     let roman_led = config(false, false, CandidateDisplayMode::SideBySide);
     let cases = [
         // No script (UNSPECIFIED, or one newer than the engine).
         (tap(CommitScript::Unspecified, TL, HANJI), roman_led.clone()),
-        // No Hanji: a prediction always carries one (`filter.rs` drops the rest).
-        (tap(CommitScript::Lead, TL, ""), roman_led.clone()),
+        // Neither Hanji nor romanization: nothing to write.
+        (tap_shown(CommitScript::Lead, "", "", TL), roman_led.clone()),
         // No stored spelling to count the pick under.
         (
             tap_shown(CommitScript::Lead, TL, HANJI, ""),

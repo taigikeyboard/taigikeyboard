@@ -34,11 +34,13 @@ public extension RustEngineBridge {
     }
 
     /// UI-ready prediction value. `subtitle` is `nil` when the wire
-    /// string is empty (filter contract — happens iff roman is empty).
+    /// string is empty (filter contract — roman is empty, or `hanji` is: a
+    /// romanization-only prediction, whose `text` is the romanization).
     struct NextWordEnginePrediction: Equatable {
         public let text: String
         public let subtitle: String?
-        /// The Hanji as shown (POJ mode renders a Han-Lo word's romanization in POJ).
+        /// The Hanji as shown (POJ mode renders a Han-Lo word's romanization in POJ);
+        /// empty for a romanization-only prediction (Hàn-Lô lām).
         public let hanji: String
         /// The stored Hanji spelling (`EnginePrediction.display_text`): the key a tap
         /// is counted under and NextWord learns.
@@ -205,6 +207,7 @@ public extension RustEngineBridge {
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         syllableSeparator: SyllableSeparator = .hyphen,
         isKhinsiannInHanjiEnabled: Bool = false,
+        isHanLoMixedEnabled: Bool = false,
         generation: UInt64,
     ) -> NextWordFilterResult {
         var payload = Taigi_Engine_PredictNext()
@@ -227,6 +230,7 @@ public extension RustEngineBridge {
                 candidateDisplayMode: candidateDisplayMode,
                 syllableSeparator: syllableSeparator,
                 isKhinsiannInHanjiEnabled: isKhinsiannInHanjiEnabled,
+                isHanLoMixedEnabled: isHanLoMixedEnabled,
             ),
         ) else {
             return NextWordFilterResult(predictions: [], wasStale: false)

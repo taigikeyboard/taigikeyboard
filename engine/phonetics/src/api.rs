@@ -162,7 +162,7 @@ pub fn is_word_material(c: char) -> bool {
 // `DeriveCustomQueryKey` op went with its last caller on 2026-09-30).
 pub use crate::custom_search::{
     custom_display_roman, custom_search_reading, custom_tps_reading, derive_custom_query_key,
-    derive_custom_search_keys, tps_toneless_edge_key, CustomSearchKey,
+    derive_custom_search_keys, toneless_edge_key, CustomSearchKey,
 };
 
 pub use crate::display_rewrite::{
@@ -177,7 +177,7 @@ pub use crate::khinsiann::{
 pub use crate::reading_key::{roman_reading_eq, stored_roman_mode, toneless_reading_key};
 pub use crate::separators::{
     opens_with_neutral_mark, push_syllable_joiner_run, render_typed_separators,
-    syllable_joiner_display,
+    syllable_joiner_display, syllable_joiner_in_hanji,
 };
 pub use crate::tone_render::{
     consumed_tone_digit_offsets, literal_learning_text, normalize_tone, to_tone_marks,

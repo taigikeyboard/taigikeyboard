@@ -83,6 +83,10 @@ pub const IS_KHINSIANN_IN_HANJI_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "khinsiannInHanjiEnabled",
     ENGINE_DEFAULTS.is_khinsiann_in_hanji_enabled,
 );
+/// Hàn-Lô lām (`EngineSettings::is_han_lo_mixed_enabled`). macOS keeps a
+/// Swift twin: `SettingsStore.swift` `isHanLoMixedEnabled`.
+pub const IS_HAN_LO_MIXED_ENABLED: SettingsKey<bool> =
+    SettingsKey::new("hanLoMixedEnabled", ENGINE_DEFAULTS.is_han_lo_mixed_enabled);
 /// Type ts / ch with c (`EngineSettings::is_c_affricate_enabled`). Desktop-only
 /// like `toneInputScheme`, and independent of it. macOS keeps a Swift twin:
 /// `SettingsStore.swift` `isCAffricateEnabled`.
@@ -458,13 +462,14 @@ pub(crate) const CLEARED_COMPOSING_CHORD: &str = "";
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
 /// takes the romanization TPS returns to and the TPS key panel with it; the
 /// Telex guide's wish resets beside them.
-pub(crate) const GENERAL_KEYS: [&str; 16] = [
+pub(crate) const GENERAL_KEYS: [&str; 17] = [
     INPUT_MODE.name,
     KEYBOARD_LAYOUT.name,
     LAST_ROMANIZATION_MODE.name,
     TPS_KEYBOARD_SHOWN.name,
     TELEX_GUIDE_SHOWN.name,
     TONE_INPUT_SCHEME.name,
+    IS_HAN_LO_MIXED_ENABLED.name,
     IS_C_AFFRICATE_ENABLED.name,
     IS_F_HYPHEN_ENABLED.name,
     IS_HANJI_FIRST.name,

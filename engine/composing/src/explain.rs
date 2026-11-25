@@ -209,7 +209,19 @@ fn explain_mechanism(
     frequency: &ranking::FrequencyMap,
     config: &AppConfig,
 ) -> Mechanism {
-    let sentence = sentence_hanji(&segmentation.words, config.khinsiann_in_hanji);
+    let sentence = segmentation.sentence_hanji.as_deref().map(|hanji| {
+        // The row as listed: Step 5 renders the Syllable Separator (§49) on
+        // its romanized words and recases its nasal markers (§53).
+        let joined = match config.rendered_syllable_joiner() {
+            Some(joiner) => phonetics::api::syllable_joiner_in_hanji(hanji, joiner),
+            None => std::borrow::Cow::Borrowed(hanji),
+        };
+        phonetics::case_transform::apply_nasal_marker_case(
+            &joined,
+            config.force_lowercase_nasal_marker,
+        )
+        .into_owned()
+    });
     // One word is still the walker's path, but it is ranked with the rest
     // (`continuous::assemble` Step 4), so it is an ordinary row: tagging it
     // `sentence` would pull it back out of the twelve stages. A path of
@@ -357,30 +369,6 @@ fn explain_mechanism(
             .collect(),
         candidates: pieces,
     }
-}
-
-/// Hanji of the walker's whole-buffer path, including a path of one word.
-/// That row is inserted at slot 0 before the twelve stages, so the inspector
-/// keeps it out of the scored list. A path with a hanji-less edge has no
-/// single string to match.
-fn sentence_hanji(
-    words: &[crate::continuous::WordCut],
-    khinsiann_in_hanji: bool,
-) -> Option<String> {
-    let words: Vec<_> = words.iter().filter(|word| word.kind != "gap").collect();
-    if words.is_empty() || words.iter().any(|word| word.hanji.is_none()) {
-        return None;
-    }
-    let mut out = String::new();
-    for (idx, word) in words.iter().enumerate() {
-        let h = word.hanji.as_deref()?;
-        phonetics::api::push_hanji_with_interword_khinsiann(
-            &mut out,
-            h,
-            idx > 0 && khinsiann_in_hanji && word.khinsiann_before,
-        );
-    }
-    Some(out)
 }
 
 fn slice_raw(raw: &str, start: u32, end: u32) -> String {

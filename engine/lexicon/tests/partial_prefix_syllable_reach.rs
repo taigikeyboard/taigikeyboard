@@ -123,6 +123,7 @@ fn ctx<'a>(
         tone_pin: lexicon::TonePin::None,
         whole_buffer_key: None,
         khinsiann_in_hanji: false,
+        roman_twins: false,
     }
 }
 

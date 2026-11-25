@@ -19,6 +19,7 @@ struct SettingsTab: View {
     @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
     @State private var khinsiannInHanjiEnabled: Bool
+    @State private var hanLoMixedEnabled: Bool
     @State private var literalRomanCandidateEnabled: Bool
     @State private var syllableSeparator: SyllableSeparator
     @State private var isTpsOrMappedToER: Bool
@@ -60,6 +61,7 @@ struct SettingsTab: View {
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
         _khinsiannInHanjiEnabled = State(initialValue: settings.isKhinsiannInHanjiEnabled)
+        _hanLoMixedEnabled = State(initialValue: settings.isHanLoMixedEnabled)
         _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
         _syllableSeparator = State(initialValue: settings.syllableSeparator)
         _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
@@ -151,6 +153,23 @@ struct SettingsTab: View {
                     .disabled(!candidateDisplayMode.showsHanji)
                     .onChange(of: khinsiannInHanjiEnabled) { _, newValue in
                         settings.isKhinsiannInHanjiEnabled = newValue
+                    }
+
+                    // Romanization candidates: the engine ignores it under Romanization Only, side by
+                    // side led by the romanization and on TPS, so it greys there, as on the desktops
+                    // (`SettingsDocument::allows_han_lo_mixed`).
+                    Toggle(isOn: $hanLoMixedEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsHanLoMixed))
+                            SettingInfoButton(description: lang.string(.settingsHanLoMixedInfo))
+                        }
+                    }
+                    .disabled(
+                        !candidateDisplayMode.allowsHanLoMixed(storedHanjiFirst: settings.storedIsHanjiFirst)
+                            || selectedInputMode == .tps,
+                    )
+                    .onChange(of: hanLoMixedEnabled) { _, newValue in
+                        settings.isHanLoMixedEnabled = newValue
                     }
 
                     // Same shape as Candidate Display: a menu picker would draw the value in the accent colour.
@@ -379,6 +398,7 @@ struct SettingsTab: View {
         candidateDisplayMode = settings.candidateDisplayMode
         isOutputBothScripts = settings.storedIsOutputBothScripts
         khinsiannInHanjiEnabled = settings.isKhinsiannInHanjiEnabled
+        hanLoMixedEnabled = settings.isHanLoMixedEnabled
         literalRomanCandidateEnabled = settings.isLiteralRomanCandidateEnabled
         syllableSeparator = settings.syllableSeparator
         isTpsOrMappedToER = settings.isTpsOrMappedToER

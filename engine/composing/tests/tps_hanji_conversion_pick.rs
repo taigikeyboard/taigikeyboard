@@ -586,7 +586,7 @@ impl Counts {
 impl ConversionFrequency for Counts {
     // The store's key match is `dispatch`'s; every row is handed over, and
     // the walk keys them itself.
-    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> UserRows {
+    fn rows_for_edge_keys(&self, edge_keys: &[String], _mode: phonetics::InputMode) -> UserRows {
         self.asked_edge_keys
             .borrow_mut()
             .extend(edge_keys.iter().cloned());

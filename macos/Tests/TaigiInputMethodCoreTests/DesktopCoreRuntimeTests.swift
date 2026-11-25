@@ -135,7 +135,8 @@ final class DesktopCoreRuntimeTests: XCTestCase {
         let booleans = [
             Keys.isHanjiFirst, Keys.isAutoSpaceEnabled, Keys.isCandidateWindowEnabled,
             Keys.isLiteralRomanCandidateEnabled, Keys.isNasalMarkerUppercaseEnabled,
-            Keys.isKhinsiannInHanjiEnabled, Keys.isOutputBothScripts, Keys.isCustomDictEnabled,
+            Keys.isKhinsiannInHanjiEnabled, Keys.isHanLoMixedEnabled, Keys.isOutputBothScripts,
+            Keys.isCustomDictEnabled,
             Keys.isCAffricateEnabled, Keys.isFHyphenEnabled,
             Keys.isKautianEnabled, Keys.isTaigitvEnabled, Keys.isItaigiEnabled, Keys.isSitbutEnabled,
             Keys.isTaihoaEnabled, Keys.isTaijitEnabled, Keys.isKunggeEnabled, Keys.isSttiEnabled,

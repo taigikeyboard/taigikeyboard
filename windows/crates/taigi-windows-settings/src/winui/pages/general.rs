@@ -62,16 +62,27 @@ pub fn view(
         // Which keys type a tone is a fact about how the syllable is
         // spelled, not a shortcut (USER 2026-09-08), and the slot keys
         // follow from it rather than being chosen on the shortcut pane.
-        // Under Input Script because both say what the user types.
-        choice_row(
-            strings.resolve(StringKey::SettingsToneInputScheme),
-            ToneInputScheme::ALL,
-            document.choice(&keys::TONE_INPUT_SCHEME),
-            true,
-            |scheme: ToneInputScheme| strings.resolve(scheme.label_key()).to_owned(),
-            |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
-            context,
-        ),
+        // Under Input Script because both say what the user types. Hàn-Lô
+        // lām right under it (macOS / Linux / Web place it there too), greyed
+        // where the engine ignores it (Romanization Only, TPS); one fragment,
+        // as the outer tuple is at `IntoViews`' 16-element limit.
+        View::fragment((
+            choice_row(
+                strings.resolve(StringKey::SettingsToneInputScheme),
+                ToneInputScheme::ALL,
+                document.choice(&keys::TONE_INPUT_SCHEME),
+                true,
+                |scheme: ToneInputScheme| strings.resolve(scheme.label_key()).to_owned(),
+                |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
+                context,
+            ),
+            cards::switch_row(
+                strings.resolve(StringKey::SettingsHanLoMixed),
+                document.bool(&keys::IS_HAN_LO_MIXED_ENABLED),
+                document.allows_han_lo_mixed(),
+                context.callback(|is_on| Message::SetSwitch(keys::IS_HAN_LO_MIXED_ENABLED, is_on)),
+            ),
+        )),
         // Under Tone Keys, independent of it: both say what a letter types.
         // TPS has no `c` initial, so the row greys there, as the layout does.
         cards::switch_row(

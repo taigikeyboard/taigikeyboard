@@ -289,6 +289,15 @@ pub struct UserRows {
     /// The learned phrases (§50) matching the buffer, most-learned first —
     /// the order decides which of two separator forms of one reading wins.
     pub learned: Vec<lexicon::LearnedEntry>,
+    /// The custom-dictionary entries filed under an edge of the buffer's
+    /// sentence walk that `custom` does not already hold (`m̄知影` inside
+    /// `guamtsaiiann`): the walker's edge pick only, never a listed row — a
+    /// row of the list covers the whole buffer.
+    pub edge_custom: Vec<lexicon::CustomEntry>,
+    /// The learned phrases (§50) filed under an edge of the buffer's sentence
+    /// walk that `learned` does not already hold, most-learned first: the
+    /// walker's edge pick only, never a listed row.
+    pub edge_learned: Vec<lexicon::LearnedEntry>,
 }
 
 /// What a mutating intent produced: the response the platform gets, the
@@ -299,6 +308,12 @@ pub struct UserRows {
 pub struct Applied {
     pub response: ComposingResponse,
     pub learned: Option<lexicon::LearnedEntry>,
+    /// The `learned` phrase holds a word picked in romanization (Hàn-Lô lām,
+    /// `我` + `tsia̍h`): the user wrote that mixed form on purpose, so it is
+    /// counted once as picked too, and the next composition of its reading
+    /// leads with it (§50). A phrase of Hanji picks alone is not: it stays
+    /// behind the dictionary until picked.
+    pub learned_counts_as_picked: bool,
     /// Set by a `CommitContinuous` that nailed or finalized (R5).
     pub usage: Option<Usage>,
 }
@@ -308,6 +323,7 @@ impl From<ComposingResponse> for Applied {
         Self {
             response,
             learned: None,
+            learned_counts_as_picked: false,
             usage: None,
         }
     }

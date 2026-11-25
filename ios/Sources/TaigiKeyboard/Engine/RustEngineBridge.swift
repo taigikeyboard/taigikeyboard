@@ -157,6 +157,7 @@ public enum RustEngineBridge {
         syllableSeparator: SyllableSeparator = .hyphen,
         isTpsOrMappedToER: Bool = false,
         isKhinsiannInHanjiEnabled: Bool = false,
+        isHanLoMixedEnabled: Bool = false,
         dictionarySources: Taigi_Engine_DictionarySourceToggles? = nil,
         // Invert of the Enable Custom Dictionary setting: the engine reads the
         // user's dictionary only with it on. Default `false` = read it.
@@ -177,6 +178,7 @@ public enum RustEngineBridge {
         cfg.syllableSeparator = syllableSeparator.engineValue
         cfg.tpsOrMapsToEr = isTpsOrMappedToER
         cfg.khinsiannInHanji = isKhinsiannInHanjiEnabled
+        cfg.hanLoMixed = isHanLoMixedEnabled
         if let dictionarySources {
             cfg.dictionarySources = dictionarySources
         }

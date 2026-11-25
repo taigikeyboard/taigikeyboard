@@ -192,6 +192,7 @@ export class Settings {
       candidateTextSize,
       fontType,
       inputMode,
+      hanLoMixedEnabled,
       isTranslateSwapped,
       khinsiannInHanjiEnabled,
       outputBothScripts,
@@ -217,6 +218,13 @@ export class Settings {
     const isRomanOnly = candidateDisplayMode.value === "romanOnly";
     isTranslateSwapped.disabled = isRomanOnly;
     khinsiannInHanjiEnabled.disabled = isRomanOnly;
+    // Romanization Only already lists every word as its romanization, side by
+    // side led by the romanization already writes it from its paired cell,
+    // and TPS never shows one (`lists_roman_twins`, `allows_han_lo_mixed`).
+    const isRomanFirstPairing =
+      candidateDisplayMode.value === "sideBySide" &&
+      isTranslateSwapped.value === "false";
+    hanLoMixedEnabled.disabled = isRomanOnly || isRomanFirstPairing || isTyping;
     // TPS commits its Hanji as shown: brackets would land on picks only
     // (`allows_output_both_scripts`).
     outputBothScripts.disabled = isRomanOnly || isTyping;

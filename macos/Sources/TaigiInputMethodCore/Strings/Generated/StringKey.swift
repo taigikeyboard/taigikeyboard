@@ -213,6 +213,7 @@ enum StringKey: String {
     case settingsNasalMarkerUppercaseCapital = "i18n_settings_nasalMarkerUppercaseCapital"
     case settingsNasalMarkerUppercaseSmall = "i18n_settings_nasalMarkerUppercaseSmall"
     case settingsKhinsiannInHanji = "i18n_settings_khinsiannInHanji"
+    case settingsHanLoMixed = "i18n_settings_hanLoMixed"
     case themeCustomFont = "i18n_theme_customFont"
     case themeEditorResetAll = "i18n_theme_editorResetAll"
 }

@@ -170,6 +170,7 @@ pub(crate) fn assemble_candidates(
     now_ms: i64,
     custom: &[CustomEntry],
     learned: &[LearnedEntry],
+    edge_rows: (&[CustomEntry], &[LearnedEntry]),
     mode: phonetics::InputMode,
     context: &ranking::ContextRanks,
     config: &protos::engine::AppConfig,
@@ -181,6 +182,7 @@ pub(crate) fn assemble_candidates(
     let force_lowercase_nasal_marker = config.force_lowercase_nasal_marker;
     let dedupe_commit_hanji = super::dedupe::should_dedupe_commit_hanji(config, mode);
     let khinsiann_in_hanji = config.khinsiann_in_hanji;
+    let roman_twins = crate::requests::lists_roman_twins(config, mode);
     LexiconHandle::with_state(|state| {
         let inv = state.syllable_inventory.as_ref();
         let prefix = state.prefix_index.as_ref();
@@ -232,6 +234,7 @@ pub(crate) fn assemble_candidates(
                     .then(|| build_partial_prefix_key(raw, mode).map(|(_, key)| key))
                     .flatten(),
                 khinsiann_in_hanji,
+                roman_twins,
             });
 
         // ---- Step 1: build keys + shadow/lattice (D1 fold).
@@ -387,9 +390,31 @@ pub(crate) fn assemble_candidates(
             // `prefix`/`dict` from the single seam `with_state`
             // scope — no second `build_shadow_lattice_with_barriers` per fetch.
             {
-                if let (Some(continuous_keys), Some(inv), Some(ctx)) =
+                if let (Some(continuous_keys), Some(inv), Some(list_ctx)) =
                     (continuous_keys.as_ref(), inv, lex_ctx.as_ref())
                 {
+                    // The walk also meets the user rows filed under its inner
+                    // edges (`UserRows::edge_custom` / `edge_learned`), which
+                    // the list never shows: a row of the list covers the
+                    // whole buffer.
+                    let (edge_custom, edge_learned) = edge_rows;
+                    let walker_custom: Vec<CustomEntry>;
+                    let walker_learned: Vec<LearnedEntry>;
+                    let walker_ctx;
+                    let ctx = if edge_custom.is_empty() && edge_learned.is_empty() {
+                        list_ctx
+                    } else {
+                        walker_custom = custom.iter().chain(edge_custom).cloned().collect();
+                        walker_learned = learned.iter().chain(edge_learned).cloned().collect();
+                        walker_ctx = ContinuousFetchCtx {
+                            custom: &walker_custom,
+                            learned: &walker_learned,
+                            tone_pin: list_ctx.tone_pin.clone(),
+                            whole_buffer_key: list_ctx.whole_buffer_key.clone(),
+                            ..*list_ctx
+                        };
+                        &walker_ctx
+                    };
                     synth = synth_cut(raw_len, continuous_keys, inv, ctx)
                         .filter(|cut| shape == ListShape::Sentence || cut.path.edges.len() == 1);
                     if let Some(slot0) = synth
@@ -769,7 +794,8 @@ pub(crate) fn assemble_candidates(
             }
         }
         // Syllable Separator (§49) — same presentation seam, same field:
-        // only `roman`, for dictionary, custom and walker rows alike;
+        // `roman` (and the romanized words of a Han-Lo `hanji`), for
+        // dictionary, custom and walker rows alike;
         // `display_text` / `canonical_tl` keep the dictionary form. After
         // the POJ render (which splits on `-`), before the rendered
         // dedupe (which keys on what the cell shows) and before the §34
@@ -779,6 +805,17 @@ pub(crate) fn assemble_candidates(
             for cand in &mut candidates {
                 if cand.roman.contains('-') {
                     cand.roman = phonetics::api::syllable_joiner_display(&cand.roman, joiner);
+                }
+                // The romanized words a Han-Lo spelling writes (`我tâi-gí`,
+                // a Hàn-Lô lām sentence or learned phrase, `啥mih`) follow
+                // the same setting, as the nailed commit of the same picks
+                // renders them; its Hanji and their khinsiann markers stay.
+                if let Some(hanji) = &cand.hanji {
+                    if let std::borrow::Cow::Owned(rendered) =
+                        phonetics::api::syllable_joiner_in_hanji(hanji, joiner)
+                    {
+                        cand.hanji = Some(rendered);
+                    }
                 }
             }
         }
@@ -795,6 +832,19 @@ pub(crate) fn assemble_candidates(
                 )
             {
                 cand.roman = roman;
+            }
+            // A Hàn-Lô lām sentence writes its romanized words in the Hanji
+            // too (`我SIÂᴺ`); a Hanji character carries no marker, so this
+            // only ever touches those.
+            if let Some(hanji) = &cand.hanji {
+                if let std::borrow::Cow::Owned(hanji) =
+                    phonetics::case_transform::apply_nasal_marker_case(
+                        hanji,
+                        force_lowercase_nasal_marker,
+                    )
+                {
+                    cand.hanji = Some(hanji);
+                }
             }
         }
         if mode == phonetics::InputMode::Poj

@@ -13,7 +13,7 @@ use super::{
     is_vertical_layout, present_table, Emit, EngineState, KeySurface, ListSelection, Recorder,
     SymbolPicker,
 };
-use crate::composing::{insert_symbol, represent_list, ContextToken};
+use crate::composing::{insert_symbol, represent_list_following, ContextToken};
 use crate::global_action::{apply_global_action, ListEffect, ShellRequest};
 use crate::keys::{ComposingKeyBindings, ShortcutAction};
 use crate::runtime::DesktopRuntime;
@@ -131,10 +131,16 @@ fn represent_open_list(
     let Some(manager) = coordinator.manager(token) else {
         return;
     };
-    represent_list(settings, manager, &mut state.candidates, refetch);
+    let selected = state.selection.selected_index().unwrap_or(0);
+    let following =
+        represent_list_following(settings, manager, &mut state.candidates, refetch, selected);
     if refetch {
-        // A refetched list starts over at its first cell.
+        // A refetched list keeps the selection on its word
+        // (`CandidateSource::cell_following`).
         state.selection = ListSelection::new(state.candidates.len());
+        if let Some(cell) = following {
+            state.selection.select(cell);
+        }
     } else {
         // The same cells in other scripts: other widths.
         state.selection.mark_stale();

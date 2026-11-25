@@ -32,8 +32,9 @@ public interface CommitPredictionOrBuilder extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -43,8 +44,9 @@ public interface CommitPredictionOrBuilder extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -55,7 +57,8 @@ public interface CommitPredictionOrBuilder extends
 
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -64,7 +67,8 @@ public interface CommitPredictionOrBuilder extends
   java.lang.String getHanji();
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>

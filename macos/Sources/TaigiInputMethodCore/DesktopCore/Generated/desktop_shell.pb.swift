@@ -1407,9 +1407,24 @@ public nonisolated struct Taigi_DesktopShell_CandidatesChanged: Sendable {
   /// usually the word before it.
   public var anchorEndUtf16: UInt32 = 0
 
+  /// A Represent's list fetched again only: the cell the selection follows to
+  /// — the same word, or a neighbour when the new list lacks it
+  /// (`CandidateSource::cell_following`). Unset: the window keeps its
+  /// selection on its index, as for a list re-rendered in place.
+  public var selectedIndex: UInt32 {
+    get {_selectedIndex ?? 0}
+    set {_selectedIndex = newValue}
+  }
+  /// Returns true if `selectedIndex` has been explicitly set.
+  public var hasSelectedIndex: Bool {self._selectedIndex != nil}
+  /// Clears the value of `selectedIndex`. Subsequent reads from it will return its default value.
+  public mutating func clearSelectedIndex() {self._selectedIndex = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _selectedIndex: UInt32? = nil
 }
 
 public nonisolated struct Taigi_DesktopShell_CandidateCell: Sendable {
@@ -4084,7 +4099,7 @@ nonisolated extension Taigi_DesktopShell_ArmSwap: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidatesChanged"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cells\0\u{3}leads_with_literal_roman\0\u{3}anchor_end_utf16\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}cells\0\u{3}leads_with_literal_roman\0\u{3}anchor_end_utf16\0\u{3}selected_index\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4095,12 +4110,17 @@ nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Messag
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.cells) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.leadsWithLiteralRoman) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.anchorEndUtf16) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self._selectedIndex) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.cells.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.cells, fieldNumber: 1)
     }
@@ -4110,6 +4130,9 @@ nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Messag
     if self.anchorEndUtf16 != 0 {
       try visitor.visitSingularUInt32Field(value: self.anchorEndUtf16, fieldNumber: 3)
     }
+    try { if let v = self._selectedIndex {
+      try visitor.visitSingularUInt32Field(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -4117,6 +4140,7 @@ nonisolated extension Taigi_DesktopShell_CandidatesChanged: SwiftProtobuf.Messag
     if lhs.cells != rhs.cells {return false}
     if lhs.leadsWithLiteralRoman != rhs.leadsWithLiteralRoman {return false}
     if lhs.anchorEndUtf16 != rhs.anchorEndUtf16 {return false}
+    if lhs._selectedIndex != rhs._selectedIndex {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

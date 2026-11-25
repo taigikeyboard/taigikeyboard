@@ -56,12 +56,16 @@ data class NextWordDecideResult(
 
 /**
  * UI-ready prediction value. `subtitle` is `null` when the wire string
- * is empty (filter contract — happens iff roman is empty).
+ * is empty (filter contract — roman is empty, or `hanji` is: a
+ * romanization-only prediction, whose `text` is the romanization).
  */
 data class NextWordEnginePrediction(
     val text: String,
     val subtitle: String?,
-    /** The Hanji as shown (POJ mode renders a Han-Lo word's romanization in POJ). */
+    /**
+     * The Hanji as shown (POJ mode renders a Han-Lo word's romanization in POJ);
+     * empty for a romanization-only prediction (Hàn-Lô lām).
+     */
     val hanji: String,
     /**
      * The stored Hanji spelling (`EnginePrediction.display_text`): the key a tap
@@ -237,6 +241,7 @@ fun RustEngineBridge.nextwordPredictNext(
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     isKhinsiannInHanjiEnabled: Boolean = false,
+    isHanLoMixedEnabled: Boolean = false,
 ): NextWordFilterResult {
     val builder = com.siansiansu.taigikeyboard.engine.proto.PredictNext
         .newBuilder()
@@ -260,6 +265,7 @@ fun RustEngineBridge.nextwordPredictNext(
                 candidateDisplayMode = candidateDisplayMode,
                 syllableSeparator = syllableSeparator,
                 isKhinsiannInHanjiEnabled = isKhinsiannInHanjiEnabled,
+                isHanLoMixedEnabled = isHanLoMixedEnabled,
             ),
     ) ?: return NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {

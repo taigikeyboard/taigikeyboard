@@ -185,8 +185,15 @@ class CandidateBasePanel: NSPanel, CandidateWindowDragging {
     /// a new rendering, through `rerenderCandidates`. `final` for the same
     /// reason — the metrics the new cells render at are resolved here, before
     /// any layout reads them.
-    final func rerender(_ cells: [CandidateCellContent]) {
+    ///
+    /// `selecting` moves the selection there first, so the layout keeps that
+    /// cell rather than the old index (a list fetched again, where the word
+    /// may sit elsewhere).
+    final func rerender(_ cells: [CandidateCellContent], selecting: Int? = nil) {
         resolveMetrics(for: cells)
+        if let selecting {
+            selectedIndex = selecting
+        }
         rerenderCandidates(cells)
     }
 

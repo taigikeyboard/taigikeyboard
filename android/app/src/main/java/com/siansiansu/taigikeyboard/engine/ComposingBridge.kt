@@ -218,7 +218,8 @@ data class PredictionPick(
     val script: CommitScript,
     /**
      * The prediction's display romanization (`EnginePrediction.text` of a
-     * prediction with a subtitle); empty for a Hanji-only prediction.
+     * prediction with a subtitle, or of a romanization-only prediction);
+     * empty for a Hanji-only prediction.
      */
     val roman: String,
     val hanji: String,

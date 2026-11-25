@@ -51,6 +51,7 @@ pub fn key_path_settings() -> Vec<KeyPathSetting> {
         keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED,
         keys::IS_NASAL_MARKER_UPPERCASE_ENABLED,
         keys::IS_KHINSIANN_IN_HANJI_ENABLED,
+        keys::IS_HAN_LO_MIXED_ENABLED,
         keys::IS_C_AFFRICATE_ENABLED,
         keys::IS_F_HYPHEN_ENABLED,
         keys::IS_CUSTOM_DICT_ENABLED,

@@ -68,6 +68,7 @@ mod candidate;
 mod compound;
 mod edge;
 mod exact;
+mod han_lo;
 mod partial_prefix;
 mod reach;
 mod tone_pin;
@@ -76,7 +77,7 @@ mod toneless_match;
 use reach::{custom_abbreviation_matches, custom_reach, fused_custom_typed_key, CustomReach};
 
 pub use abbrev::fetch_abbrev_candidates;
-pub use compound::compound_hanji_exists;
+pub use compound::{compound_hanji_exists, reading_is_dictionary_word};
 pub use edge::{best_candidate_for_key_with_barriers, homophone_words_for_key, EdgeBest};
 pub use exact::fetch_candidates_for_keys_with_barriers;
 pub use partial_prefix::{
@@ -378,6 +379,10 @@ pub struct ContinuousFetchCtx<'a> {
     /// output (`AppConfig.khinsiann_in_hanji`). Used for custom-vs-builtin
     /// displayed-Hanji collision checks.
     pub khinsiann_in_hanji: bool,
+    /// Hàn-Lô lām (`AppConfig::lists_roman_twins`, and the fetch's mode is
+    /// TL / POJ): every reading also offers its romanization as a word of its
+    /// own ([`han_lo`]). `false` = the dictionary rows as stored.
+    pub roman_twins: bool,
 }
 
 /// Span aliases for [`fetch_candidates_for_keys_with_barriers`]: `(start_byte, end_byte)`

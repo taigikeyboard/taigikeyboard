@@ -74,6 +74,14 @@ pub(crate) fn starts_with_romanization(text: &str) -> bool {
         .is_some_and(|c| c.is_ascii_alphabetic())
 }
 
+/// Whether two words written in romanization meet across `left` / `right`
+/// and so take a word space (`tsia̍h` + `kah` → `tsia̍h kah`). A word that
+/// opens with the neutral-tone mark (`--ah`, `·ah`) attaches to the syllable
+/// before it (`tsia̍h--ah`), so it takes none.
+pub(crate) fn spaces_romanized_words(left: &str, right: &str) -> bool {
+    ends_in_romanization(left) && starts_with_romanization(right) && !right.starts_with(['-', '·'])
+}
+
 /// Whether `text` ends in a Latin romanization syllable (`tāi-tsì`, `啥mih`,
 /// `啥siⁿ`, `烏o͘`, `tai-`), as opposed to Hanji (`m̄好`, `tsit塊`, `頭路`),
 /// bracketed annotations (`台 (tâi)`), or Bopomofo (`ㄏㄧㆵ`).
@@ -486,6 +494,15 @@ mod tests {
                 ..CommitResolution::default()
             }
         );
+    }
+
+    #[test]
+    fn a_neutral_tone_romanization_joins_the_word_before_it() {
+        assert!(spaces_romanized_words("我tsia̍h", "kah"));
+        assert!(!spaces_romanized_words("我tsia̍h", "--ah"));
+        assert!(!spaces_romanized_words("我tsia̍h", "·ah"));
+        assert!(!spaces_romanized_words("我", "kah"));
+        assert!(!spaces_romanized_words("我tsia̍h", "甲"));
     }
 
     #[test]

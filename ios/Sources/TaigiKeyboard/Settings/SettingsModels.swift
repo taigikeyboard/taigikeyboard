@@ -127,6 +127,15 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
         self == .combined || (stored && showsHanji)
     }
 
+    /// Whether Romanized Words as Candidates takes effect under this mode and
+    /// the stored swap: where the cells lead with Hanji — Romanization Only and
+    /// side by side led by the romanization already write the romanization
+    /// (engine `AppConfig::lists_roman_twins`, desktop-core
+    /// `SettingsDocument::allows_han_lo_mixed`). TPS is the caller's to add.
+    func allowsHanLoMixed(storedHanjiFirst: Bool) -> Bool {
+        effectiveHanjiFirst(stored: storedHanjiFirst)
+    }
+
     /// Whether the character / symbol layouts type full-width punctuation
     /// (`，。` over `,.`) for a stored swap flag — the stored flag masked like
     /// Annotate in Brackets, NOT the candidate projection above, which `.combined` forces on

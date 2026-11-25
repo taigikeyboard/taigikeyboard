@@ -70,5 +70,6 @@ pub fn fetch_abbrev_candidates(
     }
     merge_custom_abbreviations(&mut out, fst_key, raw_len, ctx);
     dedupe_by_roman_hanji_span(&mut out, ctx.khinsiann_in_hanji);
+    super::han_lo::add_roman_twins(&mut out, ctx);
     sort_by_candidate_key(out, raw_len, RawCandidate::rank_facts)
 }

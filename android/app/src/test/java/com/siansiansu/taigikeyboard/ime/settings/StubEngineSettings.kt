@@ -10,6 +10,7 @@ internal data class StubEngineSettings(
     override var isLiteralRomanCandidateEnabled: Boolean = true,
     override var syllableSeparator: SyllableSeparator = SyllableSeparator.HYPHEN,
     override var isKhinsiannInHanjiEnabled: Boolean = false,
+    override var isHanLoMixedEnabled: Boolean = false,
     override var pojMarkerOptions: PojMarkerOptions =
         PojMarkerOptions(
             isDoubleTapOOEnabled = false,

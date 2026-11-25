@@ -157,4 +157,31 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
         XCTAssertEqual(pick.hanji, "親chiâⁿ")
         XCTAssertEqual(pick.canonicalText, "親tsiânn")
     }
+
+    /// Hàn-Lô lām: a prediction without Hanji is a word written in romanization — the
+    /// cell shows its romanization alone, and the tap sends it, counted under its TL
+    /// (`EnginePrediction.display_text`). Mirrors Android
+    /// `a_romanization_prediction_sends_its_romanization`.
+    @MainActor
+    func testPredictionPick_aRomanizationPredictionSendsItsRomanization() {
+        let romanization = prediction(
+            text: "chia̍h",
+            subtitle: nil,
+            hanji: "",
+            displayText: "tsia̍h",
+            tl: "tsia̍h",
+        )
+        let paired = ActionHandler.predictionSuggestions([romanization])[0]
+        XCTAssertEqual(paired.text, "chia̍h")
+        XCTAssertNil(paired.subtitle)
+        let roman = ActionHandler.predictionSuggestions([split(romanization, .roman)])[0]
+        XCTAssertEqual(roman.text, "chia̍h")
+        for suggestion in [paired, roman] {
+            let pick = ActionHandler.predictionPick(for: suggestion)
+            XCTAssertEqual(pick.roman, "chia̍h")
+            XCTAssertEqual(pick.hanji, "")
+            XCTAssertEqual(pick.canonicalText, "tsia̍h")
+            XCTAssertEqual(pick.canonicalTl, "tsia̍h")
+        }
+    }
 }

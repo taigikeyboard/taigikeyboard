@@ -349,6 +349,8 @@ class PrefHelper(
 
     override var isKhinsiannInHanjiEnabled: Boolean by preference(PreferenceKeys.KHINSIANN_IN_HANJI, false)
 
+    override var isHanLoMixedEnabled: Boolean by preference(PreferenceKeys.HAN_LO_MIXED, false)
+
     // Taigi-specific settings
     var enableDoubleTapOO: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
 
@@ -995,6 +997,7 @@ class PrefHelper(
             prefs[PreferenceKeys.IS_HANJI_FIRST] = true
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
             prefs[PreferenceKeys.KHINSIANN_IN_HANJI] = false
+            prefs[PreferenceKeys.HAN_LO_MIXED] = false
             prefs[PreferenceKeys.CANDIDATE_DISPLAY_MODE] = CandidateDisplayMode.SIDE_BY_SIDE.storageValue
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = true

@@ -102,17 +102,24 @@ pub fn apply_global_action(
             if !display_mode.allows_swap_toggle() {
                 return None;
             }
-            // The list STAYS: the swap changes how a candidate displays,
-            // never which exist — re-presented in place, selection kept.
-            // Announced even over an open list (USER 2026-10-31), side by side
-            // only: under combined a commit still writes the Hanji.
+            // The list STAYS: the swap changes how a candidate displays —
+            // re-presented in place, selection kept. Under side by side with
+            // romanized words as candidates it also changes which exist (the
+            // romanization twins are listed only when the Hanji leads,
+            // `AppConfig::lists_roman_twins`), so the list is fetched again
+            // and the selection follows its word. Announced even over an
+            // open list (USER 2026-10-31), side by side only: under combined
+            // a commit still writes the Hanji.
+            let swap_changes_the_list = swap_changes_the_list(runtime);
             runtime
                 .update_settings("toggle_translate_swapped", |document| {
                     let swapped = document.bool(&keys::IS_HANJI_FIRST);
                     document.set_bool(&keys::IS_HANJI_FIRST, !swapped);
                 })
                 .then_some(GlobalOutcome::mode_switch(
-                    ListEffect::Represent { refetch: false },
+                    ListEffect::Represent {
+                        refetch: swap_changes_the_list,
+                    },
                     display_mode == CandidateDisplayMode::SideBySide,
                 ))
         }
@@ -132,6 +139,19 @@ pub fn apply_global_action(
             })
             .then_some(GlobalOutcome::shell(ShellRequest::TelexGuideChanged)),
     }
+}
+
+/// Whether the swap changes which candidates exist, not only how they draw:
+/// side by side, with romanized words as candidates switched on, off TPS —
+/// the swap itself turns the twins on or off there
+/// (`SettingsDocument::allows_han_lo_mixed` reads the swap, so it cannot
+/// answer this in both directions).
+fn swap_changes_the_list(runtime: &DesktopRuntime) -> bool {
+    let document = runtime.settings.current();
+    document.choice::<CandidateDisplayMode>(&keys::CANDIDATE_DISPLAY_MODE)
+        == CandidateDisplayMode::SideBySide
+        && document.bool(&keys::IS_HAN_LO_MIXED_ENABLED)
+        && !document.is_typing_tps()
 }
 
 /// One of the two input-script switches; the candidates on screen were
@@ -217,6 +237,17 @@ mod tests {
             swapping.settings.current().bool(&keys::IS_HANJI_FIRST),
             !was_hanji_first
         );
+
+        // Romanized words as candidates: the swap changes which exist.
+        let mut han_lo = SettingsDocument::default();
+        han_lo.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::SideBySide,
+        );
+        han_lo.set_bool(&keys::IS_HAN_LO_MIXED_ENABLED, true);
+        let outcome = apply_global_action(&runtime(han_lo), ShortcutAction::ToggleTranslateSwapped)
+            .expect("written");
+        assert_eq!(outcome.list, ListEffect::Represent { refetch: true });
 
         let mut combined = SettingsDocument::default();
         combined.set_choice(

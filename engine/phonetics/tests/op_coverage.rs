@@ -71,6 +71,7 @@ fn tl_config() -> AppConfig {
         c_types_affricate: false,
         f_types_hyphen: false,
         khinsiann_in_hanji: false,
+        han_lo_mixed: false,
     }
 }
 
@@ -91,6 +92,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         c_types_affricate: false,
         f_types_hyphen: false,
         khinsiann_in_hanji: false,
+        han_lo_mixed: false,
     }
 }
 

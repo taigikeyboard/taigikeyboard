@@ -343,6 +343,7 @@ class NextWordController(
                         candidateDisplayMode = settings.candidateDisplayMode,
                         syllableSeparator = settings.syllableSeparator,
                         isKhinsiannInHanjiEnabled = settings.isKhinsiannInHanjiEnabled,
+                        isHanLoMixedEnabled = settings.isHanLoMixedEnabled,
                     )
                 }
             // A context change meanwhile makes this answer another context's.
@@ -450,7 +451,8 @@ private fun String.toEngineInputMode(): String = engineInputMode(this, unknownAs
  * (`EnginePrediction.cell_script`); each row carries its [cellScriptMarker]. Every
  * other display lists paired rows, one dual-script word per prediction
  * (`roman = ""` when the engine shaped no subtitle, so the strip renders the
- * hanji alone).
+ * hanji alone; a prediction without Hanji — Hàn-Lô lām's romanization — is
+ * romanization only).
  */
 internal fun buildPredictionWords(predictions: List<NextWordEnginePrediction>): List<TaigiWord> =
     predictions.mapIndexed { index, p ->
@@ -474,10 +476,14 @@ private fun predictionWord(
             TaigiWord.MetadataKeys.CANONICAL_TL to prediction.tl,
             TaigiWord.MetadataKeys.DISPLAY_TEXT to prediction.displayText,
         )
+    // Hàn-Lô lām: a prediction without Hanji is a word written in romanization —
+    // a romanization-only word like a Continuous romanization-only candidate
+    // (`hanji = null`), its `text` the romanization the tap writes.
+    val isRomanizationWord = prediction.hanji.isEmpty()
     return TaigiWord(
         id = id,
-        roman = if (prediction.subtitle != null) prediction.text else "",
-        hanji = prediction.hanji,
+        roman = if (prediction.subtitle != null || isRomanizationWord) prediction.text else "",
+        hanji = prediction.hanji.takeUnless { isRomanizationWord },
         additionalInfo =
             if (cellScript == null) identity else identity + (TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript),
     )

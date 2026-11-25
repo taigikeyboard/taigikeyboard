@@ -19,6 +19,7 @@ struct SettingsSelectionOverlay: View {
     @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
     @State private var khinsiannInHanjiEnabled: Bool
+    @State private var hanLoMixedEnabled: Bool
     @State private var literalRomanCandidateEnabled: Bool
     @State private var autoCapitalizationEnabled: Bool
     @State private var autoSpaceEnabled: Bool
@@ -60,6 +61,7 @@ struct SettingsSelectionOverlay: View {
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: s.storedIsOutputBothScripts)
         _khinsiannInHanjiEnabled = State(initialValue: s.isKhinsiannInHanjiEnabled)
+        _hanLoMixedEnabled = State(initialValue: s.isHanLoMixedEnabled)
         _literalRomanCandidateEnabled = State(initialValue: s.isLiteralRomanCandidateEnabled)
         _autoCapitalizationEnabled = State(
             initialValue: UserDefaults.keyboardSettings.bool(forKey: Self.autoCapKey),
@@ -109,6 +111,17 @@ struct SettingsSelectionOverlay: View {
                         SharedSettings.shared.isKhinsiannInHanjiEnabled = $0
                     }
                     .disabled(!candidateDisplayMode.showsHanji)
+                    // Romanization candidates: the engine ignores it under Romanization Only, side by
+                    // side led by the romanization and on TPS, so it greys there, as on the desktops
+                    // (`SettingsDocument::allows_han_lo_mixed`).
+                    settingsToggle(lang.string(.settingsHanLoMixed), isOn: $hanLoMixedEnabled) {
+                        SharedSettings.shared.isHanLoMixedEnabled = $0
+                    }
+                    .disabled(
+                        !candidateDisplayMode.allowsHanLoMixed(
+                            storedHanjiFirst: SharedSettings.shared.storedIsHanjiFirst,
+                        ) || SharedSettings.shared.inputMode == .tps,
+                    )
                     menuPickerRow(
                         lang.string(.settingsSyllableSeparator),
                         selection: $syllableSeparator,
@@ -173,6 +186,7 @@ struct SettingsSelectionOverlay: View {
             candidateDisplayMode = s.candidateDisplayMode
             isOutputBothScripts = s.storedIsOutputBothScripts
             khinsiannInHanjiEnabled = s.isKhinsiannInHanjiEnabled
+            hanLoMixedEnabled = s.isHanLoMixedEnabled
             literalRomanCandidateEnabled = s.isLiteralRomanCandidateEnabled
             autoCapitalizationEnabled = UserDefaults.keyboardSettings.bool(forKey: Self.autoCapKey)
             autoSpaceEnabled = s.isAutoSpaceEnabled

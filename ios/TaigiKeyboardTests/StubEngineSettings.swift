@@ -10,6 +10,7 @@ struct StubEngineSettings: EngineSettings {
     var isLiteralRomanCandidateEnabled = true
     var syllableSeparator: SyllableSeparator = .hyphen
     var isKhinsiannInHanjiEnabled = false
+    var isHanLoMixedEnabled = false
     var pojMarkerOptions = PojMarkerOptions(
         isDoubleTapOOEnabled: false,
         isDoubleTapNNEnabled: false,

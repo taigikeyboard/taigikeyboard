@@ -27,7 +27,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_desktop_core::composing::{
-    pass_through_may_consume, represent_list, CandidateSource, ComposingManager,
+    pass_through_may_consume, represent_list_following, CandidateSource, ComposingManager,
     ComposingSessionCoordinator, ContextToken,
 };
 use taigi_desktop_core::global_action::{apply_global_action, ListEffect, ShellRequest};
@@ -1026,6 +1026,7 @@ impl TextService_Impl {
         let settings = runtime.settings.current();
         let slot_key_set =
             ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM).slot_key_set();
+        let selected = presenter.borrow().selected_index(token).unwrap_or(0);
         let cells = {
             let mut state = self.state.borrow_mut();
             let Some(entry) = state.contexts.entry_mut(identity) else {
@@ -1036,13 +1037,18 @@ impl TextService_Impl {
             if source.is_empty() {
                 return;
             }
-            represent_list(&settings, manager, source, refetch)
-                .then(|| window_content(source, slot_key_set))
+            represent_list_following(&settings, manager, source, refetch, selected)
+                .map(|cell| (window_content(source, slot_key_set), cell))
         };
         match cells {
-            Some(content) => presenter
-                .borrow_mut()
-                .update_cells(content, &settings, token),
+            // A list fetched again keeps the selection on its word, which may
+            // sit on another cell now (`CandidateSource::cell_following`).
+            Some((content, cell)) => presenter.borrow_mut().update_cells(
+                content,
+                &settings,
+                token,
+                refetch.then_some(cell),
+            ),
             None => presenter.borrow_mut().hide(token),
         }
     }

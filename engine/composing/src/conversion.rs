@@ -21,7 +21,7 @@
 //! ranks with the user's learned counts when the request supplies them
 //! ([`ConversionFrequency`], H5).
 
-use lexicon::{ContinuousFetchCtx, EngineHandle as LexiconHandle, SyllableInventory};
+use lexicon::{ContinuousFetchCtx, EngineHandle as LexiconHandle, LearnedEntry, SyllableInventory};
 use phonetics::InputMode;
 use protos::engine::AppConfig;
 
@@ -42,8 +42,9 @@ use crate::shadow::{
 /// mutation's request.
 pub trait ConversionFrequency {
     /// The custom-dictionary rows and learned phrases filed under any of the
-    /// toneless TPS `edge_keys` (`ㄉㄢㄙㆩ`); `frequency` is not read.
-    fn rows_for_edge_keys(&self, edge_keys: &[String]) -> crate::api::UserRows;
+    /// toneless `edge_keys` of `mode`'s family (`ㄉㄢㄙㆩ`, `mtsaiiann`), as
+    /// `custom` / `learned`; `frequency` and the `edge_*` rows are not read.
+    fn rows_for_edge_keys(&self, edge_keys: &[String], mode: InputMode) -> crate::api::UserRows;
     /// The learned rows for `words`, keyed by the `(word, canonical TL)`
     /// pair the ranking reads.
     fn rows_for_words(&self, words: &[String]) -> ranking::FrequencyMap;
@@ -374,17 +375,27 @@ pub(crate) fn convert(
             // previous-word context.
             let user_rows = frequency
                 .map(|frequency| {
-                    frequency
-                        .rows_for_edge_keys(&edge_toneless_bodies(&continuous_keys, InputMode::Tps))
+                    frequency.rows_for_edge_keys(
+                        &edge_toneless_bodies(&continuous_keys, InputMode::Tps),
+                        InputMode::Tps,
+                    )
                 })
                 .unwrap_or_default();
+            // A TPS walk is never under Hàn-Lô lām: a phrase writing a word in
+            // romanization waits for it (`requests::writes_a_word_in_romanization`).
+            let learned: Vec<LearnedEntry> = user_rows
+                .learned
+                .iter()
+                .filter(|entry| !crate::requests::writes_a_word_in_romanization(entry))
+                .cloned()
+                .collect();
             let mut ctx = ContinuousFetchCtx {
                 enabled_sources_bitmask,
                 freq_map: &ranking::FrequencyMap::new(),
                 context: ranking::ContextRanks::empty(),
                 now_ms: 0,
                 custom: &user_rows.custom,
-                learned: &user_rows.learned,
+                learned: &learned,
                 prefix_index,
                 dict,
                 mode: InputMode::Tps,
@@ -392,6 +403,8 @@ pub(crate) fn convert(
                 tone_pin: whole_buffer_tone_pin(closed, InputMode::Tps, None),
                 whole_buffer_key: None,
                 khinsiann_in_hanji: config.khinsiann_in_hanji,
+                // A TPS walk never offers a romanization.
+                roman_twins: false,
             };
             // The user's counts for every word an edge could take, the
             // custom and learned ones included: user weight both picks an
@@ -405,7 +418,7 @@ pub(crate) fn convert(
                         .custom
                         .iter()
                         .map(|entry| entry.word(InputMode::Tps))
-                        .chain(user_rows.learned.iter().map(|entry| entry.hanji.clone()));
+                        .chain(learned.iter().map(|entry| entry.hanji.clone()));
                     words.extend(user_words.filter(|word| seen.insert(word.clone())));
                     (frequency.rows_for_words(&words), frequency.now_ms())
                 })

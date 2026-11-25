@@ -85,6 +85,7 @@ fun SettingsOverlayContent(
     // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.storedOutputBothScripts) }
     var khinsiannInHanji by remember(refreshTrigger) { mutableStateOf(prefs.isKhinsiannInHanjiEnabled) }
+    var hanLoMixed by remember(refreshTrigger) { mutableStateOf(prefs.isHanLoMixedEnabled) }
     var literalRomanCandidate by remember(refreshTrigger) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
     var autoCap by remember(refreshTrigger) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(refreshTrigger) { mutableStateOf(prefs.isAutoSpaceEnabled) }
@@ -175,6 +176,24 @@ fun SettingsOverlayContent(
             onCheckedChange = {
                 khinsiannInHanji = it
                 prefs.isKhinsiannInHanjiEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+            switchColors = switchColors,
+        )
+        // Romanization candidates: the engine ignores it under Romanization Only, side by side
+        // led by the romanization and on TPS, so it greys there, as on the desktops
+        // (`SettingsDocument::allows_han_lo_mixed`).
+        SwitchRow(
+            label = L10n.settingsHanLoMixed,
+            checked = hanLoMixed,
+            enabled =
+                candidateDisplayMode.allowsHanLoMixed(prefs.storedIsHanjiFirst) &&
+                    !prefs.isTpsLayout,
+            onCheckedChange = {
+                hanLoMixed = it
+                prefs.isHanLoMixedEnabled = it
                 autoDismissIfNeeded()
             },
             labelColor = labelColor,

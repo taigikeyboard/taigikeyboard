@@ -72,3 +72,25 @@ pub fn compound_hanji_exists(
         })
     })
 }
+
+/// Whether `reading` (canonical TL) is the reading of a dictionary word under
+/// the user's source `filter`: some record under the toneless `key` (the
+/// walker's `tl:` edge key for the reading) has a `tl` equal to `reading` up
+/// to separators ([`phonetics::api::roman_reading_eq`], tone-preserving).
+/// Hàn-Lô lām learning (§50) asks it of a picked romanization, so a §34
+/// literal or a typo (`asdf`) never stands in a learned phrase as a word.
+pub fn reading_is_dictionary_word(
+    key: &str,
+    reading: &str,
+    filter: &Filter,
+    prefix_index: &PrefixIndex,
+    dict: &DictionaryReader,
+) -> bool {
+    !reading.is_empty()
+        && prefix_index.lookup_exact(key).into_iter().any(|rowid| {
+            dict.record(rowid).is_some_and(|record| {
+                DictionaryReader::passes_filter(record.bitmask, record.kautian_subtag, filter)
+                    && phonetics::api::roman_reading_eq(&record.tl, reading)
+            })
+        })
+}

@@ -81,7 +81,7 @@ pub(crate) fn leads_with_literal_roman(
 /// for them, written together so neither can outlive the other: `set` /
 /// `clear` are the only writes, and every window index (highlighted, slot,
 /// the UI-less element's selection) comes back through `resolve`.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CandidateSource {
     candidates: Vec<ContinuousCandidate>,
     presented: Vec<PresentedCandidate>,
@@ -134,6 +134,49 @@ impl CandidateSource {
             .iter()
             .map(|presented| presented.cell.clone())
             .collect()
+    }
+
+    /// The cell of this list that shows what cell `at` of `previous` showed —
+    /// where a selection follows after the list was fetched again under new
+    /// settings (`represent_list`). The same word in the same script: the
+    /// `(display_text, canonical_tl)` identity over the same span, or the §34
+    /// literal for the literal. A word the new list no longer holds (a
+    /// romanization twin the swap took away) hands the selection to its
+    /// nearest neighbour that it still holds, the one after it first — the
+    /// cell that moves into its place — then the one before; failing all,
+    /// the same position.
+    pub fn cell_following(&self, previous: &CandidateSource, at: usize) -> usize {
+        let last = self.len().saturating_sub(1);
+        if at == 0 && previous.leads_with_literal_roman && self.leads_with_literal_roman {
+            return 0;
+        }
+        let find = |index: usize| -> Option<usize> {
+            let candidate = previous.candidates.get(index)?;
+            let script = previous.presented.get(index)?.script;
+            let is_literal = index == 0 && previous.leads_with_literal_roman;
+            (0..self.len()).find(|&cell| {
+                let (Some(other), Some(presented)) =
+                    (self.candidates.get(cell), self.presented.get(cell))
+                else {
+                    return false;
+                };
+                let other_is_literal = cell == 0 && self.leads_with_literal_roman;
+                is_literal == other_is_literal
+                    && presented.script == script
+                    && other.display_text == candidate.display_text
+                    && other.canonical_tl == candidate.canonical_tl
+                    && other.consumed_span_end == candidate.consumed_span_end
+            })
+        };
+        if let Some(cell) = find(at) {
+            return cell;
+        }
+        (1..previous.len())
+            .flat_map(|distance| [at.checked_add(distance), at.checked_sub(distance)])
+            .flatten()
+            .filter(|&index| index < previous.len())
+            .find_map(find)
+            .unwrap_or(at.min(last))
     }
 
     /// The candidate behind cell `cell_index` and the script its commit

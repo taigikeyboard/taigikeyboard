@@ -232,6 +232,8 @@
     <string name="i18n_settings_nasalMarkerUppercaseCapital">ᴺ（SIÂᴺ）</string>
     <string name="i18n_settings_nasalMarkerUppercaseSmall">ⁿ（SIÂⁿ）</string>
     <string name="i18n_settings_khinsiannInHanji">漢字に軽声（--）を表示</string>
+    <string name="i18n_settings_hanLoMixed">ローマ字語も候補に</string>
+    <string name="i18n_settings_hanLoMixedInfo">オンにすると、各語にローマ字表記の候補も加わります。単独で選べるほか、文全体の候補にも使われ、漢字とローマ字の混在文を書きやすくなります。</string>
     <string name="i18n_settings_khinsiannInHanjiInfo">オンにすると、漢字出力に台羅の軽声記号が付きます（例：會記--得、--轉-去）。</string>
     <string name="i18n_settings_tpsOrMapsToER">or を ㄜ に対応</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">オンでは「or」を ㄜ、オフでは ㄛ と表示します。検索結果には影響しません。</string>

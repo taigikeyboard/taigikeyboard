@@ -122,6 +122,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.syllableSeparator, .hyphen, "音節分隔 ships as the hyphen")
         XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled, "ⁿ大本字 ships ON")
         XCTAssertFalse(settings.isKhinsiannInHanjiEnabled)
+        XCTAssertFalse(settings.isHanLoMixedEnabled, "Hàn-Lô lām ships OFF")
     }
 
     /// The retired No Hyphens switch: a stored `true` becomes `.noSeparator`, a stored separator
@@ -233,6 +234,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isTpsOrMappedToER = false
         settings.isLiteralRomanCandidateEnabled = true
         settings.isKhinsiannInHanjiEnabled = true
+        settings.isHanLoMixedEnabled = true
         settings.syllableSeparator = .space
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
         settings.isCustomDictEnabled = false
@@ -259,6 +261,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isAutoSpaceEnabled)
         XCTAssertFalse(settings.isLiteralRomanCandidateEnabled)
         XCTAssertFalse(settings.isKhinsiannInHanjiEnabled)
+        XCTAssertFalse(settings.isHanLoMixedEnabled)
         XCTAssertEqual(settings.syllableSeparator, .hyphen)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertTrue(settings.isNewwordDictEnabled)

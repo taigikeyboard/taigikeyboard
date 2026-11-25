@@ -274,8 +274,11 @@ message CommitContinuous {
   // presence marks a Hanji pick (§50 learned phrases); the phrase and the
   // usage store `canonical_text`, the stored spelling, since POJ mode shows
   // a Han-Lo word's romanization in POJ. Wire-absent for a hanji-less pick
-  // (§34 literal, OOV synth, roman-only custom row); a composition with any
-  // hanji-less segment is never learned. proto3 `optional` so absent ≠ empty
+  // (§34 literal, OOV synth, roman-only custom row, a Hàn-Lô lām
+  // romanization); a composition with a hanji-less segment is never learned,
+  // except under Hàn-Lô lām, where a hanji-less segment whose reading is a
+  // dictionary word stands in the phrase as its romanization (§50) and the
+  // phrase still needs one Hanji segment. proto3 `optional` so absent ≠ empty
   // (Codex 2026-09-20 F2: whether a pick has Hanji is an explicit
   // sidechannel, never inferred from `canonical_text` vs `association_tl`).
   optional string hanji = 6;
@@ -306,8 +309,9 @@ enum CommitScript {
 // from `roman`, `hanji` and the request's `AppConfig` exactly as for a
 // Continuous pick (`composing::commit_text`) and answers
 // `ComposingResponse.commit`: FINALIZED with the text, or IGNORED (no
-// script, `OTHER` where the mode shows one script, no `hanji`, or nothing to
-// write — a Hanji-only prediction once the swap is off) — the platform then
+// script, `OTHER` where the mode shows one script, neither `hanji` nor
+// `roman`, no `canonical_tl`, or nothing to write — a Hanji-only prediction
+// once the swap is off) — the platform then
 // writes nothing. A split cell whose own script is missing commits the lead,
 // as a Continuous pick does (the phones' fail-open marker rule). With the
 // user-data stores open the engine counts the pick's usage under
@@ -319,10 +323,12 @@ message CommitPrediction {
   // `COMMIT_SCRIPT_LEAD`, or the §42 split cell's own script.
   CommitScript script       = 1;
   // The prediction's display romanization as the engine shaped it — the
-  // `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-  // syllable-separated); empty for a Hanji-only prediction.
+  // `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+  // romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+  // (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
   string       roman        = 2;
-  // `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+  // `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+  // for a romanization-only prediction, which writes `roman`.
   string       hanji        = 3;
   // `EnginePrediction.tl` — the canonical TL the usage is counted under.
   string       canonical_tl = 4;

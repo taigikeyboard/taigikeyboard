@@ -956,9 +956,11 @@ fn nail_segment(
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed, config);
+        let learned_counts_as_picked = learned.is_some() && holds_a_romanized_pick(&new_nailed);
         let applied = Applied {
             response: finalize(state, combined, terminal),
             learned,
+            learned_counts_as_picked,
             usage: None,
         };
         return (applied, CommitOutcome::Finalized);
@@ -1172,9 +1174,11 @@ fn commit_as_shown(state: &mut EngineState, config: &AppConfig) -> Applied {
     } else {
         (next_word_clear_for_new_composing(), None)
     };
+    let learned_counts_as_picked = learned.is_some() && holds_a_romanized_pick(nailed);
     Applied {
         response: finalize_composition(state, text, terminal, config),
         learned,
+        learned_counts_as_picked,
         usage: None,
     }
 }
@@ -1388,11 +1392,13 @@ fn confirm_composition_then_insert(
 /// `Intent::CommitPrediction` (D1): the document text a NextWord prediction
 /// tap writes, resolved by the Continuous pick's resolver
 /// ([`resolve_commit_text`]), and its usage. The composition is left as it is
-/// (the snapshot answers it unchanged). No Hanji, no `canonical_text`, no
-/// script, a script the prediction lacks, or an empty document text is
-/// ignored: no usage. The usage is counted under `canonical_text`, the stored
-/// spelling, not the shown `hanji`; it carries no `hanji`, so counting it
-/// touches no learned phrase.
+/// (the snapshot answers it unchanged). Neither Hanji nor romanization, no
+/// `canonical_text`, no script, a script the prediction lacks, or an empty
+/// document text is ignored: no usage. A prediction without Hanji is a word
+/// written in romanization (Hàn-Lô lām, §42) and writes its romanization. The
+/// usage is counted under `canonical_text`, the stored spelling, not the
+/// shown `hanji`; it carries no `hanji`, so counting it touches no learned
+/// phrase.
 fn commit_prediction(
     state: &EngineState,
     script: Option<CommitScript>,
@@ -1402,9 +1408,10 @@ fn commit_prediction(
     canonical_text: String,
     config: &AppConfig,
 ) -> Applied {
+    let hanji = Some(hanji.as_str()).filter(|hanji| !hanji.is_empty());
     let resolved = script
-        .filter(|_| !hanji.is_empty() && !canonical_text.is_empty())
-        .and_then(|script| resolve_commit_text(script, roman, Some(&hanji), config))
+        .filter(|_| (hanji.is_some() || !roman.is_empty()) && !canonical_text.is_empty())
+        .and_then(|script| resolve_commit_text(script, roman, hanji, config))
         // A Hanji-only prediction led by its (absent) romanization — the swap
         // turned off between the strip and the tap — writes nothing.
         .filter(|resolved| !resolved.text.is_empty());
@@ -1419,6 +1426,7 @@ fn commit_prediction(
     Applied {
         response,
         learned: None,
+        learned_counts_as_picked: false,
         usage,
     }
 }
@@ -1596,6 +1604,13 @@ fn next_word_word_selected(
     }
 }
 
+/// Whether a composition [`learned_phrase`] learned holds a word picked in
+/// romanization (a hanji-less segment, which it admits only under Hàn-Lô
+/// lām): [`Applied::learned_counts_as_picked`].
+fn holds_a_romanized_pick(nailed: &[NailedSegment]) -> bool {
+    nailed.iter().any(|seg| seg.hanji.is_none())
+}
+
 /// Learned phrases (§50) — the `(Hanji, canonical-TL)` pair a final
 /// continuous commit learns from its nailed segments, or `None` when the
 /// composition is not one: fewer than two segments, any segment the user
@@ -1609,23 +1624,55 @@ fn next_word_word_selected(
 /// separator, USER 2026-09-22). The cap counts
 /// the joined TL, not the segments' echoed `syllable_count` — that is
 /// platform input, and the TL is what the phrase stores.
+///
+/// Under Hàn-Lô lām (`AppConfig::lists_roman_twins`) a picked hanji-less
+/// segment whose reading is a dictionary word — a word written in
+/// romanization — stands in the phrase as its canonical TL, as the
+/// whole-sentence candidate writes it (`我kap伊`), with a space between two
+/// romanized words (`我 kap i` reads `我kap i`) and the `-` / `--` the user
+/// typed in front of one kept (`記--khí-lâi`, `我tsia̍h--ah`). A §34 literal
+/// or typo no dictionary word reads (`asdf`) never learns. The phrase still
+/// needs one Hanji segment, since one in romanization alone is already its
+/// reading's romanization row.
 fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<LearnedEntry> {
     if nailed.len() < 2 {
         return None;
     }
+    // The composition's own mode, as its fetches read it
+    // (`requests::listing_buffer`): Bopomofo typed on a TL / POJ layout is a
+    // TPS buffer, which lists no romanization and so learns none.
+    let raw: String = nailed.iter().map(|seg| seg.raw_text.as_str()).collect();
+    let han_lo =
+        crate::requests::lists_roman_twins(config, crate::derived::buffer_input_mode(&raw, config));
     let mut hanji = String::new();
+    let mut any_hanji = false;
     for seg in nailed {
-        if !seg.is_picked {
+        if !seg.is_picked || seg.association_tl.is_empty() {
             return None;
         }
-        // `commit_continuous` stored an empty hanji as `None` already. The
-        // phrase stores the segment's stored spelling (`canonical_text`), not
-        // the shown Hanji, which POJ mode renders.
-        seg.hanji.as_deref()?;
-        if seg.association_tl.is_empty() {
-            return None;
-        }
+        // `commit_continuous` stored an empty hanji as `None` already. A
+        // Hanji piece is the segment's stored spelling (`canonical_text`),
+        // not the shown Hanji, which POJ mode renders.
+        let Some(_) = seg.hanji else {
+            if !han_lo || !crate::nailed::reading_is_dictionary_word(&seg.association_tl, config) {
+                return None;
+            }
+            let piece = &seg.association_tl;
+            let run = crate::nailed::typed_separator_run(&seg.raw_text);
+            if !hanji.is_empty() && !run.is_empty() && !piece.starts_with('-') {
+                // The separator kind the user typed (`canonical_separators`).
+                hanji.push_str(if run.len() >= 2 { "--" } else { "-" });
+            } else if crate::commit_text::spaces_romanized_words(&hanji, piece) {
+                hanji.push(' ');
+            }
+            hanji.push_str(piece);
+            continue;
+        };
+        any_hanji = true;
         hanji.push_str(&phonetics::api::strip_khinsiann_hanji(&seg.canonical_text));
+    }
+    if !any_hanji {
+        return None;
     }
     let canonical_tl = canonical_separators(&crate::nailed::learned_reading(nailed, config));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();

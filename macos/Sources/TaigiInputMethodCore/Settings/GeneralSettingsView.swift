@@ -70,6 +70,8 @@ struct GeneralSettingsView: View {
     private var isNasalMarkerUppercaseEnabled = SettingsStore.Keys.isNasalMarkerUppercaseEnabled.defaultValue
     @AppStorage(SettingsStore.Keys.isKhinsiannInHanjiEnabled.name)
     private var isKhinsiannInHanjiEnabled = SettingsStore.Keys.isKhinsiannInHanjiEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.isHanLoMixedEnabled.name)
+    private var isHanLoMixedEnabled = SettingsStore.Keys.isHanLoMixedEnabled.defaultValue
     @AppStorage(SettingsStore.Keys.isOutputBothScripts.name)
     private var isOutputBothScripts = SettingsStore.Keys.isOutputBothScripts.defaultValue
 
@@ -125,6 +127,19 @@ struct GeneralSettingsView: View {
                     Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
                     Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
                 }
+
+                // Hàn-Lô lām: each word's romanization is a candidate of its
+                // own, in the list and the sentence (`AppConfig::lists_roman_twins`).
+                // Greys where it has no effect: Romanization Only already lists
+                // every word as its romanization, side by side led by the
+                // romanization already writes it from its paired cell, and TPS
+                // never shows one (desktop-core `allows_han_lo_mixed`).
+                Toggle(language.string(.settingsHanLoMixed), isOn: $isHanLoMixedEnabled)
+                    .disabled(
+                        !candidateDisplayMode.showsHanji
+                            || (candidateDisplayMode == .sideBySide && !isHanjiFirst)
+                            || inputMode == .tps,
+                    )
 
                 // Under Tone Keys, independent of it: both say what a letter
                 // types. TPS has no `c` initial, so the row greys there.

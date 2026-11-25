@@ -126,6 +126,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         c_types_affricate: settings.is_c_affricate_enabled,
         f_types_hyphen: settings.is_f_hyphen_enabled,
         khinsiann_in_hanji: settings.is_khinsiann_in_hanji_enabled,
+        han_lo_mixed: settings.is_han_lo_mixed_enabled,
         output_both_scripts: settings.is_output_both_scripts,
     }
 }
@@ -308,6 +309,18 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&on).khinsiann_in_hanji);
+    }
+
+    #[test]
+    fn app_config_forwards_han_lo_mixed() {
+        let off = EngineSettings::default();
+        assert!(!off.is_han_lo_mixed_enabled);
+        assert!(!app_config(&off).han_lo_mixed);
+        let on = EngineSettings {
+            is_han_lo_mixed_enabled: true,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&on).han_lo_mixed);
     }
 
     #[test]

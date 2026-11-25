@@ -167,6 +167,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
                 canonical_tl: phrase.canonical_tl,
             })
             .collect(),
+        ..UserRows::default()
     };
     assert!(rows.frequency != FrequencyMap::new());
     assert!(!rows.custom.is_empty());

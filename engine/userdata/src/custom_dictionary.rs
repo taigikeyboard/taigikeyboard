@@ -217,8 +217,9 @@ impl CustomDictionaryStore {
     }
 
     /// The entries one of whose search keys EQUALS one of `query_keys` — the
-    /// toneless bodies of a TPS walk's edges
-    /// (`phonetics::api::tps_toneless_edge_key`), so a custom word anywhere in
+    /// toneless bodies of a walk's edges (`phonetics::api::toneless_edge_key`:
+    /// a TPS conversion walk, a TL / POJ fetch's sentence walk), so a custom
+    /// word anywhere in
     /// the walked text meets its edge — at most `limit` per key, each entry
     /// once, in one read: the store answers every key or none. Best-effort
     /// like [`keystroke_rows`](Self::keystroke_rows).

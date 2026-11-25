@@ -93,7 +93,7 @@ final class CandidatePanel: CandidatePresenter {
         // with is resolved as it is built.
         panel.slotKeySet = content.slotKeySet
         panel.leadCellIsUnkeyed = content.leadCellIsUnkeyed
-        panel.rerender(content.cells)
+        panel.rerender(content.cells, selecting: content.selectedIndex)
     }
 
     /// The panel `owner` may repaint in place, or nil.

@@ -24,10 +24,10 @@ public interface EnginePredictionOrBuilder extends
 
   /**
    * <pre>
-   * "" == nil (Optional on iOS, nullable on Android). Filter contract
-   * guarantees subtitle = "" only when roman is empty (i.e. nil case);
-   * non-nil empty subtitle cannot arise because hanji is required
-   * non-empty by the empty-hanji filter.
+   * "" == nil (Optional on iOS, nullable on Android). Filter contract:
+   * subtitle = "" when roman is empty (a Hanji-only prediction) or when
+   * `hanji` is empty (a romanization-only prediction, below); otherwise it
+   * is the shown Hanji.
    * </pre>
    *
    * <code>string subtitle = 2;</code>
@@ -36,10 +36,10 @@ public interface EnginePredictionOrBuilder extends
   java.lang.String getSubtitle();
   /**
    * <pre>
-   * "" == nil (Optional on iOS, nullable on Android). Filter contract
-   * guarantees subtitle = "" only when roman is empty (i.e. nil case);
-   * non-nil empty subtitle cannot arise because hanji is required
-   * non-empty by the empty-hanji filter.
+   * "" == nil (Optional on iOS, nullable on Android). Filter contract:
+   * subtitle = "" when roman is empty (a Hanji-only prediction) or when
+   * `hanji` is empty (a romanization-only prediction, below); otherwise it
+   * is the shown Hanji.
    * </pre>
    *
    * <code>string subtitle = 2;</code>
@@ -51,7 +51,11 @@ public interface EnginePredictionOrBuilder extends
   /**
    * <pre>
    * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
-   * POJ mode a Han-Lo word's romanization in POJ.
+   * POJ mode a Han-Lo word's romanization in POJ. Empty for a word written in
+   * romanization — a Hàn-Lô lām romanization prediction or a learned
+   * `(TL, TL)` row (§42) — whose `text` is the romanization a tap writes
+   * and whose `subtitle` is empty too. An input row with empty Hanji is still
+   * dropped by the filter.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -61,7 +65,11 @@ public interface EnginePredictionOrBuilder extends
   /**
    * <pre>
    * The Hanji as shown: khinsiann marks when `khinsiann_in_hanji` is on, and in
-   * POJ mode a Han-Lo word's romanization in POJ.
+   * POJ mode a Han-Lo word's romanization in POJ. Empty for a word written in
+   * romanization — a Hàn-Lô lām romanization prediction or a learned
+   * `(TL, TL)` row (§42) — whose `text` is the romanization a tap writes
+   * and whose `subtitle` is empty too. An input row with empty Hanji is still
+   * dropped by the filter.
    * </pre>
    *
    * <code>string hanji = 3;</code>

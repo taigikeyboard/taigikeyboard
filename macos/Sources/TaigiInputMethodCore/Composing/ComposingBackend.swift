@@ -382,6 +382,7 @@ final class ComposingBackend {
                 },
                 leadsWithLiteralRoman: list.leadsWithLiteralRoman,
                 anchorEndUTF16: Int(list.anchorEndUtf16),
+                selectedIndex: list.hasSelectedIndex ? Int(list.selectedIndex) : nil,
             ))
         case .candidatesClosed:
             .candidatesClosed

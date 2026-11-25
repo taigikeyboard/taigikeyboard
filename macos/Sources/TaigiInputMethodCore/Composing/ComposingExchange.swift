@@ -92,4 +92,8 @@ struct CandidateListUpdate: Equatable {
     /// here — where the caret walk starts. The end of the marked text, or the
     /// caret under TPS, whose list is usually the word before it.
     let anchorEndUTF16: Int
+
+    /// A represent's list fetched again: the cell the selection follows to
+    /// (`CandidatesChanged.selected_index`). Nil everywhere else.
+    var selectedIndex: Int?
 }
