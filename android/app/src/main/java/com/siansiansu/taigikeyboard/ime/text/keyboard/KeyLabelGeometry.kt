@@ -4,8 +4,37 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 internal object KeyLabelGeometry {
-    /** Margin between any text ink and the key's top edge, as a fraction of key height. */
+    /** Margin between any text and the key's edges, as a fraction of key height. */
     const val EDGE_INSET = 0.12f
+
+    /**
+     * Widest a multi-character label (`?123`, `TPS`, `……`) may be: the key width minus an
+     * [EDGE_INSET] margin on each side.
+     */
+    fun maxLabelWidth(
+        keyWidth: Float,
+        keyHeight: Float,
+    ): Float = insetWidth(keyWidth, keyHeight, EDGE_INSET)
+
+    /** Margin beside a one-glyph label, as a fraction of key height. */
+    const val GLYPH_SIDE_INSET = 0.06f
+
+    /**
+     * Largest font size for a one-glyph label: a full-width (1 em) glyph, such as a Bopomofo
+     * letter, fits the key minus a [GLYPH_SIDE_INSET] margin on each side. It does not depend on
+     * the glyph, so keys of one width keep one text size (`m` is not drawn smaller than `n`).
+     */
+    fun maxGlyphTextSize(
+        keyWidth: Float,
+        keyHeight: Float,
+    ): Float = insetWidth(keyWidth, keyHeight, GLYPH_SIDE_INSET)
+
+    /** Key width less [insetFraction] of the key height on each side; never under half the key, so a very narrow key keeps a legible label. */
+    private fun insetWidth(
+        keyWidth: Float,
+        keyHeight: Float,
+        insetFraction: Float,
+    ): Float = maxOf(keyWidth - 2f * keyHeight * insetFraction, keyWidth * 0.5f)
 
     /** Gap between a hint's ink and the label's ink below it, as a fraction of key height. */
     const val HINT_GAP = 0.06f

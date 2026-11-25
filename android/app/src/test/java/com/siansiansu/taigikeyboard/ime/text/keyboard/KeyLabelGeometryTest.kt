@@ -50,6 +50,42 @@ class KeyLabelGeometryTest {
         assertEquals(18f, fit.baseline - 58f * fit.scale, eps)
     }
 
+    // A9 / A13: labels could grow to 90% of the key width — `?123`, `TPS` and wide Bopomofo
+    // glyphs came within 4–9 px of the key edges at large display sizes.
+    @Test
+    fun multiCharacterLabel_keepsASideMarginProportionalToTheKeyHeight() {
+        // trace: ?123 key 170×100 → 170 - 2*12 = 146 (old rule: 153, 8.5 px a side).
+        assertEquals(146f, KeyLabelGeometry.maxLabelWidth(170f, 100f), eps)
+        // Key height 1.5× (text is sized from it) → each margin 1.5×: 170 - 2*18 = 134.
+        assertEquals(134f, KeyLabelGeometry.maxLabelWidth(170f, 150f), eps)
+    }
+
+    @Test
+    fun label_onAVeryNarrowKey_keepsHalfTheKey() {
+        assertEquals(20f, KeyLabelGeometry.maxLabelWidth(40f, 100f), eps)
+        assertEquals(20f, KeyLabelGeometry.maxGlyphTextSize(40f, 400f), eps)
+    }
+
+    // Default letter text is 0.58 h. Key canvas = screen/10 - 6 dp wide, 38 dp × key-height scale.
+    @Test
+    fun oneGlyphLabel_atDefaultSizes_isNotShrunk() {
+        for (screenDp in listOf(360f, 411f)) {
+            val w = screenDp / 10f - 6f
+            val h = 38f
+            assertTrue("${screenDp}dp", KeyLabelGeometry.maxGlyphTextSize(w, h) >= 0.58f * h)
+        }
+    }
+
+    @Test
+    fun oneGlyphLabel_capIsTheSameForEveryGlyph_andKeepsA1emGlyphInside() {
+        // Display size large (320 dp wide): w = 26, h = 38 → cap = 26 - 2*2.28 = 21.44 < 22.04,
+        // the same for `m` as for `n`, so neighbouring keys keep one size.
+        val cap = KeyLabelGeometry.maxGlyphTextSize(26f, 38f)
+        assertEquals(21.44f, cap, eps)
+        // A 1 em Bopomofo glyph at that size keeps GLYPH_SIDE_INSET on each side.
+        assertEquals(38f * KeyLabelGeometry.GLYPH_SIDE_INSET, (26f - cap) / 2f, eps)
+    }
+
     @Test
     fun hint_marginsScaleWithTheKey() {
         // Doubling the key (and so the text, sized from h) doubles every distance.

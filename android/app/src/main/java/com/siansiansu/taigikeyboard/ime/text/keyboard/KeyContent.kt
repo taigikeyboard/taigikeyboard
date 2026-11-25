@@ -264,19 +264,14 @@ private fun LabelContent(
         val baseTextSize = h * 0.58f * fontSizeScale
         labelPaint.typeface = typeface
         labelPaint.textSize = scaleTextSizeForKey(data, label, baseTextSize)
-        // A one-line label wider than the key face (`……` is two full-width cells) shrinks to
-        // fit, as iOS `minimumScaleFactor`.
-        val maxLabelWidth = w * 0.9f
-        val labelWidth = if (label.contains('\n')) 0f else labelPaint.measureText(label)
-        val perKeyTextSize =
-            if (labelWidth > maxLabelWidth) labelPaint.textSize * maxLabelWidth / labelWidth else labelPaint.textSize
-
-        labelPaint.textSize = perKeyTextSize
+        // A one-line label keeps its side margins (`……` is two full-width cells, `?123` on a
+        // narrow key), shrinking to fit as iOS `minimumScaleFactor` does.
+        if (!label.contains('\n')) fitLabelToKey(labelPaint, label, w, h)
         labelPaint.color = labelColorArgb
         labelPaint.alpha = if (mode == KeyboardMode.CHARACTERS && data.code == KeyCode.SPACE) 120 else 255
 
         val centerX = w / 2.0f
-        val centerY = h / 2.0f + (perKeyTextSize - labelPaint.descent()) / 2.0f
+        val centerY = h / 2.0f + (labelPaint.textSize - labelPaint.descent()) / 2.0f
 
         val isTpsWithPopup = keyboardLayoutType == "tps" && data.isTpsGlyphWithPopup()
 
@@ -285,6 +280,7 @@ private fun LabelContent(
             if (isTpsWithPopup) {
                 // Main glyph at bottom (smaller); popup callouts on top.
                 labelPaint.textSize = baseTextSize * 0.78f
+                fitLabelToKey(labelPaint, label, w, h)
                 val bottomY = h * 0.80f
                 hintPaint.color = labelPaint.color
                 hintPaint.alpha = 130
@@ -362,6 +358,33 @@ private fun LabelContent(
             }
         }
     }
+}
+
+/**
+ * Caps [paint] so [label] keeps its side margins: one glyph by the key width alone
+ * ([KeyLabelGeometry.maxGlyphTextSize], the same for every glyph), several by their advance.
+ */
+private fun fitLabelToKey(
+    paint: Paint,
+    label: String,
+    keyWidth: Float,
+    keyHeight: Float,
+) {
+    if (label.codePointCount(0, label.length) == 1) {
+        paint.textSize = minOf(paint.textSize, KeyLabelGeometry.maxGlyphTextSize(keyWidth, keyHeight))
+    } else {
+        shrinkToWidth(paint, label, KeyLabelGeometry.maxLabelWidth(keyWidth, keyHeight))
+    }
+}
+
+/** Shrinks [paint] so [text]'s advance is at most [maxWidth]; never enlarges. */
+private fun shrinkToWidth(
+    paint: Paint,
+    text: String,
+    maxWidth: Float,
+) {
+    val width = paint.measureText(text)
+    if (width > maxWidth) paint.textSize *= maxWidth / width
 }
 
 /** [text]'s ink bounds at [paint]'s current size, relative to its baseline (written into [out]). */
