@@ -1,7 +1,7 @@
 //! How the pending buffer is read and cut, from the slot-0 walk.
 
 use super::recase::{recase_roman, shows_poj_roman_in_hanji};
-use super::walk::{SynthCut, SynthWords};
+use super::walk::{edge_romans, sentence_hanji, SynthCut, SynthWords};
 
 use crate::shadow::{strip_tones_for_mode, ContinuousKeys};
 use ranking::FrequencyMap;
@@ -38,6 +38,10 @@ pub(crate) struct Segmentation {
     pub cut_by: &'static str,
     pub syllables: Vec<BufferCut>,
     pub words: Vec<WordCut>,
+    /// The whole-sentence row's shown Hanji, built as slot 0 builds it
+    /// ([`sentence_hanji`]) — a Hàn-Lô lām sentence's romanized words
+    /// included — or `None` when the cut spells no Hanji.
+    pub sentence_hanji: Option<String>,
 }
 
 impl Default for Segmentation {
@@ -46,6 +50,7 @@ impl Default for Segmentation {
             cut_by: "none",
             syllables: Vec::new(),
             words: Vec::new(),
+            sentence_hanji: None,
         }
     }
 }
@@ -73,6 +78,13 @@ pub(crate) fn explain_segmentation(
             ..Segmentation::default()
         };
     };
+    let edges = matches!(words, SynthWords::Edges);
+    let sentence_hanji = edges
+        .then(|| {
+            let parts = edge_romans(raw, &keys.shadow_to_raw_end, path);
+            sentence_hanji(path, &parts, raw, keys, mode, khinsiann_in_hanji, edges)
+        })
+        .flatten();
     let (cut_by, words): (&'static str, Vec<WordCut>) = match words {
         SynthWords::Edges => (
             "walker",
@@ -154,6 +166,7 @@ pub(crate) fn explain_segmentation(
         cut_by,
         syllables,
         words,
+        sentence_hanji,
     }
 }
 

@@ -421,6 +421,52 @@ fn han_lo_never_learns_an_all_romanized_phrase() {
     );
 }
 
+// The separator the user typed in front of a romanized word stays in the
+// phrase's Hanji, as in its reading.
+#[test]
+fn han_lo_keeps_the_typed_separator_in_the_hanji() {
+    for (raw, consumed, hanji, tl) in [
+        ("ki--khilai", 8, "記--khí-lâi", "kì--khí-lâi"),
+        ("ki-khilai", 7, "記-khí-lâi", "kì-khí-lâi"),
+        ("kikhilai", 6, "記khí-lâi", "kì khí-lâi"),
+    ] {
+        assert_eq!(
+            learn_han_lo(
+                raw,
+                &[(Some("記"), "kì", 2, 1), (None, "khí-lâi", consumed, 2)]
+            ),
+            phrase(hanji, tl),
+            "raw {raw:?}"
+        );
+    }
+}
+
+// A §34 literal or typo no dictionary word reads never learns, even beside
+// a Hanji pick.
+#[test]
+fn han_lo_never_learns_a_literal_no_word_reads() {
+    assert_eq!(
+        learn_han_lo("kiasdf", &[(Some("記"), "kì", 2, 1), (None, "asdf", 6, 1)]),
+        None
+    );
+}
+
+// English input never lists romanizations, so never learns one either.
+#[test]
+fn han_lo_learns_nothing_romanized_in_english_input() {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let config = protos::engine::AppConfig {
+        han_lo_mixed: true,
+        input_mode: "english".into(),
+        ..config_tl()
+    };
+    let mut e = engine_in_continuous("kikhilai");
+    e.apply_learning(pick((Some("記"), "kì", 2, 1)), &config);
+    let last = e.apply_learning(pick((None, "khí-lâi", 6, 2)), &config);
+    assert_eq!(last.learned, None);
+}
+
 #[test]
 fn missing_canonical_tl_blocks_learning() {
     // Legacy caller / TPS-OOV: `association_tl` empty → no key to learn under.

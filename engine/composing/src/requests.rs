@@ -260,13 +260,26 @@ fn handle_fetch_at_pos(
         .map(|candidate| raw_to_proto_candidate(candidate, config))
         .collect();
     let candidates = if config.splits_single_script_cells() {
+        // With roman twins a Hanji row whose reading's roman-only row made the
+        // list draws no roman cell: that row is the cell, with the
+        // romanization's own identity. One whose twin is not listed (the
+        // whole-sentence row, a row past the partial-prefix cap) keeps its own.
+        let listed_romanizations: std::collections::HashSet<String> = if roman_twins {
+            candidates
+                .iter()
+                .filter(|c| c.hanji.as_deref().is_none_or(str::is_empty))
+                .map(|c| c.roman.clone())
+                .collect()
+        } else {
+            std::collections::HashSet::new()
+        };
         protos::split_single_script_cells(
             candidates,
             |c| c.hanji.as_deref().unwrap_or_default(),
-            // With roman twins a Hanji row draws no roman cell: its reading's
-            // roman-only row is that cell.
             |c| {
-                if roman_twins && c.hanji.as_deref().is_some_and(|h| !h.is_empty()) {
+                if c.hanji.as_deref().is_some_and(|h| !h.is_empty())
+                    && listed_romanizations.contains(&c.roman)
+                {
                     ""
                 } else {
                     &c.roman

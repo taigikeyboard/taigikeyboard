@@ -115,23 +115,45 @@ pub fn best_candidate_for_key_with_barriers(
         dedupe_by_roman_hanji_span(&mut homophones, ctx.khinsiann_in_hanji);
     }
     // Hàn-Lô lām: each reading's romanization joins the pick as a word of its
-    // own. The edge stays priced as without it — `span_walker_cost` above, and
-    // the bigram on the word the Hanji pick would write — so a romanization
-    // changes the word an edge writes, never the segmentation.
-    let hanji_bigram_rowid = if ctx.roman_twins {
-        let at = context_free_winner(&homophones, consumed_span.1)?;
-        let rowid = homophones[at].rowid;
+    // own, and the edge stays priced as the Hanji pick prices it — the
+    // pick among the Hanji homophones alone, exactly as it would be made
+    // without any romanization row (an LKK roman-only dictionary row
+    // included: it has no walker bigram). So a romanization changes the word
+    // an edge writes, never the segmentation: the walker reads the Hanji
+    // pick's bigram rowid and user weight, and a romanization replaces it
+    // only at its syllable count (`tl:tsua` 紙 never becomes `tsu-á`), as
+    // the previous word's context does (§56). `span_walker_cost` above is
+    // the dictionary's minimum either way.
+    if ctx.roman_twins {
+        let hanji_homophones: Vec<RawCandidate> = homophones
+            .iter()
+            .filter(|cand| cand.hanji.as_deref().is_some_and(|hanji| !hanji.is_empty()))
+            .cloned()
+            .collect();
+        let priced_on = if hanji_homophones.is_empty() {
+            homophones.clone()
+        } else {
+            hanji_homophones
+        };
+        let (hanji_pick, bigram_rowid) =
+            pick_edge_word(priced_on, consumed_span.1, ctx.context.is_empty())?;
         super::han_lo::add_roman_twins(&mut homophones, ctx);
-        Some(rowid)
-    } else {
-        None
-    };
+        homophones.retain(|cand| cand.syllable_count == hanji_pick.syllable_count);
+        let (candidate, _) = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
+        return Some(EdgeBest {
+            candidate,
+            span_walker_cost,
+            bigram_rowid,
+            span_user_weight: hanji_pick.user_weight,
+        });
+    }
     let (candidate, bigram_rowid) =
         pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
     Some(EdgeBest {
+        span_user_weight: candidate.user_weight,
         candidate,
         span_walker_cost,
-        bigram_rowid: hanji_bigram_rowid.unwrap_or(bigram_rowid),
+        bigram_rowid,
     })
 }
 
@@ -243,6 +265,11 @@ pub struct EdgeBest {
     /// shown word may differ, but the bigram still prices the context-free
     /// word, so the context never moves the segmentation.
     pub bigram_rowid: u32,
+    /// The user weight the walker prices the edge on (`lattice::edge_cost`'s
+    /// user-entry cap and discount): the pick's own `user_weight`, or under
+    /// Hàn-Lô lām the Hanji pick's, so a picked romanization never moves the
+    /// segmentation.
+    pub span_user_weight: f64,
 }
 
 #[cfg(test)]

@@ -77,7 +77,7 @@ mod toneless_match;
 use reach::{custom_abbreviation_matches, custom_reach, fused_custom_typed_key, CustomReach};
 
 pub use abbrev::fetch_abbrev_candidates;
-pub use compound::compound_hanji_exists;
+pub use compound::{compound_hanji_exists, reading_is_dictionary_word};
 pub use edge::{best_candidate_for_key_with_barriers, homophone_words_for_key, EdgeBest};
 pub use exact::fetch_candidates_for_keys_with_barriers;
 pub use partial_prefix::{

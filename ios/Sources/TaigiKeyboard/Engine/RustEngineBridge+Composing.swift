@@ -191,7 +191,8 @@ public extension RustEngineBridge {
     struct PredictionPick: Equatable {
         public let script: Taigi_Engine_CommitScript
         /// The prediction's display romanization (`EnginePrediction.text` of a
-        /// prediction with a subtitle); empty for a Hanji-only prediction.
+        /// prediction with a subtitle, or of a romanization-only prediction);
+        /// empty for a Hanji-only prediction.
         public let roman: String
         public let hanji: String
         /// The canonical TL the engine counts the usage under.

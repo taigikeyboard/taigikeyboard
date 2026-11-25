@@ -222,6 +222,7 @@ pub(crate) fn walk_buffer(
                     candidate: c,
                     span_walker_cost,
                     bigram_rowid,
+                    span_user_weight,
                 }) => {
                     let user_row = !custom_for_edge.is_empty() || !learned_for_edge.is_empty();
                     // Word = the edge pick (user weight, context, corpus cost). Cost =
@@ -247,7 +248,7 @@ pub(crate) fn walk_buffer(
                         // khiin `word_len` for the S5 length
                         // normalization (Codex pre-impl Q1 BLOCK).
                         toneless_len: toneless.chars().count(),
-                        user_weight_delta: c.user_weight,
+                        user_weight_delta: span_user_weight,
                     })
                 }
                 // No dict hit: the edge's own toneless roman, SAME code
@@ -452,17 +453,7 @@ pub(super) fn walker_slot0(
     // for; greedy-longest segments are independent of `path.edges`.
     let (parts, syllable_count) = match words {
         SynthWords::Edges => {
-            let parts = path
-                .edges
-                .iter()
-                .zip(path.choices.iter())
-                .map(
-                    |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
-                        Some(seg) => recase_roman(&c.roman, seg),
-                        None => c.roman.clone(),
-                    },
-                )
-                .collect::<Vec<_>>();
+            let parts = edge_romans(raw, shadow_to_raw_end, path);
             let s = path
                 .choices
                 .iter()
@@ -486,70 +477,24 @@ pub(super) fn walker_slot0(
     // §10.2 slot-0 word space. The separators the user typed are rendered
     // onto it by Step 5 (§55) like on every other row, so `canonical_tl`
     // (folded from a space join too) never forks on a typed separator.
-    let roman = parts.join(" ");
-    // A roman-only dictionary word in the path keeps the sentence's Hanji: the
-    // word stands in romanization (Han-Lo mixed, MOE `VT_MIXED`). An OOV edge
-    // still leaves the whole path to the romanization.
-    let hanji_spelled = matches!(words, SynthWords::Edges)
-        && path.choices.iter().any(|c| c.hanji.is_some())
-        && path.choices.iter().all(|c| c.hanji.is_some() || c.dict_hit);
-    let edge_piece =
-        |s: usize, e: usize, choice: &crate::lattice::EdgeChoice, part: &String| -> String {
-            match (&choice.hanji, mode) {
-                (Some(hanji), _) => hanji.clone(),
-                // The typed Bopomofo, what the layout's roman-only cell shows.
-                (None, phonetics::InputMode::Tps) => raw
-                    .get(shadow_to_raw_end[s]..shadow_to_raw_end[e])
-                    .unwrap_or(part)
-                    .to_owned(),
-                (None, phonetics::InputMode::Poj) => recase_tl_as_poj_display(part),
-                (None, _) => part.clone(),
-            }
-        };
-    let raw_hanji: Option<String> = hanji_spelled.then(|| {
-        let mut out = String::new();
-        for ((&(s, e), choice), part) in path.edges.iter().zip(&path.choices).zip(&parts) {
-            push_sentence_piece(&mut out, &edge_piece(s, e, choice, part));
-        }
-        out
-    });
-    // The shown Hanji (`render_hanji_display`); `display_text` below keeps the
-    // stored spellings. A custom edge's Hanji stays as the user saved it.
-    let hanji: Option<String> = if ctx.khinsiann_in_hanji || mode == phonetics::InputMode::Poj {
-        hanji_spelled.then(|| {
-            let mut out = String::new();
-            for (edge_idx, ((&(s, e), choice), part)) in
-                path.edges.iter().zip(&path.choices).zip(&parts).enumerate()
-            {
-                let piece = match &choice.hanji {
-                    Some(h) => phonetics::api::render_hanji_display(
-                        h,
-                        &choice.canonical_tl,
-                        ctx.khinsiann_in_hanji,
-                        shows_poj_roman_in_hanji(mode, choice.is_custom),
-                    ),
-                    None => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
-                };
-                let khinsiann_before = ctx.khinsiann_in_hanji
-                    && edge_idx > 0
-                    && continuous_keys
-                        .hyphen_runs
-                        .iter()
-                        .any(|&(b, run)| b == s && run >= 2);
-                if !khinsiann_before {
-                    push_romanized_word_space(&mut out, &piece);
-                }
-                phonetics::api::push_hanji_with_interword_khinsiann(
-                    &mut out,
-                    &piece,
-                    khinsiann_before,
-                );
-            }
-            out
-        })
-    } else {
-        raw_hanji.clone()
-    };
+    //
+    // A piece opening with the neutral-tone mark (`--ah`, `·ah`) is written
+    // against the syllable before it (`tsia̍h--ah`), as a typed `--` renders
+    // it and as the nailed commit writes it; the identity below stays folded
+    // from the plain space join, so it does not fork on the mark either.
+    let space_joined = parts.join(" ");
+    let roman = join_attaching_neutral_pieces(&parts);
+    let edges = matches!(words, SynthWords::Edges);
+    let hanji_spelled = spells_hanji(path, edges);
+    let hanji = sentence_hanji(
+        path,
+        &parts,
+        raw,
+        continuous_keys,
+        mode,
+        ctx.khinsiann_in_hanji,
+        edges,
+    );
     // v3.5.9 B-4 (Codex pre-impl BLOCK #2 close): the walker
     // greedy-longest OOV synth builds `roman` from the
     // mode-aware shadow — POJ mode preserves POJ ASCII per B-2,
@@ -572,7 +517,7 @@ pub(super) fn walker_slot0(
     // (`assemble_candidates`) reads it instead of re-folding `slot0.roman`.
     // The fold drops the per-edge recase: a pick counted under `Kóng` would
     // rank nothing typed `kong`.
-    let canonical_tl = phonetics::api::canonical_tl_form(&roman, mode);
+    let canonical_tl = phonetics::api::canonical_tl_form(&space_joined, mode);
     // The identity, joined from each edge's own (`EdgeChoice::display_text`):
     // the stored Hanji, the canonical TL of a romanization word — so a
     // sentence holding one is the same word under TL and POJ input. A
@@ -627,6 +572,130 @@ fn push_romanized_word_space(out: &mut String, piece: &str) {
     if crate::commit_text::spaces_romanized_words(out, piece) {
         out.push(' ');
     }
+}
+
+/// Each path edge's romanization recased to what was typed for its own byte
+/// span (#288: per edge, so `hitTUI` keeps segment 2 upper) — the pieces
+/// slot 0 and the explain view read.
+pub(crate) fn edge_romans(
+    raw: &str,
+    shadow_to_raw_end: &[usize],
+    path: &crate::lattice::BestPath,
+) -> Vec<String> {
+    path.edges
+        .iter()
+        .zip(path.choices.iter())
+        .map(|(&(s, e), c)| {
+            match shadow_to_raw_end
+                .get(s)
+                .zip(shadow_to_raw_end.get(e))
+                .and_then(|(&start, &end)| raw.get(start..end))
+            {
+                Some(seg) => recase_roman(&c.roman, seg),
+                None => c.roman.clone(),
+            }
+        })
+        .collect()
+}
+
+/// Whether the walker path spells Hanji: a dictionary word on it (its edges
+/// are the words, [`SynthWords::Edges`]), one Hanji
+/// word at least, and every hanji-less edge a dictionary word — a roman-only
+/// dictionary word stands in romanization (Han-Lo mixed, MOE `VT_MIXED`); an
+/// OOV edge leaves the whole path to the romanization.
+fn spells_hanji(path: &crate::lattice::BestPath, edges: bool) -> bool {
+    edges
+        && path.choices.iter().any(|c| c.hanji.is_some())
+        && path.choices.iter().all(|c| c.hanji.is_some() || c.dict_hit)
+}
+
+/// The whole-sentence row's shown Hanji for a walker `path` whose edges
+/// read `parts` (each edge's recased romanization), or `None` when the path
+/// does not spell Hanji ([`spells_hanji`]). The single builder the slot-0 row
+/// and the Ranking Engine Lab's segmentation share, so the inspector finds
+/// the row by the very string it shows.
+pub(crate) fn sentence_hanji(
+    path: &crate::lattice::BestPath,
+    parts: &[String],
+    raw: &str,
+    continuous_keys: &crate::shadow::ContinuousKeys,
+    mode: phonetics::InputMode,
+    khinsiann_in_hanji: bool,
+    edges: bool,
+) -> Option<String> {
+    let shadow_to_raw_end = &continuous_keys.shadow_to_raw_end;
+    let edge_piece =
+        |s: usize, e: usize, choice: &crate::lattice::EdgeChoice, part: &str| -> String {
+            match (&choice.hanji, mode) {
+                (Some(hanji), _) => hanji.clone(),
+                // The typed Bopomofo, what the layout's roman-only cell shows.
+                (None, phonetics::InputMode::Tps) => raw
+                    .get(shadow_to_raw_end[s]..shadow_to_raw_end[e])
+                    .unwrap_or(part)
+                    .to_owned(),
+                (None, phonetics::InputMode::Poj) => recase_tl_as_poj_display(part),
+                (None, _) => part.to_owned(),
+            }
+        };
+    // The shown Hanji (`render_hanji_display`); the row's `display_text` keeps
+    // the stored spellings. A custom edge's Hanji stays as the user saved it.
+    let renders_hanji = khinsiann_in_hanji || mode == phonetics::InputMode::Poj;
+    spells_hanji(path, edges).then(|| {
+        let mut out = String::new();
+        for (edge_idx, ((&(s, e), choice), part)) in
+            path.edges.iter().zip(&path.choices).zip(parts).enumerate()
+        {
+            let piece = match &choice.hanji {
+                Some(h) if renders_hanji => phonetics::api::render_hanji_display(
+                    h,
+                    &choice.canonical_tl,
+                    khinsiann_in_hanji,
+                    shows_poj_roman_in_hanji(mode, choice.is_custom),
+                ),
+                _ => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
+            };
+            // The `-` run typed in front of this edge.
+            let typed_run = if edge_idx > 0 {
+                continuous_keys
+                    .hyphen_runs
+                    .iter()
+                    .find(|&&(b, _)| b == s)
+                    .map_or(0, |&(_, run)| run)
+            } else {
+                0
+            };
+            let khinsiann_before = khinsiann_in_hanji && typed_run >= 2;
+            if khinsiann_before {
+                phonetics::api::push_hanji_with_interword_khinsiann(&mut out, &piece, true);
+            } else if typed_run > 0
+                && crate::commit_text::starts_with_romanization(&piece)
+                && !piece.starts_with('-')
+                && !out.ends_with('-')
+            {
+                // A `-` / `--` the user typed in front of a romanized word
+                // stays, as the nailed commit keeps it (`我tsia̍h--lâi`).
+                out.extend(std::iter::repeat_n('-', typed_run));
+                out.push_str(&piece);
+            } else {
+                push_sentence_piece(&mut out, &piece);
+            }
+        }
+        out
+    })
+}
+
+/// The sentence's romanization: its pieces joined by the §10.2 word space,
+/// except in front of a piece opening with the neutral-tone mark (`--ah`,
+/// `·ah`), which is written against the syllable before it.
+fn join_attaching_neutral_pieces(parts: &[String]) -> String {
+    let mut out = String::new();
+    for part in parts {
+        if !out.is_empty() && !part.starts_with(['-', '·']) {
+            out.push(' ');
+        }
+        out.push_str(part);
+    }
+    out
 }
 
 /// Appends one edge's piece to the sentence's Hanji, spaced by

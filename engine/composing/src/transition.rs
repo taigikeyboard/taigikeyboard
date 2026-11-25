@@ -1614,11 +1614,14 @@ fn next_word_word_selected(
 /// platform input, and the TL is what the phrase stores.
 ///
 /// Under Hàn-Lô lām (`AppConfig::lists_roman_twins`) a picked hanji-less
-/// segment — a word written in romanization — stands in the phrase as its
-/// canonical TL, as the whole-sentence candidate writes it (`我kap伊`), with a
-/// space between two romanized words (`我 kap i` reads `我kap i`); the phrase
-/// still needs one Hanji segment, since one in romanization alone is already
-/// its reading's romanization row.
+/// segment whose reading is a dictionary word — a word written in
+/// romanization — stands in the phrase as its canonical TL, as the
+/// whole-sentence candidate writes it (`我kap伊`), with a space between two
+/// romanized words (`我 kap i` reads `我kap i`) and the `-` / `--` the user
+/// typed in front of one kept (`記--khí-lâi`, `我tsia̍h--ah`). A §34 literal
+/// or typo no dictionary word reads (`asdf`) never learns. The phrase still
+/// needs one Hanji segment, since one in romanization alone is already its
+/// reading's romanization row.
 fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<LearnedEntry> {
     if nailed.len() < 2 {
         return None;
@@ -1633,18 +1636,23 @@ fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<Learne
         // `commit_continuous` stored an empty hanji as `None` already. A
         // Hanji piece is the segment's stored spelling (`canonical_text`),
         // not the shown Hanji, which POJ mode renders.
-        let piece = match seg.hanji {
-            Some(_) => {
-                any_hanji = true;
-                phonetics::api::strip_khinsiann_hanji(&seg.canonical_text)
+        let Some(_) = seg.hanji else {
+            if !han_lo || !crate::nailed::reading_is_dictionary_word(&seg.association_tl, config) {
+                return None;
             }
-            None if han_lo => seg.association_tl.clone(),
-            None => return None,
+            let piece = &seg.association_tl;
+            let run = crate::nailed::typed_separator_run(&seg.raw_text);
+            if !hanji.is_empty() && !run.is_empty() && !piece.starts_with('-') {
+                // The separator kind the user typed (`canonical_separators`).
+                hanji.push_str(if run.len() >= 2 { "--" } else { "-" });
+            } else if crate::commit_text::spaces_romanized_words(&hanji, piece) {
+                hanji.push(' ');
+            }
+            hanji.push_str(piece);
+            continue;
         };
-        if crate::commit_text::spaces_romanized_words(&hanji, &piece) {
-            hanji.push(' ');
-        }
-        hanji.push_str(&piece);
+        any_hanji = true;
+        hanji.push_str(&phonetics::api::strip_khinsiann_hanji(&seg.canonical_text));
     }
     if !any_hanji {
         return None;

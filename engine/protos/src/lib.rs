@@ -58,12 +58,17 @@ impl engine::AppConfig {
     }
 
     /// Whether every dictionary word also lists its romanization as a word of
-    /// its own (Hàn-Lô lām, `han_lo_mixed`): on, except under Romanization
-    /// Only — where every cell is already the romanization — and on the TPS
-    /// layout, which never shows one. A TPS-glyph buffer on a roman layout is
-    /// excluded by the caller, which knows the buffer's mode.
+    /// its own (Hàn-Lô lām, `han_lo_mixed`): on a TL / POJ layout only — never
+    /// on the TPS layout, which never shows one, nor in English input — and
+    /// never under Romanization Only, where every cell is already the
+    /// romanization. A TPS-glyph buffer on a roman layout is excluded by the
+    /// caller, which knows the buffer's mode.
     pub fn lists_roman_twins(&self) -> bool {
-        self.han_lo_mixed && !self.is_roman_only_display() && !self.is_tps_layout()
+        self.han_lo_mixed
+            && !self.is_roman_only_display()
+            && !self.is_tps_layout()
+            // English input (`phonetics::api::parse_input_mode`'s spellings).
+            && !matches!(self.input_mode.as_str(), "english" | "English" | "EN")
     }
 
     /// Whether the composition renders Hanji first: the swap, or the TPS
@@ -183,6 +188,20 @@ mod tests {
         for mode in ["tl", "poj", "english", "", "Tps"] {
             assert!(!config(mode, false).is_tps_layout(), "{mode:?}");
         }
+    }
+
+    #[test]
+    fn roman_twins_list_on_a_tl_or_poj_layout_only() {
+        let han_lo = |mode: &str| AppConfig {
+            han_lo_mixed: true,
+            ..config(mode, false)
+        };
+        assert!(han_lo("tl").lists_roman_twins());
+        assert!(han_lo("poj").lists_roman_twins());
+        for mode in ["tps", "english", "English", "EN"] {
+            assert!(!han_lo(mode).lists_roman_twins(), "{mode:?}");
+        }
+        assert!(!config("tl", false).lists_roman_twins());
     }
 
     #[test]

@@ -12,8 +12,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * from `roman`, `hanji` and the request's `AppConfig` exactly as for a
  * Continuous pick (`composing::commit_text`) and answers
  * `ComposingResponse.commit`: FINALIZED with the text, or IGNORED (no
- * script, `OTHER` where the mode shows one script, no `hanji`, or nothing to
- * write — a Hanji-only prediction once the swap is off) — the platform then
+ * script, `OTHER` where the mode shows one script, neither `hanji` nor
+ * `roman`, no `canonical_tl`, or nothing to write — a Hanji-only prediction
+ * once the swap is off) — the platform then
  * writes nothing. A split cell whose own script is missing commits the lead,
  * as a Continuous pick does (the phones' fail-open marker rule). With the
  * user-data stores open the engine counts the pick's usage under
@@ -105,8 +106,9 @@ public  final class CommitPrediction extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -119,8 +121,9 @@ public  final class CommitPrediction extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -134,8 +137,9 @@ public  final class CommitPrediction extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -150,8 +154,9 @@ public  final class CommitPrediction extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -163,8 +168,9 @@ public  final class CommitPrediction extends
   /**
    * <pre>
    * The prediction's display romanization as the engine shaped it — the
-   * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-   * syllable-separated); empty for a Hanji-only prediction.
+   * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+   * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+   * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
    * </pre>
    *
    * <code>string roman = 2;</code>
@@ -181,7 +187,8 @@ public  final class CommitPrediction extends
   private java.lang.String hanji_;
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -193,7 +200,8 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -206,7 +214,8 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -220,7 +229,8 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -231,7 +241,8 @@ public  final class CommitPrediction extends
   }
   /**
    * <pre>
-   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+   * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+   * for a romanization-only prediction, which writes `roman`.
    * </pre>
    *
    * <code>string hanji = 3;</code>
@@ -473,8 +484,9 @@ public  final class CommitPrediction extends
    * from `roman`, `hanji` and the request's `AppConfig` exactly as for a
    * Continuous pick (`composing::commit_text`) and answers
    * `ComposingResponse.commit`: FINALIZED with the text, or IGNORED (no
-   * script, `OTHER` where the mode shows one script, no `hanji`, or nothing to
-   * write — a Hanji-only prediction once the swap is off) — the platform then
+   * script, `OTHER` where the mode shows one script, neither `hanji` nor
+   * `roman`, no `canonical_tl`, or nothing to write — a Hanji-only prediction
+   * once the swap is off) — the platform then
    * writes nothing. A split cell whose own script is missing commits the lead,
    * as a Continuous pick does (the phones' fail-open marker rule). With the
    * user-data stores open the engine counts the pick's usage under
@@ -567,8 +579,9 @@ public  final class CommitPrediction extends
     /**
      * <pre>
      * The prediction's display romanization as the engine shaped it — the
-     * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-     * syllable-separated); empty for a Hanji-only prediction.
+     * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+     * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+     * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
      * </pre>
      *
      * <code>string roman = 2;</code>
@@ -581,8 +594,9 @@ public  final class CommitPrediction extends
     /**
      * <pre>
      * The prediction's display romanization as the engine shaped it — the
-     * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-     * syllable-separated); empty for a Hanji-only prediction.
+     * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+     * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+     * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
      * </pre>
      *
      * <code>string roman = 2;</code>
@@ -596,8 +610,9 @@ public  final class CommitPrediction extends
     /**
      * <pre>
      * The prediction's display romanization as the engine shaped it — the
-     * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-     * syllable-separated); empty for a Hanji-only prediction.
+     * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+     * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+     * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
      * </pre>
      *
      * <code>string roman = 2;</code>
@@ -613,8 +628,9 @@ public  final class CommitPrediction extends
     /**
      * <pre>
      * The prediction's display romanization as the engine shaped it — the
-     * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-     * syllable-separated); empty for a Hanji-only prediction.
+     * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+     * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+     * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
      * </pre>
      *
      * <code>string roman = 2;</code>
@@ -628,8 +644,9 @@ public  final class CommitPrediction extends
     /**
      * <pre>
      * The prediction's display romanization as the engine shaped it — the
-     * `EnginePrediction.text` of a prediction with a `subtitle` (POJ-rendered,
-     * syllable-separated); empty for a Hanji-only prediction.
+     * `EnginePrediction.text` of a prediction with a `subtitle`, or of a
+     * romanization-only prediction (empty `hanji`, §42 Hàn-Lô lām)
+     * (POJ-rendered, syllable-separated); empty for a Hanji-only prediction.
      * </pre>
      *
      * <code>string roman = 2;</code>
@@ -645,7 +662,8 @@ public  final class CommitPrediction extends
 
     /**
      * <pre>
-     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+     * for a romanization-only prediction, which writes `roman`.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -657,7 +675,8 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+     * for a romanization-only prediction, which writes `roman`.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -670,7 +689,8 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+     * for a romanization-only prediction, which writes `roman`.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -685,7 +705,8 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+     * for a romanization-only prediction, which writes `roman`.
      * </pre>
      *
      * <code>string hanji = 3;</code>
@@ -698,7 +719,8 @@ public  final class CommitPrediction extends
     }
     /**
      * <pre>
-     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown.
+     * `EnginePrediction.hanji` — the Hanji half of the commit, as shown. Empty
+     * for a romanization-only prediction, which writes `roman`.
      * </pre>
      *
      * <code>string hanji = 3;</code>

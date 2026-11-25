@@ -33,9 +33,9 @@ const _: fn() = || {
 pub use continuous::{
     best_candidate_for_key_with_barriers, compound_hanji_exists, fetch_abbrev_candidates,
     fetch_candidates_for_keys_with_barriers, fetch_partial_prefix_candidates,
-    fetch_partial_prefix_candidates_unbounded, homophone_words_for_key, ConsumedSpan,
-    ContinuousFetchCtx, CustomEntry, EdgeBest, LearnedEntry, RawCandidate, TonePin, TpsClose,
-    TpsCloseKind, TypedBoundary, COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL,
+    fetch_partial_prefix_candidates_unbounded, homophone_words_for_key, reading_is_dictionary_word,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EdgeBest, LearnedEntry, RawCandidate, TonePin,
+    TpsClose, TpsCloseKind, TypedBoundary, COVERAGE_KIND_ABBREV, COVERAGE_KIND_FULL,
     COVERAGE_KIND_PARTIAL_PREFIX, PARTIAL_PREFIX_HYDRATE_CAP, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 pub use error::LexiconError;

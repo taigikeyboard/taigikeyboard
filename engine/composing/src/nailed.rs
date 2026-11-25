@@ -2,7 +2,10 @@
 //! the learned reading and the combined preedit display.
 
 use lexicon::dictionary_reader::Filter;
-use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
+use lexicon::{
+    compound_hanji_exists, reading_is_dictionary_word as dictionary_reads,
+    EngineHandle as LexiconHandle,
+};
 use protos::engine::AppConfig;
 
 /// One **nailed** segment inside `Phase::Continuous`. "Nailed" means the
@@ -237,12 +240,16 @@ fn push_boundary(
 ) {
     let run = typed_separator_run(&next.raw_text);
     let rendered = text.of(next);
-    if rendered.starts_with('-') {
+    let opens_with_dot = phonetics::api::opens_with_neutral_mark(rendered);
+    // An untyped self-separated piece attaches only to a romanization syllable
+    // (`hó--ah`); after anything else — the `)` of a bracketed pair
+    // (`hó (好) --ah (矣)`) — the default boundary stays.
+    let attaches = (rendered.starts_with('-') || opens_with_dot) && ends_in_romanization(s);
+    if run.is_empty() && !attaches {
+        s.push_str(default);
         return;
     }
-    let opens_with_dot = phonetics::api::opens_with_neutral_mark(rendered);
-    if run.is_empty() && !opens_with_dot {
-        s.push_str(default);
+    if rendered.starts_with('-') {
         return;
     }
     // `syllable_joiner`: `None` = the Hyphen setting (write the run as typed);
@@ -362,6 +369,28 @@ pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> Str
 /// learns the separators the preedit showed.
 pub(crate) fn learned_reading(nailed: &[NailedSegment], config: &AppConfig) -> String {
     nailed_join(nailed, SegmentText::AssociationTl, config)
+}
+
+/// Whether `reading` (a picked romanization's canonical TL) is the reading of
+/// a dictionary word under the user's source switches — what a Hàn-Lô lām
+/// learned phrase (§50) asks of each of its romanized pieces. `false` without
+/// an installed dictionary.
+pub(crate) fn reading_is_dictionary_word(reading: &str, config: &AppConfig) -> bool {
+    let Some(key) = crate::shadow::custom_toneless_key(reading, phonetics::InputMode::Tl) else {
+        return false;
+    };
+    let filter = Filter::from_enabled_bitmask(crate::requests::source_filter_bitmask(config));
+    LexiconHandle::with_state(|state| {
+        Ok(
+            match (state.prefix_index.as_ref(), state.dictionary.as_ref()) {
+                (Some(prefix), Some(dict)) => {
+                    dictionary_reads(&key, reading, &filter, prefix, dict)
+                }
+                _ => false,
+            },
+        )
+    })
+    .unwrap_or(false)
 }
 
 /// Which per-segment text a nailed join renders.
@@ -1147,6 +1176,23 @@ mod tests {
         assert_eq!(
             nailed_prefix_with_oracle(&n, SegmentText::Display, false, None, |_, _, _| false),
             "hó ah"
+        );
+    }
+
+    #[test]
+    fn an_untyped_khinsiann_piece_keeps_the_space_after_a_bracketed_pair() {
+        // Annotate in Brackets: the piece before ends in `)`, not a
+        // romanization syllable, so the word space stays — under either
+        // script order and every joiner.
+        let render = |first: &str, second: &str, joiner| {
+            let n = [seg_dc(first, "好", 1), seg_raw(second, "矣", "ah")];
+            nailed_prefix_with_oracle(&n, SegmentText::Display, true, joiner, |_, _, _| false)
+        };
+        assert_eq!(render("hó (好)", "--ah (矣)", None), "hó (好) --ah (矣)");
+        assert_eq!(render("hó (好)", "·ah (矣)", Some("")), "hó (好) ·ah (矣)");
+        assert_eq!(
+            render("好 (hó)", "--矣 (--ah)", None),
+            "好 (hó) --矣 (--ah)"
         );
     }
 

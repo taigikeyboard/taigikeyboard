@@ -82,12 +82,42 @@ fn install_fixture() {
             syll: 1,
             freq: 10,
         },
+        Row {
+            toneless_key: "lai",
+            hanji: "來",
+            tl: "lâi",
+            syll: 1,
+            freq: 9000,
+        },
+        Row {
+            toneless_key: "tsua",
+            hanji: "紙",
+            tl: "tsuá",
+            syll: 1,
+            freq: 9000,
+        },
+        Row {
+            toneless_key: "tsua",
+            hanji: "珠仔",
+            tl: "tsu-á",
+            syll: 2,
+            freq: 3000,
+        },
+        Row {
+            toneless_key: "siann",
+            hanji: "聲",
+            tl: "siann",
+            syll: 1,
+            freq: 9000,
+        },
     ];
     let source = |row: &Row| if row.hanji.is_empty() { LKK } else { KAUTIAN };
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v4_sourced(&rows, source));
     let fst_path = build_dictionary_fst(&rows);
     let association_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["gua2", "tsiah8", "tsiah4", "kah4", "ah4"]);
+    let syllables_path = build_syllables_fst(&[
+        "gua2", "tsiah8", "tsiah4", "kah4", "ah4", "lai5", "siann1", "tsua2", "tsu1", "a2",
+    ]);
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
@@ -208,6 +238,37 @@ fn a_picked_hanji_does_not_lift_its_romanization() {
             (Some("食"), "tsia̍h"),
             (Some("隻"), "tsiah"),
             (None, "tsia̍h"),
+        ]
+    );
+}
+
+// The romanization is priced from the Hanji homophone the corpus writes
+// most, never from the user's own: an unpriced custom 喫 sharing the reading
+// leaves the `tsia̍h` romanization between 隻 and 𤆬, as without it.
+#[test]
+fn a_custom_hanji_does_not_price_its_romanization() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let listed = rows(
+        "tsiah",
+        &config(CandidateDisplayMode::SideBySide, true),
+        Fetch {
+            custom: vec![lexicon::CustomEntry {
+                roman: "tsia̍h".into(),
+                hanji: Some("喫".into()),
+            }],
+            ..Fetch::default()
+        },
+    );
+    assert_eq!(
+        hanji_and_roman(&listed),
+        [
+            (None, "tsiah"),
+            (Some("喫"), "tsia̍h"),
+            (Some("食"), "tsia̍h"),
+            (Some("隻"), "tsiah"),
+            (None, "tsia̍h"),
+            (Some("𤆬"), "tsia̍h"),
         ]
     );
 }
@@ -400,4 +461,186 @@ fn the_sentence_writes_a_romanization_in_poj_under_poj() {
         .expect("the sentence");
     assert_eq!(row.hanji.as_deref(), Some("我chia̍h"));
     assert_eq!(row.display_text, "我tsia̍h");
+}
+
+/// The whole-buffer row's `(hanji, roman)`.
+fn sentence_row(raw: &str, config: &AppConfig, fetch: Fetch) -> (Option<String>, String) {
+    fetch_at_pos_response(config, raw, fetch)
+        .continuous
+        .map(|c| c.candidates)
+        .unwrap_or_default()
+        .into_iter()
+        .skip(1)
+        .find(|c| c.consumed_span_end as usize == raw.len())
+        .map(|c| (c.hanji, c.roman))
+        .unwrap_or_else(|| panic!("no sentence for {raw}"))
+}
+
+// An all-romanization sentence writes a neutral-tone piece against the
+// syllable before it, as the Hanji does (`我tsia̍h--ah`).
+#[test]
+fn the_sentence_romanization_attaches_a_neutral_tone_piece() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    assert_eq!(
+        sentence_row("tsiahah", &on, picked("tsia̍h", "tsia̍h")),
+        (None, "tsia̍h--ah".to_owned())
+    );
+    assert_eq!(
+        sentence_row("guatsiahah", &on, picked("tsia̍h", "tsia̍h")),
+        (Some("我tsia̍h--ah".to_owned()), "guá tsia̍h--ah".to_owned())
+    );
+}
+
+// A `--` typed in front of a romanized word stays in the sentence's Hanji
+// with khinsiann-in-Hanji off, as the nailed commit keeps it.
+#[test]
+fn the_sentence_keeps_a_typed_separator_before_a_romanized_word() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let fetch = Fetch {
+        now_ms: NOW_MS,
+        frequency: vec![
+            selected("tsia̍h", "tsia̍h", 3, 1_000),
+            selected("lâi", "lâi", 3, 1_000),
+        ],
+        ..Fetch::default()
+    };
+    assert_eq!(
+        sentence_row("guatsiah--lai", &on, fetch).0.as_deref(),
+        Some("我tsia̍h--lâi")
+    );
+}
+
+// §53: the nasal marker in a romanized word of the sentence's Hanji follows
+// the marker-case switch like the romanization does.
+#[test]
+fn the_sentence_hanji_follows_the_nasal_marker_case() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let poj = |force_lowercase_nasal_marker| AppConfig {
+        han_lo_mixed: true,
+        force_lowercase_nasal_marker,
+        ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
+    };
+    let (hanji, roman) = sentence_row("GOASIANN", &poj(true), picked("siann", "siann"));
+    assert_eq!(hanji.as_deref(), Some("我SIAⁿ"), "{roman}");
+    let (hanji, _) = sentence_row("GOASIANN", &poj(false), picked("siann", "siann"));
+    assert_eq!(hanji.as_deref(), Some("我SIAᴺ"));
+}
+
+// Hanji with Romanization: the whole-sentence row has no romanization twin,
+// so it keeps its own romanization cell.
+#[test]
+fn hanji_with_romanization_keeps_the_sentence_romanization_cell() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let cells: Vec<(CellScript, Option<String>, String)> = fetch_at_pos_response(
+        &config(CandidateDisplayMode::Combined, true),
+        "guatsiah",
+        Fetch::default(),
+    )
+    .continuous
+    .map(|c| c.candidates)
+    .unwrap_or_default()
+    .into_iter()
+    .map(|c| (c.cell_script(), c.hanji, c.roman))
+    .collect();
+    assert!(
+        cells
+            .iter()
+            .any(|(script, _, roman)| *script == CellScript::Roman && roman == "guá tsia̍h"),
+        "{cells:?}"
+    );
+}
+
+// Ranking Engine Lab: a Hàn-Lô lām sentence (`我tsia̍h`) is the walker's
+// sentence row, not a word ranked against the rest.
+#[test]
+fn the_lab_tags_a_mixed_sentence_as_the_sentence() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let engine = crate::common::continuous_engine(&on, "guatsiah");
+    let rows = composing::UserRows {
+        frequency: crate::common::frequency_map(vec![selected("tsia̍h", "tsia̍h", 3, 1_000)]),
+        custom: Vec::new(),
+        learned: Vec::new(),
+    };
+    let lab: Vec<(String, &str)> = composing::explain::mechanism(
+        &engine,
+        NOW_MS,
+        &rows,
+        &ranking::ContextRanks::default(),
+        false,
+        &on,
+    )
+    .expect("a composition")
+    .candidates
+    .into_iter()
+    .map(|row| (row.hanji.unwrap_or_default(), row.role))
+    .collect();
+    assert!(lab.contains(&("我tsia̍h".to_owned(), "sentence")), "{lab:?}");
+}
+
+// A romanization replaces a Hanji edge only at its syllable count: picking
+// the two-syllable `tsu-á` never turns the one-syllable 紙 edge of `guatsua`
+// into it (the segmentation never moves).
+#[test]
+fn a_picked_romanization_keeps_the_edge_syllable_count() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let off = config(CandidateDisplayMode::SideBySide, false);
+    let fetch = || picked("tsu-á", "tsu-á");
+    assert_eq!(
+        sentence("guatsua", &off, fetch()),
+        sentence("guatsua", &on, fetch()),
+    );
+    assert_eq!(sentence("guatsua", &on, fetch()).as_deref(), Some("我紙"));
+    // A one-syllable romanization still takes its edge.
+    assert_eq!(
+        sentence("guatsua", &on, picked("tsuá", "tsuá")).as_deref(),
+        Some("我tsuá")
+    );
+}
+
+// The bundled previous-word context names Hanji only (`我` → 甲); the LKK
+// recommendation `kah` shares the hit and still leads its homophones.
+#[test]
+fn a_bundled_context_keeps_the_lkk_romanization_ahead() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let mut context = ranking::ContextRanks::new();
+    context.insert("甲".into(), "kah".into(), ranking::CONTEXT_RANK_BUNDLED);
+    let listed = rows(
+        "kah",
+        &on,
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            context: context.clone(),
+            ..Fetch::default()
+        },
+    );
+    assert_eq!(hanji_and_roman(&listed)[0], (None, "kah"), "{listed:?}");
+    // The user's own context is theirs: it keeps the Hanji ahead.
+    let mut user = ranking::ContextRanks::new();
+    user.insert("甲".into(), "kah".into(), ranking::CONTEXT_RANK_USER);
+    let listed = rows(
+        "kah",
+        &on,
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            context: user,
+            ..Fetch::default()
+        },
+    );
+    assert_eq!(
+        hanji_and_roman(&listed)[0],
+        (Some("甲"), "kah"),
+        "{listed:?}"
+    );
 }

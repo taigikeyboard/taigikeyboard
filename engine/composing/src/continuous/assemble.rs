@@ -798,6 +798,19 @@ pub(crate) fn assemble_candidates(
             {
                 cand.roman = roman;
             }
+            // A Hàn-Lô lām sentence writes its romanized words in the Hanji
+            // too (`我SIÂᴺ`); a Hanji character carries no marker, so this
+            // only ever touches those.
+            if let Some(hanji) = &cand.hanji {
+                if let std::borrow::Cow::Owned(hanji) =
+                    phonetics::case_transform::apply_nasal_marker_case(
+                        hanji,
+                        force_lowercase_nasal_marker,
+                    )
+                {
+                    cand.hanji = Some(hanji);
+                }
+            }
         }
         if mode == phonetics::InputMode::Poj
             || syllable_joiner.is_some()

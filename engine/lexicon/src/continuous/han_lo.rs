@@ -14,7 +14,8 @@
 //!   is that reading's row, repriced from the same homophone — minus
 //!   [`LKK_ROMAN_COST_BONUS`] for an LKK recommendation (李江却台語文教基金會
 //!   漢羅合用建議用字: `kah`, `ka-tsiah`, `mā`), so it leads its Hanji
-//!   homophones — never worse than its own corpus price.
+//!   homophones — never worse than its own corpus price — and shares a
+//!   bundled previous-word context hit on them (`我` → 毋 lifts `m̄` too).
 //!
 //! Every phonetic fetch runs it after its custom / learned merge and dedupe,
 //! so the user's words get their romanization too and a romanization-only
@@ -30,7 +31,7 @@
 
 use std::collections::HashMap;
 
-use ranking::{CandidateSortKey, COVERAGE_KIND_ABBREV};
+use ranking::{CONTEXT_RANK_BUNDLED, COVERAGE_KIND_ABBREV};
 
 use super::{ContinuousFetchCtx, RawCandidate};
 use crate::dictionary_reader::{LKK_BIT, WALKER_COST_UNPRICED};
@@ -73,18 +74,17 @@ pub(super) fn add_roman_twins(rows: &mut Vec<RawCandidate>, ctx: &ContinuousFetc
     if !ctx.roman_twins {
         return;
     }
-    // The best Hanji row per reading, by the key the list and the edge pick
-    // sort on (every row of one reading shares its span, so its tier).
+    // The pricing Hanji row per reading: the one the corpus writes most
+    // (lowest `walker_cost`; the first listed on a tie). Never the user's
+    // preference order — a picked, custom or learned homophone (§42: picking
+    // Hanji never affects its romanization), nor an unpriced user row over a
+    // priced dictionary one.
     let mut best: HashMap<((u32, u32), &str), usize> = HashMap::new();
     for (index, row) in rows.iter().enumerate().filter(|(_, row)| has_hanji(row)) {
         let reading = (row.consumed_span, row.canonical_tl.as_str());
-        let sort_key = |at: usize| {
-            let row = &rows[at];
-            CandidateSortKey::without_context(&row.rank_facts(), row.consumed_span.1, at as u32)
-        };
         best.entry(reading)
             .and_modify(|at| {
-                if sort_key(index) < sort_key(*at) {
+                if row.walker_cost < rows[*at].walker_cost {
                     *at = index;
                 }
             })
@@ -110,7 +110,17 @@ pub(super) fn add_roman_twins(rows: &mut Vec<RawCandidate>, ctx: &ContinuousFetc
         .iter()
         .map(|(reading, &at)| (reading, rows[at].walker_cost))
         .collect();
-    let repriced: Vec<(usize, u16)> = rows
+    // Readings whose Hanji the bundled previous-word context names (`我` →
+    // 毋 / `m̄`): the LKK recommendation shares that hit, so the bundled
+    // bigram, which keys Hanji only, does not undo the recommendation. The
+    // user's own context (`CONTEXT_RANK_USER`) is theirs and stays the
+    // Hanji's.
+    let bundled_context: std::collections::HashSet<((u32, u32), &str)> = rows
+        .iter()
+        .filter(|row| has_hanji(row) && row.context_rank == CONTEXT_RANK_BUNDLED)
+        .map(|row| (row.consumed_span, row.canonical_tl.as_str()))
+        .collect();
+    let repriced: Vec<(usize, u16, u8)> = rows
         .iter()
         .enumerate()
         .filter(|(_, row)| !has_hanji(row) && !row.is_custom)
@@ -118,14 +128,23 @@ pub(super) fn add_roman_twins(rows: &mut Vec<RawCandidate>, ctx: &ContinuousFetc
             let reading = (row.consumed_span, row.canonical_tl.clone());
             let sibling = *sibling_cost.get(&reading)?;
             let recommended = row.bitmask & LKK_BIT != 0;
+            let context_rank = if recommended
+                && bundled_context.contains(&(row.consumed_span, row.canonical_tl.as_str()))
+            {
+                row.context_rank.min(CONTEXT_RANK_BUNDLED)
+            } else {
+                row.context_rank
+            };
             Some((
                 index,
                 row.walker_cost.min(roman_prior(sibling, recommended)),
+                context_rank,
             ))
         })
         .collect();
-    for (index, cost) in repriced {
+    for (index, cost, context_rank) in repriced {
         rows[index].walker_cost = cost;
+        rows[index].context_rank = context_rank;
     }
     let mut twins: Vec<(usize, RawCandidate)> = best
         .iter()
