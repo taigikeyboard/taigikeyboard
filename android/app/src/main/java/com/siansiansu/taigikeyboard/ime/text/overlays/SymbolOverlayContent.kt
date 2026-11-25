@@ -1,4 +1,4 @@
-// Compose content for the keyboard symbol selection overlay — M3 PrimaryTabRow +
+// Compose content for the keyboard symbol selection overlay — M3 PrimaryScrollableTabRow +
 // LazyVerticalGrid. Honors the user-customizable keyboard overlay appearance
 // (gradient backdrop + role-first foreground + chrome accent).
 
@@ -6,6 +6,7 @@ package com.siansiansu.taigikeyboard.ime.text.overlays
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,7 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
@@ -42,7 +43,7 @@ private val SymbolCellMinHeight = 40.dp
 private val GridContentPadding = 8.dp
 
 /**
- * Symbol picker: a fixed tab row over the 5 [SymbolCategory] tabs and a lazy grid of the
+ * Symbol picker: a tab row over the 5 [SymbolCategory] tabs and a lazy grid of the
  * selected category's symbols.
  *
  * @param appearance user keyboard overlay colors — gradient backdrop + role-first foreground +
@@ -76,30 +77,11 @@ fun SymbolOverlayContent(
             // The surface runs under the navigation bar like the keyboard's; tabs + grid stop above it.
             .padding(bottom = bottomInset),
     ) {
-        PrimaryTabRow(
-            selectedTabIndex = selectedIndex,
-            // Transparent so the column's gradient/solid backdrop shows through uniformly.
-            containerColor = Color.Transparent,
-            contentColor = appearance.foreground,
-            indicator = {
-                TabRowDefaults.PrimaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(selectedIndex, matchContentSize = false),
-                    color = appearance.accent,
-                )
-            },
-            // Theme candidate text like the expanded-grid lines; adaptive keeps the M3 default divider.
-            divider = { HorizontalDivider(color = appearance.lineColor ?: DividerDefaults.color) },
-        ) {
-            SymbolCategoryValues.forEachIndexed { index, category ->
-                Tab(
-                    selected = index == selectedIndex,
-                    onClick = { selectedCategory = category },
-                    selectedContentColor = appearance.accent,
-                    unselectedContentColor = appearance.foreground,
-                    text = { Text(stringRes(category.labelKey)) },
-                )
-            }
-        }
+        SymbolCategoryTabs(
+            appearance = appearance,
+            selectedIndex = selectedIndex,
+            onSelect = { selectedCategory = SymbolCategoryValues[it] },
+        )
 
         val symbols = remember(selectedCategory) { SymbolData.rows(selectedCategory).flatten() }
         LazyVerticalGrid(
@@ -118,6 +100,47 @@ fun SymbolOverlayContent(
                     fontSizeSp = selectedCategory.fontSize,
                     color = appearance.foreground,
                     onClick = { onSymbolSelected(symbol) },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Category tabs, each label on one line. Every tab is at least a fifth of the row, so the row
+ * fills it with equal tabs when the labels fit; a longer label widens its tab and the row
+ * scrolls (a fixed row broke labels mid-word).
+ */
+@Composable
+private fun SymbolCategoryTabs(
+    appearance: KeyboardOverlayAppearance,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        PrimaryScrollableTabRow(
+            selectedTabIndex = selectedIndex,
+            // Transparent so the column's gradient/solid backdrop shows through uniformly.
+            containerColor = Color.Transparent,
+            contentColor = appearance.foreground,
+            edgePadding = 0.dp,
+            indicator = {
+                TabRowDefaults.PrimaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(selectedIndex, matchContentSize = false),
+                    color = appearance.accent,
+                )
+            },
+            // Theme candidate text like the expanded-grid lines; adaptive keeps the M3 default divider.
+            divider = { HorizontalDivider(color = appearance.lineColor ?: DividerDefaults.color) },
+            minTabWidth = maxWidth / SymbolCategoryValues.size,
+        ) {
+            SymbolCategoryValues.forEachIndexed { index, category ->
+                Tab(
+                    selected = index == selectedIndex,
+                    onClick = { onSelect(index) },
+                    selectedContentColor = appearance.accent,
+                    unselectedContentColor = appearance.foreground,
+                    text = { Text(stringRes(category.labelKey), maxLines = 1, softWrap = false) },
                 )
             }
         }
