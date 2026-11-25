@@ -44,7 +44,8 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         ToneInputScheme::label_key,
     );
     // Hàn-Lô lām, right under Tone Keys (macOS / Web place it there too):
-    // greys where the engine ignores it (Romanization Only, TPS).
+    // greys where the engine ignores it (Romanization Only, side by side led
+    // by the romanization, TPS).
     let han_lo_row = context.switch_row_in(
         |row| group.add(row),
         StringKey::SettingsHanLoMixed,

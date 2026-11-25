@@ -1638,7 +1638,12 @@ fn learned_phrase(nailed: &[NailedSegment], config: &AppConfig) -> Option<Learne
     if nailed.len() < 2 {
         return None;
     }
-    let han_lo = config.lists_roman_twins();
+    // The composition's own mode, as its fetches read it
+    // (`requests::listing_buffer`): Bopomofo typed on a TL / POJ layout is a
+    // TPS buffer, which lists no romanization and so learns none.
+    let raw: String = nailed.iter().map(|seg| seg.raw_text.as_str()).collect();
+    let han_lo =
+        crate::requests::lists_roman_twins(config, crate::derived::buffer_input_mode(&raw, config));
     let mut hanji = String::new();
     let mut any_hanji = false;
     for seg in nailed {

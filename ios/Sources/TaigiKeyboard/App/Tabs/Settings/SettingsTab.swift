@@ -155,15 +155,19 @@ struct SettingsTab: View {
                         settings.isKhinsiannInHanjiEnabled = newValue
                     }
 
-                    // Romanization candidates: the engine ignores it under Romanization Only and on TPS,
-                    // so it greys there, as on the desktops (`SettingsDocument::allows_han_lo_mixed`).
+                    // Romanization candidates: the engine ignores it under Romanization Only, side by
+                    // side led by the romanization and on TPS, so it greys there, as on the desktops
+                    // (`SettingsDocument::allows_han_lo_mixed`).
                     Toggle(isOn: $hanLoMixedEnabled) {
                         HStack {
                             Text(lang.string(.settingsHanLoMixed))
                             SettingInfoButton(description: lang.string(.settingsHanLoMixedInfo))
                         }
                     }
-                    .disabled(!candidateDisplayMode.showsHanji || selectedInputMode == .tps)
+                    .disabled(
+                        !candidateDisplayMode.allowsHanLoMixed(storedHanjiFirst: settings.storedIsHanjiFirst)
+                            || selectedInputMode == .tps,
+                    )
                     .onChange(of: hanLoMixedEnabled) { _, newValue in
                         settings.isHanLoMixedEnabled = newValue
                     }

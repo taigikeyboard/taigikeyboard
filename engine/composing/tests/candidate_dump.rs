@@ -134,8 +134,14 @@ fn dump_continuous_candidates() {
         Ok("roman") => protos::engine::CandidateDisplayMode::RomanOnly as i32,
         _ => cfg.candidate_display_mode,
     };
-    // DUMP_HANLO=1 — Hàn-Lô lām: every word's romanization as a word of its own.
+    // DUMP_HANLO=1 — Hàn-Lô lām: every word's romanization as a word of its
+    // own. Side by side lists the twins only when the Hanji leads
+    // (`AppConfig::lists_roman_twins`), so the switch sets that too — else
+    // the dump would print the list without the switch, saying nothing.
     cfg.han_lo_mixed = std::env::var("DUMP_HANLO").is_ok_and(|v| v == "1");
+    if cfg.han_lo_mixed {
+        cfg.is_hanji_first = true;
+    }
 
     // DUMP_FREQ="更新:king-sin:10;羽:ú:10:7200000" — simulated
     // user_frequency rows `display:tl:count[:age_ms]`, default age 1 s.

@@ -123,7 +123,7 @@ pub(crate) fn filter(
     // 2. shape via display rules + drop empty-roman rows in non-Hanji mode.
     let mut shaped: Vec<EnginePrediction> = collapsed
         .into_iter()
-        .filter_map(|m| shape_prediction(m, config))
+        .filter_map(|m| shape_prediction(m, config, roman_twins))
         .collect();
 
     // 3. sort desc by score (stable — equal scores preserve IndexMap
@@ -382,7 +382,11 @@ fn has_separator(tl: &str) -> bool {
     tl.contains('-') || tl.contains(' ')
 }
 
-fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction> {
+fn shape_prediction(
+    m: MergedRow,
+    config: &AppConfig,
+    roman_twins: bool,
+) -> Option<EnginePrediction> {
     // The TPS layout renders predictions from TL, as it did while TPS arrived as `"tl"`.
     let use_tl = config.input_mode == "tl" || config.is_tps_layout();
     let mut roman = if use_tl {
@@ -398,15 +402,19 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     if !config.is_hanji_first && roman.is_empty() {
         return None;
     }
-    // A word written in romanization (a Hàn-Lô lām pick learned as
-    // `(TL, TL)`) is a romanization-only prediction (no Hanji, no subtitle),
-    // like a romanization-only candidate, whether the switch is still on or
-    // not: the tap writes `text`. The TPS layout, which never shows a
-    // romanization, drops it. Otherwise the shown Hanji, its romanization runs
-    // in POJ wherever `roman` is. `display_text` keeps the stored spelling,
-    // the key a pick is counted under and NextWord learns.
+    // A word written in romanization is a romanization-only prediction (no
+    // Hanji, no subtitle), like a romanization-only candidate: the tap writes
+    // `text`. One the user learned (a Hàn-Lô lām pick, `(TL, TL)`, no bundled
+    // score) is in effect only while the switch is (`roman_twins`): with it
+    // off — or where it does not apply, the TPS layout among them — it waits
+    // in the store, as a learned Hàn-Lô lām phrase does (§50). A bundled
+    // romanization row stays, except on the TPS layout, which never shows a
+    // romanization. Otherwise the shown Hanji, its romanization runs in POJ
+    // wherever `roman` is. `display_text` keeps the stored spelling, the key a
+    // pick is counted under and NextWord learns.
     let romanization_word = !roman.is_empty() && is_romanization_word(&m);
-    if romanization_word && config.is_tps_layout() {
+    let learned_only = m.has_user_score && m.dict_score == 0.0;
+    if romanization_word && (config.is_tps_layout() || (learned_only && !roman_twins)) {
         return None;
     }
     let hanji = if romanization_word {
@@ -1629,11 +1637,12 @@ mod tests {
         );
     }
 
-    // A romanization learned while the switch was on stays a
-    // romanization-only prediction once it is off — never `tsia̍h / tsia̍h`
-    // — and the TPS layout, which shows no romanization, drops it.
+    // A romanization learned while the switch was on is in effect only
+    // while it is: off (or on the TPS layout) it waits in the store, and the
+    // Hanji prediction of its reading stays. With the switch on it is the
+    // reading's romanization-only prediction.
     #[test]
-    fn a_learned_romanization_stays_romanization_only_with_the_switch_off() {
+    fn a_learned_romanization_waits_while_the_switch_is_off() {
         let rows = || {
             vec![
                 dict_row("食", "tsia̍h", 100),
@@ -1642,15 +1651,19 @@ mod tests {
         };
         assert_eq!(
             shown(rows(), &config_tl_mode_hanji_first(true)),
+            vec![cell("食", "tsia̍h", "食", "食")]
+        );
+        assert_eq!(
+            shown(rows(), &han_lo(config_tl_mode_hanji_first(true))),
             vec![
                 cell("", "tsia̍h", "", "tsia̍h"),
                 cell("食", "tsia̍h", "食", "食"),
             ]
         );
-        let tps = AppConfig {
+        let tps = han_lo(AppConfig {
             input_mode: "tps".to_owned(),
             ..config_tl_mode_hanji_first(true)
-        };
+        });
         assert_eq!(
             shown(rows(), &tps)
                 .into_iter()
@@ -1658,17 +1671,13 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec!["食".to_owned()]
         );
-        // Hanji with Romanization: one romanization cell, one Hanji cell.
-        let combined = AppConfig {
-            candidate_display_mode: CandidateDisplayMode::Combined as i32,
-            ..config_tl_mode_hanji_first(true)
-        };
+        // A bundled romanization row is not the user's: it stays.
         assert_eq!(
-            cells(rows(), 10, &combined),
-            vec![
-                ("tsia̍h".to_owned(), CellScript::Roman),
-                ("食".to_owned(), CellScript::Hanji),
-            ]
+            shown(
+                vec![dict_row("kah", "kah", 50)],
+                &config_tl_mode_hanji_first(true)
+            ),
+            vec![cell("", "kah", "", "kah")]
         );
     }
 

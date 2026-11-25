@@ -499,6 +499,24 @@ fn han_lo_learns_nothing_romanized_in_english_input() {
     assert_eq!(last.learned, None);
 }
 
+// Bopomofo typed on a TL / POJ layout is a TPS buffer, which lists no
+// romanization, so a hanji-less pick there learns no Hàn-Lô lām phrase —
+// the composition's mode decides, as its fetches do.
+#[test]
+fn han_lo_learns_nothing_romanized_in_a_tps_buffer() {
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let config = protos::engine::AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        ..config_tl()
+    };
+    let mut e = engine_in_continuous("ㄍㄧ˪ㄎㄧˋㄌㄞˊ");
+    e.apply_learning(pick((Some("記"), "kì", 8, 1)), &config);
+    let last = e.apply_learning(pick((None, "khí-lâi", 16, 2)), &config);
+    assert_eq!(last.learned, None);
+}
+
 #[test]
 fn missing_canonical_tl_blocks_learning() {
     // Legacy caller / TPS-OOV: `association_tl` empty → no key to learn under.

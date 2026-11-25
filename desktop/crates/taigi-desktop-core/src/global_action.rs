@@ -142,14 +142,16 @@ pub fn apply_global_action(
 }
 
 /// Whether the swap changes which candidates exist, not only how they draw:
-/// side by side, with romanized words as candidates in effect
-/// (`SettingsDocument::allows_han_lo_mixed`).
+/// side by side, with romanized words as candidates switched on, off TPS —
+/// the swap itself turns the twins on or off there
+/// (`SettingsDocument::allows_han_lo_mixed` reads the swap, so it cannot
+/// answer this in both directions).
 fn swap_changes_the_list(runtime: &DesktopRuntime) -> bool {
     let document = runtime.settings.current();
     document.choice::<CandidateDisplayMode>(&keys::CANDIDATE_DISPLAY_MODE)
         == CandidateDisplayMode::SideBySide
         && document.bool(&keys::IS_HAN_LO_MIXED_ENABLED)
-        && document.allows_han_lo_mixed()
+        && !document.is_typing_tps()
 }
 
 /// One of the two input-script switches; the candidates on screen were

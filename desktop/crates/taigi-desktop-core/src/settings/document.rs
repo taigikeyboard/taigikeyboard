@@ -258,16 +258,19 @@ impl SettingsDocument {
                 .shows_hanji()
     }
 
-    /// Whether Hàn-Lô lām takes effect: a cell shows Hanji and the input mode
-    /// is a romanization — Romanization Only already lists every word as its
-    /// romanization, TPS never shows one (`AppConfig::lists_roman_twins`). The
-    /// settings rows grey out where this is false; the engine ignores the
-    /// stored switch there itself.
+    /// Whether Hàn-Lô lām takes effect: a cell shows Hanji, side by side
+    /// leads with it, and the input mode is a romanization — Romanization
+    /// Only already lists every word as its romanization, side by side led by
+    /// the romanization already writes it from its paired cell, TPS never
+    /// shows one (`AppConfig::lists_roman_twins`). The settings rows grey out
+    /// where this is false; the engine ignores the stored switch there
+    /// itself.
     pub fn allows_han_lo_mixed(&self) -> bool {
+        let display_mode = self.choice::<CandidateDisplayMode>(&keys::CANDIDATE_DISPLAY_MODE);
         !self.is_typing_tps()
-            && self
-                .choice::<CandidateDisplayMode>(&keys::CANDIDATE_DISPLAY_MODE)
-                .shows_hanji()
+            && display_mode.shows_hanji()
+            && (display_mode != CandidateDisplayMode::SideBySide
+                || self.bool(&keys::IS_HANJI_FIRST))
     }
 
     /// Annotate in Brackets as the engine gets it: the stored switch where
@@ -787,8 +790,8 @@ mod tests {
         );
     }
 
-    /// Hàn-Lô lām greys out under Romanization Only and TPS, as the engine
-    /// ignores it there.
+    /// Hàn-Lô lām greys out under Romanization Only, side by side led by the
+    /// romanization, and TPS, as the engine ignores it there.
     #[test]
     fn han_lo_mixed_is_allowed_where_cells_show_hanji_under_a_romanization() {
         let mut doc = SettingsDocument::default();
@@ -799,6 +802,16 @@ mod tests {
         );
         assert!(doc.allows_han_lo_mixed());
         doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.allows_han_lo_mixed());
+        // Side by side led by the romanization: its cell already writes it.
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tl);
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::SideBySide,
+        );
+        doc.set_bool(&keys::IS_HANJI_FIRST, true);
+        assert!(doc.allows_han_lo_mixed());
+        doc.set_bool(&keys::IS_HANJI_FIRST, false);
         assert!(!doc.allows_han_lo_mixed());
         doc.set_choice(&keys::INPUT_MODE, InputMode::Poj);
         doc.set_choice(

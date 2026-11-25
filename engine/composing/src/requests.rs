@@ -432,12 +432,16 @@ pub fn walker_edge_words(engine: &Engine, user_rows: &UserRows, config: &AppConf
         .chain(&user_rows.edge_custom)
         .cloned()
         .collect();
-    let learned: Vec<LearnedEntry> = user_rows
-        .learned
-        .iter()
-        .chain(&user_rows.edge_learned)
-        .cloned()
-        .collect();
+    let roman_twins = lists_roman_twins(config, mode);
+    let learned: Vec<LearnedEntry> = first_learned_per_reading(
+        &user_rows
+            .learned
+            .iter()
+            .chain(&user_rows.edge_learned)
+            .cloned()
+            .collect::<Vec<_>>(),
+        roman_twins,
+    );
     let mut words = lexicon::EngineHandle::with_state(|state| {
         let (Some(inv), Some(prefix_index), Some(dict)) = (
             state.syllable_inventory.as_ref(),
@@ -460,7 +464,7 @@ pub fn walker_edge_words(engine: &Engine, user_rows: &UserRows, config: &AppConf
             tone_pin: crate::shadow::whole_buffer_tone_pin(&listed, mode, Some(inv)),
             whole_buffer_key: None,
             khinsiann_in_hanji: config.khinsiann_in_hanji,
-            roman_twins: lists_roman_twins(config, mode),
+            roman_twins,
         };
         Ok(crate::continuous::edge_homophone_words(&keys, &ctx))
     })
@@ -516,7 +520,11 @@ pub(crate) fn listed_candidates(
     }
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
-    let learned = first_learned_per_reading(&user_rows.learned);
+    // Hàn-Lô lām: the lexicon gives every reading its romanization-only row,
+    // and a phrase learned with a word written in romanization is in effect
+    // only while it does.
+    let roman_twins = lists_roman_twins(config, mode);
+    let learned = first_learned_per_reading(&user_rows.learned, roman_twins);
     // v3.5.9 A2 seam — the 6-step assemble_candidates contract
     // (key build → span-local/partial fetch → recase → walker slot-0
     // prepend → POJ presentation pass → return). Wire encoding (step 6)
@@ -537,15 +545,13 @@ pub(crate) fn listed_candidates(
         &learned,
         (
             &user_rows.edge_custom,
-            &first_learned_per_reading(&user_rows.edge_learned),
+            &first_learned_per_reading(&user_rows.edge_learned, roman_twins),
         ),
         mode,
         context,
         config,
         shape,
     );
-    // Hàn-Lô lām: the lexicon gave every reading its romanization-only row.
-    let roman_twins = lists_roman_twins(config, mode);
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
     // (= the preedit WYSIWYG) as a roman-only candidate at index 0, so Hanji-romanization
@@ -753,11 +759,18 @@ pub fn build_continuous_keys_with_inventory(
 /// order (`learn_count DESC, updated_at DESC` — the form the user composed
 /// most, then most recently) is kept, so a corrected separator wins over the
 /// slip and one slip never displaces a settled phrase.
-fn first_learned_per_reading(entries: &[LearnedEntry]) -> Vec<LearnedEntry> {
+///
+/// Without Hàn-Lô lām in effect (`roman_twins` false: the switch off, a
+/// display or buffer it does not apply to) a phrase writing a word in
+/// romanization — one only the switch could have taught
+/// ([`writes_a_word_in_romanization`]) — is left out: it waits in the store
+/// for the switch to come back on.
+fn first_learned_per_reading(entries: &[LearnedEntry], roman_twins: bool) -> Vec<LearnedEntry> {
     let mut out: Vec<LearnedEntry> = Vec::with_capacity(entries.len());
     for e in entries
         .iter()
         .filter(|e| !e.hanji.is_empty() && !e.canonical_tl.is_empty())
+        .filter(|e| roman_twins || !writes_a_word_in_romanization(e))
     {
         let same_reading = out.iter().any(|kept| {
             kept.hanji == e.hanji && roman_reading_eq(&kept.canonical_tl, &e.canonical_tl)
@@ -767,6 +780,34 @@ fn first_learned_per_reading(entries: &[LearnedEntry]) -> Vec<LearnedEntry> {
         }
     }
     out
+}
+
+/// Whether a learned phrase writes one of its words wholly in romanization
+/// (`我tsia̍h`, `記khí-lâi`, `我tsia̍h--ah`) — what only a Hàn-Lô lām
+/// composition learns (§50: a hanji-less pick learns nothing otherwise). A
+/// dictionary Han-Lo word keeps a Hanji syllable (`啥mih` / `siánn-mih`), so a
+/// phrase holding one is not. Words are the reading's runs between a space or
+/// a khinsiann `--`; a phrase whose Hanji does not align syllable by syllable
+/// with its reading is taken as not.
+pub(crate) fn writes_a_word_in_romanization(entry: &LearnedEntry) -> bool {
+    let Some((hanji, _, readings)) =
+        phonetics::api::align_hanji_syllables(&entry.hanji, &entry.canonical_tl)
+    else {
+        return false;
+    };
+    let mut word_is_romanized = false;
+    for (index, (token, reading)) in hanji.iter().zip(&readings).enumerate() {
+        let opens_word =
+            index == 0 || reading.leading_sep.contains(' ') || reading.leading_sep.contains("--");
+        if opens_word {
+            if index > 0 && word_is_romanized {
+                return true;
+            }
+            word_is_romanized = true;
+        }
+        word_is_romanized &= token.kind == phonetics::api::HanjiTokenKind::Roman;
+    }
+    word_is_romanized
 }
 
 fn raw_to_proto_candidate(c: RawCandidate, config: &AppConfig) -> CandidateMessage {
@@ -852,6 +893,35 @@ mod tests {
     //! the `Engine` + lexicon singletons.
 
     use super::*;
+
+    #[test]
+    fn a_phrase_writing_a_word_in_romanization_is_told_from_a_han_lo_word() {
+        let phrase = |hanji: &str, canonical_tl: &str| LearnedEntry {
+            hanji: hanji.into(),
+            canonical_tl: canonical_tl.into(),
+        };
+        for (hanji, tl) in [
+            ("我tsia̍h", "guá tsia̍h"),
+            ("記khí-lâi", "kì khí-lâi"),
+            ("記khí lâi", "kì khí-lâi"),
+            ("記--khí-lâi", "kì--khí-lâi"),
+            ("我tsia̍h--ah", "guá tsia̍h--ah"),
+            ("m̄知影", "m̄ tsai-iánn"),
+        ] {
+            assert!(writes_a_word_in_romanization(&phrase(hanji, tl)), "{hanji}");
+        }
+        // A dictionary Han-Lo word keeps a Hanji syllable; Hanji alone.
+        for (hanji, tl) in [
+            ("我啥mih", "guá siánn-mih"),
+            ("記起來", "kì khí-lâi"),
+            ("好矣", "hó--ah"),
+        ] {
+            assert!(
+                !writes_a_word_in_romanization(&phrase(hanji, tl)),
+                "{hanji}"
+            );
+        }
+    }
 
     /// A ranked row reading `roman` (+ `hanji`) over `span`; every other field defaulted.
     fn row(roman: &str, hanji: Option<&str>, span: (u32, u32)) -> RawCandidate {

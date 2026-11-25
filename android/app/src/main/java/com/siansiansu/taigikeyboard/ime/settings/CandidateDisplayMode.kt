@@ -37,6 +37,15 @@ enum class CandidateDisplayMode(
      */
     fun effectiveHanjiFirst(stored: Boolean): Boolean = this == COMBINED || (stored && showsHanji)
 
+    /**
+     * Whether Romanized Words as Candidates takes effect under this mode and
+     * the stored swap: where the cells lead with Hanji — Romanization Only and
+     * side by side led by the romanization already write the romanization
+     * (engine `AppConfig::lists_roman_twins`, desktop-core
+     * `SettingsDocument::allows_han_lo_mixed`). TPS is the caller's to add.
+     */
+    fun allowsHanLoMixed(storedHanjiFirst: Boolean): Boolean = effectiveHanjiFirst(storedHanjiFirst)
+
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isOutputBothScripts derivation.
     // Drift causes silent divergence (spurious bracket annotation under roman-only).
 

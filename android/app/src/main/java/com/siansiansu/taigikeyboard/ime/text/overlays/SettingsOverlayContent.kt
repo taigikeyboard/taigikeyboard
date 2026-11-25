@@ -176,12 +176,15 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
             switchColors = switchColors,
         )
-        // Romanization candidates: the engine ignores it under Romanization Only and on TPS,
-        // so it greys there, as on the desktops (`SettingsDocument::allows_han_lo_mixed`).
+        // Romanization candidates: the engine ignores it under Romanization Only, side by side
+        // led by the romanization and on TPS, so it greys there, as on the desktops
+        // (`SettingsDocument::allows_han_lo_mixed`).
         SwitchRow(
             label = L10n.settingsHanLoMixed,
             checked = hanLoMixed,
-            enabled = candidateDisplayMode.showsHanji && !prefs.isTpsLayout,
+            enabled =
+                candidateDisplayMode.allowsHanLoMixed(prefs.storedIsHanjiFirst) &&
+                    !prefs.isTpsLayout,
             onCheckedChange = {
                 hanLoMixed = it
                 prefs.isHanLoMixedEnabled = it

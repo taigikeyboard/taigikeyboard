@@ -700,3 +700,42 @@ fn the_sentence_hanji_follows_the_syllable_separator() {
         Some("我tsia̍h--ah".to_owned())
     );
 }
+
+// A phrase learned with a word in romanization is in effect only while the
+// switch is: off, it leaves the list and the sentence, and comes back with
+// the switch. A phrase of Hanji picks is not touched.
+#[test]
+fn a_learned_romanized_phrase_waits_while_the_switch_is_off() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let fetch = || Fetch {
+        learned: vec![
+            LearnedEntry {
+                hanji: "我tsia̍h".into(),
+                canonical_tl: "guá tsia̍h".into(),
+            },
+            LearnedEntry {
+                hanji: "我隻".into(),
+                canonical_tl: "guá tsiah".into(),
+            },
+        ],
+        ..Fetch::default()
+    };
+    let hanji = |config: &AppConfig| -> Vec<Option<String>> {
+        rows("guatsiah", config, fetch())
+            .into_iter()
+            .map(|(hanji, _, _)| hanji)
+            .collect()
+    };
+    let on = hanji(&config(CandidateDisplayMode::SideBySide, true));
+    assert!(on.contains(&Some("我tsia̍h".to_owned())), "{on:?}");
+    let off = hanji(&config(CandidateDisplayMode::SideBySide, false));
+    assert!(!off.contains(&Some("我tsia̍h".to_owned())), "{off:?}");
+    assert!(off.contains(&Some("我隻".to_owned())), "{off:?}");
+    // Roman-first side by side: the switch is not in effect either.
+    let roman_first = AppConfig {
+        is_hanji_first: false,
+        ..config(CandidateDisplayMode::SideBySide, true)
+    };
+    assert!(!hanji(&roman_first).contains(&Some("我tsia̍h".to_owned())));
+}
