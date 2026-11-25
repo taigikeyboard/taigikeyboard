@@ -120,7 +120,6 @@ struct CandidateSuggestionsRow: View {
         Rectangle()
             .fill(theme.gridLineColor ?? CandidateViewModels.Colors.separatorColor)
             .frame(width: 1.0, height: 32)
-            .offset(y: 7)
     }
 
     private var expandChevronButton: some View {
@@ -131,7 +130,6 @@ struct CandidateSuggestionsRow: View {
                 .scaleEffect(1.2)
                 .frame(width: 42, height: theme.height)
                 .contentShape(Rectangle())
-                .offset(y: 7)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(lang.string(.keyboardExpandCandidates))

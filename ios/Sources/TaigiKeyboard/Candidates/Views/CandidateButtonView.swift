@@ -69,6 +69,12 @@ struct CandidateButtonView: View {
         style.itemStyle.cornerRadius ?? 8
     }
 
+    /// Gap between the highlight and the bar's top / bottom edge, proportional to the
+    /// candidate text size (2.1 pt at the 21 pt default).
+    static func highlightInset(primaryFontSize: CGFloat) -> CGFloat {
+        primaryFontSize * 0.1
+    }
+
     var body: some View {
         Button(action: {
             onTap(CandidateCellHelper.suggestionToHandle(
@@ -95,14 +101,17 @@ struct CandidateButtonView: View {
             }
             .padding(.horizontal, style.itemStyle.horizontalPadding)
             .padding(.vertical, style.itemStyle.verticalPadding)
+            // Fill the bar height so the highlight is sized by the bar, not by the text:
+            // the old -4 pt outset + 5 pt downward offset pushed its bottom past the bar's
+            // clip edge.
+            .frame(maxHeight: .infinity)
         }
         .background(
             RoundedRectangle(cornerRadius: cornerRadius)
                 .fill(backgroundColor)
                 .padding(.horizontal, -2)
-                .padding(.vertical, -4),
+                .padding(.vertical, Self.highlightInset(primaryFontSize: theme.primaryFontSize)),
         )
-        .offset(y: 5) // Shift the whole item's background down to align with the candidate bar's bottom edge.
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .buttonStyle(PlainButtonStyle())
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
