@@ -6,6 +6,7 @@ import KeyboardKit
 @testable import TaigiKeyboard
 import XCTest
 
+@MainActor
 final class ButtonFontProviderTests: XCTestCase {
     private func snapshot(fontType: FontType, inputMode: InputMode = .poj) -> SettingsSnapshot {
         SettingsSnapshot(
@@ -26,7 +27,7 @@ final class ButtonFontProviderTests: XCTestCase {
     }
 
     func testButtonKeyboardFont_customFonts_areFixedSize() {
-        let context = KeyboardContext()
+        let context = KeyboardContext(settings: KeyboardSettings())
         for fontType in FontType.allCases {
             guard let name = fontType.customFontName else { continue }
             let provider = ButtonFontProvider(keyboardContext: context, settings: snapshot(fontType: fontType))
