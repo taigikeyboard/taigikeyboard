@@ -61,6 +61,25 @@ internal object KeyLabelGeometry {
         inkRight: Float,
     ): Float = centerX - (inkLeft + inkRight) / 2f
 
+    /** Gap between the two hints of a two-hint key, as a fraction of key height. */
+    const val HINT_PAIR_GAP = 0.10f
+
+    /**
+     * Centres of two side-by-side hints of widths [leftWidth] / [rightWidth], [HINT_PAIR_GAP]
+     * apart, the pair as a whole centred on the key (pinning them to the edges crowded a phone
+     * key's corner and pushed a wide tablet key's hints into its corners).
+     */
+    fun hintPairCentres(
+        centerX: Float,
+        keyHeight: Float,
+        leftWidth: Float,
+        rightWidth: Float,
+    ): Pair<Float, Float> {
+        val gap = keyHeight * HINT_PAIR_GAP
+        val left = centerX - (leftWidth + gap + rightWidth) / 2f
+        return Pair(left + leftWidth / 2f, left + leftWidth + gap + rightWidth / 2f)
+    }
+
     /** Font-size [scale] (≤ 1) and [baseline] that place a hint inside its band. */
     data class Fit(
         val scale: Float,

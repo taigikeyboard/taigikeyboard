@@ -106,6 +106,25 @@ class KeyLabelGeometryTest {
         assertEquals(50f, x + (10f + 30f) / 2f, eps)
     }
 
+    // A13: TPS key 9's two hints were pinned 12% of the key width from each edge — crowded
+    // into the top-right on a phone, pushed into the corners of a wide tablet key.
+    @Test
+    fun hintPair_isCentredAsAWhole_whateverTheKeyWidth() {
+        // trace: h = 100 → gap 10; widths 20 / 30 → pair 60 wide, 50-30 = 20..80;
+        // centres 20+10 = 30 and 20+20+10+15 = 65.
+        val (phoneLeft, phoneRight) = KeyLabelGeometry.hintPairCentres(centerX = 50f, keyHeight = 100f, leftWidth = 20f, rightWidth = 30f)
+        assertEquals(30f, phoneLeft, eps)
+        assertEquals(65f, phoneRight, eps)
+        // The pair's outer edges sit symmetrically about the key centre.
+        assertEquals(50f, ((phoneLeft - 10f) + (phoneRight + 15f)) / 2f, eps)
+        // A key 4× as wide (tablet) keeps the same pair, centred on its own centre.
+        val (tabletLeft, tabletRight) = KeyLabelGeometry.hintPairCentres(centerX = 200f, keyHeight = 100f, leftWidth = 20f, rightWidth = 30f)
+        assertEquals(phoneRight - phoneLeft, tabletRight - tabletLeft, eps)
+        assertEquals(180f, tabletLeft, eps)
+        // Inner edges are exactly the gap apart.
+        assertEquals(10f, (tabletRight - 15f) - (tabletLeft + 10f), eps)
+    }
+
     @Test
     fun hint_marginsScaleWithTheKey() {
         // Doubling the key (and so the text, sized from h) doubles every distance.

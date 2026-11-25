@@ -288,13 +288,16 @@ private fun LabelContent(
                 val labelInkTop = bottomY + inkBounds(labelPaint, label, inkRect).top
                 if (data.popup.size >= 2) {
                     hintPaint.textSize = baseTextSize * 0.48f
-                    val topY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label, data.popup[1].label), h, labelInkTop, inkRect)
-                    val padding = w * 0.12f
-                    hintPaint.textAlign = Paint.Align.LEFT
-                    nativeCanvas.drawText(data.popup[0].label, padding, topY, hintPaint)
-                    hintPaint.textAlign = Paint.Align.RIGHT
-                    nativeCanvas.drawText(data.popup[1].label, w - padding, topY, hintPaint)
+                    val left = data.popup[0].label
+                    val right = data.popup[1].label
+                    // The pair must also fit between the side insets: shrink before placing.
+                    shrinkToWidth(hintPaint, left + right, KeyLabelGeometry.maxLabelWidth(w, h) - h * KeyLabelGeometry.HINT_PAIR_GAP)
+                    val topY = fitHintAboveLabel(hintPaint, listOf(left, right), h, labelInkTop, inkRect)
+                    val (leftX, rightX) =
+                        KeyLabelGeometry.hintPairCentres(centerX, h, hintPaint.measureText(left), hintPaint.measureText(right))
                     hintPaint.textAlign = Paint.Align.CENTER
+                    nativeCanvas.drawText(left, leftX, topY, hintPaint)
+                    nativeCanvas.drawText(right, rightX, topY, hintPaint)
                 } else {
                     hintPaint.textSize = baseTextSize * 0.52f
                     val topY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label), h, labelInkTop, inkRect)
