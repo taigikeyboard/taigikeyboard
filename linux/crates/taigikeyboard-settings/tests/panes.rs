@@ -16,9 +16,12 @@ use std::process::ExitCode;
 use std::rc::Rc;
 use taigi_desktop_core::engine::user_data;
 use taigi_desktop_core::keys::{
-    ChordField, ComposingAction, ComposingKeyBindings, KeyModifiers, RecorderTarget, ShortcutAction,
+    ChordField, ComposingAction, ComposingKeyBindings, KeyModifiers, RecorderTarget,
+    ShortcutAction, ToneInputScheme,
 };
-use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsPane};
+use taigi_desktop_core::settings::{
+    keys, CandidateDisplayMode, InputMode, SettingChoice, SettingsPane,
+};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore, SettingsWriter};
 use taigi_linux_platform::DESKTOP_PLATFORM;
@@ -69,6 +72,7 @@ fn main() -> ExitCode {
     the_learning_records_list_what_the_keyboard_learned(&window);
     the_read_only_window_writes_nothing(&application);
     the_tps_key_panel_toggles_and_closes_when_tps_is_left(&application);
+    general_rows_show_captions_and_tone_keys_updates_live(&window, &store);
     the_window_fits_a_1280_px_screen_at_double_text_size(&window);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
@@ -89,12 +93,17 @@ fn every_built_pane_is_in_the_stack(window: &Rc<SettingsWindow>) {
     eprintln!("panes: {} panes in the stack", SettingsPane::ALL.len());
 }
 
-/// trace: General's first switch row is Type ts / ch with c (`IS_C_AFFRICATE_ENABLED`,
-/// default false), right under Tone Keys. Flipping the switch writes `true`;
-/// flipping back `false`.
+/// trace: `IS_C_AFFRICATE_ENABLED` (default false) is the `Type ts / ch with c`
+/// switch row under Tone Keys. Flipping the switch writes `true`; flipping back `false`.
 fn a_switch_row_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window.page_widget(SettingsPane::General).expect("general");
-    let row = find_first::<adw::SwitchRow>(&page).expect("a switch row");
+    let strings =
+        taigikeyboard_settings::presentation::strings_for(window.writer().borrow().document());
+    let title = strings.resolve(StringKey::SettingsCAffricate);
+    let row = find_all::<adw::SwitchRow>(&page)
+        .into_iter()
+        .find(|row| row.title() == title)
+        .expect("the c-affricate switch row");
     assert!(!row.is_active());
     row.set_active(true);
     assert!(window
@@ -602,6 +611,183 @@ fn the_tps_key_panel_toggles_and_closes_when_tps_is_left(application: &adw::Appl
     pump_until(|| slot.borrow().is_none());
     assert!(slot.borrow().is_none());
     eprintln!("panes: TPS key panel toggles and follows the mode");
+}
+
+fn row_by_title(page: &gtk::Widget, strings: &StringResolver, key: StringKey) -> adw::ActionRow {
+    let title = strings.resolve(key);
+    find_all::<adw::ActionRow>(page)
+        .into_iter()
+        .find(|row| row.title() == title)
+        .unwrap_or_else(|| panic!("row with title {title:?} ({key:?}) not found"))
+}
+
+/// trace: the 7 General rows with Linux captions in `i18n/*.json` display their
+/// native `adw::ActionRow` subtitles; uncaptioned rows stay without a subtitle;
+/// Tone Keys updates its subtitle live on user selection, external `SettingsFileStore`
+/// updates, and display-language rebuilds; disabled rows keep their subtitles.
+fn general_rows_show_captions_and_tone_keys_updates_live(
+    window: &Rc<SettingsWindow>,
+    store: &SettingsFileStore,
+) {
+    window.update(|document| {
+        document.reset_general();
+        document.reset_appearance();
+        document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::English.tag());
+    });
+
+    let english = StringResolver::new(DisplayLanguage::English);
+    let general = window.page_widget(SettingsPane::General).expect("general");
+
+    let expected_general = [
+        (
+            StringKey::SettingsToneInputScheme,
+            StringKey::SettingsToneSchemeStandard,
+        ),
+        (StringKey::SettingsHanLoMixed, StringKey::SettingsHanLoMixed),
+        (
+            StringKey::SettingsLiteralRomanCandidate,
+            StringKey::SettingsLiteralRomanCandidate,
+        ),
+        (
+            StringKey::SettingsOutputBothScripts,
+            StringKey::SettingsOutputBothScripts,
+        ),
+        (
+            StringKey::SettingsKhinsiannInHanji,
+            StringKey::SettingsKhinsiannInHanji,
+        ),
+        (
+            StringKey::SettingsSyllableSeparator,
+            StringKey::SettingsSyllableSeparator,
+        ),
+        (StringKey::SettingsAutoSpace, StringKey::SettingsAutoSpace),
+    ];
+    for (row_key, caption_key) in expected_general {
+        let row = row_by_title(&general, &english, row_key);
+        let expected = english
+            .caption(caption_key, DESKTOP_PLATFORM)
+            .unwrap_or_else(|| panic!("{caption_key:?} must have a Linux caption"));
+        assert!(!expected.is_empty());
+        assert_eq!(
+            row.subtitle().as_deref(),
+            Some(expected),
+            "{row_key:?} subtitle mismatch"
+        );
+    }
+
+    for uncaptioned in [
+        StringKey::SettingsInputScript,
+        StringKey::SettingsCAffricate,
+    ] {
+        let row = row_by_title(&general, &english, uncaptioned);
+        assert_eq!(row.subtitle().as_deref().unwrap_or_default(), "");
+    }
+    let appearance = window
+        .page_widget(SettingsPane::Appearance)
+        .expect("appearance");
+    assert_eq!(
+        row_by_title(
+            &appearance,
+            &english,
+            StringKey::DesktopCandidateWindowLayout
+        )
+        .subtitle()
+        .as_deref()
+        .unwrap_or_default(),
+        ""
+    );
+    let custom_dict = window
+        .page_widget(SettingsPane::CustomDictionary)
+        .expect("custom dictionary");
+    assert_eq!(
+        row_by_title(
+            &custom_dict,
+            &english,
+            StringKey::DictionaryCustomDictEnabled
+        )
+        .subtitle()
+        .as_deref()
+        .unwrap_or_default(),
+        ""
+    );
+
+    let tone_title = english.resolve(StringKey::SettingsToneInputScheme);
+    let tone_combo = find_all::<adw::ComboRow>(&general)
+        .into_iter()
+        .find(|row| row.title() == tone_title)
+        .expect("Tone Keys combo row");
+    assert_eq!(tone_combo.selected(), 0);
+
+    tone_combo.set_selected(1);
+    assert_eq!(
+        tone_combo.subtitle().as_deref(),
+        english.caption(StringKey::SettingsToneSchemeTelex, DESKTOP_PLATFORM)
+    );
+    tone_combo.set_selected(0);
+    assert_eq!(
+        tone_combo.subtitle().as_deref(),
+        english.caption(StringKey::SettingsToneSchemeStandard, DESKTOP_PLATFORM)
+    );
+
+    store
+        .update(|document| document.set_choice(&keys::TONE_INPUT_SCHEME, ToneInputScheme::Telex))
+        .expect("external tone scheme write");
+    window.tick();
+    assert_eq!(
+        tone_combo.subtitle().as_deref(),
+        english.caption(StringKey::SettingsToneSchemeTelex, DESKTOP_PLATFORM)
+    );
+
+    window.update(|document| {
+        document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::Hanji.tag())
+    });
+    let hanji = StringResolver::new(DisplayLanguage::Hanji);
+    let general_hanji = window.page_widget(SettingsPane::General).expect("general");
+    assert_eq!(
+        row_by_title(&general_hanji, &hanji, StringKey::SettingsToneInputScheme)
+            .subtitle()
+            .as_deref(),
+        hanji.caption(StringKey::SettingsToneSchemeTelex, DESKTOP_PLATFORM)
+    );
+    assert_eq!(
+        row_by_title(
+            &general_hanji,
+            &hanji,
+            StringKey::SettingsLiteralRomanCandidate
+        )
+        .subtitle()
+        .as_deref(),
+        hanji.caption(StringKey::SettingsLiteralRomanCandidate, DESKTOP_PLATFORM)
+    );
+
+    window.update(|document| {
+        document.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        )
+    });
+    for disabled_key in [
+        StringKey::SettingsHanLoMixed,
+        StringKey::SettingsOutputBothScripts,
+        StringKey::SettingsKhinsiannInHanji,
+    ] {
+        let row = row_by_title(&general_hanji, &hanji, disabled_key);
+        assert!(
+            !row.is_sensitive(),
+            "{disabled_key:?} should be insensitive under RomanOnly"
+        );
+        assert_eq!(
+            row.subtitle().as_deref(),
+            hanji.caption(disabled_key, DESKTOP_PLATFORM)
+        );
+    }
+
+    window.update(|document| {
+        document.reset_general();
+        document.reset_appearance();
+        document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::System.tag());
+    });
+    eprintln!("panes: general captions render and Tone Keys swaps live");
 }
 
 /// Runs the main context until `done` answers true or ten seconds pass —

@@ -27,10 +27,11 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         .collect();
     context.picker_row(
         &group,
-        context.strings.resolve(StringKey::SettingsInputScript),
+        StringKey::SettingsInputScript,
         input_mode_labels,
         InputMode::ALL,
         context.document.choice(&keys::INPUT_MODE),
+        |mode| Some(mode.label_key()),
         |mode, document| {
             document.switch_input_mode(InputModeRequest::Pick(mode));
         },
@@ -90,10 +91,11 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         .collect();
     let output_row = context.picker_row(
         &group,
-        context.strings.resolve(StringKey::SettingsOutputScript),
+        StringKey::SettingsOutputScript,
         output_labels,
         OUTPUT_SCRIPTS,
         context.document.bool(&keys::IS_HANJI_FIRST),
+        |is_hanji| Some(output_script_label(is_hanji)),
         |is_hanji, document| document.set_bool(&keys::IS_HANJI_FIRST, is_hanji),
         |document| document.bool(&keys::IS_HANJI_FIRST),
     );
@@ -137,14 +139,13 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         .collect();
     context.picker_row(
         &group,
-        context
-            .strings
-            .resolve(StringKey::SettingsNasalMarkerUppercase),
+        StringKey::SettingsNasalMarkerUppercase,
         nasal_marker_labels,
         NASAL_MARKER_STYLES,
         context
             .document
             .bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
+        |is_uppercase| Some(nasal_marker_style_label(is_uppercase)),
         |is_uppercase, document| {
             document.set_bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_uppercase)
         },
@@ -161,10 +162,14 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         .collect();
     context.picker_row(
         &group,
-        context.strings.resolve(StringKey::SettingsDisplayLanguage),
+        StringKey::SettingsDisplayLanguage,
         language_labels,
         &DisplayLanguage::PICKER,
         context.document.display_language(),
+        |language| {
+            (language == DisplayLanguage::System)
+                .then_some(StringKey::SettingsDisplayLanguageAutomatic)
+        },
         |language, document| document.set_string(&keys::DISPLAY_LANGUAGE, language.tag()),
         SettingsDocument::display_language,
     );
