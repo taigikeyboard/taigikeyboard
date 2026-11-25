@@ -11,9 +11,10 @@ import UIKit
 /// Both paths resolve the same user-selected font (System / Open Huninn / Iansui)
 /// using `FontType.customFontName` as the shared font-name source.
 ///
-/// Callers: `CandidateView`, `CandidateCellHelper`, `ExpandedCandidateOverlay`,
-/// `SymbolSelectionOverlay`, `SettingsSelectionOverlay`, `TaigiButtonContent` (space label),
-/// `AppStyle`, `TaigiKeyboardApp`, `KeyboardPreviewPanel`
+/// Callers (keyboard extension only): `CandidateButtonView`, `CandidateCellHelper`,
+/// `CandidateSuggestionsRow`, `ToolShortcutsToolbar`, `ExpandedCandidateOverlay` + its grid
+/// cell and control button, `OneHandedModeViews`, `SymbolSelectionOverlay`,
+/// `SettingsSelectionOverlay`, `TaigiButtonContent` (space label)
 enum KeyboardFonts {
     /// PostScript font name for jf-openhuninn (粉圓)
     static let openHuninnFontName = "jf-openhuninn-2.1"
@@ -27,8 +28,15 @@ enum KeyboardFonts {
     /// SwiftUI Font based on the user's font setting.
     /// Used by toolbar buttons and candidate views (not keyboard keys).
     static func globalFont(size: CGFloat) -> Font {
-        if let name = SharedSettings.shared.fontType.customFontName {
-            return Font.custom(name, size: size)
+        font(for: SharedSettings.shared.fontType, size: size)
+    }
+
+    /// A custom font at a fixed size, like `Font.system(size:)`: `Font.custom(_:size:)`
+    /// would scale with Dynamic Type and outgrow the fixed-height candidate bar (and the
+    /// `globalUIFont` width measurement), which System never does.
+    static func font(for fontType: FontType, size: CGFloat) -> Font {
+        if let name = fontType.customFontName {
+            return Font.custom(name, fixedSize: size)
         }
         return Font.system(size: size)
     }
