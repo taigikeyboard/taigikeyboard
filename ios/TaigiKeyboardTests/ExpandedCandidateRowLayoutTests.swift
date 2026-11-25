@@ -45,6 +45,6 @@ final class ExpandedCandidateRowLayoutTests: XCTestCase {
         for (index, row) in rows.enumerated() {
             XCTAssertLessThanOrEqual(rowWidth(row, spacing: 4), 250, "row \(index) overflows the grid")
         }
-        XCTAssertEqual(rows.flatMap { $0 }.map(\.originalIndex), Array(0 ..< 30), "order and indices kept")
+        XCTAssertEqual(rows.flatMap(\.self).map(\.originalIndex), Array(0 ..< 30), "order and indices kept")
     }
 }

@@ -71,7 +71,9 @@ final class KeyLabelLayoutTests: XCTestCase {
         let hintFont = UIFont.systemFont(ofSize: 20)
         for fontType in FontType.allCases {
             let labelFont = fontType.customFontName.flatMap { UIFont(name: $0, size: 23) } ?? .systemFont(ofSize: 23)
-            if fontType != .system, labelFont.fontName == UIFont.systemFont(ofSize: 23).fontName { continue }
+            if fontType != .system, labelFont.fontName == UIFont.systemFont(ofSize: 23).fontName {
+                continue
+            }
             let placement = KeyLabelLayout.place(KeyLabelLayout.Input(
                 keyHeight: 37,
                 labelFontSize: 23,

@@ -1,8 +1,8 @@
 // Pins that every keyboard font is fixed-size: a custom font must not follow Dynamic
 // Type (the candidate bar and keys have fixed heights; System never scales).
 
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 final class KeyboardFontsTests: XCTestCase {

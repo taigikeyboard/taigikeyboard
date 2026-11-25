@@ -3,8 +3,8 @@
 // bar's clip cut its bottom edge flat.
 
 import KeyboardKit
-@testable import TaigiKeyboard
 import SwiftUI
+@testable import TaigiKeyboard
 import XCTest
 
 @MainActor

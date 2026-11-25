@@ -53,7 +53,9 @@ final class ButtonFontProviderTests: XCTestCase {
 private extension KeyboardFont {
     /// The point size when the font is a fixed custom font, nil for any Dynamic Type–relative one.
     var fixedSize: CGFloat? {
-        if case let .customFixed(_, size) = type { return size }
+        if case let .customFixed(_, size) = type {
+            return size
+        }
         return nil
     }
 }
