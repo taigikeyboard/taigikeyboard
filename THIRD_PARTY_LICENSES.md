@@ -132,8 +132,8 @@ Both are fetched from NuGet at build time, by version and digest
 
 | Package | Version | Licence |
 | --- | --- | --- |
-| **KeyboardKit** (iOS only) | 11.1.4 | **Closed source**, © 2016-2026 Kankoda Sweden AB — see below |
-| swift-protobuf | 1.38.1 (iOS), 1.39.0 (macOS) | Apache-2.0 |
+| **KeyboardKit** (iOS only) | 11.3.2 | **Closed source**, © 2016-2026 Kankoda Sweden AB — see below |
+| swift-protobuf | 1.41.0 (iOS), 1.39.0 (macOS) | Apache-2.0 |
 | KeyboardShortcuts (macOS only) | 3.1.0 | MIT © Sindre Sorhus |
 | **LicenseKit** | 2.4.1 | **Closed source, commercial** — see below |
 

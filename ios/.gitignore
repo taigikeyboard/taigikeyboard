@@ -11,9 +11,9 @@ DerivedData/
 *.dSYM
 
 # === Swift Package Manager ===
+# `Package.resolved` is committed (under `TaigiKeyboard.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/`).
 .build/
 Packages/
-Package.resolved
 
 # === CocoaPods ===
 Pods/
