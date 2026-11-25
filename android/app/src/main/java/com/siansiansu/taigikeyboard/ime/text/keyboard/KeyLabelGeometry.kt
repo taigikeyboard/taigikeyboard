@@ -39,6 +39,28 @@ internal object KeyLabelGeometry {
     /** Gap between a hint's ink and the label's ink below it, as a fraction of key height. */
     const val HINT_GAP = 0.06f
 
+    /**
+     * Whether [label] is one full-width punctuation mark (CJK Symbols and Punctuation, or the
+     * Fullwidth Forms such as ？，！). Its glyph sits in the left part of its full-width advance,
+     * so centring the advance leaves the mark off-centre; it is centred by its ink instead.
+     */
+    fun centresByInk(label: String): Boolean {
+        if (label.isEmpty() || label.codePointCount(0, label.length) != 1) return false
+        val cp = label.codePointAt(0)
+        return cp in 0x3001..0x303F ||
+            cp in 0xFF01..0xFF0F ||
+            cp in 0xFF1A..0xFF20 ||
+            cp in 0xFF3B..0xFF40 ||
+            cp in 0xFF5B..0xFF65
+    }
+
+    /** Left x at which to draw (left-aligned) ink spanning [inkLeft, inkRight] centred on [centerX]. */
+    fun inkCentredX(
+        centerX: Float,
+        inkLeft: Float,
+        inkRight: Float,
+    ): Float = centerX - (inkLeft + inkRight) / 2f
+
     /** Font-size [scale] (≤ 1) and [baseline] that place a hint inside its band. */
     data class Fit(
         val scale: Float,

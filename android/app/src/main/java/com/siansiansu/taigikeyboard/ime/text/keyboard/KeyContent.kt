@@ -308,7 +308,7 @@ private fun LabelContent(
                 nativeCanvas.drawText(lines[0], centerX, centerY * 0.70f, labelPaint)
                 nativeCanvas.drawText(lines[1], centerX, centerY * 1.30f, labelPaint)
             } else {
-                nativeCanvas.drawText(label, centerX, centerY, labelPaint)
+                drawCentred(nativeCanvas, label, centerX, centerY, labelPaint, inkRect)
             }
 
             // TPS punctuation hint (e.g., "。" hint above "，").
@@ -325,7 +325,7 @@ private fun LabelContent(
                 hintPaint.textAlign = Paint.Align.CENTER
                 val labelInkTop = centerY + inkBounds(labelPaint, label, inkRect).top
                 val hintY = fitHintAboveLabel(hintPaint, listOf(data.popup[0].label), h, labelInkTop, inkRect)
-                nativeCanvas.drawText(data.popup[0].label, centerX, hintY, hintPaint)
+                drawCentred(nativeCanvas, data.popup[0].label, centerX, hintY, hintPaint, inkRect)
             }
 
             // Tone diacritics + MOE1/MOE2 punctuation hints. Skipped for TPS.
@@ -375,6 +375,26 @@ private fun fitLabelToKey(
     } else {
         shrinkToWidth(paint, label, KeyLabelGeometry.maxLabelWidth(keyWidth, keyHeight))
     }
+}
+
+/** Draws [text] centred on [centerX]: by its ink for full-width punctuation, else by its advance. */
+private fun drawCentred(
+    canvas: android.graphics.Canvas,
+    text: String,
+    centerX: Float,
+    baseline: Float,
+    paint: Paint,
+    scratch: Rect,
+) {
+    if (!KeyLabelGeometry.centresByInk(text)) {
+        canvas.drawText(text, centerX, baseline, paint)
+        return
+    }
+    inkBounds(paint, text, scratch)
+    val align = paint.textAlign
+    paint.textAlign = Paint.Align.LEFT
+    canvas.drawText(text, KeyLabelGeometry.inkCentredX(centerX, scratch.left.toFloat(), scratch.right.toFloat()), baseline, paint)
+    paint.textAlign = align
 }
 
 /** Shrinks [paint] so [text]'s advance is at most [maxWidth]; never enlarges. */

@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -84,6 +85,25 @@ class KeyLabelGeometryTest {
         assertEquals(21.44f, cap, eps)
         // A 1 em Bopomofo glyph at that size keeps GLYPH_SIDE_INSET on each side.
         assertEquals(38f * KeyLabelGeometry.GLYPH_SIDE_INSET, (26f - cap) / 2f, eps)
+    }
+
+    // A12: full-width ？，。 were centred by their advance; their glyphs sit left in the em box.
+    @Test
+    fun fullWidthPunctuation_isCentredByInk() {
+        for (mark in listOf("？", "，", "。", "、", "！", "：", "；", "「", "」", "（", "）", "～")) {
+            assertTrue("\"$mark\"", KeyLabelGeometry.centresByInk(mark))
+        }
+        for (label in listOf("?", ",", "a", "ㄅ", "字", "……", "?123", "ng", "")) {
+            assertFalse("\"$label\"", KeyLabelGeometry.centresByInk(label))
+        }
+    }
+
+    @Test
+    fun inkCentredX_putsTheInkCentreOnTheKeyCentre() {
+        // trace: ink spans 10..30 from the pen → centre 20; key centre 50 → draw at 30.
+        val x = KeyLabelGeometry.inkCentredX(centerX = 50f, inkLeft = 10f, inkRight = 30f)
+        assertEquals(30f, x, eps)
+        assertEquals(50f, x + (10f + 30f) / 2f, eps)
     }
 
     @Test
