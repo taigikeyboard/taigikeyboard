@@ -238,7 +238,7 @@ The candidate window is a TSF window drawn by the DLL, so the run happens on the
 | Font (`fontType`) | `system` · `openHuninn` · `iansui` · `genYoMin` · `genYoGothic` |
 | Caret position | middle · bottom (window flips above) · right edge · bottom-right |
 
-Display scale other than the box's own runs only when named (changing it needs a sign-out).
+**Screen axes, only when named** (not yet run on the box — spike each once before relying on it): display scale `150%` · `200%` (Settings → System → Display → Scale, then sign out and in, then the §7.1 binary gate); a second monitor at another scale (the box has one built-in panel, so the maintainer plugs one in) — caret on each monitor, and the host window dragged across (`WM_DPICHANGED`, `windows/crates/taigi-windows-tsf/src/ui/window.rs`). Extra kinds: `panel-wrong-scale` (text drawn at the other monitor's scale), `panel-on-wrong-monitor` (the window is not on the caret's monitor).
 
 ### 7.4 Per combination and tests
 
@@ -283,6 +283,8 @@ The candidate window is `taigikeyboard-popup` (ours, X11 / XWayland) for both IB
 
 Plus the settings window once (at text scale 2.0 when named: no page wider than the screen, headings ellipsized).
 
+**Screen axes, only when named** (spike each once first): GNOME display scale `200%` (Settings → Displays → Scale; the popup reads it through `scale_factor()`, `linux/crates/taigikeyboard-popup/src/main.rs` `scale`); a second display (UTM or VirtualBox adds a virtual one) — caret on each; the popup fits to the caret's monitor ∩ work area. Extra kinds as §7.3 (`panel-wrong-scale`, `panel-on-wrong-monitor`). Known, not a new finding: the screen width the popup reports to the session lags one list after a monitor switch.
+
 ### 8.4 Tests and kinds
 
 Once per run, on the Mac: `cargo test -p taigikeyboard-popup -p taigi-linux-core`, `cargo test -p taigikeyboard-settings --test panes`. Check kinds: §7.4's, with `panel-past-work-area` = past monitor ∩ `_NET_WORKAREA` (GNOME top bar and dock). Design, not defects: an over-wide cell ending in "…"; a vertical list scrolling around the cursor when taller than the screen. Known, not a new finding: Fcitx5 on GNOME Wayland (GTK native client) gets a window-relative rect and can cover the field — documented in `linux/README.md`. Owning files: `linux/crates/taigikeyboard-popup/src/main.rs` (placement, `Fit`), `layout.rs`. Report as §4, a table per frontend × layout (rows: size × typeface × caret position).
@@ -302,6 +304,8 @@ Settings are `UserDefaults.standard` keys with the desktop spellings (`SettingsS
 ### 9.2 Matrix and kinds
 
 Layout (4, expandables folded and opened) × size `13` / `17` / `23` × font (5) × document position (middle, near the bottom of the visible frame, near the right edge — move the stand-in window). Kinds as §7.4; design: an over-wide cell truncated with "…" (`byTruncatingTail`). Known divergence, not a new finding: `CandidatePanelPositioning.swift` clamps to the full `visibleFrame` with no 12-point edge margin (Windows has one). Owning files: `macos/Sources/TaigiInputMethodCore/Candidates/`. Report as §4, a table per layout (rows: font × size × position).
+
+**Screen axes, only when named**: a 1× (non-Retina) display and a second display — move the stand-in document into the other screen's `visibleFrame` (`NSScreen.screens`); the panel stays on the caret's screen. Needs a display the maintainer connects. Extra kinds as §7.3 (`panel-wrong-scale`, `panel-on-wrong-monitor`).
 
 ## 10. Browser extension
 
