@@ -1117,3 +1117,5 @@ export const STRINGS = {
     "web.extensionUnsupported": "Chit keh bô chi-oān"
   }
 };
+
+export const CAPTIONS = {};

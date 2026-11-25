@@ -778,9 +778,18 @@ class MacOSEmitTest(unittest.TestCase):
 class WebEmitTest(unittest.TestCase):
     _outputs = staticmethod(_build_probe_outputs)
 
-    def _strings(self, keys):
+    def _export(self, keys, name: str):
         text = self._outputs(keys)[i18n_lib.WEB_STRINGS_FILE]
-        return json.loads(text[text.index("{"):text.rindex("}") + 1])
+        marker = f"export const {name} = "
+        start = text.index(marker) + len(marker)
+        value, _end = json.JSONDecoder().raw_decode(text, start)
+        return value
+
+    def _strings(self, keys):
+        return self._export(keys, "STRINGS")
+
+    def _captions(self, keys):
+        return self._export(keys, "CAPTIONS")
 
     def _web_key(self, values, **extra):
         return {"scope": {"platforms": ["web"], "surfaces": ["host"]}, "values": values, **extra}
@@ -1145,6 +1154,280 @@ class WindowsEmitTest(unittest.TestCase):
         with self.assertRaises(ValueError) as raised:
             i18n_lib.validate_platform_has_keys([], "windows")
         self.assertIn("windows", str(raised.exception))
+
+
+class CaptionTest(unittest.TestCase):
+    @staticmethod
+    def _entry(platforms, hanji="字", en="Word", **extra):
+        return {
+            "scope": {"platforms": list(platforms), "surfaces": ["host"]},
+            "values": {"hanji": hanji, "en": en},
+            **extra,
+        }
+
+    def test_info_suffix_auto_pairs_across_macos_rust_and_web(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "settings",
+                {
+                    "autoSpace": self._entry(["ios", "macos", "windows", "linux", "web"]),
+                    "autoSpaceInfo": self._entry(["ios", "macos", "windows", "web"], hanji="說明", en="Info"),
+                    "sharedRow": self._entry(["windows", "linux"]),
+                    "sharedRowInfo": self._entry(["windows", "linux"], hanji="共用", en="Shared"),
+                    "noCaption": self._entry(["ios", "macos", "windows", "linux", "web"]),
+                },
+            )
+            outputs = build_outputs(repo)
+
+        macos_key = outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringKey.swift"]
+        self.assertIn("var infoKey: StringKey? {", macos_key)
+        self.assertIn("case .settingsAutoSpace: .settingsAutoSpaceInfo", macos_key)
+        self.assertNotIn("case .settingsNoCaption:", macos_key)
+
+        ios_key = outputs[f"{i18n_lib.IOS_GEN_DIR}/StringKey.swift"]
+        self.assertNotIn("infoKey", ios_key)
+
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn("pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {", rust)
+        info_fn = rust.split("pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {", 1)[1].split(
+            "\n    }", 1
+        )[0]
+        self.assertIn(
+            "(Self::SettingsAutoSpace, DesktopPlatform::Windows) => Some(Self::SettingsAutoSpaceInfo),",
+            info_fn,
+        )
+        self.assertNotIn("(Self::SettingsAutoSpace, DesktopPlatform::Linux)", info_fn)
+        self.assertIn(
+            "(Self::SettingsSharedRow, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsSharedRowInfo),",
+            info_fn,
+        )
+        self.assertNotIn("SettingsNoCaption", info_fn)
+
+        web_js = outputs[i18n_lib.WEB_STRINGS_FILE]
+        marker = "export const CAPTIONS = "
+        captions, _ = json.JSONDecoder().raw_decode(web_js, web_js.index(marker) + len(marker))
+        self.assertEqual(captions, {"settings.autoSpace": "settings.autoSpaceInfo"})
+
+    def test_caption_scoped_only_to_other_platforms_is_excluded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "settings",
+                {
+                    "autoSpace": self._entry(["android", "ios", "macos", "windows", "web"]),
+                    "autoSpaceInfo": self._entry(["android", "ios"], hanji="手機說明", en="Mobile info"),
+                },
+            )
+            outputs = build_outputs(repo)
+
+        macos_key = outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringKey.swift"]
+        self.assertIn("var infoKey: StringKey? {\n        nil\n    }", macos_key)
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn(
+            "pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {\n        let _ = (self, platform);\n        None\n    }",
+            rust,
+        )
+        web_js = outputs[i18n_lib.WEB_STRINGS_FILE]
+        marker = "export const CAPTIONS = "
+        captions, _ = json.JSONDecoder().raw_decode(web_js, web_js.index(marker) + len(marker))
+        self.assertEqual(captions, {})
+
+    def test_orphan_info_key_without_base_is_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "dictionary",
+                {"learningRecordsCountCapInfo": self._entry(["macos", "windows", "linux"], hanji="上限", en="Cap")},
+            )
+            outputs = build_outputs(repo)
+
+        self.assertIn("var infoKey: StringKey? {\n        nil\n    }", outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringKey.swift"])
+
+    def test_caption_for_pairs_cross_namespace_and_allows_disjoint_platforms(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "settings",
+                {
+                    "literalRomanCandidate": self._entry(["android", "ios", "macos", "windows", "web"]),
+                    "literalRomanCandidateInfo": self._entry(["android", "ios"], hanji="手機版", en="Mobile"),
+                },
+            )
+            _write_namespace(
+                repo,
+                "desktop",
+                {
+                    "literalRomanCandidateInfo": self._entry(
+                        ["macos", "windows", "web"],
+                        hanji="電腦版",
+                        en="Desktop",
+                        captionFor="settings.literalRomanCandidate",
+                    ),
+                },
+            )
+            outputs = build_outputs(repo)
+
+        macos_key = outputs[f"{i18n_lib.MACOS_GEN_DIR}/StringKey.swift"]
+        self.assertIn("case .settingsLiteralRomanCandidate: .desktopLiteralRomanCandidateInfo", macos_key)
+        self.assertNotIn("settingsLiteralRomanCandidateInfo", macos_key)
+
+        rust = outputs[i18n_lib.WINDOWS_GEN_FILE]
+        self.assertIn(
+            "(Self::SettingsLiteralRomanCandidate, DesktopPlatform::Windows) => Some(Self::DesktopLiteralRomanCandidateInfo),",
+            rust,
+        )
+
+        web_js = outputs[i18n_lib.WEB_STRINGS_FILE]
+        marker = "export const CAPTIONS = "
+        captions, _ = json.JSONDecoder().raw_decode(web_js, web_js.index(marker) + len(marker))
+        self.assertEqual(captions, {"settings.literalRomanCandidate": "desktop.literalRomanCandidateInfo"})
+
+    def test_shared_rust_artifact_isolates_windows_and_linux_captions(self):
+        # Single-platform caption must not leak to the other platform in shared generated.rs
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "settings",
+                {
+                    "row": self._entry(["windows", "linux"]),
+                    "rowInfo": self._entry(["windows"], hanji="窗說明", en="Win info"),
+                },
+            )
+            outputs = build_outputs(repo)
+
+        info_fn = (
+            outputs[i18n_lib.WINDOWS_GEN_FILE]
+            .split("pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {", 1)[1]
+            .split("\n    }", 1)[0]
+        )
+        self.assertIn("(Self::SettingsRow, DesktopPlatform::Windows) => Some(Self::SettingsRowInfo),", info_fn)
+        self.assertNotIn("DesktopPlatform::Linux", info_fn)
+
+        # Divergent Windows-only and Linux-only captions on the same base key emit separate arms
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "settings", {"row": self._entry(["windows", "linux"])})
+            _write_namespace(
+                repo,
+                "desktop",
+                {
+                    "capWin": self._entry(["windows"], hanji="窗", en="Win", captionFor="settings.row"),
+                    "capLin": self._entry(["linux"], hanji="企鵝", en="Lin", captionFor="settings.row"),
+                },
+            )
+            outputs = build_outputs(repo)
+
+        info_fn = (
+            outputs[i18n_lib.WINDOWS_GEN_FILE]
+            .split("pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {", 1)[1]
+            .split("\n    }", 1)[0]
+        )
+        self.assertIn("(Self::SettingsRow, DesktopPlatform::Windows) => Some(Self::DesktopCapWin),", info_fn)
+        self.assertIn("(Self::SettingsRow, DesktopPlatform::Linux) => Some(Self::DesktopCapLin),", info_fn)
+
+    def test_overlapping_platform_caption_collisions_rejected(self):
+        # <key>Info + captionFor overlapping on macos
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(
+                repo,
+                "settings",
+                {
+                    "row": self._entry(["android", "macos"]),
+                    "rowInfo": self._entry(["android", "macos"], hanji="舊", en="Old"),
+                },
+            )
+            _write_namespace(
+                repo,
+                "desktop",
+                {
+                    "rowAlt": self._entry(["macos"], hanji="新", en="New", captionFor="settings.row"),
+                },
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate caption for settings.row on platform 'macos'"):
+                build_outputs(repo)
+
+        # Two captionFor keys overlapping on windows
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_namespace(repo, "settings", {"row": self._entry(["windows"])})
+            _write_namespace(
+                repo,
+                "desktop",
+                {
+                    "capOne": self._entry(["windows"], hanji="一", en="One", captionFor="settings.row"),
+                    "capTwo": self._entry(["windows"], hanji="二", en="Two", captionFor="settings.row"),
+                },
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate caption for settings.row on platform 'windows'"):
+                build_outputs(repo)
+
+    def test_invalid_caption_for_and_constraints_rejected(self):
+        invalid_cases = [
+            # Bad format
+            (
+                {"a": self._entry(["macos"]), "b": self._entry(["macos"], captionFor="notDotted")},
+                None,
+                "lowerCamelCase",
+            ),
+            # Self-targeting
+            (
+                {"a": self._entry(["macos"], captionFor="probe.a")},
+                None,
+                "cannot target itself",
+            ),
+            # Missing target
+            (
+                {"b": self._entry(["macos"], captionFor="probe.missing")},
+                None,
+                "does not exist",
+            ),
+            # Target missing platform declared on caption
+            (
+                {"a": self._entry(["android"]), "b": self._entry(["macos"], captionFor="probe.a")},
+                None,
+                "not scoped to platform",
+            ),
+            # Placeholder in paired caption
+            (
+                {
+                    "a": self._entry(["macos"]),
+                    "aInfo": {
+                        "scope": {"platforms": ["macos"], "surfaces": ["host"]},
+                        "placeholders": {"n": "int"},
+                        "values": {"hanji": "{n} 項", "en": "{n} items"},
+                    },
+                },
+                None,
+                "must not use placeholders",
+            ),
+            # Chained caption targeting another caption
+            (
+                {
+                    "a": self._entry(["macos"]),
+                    "aInfo": self._entry(["macos"]),
+                    "b": self._entry(["macos"], captionFor="probe.aInfo"),
+                },
+                None,
+                "cannot also be targeted as a caption base",
+            ),
+        ]
+        for keys, extra_ns, msg in invalid_cases:
+            with self.subTest(msg=msg):
+                with tempfile.TemporaryDirectory() as tmp:
+                    repo = Path(tmp)
+                    _write_namespace(repo, "probe", keys)
+                    if extra_ns:
+                        for ns, ns_keys in extra_ns.items():
+                            _write_namespace(repo, ns, ns_keys)
+                    with self.assertRaisesRegex(ValueError, msg):
+                        build_outputs(repo)
 
 
 if __name__ == "__main__":

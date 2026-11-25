@@ -216,4 +216,9 @@ enum StringKey: String {
     case settingsHanLoMixed = "i18n_settings_hanLoMixed"
     case themeCustomFont = "i18n_theme_customFont"
     case themeEditorResetAll = "i18n_theme_editorResetAll"
+
+    /// Companion caption key for a setting row or picker option, if one is scoped to macOS.
+    var infoKey: StringKey? {
+        nil
+    }
 }

@@ -26,6 +26,11 @@ struct StringResolver {
         GeneratedStrings.lookup(language, key) ?? hanjiDefault(key)
     }
 
+    /// Resolves the companion caption for `key`, or `nil` when none is paired.
+    func caption(for key: StringKey) -> String? {
+        key.infoKey.map(resolve)
+    }
+
     /// Resolves a format key's template under the active language and interpolates `args`. The single
     /// entry point for `String(format:)`; the generated typed accessors in StringResolverFormats.swift
     /// are the only callers, so a raw "%1$lld" template never reaches a call site.
