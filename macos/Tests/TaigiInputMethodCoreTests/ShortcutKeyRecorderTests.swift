@@ -140,7 +140,7 @@ final class ShortcutKeyRecorderTests: XCTestCase {
     /// took the click away from the field) and hands first responder to a view
     /// that accepts it BEFORE `mouseDown` runs. A test calling `mouseDown`
     /// directly skips both and stays green while the device fails.
-    private func click(_ target: ShortcutKeyRecorderField, atX x: Double) throws {
+    private func click(_ target: ShortcutKeyRecorderField, atX x: CGFloat) throws {
         window.makeKeyAndOrderFront(nil)
         window.displayIfNeeded()
         let point = target.convert(NSPoint(x: x, y: target.bounds.midY), to: nil)
