@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -29,9 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ime.text.keyboard.computeBottomInsetPadding
 import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 
 private val SymbolCategoryValues = SymbolCategory.entries
@@ -54,6 +57,8 @@ fun SymbolOverlayContent(
     resetKey: Int,
     onSymbolSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Navigation-bar inset the keyboard body pads by; the overlay covers that band too. */
+    bottomInset: Dp = computeBottomInsetPadding(),
 ) {
     // remember(resetKey) re-initializes to FULL_WIDTH whenever the overlay is reopened
     // (show() bumps the key) — a synchronous reset, no one-frame stale-tab render.
@@ -67,7 +72,9 @@ fun SymbolOverlayContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .themeBackground(appearance.surface, appearance.solidBackground, topInsetPx),
+            .themeBackground(appearance.surface, appearance.solidBackground, topInsetPx)
+            // The surface runs under the navigation bar like the keyboard's; tabs + grid stop above it.
+            .padding(bottom = bottomInset),
     ) {
         PrimaryTabRow(
             selectedTabIndex = selectedIndex,
