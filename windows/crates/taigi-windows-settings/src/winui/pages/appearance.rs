@@ -10,7 +10,7 @@
 //! Settings itself uses for "Choose your mode" — and, since 2026-09-02, what
 //! the Mac draws too.
 
-use super::{choice_row, reset_row};
+use super::{choice_row, reset_row, RowLabel};
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::settings::{
     keys, AppearanceMode, CandidateDisplayMode, CandidateLayout, CandidateSizeChoice, SettingChoice,
@@ -24,21 +24,33 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let document = window.document();
+    let appearance_mode = document.choice(&keys::APPEARANCE_MODE);
+    let candidate_layout = document.choice(&keys::CANDIDATE_LAYOUT);
+    let candidate_size = document.choice(&keys::CANDIDATE_SIZE);
+    let candidate_display_mode = document.choice(&keys::CANDIDATE_DISPLAY_MODE);
     View::fragment((
         // The mode selector leads the pane's one group of rows.
         choice_row(
-            strings.resolve(StringKey::DesktopAppearanceTab),
+            RowLabel::with_option(
+                strings,
+                StringKey::DesktopAppearanceTab,
+                Some(appearance_mode.label_key()),
+            ),
             AppearanceMode::ALL,
-            document.choice(&keys::APPEARANCE_MODE),
+            appearance_mode,
             true,
             |mode: AppearanceMode| strings.resolve(mode.label_key()).to_owned(),
             |mode| Message::set_choice(mode, &keys::APPEARANCE_MODE),
             context,
         ),
         choice_row(
-            strings.resolve(StringKey::DesktopCandidateWindowLayout),
+            RowLabel::with_option(
+                strings,
+                StringKey::DesktopCandidateWindowLayout,
+                Some(candidate_layout.label_key()),
+            ),
             CandidateLayout::ALL,
-            document.choice(&keys::CANDIDATE_LAYOUT),
+            candidate_layout,
             true,
             |choice: CandidateLayout| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::CANDIDATE_LAYOUT),
@@ -48,9 +60,13 @@ pub fn view(
         // five named steps, beside the window layout it sizes (USER
         // 2026-09-23, `AppearanceSettingsView.swift`).
         choice_row(
-            strings.resolve(StringKey::DesktopCandidateWindowSize),
+            RowLabel::with_option(
+                strings,
+                StringKey::DesktopCandidateWindowSize,
+                Some(candidate_size.label_key()),
+            ),
             CandidateSizeChoice::ALL,
-            document.choice(&keys::CANDIDATE_SIZE),
+            candidate_size,
             true,
             |step: CandidateSizeChoice| strings.resolve(step.label_key()).to_owned(),
             |step| Message::set_choice(step, &keys::CANDIDATE_SIZE),
@@ -59,9 +75,13 @@ pub fn view(
         // What each cell shows, after the window rows: both scripts, or the
         // romanization alone.
         choice_row(
-            strings.resolve(StringKey::SettingsCandidateDisplayMode),
+            RowLabel::with_option(
+                strings,
+                StringKey::SettingsCandidateDisplayMode,
+                Some(candidate_display_mode.label_key()),
+            ),
             CandidateDisplayMode::ALL,
-            document.choice(&keys::CANDIDATE_DISPLAY_MODE),
+            candidate_display_mode,
             true,
             |choice: CandidateDisplayMode| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::CANDIDATE_DISPLAY_MODE),

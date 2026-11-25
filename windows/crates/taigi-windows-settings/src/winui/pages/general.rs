@@ -2,7 +2,7 @@
 //! keys, auto-space, the candidate window's two switches, display language;
 //! then the update row and the reset card. Port of `GeneralSettingsView.swift`.
 
-use super::{choice_row, reset_row};
+use super::{choice_row, reset_row, switch_row, RowLabel};
 use crate::updates::INSTALLED_VERSION;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
@@ -30,6 +30,12 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let document = window.document();
+    let input_mode = document.choice(&keys::INPUT_MODE);
+    let tone_scheme = document.choice(&keys::TONE_INPUT_SCHEME);
+    let is_hanji_first = document.bool(&keys::IS_HANJI_FIRST);
+    let syllable_separator = document.choice(&keys::SYLLABLE_SEPARATOR);
+    let is_nasal_upper = document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED);
+    let display_language = document.display_language();
     // One run of cards, no sub-groups (USER 2026-09-18: "no grouping"), in the
     // order the typing pipeline runs (USER 2026-09-21): what is typed and
     // how its tones are spelled, then the candidate window and its content,
@@ -41,9 +47,13 @@ pub fn view(
         // Output Script name the pair (USER 2026-09-18); mobile keeps Input Mode,
         // whose picker also holds TPS.
         choice_row(
-            strings.resolve(StringKey::SettingsInputScript),
+            RowLabel::with_option(
+                strings,
+                StringKey::SettingsInputScript,
+                Some(input_mode.label_key()),
+            ),
             InputMode::ALL,
-            document.choice(&keys::INPUT_MODE),
+            input_mode,
             true,
             |mode: InputMode| strings.resolve(mode.label_key()).to_owned(),
             Message::SetInputMode,
@@ -51,7 +61,7 @@ pub fn view(
         ),
         // Beside Input Script, as on the Mac; disabled under TPS.
         choice_row(
-            strings.resolve(StringKey::SettingsKeyboardLayout),
+            RowLabel::of(strings, StringKey::SettingsKeyboardLayout),
             KeyboardLayout::ALL,
             document.key_reading_layout(),
             !document.is_typing_tps(),
@@ -68,16 +78,21 @@ pub fn view(
         // as the outer tuple is at `IntoViews`' 16-element limit.
         View::fragment((
             choice_row(
-                strings.resolve(StringKey::SettingsToneInputScheme),
+                RowLabel::with_option(
+                    strings,
+                    StringKey::SettingsToneInputScheme,
+                    Some(tone_scheme.label_key()),
+                ),
                 ToneInputScheme::ALL,
-                document.choice(&keys::TONE_INPUT_SCHEME),
+                tone_scheme,
                 true,
                 |scheme: ToneInputScheme| strings.resolve(scheme.label_key()).to_owned(),
                 |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
                 context,
             ),
-            cards::switch_row(
-                strings.resolve(StringKey::SettingsHanLoMixed),
+            switch_row(
+                strings,
+                StringKey::SettingsHanLoMixed,
                 document.bool(&keys::IS_HAN_LO_MIXED_ENABLED),
                 document.allows_han_lo_mixed(),
                 context.callback(|is_on| Message::SetSwitch(keys::IS_HAN_LO_MIXED_ENABLED, is_on)),
@@ -85,16 +100,18 @@ pub fn view(
         )),
         // Under Tone Keys, independent of it: both say what a letter types.
         // TPS has no `c` initial, so the row greys there, as the layout does.
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsCAffricate),
+        switch_row(
+            strings,
+            StringKey::SettingsCAffricate,
             document.bool(&keys::IS_C_AFFRICATE_ENABLED),
             !document.is_typing_tps(),
             context.callback(|is_on| Message::SetSwitch(keys::IS_C_AFFRICATE_ENABLED, is_on)),
         ),
         // Beside it for the same reason; TPS has no romanization hyphen on
         // `f`, so the row greys there too.
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsFHyphen),
+        switch_row(
+            strings,
+            StringKey::SettingsFHyphen,
             document.bool(&keys::IS_F_HYPHEN_ENABLED),
             !document.is_typing_tps(),
             context.callback(|is_on| Message::SetSwitch(keys::IS_F_HYPHEN_ENABLED, is_on)),
@@ -104,16 +121,18 @@ pub fn view(
         // Show Typed Text First, which describes the window's content and so reads
         // as its sub-option; that row stays enabled with the window off (one
         // plain switch, no greyed-out state to explain).
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsCandidateWindow),
+        switch_row(
+            strings,
+            StringKey::SettingsCandidateWindow,
             document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_CANDIDATE_WINDOW_ENABLED, is_on)),
         ),
         // §34/S22. On means candidate slot 0 is the preedit literal, so
         // Enter writes the typed romanization.
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsLiteralRomanCandidate),
+        switch_row(
+            strings,
+            StringKey::SettingsLiteralRomanCandidate,
             document.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             true,
             context.callback(|is_on| {
@@ -128,9 +147,13 @@ pub fn view(
         // width, as the shortcut does there. A cleared pop-up writes nothing,
         // the rule `Message::set_choice` states for every other picker.
         choice_row(
-            strings.resolve(StringKey::SettingsOutputScript),
+            RowLabel::with_option(
+                strings,
+                StringKey::SettingsOutputScript,
+                Some(output_script_label(is_hanji_first)),
+            ),
             OUTPUT_SCRIPTS,
-            document.bool(&keys::IS_HANJI_FIRST),
+            is_hanji_first,
             document
                 .choice(&keys::CANDIDATE_DISPLAY_MODE)
                 .allows_swap_toggle(),
@@ -145,14 +168,16 @@ pub fn view(
         // `IntoViews`' 16-element limit.
         View::fragment((
             // Annotate in Brackets: greys where it has no effect (Romanization Only, TPS).
-            cards::switch_row(
-                strings.resolve(StringKey::SettingsOutputBothScripts),
+            switch_row(
+                strings,
+                StringKey::SettingsOutputBothScripts,
                 document.bool(&keys::OUTPUT_BOTH_SCRIPTS),
                 document.allows_output_both_scripts(),
                 context.callback(|is_on| Message::SetSwitch(keys::OUTPUT_BOTH_SCRIPTS, is_on)),
             ),
-            cards::switch_row(
-                strings.resolve(StringKey::SettingsKhinsiannInHanji),
+            switch_row(
+                strings,
+                StringKey::SettingsKhinsiannInHanji,
                 document.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
                 document.choice(&keys::CANDIDATE_DISPLAY_MODE).shows_hanji(),
                 context.callback(|is_on| {
@@ -163,9 +188,13 @@ pub fn view(
         // Syllable Separator (§49), directly under Output Script — it describes that
         // output's shape.
         choice_row(
-            strings.resolve(StringKey::SettingsSyllableSeparator),
+            RowLabel::with_option(
+                strings,
+                StringKey::SettingsSyllableSeparator,
+                Some(syllable_separator.label_key()),
+            ),
             SyllableSeparator::ALL,
-            document.choice(&keys::SYLLABLE_SEPARATOR),
+            syllable_separator,
             true,
             |choice: SyllableSeparator| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::SYLLABLE_SEPARATOR),
@@ -174,9 +203,13 @@ pub fn view(
         // Nasal mark in POJ capitals (§53): the other setting that shapes the
         // output's romanization — a pop-up over the stored switch, ᴺ or ⁿ.
         choice_row(
-            strings.resolve(StringKey::SettingsNasalMarkerUppercase),
+            RowLabel::with_option(
+                strings,
+                StringKey::SettingsNasalMarkerUppercase,
+                Some(nasal_marker_style_label(is_nasal_upper)),
+            ),
             NASAL_MARKER_STYLES,
-            document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
+            is_nasal_upper,
             true,
             |is_uppercase: bool| {
                 strings
@@ -192,16 +225,22 @@ pub fn view(
             context,
         ),
         // The space after a commit: the last thing the output stage does.
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsAutoSpace),
+        switch_row(
+            strings,
+            StringKey::SettingsAutoSpace,
             document.bool(&keys::IS_AUTO_SPACE_ENABLED),
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_AUTO_SPACE_ENABLED, is_on)),
         ),
         choice_row(
-            strings.resolve(StringKey::SettingsDisplayLanguage),
+            RowLabel::with_option(
+                strings,
+                StringKey::SettingsDisplayLanguage,
+                (display_language == DisplayLanguage::System)
+                    .then_some(StringKey::SettingsDisplayLanguageAutomatic),
+            ),
             &DisplayLanguage::PICKER,
-            document.display_language(),
+            display_language,
             true,
             |language: DisplayLanguage| display_language_label(language, strings),
             |language| Message::SetChoice(language.map(SettingsWrite::display_language)),

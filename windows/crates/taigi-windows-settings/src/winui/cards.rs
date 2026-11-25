@@ -22,12 +22,12 @@ const SUB_ROW_MIN_HEIGHT: f64 = 48.0;
 const GROUP_INDENT: f64 = 16.0;
 /// `TextFillColorDisabled` is 36% of the theme's text colour, in both the
 /// light and the dark resource dictionary.
-const DISABLED_LABEL_OPACITY: f64 = 0.36;
+pub(super) const DISABLED_LABEL_OPACITY: f64 = 0.36;
 /// `CaptionTextBlockStyle`'s size: a card's description.
-const CAPTION_FONT_SIZE: f64 = 12.0;
+pub(super) const CAPTION_FONT_SIZE: f64 = 12.0;
 /// `PrimaryText` at less than full is WinUI's secondary text, and it
 /// follows the theme.
-const SECONDARY_OPACITY: f64 = 0.65;
+pub(super) const SECONDARY_OPACITY: f64 = 0.65;
 /// `ControlCornerRadius`.
 const CARD_CORNER_RADIUS: f64 = 4.0;
 /// Between the header and the control, when the line is tight.
@@ -54,7 +54,7 @@ pub fn line(header: &str, control: impl Into<View>) -> View {
     dimmable_line(header, true, control)
 }
 
-/// `line`, with the header greyed when the setting cannot be changed.
+/// Header text, greyed when the setting cannot be changed.
 ///
 /// A control greys itself; its name does not, and a row whose switch is
 /// disabled under a full-strength label reads as a switch that is merely
@@ -62,18 +62,20 @@ pub fn line(header: &str, control: impl Into<View>) -> View {
 /// reactor exposes no such brush — the same 36% the light and dark
 /// resources both resolve to, applied to the theme's own text colour, is
 /// the nearest thing that stays theme- and high-contrast-correct.
+fn header_text(header: &str, is_enabled: bool) -> TextBlock {
+    TextBlock::new()
+        .text(header)
+        .text_wrapping(TextWrapping::Wrap)
+        .opacity(if is_enabled {
+            1.0
+        } else {
+            DISABLED_LABEL_OPACITY
+        })
+}
+
+/// `line`, with the header greyed when the setting cannot be changed.
 fn dimmable_line(header: &str, is_enabled: bool, control: impl Into<View>) -> View {
-    header_and_control(
-        TextBlock::new()
-            .text(header)
-            .text_wrapping(TextWrapping::Wrap)
-            .opacity(if is_enabled {
-                1.0
-            } else {
-                DISABLED_LABEL_OPACITY
-            }),
-        control,
-    )
+    header_and_control(header_text(header, is_enabled), control)
 }
 
 /// `header` at the left, `control` at the right, both centred.
@@ -102,21 +104,41 @@ pub fn row(header: &str, control: impl Into<View>) -> View {
 }
 
 /// `row`, with `description` under the header in the secondary caption
-/// (`SettingsCard.Description`).
-pub fn described_row(header: &str, description: &str, control: impl Into<View>) -> View {
+/// (`SettingsCard.Description`). `is_enabled` greys both header and caption
+/// consistently with disabled controls (`header_text`).
+pub fn described_row(
+    header: &str,
+    description: &str,
+    is_enabled: bool,
+    control: impl Into<View>,
+) -> View {
     card(header_and_control(
         StackPanel::new().children((
-            TextBlock::new()
-                .text(header)
-                .text_wrapping(TextWrapping::Wrap),
+            header_text(header, is_enabled),
             TextBlock::new()
                 .text(description)
                 .text_wrapping(TextWrapping::Wrap)
                 .font_size(CAPTION_FONT_SIZE)
-                .opacity(SECONDARY_OPACITY),
+                .opacity(if is_enabled {
+                    SECONDARY_OPACITY
+                } else {
+                    DISABLED_LABEL_OPACITY
+                }),
         )),
         control,
     ))
+}
+
+fn setting_row(
+    header: &str,
+    description: Option<&str>,
+    is_enabled: bool,
+    control: impl Into<View>,
+) -> View {
+    match description {
+        Some(description) => described_row(header, description, is_enabled, control),
+        None => card(dimmable_line(header, is_enabled, control)),
+    }
 }
 
 fn card(content: View) -> View {
@@ -197,8 +219,19 @@ pub fn group(
 /// necessarily the display language this window was told to speak.
 /// `is_enabled` is false for a row that follows a parent switch — greyed,
 /// never cleared, so the choice comes back with its parent.
-pub fn switch_row(header: &str, is_on: bool, is_enabled: bool, on_toggled: Callback<bool>) -> View {
-    row(header, switch(is_on, is_enabled, on_toggled))
+pub fn switch_row(
+    header: &str,
+    description: Option<&str>,
+    is_on: bool,
+    is_enabled: bool,
+    on_toggled: Callback<bool>,
+) -> View {
+    setting_row(
+        header,
+        description,
+        is_enabled,
+        switch(is_on, is_enabled, on_toggled),
+    )
 }
 
 /// The switch itself, for a caller that places its own line.
@@ -219,13 +252,16 @@ pub fn switch(is_on: bool, is_enabled: bool, on_toggled: Callback<bool>) -> View
 /// shows and comes back with the setting that masks it.
 pub fn choice_row(
     header: &str,
+    description: Option<&str>,
     labels: Vec<String>,
     selected: Option<usize>,
     is_enabled: bool,
     on_change: Callback<Option<usize>>,
 ) -> View {
-    row(
+    setting_row(
         header,
+        description,
+        is_enabled,
         ComboBox::new()
             .items_source(labels)
             .is_enabled(is_enabled)

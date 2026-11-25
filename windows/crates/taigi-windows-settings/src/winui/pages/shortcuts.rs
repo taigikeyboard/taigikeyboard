@@ -184,7 +184,7 @@ fn recorder_row(
         .spacing(FIELD_GAP)
         .children(fields);
     match fixed_keys {
-        Some(keys) => cards::described_row(strings.resolve(label), keys, fields),
+        Some(keys) => cards::described_row(strings.resolve(label), keys, true, fields),
         None => cards::row(strings.resolve(label), fields),
     }
 }

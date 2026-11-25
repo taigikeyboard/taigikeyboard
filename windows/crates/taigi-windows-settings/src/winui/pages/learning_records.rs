@@ -26,8 +26,8 @@ use crate::winui::list_pager::{
     TABLE_COLUMN_GAP, TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
 };
 use crate::winui::list_selection::{selectable_list, SettledRows};
-use crate::winui::pages::choice_row;
 use crate::winui::pages::custom_dictionary::{self, word_dialog, EntryField};
+use crate::winui::pages::{choice_row, RowLabel};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
@@ -505,7 +505,7 @@ pub fn view(
         .unwrap_or(KINDS[0]);
     View::fragment((
         choice_row(
-            strings.resolve(StringKey::DictionaryLearningRecords),
+            RowLabel::plain(strings, StringKey::DictionaryLearningRecords),
             &KINDS,
             current_kind,
             is_enabled,
@@ -514,7 +514,7 @@ pub fn view(
             context,
         ),
         choice_row(
-            strings.resolve(StringKey::DictionaryLearningRecordsOrder),
+            RowLabel::plain(strings, StringKey::DictionaryLearningRecordsOrder),
             &ORDERS,
             model.order,
             is_enabled,
