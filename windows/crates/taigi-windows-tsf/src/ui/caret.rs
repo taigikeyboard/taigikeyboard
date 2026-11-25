@@ -1,7 +1,7 @@
 //! Where the caret is, in PHYSICAL screen pixels: `ITfContextView::GetTextExt`
-//! on the composition's end (rakukan `on_compose.rs:29-43`) and start, spanned
-//! over every line a wrapped composition covers, else the selection (khiin `composition_utils.rs:31-69`). A rectangle the
-//! host reports empty or not at all is "no anchor" (roadmap W4): the window
+//! on the composition's end (rakukan `on_compose.rs:29-43`), raised to its
+//! start's line when a wrapped composition spans several, else the selection
+//! (khiin `composition_utils.rs:31-69`). A rectangle the host reports empty or not at all is "no anchor" (roadmap W4): the window
 //! is not shown, as on the Mac — a bar parked in a corner of the host window
 //! is worse than none. A host that has not laid the text out yet
 //! (`TS_E_NOLAYOUT`) is told apart ([`Caret::NotLaidOut`]): a window already
@@ -22,7 +22,8 @@ use windows::Win32::UI::TextServices::{
 
 /// What the host says about where its caret is.
 pub enum Caret {
-    /// The caret line's rectangle, physical screen pixels.
+    /// The caret's line — from a wrapped composition's first line down to the
+    /// caret's — physical screen pixels.
     At(RECT),
     /// Some probe was refused with `TS_E_NOLAYOUT` and none answered: Chrome
     /// until its renderer reports the composition's character bounds — which
@@ -114,20 +115,26 @@ unsafe fn to_physical(rect: RECT, host: Option<HWND>) -> RECT {
     }
 }
 
-/// The anchor for a composition whose `start` and `end` carets may sit on
-/// different lines of a wrapped preedit: the end caret's column, and every
-/// line from the first one's top to the last one's bottom. The window then
-/// goes below the last line or, flipped, above the first — anchored on the
-/// last line alone, a flipped window covered the lines above it (WIN1).
-fn composition_lines(start: RECT, end: RECT) -> RECT {
-    RECT {
-        top: start.top.min(end.top),
-        bottom: start.bottom.max(end.bottom),
-        ..end
+/// The anchor for a composition from its `start` and `end` caret probes:
+/// the end caret's rectangle, its top raised to the start's when a wrapped
+/// preedit puts the start on an earlier line. A window below still hangs
+/// from the end caret's line; a flipped one goes above the first line —
+/// anchored on the last line alone, it covered the lines above (WIN1).
+/// Either probe alone is the anchor, the end preferred. A host that answers
+/// every range with the caret's line (an IMM32 host through CUAS, such as a
+/// WinForms `RichTextBox`) gets the end caret's line, as before.
+fn composition_anchor(start: Option<RECT>, end: Option<RECT>) -> Option<RECT> {
+    match (start, end) {
+        (Some(start), Some(end)) => Some(RECT {
+            top: start.top.min(end.top),
+            ..end
+        }),
+        (start, end) => end.or(start),
     }
 }
 
-/// Where the caret line is for the window to anchor to.
+/// Where the caret's line is for the window to anchor to (a wrapped
+/// composition's first line down to it, [`composition_anchor`]).
 pub fn caret(context: &ITfContext, ec: EditCookie, composition: Option<&ITfComposition>) -> Caret {
     // SAFETY: every range is a clone this function owns; the view is the
     // context's; all under the session's cookie.
@@ -141,11 +148,7 @@ pub fn caret(context: &ITfContext, ec: EditCookie, composition: Option<&ITfCompo
             if let Ok(range) = composition.GetRange() {
                 let end = probe(&view, ec, &range, TF_ANCHOR_END, &mut is_not_laid_out);
                 let start = probe(&view, ec, &range, TF_ANCHOR_START, &mut is_not_laid_out);
-                let spanned = match (start, end) {
-                    (Some(start), Some(end)) => Some(composition_lines(start, end)),
-                    (start, end) => end.or(start),
-                };
-                if let Some(rect) = spanned {
+                if let Some(rect) = composition_anchor(start, end) {
                     return Caret::At(to_physical(rect, host));
                 }
             }
@@ -177,24 +180,34 @@ mod tests {
         }
     }
 
-    #[test]
-    fn a_wrapped_composition_spans_its_first_to_last_line_at_the_end_column() {
-        // trace: start on line 1 (top 100), end on line 3 (top 140) at x 30.
-        let rect = composition_lines(line(400, 100), line(30, 140));
-        assert_eq!((rect.left, rect.right), (30, 31), "end caret's column");
-        assert_eq!(
-            (rect.top, rect.bottom),
-            (100, 160),
-            "line 1 top to line 3 bottom"
-        );
+    fn edges(rect: Option<RECT>) -> Option<(i32, i32, i32, i32)> {
+        rect.map(|rect| (rect.left, rect.top, rect.right, rect.bottom))
     }
 
     #[test]
-    fn a_one_line_composition_keeps_its_line() {
-        let rect = composition_lines(line(10, 100), line(60, 100));
+    fn a_wrapped_composition_raises_the_end_caret_to_its_first_line() {
+        // trace: start on line 1 (top 100), end on line 3 (top 140) at x 30:
+        // end's column and bottom (160), start's top (100).
+        let anchor = composition_anchor(Some(line(400, 100)), Some(line(30, 140)));
+        assert_eq!(edges(anchor), Some((30, 100, 31, 160)));
+    }
+
+    #[test]
+    fn a_one_line_composition_keeps_the_end_caret() {
+        let anchor = composition_anchor(Some(line(10, 100)), Some(line(60, 100)));
+        assert_eq!(edges(anchor), Some((60, 100, 61, 120)));
+    }
+
+    #[test]
+    fn either_probe_alone_is_the_anchor() {
         assert_eq!(
-            (rect.left, rect.top, rect.right, rect.bottom),
-            (60, 100, 61, 120)
+            edges(composition_anchor(None, Some(line(60, 140)))),
+            Some((60, 140, 61, 160))
         );
+        assert_eq!(
+            edges(composition_anchor(Some(line(10, 100)), None)),
+            Some((10, 100, 11, 120))
+        );
+        assert_eq!(edges(composition_anchor(None, None)), None);
     }
 }
