@@ -112,6 +112,9 @@ No harness script: you drive one emulator with `adb`, read every screenshot, and
 - **Typing** (layout `phahTaigi`): the §1 sentences, each word toneless. After each word, screenshot the candidate strip. Once per clause, open the expanded grid (the strip's expand button), screenshot it, scroll it to the end and screenshot again, collapse, tap the first candidate. Clear the field after each sentence.
 - **Symbol picker**: open it once from the toolbar (`+`, then the symbol button), screenshot the tabs, scroll the grid to the end, screenshot.
 - **Key faces**: one screenshot of the keyboard per keyboard layout (plus the number row, where tone marks sit).
+- **Layers**: on `phahTaigi`, one screenshot each of Shift, `SYMBOLS`, `SYMBOLS2` (`ime/text/keyboard/KeyboardMode.kt`), and the number / phone pads from the contact form's Phone field.
+- **Long-press popups**: per keyboard layout, hold the key with the longest popup list (up to 9 entries, `CustomLayout.MAX_CALLOUTS`), the leftmost and the rightmost key that have one, and a top-row key, and screenshot while held: `adb -s emulator-5554 shell input swipe x y x y 3000 &`, `screencap` about 1.5 s later. Popup code: `ime/popup/` (`KeyPopupManager.kt`, `KeyPopupBox.kt`).
+- **Custom layout**: create one in the app's Layout editor (driven with taps or Maestro) that packs the longest keys the editor offers (multi-letter finals such as `ng`, `nn`) into one row and a 9-entry popup on an edge key; screenshot its key faces and that popup. Up to 5 custom layouts exist (`CustomLayout.MAX_CUSTOM_LAYOUTS`); delete the test layout at the end.
 - **Fullscreen**: in landscape, confirm the app's own field stays visible above the keyboard (no extract editor).
 
 ### 5.5 Instrumented tests
@@ -139,6 +142,9 @@ Never run the whole `connectedDebugAndroidTest`: `RustEngineBridgeTest` needs th
 | `key-label-near-edge` | a key label's ink is closer to a side than 6 % of the key height (one glyph) or 12 % (several characters) |
 | `key-hint-near-top` / `key-hint-touches-label` | a hint's ink is within 12 % of the key height of the key top, or touches the label below |
 | `key-label-off-centre` | a label's ink is visibly off the key centre (full-width ？，。 are centred by ink) |
+| `popup-past-screen` | a long-press popup extends past a screen side or the top of the keyboard window |
+| `popup-entry-cut` / `popup-entries-overlap` | a popup entry is cut by its cell, or two entries touch |
+| `popup-off-key` | the popup is not above (or beside, at an edge) the key held |
 | `fullscreen-extract` | landscape shows the framework's extract editor over the app |
 
 The thresholds are the ones `android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/keyboard/KeyLabelGeometry.kt` draws to; measure in pixels from the crop when a case is close. Design, not defects: a candidate wider than the whole row ellipsized; tofu for a character no bundled font has (a font coverage report, not layout).
@@ -178,7 +184,7 @@ No harness script and no UI-test target: you drive the simulator, read every scr
 
 ### 6.4 Per combination
 
-As §5.4: the sentences on `phahTaigi` with a candidate-bar screenshot after each word; once per clause the expanded candidate grid (top and scrolled to the end); the symbol picker once (tabs, grid end); one key-face screenshot per keyboard layout plus the number row.
+As §5.4: the sentences on `phahTaigi` with a candidate-bar screenshot after each word; once per clause the expanded candidate grid (top and scrolled to the end); the symbol picker once (tabs, grid end); one key-face screenshot per keyboard layout plus the number row. Layers: Shift and the `123` / `#+=` pages (`ios/Sources/TaigiKeyboard/Layout/TaigiLayouts.swift`). Long-press popups: the same keys as §5.4 — Maestro `swipe` with start = end for 12 s, screenshot about 9 s in; popup maps `ios/Sources/TaigiKeyboard/Callouts/`. Custom layout: as §5.4, in the app's Layout tab (`App/Tabs/Layout/LayoutEditorView.swift`, limit `CustomLayout.maxCallouts` = 9); delete it at the end.
 
 ### 6.5 Unit tests
 
@@ -203,6 +209,7 @@ xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -dest
 | `symbol-tab-wrapped` | as §5.6 |
 | `key-label-near-edge` / `key-hint-near-top` / `key-hint-touches-label` / `key-label-off-centre` | as §5.6 |
 | `key-text-follows-system-size` | a key label or candidate grows with the system text size (every font is fixed-size) |
+| `popup-past-screen` / `popup-entry-cut` / `popup-entries-overlap` / `popup-off-key` | as §5.6 |
 
 Owning files, under `ios/Sources/TaigiKeyboard/`: `Candidates/Views/CandidateView.swift`, `Candidates/Views/CandidateButtonView.swift`, `Overlays/ExpandedCandidateOverlay.swift`, `Overlays/ExpandedCandidateRowLayout.swift`, `Overlays/SymbolSelectionOverlay.swift`, `Styling/KeyLabelLayout.swift`, `Styling/KeyHintStack.swift`, `Styling/KeyboardFonts.swift`. Known, not a new finding: `ExpandedCandidateOverlay` takes its width from `UIScreen.main.bounds` (wrong in an iPad floating keyboard).
 
