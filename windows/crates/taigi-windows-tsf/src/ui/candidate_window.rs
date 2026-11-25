@@ -48,6 +48,21 @@ use windows_numerics::{Matrix3x2, Vector2};
 /// How much of its screen a stretched window leaves unspent
 /// (`CandidateBasePanel.screenEdgeMargin`).
 const SCREEN_EDGE_MARGIN: f32 = 12.0;
+/// The part of `work_area` (DIPs) the window is placed in: the screen edge
+/// margins the width budget leaves (`maximum_window_width`) also kept
+/// between a placed window and the left and right edges — clamped to the
+/// whole work area, a window at a caret near the edge sat flush against it
+/// (WIN7). Top and bottom keep the work area: the flip below / above the
+/// caret line decides there.
+fn placement_area(work_area: Rect) -> Rect {
+    Rect::new(
+        work_area.x + SCREEN_EDGE_MARGIN,
+        work_area.y,
+        (work_area.width - 2.0 * SCREEN_EDGE_MARGIN).max(0.0),
+        work_area.height,
+    )
+}
+
 /// The width budget before any caret has named a screen.
 const FALLBACK_MAXIMUM_WINDOW_WIDTH: f32 = 640.0;
 /// Our drawn scroller (overlay style): its width and the gap to the text.
@@ -597,7 +612,7 @@ impl CandidateWindow {
             to_dip(self.caret.right - self.caret.left),
             to_dip(self.caret.bottom - self.caret.top),
         );
-        let placed = panel_frame(caret, self.size, visible);
+        let placed = panel_frame(caret, self.size, placement_area(visible));
         WindowFrame {
             frame: RECT {
                 left: (placed.x * scale).round() as i32,
@@ -1690,3 +1705,52 @@ impl CandidateWindow {
 /// What the presenter needs to start a transition's timer after a
 /// navigation it drove itself.
 pub const UNFOLD_TIMER: (usize, u32) = (UNFOLD_TIMER_ID, UNFOLD_FRAME_MILLISECONDS);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_window_at_a_caret_by_the_right_edge_keeps_the_screen_edge_margin() {
+        // trace: work area 0..1920 DIP, caret x 1900, panel 300 wide:
+        // placement area 12..1908, so the window ends at 1908, starts at 1608.
+        let work_area = Rect::new(0.0, 0.0, 1920.0, 1040.0);
+        let caret = Rect::new(1900.0, 500.0, 1.0, 20.0);
+        let panel = Size {
+            width: 300.0,
+            height: 40.0,
+        };
+        let placed = panel_frame(caret, panel, placement_area(work_area));
+        assert_eq!(placed.right(), work_area.right() - SCREEN_EDGE_MARGIN);
+        assert_eq!(placed.x, 1608.0);
+    }
+
+    #[test]
+    fn a_window_at_a_caret_by_the_left_edge_keeps_the_screen_edge_margin() {
+        let work_area = Rect::new(-1600.0, 0.0, 1600.0, 900.0);
+        let caret = Rect::new(-1598.0, 500.0, 1.0, 20.0);
+        let panel = Size {
+            width: 300.0,
+            height: 40.0,
+        };
+        let placed = panel_frame(caret, panel, placement_area(work_area));
+        assert_eq!(placed.x, work_area.x + SCREEN_EDGE_MARGIN);
+    }
+
+    #[test]
+    fn a_window_the_width_budget_allows_fits_the_placement_area() {
+        // `maximum_window_width` budgets screen - 2 x margin: that width is
+        // placed whole, not cut.
+        let work_area = Rect::new(0.0, 0.0, 1280.0, 760.0);
+        let panel = Size {
+            width: 1280.0 - 2.0 * SCREEN_EDGE_MARGIN,
+            height: 40.0,
+        };
+        let placed = panel_frame(
+            Rect::new(600.0, 300.0, 1.0, 20.0),
+            panel,
+            placement_area(work_area),
+        );
+        assert_eq!((placed.x, placed.width), (SCREEN_EDGE_MARGIN, panel.width));
+    }
+}
