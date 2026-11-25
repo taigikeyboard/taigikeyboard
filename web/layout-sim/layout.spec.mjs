@@ -115,6 +115,8 @@ function check(root) {
   const byId = (id) => /** @type {HTMLElement} */ (document.getElementById(id));
   /** @param {Element} element */
   const box = (element) => element.getBoundingClientRect();
+  /** @param {string} length a computed length; `normal` reads as 0 */
+  const px = (length) => Number.parseFloat(length) || 0;
   const p = box(root);
   const composition = box(byId("preedit"));
   const editor = box(byId("editor"));
@@ -149,6 +151,8 @@ function check(root) {
   if (!arrows.hidden && box(arrows).right > p.right + 0.5) {
     issues.push("arrows-past-panel");
   }
+  // Fractional, unlike `clientWidth`; the list has no border or scrollbar.
+  const listWidth = box(ol).width;
   for (const li of ol.querySelectorAll("li")) {
     if (li.scrollHeight > li.clientHeight + 0.5) {
       issues.push(`row-taller-than-box:${li.textContent}`);
@@ -157,14 +161,24 @@ function check(root) {
     const visible = row.bottom > p.y && row.y < p.bottom;
     const parts = [...li.querySelectorAll(".text, .annotation")];
     const cells = parts.map(box);
-    // The widest a candidate could be: the list's width less the row's index
-    // and padding (everything outside its scripts' span), as if the row
-    // alone filled the list and the romanization gave way. A wider candidate
-    // is cut with "…" by design; a narrower cut one had room.
-    const span =
-      Math.max(...cells.map((cell) => cell.right)) -
-      Math.min(...cells.map((cell) => cell.left));
-    const room = ol.clientWidth - (row.width - span);
+    // The widest a candidate could be: the list's width less the row's index,
+    // the index's gap and the row's end padding, as if the row alone filled
+    // the list and the romanization gave way (`maximum_primary_column_width`
+    // in `taigi-desktop-core`). An annotation clipped to nothing still keeps
+    // its `--candidate-annotation-gap` padding, which overflows into the end
+    // padding rather than giving the candidate room. A wider candidate is cut
+    // with "…" by design; a narrower cut one had room.
+    const style = getComputedStyle(li);
+    const index = /** @type {HTMLElement} */ (li.querySelector(".index"));
+    const lead =
+      index.offsetWidth > 0
+        ? box(index).right -
+          row.left +
+          px(getComputedStyle(index).marginRight) +
+          // `normal` on one-line cells, whose gap is the index's margin.
+          px(style.columnGap)
+        : px(style.paddingLeft);
+    const room = listWidth - lead - px(style.paddingRight);
     for (const [i, part] of parts.entries()) {
       const range = document.createRange();
       range.selectNodeContents(part);

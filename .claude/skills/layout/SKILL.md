@@ -66,7 +66,7 @@ A combination with any issue fails its test, so `make` exits non-zero; read `sum
 
 Open the `FAIL-*.png` for every kind before calling it either. Design behavior, not defects:
 
-- A candidate wider than the whole list less the row's index and padding, cut with "…" — the check already skips those (at `zoom200` a five-Hanji word does not fit a `horizontal` / `expandable` cell). The romanization is truncated with "…" by design (the candidate stays whole, `web/e2e/look.spec.mjs`) and is never checked for cuts.
+- A candidate wider than the whole list less the row's index and padding, cut with "…" — the check already skips those (at `zoom200` a five-Hanji word does not fit a `horizontal` / `expandable` cell, nor at size 17 the `verticalExpandable` column, 83 px for 85). The romanization is truncated with "…" by design (the candidate stays whole, `web/e2e/look.spec.mjs`) and is never checked for cuts.
 - A kind in one browser only, once, that a rerun of that combination (`BROWSERS=<b> VIEWS=<v> LAYOUTS=<l>`) does not repeat — a timing flake; report it as such.
 
 Everything else is a candidate defect. Trace it to the CSS / layout code (`web/src/style.css`, `web/crates/taigi-web/src/layout.rs`, `desktop/crates/taigi-desktop-core/src/candidates/expandable.rs`) before naming a cause, and say whether the same kind also shows in the other browsers.
