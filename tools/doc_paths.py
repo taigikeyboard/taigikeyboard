@@ -53,10 +53,19 @@ NOT_A_PATH = re.compile(r"[*?{}<>$\[\]|\s,=()]|\.\.\.|…|[A-Z]+\.[A-Z]+\.[A-Z]+
 SUFFIX = re.compile(r"(::.*|:L?\d.*|#.*)$")
 
 
-def git(*args: str, stdin: str = "", repo: Path = ROOT) -> list[str]:
+def git(
+    *args: str,
+    stdin: str = "",
+    repo: Path = ROOT,
+    ignore_global_excludes: bool = True,
+) -> list[str]:
     """NUL-separated git output, so non-ASCII names come back unquoted."""
+    cmd = ["git", "-C", str(repo)]
+    if ignore_global_excludes:
+        cmd.extend(["-c", "core.excludesFile=/dev/null"])
+    cmd.extend([*args, "-z"])
     result = subprocess.run(
-        ["git", "-C", str(repo), "-c", "core.excludesFile=/dev/null", *args, "-z"],
+        cmd,
         input=stdin,
         capture_output=True,
         text=True,
@@ -159,16 +168,37 @@ def ignored_paths(paths: set[str], repo: Path = ROOT) -> set[str]:
     return {hit.rstrip("/") for hit in git("check-ignore", "--no-index", "--stdin", stdin=queries, repo=repo)}
 
 
-def main() -> int:
+def working_tree_paths(repo: Path = ROOT) -> tuple[set[str], set[str]]:
+    """(existing tracked + non-ignored untracked paths, submodule paths) in `repo`."""
     # `<mode> <object> <stage>\t<path>`; mode 160000 is a submodule.
-    entries = [entry.split("\t", 1) for entry in git("ls-files", "--stage")]
-    tracked = {path for _, path in entries}
+    entries = [entry.split("\t", 1) for entry in git("ls-files", "--stage", repo=repo)]
     submodules = {path for meta, path in entries if meta.startswith("160000 ")}
+    cached = {
+        path
+        for _, path in entries
+        if path in submodules or (repo / path).is_file() or (repo / path).is_symlink()
+    }
+    others = {
+        path
+        for path in git(
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            repo=repo,
+            ignore_global_excludes=False,
+        )
+        if not path.endswith("/") and ((repo / path).is_file() or (repo / path).is_symlink())
+    }
+    return cached | others, submodules
+
+
+def main() -> int:
+    tracked, submodules = working_tree_paths(ROOT)
     top_dirs = {path.split("/")[0] for path in tracked if "/" in path}
     doc_refs = []
     for doc in sorted(filter(is_living_doc, tracked)):
         file = ROOT / doc
-        if file.exists():  # deleted in the worktree but still in the index
+        if file.is_file():
             doc_refs.append((doc, references(doc, file.read_text(encoding="utf-8"), top_dirs)))
     unresolved = {path for _, refs in doc_refs for _, paths, _ in refs for path in paths} - tracked
     ignored = ignored_paths(unresolved)
@@ -179,7 +209,7 @@ def main() -> int:
     print("\n".join(failures), file=sys.stderr)
     print(
         f"doc-paths: {len(failures)} dead path(s) — point the doc at the file's new"
-        " location, drop the reference if the file is gone, or `git add` a new file;"
+        " location, drop the reference if the file is gone, or check that a new file is not gitignored;"
         " name another repository's file by URL.",
         file=sys.stderr,
     )

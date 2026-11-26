@@ -88,16 +88,30 @@ def test_code(rel: str, text: str) -> str:
 
 def test_mentions(root: Path) -> set[str]:
     listed = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "--", *TEST_ROOTS],
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            *TEST_ROOTS,
+        ],
         check=True,
         capture_output=True,
         text=True,
-    ).stdout.splitlines()
+    ).stdout
     names: set[str] = set()
-    for rel in listed:
+    for rel in sorted({entry for entry in listed.split("\0") if entry}):
         if not rel.endswith(TEST_SUFFIXES):
             continue
-        text = test_code(rel, (root / rel).read_text(encoding="utf-8", errors="ignore"))
+        path = root / rel
+        if not path.is_file():
+            continue
+        text = test_code(rel, path.read_text(encoding="utf-8", errors="ignore"))
         names.update(match.group(1).lower() for match in MENTION.finditer(text))
     return names
 

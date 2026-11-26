@@ -139,5 +139,83 @@ class LivingDocTests(unittest.TestCase):
             self.assertFalse(doc_paths.is_living_doc(path), path)
 
 
+class WorkingTreePathsTests(unittest.TestCase):
+    def _git(self, repo: Path, *args: str) -> str:
+        return subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                *args,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    def test_tracks_new_files_submodules_and_skips_deleted_or_ignored(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self._git(repo, "init", "-q")
+            (repo / ".gitignore").write_text("ignored/\n", encoding="utf-8")
+            (repo / ".jj").mkdir()
+            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
+            (repo / ".jj" / "state.md").write_text("jj\n", encoding="utf-8")
+            (repo / "docs").mkdir()
+            (repo / "docs" / "kept.md").write_text("kept\n", encoding="utf-8")
+            (repo / "docs" / "deleted.md").write_text("gone\n", encoding="utf-8")
+            self._git(repo, "add", ".gitignore", "docs/kept.md", "docs/deleted.md")
+            self._git(repo, "commit", "-q", "-m", "init")
+            head_sha = self._git(repo, "rev-parse", "HEAD")
+
+            # Register a submodule gitlink with no initialized checkout on disk.
+            self._git(
+                repo,
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                f"160000,{head_sha},taigi-converter",
+            )
+
+            global_excludes = repo / ".global-excludes"
+            global_excludes.write_text("*.personal\n.global-excludes\n", encoding="utf-8")
+            self._git(repo, "config", "core.excludesFile", str(global_excludes))
+
+            (repo / "docs" / "deleted.md").unlink()
+            (repo / "engine").mkdir()
+            (repo / "engine" / "new_file.rs").write_text("fn f() {}\n", encoding="utf-8")
+            (repo / "docs" / "new_doc.md").write_text(
+                "See `engine/new_file.rs` and [kept](kept.md).\n", encoding="utf-8"
+            )
+            (repo / "ignored").mkdir()
+            (repo / "ignored" / "skip.md").write_text("ignored\n", encoding="utf-8")
+            (repo / "notes.personal").write_text("personal\n", encoding="utf-8")
+
+            tracked, submodules = doc_paths.working_tree_paths(repo)
+
+            self.assertEqual(submodules, {"taigi-converter"})
+            self.assertEqual(
+                tracked,
+                {
+                    ".gitignore",
+                    "docs/kept.md",
+                    "docs/new_doc.md",
+                    "engine/new_file.rs",
+                    "taigi-converter",
+                },
+            )
+            # ignored_paths keeps ignoring global excludes so CI and local agree.
+            self.assertEqual(
+                doc_paths.ignored_paths({"ignored/skip.md", "notes.personal"}, repo),
+                {"ignored/skip.md"},
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

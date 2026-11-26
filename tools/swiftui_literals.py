@@ -86,17 +86,35 @@ def findings_in(text: str) -> list[tuple[int, str]]:
     ]
 
 
-def main() -> int:
+def swift_files(root: Path = ROOT) -> list[str]:
+    """Every non-ignored `.swift` file under `ios/` or `macos/` present on disk."""
     listed = subprocess.run(
-        ["git", "ls-files", "-z", "ios/*.swift", "macos/*.swift"],
-        cwd=ROOT,
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            "ios/*.swift",
+            "macos/*.swift",
+        ],
         check=True,
         capture_output=True,
         text=True,
     ).stdout
+    return sorted(
+        {rel for rel in listed.split("\0") if rel and (root / rel).is_file()}
+    )
+
+
+def main() -> int:
     failures = [
         f"{rel}:{line}: {call}"
-        for rel in filter(None, listed.split("\0"))
+        for rel in swift_files(ROOT)
         for line, call in findings_in((ROOT / rel).read_text(encoding="utf-8"))
     ]
     if not failures:

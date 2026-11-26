@@ -485,15 +485,36 @@ class DefaultBaseTests(unittest.TestCase):
             self.assertNotIn("jj", calls)
 
 
+def _working_tree_paths(root: Path) -> list[str]:
+    listed = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "-c",
+            "core.quotepath=false",
+            "ls-files",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return sorted(
+        {
+            path
+            for path in listed.split("\0")
+            if path and ((root / path).exists() or (root / path).is_symlink())
+        }
+    )
+
+
 class CoverageGuardTests(SelectorTestCase):
     def test_every_tracked_file_has_a_rule(self) -> None:
-        tracked = subprocess.run(
-            ["git", "-C", str(ROOT), "-c", "core.quotepath=false", "ls-files", "-z"],
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout
-        paths = [path for path in tracked.split("\0") if path]
+        paths = _working_tree_paths(ROOT)
 
         effects = test_select.effects_of(paths, self.graph)
 
@@ -503,6 +524,53 @@ class CoverageGuardTests(SelectorTestCase):
             "give each new top-level directory a rule in tools/test_select.py "
             "(effects_of, or NO_GATE_DIRS when it needs no gate)",
         )
+
+    def test_working_tree_paths_tracks_new_files_and_skips_deleted_or_ignored(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            subprocess.run(["git", "init", "-q", tmp], check=True)
+            (repo / ".gitignore").write_text("ignored_dir/\n*.log\n", encoding="utf-8")
+            (repo / ".jj").mkdir()
+            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
+            (repo / ".jj" / "state.txt").write_text("jj\n", encoding="utf-8")
+            (repo / "kept.txt").write_text("kept\n", encoding="utf-8")
+            (repo / "deleted.txt").write_text("gone\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", tmp, "add", ".gitignore", "kept.txt", "deleted.txt"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    tmp,
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.com",
+                    "-c",
+                    "commit.gpgsign=false",
+                    "commit",
+                    "-q",
+                    "-m",
+                    "init",
+                ],
+                check=True,
+            )
+
+            (repo / "deleted.txt").unlink()
+            (repo / "newdir").mkdir()
+            (repo / "newdir" / "thing.txt").write_text("new\n", encoding="utf-8")
+            (repo / "ignored_dir").mkdir()
+            (repo / "ignored_dir" / "skip.txt").write_text("ignored\n", encoding="utf-8")
+            (repo / "skip.log").write_text("ignored\n", encoding="utf-8")
+
+            self.assertEqual(
+                _working_tree_paths(repo),
+                [".gitignore", "kept.txt", "newdir/thing.txt"],
+            )
 
 
 if __name__ == "__main__":

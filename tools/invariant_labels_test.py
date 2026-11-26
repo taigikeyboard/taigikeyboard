@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
 import invariant_labels
 from invariant_labels import Label
@@ -123,6 +126,71 @@ class PendingBaselineTests(unittest.TestCase):
 
         self.assertEqual(new, [])
         self.assertEqual(stale, ["foo_rule"])
+
+
+class TestMentionsWorkingTreeTests(unittest.TestCase):
+    def _git(self, repo: Path, *args: str) -> None:
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                *args,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    def test_reads_new_untracked_tests_and_skips_deleted_or_ignored_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self._git(repo, "init", "-q")
+            (repo / ".gitignore").write_text("engine/target/\n", encoding="utf-8")
+            (repo / ".jj").mkdir()
+            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
+            (repo / "engine" / "phonetics" / "tests").mkdir(parents=True)
+            (repo / "android" / "app" / "src" / "test" / "java").mkdir(parents=True)
+
+            (repo / "engine" / "phonetics" / "tests" / "a.rs").write_text(
+                "// INVARIANT_committed_rule\n", encoding="utf-8"
+            )
+            deleted = repo / "android" / "app" / "src" / "test" / "java" / "DeletedTest.kt"
+            deleted.write_text("// INVARIANT_deleted_rule\n", encoding="utf-8")
+            self._git(
+                repo,
+                "add",
+                ".gitignore",
+                "engine/phonetics/tests/a.rs",
+                "android/app/src/test/java/DeletedTest.kt",
+            )
+            self._git(repo, "commit", "-q", "-m", "init")
+
+            # Simulate jj @ edits: remove tracked file, add new untracked test files, add ignored file.
+            deleted.unlink()
+            (repo / "ios" / "TaigiKeyboardTests").mkdir(parents=True)
+            (repo / "ios" / "TaigiKeyboardTests" / "NewTests.swift").write_text(
+                "// INVARIANT_new_jj_rule\n", encoding="utf-8"
+            )
+            (repo / "macos" / "Tests" / "NewSuite").mkdir(parents=True)
+            (repo / "macos" / "Tests" / "NewSuite" / "CaseTests.swift").write_text(
+                "// INVARIANT_new_macos_rule\n", encoding="utf-8"
+            )
+            (repo / "engine" / "target" / "debug" / "tests").mkdir(parents=True)
+            (repo / "engine" / "target" / "debug" / "tests" / "ignored.rs").write_text(
+                "// INVARIANT_ignored_rule\n", encoding="utf-8"
+            )
+
+            self.assertEqual(
+                invariant_labels.test_mentions(repo),
+                {"committed_rule", "new_jj_rule", "new_macos_rule"},
+            )
 
 
 if __name__ == "__main__":

@@ -319,7 +319,7 @@ lint-i18n:
 	python3 tools/i18n/check.py
 
 lint-ps1:
-	@git ls-files -z '*.ps1' | xargs -0 perl -ne 'if (/[^\t\r\n\x20-\x7e]/) { print "$$ARGV:$$.: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } close ARGV if eof; END { exit $$bad }'
+	@perl -e 'open my $$ls, "-|", qw(git ls-files --cached --others --exclude-standard -z -- *.ps1) or die $$!; my @files = do { local $$/ = "\0"; map { chomp; $$_ } <$$ls> }; close $$ls or die "git ls-files failed\n"; my (%seen, $$bad); for my $$f (@files) { next unless length($$f) && !$$seen{$$f}++ && -f $$f; open my $$fh, "<:raw", $$f or die "$$f: $$!\n"; my $$n = 0; while (<$$fh>) { $$n++; if (/[^\t\r\n\x20-\x7e]/) { print "$$f:$$n: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } } } exit($$bad ? 1 : 0)'
 
 # Point git at the repo's tracked hooks. Per clone, not per checkout — core.hooksPath
 # lives in .git/config, so a fresh clone has no gate until this runs. That is why the
