@@ -25,6 +25,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from common.cleanup import count_syllables
 from pipeline.context import PipelineContext
 
 
@@ -181,7 +182,7 @@ def _expand_variant_readings(hanzi: str, tl: str) -> list[str]:
     current_syllables = 0
 
     for token in tokens:
-        syllables = len(token.split("-"))
+        syllables = count_syllables(token)
         current_group.append(token)
         current_syllables += syllables
 
