@@ -247,8 +247,13 @@ body.options {
   text-align: left;
 }
 
-.options .setting select:hover {
+.options .setting select:hover:not(:disabled) {
   background-color: var(--hover);
+}
+
+.options .setting:has(:disabled) > span,
+.options .setting select:disabled {
+  opacity: 0.38;
 }
 
 /* Chrome's toggle (cr-toggle): an outlined 26 × 16 track with a small grey

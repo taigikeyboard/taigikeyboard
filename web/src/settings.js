@@ -243,6 +243,7 @@ export class Settings {
       !isTyping && values.telexGuideShown === true,
     );
     // The stored tag, not the control's: the session reads an unknown one too.
+    // Also refreshes setting captions for the current `<select>` values.
     setDisplayLanguage(
       typeof values.displayLanguage === "string"
         ? values.displayLanguage

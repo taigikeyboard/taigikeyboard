@@ -3,10 +3,13 @@
 // attribute. The markup's English text only holds the layout; style.css keeps it
 // out of sight until `setDisplayLanguage` has run.
 
-import { STRINGS } from "./generated/strings.js";
+import { CAPTIONS, STRINGS } from "./generated/strings.js";
 
 /** @typedef {keyof typeof STRINGS} DisplayLanguage */
 /** @typedef {keyof (typeof STRINGS)["hanji"]} StringKey */
+
+/** @type {Record<string, string>} */
+const CAPTION_KEYS = CAPTIONS;
 
 const ATTRIBUTES = ["aria-label", "title"];
 
@@ -63,6 +66,53 @@ export function chooseLanguage(tag) {
 }
 
 /**
+ * The caption text for `key` in the current display language, or `null`
+ * when `key` has no paired caption in `CAPTIONS`.
+ * @param {string | undefined} key
+ * @returns {string | null}
+ */
+export function caption(key) {
+  if (!key || !Object.hasOwn(CAPTION_KEYS, key)) {
+    return null;
+  }
+  return translate(CAPTION_KEYS[key]);
+}
+
+/**
+ * Renders or updates inline `<small>` captions beneath setting labels inside
+ * `#settings`, preferring a `<select>`'s selected `<option>` key over the row's
+ * own key so scheme-dependent rows (such as Tone Keys) switch live.
+ * @param {ParentNode} [root]
+ * @returns {void}
+ */
+export function refreshSettingCaptions(root = document) {
+  for (const span of root.querySelectorAll(
+    "#settings .setting > span[data-i18n]",
+  )) {
+    if (!(span instanceof HTMLElement) || !span.dataset.i18n) {
+      continue;
+    }
+    const select = span.parentElement?.querySelector("select") ?? null;
+    const selectedOption =
+      select && select.selectedIndex >= 0
+        ? select.options[select.selectedIndex]
+        : null;
+    const text =
+      caption(selectedOption?.dataset.i18n) ?? caption(span.dataset.i18n);
+    const existing = span.querySelector(":scope > small");
+    if (text === null) {
+      existing?.remove();
+    } else if (existing) {
+      existing.textContent = text;
+    } else {
+      const note = document.createElement("small");
+      note.textContent = text;
+      span.append(note);
+    }
+  }
+}
+
+/**
  * Draws the page in the language of `tag`.
  * @param {string} tag
  * @returns {void}
@@ -76,6 +126,7 @@ export function setDisplayLanguage(tag) {
       element.textContent = translate(element.dataset.i18n);
     }
   }
+  refreshSettingCaptions();
   for (const attribute of ATTRIBUTES) {
     const source = `data-i18n-${attribute}`;
     for (const element of document.querySelectorAll(`[${source}]`)) {

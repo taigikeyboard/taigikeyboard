@@ -10,6 +10,7 @@ import {
   forShadowTree,
   panelMarkup,
 } from "../scripts/stage-extension.mjs";
+import { CAPTIONS } from "../src/generated/strings.js";
 
 const index = readFileSync(
   new URL("../src/index.html", import.meta.url),
@@ -90,4 +91,25 @@ test("forShadowTree moves :root rules onto :host", () => {
   assert.match(rewritten, /:host\(\[data-theme="dark"\]\)/);
   assert.match(rewritten, /:host\(:not\(\[data-translated\]\)\)/);
   assert.throws(() => forShadowTree("body { color: black; }"), /:root/);
+});
+
+test("the extension options form keeps all captioned General rows visible", () => {
+  const { form } = optionsMarkup(index, EXTENSION_CUT);
+  for (const baseKey of Object.keys(CAPTIONS)) {
+    assert.ok(
+      form.includes(`data-i18n="${baseKey}"`),
+      `Extension form missing ${baseKey}`,
+    );
+  }
+  for (const name of [
+    "toneInputScheme",
+    "hanLoMixedEnabled",
+    "literalRomanCandidateEnabled",
+    "outputBothScripts",
+    "khinsiannInHanjiEnabled",
+    "syllableSeparator",
+    "autoSpaceEnabled",
+  ]) {
+    assert.match(rowOf(form, name), /<label class="setting">/, name);
+  }
 });

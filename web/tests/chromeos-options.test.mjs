@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
 import { optionsMarkup, optionsPage } from "../chromeos/options-form.mjs";
+import { CAPTIONS, STRINGS } from "../src/generated/strings.js";
 
 const index = readFileSync(
   new URL("../src/index.html", import.meta.url),
@@ -124,4 +125,43 @@ test("markup drift fails the build", () => {
     /fontType/,
   );
   assert.throws(() => optionsMarkup("<p>no form</p>"), /form id="settings"/);
+});
+
+test("all 8 inline captions are scoped for web and kept in the ChromeOS form", () => {
+  assert.deepEqual(CAPTIONS, {
+    "settings.toneSchemeStandard": "settings.toneSchemeStandardInfo",
+    "settings.toneSchemeTelex": "settings.toneSchemeTelexInfo",
+    "settings.hanLoMixed": "settings.hanLoMixedInfo",
+    "settings.literalRomanCandidate": "desktop.literalRomanCandidateInfo",
+    "settings.outputBothScripts": "settings.outputBothScriptsInfo",
+    "settings.khinsiannInHanji": "settings.khinsiannInHanjiInfo",
+    "settings.syllableSeparator": "settings.syllableSeparatorInfo",
+    "settings.autoSpace": "settings.autoSpaceInfo",
+  });
+  for (const [lang, table] of Object.entries(STRINGS)) {
+    const strings = /** @type {Record<string, string>} */ (table);
+    for (const captionKey of Object.values(CAPTIONS)) {
+      assert.ok(
+        Object.hasOwn(strings, captionKey) && strings[captionKey].length > 0,
+        `${lang} missing caption ${captionKey}`,
+      );
+    }
+  }
+  for (const baseKey of Object.keys(CAPTIONS)) {
+    assert.ok(
+      form.includes(`data-i18n="${baseKey}"`),
+      `ChromeOS form missing ${baseKey}`,
+    );
+  }
+  for (const name of [
+    "toneInputScheme",
+    "hanLoMixedEnabled",
+    "literalRomanCandidateEnabled",
+    "outputBothScripts",
+    "khinsiannInHanjiEnabled",
+    "syllableSeparator",
+    "autoSpaceEnabled",
+  ]) {
+    assert.match(rowOf(name), /<label class="setting">/, name);
+  }
 });

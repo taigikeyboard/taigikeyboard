@@ -319,6 +319,7 @@ summary:focus-visible {
   justify-content: space-between;
   gap: 1rem;
   min-height: 2.75rem;
+  padding-block: 0.5rem;
   font-size: 0.9375rem;
 }
 
@@ -339,20 +340,23 @@ summary:focus-visible {
 
 .setting small {
   display: block;
+  margin-top: 0.125rem;
   color: var(--secondary);
   font-size: 0.8125rem;
+  line-height: 1.45;
 }
 
 /* A long label wraps beside the value rather than squeeze it to its chevron
    at a large text size (the value keeps at least 5em, or half the row), and
    breaks a word only when the word alone is wider than its room (Firefox
    reads the stacking query's `em` before the text size). */
-.setting:has(> select) > span {
+.setting > span:first-child {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .setting select {
+  flex-shrink: 0;
   min-width: min(5em, 50%);
   max-width: 60%;
   padding: 0.25rem 1.125rem 0.25rem 0.25rem;
@@ -382,7 +386,7 @@ summary:focus-visible {
   }
 }
 
-.setting select:hover {
+.setting select:hover:not(:disabled) {
   color: var(--text);
 }
 
@@ -392,9 +396,20 @@ summary:focus-visible {
   accent-color: var(--accent);
 }
 
-/* In place outside TPS, as the desktop menu keeps its row. */
+/* In place outside TPS, as the desktop menu keeps its row. Dim the label
+   block (title and `<small>` caption together) and disabled selects without
+   double-dimming checkboxes or fading the row's hairline divider. */
 .setting:has(:disabled) {
-  color: var(--secondary);
+  cursor: default;
+}
+
+.setting:has(:disabled) > span {
+  opacity: 0.45;
+}
+
+.setting select:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 /* The desktop panes' reset button; Save's format buttons share its look. */
