@@ -247,6 +247,69 @@ export async function openPopup(context, worker, page) {
   return popup;
 }
 
+const TARGET_CLOSED =
+  /Target page, context or browser has been closed|Target closed|Page has been closed/i;
+
+/**
+ * Whether `error` is Playwright's target-closed rejection when a page closes
+ * itself while an action's protocol round-trip is still in flight.
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+function isTargetClosedError(error) {
+  return error instanceof Error && TARGET_CLOSED.test(error.message);
+}
+
+/**
+ * @typedef {{
+ *   click(options?: { trial?: boolean }): Promise<void>,
+ * }} PopupButton
+ */
+/**
+ * @typedef {{
+ *   locator(selector: string): PopupButton,
+ *   waitForEvent(event: "close"): Promise<unknown>,
+ * }} ClosablePopup
+ */
+
+/**
+ * Clicks `#name` on `popup` and waits for `popup` to close itself.
+ *
+ * `popup.js` calls `window.close()` as soon as the service worker answers
+ * `taigi.popup.setTyping`, which can tear down the popup target before
+ * Playwright's `locator.click()` finishes its post-click protocol round-trip.
+ * A trial click runs actionability checks first so missing, hidden, disabled
+ * or obscured buttons fail directly; a target-closed rejection on the real
+ * click is tolerated only when `popup`'s `close` event fires.
+ * @param {ClosablePopup} popup
+ * @param {string} name
+ * @returns {Promise<void>}
+ */
+export async function clickClosingPopup(popup, name) {
+  const button = popup.locator(`#${name}`);
+  await button.click({ trial: true });
+  // Catch `waitForEvent("close")` into a settled outcome so a click error
+  // before `await closed` cannot leak an unhandled rejection on teardown.
+  const closed = popup.waitForEvent("close").then(
+    () => /** @type {const} */ ({ ok: true }),
+    (error) => /** @type {const} */ ({ ok: false, error }),
+  );
+  /** @type {unknown} */
+  let clickError = null;
+  try {
+    await button.click();
+  } catch (error) {
+    if (!isTargetClosedError(error)) {
+      throw error;
+    }
+    clickError = error;
+  }
+  const closeResult = await closed;
+  if (!closeResult.ok) {
+    throw clickError ?? closeResult.error;
+  }
+}
+
 /**
  * Clicks the popup's button `name` (`turn-on`, `turn-off`) for `page`'s tab,
  * and brings `page` back to the front.
@@ -259,10 +322,7 @@ export async function openPopup(context, worker, page) {
 export async function clickPopup(context, worker, page, name) {
   const popup = await openPopup(context, worker, page);
   // The popup closes itself once the service worker has answered.
-  await Promise.all([
-    popup.waitForEvent("close"),
-    popup.locator(`#${name}`).click(),
-  ]);
+  await clickClosingPopup(popup, name);
   await page.bringToFront();
 }
 
