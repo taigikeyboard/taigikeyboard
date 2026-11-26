@@ -369,4 +369,26 @@ final class CustomDictionaryListParityTests: XCTestCase {
 
         XCTAssertEqual(model.list.selectedRow, selected, "the rows on screen did not change")
     }
+
+    func testANonUTF8CSVImport_setsNotUTF8MessageAndReloads() async {
+        let model = await makeModel(rows: 1)
+        client.csvImportError = .refused(refusal: .notUtf8, detail: "file is not UTF-8")
+
+        await model.importCSV(at: URL(fileURLWithPath: "/dev/null"))
+
+        XCTAssertEqual(model.message, .notUTF8)
+        let english = StringResolver(.english)
+        XCTAssertEqual(model.message?.detail(english), english.resolve(.desktopNotUTF8Detail))
+        XCTAssertEqual(model.list.rows.count, 1)
+    }
+
+    func testANonEncodingCSVRefusal_keepsDiagnosticMessage() async {
+        let model = await makeModel(rows: 1)
+        client.csvImportError = .refused(refusal: .noUsableRows, detail: "no usable rows")
+
+        await model.importCSV(at: URL(fileURLWithPath: "/dev/null"))
+
+        XCTAssertEqual(model.message, .failure(.commonImportFailed, diagnostic: "no usable rows"))
+        XCTAssertEqual(model.list.rows.count, 1)
+    }
 }

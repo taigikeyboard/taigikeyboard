@@ -38,7 +38,7 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
     /// entries)`), or desktop-core's where the engine answers only a code (a
     /// refused backup) or never saw the file (one that could not be read,
     /// whose tail is the system's reason, in the system's language).
-    case refused(detail: String)
+    case refused(refusal: Taigi_Engine_CustomDictionaryRefusal = .none, detail: String)
     /// A reset that emptied some stores and not others, one line per store
     /// that failed (`user_frequency: <error>`).
     case notEmptied([String])
@@ -46,7 +46,7 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
     var description: String {
         switch self {
         case let .engineUnavailable(op): "the engine did not answer \(op)"
-        case let .refused(detail): detail
+        case let .refused(_, detail): detail
         case let .notEmptied(failures): failures.joined(separator: "\n")
         }
     }
@@ -140,7 +140,9 @@ struct EngineUserDataClient: UserDataClient {
             roman: row.roman,
             hanji: row.hanji,
         ) else { throw UserDataClientError.engineUnavailable(op: "customDictionarySave") }
-        guard saved.refusal == .none else { throw UserDataClientError.refused(detail: saved.detail) }
+        guard saved.refusal == .none else {
+            throw UserDataClientError.refused(refusal: saved.refusal, detail: saved.detail)
+        }
     }
 
     func delete(id: String) throws {
@@ -168,12 +170,18 @@ struct EngineUserDataClient: UserDataClient {
             throw Self.unreadable(error)
         }
         guard size <= Self.maxImportFileBytes else {
-            throw UserDataClientError.refused(detail: "file is larger than 5 MB")
+            throw UserDataClientError.refused(refusal: .fileTooLarge, detail: "file is larger than 5 MB")
         }
         guard let imported = try RustEngineBridge.customDictionaryImportCSV(Self.read(url)) else {
             throw UserDataClientError.engineUnavailable(op: "customDictionaryImportCSV")
         }
-        guard imported.refusal == .none else { throw UserDataClientError.refused(detail: imported.detail) }
+        return try Self.importCSVResult(from: imported)
+    }
+
+    static func importCSVResult(from imported: Taigi_Engine_CustomCsvImported) throws -> CustomDictionaryImportResult {
+        guard imported.refusal == .none else {
+            throw UserDataClientError.refused(refusal: imported.refusal, detail: imported.detail)
+        }
         return CustomDictionaryImportResult(
             imported: Int(imported.imported),
             skipped: Int(imported.skipped),
@@ -281,7 +289,9 @@ struct EngineUserDataClient: UserDataClient {
         ) else {
             throw UserDataClientError.engineUnavailable(op: "learningRecordAddToCustomDictionary")
         }
-        guard added.refusal == .none else { throw UserDataClientError.refused(detail: added.detail) }
+        guard added.refusal == .none else {
+            throw UserDataClientError.refused(refusal: added.refusal, detail: added.detail)
+        }
     }
 
     /// Empties the stores `select` names; every one is attempted, and the

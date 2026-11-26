@@ -15,7 +15,7 @@ final class UserDataClientTests: XCTestCase {
         try Data(count: EngineUserDataClient.maxImportFileBytes + 1).write(to: file)
 
         XCTAssertThrowsError(try EngineUserDataClient().importCSV(at: file)) {
-            XCTAssertEqual($0 as? UserDataClientError, .refused(detail: "file is larger than 5 MB"))
+            XCTAssertEqual($0 as? UserDataClientError, .refused(refusal: .fileTooLarge, detail: "file is larger than 5 MB"))
         }
     }
 
@@ -47,7 +47,7 @@ final class UserDataClientTests: XCTestCase {
         let missing = try TestFixtures.scratchDirectory().appendingPathComponent("absent.taigi")
 
         XCTAssertThrowsError(try EngineUserDataClient().importBackup(at: missing)) {
-            guard case let .refused(detail) = $0 as? UserDataClientError else {
+            guard case let .refused(refusal: .none, detail: detail) = $0 as? UserDataClientError else {
                 return XCTFail("expected a refusal, got \($0)")
             }
             XCTAssertTrue(detail.hasPrefix("could not read the file: "), detail)
@@ -70,11 +70,42 @@ final class UserDataClientTests: XCTestCase {
         let missing = try TestFixtures.scratchDirectory().appendingPathComponent("absent.csv")
 
         XCTAssertThrowsError(try EngineUserDataClient().importCSV(at: missing)) {
-            guard case let .refused(detail) = $0 as? UserDataClientError else {
+            guard case let .refused(refusal: .none, detail: detail) = $0 as? UserDataClientError else {
                 return XCTFail("expected a refusal, got \($0)")
             }
             XCTAssertTrue(detail.hasPrefix("could not read the file: "), detail)
         }
+    }
+
+    func testImportCSVResult_preservesEngineRefusalCodes() throws {
+        var notUtf8 = Taigi_Engine_CustomCsvImported()
+        notUtf8.refusal = .notUtf8
+        notUtf8.detail = "file is not UTF-8"
+        XCTAssertThrowsError(try EngineUserDataClient.importCSVResult(from: notUtf8)) {
+            XCTAssertEqual(
+                $0 as? UserDataClientError,
+                .refused(refusal: .notUtf8, detail: "file is not UTF-8"),
+            )
+        }
+
+        var noRows = Taigi_Engine_CustomCsvImported()
+        noRows.refusal = .noUsableRows
+        noRows.detail = "no usable rows"
+        XCTAssertThrowsError(try EngineUserDataClient.importCSVResult(from: noRows)) {
+            XCTAssertEqual(
+                $0 as? UserDataClientError,
+                .refused(refusal: .noUsableRows, detail: "no usable rows"),
+            )
+        }
+
+        var ok = Taigi_Engine_CustomCsvImported()
+        ok.refusal = .none
+        ok.imported = 4
+        ok.skipped = 1
+        XCTAssertEqual(
+            try EngineUserDataClient.importCSVResult(from: ok),
+            CustomDictionaryImportResult(imported: 4, skipped: 1),
+        )
     }
 
     /// trace: desktop-core `backup_refused` (`engine/user_data.rs`) —

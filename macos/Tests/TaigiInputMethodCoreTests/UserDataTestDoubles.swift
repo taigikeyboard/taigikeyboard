@@ -72,7 +72,13 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         Data()
     }
 
+    /// Set to make `importCSV` throw a specific error (e.g. `.notUtf8` refusal).
+    var csvImportError: UserDataClientError?
+
     func importCSV(at _: URL) throws -> CustomDictionaryImportResult {
+        if let error = lock.withLock({ csvImportError }) {
+            throw error
+        }
         let imported = lock.withLock { rowsToImport }
         try applyCustomWrite { rows.insert(contentsOf: imported, at: 0) }
         return CustomDictionaryImportResult(imported: imported.count, skipped: 0)
@@ -232,7 +238,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     ) throws {
         try lock.withLock {
             if refusesLearningRecordAdds {
-                throw UserDataClientError.refused(detail: "custom dictionary is full (max 30000 entries)")
+                throw UserDataClientError.refused(refusal: .full, detail: "custom dictionary is full (max 30000 entries)")
             }
             let roman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
             let hanji = hanji.trimmingCharacters(in: .whitespacesAndNewlines)
