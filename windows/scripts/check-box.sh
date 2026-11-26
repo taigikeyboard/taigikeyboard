@@ -6,11 +6,11 @@
 # translation is the Win32 keyboard API itself (so its tests cannot run on
 # the macOS host either).
 #
-# Gates the PUSHED commit (commit-first ordering): in Git, HEAD; in colocated
-# jj, @ when non-empty/bookmarked/merge or clean @-. The box keeps its own gate
-# clone, fetches the SHA, checks it out detached and runs cargo there. Fails
-# hard on uncommitted changes or conflicts, and an unreachable box or failing
-# command is a gate FAILURE — never a skip.
+# Gates the PUSHED commit (commit-first ordering): in Git, HEAD (warning if the
+# working tree is dirty); in colocated jj, @ when non-empty/bookmarked/merge or
+# clean @- (failing on unresolved conflicts). The box keeps its own gate clone,
+# fetches the SHA, checks it out detached and runs cargo there. An unreachable
+# box or a failing command is a gate FAILURE — never a skip.
 #
 #   TAIGI_WINDOWS_BOX       ssh host (default: win)
 #   TAIGI_WINDOWS_BOX_REPO  the gate clone on the box
@@ -53,7 +53,7 @@ resolve_gate_sha() {
     local sha
     sha="$(git -C "$repo_dir" rev-parse HEAD)" || fail "cannot resolve HEAD"
     if ! git -C "$repo_dir" diff --quiet || ! git -C "$repo_dir" diff --cached --quiet; then
-        fail "the working tree has uncommitted changes — commit and push before running check-box (the box gates the pushed commit, not uncommitted files)"
+        echo "check-box: warning — the working tree is dirty; the box checks $sha, not this tree" >&2
     fi
     printf '%s\n' "$sha"
 }

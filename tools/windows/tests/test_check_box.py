@@ -98,7 +98,7 @@ sys.exit(2)
     def _env_without_jj(self) -> dict[str, str]:
         bin_dir = self.temporary_directory() / "no-jj-bin"
         bin_dir.mkdir()
-        for tool in ("bash", "git"):
+        for tool in ("bash", "dirname", "git"):
             resolved = shutil.which(tool)
             self.assertIsNotNone(resolved, f"{tool} must exist on PATH")
             (bin_dir / tool).symlink_to(resolved)
@@ -125,20 +125,23 @@ sys.exit(2)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), head)
+        self.assertEqual(result.stderr, "")
 
-    def test_plain_git_rejects_modified_and_staged_files(self) -> None:
+    def test_plain_git_dirty_warns_and_still_returns_head(self) -> None:
         repo = self.temporary_directory()
-        self._init_git_repo(repo)
+        head = self._init_git_repo(repo)
 
         (repo / "tracked.txt").write_text("modified\n", encoding="utf-8")
         res_mod = self._run_print_sha(repo)
-        self.assertNotEqual(res_mod.returncode, 0)
-        self.assertIn("uncommitted changes", res_mod.stderr)
+        self.assertEqual(res_mod.returncode, 0, res_mod.stderr)
+        self.assertEqual(res_mod.stdout.strip(), head)
+        self.assertIn("warning — the working tree is dirty", res_mod.stderr)
 
         self._git(repo, "add", "tracked.txt")
         res_staged = self._run_print_sha(repo)
-        self.assertNotEqual(res_staged.returncode, 0)
-        self.assertIn("uncommitted changes", res_staged.stderr)
+        self.assertEqual(res_staged.returncode, 0, res_staged.stderr)
+        self.assertEqual(res_staged.stdout.strip(), head)
+        self.assertIn("warning — the working tree is dirty", res_staged.stderr)
 
     def test_jj_stub_non_empty_at_resolves_to_at_even_with_git_diff(self) -> None:
         repo = self.temporary_directory()
@@ -238,11 +241,13 @@ sys.exit(2)
         clean = self._run_print_sha(repo, env=env)
         self.assertEqual(clean.returncode, 0, clean.stderr)
         self.assertEqual(clean.stdout.strip(), head)
+        self.assertEqual(clean.stderr, "")
 
         (repo / "tracked.txt").write_text("dirty\n", encoding="utf-8")
         dirty = self._run_print_sha(repo, env=env)
-        self.assertNotEqual(dirty.returncode, 0)
-        self.assertIn("uncommitted changes", dirty.stderr)
+        self.assertEqual(dirty.returncode, 0, dirty.stderr)
+        self.assertEqual(dirty.stdout.strip(), head)
+        self.assertIn("warning — the working tree is dirty", dirty.stderr)
 
     @unittest.skipUnless(shutil.which("jj"), "jj not installed")
     def test_real_colocated_jj_workspace_resolution(self) -> None:
