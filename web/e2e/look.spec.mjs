@@ -568,6 +568,32 @@ test("Annotate in Brackets greys under TPS", async ({ page }) => {
   await expect(page.getByLabel("Annotate in Brackets")).toBeDisabled();
 });
 
+test("c affricate and f hyphen toggles grey out under TPS", async ({
+  page,
+}) => {
+  // trace: TPS maps `c` and `f` to phonetic glyphs (`allows_c_affricate`,
+  // `allows_f_hyphen`), keeping stored switches intact across mode switches.
+  await open(page, {
+    settings: {
+      inputMode: "tps",
+      cAffricateEnabled: true,
+      fHyphenEnabled: true,
+    },
+  });
+  const cToggle = page.locator('input[name="cAffricateEnabled"]');
+  const fToggle = page.locator('input[name="fHyphenEnabled"]');
+  await expect(cToggle).toBeDisabled();
+  await expect(cToggle).toBeChecked();
+  await expect(fToggle).toBeDisabled();
+  await expect(fToggle).toBeChecked();
+
+  await inputMode(page).selectOption("tl");
+  await expect(cToggle).toBeEnabled();
+  await expect(cToggle).toBeChecked();
+  await expect(fToggle).toBeEnabled();
+  await expect(fToggle).toBeChecked();
+});
+
 test("a dictionary row keeps its default and its value", async ({ page }) => {
   await open(page);
   const moe = page.locator('input[name="moeDictEnabled"]');
