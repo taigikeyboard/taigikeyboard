@@ -22,8 +22,9 @@
 //!    Else → `lexicon::fetch_candidates_for_keys_with_barriers` (span-local
 //!    fetch).
 //! 3. Per-candidate recase loop (`recase_roman` over each
-//!    `consumed_span`; presentation `roman` only —`display_text` / `hanji`
-//!    untouched).
+//!    `consumed_span`), then the shown `hanji`'s Taigi romanized words
+//!    (`recase_hanji` in `apply_hanji_display`, after the POJ render; a
+//!    custom word's Hanji stays as saved) — `display_text` untouched.
 //! 4. `synth_cut(..) → Some(cut)` → `walker_slot0(.., &cut)`: span-aware
 //!    retain-dedupe on `(hanji, consumed_span)` + identity or recased roman, then
 //!    `insert(0, ..)`. The walker returns a [`WalkerSlot0`] and the seam

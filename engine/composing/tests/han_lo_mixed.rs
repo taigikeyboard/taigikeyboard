@@ -739,3 +739,179 @@ fn a_learned_romanized_phrase_waits_while_the_switch_is_off() {
     };
     assert!(!hanji(&roman_first).contains(&Some("我tsia̍h".to_owned())));
 }
+
+// A learned Han-Lo phrase follows the typed case like the sentence it was
+// learned from: its romanized words are raised with the romanization
+// (`GUATSIAH` → `我TSIA̍H`, `Tsiahlai` → `Tsia̍h來`), and a Hanji-first phrase
+// has no letter to capitalize. Its identity (`display_text`) stays the stored
+// form.
+#[test]
+fn a_learned_han_lo_phrase_follows_the_typed_case() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let fetch = || Fetch {
+        learned: vec![
+            LearnedEntry {
+                hanji: "我tsia̍h".into(),
+                canonical_tl: "guá tsia̍h".into(),
+            },
+            LearnedEntry {
+                hanji: "tsia̍h來".into(),
+                canonical_tl: "tsia̍h lâi".into(),
+            },
+        ],
+        ..Fetch::default()
+    };
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let learned = |raw: &str, stored: &str| -> (Option<String>, String) {
+        let listed = rows(raw, &on, fetch());
+        let row = listed
+            .iter()
+            .find(|(_, _, display_text)| display_text == stored)
+            .unwrap_or_else(|| panic!("the learned row {stored} for {raw}: {listed:?}"));
+        (row.0.clone(), row.1.clone())
+    };
+    assert_eq!(learned("guatsiah", "我tsia̍h").0.as_deref(), Some("我tsia̍h"));
+    assert_eq!(learned("GUATSIAH", "我tsia̍h").0.as_deref(), Some("我TSIA̍H"));
+    assert_eq!(learned("Guatsiah", "我tsia̍h").0.as_deref(), Some("我tsia̍h"));
+    assert_eq!(learned("Tsiahlai", "tsia̍h來").0.as_deref(), Some("Tsia̍h來"));
+    assert_eq!(learned("TSIAHLAI", "tsia̍h來").0.as_deref(), Some("TSIA̍H來"));
+    // The whole-sentence row the learned phrase wins.
+    assert_eq!(
+        sentence("GUATSIAH", &on, fetch()).as_deref(),
+        Some("我TSIA̍H")
+    );
+    assert_eq!(
+        sentence("Tsiahlai", &on, fetch()).as_deref(),
+        Some("Tsia̍h來")
+    );
+    // POJ: raised after the POJ rewrite of the stored TL.
+    let poj = AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
+    };
+    let listed = fetch_at_pos_response(&poj, "GOACHIAH", fetch())
+        .continuous
+        .map(|c| c.candidates)
+        .unwrap_or_default();
+    let row = listed
+        .iter()
+        .find(|c| c.display_text == "我tsia̍h")
+        .unwrap_or_else(|| panic!("the learned row: {listed:?}"));
+    assert_eq!(row.hanji.as_deref(), Some("我CHIA̍H"));
+}
+
+// A learned phrase's non-Taigi word (one a custom word brought in) stays as
+// written, and stops capitalize-first: only a Taigi romanization rises.
+#[test]
+fn a_learned_phrase_keeps_its_non_taigi_word_as_written() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let fetch = || Fetch {
+        learned: vec![
+            LearnedEntry {
+                hanji: "iPhone來".into(),
+                canonical_tl: "tsia̍h lâi".into(),
+            },
+            LearnedEntry {
+                hanji: "我iPhone".into(),
+                canonical_tl: "guá tsia̍h".into(),
+            },
+        ],
+        ..Fetch::default()
+    };
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    for (raw, stored) in [
+        ("Tsiahlai", "iPhone來"),
+        ("TSIAHLAI", "iPhone來"),
+        ("GUATSIAH", "我iPhone"),
+    ] {
+        let listed = rows(raw, &on, fetch());
+        assert!(
+            listed
+                .iter()
+                .any(|(hanji, _, key)| hanji.as_deref() == Some(stored) && key == stored),
+            "{stored} under {raw}: {listed:?}"
+        );
+    }
+}
+
+// The whole-sentence row a learned Han-Lo phrase wins: raised in POJ after the
+// POJ rewrite, its nasal marker following the marker-case switch, and its
+// identity the stored lowercase spelling.
+#[test]
+fn a_learned_han_lo_sentence_follows_the_typed_case() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let fetch = || Fetch {
+        learned: vec![
+            LearnedEntry {
+                hanji: "我siann".into(),
+                canonical_tl: "guá siann".into(),
+            },
+            LearnedEntry {
+                hanji: "我tsia̍h".into(),
+                canonical_tl: "guá tsia̍h".into(),
+            },
+        ],
+        ..Fetch::default()
+    };
+    let poj = |force_lowercase_nasal_marker| AppConfig {
+        han_lo_mixed: true,
+        is_hanji_first: true,
+        force_lowercase_nasal_marker,
+        ..config_with_display_mode("poj", CandidateDisplayMode::SideBySide as i32)
+    };
+    let (hanji, _) = sentence_row("GOASIANN", &poj(false), fetch());
+    assert_eq!(hanji.as_deref(), Some("我SIA\u{1d3a}"));
+    let (hanji, _) = sentence_row("GOASIANN", &poj(true), fetch());
+    assert_eq!(hanji.as_deref(), Some("我SIA\u{207f}"));
+    let (hanji, _) = sentence_row("GOACHIAH", &poj(false), fetch());
+    assert_eq!(hanji.as_deref(), Some("我CHIA̍H"));
+    let row = fetch_at_pos_response(
+        &config(CandidateDisplayMode::SideBySide, true),
+        "GUATSIAH",
+        fetch(),
+    )
+    .continuous
+    .map(|c| c.candidates)
+    .unwrap_or_default()
+    .into_iter()
+    .skip(1)
+    .find(|c| c.consumed_span_end as usize == "GUATSIAH".len())
+    .expect("the sentence");
+    assert_eq!(row.hanji.as_deref(), Some("我TSIA̍H"));
+    assert_eq!(row.display_text, "我tsia̍h");
+}
+
+// The Lab's word cut shows a learned Han-Lo word as the sentence row does.
+#[test]
+fn the_lab_word_cut_follows_the_typed_case() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = config(CandidateDisplayMode::SideBySide, true);
+    let engine = crate::common::continuous_engine(&on, "GUATSIAH");
+    let rows = composing::UserRows {
+        learned: vec![LearnedEntry {
+            hanji: "我tsia̍h".into(),
+            canonical_tl: "guá tsia̍h".into(),
+        }],
+        ..Default::default()
+    };
+    let mechanism = composing::explain::mechanism(
+        &engine,
+        NOW_MS,
+        &rows,
+        &ranking::ContextRanks::default(),
+        false,
+        &on,
+    )
+    .expect("a composition");
+    let words: Vec<Option<&str>> = mechanism
+        .words
+        .iter()
+        .map(|word| word.hanji.as_deref())
+        .collect();
+    assert_eq!(words, [Some("我TSIA̍H")], "{mechanism:?}");
+}
