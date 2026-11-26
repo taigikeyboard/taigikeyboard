@@ -42,10 +42,23 @@ final class DisplayLanguageTests: XCTestCase {
     }
 
     func testINVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_mapsDeviceSubtagToAuthoredLanguage() {
-        // Japanese device → Japanese; English → English; everything else (Chinese included, or a
-        // device that reports nothing) → Hanji.
+        // Japanese device → Japanese; English → English; everything else (Chinese included, 3-letter
+        // ISO 639 codes like jav/jam/eng, or a device that reports nothing) → Hanji.
         XCTAssertEqual(DisplayLanguage.resolveAutomatic("ja"), .japanese)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("JA"), .japanese)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("ja-JP"), .japanese)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("ja_JP"), .japanese)
         XCTAssertEqual(DisplayLanguage.resolveAutomatic("en"), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("EN"), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("en-US"), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("en_GB"), .english)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("jav"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("jav-ID"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("jam"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("eng"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("eng-US"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("-ja"), .hanji)
+        XCTAssertEqual(DisplayLanguage.resolveAutomatic("_en"), .hanji)
         XCTAssertEqual(DisplayLanguage.resolveAutomatic("zh"), .hanji)
         XCTAssertEqual(DisplayLanguage.resolveAutomatic("fr"), .hanji)
         XCTAssertEqual(DisplayLanguage.resolveAutomatic(""), .hanji)

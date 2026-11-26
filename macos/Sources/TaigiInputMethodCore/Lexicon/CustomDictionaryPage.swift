@@ -141,6 +141,8 @@ final class CustomDictionaryPageModel {
     private func importAndReload(_ body: () async throws -> UserDataPageMessage) async {
         do {
             message = try await body()
+        } catch UserDataClientError.refused(refusal: .notUtf8, detail: _) {
+            message = .notUTF8
         } catch {
             message = .failure(.commonImportFailed, error)
         }

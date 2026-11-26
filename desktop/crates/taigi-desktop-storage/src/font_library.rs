@@ -114,7 +114,7 @@ pub enum ImportError {
     UnsupportedFileType(String),
     #[error("not a regular file")]
     NotARegularFile,
-    #[error("the file is {}, over the {} limit", .0 / (1024 * 1024), MAX_FILE_SIZE / (1024 * 1024))]
+    #[error("the file is {} MB, over the {} MB limit", .0 / (1024 * 1024), MAX_FILE_SIZE / (1024 * 1024))]
     TooLarge(u64),
     #[error("could not read the file: {0}")]
     Unreadable(#[source] std::io::Error),
@@ -402,10 +402,13 @@ mod tests {
         file.set_len(MAX_FILE_SIZE + 1).unwrap();
         drop(file);
 
-        assert!(matches!(
-            copy_in(&library, &source).unwrap_err(),
-            ImportError::TooLarge(_),
-        ));
+        let error = copy_in(&library, &source).unwrap_err();
+        assert!(matches!(error, ImportError::TooLarge(_)));
+        assert_eq!(error.to_string(), "the file is 64 MB, over the 64 MB limit");
+        assert_eq!(
+            ImportError::TooLarge(65 * 1024 * 1024).to_string(),
+            "the file is 65 MB, over the 64 MB limit"
+        );
     }
 
     #[test]

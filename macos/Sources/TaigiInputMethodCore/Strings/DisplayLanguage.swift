@@ -14,8 +14,9 @@ import Foundation
 ///
 /// Unlike iOS this enum carries no per-language resolution strategy: the package ships no string
 /// catalog, so every production language resolves through `GeneratedStrings`. That is an
-/// implementation divergence only — the roster, the Automatic mapping, and the Hanji fallback are
-/// the same contract on all three platforms.
+/// implementation divergence only — the roster, `.hanji` fallback, and `system` policy share the
+/// same contract across platforms (exact-subtag Automatic matching aligns with desktop-core and
+/// web; pending mobile prefix divergence is recorded in `docs/architecture/behavioral-invariants.md` §37).
 enum DisplayLanguage: String, CaseIterable {
     case system
     case hanji
@@ -64,21 +65,27 @@ enum DisplayLanguage: String, CaseIterable {
     /// CROSS-PLATFORM INVARIANT — mirrors iOS + android `selectableLanguages`.
     static let selectableLanguages: [DisplayLanguage] = [.system] + productionLanguages
 
-    /// Resolves the Automatic policy to a concrete authored language from the device OS language subtag
-    /// (lowercased ISO 639). Pure + injectable for tests — never reads `Locale` itself; the store passes
-    /// the device subtag in. `ja*` → Japanese, `en*` → English, anything else (incl. `zh*` / absent) →
-    /// Hanji. Taiwanese Hanji is the neutral default so a Chinese-locale (or any non-ja/en) device reads
-    /// the UI in Hanji, not English.
-    /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION) — mirrors iOS +
-    /// android `resolveAutomatic`.
+    /// Resolves the Automatic policy to a concrete authored language from the device OS locale tag
+    /// (BCP-47 or underscore-delimited, e.g. `ja-JP`, `en_US`). Splits on `[-_]`, lowercases, and
+    /// exact-matches `"ja"` → Japanese, `"en"` → English, anything else (incl. `zh*`, 3-letter codes,
+    /// or absent) → Hanji. Taiwanese Hanji is the neutral default so a Chinese-locale (or any
+    /// non-ja/en) device reads the UI in Hanji, not English.
+    /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION) — mirrors
+    /// `desktop/crates/taigi-desktop-core/src/strings/mod.rs` (`DisplayLanguage::resolve_automatic`)
+    /// and `web/src/i18n.js` (`effectiveLanguage`). Pending mobile divergence: iOS
+    /// (`ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift`) and Android
+    /// (`android/.../i18n/DisplayLanguage.kt`) still use `hasPrefix` / `startsWith`
+    /// (`docs/architecture/behavioral-invariants.md` §37).
     static func resolveAutomatic(_ deviceLanguageSubtag: String) -> DisplayLanguage {
-        if deviceLanguageSubtag.hasPrefix("ja") {
-            return .japanese
+        let primary = deviceLanguageSubtag
+            .split(maxSplits: 1, omittingEmptySubsequences: false, whereSeparator: { $0 == "-" || $0 == "_" })
+            .first?
+            .lowercased() ?? ""
+        switch primary {
+        case "ja": return .japanese
+        case "en": return .english
+        default: return .hanji
         }
-        if deviceLanguageSubtag.hasPrefix("en") {
-            return .english
-        }
-        return .hanji
     }
 
     /// The concrete language this selection resolves to: `.system` defers to the device locale via

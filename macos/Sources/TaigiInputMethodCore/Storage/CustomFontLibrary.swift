@@ -2,6 +2,7 @@
 
 import AppKit
 import CoreText
+import Darwin
 
 /// One typeface the user added, as the library holds it.
 ///
@@ -70,10 +71,13 @@ final class CustomFontLibrary {
         case unsupportedFileType(String)
         case notARegularFile
         case tooLarge(bytes: Int)
+        case unreadable(String)
+        case notCopied(String)
         case noFace
         case nameAlreadyResolves(String)
         case registrationFailed(String)
         case didNotResolve(String)
+        case noAvailableName
 
         var description: String {
             switch self {
@@ -83,6 +87,10 @@ final class CustomFontLibrary {
                 "not a regular file"
             case let .tooLarge(bytes):
                 "the file is \(bytes / (1024 * 1024)) MB, over the \(CustomFontLibrary.maximumFileSize / (1024 * 1024)) MB limit"
+            case let .unreadable(reason):
+                "could not read the file: \(reason)"
+            case let .notCopied(reason):
+                "could not copy the file into the library: \(reason)"
             case .noFace:
                 "the file carries no typeface this Mac can read"
             case let .nameAlreadyResolves(postScriptName):
@@ -91,6 +99,8 @@ final class CustomFontLibrary {
                 "the typeface did not activate: \(reason)"
             case let .didNotResolve(postScriptName):
                 "the typeface activated but \(postScriptName) still draws in another face"
+            case .noAvailableName:
+                "every name this typeface could be stored under is taken"
             }
         }
     }
@@ -98,10 +108,12 @@ final class CustomFontLibrary {
     /// Why a font could not leave the library.
     enum RemovalFailure: Error, CustomStringConvertible {
         case stillInUse(String)
+        case invalidFileName
 
         var description: String {
             switch self {
             case let .stillInUse(reason): "the typeface is still in use: \(reason)"
+            case .invalidFileName: "invalid typeface file name"
             }
         }
     }
@@ -116,6 +128,10 @@ final class CustomFontLibrary {
     /// 20 MB, so this is generous rather than tight — a screening limit against
     /// a mistaken pick, not a security boundary.
     nonisolated static let maximumFileSize = 64 * 1024 * 1024
+
+    /// How many suffixes one stem may be tried with before the import gives up.
+    /// A library with a hundred copies of one name is a mistake, not a use.
+    nonisolated static let maximumNameAttempts = 100
 
     /// The directory name inside the per-user container.
     private nonisolated static let directoryName = "Fonts"
@@ -190,8 +206,8 @@ final class CustomFontLibrary {
     /// rendering path's question, and parsing the whole library to answer it
     /// would put every unselected typeface through Core Text at launch.
     func font(fileName: String) -> CustomFont? {
-        guard let directory = try? directory() else { return nil }
-        return makeFont(at: directory.appendingPathComponent(fileName))
+        guard let url = try? storedURL(for: fileName) else { return nil }
+        return makeFont(at: url)
     }
 
     /// The typeface `fileName` is drawing in right now, or nil because this
@@ -206,7 +222,7 @@ final class CustomFontLibrary {
     /// the user threw away is a lie.
     func activatedFont(fileName: String) -> CustomFont? {
         guard let registration = registrations[fileName], registration.isDrawable,
-              let url = try? directory().appendingPathComponent(fileName),
+              let url = try? storedURL(for: fileName),
               fileManager.fileExists(atPath: url.path)
         else { return nil }
         return registration.font
@@ -222,9 +238,7 @@ final class CustomFontLibrary {
     /// the text stack for nothing.
     @discardableResult
     func activate(fileName: String) -> CustomFont? {
-        guard !fileName.isEmpty,
-              let url = try? directory().appendingPathComponent(fileName)
-        else { return nil }
+        guard let url = try? storedURL(for: fileName) else { return nil }
         // Registered once already: Core Text reports a second registration of
         // the same file as an error, and nothing about the answer has changed
         // since the first one — including a "no", when the face turned out to
@@ -269,15 +283,25 @@ final class CustomFontLibrary {
         guard Self.allowedFileExtensions.contains(fileExtension) else {
             throw ImportFailure.unsupportedFileType(fileExtension)
         }
-        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-        guard values.isRegularFile == true, values.isSymbolicLink != true else {
-            throw ImportFailure.notARegularFile
-        }
-        let size = values.fileSize ?? 0
-        guard size <= Self.maximumFileSize else { throw ImportFailure.tooLarge(bytes: size) }
+        let sourceFD = try Self.openSourceFile(at: url)
+        defer { _ = Darwin.close(sourceFD) }
 
-        let destination = try unusedURL(for: url)
-        try fileManager.copyItem(at: url, to: destination)
+        let (destination, destFD) = try createExclusiveFile(for: url)
+        var isDestOpen = true
+        do {
+            try Self.copyBounded(from: sourceFD, to: destFD, maxBytes: Self.maximumFileSize)
+            isDestOpen = false
+            if Darwin.close(destFD) != 0 {
+                throw ImportFailure.notCopied(Self.posixMessage(errno))
+            }
+        } catch {
+            if isDestOpen {
+                _ = Darwin.close(destFD)
+            }
+            try? fileManager.removeItem(at: destination)
+            throw error
+        }
+
         do {
             let font = try take(in: destination)
             cachedFonts = nil
@@ -297,7 +321,9 @@ final class CustomFontLibrary {
     /// they were built with, so a caller releases those before calling this
     /// (`AppearanceSettingsView.remove`).
     func remove(_ font: CustomFont) throws {
-        let url = try directory().appendingPathComponent(font.fileName)
+        guard let url = try storedURL(for: font.fileName) else {
+            throw RemovalFailure.invalidFileName
+        }
         if let reason = withdraw(url) {
             throw RemovalFailure.stillInUse(reason)
         }
@@ -379,23 +405,142 @@ final class CustomFontLibrary {
         }
     }
 
-    /// Where `url`'s bytes will be copied: a sanitized name inside the library,
-    /// suffixed until it is one no file there has.
-    ///
-    /// The stored name is built from characters this method chose, never from
-    /// the picked file's own name verbatim — a name is untrusted text, and this
-    /// one becomes a path.
-    private func unusedURL(for url: URL) throws -> URL {
-        let directory = try directory()
+    /// Whether `fileName` names a single path component inside the library
+    /// rather than a relative traversal (`..`), empty name, or separator path.
+    private nonisolated static func isSinglePathComponent(_ fileName: String) -> Bool {
+        !fileName.isEmpty
+            && fileName != "."
+            && fileName != ".."
+            && !fileName.contains("/")
+            && !fileName.contains("\\")
+            && !fileName.contains("\0")
+    }
+
+    /// Resolves `fileName` inside `Fonts/`, returning `nil` when `fileName`
+    /// could escape the library directory.
+    private func storedURL(for fileName: String) throws -> URL? {
+        guard Self.isSinglePathComponent(fileName) else { return nil }
+        let dir = try directory()
+        return dir.appendingPathComponent(fileName, isDirectory: false)
+    }
+
+    private nonisolated static func posixMessage(_ code: Int32 = errno) -> String {
+        var buffer = [CChar](repeating: 0, count: 256)
+        if Darwin.strerror_r(code, &buffer, buffer.count) == 0 {
+            return String(decoding: buffer.prefix { $0 != 0 }.map(UInt8.init(bitPattern:)), as: UTF8.self)
+        }
+        return "error \(code)"
+    }
+
+    /// Opens `url` without following symlinks and validates via `fstat` on the
+    /// open descriptor that it is a regular file within `maximumFileSize`.
+    private nonisolated static func openSourceFile(at url: URL) throws -> Int32 {
+        let fd = url.withUnsafeFileSystemRepresentation { path -> Int32 in
+            guard let path else {
+                errno = ENOENT
+                return -1
+            }
+            return Darwin.open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        }
+        if fd < 0 {
+            let code = errno
+            if code == ELOOP || code == EISDIR {
+                throw ImportFailure.notARegularFile
+            }
+            throw ImportFailure.unreadable(posixMessage(code))
+        }
+        var info = Darwin.stat()
+        if Darwin.fstat(fd, &info) != 0 {
+            let code = errno
+            _ = Darwin.close(fd)
+            throw ImportFailure.unreadable(posixMessage(code))
+        }
+        guard (info.st_mode & S_IFMT) == S_IFREG else {
+            _ = Darwin.close(fd)
+            throw ImportFailure.notARegularFile
+        }
+        guard info.st_size >= 0, info.st_size <= Int64(Self.maximumFileSize) else {
+            _ = Darwin.close(fd)
+            throw ImportFailure.tooLarge(bytes: Int(clamping: max(0, info.st_size)))
+        }
+        return fd
+    }
+
+    /// Creates the exclusive destination file in `Fonts/`, suffixed up to
+    /// `maximumNameAttempts` times so concurrent imports never overwrite one another.
+    func createExclusiveFile(for url: URL) throws -> (url: URL, fd: Int32) {
+        let dir = try directory()
         let fileExtension = url.pathExtension.lowercased()
         let base = Self.sanitized(url.deletingPathExtension().lastPathComponent)
-        var candidate = "\(base).\(fileExtension)"
-        var suffix = 2
-        while fileManager.fileExists(atPath: directory.appendingPathComponent(candidate).path) {
-            candidate = "\(base)-\(suffix).\(fileExtension)"
-            suffix += 1
+        for attempt in 1 ... Self.maximumNameAttempts {
+            let candidate = attempt == 1 ? "\(base).\(fileExtension)" : "\(base)-\(attempt).\(fileExtension)"
+            let destination = dir.appendingPathComponent(candidate, isDirectory: false)
+            let fd = destination.withUnsafeFileSystemRepresentation { path -> Int32 in
+                guard let path else {
+                    errno = EINVAL
+                    return -1
+                }
+                return Darwin.open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, mode_t(0o644))
+            }
+            if fd >= 0 {
+                return (destination, fd)
+            }
+            let code = errno
+            if code == EEXIST {
+                continue
+            }
+            throw ImportFailure.notCopied(Self.posixMessage(code))
         }
-        return directory.appendingPathComponent(candidate)
+        throw ImportFailure.noAvailableName
+    }
+
+    /// Streams `sourceFD` into `destFD`, refusing any growth past `maxBytes`
+    /// before writing the excess bytes.
+    nonisolated static func copyBounded(from sourceFD: Int32, to destFD: Int32, maxBytes: Int) throws {
+        let chunkSize = 64 * 1024
+        var buffer = [UInt8](repeating: 0, count: chunkSize)
+        var totalWritten = 0
+        while true {
+            let remainingToCap = maxBytes - totalWritten
+            let requestSize = min(chunkSize, remainingToCap + 1)
+            let bytesRead = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
+                guard let base = rawBuffer.baseAddress else { return 0 }
+                while true {
+                    let count = Darwin.read(sourceFD, base, requestSize)
+                    if count < 0, errno == EINTR {
+                        continue
+                    }
+                    return count
+                }
+            }
+            if bytesRead < 0 {
+                throw ImportFailure.unreadable(posixMessage(errno))
+            }
+            if bytesRead == 0 {
+                return
+            }
+            if totalWritten + bytesRead > maxBytes {
+                throw ImportFailure.tooLarge(bytes: totalWritten + bytesRead)
+            }
+            var offset = 0
+            while offset < bytesRead {
+                let bytesWritten = buffer.withUnsafeBytes { rawBuffer -> Int in
+                    guard let base = rawBuffer.baseAddress else { return -1 }
+                    while true {
+                        let count = Darwin.write(destFD, base.advanced(by: offset), bytesRead - offset)
+                        if count < 0, errno == EINTR {
+                            continue
+                        }
+                        return count
+                    }
+                }
+                if bytesWritten <= 0 {
+                    throw ImportFailure.notCopied(posixMessage(bytesWritten < 0 ? errno : EIO))
+                }
+                offset += bytesWritten
+            }
+            totalWritten += bytesRead
+        }
     }
 
     /// `name` reduced to what one path component may hold, keeping as much of

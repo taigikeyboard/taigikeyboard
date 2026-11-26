@@ -58,4 +58,11 @@ final class StringResolverTests: XCTestCase {
             "台語キーボード 3.7.0 がダウンロードできます。",
         )
     }
+
+    func testNormalizedLanguage_mapsSystemToHanjiAndPreservesConcreteLanguages() {
+        XCTAssertEqual(StringResolver.normalizedLanguage(.system), .hanji)
+        for language in DisplayLanguage.productionLanguages {
+            XCTAssertEqual(StringResolver.normalizedLanguage(language), language)
+        }
+    }
 }
