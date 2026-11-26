@@ -21,6 +21,7 @@ use taigi_desktop_core::settings::{
     keys, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_linux_platform::DESKTOP_PLATFORM;
 
 /// The panes this crate draws, listed or not (About has no sidebar row, as on
 /// the other desktops).
@@ -135,8 +136,12 @@ impl<'a> PageContext<'a> {
     ) -> adw::SwitchRow {
         let row = adw::SwitchRow::builder()
             .title(self.strings.resolve(title))
+            .use_markup(false)
             .active(self.document.bool(&key))
             .build();
+        if let Some(caption) = row_caption(self.strings, title, None) {
+            row.set_subtitle(caption);
+        }
         let shell = self.shell.clone();
         let suppress = Rc::clone(&self.suppress);
         row.connect_active_notify(move |row| {
@@ -173,41 +178,58 @@ impl<'a> PageContext<'a> {
         let current = self.document.choice(&key);
         self.picker_row(
             group,
-            self.strings.resolve(title),
+            title,
             labels,
             roster,
             current,
+            |choice| Some(label(choice)),
             move |choice, document| document.set_choice(&key, choice),
             move |document| document.choice(&key),
         )
     }
 
-    /// A combo row over any roster: `write` stores a pick, `read` answers
-    /// the stored value for a refresh.
+    /// A combo row over any roster: `option_keys` maps each choice to an
+    /// optional i18n key whose caption overrides the row title's caption,
+    /// `write` stores a pick, `read` answers the stored value for a refresh.
     #[allow(clippy::too_many_arguments)]
     pub fn picker_row<T: Copy + PartialEq + 'static>(
         &mut self,
         group: &adw::PreferencesGroup,
-        title: &str,
+        title: StringKey,
         labels: Vec<String>,
         roster: &'static [T],
         current: T,
+        option_keys: impl Fn(T) -> Option<StringKey>,
         write: impl Fn(T, &mut SettingsDocument) + 'static,
         read: impl Fn(&SettingsDocument) -> T + 'static,
     ) -> adw::ComboRow {
+        let selected = roster.iter().position(|c| *c == current).unwrap_or(0);
+        let subtitles: Vec<Option<&'static str>> = roster
+            .iter()
+            .map(|choice| row_caption(self.strings, title, option_keys(*choice)))
+            .collect();
         let label_refs: Vec<&str> = labels.iter().map(String::as_str).collect();
         let row = adw::ComboRow::builder()
-            .title(title)
+            .title(self.strings.resolve(title))
+            .use_markup(false)
             .model(&gtk::StringList::new(&label_refs))
-            .selected(roster.iter().position(|c| *c == current).unwrap_or(0) as u32)
+            .selected(selected as u32)
             .build();
+        if let Some(caption) = subtitles.get(selected).copied().flatten() {
+            row.set_subtitle(caption);
+        }
         let shell = self.shell.clone();
         let suppress = Rc::clone(&self.suppress);
         row.connect_selected_notify(move |row| {
+            let index = row.selected() as usize;
+            let caption = subtitles.get(index).copied().flatten().unwrap_or_default();
+            if row.subtitle().as_deref().unwrap_or_default() != caption {
+                row.set_subtitle(caption);
+            }
             if suppress.get() {
                 return;
             }
-            let Some(choice) = roster.get(row.selected() as usize).copied() else {
+            let Some(choice) = roster.get(index).copied() else {
                 return;
             };
             shell.update(|document| write(choice, document));
@@ -237,6 +259,10 @@ impl<'a> PageContext<'a> {
     ) -> adw::SpinRow {
         let row = adw::SpinRow::with_range(*range.start() as f64, *range.end() as f64, 1.0);
         row.set_title(self.strings.resolve(title));
+        row.set_use_markup(false);
+        if let Some(caption) = row_caption(self.strings, title, None) {
+            row.set_subtitle(caption);
+        }
         row.set_digits(0);
         row.set_value(self.document.i64(&key).clamp(*range.start(), *range.end()) as f64);
         let shell = self.shell.clone();
@@ -278,7 +304,11 @@ impl<'a> PageContext<'a> {
         )));
         let row = adw::ActionRow::builder()
             .title(self.strings.resolve(title))
+            .use_markup(false)
             .build();
+        if let Some(caption) = row_caption(self.strings, title, None) {
+            row.set_subtitle(caption);
+        }
         row.add_suffix(&button);
         let shell = self.shell.clone();
         let suppress = Rc::clone(&self.suppress);
@@ -369,7 +399,11 @@ impl<'a> PageContext<'a> {
         button.set_popover(Some(&popover));
         let row = adw::ActionRow::builder()
             .title(self.strings.resolve(title))
+            .use_markup(false)
             .build();
+        if let Some(caption) = row_caption(self.strings, title, None) {
+            row.set_subtitle(caption);
+        }
         row.add_suffix(&button);
         let shell = self.shell.clone();
         let suppress = Rc::clone(&self.suppress);
@@ -420,10 +454,12 @@ impl<'a> PageContext<'a> {
     /// 1 is 0, 2 is 25, 3 is 50, 4 is 75, 5 is 100.
     pub fn highlight_fill_row(&mut self, group: &adw::PreferencesGroup) {
         let row = adw::SpinRow::with_range(1.0, 5.0, 1.0);
-        row.set_title(
-            self.strings
-                .resolve(StringKey::DesktopCandidateHighlightFill),
-        );
+        let title = StringKey::DesktopCandidateHighlightFill;
+        row.set_title(self.strings.resolve(title));
+        row.set_use_markup(false);
+        if let Some(caption) = row_caption(self.strings, title, None) {
+            row.set_subtitle(caption);
+        }
         row.set_digits(0);
         row.set_value(fill_step(self.document.i64(&keys::CANDIDATE_HIGHLIGHT_FILL)) as f64);
         let shell = self.shell.clone();
@@ -480,6 +516,18 @@ impl<'a> PageContext<'a> {
     pub fn on_refresh(&mut self, refresher: impl Fn(&SettingsDocument) + 'static) {
         self.refreshers.push(Box::new(refresher));
     }
+}
+
+/// Secondary caption for a setting row on Linux, preferring the selected
+/// picker option's caption over the row title's caption.
+fn row_caption(
+    strings: &StringResolver,
+    title: StringKey,
+    selected_option: Option<StringKey>,
+) -> Option<&'static str> {
+    selected_option
+        .and_then(|option| strings.caption(option, DESKTOP_PLATFORM))
+        .or_else(|| strings.caption(title, DESKTOP_PLATFORM))
 }
 
 fn rgba(rgb: u32) -> gtk::gdk::RGBA {

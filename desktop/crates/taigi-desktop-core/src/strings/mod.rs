@@ -319,4 +319,56 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn linux_captions_resolve_across_production_languages_without_leaking_to_windows() {
+        let captioned_keys = [
+            StringKey::SettingsToneSchemeStandard,
+            StringKey::SettingsToneSchemeTelex,
+            StringKey::SettingsHanLoMixed,
+            StringKey::SettingsLiteralRomanCandidate,
+            StringKey::SettingsOutputBothScripts,
+            StringKey::SettingsKhinsiannInHanji,
+            StringKey::SettingsSyllableSeparator,
+            StringKey::SettingsAutoSpace,
+        ];
+        for language in DisplayLanguage::PICKER.into_iter().skip(1) {
+            let resolver = StringResolver::new(language);
+            for key in captioned_keys {
+                let caption = resolver
+                    .caption(key, DesktopPlatform::Linux)
+                    .unwrap_or_else(|| panic!("{key:?} missing Linux caption in {language:?}"));
+                assert!(
+                    !caption.is_empty(),
+                    "{key:?} empty Linux caption in {language:?}"
+                );
+                assert_ne!(
+                    caption,
+                    key.as_str(),
+                    "{key:?} fell back to raw key in {language:?}"
+                );
+                assert_eq!(
+                    key.info_key(DesktopPlatform::Windows),
+                    None,
+                    "{key:?} leaked Linux caption to Windows"
+                );
+                assert_eq!(resolver.caption(key, DesktopPlatform::Windows), None);
+            }
+        }
+        let english = StringResolver::new(DisplayLanguage::English);
+        assert_eq!(
+            english.caption(
+                StringKey::SettingsToneSchemeStandard,
+                DesktopPlatform::Linux
+            ),
+            Some("Type 1–9 after a syllable for its tone (e.g. tai5 → tâi).")
+        );
+        assert_eq!(
+            english.caption(
+                StringKey::SettingsLiteralRomanCandidate,
+                DesktopPlatform::Linux
+            ),
+            Some("Shows what you typed as the first candidate. When off, use “Output What You Are Typing” to commit it.")
+        );
+    }
 }

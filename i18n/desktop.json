@@ -1952,7 +1952,8 @@
       "captionFor": "settings.literalRomanCandidate",
       "scope": {
         "platforms": [
-          "macos"
+          "macos",
+          "linux"
         ],
         "surfaces": [
           "host"

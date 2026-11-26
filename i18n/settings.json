@@ -83,7 +83,7 @@
     },
     "outputBothScriptsInfo": {
       "comment": "Secondary caption for the Annotate in Brackets toggle.",
-      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "漢字佮羅馬字做伙送出，像台語 (Tâi-gí)。", "tailo": "Hàn-jī kah lô-má-jī tsò-hué sàng-tshut, tshiūnn 台語 (Tâi-gí).", "poj": "Hàn-jī kah lô-má-jī chò-hóe sàng-chhut, chhiūⁿ 台語 (Tâi-gí).", "en": "Commits Hanji and romanization together, e.g. 台語 (Tâi-gí).", "ja": "漢字とローマ字を一緒に確定します（例：台語 (Tâi-gí)）。" }
     },
     "inputScript": {
@@ -123,7 +123,7 @@
     },
     "syllableSeparatorInfo": {
       "comment": "Help text for the Syllable Separator picker.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "音節中間用連字符（tâi-uân）、空白（tâi uân）抑是無分隔（tâiuân）。後兩種輕聲 -- 改用 ·。", "tailo": "Im-tsiat tiong-kan iōng liân-jī-hû (tâi-uân), khang-pe̍h (tâi uân) iah-sī bô hun-keh (tâiuân). Āu nn̄g tsióng khin-siann -- kái iōng ·.", "poj": "Im-chiat tiong-kan iōng liân-jī-hû (tâi-oân), khang-pe̍h (tâi oân) iah-sī bô hun-keh (tâioân). Āu nn̄g chióng khin-siaⁿ -- kái iōng ·.", "en": "Syllables are separated by a hyphen (tâi-uân), a space (tâi uân), or nothing (tâiuân). With the last two, the neutral-tone -- becomes ·.", "ja": "音節の区切り：ハイフン（tâi-uân）、スペース（tâi uân）、なし（tâiuân）。後の二つでは軽声 -- は · になります。" }
     },
     "candidateWindow": {
@@ -158,7 +158,7 @@
     },
     "toneSchemeStandardInfo": {
       "comment": "Secondary caption for the Numeric Tones option of settings.toneInputScheme.",
-      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "音節後壁拍 1–9 表示聲調（例：tai5 → tâi）。", "tailo": "Im-tsiat āu-piah phah 1–9 piáu-sī siann-tiāu (lē: tai5 → tâi).", "poj": "Im-chiat āu-piah phah 1–9 piáu-sī siaⁿ-tiāu (lē: tai5 → tâi).", "en": "Type 1–9 after a syllable for its tone (e.g. tai5 → tâi).", "ja": "音節のあとに 1–9 を打って声調を指定します（例：tai5 → tâi）。" }
     },
     "toneSchemeTelex": {
@@ -168,7 +168,7 @@
     },
     "toneSchemeTelexInfo": {
       "comment": "Secondary caption for the Telex option of settings.toneInputScheme.",
-      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "音節後壁拍字母表示聲調：x (1/4)、v (2/8)、y (3)、d (5)、z (6)、w (7)、q (9)。", "tailo": "Im-tsiat āu-piah phah jī-bió piáu-sī siann-tiāu: x (1/4), v (2/8), y (3), d (5), z (6), w (7), q (9).", "poj": "Im-chiat āu-piah phah jī-bió piáu-sī siaⁿ-tiāu: x (1/4), v (2/8), y (3), d (5), z (6), w (7), q (9).", "en": "Type a letter after a syllable for its tone: x (1/4), v (2/8), y (3), d (5), z (6), w (7), q (9).", "ja": "音節のあとに文字を打って声調を指定します：x (1/4)、v (2/8)、y (3)、d (5)、z (6)、w (7)、q (9)。" }
     },
     "cAffricate": {
@@ -188,7 +188,7 @@
     },
     "autoSpaceInfo": {
       "comment": "Secondary caption for the Auto-Space toggle.",
-      "scope": { "platforms": ["macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "送出羅馬字了後自動加空格。", "tailo": "Sàng-tshut lô-má-jī liáu-āu tsū-tōng ka khang-keh.", "poj": "Sàng-chhut lô-má-jī liáu-āu chū-tōng ka khang-keh.", "en": "Automatically inserts a space after committing romanization.", "ja": "ローマ字の確定後に自動でスペースを入れます。" }
     },
     "keyboardSectionTitle": {
@@ -268,12 +268,12 @@
     },
     "hanLoMixedInfo": {
       "comment": "Help text for the romanization candidates toggle (engine `han_lo_mixed`).",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "若開開，逐个詞攏會有羅馬字候選詞，方便漢羅濫寫。", "tailo": "Nā khui--khui, ta̍k ê sû lóng ē ū lô-má-jī hāu-suán-sû, hong-piān Hàn-Lô lām-siá.", "poj": "Nā khui--khui, ta̍k ê sû lóng ē ū lô-má-jī hāu-soán-sû, hong-piān Hàn-Lô lām-siá.", "en": "Offer each word's romanization as its own candidate for mixed Hanji and romanization writing.", "ja": "各語にローマ字の候補も加え、漢字とローマ字の混在文を書きやすくします。" }
     },
     "khinsiannInHanjiInfo": {
       "comment": "Help text for the neutral-tone in Hanji toggle.",
-      "scope": { "platforms": ["android", "ios", "macos"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios", "macos", "linux"], "surfaces": ["host"] },
       "values": { "hanji": "開啟時，漢字輸出會照台羅詞彙加上輕聲符號（例：會記--得、--轉-去）。", "tailo": "Phah-khui sî, Hàn-jī su-tshut ē tsiàu Tâi-lô sû-luī ka-siōng khin-siann hû-hō (lē: 會記--得, --轉-去).", "poj": "Phah-khui sî, Hàn-jī su-chhut ē chiàu Tâi-lô sû-lūi ka-siōng khin-siaⁿ hû-hō (lē: 會記--得, --轉-去).", "en": "When on, Hanji output includes neutral-tone markers matching Tâi-lô words (e.g. 會記--得, --轉-去).", "ja": "オンにすると、漢字出力に台羅の軽声記号が付きます（例：會記--得、--轉-去）。" }
     },
     "tpsOrMapsToER": {

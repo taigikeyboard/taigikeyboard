@@ -56,10 +56,11 @@ pub fn build<'a>(
     let current = panel_layout(context.document);
     context.picker_row(
         &group,
-        strings.resolve(StringKey::DesktopCandidateWindowLayout),
+        StringKey::DesktopCandidateWindowLayout,
         labels,
         PANEL_LAYOUTS,
         current,
+        |layout| Some(layout.label_key()),
         |layout, document| document.set_choice(&keys::CANDIDATE_LAYOUT, layout),
         panel_layout,
     );
@@ -109,10 +110,11 @@ pub fn build<'a>(
         .collect();
     context.picker_row(
         &colors,
-        strings.resolve(StringKey::DesktopCandidateColorTheme),
+        StringKey::DesktopCandidateColorTheme,
         theme_labels,
         CandidateColorTheme::ALL,
         keys::shown_candidate_color_theme(context.document),
+        |theme| Some(theme.label_key()),
         |theme, document| keys::apply_candidate_color_theme(document, theme),
         keys::shown_candidate_color_theme,
     );
