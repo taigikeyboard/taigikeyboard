@@ -348,8 +348,9 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let model = window.custom_dictionary();
-    let enabled_row = cards::switch_row(
-        strings.resolve(StringKey::DictionaryCustomDictEnabled),
+    let enabled_row = super::switch_row(
+        strings,
+        StringKey::DictionaryCustomDictEnabled,
         window.document().bool(&keys::IS_CUSTOM_DICT_ENABLED),
         true,
         context.callback(|is_on| WindowMessage::SetSwitch(keys::IS_CUSTOM_DICT_ENABLED, is_on)),

@@ -650,6 +650,7 @@ fn weight_row(
     };
     cards::choice_row(
         strings.resolve(StringKey::DesktopFontWeight),
+        None,
         // The names the font declares — its own words, not translated.
         faces.iter().map(|face| face.name.clone()).collect(),
         shown,

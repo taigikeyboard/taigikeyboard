@@ -503,14 +503,14 @@ impl StringKey {
 
     pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {
         match (self, platform) {
-            (Self::SettingsOutputBothScripts, DesktopPlatform::Linux) => Some(Self::SettingsOutputBothScriptsInfo),
-            (Self::SettingsSyllableSeparator, DesktopPlatform::Linux) => Some(Self::SettingsSyllableSeparatorInfo),
-            (Self::SettingsLiteralRomanCandidate, DesktopPlatform::Linux) => Some(Self::DesktopLiteralRomanCandidateInfo),
-            (Self::SettingsToneSchemeStandard, DesktopPlatform::Linux) => Some(Self::SettingsToneSchemeStandardInfo),
-            (Self::SettingsToneSchemeTelex, DesktopPlatform::Linux) => Some(Self::SettingsToneSchemeTelexInfo),
-            (Self::SettingsAutoSpace, DesktopPlatform::Linux) => Some(Self::SettingsAutoSpaceInfo),
-            (Self::SettingsKhinsiannInHanji, DesktopPlatform::Linux) => Some(Self::SettingsKhinsiannInHanjiInfo),
-            (Self::SettingsHanLoMixed, DesktopPlatform::Linux) => Some(Self::SettingsHanLoMixedInfo),
+            (Self::SettingsOutputBothScripts, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsOutputBothScriptsInfo),
+            (Self::SettingsSyllableSeparator, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsSyllableSeparatorInfo),
+            (Self::SettingsLiteralRomanCandidate, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::DesktopLiteralRomanCandidateInfo),
+            (Self::SettingsToneSchemeStandard, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsToneSchemeStandardInfo),
+            (Self::SettingsToneSchemeTelex, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsToneSchemeTelexInfo),
+            (Self::SettingsAutoSpace, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsAutoSpaceInfo),
+            (Self::SettingsKhinsiannInHanji, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsKhinsiannInHanjiInfo),
+            (Self::SettingsHanLoMixed, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::SettingsHanLoMixedInfo),
             _ => None,
         }
     }

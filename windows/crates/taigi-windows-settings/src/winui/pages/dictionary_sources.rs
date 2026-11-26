@@ -77,6 +77,7 @@ fn source_rows(
             key.name,
             cards::switch_row(
                 strings.resolve(*label),
+                None,
                 window.document().bool(&key),
                 true,
                 context.callback(move |is_on| Message::SetSwitch(key, is_on)),
