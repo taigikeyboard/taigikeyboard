@@ -46,16 +46,19 @@ current-at-release values when cutting a dictionary refresh.
   and known-key verification. The workflow commits only the Kautian capture,
   provenance, source CSV, derived variants, merged dictionary, walker statistics,
   word keys and four shipped artifacts to an `automation/kautian-*` branch,
-  then comments on the issue with a prefilled compare link. The repository's
-  workflow permissions do not let Actions create or approve PRs, so the
-  maintainer opens the PR from that link; its body closes the issue, so merging
-  it closes the issue and preserves its report. Callable Python and Engine
-  workflows validate the branch's exact commit in the same run; the
-  maintainer-opened PR then runs the regular PR checks.
+  then opens the data PR as a dedicated GitHub App (repository variable
+  `KAUTIAN_APP_CLIENT_ID`, secret `KAUTIAN_APP_PRIVATE_KEY`; installed on this
+  repository only, with contents, pull-request and issue access): the
+  repository's workflow permissions do not let `GITHUB_TOKEN` create PRs. The
+  token is minted only for the final PR step, after the rebuild. Rotate the key
+  in the App settings, then update the secret. The PR body closes the issue, so
+  merging it closes the issue and preserves its report. Callable Python and
+  Engine workflows validate the branch's exact commit in the same run; the
+  App-opened PR then runs the regular PR checks.
   Rebuild failures stop the push. Verification failures remain visible for
-  review before manual merge. A refresh branch with no closed PR (link not yet
-  used, or PR open) skips duplicate refresh creation while awaiting the
-  maintainer; daily issue reports still update.
+  review before manual merge. A refresh branch with no closed PR skips duplicate
+  refresh creation while awaiting the maintainer (one whose PR creation failed
+  gets its PR on a later run); daily issue reports still update.
   The pending refresh branch keeps its original capture; upstream changes
   arriving meanwhile are detected again after its PR merges.
   Dictionary merging preserves source and row order within official-source
