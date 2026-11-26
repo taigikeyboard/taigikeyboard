@@ -5,18 +5,18 @@ Replaces the SQLite intermediate (`dictionary.db`) that previously held
 dictionary records as the source-of-truth for `dictionary.bin` and the
 hanzi half of `dictionary.fst`.
 
-Filter + dedup mirror the original `INSERT OR IGNORE INTO dictionary` from
-build/create_app_db.sh:
-  - Drop rows where `tl` is empty or > MAX_SYLLABLES (counted by `_syllable_count`,
-    which — unlike the old SQL hyphen count — reads the khinsiann `--` as one separator).
+Filter + dedup (descended from the `INSERT OR IGNORE INTO dictionary` of the
+retired build/create_app_db.sh):
+  - Drop rows whose `tl` has no syllable or more than MAX_SYLLABLES, counted by
+    `_syllable_count` — unlike the old SQL hyphen count, the khinsiann `--` is
+    one separator.
   - UNIQUE(tl, hanzi) — but NULL hanzi rows are NEVER deduped (SQLite
     UNIQUE allows multiple NULLs; collapsing them with a Python tuple key
     would silently drop valid pure-romanization rows).
 
-Rowid is assigned by enumerate (1..N) in post-filter CSV order. This order
-must match what create_app_db.sh produced via INSERT, otherwise the rowids
-embedded in dictionary.fst values won't line up with dictionary.bin offsets
-(see INV-1 / INV-2 in the part-2 pre-impl plan).
+Rowid is assigned by enumerate (1..N) in post-filter CSV order. dictionary.bin
+and the rowids embedded in dictionary.fst values are both built from this list,
+which keeps them aligned (see INV-1 / INV-2 in the part-2 pre-impl plan).
 """
 
 from __future__ import annotations
@@ -78,7 +78,7 @@ class DictionaryRecord:
     tps_notone_var: str | None
     tps_abbrev_var: str | None
     sources: tuple[tuple[str, bool], ...]
-    # Number of TL syllables in `tl`, computed from hyphen / space count
+    # Number of TL syllables in `tl`, from `common.cleanup.count_syllables`
     # (see `_syllable_count`). Always 1..=MAX_SYLLABLES — out-of-range rows
     # are filtered before construction. Encoded as `u8` in dictionary.bin v2.
     syllable_count: int
@@ -94,7 +94,9 @@ class DictionaryRecord:
 
 def _syllable_count(tl: str) -> int:
     """Syllables of a TL reading. The khinsiann `--` is one separator, not an empty syllable
-    (`ông--ko-liú--ko` = 4) — the engine's `phonetics::api::tl_syllables` counts the same."""
+    (`ông--ko-liú--ko` = 4), as in the engine's `phonetics::api::tl_syllables`. The engine
+    splits only on `-`, space and tab; `count_syllables` also splits on other whitespace
+    (NBSP, U+3000), which production TL does not contain."""
     return count_syllables(tl)
 
 
@@ -138,9 +140,10 @@ _records_cache: dict[tuple[Path, int, int], list[DictionaryRecord]] = {}
 def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     """Read dictionary.csv → return filtered, deduped records with rowids.
 
-    The returned list's order MUST match what create_app_db.sh produced via
-    INSERT OR IGNORE — both for byte-for-byte parity of dictionary.bin and
-    for fst rowid alignment.
+    dictionary.bin and the fst rowids are both built from this one list, so
+    its order is what keeps them aligned. The filter no longer matches the old
+    create_app_db.sh SQL: that counted every hyphen, dropping khinsiann readings
+    such as `ông--ko-liú--ko` as over-long. Do not restore the SQL count.
 
     Repeat calls on an unchanged file return the same list; callers must not
     mutate it.
@@ -181,7 +184,7 @@ def _read_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
             continue
         tl = str(tl_raw)
         syllable_count = _syllable_count(tl)
-        if tl == "" or syllable_count > MAX_SYLLABLES:
+        if not 1 <= syllable_count <= MAX_SYLLABLES:  # 0 = empty or separators only
             continue
 
         hanzi = _normalise_optional(row["hanzi"])

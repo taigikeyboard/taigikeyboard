@@ -3040,6 +3040,9 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 小妹,sió-bēr,25,sió-bēr,sio2ber7,sio2ber7,ㄒㄧㄛˋㆠㄜ˫,ㄒㄧㄛˋㆠㄛ˫,siober,siober,ㄒㄧㄛㆠㄜ,ㄒㄧㄛㆠㄛ,sb,sb,ㄒㆠ,,True,False
 小暑,siáu-sír,25,siáu-sír,siau2sir2,siau2sir2,ㄒㄧㄠˋㄙㆨˋ,,siausir,siausir,ㄒㄧㄠㄙㆨ,,ss,ss,ㄒㄙ,,True,False
 小碼,sió-bé,25,sió-bé,sio2be2,sio2be2,ㄒㄧㄛˋㆠㆤˋ,,siobe,siobe,ㄒㄧㄛㆠㆤ,,sb,sb,ㄒㆠ,,True,False
+尾仔,bué--á,25,bóe--á,bue2a2,boe2a2,ㆠㄨㆤˋㄚˋ,,buea,boea,ㆠㄨㆤㄚ,,ba,ba,ㆠㄚ,,True,False
+尾仔,bé--á,25,bé--á,be2a2,be2a2,ㆠㆤˋㄚˋ,,bea,bea,ㆠㆤㄚ,,ba,ba,ㆠㄚ,,True,False
+尾仔,bér--á,25,bér--á,ber2a2,ber2a2,ㆠㄜˋㄚˋ,ㆠㄛˋㄚˋ,bera,bera,ㆠㄜㄚ,ㆠㄛㄚ,ba,ba,ㆠㄚ,,True,False
 尾溜,bér-liu,25,bér-liu,ber2liu1,ber2liu1,ㆠㄜˋㄌㄧㄨ,ㆠㄛˋㄌㄧㄨ,berliu,berliu,ㆠㄜㄌㄧㄨ,ㆠㄛㄌㄧㄨ,bl,bl,ㆠㄌ,,True,False
 尾牙,bér-gê,25,bér-gê,ber2ge5,ber2ge5,ㆠㄜˋㆣㆤˊ,ㆠㄛˋㆣㆤˊ,berge,berge,ㆠㄜㆣㆤ,ㆠㄛㆣㆤ,bg,bg,ㆠㆣ,,True,False
 居士,kir-sīr,25,kir-sīr,kir1sir7,kir1sir7,ㄍㆨㄙㆨ˫,,kirsir,kirsir,ㄍㆨㄙㆨ,,ks,ks,ㄍㄙ,,True,False
@@ -3071,6 +3074,9 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 廢人,huè-jîn,25,hòe-jîn,hue3jin5,hoe3jin5,ㄏㄨㆤ˪ㆢㄧㄣˊ,,huejin,hoejin,ㄏㄨㆤㆢㄧㄣ,,hj,hj,ㄏㆢ,,True,False
 廢人,huè-lîn,25,hòe-lîn,hue3lin5,hoe3lin5,ㄏㄨㆤ˪ㄌㄧㄣˊ,,huelin,hoelin,ㄏㄨㆤㄌㄧㄣ,,hl,hl,ㄏㄌ,,True,False
 廢人,huì-lîn,25,hùi-lîn,hui3lin5,hui3lin5,ㄏㄨㄧ˪ㄌㄧㄣˊ,,huilin,huilin,ㄏㄨㄧㄌㄧㄣ,,hl,hl,ㄏㄌ,,True,False
+廢去,huè--khì,25,hòe--khì,hue3khi3,hoe3khi3,ㄏㄨㆤ˪ㄎㄧ˪,,huekhi,hoekhi,ㄏㄨㆤㄎㄧ,,hkh,hkh,ㄏㄎ,,True,False
+廢去,huè--khìr,25,hòe--khìr,hue3khir3,hoe3khir3,ㄏㄨㆤ˪ㄎㆨ˪,,huekhir,hoekhir,ㄏㄨㆤㄎㆨ,,hkh,hkh,ㄏㄎ,,True,False
+廢去,huì--khì,25,hùi--khì,hui3khi3,hui3khi3,ㄏㄨㄧ˪ㄎㄧ˪,,huikhi,huikhi,ㄏㄨㄧㄎㄧ,,hkh,hkh,ㄏㄎ,,True,False
 廢塚,huè-thióng,25,hòe-thióng,hue3thiong2,hoe3thiong2,ㄏㄨㆤ˪ㄊㄧㆲˋ,,huethiong,hoethiong,ㄏㄨㆤㄊㄧㆲ,,hth,hth,ㄏㄊ,,True,False
 廢塚,huì-thióng,25,hùi-thióng,hui3thiong2,hui3thiong2,ㄏㄨㄧ˪ㄊㄧㆲˋ,,huithiong,huithiong,ㄏㄨㄧㄊㄧㆲ,,hth,hth,ㄏㄊ,,True,False
 廢墜,huè-tuī,25,hòe-tūi,hue3tui7,hoe3tui7,ㄏㄨㆤ˪ㄉㄨㄧ˫,,huetui,hoetui,ㄏㄨㆤㄉㄨㄧ,,ht,ht,ㄏㄉ,,True,False
@@ -3241,6 +3247,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 歲頭,hèr-thâu,25,hèr-thâu,her3thau5,her3thau5,ㄏㄜ˪ㄊㄠˊ,ㄏㄛ˪ㄊㄠˊ,herthau,herthau,ㄏㄜㄊㄠ,ㄏㄛㄊㄠ,hth,hth,ㄏㄊ,,True,False
 歷史,li̍k-sír,25,le̍k-sír,lik8sir2,lek8sir2,ㄌㄧㆻ̇ㄙㆨˋ,,liksir,leksir,ㄌㄧㆻㄙㆨ,,ls,ls,ㄌㄙ,,True,False
 歸尾,kui-bér,25,kui-bér,kui1ber2,kui1ber2,ㄍㄨㄧㆠㄜˋ,ㄍㄨㄧㆠㄛˋ,kuiber,kuiber,ㄍㄨㄧㆠㄜ,ㄍㄨㄧㆠㄛ,kb,kb,ㄍㆠ,,True,True
+歹去,phái--khìr,25,phái--khìr,phai2khir3,phai2khir3,ㄆㄞˋㄎㆨ˪,,phaikhir,phaikhir,ㄆㄞㄎㆨ,,phkh,phkh,ㄆㄎ,,True,False
 死亡,sír-bông,25,sír-bông,sir2bong5,sir2bong5,ㄙㆨˋㆠㆲˊ,,sirbong,sirbong,ㄙㆨㆠㆲ,,sb,sb,ㄙㆠ,,True,False
 死亡,sú-bông,25,sú-bông,su2bong5,su2bong5,ㄙㄨˋㆠㆲˊ,,subong,subong,ㄙㄨㆠㆲ,,sb,sb,ㄙㆠ,,True,False
 死絕,sí-tse̍rh,25,sí-che̍rh,si2tserh8,si2cherh8,ㄒㄧˋㄗㄜㆷ̇,ㄒㄧˋㄗㄛㆷ̇,sitserh,sicherh,ㄒㄧㄗㄜㆷ,ㄒㄧㄗㄛㆷ,sts,sch,ㄒㄗ,,True,False
@@ -3473,7 +3480,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 科舉,kho-kír,25,kho-kír,kho1kir2,kho1kir2,ㄎㄛㄍㆨˋ,,khokir,khokir,ㄎㄛㄍㆨ,,khk,khk,ㄎㄍ,,True,False
 科舉,kho-kú,25,kho-kú,kho1ku2,kho1ku2,ㄎㄛㄍㄨˋ,,khoku,khoku,ㄎㄛㄍㄨ,,khk,khk,ㄎㄍ,,True,False
 稅金,sèr-kim,25,sèr-kim,ser3kim1,ser3kim1,ㄙㄜ˪ㄍㄧㆬ,ㄙㄛ˪ㄍㄧㆬ,serkim,serkim,ㄙㄜㄍㄧㆬ,ㄙㄛㄍㄧㆬ,sk,sk,ㄙㄍ,,True,False
+穢人,uè--lâng,25,òe--lâng,ue3lang5,oe3lang5,ㄨㆤ˪ㄌㄤˊ,,uelang,oelang,ㄨㆤㄌㄤ,,ul,ol,ㄨㄌ,,True,False
+穢人,è--lâng,25,è--lâng,e3lang5,e3lang5,ㆤ˪ㄌㄤˊ,,elang,elang,ㆤㄌㄤ,,el,el,ㆤㄌ,,True,False
+穢人,èr--lâng,25,èr--lâng,er3lang5,er3lang5,ㄜ˪ㄌㄤˊ,ㄛ˪ㄌㄤˊ,erlang,erlang,ㄜㄌㄤ,ㄛㄌㄤ,el,el,ㄜㄌ,ㄛㄌ,True,False
 穢涗,èr-sèr,25,èr-sèr,er3ser3,er3ser3,ㄜ˪ㄙㄜ˪,ㄛ˪ㄙㄛ˪,erser,erser,ㄜㄙㄜ,ㄛㄙㄛ,es,es,ㄜㄙ,ㄛㄙ,True,False
+穢著,uè--tio̍h,25,òe--tio̍h,ue3tioh8,oe3tioh8,ㄨㆤ˪ㄉㄧㄛㆷ̇,,uetioh,oetioh,ㄨㆤㄉㄧㄛㆷ,,ut,ot,ㄨㄉ,,True,False
 穢著,è-tio̍h,25,è-tio̍h,e3tioh8,e3tioh8,ㆤ˪ㄉㄧㄛㆷ̇,,etioh,etioh,ㆤㄉㄧㄛㆷ,,et,et,ㆤㄉ,,True,False
 穢著,èr-tio̍h,25,èr-tio̍h,er3tioh8,er3tioh8,ㄜ˪ㄉㄧㄛㆷ̇,ㄛ˪ㄉㄧㄛㆷ̇,ertioh,ertioh,ㄜㄉㄧㄛㆷ,ㄛㄉㄧㄛㆷ,et,et,ㄜㄉ,ㄛㄉ,True,False
 空虛,khang-hir,25,khang-hir,khang1hir1,khang1hir1,ㄎㄤㄏㆨ,,khanghir,khanghir,ㄎㄤㄏㆨ,,khh,khh,ㄎㄏ,,True,False
@@ -3523,6 +3534,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 自習,tsū-si̍p,25,chū-si̍p,tsu7sip8,chu7sip8,ㄗㄨ˫ㄒㄧㆴ̇,,tsusip,chusip,ㄗㄨㄒㄧㆴ,,tss,chs,ㄗㄒ,,True,False
 自身,tsīr-sin,25,chīr-sin,tsir7sin1,chir7sin1,ㄗㆨ˫ㄒㄧㄣ,,tsirsin,chirsin,ㄗㆨㄒㄧㄣ,,tss,chs,ㄗㄒ,,True,False
 臺語,tâi-gír,25,tâi-gír,tai5gir2,tai5gir2,ㄉㄞˊㆣㆨˋ,,taigir,taigir,ㄉㄞㆣㆨ,,tg,tg,ㄉㆣ,,True,False
+花去,hue--khìr,25,hoe--khìr,hue1khir3,hoe1khir3,ㄏㄨㆤㄎㆨ˪,,huekhir,hoekhir,ㄏㄨㆤㄎㆨ,,hkh,hkh,ㄏㄎ,,True,False
 花子,hua-tsír,25,hoa-chír,hua1tsir2,hoa1chir2,ㄏㄨㄚㄗㆨˋ,,huatsir,hoachir,ㄏㄨㄚㄗㆨ,,hts,hch,ㄏㄗ,,True,False
 花子,hue-tsí,25,hoe-chí,hue1tsi2,hoe1chi2,ㄏㄨㆤㄐㄧˋ,,huetsi,hoechi,ㄏㄨㆤㄐㄧ,,hts,hch,ㄏㄐ,,True,False
 茶洗,tê-seré,25,tê-seré,te5sere2,te5sere2,ㄉㆤˊㄙㄜㆤˋ,ㄉㆤˊㄙㄛㆤˋ,tesere,tesere,ㄉㆤㄙㄜㆤ,ㄉㆤㄙㄛㆤ,ts,ts,ㄉㄙ,,True,False
@@ -3703,6 +3715,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 軍士,kun-sū,25,kun-sū,kun1su7,kun1su7,ㄍㄨㄣㄙㄨ˫,,kunsu,kunsu,ㄍㄨㄣㄙㄨ,,ks,ks,ㄍㄙ,,True,False
 軍士,kun-sǐr,25,kun-sǐr,kun1sir6,kun1sir6,ㄍㄨㄣㄙㆨˇ,,kunsir,kunsir,ㄍㄨㄣㄙㆨ,,ks,ks,ㄍㄙ,,True,False
 軍師,kun-sir,25,kun-sir,kun1sir1,kun1sir1,ㄍㄨㄣㄙㆨ,,kunsir,kunsir,ㄍㄨㄣㄙㆨ,,ks,ks,ㄍㄙ,,True,False
+轉去,tńg--khìr,25,tńg--khìr,tng2khir3,tng2khir3,ㄉㆭˋㄎㆨ˪,,tngkhir,tngkhir,ㄉㆭㄎㆨ,,tkh,tkh,ㄉㄎ,,True,False
 轉去,tńg-khìr,25,tńg-khìr,tng2khir3,tng2khir3,ㄉㆭˋㄎㆨ˪,,tngkhir,tngkhir,ㄉㆭㄎㆨ,,tkh,tkh,ㄉㄎ,,True,False
 辭世,sîr-sè,25,sîr-sè,sir5se3,sir5se3,ㄙㆨˊㄙㆤ˪,,sirse,sirse,ㄙㆨㄙㆤ,,ss,ss,ㄙㄙ,,True,False
 辭世,sû-sè,25,sû-sè,su5se3,su5se3,ㄙㄨˊㄙㆤ˪,,suse,suse,ㄙㄨㄙㆤ,,ss,ss,ㄙㄙ,,True,False
@@ -3712,6 +3725,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 辭書,sîr-sir,25,sîr-sir,sir5sir1,sir5sir1,ㄙㆨˊㄙㆨ,,sirsir,sirsir,ㄙㆨㄙㆨ,,ss,ss,ㄙㄙ,,True,False
 迦葉,ka-sia̍p,25,ka-sia̍p,ka1siap8,ka1siap8,ㄍㄚㄒㄧㄚㆴ̇,,kasiap,kasiap,ㄍㄚㄒㄧㄚㆴ,,ks,ks,ㄍㄒ,,True,False
 迦葉,kia-sia̍p,25,kia-sia̍p,kia1siap8,kia1siap8,ㄍㄧㄚㄒㄧㄚㆴ̇,,kiasiap,kiasiap,ㄍㄧㄚㄒㄧㄚㆴ,,ks,ks,ㄍㄒ,,True,False
+迵過,thàng--kèr,25,thàng--kèr,thang3ker3,thang3ker3,ㄊㄤ˪ㄍㄜ˪,ㄊㄤ˪ㄍㄛ˪,thangker,thangker,ㄊㄤㄍㄜ,ㄊㄤㄍㄛ,thk,thk,ㄊㄍ,,True,False
 迵過,thàng-kèr,25,thàng-kèr,thang3ker3,thang3ker3,ㄊㄤ˪ㄍㄜ˪,ㄊㄤ˪ㄍㄛ˪,thangker,thangker,ㄊㄤㄍㄜ,ㄊㄤㄍㄛ,thk,thk,ㄊㄍ,,True,False
 退味,thè-bī,25,thè-bī,the3bi7,the3bi7,ㄊㆤ˪ㆠㄧ˫,,thebi,thebi,ㄊㆤㆠㄧ,,thb,thb,ㄊㆠ,,True,False
 退味,thèr-bī,25,thèr-bī,ther3bi7,ther3bi7,ㄊㄜ˪ㆠㄧ˫,ㄊㄛ˪ㆠㄧ˫,therbi,therbi,ㄊㄜㆠㄧ,ㄊㄛㆠㄧ,thb,thb,ㄊㆠ,,True,False
@@ -3747,6 +3761,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 過濾,kèr-līr,25,kèr-līr,ker3lir7,ker3lir7,ㄍㄜ˪ㄌㆨ˫,ㄍㄛ˪ㄌㆨ˫,kerlir,kerlir,ㄍㄜㄌㆨ,ㄍㄛㄌㆨ,kl,kl,ㄍㄌ,,True,False
 過磅,kèr-pōng,25,kèr-pōng,ker3pong7,ker3pong7,ㄍㄜ˪ㄅㆲ˫,ㄍㄛ˪ㄅㆲ˫,kerpong,kerpong,ㄍㄜㄅㆲ,ㄍㄛㄅㆲ,kp,kp,ㄍㄅ,,True,False
 過磅,kèr-pǒng,25,kèr-pǒng,ker3pong6,ker3pong6,ㄍㄜ˪ㄅㆲˇ,ㄍㄛ˪ㄅㆲˇ,kerpong,kerpong,ㄍㄜㄅㆲ,ㄍㄛㄅㆲ,kp,kp,ㄍㄅ,,True,False
+過著,kè--tio̍h,25,kè--tio̍h,ke3tioh8,ke3tioh8,ㄍㆤ˪ㄉㄧㄛㆷ̇,,ketioh,ketioh,ㄍㆤㄉㄧㄛㆷ,,kt,kt,ㄍㄉ,,True,False
+過著,kèr--tio̍h,25,kèr--tio̍h,ker3tioh8,ker3tioh8,ㄍㄜ˪ㄉㄧㄛㆷ̇,ㄍㄛ˪ㄉㄧㄛㆷ̇,kertioh,kertioh,ㄍㄜㄉㄧㄛㆷ,ㄍㄛㄉㄧㄛㆷ,kt,kt,ㄍㄉ,,True,False
 過面,kèr-bīn,25,kèr-bīn,ker3bin7,ker3bin7,ㄍㄜ˪ㆠㄧㄣ˫,ㄍㄛ˪ㆠㄧㄣ˫,kerbin,kerbin,ㄍㄜㆠㄧㄣ,ㄍㄛㆠㄧㄣ,kb,kb,ㄍㆠ,,True,False
 過頭,kèr-thâu,25,kèr-thâu,ker3thau5,ker3thau5,ㄍㄜ˪ㄊㄠˊ,ㄍㄛ˪ㄊㄠˊ,kerthau,kerthau,ㄍㄜㄊㄠ,ㄍㄛㄊㄠ,kth,kth,ㄍㄊ,,True,False
 遺書,uî-sir,25,ûi-sir,ui5sir1,ui5sir1,ㄨㄧˊㄙㆨ,,uisir,uisir,ㄨㄧㄙㆨ,,us,us,ㄨㄙ,,True,False
@@ -3919,14 +3935,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 小兒科,siáu-lî-kher,16,siáu-lî-kher,siau2li5kher1,siau2li5kher1,ㄒㄧㄠˋㄌㄧˊㄎㄜ,ㄒㄧㄠˋㄌㄧˊㄎㄛ,siaulikher,siaulikher,ㄒㄧㄠㄌㄧㄎㄜ,ㄒㄧㄠㄌㄧㄎㄛ,slkh,slkh,ㄒㄌㄎ,,True,False
 小本字,sió-pún-lī,16,sió-pún-lī,sio2pun2li7,sio2pun2li7,ㄒㄧㄛˋㄅㄨㄣˋㄌㄧ˫,,siopunli,siopunli,ㄒㄧㄛㄅㄨㄣㄌㄧ,,spl,spl,ㄒㄅㄌ,,True,False
 小父さん,oo-jí-sáng,16,o͘-jí-sáng,oo1ji2sang2,oo1ji2sang2,ㆦㆢㄧˋㄙㄤˋ,,oojisang,oojisang,ㆦㆢㄧㄙㄤ,,ojs,ojs,ㆦㆢㄙ,,True,False
-尾仔,bué--á,16,bóe--á,bue2a2,boe2a2,ㆠㄨㆤˋㄚˋ,,buea,boea,ㆠㄨㆤㄚ,,ba,ba,ㆠㄚ,,True,False
-尾仔,bé--á,16,bé--á,be2a2,be2a2,ㆠㆤˋㄚˋ,,bea,bea,ㆠㆤㄚ,,ba,ba,ㆠㄚ,,True,False
-尾仔,bér--á,16,bér--á,ber2a2,ber2a2,ㆠㄜˋㄚˋ,ㆠㄛˋㄚˋ,bera,bera,ㆠㄜㄚ,ㆠㄛㄚ,ba,ba,ㆠㄚ,,True,False
 山葵,ua-sá-bih,16,oa-sá-bih,ua1sa2bih4,oa1sa2bih4,ㄨㄚㄙㄚˋㆠㄧㆷ,,uasabih,oasabih,ㄨㄚㄙㄚㆠㄧㆷ,,usb,osb,ㄨㄙㆠ,,True,False
 布袋戲,pòo-tēr-hì,16,pò͘-tēr-hì,poo3ter7hi3,poo3ter7hi3,ㄅㆦ˪ㄉㄜ˫ㄏㄧ˪,ㄅㆦ˪ㄉㄛ˫ㄏㄧ˪,pooterhi,pooterhi,ㄅㆦㄉㄜㄏㄧ,ㄅㆦㄉㄛㄏㄧ,pth,pth,ㄅㄉㄏ,,True,True
-廢去,huè--khì,16,hòe--khì,hue3khi3,hoe3khi3,ㄏㄨㆤ˪ㄎㄧ˪,,huekhi,hoekhi,ㄏㄨㆤㄎㄧ,,hkh,hkh,ㄏㄎ,,True,False
-廢去,huè--khìr,16,hòe--khìr,hue3khir3,hoe3khir3,ㄏㄨㆤ˪ㄎㆨ˪,,huekhir,hoekhir,ㄏㄨㆤㄎㆨ,,hkh,hkh,ㄏㄎ,,True,False
-廢去,huì--khì,16,hùi--khì,hui3khi3,hui3khi3,ㄏㄨㄧ˪ㄎㄧ˪,,huikhi,huikhi,ㄏㄨㄧㄎㄧ,,hkh,hkh,ㄏㄎ,,True,False
 御林軍,gī-lîm-kun,16,gī-lîm-kun,gi7lim5kun1,gi7lim5kun1,ㆣㄧ˫ㄌㄧㆬˊㄍㄨㄣ,,gilimkun,gilimkun,ㆣㄧㄌㄧㆬㄍㄨㄣ,,glk,glk,ㆣㄌㄍ,,True,False
 御林軍,gīr-lîm-kun,16,gīr-lîm-kun,gir7lim5kun1,gir7lim5kun1,ㆣㆨ˫ㄌㄧㆬˊㄍㄨㄣ,,girlimkun,girlimkun,ㆣㆨㄌㄧㆬㄍㄨㄣ,,glk,glk,ㆣㄌㄍ,,True,False
 御林軍,gū-lîm-kun,16,gū-lîm-kun,gu7lim5kun1,gu7lim5kun1,ㆣㄨ˫ㄌㄧㆬˊㄍㄨㄣ,,gulimkun,gulimkun,ㆣㄨㄌㄧㆬㄍㄨㄣ,,glk,glk,ㆣㄌㄍ,,True,False
@@ -3949,7 +3959,6 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 會毋著,hēr-m̄-tio̍h,16,hēr-m̄-tio̍h,her7m7tioh8,her7m7tioh8,ㄏㄜ˫ㆬ˫ㄉㄧㄛㆷ̇,ㄏㄛ˫ㆬ˫ㄉㄧㄛㆷ̇,hermtioh,hermtioh,ㄏㄜㆬㄉㄧㄛㆷ,ㄏㄛㆬㄉㄧㄛㆷ,hmt,hmt,ㄏㆬㄉ,,True,False
 桜,sa-khú-lah,16,sa-khú-lah,sa1khu2lah4,sa1khu2lah4,ㄙㄚㄎㄨˋㄌㄚㆷ,,sakhulah,sakhulah,ㄙㄚㄎㄨㄌㄚㆷ,,skhl,skhl,ㄙㄎㄌ,,True,False
 檜,hi-nóo-khih,16,hi-nó͘-khih,hi1noo2khih4,hi1noo2khih4,ㄏㄧㄋㆦˋㄎㄧㆷ,,hinookhih,hinookhih,ㄏㄧㄋㆦㄎㄧㆷ,,hnkh,hnkh,ㄏㄋㄎ,,True,False
-歹去,phái--khìr,16,phái--khìr,phai2khir3,phai2khir3,ㄆㄞˋㄎㆨ˪,,phaikhir,phaikhir,ㄆㄞㄎㆨ,,phkh,phkh,ㄆㄎ,,True,False
 氣持ち,khi-móo-tsih,16,khi-mó͘-chih,khi1moo2tsih4,khi1moo2chih4,ㄎㄧㄇㆦˋㄐㄧㆷ,,khimootsih,khimoochih,ㄎㄧㄇㆦㄐㄧㆷ,,khmts,khmch,ㄎㄇㄐ,,True,False
 沢庵,tha-khú-áng,16,tha-khú-áng,tha1khu2ang2,tha1khu2ang2,ㄊㄚㄎㄨˋㄤˋ,,thakhuang,thakhuang,ㄊㄚㄎㄨㄤ,,thkha,thkha,ㄊㄎㄤ,,True,False
 洗手盆,seré-tshiú-phûn,16,seré-chhiú-phûn,sere2tshiu2phun5,sere2chhiu2phun5,ㄙㄜㆤˋㄑㄧㄨˋㄆㄨㄣˊ,ㄙㄛㆤˋㄑㄧㄨˋㄆㄨㄣˊ,seretshiuphun,serechhiuphun,ㄙㄜㆤㄑㄧㄨㄆㄨㄣ,ㄙㄛㆤㄑㄧㄨㄆㄨㄣ,stshph,schhph,ㄙㄑㄆ,,True,False
@@ -3971,6 +3980,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 洗飯頓,sué-pn̄g-tǹg,16,sóe-pn̄g-tǹg,sue2png7tng3,soe2png7tng3,ㄙㄨㆤˋㄅㆭ˫ㄉㆭ˪,,suepngtng,soepngtng,ㄙㄨㆤㄅㆭㄉㆭ,,spt,spt,ㄙㄅㄉ,,True,False
 洗飯頓,sé-puīnn-tuìnn,16,sé-pūiⁿ-tùiⁿ,se2puinn7tuinn3,se2puinn7tuinn3,ㄙㆤˋㄅㄨㆪ˫ㄉㄨㆪ˪,,sepuinntuinn,sepuinntuinn,ㄙㆤㄅㄨㆪㄉㄨㆪ,,spt,spt,ㄙㄅㄉ,,True,False
 混凝土,khōng-ku-lí,16,khōng-ku-lí,khong7ku1li2,khong7ku1li2,ㄎㆲ˫ㄍㄨㄌㄧˋ,,khongkuli,khongkuli,ㄎㆲㄍㄨㄌㄧ,,khkl,khkl,ㄎㄍㄌ,,True,False
+火劃仔,hér-ui̍h--á,16,hér-u̍ih--á,her2uih8a2,her2uih8a2,ㄏㄜˋㄨㄧㆷ̇ㄚˋ,ㄏㄛˋㄨㄧㆷ̇ㄚˋ,heruiha,heruiha,ㄏㄜㄨㄧㆷㄚ,ㄏㄛㄨㄧㆷㄚ,hua,hua,ㄏㄨㄚ,,True,False
+火擦仔,hér-tshat--á,16,hér-chhat--á,her2tshat4a2,her2chhat4a2,ㄏㄜˋㄘㄚㆵㄚˋ,ㄏㄛˋㄘㄚㆵㄚˋ,hertshata,herchhata,ㄏㄜㄘㄚㆵㄚ,ㄏㄛㄘㄚㆵㄚ,htsha,hchha,ㄏㄘㄚ,,True,True
 火葬場,hué-tsòng-tiônn,16,hóe-chòng-tiôⁿ,hue2tsong3tionn5,hoe2chong3tionn5,ㄏㄨㆤˋㄗㆲ˪ㄉㄧㆧˊ,,huetsongtionn,hoechongtionn,ㄏㄨㆤㄗㆲㄉㄧㆧ,,htst,hcht,ㄏㄗㄉ,,True,False
 火葬場,hé-tsòng-tiûnn,16,hé-chòng-tiûⁿ,he2tsong3tiunn5,he2chong3tiunn5,ㄏㆤˋㄗㆲ˪ㄉㄧㆫˊ,,hetsongtiunn,hechongtiunn,ㄏㆤㄗㆲㄉㄧㆫ,,htst,hcht,ㄏㄗㄉ,,True,False
 火葬場,hér-tsòng-tiûnn,16,hér-chòng-tiûⁿ,her2tsong3tiunn5,her2chong3tiunn5,ㄏㄜˋㄗㆲ˪ㄉㄧㆫˊ,ㄏㄛˋㄗㆲ˪ㄉㄧㆫˊ,hertsongtiunn,herchongtiunn,ㄏㄜㄗㆲㄉㄧㆫ,ㄏㄛㄗㆲㄉㄧㆫ,htst,hcht,ㄏㄗㄉ,,True,False
@@ -3999,10 +4010,6 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 相褒歌,sann-po-kua,16,saⁿ-po-koa,sann1po1kua1,sann1po1koa1,ㄙㆩㄅㄛㄍㄨㄚ,,sannpokua,sannpokoa,ㄙㆩㄅㄛㄍㄨㄚ,,spk,spk,ㄙㄅㄍ,,True,False
 相閃身,sann-siám-sin,16,saⁿ-siám-sin,sann1siam2sin1,sann1siam2sin1,ㄙㆩㄒㄧㆰˋㄒㄧㄣ,,sannsiamsin,sannsiamsin,ㄙㆩㄒㄧㆰㄒㄧㄣ,,sss,sss,ㄙㄒㄒ,,True,False
 福佬人,hô-ló-lâng,16,hô-ló-lâng,ho5lo2lang5,ho5lo2lang5,ㄏㄛˊㄌㄛˋㄌㄤˊ,,hololang,hololang,ㄏㄛㄌㄛㄌㄤ,,hll,hll,ㄏㄌㄌ,,True,False
-穢人,uè--lâng,16,òe--lâng,ue3lang5,oe3lang5,ㄨㆤ˪ㄌㄤˊ,,uelang,oelang,ㄨㆤㄌㄤ,,ul,ol,ㄨㄌ,,True,False
-穢人,è--lâng,16,è--lâng,e3lang5,e3lang5,ㆤ˪ㄌㄤˊ,,elang,elang,ㆤㄌㄤ,,el,el,ㆤㄌ,,True,False
-穢人,èr--lâng,16,èr--lâng,er3lang5,er3lang5,ㄜ˪ㄌㄤˊ,ㄛ˪ㄌㄤˊ,erlang,erlang,ㄜㄌㄤ,ㄛㄌㄤ,el,el,ㄜㄌ,ㄛㄌ,True,False
-穢著,uè--tio̍h,16,òe--tio̍h,ue3tioh8,oe3tioh8,ㄨㆤ˪ㄉㄧㄛㆷ̇,,uetioh,oetioh,ㄨㆤㄉㄧㄛㆷ,,ut,ot,ㄨㄉ,,True,False
 細本字,serè-pún-jī,16,serè-pún-jī,sere3pun2ji7,sere3pun2ji7,ㄙㄜㆤ˪ㄅㄨㄣˋㆢㄧ˫,ㄙㄛㆤ˪ㄅㄨㄣˋㆢㄧ˫,serepunji,serepunji,ㄙㄜㆤㄅㄨㄣㆢㄧ,ㄙㄛㆤㄅㄨㄣㆢㄧ,spj,spj,ㄙㄅㆢ,,True,False
 細本字,serè-pún-lī,16,serè-pún-lī,sere3pun2li7,sere3pun2li7,ㄙㄜㆤ˪ㄅㄨㄣˋㄌㄧ˫,ㄙㄛㆤ˪ㄅㄨㄣˋㄌㄧ˫,serepunli,serepunli,ㄙㄜㆤㄅㄨㄣㄌㄧ,ㄙㄛㆤㄅㄨㄣㄌㄧ,spl,spl,ㄙㄅㄌ,,True,False
 細本字,suè-pún-jī,16,sòe-pún-jī,sue3pun2ji7,soe3pun2ji7,ㄙㄨㆤ˪ㄅㄨㄣˋㆢㄧ˫,,suepunji,soepunji,ㄙㄨㆤㄅㄨㄣㆢㄧ,,spj,spj,ㄙㄅㆢ,,True,False
@@ -4010,18 +4017,13 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 細本字,sè-pún-lī,16,sè-pún-lī,se3pun2li7,se3pun2li7,ㄙㆤ˪ㄅㄨㄣˋㄌㄧ˫,,sepunli,sepunli,ㄙㆤㄅㄨㄣㄌㄧ,,spl,spl,ㄙㄅㄌ,,True,False
 背広,se-bí-looh,16,se-bí-lo͘h,se1bi2looh4,se1bi2looh4,ㄙㆤㆠㄧˋㄌㆦㆷ,,sebilooh,sebilooh,ㄙㆤㆠㄧㄌㆦㆷ,,sbl,sbl,ㄙㆠㄌ,,True,False
 芎蕉霜,king-tsio-sng,16,keng-chio-sng,king1tsio1sng1,keng1chio1sng1,ㄍㄧㄥㄐㄧㄛㄙㆭ,,kingtsiosng,kengchiosng,ㄍㄧㄥㄐㄧㄛㄙㆭ,,ktss,kchs,ㄍㄐㄙ,,True,True
-花去,hue--khìr,16,hoe--khìr,hue1khir3,hoe1khir3,ㄏㄨㆤㄎㆨ˪,,huekhir,hoekhir,ㄏㄨㆤㄎㆨ,,hkh,hkh,ㄏㄎ,,True,False
 草履,lóo-lí-á,16,ló͘-lí-á,loo2li2a2,loo2li2a2,ㄌㆦˋㄌㄧˋㄚˋ,,loolia,loolia,ㄌㆦㄌㄧㄚ,,lla,lla,ㄌㄌㄚ,,True,False
 西洋洗,se-iônn-sé,16,se-iôⁿ-sé,se1ionn5se2,se1ionn5se2,ㄙㆤㄧㆧˊㄙㆤˋ,,seionnse,seionnse,ㄙㆤㄧㆧㄙㆤ,,sis,sis,ㄙㄧㄙ,,True,False
 西洋洗,se-iûnn-seré,16,se-iûⁿ-seré,se1iunn5sere2,se1iunn5sere2,ㄙㆤㄧㆫˊㄙㄜㆤˋ,ㄙㆤㄧㆫˊㄙㄛㆤˋ,seiunnsere,seiunnsere,ㄙㆤㄧㆫㄙㄜㆤ,ㄙㆤㄧㆫㄙㄛㆤ,sis,sis,ㄙㄧㄙ,,True,False
 西洋洗,se-iûnn-sué,16,se-iûⁿ-sóe,se1iunn5sue2,se1iunn5soe2,ㄙㆤㄧㆫˊㄙㄨㆤˋ,,seiunnsue,seiunnsoe,ㄙㆤㄧㆫㄙㄨㆤ,,sis,sis,ㄙㄧㄙ,,True,False
 西洋洗,se-iûnn-sé,16,se-iûⁿ-sé,se1iunn5se2,se1iunn5se2,ㄙㆤㄧㆫˊㄙㆤˋ,,seiunnse,seiunnse,ㄙㆤㄧㆫㄙㆤ,,sis,sis,ㄙㄧㄙ,,True,False
 說多謝,serh-to-siā,16,serh-to-siā,serh4to1sia7,serh4to1sia7,ㄙㄜㆷㄉㄛㄒㄧㄚ˫,ㄙㄛㆷㄉㄛㄒㄧㄚ˫,serhtosia,serhtosia,ㄙㄜㆷㄉㄛㄒㄧㄚ,ㄙㄛㆷㄉㄛㄒㄧㄚ,sts,sts,ㄙㄉㄒ,,True,False
-轉去,tńg--khìr,16,tńg--khìr,tng2khir3,tng2khir3,ㄉㆭˋㄎㆨ˪,,tngkhir,tngkhir,ㄉㆭㄎㆨ,,tkh,tkh,ㄉㄎ,,True,False
 辯護士,piān-hōo-sīr,16,piān-hō͘-sīr,pian7hoo7sir7,pian7hoo7sir7,ㄅㄧㄢ˫ㄏㆦ˫ㄙㆨ˫,,pianhoosir,pianhoosir,ㄅㄧㄢㄏㆦㄙㆨ,,phs,phs,ㄅㄏㄙ,,True,False
-迵過,thàng--kèr,16,thàng--kèr,thang3ker3,thang3ker3,ㄊㄤ˪ㄍㄜ˪,ㄊㄤ˪ㄍㄛ˪,thangker,thangker,ㄊㄤㄍㄜ,ㄊㄤㄍㄛ,thk,thk,ㄊㄍ,,True,False
-過著,kè--tio̍h,16,kè--tio̍h,ke3tioh8,ke3tioh8,ㄍㆤ˪ㄉㄧㄛㆷ̇,,ketioh,ketioh,ㄍㆤㄉㄧㄛㆷ,,kt,kt,ㄍㄉ,,True,False
-過著,kèr--tio̍h,16,kèr--tio̍h,ker3tioh8,ker3tioh8,ㄍㄜ˪ㄉㄧㄛㆷ̇,ㄍㄛ˪ㄉㄧㄛㆷ̇,kertioh,kertioh,ㄍㄜㄉㄧㄛㆷ,ㄍㄛㄉㄧㄛㆷ,kt,kt,ㄍㄉ,,True,False
 那來那,ná-lâi-ná,16,ná-lâi-ná,na2lai5na2,na2lai5na2,ㄋㄚˋㄌㄞˊㄋㄚˋ,,nalaina,nalaina,ㄋㄚㄌㄞㄋㄚ,,nln,nln,ㄋㄌㄋ,,True,False
 鐮𠠝仔,liâm-li̍k-á,16,liâm-le̍k-á,liam5lik8a2,liam5lek8a2,ㄌㄧㆰˊㄌㄧㆻ̇ㄚˋ,,liamlika,liamleka,ㄌㄧㆰㄌㄧㆻㄚ,,lla,lla,ㄌㄌㄚ,,True,False
 閩南語,bân-lâm-gír,16,bân-lâm-gír,ban5lam5gir2,ban5lam5gir2,ㆠㄢˊㄌㆰˊㆣㆨˋ,,banlamgir,banlamgir,ㆠㄢㄌㆰㆣㆨ,,blg,blg,ㆠㄌㆣ,,True,False
@@ -4049,8 +4051,6 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tps_num,tps_num_var,tl_notone,poj_notone,t
 大睏如死,tāi-khùn-lîr-sír,12,tāi-khùn-lîr-sír,tai7khun3lir5sir2,tai7khun3lir5sir2,ㄉㄞ˫ㄎㄨㄣ˪ㄌㆨˊㄙㆨˋ,,taikhunlirsir,taikhunlirsir,ㄉㄞㄎㄨㄣㄌㆨㄙㆨ,,tkhls,tkhls,ㄉㄎㄌㄙ,,True,False
 大睏如死,tāi-khùn-lû-sú,12,tāi-khùn-lû-sú,tai7khun3lu5su2,tai7khun3lu5su2,ㄉㄞ˫ㄎㄨㄣ˪ㄌㄨˊㄙㄨˋ,,taikhunlusu,taikhunlusu,ㄉㄞㄎㄨㄣㄌㄨㄙㄨ,,tkhls,tkhls,ㄉㄎㄌㄙ,,True,False
 滑り台,sir-bé-lí-lái,12,sir-bé-lí-lái,sir1be2li2lai2,sir1be2li2lai2,ㄙㆨㆠㆤˋㄌㄧˋㄌㄞˋ,,sirbelilai,sirbelilai,ㄙㆨㆠㆤㄌㄧㄌㄞ,,sbll,sbll,ㄙㆠㄌㄌ,,True,False
-火劃仔,hér-ui̍h--á,12,hér-u̍ih--á,her2uih8a2,her2uih8a2,ㄏㄜˋㄨㄧㆷ̇ㄚˋ,ㄏㄛˋㄨㄧㆷ̇ㄚˋ,heruiha,heruiha,ㄏㄜㄨㄧㆷㄚ,ㄏㄛㄨㄧㆷㄚ,hua,hua,ㄏㄨㄚ,,True,False
-火擦仔,hér-tshat--á,12,hér-chhat--á,her2tshat4a2,her2chhat4a2,ㄏㄜˋㄘㄚㆵㄚˋ,ㄏㄛˋㄘㄚㆵㄚˋ,hertshata,herchhata,ㄏㄜㄘㄚㆵㄚ,ㄏㄛㄘㄚㆵㄚ,htsha,hchha,ㄏㄘㄚ,,True,True
 疎,sue,12,soe,sue1,soe1,ㄙㄨㆤ,,sue,soe,ㄙㄨㆤ,,,,,,True,False
 盛リ場,sa-khá-lí-bah,12,sa-khá-lí-bah,sa1kha2li2bah4,sa1kha2li2bah4,ㄙㄚㄎㄚˋㄌㄧˋㆠㄚㆷ,,sakhalibah,sakhalibah,ㄙㄚㄎㄚㄌㄧㆠㄚㆷ,,skhlb,skhlb,ㄙㄎㄌㆠ,,True,False
 砄砄硞硞,khih-khih-kho̍k-kho̍k,12,khih-khih-kho̍k-kho̍k,khih4khih4khok8khok8,khih4khih4khok8khok8,ㄎㄧㆷㄎㄧㆷㄎㆦㆻ̇ㄎㆦㆻ̇,,khihkhihkhokkhok,khihkhihkhokkhok,ㄎㄧㆷㄎㄧㆷㄎㆦㆻㄎㆦㆻ,,khkhkhkh,khkhkhkh,ㄎㄎㄎㄎ,,True,False

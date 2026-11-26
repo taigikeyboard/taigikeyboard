@@ -151,6 +151,8 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 刀術,to-su̍t,25,to-su̍t,to1sut8,to1sut8,ㄉㄛㄙㄨㆵ̇,,tosut,tosut,ㄉㄛㄙㄨㆵ,,ts,ts,ㄉㄙ,,True,False
 分道,pun-tō,25,pun-tō,pun1to7,pun1to7,ㄅㄨㄣㄉㄛ˫,,punto,punto,ㄅㄨㄣㄉㄛ,,pt,pt,ㄅㄉ,,True,False
 分頁,hun-ia̍h,25,hun-ia̍h,hun1iah8,hun1iah8,ㄏㄨㄣㄧㄚㆷ̇,,huniah,huniah,ㄏㄨㄣㄧㄚㆷ,,hi,hi,ㄏㄧ,,True,False
+切入,tshiat--ji̍p,25,chhiat--ji̍p,tshiat4jip8,chhiat4jip8,ㄑㄧㄚㆵㆢㄧㆴ̇,,tshiatjip,chhiatjip,ㄑㄧㄚㆵㆢㄧㆴ,,tshj,chhj,ㄑㆢ,,True,False
+切入,tshiat--li̍p,25,chhiat--li̍p,tshiat4lip8,chhiat4lip8,ㄑㄧㄚㆵㄌㄧㆴ̇,,tshiatlip,chhiatlip,ㄑㄧㄚㆵㄌㄧㆴ,,tshl,chhl,ㄑㄌ,,True,False
 切球,tshiat-kiû,25,chhiat-kiû,tshiat4kiu5,chhiat4kiu5,ㄑㄧㄚㆵㄍㄧㄨˊ,,tshiatkiu,chhiatkiu,ㄑㄧㄚㆵㄍㄧㄨ,,tshk,chhk,ㄑㄍ,,True,False
 刣掉,thâi-tiāu,25,thâi-tiāu,thai5tiau7,thai5tiau7,ㄊㄞˊㄉㄧㄠ˫,,thaitiau,thaitiau,ㄊㄞㄉㄧㄠ,,tht,tht,ㄊㄉ,,True,False
 利劍,lāi-kiàm,25,lāi-kiàm,lai7kiam3,lai7kiam3,ㄌㄞ˫ㄍㄧㆰ˪,,laikiam,laikiam,ㄌㄞㄍㄧㆰ,,lk,lk,ㄌㄍ,,True,False
@@ -267,6 +269,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 帆船,phâng-tsûn,25,phâng-chûn,phang5tsun5,phang5chun5,ㄆㄤˊㄗㄨㄣˊ,,phangtsun,phangchun,ㄆㄤㄗㄨㄣ,,phts,phch,ㄆㄗ,,True,False
 幌壺,hàinn-ôo,25,hàiⁿ-ô͘,hainn3oo5,hainn3oo5,ㄏㆮ˪ㆦˊ,,hainnoo,hainnoo,ㄏㆮㆦ,,ho,ho,ㄏㆦ,,True,False
 弄舌,lāng-tsi̍h,25,lāng-chi̍h,lang7tsih8,lang7chih8,ㄌㄤ˫ㄐㄧㆷ̇,,langtsih,langchih,ㄌㄤㄐㄧㆷ,,lts,lch,ㄌㄐ,,True,False
+弓咧,king--leh,25,keng--leh,king1leh4,keng1leh4,ㄍㄧㄥㄌㆤㆷ,,kingleh,kengleh,ㄍㄧㄥㄌㆤㆷ,,kl,kl,ㄍㄌ,,True,False
 彈劾,tân-hik,25,tân-hek,tan5hik4,tan5hek4,ㄉㄢˊㄏㄧㆻ,,tanhik,tanhek,ㄉㄢㄏㄧㆻ,,th,th,ㄉㄏ,,True,False
 彗星,huī-tshinn,25,hūi-chhiⁿ,hui7tshinn1,hui7chhinn1,ㄏㄨㄧ˫ㄑㆪ,,huitshinn,huichhinn,ㄏㄨㄧㄑㆪ,,htsh,hchh,ㄏㄑ,,True,False
 影迷,iánn-bê,25,iáⁿ-bê,iann2be5,iann2be5,ㄧㆩˋㆠㆤˊ,,iannbe,iannbe,ㄧㆩㆠㆤ,,ib,ib,ㄧㆠ,,True,False
@@ -299,6 +302,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 拿鐵,la-thé,25,la-thé,la1the2,la1the2,ㄌㄚㄊㆤˋ,,lathe,lathe,ㄌㄚㄊㆤ,,lth,lth,ㄌㄊ,,True,False
 持妝,tshî-tsong,25,chhî-chong,tshi5tsong1,chhi5chong1,ㄑㄧˊㄗㆲ,,tshitsong,chhichong,ㄑㄧㄗㆲ,,tshts,chhch,ㄑㄗ,,True,False
 挵球,lòng-kiû,25,lòng-kiû,long3kiu5,long3kiu5,ㄌㆲ˪ㄍㄧㄨˊ,,longkiu,longkiu,ㄌㆲㄍㄧㄨ,,lk,lk,ㄌㄍ,,True,False
+挾的,gia̍p--ê,25,gia̍p--ê,giap8e5,giap8e5,ㆣㄧㄚㆴ̇ㆤˊ,,giape,giape,ㆣㄧㄚㆴㆤ,,ge,ge,ㆣㆤ,,True,False
 捕手,póo-tshiú,25,pó͘-chhiú,poo2tshiu2,poo2chhiu2,ㄅㆦˋㄑㄧㄨˋ,,pootshiu,poochhiu,ㄅㆦㄑㄧㄨ,,ptsh,pchh,ㄅㄑ,,True,False
 捕殺,póo-sat,25,pó͘-sat,poo2sat4,poo2sat4,ㄅㆦˋㄙㄚㆵ,,poosat,poosat,ㄅㆦㄙㄚㆵ,,ps,ps,ㄅㄙ,,True,False
 捕逸,póo-i̍k,25,pó͘-e̍k,poo2ik8,poo2ek8,ㄅㆦˋㄧㆻ̇,,pooik,pooek,ㄅㆦㄧㆻ,,pi,pe,ㄅㄧ,,True,False
@@ -319,6 +323,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 摃球,kòng-kiû,25,kòng-kiû,kong3kiu5,kong3kiu5,ㄍㆲ˪ㄍㄧㄨˊ,,kongkiu,kongkiu,ㄍㆲㄍㄧㄨ,,kk,kk,ㄍㄍ,,True,False
 摔技,siak-ki,25,siak-ki,siak4ki1,siak4ki1,ㄒㄧㄚㆻㄍㄧ,,siakki,siakki,ㄒㄧㄚㆻㄍㄧ,,sk,sk,ㄒㄍ,,True,False
 摔法,siak-huat,25,siak-hoat,siak4huat4,siak4hoat4,ㄒㄧㄚㆻㄏㄨㄚㆵ,,siakhuat,siakhoat,ㄒㄧㄚㆻㄏㄨㄚㆵ,,sh,sh,ㄒㄏ,,True,False
+摧死,tshui--sí,25,chhui--sí,tshui1si2,chhui1si2,ㄘㄨㄧㄒㄧˋ,,tshuisi,chhuisi,ㄘㄨㄧㄒㄧ,,tshs,chhs,ㄘㄒ,,True,False
 摸著,bong-tio̍h,25,bong-tio̍h,bong1tioh8,bong1tioh8,ㆠㆲㄉㄧㄛㆷ̇,,bongtioh,bongtioh,ㆠㆲㄉㄧㄛㆷ,,bt,bt,ㆠㄉ,,True,False
 擊劍,kik-kiàm,25,kek-kiàm,kik4kiam3,kek4kiam3,ㄍㄧㆻㄍㄧㆰ˪,,kikkiam,kekkiam,ㄍㄧㆻㄍㄧㆰ,,kk,kk,ㄍㄍ,,True,False
 擊球,kik-kiû,25,kek-kiû,kik4kiu5,kek4kiu5,ㄍㄧㆻㄍㄧㄨˊ,,kikkiu,kekkiu,ㄍㄧㆻㄍㄧㄨ,,kk,kk,ㄍㄍ,,True,False
@@ -421,6 +426,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 滑鼠,ku̍t-tshí,25,ku̍t-chhí,kut8tshi2,kut8chhi2,ㄍㄨㆵ̇ㄑㄧˋ,,kuttshi,kutchhi,ㄍㄨㆵㄑㄧ,,ktsh,kchh,ㄍㄑ,,True,False
 滑鼠,ku̍t-tshú,25,ku̍t-chhú,kut8tshu2,kut8chhu2,ㄍㄨㆵ̇ㄘㄨˋ,,kuttshu,kutchhu,ㄍㄨㆵㄘㄨ,,ktsh,kchh,ㄍㄘ,,True,False
 滾輪,kún-lûn,25,kún-lûn,kun2lun5,kun2lun5,ㄍㄨㄣˋㄌㄨㄣˊ,,kunlun,kunlun,ㄍㄨㄣㄌㄨㄣ,,kl,kl,ㄍㄌ,,True,False
+漏去,lāu--khì,25,lāu--khì,lau7khi3,lau7khi3,ㄌㄠ˫ㄎㄧ˪,,laukhi,laukhi,ㄌㄠㄎㄧ,,lkh,lkh,ㄌㄎ,,True,False
 漏球,lāu-kiû,25,lāu-kiû,lau7kiu5,lau7kiu5,ㄌㄠ˫ㄍㄧㄨˊ,,laukiu,laukiu,ㄌㄠㄍㄧㄨ,,lk,lk,ㄌㄍ,,True,False
 漸層,tsiām-tsân,25,chiām-chân,tsiam7tsan5,chiam7chan5,ㄐㄧㆰ˫ㄗㄢˊ,,tsiamtsan,chiamchan,ㄐㄧㆰㄗㄢ,,tsts,chch,ㄐㄗ,,True,False
 灌籃,kuàn-nâ,25,koàn-nâ,kuan3na5,koan3na5,ㄍㄨㄢ˪ㄋㄚˊ,,kuanna,koanna,ㄍㄨㄢㄋㄚ,,kn,kn,ㄍㄋ,,True,False
@@ -491,6 +497,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 目彩,ba̍k-tshái,25,ba̍k-chhái,bak8tshai2,bak8chhai2,ㆠㄚㆻ̇ㄘㄞˋ,,baktshai,bakchhai,ㆠㄚㆻㄘㄞ,,btsh,bchh,ㆠㄘ,,True,False
 直播,ti̍t-pò,25,ti̍t-pò,tit8po3,tit8po3,ㄉㄧㆵ̇ㄅㄛ˪,,titpo,titpo,ㄉㄧㆵㄅㄛ,,tp,tp,ㄉㄅ,,True,False
 直球,ti̍t-kiû,25,ti̍t-kiû,tit8kiu5,tit8kiu5,ㄉㄧㆵ̇ㄍㄧㄨˊ,,titkiu,titkiu,ㄉㄧㆵㄍㄧㄨ,,tk,tk,ㄉㄍ,,True,False
+直的,ti̍t--ê,25,ti̍t--ê,tit8e5,tit8e5,ㄉㄧㆵ̇ㆤˊ,,tite,tite,ㄉㄧㆵㆤ,,te,te,ㄉㆤ,,True,False
 相偃,sio-ián,25,sio-ián,sio1ian2,sio1ian2,ㄒㄧㄛㄧㄢˋ,,sioian,sioian,ㄒㄧㄛㄧㄢ,,si,si,ㄒㄧ,,True,False
 眼影,gán-iánn,25,gán-iáⁿ,gan2iann2,gan2iann2,ㆣㄢˋㄧㆩˋ,,ganiann,ganiann,ㆣㄢㄧㆩ,,gi,gi,ㆣㄧ,,True,False
 眼膜,gán-mo̍oh,25,gán-mo̍͘h,gan2mooh8,gan2mooh8,ㆣㄢˋㄇㆦㆷ̇,,ganmooh,ganmooh,ㆣㄢㄇㆦㆷ,,gm,gm,ㆣㄇ,,True,False
@@ -535,6 +542,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 網球,bāng-kiû,25,bāng-kiû,bang7kiu5,bang7kiu5,ㆠㄤ˫ㄍㄧㄨˊ,,bangkiu,bangkiu,ㆠㄤㄍㄧㄨ,,bk,bk,ㆠㄍ,,True,False
 網紅,bāng-âng,25,bāng-âng,bang7ang5,bang7ang5,ㆠㄤ˫ㄤˊ,,bangang,bangang,ㆠㄤㄤ,,ba,ba,ㆠㄤ,,True,False
 網衝,bāng-tshìng,25,bāng-chhèng,bang7tshing3,bang7chheng3,ㆠㄤ˫ㄑㄧㄥ˪,,bangtshing,bangchheng,ㆠㄤㄑㄧㄥ,,btsh,bchh,ㆠㄑ,,True,False
+緊的,kín--ê,25,kín--ê,kin2e5,kin2e5,ㄍㄧㄣˋㆤˊ,,kine,kine,ㄍㄧㄣㆤ,,ke,ke,ㄍㆤ,,True,False
 緩刑,uān-hîng,25,oān-hêng,uan7hing5,oan7heng5,ㄨㄢ˫ㄏㄧㄥˊ,,uanhing,oanheng,ㄨㄢㄏㄧㄥ,,uh,oh,ㄨㄏ,,True,False
 縮圖,sok-tôo,25,sok-tô͘,sok4too5,sok4too5,ㄙㆦㆻㄉㆦˊ,,soktoo,soktoo,ㄙㆦㆻㄉㆦ,,st,st,ㄙㄉ,,True,False
 總匯,tsóng-huē,25,chóng-hōe,tsong2hue7,chong2hoe7,ㄗㆲˋㄏㄨㆤ˫,,tsonghue,chonghoe,ㄗㆲㄏㄨㆤ,,tsh,chh,ㄗㄏ,,True,False
@@ -650,6 +658,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 載具,tsài-kū,25,chài-kū,tsai3ku7,chai3ku7,ㄗㄞ˪ㄍㄨ˫,,tsaiku,chaiku,ㄗㄞㄍㄨ,,tsk,chk,ㄗㄍ,,True,False
 輕鐵,khin-thih,25,khin-thih,khin1thih4,khin1thih4,ㄎㄧㄣㄊㄧㆷ,,khinthih,khinthih,ㄎㄧㄣㄊㄧㆷ,,khth,khth,ㄎㄊ,,True,False
 輝瑞,hui-suī,25,hui-sūi,hui1sui7,hui1sui7,ㄏㄨㄧㄙㄨㄧ˫,,huisui,huisui,ㄏㄨㄧㄙㄨㄧ,,hs,hs,ㄏㄙ,,True,False
+輾的,lián--ê,25,lián--ê,lian2e5,lian2e5,ㄌㄧㄢˋㆤˊ,,liane,liane,ㄌㄧㄢㆤ,,le,le,ㄌㆤ,,True,True
 轉翕,tsuán-hip,25,choán-hip,tsuan2hip4,choan2hip4,ㄗㄨㄢˋㄏㄧㆴ,,tsuanhip,choanhip,ㄗㄨㄢㄏㄧㆴ,,tsh,chh,ㄗㄏ,,True,False
 轉速,tńg-sok,25,tńg-sok,tng2sok4,tng2sok4,ㄉㆭˋㄙㆦㆻ,,tngsok,tngsok,ㄉㆭㄙㆦㆻ,,ts,ts,ㄉㄙ,,True,False
 迒年,hānn-nî,25,hāⁿ-nî,hann7ni5,hann7ni5,ㄏㆩ˫ㄋㄧˊ,,hannni,hannni,ㄏㆩㄋㄧ,,hn,hn,ㄏㄋ,,True,False
@@ -799,6 +808,7 @@ OK球,ok-kiû,25,ok-kiû,ok4kiu5,ok4kiu5,ㆦㆻㄍㄧㄨˊ,,okkiu,okkiu,ㆦㆻ�
 ,hu-lìng-gah,16,hu-lèng-gah,hu1ling3gah4,hu1leng3gah4,ㄏㄨㄌㄧㄥ˪ㆣㄚㆷ,,hulinggah,hulenggah,ㄏㄨㄌㄧㄥㆣㄚㆷ,,hlg,hlg,ㄏㄌㆣ,,True,False
 ,hua-lú-bóo,16,hoa-lú-bó͘,hua1lu2boo2,hoa1lu2boo2,ㄏㄨㄚㄌㄨˋㆠㆦˋ,,hualuboo,hoaluboo,ㄏㄨㄚㄌㄨㆠㆦ,,hlb,hlb,ㄏㄌㆠ,,True,False
 ,huá-sū-tooh,16,hóa-sū-to͘h,hua2su7tooh4,hoa2su7tooh4,ㄏㄨㄚˋㄙㄨ˫ㄉㆦㆷ,,huasutooh,hoasutooh,ㄏㄨㄚㄙㄨㄉㆦㆷ,,hst,hst,ㄏㄙㄉ,,True,False
+,iú-bih--ê,16,iú-bih--ê,iu2bih4e5,iu2bih4e5,ㄧㄨˋㆠㄧㆷㆤˊ,,iubihe,iubihe,ㄧㄨㆠㄧㆷㆤ,,ibe,ibe,ㄧㆠㆤ,,True,False
 ,khong-tó-luh,16,khong-tó-luh,khong1to2luh4,khong1to2luh4,ㄎㆲㄉㄛˋㄌㄨㆷ,,khongtoluh,khongtoluh,ㄎㆲㄉㄛㄌㄨㆷ,,khtl,khtl,ㄎㄉㄌ,,True,False
 ,khu-lì-mù,16,khu-lì-mù,khu1li3mu3,khu1li3mu3,ㄎㄨㄌㄧ˪ㄇㄨ˪,,khulimu,khulimu,ㄎㄨㄌㄧㄇㄨ,,khlm,khlm,ㄎㄌㄇ,,True,False
 ,khőng-niá-kuh,16,khŏng-niá-kuh,khong9nia2kuh4,khong9nia2kuh4,ㄎㆲˆㄋㄧㄚˋㄍㄨㆷ,,khongniakuh,khongniakuh,ㄎㆲㄋㄧㄚㄍㄨㆷ,,khnk,khnk,ㄎㄋㄍ,,True,False
@@ -887,6 +897,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 個人賽,kò-lîn-sài,16,kò-lîn-sài,ko3lin5sai3,ko3lin5sai3,ㄍㄛ˪ㄌㄧㄣˊㄙㄞ˪,,kolinsai,kolinsai,ㄍㄛㄌㄧㄣㄙㄞ,,kls,kls,ㄍㄌㄙ,,True,False
 倒徛騰,tò-khiā-thîng,16,tò-khiā-thêng,to3khia7thing5,to3khia7theng5,ㄉㄛ˪ㄎㄧㄚ˫ㄊㄧㄥˊ,,tokhiathing,tokhiatheng,ㄉㄛㄎㄧㄚㄊㄧㄥ,,tkhth,tkhth,ㄉㄎㄊ,,True,False
 倒線審,tò-suànn-sím,16,tò-sòaⁿ-sím,to3suann3sim2,to3soann3sim2,ㄉㄛ˪ㄙㄨㆩ˪ㄒㄧㆬˋ,,tosuannsim,tosoannsim,ㄉㄛㄙㄨㆩㄒㄧㆬ,,tss,tss,ㄉㄙㄒ,,True,False
+倒鉤的,tò-kau--ê,16,tò-kau--ê,to3kau1e5,to3kau1e5,ㄉㄛ˪ㄍㄠㆤˊ,,tokaue,tokaue,ㄉㄛㄍㄠㆤ,,tke,tke,ㄉㄍㆤ,,True,False
 倖存者,hīng-tsûn-tsiá,16,hēng-chûn-chiá,hing7tsun5tsia2,heng7chun5chia2,ㄏㄧㄥ˫ㄗㄨㄣˊㄐㄧㄚˋ,,hingtsuntsia,hengchunchia,ㄏㄧㄥㄗㄨㄣㄐㄧㄚ,,htsts,hchch,ㄏㄗㄐ,,True,False
 倚身球,uá-sin-kiû,16,óa-sin-kiû,ua2sin1kiu5,oa2sin1kiu5,ㄨㄚˋㄒㄧㄣㄍㄧㄨˊ,,uasinkiu,oasinkiu,ㄨㄚㄒㄧㄣㄍㄧㄨ,,usk,osk,ㄨㄒㄍ,,True,False
 假khia̋n-sé,ké-khia̋n-sé,16,ké-khiăn-sé,ke2khian9se2,ke2khian9se2,ㄍㆤˋㄎㄧㄢˆㄙㆤˋ,,kekhianse,kekhianse,ㄍㆤㄎㄧㄢㄙㆤ,,kkhs,kkhs,ㄍㄎㄙ,,True,False
@@ -916,8 +927,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 出賽數,tshut-sài-sòo,16,chhut-sài-sò͘,tshut4sai3soo3,chhut4sai3soo3,ㄘㄨㆵㄙㄞ˪ㄙㆦ˪,,tshutsaisoo,chhutsaisoo,ㄘㄨㆵㄙㄞㄙㆦ,,tshss,chhss,ㄘㄙㄙ,,True,False
 分析師,hun-sik-su,16,hun-sek-su,hun1sik4su1,hun1sek4su1,ㄏㄨㄣㄒㄧㆻㄙㄨ,,hunsiksu,hunseksu,ㄏㄨㄣㄒㄧㆻㄙㄨ,,hss,hss,ㄏㄒㄙ,,True,False
 分道喙,pun-tō-tshuì,16,pun-tō-chhùi,pun1to7tshui3,pun1to7chhui3,ㄅㄨㄣㄉㄛ˫ㄘㄨㄧ˪,,puntotshui,puntochhui,ㄅㄨㄣㄉㄛㄘㄨㄧ,,pttsh,ptchh,ㄅㄉㄘ,,True,False
-切入,tshiat--ji̍p,16,chhiat--ji̍p,tshiat4jip8,chhiat4jip8,ㄑㄧㄚㆵㆢㄧㆴ̇,,tshiatjip,chhiatjip,ㄑㄧㄚㆵㆢㄧㆴ,,tshj,chhj,ㄑㆢ,,True,False
-切入,tshiat--li̍p,16,chhiat--li̍p,tshiat4lip8,chhiat4lip8,ㄑㄧㄚㆵㄌㄧㆴ̇,,tshiatlip,chhiatlip,ㄑㄧㄚㆵㄌㄧㆴ,,tshl,chhl,ㄑㄌ,,True,False
 刪除線,san-tî-suànn,16,san-tî-sòaⁿ,san1ti5suann3,san1ti5soann3,ㄙㄢㄉㄧˊㄙㄨㆩ˪,,santisuann,santisoann,ㄙㄢㄉㄧㄙㄨㆩ,,sts,sts,ㄙㄉㄙ,,True,True
 刪除線,san-tû-suànn,16,san-tû-sòaⁿ,san1tu5suann3,san1tu5soann3,ㄙㄢㄉㄨˊㄙㄨㆩ˪,,santusuann,santusoann,ㄙㄢㄉㄨㄙㄨㆩ,,sts,sts,ㄙㄉㄙ,,True,True
 刺目眉,tshiah ba̍k-bâi,16,chhiah ba̍k-bâi,tshiah4bak8bai5,chhiah4bak8bai5,ㄑㄧㄚㆷㆠㄚㆻ̇ㆠㄞˊ,,tshiahbakbai,chhiahbakbai,ㄑㄧㄚㆷㆠㄚㆻㆠㄞ,,tshbb,chhbb,ㄑㆠㆠ,,True,False
@@ -996,6 +1005,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 壓縮檔,ap-sok-tóng,16,ap-sok-tóng,ap4sok4tong2,ap4sok4tong2,ㄚㆴㄙㆦㆻㄉㆲˋ,,apsoktong,apsoktong,ㄚㆴㄙㆦㆻㄉㆲ,,ast,ast,ㄚㄙㄉ,,True,False
 壘打數,luí-tánn-sòo,16,lúi-táⁿ-sò͘,lui2tann2soo3,lui2tann2soo3,ㄌㄨㄧˋㄉㆩˋㄙㆦ˪,,luitannsoo,luitannsoo,ㄌㄨㄧㄉㆩㄙㆦ,,lts,lts,ㄌㄉㄙ,,True,False
 外役監,guā-i̍k-kann,16,gōa-e̍k-kaⁿ,gua7ik8kann1,goa7ek8kann1,ㆣㄨㄚ˫ㄧㆻ̇ㄍㆩ,,guaikkann,goaekkann,ㆣㄨㄚㄧㆻㄍㆩ,,gik,gek,ㆣㄧㄍ,,True,True
+外籍的,guā-tsi̍k--ê,16,gōa-che̍k--ê,gua7tsik8e5,goa7chek8e5,ㆣㄨㄚ˫ㄐㄧㆻ̇ㆤˊ,,guatsike,goacheke,ㆣㄨㄚㄐㄧㆻㆤ,,gtse,gche,ㆣㄐㆤ,,True,True
 外角球,guā-kak-kiû,16,gōa-kak-kiû,gua7kak4kiu5,goa7kak4kiu5,ㆣㄨㄚ˫ㄍㄚㆻㄍㄧㄨˊ,,guakakkiu,goakakkiu,ㆣㄨㄚㄍㄚㆻㄍㄧㄨ,,gkk,gkk,ㆣㄍㄍ,,True,True
 外野手,guā-iá-tshiú,16,gōa-iá-chhiú,gua7ia2tshiu2,goa7ia2chhiu2,ㆣㄨㄚ˫ㄧㄚˋㄑㄧㄨˋ,,guaiatshiu,goaiachhiu,ㆣㄨㄚㄧㄚㄑㄧㄨ,,gitsh,gichh,ㆣㄧㄑ,,True,True
 多壘打,to-luí-tánn,16,to-lúi-táⁿ,to1lui2tann2,to1lui2tann2,ㄉㄛㄌㄨㄧˋㄉㆩˋ,,toluitann,toluitann,ㄉㄛㄌㄨㄧㄉㆩ,,tlt,tlt,ㄉㄌㄉ,,True,False
@@ -1067,7 +1077,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 幹細胞,kàn-sè-pau,16,kàn-sè-pau,kan3se3pau1,kan3se3pau1,ㄍㄢ˪ㄙㆤ˪ㄅㄠ,,kansepau,kansepau,ㄍㄢㄙㆤㄅㄠ,,ksp,ksp,ㄍㄙㄅ,,True,True
 庫德族,khòo-tik-tso̍k,16,khò͘-tek-cho̍k,khoo3tik4tsok8,khoo3tek4chok8,ㄎㆦ˪ㄉㄧㆻㄗㆦㆻ̇,,khootiktsok,khootekchok,ㄎㆦㄉㄧㆻㄗㆦㆻ,,khtts,khtch,ㄎㄉㄗ,,True,False
 弄貓枝,lāng-niau-ki,16,lāng-niau-ki,lang7niau1ki1,lang7niau1ki1,ㄌㄤ˫ㄋㄧㄠㄍㄧ,,langniauki,langniauki,ㄌㄤㄋㄧㄠㄍㄧ,,lnk,lnk,ㄌㄋㄍ,,True,False
-弓咧,king--leh,16,keng--leh,king1leh4,keng1leh4,ㄍㄧㄥㄌㆤㆷ,,kingleh,kengleh,ㄍㄧㄥㄌㆤㆷ,,kl,kl,ㄍㄌ,,True,False
 弓箭步,king-tsìnn-pōo,16,keng-chìⁿ-pō͘,king1tsinn3poo7,keng1chinn3poo7,ㄍㄧㄥㄐㆪ˪ㄅㆦ˫,,kingtsinnpoo,kengchinnpoo,ㄍㄧㄥㄐㆪㄅㆦ,,ktsp,kchp,ㄍㄐㄅ,,True,False
 弓箭步,kiong-tsìnn-pōo,16,kiong-chìⁿ-pō͘,kiong1tsinn3poo7,kiong1chinn3poo7,ㄍㄧㆲㄐㆪ˪ㄅㆦ˫,,kiongtsinnpoo,kiongchinnpoo,ㄍㄧㆲㄐㆪㄅㆦ,,ktsp,kchp,ㄍㄐㄅ,,True,False
 引路人,ín-lōo-lâng,16,ín-lō͘-lâng,in2loo7lang5,in2loo7lang5,ㄧㄣˋㄌㆦ˫ㄌㄤˊ,,inloolang,inloolang,ㄧㄣㄌㆦㄌㄤ,,ill,ill,ㄧㄌㄌ,,True,False
@@ -1121,7 +1130,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 拚勢衝,piànn-sì-tshiong,16,piàⁿ-sì-chhiong,piann3si3tshiong1,piann3si3chhiong1,ㄅㄧㆩ˪ㄒㄧ˪ㄑㄧㆲ,,piannsitshiong,piannsichhiong,ㄅㄧㆩㄒㄧㄑㄧㆲ,,pstsh,pschh,ㄅㄒㄑ,,True,True
 挖人才,óo jîn-tsâi,16,ó͘ jîn-châi,oo2jin5tsai5,oo2jin5chai5,ㆦˋㆢㄧㄣˊㄗㄞˊ,,oojintsai,oojinchai,ㆦㆢㄧㄣㄗㄞ,,ojts,ojch,ㆦㆢㄗ,,True,False
 挖人才,óo lîn-tsâi,16,ó͘ lîn-châi,oo2lin5tsai5,oo2lin5chai5,ㆦˋㄌㄧㄣˊㄗㄞˊ,,oolintsai,oolinchai,ㆦㄌㄧㄣㄗㄞ,,olts,olch,ㆦㄌㄗ,,True,False
-挾的,gia̍p--ê,16,gia̍p--ê,giap8e5,giap8e5,ㆣㄧㄚㆴ̇ㆤˊ,,giape,giape,ㆣㄧㄚㆴㆤ,,ge,ge,ㆣㆤ,,True,False
 捋仔田,lua̍h-á-tshân,16,loa̍h-á-chhân,luah8a2tshan5,loah8a2chhan5,ㄌㄨㄚㆷ̇ㄚˋㄘㄢˊ,,luahatshan,loahachhan,ㄌㄨㄚㆷㄚㄘㄢ,,latsh,lachh,ㄌㄚㄘ,,True,False
 捘卵機,tsūn-nn̄g-ki,16,chūn-nn̄g-ki,tsun7nng7ki1,chun7nng7ki1,ㄗㄨㄣ˫ㄋㆭ˫ㄍㄧ,,tsunnngki,chunnngki,ㄗㄨㄣㄋㆭㄍㄧ,,tsnk,chnk,ㄗㄋㄍ,,True,False
 捲螺筅,kńg-lê-tshíng,16,kńg-lê-chhéng,kng2le5tshing2,kng2le5chheng2,ㄍㆭˋㄌㆤˊㄑㄧㄥˋ,,kngletshing,knglechheng,ㄍㆭㄌㆤㄑㄧㄥ,,kltsh,klchh,ㄍㄌㄑ,,True,True
@@ -1141,7 +1149,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 搜索票,soo-sik-phiò,16,so͘-sek-phiò,soo1sik4phio3,soo1sek4phio3,ㄙㆦㄒㄧㆻㄆㄧㄛ˪,,soosikphio,soosekphio,ㄙㆦㄒㄧㆻㄆㄧㄛ,,ssph,ssph,ㄙㄒㄆ,,True,False
 搝大索,khiú-tuā-soh,16,khiú-tōa-soh,khiu2tua7soh4,khiu2toa7soh4,ㄎㄧㄨˋㄉㄨㄚ˫ㄙㄛㆷ,,khiutuasoh,khiutoasoh,ㄎㄧㄨㄉㄨㄚㄙㄛㆷ,,khts,khts,ㄎㄉㄙ,,True,False
 摖板球,tshè-pán-kiû,16,chhè-pán-kiû,tshe3pan2kiu5,chhe3pan2kiu5,ㄘㆤ˪ㄅㄢˋㄍㄧㄨˊ,,tshepankiu,chhepankiu,ㄘㆤㄅㄢㄍㄧㄨ,,tshpk,chhpk,ㄘㄅㄍ,,True,False
-摧死,tshui--sí,16,chhui--sí,tshui1si2,chhui1si2,ㄘㄨㄧㄒㄧˋ,,tshuisi,chhuisi,ㄘㄨㄧㄒㄧ,,tshs,chhs,ㄘㄒ,,True,False
 擉著人,tia̍k-tio̍h-lâng,16,tia̍k-tio̍h-lâng,tiak8tioh8lang5,tiak8tioh8lang5,ㄉㄧㄚㆻ̇ㄉㄧㄛㆷ̇ㄌㄤˊ,,tiaktiohlang,tiaktiohlang,ㄉㄧㄚㆻㄉㄧㄛㆷㄌㄤ,,ttl,ttl,ㄉㄉㄌ,,True,False
 擋老化,tòng-nóo-huà,16,tòng-nó͘-hòa,tong3noo2hua3,tong3noo2hoa3,ㄉㆲ˪ㄋㆦˋㄏㄨㄚ˪,,tongnoohua,tongnoohoa,ㄉㆲㄋㆦㄏㄨㄚ,,tnh,tnh,ㄉㄋㄏ,,True,False
 攑頭痕,gia̍h-thâu-hûn,16,gia̍h-thâu-hûn,giah8thau5hun5,giah8thau5hun5,ㆣㄧㄚㆷ̇ㄊㄠˊㄏㄨㄣˊ,,giahthauhun,giahthauhun,ㆣㄧㄚㆷㄊㄠㄏㄨㄣ,,gthh,gthh,ㆣㄊㄏ,,True,False
@@ -1247,7 +1254,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 滑曲球,ku̍t-khiau-kiû,16,ku̍t-khiau-kiû,kut8khiau1kiu5,kut8khiau1kiu5,ㄍㄨㆵ̇ㄎㄧㄠㄍㄧㄨˊ,,kutkhiaukiu,kutkhiaukiu,ㄍㄨㆵㄎㄧㄠㄍㄧㄨ,,kkhk,kkhk,ㄍㄎㄍ,,True,False
 滯洪池,tī-hông-tî,16,tī-hông-tî,ti7hong5ti5,ti7hong5ti5,ㄉㄧ˫ㄏㆲˊㄉㄧˊ,,tihongti,tihongti,ㄉㄧㄏㆲㄉㄧ,,tht,tht,ㄉㄏㄉ,,True,False
 滾飛比,kún-hui-pí,16,kún-hui-pí,kun2hui1pi2,kun2hui1pi2,ㄍㄨㄣˋㄏㄨㄧㄅㄧˋ,,kunhuipi,kunhuipi,ㄍㄨㄣㄏㄨㄧㄅㄧ,,khp,khp,ㄍㄏㄅ,,True,False
-漏去,lāu--khì,16,lāu--khì,lau7khi3,lau7khi3,ㄌㄠ˫ㄎㄧ˪,,laukhi,laukhi,ㄌㄠㄎㄧ,,lkh,lkh,ㄌㄎ,,True,False
 演算法,ián-suàn-huat,16,ián-soàn-hoat,ian2suan3huat4,ian2soan3hoat4,ㄧㄢˋㄙㄨㄢ˪ㄏㄨㄚㆵ,,iansuanhuat,iansoanhoat,ㄧㄢㄙㄨㄢㄏㄨㄚㆵ,,ish,ish,ㄧㄙㄏ,,True,False
 漚查埔,àu-tsa-poo,16,àu-cha-po͘,au3tsa1poo1,au3cha1poo1,ㄠ˪ㄗㄚㄅㆦ,,autsapoo,auchapoo,ㄠㄗㄚㄅㆦ,,atsp,achp,ㄠㄗㄅ,,True,False
 漩尿球,suān-jiō-kiû,16,soān-jiō-kiû,suan7jio7kiu5,soan7jio7kiu5,ㄙㄨㄢ˫ㆢㄧㄛ˫ㄍㄧㄨˊ,,suanjiokiu,soanjiokiu,ㄙㄨㄢㆢㄧㄛㄍㄧㄨ,,sjk,sjk,ㄙㆢㄍ,,True,False
@@ -1284,6 +1290,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 熱氣球,lia̍t-khì-kiû,16,lia̍t-khì-kiû,liat8khi3kiu5,liat8khi3kiu5,ㄌㄧㄚㆵ̇ㄎㄧ˪ㄍㄧㄨˊ,,liatkhikiu,liatkhikiu,ㄌㄧㄚㆵㄎㄧㄍㄧㄨ,,lkhk,lkhk,ㄌㄎㄍ,,True,False
 燃料棒,jiân-liāu-pāng,16,jiân-liāu-pāng,jian5liau7pang7,jian5liau7pang7,ㆢㄧㄢˊㄌㄧㄠ˫ㄅㄤ˫,,jianliaupang,jianliaupang,ㆢㄧㄢㄌㄧㄠㄅㄤ,,jlp,jlp,ㆢㄌㄅ,,True,False
 燃料棒,liân-liāu-pāng,16,liân-liāu-pāng,lian5liau7pang7,lian5liau7pang7,ㄌㄧㄢˊㄌㄧㄠ˫ㄅㄤ˫,,lianliaupang,lianliaupang,ㄌㄧㄢㄌㄧㄠㄅㄤ,,llp,llp,ㄌㄌㄅ,,True,False
+燒一下,sio--tsi̍t-ē,16,sio--chi̍t-ē,sio1tsit8e7,sio1chit8e7,ㄒㄧㄛㄐㄧㆵ̇ㆤ˫,,siotsite,siochite,ㄒㄧㄛㄐㄧㆵㆤ,,stse,sche,ㄒㄐㆤ,,True,False
 燕麥奶,iàn-be̍h-ling,16,iàn-be̍h-leng,ian3beh8ling1,ian3beh8leng1,ㄧㄢ˪ㆠㆤㆷ̇ㄌㄧㄥ,,ianbehling,ianbehleng,ㄧㄢㆠㆤㆷㄌㄧㄥ,,ibl,ibl,ㄧㆠㄌ,,True,False
 燕麥奶,iàn-be̍h-ni,16,iàn-be̍h-ni,ian3beh8ni1,ian3beh8ni1,ㄧㄢ˪ㆠㆤㆷ̇ㄋㄧ,,ianbehni,ianbehni,ㄧㄢㆠㆤㆷㄋㄧ,,ibn,ibn,ㄧㆠㄋ,,True,False
 爆發力,po̍k-huat-li̍k,16,po̍k-hoat-le̍k,pok8huat4lik8,pok8hoat4lek8,ㄅㆦㆻ̇ㄏㄨㄚㆵㄌㄧㆻ̇,,pokhuatlik,pokhoatlek,ㄅㆦㆻㄏㄨㄚㆵㄌㄧㆻ,,phl,phl,ㄅㄏㄌ,,True,False
@@ -1317,6 +1324,9 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 生成式,sing-sîng-sik,16,seng-sêng-sek,sing1sing5sik4,seng1seng5sek4,ㄒㄧㄥㄒㄧㄥˊㄒㄧㆻ,,singsingsik,sengsengsek,ㄒㄧㄥㄒㄧㄥㄒㄧㆻ,,sss,sss,ㄒㄒㄒ,,True,False
 生湠地,senn-thuànn-tē,16,seⁿ-thòaⁿ-tē,senn1thuann3te7,senn1thoann3te7,ㄙㆥㄊㄨㆩ˪ㄉㆤ˫,,sennthuannte,sennthoannte,ㄙㆥㄊㄨㆩㄉㆤ,,stht,stht,ㄙㄊㄉ,,True,False
 生湠地,sinn-thuànn-tuē,16,siⁿ-thòaⁿ-tōe,sinn1thuann3tue7,sinn1thoann3toe7,ㄒㆪㄊㄨㆩ˪ㄉㄨㆤ˫,,sinnthuanntue,sinnthoanntoe,ㄒㆪㄊㄨㆩㄉㄨㆤ,,stht,stht,ㄒㄊㄉ,,True,False
+用sai的,iōng sai--ê,16,iōng sai--ê,iong7sai1e5,iong7sai1e5,ㄧㆲ˫ㄙㄞㆤˊ,,iongsaie,iongsaie,ㄧㆲㄙㄞㆤ,,ise,ise,ㄧㄙㆤ,,True,False
+用捒的,iōng sak--ê,16,iōng sak--ê,iong7sak4e5,iong7sak4e5,ㄧㆲ˫ㄙㄚㆻㆤˊ,,iongsake,iongsake,ㄧㆲㄙㄚㆻㆤ,,ise,ise,ㄧㄙㆤ,,True,False
+用搝的,iōng giú--ê,16,iōng giú--ê,iong7giu2e5,iong7giu2e5,ㄧㆲ˫ㆣㄧㄨˋㆤˊ,,ionggiue,ionggiue,ㄧㆲㆣㄧㄨㆤ,,ige,ige,ㄧㆣㆤ,,True,False
 界內球,kài-lāi-kiû,16,kài-lāi-kiû,kai3lai7kiu5,kai3lai7kiu5,ㄍㄞ˪ㄌㄞ˫ㄍㄧㄨˊ,,kailaikiu,kailaikiu,ㄍㄞㄌㄞㄍㄧㄨ,,klk,klk,ㄍㄌㄍ,,True,False
 界外球,kài-guā-kiû,16,kài-gōa-kiû,kai3gua7kiu5,kai3goa7kiu5,ㄍㄞ˪ㆣㄨㄚ˫ㄍㄧㄨˊ,,kaiguakiu,kaigoakiu,ㄍㄞㆣㄨㄚㄍㄧㄨ,,kgk,kgk,ㄍㆣㄍ,,True,True
 番薯球,han-tsî-kiû,16,han-chî-kiû,han1tsi5kiu5,han1chi5kiu5,ㄏㄢㄐㄧˊㄍㄧㄨˊ,,hantsikiu,hanchikiu,ㄏㄢㄐㄧㄍㄧㄨ,,htsk,hchk,ㄏㄐㄍ,,True,False
@@ -1346,7 +1356,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 目眉膠,ba̍k-bâi-ka,16,ba̍k-bâi-ka,bak8bai5ka1,bak8bai5ka1,ㆠㄚㆻ̇ㆠㄞˊㄍㄚ,,bakbaika,bakbaika,ㆠㄚㆻㆠㄞㄍㄚ,,bbk,bbk,ㆠㆠㄍ,,True,False
 目睭頭,ba̍k-tsiu-thâu,16,ba̍k-chiu-thâu,bak8tsiu1thau5,bak8chiu1thau5,ㆠㄚㆻ̇ㄐㄧㄨㄊㄠˊ,,baktsiuthau,bakchiuthau,ㆠㄚㆻㄐㄧㄨㄊㄠ,,btsth,bchth,ㆠㄐㄊ,,True,False
 直排輪,ti̍t-pâi-lián,16,ti̍t-pâi-lián,tit8pai5lian2,tit8pai5lian2,ㄉㄧㆵ̇ㄅㄞˊㄌㄧㄢˋ,,titpailian,titpailian,ㄉㄧㆵㄅㄞㄌㄧㄢ,,tpl,tpl,ㄉㄅㄌ,,True,False
-直的,ti̍t--ê,16,ti̍t--ê,tit8e5,tit8e5,ㄉㄧㆵ̇ㆤˊ,,tite,tite,ㄉㄧㆵㆤ,,te,te,ㄉㆤ,,True,False
 真假值,tsin-ké-ta̍t,16,chin-ké-ta̍t,tsin1ke2tat8,chin1ke2tat8,ㄐㄧㄣㄍㆤˋㄉㄚㆵ̇,,tsinketat,chinketat,ㄐㄧㄣㄍㆤㄉㄚㆵ,,tskt,chkt,ㄐㄍㄉ,,True,False
 眼影盤,gán-iánn-puânn,16,gán-iáⁿ-pôaⁿ,gan2iann2puann5,gan2iann2poann5,ㆣㄢˋㄧㆩˋㄅㄨㆩˊ,,ganiannpuann,ganiannpoann,ㆣㄢㄧㆩㄅㄨㆩ,,gip,gip,ㆣㄧㄅ,,True,False
 眼影筅,gán-iánn-tshíng,16,gán-iáⁿ-chhéng,gan2iann2tshing2,gan2iann2chheng2,ㆣㄢˋㄧㆩˋㄑㄧㄥˋ,,ganianntshing,ganiannchheng,ㆣㄢㄧㆩㄑㄧㄥ,,gitsh,gichh,ㆣㄧㄑ,,True,False
@@ -1389,7 +1398,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 綠奶茶,li̍k-ni-tê,16,le̍k-ni-tê,lik8ni1te5,lek8ni1te5,ㄌㄧㆻ̇ㄋㄧㄉㆤˊ,,liknite,leknite,ㄌㄧㆻㄋㄧㄉㆤ,,lnt,lnt,ㄌㄋㄉ,,True,False
 網仔瓜,bāng-á-kue,16,bāng-á-koe,bang7a2kue1,bang7a2koe1,ㆠㄤ˫ㄚˋㄍㄨㆤ,,bangakue,bangakoe,ㆠㄤㄚㄍㄨㆤ,,bak,bak,ㆠㄚㄍ,,True,False
 網仔篩,bāng-á-thai,16,bāng-á-thai,bang7a2thai1,bang7a2thai1,ㆠㄤ˫ㄚˋㄊㄞ,,bangathai,bangathai,ㆠㄤㄚㄊㄞ,,bath,bath,ㆠㄚㄊ,,True,False
-緊的,kín--ê,16,kín--ê,kin2e5,kin2e5,ㄍㄧㄣˋㆤˊ,,kine,kine,ㄍㄧㄣㆤ,,ke,ke,ㄍㆤ,,True,False
 練習生,liān-si̍p-sing,16,liān-si̍p-seng,lian7sip8sing1,lian7sip8seng1,ㄌㄧㄢ˫ㄒㄧㆴ̇ㄒㄧㄥ,,liansipsing,liansipseng,ㄌㄧㄢㄒㄧㆴㄒㄧㄥ,,lss,lss,ㄌㄒㄒ,,True,False
 總教練,tsóng-kàu-liān,16,chóng-kàu-liān,tsong2kau3lian7,chong2kau3lian7,ㄗㆲˋㄍㄠ˪ㄌㄧㄢ˫,,tsongkaulian,chongkaulian,ㄗㆲㄍㄠㄌㄧㄢ,,tskl,chkl,ㄗㄍㄌ,,True,False
 羅宋湯,lô-sòng-thng,16,lô-sòng-thng,lo5song3thng1,lo5song3thng1,ㄌㄛˊㄙㆲ˪ㄊㆭ,,losongthng,losongthng,ㄌㄛㄙㆲㄊㆭ,,lsth,lsth,ㄌㄙㄊ,,True,False
@@ -1421,6 +1429,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 膨粉筅,phòng-hún tshíng,16,phòng-hún chhéng,phong3hun2tshing2,phong3hun2chheng2,ㄆㆲ˪ㄏㄨㄣˋㄑㄧㄥˋ,,phonghuntshing,phonghunchheng,ㄆㆲㄏㄨㄣㄑㄧㄥ,,phhtsh,phhchh,ㄆㄏㄑ,,True,False
 膨粉餅,phòng-hún-piánn,16,phòng-hún-piáⁿ,phong3hun2piann2,phong3hun2piann2,ㄆㆲ˪ㄏㄨㄣˋㄅㄧㆩˋ,,phonghunpiann,phonghunpiann,ㄆㆲㄏㄨㄣㄅㄧㆩ,,phhp,phhp,ㄆㄏㄅ,,True,False
 膽固醇,tánn-kòo-sûn,16,táⁿ-kò͘-sûn,tann2koo3sun5,tann2koo3sun5,ㄉㆩˋㄍㆦ˪ㄙㄨㄣˊ,,tannkoosun,tannkoosun,ㄉㆩㄍㆦㄙㄨㄣ,,tks,tks,ㄉㄍㄙ,,True,False
+自培的,tsū-puê--ê,16,chū-pôe--ê,tsu7pue5e5,chu7poe5e5,ㄗㄨ˫ㄅㄨㆤˊㆤˊ,,tsupuee,chupoee,ㄗㄨㄅㄨㆤㆤ,,tspe,chpe,ㄗㄅㆤ,,True,False
 自由跤,tsū-iû-kha,16,chū-iû-kha,tsu7iu5kha1,chu7iu5kha1,ㄗㄨ˫ㄧㄨˊㄎㄚ,,tsuiukha,chuiukha,ㄗㄨㄧㄨㄎㄚ,,tsikh,chikh,ㄗㄧㄎ,,True,False
 自由車,tsū-iû-tshia,16,chū-iû-chhia,tsu7iu5tshia1,chu7iu5chhia1,ㄗㄨ˫ㄧㄨˊㄑㄧㄚ,,tsuiutshia,chuiuchhia,ㄗㄨㄧㄨㄑㄧㄚ,,tsitsh,chichh,ㄗㄧㄑ,,True,False
 自責分,tsū-tsik-hun,16,chū-chek-hun,tsu7tsik4hun1,chu7chek4hun1,ㄗㄨ˫ㄐㄧㆻㄏㄨㄣ,,tsutsikhun,chuchekhun,ㄗㄨㄐㄧㆻㄏㄨㄣ,,tstsh,chchh,ㄗㄐㄏ,,True,False
@@ -1440,6 +1449,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 菇類湯,koo-luī-thng,16,ko͘-lūi-thng,koo1lui7thng1,koo1lui7thng1,ㄍㆦㄌㄨㄧ˫ㄊㆭ,,kooluithng,kooluithng,ㄍㆦㄌㄨㄧㄊㆭ,,klth,klth,ㄍㄌㄊ,,True,False
 菇類醬,koo-luī-tsiùnn,16,ko͘-lūi-chiùⁿ,koo1lui7tsiunn3,koo1lui7chiunn3,ㄍㆦㄌㄨㄧ˫ㄐㄧㆫ˪,,kooluitsiunn,kooluichiunn,ㄍㆦㄌㄨㄧㄐㄧㆫ,,klts,klch,ㄍㄌㄐ,,True,False
 菇類麵,koo-luī-mī,16,ko͘-lūi-mī,koo1lui7mi7,koo1lui7mi7,ㄍㆦㄌㄨㄧ˫ㄇㄧ˫,,kooluimi,kooluimi,ㄍㆦㄌㄨㄧㄇㄧ,,klm,klm,ㄍㄌㄇ,,True,False
+萬能的,bān-lîng--ê,16,bān-lêng--ê,ban7ling5e5,ban7leng5e5,ㆠㄢ˫ㄌㄧㄥˊㆤˊ,,banlinge,banlenge,ㆠㄢㄌㄧㄥㆤ,,ble,ble,ㆠㄌㆤ,,True,False
 落崎賽,lo̍h-kiā-sài,16,lo̍h-kiā-sài,loh8kia7sai3,loh8kia7sai3,ㄌㄛㆷ̇ㄍㄧㄚ˫ㄙㄞ˪,,lohkiasai,lohkiasai,ㄌㄛㆷㄍㄧㄚㄙㄞ,,lks,lks,ㄌㄍㄙ,,True,False
 葉黃素,ia̍p-hông-sòo,16,ia̍p-hông-sò͘,iap8hong5soo3,iap8hong5soo3,ㄧㄚㆴ̇ㄏㆲˊㄙㆦ˪,,iaphongsoo,iaphongsoo,ㄧㄚㆴㄏㆲㄙㆦ,,ihs,ihs,ㄧㄏㄙ,,True,False
 著球點,tio̍h-kiû-tiám,16,tio̍h-kiû-tiám,tioh8kiu5tiam2,tioh8kiu5tiam2,ㄉㄧㄛㆷ̇ㄍㄧㄨˊㄉㄧㆰˋ,,tiohkiutiam,tiohkiutiam,ㄉㄧㄛㆷㄍㄧㄨㄉㄧㆰ,,tkt,tkt,ㄉㄍㄉ,,True,False
@@ -1495,9 +1505,12 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 豬流感,tu-liû-kám,16,tu-liû-kám,tu1liu5kam2,tu1liu5kam2,ㄉㄨㄌㄧㄨˊㄍㆰˋ,,tuliukam,tuliukam,ㄉㄨㄌㄧㄨㄍㆰ,,tlk,tlk,ㄉㄌㄍ,,True,False
 貴賓狗,kuì-pin-káu,16,kùi-pin-káu,kui3pin1kau2,kui3pin1kau2,ㄍㄨㄧ˪ㄅㄧㄣㄍㄠˋ,,kuipinkau,kuipinkau,ㄍㄨㄧㄅㄧㄣㄍㄠ,,kpk,kpk,ㄍㄅㄍ,,True,False
 費南雪,huì-lâm-seh,16,hùi-lâm-seh,hui3lam5seh4,hui3lam5seh4,ㄏㄨㄧ˪ㄌㆰˊㄙㆤㆷ,,huilamseh,huilamseh,ㄏㄨㄧㄌㆰㄙㆤㆷ,,hls,hls,ㄏㄌㄙ,,True,False
+貼起去,tah--khí-khì,16,tah--khí-khì,tah4khi2khi3,tah4khi2khi3,ㄉㄚㆷㄎㄧˋㄎㄧ˪,,tahkhikhi,tahkhikhi,ㄉㄚㆷㄎㄧㄎㄧ,,tkhkh,tkhkh,ㄉㄎㄎ,,True,False
 資料庫,tsu-liāu-khòo,16,chu-liāu-khò͘,tsu1liau7khoo3,chu1liau7khoo3,ㄗㄨㄌㄧㄠ˫ㄎㆦ˪,,tsuliaukhoo,chuliaukhoo,ㄗㄨㄌㄧㄠㄎㆦ,,tslkh,chlkh,ㄗㄌㄎ,,True,False
 賽末點,sài-bua̍t-tiám,16,sài-boa̍t-tiám,sai3buat8tiam2,sai3boat8tiam2,ㄙㄞ˪ㆠㄨㄚㆵ̇ㄉㄧㆰˋ,,saibuattiam,saiboattiam,ㄙㄞㆠㄨㄚㆵㄉㄧㆰ,,sbt,sbt,ㄙㆠㄉ,,True,False
 走掛拍,tsáu-kuà-phah,16,cháu-kòa-phah,tsau2kua3phah4,chau2koa3phah4,ㄗㄠˋㄍㄨㄚ˪ㄆㄚㆷ,,tsaukuaphah,chaukoaphah,ㄗㄠㄍㄨㄚㄆㄚㆷ,,tskph,chkph,ㄗㄍㄆ,,True,False
+走橫的,tsáu huâinn--ê,16,cháu hoâiⁿ--ê,tsau2huainn5e5,chau2hoainn5e5,ㄗㄠˋㄏㄨㆮˊㆤˊ,,tsauhuainne,chauhoainne,ㄗㄠㄏㄨㆮㆤ,,tshe,chhe,ㄗㄏㆤ,,True,False
+走直的,tsáu ti̍t--ê,16,cháu ti̍t--ê,tsau2tit8e5,chau2tit8e5,ㄗㄠˋㄉㄧㆵ̇ㆤˊ,,tsautite,chautite,ㄗㄠㄉㄧㆵㆤ,,tste,chte,ㄗㄉㆤ,,True,False
 起泡片,khí-pho-phìnn,16,khí-pho-phìⁿ,khi2pho1phinn3,khi2pho1phinn3,ㄎㄧˋㄆㄛㄆㆪ˪,,khiphophinn,khiphophinn,ㄎㄧㄆㄛㄆㆪ,,khphph,khphph,ㄎㄆㄆ,,True,False
 起跑線,khí-pháu-suànn,16,khí-pháu-sòaⁿ,khi2phau2suann3,khi2phau2soann3,ㄎㄧˋㄆㄠˋㄙㄨㆩ˪,,khiphausuann,khiphausoann,ㄎㄧㄆㄠㄙㄨㆩ,,khphs,khphs,ㄎㄆㄙ,,True,False
 起跑點,khí-pháu-tiám,16,khí-pháu-tiám,khi2phau2tiam2,khi2phau2tiam2,ㄎㄧˋㄆㄠˋㄉㄧㆰˋ,,khiphautiam,khiphautiam,ㄎㄧㄆㄠㄉㄧㆰ,,khpht,khpht,ㄎㄆㄉ,,True,False
@@ -1520,7 +1533,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 載入中,tsài-li̍p-tiong,16,chài-li̍p-tiong,tsai3lip8tiong1,chai3lip8tiong1,ㄗㄞ˪ㄌㄧㆴ̇ㄉㄧㆲ,,tsailiptiong,chailiptiong,ㄗㄞㄌㄧㆴㄉㄧㆲ,,tslt,chlt,ㄗㄌㄉ,,True,False
 輸入欄,su-ji̍p-nuâ,16,su-ji̍p-nôa,su1jip8nua5,su1jip8noa5,ㄙㄨㆢㄧㆴ̇ㄋㄨㄚˊ,,sujipnua,sujipnoa,ㄙㄨㆢㄧㆴㄋㄨㄚ,,sjn,sjn,ㄙㆢㄋ,,True,False
 輸入欄,su-li̍p-nuâ,16,su-li̍p-nôa,su1lip8nua5,su1lip8noa5,ㄙㄨㄌㄧㆴ̇ㄋㄨㄚˊ,,sulipnua,sulipnoa,ㄙㄨㄌㄧㆴㄋㄨㄚ,,sln,sln,ㄙㄌㄋ,,True,False
-輾的,lián--ê,16,lián--ê,lian2e5,lian2e5,ㄌㄧㄢˋㆤˊ,,liane,liane,ㄌㄧㄢㆤ,,le,le,ㄌㆤ,,True,True
 轉接頭,tsuán-tsiap-thâu,16,choán-chiap-thâu,tsuan2tsiap4thau5,choan2chiap4thau5,ㄗㄨㄢˋㄐㄧㄚㆴㄊㄠˊ,,tsuantsiapthau,choanchiapthau,ㄗㄨㄢㄐㄧㄚㆴㄊㄠ,,tststh,chchth,ㄗㄐㄊ,,True,False
 迷客夏,bê-kheh-hā,16,bê-kheh-hā,be5kheh4ha7,be5kheh4ha7,ㆠㆤˊㄎㆤㆷㄏㄚ˫,,bekhehha,bekhehha,ㆠㆤㄎㆤㆷㄏㄚ,,bkhh,bkhh,ㆠㄎㄏ,,True,False
 迷眾頁,bê-tsiòng-ia̍h,16,bê-chiòng-ia̍h,be5tsiong3iah8,be5chiong3iah8,ㆠㆤˊㄐㄧㆲ˪ㄧㄚㆷ̇,,betsiongiah,bechiongiah,ㆠㆤㄐㄧㆲㄧㄚㆷ,,btsi,bchi,ㆠㄐㄧ,,True,False
@@ -1531,6 +1543,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 過路人,kuè-lōo-lâng,16,kòe-lō͘-lâng,kue3loo7lang5,koe3loo7lang5,ㄍㄨㆤ˪ㄌㆦ˫ㄌㄤˊ,,kueloolang,koeloolang,ㄍㄨㆤㄌㆦㄌㄤ,,kll,kll,ㄍㄌㄌ,,True,False
 遠近法,hn̄g-kīn-huat,16,hn̄g-kīn-hoat,hng7kin7huat4,hng7kin7hoat4,ㄏㆭ˫ㄍㄧㄣ˫ㄏㄨㄚㆵ,,hngkinhuat,hngkinhoat,ㄏㆭㄍㄧㄣㄏㄨㄚㆵ,,hkh,hkh,ㄏㄍㄏ,,True,False
 遠近法,hn̄g-kūn-huat,16,hn̄g-kūn-hoat,hng7kun7huat4,hng7kun7hoat4,ㄏㆭ˫ㄍㄨㄣ˫ㄏㄨㄚㆵ,,hngkunhuat,hngkunhoat,ㄏㆭㄍㄨㄣㄏㄨㄚㆵ,,hkh,hkh,ㄏㄍㄏ,,True,False
+邊仔面,pinn--á-bīn,16,piⁿ--á-bīn,pinn1a2bin7,pinn1a2bin7,ㄅㆪㄚˋㆠㄧㄣ˫,,pinnabin,pinnabin,ㄅㆪㄚㆠㄧㄣ,,pab,pab,ㄅㄚㆠ,,True,False
 邊緣人,pian-iân-jîn,16,pian-iân-jîn,pian1ian5jin5,pian1ian5jin5,ㄅㄧㄢㄧㄢˊㆢㄧㄣˊ,,pianianjin,pianianjin,ㄅㄧㄢㄧㄢㆢㄧㄣ,,pij,pij,ㄅㄧㆢ,,True,False
 酸種麭,sng-tsíng-pháng,16,sng-chéng-pháng,sng1tsing2phang2,sng1cheng2phang2,ㄙㆭㄐㄧㄥˋㄆㄤˋ,,sngtsingphang,sngchengphang,ㄙㆭㄐㄧㄥㄆㄤ,,stsph,schph,ㄙㄐㄆ,,True,False
 酸薟湯,sng-hiam-thng,16,sng-hiam-thng,sng1hiam1thng1,sng1hiam1thng1,ㄙㆭㄏㄧㆰㄊㆭ,,snghiamthng,snghiamthng,ㄙㆭㄏㄧㆰㄊㆭ,,shth,shth,ㄙㄏㄊ,,True,False
@@ -1543,6 +1556,7 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 金萱茶,kim-suan-tê,16,kim-soan-tê,kim1suan1te5,kim1soan1te5,ㄍㄧㆬㄙㄨㄢㄉㆤˊ,,kimsuante,kimsoante,ㄍㄧㆬㄙㄨㄢㄉㆤ,,kst,kst,ㄍㄙㄉ,,True,False
 鈉含量,nà-hâm-liōng,16,nà-hâm-liōng,na3ham5liong7,na3ham5liong7,ㄋㄚ˪ㄏㆰˊㄌㄧㆲ˫,,nahamliong,nahamliong,ㄋㄚㄏㆰㄌㄧㆲ,,nhl,nhl,ㄋㄏㄌ,,True,False
 鈕仔餅,liú-á-piánn,16,liú-á-piáⁿ,liu2a2piann2,liu2a2piann2,ㄌㄧㄨˋㄚˋㄅㄧㆩˋ,,liuapiann,liuapiann,ㄌㄧㄨㄚㄅㄧㆩ,,lap,lap,ㄌㄚㄅ,,True,False
+鉸落來,ka--lo̍h-lâi,16,ka--lo̍h-lâi,ka1loh8lai5,ka1loh8lai5,ㄍㄚㄌㄛㆷ̇ㄌㄞˊ,,kalohlai,kalohlai,ㄍㄚㄌㄛㆷㄌㄞ,,kll,kll,ㄍㄌㄌ,,True,False
 銃子球,tshìng-tsí-kiû,16,chhèng-chí-kiû,tshing3tsi2kiu5,chheng3chi2kiu5,ㄑㄧㄥ˪ㄐㄧˋㄍㄧㄨˊ,,tshingtsikiu,chhengchikiu,ㄑㄧㄥㄐㄧㄍㄧㄨ,,tshtsk,chhchk,ㄑㄐㄍ,,True,False
 鋁箔紙,lī-po̍h-tsuá,16,lī-po̍h-chóa,li7poh8tsua2,li7poh8choa2,ㄌㄧ˫ㄅㄛㆷ̇ㄗㄨㄚˋ,,lipohtsua,lipohchoa,ㄌㄧㄅㄛㆷㄗㄨㄚ,,lpts,lpch,ㄌㄅㄗ,,True,False
 鋁箔紙,lū-po̍h-tsuá,16,lū-po̍h-chóa,lu7poh8tsua2,lu7poh8choa2,ㄌㄨ˫ㄅㄛㆷ̇ㄗㄨㄚˋ,,lupohtsua,lupohchoa,ㄌㄨㄅㄛㆷㄗㄨㄚ,,lpts,lpch,ㄌㄅㄗ,,True,False
@@ -1550,8 +1564,11 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 長打率,tn̂g-tánn-lu̍t,16,tn̂g-táⁿ-lu̍t,tng5tann2lut8,tng5tann2lut8,ㄉㆭˊㄉㆩˋㄌㄨㆵ̇,,tngtannlut,tngtannlut,ㄉㆭㄉㆩㄌㄨㆵ,,ttl,ttl,ㄉㄉㄌ,,True,False
 開發者,khai-huat-tsiá,16,khai-hoat-chiá,khai1huat4tsia2,khai1hoat4chia2,ㄎㄞㄏㄨㄚㆵㄐㄧㄚˋ,,khaihuattsia,khaihoatchia,ㄎㄞㄏㄨㄚㆵㄐㄧㄚ,,khhts,khhch,ㄎㄏㄐ,,True,False
 開講室,khai-káng-sik,16,khai-káng-sek,khai1kang2sik4,khai1kang2sek4,ㄎㄞㄍㄤˋㄒㄧㆻ,,khaikangsik,khaikangsek,ㄎㄞㄍㄤㄒㄧㆻ,,khks,khks,ㄎㄍㄒ,,True,False
+開路的,khui-lōo--ê,16,khui-lō͘--ê,khui1loo7e5,khui1loo7e5,ㄎㄨㄧㄌㆦ˫ㆤˊ,,khuilooe,khuilooe,ㄎㄨㄧㄌㆦㆤ,,khle,khle,ㄎㄌㆤ,,True,False
 閣踏壘,koh ta̍h-luí,16,koh ta̍h-lúi,koh4tah8lui2,koh4tah8lui2,ㄍㄛㆷㄉㄚㆷ̇ㄌㄨㄧˋ,,kohtahlui,kohtahlui,ㄍㄛㆷㄉㄚㆷㄌㄨㄧ,,ktl,ktl,ㄍㄉㄌ,,True,False
 閬位坐,làng-uī-tsē,16,làng-ūi-chē,lang3ui7tse7,lang3ui7che7,ㄌㄤ˪ㄨㄧ˫ㄗㆤ˫,,languitse,languiche,ㄌㄤㄨㄧㄗㆤ,,luts,luch,ㄌㄨㄗ,,True,False
+關門的,kuainn-mn̂g--ê,16,koaiⁿ-mn̂g--ê,kuainn1mng5e5,koainn1mng5e5,ㄍㄨㆮㄇㆭˊㆤˊ,,kuainnmnge,koainnmnge,ㄍㄨㆮㄇㆭㆤ,,kme,kme,ㄍㄇㆤ,,True,False
+關門的,kuinn-mn̂g--ê,16,kuiⁿ-mn̂g--ê,kuinn1mng5e5,kuinn1mng5e5,ㄍㄨㆪㄇㆭˊㆤˊ,,kuinnmnge,kuinnmnge,ㄍㄨㆪㄇㆭㆤ,,kme,kme,ㄍㄇㆤ,,True,False
 防曝乳,hông-pha̍k-jú,16,hông-pha̍k-jú,hong5phak8ju2,hong5phak8ju2,ㄏㆲˊㄆㄚㆻ̇ㆡㄨˋ,,hongphakju,hongphakju,ㄏㆲㄆㄚㆻㆡㄨ,,hphj,hphj,ㄏㄆㆡ,,True,False
 防曝乳,hông-pha̍k-lú,16,hông-pha̍k-lú,hong5phak8lu2,hong5phak8lu2,ㄏㆲˊㄆㄚㆻ̇ㄌㄨˋ,,hongphaklu,hongphaklu,ㄏㆲㄆㄚㆻㄌㄨ,,hphl,hphl,ㄏㄆㄌ,,True,False
 防禦率,hông-gū-lu̍t,16,hông-gū-lu̍t,hong5gu7lut8,hong5gu7lut8,ㄏㆲˊㆣㄨ˫ㄌㄨㆵ̇,,honggulut,honggulut,ㄏㆲㆣㄨㄌㄨㆵ,,hgl,hgl,ㄏㆣㄌ,,True,False
@@ -1626,7 +1643,6 @@ tshì-sù餅,tshì-sù-piánn,16,chhì-sù-piáⁿ,tshi3su3piann2,chhi3su3piann2
 ,ang-ta su-ló,12,ang-ta su-ló,ang1ta1su1lo2,ang1ta1su1lo2,ㄤㄉㄚㄙㄨㄌㄛˋ,,angtasulo,angtasulo,ㄤㄉㄚㄙㄨㄌㄛ,,atsl,atsl,ㄤㄉㄙㄌ,,True,False
 ,góo-looh àu-tooh,12,gó͘-lo͘h àu-to͘h,goo2looh4au3tooh4,goo2looh4au3tooh4,ㆣㆦˋㄌㆦㆷㄠ˪ㄉㆦㆷ,,gooloohautooh,gooloohautooh,ㆣㆦㄌㆦㆷㄠㄉㆦㆷ,,glat,glat,ㆣㄌㄠㄉ,,True,False
 ,hu-lái àu-tooh,12,hu-lái àu-to͘h,hu1lai2au3tooh4,hu1lai2au3tooh4,ㄏㄨㄌㄞˋㄠ˪ㄉㆦㆷ,,hulaiautooh,hulaiautooh,ㄏㄨㄌㄞㄠㄉㆦㆷ,,hlat,hlat,ㄏㄌㄠㄉ,,True,False
-,iú-bih--ê,12,iú-bih--ê,iu2bih4e5,iu2bih4e5,ㄧㄨˋㆠㄧㆷㆤˊ,,iubihe,iubihe,ㄧㄨㆠㄧㆷㆤ,,ibe,ibe,ㄧㆠㆤ,,True,False
 ,ma-su-kha-phóng,12,ma-su-kha-phóng,ma1su1kha1phong2,ma1su1kha1phong2,ㄇㄚㄙㄨㄎㄚㄆㆲˋ,,masukhaphong,masukhaphong,ㄇㄚㄙㄨㄎㄚㄆㆲ,,mskhph,mskhph,ㄇㄙㄎㄆ,,True,False
 ,phi̋n-tsí hit-tah,12,phĭn-chí hit-tah,phin9tsi2hit4tah4,phin9chi2hit4tah4,ㄆㄧㄣˆㄐㄧˋㄏㄧㆵㄉㄚㆷ,,phintsihittah,phinchihittah,ㄆㄧㄣㄐㄧㄏㄧㆵㄉㄚㆷ,,phtsht,phchht,ㄆㄐㄏㄉ,,True,False
 ,phi̋n-tsí làng-nah,12,phĭn-chí làng-nah,phin9tsi2lang3nah4,phin9chi2lang3nah4,ㄆㄧㄣˆㄐㄧˋㄌㄤ˪ㄋㄚㆷ,,phintsilangnah,phinchilangnah,ㄆㄧㄣㄐㄧㄌㄤㄋㄚㆷ,,phtsln,phchln,ㄆㄐㄌㄋ,,True,False
@@ -1691,7 +1707,6 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 修容粉餅,siu-iông hún-piánn,12,siu-iông hún-piáⁿ,siu1iong5hun2piann2,siu1iong5hun2piann2,ㄒㄧㄨㄧㆲˊㄏㄨㄣˋㄅㄧㆩˋ,,siuionghunpiann,siuionghunpiann,ㄒㄧㄨㄧㆲㄏㄨㄣㄅㄧㆩ,,sihp,sihp,ㄒㄧㄏㄅ,,True,False
 個資漏洩,kò-tsu lāu-sia̍p,12,kò-chu lāu-sia̍p,ko3tsu1lau7siap8,ko3chu1lau7siap8,ㄍㄛ˪ㄗㄨㄌㄠ˫ㄒㄧㄚㆴ̇,,kotsulausiap,kochulausiap,ㄍㄛㄗㄨㄌㄠㄒㄧㄚㆴ,,ktsls,kchls,ㄍㄗㄌㄒ,,True,False
 倒外野手,tò-guā-iá-tshiú,12,tò-gōa-iá-chhiú,to3gua7ia2tshiu2,to3goa7ia2chhiu2,ㄉㄛ˪ㆣㄨㄚ˫ㄧㄚˋㄑㄧㄨˋ,,toguaiatshiu,togoaiachhiu,ㄉㄛㆣㄨㄚㄧㄚㄑㄧㄨ,,tgitsh,tgichh,ㄉㆣㄧㄑ,,True,True
-倒鉤的,tò-kau--ê,12,tò-kau--ê,to3kau1e5,to3kau1e5,ㄉㄛ˪ㄍㄠㆤˊ,,tokaue,tokaue,ㄉㄛㄍㄠㆤ,,tke,tke,ㄉㄍㆤ,,True,False
 假目睫毛,ké-ba̍k-tsiah-mn̂g,12,ké-ba̍k-chiah-mn̂g,ke2bak8tsiah4mng5,ke2bak8chiah4mng5,ㄍㆤˋㆠㄚㆻ̇ㄐㄧㄚㆷㄇㆭˊ,,kebaktsiahmng,kebakchiahmng,ㄍㆤㆠㄚㆻㄐㄧㄚㆷㄇㆭ,,kbtsm,kbchm,ㄍㆠㄐㄇ,,True,False
 假目睫毛,ké-ba̍k-tsiap-mn̂g,12,ké-ba̍k-chiap-mn̂g,ke2bak8tsiap4mng5,ke2bak8chiap4mng5,ㄍㆤˋㆠㄚㆻ̇ㄐㄧㄚㆴㄇㆭˊ,,kebaktsiapmng,kebakchiapmng,ㄍㆤㆠㄚㆻㄐㄧㄚㆴㄇㆭ,,kbtsm,kbchm,ㄍㆠㄐㄇ,,True,False
 偏好設定,phian-hònn siat-tīng,12,phian-hòⁿ siat-tēng,phian1honn3siat4ting7,phian1honn3siat4teng7,ㄆㄧㄢㄏㆧ˪ㄒㄧㄚㆵㄉㄧㄥ˫,,phianhonnsiatting,phianhonnsiatteng,ㄆㄧㄢㄏㆧㄒㄧㄚㆵㄉㄧㄥ,,phhst,phhst,ㄆㄏㄒㄉ,,True,False
@@ -1753,7 +1768,6 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 外掛程式,guā-kuà tîng-sik,12,gōa-kòa têng-sek,gua7kua3ting5sik4,goa7koa3teng5sek4,ㆣㄨㄚ˫ㄍㄨㄚ˪ㄉㄧㄥˊㄒㄧㆻ,,guakuatingsik,goakoatengsek,ㆣㄨㄚㄍㄨㄚㄉㄧㄥㄒㄧㆻ,,gkts,gkts,ㆣㄍㄉㄒ,,True,True
 外籍勞工,guā-tsi̍k lô-kang,12,gōa-che̍k lô-kang,gua7tsik8lo5kang1,goa7chek8lo5kang1,ㆣㄨㄚ˫ㄐㄧㆻ̇ㄌㄛˊㄍㄤ,,guatsiklokang,goacheklokang,ㆣㄨㄚㄐㄧㆻㄌㄛㄍㄤ,,gtslk,gchlk,ㆣㄐㄌㄍ,,True,True
 外籍球員,guā-tsi̍k kiû-uân,12,gōa-che̍k kiû-oân,gua7tsik8kiu5uan5,goa7chek8kiu5oan5,ㆣㄨㄚ˫ㄐㄧㆻ̇ㄍㄧㄨˊㄨㄢˊ,,guatsikkiuuan,goachekkiuoan,ㆣㄨㄚㄐㄧㆻㄍㄧㄨㄨㄢ,,gtsku,gchko,ㆣㄐㄍㄨ,,True,True
-外籍的,guā-tsi̍k--ê,12,gōa-che̍k--ê,gua7tsik8e5,goa7chek8e5,ㆣㄨㄚ˫ㄐㄧㆻ̇ㆤˊ,,guatsike,goacheke,ㆣㄨㄚㄐㄧㆻㆤ,,gtse,gche,ㆣㄐㆤ,,True,True
 外線跑道,guā-suànn pháu-tō,12,gōa-sòaⁿ pháu-tō,gua7suann3phau2to7,goa7soann3phau2to7,ㆣㄨㄚ˫ㄙㄨㆩ˪ㄆㄠˋㄉㄛ˫,,guasuannphauto,goasoannphauto,ㆣㄨㄚㄙㄨㆩㄆㄠㄉㄛ,,gspht,gspht,ㆣㄙㄆㄉ,,True,True
 大雨特報,tuā-ú ti̍k-pò,12,tōa-ú te̍k-pò,tua7u2tik8po3,toa7u2tek8po3,ㄉㄨㄚ˫ㄨˋㄉㄧㆻ̇ㄅㄛ˪,,tuautikpo,toautekpo,ㄉㄨㄚㄨㄉㄧㆻㄅㄛ,,tutp,tutp,ㄉㄨㄉㄅ,,True,False
 天光之暝,thinn kng tsi mê,12,thiⁿ kng chi mê,thinn1kng1tsi1me5,thinn1kng1chi1me5,ㄊㆪㄍㆭㄐㄧㄇㆤˊ,,thinnkngtsime,thinnkngchime,ㄊㆪㄍㆭㄐㄧㄇㆤ,,thktsm,thkchm,ㄊㄍㄐㄇ,,True,False
@@ -1946,7 +1960,6 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 熱壓俗麭,lia̍t-ap sio̍k-pháng,12,lia̍t-ap sio̍k-pháng,liat8ap4siok8phang2,liat8ap4siok8phang2,ㄌㄧㄚㆵ̇ㄚㆴㄒㄧㆦㆻ̇ㄆㄤˋ,,liatapsiokphang,liatapsiokphang,ㄌㄧㄚㆵㄚㆴㄒㄧㆦㆻㄆㄤ,,lasph,lasph,ㄌㄚㄒㄆ,,True,False
 熱脹冷縮,jia̍t-tiòng-líng-sok,12,jia̍t-tiòng-léng-sok,jiat8tiong3ling2sok4,jiat8tiong3leng2sok4,ㆢㄧㄚㆵ̇ㄉㄧㆲ˪ㄌㄧㄥˋㄙㆦㆻ,,jiattionglingsok,jiattionglengsok,ㆢㄧㄚㆵㄉㄧㆲㄌㄧㄥㄙㆦㆻ,,jtls,jtls,ㆢㄉㄌㄙ,,True,False
 熱脹冷縮,lia̍t-tiòng-líng-sok,12,lia̍t-tiòng-léng-sok,liat8tiong3ling2sok4,liat8tiong3leng2sok4,ㄌㄧㄚㆵ̇ㄉㄧㆲ˪ㄌㄧㄥˋㄙㆦㆻ,,liattionglingsok,liattionglengsok,ㄌㄧㄚㆵㄉㄧㆲㄌㄧㄥㄙㆦㆻ,,ltls,ltls,ㄌㄉㄌㄙ,,True,False
-燒一下,sio--tsi̍t-ē,12,sio--chi̍t-ē,sio1tsit8e7,sio1chit8e7,ㄒㄧㄛㄐㄧㆵ̇ㆤ˫,,siotsite,siochite,ㄒㄧㄛㄐㄧㆵㆤ,,stse,sche,ㄒㄐㆤ,,True,False
 燒幾粒仔,sio kuí lia̍p-á,12,sio kúi lia̍p-á,sio1kui2liap8a2,sio1kui2liap8a2,ㄒㄧㄛㄍㄨㄧˋㄌㄧㄚㆴ̇ㄚˋ,,siokuiliapa,siokuiliapa,ㄒㄧㄛㄍㄨㄧㄌㄧㄚㆴㄚ,,skla,skla,ㄒㄍㄌㄚ,,True,False
 燒膨冷縮,sio-phòng-líng-sok,12,sio-phòng-léng-sok,sio1phong3ling2sok4,sio1phong3leng2sok4,ㄒㄧㄛㄆㆲ˪ㄌㄧㄥˋㄙㆦㆻ,,siophonglingsok,siophonglengsok,ㄒㄧㄛㄆㆲㄌㄧㄥㄙㆦㆻ,,sphls,sphls,ㄒㄆㄌㄙ,,True,False
 營養午餐,îng-ióng ngóo-tshan,12,êng-ióng ngó͘-chhan,ing5iong2ngoo2tshan1,eng5iong2ngoo2chhan1,ㄧㄥˊㄧㆲˋㄫㆦˋㄘㄢ,,ingiongngootshan,engiongngoochhan,ㄧㄥㄧㆲㄫㆦㄘㄢ,,iingtsh,eingchh,ㄧㄧㄫㄘ,,True,False
@@ -1965,9 +1978,6 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 生肌減油,sinn-ki kiám-iû,12,siⁿ-ki kiám-iû,sinn1ki1kiam2iu5,sinn1ki1kiam2iu5,ㄒㆪㄍㄧㄍㄧㆰˋㄧㄨˊ,,sinnkikiamiu,sinnkikiamiu,ㄒㆪㄍㄧㄍㄧㆰㄧㄨ,,skki,skki,ㄒㄍㄍㄧ,,True,False
 生酮飲食,sing-tông ím-si̍t,12,seng-tông ím-si̍t,sing1tong5im2sit8,seng1tong5im2sit8,ㄒㄧㄥㄉㆲˊㄧㆬˋㄒㄧㆵ̇,,singtongimsit,sengtongimsit,ㄒㄧㄥㄉㆲㄧㆬㄒㄧㆵ,,stis,stis,ㄒㄉㄧㄒ,,True,False
 產生得分,sán-sing tit-hun,12,sán-seng tit-hun,san2sing1tit4hun1,san2seng1tit4hun1,ㄙㄢˋㄒㄧㄥㄉㄧㆵㄏㄨㄣ,,sansingtithun,sansengtithun,ㄙㄢㄒㄧㄥㄉㄧㆵㄏㄨㄣ,,ssth,ssth,ㄙㄒㄉㄏ,,True,False
-用sai的,iōng sai--ê,12,iōng sai--ê,iong7sai1e5,iong7sai1e5,ㄧㆲ˫ㄙㄞㆤˊ,,iongsaie,iongsaie,ㄧㆲㄙㄞㆤ,,ise,ise,ㄧㄙㆤ,,True,False
-用捒的,iōng sak--ê,12,iōng sak--ê,iong7sak4e5,iong7sak4e5,ㄧㆲ˫ㄙㄚㆻㆤˊ,,iongsake,iongsake,ㄧㆲㄙㄚㆻㆤ,,ise,ise,ㄧㄙㆤ,,True,False
-用搝的,iōng giú--ê,12,iōng giú--ê,iong7giu2e5,iong7giu2e5,ㄧㆲ˫ㆣㄧㄨˋㆤˊ,,ionggiue,ionggiue,ㄧㆲㆣㄧㄨㆤ,,ige,ige,ㄧㆣㆤ,,True,False
 番麥羹湯,huan-be̍h kenn-thng,12,hoan-be̍h keⁿ-thng,huan1beh8kenn1thng1,hoan1beh8kenn1thng1,ㄏㄨㄢㆠㆤㆷ̇ㄍㆥㄊㆭ,,huanbehkennthng,hoanbehkennthng,ㄏㄨㄢㆠㆤㆷㄍㆥㄊㆭ,,hbkth,hbkth,ㄏㆠㄍㄊ,,True,False
 番麥羹湯,huan-be̍h kinn-thng,12,hoan-be̍h kiⁿ-thng,huan1beh8kinn1thng1,hoan1beh8kinn1thng1,ㄏㄨㄢㆠㆤㆷ̇ㄍㆪㄊㆭ,,huanbehkinnthng,hoanbehkinnthng,ㄏㄨㄢㆠㆤㆷㄍㆪㄊㆭ,,hbkth,hbkth,ㄏㆠㄍㄊ,,True,False
 畫面縮放,uē-bīn sok-hòng,12,ōe-bīn sok-hòng,ue7bin7sok4hong3,oe7bin7sok4hong3,ㄨㆤ˫ㆠㄧㄣ˫ㄙㆦㆻㄏㆲ˪,,uebinsokhong,oebinsokhong,ㄨㆤㆠㄧㄣㄙㆦㆻㄏㆲ,,ubsh,obsh,ㄨㆠㄙㄏ,,True,False
@@ -2037,7 +2047,6 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 育成教練,io̍k-sîng kàu-liān,12,io̍k-sêng kàu-liān,iok8sing5kau3lian7,iok8seng5kau3lian7,ㄧㆦㆻ̇ㄒㄧㄥˊㄍㄠ˪ㄌㄧㄢ˫,,ioksingkaulian,ioksengkaulian,ㄧㆦㆻㄒㄧㄥㄍㄠㄌㄧㄢ,,iskl,iskl,ㄧㄒㄍㄌ,,True,False
 腿二頭肌,thuí-jī-thâu-ki,12,thúi-jī-thâu-ki,thui2ji7thau5ki1,thui2ji7thau5ki1,ㄊㄨㄧˋㆢㄧ˫ㄊㄠˊㄍㄧ,,thuijithauki,thuijithauki,ㄊㄨㄧㆢㄧㄊㄠㄍㄧ,,thjthk,thjthk,ㄊㆢㄊㄍ,,True,False
 腿二頭肌,thuí-lī-thâu-ki,12,thúi-lī-thâu-ki,thui2li7thau5ki1,thui2li7thau5ki1,ㄊㄨㄧˋㄌㄧ˫ㄊㄠˊㄍㄧ,,thuilithauki,thuilithauki,ㄊㄨㄧㄌㄧㄊㄠㄍㄧ,,thlthk,thlthk,ㄊㄌㄊㄍ,,True,False
-自培的,tsū-puê--ê,12,chū-pôe--ê,tsu7pue5e5,chu7poe5e5,ㄗㄨ˫ㄅㄨㆤˊㆤˊ,,tsupuee,chupoee,ㄗㄨㄅㄨㆤㆤ,,tspe,chpe,ㄗㄅㆤ,,True,False
 自培選手,tsū-puê suán-tshiú,12,chū-pôe soán-chhiú,tsu7pue5suan2tshiu2,chu7poe5soan2chhiu2,ㄗㄨ˫ㄅㄨㆤˊㄙㄨㄢˋㄑㄧㄨˋ,,tsupuesuantshiu,chupoesoanchhiu,ㄗㄨㄅㄨㆤㄙㄨㄢㄑㄧㄨ,,tspstsh,chpschh,ㄗㄅㄙㄑ,,True,False
 自由組手,tsū-iû tsoo-tshiú,12,chū-iû cho͘-chhiú,tsu7iu5tsoo1tshiu2,chu7iu5choo1chhiu2,ㄗㄨ˫ㄧㄨˊㄗㆦㄑㄧㄨˋ,,tsuiutsootshiu,chuiuchoochhiu,ㄗㄨㄧㄨㄗㆦㄑㄧㄨ,,tsitstsh,chichchh,ㄗㄧㄗㄑ,,True,False
 自由體操,tsū-iû thé-tshau,12,chū-iû thé-chhau,tsu7iu5the2tshau1,chu7iu5the2chhau1,ㄗㄨ˫ㄧㄨˊㄊㆤˋㄘㄠ,,tsuiuthetshau,chuiuthechhau,ㄗㄨㄧㄨㄊㆤㄘㄠ,,tsithtsh,chithchh,ㄗㄧㄊㄘ,,True,False
@@ -2050,7 +2059,6 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 英雄聯盟,ing-hiông liân-bîng,12,eng-hiông liân-bêng,ing1hiong5lian5bing5,eng1hiong5lian5beng5,ㄧㄥㄏㄧㆲˊㄌㄧㄢˊㆠㄧㄥˊ,,inghionglianbing,enghionglianbeng,ㄧㄥㄏㄧㆲㄌㄧㄢㆠㄧㄥ,,ihlb,ehlb,ㄧㄏㄌㆠ,,True,False
 草埔 há-khih,tsháu-poo há-khih,12,chháu-po͘ há-khih,tshau2poo1ha2khih4,chhau2poo1ha2khih4,ㄘㄠˋㄅㆦㄏㄚˋㄎㄧㆷ,,tshaupoohakhih,chhaupoohakhih,ㄘㄠㄅㆦㄏㄚㄎㄧㆷ,,tshphkh,chhphkh,ㄘㄅㄏㄎ,,True,False
 菜頭簽餅,tshài-thâu-tshiam-piánn,12,chhài-thâu-chhiam-piáⁿ,tshai3thau5tshiam1piann2,chhai3thau5chhiam1piann2,ㄘㄞ˪ㄊㄠˊㄑㄧㆰㄅㄧㆩˋ,,tshaithautshiampiann,chhaithauchhiampiann,ㄘㄞㄊㄠㄑㄧㆰㄅㄧㆩ,,tshthtshp,chhthchhp,ㄘㄊㄑㄅ,,True,False
-萬能的,bān-lîng--ê,12,bān-lêng--ê,ban7ling5e5,ban7leng5e5,ㆠㄢ˫ㄌㄧㄥˊㆤˊ,,banlinge,banlenge,ㆠㄢㄌㄧㄥㆤ,,ble,ble,ㆠㄌㆤ,,True,False
 萬能選手,bān-lîng suán-tshiú,12,bān-lêng soán-chhiú,ban7ling5suan2tshiu2,ban7leng5soan2chhiu2,ㆠㄢ˫ㄌㄧㄥˊㄙㄨㄢˋㄑㄧㄨˋ,,banlingsuantshiu,banlengsoanchhiu,ㆠㄢㄌㄧㄥㄙㄨㄢㄑㄧㄨ,,blstsh,blschh,ㆠㄌㄙㄑ,,True,False
 蓄能設施,thiok-lîng siat-si,12,thiok-lêng siat-si,thiok4ling5siat4si1,thiok4leng5siat4si1,ㄊㄧㆦㆻㄌㄧㄥˊㄒㄧㄚㆵㄒㄧ,,thioklingsiatsi,thioklengsiatsi,ㄊㄧㆦㆻㄌㄧㄥㄒㄧㄚㆵㄒㄧ,,thlss,thlss,ㄊㄌㄒㄒ,,True,False
 蓄電設施,thiok-tiān siat-si,12,thiok-tiān siat-si,thiok4tian7siat4si1,thiok4tian7siat4si1,ㄊㄧㆦㆻㄉㄧㄢ˫ㄒㄧㄚㆵㄒㄧ,,thioktiansiatsi,thioktiansiatsi,ㄊㄧㆦㆻㄉㄧㄢㄒㄧㄚㆵㄒㄧ,,thtss,thtss,ㄊㄉㄒㄒ,,True,False
@@ -2078,11 +2086,8 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 諾羅病毒,lo̍k-lô pēnn-to̍k,12,lo̍k-lô pēⁿ-to̍k,lok8lo5penn7tok8,lok8lo5penn7tok8,ㄌㆦㆻ̇ㄌㄛˊㄅㆥ˫ㄉㆦㆻ̇,,loklopenntok,loklopenntok,ㄌㆦㆻㄌㄛㄅㆥㄉㆦㆻ,,llpt,llpt,ㄌㄌㄅㄉ,,True,False
 諾羅病毒,lo̍k-lô pīnn-to̍k,12,lo̍k-lô pīⁿ-to̍k,lok8lo5pinn7tok8,lok8lo5pinn7tok8,ㄌㆦㆻ̇ㄌㄛˊㄅㆪ˫ㄉㆦㆻ̇,,loklopinntok,loklopinntok,ㄌㆦㆻㄌㄛㄅㆪㄉㆦㆻ,,llpt,llpt,ㄌㄌㄅㄉ,,True,False
 豪雨特報,hô-ú ti̍k-pò,12,hô-ú te̍k-pò,ho5u2tik8po3,ho5u2tek8po3,ㄏㄛˊㄨˋㄉㄧㆻ̇ㄅㄛ˪,,houtikpo,houtekpo,ㄏㄛㄨㄉㄧㆻㄅㄛ,,hutp,hutp,ㄏㄨㄉㄅ,,True,False
-貼起去,tah--khí-khì,12,tah--khí-khì,tah4khi2khi3,tah4khi2khi3,ㄉㄚㆷㄎㄧˋㄎㄧ˪,,tahkhikhi,tahkhikhi,ㄉㄚㆷㄎㄧㄎㄧ,,tkhkh,tkhkh,ㄉㄎㄎ,,True,False
 資料鋏仔,tsu-liāu giap-á,12,chu-liāu giap-á,tsu1liau7giap4a2,chu1liau7giap4a2,ㄗㄨㄌㄧㄠ˫ㆣㄧㄚㆴㄚˋ,,tsuliaugiapa,chuliaugiapa,ㄗㄨㄌㄧㄠㆣㄧㄚㆴㄚ,,tslga,chlga,ㄗㄌㆣㄚ,,True,False
 走壘教練,tsáu-luí kàu-liān,12,cháu-lúi kàu-liān,tsau2lui2kau3lian7,chau2lui2kau3lian7,ㄗㄠˋㄌㄨㄧˋㄍㄠ˪ㄌㄧㄢ˫,,tsauluikaulian,chauluikaulian,ㄗㄠㄌㄨㄧㄍㄠㄌㄧㄢ,,tslkl,chlkl,ㄗㄌㄍㄌ,,True,False
-走橫的,tsáu huâinn--ê,12,cháu hoâiⁿ--ê,tsau2huainn5e5,chau2hoainn5e5,ㄗㄠˋㄏㄨㆮˊㆤˊ,,tsauhuainne,chauhoainne,ㄗㄠㄏㄨㆮㆤ,,tshe,chhe,ㄗㄏㆤ,,True,False
-走直的,tsáu ti̍t--ê,12,cháu ti̍t--ê,tsau2tit8e5,chau2tit8e5,ㄗㄠˋㄉㄧㆵ̇ㆤˊ,,tsautite,chautite,ㄗㄠㄉㄧㆵㆤ,,tste,chte,ㄗㄉㆤ,,True,False
 超級雷暴,tshiau-kip luî-pō,12,chhiau-kip lûi-pō,tshiau1kip4lui5po7,chhiau1kip4lui5po7,ㄑㄧㄠㄍㄧㆴㄌㄨㄧˊㄅㄛ˫,,tshiaukipluipo,chhiaukipluipo,ㄑㄧㄠㄍㄧㆴㄌㄨㄧㄅㄛ,,tshklp,chhklp,ㄑㄍㄌㄅ,,True,False
 越野趨雪,ua̍t-iá tshu-seh,12,oa̍t-iá chhu-seh,uat8ia2tshu1seh4,oat8ia2chhu1seh4,ㄨㄚㆵ̇ㄧㄚˋㄘㄨㄙㆤㆷ,,uatiatshuseh,oatiachhuseh,ㄨㄚㆵㄧㄚㄘㄨㄙㆤㆷ,,uitshs,oichhs,ㄨㄧㄘㄙ,,True,False
 趨輪趨冰,tshu-lián tshu-ping,12,chhu-lián chhu-peng,tshu1lian2tshu1ping1,chhu1lian2chhu1peng1,ㄘㄨㄌㄧㄢˋㄘㄨㄅㄧㄥ,,tshuliantshuping,chhulianchhupeng,ㄘㄨㄌㄧㄢㄘㄨㄅㄧㄥ,,tshltshp,chhlchhp,ㄘㄌㄘㄅ,,True,False
@@ -2111,25 +2116,20 @@ si-lí-khóng 筅,si-lí-khóng-tshíng,12,si-lí-khóng-chhéng,si1li2khong2tsh
 遮光kha-tián,jia-kng kha-tián,12,jia-kng kha-tián,jia1kng1kha1tian2,jia1kng1kha1tian2,ㆢㄧㄚㄍㆭㄎㄚㄉㄧㄢˋ,,jiakngkhatian,jiakngkhatian,ㆢㄧㄚㄍㆭㄎㄚㄉㄧㄢ,,jkkht,jkkht,ㆢㄍㄎㄉ,,True,False
 還稅於民,hîng-suè-î-bîn,12,hêng-sòe-î-bîn,hing5sue3i5bin5,heng5soe3i5bin5,ㄏㄧㄥˊㄙㄨㆤ˪ㄧˊㆠㄧㄣˊ,,hingsueibin,hengsoeibin,ㄏㄧㄥㄙㄨㆤㄧㆠㄧㄣ,,hsib,hsib,ㄏㄙㄧㆠ,,True,False
 還稅於民,hîng-sè-î-bîn,12,hêng-sè-î-bîn,hing5se3i5bin5,heng5se3i5bin5,ㄏㄧㄥˊㄙㆤ˪ㄧˊㆠㄧㄣˊ,,hingseibin,hengseibin,ㄏㄧㄥㄙㆤㄧㆠㄧㄣ,,hsib,hsib,ㄏㄙㄧㆠ,,True,False
-邊仔面,pinn--á-bīn,12,piⁿ--á-bīn,pinn1a2bin7,pinn1a2bin7,ㄅㆪㄚˋㆠㄧㄣ˫,,pinnabin,pinnabin,ㄅㆪㄚㆠㄧㄣ,,pab,pab,ㄅㄚㆠ,,True,False
 酒精棉片,tsiú-tsing mî-phìnn,12,chiú-cheng mî-phìⁿ,tsiu2tsing1mi5phinn3,chiu2cheng1mi5phinn3,ㄐㄧㄨˋㄐㄧㄥㄇㄧˊㄆㆪ˪,,tsiutsingmiphinn,chiuchengmiphinn,ㄐㄧㄨㄐㄧㄥㄇㄧㄆㆪ,,tstsmph,chchmph,ㄐㄐㄇㄆ,,True,False
 重量訓練,tāng-liōng hùn-liān,12,tāng-liōng hùn-liān,tang7liong7hun3lian7,tang7liong7hun3lian7,ㄉㄤ˫ㄌㄧㆲ˫ㄏㄨㄣ˪ㄌㄧㄢ˫,,tanglionghunlian,tanglionghunlian,ㄉㄤㄌㄧㆲㄏㄨㄣㄌㄧㄢ,,tlhl,tlhl,ㄉㄌㄏㄌ,,True,False
 野手教練,iá-tshiú kàu-liān,12,iá-chhiú kàu-liān,ia2tshiu2kau3lian7,ia2chhiu2kau3lian7,ㄧㄚˋㄑㄧㄨˋㄍㄠ˪ㄌㄧㄢ˫,,iatshiukaulian,iachhiukaulian,ㄧㄚㄑㄧㄨㄍㄠㄌㄧㄢ,,itshkl,ichhkl,ㄧㄑㄍㄌ,,True,False
 野手選擇,iá-tshiú suán-ti̍k,12,iá-chhiú soán-te̍k,ia2tshiu2suan2tik8,ia2chhiu2soan2tek8,ㄧㄚˋㄑㄧㄨˋㄙㄨㄢˋㄉㄧㆻ̇,,iatshiusuantik,iachhiusoantek,ㄧㄚㄑㄧㄨㄙㄨㄢㄉㄧㆻ,,itshst,ichhst,ㄧㄑㄙㄉ,,True,False
 金璇王梨,kim-suān ông-lâi,12,kim-soān ông-lâi,kim1suan7ong5lai5,kim1soan7ong5lai5,ㄍㄧㆬㄙㄨㄢ˫ㆲˊㄌㄞˊ,,kimsuanonglai,kimsoanonglai,ㄍㄧㆬㄙㄨㄢㆲㄌㄞ,,ksol,ksol,ㄍㄙㆲㄌ,,True,False
-鉸落來,ka--lo̍h-lâi,12,ka--lo̍h-lâi,ka1loh8lai5,ka1loh8lai5,ㄍㄚㄌㄛㆷ̇ㄌㄞˊ,,kalohlai,kalohlai,ㄍㄚㄌㄛㆷㄌㄞ,,kll,kll,ㄍㄌㄌ,,True,False
 銃子篋仔,tshìng-tsí kheh-á,12,chhèng-chí kheh-á,tshing3tsi2kheh4a2,chheng3chi2kheh4a2,ㄑㄧㄥ˪ㄐㄧˋㄎㆤㆷㄚˋ,,tshingtsikheha,chhengchikheha,ㄑㄧㄥㄐㄧㄎㆤㆷㄚ,,tshtskha,chhchkha,ㄑㄐㄎㄚ,,True,False
 鋸齒打線,kì-khí tánn-suànn,12,kì-khí táⁿ-sòaⁿ,ki3khi2tann2suann3,ki3khi2tann2soann3,ㄍㄧ˪ㄎㄧˋㄉㆩˋㄙㄨㆩ˪,,kikhitannsuann,kikhitannsoann,ㄍㄧㄎㄧㄉㆩㄙㄨㆩ,,kkhts,kkhts,ㄍㄎㄉㄙ,,True,False
 鋸齒打線,kù-khí tánn-suànn,12,kù-khí táⁿ-sòaⁿ,ku3khi2tann2suann3,ku3khi2tann2soann3,ㄍㄨ˪ㄎㄧˋㄉㆩˋㄙㄨㆩ˪,,kukhitannsuann,kukhitannsoann,ㄍㄨㄎㄧㄉㆩㄙㄨㆩ,,kkhts,kkhts,ㄍㄎㄉㄙ,,True,False
 鐵人三項,thih-lâng sann-hāng,12,thih-lâng saⁿ-hāng,thih4lang5sann1hang7,thih4lang5sann1hang7,ㄊㄧㆷㄌㄤˊㄙㆩㄏㄤ˫,,thihlangsannhang,thihlangsannhang,ㄊㄧㆷㄌㄤㄙㆩㄏㄤ,,thlsh,thlsh,ㄊㄌㄙㄏ,,True,False
 開場投手,khui-tiûnn tâu-tshiú,12,khui-tiûⁿ tâu-chhiú,khui1tiunn5tau5tshiu2,khui1tiunn5tau5chhiu2,ㄎㄨㄧㄉㄧㆫˊㄉㄠˊㄑㄧㄨˋ,,khuitiunntautshiu,khuitiunntauchhiu,ㄎㄨㄧㄉㄧㆫㄉㄠㄑㄧㄨ,,khtttsh,khttchh,ㄎㄉㄉㄑ,,True,False
 開路先鋒,khai-lōo sian-hong,12,khai-lō͘ sian-hong,khai1loo7sian1hong1,khai1loo7sian1hong1,ㄎㄞㄌㆦ˫ㄒㄧㄢㄏㆲ,,khailoosianhong,khailoosianhong,ㄎㄞㄌㆦㄒㄧㄢㄏㆲ,,khlsh,khlsh,ㄎㄌㄒㄏ,,True,False
-開路的,khui-lōo--ê,12,khui-lō͘--ê,khui1loo7e5,khui1loo7e5,ㄎㄨㄧㄌㆦ˫ㆤˊ,,khuilooe,khuilooe,ㄎㄨㄧㄌㆦㆤ,,khle,khle,ㄎㄌㆤ,,True,False
 閬歇時間,làng-hioh sî-kan,12,làng-hioh sî-kan,lang3hioh4si5kan1,lang3hioh4si5kan1,ㄌㄤ˪ㄏㄧㄛㆷㄒㄧˊㄍㄢ,,langhiohsikan,langhiohsikan,ㄌㄤㄏㄧㄛㆷㄒㄧㄍㄢ,,lhsk,lhsk,ㄌㄏㄒㄍ,,True,False
 關門投手,kuainn-mn̂g tâu-tshiú,12,koaiⁿ-mn̂g tâu-chhiú,kuainn1mng5tau5tshiu2,koainn1mng5tau5chhiu2,ㄍㄨㆮㄇㆭˊㄉㄠˊㄑㄧㄨˋ,,kuainnmngtautshiu,koainnmngtauchhiu,ㄍㄨㆮㄇㆭㄉㄠㄑㄧㄨ,,kmttsh,kmtchh,ㄍㄇㄉㄑ,,True,False
 關門投手,kuinn-mn̂g tâu-tshiú,12,kuiⁿ-mn̂g tâu-chhiú,kuinn1mng5tau5tshiu2,kuinn1mng5tau5chhiu2,ㄍㄨㆪㄇㆭˊㄉㄠˊㄑㄧㄨˋ,,kuinnmngtautshiu,kuinnmngtauchhiu,ㄍㄨㆪㄇㆭㄉㄠㄑㄧㄨ,,kmttsh,kmtchh,ㄍㄇㄉㄑ,,True,False
-關門的,kuainn-mn̂g--ê,12,koaiⁿ-mn̂g--ê,kuainn1mng5e5,koainn1mng5e5,ㄍㄨㆮㄇㆭˊㆤˊ,,kuainnmnge,koainnmnge,ㄍㄨㆮㄇㆭㆤ,,kme,kme,ㄍㄇㆤ,,True,False
-關門的,kuinn-mn̂g--ê,12,kuiⁿ-mn̂g--ê,kuinn1mng5e5,kuinn1mng5e5,ㄍㄨㆪㄇㆭˊㆤˊ,,kuinnmnge,kuinnmnge,ㄍㄨㆪㄇㆭㆤ,,kme,kme,ㄍㄇㆤ,,True,False
 防呆機制,hông-tai ki-tsè,12,hông-tai ki-chè,hong5tai1ki1tse3,hong5tai1ki1che3,ㄏㆲˊㄉㄞㄍㄧㄗㆤ˪,,hongtaikitse,hongtaikiche,ㄏㆲㄉㄞㄍㄧㄗㆤ,,htkts,htkch,ㄏㄉㄍㄗ,,True,False
 防曝係數,hông-pha̍k hē-sòo,12,hông-pha̍k hē-sò͘,hong5phak8he7soo3,hong5phak8he7soo3,ㄏㆲˊㄆㄚㆻ̇ㄏㆤ˫ㄙㆦ˪,,hongphakhesoo,hongphakhesoo,ㄏㆲㄆㄚㆻㄏㆤㄙㆦ,,hphhs,hphhs,ㄏㄆㄏㄙ,,True,False
 附加功能,hù-ka kong-lîng,12,hù-ka kong-lêng,hu3ka1kong1ling5,hu3ka1kong1leng5,ㄏㄨ˪ㄍㄚㄍㆲㄌㄧㄥˊ,,hukakongling,hukakongleng,ㄏㄨㄍㄚㄍㆲㄌㄧㄥ,,hkkl,hkkl,ㄏㄍㄍㄌ,,True,False

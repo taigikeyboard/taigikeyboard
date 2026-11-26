@@ -9,14 +9,14 @@ from pathlib import Path
 import pandas as pd
 
 from .cjk import is_cjk
+from .cleanup import count_syllables
 
 BASE_DEFAULT_FREQUENCY = 50
 
 
 def get_default_frequency(roman: str) -> int:
     """Fallback frequency derived from syllable count (fewer → more frequent)."""
-    syllable_count = len(roman.replace(" ", "-").split("-"))
-    return max(1, BASE_DEFAULT_FREQUENCY // syllable_count)
+    return max(1, BASE_DEFAULT_FREQUENCY // max(1, count_syllables(roman)))
 
 
 def load_frequency_map(filepath: str | Path) -> dict[tuple[str, str], int]:
