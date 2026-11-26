@@ -12,6 +12,8 @@ mod generated;
 
 pub use generated::StringKey;
 
+use crate::platform::DesktopPlatform;
+
 /// The languages the UI can be shown in. `System` is a selection policy, not a
 /// language: it resolves to one of the others through [`DisplayLanguage::resolve_automatic`]
 /// and is never handed to a [`StringResolver`].
@@ -152,6 +154,12 @@ impl StringResolver {
         generated::lookup(self.language, key)
             .or_else(|| generated::lookup(DisplayLanguage::Hanji, key))
             .unwrap_or_else(|| key.as_str())
+    }
+
+    /// Secondary caption for `key` under the active language on `platform`, or
+    /// `None` when no caption key is paired with `key` for that platform.
+    pub fn caption(&self, key: StringKey, platform: DesktopPlatform) -> Option<&'static str> {
+        key.info_key(platform).map(|info| self.resolve(info))
     }
 
     /// The template behind a format key, filled with `args` by position.
@@ -296,6 +304,18 @@ mod tests {
                 resolver.resolve(StringKey::DesktopGeneralTab),
                 StringKey::DesktopGeneralTab.as_str(),
                 "{language:?} lacks DesktopGeneralTab"
+            );
+        }
+    }
+
+    #[test]
+    fn uncaptioned_key_returns_none_for_caption() {
+        let resolver = StringResolver::new(DisplayLanguage::English);
+        for platform in crate::platform::test_support::ALL_PLATFORMS {
+            assert_eq!(StringKey::ThemeEditorResetAll.info_key(platform), None);
+            assert_eq!(
+                resolver.caption(StringKey::ThemeEditorResetAll, platform),
+                None
             );
         }
     }

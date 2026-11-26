@@ -67,6 +67,13 @@ final class DisplayLanguageStore {
         resolver.resolve(key)
     }
 
+    /// Localized secondary caption for `key` under the active language, or `nil` when `key` has no
+    /// paired caption. Reading this in a SwiftUI `body` registers the same dependency on `resolver`
+    /// as `string(_:)`.
+    func caption(for key: StringKey) -> String? {
+        resolver.caption(for: key)
+    }
+
     /// The EFFECTIVE display language currently rendering — already resolved away from `.system`.
     var language: DisplayLanguage {
         resolver.language

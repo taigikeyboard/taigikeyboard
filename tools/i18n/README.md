@@ -43,7 +43,7 @@ from what `i18n/*.json` generates):
 
 ## Generated artifacts (macOS)
 
-- `macos/Sources/TaigiInputMethodCore/Strings/Generated/` — `StringKey.swift`, `GeneratedStrings.swift`
+- `macos/Sources/TaigiInputMethodCore/Strings/Generated/` — `StringKey.swift` (with `var infoKey: StringKey?` for paired captions), `GeneratedStrings.swift`
   (**all five** production languages), `StringResolverFormats.swift`.
 - macOS maps every language rather than splitting catalog + map like iOS: the input method is a
   hand-assembled SwiftPM bundle installed to `~/Library/Input Methods`, so the App Store constraint
@@ -55,10 +55,10 @@ from what `i18n/*.json` generates):
 
 ## Generated artifacts (Windows + Linux)
 
-- `desktop/crates/taigi-desktop-core/src/strings/generated.rs` — one Rust module covering every key scoped `windows` or `linux` (both desktops link this crate): `StringKey` enum,
+- `desktop/crates/taigi-desktop-core/src/strings/generated.rs` — one Rust module covering every key scoped `windows` or `linux` (both desktops link this crate): `StringKey` enum, `StringKey::info_key(self, platform: DesktopPlatform) -> Option<StringKey>` (dispatched per `DesktopPlatform` so single-platform captions never leak across Windows and Linux),
   a per-language `fn hanji(key)` … `fn en(key)` table for **all five** production languages, and one
   typed `StringResolver` method per format key. The hand-written `strings/mod.rs` beside it owns
-  `DisplayLanguage`, `StringResolver` and the `{N}` positional formatter the generated methods call.
+  `DisplayLanguage`, `StringResolver` (including `StringResolver::caption(&self, key, platform)`), and the `{N}` positional formatter the generated methods call.
 - Same shape as macOS (every language a map, no resource bundle); the input method is a Rust
   workspace, so the emitter targets Rust instead of Swift. Resolution behavior is identical
   (`docs/architecture/behavioral-invariants.md` §37).
@@ -76,8 +76,9 @@ from what `i18n/*.json` generates):
 
 ## Generated artifacts (web)
 
-- `web/src/generated/strings.js` — `STRINGS`, a `namespace.key` map per production language, for keys
-  scoped `web`. `{name}` placeholders stay as authored and `web/src/i18n.js` fills them. A plural in
+- `web/src/generated/strings.js` — `STRINGS` (a `namespace.key` map per production language, for keys
+  scoped `web`) and `CAPTIONS` (a `namespace.key` → caption `namespace.key` map for web-scoped pairs).
+  `{name}` placeholders stay as authored and `web/src/i18n.js` fills them. A plural in
   a web key fails generation: the page has no runtime for one.
 
 ## Source schema
@@ -88,6 +89,7 @@ from what `i18n/*.json` generates):
   "keys": {
     "inputMode": {
       "comment": "translator context",
+      "captionFor": "settings.example",     // optional; targets "<namespace>.<key>" on another row
       "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "placeholders": { "count": "int" },   // optional; named {count}, never %d
       "values": {
@@ -120,6 +122,20 @@ the generator's job):
   which tests drive with partial fixtures).
 - Every authored language must carry the same `{placeholder}` set as the base (order may differ —
   substitution is by name, not position, so a reordered translation is allowed).
+
+### Inline captions
+
+A setting row or picker option pairs with a secondary caption whenever either:
+
+1. A `<key>Info` sibling exists in the same namespace and overlaps on platform scope, or
+2. Another entry declares `"captionFor": "<namespace>.<key>"` (useful for platform-divergent captions such as desktop vs mobile).
+
+Rules enforced for caption keys:
+
+- `captionFor` must be `<namespace>.<key>` with lowerCamelCase parts, cannot target itself, must resolve to an existing key, and that target key must include every platform in the caption's `scope.platforms`.
+- Paired caption keys must not use `{placeholder}` slots (`placeholders`), and a caption key cannot itself be targeted as another caption's base key.
+- At most one caption key may target a given base key on any platform (overlapping-platform duplicates across `<key>Info` and/or `captionFor` are rejected).
+- When `windows` and `linux` share `desktop/crates/taigi-desktop-core/src/strings/generated.rs`, each caption arm is emitted per `DesktopPlatform` (`StringKey::info_key(platform)` / `StringResolver::caption(key, platform)`), so platform-specific captions do not leak between Windows and Linux.
 
 ### Format keys (placeholders)
 

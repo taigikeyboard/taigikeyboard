@@ -1946,6 +1946,25 @@
         "en": "TaigiKeyboard Settings",
         "ja": "台湾語キーボードの設定"
       }
+    },
+    "literalRomanCandidateInfo": {
+      "comment": "Secondary caption for settings.literalRomanCandidate on desktop (where the commit key is a configurable Shortcuts action rather than mobile's fixed Enter). Cross-references desktop.actionCommitLiteral so every language uses the exact Shortcuts action name instead of hardcoding a keybinding.",
+      "captionFor": "settings.literalRomanCandidate",
+      "scope": {
+        "platforms": [
+          "macos"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "選字窗頭一格顯示你拍的字。關起來的時，用「輸出拍的字」來送出。",
+        "tailo": "Suán-jī-thang thâu tsi̍t keh hián-sī lí phah ê jī. Kuainn--khí-lâi ê sî, iōng “Su-tshut phah ê jī” lâi sàng-tshut.",
+        "poj": "Soán-jī-thang thâu chi̍t keh hián-sī lí phah ê jī. Koaiⁿ--khí-lâi ê sî, iōng “Su-chhut phah ê jī” lâi sàng-chhut.",
+        "en": "Shows what you typed as the first candidate. When off, use “Output What You Are Typing” to commit it.",
+        "ja": "入力中の文字を候補の先頭に表示します。オフのときは「入力中の文字を出力」で確定します。"
+      }
     }
   }
 }

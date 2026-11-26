@@ -104,17 +104,21 @@ struct GeneralSettingsView: View {
                 // a difference that means something. Input Script / Output Script name
                 // the pair (USER 2026-09-18); mobile keeps Input Mode, whose
                 // picker also holds TPS.
-                Picker(language.string(.settingsInputScript), selection: inputModeSelection) {
+                Picker(selection: inputModeSelection) {
                     ForEach(InputMode.allCases, id: \.self) { mode in
                         Text(language.string(mode.displayNameKey)).tag(mode)
                     }
+                } label: {
+                    SettingsRowLabel(titleKey: .settingsInputScript, selectedOptionKey: inputMode.displayNameKey)
                 }
 
                 // TPS uses a fixed layout, so keep this choice beside Input Script.
-                Picker(language.string(.settingsKeyboardLayout), selection: keyboardLayoutSelection) {
+                Picker(selection: keyboardLayoutSelection) {
                     ForEach(KeyboardLayout.allCases, id: \.self) { layout in
                         Text(layout.displayName).tag(layout)
                     }
+                } label: {
+                    SettingsRowLabel(titleKey: .settingsKeyboardLayout)
                 }
                 .disabled(inputMode == .tps)
 
@@ -123,9 +127,14 @@ struct GeneralSettingsView: View {
                 // keys follow from it rather than being chosen on the
                 // shortcut pane. Under Input Script because both say what the
                 // user types.
-                Picker(language.string(.settingsToneInputScheme), selection: $toneInputScheme) {
-                    Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
-                    Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
+                Picker(selection: $toneInputScheme) {
+                    Text(language.string(ToneInputScheme.standard.labelKey)).tag(ToneInputScheme.standard)
+                    Text(language.string(ToneInputScheme.telex.labelKey)).tag(ToneInputScheme.telex)
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .settingsToneInputScheme,
+                        selectedOptionKey: toneInputScheme.labelKey,
+                    )
                 }
 
                 // Hàn-Lô lām: each word's romanization is a candidate of its
@@ -134,21 +143,27 @@ struct GeneralSettingsView: View {
                 // every word as its romanization, side by side led by the
                 // romanization already writes it from its paired cell, and TPS
                 // never shows one (desktop-core `allows_han_lo_mixed`).
-                Toggle(language.string(.settingsHanLoMixed), isOn: $isHanLoMixedEnabled)
-                    .disabled(
-                        !candidateDisplayMode.showsHanji
-                            || (candidateDisplayMode == .sideBySide && !isHanjiFirst)
-                            || inputMode == .tps,
-                    )
+                Toggle(isOn: $isHanLoMixedEnabled) {
+                    SettingsRowLabel(titleKey: .settingsHanLoMixed)
+                }
+                .disabled(
+                    !candidateDisplayMode.showsHanji
+                        || (candidateDisplayMode == .sideBySide && !isHanjiFirst)
+                        || inputMode == .tps,
+                )
 
                 // Under Tone Keys, independent of it: both say what a letter
                 // types. TPS has no `c` initial, so the row greys there.
-                Toggle(language.string(.settingsCAffricate), isOn: $isCAffricateEnabled)
-                    .disabled(inputMode == .tps)
+                Toggle(isOn: $isCAffricateEnabled) {
+                    SettingsRowLabel(titleKey: .settingsCAffricate)
+                }
+                .disabled(inputMode == .tps)
                 // Beside it for the same reason; TPS has no romanization
                 // hyphen on `f`, so the row greys there too.
-                Toggle(language.string(.settingsFHyphen), isOn: $isFHyphenEnabled)
-                    .disabled(inputMode == .tps)
+                Toggle(isOn: $isFHyphenEnabled) {
+                    SettingsRowLabel(titleKey: .settingsFHyphen)
+                }
+                .disabled(inputMode == .tps)
 
                 // S33 (USER 2026-09-08): off means no window at all — the
                 // user types romanization and Space / Return write it as
@@ -156,11 +171,15 @@ struct GeneralSettingsView: View {
                 // window's content and so reads as its sub-option; that row
                 // stays enabled with the window off (one plain switch, no
                 // greyed-out state to explain).
-                Toggle(language.string(.settingsCandidateWindow), isOn: $isCandidateWindowEnabled)
+                Toggle(isOn: $isCandidateWindowEnabled) {
+                    SettingsRowLabel(titleKey: .settingsCandidateWindow)
+                }
 
                 // §34/S22. On means candidate slot 0 is the preedit literal,
                 // so Return writes the typed romanization.
-                Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
+                Toggle(isOn: $isLiteralRomanCandidateEnabled) {
+                    SettingsRowLabel(titleKey: .settingsLiteralRomanCandidate)
+                }
 
                 // Which script a commit writes (USER 2026-09-18): the same
                 // stored swap the `` ` `` shortcut toggles, so the two never
@@ -169,47 +188,75 @@ struct GeneralSettingsView: View {
                 // (`allowsSwapToggle`); under Hanji with Romanization both scripts are on
                 // screen and this only picks the punctuation width, as the
                 // shortcut does there.
-                Picker(language.string(.settingsOutputScript), selection: $isHanjiFirst) {
+                Picker(selection: $isHanjiFirst) {
                     Text(language.string(.settingsOutputScriptHanji)).tag(true)
                     Text(language.string(.settingsOutputScriptRoman)).tag(false)
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .settingsOutputScript,
+                        selectedOptionKey: isHanjiFirst ? .settingsOutputScriptHanji : .settingsOutputScriptRoman,
+                    )
                 }
                 .disabled(!candidateDisplayMode.allowsSwapToggle)
 
                 // Annotate in Brackets: greys where it has no effect — Romanization
                 // Only, and TPS (desktop-core `allows_output_both_scripts`).
-                Toggle(language.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts)
-                    .disabled(!candidateDisplayMode.showsHanji || inputMode == .tps)
+                Toggle(isOn: $isOutputBothScripts) {
+                    SettingsRowLabel(titleKey: .settingsOutputBothScripts)
+                }
+                .disabled(!candidateDisplayMode.showsHanji || inputMode == .tps)
 
                 // Side-by-Side with Romanization output still displays Hanji candidates,
                 // so only Romanization Only (`!showsHanji`) disables this toggle.
-                Toggle(language.string(.settingsKhinsiannInHanji), isOn: $isKhinsiannInHanjiEnabled)
-                    .disabled(!candidateDisplayMode.showsHanji)
+                Toggle(isOn: $isKhinsiannInHanjiEnabled) {
+                    SettingsRowLabel(titleKey: .settingsKhinsiannInHanji)
+                }
+                .disabled(!candidateDisplayMode.showsHanji)
 
                 // Syllable Separator (§49), directly under Output Script — it describes
                 // that output's shape.
-                Picker(language.string(.settingsSyllableSeparator), selection: $syllableSeparator) {
+                Picker(selection: $syllableSeparator) {
                     ForEach(SyllableSeparator.allCases, id: \.self) { separator in
                         Text(language.string(separator.displayNameKey)).tag(separator)
                     }
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .settingsSyllableSeparator,
+                        selectedOptionKey: syllableSeparator.displayNameKey,
+                    )
                 }
 
                 // Nasal mark in POJ capitals (§53): the other setting that shapes the
                 // output's romanization — a pop-up over the stored switch, ᴺ or ⁿ.
-                Picker(language.string(.settingsNasalMarkerUppercase), selection: $isNasalMarkerUppercaseEnabled) {
+                Picker(selection: $isNasalMarkerUppercaseEnabled) {
                     Text(language.string(.settingsNasalMarkerUppercaseCapital)).tag(true)
                     Text(language.string(.settingsNasalMarkerUppercaseSmall)).tag(false)
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .settingsNasalMarkerUppercase,
+                        selectedOptionKey: isNasalMarkerUppercaseEnabled
+                            ? .settingsNasalMarkerUppercaseCapital
+                            : .settingsNasalMarkerUppercaseSmall,
+                    )
                 }
 
                 // The space after a commit: the last thing the output stage
                 // does.
-                Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
+                Toggle(isOn: $isAutoSpaceEnabled) {
+                    SettingsRowLabel(titleKey: .settingsAutoSpace)
+                }
 
-                Picker(language.string(.settingsDisplayLanguage), selection: displayLanguageSelection) {
+                Picker(selection: displayLanguageSelection) {
                     ForEach(DisplayLanguage.selectableLanguages, id: \.self) { option in
                         // Endonyms for the authored languages, so a user can find their own language
                         // whatever the UI currently reads in; `.system` is the one translated row.
                         Text(language.selectionLabel(for: option)).tag(option)
                     }
+                } label: {
+                    SettingsRowLabel(
+                        titleKey: .settingsDisplayLanguage,
+                        selectedOptionKey: language.selected == .system ? .settingsDisplayLanguageAutomatic : nil,
+                    )
                 }
             }
 

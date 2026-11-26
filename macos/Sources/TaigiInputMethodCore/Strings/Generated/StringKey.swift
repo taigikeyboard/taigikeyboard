@@ -107,6 +107,7 @@ enum StringKey: String {
     case desktopFontManagementTab = "i18n_desktop_fontManagementTab"
     case desktopFontWeight = "i18n_desktop_fontWeight"
     case desktopMenuSettings = "i18n_desktop_menuSettings"
+    case desktopLiteralRomanCandidateInfo = "i18n_desktop_literalRomanCandidateInfo"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"
     case dictionaryVariantDictionary = "i18n_dictionary_variantDictionary"
@@ -194,6 +195,7 @@ enum StringKey: String {
     case settingsCandidateDisplayModeCombined = "i18n_settings_candidateDisplayModeCombined"
     case settingsCandidateDisplayModeRomanOnly = "i18n_settings_candidateDisplayModeRomanOnly"
     case settingsOutputBothScripts = "i18n_settings_outputBothScripts"
+    case settingsOutputBothScriptsInfo = "i18n_settings_outputBothScriptsInfo"
     case settingsInputScript = "i18n_settings_inputScript"
     case settingsOutputScript = "i18n_settings_outputScript"
     case settingsOutputScriptHanji = "i18n_settings_outputScriptHanji"
@@ -201,19 +203,40 @@ enum StringKey: String {
     case settingsSyllableSeparator = "i18n_settings_syllableSeparator"
     case settingsSyllableSeparatorSpace = "i18n_settings_syllableSeparatorSpace"
     case settingsSyllableSeparatorNone = "i18n_settings_syllableSeparatorNone"
+    case settingsSyllableSeparatorInfo = "i18n_settings_syllableSeparatorInfo"
     case settingsCandidateWindow = "i18n_settings_candidateWindow"
     case settingsLiteralRomanCandidate = "i18n_settings_literalRomanCandidate"
     case settingsToneInputScheme = "i18n_settings_toneInputScheme"
     case settingsToneSchemeStandard = "i18n_settings_toneSchemeStandard"
+    case settingsToneSchemeStandardInfo = "i18n_settings_toneSchemeStandardInfo"
     case settingsToneSchemeTelex = "i18n_settings_toneSchemeTelex"
+    case settingsToneSchemeTelexInfo = "i18n_settings_toneSchemeTelexInfo"
     case settingsCAffricate = "i18n_settings_cAffricate"
     case settingsFHyphen = "i18n_settings_fHyphen"
     case settingsAutoSpace = "i18n_settings_autoSpace"
+    case settingsAutoSpaceInfo = "i18n_settings_autoSpaceInfo"
     case settingsNasalMarkerUppercase = "i18n_settings_nasalMarkerUppercase"
     case settingsNasalMarkerUppercaseCapital = "i18n_settings_nasalMarkerUppercaseCapital"
     case settingsNasalMarkerUppercaseSmall = "i18n_settings_nasalMarkerUppercaseSmall"
     case settingsKhinsiannInHanji = "i18n_settings_khinsiannInHanji"
     case settingsHanLoMixed = "i18n_settings_hanLoMixed"
+    case settingsHanLoMixedInfo = "i18n_settings_hanLoMixedInfo"
+    case settingsKhinsiannInHanjiInfo = "i18n_settings_khinsiannInHanjiInfo"
     case themeCustomFont = "i18n_theme_customFont"
     case themeEditorResetAll = "i18n_theme_editorResetAll"
+
+    /// Companion caption key for a setting row or picker option, if one is scoped to macOS.
+    var infoKey: StringKey? {
+        switch self {
+        case .settingsOutputBothScripts: .settingsOutputBothScriptsInfo
+        case .settingsSyllableSeparator: .settingsSyllableSeparatorInfo
+        case .settingsLiteralRomanCandidate: .desktopLiteralRomanCandidateInfo
+        case .settingsToneSchemeStandard: .settingsToneSchemeStandardInfo
+        case .settingsToneSchemeTelex: .settingsToneSchemeTelexInfo
+        case .settingsAutoSpace: .settingsAutoSpaceInfo
+        case .settingsKhinsiannInHanji: .settingsKhinsiannInHanjiInfo
+        case .settingsHanLoMixed: .settingsHanLoMixedInfo
+        default: nil
+        }
+    }
 }

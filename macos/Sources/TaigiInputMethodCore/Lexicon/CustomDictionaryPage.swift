@@ -198,7 +198,9 @@ struct CustomDictionaryPage: View {
     var body: some View {
         Form {
             Section {
-                Toggle(language.string(.dictionaryCustomDictEnabled), isOn: $isCustomDictEnabled)
+                Toggle(isOn: $isCustomDictEnabled) {
+                    SettingsRowLabel(titleKey: .dictionaryCustomDictEnabled)
+                }
             }
 
             Section {

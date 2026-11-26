@@ -35,6 +35,8 @@ PRODUCTION_LANGUAGES = ("hanji", "en", "ja", "tailo", "poj")
 VALID_PLATFORMS = {"ios", "android", "macos", "windows", "linux", "web"}
 VALID_SURFACES = {"host", "extension"}
 VALID_VALUE_LANGUAGES = {"hanji", "tailo", "poj", "ja", "en"}
+CAPTION_SUFFIX = "Info"
+CAPTION_FOR_FIELD = "captionFor"
 
 # Output locations (repo-relative).
 ANDROID_PKG = "android/app/src/main/java/com/siansiansu/taigikeyboard"
@@ -562,6 +564,17 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
             # substitution is by name, not position, so a reordered translation is allowed).
             if lang_names != base_placeholder_names:
                 raise ValueError(f"{path}:{key}: placeholder names in '{lang}' differ from base")
+        if CAPTION_FOR_FIELD in entry:
+            caption_for = entry[CAPTION_FOR_FIELD]
+            if not isinstance(caption_for, str):
+                raise ValueError(f"{path}:{key}: '{CAPTION_FOR_FIELD}' must be a '<namespace>.<key>' string")
+            parts = caption_for.split(".")
+            if len(parts) != 2 or not all(IDENTIFIER_RE.fullmatch(part) for part in parts):
+                raise ValueError(
+                    f"{path}:{key}: '{CAPTION_FOR_FIELD}' must be '<namespace>.<key>' with lowerCamelCase parts, got {caption_for!r}"
+                )
+            if tuple(parts) == (namespace, key):
+                raise ValueError(f"{path}:{key}: '{CAPTION_FOR_FIELD}' cannot target itself")
 
 
 # --- Name transforms --------------------------------------------------------
@@ -691,6 +704,48 @@ def _validate_global(entries) -> None:
         seen_rust_accessor[rust_fn] = origin
         if rust_fn in RUST_KEYWORDS or rust_variant(namespace, key) in RUST_KEYWORDS:
             raise ValueError(f"accessor {accessor!r} ({origin}) lowers to a reserved Rust identifier")
+
+    by_id = {(ns, key): entry for ns, key, entry in entries}
+    caption_owners: dict[tuple[tuple[str, str], str], tuple[str, str]] = {}
+    all_caption_ids: set[tuple[str, str]] = set()
+    all_target_ids: set[tuple[str, str]] = set()
+    for ns, key, entry in entries:
+        if CAPTION_FOR_FIELD in entry:
+            target = tuple(entry[CAPTION_FOR_FIELD].split("."))
+            if target not in by_id:
+                raise ValueError(f"{ns}:{key}: {CAPTION_FOR_FIELD} target {entry[CAPTION_FOR_FIELD]!r} does not exist")
+            cap_platforms = set(entry["scope"]["platforms"])
+            target_platforms = set(by_id[target]["scope"]["platforms"])
+            if cap_platforms - target_platforms:
+                raise ValueError(
+                    f"{ns}:{key}: {CAPTION_FOR_FIELD} target {entry[CAPTION_FOR_FIELD]!r} is not scoped to platform(s) {sorted(cap_platforms - target_platforms)}"
+                )
+            active_platforms = cap_platforms
+        elif key.endswith(CAPTION_SUFFIX) and len(key) > len(CAPTION_SUFFIX):
+            target = (ns, key[: -len(CAPTION_SUFFIX)])
+            if target not in by_id:
+                continue
+            active_platforms = set(entry["scope"]["platforms"]) & set(by_id[target]["scope"]["platforms"])
+            if not active_platforms:
+                continue
+        else:
+            continue
+        if _placeholder_names_in_order(entry["values"][BASE_LANGUAGE]):
+            raise ValueError(f"{ns}:{key}: caption key must not use placeholders")
+        all_caption_ids.add((ns, key))
+        all_target_ids.add(target)
+        for platform in sorted(active_platforms):
+            if (target, platform) in caption_owners:
+                other_ns, other_key = caption_owners[(target, platform)]
+                t_ns, t_key = target
+                raise ValueError(
+                    f"duplicate caption for {t_ns}.{t_key} on platform {platform!r}: {other_ns}.{other_key} and {ns}.{key}"
+                )
+            caption_owners[(target, platform)] = (ns, key)
+    chained = sorted(all_caption_ids & all_target_ids)
+    if chained:
+        c_ns, c_key = chained[0]
+        raise ValueError(f"{c_ns}:{c_key}: caption key cannot also be targeted as a caption base")
 
 
 def validate_production_completeness(entries) -> None:
@@ -1023,7 +1078,31 @@ def _emit_swift_strings_map(entries, *, enum_name: str, doc: tuple, map_language
     return "\n".join(lines) + "\n"
 
 
-def _emit_swift_string_key(entries, *, doc: tuple) -> str:
+def _caption_pairs_for_platform(entries, platform: str) -> list[tuple[tuple[str, str], tuple[str, str]]]:
+    scoped_ids = {(ns, key) for ns, key, entry in entries if platform in entry["scope"]["platforms"]}
+    by_base: dict[tuple[str, str], tuple[str, str]] = {}
+    for ns, key, entry in entries:
+        if platform not in entry["scope"]["platforms"]:
+            continue
+        if CAPTION_FOR_FIELD in entry:
+            target = tuple(entry[CAPTION_FOR_FIELD].split("."))
+        elif key.endswith(CAPTION_SUFFIX) and len(key) > len(CAPTION_SUFFIX):
+            target = (ns, key[: -len(CAPTION_SUFFIX)])
+        else:
+            continue
+        if target not in scoped_ids:
+            continue
+        if target in by_base:
+            other_ns, other_key = by_base[target]
+            t_ns, t_key = target
+            raise ValueError(
+                f"duplicate caption for {t_ns}.{t_key} on platform {platform!r}: {other_ns}.{other_key} and {ns}.{key}"
+            )
+        by_base[target] = (ns, key)
+    return [((ns, key), by_base[(ns, key)]) for ns, key, _entry in entries if (ns, key) in by_base]
+
+
+def _emit_swift_string_key(entries, *, doc: tuple, caption_platform: str | None = None) -> str:
     lines = [
         f"// {GENERATED_HEADER}",
         "",
@@ -1032,6 +1111,23 @@ def _emit_swift_string_key(entries, *, doc: tuple) -> str:
     ]
     for namespace, key, _entry in entries:
         lines.append(f'    case {l10n_accessor(namespace, key)} = "{res_name(namespace, key)}"')
+    if caption_platform is not None:
+        caption_pairs = _caption_pairs_for_platform(entries, caption_platform)
+        lines.extend(
+            [
+                "",
+                "    /// Companion caption key for a setting row or picker option, if one is scoped to macOS.",
+                "    var infoKey: StringKey? {",
+            ]
+        )
+        if caption_pairs:
+            lines.append("        switch self {")
+            for (b_ns, b_key), (c_ns, c_key) in caption_pairs:
+                lines.append(f"        case .{l10n_accessor(b_ns, b_key)}: .{l10n_accessor(c_ns, c_key)}")
+            lines.extend(["        default: nil", "        }"])
+        else:
+            lines.append("        nil")
+        lines.append("    }")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -1115,13 +1211,14 @@ def _emit_inno_messages(entries) -> str:
 
 
 def _emit_rust_strings(entries) -> str:
-    # One file for the whole Windows string surface: the typed key enum, the per-language lookup
-    # tables, and one typed format function per placeholder-bearing key. Everything hand-written
-    # (`DisplayLanguage`, `StringResolver`, `format_positional`) lives in the sibling `mod.rs`.
+    # One file for the whole Windows/Linux string surface: the typed key enum, the per-language lookup
+    # tables, per-platform caption pairing, and one typed format function per placeholder-bearing key.
+    # Everything hand-written (`DisplayLanguage`, `StringResolver`, `format_positional`) lives in `mod.rs`.
     lines = [
         f"// {GENERATED_HEADER}",
         "",
         "use super::{DisplayLanguage, StringResolver};",
+        "use crate::platform::DesktopPlatform;",
         "",
         "/// Typed key for every Windows i18n string. `as_str` is the shared cross-platform key name,",
         "/// which is also the last-resort fallback text (`StringResolver::resolve`).",
@@ -1133,7 +1230,36 @@ def _emit_rust_strings(entries) -> str:
     lines.extend(["}", "", "impl StringKey {", "    pub fn as_str(self) -> &'static str {", "        match self {"])
     for namespace, key, _entry in entries:
         lines.append(f'            Self::{rust_variant(namespace, key)} => "{res_name(namespace, key)}",')
-    lines.extend(["        }", "    }", "}", ""])
+    lines.extend(["        }", "    }"])
+    win_pairs = dict(_caption_pairs_for_platform(entries, "windows"))
+    lin_pairs = dict(_caption_pairs_for_platform(entries, "linux"))
+    arms = []
+    for namespace, key, _entry in entries:
+        base_id = (namespace, key)
+        base_var = rust_variant(namespace, key)
+        win_cap = win_pairs.get(base_id)
+        lin_cap = lin_pairs.get(base_id)
+        if win_cap is not None and win_cap == lin_cap:
+            arms.append(
+                f"            (Self::{base_var}, DesktopPlatform::Windows | DesktopPlatform::Linux) => Some(Self::{rust_variant(*win_cap)}),"
+            )
+        else:
+            if win_cap is not None:
+                arms.append(
+                    f"            (Self::{base_var}, DesktopPlatform::Windows) => Some(Self::{rust_variant(*win_cap)}),"
+                )
+            if lin_cap is not None:
+                arms.append(
+                    f"            (Self::{base_var}, DesktopPlatform::Linux) => Some(Self::{rust_variant(*lin_cap)}),"
+                )
+    lines.extend(["", "    pub fn info_key(self, platform: DesktopPlatform) -> Option<StringKey> {"])
+    if arms:
+        lines.append("        match (self, platform) {")
+        lines.extend(arms)
+        lines.extend(["            _ => None,", "        }"])
+    else:
+        lines.extend(["        let _ = (self, platform);", "        None"])
+    lines.extend(["    }", "}", ""])
 
     lines.append("pub(super) fn lookup(language: DisplayLanguage, key: StringKey) -> Option<&'static str> {")
     lines.append("    match language {")
@@ -1225,8 +1351,14 @@ def _emit_web_strings(entries) -> str:
         }
         for lang in PRODUCTION_LANGUAGES
     }
+    caption_pairs = _caption_pairs_for_platform(entries, "web")
+    captions = {
+        f"{b_ns}.{b_key}": f"{c_ns}.{c_key}"
+        for (b_ns, b_key), (c_ns, c_key) in caption_pairs
+    }
     body = json.dumps(strings, ensure_ascii=False, indent=2)
-    return f"// {GENERATED_HEADER}\n\nexport const STRINGS = {body};\n"
+    captions_body = json.dumps(captions, ensure_ascii=False, indent=2)
+    return f"// {GENERATED_HEADER}\n\nexport const STRINGS = {body};\n\nexport const CAPTIONS = {captions_body};\n"
 
 
 def _bundle_name_values(all_entries):
@@ -1309,6 +1441,7 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
     outputs[f"{MACOS_GEN_DIR}/StringKey.swift"] = _emit_swift_string_key(
         macos_entries,
         doc=("/// Typed key for every macOS i18n string. The raw value is the shared cross-platform key name.",),
+        caption_platform="macos",
     )
     outputs[f"{MACOS_GEN_DIR}/GeneratedStrings.swift"] = _emit_swift_strings_map(
         macos_entries,

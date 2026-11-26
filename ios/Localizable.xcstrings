@@ -3824,13 +3824,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When on, every word also offers its romanization as a candidate of its own: pick it on its own, and the whole-sentence candidate can use it too, for mixed Hanji and romanization writing."
+            "value": "Offer each word's romanization as its own candidate for mixed Hanji and romanization writing."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オンにすると、各語にローマ字表記の候補も加わります。単独で選べるほか、文全体の候補にも使われ、漢字とローマ字の混在文を書きやすくなります。"
+            "value": "各語にローマ字の候補も加え、漢字とローマ字の混在文を書きやすくします。"
           }
         }
       }
@@ -4124,7 +4124,7 @@
       }
     },
     "i18n_settings_syllableSeparatorInfo": {
-      "comment": "Help text for the Syllable Separator picker (mobile host app).",
+      "comment": "Help text for the Syllable Separator picker.",
       "extractionState": "manual",
       "localizations": {
         "en": {

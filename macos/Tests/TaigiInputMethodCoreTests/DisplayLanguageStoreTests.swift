@@ -133,4 +133,30 @@ final class DisplayLanguageStoreTests: XCTestCase {
         store.setLanguage(.english)
         XCTAssertEqual(store.string(.settingsDisplayLanguage), "Display Language")
     }
+
+    func testCaption_resolvesSameNamespaceCrossNamespaceAndUncaptionedKeys() throws {
+        let store = makeStore()
+        for lang in DisplayLanguage.productionLanguages {
+            store.setLanguage(lang)
+            XCTAssertNotNil(store.caption(for: .settingsAutoSpace), "\(lang.tag)")
+            XCTAssertNotNil(store.caption(for: .settingsToneSchemeStandard), "\(lang.tag)")
+            XCTAssertNotNil(store.caption(for: .settingsToneSchemeTelex), "\(lang.tag)")
+            let literalCaption = try XCTUnwrap(
+                store.caption(for: .settingsLiteralRomanCandidate),
+                "\(lang.tag)",
+            )
+            XCTAssertTrue(
+                literalCaption.contains(store.string(.desktopActionCommitLiteral)),
+                "\(lang.tag) literal caption did not reference desktopActionCommitLiteral",
+            )
+            XCTAssertNil(store.caption(for: .dictionaryCustomDictEnabled), "\(lang.tag)")
+            XCTAssertNil(store.caption(for: .settingsCAffricate), "\(lang.tag)")
+        }
+
+        store.setLanguage(.english)
+        XCTAssertEqual(
+            store.caption(for: .settingsAutoSpace),
+            "Automatically inserts a space after committing romanization.",
+        )
+    }
 }
