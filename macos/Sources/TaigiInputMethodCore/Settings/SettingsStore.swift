@@ -2,6 +2,7 @@
 // the engine, the settings form, the input-source menu — agrees on the keys.
 
 import Foundation
+import os
 
 /// The `UserDefaults` key of one setting, paired with the value used when the
 /// user has never touched it.
@@ -894,6 +895,38 @@ final class SettingsStore: @unchecked Sendable {
         observeChanges(of: key) { Task { @MainActor in onChange() } }
     }
 
+    /// `observeChanges(of:onMainActor:)` gated by `SelfWriteGuard` so writes
+    /// made through `guardState.perform` suppress their own synchronous KVO
+    /// callback and invalidate any older queued observation task.
+    func observeChanges(
+        of key: SettingsKey<some Any>,
+        skipping guardState: SelfWriteGuard,
+        onMainActor onChange: @escaping @MainActor () -> Void,
+    ) -> AnyObject {
+        observeChanges(of: key) {
+            guard let generation = guardState.beginExternalObservation() else { return }
+            Task { @MainActor in
+                guard guardState.isCurrent(generation) else { return }
+                onChange()
+            }
+        }
+    }
+
+    /// `observeChanges(of:onMainActor:)` that runs synchronously when KVO
+    /// fires on the main thread, hopping only when notified off-main.
+    func observeChangesImmediatelyIfMain(
+        of key: SettingsKey<some Any>,
+        onMainActor onChange: @escaping @MainActor () -> Void,
+    ) -> AnyObject {
+        observeChanges(of: key) {
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { onChange() }
+            } else {
+                Task { @MainActor in onChange() }
+            }
+        }
+    }
+
     /// `object(forKey:)` rather than `bool(forKey:)`: the latter answers `false`
     /// for a key that was never written, which would silently turn every
     /// default-on setting off on a fresh install.
@@ -913,6 +946,52 @@ final class SettingsStore: @unchecked Sendable {
 
     private func stringArray(_ key: SettingsKey<[String]>) -> [String] {
         userDefaults.stringArray(forKey: key.name) ?? key.defaultValue
+    }
+}
+
+/// Suppresses self-originated `UserDefaults` KVO callbacks when the caller
+/// already handles its own write synchronously on the main actor, and drops any
+/// older queued async KVO task superseded by a newer synchronous write.
+final class SelfWriteGuard: Sendable {
+    private struct State: Sendable {
+        var isWritingOnMainThread = false
+        var generation: UInt64 = 0
+        var minValidGeneration: UInt64 = 0
+    }
+
+    private let state = OSAllocatedUnfairLock(initialState: State())
+
+    @MainActor
+    @discardableResult
+    func perform<T>(_ write: () -> T, committed: (T) -> Bool = { _ in true }) -> T {
+        // Bump generation before `write()` so a concurrent off-main write
+        // during `write()` receives `nextGeneration` and is not dropped with
+        // pre-write observations when `committed(result)` advances the floor.
+        let nextGeneration = state.withLock { state in
+            state.isWritingOnMainThread = true
+            state.generation += 1
+            return state.generation
+        }
+        defer { state.withLock { $0.isWritingOnMainThread = false } }
+        let result = write()
+        if committed(result) {
+            state.withLock { $0.minValidGeneration = nextGeneration }
+        }
+        return result
+    }
+
+    func beginExternalObservation() -> UInt64? {
+        let isMain = Thread.isMainThread
+        return state.withLock { state in
+            if isMain, state.isWritingOnMainThread {
+                return nil
+            }
+            return state.generation
+        }
+    }
+
+    func isCurrent(_ observedGeneration: UInt64) -> Bool {
+        state.withLock { observedGeneration >= $0.minValidGeneration }
     }
 }
 

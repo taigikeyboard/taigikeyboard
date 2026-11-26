@@ -25,13 +25,18 @@ enum HUDPanel {
     /// clicks through to the content — the TPS key panel's caps — and still
     /// takes no focus: the panel becomes key only if a view needs it, and
     /// none does.
-    static func makePanel(background: NSVisualEffectView, acceptsClicks: Bool = false) -> NSPanel {
+    static func makePanel(
+        background: NSVisualEffectView,
+        acceptsClicks: Bool = false,
+        appearance: NSAppearance? = nil,
+    ) -> NSPanel {
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: background.frame.size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false,
         )
+        panel.appearance = appearance
         panel.contentView = background
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -42,6 +47,15 @@ enum HUDPanel {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
         return panel
+    }
+
+    /// Puts the Appearance setting on `panel`: Light / Dark force it, Automatic
+    /// leaves it `nil` so AppKit follows the system.
+    static func applyAppearance(_ mode: AppearanceMode, to panel: NSPanel) {
+        let appearance = mode.forcedAppearance
+        if panel.appearance != appearance {
+            panel.appearance = appearance
+        }
     }
 
     /// The visible frame of the screen the mouse is on, else the main one —

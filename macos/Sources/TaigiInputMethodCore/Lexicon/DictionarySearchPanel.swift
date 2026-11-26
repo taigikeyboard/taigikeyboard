@@ -11,8 +11,9 @@ struct DictionarySearchPanel: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     @State private var model: DictionarySearchModel
-    /// The page that could not be opened, for the alert.
-    @State private var failedLink: String?
+    /// Single modal alert slot shared between failed external lookups and
+    /// failed searches (SwiftUI drops stacked alert modifiers on one chain).
+    @State private var activeAlert: ActiveAlert?
     /// The hit whose lookups the dialog offers.
     @State private var selectedHit: DictionarySearchModel.Hit?
 
@@ -23,8 +24,9 @@ struct DictionarySearchPanel: View {
 
     var body: some View {
         VStack(spacing: Metrics.spacing) {
-            // Nothing for an empty query, so the panel is the field alone.
-            if !model.trimmedQuery.isEmpty {
+            // Nothing for an empty query or a failed search, so a failure never
+            // displays a misleading empty-state label.
+            if model.shouldShowResultsSection {
                 results
             }
             // The pane's one control at its foot, sized up to stand out, as
@@ -37,7 +39,27 @@ struct DictionarySearchPanel: View {
         .overlay(alignment: .top) { Divider() }
         // iOS and Android wait 300 ms (`DictionarySearchViewModel`).
         .reloadWhenFilterSettles(model.trimmedQuery, after: .milliseconds(300)) { await model.search() }
-        .openURLFailureAlert($failedLink)
+        .onChange(of: model.failureDiagnostic) { _, diagnostic in
+            guard let diagnostic else { return }
+            activeAlert = .searchFailed(diagnostic)
+            model.dismissFailureAlert()
+        }
+        .alert(
+            activeAlert?.title(language) ?? "",
+            isPresented: Binding(
+                get: { activeAlert != nil },
+                set: {
+                    if !$0 {
+                        activeAlert = nil
+                    }
+                },
+            ),
+            presenting: activeAlert,
+        ) { _ in
+            Button(language.string(.commonOk)) {}
+        } message: { alert in
+            Text(verbatim: alert.detail)
+        }
         .confirmationDialog(
             "",
             isPresented: Binding(get: { selectedHit != nil }, set: {
@@ -59,7 +81,7 @@ struct DictionarySearchPanel: View {
 
     @ViewBuilder
     private var results: some View {
-        if model.hits.isEmpty, !model.isSearching {
+        if model.shouldShowNoResults {
             Text(language.string(.dictionaryNoResults))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -78,35 +100,46 @@ struct DictionarySearchPanel: View {
         }
     }
 
-    /// One hit as a whole-row button: a click anywhere asks which page to
-    /// look the reading up on, as iOS's row does (`confirmationDialog`).
-    /// Disabled when the reading makes no URL.
+    /// One hit as a whole-row button when external lookups exist, or a plain
+    /// full-strength non-interactive row without a link icon otherwise (matching
+    /// Windows and Linux).
+    @ViewBuilder
     private func row(_ hit: DictionarySearchModel.Hit) -> some View {
-        Button {
-            selectedHit = hit
-        } label: {
-            HStack(spacing: Metrics.spacing) {
-                Text(verbatim: hit.roman)
-                if hit.hasHanji {
-                    Text(verbatim: hit.hanji)
-                }
-                // A key this build does not know is dropped, not shown raw.
-                ForEach(hit.badgeKeys.compactMap(StringKey.init(rawValue:)), id: \.self) { key in
-                    Badge(text: language.string(key))
-                }
-                Spacer()
+        if hit.hasExternalLookup {
+            Button {
+                selectedHit = hit
+            } label: {
+                rowContent(hit, showExternalLinkIcon: true)
+            }
+            .buttonStyle(.plain)
+            // Read as one element: the word, then its source badges.
+            .accessibilityElement(children: .combine)
+        } else {
+            rowContent(hit, showExternalLinkIcon: false)
+                .accessibilityElement(children: .combine)
+        }
+    }
+
+    private func rowContent(_ hit: DictionarySearchModel.Hit, showExternalLinkIcon: Bool) -> some View {
+        HStack(spacing: Metrics.spacing) {
+            Text(verbatim: hit.roman)
+            if hit.hasHanji {
+                Text(verbatim: hit.hanji)
+            }
+            // A key this build does not know is dropped, not shown raw.
+            ForEach(hit.badgeKeys.compactMap(StringKey.init(rawValue:)), id: \.self) { key in
+                Badge(text: language.string(key))
+            }
+            Spacer()
+            if showExternalLinkIcon {
                 Image(systemName: "arrow.up.forward.square")
                     .foregroundStyle(.secondary)
                     .accessibilityHidden(true)
             }
-            .padding(.vertical, Metrics.rowInset)
-            // The whole row, not only its text, takes the click.
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .disabled(!hit.hasMoeURL && !hit.hasChhoeURL)
-        // Read as one element: the word, then its source badges.
-        .accessibilityElement(children: .combine)
+        .padding(.vertical, Metrics.rowInset)
+        // The whole row, not only its text, takes the click.
+        .contentShape(Rectangle())
     }
 
     /// A lookup that silently does nothing reads as a broken one
@@ -118,7 +151,27 @@ struct DictionarySearchPanel: View {
         if let url = URL(string: link), NSWorkspace.shared.open(url) {
             return
         }
-        Task { @MainActor in failedLink = link }
+        Task { @MainActor in activeAlert = .openURLFailed(link) }
+    }
+
+    private enum ActiveAlert: Equatable {
+        case openURLFailed(String)
+        case searchFailed(String)
+
+        @MainActor
+        func title(_ language: DisplayLanguageStore) -> String {
+            switch self {
+            case .openURLFailed: language.string(.desktopOpenURLFailed)
+            case .searchFailed: language.string(.desktopCustomDictReadFailed)
+            }
+        }
+
+        var detail: String {
+            switch self {
+            case let .openURLFailed(link): link
+            case let .searchFailed(diagnostic): diagnostic
+            }
+        }
     }
 
     /// One source's compact label.

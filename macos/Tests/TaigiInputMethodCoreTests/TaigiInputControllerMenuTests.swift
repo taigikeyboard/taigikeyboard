@@ -20,6 +20,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
     /// How many times a row asked for the settings window.
     private var settingsShownCount = 0
+    private var flashes: [String] = []
 
     @MainActor
     override func setUp() async throws {
@@ -35,6 +36,8 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // input method's settings window ordered in mid-test lands in front of
         // whoever is running the tests.
         controller.settingsPresenterOverride = { [weak self] in self?.settingsShownCount += 1 }
+        flashes = []
+        controller.modeFlashOverride = { [weak self] text in self?.flashes.append(text) }
         savedShortcuts = Dictionary(
             uniqueKeysWithValues: ShortcutAction.allCases.map {
                 ($0, KeyboardShortcuts.getShortcut(for: $0.name))
@@ -156,22 +159,53 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertEqual(cleared.keyEquivalentModifierMask, [])
     }
 
-    /// With no session armed the click goes nowhere, as the chord does: there
-    /// is no composition for the switch to apply to.
-    func testTheRomanizationRow_withNoSession_changesNothing() throws {
+    /// With no session armed, menu clicks still flip settings and announce mode
+    /// changes (matching Windows and Linux) instead of being silently dropped.
+    func testTheRomanizationRow_withNoSession_switchesAndFlashes() throws {
         XCTAssertEqual(controller.settings.inputMode, .tl)
 
         try select(Self.toggleRomanization)
 
+        XCTAssertEqual(controller.settings.inputMode, .poj)
+        XCTAssertEqual(flashes, ["白話字"])
+    }
+
+    func testTheTpsRow_withNoSession_switchesAndFlashes() throws {
+        try select(Self.toggleTps)
+        XCTAssertEqual(controller.settings.inputMode, .tps)
+
+        try select(Self.toggleTps)
         XCTAssertEqual(controller.settings.inputMode, .tl)
+        XCTAssertEqual(flashes, ["方音符號", "台羅"])
+    }
+
+    func testCycleCandidateDisplayRow_withNoSession_cyclesAndFlashes_andIsInertUnderTps() throws {
+        try select(Self.cycleCandidateDisplayMode)
+        XCTAssertEqual(controller.settings.candidateDisplayMode, .combined)
+        XCTAssertEqual(flashes, ["漢羅濫"])
+
+        controller.settings.switchInputMode(.pick(.tps))
+        try select(Self.cycleCandidateDisplayMode)
+        XCTAssertEqual(controller.settings.candidateDisplayMode, .combined)
+        XCTAssertEqual(flashes, ["漢羅濫"])
+    }
+
+    func testShowTpsKeyboardRow_withNoSession_flipsWishUnderTpsOnly_withoutShowingPanel() throws {
+        TpsKeyboardPanel.shared.hideNow()
+        try select(Self.showTpsKeyboard)
+        XCTAssertFalse(controller.settings.isTpsKeyboardShown, "inert outside TPS")
+        XCTAssertFalse(TpsKeyboardPanel.shared.isShowing)
+
+        controller.settings.switchInputMode(.pick(.tps))
+        try select(Self.showTpsKeyboard)
+        XCTAssertTrue(controller.settings.isTpsKeyboardShown)
+        XCTAssertFalse(TpsKeyboardPanel.shared.isShowing, "no panel without an active typing session")
+        XCTAssertEqual(flashes, [])
     }
 
     /// Clicking a shortcut row does what its chord does, through the same
     /// doorway: with the session armed, the romanization flips.
     func testTheRomanizationRow_switchesTheRomanization() throws {
-        // Recorded rather than shown: a real flash is a panel ordered in
-        // front of whoever is running the tests.
-        controller.modeFlashOverride = { _ in }
         controller.activateServer(RecordingTextInputClient())
         defer { controller.deactivateServer(nil) }
         XCTAssertEqual(controller.settings.inputMode, .tl)

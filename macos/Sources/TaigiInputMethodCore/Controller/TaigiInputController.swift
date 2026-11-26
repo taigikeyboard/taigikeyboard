@@ -115,13 +115,17 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     var isSymbolPickerPlaceholderMarked = false
 
-    /// The chord on the picker row, read at activation rather than per key:
-    /// the registry read decodes JSON out of `UserDefaults`, and every
-    /// keystroke would otherwise pay it before the composing contract ran.
-    /// Recording a new chord means the settings window took focus, which is
-    /// a fresh activation of this session on the way back.
+    /// The chord on the picker row, cached at activation and refreshed via
+    /// KVO on `UserDefaults.standard` rather than decoded on every keystroke:
+    /// the registry read decodes JSON out of `UserDefaults`, and opening
+    /// Settings does not always deactivate and re-activate the session.
     @MainActor
     var symbolPickerShortcut: KeyboardShortcuts.Shortcut?
+
+    private static let symbolPickerShortcutKey = SettingsKey(
+        name: "KeyboardShortcuts_\(KeyboardShortcuts.Name.showSymbolPicker.rawValue)",
+        defaultValue: "",
+    )
 
     /// The display language the chrome renders in — the process-wide store,
     /// or the one a test injected.
@@ -243,6 +247,22 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var displayLanguageObservation: AnyObject?
 
+    /// KVO on the `KeyboardShortcuts` registry key for `.showSymbolPicker` in
+    /// `UserDefaults.standard`, so rebinding or clearing the shortcut refreshes
+    /// `symbolPickerShortcut` without waiting for re-activation.
+    @MainActor
+    private var symbolPickerShortcutObservation: AnyObject?
+
+    /// KVO on the Appearance setting, so an open TPS keyboard or Telex guide
+    /// follows Light / Dark / Automatic while on screen.
+    @MainActor
+    private var appearanceModeObservation: AnyObject?
+
+    /// Suppresses redundant async KVO callbacks for writes this controller just
+    /// applied synchronously (`switchInputMode`, `cycleCandidateDisplayMode`).
+    private let inputModeWriteGuard = SelfWriteGuard()
+    private let displayModeWriteGuard = SelfWriteGuard()
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -289,6 +309,7 @@ public final class TaigiInputController: IMKInputController {
             // a `defaults write` from outside the process reaches the bar too.
             controller.displayModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.candidateDisplayMode,
+                skipping: controller.displayModeWriteGuard,
                 onMainActor: { [weak controller] in
                     controller?.representCandidates(refetch: true)
                 },
@@ -301,6 +322,7 @@ public final class TaigiInputController: IMKInputController {
             )
             controller.inputModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.inputMode,
+                skipping: controller.inputModeWriteGuard,
                 onMainActor: { [weak controller] in
                     controller?.dismissPalettes()
                     controller?.applyKeyboardLayout()
@@ -335,7 +357,18 @@ public final class TaigiInputController: IMKInputController {
                     controller?.syncTelexGuide()
                 },
             )
-            controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
+            controller.appearanceModeObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.appearanceMode,
+                onMainActor: { [weak controller] in
+                    controller?.syncTpsKeyboard()
+                    controller?.syncTelexGuide()
+                },
+            )
+            controller.refreshSymbolPickerShortcut()
+            controller.symbolPickerShortcutObservation = SettingsStore(userDefaults: .standard)
+                .observeChangesImmediatelyIfMain(of: Self.symbolPickerShortcutKey) { [weak controller] in
+                    controller?.refreshSymbolPickerShortcut()
+                }
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
             controller.armedAutoSpaceCaret = nil
@@ -351,6 +384,11 @@ public final class TaigiInputController: IMKInputController {
                 "activate end session=\(controller.sessionToken.value) tenure=\(activatingTenure) currentTenure=\(controller.tenure) owns=\(controller.backend.owns(controller.sessionToken))",
             )
         }
+    }
+
+    @MainActor
+    private func refreshSymbolPickerShortcut() {
+        symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
     }
 
     /// Claims the engine and the shared UI for an eligible controller. Called
@@ -443,29 +481,31 @@ public final class TaigiInputController: IMKInputController {
     /// One of the two switch chords, through the core's one mode writer
     /// (`SettingsStore.switchInputMode(_:)`). A composition across TPS stays
     /// on screen until the next key commits it (desktop TPS roadmap D5).
+    @MainActor
     private func switchInputMode(_ request: InputModeSwitch) {
         Self.logger.debug("switch input mode \(request)")
-        guard let mode = settings.switchInputMode(request) else { return }
-        onMainActor(nil) { controller, _ in
-            // The candidates on screen were fetched under the old mode, and
-            // the key contract lets Space commit whichever one is
-            // highlighted; the picker was raised under it too. They go with
-            // the mode that produced them — here, not left to
-            // `inputModeObservation`, whose hop lands after a key already
-            // queued.
-            controller.dismissPalettes()
-            controller.applyKeyboardLayout()
-            // The TPS key panel comes and goes with TPS; its stored wish stays.
-            controller.syncTpsKeyboard()
-            // The guide goes under TPS, and is respelled for a romanization.
-            controller.syncTelexGuide()
-            // Then the HUD, because the chord fires from anywhere and a
-            // mode that changed with
-            // no notice reads as the keyboard breaking — the next syllable
-            // composes under rules nothing on screen said had changed
-            // (USER 2026-08-26).
-            controller.flash(mode.displayNameKey)
-        }
+        guard let mode = inputModeWriteGuard.perform(
+            { settings.switchInputMode(request) },
+            committed: { $0 != nil },
+        ) else { return }
+        // The candidates on screen were fetched under the old mode, and
+        // the key contract lets Space commit whichever one is
+        // highlighted; the picker was raised under it too. They go with
+        // the mode that produced them here, and `inputModeWriteGuard`
+        // suppresses the self-triggered KVO `dismissPalettes()` so a key
+        // or picker opened immediately afterward cannot be torn down later.
+        dismissPalettes()
+        applyKeyboardLayout()
+        // The TPS key panel comes and goes with TPS; its stored wish stays.
+        syncTpsKeyboard()
+        // The guide goes under TPS, and stays up for romanizations.
+        syncTelexGuide()
+        // Then the HUD, because the chord fires from anywhere and a
+        // mode that changed with
+        // no notice reads as the keyboard breaking — the next syllable
+        // composes under rules nothing on screen said had changed
+        // (USER 2026-08-26).
+        flash(mode.displayNameKey)
     }
 
     /// The list and the picker taken down without touching the composition:
@@ -486,7 +526,12 @@ public final class TaigiInputController: IMKInputController {
     private func syncTpsKeyboard() {
         guard backend.owns(sessionToken) else { return }
         if settings.isTpsKeyboardWanted {
-            TpsKeyboardPanel.shared.show(ownedBy: sessionToken, target: self, generation: tenure)
+            TpsKeyboardPanel.shared.show(
+                ownedBy: sessionToken,
+                target: self,
+                generation: tenure,
+                appearanceMode: settings.appearanceMode,
+            )
         } else {
             TpsKeyboardPanel.shared.hideNow()
         }
@@ -501,6 +546,7 @@ public final class TaigiInputController: IMKInputController {
             TelexGuidePanel.shared.show(
                 inputMode: settings.inputMode,
                 language: displayLanguage,
+                appearanceMode: settings.appearanceMode,
                 ownedBy: sessionToken,
             )
         } else {
@@ -581,18 +627,21 @@ public final class TaigiInputController: IMKInputController {
                 flash(settings.storedIsHanjiFirst ? .settingsOutputScriptHanji : .settingsOutputScriptRoman)
             }
         case .cycleCandidateDisplayMode:
-            // Inert only under TPS (gated above). Only the setting is
-            // written here — the open bar is re-fetched by the observation
-            // `activateServer` armed on this key, which is the one path the
-            // Appearance pane's write already takes (`representCandidates(refetch:)`).
-            // That observation hops to the main actor, so the flash below
-            // lands one turn BEFORE the bar changes shape; a second, in-line
-            // re-fetch would run the same fetch twice.
+            // Inert only under TPS (gated above). Refetched and repainted
+            // synchronously BEFORE flashing the mode banner (matching Windows
+            // `session/mod.rs` and desktop-core `global.rs`), so the announced
+            // mode never leads an unchanged strip; `displayModeWriteGuard`
+            // suppresses the redundant self-triggered KVO refetch while leaving
+            // external writes (Appearance pane, `defaults write`) updating the
+            // open bar.
             // Flashed even over an open list, as the swap is: the strip
             // changes shape, and a strip that did so with no notice reads as
             // breakage — the same rule as the romanization switch.
             let next = settings.candidateDisplayMode.next
-            settings.candidateDisplayMode = next
+            displayModeWriteGuard.perform {
+                settings.candidateDisplayMode = next
+            }
+            representCandidates(refetch: true)
             flash(next.displayNameKey)
         case .showTelexGuide:
             // The wish is stored for every session to read; this one's guide
@@ -738,9 +787,23 @@ public final class TaigiInputController: IMKInputController {
         armedSwap: Int?,
         _ call: (ComposingRequest) -> [ComposingEffect]?,
     ) -> Bool {
-        guard let effects = call(request(client: client, armedSwap: armedSwap)) else { return false }
-        replay(effects, into: client, armedSwap: armedSwap)
-        return true
+        sendOutcome(client: client, armedSwap: armedSwap, call).answered
+    }
+
+    /// Sends one request and reports both whether this session answered and
+    /// whether replay actually wrote text into `client` (false on ownership
+    /// loss or internal failure recovery).
+    @MainActor
+    func sendOutcome(
+        client: IMKTextInput,
+        armedSwap: Int?,
+        _ call: (ComposingRequest) -> [ComposingEffect]?,
+    ) -> (answered: Bool, wroteText: Bool) {
+        guard let effects = call(request(client: client, armedSwap: armedSwap)) else {
+            return (false, false)
+        }
+        let wroteText = replay(effects, into: client, armedSwap: armedSwap)
+        return (true, wroteText)
     }
 
     /// A request from this session: its window and, with a client and an arm
@@ -770,9 +833,10 @@ public final class TaigiInputController: IMKInputController {
 
     /// Does what the back end answered to a request made with `client`, in
     /// its order, to the client and the window (a represent has its own,
-    /// `representCandidates`).
+    /// `representCandidates`). Answers whether a text write reached `client`.
     @MainActor
-    private func replay(_ effects: [ComposingEffect], into client: IMKTextInput, armedSwap: Int?) {
+    @discardableResult
+    private func replay(_ effects: [ComposingEffect], into client: IMKTextInput, armedSwap: Int?) -> Bool {
         // Where a swap in this reply left the caret: the re-arm that follows
         // it is arithmetic, not another `selectedRange()` query — the
         // rewrite's end is fully determined by the range just replaced, and
@@ -784,6 +848,7 @@ public final class TaigiInputController: IMKInputController {
         // arithmetic too (`writeStart(in:)`).
         let writeStart = effects.contains(.armSwap) ? Self.writeStart(in: client) : nil
         var writtenUTF16 = 0
+        var wroteText = false
         let writer = ClientWriter(client: client)
         let replayTenure = tenure
         for effect in effects {
@@ -795,7 +860,7 @@ public final class TaigiInputController: IMKInputController {
                 Self.logger.notice(
                     "replay discarded session=\(sessionToken.value) tenure=\(replayTenure) currentTenure=\(tenure) owns=\(backend.owns(sessionToken))",
                 )
-                return
+                return wroteText
             }
             switch effect {
             case let .setMarkedText(text, caretUTF16):
@@ -807,12 +872,14 @@ public final class TaigiInputController: IMKInputController {
                 // auto space, a mapped punctuation or a symbol alike.
                 writer.insertText(text)
                 writtenUTF16 += (text as NSString).length
+                wroteText = true
             case let .swapPrecedingSpace(replacement):
                 // Only ever answered after `canSwapPrecedingSpace` found the
                 // arm and the space still in front of the caret.
                 guard let armedSwap else { preconditionFailure("a swap answered with no arm") }
                 client.insertText(replacement, replacementRange: Self.autoSpaceRange(armedAt: armedSwap))
                 caretAfterSwap = armedSwap - 1 + (replacement as NSString).length
+                wroteText = true
             case .armSwap:
                 if let caretAfterSwap {
                     armedAutoSpaceCaret = caretAfterSwap
@@ -831,6 +898,7 @@ public final class TaigiInputController: IMKInputController {
                 TpsKeyboardPanel.shared.flash(row: row, cap: cap, ownedBy: sessionToken)
             }
         }
+        return wroteText
     }
 
     /// Announces a mode the user just switched into, through the injected
@@ -843,12 +911,12 @@ public final class TaigiInputController: IMKInputController {
     /// and it draws its own indicator; a second one of ours over it would be
     /// announcing a mode nothing here owns.
     @MainActor
-    private func flash(_ mode: StringKey) {
+    func flash(_ mode: StringKey) {
         let text = displayLanguage.string(mode)
         if let modeFlashOverride {
             modeFlashOverride(text)
         } else {
-            ModeFlashPanel.shared.flash(text)
+            ModeFlashPanel.shared.flash(text, appearanceMode: settings.appearanceMode)
         }
     }
 
@@ -1014,6 +1082,8 @@ public final class TaigiInputController: IMKInputController {
         tpsKeyboardObservation = nil
         telexGuideObservation = nil
         displayLanguageObservation = nil
+        symbolPickerShortcutObservation = nil
+        appearanceModeObservation = nil
         Self.logger.notice("end complete session=\(sessionToken.value) tenure=\(endingTenure)")
         ComposingSessionCoordinator.shared.resumeWaitingSession()
     }

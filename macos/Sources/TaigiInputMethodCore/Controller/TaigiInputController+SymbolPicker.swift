@@ -139,25 +139,26 @@ extension TaigiInputController {
     }
 
     /// Writes the symbol at `index`, closes the picker and moves the symbol
-    /// to the front of the recents, for the next opening. Nil — a slot with
+    /// to the front of the recents when the write succeeded. Nil — a slot with
     /// no cell — does nothing, and keeps the picker up.
     @MainActor
     private func pickSymbolCell(at index: Int?, client: IMKTextInput) {
         guard let index, symbolPickerCells.indices.contains(index) else { return }
         let symbol = symbolPickerCells[index]
         dismissSymbolPicker()
-        insertSymbol(symbol, client: client)
+        guard insertSymbol(symbol, client: client) else { return }
         settings.noteRecentSymbol(symbol)
     }
 
     /// Writes `symbol` through the back end (`ComposingBackend.insertSymbol`)
     /// — the one picker key that touches the document, so the one that
-    /// spends the auto-space arm.
+    /// spends the auto-space arm. Returns whether the symbol was actually
+    /// written to `client`.
     @MainActor
-    private func insertSymbol(_ symbol: String, client: IMKTextInput) {
+    private func insertSymbol(_ symbol: String, client: IMKTextInput) -> Bool {
         let armedSwap = armedAutoSpaceCaret
         armedAutoSpaceCaret = nil
-        send(client: client, armedSwap: armedSwap) { backend.insertSymbol(symbol, in: $0) }
+        return sendOutcome(client: client, armedSwap: armedSwap) { backend.insertSymbol(symbol, in: $0) }.wroteText
     }
 
     /// Takes the list down and its placeholder with it — from `lastClient`,

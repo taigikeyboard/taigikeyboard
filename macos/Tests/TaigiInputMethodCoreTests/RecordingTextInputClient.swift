@@ -70,6 +70,10 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     /// whose callback re-enters the input method mid-write.
     var afterInsertText: ((String) -> Void)?
 
+    /// Called after each `setMarkedText` is recorded — e.g. to simulate a
+    /// host deactivating the session while clearing the picker placeholder.
+    var afterSetMarkedText: ((String) -> Void)?
+
     /// The attributes of the most recent marked-text write, which is where the
     /// composition's underline lives.
     private(set) var lastMarkedTextAttributes: [NSAttributedString.Key: Any] = [:]
@@ -162,6 +166,7 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         simulateMarkedText(text, selectionRange: selectionRange)
         lastMarkedTextAttributes = (string as? NSAttributedString)
             .flatMap { $0.length > 0 ? $0.attributes(at: 0, effectiveRange: nil) : [:] } ?? [:]
+        afterSetMarkedText?(text)
     }
 
     private func holdSelectionIfLagging() {

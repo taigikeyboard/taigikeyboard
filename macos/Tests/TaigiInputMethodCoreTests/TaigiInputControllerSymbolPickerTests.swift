@@ -177,6 +177,33 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertTrue(session.picker.isShowing)
     }
 
+    /// Rebinding, clearing, or resetting `.showSymbolPicker` while a session
+    /// stays active updates `symbolPickerShortcut` immediately without requiring
+    /// `deactivateServer` / `activateServer`.
+    func testRebindingOrClearingThePickerChord_takesEffectWithoutReactivation() throws {
+        let session = try makeSession()
+
+        KeyboardShortcuts.setShortcut(.init(.period, modifiers: [.control, .command]), for: .showSymbolPicker)
+        XCTAssertFalse(try session.pressPickerChord(), "the old default chord must stop firing")
+        XCTAssertFalse(session.picker.isShowing)
+
+        let periodEvent = try TestFixtures.keyDownEvent(
+            characters: ".", modifiers: [.control, .command], keyCode: UInt16(kVK_ANSI_Period),
+        )
+        XCTAssertTrue(session.controller.handle(periodEvent, client: session.client))
+        XCTAssertTrue(session.picker.isShowing)
+        XCTAssertTrue(session.controller.handle(periodEvent, client: session.client))
+        XCTAssertFalse(session.picker.isShowing)
+
+        KeyboardShortcuts.setShortcut(nil, for: .showSymbolPicker)
+        XCTAssertFalse(session.controller.handle(periodEvent, client: session.client))
+        XCTAssertFalse(session.picker.isShowing)
+
+        KeyboardShortcuts.reset(.showSymbolPicker)
+        XCTAssertTrue(try session.pressPickerChord(), "resetting restores the default chord immediately")
+        XCTAssertTrue(session.picker.isShowing)
+    }
+
     /// A client that cannot say where its caret is cannot host the picker,
     /// for the reason it cannot host the bar. The chord is still consumed.
     func testAClientWithNoCaret_opensNothing() throws {
@@ -434,6 +461,25 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertEqual(session.controller.settings.inputMode, .poj, "the switch itself still ran")
     }
 
+    /// Switching input modes must not queue a delayed KVO `dismissPalettes()`
+    /// that tears down a symbol picker opened right after the switch.
+    func testOpeningPickerRightAfterInputModeSwitch_keepsPickerOpen() async throws {
+        let session = try makeSession()
+        session.controller.modeFlashOverride = { _ in }
+
+        session.controller.performShortcutAction(.toggleRomanization)
+        XCTAssertEqual(session.controller.settings.inputMode, .poj)
+        try session.pressPickerChord()
+        XCTAssertTrue(session.picker.isShowing)
+
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(session.picker.isShowing)
+        XCTAssertTrue(session.controller.isSymbolPickerOpen)
+    }
+
     /// The settings doorway never reaches the key path, and the window it
     /// opens taking focus does not guarantee this session ends — so the
     /// doorway takes the picker down itself.
@@ -516,6 +562,24 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
             SettingsStore(userDefaults: userDefaults).recentSymbols, ["·", "★"],
             "the pick is recorded on top of the other write",
         )
+    }
+
+    /// If inserting the picked symbol fails (for example, the session lost
+    /// ownership while clearing the placeholder), nothing enters the document
+    /// and the symbol must not pollute `recentSymbols`.
+    func testAFailedInsert_doesNotRecordRecentSymbol() throws {
+        let session = try makeSession()
+        try session.pressPickerChord()
+        session.client.afterSetMarkedText = { text in
+            guard text.isEmpty else { return }
+            session.client.afterSetMarkedText = nil
+            session.controller.deactivateServer(session.client)
+        }
+
+        try session.type("w")
+
+        XCTAssertTrue(session.client.insertedTexts.isEmpty)
+        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols, [])
     }
 
     // MARK: - Harness

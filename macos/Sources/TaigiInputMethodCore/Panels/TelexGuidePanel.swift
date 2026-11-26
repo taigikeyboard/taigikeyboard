@@ -46,17 +46,25 @@ final class TelexGuidePanel {
     /// The session the guide is showing for, or nil when nothing is showing.
     private(set) var owner: ComposingSessionToken?
 
-    /// The romanization the card on screen is spelled for, or nil when
-    /// nothing is showing — what a test reads instead of the view tree.
+    /// The input mode `show` was last called with, or nil when nothing is
+    /// showing — kept for tests rather than rebuilding the identical Telex card.
     private(set) var shownInputMode: InputMode?
 
     var isShowing: Bool {
         panel?.isVisible == true
     }
 
+    var currentAppearance: NSAppearance? {
+        panel?.appearance
+    }
+
     /// The display language the card on screen is written in, or nil when
     /// nothing is showing.
     private var shownLanguage: DisplayLanguage?
+
+    /// How many times `makePanel` built a card (for tests pinning that TL↔POJ
+    /// switches reuse the existing card).
+    private(set) var panelBuildCount = 0
 
     /// Small: the card stays up beside the text being typed, about the
     /// height of the TPS key panel that takes its place under TPS (#684).
@@ -98,20 +106,28 @@ final class TelexGuidePanel {
     /// Up for `owner`, or kept up and handed to it — placed again each time,
     /// so a session in an app on another screen takes it there (IMK activates
     /// the incoming session before the outgoing one goes, so the guide is
-    /// still up at every handover). Rebuilt only when the mode or the display
-    /// language it is spelled for changed, so a handover does not flicker.
-    func show(inputMode: InputMode, language: DisplayLanguageStore, ownedBy owner: ComposingSessionToken) {
+    /// still up at every handover). Rebuilt only when no card is showing or
+    /// the display language changed (the table is identical for TL and POJ),
+    /// so neither a handover nor a TL↔POJ switch flickers.
+    func show(
+        inputMode: InputMode,
+        language: DisplayLanguageStore,
+        appearanceMode: AppearanceMode = .auto,
+        ownedBy owner: ComposingSessionToken,
+    ) {
         // TPS types no Telex keys; its chord is inert there too. A guide
         // still up goes all the same.
         guard inputMode != .tps else {
             hideNow()
             return
         }
-        if !isShowing || shownInputMode != inputMode || shownLanguage != language.language {
+        if !isShowing || shownLanguage != language.language {
             panel?.orderOut(nil)
-            panel = Self.makePanel(language: language)
+            panel = Self.makePanel(language: language, appearanceMode: appearanceMode)
+            panelBuildCount += 1
         }
         guard let panel else { return }
+        HUDPanel.applyAppearance(appearanceMode, to: panel)
         if let frame = HUDPanel.typingScreenFrame {
             let size = panel.frame.size
             panel.setFrameOrigin(NSPoint(
@@ -148,7 +164,7 @@ final class TelexGuidePanel {
 
     /// The card: the scheme's name and the two-column table, on the same HUD
     /// chrome as the mode flash.
-    static func makePanel(language: DisplayLanguageStore) -> NSPanel {
+    static func makePanel(language: DisplayLanguageStore, appearanceMode: AppearanceMode = .auto) -> NSPanel {
         let title = NSTextField(labelWithString: language.string(.settingsToneSchemeTelex))
         title.font = .systemFont(ofSize: titleFontSize, weight: .semibold)
 
@@ -180,7 +196,7 @@ final class TelexGuidePanel {
             stack.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -padding.bottom),
         ])
 
-        return HUDPanel.makePanel(background: background)
+        return HUDPanel.makePanel(background: background, appearance: appearanceMode.forcedAppearance)
     }
 
     /// Key | meaning. The key is monospaced semibold because it is a thing
