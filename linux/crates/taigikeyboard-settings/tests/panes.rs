@@ -23,6 +23,7 @@ use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore, SettingsWriter};
 use taigi_linux_platform::DESKTOP_PLATFORM;
 use taigikeyboard_settings::pages::BUILT;
+use taigikeyboard_settings::presentation::strings_for;
 use taigikeyboard_settings::tps_keyboard::{self, PanelSlot, TpsKeyboardWindow};
 use taigikeyboard_settings::window::SettingsWindow;
 use taigikeyboard_settings::SIDEBAR;
@@ -89,12 +90,17 @@ fn every_built_pane_is_in_the_stack(window: &Rc<SettingsWindow>) {
     eprintln!("panes: {} panes in the stack", SettingsPane::ALL.len());
 }
 
-/// trace: General's first switch row is Type ts / ch with c (`IS_C_AFFRICATE_ENABLED`,
-/// default false), right under Tone Keys. Flipping the switch writes `true`;
-/// flipping back `false`.
+/// trace: General's Type ts / ch with c row (`IS_C_AFFRICATE_ENABLED`,
+/// default false), found by its title in the window's language. Flipping the
+/// switch writes `true`; flipping back `false`.
 fn a_switch_row_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window.page_widget(SettingsPane::General).expect("general");
-    let row = find_first::<adw::SwitchRow>(&page).expect("a switch row");
+    let title =
+        strings_for(window.writer().borrow().document()).resolve(StringKey::SettingsCAffricate);
+    let row = find_all::<adw::SwitchRow>(&page)
+        .into_iter()
+        .find(|row| row.title() == title)
+        .expect("the c-affricate switch row");
     assert!(!row.is_active());
     row.set_active(true);
     assert!(window
