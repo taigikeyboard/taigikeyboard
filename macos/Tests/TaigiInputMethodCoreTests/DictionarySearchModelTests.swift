@@ -23,9 +23,12 @@ final class DictionarySearchModelTests: XCTestCase {
             lock.withLock { asked }
         }
 
-        func lookUp(_ query: String, _: Taigi_DesktopShell_SettingsSnapshot) -> [DictionarySearchModel.Hit]? {
+        func lookUp(
+            _ query: String,
+            _: Taigi_DesktopShell_SettingsSnapshot,
+        ) -> Result<[DictionarySearchModel.Hit], DictionarySearchFailure> {
             lock.withLock { asked.append(query) }
-            return [DictionarySearchModelTests.hit(query)]
+            return .success([DictionarySearchModelTests.hit(query)])
         }
     }
 
@@ -38,6 +41,10 @@ final class DictionarySearchModelTests: XCTestCase {
         XCTAssertEqual(recorder.queries, ["tsiah"])
         XCTAssertEqual(model.hits.map(\.roman), ["tsiah"])
         XCTAssertFalse(model.isSearching)
+        XCTAssertFalse(model.hasFailed)
+        XCTAssertNil(model.failureDiagnostic)
+        XCTAssertTrue(model.shouldShowResultsSection)
+        XCTAssertFalse(model.shouldShowNoResults)
     }
 
     func testABlankQueryAsksNothingAndClears() async {
@@ -50,6 +57,8 @@ final class DictionarySearchModelTests: XCTestCase {
         XCTAssertEqual(recorder.queries, ["tsiah"])
         XCTAssertTrue(model.hits.isEmpty)
         XCTAssertFalse(model.isSearching)
+        XCTAssertFalse(model.hasFailed)
+        XCTAssertFalse(model.shouldShowResultsSection)
     }
 
     /// An answer for a query the user has since changed is dropped.
@@ -79,13 +88,71 @@ final class DictionarySearchModelTests: XCTestCase {
     }
 
     /// Before the runtime is configured there are no settings to search
-    /// under: nothing is asked.
-    func testNoSettingsAsksNothing() async {
+    /// under: nothing is asked and a failure is surfaced rather than "No results".
+    func testNoSettingsAsksNothingAndReportsFailure() async {
         let recorder = Recorder()
         let model = DictionarySearchModel(lookUp: recorder.lookUp, settings: { nil })
         model.query = "tsiah"
         await model.search()
         XCTAssertTrue(recorder.queries.isEmpty)
         XCTAssertTrue(model.hits.isEmpty)
+        XCTAssertTrue(model.hasFailed)
+        XCTAssertNotNil(model.failureDiagnostic)
+        XCTAssertFalse(model.shouldShowNoResults)
+        XCTAssertFalse(model.shouldShowResultsSection)
+    }
+
+    /// A failed bridge search surfaces its diagnostic, clears stale hits, and
+    /// suppresses "No results" even after the alert is dismissed, until a
+    /// subsequent query succeeds.
+    func testAFailedLookupReportsDiagnosticAndSuppressesNoResults() async {
+        let model = DictionarySearchModel(
+            lookUp: { query, _ in
+                if query == "broken" {
+                    return .failure(DictionarySearchFailure(diagnostic: "core returned failInternal"))
+                }
+                return .success([DictionarySearchModelTests.hit(query)])
+            },
+            settings: { .init() },
+        )
+
+        model.query = "tsiah"
+        await model.search()
+        XCTAssertEqual(model.hits.map(\.roman), ["tsiah"])
+
+        model.query = "broken"
+        await model.search()
+        XCTAssertTrue(model.hits.isEmpty)
+        XCTAssertTrue(model.hasFailed)
+        XCTAssertEqual(model.failureDiagnostic, "core returned failInternal")
+        XCTAssertFalse(model.shouldShowNoResults)
+        XCTAssertFalse(model.shouldShowResultsSection)
+
+        model.dismissFailureAlert()
+        XCTAssertNil(model.failureDiagnostic)
+        XCTAssertTrue(model.hasFailed)
+        XCTAssertFalse(model.shouldShowNoResults)
+        XCTAssertFalse(model.shouldShowResultsSection)
+
+        model.query = "tsiah-png"
+        await model.search()
+        XCTAssertFalse(model.hasFailed)
+        XCTAssertNil(model.failureDiagnostic)
+        XCTAssertEqual(model.hits.map(\.roman), ["tsiah-png"])
+        XCTAssertTrue(model.shouldShowResultsSection)
+    }
+
+    func testHitHasExternalLookup_reflectsURLAvailability() {
+        var none = DictionarySearchModel.Hit()
+        none.key = "custom:1"
+        XCTAssertFalse(none.hasExternalLookup)
+
+        var moeOnly = none
+        moeOnly.moeURL = "https://sutian.moe.edu.tw/zh-hant/tshiau/?lui=tai_su&tsha=tai5"
+        XCTAssertTrue(moeOnly.hasExternalLookup)
+
+        var chhoeOnly = none
+        chhoeOnly.chhoeURL = "https://chhoe.taigi.info/s?s=su&f=e&lmjf=ki&lmj=tai5"
+        XCTAssertTrue(chhoeOnly.hasExternalLookup)
     }
 }
