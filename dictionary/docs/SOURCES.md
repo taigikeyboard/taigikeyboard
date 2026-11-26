@@ -10,10 +10,10 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: 中華民國教育部 (MoE Taiwan)
 - **Origin URL**: <https://sutian.moe.edu.tw/>
 - **Format**: ODS (OpenDocument Spreadsheet, 19 sheets in the committed capture)
-- **Captured**: `data/raw/kautian.ods` on 2026-11-25 from
+- **Captured**: `data/raw/kautian.ods` on 2026-11-26 from
   <https://sutian.moe.edu.tw/media/senn/ods/kautian.ods>.
-  Upstream Last-Modified: 2026-11-24 18:04:25 UTC; SHA-256:
-  `f5e1d9d3f2c41b8ef20a180c8ccd39af87a9188f923681a121ce57fe2a036864`.
+  Upstream Last-Modified: 2026-11-25 18:04:16 UTC; SHA-256:
+  `ba1cb5d503deb97c6fe6eab802a9147c1bfac091836d6faf7f6bdfb4e4bc2bb0`.
 - **Licence**: **CC BY-ND 3.0 TW** (創用CC 姓名標示-禁止改作 3.0 臺灣) — verified 2026-09-05 against the publisher's copyright notice, <https://sutian.moe.edu.tw/zh-hant/piantsip/pankhuan-singbing/>. Covers text and audio content (文字、音檔內容). **Commercial use permitted; no NonCommercial term.** This file previously recorded CC BY-NC 4.0, which was wrong. Only Hanji + romanization are taken — see `dictionary/LICENSE` for why CC BY-ND permits that.
 - **Notes**: Multi-sheet; pipeline `select`/`expand`/`merge` stages
   handle the pivoting. Largest single source (~49k rows).
