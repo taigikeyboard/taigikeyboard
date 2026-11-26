@@ -17,6 +17,10 @@ final class ModeFlashPanel {
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
 
+    var currentAppearance: NSAppearance? {
+        panel?.appearance
+    }
+
     /// How long the flash holds before fading, and how long the fade takes.
     /// One reading, not an exposure: by the time these could feel wrong the
     /// user has long since learned what the tap does.
@@ -26,11 +30,11 @@ final class ModeFlashPanel {
     /// Shows `text` centred on the screen the user is working on, replacing
     /// any flash still up — a quick double tap must read as two states, not
     /// queue two panels.
-    func flash(_ text: String) {
+    func flash(_ text: String, appearanceMode: AppearanceMode = .auto) {
         hideTask?.cancel()
         panel?.orderOut(nil)
 
-        let panel = Self.makePanel(text: text)
+        let panel = Self.makePanel(text: text, appearanceMode: appearanceMode)
         self.panel = panel
         panel.alphaValue = 1
         panel.orderFrontRegardless()
@@ -59,7 +63,7 @@ final class ModeFlashPanel {
     /// A borderless, non-activating rounded card. Rebuilt per flash: the text
     /// changes each time and the panel lives well under a second, so there is
     /// nothing worth keeping warm.
-    private static func makePanel(text: String) -> NSPanel {
+    static func makePanel(text: String, appearanceMode: AppearanceMode = .auto) -> NSPanel {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 24, weight: .medium)
         label.alignment = .center
@@ -75,7 +79,7 @@ final class ModeFlashPanel {
         label.frame.origin = NSPoint(x: padding.left, y: padding.bottom)
         background.addSubview(label)
 
-        let panel = HUDPanel.makePanel(background: background)
+        let panel = HUDPanel.makePanel(background: background, appearance: appearanceMode.forcedAppearance)
 
         // Centred a third of the way up, clear of both the caret line and the
         // dock.

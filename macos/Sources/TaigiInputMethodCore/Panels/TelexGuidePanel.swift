@@ -54,6 +54,10 @@ final class TelexGuidePanel {
         panel?.isVisible == true
     }
 
+    var currentAppearance: NSAppearance? {
+        panel?.appearance
+    }
+
     /// The display language the card on screen is written in, or nil when
     /// nothing is showing.
     private var shownLanguage: DisplayLanguage?
@@ -105,7 +109,12 @@ final class TelexGuidePanel {
     /// still up at every handover). Rebuilt only when no card is showing or
     /// the display language changed (the table is identical for TL and POJ),
     /// so neither a handover nor a TL↔POJ switch flickers.
-    func show(inputMode: InputMode, language: DisplayLanguageStore, ownedBy owner: ComposingSessionToken) {
+    func show(
+        inputMode: InputMode,
+        language: DisplayLanguageStore,
+        appearanceMode: AppearanceMode = .auto,
+        ownedBy owner: ComposingSessionToken,
+    ) {
         // TPS types no Telex keys; its chord is inert there too. A guide
         // still up goes all the same.
         guard inputMode != .tps else {
@@ -114,10 +123,11 @@ final class TelexGuidePanel {
         }
         if !isShowing || shownLanguage != language.language {
             panel?.orderOut(nil)
-            panel = Self.makePanel(language: language)
+            panel = Self.makePanel(language: language, appearanceMode: appearanceMode)
             panelBuildCount += 1
         }
         guard let panel else { return }
+        HUDPanel.applyAppearance(appearanceMode, to: panel)
         if let frame = HUDPanel.typingScreenFrame {
             let size = panel.frame.size
             panel.setFrameOrigin(NSPoint(
@@ -154,7 +164,7 @@ final class TelexGuidePanel {
 
     /// The card: the scheme's name and the two-column table, on the same HUD
     /// chrome as the mode flash.
-    static func makePanel(language: DisplayLanguageStore) -> NSPanel {
+    static func makePanel(language: DisplayLanguageStore, appearanceMode: AppearanceMode = .auto) -> NSPanel {
         let title = NSTextField(labelWithString: language.string(.settingsToneSchemeTelex))
         title.font = .systemFont(ofSize: titleFontSize, weight: .semibold)
 
@@ -186,7 +196,7 @@ final class TelexGuidePanel {
             stack.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -padding.bottom),
         ])
 
-        return HUDPanel.makePanel(background: background)
+        return HUDPanel.makePanel(background: background, appearance: appearanceMode.forcedAppearance)
     }
 
     /// Key | meaning. The key is monospaced semibold because it is a thing

@@ -55,6 +55,10 @@ final class TpsKeyboardPanel {
         panel?.isVisible == true
     }
 
+    var currentAppearance: NSAppearance? {
+        panel?.appearance
+    }
+
     /// A key cap's side and the gap between caps, in points. Mirrors the
     /// Windows panel's `CAP_SIZE` / `CAP_GAP` (`ui/tps_keyboard.rs`).
     static let capSize: CGFloat = 48
@@ -98,7 +102,12 @@ final class TpsKeyboardPanel {
     /// the incoming session before the outgoing one goes, so the panel is
     /// still up at every handover). Built once and reused — its content never
     /// changes, and AppKit re-colours it for the appearance.
-    func show(ownedBy owner: ComposingSessionToken, target: any TpsKeyboardTarget, generation: Int) {
+    func show(
+        ownedBy owner: ComposingSessionToken,
+        target: any TpsKeyboardTarget,
+        generation: Int,
+        appearanceMode: AppearanceMode = .auto,
+    ) {
         // A flash or a press belongs to the session it lit for; a handover
         // puts both out. A re-show for the same tenure keeps a held cap lit.
         if self.owner != owner || self.generation != generation {
@@ -109,6 +118,7 @@ final class TpsKeyboardPanel {
         self.generation = generation
         guard !rows.isEmpty else { return }
         let panel = panel ?? makePanel()
+        HUDPanel.applyAppearance(appearanceMode, to: panel)
         if let frame = HUDPanel.typingScreenFrame {
             let size = panel.frame.size
             panel.setFrameOrigin(NSPoint(
@@ -225,8 +235,8 @@ final class TpsKeyboardPanel {
         view.wantsLayer = true
         view.layer?.cornerRadius = 6
         view.layer?.borderWidth = 1
-        view.layer?.borderColor = NSColor.separatorColor.cgColor
         view.layer?.masksToBounds = true
+        view.applyBorderColor()
 
         let label = NSTextField(labelWithString: cap.label)
         label.font = .systemFont(ofSize: labelFontSize)
@@ -306,6 +316,24 @@ private final class TpsKeyCapView: NSView {
         // against the current drawing appearance.
         effectiveAppearance.performAsCurrentDrawingAppearance {
             layer?.backgroundColor = NSColor.selectedContentBackgroundColor.cgColor
+        }
+    }
+
+    /// Resolves the cap border under its own effective appearance so switching
+    /// Light / Dark while the panel is open re-tints the `CGColor`.
+    func applyBorderColor() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.borderColor = NSColor.separatorColor.cgColor
+        }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyBorderColor()
+        if isLit {
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                layer?.backgroundColor = NSColor.selectedContentBackgroundColor.cgColor
+            }
         }
     }
 

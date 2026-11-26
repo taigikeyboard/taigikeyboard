@@ -253,6 +253,11 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var symbolPickerShortcutObservation: AnyObject?
 
+    /// KVO on the Appearance setting, so an open TPS keyboard or Telex guide
+    /// follows Light / Dark / Automatic while on screen.
+    @MainActor
+    private var appearanceModeObservation: AnyObject?
+
     /// Suppresses redundant async KVO callbacks for writes this controller just
     /// applied synchronously (`switchInputMode`, `cycleCandidateDisplayMode`).
     private let inputModeWriteGuard = SelfWriteGuard()
@@ -349,6 +354,13 @@ public final class TaigiInputController: IMKInputController {
                     // The store may not have heard yet; its own observation
                     // has no order against this one.
                     controller?.displayLanguage.syncFromSettings()
+                    controller?.syncTelexGuide()
+                },
+            )
+            controller.appearanceModeObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.appearanceMode,
+                onMainActor: { [weak controller] in
+                    controller?.syncTpsKeyboard()
                     controller?.syncTelexGuide()
                 },
             )
@@ -514,7 +526,12 @@ public final class TaigiInputController: IMKInputController {
     private func syncTpsKeyboard() {
         guard backend.owns(sessionToken) else { return }
         if settings.isTpsKeyboardWanted {
-            TpsKeyboardPanel.shared.show(ownedBy: sessionToken, target: self, generation: tenure)
+            TpsKeyboardPanel.shared.show(
+                ownedBy: sessionToken,
+                target: self,
+                generation: tenure,
+                appearanceMode: settings.appearanceMode,
+            )
         } else {
             TpsKeyboardPanel.shared.hideNow()
         }
@@ -529,6 +546,7 @@ public final class TaigiInputController: IMKInputController {
             TelexGuidePanel.shared.show(
                 inputMode: settings.inputMode,
                 language: displayLanguage,
+                appearanceMode: settings.appearanceMode,
                 ownedBy: sessionToken,
             )
         } else {
@@ -898,7 +916,7 @@ public final class TaigiInputController: IMKInputController {
         if let modeFlashOverride {
             modeFlashOverride(text)
         } else {
-            ModeFlashPanel.shared.flash(text)
+            ModeFlashPanel.shared.flash(text, appearanceMode: settings.appearanceMode)
         }
     }
 
@@ -1065,6 +1083,7 @@ public final class TaigiInputController: IMKInputController {
         telexGuideObservation = nil
         displayLanguageObservation = nil
         symbolPickerShortcutObservation = nil
+        appearanceModeObservation = nil
         Self.logger.notice("end complete session=\(sessionToken.value) tenure=\(endingTenure)")
         ComposingSessionCoordinator.shared.resumeWaitingSession()
     }
