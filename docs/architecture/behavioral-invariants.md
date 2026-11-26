@@ -870,13 +870,17 @@ Two distinct sets, both of which MUST match across iOS, Android, and macOS:
 
 ### `INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION`
 
-When the selected display language is `system` (Automatic), the **effective** language is resolved from the device locale by a pure mapping, identical on all three platforms:
+When the selected display language is `system` (Automatic), the **effective** language is resolved from the device locale by a pure mapping:
 
-| Device language subtag | Effective display language |
+- **Desktop and Web rule** (`desktop/crates/taigi-desktop-core/src/strings/mod.rs`, `macos/Sources/TaigiInputMethodCore/Strings/DisplayLanguage.swift`, `web/src/i18n.js`): split the tag on `[-_]`, lowercase the primary language subtag, and exact-match:
+
+| Primary language subtag | Effective display language |
 |---|---|
-| `ja*` | japanese |
-| `en*` | english |
-| anything else / absent (incl. `zh*`) | hanji |
+| `"ja"` (e.g. `ja`, `ja-JP`, `ja_JP`, `JA-Latn-JP`) | japanese |
+| `"en"` (e.g. `en`, `en-US`, `en_GB`, `EN`) | english |
+| anything else / absent (incl. `zh*`, `-ja`, and 3-letter codes `jav`, `jam`, `eng`) | hanji |
+
+- **Pending divergence** (`docs/contributing/cross-platform-alignment.md` §3): desktop (`taigi-desktop-core`, macOS) and web (`web/src/i18n.js`) match exact lowercased primary subtags, whereas iOS (`ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift`) and Android (`android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/DisplayLanguage.kt`) still use `hasPrefix` / `startsWith` (`ja*` → `japanese`, `en*` → `english`), so 3-letter subtags such as `jam` or `eng` resolve to Japanese/English on mobile instead of Hanji — pending a dedicated mobile follow-up.
 
 Taiwanese Hanji is the neutral default: a Chinese-locale (or any non-`ja`/`en`) device reads the UI in Hanji.
 
@@ -884,9 +888,9 @@ Taiwanese Hanji is the neutral default: a Chinese-locale (or any non-`ja`/`en`) 
 
 **macOS** (single process) needs both refresh paths: (a) **selection changes** — key-path KVO on the persisted `displayLanguage` default calls `syncFromSettings()`, covering writes from outside the app (`defaults write`); (b) **OS-language changes under Automatic** — the persisted tag stays `"system"`, so (a) never fires; `SettingsWindowController.show()` and `TaigiInputController.menu()` call `syncFromSettings()` at their own refresh points. Rendering: SwiftUI re-renders the settings window (title = the pane's `navigationTitle`, `sceneBridgingOptions = .all`); `NSApp.mainMenu` is rebuilt from `DisplayLanguageStore.languageDidChange`, invoked from `apply(selected:)` right after the resolver is swapped; `AppDelegate` supplies the callback, the store never imports AppKit.
 
-**Scope**: iOS `Strings/DisplayLanguage.swift` (`resolveAutomatic` / `effectiveLanguage`) + `DisplayLanguageStore.swift`; Android `i18n/DisplayLanguage.kt` + `StringResolver.kt`; macOS `Strings/DisplayLanguage.swift` + `DisplayLanguageStore.swift`.
+**Scope**: `desktop/crates/taigi-desktop-core/src/strings/mod.rs` (`DisplayLanguage::resolve_automatic` / `effective`); macOS `macos/Sources/TaigiInputMethodCore/Strings/DisplayLanguage.swift` + `macos/Sources/TaigiInputMethodCore/Strings/DisplayLanguageStore.swift`; Web `web/src/i18n.js` (`effectiveLanguage`); iOS `ios/Sources/TaigiKeyboard/Strings/DisplayLanguage.swift` + `ios/Sources/TaigiKeyboard/Strings/DisplayLanguageStore.swift`; Android `android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/DisplayLanguage.kt` + `android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/StringResolver.kt`.
 
-**Tests**: iOS `SettingsKeyTests.swift`, Android `DisplayLanguageTest.kt`, macOS `DisplayLanguageTests.swift` (`INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_*` — `ja*→japanese`, `en*→english`, `zh*/fr/absent→hanji`; explicit selection ignores locale). macOS `DisplayLanguageStoreTests.swift` pins the store against an injected defaults suite and device subtag, including the external-write refresh. Cross-process agreement (iOS/Android) + live OS-language refresh are dogfood-pinned.
+**Tests**: `desktop/crates/taigi-desktop-core/src/strings/mod.rs` and macOS `macos/Tests/TaigiInputMethodCoreTests/DisplayLanguageTests.swift` (`INVARIANT_DISPLAY_LANGUAGE_AUTOMATIC_RESOLUTION_*` — exact `"ja"`/`"en"`, `[-_]` delimiters, mixed case, and 3-letter codes `jav`/`jam`/`eng` + `zh*`/empty/`-ja` → `hanji`; explicit selection ignores locale), plus `web/e2e/i18n.spec.mjs`; iOS `ios/TaigiKeyboardTests/SettingsKeyTests.swift` and Android `android/app/src/test/java/com/siansiansu/taigikeyboard/i18n/DisplayLanguageTest.kt` currently pin the pending prefix rule. `macos/Tests/TaigiInputMethodCoreTests/DisplayLanguageStoreTests.swift` pins the store against an injected defaults suite and device subtag, including the external-write refresh. Cross-process agreement (iOS/Android) + live OS-language refresh are dogfood-pinned.
 
 ## §38 — Main-app tab titles follow the display-language picker
 

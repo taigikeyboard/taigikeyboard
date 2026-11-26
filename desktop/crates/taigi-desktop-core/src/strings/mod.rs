@@ -266,8 +266,28 @@ mod tests {
             DisplayLanguage::Japanese
         );
         assert_eq!(
+            DisplayLanguage::resolve_automatic("JA-JP"),
+            DisplayLanguage::Japanese
+        );
+        assert_eq!(
             DisplayLanguage::resolve_automatic("en_US"),
             DisplayLanguage::English
+        );
+        assert_eq!(
+            DisplayLanguage::resolve_automatic("EN_US"),
+            DisplayLanguage::English
+        );
+        assert_eq!(
+            DisplayLanguage::resolve_automatic("jav"),
+            DisplayLanguage::Hanji
+        );
+        assert_eq!(
+            DisplayLanguage::resolve_automatic("jam"),
+            DisplayLanguage::Hanji
+        );
+        assert_eq!(
+            DisplayLanguage::resolve_automatic("eng"),
+            DisplayLanguage::Hanji
         );
         assert_eq!(
             DisplayLanguage::resolve_automatic("zh-TW"),
