@@ -434,6 +434,25 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertEqual(session.controller.settings.inputMode, .poj, "the switch itself still ran")
     }
 
+    /// Switching input modes must not queue a delayed KVO `dismissPalettes()`
+    /// that tears down a symbol picker opened right after the switch.
+    func testOpeningPickerRightAfterInputModeSwitch_keepsPickerOpen() async throws {
+        let session = try makeSession()
+        session.controller.modeFlashOverride = { _ in }
+
+        session.controller.performShortcutAction(.toggleRomanization)
+        XCTAssertEqual(session.controller.settings.inputMode, .poj)
+        try session.pressPickerChord()
+        XCTAssertTrue(session.picker.isShowing)
+
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(session.picker.isShowing)
+        XCTAssertTrue(session.controller.isSymbolPickerOpen)
+    }
+
     /// The settings doorway never reaches the key path, and the window it
     /// opens taking focus does not guarantee this session ends — so the
     /// doorway takes the picker down itself.

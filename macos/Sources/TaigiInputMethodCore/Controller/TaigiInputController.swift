@@ -243,6 +243,11 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var displayLanguageObservation: AnyObject?
 
+    /// Suppresses redundant async KVO callbacks for writes this controller just
+    /// applied synchronously (`switchInputMode`, `cycleCandidateDisplayMode`).
+    private let inputModeWriteGuard = SelfWriteGuard()
+    private let displayModeWriteGuard = SelfWriteGuard()
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -289,6 +294,7 @@ public final class TaigiInputController: IMKInputController {
             // a `defaults write` from outside the process reaches the bar too.
             controller.displayModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.candidateDisplayMode,
+                skipping: controller.displayModeWriteGuard,
                 onMainActor: { [weak controller] in
                     controller?.representCandidates(refetch: true)
                 },
@@ -301,6 +307,7 @@ public final class TaigiInputController: IMKInputController {
             )
             controller.inputModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.inputMode,
+                skipping: controller.inputModeWriteGuard,
                 onMainActor: { [weak controller] in
                     controller?.dismissPalettes()
                     controller?.applyKeyboardLayout()
@@ -443,29 +450,31 @@ public final class TaigiInputController: IMKInputController {
     /// One of the two switch chords, through the core's one mode writer
     /// (`SettingsStore.switchInputMode(_:)`). A composition across TPS stays
     /// on screen until the next key commits it (desktop TPS roadmap D5).
+    @MainActor
     private func switchInputMode(_ request: InputModeSwitch) {
         Self.logger.debug("switch input mode \(request)")
-        guard let mode = settings.switchInputMode(request) else { return }
-        onMainActor(nil) { controller, _ in
-            // The candidates on screen were fetched under the old mode, and
-            // the key contract lets Space commit whichever one is
-            // highlighted; the picker was raised under it too. They go with
-            // the mode that produced them — here, not left to
-            // `inputModeObservation`, whose hop lands after a key already
-            // queued.
-            controller.dismissPalettes()
-            controller.applyKeyboardLayout()
-            // The TPS key panel comes and goes with TPS; its stored wish stays.
-            controller.syncTpsKeyboard()
-            // The guide goes under TPS, and is respelled for a romanization.
-            controller.syncTelexGuide()
-            // Then the HUD, because the chord fires from anywhere and a
-            // mode that changed with
-            // no notice reads as the keyboard breaking — the next syllable
-            // composes under rules nothing on screen said had changed
-            // (USER 2026-08-26).
-            controller.flash(mode.displayNameKey)
-        }
+        guard let mode = inputModeWriteGuard.perform(
+            { settings.switchInputMode(request) },
+            committed: { $0 != nil },
+        ) else { return }
+        // The candidates on screen were fetched under the old mode, and
+        // the key contract lets Space commit whichever one is
+        // highlighted; the picker was raised under it too. They go with
+        // the mode that produced them here, and `inputModeWriteGuard`
+        // suppresses the self-triggered KVO `dismissPalettes()` so a key
+        // or picker opened immediately afterward cannot be torn down later.
+        dismissPalettes()
+        applyKeyboardLayout()
+        // The TPS key panel comes and goes with TPS; its stored wish stays.
+        syncTpsKeyboard()
+        // The guide goes under TPS, and stays up for romanizations.
+        syncTelexGuide()
+        // Then the HUD, because the chord fires from anywhere and a
+        // mode that changed with
+        // no notice reads as the keyboard breaking — the next syllable
+        // composes under rules nothing on screen said had changed
+        // (USER 2026-08-26).
+        flash(mode.displayNameKey)
     }
 
     /// The list and the picker taken down without touching the composition:
@@ -581,18 +590,21 @@ public final class TaigiInputController: IMKInputController {
                 flash(settings.storedIsHanjiFirst ? .settingsOutputScriptHanji : .settingsOutputScriptRoman)
             }
         case .cycleCandidateDisplayMode:
-            // Inert only under TPS (gated above). Only the setting is
-            // written here — the open bar is re-fetched by the observation
-            // `activateServer` armed on this key, which is the one path the
-            // Appearance pane's write already takes (`representCandidates(refetch:)`).
-            // That observation hops to the main actor, so the flash below
-            // lands one turn BEFORE the bar changes shape; a second, in-line
-            // re-fetch would run the same fetch twice.
+            // Inert only under TPS (gated above). Refetched and repainted
+            // synchronously BEFORE flashing the mode banner (matching Windows
+            // `session/mod.rs` and desktop-core `global.rs`), so the announced
+            // mode never leads an unchanged strip; `displayModeWriteGuard`
+            // suppresses the redundant self-triggered KVO refetch while leaving
+            // external writes (Appearance pane, `defaults write`) updating the
+            // open bar.
             // Flashed even over an open list, as the swap is: the strip
             // changes shape, and a strip that did so with no notice reads as
             // breakage — the same rule as the romanization switch.
             let next = settings.candidateDisplayMode.next
-            settings.candidateDisplayMode = next
+            displayModeWriteGuard.perform {
+                settings.candidateDisplayMode = next
+            }
+            representCandidates(refetch: true)
             flash(next.displayNameKey)
         case .showTelexGuide:
             // The wish is stored for every session to read; this one's guide

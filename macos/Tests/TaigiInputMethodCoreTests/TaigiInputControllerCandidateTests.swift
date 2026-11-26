@@ -1145,12 +1145,9 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "romanization-only cells carry no Hanji")
     }
 
-    /// The ⌃⌘H chord takes the same road as the pane: the handler writes the
-    /// setting and nothing else, and the observation armed at activation is
-    /// what re-fetches the open bar — one mechanism, one turn later. Pinned
-    /// through the chord so a handler that stopped writing the observed key,
-    /// or an activation that stopped arming it, fails here rather than on a
-    /// real device. One press, side by side → Hanji with Romanization: every two-script cell
+    /// The ⌃⌘H chord writes the setting under the self-write guard, refetches
+    /// the open bar synchronously, and leaves external KVO writes updating it
+    /// too. One press, side by side → Hanji with Romanization: every two-script cell
     /// becomes two adjacent one-script cells, the bar stays up.
     func testCycleCandidateDisplayShortcut_refetchesTheOpenBar() async throws {
         let key = SettingsStore.Keys.candidateDisplayMode.name
@@ -1186,6 +1183,82 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         XCTAssertTrue(after.allSatisfy { $0.annotation == nil }, "合用 cells carry one script each")
         let leading = try XCTUnwrap(before.firstTwoScriptCell)
         try assertRomanizationFollowsHanji(in: after, hanji: XCTUnwrap(leading.annotation), romanization: leading.text)
+    }
+
+    /// The bar must repaint BEFORE the mode flash fires — not on a later KVO
+    /// turn — and the suppressed KVO task must not refetch a second time.
+    func testCycleCandidateDisplayShortcut_repaintsBeforeFlashing_withNoDuplicateRefetch() async throws {
+        let key = SettingsStore.Keys.candidateDisplayMode.name
+        clearSettingRestoredAtTeardown(key)
+        let session = try composedSession()
+        defer { session.controller.deactivateServer(session.client) }
+        var shownDuringFlash: CandidateWindowContent?
+        session.controller.modeFlashOverride = { [flashes = session.flashes, presenter = session.presenter] text in
+            flashes.texts.append(text)
+            shownDuringFlash = presenter.shownContent
+        }
+        let callsBefore = session.presenter.calls.count
+
+        session.controller.performShortcutAction(.cycleCandidateDisplayMode)
+
+        let duringFlash = try XCTUnwrap(shownDuringFlash)
+        XCTAssertTrue(
+            duringFlash.cells.allSatisfy { $0.annotation == nil },
+            "bar must already be repainted to .combined when the flash fires",
+        )
+        let callsRightAfter = session.presenter.calls.dropFirst(callsBefore)
+        XCTAssertEqual(callsRightAfter.count, 1)
+
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+        XCTAssertEqual(
+            session.presenter.calls.dropFirst(callsBefore).count,
+            1,
+            "self-triggered KVO must not trigger a second refetch",
+        )
+    }
+
+    /// A mode switch suppresses its own async KVO `dismissPalettes()`, so a
+    /// keystroke typed right after switching brings up a bar that stays up.
+    func testSwitchingRomanization_thenTypingImmediately_keepsTheNewBarOnScreen() async throws {
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.inputMode.name)
+        let session = try composedSession()
+        defer { session.controller.deactivateServer(session.client) }
+        XCTAssertTrue(session.presenter.isShowing)
+
+        session.controller.performShortcutAction(.toggleRomanization)
+        XCTAssertFalse(session.presenter.isShowing)
+        XCTAssertEqual(session.controller.settings.inputMode, .poj)
+
+        session.client.caretRects[0] = Self.caretRectAtEndOfComposition
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: session.client)
+        XCTAssertTrue(session.presenter.isShowing)
+
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
+
+        XCTAssertTrue(
+            session.presenter.isShowing,
+            "delayed KVO from switchInputMode must not tear down a bar opened after the switch",
+        )
+    }
+
+    /// External `inputMode` writes (General pane / `defaults write`) still
+    /// dismiss an open candidate bar through KVO.
+    func testExternalInputModeWrite_dismissesTheOpenBar() async throws {
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.inputMode.name)
+        let session = try composedSession()
+        defer { session.controller.deactivateServer(session.client) }
+        XCTAssertTrue(session.presenter.isShowing)
+
+        UserDefaults.standard.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
+        for _ in 0 ..< 50 where session.presenter.isShowing {
+            await Task.yield()
+        }
+
+        XCTAssertFalse(session.presenter.isShowing)
     }
 
     func testHidePalettes_returnsTheCandidateKeysToTheHost() throws {
