@@ -7,7 +7,8 @@ hanzi half of `dictionary.fst`.
 
 Filter + dedup mirror the original `INSERT OR IGNORE INTO dictionary` from
 build/create_app_db.sh:
-  - Drop rows where `tl` is empty or > MAX_SYLLABLES.
+  - Drop rows where `tl` is empty or > MAX_SYLLABLES (counted by `_syllable_count`,
+    which — unlike the old SQL hyphen count — reads the khinsiann `--` as one separator).
   - UNIQUE(tl, hanzi) — but NULL hanzi rows are NEVER deduped (SQLite
     UNIQUE allows multiple NULLs; collapsing them with a Python tuple key
     would silently drop valid pure-romanization rows).
@@ -25,6 +26,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from common.cleanup import count_syllables
 from common.kautian_provenance import COL_ACCENT_MASK, COL_ALT_READING, COL_MAIN, COL_NAME
 from common.source_bits import DICT_BIN_COLUMNS, encode_kautian_subtag
 
@@ -91,8 +93,9 @@ class DictionaryRecord:
 
 
 def _syllable_count(tl: str) -> int:
-    """Mirror SQL: count syllables after normalising spaces to hyphens."""
-    return tl.replace(" ", "-").count("-") + 1
+    """Syllables of a TL reading. The khinsiann `--` is one separator, not an empty syllable
+    (`ông--ko-liú--ko` = 4) — the engine's `phonetics::api::tl_syllables` counts the same."""
+    return count_syllables(tl)
 
 
 def _normalise_optional(value) -> str | None:

@@ -30,7 +30,7 @@ import polars as pl
 
 from build.common import BASE_DIR, LOG_DIR
 from common.abbrev import extract_abbrev, extract_tps_abbrev
-from common.cleanup import blank_roman_only_hanzi, strip_pure_hanji_khinsiann
+from common.cleanup import blank_roman_only_hanzi, count_syllables, strip_pure_hanji_khinsiann
 from common.frequency import load_frequency_map, get_frequency
 from common.logging_utils import setup_logging, log_header
 from common.notone import apply_or_dialect_variant, remove_tone, remove_tps_tone
@@ -439,7 +439,7 @@ def _load_khiin_new_entries(
             continue
 
         # Skip entries exceeding 4 syllables
-        if len(tl.split("-")) > 4:
+        if count_syllables(tl) > 4:
             filter_drops["khiin_over_4syl"] += 1
             continue
 
