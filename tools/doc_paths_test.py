@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import doc_paths
 
@@ -159,62 +162,150 @@ class WorkingTreePathsTests(unittest.TestCase):
             text=True,
         ).stdout.strip()
 
-    def test_tracks_new_files_submodules_and_skips_deleted_or_ignored(self) -> None:
+    def _init_repo_with_submodule(self, repo: Path) -> None:
+        self._git(repo, "init", "-q")
+        (repo / ".gitignore").write_text("ignored/\n", encoding="utf-8")
+        (repo / "docs").mkdir()
+        (repo / "docs" / "kept.md").write_text("kept\n", encoding="utf-8")
+        (repo / "docs" / "deleted.md").write_text("gone\n", encoding="utf-8")
+        self._git(repo, "add", ".gitignore", "docs/kept.md", "docs/deleted.md")
+        self._git(repo, "commit", "-q", "-m", "init")
+        head_sha = self._git(repo, "rev-parse", "HEAD")
+        self._git(
+            repo,
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            f"160000,{head_sha},taigi-converter",
+        )
+
+    def test_plain_git_tracks_submodules_skips_deleted_and_untracked_without_jj(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            self._git(repo, "init", "-q")
-            (repo / ".gitignore").write_text("ignored/\n", encoding="utf-8")
-            (repo / ".jj").mkdir()
-            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
-            (repo / ".jj" / "state.md").write_text("jj\n", encoding="utf-8")
-            (repo / "docs").mkdir()
-            (repo / "docs" / "kept.md").write_text("kept\n", encoding="utf-8")
-            (repo / "docs" / "deleted.md").write_text("gone\n", encoding="utf-8")
-            self._git(repo, "add", ".gitignore", "docs/kept.md", "docs/deleted.md")
-            self._git(repo, "commit", "-q", "-m", "init")
-            head_sha = self._git(repo, "rev-parse", "HEAD")
-
-            # Register a submodule gitlink with no initialized checkout on disk.
-            self._git(
-                repo,
-                "update-index",
-                "--add",
-                "--cacheinfo",
-                f"160000,{head_sha},taigi-converter",
-            )
-
-            global_excludes = repo / ".global-excludes"
-            global_excludes.write_text("*.personal\n.global-excludes\n", encoding="utf-8")
-            self._git(repo, "config", "core.excludesFile", str(global_excludes))
-
+            self._init_repo_with_submodule(repo)
             (repo / "docs" / "deleted.md").unlink()
             (repo / "engine").mkdir()
-            (repo / "engine" / "new_file.rs").write_text("fn f() {}\n", encoding="utf-8")
-            (repo / "docs" / "new_doc.md").write_text(
-                "See `engine/new_file.rs` and [kept](kept.md).\n", encoding="utf-8"
-            )
+            (repo / "engine" / "untracked.rs").write_text("fn f() {}\n", encoding="utf-8")
+            (repo / "docs" / "untracked.md").write_text("untracked\n", encoding="utf-8")
             (repo / "ignored").mkdir()
             (repo / "ignored" / "skip.md").write_text("ignored\n", encoding="utf-8")
-            (repo / "notes.personal").write_text("personal\n", encoding="utf-8")
 
-            tracked, submodules = doc_paths.working_tree_paths(repo)
+            real_run = subprocess.run
+            calls = []
+
+            def spy_run(cmd, *args, **kwargs):
+                calls.append(cmd[0])
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(doc_paths.subprocess, "run", side_effect=spy_run):
+                tracked, submodules = doc_paths.working_tree_paths(repo)
+
+            self.assertNotIn("jj", calls)
+            self.assertEqual(submodules, {"taigi-converter"})
+            self.assertEqual(tracked, {".gitignore", "docs/kept.md", "taigi-converter"})
+
+    def test_jj_repo_uses_jj_file_list_and_falls_back_when_jj_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self._init_repo_with_submodule(repo)
+            (repo / ".jj").mkdir()
+            (repo / "docs" / "deleted.md").unlink()
+            (repo / "Makefile").write_text("all:\n", encoding="utf-8")
+
+            real_run = subprocess.run
+
+            def fake_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    self.assertEqual(
+                        cmd,
+                        [
+                            "jj",
+                            "--no-pager",
+                            "--color=never",
+                            "--quiet",
+                            "-R",
+                            str(repo),
+                            "file",
+                            "list",
+                            "-T",
+                            r'file_type ++ "\t" ++ path ++ "\0"',
+                        ],
+                    )
+                    return subprocess.CompletedProcess(
+                        cmd,
+                        0,
+                        stdout="file\tMakefile\0file\tdocs/deleted.md\0git-submodule\ttaigi-converter\0",
+                        stderr="",
+                    )
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(doc_paths.subprocess, "run", side_effect=fake_jj):
+                tracked, submodules = doc_paths.working_tree_paths(repo)
 
             self.assertEqual(submodules, {"taigi-converter"})
-            self.assertEqual(
-                tracked,
-                {
-                    ".gitignore",
-                    "docs/kept.md",
-                    "docs/new_doc.md",
-                    "engine/new_file.rs",
-                    "taigi-converter",
-                },
-            )
-            # ignored_paths keeps ignoring global excludes so CI and local agree.
-            self.assertEqual(
-                doc_paths.ignored_paths({"ignored/skip.md", "notes.personal"}, repo),
-                {"ignored/skip.md"},
-            )
+            self.assertEqual(tracked, {"Makefile", "taigi-converter"})
+
+            def missing_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    raise FileNotFoundError("jj")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(doc_paths.subprocess, "run", side_effect=missing_jj):
+                tracked, submodules = doc_paths.working_tree_paths(repo)
+
+            self.assertEqual(submodules, {"taigi-converter"})
+            self.assertEqual(tracked, {".gitignore", "docs/kept.md", "taigi-converter"})
+
+    @unittest.skipUnless(shutil.which("jj"), "jj not installed")
+    def test_real_jj_tracks_new_files_and_respects_auto_track(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            cfg = root / "jj.toml"
+            cfg.write_text('[user]\nname = "Test"\nemail = "test@example.com"\n', encoding="utf-8")
+            with mock.patch.dict(os.environ, {"JJ_CONFIG": str(cfg)}):
+                subprocess.run(
+                    ["jj", "git", "init", "--colocate", str(repo)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                (repo / ".gitignore").write_text("ignored/\n", encoding="utf-8")
+                (repo / "docs").mkdir()
+                (repo / "docs" / "kept.md").write_text("kept\n", encoding="utf-8")
+                (repo / "docs" / "deleted.md").write_text("gone\n", encoding="utf-8")
+                subprocess.run(
+                    ["jj", "-R", str(repo), "commit", "-m", "init"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                (repo / "docs" / "deleted.md").unlink()
+                (repo / "engine").mkdir()
+                (repo / "engine" / "new_file.rs").write_text("fn f() {}\n", encoding="utf-8")
+                (repo / "docs" / "new_doc.md").write_text(
+                    "See `engine/new_file.rs` and [kept](kept.md).\n", encoding="utf-8"
+                )
+                (repo / "ignored").mkdir()
+                (repo / "ignored" / "skip.md").write_text("ignored\n", encoding="utf-8")
+
+                tracked, submodules = doc_paths.working_tree_paths(repo)
+                self.assertEqual(submodules, set())
+                self.assertEqual(
+                    tracked,
+                    {".gitignore", "docs/kept.md", "docs/new_doc.md", "engine/new_file.rs"},
+                )
+
+                cfg.write_text(
+                    '[user]\nname = "Test"\nemail = "test@example.com"\n[snapshot]\nauto-track = "none()"\n',
+                    encoding="utf-8",
+                )
+                (repo / "docs" / "untracked.md").write_text("untracked\n", encoding="utf-8")
+                tracked_after, _ = doc_paths.working_tree_paths(repo)
+                self.assertNotIn("docs/untracked.md", tracked_after)
 
 
 if __name__ == "__main__":

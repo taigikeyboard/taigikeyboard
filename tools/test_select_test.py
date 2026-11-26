@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -486,23 +488,43 @@ class DefaultBaseTests(unittest.TestCase):
 
 
 def _working_tree_paths(root: Path) -> list[str]:
-    listed = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(root),
-            "-c",
-            "core.quotepath=false",
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
+    listed: str | None = None
+    if (root / ".jj").is_dir():
+        try:
+            listed = subprocess.run(
+                [
+                    "jj",
+                    "--no-pager",
+                    "--color=never",
+                    "--quiet",
+                    "-R",
+                    str(root),
+                    "file",
+                    "list",
+                    "-T",
+                    r'path ++ "\0"',
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+        except FileNotFoundError:
+            listed = None
+    if listed is None:
+        listed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "-c",
+                "core.quotepath=false",
+                "ls-files",
+                "-z",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
     return sorted(
         {
             path
@@ -513,6 +535,34 @@ def _working_tree_paths(root: Path) -> list[str]:
 
 
 class CoverageGuardTests(SelectorTestCase):
+    def _init_git_repo(self, repo: Path) -> None:
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        (repo / ".gitignore").write_text("ignored_dir/\n*.log\n", encoding="utf-8")
+        (repo / "kept.txt").write_text("kept\n", encoding="utf-8")
+        (repo / "deleted.txt").write_text("gone\n", encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(repo), "add", ".gitignore", "kept.txt", "deleted.txt"],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-q",
+                "-m",
+                "init",
+            ],
+            check=True,
+        )
+
     def test_every_tracked_file_has_a_rule(self) -> None:
         paths = _working_tree_paths(ROOT)
 
@@ -525,52 +575,120 @@ class CoverageGuardTests(SelectorTestCase):
             "(effects_of, or NO_GATE_DIRS when it needs no gate)",
         )
 
-    def test_working_tree_paths_tracks_new_files_and_skips_deleted_or_ignored(
-        self,
-    ) -> None:
+    def test_plain_git_skips_deleted_and_untracked_without_invoking_jj(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            subprocess.run(["git", "init", "-q", tmp], check=True)
-            (repo / ".gitignore").write_text("ignored_dir/\n*.log\n", encoding="utf-8")
-            (repo / ".jj").mkdir()
-            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
-            (repo / ".jj" / "state.txt").write_text("jj\n", encoding="utf-8")
-            (repo / "kept.txt").write_text("kept\n", encoding="utf-8")
-            (repo / "deleted.txt").write_text("gone\n", encoding="utf-8")
-            subprocess.run(
-                ["git", "-C", tmp, "add", ".gitignore", "kept.txt", "deleted.txt"],
-                check=True,
-            )
-            subprocess.run(
-                [
-                    "git",
-                    "-C",
-                    tmp,
-                    "-c",
-                    "user.name=Test",
-                    "-c",
-                    "user.email=test@example.com",
-                    "-c",
-                    "commit.gpgsign=false",
-                    "commit",
-                    "-q",
-                    "-m",
-                    "init",
-                ],
-                check=True,
-            )
-
+            self._init_git_repo(repo)
             (repo / "deleted.txt").unlink()
             (repo / "newdir").mkdir()
             (repo / "newdir" / "thing.txt").write_text("new\n", encoding="utf-8")
-            (repo / "ignored_dir").mkdir()
-            (repo / "ignored_dir" / "skip.txt").write_text("ignored\n", encoding="utf-8")
-            (repo / "skip.log").write_text("ignored\n", encoding="utf-8")
 
-            self.assertEqual(
-                _working_tree_paths(repo),
-                [".gitignore", "kept.txt", "newdir/thing.txt"],
-            )
+            real_run = subprocess.run
+            calls = []
+
+            def spy_run(cmd, *args, **kwargs):
+                calls.append(cmd[0])
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(subprocess, "run", side_effect=spy_run):
+                paths = _working_tree_paths(repo)
+
+            self.assertNotIn("jj", calls)
+            self.assertEqual(paths, [".gitignore", "kept.txt"])
+
+    def test_jj_repo_uses_jj_file_list_and_falls_back_when_jj_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self._init_git_repo(repo)
+            (repo / ".jj").mkdir()
+            (repo / "deleted.txt").unlink()
+            (repo / "newdir").mkdir()
+            (repo / "newdir" / "thing.txt").write_text("new\n", encoding="utf-8")
+
+            real_run = subprocess.run
+
+            def fake_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    self.assertEqual(
+                        cmd,
+                        [
+                            "jj",
+                            "--no-pager",
+                            "--color=never",
+                            "--quiet",
+                            "-R",
+                            str(repo),
+                            "file",
+                            "list",
+                            "-T",
+                            r'path ++ "\0"',
+                        ],
+                    )
+                    return subprocess.CompletedProcess(
+                        cmd,
+                        0,
+                        stdout=".gitignore\0kept.txt\0deleted.txt\0newdir/thing.txt\0",
+                        stderr="",
+                    )
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(subprocess, "run", side_effect=fake_jj):
+                self.assertEqual(
+                    _working_tree_paths(repo),
+                    [".gitignore", "kept.txt", "newdir/thing.txt"],
+                )
+
+            def missing_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    raise FileNotFoundError("jj")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(subprocess, "run", side_effect=missing_jj):
+                self.assertEqual(_working_tree_paths(repo), [".gitignore", "kept.txt"])
+
+    @unittest.skipUnless(shutil.which("jj"), "jj not installed")
+    def test_real_jj_tracks_new_dirs_and_respects_auto_track_none(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            cfg = root / "jj.toml"
+            cfg.write_text('[user]\nname = "Test"\nemail = "test@example.com"\n', encoding="utf-8")
+            with mock.patch.dict(os.environ, {"JJ_CONFIG": str(cfg)}):
+                subprocess.run(
+                    ["jj", "git", "init", "--colocate", str(repo)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                (repo / ".gitignore").write_text("ignored_dir/\n*.log\n", encoding="utf-8")
+                (repo / "kept.txt").write_text("kept\n", encoding="utf-8")
+                (repo / "deleted.txt").write_text("gone\n", encoding="utf-8")
+                subprocess.run(
+                    ["jj", "-R", str(repo), "commit", "-m", "init"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                (repo / "deleted.txt").unlink()
+                (repo / "newdir").mkdir()
+                (repo / "newdir" / "thing.txt").write_text("new\n", encoding="utf-8")
+                (repo / "ignored_dir").mkdir()
+                (repo / "ignored_dir" / "skip.txt").write_text("ignored\n", encoding="utf-8")
+                (repo / "skip.log").write_text("ignored\n", encoding="utf-8")
+
+                self.assertEqual(
+                    _working_tree_paths(repo),
+                    [".gitignore", "kept.txt", "newdir/thing.txt"],
+                )
+
+                cfg.write_text(
+                    '[user]\nname = "Test"\nemail = "test@example.com"\n[snapshot]\nauto-track = "none()"\n',
+                    encoding="utf-8",
+                )
+                (repo / "untracked_dir").mkdir()
+                (repo / "untracked_dir" / "skip.txt").write_text("u\n", encoding="utf-8")
+                self.assertNotIn("untracked_dir/skip.txt", _working_tree_paths(repo))
 
 
 if __name__ == "__main__":

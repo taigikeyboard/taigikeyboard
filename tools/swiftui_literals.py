@@ -87,25 +87,48 @@ def findings_in(text: str) -> list[tuple[int, str]]:
 
 
 def swift_files(root: Path = ROOT) -> list[str]:
-    """Every non-ignored `.swift` file under `ios/` or `macos/` present on disk."""
-    listed = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(root),
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            "ios/*.swift",
-            "macos/*.swift",
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
+    """Every tracked `.swift` file under `ios/` or `macos/` present on disk."""
+    listed: str | None = None
+    if (root / ".jj").is_dir():
+        try:
+            listed = subprocess.run(
+                [
+                    "jj",
+                    "--no-pager",
+                    "--color=never",
+                    "--quiet",
+                    "-R",
+                    str(root),
+                    "file",
+                    "list",
+                    "-T",
+                    r'path ++ "\0"',
+                    "--",
+                    "root-glob:ios/**/*.swift",
+                    "root-glob:macos/**/*.swift",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+        except FileNotFoundError:
+            listed = None
+    if listed is None:
+        listed = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "ls-files",
+                "-z",
+                "--",
+                "ios/*.swift",
+                "macos/*.swift",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
     return sorted(
         {rel for rel in listed.split("\0") if rel and (root / rel).is_file()}
     )

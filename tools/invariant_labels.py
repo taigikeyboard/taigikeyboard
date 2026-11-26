@@ -87,23 +87,37 @@ def test_code(rel: str, text: str) -> str:
 
 
 def test_mentions(root: Path) -> set[str]:
-    listed = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(root),
-            "ls-files",
-            "--cached",
-            "--others",
-            "--exclude-standard",
-            "-z",
-            "--",
-            *TEST_ROOTS,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout
+    listed: str | None = None
+    if (root / ".jj").is_dir():
+        try:
+            listed = subprocess.run(
+                [
+                    "jj",
+                    "--no-pager",
+                    "--color=never",
+                    "--quiet",
+                    "-R",
+                    str(root),
+                    "file",
+                    "list",
+                    "-T",
+                    r'path ++ "\0"',
+                    "--",
+                    *(f"root-glob:{d}/**" for d in TEST_ROOTS),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout
+        except FileNotFoundError:
+            listed = None
+    if listed is None:
+        listed = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--", *TEST_ROOTS],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
     names: set[str] = set()
     for rel in sorted({entry for entry in listed.split("\0") if entry}):
         if not rel.endswith(TEST_SUFFIXES):

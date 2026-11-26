@@ -27,14 +27,14 @@ resolve_gate_sha() {
     local repo_dir="$1"
     if [[ -d "$repo_dir/.jj" ]] && command -v jj >/dev/null 2>&1; then
         local jj_state jj_commit jj_empty jj_parents jj_bookmarks jj_conflict
-        jj_state="$(jj -R "$repo_dir" log -r '@' --no-graph \
+        jj_state="$(jj --no-pager --color=never -R "$repo_dir" log -r '@' --no-graph \
             -T 'commit_id ++ " " ++ empty ++ " " ++ parents.len() ++ " " ++ local_bookmarks.len() ++ " " ++ conflict ++ "\n"')" ||
             fail "cannot inspect jj working copy (@)"
         read -r jj_commit jj_empty jj_parents jj_bookmarks jj_conflict <<< "$jj_state"
         [[ -n "$jj_commit" ]] || fail "cannot resolve jj working copy (@)"
         if [[ "$jj_empty" == "true" && "$jj_parents" == "1" && "$jj_bookmarks" == "0" ]]; then
             local parent_state parent_commit parent_conflict
-            parent_state="$(jj -R "$repo_dir" --ignore-working-copy log -r '@-' --no-graph \
+            parent_state="$(jj --no-pager --color=never -R "$repo_dir" --ignore-working-copy log -r '@-' --no-graph \
                 -T 'commit_id ++ " " ++ conflict ++ "\n"')" ||
                 fail "cannot resolve jj parent commit (@-)"
             read -r parent_commit parent_conflict <<< "$parent_state"
@@ -52,9 +52,7 @@ resolve_gate_sha() {
 
     local sha
     sha="$(git -C "$repo_dir" rev-parse HEAD)" || fail "cannot resolve HEAD"
-    if ! git -C "$repo_dir" diff --quiet \
-        || ! git -C "$repo_dir" diff --cached --quiet \
-        || [[ -n "$(git -C "$repo_dir" ls-files --others --exclude-standard)" ]]; then
+    if ! git -C "$repo_dir" diff --quiet || ! git -C "$repo_dir" diff --cached --quiet; then
         fail "the working tree has uncommitted changes — commit and push before running check-box (the box gates the pushed commit, not uncommitted files)"
     fi
     printf '%s\n' "$sha"

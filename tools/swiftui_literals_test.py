@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import swiftui_literals
 
@@ -83,50 +86,160 @@ class SwiftFilesTests(unittest.TestCase):
             text=True,
         )
 
-    def test_tracks_new_files_and_skips_deleted_ignored_and_jj_files(self) -> None:
+    def _init_swift_repo(self, repo: Path) -> None:
+        self._git(repo, "init", "-q")
+        (repo / ".gitignore").write_text("ios/Ignored/\n*.generated.swift\n", encoding="utf-8")
+        (repo / "ios" / "Sources").mkdir(parents=True)
+        (repo / "macos" / "Sources").mkdir(parents=True)
+        (repo / "ios" / "Sources" / "Kept.swift").write_text("let a = 1\n", encoding="utf-8")
+        (repo / "ios" / "Sources" / "Deleted.swift").write_text("let b = 2\n", encoding="utf-8")
+        (repo / "macos" / "Sources" / "Mac.swift").write_text("let c = 3\n", encoding="utf-8")
+        self._git(
+            repo,
+            "add",
+            ".gitignore",
+            "ios/Sources/Kept.swift",
+            "ios/Sources/Deleted.swift",
+            "macos/Sources/Mac.swift",
+        )
+        self._git(repo, "commit", "-q", "-m", "init")
+
+    def test_plain_git_skips_deleted_and_untracked_and_never_invokes_jj(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            self._git(repo, "init", "-q")
-            (repo / ".gitignore").write_text("ios/Ignored/\n*.generated.swift\n", encoding="utf-8")
-            (repo / ".jj").mkdir()
-            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
-            (repo / ".jj" / "Ignored.swift").write_text("// jj\n", encoding="utf-8")
-            (repo / "ios" / "Sources").mkdir(parents=True)
-            (repo / "macos" / "Sources").mkdir(parents=True)
-            (repo / "ios" / "Sources" / "Kept.swift").write_text("let a = 1\n", encoding="utf-8")
-            (repo / "ios" / "Sources" / "Deleted.swift").write_text("let b = 2\n", encoding="utf-8")
-            (repo / "macos" / "Sources" / "Mac.swift").write_text("let c = 3\n", encoding="utf-8")
-            self._git(
-                repo,
-                "add",
-                ".gitignore",
-                "ios/Sources/Kept.swift",
-                "ios/Sources/Deleted.swift",
-                "macos/Sources/Mac.swift",
-            )
-            self._git(repo, "commit", "-q", "-m", "init")
+            self._init_swift_repo(repo)
+            (repo / "ios" / "Sources" / "Deleted.swift").unlink()
+            (repo / "ios" / "Untracked.swift").write_text("let x = 0\n", encoding="utf-8")
 
-            # Simulate jj @ edits without staging in Git's index:
-            # delete a tracked file, add files in a brand-new subdir, and add ignored files.
+            real_run = subprocess.run
+            calls = []
+
+            def spy_run(cmd, *args, **kwargs):
+                calls.append(cmd[0])
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(swiftui_literals.subprocess, "run", side_effect=spy_run):
+                files = swiftui_literals.swift_files(repo)
+
+            self.assertNotIn("jj", calls)
+            self.assertEqual(
+                files,
+                ["ios/Sources/Kept.swift", "macos/Sources/Mac.swift"],
+            )
+
+    def test_jj_repo_uses_jj_file_list_and_falls_back_when_jj_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            self._init_swift_repo(repo)
+            (repo / ".jj").mkdir()
             (repo / "ios" / "Sources" / "Deleted.swift").unlink()
             (repo / "ios" / "NewFeature").mkdir(parents=True)
             (repo / "ios" / "NewFeature" / "Added.swift").write_text("let d = 4\n", encoding="utf-8")
-            (repo / "macos" / "NewMac.swift").write_text("let e = 5\n", encoding="utf-8")
-            (repo / "ios" / "Ignored").mkdir(parents=True)
-            (repo / "ios" / "Ignored" / "Skip.swift").write_text("let f = 6\n", encoding="utf-8")
-            (repo / "ios" / "Sources" / "Auto.generated.swift").write_text(
-                "let g = 7\n", encoding="utf-8"
-            )
 
-            self.assertEqual(
-                swiftui_literals.swift_files(repo),
-                [
-                    "ios/NewFeature/Added.swift",
-                    "ios/Sources/Kept.swift",
-                    "macos/NewMac.swift",
-                    "macos/Sources/Mac.swift",
-                ],
-            )
+            real_run = subprocess.run
+
+            def fake_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    self.assertEqual(
+                        cmd,
+                        [
+                            "jj",
+                            "--no-pager",
+                            "--color=never",
+                            "--quiet",
+                            "-R",
+                            str(repo),
+                            "file",
+                            "list",
+                            "-T",
+                            r'path ++ "\0"',
+                            "--",
+                            "root-glob:ios/**/*.swift",
+                            "root-glob:macos/**/*.swift",
+                        ],
+                    )
+                    return subprocess.CompletedProcess(
+                        cmd,
+                        0,
+                        stdout="ios/Sources/Kept.swift\0ios/Sources/Deleted.swift\0ios/NewFeature/Added.swift\0macos/Sources/Mac.swift\0",
+                        stderr="",
+                    )
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(swiftui_literals.subprocess, "run", side_effect=fake_jj):
+                self.assertEqual(
+                    swiftui_literals.swift_files(repo),
+                    [
+                        "ios/NewFeature/Added.swift",
+                        "ios/Sources/Kept.swift",
+                        "macos/Sources/Mac.swift",
+                    ],
+                )
+
+            def missing_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    raise FileNotFoundError("jj")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(swiftui_literals.subprocess, "run", side_effect=missing_jj):
+                self.assertEqual(
+                    swiftui_literals.swift_files(repo),
+                    ["ios/Sources/Kept.swift", "macos/Sources/Mac.swift"],
+                )
+
+    @unittest.skipUnless(shutil.which("jj"), "jj not installed")
+    def test_real_jj_tracks_new_swift_files_and_respects_auto_track(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            cfg = root / "jj.toml"
+            cfg.write_text('[user]\nname = "Test"\nemail = "test@example.com"\n', encoding="utf-8")
+            with mock.patch.dict(os.environ, {"JJ_CONFIG": str(cfg)}):
+                subprocess.run(
+                    ["jj", "git", "init", "--colocate", str(repo)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                (repo / ".gitignore").write_text("ios/Ignored/\n*.generated.swift\n", encoding="utf-8")
+                (repo / "ios" / "Sources").mkdir(parents=True)
+                (repo / "macos" / "Sources").mkdir(parents=True)
+                (repo / "ios" / "Sources" / "Kept.swift").write_text("let a = 1\n", encoding="utf-8")
+                (repo / "ios" / "Sources" / "Deleted.swift").write_text("let b = 2\n", encoding="utf-8")
+                (repo / "macos" / "Sources" / "Mac.swift").write_text("let c = 3\n", encoding="utf-8")
+                subprocess.run(
+                    ["jj", "-R", str(repo), "commit", "-m", "init"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                (repo / "ios" / "Sources" / "Deleted.swift").unlink()
+                (repo / "ios" / "Top.swift").write_text("let top = 0\n", encoding="utf-8")
+                (repo / "ios" / "NewFeature").mkdir(parents=True)
+                (repo / "ios" / "NewFeature" / "Added.swift").write_text("let d = 4\n", encoding="utf-8")
+                (repo / "macos" / "NewMac.swift").write_text("let e = 5\n", encoding="utf-8")
+                (repo / "ios" / "Ignored").mkdir(parents=True)
+                (repo / "ios" / "Ignored" / "Skip.swift").write_text("let f = 6\n", encoding="utf-8")
+                (repo / "ios" / "Sources" / "Auto.generated.swift").write_text("let g = 7\n", encoding="utf-8")
+
+                self.assertEqual(
+                    swiftui_literals.swift_files(repo),
+                    [
+                        "ios/NewFeature/Added.swift",
+                        "ios/Sources/Kept.swift",
+                        "ios/Top.swift",
+                        "macos/NewMac.swift",
+                        "macos/Sources/Mac.swift",
+                    ],
+                )
+
+                cfg.write_text(
+                    '[user]\nname = "Test"\nemail = "test@example.com"\n[snapshot]\nauto-track = "none()"\n',
+                    encoding="utf-8",
+                )
+                (repo / "ios" / "Untracked.swift").write_text("let u = 8\n", encoding="utf-8")
+                self.assertNotIn("ios/Untracked.swift", swiftui_literals.swift_files(repo))
 
 
 if __name__ == "__main__":

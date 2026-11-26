@@ -69,6 +69,9 @@ class CheckBoxTests(unittest.TestCase):
 import sys
 
 args = sys.argv[1:]
+if "--no-pager" not in args or "--color=never" not in args:
+    print(f"missing --no-pager or --color=never in jj args: {{args}}", file=sys.stderr)
+    sys.exit(2)
 if "-r" in args:
     rev = args[args.index("-r") + 1]
     if rev == "@":
@@ -103,17 +106,27 @@ sys.exit(2)
         env["PATH"] = str(bin_dir)
         return env
 
-    def test_plain_git_clean_returns_head_and_ignores_gitignored_files(self) -> None:
+    def _env_with_jj_config(self, toml_text: str = "") -> dict[str, str]:
+        cfg = self.temporary_directory() / "jj-config.toml"
+        cfg.write_text(toml_text, encoding="utf-8")
+        env = dict(os.environ)
+        env["JJ_CONFIG"] = str(cfg)
+        return env
+
+    def test_plain_git_clean_returns_head_and_ignores_ignored_and_untracked_files(
+        self,
+    ) -> None:
         repo = self.temporary_directory()
         head = self._init_git_repo(repo)
         (repo / "scratch.ignored").write_text("ignored\n", encoding="utf-8")
+        (repo / "notes.txt").write_text("untracked\n", encoding="utf-8")
 
         result = self._run_print_sha(repo)
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), head)
 
-    def test_plain_git_rejects_modified_staged_and_untracked_files(self) -> None:
+    def test_plain_git_rejects_modified_and_staged_files(self) -> None:
         repo = self.temporary_directory()
         self._init_git_repo(repo)
 
@@ -126,12 +139,6 @@ sys.exit(2)
         res_staged = self._run_print_sha(repo)
         self.assertNotEqual(res_staged.returncode, 0)
         self.assertIn("uncommitted changes", res_staged.stderr)
-
-        self._git(repo, "reset", "--hard", "-q", "HEAD")
-        (repo / "new.txt").write_text("untracked\n", encoding="utf-8")
-        res_untracked = self._run_print_sha(repo)
-        self.assertNotEqual(res_untracked.returncode, 0)
-        self.assertIn("uncommitted changes", res_untracked.stderr)
 
     def test_jj_stub_non_empty_at_resolves_to_at_even_with_git_diff(self) -> None:
         repo = self.temporary_directory()
@@ -240,6 +247,7 @@ sys.exit(2)
     @unittest.skipUnless(shutil.which("jj"), "jj not installed")
     def test_real_colocated_jj_workspace_resolution(self) -> None:
         repo = self.temporary_directory()
+        env = self._env_with_jj_config("")
         subprocess.run(
             [
                 "jj",
@@ -255,6 +263,7 @@ sys.exit(2)
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         )
         (repo / "tracked.txt").write_text("v1\n", encoding="utf-8")
         subprocess.run(
@@ -273,12 +282,15 @@ sys.exit(2)
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         )
 
         def jj_id(rev: str) -> str:
             return subprocess.run(
                 [
                     "jj",
+                    "--no-pager",
+                    "--color=never",
                     "-R",
                     str(repo),
                     "log",
@@ -291,17 +303,18 @@ sys.exit(2)
                 check=True,
                 capture_output=True,
                 text=True,
+                env=env,
             ).stdout.strip()
 
         # Clean empty @ resolves to @- (== git HEAD).
-        res_empty = self._run_print_sha(repo)
+        res_empty = self._run_print_sha(repo, env=env)
         self.assertEqual(res_empty.returncode, 0, res_empty.stderr)
         self.assertEqual(res_empty.stdout.strip(), jj_id("@-"))
         self.assertEqual(res_empty.stdout.strip(), self._git(repo, "rev-parse", "HEAD"))
 
         # Editing a tracked file in @ resolves to @'s commit_id (different from git HEAD).
         (repo / "tracked.txt").write_text("v2\n", encoding="utf-8")
-        res_edit = self._run_print_sha(repo)
+        res_edit = self._run_print_sha(repo, env=env)
         self.assertEqual(res_edit.returncode, 0, res_edit.stderr)
         edit_sha = res_edit.stdout.strip()
         self.assertEqual(edit_sha, jj_id("@"))
@@ -309,7 +322,7 @@ sys.exit(2)
 
         # Adding a brand-new untracked file in @ snapshots and updates @'s commit_id.
         (repo / "added.txt").write_text("new\n", encoding="utf-8")
-        res_added = self._run_print_sha(repo)
+        res_added = self._run_print_sha(repo, env=env)
         self.assertEqual(res_added.returncode, 0, res_added.stderr)
         added_sha = res_added.stdout.strip()
         self.assertEqual(added_sha, jj_id("@"))
@@ -331,14 +344,108 @@ sys.exit(2)
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         )
-        res_after_new = self._run_print_sha(repo)
+        res_after_new = self._run_print_sha(repo, env=env)
         self.assertEqual(res_after_new.returncode, 0, res_after_new.stderr)
         self.assertEqual(res_after_new.stdout.strip(), added_sha)
         self.assertEqual(res_after_new.stdout.strip(), jj_id("@-"))
         self.assertEqual(
             res_after_new.stdout.strip(), self._git(repo, "rev-parse", "HEAD")
         )
+
+    @unittest.skipUnless(shutil.which("jj"), "jj not installed")
+    def test_real_colocated_jj_ignores_user_color_and_pager_config(self) -> None:
+        repo = self.temporary_directory()
+        env = self._env_with_jj_config(
+            '[user]\nname = "Test"\nemail = "test@example.com"\n'
+            '[ui]\ncolor = "always"\npaginate = "auto"\n'
+        )
+        subprocess.run(
+            ["jj", "git", "init", "--colocate", str(repo)],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        (repo / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        subprocess.run(
+            ["jj", "-R", str(repo), "commit", "-m", "base"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        def clean_id(rev: str) -> str:
+            return subprocess.run(
+                [
+                    "jj",
+                    "--no-pager",
+                    "--color=never",
+                    "-R",
+                    str(repo),
+                    "log",
+                    "-r",
+                    rev,
+                    "--no-graph",
+                    "-T",
+                    'commit_id ++ "\\n"',
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            ).stdout.strip()
+
+        res_empty = self._run_print_sha(repo, env=env)
+        self.assertEqual(res_empty.returncode, 0, res_empty.stderr)
+        empty_sha = res_empty.stdout.strip()
+        self.assertRegex(empty_sha, r"^[0-9a-f]{40}$")
+        self.assertEqual(empty_sha, clean_id("@-"))
+
+        (repo / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        res_edit = self._run_print_sha(repo, env=env)
+        self.assertEqual(res_edit.returncode, 0, res_edit.stderr)
+        edit_sha = res_edit.stdout.strip()
+        self.assertRegex(edit_sha, r"^[0-9a-f]{40}$")
+        self.assertEqual(edit_sha, clean_id("@"))
+
+    @unittest.skipUnless(shutil.which("jj"), "jj not installed")
+    def test_real_colocated_jj_respects_auto_track_none_for_untracked_files(self) -> None:
+        repo = self.temporary_directory()
+        cfg = self.temporary_directory() / "jj-config.toml"
+        cfg.write_text(
+            '[user]\nname = "Test"\nemail = "test@example.com"\n',
+            encoding="utf-8",
+        )
+        env = dict(os.environ)
+        env["JJ_CONFIG"] = str(cfg)
+        subprocess.run(
+            ["jj", "git", "init", "--colocate", str(repo)],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        (repo / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        subprocess.run(
+            ["jj", "-R", str(repo), "commit", "-m", "base"],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+
+        cfg.write_text(
+            '[user]\nname = "Test"\nemail = "test@example.com"\n'
+            '[snapshot]\nauto-track = "none()"\n',
+            encoding="utf-8",
+        )
+        (repo / "notes.txt").write_text("untracked\n", encoding="utf-8")
+        res = self._run_print_sha(repo, env=env)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(res.stdout.strip(), self._git(repo, "rev-parse", "HEAD"))
 
 
 if __name__ == "__main__":

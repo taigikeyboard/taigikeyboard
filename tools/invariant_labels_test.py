@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import invariant_labels
 from invariant_labels import Label
@@ -148,49 +151,159 @@ class TestMentionsWorkingTreeTests(unittest.TestCase):
             text=True,
         )
 
-    def test_reads_new_untracked_tests_and_skips_deleted_or_ignored_files(self) -> None:
+    def _init_repo(self, repo: Path) -> Path:
+        self._git(repo, "init", "-q")
+        (repo / ".gitignore").write_text("engine/target/\n", encoding="utf-8")
+        (repo / "engine" / "phonetics" / "tests").mkdir(parents=True)
+        (repo / "android" / "app" / "src" / "test" / "java").mkdir(parents=True)
+        (repo / "engine" / "phonetics" / "tests" / "a.rs").write_text(
+            "// INVARIANT_committed_rule\n", encoding="utf-8"
+        )
+        deleted = repo / "android" / "app" / "src" / "test" / "java" / "DeletedTest.kt"
+        deleted.write_text("// INVARIANT_deleted_rule\n", encoding="utf-8")
+        self._git(
+            repo,
+            "add",
+            ".gitignore",
+            "engine/phonetics/tests/a.rs",
+            "android/app/src/test/java/DeletedTest.kt",
+        )
+        self._git(repo, "commit", "-q", "-m", "init")
+        return deleted
+
+    def test_plain_git_skips_deleted_and_untracked_and_never_invokes_jj(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)
-            self._git(repo, "init", "-q")
-            (repo / ".gitignore").write_text("engine/target/\n", encoding="utf-8")
+            deleted = self._init_repo(repo)
+            deleted.unlink()
+            (repo / "ios" / "TaigiKeyboardTests").mkdir(parents=True)
+            (repo / "ios" / "TaigiKeyboardTests" / "UntrackedTests.swift").write_text(
+                "// INVARIANT_untracked_rule\n", encoding="utf-8"
+            )
+
+            real_run = subprocess.run
+            calls = []
+
+            def spy_run(cmd, *args, **kwargs):
+                calls.append(cmd[0])
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(invariant_labels.subprocess, "run", side_effect=spy_run):
+                mentions = invariant_labels.test_mentions(repo)
+
+            self.assertNotIn("jj", calls)
+            self.assertEqual(mentions, {"committed_rule"})
+
+    def test_jj_repo_uses_jj_file_list_and_falls_back_when_jj_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            deleted = self._init_repo(repo)
             (repo / ".jj").mkdir()
-            (repo / ".jj" / ".gitignore").write_text("/*\n", encoding="utf-8")
-            (repo / "engine" / "phonetics" / "tests").mkdir(parents=True)
-            (repo / "android" / "app" / "src" / "test" / "java").mkdir(parents=True)
-
-            (repo / "engine" / "phonetics" / "tests" / "a.rs").write_text(
-                "// INVARIANT_committed_rule\n", encoding="utf-8"
-            )
-            deleted = repo / "android" / "app" / "src" / "test" / "java" / "DeletedTest.kt"
-            deleted.write_text("// INVARIANT_deleted_rule\n", encoding="utf-8")
-            self._git(
-                repo,
-                "add",
-                ".gitignore",
-                "engine/phonetics/tests/a.rs",
-                "android/app/src/test/java/DeletedTest.kt",
-            )
-            self._git(repo, "commit", "-q", "-m", "init")
-
-            # Simulate jj @ edits: remove tracked file, add new untracked test files, add ignored file.
             deleted.unlink()
             (repo / "ios" / "TaigiKeyboardTests").mkdir(parents=True)
             (repo / "ios" / "TaigiKeyboardTests" / "NewTests.swift").write_text(
                 "// INVARIANT_new_jj_rule\n", encoding="utf-8"
             )
-            (repo / "macos" / "Tests" / "NewSuite").mkdir(parents=True)
-            (repo / "macos" / "Tests" / "NewSuite" / "CaseTests.swift").write_text(
-                "// INVARIANT_new_macos_rule\n", encoding="utf-8"
-            )
-            (repo / "engine" / "target" / "debug" / "tests").mkdir(parents=True)
-            (repo / "engine" / "target" / "debug" / "tests" / "ignored.rs").write_text(
-                "// INVARIANT_ignored_rule\n", encoding="utf-8"
-            )
 
-            self.assertEqual(
-                invariant_labels.test_mentions(repo),
-                {"committed_rule", "new_jj_rule", "new_macos_rule"},
-            )
+            real_run = subprocess.run
+
+            def fake_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    self.assertEqual(
+                        cmd,
+                        [
+                            "jj",
+                            "--no-pager",
+                            "--color=never",
+                            "--quiet",
+                            "-R",
+                            str(repo),
+                            "file",
+                            "list",
+                            "-T",
+                            r'path ++ "\0"',
+                            "--",
+                            *(f"root-glob:{d}/**" for d in invariant_labels.TEST_ROOTS),
+                        ],
+                    )
+                    return subprocess.CompletedProcess(
+                        cmd,
+                        0,
+                        stdout="engine/phonetics/tests/a.rs\0android/app/src/test/java/DeletedTest.kt\0ios/TaigiKeyboardTests/NewTests.swift\0",
+                        stderr="",
+                    )
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(invariant_labels.subprocess, "run", side_effect=fake_jj):
+                self.assertEqual(
+                    invariant_labels.test_mentions(repo),
+                    {"committed_rule", "new_jj_rule"},
+                )
+
+            def missing_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    raise FileNotFoundError("jj")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(invariant_labels.subprocess, "run", side_effect=missing_jj):
+                self.assertEqual(invariant_labels.test_mentions(repo), {"committed_rule"})
+
+    @unittest.skipUnless(shutil.which("jj"), "jj not installed")
+    def test_real_jj_reads_new_tests_and_respects_auto_track(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            cfg = root / "jj.toml"
+            cfg.write_text('[user]\nname = "Test"\nemail = "test@example.com"\n', encoding="utf-8")
+            with mock.patch.dict(os.environ, {"JJ_CONFIG": str(cfg)}):
+                subprocess.run(
+                    ["jj", "git", "init", "--colocate", str(repo)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                (repo / ".gitignore").write_text("engine/target/\n", encoding="utf-8")
+                (repo / "engine" / "phonetics" / "tests").mkdir(parents=True)
+                (repo / "android" / "app" / "src" / "test" / "java").mkdir(parents=True)
+                (repo / "engine" / "phonetics" / "tests" / "a.rs").write_text(
+                    "// INVARIANT_committed_rule\n", encoding="utf-8"
+                )
+                deleted = repo / "android" / "app" / "src" / "test" / "java" / "DeletedTest.kt"
+                deleted.write_text("// INVARIANT_deleted_rule\n", encoding="utf-8")
+                subprocess.run(
+                    ["jj", "-R", str(repo), "commit", "-m", "init"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
+                deleted.unlink()
+                (repo / "ios" / "TaigiKeyboardTests").mkdir(parents=True)
+                (repo / "ios" / "TaigiKeyboardTests" / "NewTests.swift").write_text(
+                    "// INVARIANT_new_jj_rule\n", encoding="utf-8"
+                )
+                (repo / "macos" / "Tests" / "NewSuite").mkdir(parents=True)
+                (repo / "macos" / "Tests" / "NewSuite" / "CaseTests.swift").write_text(
+                    "// INVARIANT_new_macos_rule\n", encoding="utf-8"
+                )
+                (repo / "engine" / "target" / "debug" / "tests").mkdir(parents=True)
+                (repo / "engine" / "target" / "debug" / "tests" / "ignored.rs").write_text(
+                    "// INVARIANT_ignored_rule\n", encoding="utf-8"
+                )
+
+                self.assertEqual(
+                    invariant_labels.test_mentions(repo),
+                    {"committed_rule", "new_jj_rule", "new_macos_rule"},
+                )
+
+                cfg.write_text(
+                    '[user]\nname = "Test"\nemail = "test@example.com"\n[snapshot]\nauto-track = "none()"\n',
+                    encoding="utf-8",
+                )
+                (repo / "ios" / "TaigiKeyboardTests" / "UntrackedTests.swift").write_text(
+                    "// INVARIANT_untracked_rule\n", encoding="utf-8"
+                )
+                self.assertNotIn("untracked_rule", invariant_labels.test_mentions(repo))
 
 
 if __name__ == "__main__":

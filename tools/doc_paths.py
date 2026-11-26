@@ -53,19 +53,10 @@ NOT_A_PATH = re.compile(r"[*?{}<>$\[\]|\s,=()]|\.\.\.|…|[A-Z]+\.[A-Z]+\.[A-Z]+
 SUFFIX = re.compile(r"(::.*|:L?\d.*|#.*)$")
 
 
-def git(
-    *args: str,
-    stdin: str = "",
-    repo: Path = ROOT,
-    ignore_global_excludes: bool = True,
-) -> list[str]:
+def git(*args: str, stdin: str = "", repo: Path = ROOT) -> list[str]:
     """NUL-separated git output, so non-ASCII names come back unquoted."""
-    cmd = ["git", "-C", str(repo)]
-    if ignore_global_excludes:
-        cmd.extend(["-c", "core.excludesFile=/dev/null"])
-    cmd.extend([*args, "-z"])
     result = subprocess.run(
-        cmd,
+        ["git", "-C", str(repo), "-c", "core.excludesFile=/dev/null", *args, "-z"],
         input=stdin,
         capture_output=True,
         text=True,
@@ -168,28 +159,61 @@ def ignored_paths(paths: set[str], repo: Path = ROOT) -> set[str]:
     return {hit.rstrip("/") for hit in git("check-ignore", "--no-index", "--stdin", stdin=queries, repo=repo)}
 
 
+def _jj_tracked_entries(repo: Path) -> list[tuple[str, str]] | None:
+    if not (repo / ".jj").is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            [
+                "jj",
+                "--no-pager",
+                "--color=never",
+                "--quiet",
+                "-R",
+                str(repo),
+                "file",
+                "list",
+                "-T",
+                r'file_type ++ "\t" ++ path ++ "\0"',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        raise RuntimeError(f"jj file list failed: {result.stderr.strip()}")
+    entries: list[tuple[str, str]] = []
+    for entry in result.stdout.split("\0"):
+        if entry:
+            kind, path = entry.split("\t", 1)
+            entries.append((kind, path))
+    return entries
+
+
 def working_tree_paths(repo: Path = ROOT) -> tuple[set[str], set[str]]:
-    """(existing tracked + non-ignored untracked paths, submodule paths) in `repo`."""
+    """(existing tracked paths, submodule paths) in `repo`."""
+    jj_entries = _jj_tracked_entries(repo)
+    if jj_entries is not None:
+        submodules = {path for kind, path in jj_entries if kind == "git-submodule"}
+        tracked = {
+            path
+            for kind, path in jj_entries
+            if kind == "git-submodule"
+            or (repo / path).is_file()
+            or (repo / path).is_symlink()
+        }
+        return tracked, submodules
     # `<mode> <object> <stage>\t<path>`; mode 160000 is a submodule.
     entries = [entry.split("\t", 1) for entry in git("ls-files", "--stage", repo=repo)]
     submodules = {path for meta, path in entries if meta.startswith("160000 ")}
-    cached = {
+    tracked = {
         path
         for _, path in entries
         if path in submodules or (repo / path).is_file() or (repo / path).is_symlink()
     }
-    others = {
-        path
-        for path in git(
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            repo=repo,
-            ignore_global_excludes=False,
-        )
-        if not path.endswith("/") and ((repo / path).is_file() or (repo / path).is_symlink())
-    }
-    return cached | others, submodules
+    return tracked, submodules
 
 
 def main() -> int:
@@ -209,7 +233,7 @@ def main() -> int:
     print("\n".join(failures), file=sys.stderr)
     print(
         f"doc-paths: {len(failures)} dead path(s) — point the doc at the file's new"
-        " location, drop the reference if the file is gone, or check that a new file is not gitignored;"
+        " location, drop the reference if the file is gone, or `git add` a new file;"
         " name another repository's file by URL.",
         file=sys.stderr,
     )
