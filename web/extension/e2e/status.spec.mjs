@@ -10,6 +10,7 @@ import {
   A,
   C,
   chip,
+  clickPopup,
   commitWord,
   expect,
   expectToolbar,
@@ -253,9 +254,7 @@ test("a broken package keeps the site's keys, and says why not", async ({
   try {
     const page = await context.newPage();
     await page.goto(FIELDS);
-    const popup = await openPopup(context, worker, page);
-    await popup.locator("#turn-on").click();
-    await page.bringToFront();
+    await clickPopup(context, worker, page, "turn-on");
     await expectToolbar(worker, page, "!");
     const field = page.locator("#text");
     await field.click();
@@ -266,11 +265,7 @@ test("a broken package keeps the site's keys, and says why not", async ({
     await expect(preedit(page)).toBeEmpty();
 
     // Turning off clears the failure badge and chip.
-    const offPopup = await openPopup(context, worker, page);
-    await Promise.all([
-      offPopup.waitForEvent("close"),
-      offPopup.locator("#turn-off").click(),
-    ]);
+    await clickPopup(context, worker, page, "turn-off");
     await expectToolbar(worker, page, "");
     await expect(chip(page)).toBeHidden();
   } finally {
