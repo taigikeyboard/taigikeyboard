@@ -197,11 +197,12 @@ impl CandidateMetrics {
             // selections keep the arithmetic they shipped with, exactly
             // (the macOS Swift twin's inline arm, `CandidateMetrics.swift`,
             // does the same).
-            None if font_selection.requires_line_box_measurement() => {
-                (candidate_font_size.max(measurer.line_height(candidate_font)) + vertical_padding)
-                    .ceil()
-            }
-            None => candidate_font_size + vertical_padding,
+            None => Self::inline_item_height(
+                candidate_font_size,
+                vertical_padding,
+                font_selection,
+                || measurer.line_height(candidate_font),
+            ),
             Some((candidate_line, annotation_line)) => {
                 (candidate_line + annotation_line + stacked_line_gap + vertical_padding).ceil()
             }
@@ -233,6 +234,23 @@ impl CandidateMetrics {
         }
     }
 
+    /// Single-line row height for `Inline` cells and annotation-less `Stacked`
+    /// lists: bundled faces keep `candidate_font_size + vertical_padding`;
+    /// custom and installed faces measure their line box so tall glyphs do not
+    /// clip.
+    fn inline_item_height(
+        candidate_font_size: f32,
+        vertical_padding: f32,
+        font_selection: CandidateFontSelection,
+        candidate_line_height: impl FnOnce() -> f32,
+    ) -> f32 {
+        if font_selection.requires_line_box_measurement() {
+            (candidate_font_size.max(candidate_line_height()) + vertical_padding).ceil()
+        } else {
+            candidate_font_size + vertical_padding
+        }
+    }
+
     /// These metrics for content that does or does not carry an annotated
     /// cell: a stacked cell is one line tall (the inline height) when nothing
     /// in the list has an annotation — Romanization Only, or Combined's one-script cells —
@@ -243,7 +261,15 @@ impl CandidateMetrics {
         let item_height = match self.cell_arrangement {
             CandidateCellArrangement::Inline => self.item_height,
             CandidateCellArrangement::Stacked if has_annotations => self.stacked_item_height,
-            CandidateCellArrangement::Stacked => self.candidate_font_size + self.vertical_padding,
+            CandidateCellArrangement::Stacked => Self::inline_item_height(
+                self.candidate_font_size,
+                self.vertical_padding,
+                self.font_selection,
+                || {
+                    self.stacked_line_heights
+                        .map_or(0.0, |(candidate_line, _)| candidate_line)
+                },
+            ),
         };
         Self {
             item_height,
@@ -803,5 +829,77 @@ mod tests {
         assert_ne!(first, second);
         assert_ne!(first, CandidateFontSelection::Custom(CustomFontId(1)));
         assert_eq!(first.built_in(), None);
+    }
+
+    #[test]
+    fn stacked_unannotated_measures_custom_and_installed_line_box() {
+        use crate::settings::InstalledFontId;
+
+        struct FixedLineHeightMeasurer(f32);
+
+        impl TextMeasurer for FixedLineHeightMeasurer {
+            fn width(&self, text: &str, font: FontSpec) -> f32 {
+                text.chars().count() as f32 * font.size * 0.5
+            }
+
+            fn line_height(&self, _font: FontSpec) -> f32 {
+                self.0
+            }
+        }
+
+        let tall = FixedLineHeightMeasurer(28.0);
+        let fractional = FixedLineHeightMeasurer(20.3);
+        let compact = FixedLineHeightMeasurer(10.0);
+
+        for selection in [
+            CandidateFontSelection::Custom(CustomFontId(1)),
+            CandidateFontSelection::Installed(InstalledFontId(1)),
+        ] {
+            for chrome in [CandidateChrome::WINDOWS, CandidateChrome::MACOS] {
+                for size in S::ALL {
+                    for measurer in [&tall, &fractional, &compact] {
+                        let inline = CandidateMetrics::resolve_with_chrome(
+                            *size, selection, Inline, chrome, measurer,
+                        );
+                        let stacked = CandidateMetrics::resolve_with_chrome(
+                            *size, selection, Stacked, chrome, measurer,
+                        );
+                        let unannotated = stacked.for_content(false);
+                        assert_eq!(
+                            unannotated.item_height(),
+                            inline.for_content(false).item_height(),
+                            "{selection:?} {size:?}"
+                        );
+                        assert_eq!(unannotated.for_content(true), stacked);
+                        assert_eq!(unannotated.for_content(false), unannotated);
+                    }
+                }
+            }
+
+            // Standard = 17 pt, vertical_padding = 8 pt under Windows chrome.
+            let stacked_tall = CandidateMetrics::resolve(S::Standard, selection, Stacked, &tall);
+            assert_eq!(stacked_tall.for_content(false).item_height(), 36.0);
+
+            let stacked_fractional =
+                CandidateMetrics::resolve(S::Standard, selection, Stacked, &fractional);
+            assert_eq!(stacked_fractional.for_content(false).item_height(), 29.0);
+
+            let stacked_compact =
+                CandidateMetrics::resolve(S::Standard, selection, Stacked, &compact);
+            assert_eq!(stacked_compact.for_content(false).item_height(), 25.0);
+        }
+
+        // Built-in faces keep `candidate_font_size + vertical_padding`, even with a tall measurer.
+        let built_in_stacked = CandidateMetrics::resolve(
+            S::Standard,
+            CandidateFontSelection::BuiltIn(CandidateFontChoice::Iansui),
+            Stacked,
+            &tall,
+        );
+        assert_eq!(
+            built_in_stacked.for_content(false).item_height(),
+            built_in_stacked.candidate_font_size() + built_in_stacked.vertical_padding()
+        );
+        assert_eq!(built_in_stacked.for_content(false).item_height(), 25.0);
     }
 }
