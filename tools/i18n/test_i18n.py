@@ -161,6 +161,33 @@ class ValidateTest(unittest.TestCase):
     def test_valid_passes(self):
         self._validate({"k": _android_key({"hanji": "字", "en": "x"})})
 
+    def test_sentence_final_punctuation_missing_rejected(self):
+        base = {"hanji": "這是說明。", "ja": "説明です。", "tailo": "Lē.", "poj": "Lē.", "en": "Example."}
+        for lang, bad in (
+            ("ja", "説明です"),
+            ("tailo", "Lē"),
+            ("poj", "Lē"),
+            ("en", "Example"),
+        ):
+            with self.subTest(lang=lang):
+                values = {**base, lang: bad}
+                with self.assertRaisesRegex(ValueError, "sentence-final punctuation"):
+                    self._validate({"k": _android_key(values)})
+
+    def test_sentence_final_punctuation_allowed_endings(self):
+        for end in ("。", "）", "」"):
+            with self.subTest(ja_end=end):
+                self._validate({"k": _android_key({"hanji": "這是說明。", "ja": f"説明{end}"})})
+        for lang in ("tailo", "poj", "en"):
+            for end in (".", "?", "!", ")", "\u201d", '"'):
+                with self.subTest(lang=lang, end=end):
+                    self._validate({"k": _android_key({"hanji": "這是說明。", lang: f"Example{end}"})})
+
+    def test_sentence_final_punctuation_not_required_without_hanji_period(self):
+        self._validate(
+            {"k": _android_key({"hanji": "這是標題", "ja": "タイトル", "tailo": "Piau-tê", "poj": "Piau-tê", "en": "Title"})}
+        )
+
 
 class ProductionCompletenessTest(unittest.TestCase):
     # A fully-authored key: every production language present + non-empty. tailo/poj joined the roster

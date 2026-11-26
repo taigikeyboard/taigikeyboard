@@ -195,6 +195,17 @@ IDENTIFIER_RE = re.compile(r"[a-z][a-zA-Z0-9]*")
 # through (Codex post-impl).
 HANJI_HALFWIDTH_COMMA_RE = re.compile(r"(?<![0-9]),|,(?![0-9])")
 
+# Sentence-final punctuation parity: when the base Hanji value ends with '。',
+# every authored translation must close with terminal punctuation appropriate to
+# its script so copy revisions cannot silently drop sentence-final periods.
+HANJI_SENTENCE_END = "。"
+SENTENCE_END_CHARS = {
+    "ja": ("。", "）", "」"),
+    "tailo": (".", "?", "!", ")", "\u201d", '"'),
+    "poj": (".", "?", "!", ")", "\u201d", '"'),
+    "en": (".", "?", "!", ")", "\u201d", '"'),
+}
+
 # Placeholder type vocabulary: schema type -> per-target facets. The table is the single, complete
 # extension point — adding a type propagates to both the typed accessor signature and the emitted
 # format spec on every platform. Facets per target:
@@ -552,6 +563,7 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
                     raise ValueError(f"{path}:{key}: placeholder {name!r} type {ptype!r} not in {sorted(PLACEHOLDER_TYPES)}")
         elif declared:
             raise ValueError(f"{path}:{key}: declared placeholders {sorted(declared)} but base text has none")
+        hanji_ends_sentence = values[BASE_LANGUAGE].endswith(HANJI_SENTENCE_END)
         for lang, text in values.items():
             # Reject empty authored values — a blank string would render blank, not fall back to base.
             if not text:
@@ -564,6 +576,16 @@ def validate_namespace(namespace: str, data: dict, path: Path) -> None:
             # substitution is by name, not position, so a reordered translation is allowed).
             if lang_names != base_placeholder_names:
                 raise ValueError(f"{path}:{key}: placeholder names in '{lang}' differ from base")
+            if (
+                hanji_ends_sentence
+                and lang in SENTENCE_END_CHARS
+                and not text.endswith(SENTENCE_END_CHARS[lang])
+            ):
+                allowed = "/".join(SENTENCE_END_CHARS[lang])
+                raise ValueError(
+                    f"{path}:{key}: '{BASE_LANGUAGE}' ends with '{HANJI_SENTENCE_END}', "
+                    f"so '{lang}' must end with sentence-final punctuation ({allowed}): {text!r}"
+                )
         if CAPTION_FOR_FIELD in entry:
             caption_for = entry[CAPTION_FOR_FIELD]
             if not isinstance(caption_for, str):

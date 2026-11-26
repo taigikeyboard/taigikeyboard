@@ -16,6 +16,7 @@ from what `i18n/*.json` generates):
 - **CI** — the `i18n` job of `.github/workflows/codegen-lint.yml` runs `test_i18n.py` + `check.py` on every
   PR / push that touches `i18n/**`, `tools/i18n/**` or `ios/Localizable.xcstrings`. This is the only
   gate for iOS, which has no build-time guard.
+- **Root lint** — `make lint` (`make lint-i18n`) runs `tools/i18n/check.py`.
 - **Android** — the Gradle `checkI18nGenerated` task runs `check.py` on `preBuild`, so
   Android Studio / archive / `assemble` builds cannot link stale output.
 - **macOS** — `macos/Makefile`'s `i18n-check` is a prerequisite of `build` and `test`, and
@@ -122,6 +123,8 @@ the generator's job):
   which tests drive with partial fixtures).
 - Every authored language must carry the same `{placeholder}` set as the base (order may differ —
   substitution is by name, not position, so a reordered translation is allowed).
+- **Sentence-final punctuation parity**: when `hanji` ends with `。`, `ja` must end with `。` / `）` / `」`
+  and `tailo` / `poj` / `en` must end with `.` / `?` / `!` / `)` / `”` / `"`.
 
 ### Inline captions
 
