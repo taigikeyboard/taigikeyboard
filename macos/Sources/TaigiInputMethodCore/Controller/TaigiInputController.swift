@@ -115,13 +115,17 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     var isSymbolPickerPlaceholderMarked = false
 
-    /// The chord on the picker row, read at activation rather than per key:
-    /// the registry read decodes JSON out of `UserDefaults`, and every
-    /// keystroke would otherwise pay it before the composing contract ran.
-    /// Recording a new chord means the settings window took focus, which is
-    /// a fresh activation of this session on the way back.
+    /// The chord on the picker row, cached at activation and refreshed via
+    /// KVO on `UserDefaults.standard` rather than decoded on every keystroke:
+    /// the registry read decodes JSON out of `UserDefaults`, and opening
+    /// Settings does not always deactivate and re-activate the session.
     @MainActor
     var symbolPickerShortcut: KeyboardShortcuts.Shortcut?
+
+    private static let symbolPickerShortcutKey = SettingsKey(
+        name: "KeyboardShortcuts_\(KeyboardShortcuts.Name.showSymbolPicker.rawValue)",
+        defaultValue: "",
+    )
 
     /// The display language the chrome renders in — the process-wide store,
     /// or the one a test injected.
@@ -243,6 +247,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var displayLanguageObservation: AnyObject?
 
+    /// KVO on the `KeyboardShortcuts` registry key for `.showSymbolPicker` in
+    /// `UserDefaults.standard`, so rebinding or clearing the shortcut refreshes
+    /// `symbolPickerShortcut` without waiting for re-activation.
+    @MainActor
+    private var symbolPickerShortcutObservation: AnyObject?
+
     /// Suppresses redundant async KVO callbacks for writes this controller just
     /// applied synchronously (`switchInputMode`, `cycleCandidateDisplayMode`).
     private let inputModeWriteGuard = SelfWriteGuard()
@@ -342,7 +352,11 @@ public final class TaigiInputController: IMKInputController {
                     controller?.syncTelexGuide()
                 },
             )
-            controller.symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
+            controller.refreshSymbolPickerShortcut()
+            controller.symbolPickerShortcutObservation = SettingsStore(userDefaults: .standard)
+                .observeChangesImmediatelyIfMain(of: Self.symbolPickerShortcutKey) { [weak controller] in
+                    controller?.refreshSymbolPickerShortcut()
+                }
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
             controller.armedAutoSpaceCaret = nil
@@ -358,6 +372,11 @@ public final class TaigiInputController: IMKInputController {
                 "activate end session=\(controller.sessionToken.value) tenure=\(activatingTenure) currentTenure=\(controller.tenure) owns=\(controller.backend.owns(controller.sessionToken))",
             )
         }
+    }
+
+    @MainActor
+    private func refreshSymbolPickerShortcut() {
+        symbolPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
     }
 
     /// Claims the engine and the shared UI for an eligible controller. Called
@@ -1026,6 +1045,7 @@ public final class TaigiInputController: IMKInputController {
         tpsKeyboardObservation = nil
         telexGuideObservation = nil
         displayLanguageObservation = nil
+        symbolPickerShortcutObservation = nil
         Self.logger.notice("end complete session=\(sessionToken.value) tenure=\(endingTenure)")
         ComposingSessionCoordinator.shared.resumeWaitingSession()
     }

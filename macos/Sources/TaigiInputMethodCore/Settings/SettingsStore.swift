@@ -912,6 +912,21 @@ final class SettingsStore: @unchecked Sendable {
         }
     }
 
+    /// `observeChanges(of:onMainActor:)` that runs synchronously when KVO
+    /// fires on the main thread, hopping only when notified off-main.
+    func observeChangesImmediatelyIfMain(
+        of key: SettingsKey<some Any>,
+        onMainActor onChange: @escaping @MainActor () -> Void,
+    ) -> AnyObject {
+        observeChanges(of: key) {
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { onChange() }
+            } else {
+                Task { @MainActor in onChange() }
+            }
+        }
+    }
+
     /// `object(forKey:)` rather than `bool(forKey:)`: the latter answers `false`
     /// for a key that was never written, which would silently turn every
     /// default-on setting off on a fresh install.

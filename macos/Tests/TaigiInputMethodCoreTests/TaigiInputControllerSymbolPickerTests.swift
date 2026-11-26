@@ -177,6 +177,33 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertTrue(session.picker.isShowing)
     }
 
+    /// Rebinding, clearing, or resetting `.showSymbolPicker` while a session
+    /// stays active updates `symbolPickerShortcut` immediately without requiring
+    /// `deactivateServer` / `activateServer`.
+    func testRebindingOrClearingThePickerChord_takesEffectWithoutReactivation() throws {
+        let session = try makeSession()
+
+        KeyboardShortcuts.setShortcut(.init(.period, modifiers: [.control, .command]), for: .showSymbolPicker)
+        XCTAssertFalse(try session.pressPickerChord(), "the old default chord must stop firing")
+        XCTAssertFalse(session.picker.isShowing)
+
+        let periodEvent = try TestFixtures.keyDownEvent(
+            characters: ".", modifiers: [.control, .command], keyCode: UInt16(kVK_ANSI_Period),
+        )
+        XCTAssertTrue(session.controller.handle(periodEvent, client: session.client))
+        XCTAssertTrue(session.picker.isShowing)
+        XCTAssertTrue(session.controller.handle(periodEvent, client: session.client))
+        XCTAssertFalse(session.picker.isShowing)
+
+        KeyboardShortcuts.setShortcut(nil, for: .showSymbolPicker)
+        XCTAssertFalse(session.controller.handle(periodEvent, client: session.client))
+        XCTAssertFalse(session.picker.isShowing)
+
+        KeyboardShortcuts.reset(.showSymbolPicker)
+        XCTAssertTrue(try session.pressPickerChord(), "resetting restores the default chord immediately")
+        XCTAssertTrue(session.picker.isShowing)
+    }
+
     /// A client that cannot say where its caret is cannot host the picker,
     /// for the reason it cannot host the bar. The chord is still consumed.
     func testAClientWithNoCaret_opensNothing() throws {
