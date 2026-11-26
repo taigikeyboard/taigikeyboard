@@ -911,7 +911,7 @@ public final class TaigiInputController: IMKInputController {
     /// and it draws its own indicator; a second one of ours over it would be
     /// announcing a mode nothing here owns.
     @MainActor
-    private func flash(_ mode: StringKey) {
+    func flash(_ mode: StringKey) {
         let text = displayLanguage.string(mode)
         if let modeFlashOverride {
             modeFlashOverride(text)

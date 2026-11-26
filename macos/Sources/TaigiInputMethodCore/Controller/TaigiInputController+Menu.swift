@@ -210,10 +210,13 @@ extension TaigiInputController {
         openSettings(on: .about)
     }
 
-    /// The menu's stand-ins for the global chords: each row sends the same
-    /// command its chord does, through the same doorway (`ShortcutHotkeys.perform`),
-    /// so the click and the key can never drift apart. With no session armed
-    /// the coordinator drops the command, as it drops the chord.
+    /// The menu's stand-ins for the global chords: when a session holds
+    /// `shortcutTarget`, each row dispatches through the coordinator so the
+    /// armed session updates its candidate bar, layout, and floating panels.
+    /// When no session is armed (`shortcutTarget == nil`), the click still
+    /// writes the setting (and flashes the HUD for mode switches), matching
+    /// Windows (`lang_bar.rs`) and Linux (`chrome.rs`), while Carbon hotkeys
+    /// remain strictly session-scoped.
     @objc
     private func toggleRomanization(_: Any!) {
         performGlobalShortcut(.toggleRomanization)
@@ -236,8 +239,35 @@ extension TaigiInputController {
 
     private func performGlobalShortcut(_ action: ShortcutAction) {
         Self.logger.debug("menu shortcut \(action)")
-        onMainActor(nil) { _, _ in
-            ShortcutHotkeys.perform(action)
+        onMainActor(nil) { controller, _ in
+            if ComposingSessionCoordinator.shared.performShortcutAction(action) {
+                return
+            }
+            controller.performUnarmedMenuAction(action)
+        }
+    }
+
+    @MainActor
+    private func performUnarmedMenuAction(_ action: ShortcutAction) {
+        guard !action.isInert(under: settings.inputMode) else { return }
+        switch action {
+        case .toggleRomanization:
+            guard let mode = settings.switchInputMode(.toggleRomanization) else { return }
+            flash(mode.displayNameKey)
+        case .toggleTps:
+            guard let mode = settings.switchInputMode(.toggleTps) else { return }
+            flash(mode.displayNameKey)
+        case .cycleCandidateDisplayMode:
+            let next = settings.candidateDisplayMode.next
+            settings.candidateDisplayMode = next
+            flash(next.displayNameKey)
+        case .showTpsKeyboard:
+            settings.isTpsKeyboardShown.toggle()
+        // None of these route through `performGlobalShortcut` (`openLastSettingsPane`
+        // uses `showPreferences:`, and the other three have no menu row). If a row
+        // is added for one later, add its unarmed handling here too.
+        case .toggleTranslateSwapped, .showTelexGuide, .showSymbolPicker, .openLastSettingsPane:
+            break
         }
     }
 }

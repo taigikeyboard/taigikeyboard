@@ -155,17 +155,21 @@ final class ComposingSessionCoordinator {
     }
 
     /// Routes one shortcut action to the focused session's endpoint.
+    /// Returns `true` when an armed session handled it, or `false` when no
+    /// session is armed.
     ///
     /// A target that has been deallocated without its session being released
     /// disarms the hotkeys here: the reference is weak, so it can go while
     /// `areShortcutsArmed` still says otherwise, and armed-with-nowhere-to-go
     /// means the chord is taken from the host for nothing.
-    func performShortcutAction(_ action: ShortcutAction) {
+    @discardableResult
+    func performShortcutAction(_ action: ShortcutAction) -> Bool {
         guard let shortcutTarget else {
             clearShortcutTarget()
-            return
+            return false
         }
         shortcutTarget.performShortcutAction(action)
+        return true
     }
 
     /// Silent when nothing is armed: every release would otherwise disarm what
