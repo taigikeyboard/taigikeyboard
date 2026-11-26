@@ -77,8 +77,8 @@ test-crate:
 	cd $(ENGINE) && cargo test -p "$(CRATE)"
 
 # Run only the gates this branch's changes need: tools/test_select.py maps every
-# path changed since BASE (default: merge-base with origin/main; plus uncommitted
-# and untracked files) to its platform commands. PLATFORM=engine,macos narrows it;
+# path changed since BASE (default: merge-base with jj trunk(), upstream/main, or
+# origin/main; plus uncommitted and untracked files) to its platform commands. PLATFORM=engine,macos narrows it;
 # `python3 tools/test_select.py` without --run prints the selection.
 # Usage: make test-changed [BASE=origin/main] [PLATFORM=engine,macos]
 test-changed:
