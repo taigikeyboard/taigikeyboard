@@ -2,8 +2,9 @@
 """Select the build / test commands a change needs — "test only what changed".
 
 Changed files come from `--base <ref>` (`git diff <base>...HEAD` plus staged,
-unstaged and untracked files; default base = merge-base with origin/main),
-`--range A..B` (a finished range, e.g. `<merge>^1..<merge>`), or `--paths`.
+unstaged and untracked files; default base = merge-base with jj trunk(),
+upstream/main, or origin/main), `--range A..B` (a finished range, e.g.
+`<merge>^1..<merge>`), or `--paths`.
 Each path maps to commands grouped by platform (PLATFORMS below).
 
 Engine: a path under an engine crate selects that crate and every workspace
@@ -449,9 +450,9 @@ def select(paths: Iterable[str], graph: EngineGraph) -> Selection:
     return Selection(ordered, notes, prerequisites, effects.unmapped, engine_crates)
 
 
-def git(*args: str) -> str:
+def git(*args: str, root: Path = ROOT) -> str:
     return subprocess.run(
-        ["git", "-C", str(ROOT), "-c", "core.quotepath=false", *args],
+        ["git", "-C", str(root), "-c", "core.quotepath=false", *args],
         check=True,
         capture_output=True,
         text=True,
@@ -476,8 +477,56 @@ def changed_in_range(range_spec: str) -> list[str]:
     return sorted(set(split_z(git("diff", "--name-only", "-z", start, end))))
 
 
-def default_base() -> str:
-    return git("merge-base", "origin/main", "HEAD").strip()
+def _jj_trunk(root: Path = ROOT) -> str | None:
+    if not (root / ".jj").exists():
+        return None
+    try:
+        result = subprocess.run(
+            [
+                "jj",
+                "--ignore-working-copy",
+                "-R",
+                str(root),
+                "log",
+                "-r",
+                "trunk()",
+                "--no-graph",
+                "-T",
+                r'commit_id ++ "\n"',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        return None
+    commits = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return commits[0] if len(commits) == 1 else None
+
+
+def _git_ref_exists(ref: str, root: Path = ROOT) -> bool:
+    return (
+        subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--verify", "--quiet", ref],
+            check=False,
+            capture_output=True,
+            text=True,
+        ).returncode
+        == 0
+    )
+
+
+def default_base(root: Path = ROOT) -> str:
+    ref = _jj_trunk(root)
+    if ref is None:
+        ref = (
+            "upstream/main"
+            if _git_ref_exists("refs/remotes/upstream/main", root)
+            else "origin/main"
+        )
+    return git("merge-base", ref, "HEAD", root=root).strip()
 
 
 def print_selection(selection: Selection, changed: list[str]) -> None:
@@ -533,7 +582,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     source = parser.add_mutually_exclusive_group()
     source.add_argument(
         "--base",
-        help="diff <base>...HEAD + working tree (default: merge-base with origin/main)",
+        help="diff <base>...HEAD + working tree (default: merge-base with jj trunk(), upstream/main, or origin/main)",
     )
     source.add_argument("--range", help="A..B: the files changed between two commits")
     source.add_argument("--paths", nargs="+", help="explicit repo-relative paths")

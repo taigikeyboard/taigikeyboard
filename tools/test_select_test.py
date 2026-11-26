@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
+
+_TOOLS_DIR = str(Path(__file__).resolve().parent)
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
 
 import test_select
 from test_select import DOCS_CHECKS, ROOT, Command
@@ -322,6 +330,159 @@ class PlatformSelectionTests(SelectorTestCase):
         selection = self.select("newdir/thing.txt")
 
         self.assertEqual(selection.unmapped, ["newdir/thing.txt"])
+
+
+class DefaultBaseTests(unittest.TestCase):
+    def _git(self, repo: Path, *args: str) -> str:
+        return subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.com",
+                "-c",
+                "commit.gpgsign=false",
+                *args,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+
+    def _init_repo(self, repo: Path) -> str:
+        self._git(repo, "init", "-b", "main")
+        self._git(repo, "commit", "--allow-empty", "-m", "root")
+        return self._git(repo, "rev-parse", "HEAD")
+
+    def _commit(self, repo: Path, message: str) -> str:
+        self._git(repo, "commit", "--allow-empty", "-m", message)
+        return self._git(repo, "rev-parse", "HEAD")
+
+    def test_plain_git_repo_uses_origin_main(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            origin_main = self._init_repo(repo)
+            self._git(repo, "update-ref", "refs/remotes/origin/main", origin_main)
+            self._commit(repo, "branch")
+
+            self.assertEqual(test_select.default_base(repo), origin_main)
+
+    def test_fork_prefers_upstream_main_over_stale_origin_main(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            stale_origin = self._init_repo(repo)
+            upstream_main = self._commit(repo, "upstream")
+            self._git(repo, "update-ref", "refs/remotes/origin/main", stale_origin)
+            self._git(repo, "update-ref", "refs/remotes/upstream/main", upstream_main)
+            self._commit(repo, "branch")
+
+            self.assertEqual(test_select.default_base(repo), upstream_main)
+
+    def test_upstream_remote_without_upstream_main_falls_back_to_origin_main(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            origin_main = self._init_repo(repo)
+            self._git(
+                repo, "remote", "add", "upstream", "https://example.com/upstream.git"
+            )
+            self._git(repo, "update-ref", "refs/remotes/origin/main", origin_main)
+            self._commit(repo, "branch")
+
+            self.assertEqual(test_select.default_base(repo), origin_main)
+
+    def test_jj_repo_uses_jj_trunk_over_older_git_refs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / ".jj").mkdir()
+            stale_origin = self._init_repo(repo)
+            older_upstream = self._commit(repo, "upstream")
+            jj_trunk = self._commit(repo, "trunk")
+            self._git(repo, "update-ref", "refs/remotes/origin/main", stale_origin)
+            self._git(repo, "update-ref", "refs/remotes/upstream/main", older_upstream)
+            self._commit(repo, "branch")
+
+            real_run = subprocess.run
+
+            def fake_run(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    self.assertEqual(
+                        cmd,
+                        [
+                            "jj",
+                            "--ignore-working-copy",
+                            "-R",
+                            str(repo),
+                            "log",
+                            "-r",
+                            "trunk()",
+                            "--no-graph",
+                            "-T",
+                            r'commit_id ++ "\n"',
+                        ],
+                    )
+                    return subprocess.CompletedProcess(
+                        cmd, 0, stdout=f"{jj_trunk}\n", stderr=""
+                    )
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(test_select.subprocess, "run", side_effect=fake_run):
+                self.assertEqual(test_select.default_base(repo), jj_trunk)
+
+    def test_jj_fallback_when_jj_fails_or_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            (repo / ".jj").mkdir()
+            stale_origin = self._init_repo(repo)
+            upstream_main = self._commit(repo, "upstream")
+            self._git(repo, "update-ref", "refs/remotes/origin/main", stale_origin)
+            self._git(repo, "update-ref", "refs/remotes/upstream/main", upstream_main)
+            self._commit(repo, "branch")
+
+            real_run = subprocess.run
+
+            def fail_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    return subprocess.CompletedProcess(
+                        cmd, 1, stdout="", stderr="error"
+                    )
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(test_select.subprocess, "run", side_effect=fail_jj):
+                self.assertEqual(test_select.default_base(repo), upstream_main)
+
+            def missing_jj(cmd, *args, **kwargs):
+                if cmd[0] == "jj":
+                    raise FileNotFoundError("jj")
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(
+                test_select.subprocess, "run", side_effect=missing_jj
+            ):
+                self.assertEqual(test_select.default_base(repo), upstream_main)
+
+    def test_repo_without_jj_dir_does_not_invoke_jj(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            origin_main = self._init_repo(repo)
+            self._git(repo, "update-ref", "refs/remotes/origin/main", origin_main)
+            self._commit(repo, "branch")
+
+            real_run = subprocess.run
+            calls = []
+
+            def spy_run(cmd, *args, **kwargs):
+                calls.append(cmd[0])
+                return real_run(cmd, *args, **kwargs)
+
+            with mock.patch.object(test_select.subprocess, "run", side_effect=spy_run):
+                self.assertEqual(test_select.default_base(repo), origin_main)
+
+            self.assertNotIn("jj", calls)
 
 
 class CoverageGuardTests(SelectorTestCase):

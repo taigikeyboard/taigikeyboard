@@ -54,7 +54,7 @@ emoji/             # Emoji data generator (own instructions file)
 
 Full setup: [`docs/BUILDING.md`](docs/BUILDING.md). **Bootstrap**: clone with `--recurse-submodules`, then `make build` once per machine — generates the xcframeworks and `jniLibs/*.so` the app builds link (not committed) and regenerates the committed platform protos.
 
-**Test what you touched**: `python3 tools/test_select.py --run --platform <p>` per touched platform (no args = print the selection; `make test-changed` runs the whole selection). The full suites below are for release prep or a deliberate catch-net. `make lint` runs every formatter / linter gate CI enforces.
+**Test what you touched**: `python3 tools/test_select.py --run --platform <p>` per touched platform (no args = print the selection; `make test-changed` runs the whole selection). The full suites below are for release prep or a deliberate catch-net. `make lint` runs every formatter / linter gate CI enforces. For direct CLI calls to mise-pinned tools (`node`, `swiftformat`, `biome`, `protoc`, `gitleaks`) in non-interactive shells, prefix with `PATH="$(sh tools/mise-path-prefix.sh)$PATH"` (`make` and `test_select.py --run` inject it automatically).
 
 | Platform | Build | Test |
 |---|---|---|

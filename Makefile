@@ -19,7 +19,7 @@ SHELL := /usr/bin/env sh
 .DEFAULT_GOAL := help
 
 .PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
-        fmt lint lint-ps1 lint-rust-toolchain lint-swiftui-literals lint-agent-rule-paths lint-doc-paths hooks scan-secrets scan-secrets-full scan-private \
+        fmt lint lint-ps1 lint-rust-toolchain lint-swiftui-literals lint-agent-rule-paths lint-doc-paths lint-i18n hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check macos-rust-check web-check web-serve web-e2e \
@@ -77,8 +77,8 @@ test-crate:
 	cd $(ENGINE) && cargo test -p "$(CRATE)"
 
 # Run only the gates this branch's changes need: tools/test_select.py maps every
-# path changed since BASE (default: merge-base with origin/main; plus uncommitted
-# and untracked files) to its platform commands. PLATFORM=engine,macos narrows it;
+# path changed since BASE (default: merge-base with jj trunk(), upstream/main, or
+# origin/main; plus uncommitted and untracked files) to its platform commands. PLATFORM=engine,macos narrows it;
 # `python3 tools/test_select.py` without --run prints the selection.
 # Usage: make test-changed [BASE=origin/main] [PLATFORM=engine,macos]
 test-changed:
@@ -279,6 +279,8 @@ version-mobile version-desktop:
 #           (lint-agent-rule-paths; tools/agent_rule_paths.py says why).
 #   Docs    every repo path a living doc names exists
 #           (lint-doc-paths; tools/doc_paths.py says why).
+#   i18n    generated artifacts match i18n/*.json and validation passes
+#           (lint-i18n; tools/i18n/check.py).
 # CI runs the same checks: engine.yml, desktop-shared.yml, macos.yml, web.yml, codegen-lint.yml,
 # android.yml, agent-rule-paths.yml, doc-paths.yml on pull requests; linux-build.yml nightly.
 RUST_WORKSPACES := engine desktop windows linux macos
@@ -289,7 +291,7 @@ fmt:
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
-lint: lint-ps1 lint-rust-toolchain lint-swiftui-literals lint-agent-rule-paths lint-doc-paths
+lint: lint-ps1 lint-rust-toolchain lint-swiftui-literals lint-agent-rule-paths lint-doc-paths lint-i18n
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
@@ -312,6 +314,9 @@ lint-agent-rule-paths:
 
 lint-doc-paths:
 	python3 tools/doc_paths.py
+
+lint-i18n:
+	python3 tools/i18n/check.py
 
 lint-ps1:
 	@git ls-files -z '*.ps1' | xargs -0 perl -ne 'if (/[^\t\r\n\x20-\x7e]/) { print "$$ARGV:$$.: non-ASCII byte (Windows PowerShell 5.1 reads BOM-less scripts as ANSI)\n"; $$bad = 1 } close ARGV if eof; END { exit $$bad }'
@@ -384,7 +389,7 @@ help:
 	@echo ""
 	@echo "Quality and hooks"
 	@echo "  make fmt                Apply formatting: rustfmt (5 workspaces) + SwiftFormat + Spotless"
-	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos, web) + web typecheck/biome + SwiftFormat + SwiftUI literals + Spotless"
+	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos, web) + web typecheck/biome + SwiftFormat + SwiftUI literals + Spotless + i18n"
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"
