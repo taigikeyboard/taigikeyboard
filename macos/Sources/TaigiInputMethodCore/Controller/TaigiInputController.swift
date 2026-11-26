@@ -769,9 +769,23 @@ public final class TaigiInputController: IMKInputController {
         armedSwap: Int?,
         _ call: (ComposingRequest) -> [ComposingEffect]?,
     ) -> Bool {
-        guard let effects = call(request(client: client, armedSwap: armedSwap)) else { return false }
-        replay(effects, into: client, armedSwap: armedSwap)
-        return true
+        sendOutcome(client: client, armedSwap: armedSwap, call).answered
+    }
+
+    /// Sends one request and reports both whether this session answered and
+    /// whether replay actually wrote text into `client` (false on ownership
+    /// loss or internal failure recovery).
+    @MainActor
+    func sendOutcome(
+        client: IMKTextInput,
+        armedSwap: Int?,
+        _ call: (ComposingRequest) -> [ComposingEffect]?,
+    ) -> (answered: Bool, wroteText: Bool) {
+        guard let effects = call(request(client: client, armedSwap: armedSwap)) else {
+            return (false, false)
+        }
+        let wroteText = replay(effects, into: client, armedSwap: armedSwap)
+        return (true, wroteText)
     }
 
     /// A request from this session: its window and, with a client and an arm
@@ -801,9 +815,10 @@ public final class TaigiInputController: IMKInputController {
 
     /// Does what the back end answered to a request made with `client`, in
     /// its order, to the client and the window (a represent has its own,
-    /// `representCandidates`).
+    /// `representCandidates`). Answers whether a text write reached `client`.
     @MainActor
-    private func replay(_ effects: [ComposingEffect], into client: IMKTextInput, armedSwap: Int?) {
+    @discardableResult
+    private func replay(_ effects: [ComposingEffect], into client: IMKTextInput, armedSwap: Int?) -> Bool {
         // Where a swap in this reply left the caret: the re-arm that follows
         // it is arithmetic, not another `selectedRange()` query — the
         // rewrite's end is fully determined by the range just replaced, and
@@ -815,6 +830,7 @@ public final class TaigiInputController: IMKInputController {
         // arithmetic too (`writeStart(in:)`).
         let writeStart = effects.contains(.armSwap) ? Self.writeStart(in: client) : nil
         var writtenUTF16 = 0
+        var wroteText = false
         let writer = ClientWriter(client: client)
         let replayTenure = tenure
         for effect in effects {
@@ -826,7 +842,7 @@ public final class TaigiInputController: IMKInputController {
                 Self.logger.notice(
                     "replay discarded session=\(sessionToken.value) tenure=\(replayTenure) currentTenure=\(tenure) owns=\(backend.owns(sessionToken))",
                 )
-                return
+                return wroteText
             }
             switch effect {
             case let .setMarkedText(text, caretUTF16):
@@ -838,12 +854,14 @@ public final class TaigiInputController: IMKInputController {
                 // auto space, a mapped punctuation or a symbol alike.
                 writer.insertText(text)
                 writtenUTF16 += (text as NSString).length
+                wroteText = true
             case let .swapPrecedingSpace(replacement):
                 // Only ever answered after `canSwapPrecedingSpace` found the
                 // arm and the space still in front of the caret.
                 guard let armedSwap else { preconditionFailure("a swap answered with no arm") }
                 client.insertText(replacement, replacementRange: Self.autoSpaceRange(armedAt: armedSwap))
                 caretAfterSwap = armedSwap - 1 + (replacement as NSString).length
+                wroteText = true
             case .armSwap:
                 if let caretAfterSwap {
                     armedAutoSpaceCaret = caretAfterSwap
@@ -862,6 +880,7 @@ public final class TaigiInputController: IMKInputController {
                 TpsKeyboardPanel.shared.flash(row: row, cap: cap, ownedBy: sessionToken)
             }
         }
+        return wroteText
     }
 
     /// Announces a mode the user just switched into, through the injected

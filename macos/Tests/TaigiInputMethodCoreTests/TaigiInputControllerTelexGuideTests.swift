@@ -71,6 +71,34 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .poj)
     }
 
+    /// The Telex table is identical under TL and POJ, so switching between them
+    /// reuses the existing panel without rebuilding; a display-language change
+    /// rebuilds it.
+    func testTheGuide_doesNotRebuildOnRomanizationSwitch_butRebuildsOnLanguageChange() throws {
+        let session = try makeSession()
+        session.controller.modeFlashOverride = { _ in }
+        session.controller.performShortcutAction(.showTelexGuide)
+        let buildsAfterShow = TelexGuidePanel.shared.panelBuildCount
+
+        session.controller.performShortcutAction(.toggleRomanization)
+        XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .poj)
+        XCTAssertEqual(TelexGuidePanel.shared.panelBuildCount, buildsAfterShow)
+
+        session.controller.performShortcutAction(.toggleRomanization)
+        XCTAssertEqual(TelexGuidePanel.shared.shownInputMode, .tl)
+        XCTAssertEqual(TelexGuidePanel.shared.panelBuildCount, buildsAfterShow)
+
+        let language = try XCTUnwrap(session.controller.displayLanguageOverride)
+        language.setLanguage(.english)
+        userDefaults.set(DisplayLanguage.english.tag, forKey: SettingsStore.Keys.displayLanguage.name)
+        TelexGuidePanel.shared.show(
+            inputMode: .tl,
+            language: language,
+            ownedBy: session.controller.sessionToken,
+        )
+        XCTAssertEqual(TelexGuidePanel.shared.panelBuildCount, buildsAfterShow + 1)
+    }
+
     /// Under TPS, which types no Telex keys, the guide goes; the wish stays,
     /// so it returns with the romanization.
     func testTheGuide_leavesWithTps_andComesBack() throws {

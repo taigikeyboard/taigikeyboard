@@ -564,6 +564,24 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         )
     }
 
+    /// If inserting the picked symbol fails (for example, the session lost
+    /// ownership while clearing the placeholder), nothing enters the document
+    /// and the symbol must not pollute `recentSymbols`.
+    func testAFailedInsert_doesNotRecordRecentSymbol() throws {
+        let session = try makeSession()
+        try session.pressPickerChord()
+        session.client.afterSetMarkedText = { text in
+            guard text.isEmpty else { return }
+            session.client.afterSetMarkedText = nil
+            session.controller.deactivateServer(session.client)
+        }
+
+        try session.type("w")
+
+        XCTAssertTrue(session.client.insertedTexts.isEmpty)
+        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols, [])
+    }
+
     // MARK: - Harness
 
     private struct Session: CandidateBarSession {
