@@ -65,7 +65,10 @@ tools/test_select.py --run`, the commit hook and `tools/secret-scan/gitleaks-sca
 put these tools first on `PATH` through `tools/mise-path-prefix.sh`. It names each
 tool, so your global mise tools stay out: a global `rust` under `mise exec` would
 override `rust-toolchain.toml`. mise stops reading `mise.toml` when the file changes,
-so run `mise trust` if `make` warns about it.
+so run `mise trust` if `make` warns about it. For direct CLI calls to mise-pinned
+tools (`node`, `swiftformat`, `biome`, `protoc`, `gitleaks`) in non-interactive shells
+where mise is not activated, prefix the command with
+`PATH="$(sh tools/mise-path-prefix.sh)$PATH"`.
 
 Node 22 supplies `node`, `npm` and `npx` for web builds and `taigi-converter/`.
 Python stays unpinned so mise does not shadow the interpreter holding your
