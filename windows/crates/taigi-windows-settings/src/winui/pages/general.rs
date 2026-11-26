@@ -99,21 +99,21 @@ pub fn view(
             ),
         )),
         // Under Tone Keys, independent of it: both say what a letter types.
-        // TPS has no `c` initial, so the row greys there, as the layout does.
+        // TPS has no `c` initial, so the row greys there (`allows_c_affricate`).
         switch_row(
             strings,
             StringKey::SettingsCAffricate,
             document.bool(&keys::IS_C_AFFRICATE_ENABLED),
-            !document.is_typing_tps(),
+            document.allows_c_affricate(),
             context.callback(|is_on| Message::SetSwitch(keys::IS_C_AFFRICATE_ENABLED, is_on)),
         ),
         // Beside it for the same reason; TPS has no romanization hyphen on
-        // `f`, so the row greys there too.
+        // `f`, so the row greys there too (`allows_f_hyphen`).
         switch_row(
             strings,
             StringKey::SettingsFHyphen,
             document.bool(&keys::IS_F_HYPHEN_ENABLED),
-            !document.is_typing_tps(),
+            document.allows_f_hyphen(),
             context.callback(|is_on| Message::SetSwitch(keys::IS_F_HYPHEN_ENABLED, is_on)),
         ),
         // S33 (USER 2026-09-08): off means no window at all — the user types

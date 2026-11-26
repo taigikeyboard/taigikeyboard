@@ -273,6 +273,20 @@ impl SettingsDocument {
                 || self.bool(&keys::IS_HANJI_FIRST))
     }
 
+    /// Whether Type ts / ch with c takes effect: romanization modes only — TPS
+    /// maps `c` to a phonetic glyph, where `engine_settings` masks the stored
+    /// switch off.
+    pub fn allows_c_affricate(&self) -> bool {
+        !self.is_typing_tps()
+    }
+
+    /// Whether Type - with f takes effect: romanization modes only — TPS maps
+    /// `f` to a phonetic glyph, where `engine_settings` masks the stored
+    /// switch off.
+    pub fn allows_f_hyphen(&self) -> bool {
+        !self.is_typing_tps()
+    }
+
     /// Annotate in Brackets as the engine gets it: the stored switch where
     /// [`Self::allows_output_both_scripts`].
     pub fn effective_output_both_scripts(&self) -> bool {
@@ -403,11 +417,10 @@ impl SettingsDocument {
             is_hanji_conversion_enabled: input_mode == InputMode::Tps
                 && self.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
             // A romanization initial: off under TPS, whose `c` key is a glyph.
-            is_c_affricate_enabled: input_mode != InputMode::Tps
+            is_c_affricate_enabled: self.allows_c_affricate()
                 && self.bool(&keys::IS_C_AFFRICATE_ENABLED),
             // The romanization hyphen: off under TPS, whose `f` key is a glyph.
-            is_f_hyphen_enabled: input_mode != InputMode::Tps
-                && self.bool(&keys::IS_F_HYPHEN_ENABLED),
+            is_f_hyphen_enabled: self.allows_f_hyphen() && self.bool(&keys::IS_F_HYPHEN_ENABLED),
             is_khinsiann_in_hanji_enabled: self.bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED),
             is_han_lo_mixed_enabled: self.bool(&keys::IS_HAN_LO_MIXED_ENABLED),
             is_output_both_scripts: self.effective_output_both_scripts(),
@@ -938,28 +951,54 @@ mod tests {
 
     #[test]
     fn c_affricate_reads_the_stored_switch_off_under_tps() {
-        // trace: `engine_settings` — the stored switch AND input mode != TPS;
+        // trace: `engine_settings` — the stored switch AND `allows_c_affricate`;
         // ships OFF; the General reset removes it.
         let mut doc = SettingsDocument::default();
+        assert!(doc.allows_c_affricate());
         assert!(!doc.engine_settings().is_c_affricate_enabled, "ships OFF");
         doc.set_bool(&keys::IS_C_AFFRICATE_ENABLED, true);
         assert!(doc.engine_settings().is_c_affricate_enabled);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Poj);
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        assert!(doc.allows_c_affricate());
+        assert!(doc.engine_settings().is_c_affricate_enabled);
         doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.allows_c_affricate());
         assert!(!doc.engine_settings().is_c_affricate_enabled);
+        assert!(
+            doc.bool(&keys::IS_C_AFFRICATE_ENABLED),
+            "stored switch untouched"
+        );
         doc.reset_general();
         assert!(!doc.contains(keys::IS_C_AFFRICATE_ENABLED.name));
     }
 
     #[test]
     fn f_hyphen_reads_the_stored_switch_off_under_tps() {
-        // trace: `engine_settings` — the stored switch AND input mode != TPS;
+        // trace: `engine_settings` — the stored switch AND `allows_f_hyphen`;
         // ships OFF; the General reset removes it.
         let mut doc = SettingsDocument::default();
+        assert!(doc.allows_f_hyphen());
         assert!(!doc.engine_settings().is_f_hyphen_enabled, "ships OFF");
         doc.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
         assert!(doc.engine_settings().is_f_hyphen_enabled);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Poj);
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        assert!(doc.allows_f_hyphen());
+        assert!(doc.engine_settings().is_f_hyphen_enabled);
         doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.allows_f_hyphen());
         assert!(!doc.engine_settings().is_f_hyphen_enabled);
+        assert!(
+            doc.bool(&keys::IS_F_HYPHEN_ENABLED),
+            "stored switch untouched"
+        );
         doc.reset_general();
         assert!(!doc.contains(keys::IS_F_HYPHEN_ENABLED.name));
     }
