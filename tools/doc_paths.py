@@ -159,16 +159,70 @@ def ignored_paths(paths: set[str], repo: Path = ROOT) -> set[str]:
     return {hit.rstrip("/") for hit in git("check-ignore", "--no-index", "--stdin", stdin=queries, repo=repo)}
 
 
-def main() -> int:
+def _jj_tracked_entries(repo: Path) -> list[tuple[str, str]] | None:
+    if not (repo / ".jj").is_dir():
+        return None
+    try:
+        result = subprocess.run(
+            [
+                "jj",
+                "--no-pager",
+                "--color=never",
+                "--quiet",
+                "-R",
+                str(repo),
+                "file",
+                "list",
+                "-T",
+                r'file_type ++ "\t" ++ path ++ "\0"',
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return None
+    if result.returncode != 0:
+        raise RuntimeError(f"jj file list failed: {result.stderr.strip()}")
+    entries: list[tuple[str, str]] = []
+    for entry in result.stdout.split("\0"):
+        if entry:
+            kind, path = entry.split("\t", 1)
+            entries.append((kind, path))
+    return entries
+
+
+def working_tree_paths(repo: Path = ROOT) -> tuple[set[str], set[str]]:
+    """(existing tracked paths, submodule paths) in `repo`."""
+    jj_entries = _jj_tracked_entries(repo)
+    if jj_entries is not None:
+        submodules = {path for kind, path in jj_entries if kind == "git-submodule"}
+        tracked = {
+            path
+            for kind, path in jj_entries
+            if kind == "git-submodule"
+            or (repo / path).is_file()
+            or (repo / path).is_symlink()
+        }
+        return tracked, submodules
     # `<mode> <object> <stage>\t<path>`; mode 160000 is a submodule.
-    entries = [entry.split("\t", 1) for entry in git("ls-files", "--stage")]
-    tracked = {path for _, path in entries}
+    entries = [entry.split("\t", 1) for entry in git("ls-files", "--stage", repo=repo)]
     submodules = {path for meta, path in entries if meta.startswith("160000 ")}
+    tracked = {
+        path
+        for _, path in entries
+        if path in submodules or (repo / path).is_file() or (repo / path).is_symlink()
+    }
+    return tracked, submodules
+
+
+def main() -> int:
+    tracked, submodules = working_tree_paths(ROOT)
     top_dirs = {path.split("/")[0] for path in tracked if "/" in path}
     doc_refs = []
     for doc in sorted(filter(is_living_doc, tracked)):
         file = ROOT / doc
-        if file.exists():  # deleted in the worktree but still in the index
+        if file.is_file():
             doc_refs.append((doc, references(doc, file.read_text(encoding="utf-8"), top_dirs)))
     unresolved = {path for _, refs in doc_refs for _, paths, _ in refs for path in paths} - tracked
     ignored = ignored_paths(unresolved)

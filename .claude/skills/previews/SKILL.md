@@ -62,4 +62,4 @@ Generator: `android/app/src/androidTest/java/com/siansiansu/taigikeyboard/ui/Pre
      -vf "scale=360:-1,pad=370:ih+10:5:5:gray,tile=4x10" -frames:v 1 "<scratchpad>/preview_sheet.png"
    ```
 
-2. **Report** `git diff --stat` of the image folders and the absolute paths of the images you checked. Committing is the caller's round. A gradient image can differ between runs by ±1 in a few pixels (dithering); when that is its only change, `git checkout` it rather than commit the churn.
+2. **Report** `jj diff --stat` (or `git diff --stat` in plain Git) of the image folders and the absolute paths of the images you checked. Committing is the caller's round. A gradient image can differ between runs by ±1 in a few pixels (dithering); when that is its only change, revert it with `jj restore <path>` (or `git checkout -- <path>` in plain Git) rather than commit the churn.

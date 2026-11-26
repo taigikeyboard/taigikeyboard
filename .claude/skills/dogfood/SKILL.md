@@ -1,6 +1,6 @@
 ---
 name: dogfood
-description: Give manual test cases for a just-fixed bug, built from random real sentences in corpus/taigi-typing. Use after a fix lands or before a dogfood pass, when you want something real to type on a device. Fast and read-only — greps the corpus, never builds, runs tests or edits files. Args: a description of the sentences wanted ("khinsiann after a verb", "reduplication", "放重利"), a TL form, or nothing (the fix at HEAD decides).
+description: Give manual test cases for a just-fixed bug, built from random real sentences in corpus/taigi-typing. Use after a fix lands or before a dogfood pass, when you want something real to type on a device. Fast and read-only — greps the corpus, never builds, runs tests or edits files. Args: a description of the sentences wanted ("khinsiann after a verb", "reduplication", "放重利"), a TL form, or nothing (the current fix commit decides).
 disable-model-invocation: false
 context: fork
 model: haiku
@@ -16,8 +16,9 @@ python3 .claude/skills/dogfood/pick.py '<pattern>' [count]   # count = 5
 Prints random 教典 sentences: hanji, TL, keystrokes, `dic_url`.
 
 1. **Pattern.** Translate the user's description into one regex — that is your job,
-   the script only greps. No argument → `git show --stat HEAD` + its commit message
-   gives the typed form the fix changed. Examples:
+   the script only greps. No argument → inspect the current fix commit (`jj show --stat @`
+   when `.jj/` exists and `@` is non-empty, else `jj show --stat @-`; `git show --stat HEAD`
+   in plain Git) + its commit message gives the typed form the fix changed. Examples:
 
    | Description | pattern |
    |---|---|
