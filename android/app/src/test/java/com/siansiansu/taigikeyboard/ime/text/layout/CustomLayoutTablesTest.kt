@@ -16,7 +16,6 @@ import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.visible
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutTestAssets.withoutGlobe
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -60,7 +59,6 @@ class CustomLayoutTablesTest {
         assertEquals(listOf(",", "-"), tables.baseTable("qwerty", LayoutScript.TL)!!.labels.takeLast(2))
         assertEquals(listOf(",", "."), tables.baseTable("moe2", LayoutScript.TL)!!.labels.takeLast(2))
         assertEquals("ph", tables.baseTable("moe2", LayoutScript.TL)!!.labels[1])
-        assertNull(tables.baseTable("tps", LayoutScript.TL))
     }
 
     @Test

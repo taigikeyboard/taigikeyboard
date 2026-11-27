@@ -18,7 +18,7 @@ class CustomLayoutSelectionTest {
 
     @Test
     fun `a built-in layout clears the selection, even on the same base`() {
-        val writes = CustomLayoutSelection.forBuiltIn(TpsCascade.forKeyboardLayoutType("moe1", "moe1", "tl", "tl"))
+        val writes = CustomLayoutSelection.forBuiltIn(TpsCascade.forKeyboardLayoutType("moe1", "moe1", "tl", "tl"), oldLayout = "moe1")
         assertEquals("", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
         assertEquals("moe1", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
     }
@@ -57,12 +57,12 @@ class CustomLayoutSelectionTest {
 
     @Test
     fun `deleting the selected layout clears the selection and keeps the base`() {
-        val writes = CustomLayoutSelection.forDelete(listOf(layoutA, layoutB), id = "a", selectedId = "a")
+        val writes = CustomLayoutSelection.forDelete(listOf(layoutA, layoutB), id = "a", selectedId = "a", tpsId = "")
         assertEquals(CustomLayout.encodeList(listOf(layoutB)), writes[PreferenceKeys.USER_LAYOUTS])
         assertEquals("", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
         assertFalse(writes.containsKey(PreferenceKeys.KEYBOARD_LAYOUT_TYPE))
 
-        assertFalse(CustomLayoutSelection.forDelete(listOf(layoutA, layoutB), id = "b", selectedId = "a").containsKey(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID))
+        assertFalse(CustomLayoutSelection.forDelete(listOf(layoutA, layoutB), id = "b", selectedId = "a", tpsId = "").containsKey(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID))
     }
 
     @Test
@@ -108,6 +108,63 @@ class CustomLayoutSelectionTest {
         assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
         assertEquals("tps", writes[PreferenceKeys.INPUT_MODE])
         assertEquals("qwerty", writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
+    }
+
+    // TPS layouts — their own slot (iOS tpsCustomLayoutId)
+
+    private val tpsLayout = LayoutTestAssets.unchanged("tps", LayoutScript.TL, id = "t")
+
+    @Test
+    fun `applying a layout enters TPS, its script or no mode`() {
+        assertEquals("tps", CustomLayoutSelection.inputModeToApply(tpsLayout))
+        assertEquals("poj", CustomLayoutSelection.inputModeToApply(layoutB))
+        assertNull(CustomLayoutSelection.inputModeToApply(LayoutTestAssets.unchanged("phahTaigi", LayoutScript.TL)))
+    }
+
+    @Test
+    fun `applying a TPS layout saves the mode to leave to and keeps the romanization selection`() {
+        // trace: forInputMode(tps, old=poj, layout qwerty) saves LAYOUT_BEFORE_TPS=qwerty, layout tps, mode tps.
+        val modeWrites = TpsCascade.forInputMode("tps", "poj", "qwerty", "phahTaigi")
+        val writes = CustomLayoutSelection.forApply(tpsLayout, modeWrites, currentLayout = "qwerty", currentInputMode = "poj", inputModeBeforeTps = "tl")
+        assertEquals("poj", writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
+        assertEquals("qwerty", writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
+        assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
+        assertEquals("tps", writes[PreferenceKeys.INPUT_MODE])
+        assertEquals("t", writes[PreferenceKeys.TPS_CUSTOM_LAYOUT_ID])
+        assertFalse(writes.containsKey(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID))
+
+        // Already in TPS: the backup stays as it was.
+        val inside = CustomLayoutSelection.forApply(tpsLayout, TpsCascade.forInputMode("tps", "tps", "tps", "qwerty"), "tps", "tps", "poj")
+        assertFalse(inside.containsKey(PreferenceKeys.INPUT_MODE_BEFORE_TPS))
+        assertEquals("t", inside[PreferenceKeys.TPS_CUSTOM_LAYOUT_ID])
+    }
+
+    @Test
+    fun `the TPS card inside TPS ends only the TPS selection`() {
+        val writes = CustomLayoutSelection.forBuiltIn(TpsCascade.forKeyboardLayoutType("tps", "tps", "tps", "tl"), oldLayout = "tps")
+        assertEquals("", writes[PreferenceKeys.TPS_CUSTOM_LAYOUT_ID])
+        assertFalse(writes.containsKey(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID))
+    }
+
+    @Test
+    fun `the TPS card from a romanization layout ends both selections`() {
+        val writes = CustomLayoutSelection.forBuiltIn(TpsCascade.forKeyboardLayoutType("tps", "qwerty", "tl", "tl"), oldLayout = "qwerty")
+        assertEquals("", writes[PreferenceKeys.TPS_CUSTOM_LAYOUT_ID])
+        assertEquals("", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
+    }
+
+    @Test
+    fun `a romanization card leaving TPS keeps the TPS selection`() {
+        val writes = CustomLayoutSelection.forBuiltIn(TpsCascade.forKeyboardLayoutType("moe1", "tps", "tps", "poj"), oldLayout = "tps")
+        assertEquals("", writes[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID])
+        assertFalse(writes.containsKey(PreferenceKeys.TPS_CUSTOM_LAYOUT_ID))
+    }
+
+    @Test
+    fun `deleting the selected TPS layout clears only its slot`() {
+        val writes = CustomLayoutSelection.forDelete(listOf(layoutA, tpsLayout), id = "t", selectedId = "a", tpsId = "t")
+        assertEquals("", writes[PreferenceKeys.TPS_CUSTOM_LAYOUT_ID])
+        assertFalse(writes.containsKey(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID))
     }
 
     @Test

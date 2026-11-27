@@ -478,6 +478,7 @@ class PrefHelper(
                     currentInputMode = inputMode,
                     inputModeBeforeTps = inputModeBeforeTps,
                 ),
+                oldLayout = keyboardLayoutType,
             )
         // Logger fires on the IO coroutine after the batch commits.
         // HEAD~1 fired the same log inside the `dataStore.edit { }` transform
@@ -505,19 +506,22 @@ class PrefHelper(
                 this.inputMode,
                 inputModeBeforeTps,
             )
-        updateCacheBatchAndPersist(CustomLayoutSelection.forBuiltIn(writes))
+        updateCacheBatchAndPersist(CustomLayoutSelection.forBuiltIn(writes, oldLayout = keyboardLayoutType))
     }
 
-    // Custom layouts: a JSON list (iOS `user_layouts.json`) and the selected one's id ("" while a
-    // built-in layout is selected). Selection = `keyboardLayoutType` (the base) + that id; the
-    // input-mode TPS cascade keeps the id, so leaving TPS resumes the layout. Mirrors iOS
-    // SharedSettings § Custom layouts.
+    // Custom layouts: a JSON list (iOS `user_layouts.json`), the selected romanization one's id (""
+    // while a built-in layout is selected) and the selected TPS one's. Selection =
+    // `keyboardLayoutType` (the base) + the id of its slot; the input-mode TPS cascade keeps both, so
+    // leaving TPS resumes the romanization layout. Mirrors iOS SharedSettings § Custom layouts.
 
     private val userLayouts: String
         get() = cached(PreferenceKeys.USER_LAYOUTS, DEFAULT_USER_LAYOUTS)
 
     private val selectedCustomLayoutId: String
         get() = cached(PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID, "")
+
+    private val tpsCustomLayoutId: String
+        get() = cached(PreferenceKeys.TPS_CUSTOM_LAYOUT_ID, "")
 
     // The last decoded list and the JSON it came from, so a layout compute never re-parses.
     @Volatile
@@ -528,12 +532,29 @@ class PrefHelper(
 
     /** The custom layout the keyboard shows ([CustomLayout.active]); null while a built-in one is selected. */
     val activeCustomLayout: CustomLayout?
-        get() = activeCustomLayoutIn(userLayouts, selectedCustomLayoutId, keyboardLayoutType)
+        get() = activeCustomLayoutIn(userLayouts, selectedCustomLayoutId, tpsCustomLayoutId, keyboardLayoutType)
+
+    /**
+     * Board labels of the keys the custom layout shown in [inputMode] ([CustomLayout.shown]) gives their
+     * own long-press list ([CustomLayoutTables.customCalloutLabels]): their built-in hints hide and their
+     * list shows as stored. Memoized per shown layout: read on every key-down and appearance push.
+     */
+    fun customCalloutLabels(inputMode: String): Set<String> {
+        val layout = CustomLayout.shown(activeCustomLayout, inputMode, keyboardLayoutType) ?: return emptySet()
+        calloutLabelsMemo?.let { (memoLayout, labels) -> if (memoLayout === layout) return labels }
+        val labels = CompositionRoot.shared(context).customLayoutTables.customCalloutLabels(layout)
+        calloutLabelsMemo = layout to labels
+        return labels
+    }
+
+    // The last [customCalloutLabels] result and the decoded layout it came from (decodes are memoized, so identity holds).
+    @Volatile
+    private var calloutLabelsMemo: Pair<CustomLayout, Set<String>>? = null
 
     /** Selects [layout] ([CustomLayoutSelection.forApply]). */
     fun applyCustomLayout(layout: CustomLayout) {
         updateCacheBatchAndPersist(
-            CustomLayoutSelection.forApply(layout, scriptModeWrites(layout), keyboardLayoutType, inputMode, inputModeBeforeTps),
+            CustomLayoutSelection.forApply(layout, modeWrites(layout), keyboardLayoutType, inputMode, inputModeBeforeTps),
         )
     }
 
@@ -546,7 +567,7 @@ class PrefHelper(
             CustomLayoutSelection.forSave(
                 loadCustomLayouts(),
                 layout,
-                scriptModeWrites(layout),
+                modeWrites(layout),
                 keyboardLayoutType,
                 inputMode,
                 inputModeBeforeTps,
@@ -555,12 +576,9 @@ class PrefHelper(
         return true
     }
 
-    // Applying a custom layout enters its script first, like a Tâi-lô / Pe̍h-ōe-jī card; a universal
-    // layout keeps the mode.
-    private fun scriptModeWrites(layout: CustomLayout): Map<Preferences.Key<*>, Any> {
-        if (layout.isUniversal) return emptyMap()
-        return inputModeWrites(layout.script.inputMode)
-    }
+    // Applying a custom layout enters its mode first ([CustomLayoutSelection.inputModeToApply]): TPS
+    // for a TPS one, its script like a Tâi-lô / Pe̍h-ōe-jī card; a universal layout keeps the mode.
+    private fun modeWrites(layout: CustomLayout): Map<Preferences.Key<*>, Any> = CustomLayoutSelection.inputModeToApply(layout)?.let(::inputModeWrites).orEmpty()
 
     /** Saves a copy of [layout] named [name] ([CustomLayoutSelection.forDuplicate]); no-op at the cap. */
     fun duplicateCustomLayout(
@@ -572,15 +590,19 @@ class PrefHelper(
 
     /** Deletes the layout with [id] ([CustomLayoutSelection.forDelete]). */
     fun deleteCustomLayout(id: String) {
-        updateCacheBatchAndPersist(CustomLayoutSelection.forDelete(loadCustomLayouts(), id, selectedCustomLayoutId))
+        updateCacheBatchAndPersist(CustomLayoutSelection.forDelete(loadCustomLayouts(), id, selectedCustomLayoutId, tpsCustomLayoutId))
     }
 
     // No selection reads no list, so a user without custom layouts never parses the layout tables.
     private fun activeCustomLayoutIn(
         json: String,
         selectedId: String,
+        tpsId: String,
         layoutType: String,
-    ): CustomLayout? = if (selectedId.isEmpty()) null else CustomLayout.active(decodeCustomLayouts(json), selectedId, layoutType)
+    ): CustomLayout? {
+        if (selectedId.isEmpty() && tpsId.isEmpty()) return null
+        return CustomLayout.active(decodeCustomLayouts(json), romanizationId = selectedId, tpsId = tpsId, layoutType = layoutType)
+    }
 
     private fun decodeCustomLayouts(json: String): List<CustomLayout> {
         if (json == DEFAULT_USER_LAYOUTS) return emptyList()
@@ -897,16 +919,25 @@ class PrefHelper(
     fun observeLetterLayout(): Flow<Pair<String, CustomLayout?>> =
         dataStore.data
             .map { prefs ->
-                Triple(
+                LetterLayoutSource(
                     prefs[PreferenceKeys.USER_LAYOUTS] ?: DEFAULT_USER_LAYOUTS,
                     prefs[PreferenceKeys.SELECTED_CUSTOM_LAYOUT_ID] ?: "",
+                    prefs[PreferenceKeys.TPS_CUSTOM_LAYOUT_ID] ?: "",
                     prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] ?: DEFAULT_KEYBOARD_LAYOUT_TYPE,
                 )
             }.distinctUntilChanged()
-            .map { (json, selectedId, layoutType) -> layoutType to activeCustomLayoutIn(json, selectedId, layoutType) }
+            .map { source -> source.layoutType to activeCustomLayoutIn(source.json, source.selectedId, source.tpsId, source.layoutType) }
             .distinctUntilChanged()
             // The first decode parses the layout assets (CustomLayoutTables): off the main thread.
             .flowOn(Dispatchers.Default)
+
+    // The prefs the letter layout is built from, compared as one value.
+    private data class LetterLayoutSource(
+        val json: String,
+        val selectedId: String,
+        val tpsId: String,
+        val layoutType: String,
+    )
 
     /** Observes the custom layout the keyboard shows ([observeLetterLayout]). */
     fun observeActiveCustomLayout(): Flow<CustomLayout?> = observeLetterLayout().map { it.second }.distinctUntilChanged()

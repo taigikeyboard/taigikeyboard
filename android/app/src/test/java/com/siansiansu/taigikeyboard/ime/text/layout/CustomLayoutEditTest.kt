@@ -173,7 +173,8 @@ class CustomLayoutEditTest {
                 assertTrue("$base $script", tables.isValid(fresh))
             }
         }
-        assertNull(tables.fresh("id", "Name", "tps", LayoutScript.TL))
+        assertTrue("tps", tables.isValid(tables.fresh("id", "Name", "tps", LayoutScript.TL)!!))
+        assertNull(tables.fresh("id", "Name", "unknown", LayoutScript.TL))
     }
 
     @Test

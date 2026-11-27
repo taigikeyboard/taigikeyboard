@@ -72,9 +72,11 @@ object PreferenceKeys {
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
 
     // Custom layouts: the JSON list ([com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout]) and
-    // the selected one's id ("" while a built-in layout is selected).
+    // the selected romanization one's id ("" while a built-in layout is selected), and the selected
+    // TPS one's (its own slot, so entering and leaving TPS keeps both; iOS `tpsCustomLayoutId`).
     val USER_LAYOUTS = stringPreferencesKey("keyboard__user_layouts")
     val SELECTED_CUSTOM_LAYOUT_ID = stringPreferencesKey("keyboard__selected_custom_layout_id")
+    val TPS_CUSTOM_LAYOUT_ID = stringPreferencesKey("keyboard__tps_custom_layout_id")
 
     // Per-script layout memory ([LayoutScriptMemory]): the script the live selection belongs to
     // ("tl" / "poj"), and each script's selection while the other one is live.

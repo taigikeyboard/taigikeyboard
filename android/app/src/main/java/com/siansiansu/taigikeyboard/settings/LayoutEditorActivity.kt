@@ -42,8 +42,8 @@ class LayoutEditorActivity : ComponentActivity() {
                 .putExtra(EXTRA_USE, use.name)
 
         /**
-         * A new layout starts from the layout in use — its base table in the current script — or from
-         * PhahTaigi while the TPS layout is on. Its use is the create dialog's default. Mirrors iOS
+         * A new layout starts from the layout in use — its base table in the current script, or the
+         * TPS table while the TPS layout is on. Its use is the create dialog's default. Mirrors iOS
          * `LayoutEditorView.newDraft`.
          */
         fun newDraft(
@@ -51,15 +51,35 @@ class LayoutEditorActivity : ComponentActivity() {
             tables: CustomLayoutTables,
         ): CustomLayout {
             val active = prefs.activeCustomLayout
-            val stored = prefs.keyboardLayoutType
-            val base = active?.base ?: stored.takeIf { layout -> KeyboardLayoutOptions.romanization.any { it.key == layout } } ?: "phahTaigi"
-            val script = active?.script ?: LayoutScript.fromStorage(prefs.romanizationInputMode) ?: LayoutScript.TL
-            return checkNotNull(tables.fresh(UUID.randomUUID().toString(), "", base, script)) { "no $base table" }
+            return when {
+                active != null -> fresh(tables, "", active.base, active.script)
+                prefs.keyboardLayoutType == CustomLayout.TPS_BASE -> fresh(tables, "", CustomLayout.TPS_BASE, LayoutScript.TL)
+                else -> romanizationDraft(prefs, tables)
+            }
         }
+
+        /** A romanization start: the stored layout (PhahTaigi while the TPS layout is on) in the romanization script the keyboard returns to. */
+        private fun romanizationDraft(
+            prefs: PrefHelper,
+            tables: CustomLayoutTables,
+        ): CustomLayout {
+            val stored = prefs.keyboardLayoutType
+            val base = stored.takeIf { layout -> KeyboardLayoutOptions.romanization.any { it.key == layout } } ?: "phahTaigi"
+            return fresh(tables, "", base, LayoutScript.fromStorage(prefs.romanizationInputMode) ?: LayoutScript.TL)
+        }
+
+        private fun fresh(
+            tables: CustomLayoutTables,
+            name: String,
+            base: String,
+            script: LayoutScript,
+        ): CustomLayout = checkNotNull(tables.fresh(UUID.randomUUID().toString(), name, base, script)) { "no $base table" }
 
         /**
          * A new layout named [name]: [newDraft] in the script [use] names (a universal one keeps the
-         * current script's table), shown where [use] says. Mirrors iOS `LayoutEditorView.newDraft(named:use:)`.
+         * current script's table), shown where [use] says. A TPS use starts from the TPS table; a
+         * romanization use while TPS is on starts from [romanizationDraft]. Mirrors iOS
+         * `LayoutEditorView.newDraft(named:use:)`.
          */
         private fun newDraft(
             prefs: PrefHelper,
@@ -67,7 +87,9 @@ class LayoutEditorActivity : ComponentActivity() {
             name: String,
             use: LayoutUse,
         ): CustomLayout {
-            val start = newDraft(prefs, tables)
+            if (use == LayoutUse.TPS) return fresh(tables, name, CustomLayout.TPS_BASE, LayoutScript.TL)
+            val draft = newDraft(prefs, tables)
+            val start = if (draft.isTps) romanizationDraft(prefs, tables) else draft
             val script = use.script ?: start.script
             val fresh = checkNotNull(tables.fresh(start.id, name, start.base, script)) { "no ${start.base} table" }
             // The script already matches, so this only sets the universal flag.

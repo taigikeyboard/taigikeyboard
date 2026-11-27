@@ -1,4 +1,4 @@
-// A user-made romanization layout: a built-in key table with its keys rearranged, and the JSON list
+// A user-made layout: a built-in romanization or TPS key table with its keys rearranged, and the JSON list
 // it is stored in (PrefHelper, DataStore). The record matches iOS `CustomLayout` field for field;
 // the tables it is checked against live in CustomLayoutTables. Mirrors iOS Layout/CustomLayout.swift.
 
@@ -36,8 +36,9 @@ enum class LayoutScript(
 }
 
 /**
- * Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen when the layout
- * is created; editing an existing one can change it on save. Mirrors iOS `LayoutUse`.
+ * Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, in one of them, or in Phonetic Symbols
+ * (a TPS layout). Chosen when the layout is created; editing a romanization layout can change it among
+ * the romanization uses on save. A TPS layout stays TPS. Mirrors iOS `LayoutUse`.
  */
 enum class LayoutUse(
     val labelKey: StringKey,
@@ -45,16 +46,25 @@ enum class LayoutUse(
     UNIVERSAL(StringKey.LAYOUT_COMMON_LAYOUTS_SECTION),
     TL(StringKey.SETTINGS_TL_MODE),
     POJ(StringKey.SETTINGS_POJ_MODE),
+    TPS(StringKey.SETTINGS_TPS_MODE),
     ;
 
-    /** The script this use lays the keys out in; null for universal, which keeps the layout's. */
+    /**
+     * The script this use lays the keys out in; null for universal, which keeps the layout's, and for
+     * TPS, whose one table serves no romanization script.
+     */
     val script: LayoutScript?
         get() =
             when (this) {
-                UNIVERSAL -> null
+                UNIVERSAL, TPS -> null
                 TL -> LayoutScript.TL
                 POJ -> LayoutScript.POJ
             }
+
+    companion object {
+        /** The uses a romanization layout can take. */
+        val romanization = listOf(UNIVERSAL, TL, POJ)
+    }
 }
 
 /** A function key as stored in a record (iOS `CustomLayout.FunctionKey` raw values), and the key code it stands for. */
@@ -90,14 +100,15 @@ sealed interface LayoutPlace {
 }
 
 /**
- * A custom layout over the [base] × [script] table, below its digit row:
+ * A custom layout over the [base] × [script] table, below its digit row (TPS has none, so every row of
+ * its table is editable; its [script] is TL and unused):
  * - [keys] fills the character keys in reading order; null marks a removed key.
  * - [functionKeys] fills the function keys in reading order; each stays in its own row.
  * - [hasEmojiKey] false hides the emoji key, the one function key that can be removed.
  * - [callouts] holds the long-press lists the user set, by half-width key label; a key without one
  *   keeps the built-in list ([CustomLayoutTables.defaultCallouts]).
  * - [isUniversal] shows it in both scripts; otherwise only in [script]. A record saved before it could
- *   be chosen shows where its base's table does.
+ *   be chosen shows where its base's table does. Always false for TPS.
  * The globe key and the email / URL key are not part of it: the keyboard places them.
  * The editing operations only swap, trade a key for a spare or remove one, so a key never appears
  * twice; each returns the edited copy.
@@ -120,7 +131,9 @@ data class CustomLayout(
     /** Where the layout shows; [CustomLayoutTables.withUse] changes it. */
     val use: LayoutUse
         get() =
-            if (isUniversal) {
+            if (isTps) {
+                LayoutUse.TPS
+            } else if (isUniversal) {
                 LayoutUse.UNIVERSAL
             } else {
                 when (script) {
@@ -129,8 +142,26 @@ data class CustomLayout(
                 }
             }
 
-    /** The engine's tone marks this layout's keys offer: both scripts' (both tone-9 marks) when universal, else [script]'s. */
-    fun toneMarks(tones: ToneVariations): Map<String, List<String>> = if (isUniversal) tones.universal else script.toneMarks(tones)
+    /** Whether this is a TPS layout, over the Phonetic Symbols table. */
+    val isTps: Boolean
+        get() = base == TPS_BASE
+
+    /** The bases the editor offers: the romanization ones, or a TPS layout's own (it restarts the board). */
+    val editorBases: List<KeyboardLayoutOption>
+        get() = if (isTps) KeyboardLayoutOptions.phonetic else KeyboardLayoutOptions.romanization
+
+    /** The uses an edit's save offers: a romanization layout's three, or TPS alone. */
+    val editorUses: List<LayoutUse>
+        get() = if (isTps) listOf(LayoutUse.TPS) else LayoutUse.romanization
+
+    /** The engine's tone marks this layout's keys offer: both scripts' (both tone-9 marks) when universal, none on TPS, else [script]'s. */
+    fun toneMarks(tones: ToneVariations): Map<String, List<String>> =
+        when {
+            // TPS types tones as glyphs (ˋ ˊ …), never as marked letters.
+            isTps -> emptyMap()
+            isUniversal -> tones.universal
+            else -> script.toneMarks(tones)
+        }
 
     /** This layout under a new id and [name] — what the Duplicate card action saves. Mirrors iOS `CustomLayout.duplicated(named:)`. */
     fun duplicated(name: String): CustomLayout = copy(id = UUID.randomUUID().toString(), name = name)
@@ -249,6 +280,9 @@ data class CustomLayout(
         }
 
     companion object {
+        /** The base of a TPS layout: the Phonetic Symbols table. */
+        const val TPS_BASE = "tps"
+
         /** The most custom layouts a user can keep, as for user themes. */
         const val MAX_CUSTOM_LAYOUTS = 5
 
@@ -275,13 +309,33 @@ data class CustomLayout(
 
         /**
          * The selected layout in [layouts] while its base is the stored layout: TPS entered through
-         * the input mode suspends it until leaving TPS restores the base.
+         * the input mode suspends a romanization one until leaving TPS restores the base, and a TPS
+         * one shows only while the layout is TPS.
          */
         fun active(
             layouts: List<CustomLayout>,
             selectedId: String,
             layoutType: String,
         ): CustomLayout? = layouts.firstOrNull { it.id == selectedId && it.base == layoutType }
+
+        /** The active layout given both selection slots: the TPS one's while the layout is TPS, else the romanization one's. */
+        fun active(
+            layouts: List<CustomLayout>,
+            romanizationId: String,
+            tpsId: String,
+            layoutType: String,
+        ): CustomLayout? = active(layouts, if (layoutType == TPS_BASE) tpsId else romanizationId, layoutType)
+
+        /**
+         * [layout] when the letter keyboard of [inputMode] on [layoutType] shows it: never in English,
+         * and a TPS layout exactly while TPS is live (the two prefs can briefly disagree, `PrefHelper.isTpsLayout`).
+         * The one gate for the keyboard, its long-press lists and its hints. iOS `CustomLayoutService` TPS guard.
+         */
+        fun shown(
+            layout: CustomLayout?,
+            inputMode: String,
+            layoutType: String,
+        ): CustomLayout? = layout?.takeIf { inputMode != "english" && it.isTps == (inputMode == TPS_BASE || layoutType == TPS_BASE) }
 
         /**
          * [layouts] with [layout] in place of its saved version, or added right after the layout
@@ -335,7 +389,8 @@ data class CustomLayout(
                         val entries = callouts.getJSONArray(label)
                         (0 until entries.length()).map(entries::getString)
                     } ?: emptyMap(),
-                isUniversal = json.optBoolean("isUniversal", KeyboardLayoutOptions.sharesTableAcrossScripts(base)),
+                // A TPS record is never universal, whatever it holds.
+                isUniversal = base != TPS_BASE && json.optBoolean("isUniversal", KeyboardLayoutOptions.sharesTableAcrossScripts(base)),
             )
         }
     }

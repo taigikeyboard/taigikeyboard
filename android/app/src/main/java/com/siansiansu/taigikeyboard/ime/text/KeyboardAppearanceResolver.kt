@@ -53,7 +53,7 @@ internal class KeyboardAppearanceResolver(
             keyBorderWidth = theme.keyBorderWidth,
             keyShadowIntensity = theme.keyShadowIntensity,
             keyHeightScale = theme.keyHeightScale,
-            customCalloutLabels = KeyboardAppearance.customCalloutLabels(prefs.inputMode, prefs.activeCustomLayout),
+            customCalloutLabels = prefs.customCalloutLabels(prefs.inputMode),
         )
     }
 

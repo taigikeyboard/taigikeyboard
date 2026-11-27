@@ -238,7 +238,7 @@ fun LayoutScreen(
             },
             onDismiss = { showCreateDialog = false },
         ) {
-            UseMenu(selected = createUse, onSelect = { createUse = it })
+            UseMenu(uses = LayoutUse.entries, selected = createUse, onSelect = { createUse = it })
         }
     }
 }
