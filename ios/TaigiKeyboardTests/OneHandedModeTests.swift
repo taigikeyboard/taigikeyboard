@@ -36,7 +36,7 @@ final class OneHandedModeTests: XCTestCase {
         XCTAssertEqual(OneHandedMode.right.flipped, .left)
         XCTAssertEqual(OneHandedMode.off.flipped, .off)
         XCTAssertNil(OneHandedMode.off.dockEdge)
-        XCTAssertEqual(OneHandedMode.left.dockEdge, .leading)
-        XCTAssertEqual(OneHandedMode.right.dockEdge, .trailing)
+        XCTAssertEqual(OneHandedMode.left.dockEdge, .left)
+        XCTAssertEqual(OneHandedMode.right.dockEdge, .right)
     }
 }

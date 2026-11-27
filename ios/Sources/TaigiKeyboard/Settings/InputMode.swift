@@ -10,7 +10,7 @@ import Foundation
 /// The enum is a pure value type over `String` so it can live in shared core;
 /// the `displayName` localization sibling stays platform-side and is provided
 /// via an extension in `SettingsModels.swift`.
-public enum InputMode: String, CaseIterable {
+public enum InputMode: String, CaseIterable, Sendable {
     case poj // Pe̍h-ōe-jī
     case tl // Tâi-lô
     // English passthrough mode; bypasses phonetic processing.
