@@ -1,6 +1,6 @@
 import Foundation
 
-// A user-made romanization layout: a built-in key table with its keys rearranged.
+// A user-made layout: a built-in romanization or TPS key table with its keys rearranged.
 
 /// The script of the key table a custom layout was made from — Lohankha and the MOE layouts have
 /// different TL and POJ tables (`TaigiLayouts.Alphabetic.table`).
@@ -21,36 +21,43 @@ enum LayoutScript: String, Codable {
     }
 }
 
-/// Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, or in one of them. Chosen when the
-/// layout is created; editing an existing one can change it on save.
+/// Where a custom layout shows: in both Tâi-lô and Pe̍h-ōe-jī, in one of them, or in Phonetic
+/// Symbols (a TPS layout). Chosen when the layout is created; editing a romanization layout can
+/// change it among the romanization uses on save. A TPS layout stays TPS.
 enum LayoutUse: CaseIterable, Hashable {
-    case universal, tl, poj
+    case universal, tl, poj, tps
+
+    /// The uses a romanization layout can take.
+    static let romanization: [LayoutUse] = [.universal, .tl, .poj]
 
     var nameKey: StringKey {
         switch self {
         case .universal: .layoutCommonLayoutsSection
         case .tl: .settingsTlMode
         case .poj: .settingsPojMode
+        case .tps: .settingsTpsMode
         }
     }
 
-    /// The script this use lays the keys out in; nil for universal, which keeps the layout's.
+    /// The script this use lays the keys out in; nil for universal, which keeps the layout's, and
+    /// for TPS, whose one table serves no romanization script.
     var script: LayoutScript? {
         switch self {
-        case .universal: nil
+        case .universal, .tps: nil
         case .tl: .tl
         case .poj: .poj
         }
     }
 }
 
-/// A custom layout over the `base` × `script` table, below its digit row:
+/// A custom layout over the `base` × `script` table, below its digit row (TPS has none, so every
+/// row of its table is editable; its `script` is `.tl` and unused):
 /// - `keys` fills the character keys in reading order; nil marks a removed key.
 /// - `functionKeys` fills the function keys in reading order; each stays in its own row.
 /// - `hasEmojiKey` false hides the emoji key, the one function key that can be removed.
 /// - `callouts` holds the long-press lists the user set, by half-width key label; a key without one
 ///   keeps the built-in list (`TaigiCallouts.calloutChars`).
-/// - `isUniversal` shows it in both scripts; otherwise only in `script`.
+/// - `isUniversal` shows it in both scripts; otherwise only in `script`. Always false for TPS.
 /// The globe key is not part of it: the keyboard puts it right after 123 when the device needs it.
 /// The editor only swaps, trades a key for a spare or removes one, so a key never appears twice.
 struct CustomLayout: Codable, Identifiable, Hashable {
@@ -137,13 +144,34 @@ struct CustomLayout: Codable, Identifiable, Hashable {
     /// Letters offered in the spare tray: a–z, o͘, ⁿ, `ee`, `-`, then every multi-letter key of the
     /// romanization layouts (MOE2 `ph`, `tsh`, `ch` …), whatever the base, then `trayFinals`.
     private static let trayLetters: [String] = {
-        let symbols = Set(symbolPageKeys.compactMap(\.characterLabel))
+        let symbols = symbolPageLabelSet
         let single = "abcdefghijklmnopqrstuvwxyz".map(String.init) + ["o\u{0358}", trayNasalMarker] + trayVowels + ["-"]
         return unique(single + romanizationKeys.compactMap(\.characterLabel).filter { !symbols.contains($0) } + trayFinals)
     }()
 
     /// Punctuation and symbols offered in the spare tray: the common symbol page (the 123 key).
     private static let traySymbols = symbolPageKeys.compactMap(\.characterLabel).filter { !trayLetters.contains($0) }
+
+    /// Labels of the common symbol page (the 123 key).
+    private static let symbolPageLabelSet = Set(symbolPageKeys.compactMap(\.characterLabel))
+
+    /// Labels of both symbol pages: what any layout, TPS included, can put on its board.
+    private static let symbolPageLabels = symbolPageLabelSet.union(secondSymbolPageKeys.compactMap(\.characterLabel))
+
+    /// The TPS table's glyphs in reading order (its `,` is a symbol-page key).
+    private static let tpsBoardGlyphs = labels(of: baseTable(.tps, .tl)).filter { !symbolPageLabelSet.contains($0) }
+
+    /// Glyphs a TPS layout can put on its board: the table's, then each key's long-press variants
+    /// (ㆴ on ㄅ …) in table order; never a digit (digits stay long-press entries) or a Latin letter.
+    private static let tpsGlyphs: [String] = unique(tpsBoardGlyphs + tpsBoardGlyphs.flatMap { glyph in
+        (TaigiCallouts.TPSCallouts.glyphActions[glyph] ?? []).filter { $0.first?.isASCII != true }
+    })
+
+    private static let tpsGlyphSet = Set(tpsGlyphs)
+
+    /// Characters a TPS key's long-press list can take beyond the symbols: every TPS glyph, then
+    /// the digits the built-in row-1 lists hold (ㆠ → 1 …).
+    private static let tpsCalloutCharacters = tpsGlyphs + "1234567890".map(String.init)
 
     /// Every key the tray can offer, so a moved key keeps its full-width form. The symbol page
     /// comes first: its `(` `)` carry full-width forms that MOE1's own keys leave out (a base's
@@ -182,32 +210,55 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         hasEmojiKey = try container.decodeIfPresent(Bool.self, forKey: .hasEmojiKey) ?? true
         callouts = try container.decodeIfPresent([String: [String]].self, forKey: .callouts) ?? [:]
         // Lenient like Android's optBoolean: a malformed flag reads as the default, not a lost record.
-        isUniversal = (try? container.decodeIfPresent(Bool.self, forKey: .isUniversal)) ?? base.sharesTableAcrossScripts
+        // A TPS record is never universal, whatever it holds.
+        isUniversal = base != .tps && ((try? container.decodeIfPresent(Bool.self, forKey: .isUniversal)) ?? base.sharesTableAcrossScripts)
     }
 
-    /// Whether a decoded record can be shown: an editable base, one entry per slot, every key
-    /// known, none twice, each row's function keys the base row's. Records failing it are dropped
+    /// Whether a decoded record can be shown: one entry per slot, every key placeable on its base
+    /// (`isPlaceable`), none twice, each row's function keys the base row's. Records failing it are dropped
     /// on load.
     var isValid: Bool {
-        guard base != .tps else { return false }
         let placed = keys.compactMap(\.self)
         return keys.count == baseLabels.count
-            && placed.allSatisfy { Self.catalog[$0] != nil }
+            && placed.allSatisfy(isPlaceable)
             && Set(placed).count == placed.count
             && functionKeysByRow(functionKeys) == functionKeysByRow(baseFunctionKeys)
     }
 
     /// The selected layout in `layouts` while its base is the stored layout: TPS entered through
-    /// the input mode suspends it until leaving TPS restores the base.
+    /// the input mode suspends a romanization one until leaving TPS restores the base, and a TPS
+    /// one shows only while the layout is TPS.
     static func active(in layouts: [CustomLayout], selectedId: UUID?, layoutType: KeyboardLayoutType) -> CustomLayout? {
         guard let selectedId else { return nil }
         return layouts.first { $0.id == selectedId && $0.base == layoutType }
+    }
+
+    /// The active layout given both selection slots: the TPS one's while the layout is TPS, else the
+    /// romanization one's.
+    static func active(
+        in layouts: [CustomLayout],
+        romanizationId: UUID?,
+        tpsId: UUID?,
+        layoutType: KeyboardLayoutType,
+    ) -> CustomLayout? {
+        active(in: layouts, selectedId: layoutType == .tps ? tpsId : romanizationId, layoutType: layoutType)
+    }
+
+    /// The bases the editor offers: the romanization ones, or a TPS layout's own (it restarts the board).
+    var editorBases: [KeyboardLayoutType] {
+        base == .tps ? [.tps] : KeyboardLayoutType.romanizationLayouts
+    }
+
+    /// The uses an edit's save offers: a romanization layout's three, or TPS alone.
+    var editorUses: [LayoutUse] {
+        base == .tps ? [.tps] : LayoutUse.romanization
     }
 
     /// Where the layout shows. Picking one script lays the keys as arranged on that script's table
     /// (`moveKeys(to:)`).
     var use: LayoutUse {
         get {
+            guard base != .tps else { return .tps }
             guard !isUniversal else { return .universal }
             switch script {
             case .tl: return .tl
@@ -215,7 +266,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
             }
         }
         set {
-            isUniversal = newValue == .universal
+            isUniversal = base != .tps && newValue == .universal
             if let script = newValue.script {
                 moveKeys(to: script)
             }
@@ -292,9 +343,17 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         functionKeys.firstIndex(of: .emoji).map(Place.function)
     }
 
-    /// Spare letters, multi-letter keys included.
+    /// Spare letters, multi-letter keys included; on a TPS layout, spare TPS glyphs.
     var spareLetters: [String] {
-        spares(from: Self.trayLetters)
+        spares(from: base == .tps ? Self.tpsGlyphs : Self.trayLetters)
+    }
+
+    /// A TPS layout's long-press group in the tray: the TPS glyphs on the board and the digits (the
+    /// spare glyphs already show with the letters). Empty for a romanization layout.
+    var trayTpsCallouts: [String] {
+        guard base == .tps else { return [] }
+        let spare = Set(spareLetters)
+        return Self.tpsCalloutCharacters.filter { !spare.contains($0) }
     }
 
     /// Spare punctuation and symbols.
@@ -302,15 +361,16 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         spares(from: Self.traySymbols)
     }
 
-    /// The place of each key in `rows`: the character keys below the digit row number the slots of
-    /// `keys` and the function keys those of `functionKeys`, in reading order; nil for the digit
-    /// row and the globe key.
+    /// The place of each key in `rows`: the character keys below the digit row (if any) number the
+    /// slots of `keys` and the function keys those of `functionKeys`, in reading order; nil for the
+    /// digit row and the globe key.
     static func places(of rows: [[KeyDef]]) -> [[Place?]] {
         var nextKey = 0
         var nextFunction = 0
+        let firstRow = firstEditableRow(of: rows)
         return rows.enumerated().map { row, keys in
             keys.map { key in
-                guard row > 0 else { return nil }
+                guard row >= firstRow else { return nil }
                 if key.isCharacter {
                     defer { nextKey += 1 }
                     return .key(nextKey)
@@ -343,11 +403,19 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         }
     }
 
-    /// Whether `spare` can go on `place`: a character place and a catalog key not on the board. A
-    /// full-width form and a long-press-only symbol are not catalog keys.
+    /// Whether `spare` can go on `place`: a character place and a key placeable on this base
+    /// (`isPlaceable`) not on the board. A full-width form and a long-press-only symbol never are.
     func canReplace(_ place: Place, with spare: String) -> Bool {
         guard case .key = place else { return false }
-        return Self.catalog[spare] != nil && !keys.contains(spare)
+        return isPlaceable(spare) && !keys.contains(spare)
+    }
+
+    /// Whether a key labelled `label` can sit on this layout's board: a TPS layout takes TPS glyphs
+    /// and symbol-page keys, a romanization layout any catalog key.
+    private func isPlaceable(_ label: String) -> Bool {
+        base == .tps
+            ? Self.tpsGlyphSet.contains(label) || Self.symbolPageLabels.contains(label)
+            : Self.catalog[label] != nil
     }
 
     /// Puts `spare` on a character place (a removed one too); the key it replaces returns to the tray,
@@ -507,7 +575,9 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     /// The row of each `functionKeys` slot in the base table.
     private var baseFunctionRows: [Int] {
-        Self.baseTable(base, script).enumerated().dropFirst().flatMap { row, keys in
+        // The slice keeps the table's row numbers.
+        let rows = Self.editableRows(of: Self.baseTable(base, script))
+        return zip(rows.indices, rows).flatMap { row, keys in
             keys.compactMap(FunctionKey.init).map { _ in row }
         }
     }
@@ -554,13 +624,29 @@ struct CustomLayout: Codable, Identifiable, Hashable {
         TaigiLayouts.Alphabetic.table(base, script: script, withGlobe: false)
     }
 
+    /// 1 when `rows` opens with a digit row (romanization tables), which stays the base's; 0 for a
+    /// table without one (TPS). A digit row is non-empty and holds only the keys `0`–`9`, so a TPS
+    /// first row with every key removed (`removedSlot`, an empty label) stays editable.
+    private static func firstEditableRow(of rows: [[KeyDef]]) -> Int {
+        guard let first = rows.first, !first.isEmpty else { return 0 }
+        let isDigitRow = first.allSatisfy { key in
+            key.characterLabel.map { $0.count == 1 && $0.allSatisfy { $0.isASCII && $0.isNumber } } ?? false
+        }
+        return isDigitRow ? 1 : 0
+    }
+
+    /// The rows `places` numbers: all but the digit row.
+    private static func editableRows(of rows: [[KeyDef]]) -> ArraySlice<[KeyDef]> {
+        rows.dropFirst(firstEditableRow(of: rows))
+    }
+
     /// The character keys `places` numbers, in slot order.
     private static func characterKeys(of rows: [[KeyDef]]) -> [KeyDef] {
-        rows.dropFirst().flatMap { $0.filter(\.isCharacter) }
+        editableRows(of: rows).flatMap { $0.filter(\.isCharacter) }
     }
 
     private static func characterCountsPerRow(of rows: [[KeyDef]]) -> [Int] {
-        rows.dropFirst().map { $0.count(where: \.isCharacter) }
+        editableRows(of: rows).map { $0.count(where: \.isCharacter) }
     }
 
     private static func labels(of rows: [[KeyDef]]) -> [String] {
@@ -569,7 +655,7 @@ struct CustomLayout: Codable, Identifiable, Hashable {
 
     /// The function keys `places` numbers, in slot order.
     private static func functionKeys(of rows: [[KeyDef]]) -> [FunctionKey] {
-        rows.dropFirst().flatMap { $0.compactMap(FunctionKey.init) }
+        editableRows(of: rows).flatMap { $0.compactMap(FunctionKey.init) }
     }
 
     /// TL and POJ tables spell some marked letters in different Unicode forms (ň precomposed or

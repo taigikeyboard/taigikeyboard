@@ -113,8 +113,14 @@ struct LayoutEditorView: View {
             isUndoing = false
         }
         .sheet(isPresented: $showsSaveSheet, onDismiss: closeAfterSave) {
-            LayoutDetailsSheet(name: $pendingName, use: $pendingUse, confirmTitle: lang.string(.commonSave), onConfirm: commit)
-                .environment(lang)
+            LayoutDetailsSheet(
+                name: $pendingName,
+                use: $pendingUse,
+                uses: draft.editorUses,
+                confirmTitle: lang.string(.commonSave),
+                onConfirm: commit,
+            )
+            .environment(lang)
         }
     }
 
@@ -198,10 +204,11 @@ struct LayoutEditorView: View {
         .padding(.horizontal, AppStyle.horizontalPadding)
     }
 
+    /// The romanization bases, or for a TPS layout its one base (tapping it starts the board over).
     private var baseChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(KeyboardLayoutType.romanizationLayouts, id: \.self) { base in
+                ForEach(draft.editorBases, id: \.self) { base in
                     let isSelected = base == draft.base
                     Button {
                         restart(from: base)
@@ -225,15 +232,20 @@ struct LayoutEditorView: View {
         selectedCallout.map(selectedCallouts.indices.contains) ?? (selected.map(draft.canRemove) ?? false)
     }
 
-    /// The removed emoji key and spare letters, shown when any, then titled groups: tone-marked letters,
-    /// one row per base; half-width symbols; full-width symbols. A tap puts a character on the selected key
-    /// or long-press slot (where it fits); the emoji chip goes straight back to its place.
+    /// The removed emoji key and spare letters (TPS glyphs on a TPS layout), shown when any, then titled
+    /// groups: tone-marked letters, one row per base (on a TPS layout, the board's glyphs and the digits
+    /// for long-press lists); half-width symbols; full-width symbols. A tap puts a character on the
+    /// selected key or long-press slot (where it fits); the emoji chip goes straight back to its place.
     private var spareTray: some View {
         VStack(spacing: 28) {
             if !draft.hasEmojiKey || !draft.spareLetters.isEmpty {
                 letterGrid
             }
-            traySection(lang.string(.layoutTrayTones)) { toneGrid }
+            if draft.base == .tps {
+                traySection(lang.string(.settingsTpsMode)) { symbolGrid(draft.trayTpsCallouts) }
+            } else {
+                traySection(lang.string(.layoutTrayTones)) { toneGrid }
+            }
             traySection(lang.string(.symbolHalfWidth)) {
                 symbolGrid(draft.traySymbols.filter { !CustomLayout.isFullWidth($0) })
             }
@@ -497,22 +509,34 @@ struct LayoutEditorView: View {
     }
 
     /// A new layout named `name`: `newDraft()` in the script `use` names (a universal one keeps
-    /// the current script's table), shown where `use` says.
+    /// the current script's table), shown where `use` says. A TPS use starts from the TPS table; a
+    /// romanization use while TPS is on starts from `romanizationDraft()`.
     private static func newDraft(named name: String, use: LayoutUse) -> CustomLayout {
-        let start = newDraft()
+        if use == .tps {
+            return CustomLayout(name: name, base: .tps, script: .tl)
+        }
+        let draft = newDraft()
+        let start = draft.base == .tps ? romanizationDraft() : draft
         var layout = CustomLayout(name: name, base: start.base, script: use.script ?? start.script)
         // The script already matches, so this only sets the universal flag.
         layout.use = use
         return layout
     }
 
-    /// A new layout starts from the layout in use — its base table in the current script — or
-    /// from PhahTaigi while the TPS layout is on. Its use is the create sheet's default.
+    /// A new layout starts from the layout in use — its base table in the current script, or the
+    /// TPS table while the TPS layout is on. Its use is the create sheet's default.
     static func newDraft() -> CustomLayout {
         let settings = SharedSettings.shared
         if let active = settings.activeCustomLayout {
             return CustomLayout(base: active.base, script: active.script)
         }
+        return settings.keyboardLayoutType == .tps ? CustomLayout(base: .tps, script: .tl) : romanizationDraft()
+    }
+
+    /// A romanization start: the stored layout (PhahTaigi while the TPS layout is on) in the
+    /// romanization script the keyboard returns to.
+    private static func romanizationDraft() -> CustomLayout {
+        let settings = SharedSettings.shared
         let layout = settings.keyboardLayoutType
         return CustomLayout(
             base: layout == .tps ? .phahTaigi : layout,
@@ -523,13 +547,17 @@ struct LayoutEditorView: View {
 
 // MARK: - Details sheet
 
-/// The name field and where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī), with Cancel and
-/// `confirmTitle`: OK when creating a layout (Layout tab), Save when saving an edit.
+/// The name field and where the layout shows, among `uses` (Universal / Tâi-lô / Pe̍h-ōe-jī /
+/// Phonetic Symbols when creating; a romanization layout's three or none for a TPS one when
+/// editing), with Cancel and `confirmTitle`: OK when creating a layout (Layout tab), Save when
+/// saving an edit.
 struct LayoutDetailsSheet: View {
     @Environment(DisplayLanguageStore.self) private var lang
     @Environment(\.dismiss) private var dismiss
     @Binding var name: String
     @Binding var use: LayoutUse
+    /// The uses offered; one alone hides the picker.
+    var uses: [LayoutUse] = LayoutUse.allCases
     let confirmTitle: String
     let onConfirm: () -> Void
 
@@ -537,12 +565,14 @@ struct LayoutDetailsSheet: View {
         NavigationStack {
             Form {
                 TextField(lang.string(.layoutEditorTitleNew), text: $name)
-                Picker(lang.string(.settingsInputMode), selection: $use) {
-                    ForEach(LayoutUse.allCases, id: \.self) { use in
-                        Text(lang.string(use.nameKey)).tag(use)
+                if uses.count > 1 {
+                    Picker(lang.string(.settingsInputMode), selection: $use) {
+                        ForEach(uses, id: \.self) { use in
+                            Text(lang.string(use.nameKey)).tag(use)
+                        }
                     }
+                    .pickerStyle(.menu)
                 }
-                .pickerStyle(.menu)
             }
             .navigationTitle(lang.string(.layoutNameHeader))
             .navigationBarTitleDisplayMode(.inline)

@@ -173,7 +173,8 @@ enum KeyboardLayoutType: String, CaseIterable {
     case moe1 // MOE input method layout 1
     case moe2 // MOE input method layout 2
 
-    /// Every layout but TPS: the romanization layouts, which a custom layout can start from.
+    /// Every layout but TPS: the romanization layouts, which a romanization custom layout can start
+    /// from (a TPS one starts from `.tps`).
     static let romanizationLayouts = allCases.filter { $0 != .tps }
 
     /// Card screenshot in `LayoutPreviewAssets.xcassets` (Layout tab, in-keyboard layout picker),
@@ -211,12 +212,13 @@ enum KeyboardLayoutType: String, CaseIterable {
         }
     }
 
-    /// Whether one key table serves TL and POJ (`TaigiLayouts.Alphabetic.table`), so a custom
-    /// layout over it starts universal (`CustomLayout.isUniversal`).
+    /// Whether a custom layout over it starts universal (`CustomLayout.isUniversal`): one key table
+    /// serves TL and POJ (`TaigiLayouts.Alphabetic.table`). False for TPS, which serves no
+    /// romanization script.
     var sharesTableAcrossScripts: Bool {
         switch self {
-        case .phahTaigi, .tps: true
-        case .qwerty, .moe1, .moe2: false
+        case .phahTaigi: true
+        case .qwerty, .moe1, .moe2, .tps: false
         }
     }
 

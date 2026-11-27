@@ -19,6 +19,8 @@ struct LayoutTab: View {
     private var inputMode = SharedSettings.inputModeKey.defaultValue
     @AppStorage(SharedSettings.selectedCustomLayoutIdKey.key, store: SharedSettings.sharedUserDefaults)
     private var selectedCustomLayoutId = SharedSettings.selectedCustomLayoutIdKey.defaultValue
+    @AppStorage(SharedSettings.tpsCustomLayoutIdKey.key, store: SharedSettings.sharedUserDefaults)
+    private var tpsCustomLayoutId = SharedSettings.tpsCustomLayoutIdKey.defaultValue
     @AppStorage(SharedSettings.layoutRevisionKey.key, store: SharedSettings.sharedUserDefaults)
     private var layoutRevision = SharedSettings.layoutRevisionKey.defaultValue
 
@@ -30,7 +32,10 @@ struct LayoutTab: View {
 
     var body: some View {
         let activeCustomLayoutId = CustomLayout.active(
-            in: customLayouts, selectedId: UUID(uuidString: selectedCustomLayoutId), layoutType: keyboardLayoutType,
+            in: customLayouts,
+            romanizationId: UUID(uuidString: selectedCustomLayoutId),
+            tpsId: UUID(uuidString: tpsCustomLayoutId),
+            layoutType: keyboardLayoutType,
         )?.id
         NavigationStack {
             ScrollView {
