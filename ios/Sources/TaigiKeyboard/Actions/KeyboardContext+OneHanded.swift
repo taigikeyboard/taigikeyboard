@@ -5,8 +5,8 @@ extension OneHandedMode {
     var dockEdge: Keyboard.DockEdge? {
         switch self {
         case .off: nil
-        case .left: .leading
-        case .right: .trailing
+        case .left: .left
+        case .right: .right
         }
     }
 }

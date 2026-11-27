@@ -8,7 +8,7 @@ import XCTest
 final class InputTypeKeyTests: XCTestCase {
     private let layouts = TaigiLayouts.Alphabetic.self
 
-    private func bottomRow(_ rows: [[KeyDef]], _ inputType: Keyboard.InputType) -> [KeyDef] {
+    private func bottomRow(_ rows: [[KeyDef]], _ inputType: Keyboard.TextInputType) -> [KeyDef] {
         CustomLayoutService.applyInputTypeKey(rows, inputType: inputType).last ?? []
     }
 
@@ -51,7 +51,7 @@ final class InputTypeKeyTests: XCTestCase {
     }
 
     func testOtherInputTypes_leaveRowsUnchanged() {
-        for inputType in [Keyboard.InputType.text, .webSearch, .emojiSearch] {
+        for inputType in [Keyboard.TextInputType.text, .webSearch, .emojiSearch] {
             for rows in [layouts.qwerty_TL_iPhone, layouts.moe1_TL_iPhone, layouts.qwerty_English_iPhone] {
                 XCTAssertEqual(CustomLayoutService.applyInputTypeKey(rows, inputType: inputType), rows, "\(inputType)")
             }
