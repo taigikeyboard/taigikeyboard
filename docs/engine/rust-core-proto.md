@@ -17,7 +17,7 @@ The request envelope, the per-request settings and generation rules, and the Pho
 ## 2. Why protobuf
 
 - One bytes-in / bytes-out entry point per platform, as khiin-rs does on iOS, macOS, Android and Windows (`references/khiin-rs/README.md`).
-- Bindings: `prost` (Rust), `SwiftProtobuf` (iOS / macOS), `protobuf-javalite` (Android, `android/app/build.gradle.kts`).
+- Bindings: `prost` (Rust), `SwiftProtobuf` (iOS from `engine/protos/proto/`, macOS from `macos/crates/taigi-macos-ffi/proto/`), `protobuf-javalite` (Android, `android/app/build.gradle.kts`).
 - The schema evolves by adding tags and reserving removed ones; no handle table to break.
 - UniFFI was considered and not adopted.
 

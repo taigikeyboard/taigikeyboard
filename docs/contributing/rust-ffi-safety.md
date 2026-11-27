@@ -8,8 +8,8 @@ Rules for the Rust ↔ platform boundary: the seam as built, panic / thread / er
 
 ### 1.1 The seam as built
 
-- **Engine adapters (iOS, macOS, Android)** — a process-singleton, bytes-in / bytes-out seam. The entry takes only `bytes: &[u8]` and reaches the engine through `EngineHandle::instance()` (`engine/composing/src/handle.rs`); no handle crosses the boundary and there is no shutdown call — the singleton owns its lifetime, and the user-data stores are process-wide in `userdata` (`UserDataHandle`, opened once by `OpenUserData`). Live entry points: `process_request_bytes` / `install_logger_sink` / `set_log_level` / `panic_for_test` (`engine/swift-ffi`) and `processRequestBytes` / `registerLogger` / `setLogLevel` / `panicForTest` (`engine/android-jni`). Both call `dispatch::process_request` directly.
-- **macOS desktop shell** — a second bytes seam in the same archive: `desktop_request_bytes` (`macos/crates/taigi-macos-ffi/src/lib.rs`), which links `engine/swift-ffi` as an rlib so macOS ships ONE static library and the engine's statics exist once (`docs/architecture/macos-desktop-core-roadmap.md` D1, D2). Envelope `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`; its `DesktopResponse.error` is the engine's `ErrorCode` (§1.5). Same rules as the engine adapters: no handle crosses, `catch_unwind`, the §1.4 cap, no `unsafe`.
+- **Engine adapters (iOS, Android)** — a process-singleton, bytes-in / bytes-out seam. The entry takes only `bytes: &[u8]` and reaches the engine through `EngineHandle::instance()` (`engine/composing/src/handle.rs`); no handle crosses the boundary and there is no shutdown call — the singleton owns its lifetime, and the user-data stores are process-wide in `userdata` (`UserDataHandle`, opened once by `OpenUserData`). Live entry points: `process_request_bytes` / `install_logger_sink` / `set_log_level` / `panic_for_test` (`engine/swift-ffi`) and `processRequestBytes` / `registerLogger` / `setLogLevel` / `panicForTest` (`engine/android-jni`). Both call `dispatch::process_request` directly.
+- **macOS desktop shell** — a single swift-bridge archive (`macos/crates/taigi-macos-ffi/src/lib.rs`) exporting `desktop_request_bytes`, `install_logger_sink`, `set_log_level`, and `panic_for_test` over `taigi-desktop-core` and `dispatch` (with `user-data` enabled directly, no `engine/swift-ffi` dependency). Envelope `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`; its `DesktopResponse.error` uses a local `ErrorCode` enum matching §1.5. Same rules as the engine adapters: no handle crosses, `catch_unwind`, the §1.4 cap, and `unsafe` confined solely to `SinkCell`'s `Send`/`Sync` impls in `macos/crates/taigi-macos-ffi/src/logger.rs`.
 - **Linux Fcitx5 addon** — a C ABI over `taigi-linux-core` (`linux/crates/taigi-linux-ffi`, contract `include/taigikeyboard.h`): opaque handles (`TaigiRuntime`, `TaigiEngine`, `TaigiReply`, `TaigiMenu`), each with a matching `*_free`, accessors instead of shared structs. This is the §4 pattern.
 - **Windows TSF DLL** — every COM entry runs through `windows/crates/taigi-windows-tsf/src/com_guard.rs` (`guarded` / `guarded_hresult`), which turns a panic into `E_FAIL` plus one log line.
 
@@ -44,7 +44,7 @@ Every FFI return is either (a) valid protobuf bytes carrying `Response.error: Er
 | 3 | `FAIL_IO` | DB / file error |
 | 4 | `FAIL_INVARIANT` | Engine invariant violated or request over the cap — surfaced as data, logged, the engine serves the next request |
 
-Source of truth: `engine/protos/proto/envelope.proto` `enum ErrorCode`.
+Source of truth: `engine/protos/proto/envelope.proto` `enum ErrorCode` (mirrored locally with identical values in `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`).
 
 ### 1.6 Logging bridge — `log` crate only
 
@@ -92,7 +92,7 @@ mod syllable;
 - **Every `unsafe` block carries a `// SAFETY:` comment** explaining the invariant that makes the operation sound. The khiin-rs unsafe deref at `references/khiin-rs/swift/bridge/src/lib.rs:52` has no SAFETY note — this pattern is rejected at review.
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
-- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi`, the documented `mmap-host` carve-out and the desktop crates whose `[lints.rust]` allows it under a `# JUSTIFICATION:` comment (`taigi-linux-ffi`, `taigi-windows-tsf`, `taigi-windows-platform`, `taigi-windows-update`) may contain `unsafe`.
+- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi`, `taigi-macos-ffi`, the documented `mmap-host` carve-out and the desktop crates whose `[lints.rust]` allows it under a `# JUSTIFICATION:` comment (`taigi-linux-ffi`, `taigi-windows-tsf`, `taigi-windows-platform`, `taigi-windows-update`) may contain `unsafe`.
 
 ## 4. Opaque handle pattern `[S]` `[R]`
 
@@ -143,7 +143,7 @@ Both extern fns wrap their bodies in `catch_unwind` per §1.2. Every `unsafe` bl
 | T1' | Library-side panic | A panicking dispatcher behind the same `catch_unwind` boundary answers `FailInternal` | `engine/dispatch/src/lib.rs` `forced_dispatcher_panic_is_caught_and_returns_fail_internal` |
 | T2 | Session lifecycle | 1000 IME session create / destroy cycles → RSS stable, no growing handle table | — |
 | T3 | Thread safety | Two concurrent requests from different threads → both valid, TSan clean | — |
-| T4 | Malformed protobuf | Invalid bytes → `FAIL_PARSE`, no panic | `engine/dispatch/tests/malformed.rs`; iOS `RustEngineBridgeTests.test_T4_malformedBytes_returnsFailParse`; macOS `EngineFfiSmokeTests` |
+| T4 | Malformed protobuf | Invalid bytes → `FAIL_PARSE`, no panic | `engine/dispatch/tests/malformed.rs`; iOS `RustEngineBridgeTests.test_T4_malformedBytes_returnsFailParse`; macOS `DesktopCoreFfiSmokeTests` |
 | T5 | Oversized payload | Over `MAX_REQUEST_BYTES` → `FAIL_INVARIANT` before copy / decode; exactly the cap is accepted | `engine/dispatch/tests/oversized.rs`, `engine/dispatch/src/lib.rs` `request_cap_accepts_exactly_the_cap_and_refuses_one_byte_over`; each adapter keeps an over-cap test for its mapping |
 | T6 | Logging round-trip | Rust `log::warn!` reaches the platform sink with category preserved | `engine/dispatch/tests/logging.rs` |
 | T7 | Null handle (handle ABIs only) | Every entry called with a null handle answers its documented sentinel without dereferencing | — |

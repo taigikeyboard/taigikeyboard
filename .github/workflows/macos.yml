@@ -12,7 +12,7 @@ name: macOS
 #
 # The engine is built for the runner's architecture only
 # (TAIGI_MACOS_TARGETS): `swift test` links one slice, and a second
-# release build of swift-ffi would roughly double the Rust time. The
+# release build of taigi-macos-ffi would roughly double the Rust time. The
 # universal build stays with `make build` / the release pipeline.
 on:
   pull_request:
@@ -20,6 +20,7 @@ on:
       - 'macos/**'
       - 'desktop/**'
       - 'engine/**'
+      - '!engine/swift-ffi/**'
       - '!engine/android-jni/**'
       - '!engine/build-helpers/fst-builder/**'
       - 'assets/dictionaries/**'
@@ -39,6 +40,7 @@ on:
       - 'macos/**'
       - 'desktop/**'
       - 'engine/**'
+      - '!engine/swift-ffi/**'
       - '!engine/android-jni/**'
       - '!engine/build-helpers/fst-builder/**'
       - 'assets/dictionaries/**'
@@ -115,7 +117,7 @@ jobs:
       # step above built this commit's, so the old copy must not stand in for
       # it. (A `!` path in actions/cache does not exclude a nested file.)
       - name: Drop the cached engine archive
-        run: rm -f macos/.build/*/debug/librust_taigi.a
+        run: rm -f macos/.build/*/debug/libtaigi_macos_ffi.a macos/.build/out/Products/*/libtaigi_macos_ffi.a macos/.build/*/debug/librust_taigi.a
 
       - name: make -C macos test
         run: make -C macos test
@@ -166,8 +168,9 @@ jobs:
 
       # docs/architecture/e2e-trace-schema.md § Test mode only — the macOS
       # half of engine.yml's `e2e-trace-guard`. The archive sets its own engine
-      # features (`dispatch` without defaults, `user-data` via `swift-ffi`), so
-      # swift-ffi's graph there is not the one this archive ships.
+      # features (`dispatch` without defaults, `user-data` enabled directly on
+      # `dispatch` and `taigi-desktop-core`), so the engine workspace's graph
+      # is not the one this archive ships.
       - name: shipped feature graph has no e2e-trace
         run: |
           set -euo pipefail

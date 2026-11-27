@@ -23,6 +23,8 @@ on:
       - '.swiftformat'
       - 'engine/protos/proto/**'
       - 'engine/scripts/gen-platform-protos.sh'
+      - 'engine/scripts/gen-macos-protos.sh'
+      - 'macos/crates/taigi-macos-ffi/proto/**'
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
       - 'android/app/build.gradle.kts'
       - '**/*.ps1'
@@ -44,6 +46,8 @@ on:
       - '.swiftformat'
       - 'engine/protos/proto/**'
       - 'engine/scripts/gen-platform-protos.sh'
+      - 'engine/scripts/gen-macos-protos.sh'
+      - 'macos/crates/taigi-macos-ffi/proto/**'
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
       - 'android/app/build.gradle.kts'
       - '**/*.ps1'
@@ -156,11 +160,12 @@ jobs:
           swiftformat --lint ios
           swiftformat --lint macos
 
-  # The committed protobuf bindings match engine/protos/proto/. Java is
-  # regenerated and compared — the same .proto drives Java and Swift, so a
+  # The committed protobuf bindings match engine/protos/proto/ (Java + iOS
+  # Swift) and macos/crates/taigi-macos-ffi/proto/ (macOS Swift). Java is
+  # regenerated and compared — the same .proto drives Java and iOS Swift, so a
   # forgotten `make protos` shows here. protoc-gen-swift has no Linux binary, so
-  # Swift is checked structurally: one .pb.swift per .proto, and the iOS and
-  # macOS copies identical (both come from the same generator and options).
+  # Swift is checked structurally: one .pb.swift per .proto on iOS and macOS,
+  # and no stale macOS Engine/Generated copy.
   protos:
     name: protobuf bindings current
     runs-on: ubuntu-24.04
@@ -188,7 +193,6 @@ jobs:
         run: |
           set -euo pipefail
           ios=ios/Sources/TaigiKeyboard/Engine/Generated
-          mac=macos/Sources/TaigiInputMethodCore/Engine/Generated
           protos=$(cd engine/protos/proto && ls *.proto | sed 's/\.proto$//' | sort)
           swift=$(cd "$ios" && ls *.pb.swift | sed 's/\.pb\.swift$//' | sort)
           if [ "$protos" != "$swift" ]; then
@@ -196,9 +200,17 @@ jobs:
             echo "::error::$ios needs exactly one .pb.swift per .proto — run \`make protos\`."
             exit 1
           fi
-          if ! diff -r "$ios" "$mac" >/dev/null; then
-            diff -rq "$ios" "$mac" || true
-            echo "::error::iOS and macOS Swift bindings differ — run \`make protos\` to regenerate both."
+          if [ -e macos/Sources/TaigiInputMethodCore/Engine/Generated ]; then
+            echo "::error::macos/Sources/TaigiInputMethodCore/Engine/Generated must not exist — macOS no longer links engine/swift-ffi."
+            exit 1
+          fi
+          mac_proto_dir=macos/crates/taigi-macos-ffi/proto
+          mac_swift=macos/Sources/TaigiInputMethodCore/DesktopCore/Generated
+          mac_protos=$(cd "$mac_proto_dir" && ls *.proto | sed 's/\.proto$//' | sort)
+          mac_bindings=$(cd "$mac_swift" && ls *.pb.swift | sed 's/\.pb\.swift$//' | sort)
+          if [ "$mac_protos" != "$mac_bindings" ]; then
+            diff <(echo "$mac_protos") <(echo "$mac_bindings") || true
+            echo "::error::$mac_swift needs exactly one .pb.swift per .proto in $mac_proto_dir — run \`make protos\`."
             exit 1
           fi
 

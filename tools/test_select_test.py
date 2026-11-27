@@ -74,8 +74,8 @@ class EngineGraphTests(SelectorTestCase):
 
 class EngineSelectionTests(SelectorTestCase):
     def test_leaf_source_change_selects_closure_and_desktop_shells(self) -> None:
-        # dispatch reaches the Windows / Linux shells, swift-ffi the macOS
-        # workspace's native gate; neither is a wire-surface change.
+        # dispatch reaches the Windows, Linux, Web, and macOS Rust shells;
+        # neither is a wire-surface change.
         selection = self.select("engine/phonetics/src/tl.rs")
 
         self.assertIn("dispatch", selection.engine_crates)
@@ -135,7 +135,7 @@ class EngineSelectionTests(SelectorTestCase):
         self.assertEqual(selection.engine_crates, ["swift-ffi"])
         self.assertEqual(
             set(selection.commands),
-            {"engine", "macos-rust", "macos", "ios", "android", "docs-checks"},
+            {"engine", "macos", "ios", "android", "docs-checks"},
         )
 
     def test_engine_build_script_selects_mobile_only(self) -> None:
