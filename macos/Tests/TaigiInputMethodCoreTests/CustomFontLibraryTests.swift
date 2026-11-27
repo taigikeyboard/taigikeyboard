@@ -489,6 +489,7 @@ final class CustomFontLibraryTests: XCTestCase {
         guard CTFontManagerUnregisterFontsForURL(url as CFURL, .process, nil) else {
             return XCTFail("the bundled face could not be withdrawn")
         }
+        RegisteredFace.forgetResolvedFaces()
         // Registration is process-wide state every other suite draws in, so the
         // restoration runs however the body ends — and it takes the library's
         // own registrations with it first, since a case that failed part way
@@ -502,6 +503,7 @@ final class CustomFontLibraryTests: XCTestCase {
                 CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil),
                 "the bundled face was not put back for the other suites",
             )
+            RegisteredFace.forgetResolvedFaces()
         }
         // A Mac with this typeface installed for the user cannot have the
         // premise: the name stays claimed however this process registers it.

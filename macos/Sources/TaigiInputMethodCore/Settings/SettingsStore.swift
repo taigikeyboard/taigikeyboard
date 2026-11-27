@@ -433,10 +433,17 @@ final class SettingsStore: @unchecked Sendable {
     /// request's settings snapshot from.
     let userDefaults: UserDefaults
 
+    /// Optional library override for isolated tests; `nil` resolves `CustomFontLibrary.shared`.
+    private let customFontLibrary: CustomFontLibrary?
+
     /// The suite is injectable so a test can run against its own domain rather
     /// than the one the user's real settings live in.
-    init(userDefaults: UserDefaults = .standard) {
+    init(
+        userDefaults: UserDefaults = .standard,
+        customFontLibrary: CustomFontLibrary? = nil,
+    ) {
         self.userDefaults = userDefaults
+        self.customFontLibrary = customFontLibrary
     }
 
     /// A setting stored as the raw value of a `String`-backed enum, read fresh
@@ -499,7 +506,8 @@ final class SettingsStore: @unchecked Sendable {
         case let .builtIn(choice):
             return .builtIn(choice)
         case let .customFile(fileName):
-            guard let font = CustomFontLibrary.shared.activatedFont(fileName: fileName) else { return .default }
+            let library = customFontLibrary ?? CustomFontLibrary.shared
+            guard let font = library.activatedFont(fileName: fileName) else { return .default }
             return .custom(font)
         case let .installedFamily(family, face):
             guard RegisteredFace.isRegistered(.family(family)) else { return .default }
