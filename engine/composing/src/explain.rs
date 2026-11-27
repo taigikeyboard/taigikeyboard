@@ -167,6 +167,7 @@ pub fn mechanism(
             &user_rows.frequency,
             listed.mode,
             config.khinsiann_in_hanji,
+            listed.prev_in_neutral,
         )
     };
     if listed.shift > 0 {

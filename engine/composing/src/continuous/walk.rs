@@ -430,6 +430,7 @@ pub(super) fn walker_slot0(
     continuous_keys: &crate::shadow::ContinuousKeys,
     ctx: &ContinuousFetchCtx<'_>,
     cut: &SynthCut,
+    prev_in_neutral: bool,
 ) -> WalkerSlot0 {
     let crate::shadow::ContinuousKeys {
         shadow,
@@ -496,6 +497,7 @@ pub(super) fn walker_slot0(
         mode,
         ctx.khinsiann_in_hanji,
         edges,
+        prev_in_neutral,
     );
     // v3.5.9 B-4 (Codex pre-impl BLOCK #2 close): the walker
     // greedy-longest OOV synth builds `roman` from the
@@ -616,6 +618,7 @@ fn spells_hanji(path: &crate::lattice::BestPath, edges: bool) -> bool {
 /// does not spell Hanji ([`spells_hanji`]). The single builder the slot-0 row
 /// and the Ranking Engine Lab's segmentation share, so the inspector finds
 /// the row by the very string it shows.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn sentence_hanji(
     path: &crate::lattice::BestPath,
     parts: &[String],
@@ -624,6 +627,7 @@ pub(crate) fn sentence_hanji(
     mode: phonetics::InputMode,
     khinsiann_in_hanji: bool,
     edges: bool,
+    prev_in_neutral: bool,
 ) -> Option<String> {
     let shadow_to_raw_end = &continuous_keys.shadow_to_raw_end;
     let edge_piece =
@@ -639,19 +643,38 @@ pub(crate) fn sentence_hanji(
                 (None, _) => part.to_owned(),
             }
         };
-    // The shown Hanji (`render_hanji_display`); the row's `display_text` keeps
-    // the stored spellings. A custom edge's Hanji stays as the user saved it.
+    // The shown Hanji (`render_hanji_display_with_leading`); the row's
+    // `display_text` keeps the stored spellings. A custom edge's Hanji stays
+    // as the user saved it.
     let renders_hanji = khinsiann_in_hanji || mode == phonetics::InputMode::Poj;
     spells_hanji(path, edges).then(|| {
         let mut out = String::new();
+        let mut in_neutral = khinsiann_in_hanji && prev_in_neutral;
         for (edge_idx, ((&(s, e), choice), part)) in
             path.edges.iter().zip(&path.choices).zip(parts).enumerate()
         {
+            // The `-` run typed in front of this edge (including edge 0 so a
+            // pending tail opening with `--` / `-` matches `apply_hanji_display`).
+            let typed_run = continuous_keys
+                .hyphen_runs
+                .iter()
+                .find(|&&(b, _)| b == s)
+                .map_or(0, |&(_, run)| run);
+            let leading = if !khinsiann_in_hanji {
+                phonetics::api::LeadingKhinsiann::None
+            } else if typed_run >= 2 {
+                phonetics::api::LeadingKhinsiann::DoubleDash
+            } else if typed_run == 1 && in_neutral {
+                phonetics::api::LeadingKhinsiann::ContinueHyphen
+            } else {
+                phonetics::api::LeadingKhinsiann::None
+            };
             let piece = match &choice.hanji {
-                Some(h) if renders_hanji => phonetics::api::render_hanji_display(
+                Some(h) if renders_hanji => phonetics::api::render_hanji_display_with_leading(
                     h,
                     &choice.canonical_tl,
                     khinsiann_in_hanji,
+                    leading,
                     shows_poj_roman_in_hanji(mode, choice.is_custom),
                 ),
                 _ => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
@@ -673,20 +696,16 @@ pub(crate) fn sentence_hanji(
                 }
                 _ => piece,
             };
-            // The `-` run typed in front of this edge.
-            let typed_run = if edge_idx > 0 {
-                continuous_keys
-                    .hyphen_runs
-                    .iter()
-                    .find(|&&(b, _)| b == s)
-                    .map_or(0, |&(_, run)| run)
-            } else {
-                0
-            };
-            let khinsiann_before = khinsiann_in_hanji && typed_run >= 2;
-            if khinsiann_before {
+            if choice.hanji.is_some() && leading != phonetics::api::LeadingKhinsiann::None {
+                if out.ends_with('-') && piece.starts_with('-') {
+                    out.push_str(piece.trim_start_matches('-'));
+                } else {
+                    out.push_str(&piece);
+                }
+            } else if edge_idx > 0 && khinsiann_in_hanji && typed_run >= 2 {
                 phonetics::api::push_hanji_with_interword_khinsiann(&mut out, &piece, true);
-            } else if typed_run > 0
+            } else if edge_idx > 0
+                && typed_run > 0
                 && crate::commit_text::starts_with_romanization(&piece)
                 && !piece.starts_with('-')
                 && !out.ends_with('-')
@@ -698,6 +717,8 @@ pub(crate) fn sentence_hanji(
             } else {
                 push_sentence_piece(&mut out, &piece);
             }
+            in_neutral = khinsiann_in_hanji
+                && phonetics::api::ends_in_khinsiann(&choice.canonical_tl, leading);
         }
         out
     })

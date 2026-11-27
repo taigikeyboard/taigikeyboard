@@ -167,12 +167,15 @@ pub use crate::custom_search::{
 
 pub use crate::display_rewrite::{
     canonical_tl_form, poj_display_to_tl_display, raise_taigi_roman_case_in_hanji,
-    render_hanji_display, tl_display_to_poj_display, tl_roman_in_hanji_to_poj,
+    render_hanji_display, render_hanji_display_with_leading, tl_display_to_poj_display,
+    tl_roman_in_hanji_to_poj,
 };
 pub use crate::hanji::{is_hanji, is_roman_only_spelling, CJK_RANGES};
 pub use crate::khinsiann::{
-    align_hanji_syllables, learning_hanji_key, push_hanji_with_interword_khinsiann,
-    render_hanji_khinsiann, strip_khinsiann_hanji, HanjiToken, HanjiTokenKind, TlToken,
+    align_hanji_syllables, ends_in_khinsiann, learning_hanji_key,
+    push_hanji_with_interword_khinsiann, render_hanji_khinsiann,
+    render_hanji_khinsiann_with_leading, strip_khinsiann_hanji, HanjiToken, HanjiTokenKind,
+    LeadingKhinsiann, TlToken,
 };
 pub use crate::reading_key::{roman_reading_eq, stored_roman_mode, toneless_reading_key};
 pub use crate::separators::{

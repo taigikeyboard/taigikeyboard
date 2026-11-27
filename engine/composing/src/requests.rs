@@ -315,6 +315,9 @@ pub(crate) struct Listed {
     /// Every reading has its own roman-only row (`continuous::han_lo`), so
     /// the §42 split draws Hanji rows as Hanji cells only.
     pub(crate) roman_twins: bool,
+    /// Whether the nailed segment immediately before `segment_raw` ended inside
+    /// an open neutral-tone span (`khinsiann_in_hanji` enabled).
+    pub(crate) prev_in_neutral: bool,
     /// Hanji leaked into the buffer: an empty list, no cut.
     pub(crate) blocked: bool,
 }
@@ -339,6 +342,7 @@ struct ListingBuffer {
     list_start: usize,
     shape: ListShape,
     mode: phonetics::InputMode,
+    prev_in_neutral: bool,
 }
 
 fn listing_buffer(engine: &Engine, config: &AppConfig) -> Option<ListingBuffer> {
@@ -378,12 +382,21 @@ fn listing_buffer(engine: &Engine, config: &AppConfig) -> Option<ListingBuffer> 
         Some(WordListStart::LastNailed) => buffer_input_mode(&listed, config),
         _ => buffer_input_mode(tail, config),
     };
+    let prev_in_neutral = config.khinsiann_in_hanji
+        && match word_list_start {
+            Some(WordListStart::LastNailed) => {
+                crate::nailed::nailed_ends_in_khinsiann(&nailed[..nailed.len().saturating_sub(1)])
+            }
+            Some(WordListStart::InTail(start)) if start > 0 => false,
+            _ => crate::nailed::nailed_ends_in_khinsiann(nailed),
+        };
     Some(ListingBuffer {
         tail: tail.clone(),
         listed,
         list_start,
         shape,
         mode,
+        prev_in_neutral,
     })
 }
 
@@ -494,6 +507,7 @@ pub(crate) fn listed_candidates(
         list_start,
         shape,
         mode,
+        prev_in_neutral,
     } = listing_buffer(engine, config)?;
     let raw = listed.as_str();
     // v3.5.8 Phase 9 Item 11 — hanji guard (§15.3.E). The only input
@@ -515,6 +529,7 @@ pub(crate) fn listed_candidates(
             literal_at: None,
             walker_moved: false,
             roman_twins: false,
+            prev_in_neutral: false,
             blocked: true,
         });
     }
@@ -551,6 +566,7 @@ pub(crate) fn listed_candidates(
         context,
         config,
         shape,
+        prev_in_neutral,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
@@ -615,6 +631,7 @@ pub(crate) fn listed_candidates(
         literal_at,
         walker_moved,
         roman_twins,
+        prev_in_neutral,
         blocked: false,
     })
 }

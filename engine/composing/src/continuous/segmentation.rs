@@ -67,6 +67,7 @@ pub(crate) fn explain_segmentation(
     freq_map: &FrequencyMap,
     mode: phonetics::InputMode,
     khinsiann_in_hanji: bool,
+    prev_in_neutral: bool,
 ) -> Segmentation {
     let Some(keys) = keys else {
         return Segmentation::default();
@@ -82,16 +83,42 @@ pub(crate) fn explain_segmentation(
     let sentence_hanji = edges
         .then(|| {
             let parts = edge_romans(raw, &keys.shadow_to_raw_end, path);
-            sentence_hanji(path, &parts, raw, keys, mode, khinsiann_in_hanji, edges)
+            sentence_hanji(
+                path,
+                &parts,
+                raw,
+                keys,
+                mode,
+                khinsiann_in_hanji,
+                edges,
+                prev_in_neutral,
+            )
         })
         .flatten();
     let (cut_by, words): (&'static str, Vec<WordCut>) = match words {
-        SynthWords::Edges => (
-            "walker",
-            path.edges
+        SynthWords::Edges => {
+            let mut in_neutral = khinsiann_in_hanji && prev_in_neutral;
+            let words = path
+                .edges
                 .iter()
                 .zip(&path.choices)
                 .filter_map(|(&(start, end), choice)| {
+                    let typed_run = keys
+                        .hyphen_runs
+                        .iter()
+                        .find(|&&(b, _)| b == start)
+                        .map_or(0, |&(_, run)| run);
+                    let leading = if !khinsiann_in_hanji {
+                        phonetics::api::LeadingKhinsiann::None
+                    } else if typed_run >= 2 {
+                        phonetics::api::LeadingKhinsiann::DoubleDash
+                    } else if typed_run == 1 && in_neutral {
+                        phonetics::api::LeadingKhinsiann::ContinueHyphen
+                    } else {
+                        phonetics::api::LeadingKhinsiann::None
+                    };
+                    in_neutral = khinsiann_in_hanji
+                        && phonetics::api::ends_in_khinsiann(&choice.canonical_tl, leading);
                     let (raw_start, raw_end) = raw_bounds(&keys.shadow_to_raw_end, start, end)?;
                     let text = raw.get(raw_start..raw_end)?.to_owned();
                     let roman = recase_roman(&choice.roman, &text);
@@ -103,18 +130,16 @@ pub(crate) fn explain_segmentation(
                     let picks = freq_map.get(&lookup_key, &choice.canonical_tl);
                     // As the sentence row shows the word (`sentence_hanji`).
                     let hanji = choice.hanji.as_deref().map(|h| {
-                        let rendered = phonetics::api::render_hanji_display(
+                        let rendered = phonetics::api::render_hanji_display_with_leading(
                             h,
                             &choice.canonical_tl,
                             khinsiann_in_hanji,
+                            leading,
                             shows_poj_roman_in_hanji(mode, choice.is_custom),
                         );
                         recase_hanji(&rendered, &text, choice.is_custom).into_owned()
                     });
-                    let khinsiann_before = keys
-                        .hyphen_runs
-                        .iter()
-                        .any(|&(b, run)| b == start && run >= 2);
+                    let khinsiann_before = typed_run >= 2;
                     Some(WordCut {
                         text,
                         hanji,
@@ -132,8 +157,9 @@ pub(crate) fn explain_segmentation(
                         khinsiann_before,
                     })
                 })
-                .collect(),
-        ),
+                .collect();
+            ("walker", words)
+        }
         SynthWords::Syllables(segs) => {
             let words: Vec<WordCut> = segs
                 .iter()
