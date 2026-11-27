@@ -35,39 +35,58 @@ final class DesktopCoreFfiSmokeTests: XCTestCase {
         XCTAssertEqual(response.error, .failParse)
     }
 
-    func testInstallLoggerSink_isIdempotent() {
-        DesktopCoreBridge.installLoggerSink()
-        DesktopCoreBridge.installLoggerSink()
+    private final class LogCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var entries: [(UInt8, String, String)] = []
+
+        func append(_ entry: (UInt8, String, String)) {
+            lock.lock()
+            entries.append(entry)
+            lock.unlock()
+        }
+
+        func snapshot() -> [(UInt8, String, String)] {
+            lock.lock()
+            defer { lock.unlock() }
+            return entries
+        }
     }
 
-    /// Negative/round-trip control (rust-ffi-safety.md §6 T6): Rust `log::info!`
-    /// emitted by `set_log_level(3)` crosses the swift-bridge `SwiftLoggerSink`.
-    func testLoggerSink_receivesRustLogRecords() {
-        final class LogCapture: @unchecked Sendable {
-            private let lock = NSLock()
-            private var entries: [(UInt8, String, String)] = []
+    private static func restoreDefaultLoggerSink() {
+        install_logger_sink(SwiftLoggerSink(handleRecord: DesktopCoreBridge.forwardEngineRecord))
+        set_log_level(DesktopCoreBridge.defaultLogFilter)
+    }
 
-            func append(_ entry: (UInt8, String, String)) {
-                lock.lock()
-                entries.append(entry)
-                lock.unlock()
-            }
-
-            func snapshot() -> [(UInt8, String, String)] {
-                lock.lock()
-                defer { lock.unlock() }
-                return entries
-            }
-        }
+    func testInstallLoggerSink_isIdempotent() {
+        DesktopCoreBridge.installLoggerSink()
 
         let capture = LogCapture()
         install_logger_sink(SwiftLoggerSink { level, category, message in
             capture.append((level, category, message))
         })
-        defer {
-            set_log_level(0)
-            install_logger_sink(SwiftLoggerSink { _, _, _ in })
-        }
+        defer { Self.restoreDefaultLoggerSink() }
+
+        set_log_level(0)
+        // A second `installLoggerSink()` must be a no-op rather than
+        // replacing the already-installed sink or resetting the log filter.
+        DesktopCoreBridge.installLoggerSink()
+        set_log_level(3)
+
+        let records = capture.snapshot()
+        XCTAssertTrue(
+            records.contains { $0.0 == 2 && $0.2.contains("Info") },
+            "second installLoggerSink() unexpectedly replaced active sink, got \(records)",
+        )
+    }
+
+    /// Negative/round-trip control (rust-ffi-safety.md §6 T6): Rust `log::info!`
+    /// emitted by `set_log_level(3)` crosses the swift-bridge `SwiftLoggerSink`.
+    func testLoggerSink_receivesRustLogRecords() {
+        let capture = LogCapture()
+        install_logger_sink(SwiftLoggerSink { level, category, message in
+            capture.append((level, category, message))
+        })
+        defer { Self.restoreDefaultLoggerSink() }
 
         set_log_level(3)
         let records = capture.snapshot()

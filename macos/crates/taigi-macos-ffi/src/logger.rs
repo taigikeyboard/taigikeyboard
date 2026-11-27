@@ -65,16 +65,12 @@ fn level_filter_from_byte(level: u8) -> log::LevelFilter {
 /// Wrapper that lets `SwiftLoggerSink` sit inside `LOGGER_SINK` (`Mutex<Option<SinkCell>>`).
 struct SinkCell(SwiftLoggerSink);
 
-// SAFETY: `SwiftLoggerSink` is a Swift class instance held by Rust through a
-// reference-counted pointer. On macOS its only conforming closure forwards
-// into `DebugLogger` (`os.Logger`, which is thread-safe), and `PlatformLogger`
-// only calls `log` while holding `LOGGER_SINK`'s `Mutex`.
+// SAFETY: `SwiftLoggerSink` is a Swift class instance held by Rust through an
+// atomically reference-counted pointer, and every access to the inner sink is
+// serialized by `LOGGER_SINK`'s `Mutex<Option<SinkCell>>`. Dropping or moving
+// `SinkCell` across threads only touches that atomic refcount, and `install` /
+// `PlatformLogger::log` never expose or invoke the closure concurrently.
 unsafe impl Send for SinkCell {}
-
-// SAFETY: Access to the inner `SwiftLoggerSink` is serialized by `LOGGER_SINK`
-// (`Mutex<Option<SinkCell>>`) and the Swift closure itself has no unsynchronized
-// mutable state (`DebugLogger` delegates directly to `os.Logger`).
-unsafe impl Sync for SinkCell {}
 
 static LOGGER_SINK: OnceLock<Mutex<Option<SinkCell>>> = OnceLock::new();
 static SET_LOGGER: Once = Once::new();
@@ -91,8 +87,10 @@ impl log::Log for PlatformLogger {
         let Some(mutex) = LOGGER_SINK.get() else {
             return;
         };
-        // try_lock breaks any reentrant log loop (Swift sink that logs from
-        // its own log handler) — a missed line is preferable to a deadlock.
+        // try_lock breaks reentrant log loops (e.g., a Swift sink that logs
+        // from its own handler) and drops concurrently contended cross-thread
+        // log lines rather than blocking; missing a log line is preferable to
+        // deadlocking the typing path.
         let Ok(guard) = mutex.try_lock() else {
             return;
         };

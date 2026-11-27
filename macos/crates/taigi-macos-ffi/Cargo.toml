@@ -19,10 +19,10 @@ e2e-trace = ["dispatch/e2e-trace"]
 panic-injector = []
 
 [dependencies]
-# macOS always ships the engine-owned user-data stores (bundled SQLite;
-# docs/architecture/user-data-engine-roadmap.md P7b).
+# macOS turns on `dispatch/user-data` directly at its shell edge (bundled
+# SQLite; docs/architecture/user-data-engine-roadmap.md U11).
 dispatch = { workspace = true, features = ["user-data"] }
-taigi-desktop-core = { workspace = true, features = ["user-data"] }
+taigi-desktop-core = { workspace = true }
 log = { workspace = true }
 prost = { workspace = true }
 swift-bridge = { workspace = true }
