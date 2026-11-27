@@ -29,6 +29,12 @@ enum DesktopCoreBridge {
     private static let installLock = NSLock()
     private nonisolated(unsafe) static var isLoggerSinkInstalled = false
 
+    /// Default filter sent to `set_log_level` at bootstrap (`debug` in DEBUG
+    /// builds, `off` in Release).
+    static var defaultLogFilter: UInt8 {
+        isDebugBuild ? EngineLogFilter.debug : EngineLogFilter.off
+    }
+
     /// Idempotent. Routes Rust `log::*` records into `DebugLogger`, so they
     /// obey the same release-builds-log-nothing rule as native call sites.
     /// Called once at bootstrap; the underlying Rust `log::set_logger` is
@@ -41,7 +47,7 @@ enum DesktopCoreBridge {
         // Release silences Rust at the source. Leaving the Rust default of Warn
         // in place would still marshal every warning across the FFI seam and
         // build two Swift strings, only for `DebugLogger` to discard them.
-        set_log_level(isDebugBuild ? EngineLogFilter.debug : EngineLogFilter.off)
+        set_log_level(defaultLogFilter)
         isLoggerSinkInstalled = true
     }
 
@@ -53,7 +59,7 @@ enum DesktopCoreBridge {
         #endif
     }
 
-    private static func forwardEngineRecord(level: UInt8, category: String, message: String) {
+    static func forwardEngineRecord(level: UInt8, category: String, message: String) {
         let logger = DebugLogger(category: category)
         switch level {
         case EngineLogRecordLevel.error: logger.error(message)

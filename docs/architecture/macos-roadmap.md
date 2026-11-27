@@ -29,7 +29,7 @@ Host app — IMKTextInput client
 │ (D11)         │ (SwiftUI, D5)       │ (user data = engine)    │
 ├──────────────┴─────────────────────┴──────────────────────────┤
 │ macos/RustEngine/RustTaigi.xcframework — one archive:         │
-│ macos/crates/taigi-macos-ffi = engine swift-ffi + desktop-core│
+│ macos/crates/taigi-macos-ffi = taigi-desktop-core + dispatch  │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -39,14 +39,15 @@ Runtime data: `dictionary.fst` / `dictionary.bin` / `association.bin` /
 through `Prepare` (`macos-desktop-core-roadmap.md` P6).
 ## Design decisions (D1–D11, grounded in code)
 
-- **D1 Engine artifact** — **Replaced by** `macos-desktop-core-roadmap.md` D1 for the
-  archive's contents: `engine/scripts/build-macos-xcframework.sh` now builds
-  `macos/crates/taigi-macos-ffi` (engine `swift-ffi` as an rlib + the desktop-core
-  bridge) into one static library. What stands: the script builds
+- **D1 Engine artifact** — `engine/scripts/build-macos-xcframework.sh` builds
+  `macos/crates/taigi-macos-ffi` (over `taigi-desktop-core` + `dispatch`, hosting
+  the macOS logger sink and `panic_for_test` directly; `swift-ffi` is iOS-only
+  since #1162) into one static library. What stands: the script builds
   `aarch64-apple-darwin` + `x86_64-apple-darwin`, `lipo`s them into one universal
   archive → `macos/RustEngine/RustTaigi.xcframework` + macOS-owned copies of the
-  generated swift-bridge Swift (`macos-release.md` § Architectures). `make build` runs the iOS and macOS xcframework scripts together, so the two
-  outputs cannot drift behind a `swift-ffi` change. The shared swift-bridge
+  generated swift-bridge Swift (`macos-release.md` § Architectures). `make build`
+  runs the iOS (`swift-ffi`) and macOS (`taigi-macos-ffi`) xcframework scripts
+  together so every platform artifact stays in sync with engine changes. The shared swift-bridge
   post-processing (OUT_DIR discovery, modulemap, `import` injection,
   `@retroactive` patch) lives in `engine/scripts/lib/swift-bridge-artifacts.sh`.
   OUT_DIR discovery asks cargo (`--message-format=json`,
@@ -65,8 +66,9 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   `docs/architecture/macos-release.md`.
   The package is a library (`TaigiInputMethodCore`) plus
   a thin executable, not a single executable target, because `swift test` needs
-  an importable module. Generated `.pb.swift`
-  therefore live under `Sources/TaigiInputMethodCore/Engine/Generated/`. The
+  an importable module. Generated `.pb.swift` (`desktop_shell.pb.swift`, plus any
+  future macOS-local protos) live under
+  `Sources/TaigiInputMethodCore/DesktopCore/Generated/`. The
   swift-bridge wrappers compile as their own `RustTaigiSwift` target pinned to
   Swift 5 language mode (generated sources cannot be annotated for Swift 6
   strict concurrency); everything above it is Swift 6 mode.
@@ -99,7 +101,7 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   mutation-checked (adding a `selectedRange()` call fails it).
   Note two distinct log scales cross the FFI seam — `set_log_level`'s filter
   (`0=Off … 5=Trace`) and the sink callback's record byte (`0=Error … 4=Trace`).
-  A shared "log level" constant is a bug; `RustEngineBridge` names them apart.
+  A shared "log level" constant is a bug; `DesktopCoreBridge` names them apart.
 - **D4 Candidate window** — the panel itself is **replaced by** D11; the key bindings
   below stand (their classification now lives in desktop-core,
   `macos-desktop-core-roadmap.md` P14). Window level = client window level + 1;
@@ -189,10 +191,10 @@ through `Prepare` (`macos-desktop-core-roadmap.md` P6).
   the single committed copy every platform packages from; `dictionary/build/deploy.sh`
   writes it.
 - **D9 Proto codegen** — `engine/scripts/gen-macos-protos.sh` writes to an independent output dir
-  `macos/Sources/TaigiInputMethodCore/Engine/Generated/` (committed). It runs inside
-  `make protos` beside the iOS / Android bindings, never alone: regenerating one
-  platform's bindings from shared sources is what leaves the others stale against the
-  same commit. Root `make build` also runs `make macos-libs`.
+  `macos/Sources/TaigiInputMethodCore/DesktopCore/Generated/` (committed). It runs inside
+  `make protos` beside the iOS / Android / desktop bindings, never alone: regenerating one
+  platform's bindings in isolation can leave the others stale against the same commit. Root
+  `make build` also runs `make macos-libs`.
 - **D10 Dev loop** — `macos/Makefile`: build → bundle (+ plutil lint,
   codesign --verify, arch check) → install (delete-before-kill, kill by
   bundle-ID/PID, `lsregister -f -R -trusted`, re-login hint only on

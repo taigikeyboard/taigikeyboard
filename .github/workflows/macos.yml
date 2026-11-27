@@ -155,11 +155,15 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: cargo test (macos)
-        run: cargo test --manifest-path macos/Cargo.toml --workspace --locked --no-fail-fast
+        run: |
+          cargo test --manifest-path macos/Cargo.toml --workspace --locked --no-fail-fast
+          cargo test --manifest-path macos/Cargo.toml -p taigi-macos-ffi --locked --features panic-injector panic_for_test
 
       # Same gate as `make lint`, macOS half.
       - name: cargo clippy -D warnings (macos)
-        run: cargo clippy --manifest-path macos/Cargo.toml --workspace --all-targets --locked -- -D warnings
+        run: |
+          cargo clippy --manifest-path macos/Cargo.toml --workspace --all-targets --locked -- -D warnings
+          cargo clippy --manifest-path macos/Cargo.toml -p taigi-macos-ffi --all-targets --locked --features panic-injector -- -D warnings
 
       # Plain fmt, never `--all`: `--all` also checks the engine crates (path
       # dependencies), which engine.yml gates.
