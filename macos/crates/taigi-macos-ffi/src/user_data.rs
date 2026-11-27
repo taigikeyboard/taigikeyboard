@@ -3,10 +3,11 @@
 //! (`engine::user_data`, `settings::custom_dictionary`,
 //! `settings::learning_records`, `settings::listing`).
 //!
-//! Answered in `Shell::serve` before taking the session lock (and without
+//! Answered in `Shell::serve` before taking `Shell::session` (and without
 //! gating on `Configure` or mutating `Shell::settings`) so pre-open callers
-//! and file-size / missing-file refusals behave identically to `desktop-core`,
-//! and SQLite I/O never stalls the composing key path.
+//! and file-size / missing-file refusals behave identically to `desktop-core`.
+//! Does not take the session lock; the engine's own store locks order
+//! concurrent user-data and composing accesses.
 
 use std::path::Path;
 
@@ -58,9 +59,9 @@ fn serve_user_data(request: &UserDataRequest) -> Result<UserDataReply, Refusal> 
     match method {
         Method::ListCustomEntries(req) => {
             let input_mode = if req.input_mode.is_empty() {
-                InputMode::Tl
+                InputMode::DEFAULT
             } else {
-                InputMode::from_raw(&req.input_mode).unwrap_or(InputMode::Tl)
+                InputMode::from_raw(&req.input_mode).ok_or(Refusal::Invalid("input_mode"))?
             };
             let limit = usize::try_from(req.limit).unwrap_or(usize::MAX);
             let offset = usize::try_from(req.offset).unwrap_or(usize::MAX);
@@ -138,10 +139,10 @@ fn serve_user_data(request: &UserDataRequest) -> Result<UserDataReply, Refusal> 
         }
         Method::ListLearningRecords(req) => {
             let kind = to_engine_kind(
-                LearningRecordKind::try_from(req.kind).map_err(|_| Refusal::Missing("kind"))?,
+                LearningRecordKind::try_from(req.kind).map_err(|_| Refusal::Invalid("kind"))?,
             );
             let order = to_engine_order(
-                LearningRecordOrder::try_from(req.order).map_err(|_| Refusal::Missing("order"))?,
+                LearningRecordOrder::try_from(req.order).map_err(|_| Refusal::Invalid("order"))?,
             );
             let limit = usize::try_from(req.limit).unwrap_or(usize::MAX);
             let offset = usize::try_from(req.offset).unwrap_or(usize::MAX);
@@ -298,7 +299,7 @@ fn from_proto_learning_record(
     record: &LearningRecord,
 ) -> Result<user_data::LearningRecord, Refusal> {
     let kind =
-        LearningRecordKind::try_from(record.kind).map_err(|_| Refusal::Missing("record.kind"))?;
+        LearningRecordKind::try_from(record.kind).map_err(|_| Refusal::Invalid("record.kind"))?;
     Ok(user_data::LearningRecord {
         kind: to_engine_kind(kind) as i32,
         id: record.id,
@@ -354,7 +355,8 @@ pub(crate) fn export_file_name(
             custom_dict_settings::export_file_name(&request.local_date)
         }
         Ok(UserDataExportKind::Backup) => learning_records::backup_file_name(&request.local_date),
-        _ => return Err(Refusal::Missing("kind")),
+        Ok(UserDataExportKind::Unspecified) => return Err(Refusal::Missing("kind")),
+        Err(_) => return Err(Refusal::Invalid("kind")),
     };
     Ok(UserDataExportFileNameReply { file_name })
 }
@@ -602,7 +604,7 @@ mod tests {
                     },
                 )),
             }),
-            Err(Refusal::Missing("kind"))
+            Err(Refusal::Invalid("kind"))
         );
         assert_eq!(
             serve_user_data(&UserDataRequest {
@@ -616,7 +618,7 @@ mod tests {
                     },
                 )),
             }),
-            Err(Refusal::Missing("order"))
+            Err(Refusal::Invalid("order"))
         );
         assert_eq!(
             serve_user_data(&UserDataRequest {
@@ -658,7 +660,7 @@ mod tests {
         };
         assert_eq!(
             from_proto_learning_record(&bad_record),
-            Err(Refusal::Missing("record.kind"))
+            Err(Refusal::Invalid("record.kind"))
         );
     }
 

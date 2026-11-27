@@ -36,9 +36,8 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
     case engineUnavailable(op: String)
     /// Something the user can be told — a full dictionary, an unusable file —
     /// in the engine's own words (`custom dictionary is full (max 30000
-    /// entries)`), or desktop-core's where the engine answers only a code (a
-    /// refused backup) or never saw the file (one that could not be read,
-    /// whose tail is the system's reason, in the system's language).
+    /// entries)`), or desktop-core's, including file-read errors
+    /// (`could not read the file: ...`, shared with Windows and Linux).
     case refused(refusal: Taigi_DesktopShell_CustomDictionaryRefusal = .none, detail: String)
     /// A reset that emptied some stores and not others, one line per store
     /// that failed (`user_frequency: <error>`).
@@ -57,7 +56,6 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
 /// naming (`desktop/crates/taigi-desktop-core/src/settings/learning_records.rs`,
 /// `custom_dictionary.rs`, `listing.rs`).
 enum UserDataRules {
-    private static let logger = DebugLogger(category: "UserDataRules")
     private static let cachedReply = OSAllocatedUnfairLock<Taigi_DesktopShell_UserDataRulesReply?>(initialState: nil)
 
     /// Cached read from `desktop-core`; never caches `nil` so a transient failure
@@ -79,21 +77,13 @@ enum UserDataRules {
     static func fetch(
         transport: ([UInt8]) -> [UInt8] = DesktopCoreBridge.send,
     ) -> Taigi_DesktopShell_UserDataRulesReply? {
-        let op = "userDataRules"
-        guard
-            case let .success(response) = DesktopCoreBridge.response(
-                to: .userDataRules(.init()),
-                settings: nil,
-                op: op,
-                transport: transport,
-            ),
-            response.error == .ok,
-            case let .userDataRules(reply)? = response.reply
-        else {
-            logger.error("[\(op)] no rules reply")
-            return nil
+        DesktopCoreBridge.roundtrip(.userDataRules(.init()), op: "userDataRules", transport: transport) {
+            if case let .userDataRules(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
         }
-        return reply
     }
 
     static var pageSize: Int {
@@ -148,21 +138,17 @@ enum UserDataRules {
         var req = Taigi_DesktopShell_UserDataExportFileNameRequest()
         req.kind = kind
         req.localDate = localDate
-        let op = "userDataExportFileName"
-        guard
-            case let .success(response) = DesktopCoreBridge.response(
-                to: .userDataExportFileName(req),
-                settings: nil,
-                op: op,
-                transport: transport,
-            ),
-            response.error == .ok,
-            case let .userDataExportFileName(reply)? = response.reply
-        else {
-            logger.error("[\(op)] failed to format export file name")
-            return nil
+        return DesktopCoreBridge.roundtrip(
+            .userDataExportFileName(req),
+            op: "userDataExportFileName",
+            transport: transport,
+        ) {
+            if case let .userDataExportFileName(reply) = $0 {
+                reply.fileName
+            } else {
+                nil
+            }
         }
-        return reply.fileName
     }
 }
 
@@ -458,16 +444,13 @@ struct EngineUserDataClient: UserDataClient {
     ) throws -> Result {
         var request = Taigi_DesktopShell_UserDataRequest()
         build(&request)
-        guard
-            case let .success(response) = DesktopCoreBridge.response(
-                to: .userData(request),
-                settings: nil,
-                op: op,
-                transport: transport,
-            ),
-            response.error == .ok,
-            case let .userData(reply)? = response.reply
-        else {
+        guard let reply = DesktopCoreBridge.roundtrip(.userData(request), op: op, transport: transport, expected: {
+            if case let .userData(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }) else {
             throw UserDataClientError.engineUnavailable(op: op)
         }
         if reply.hasError {

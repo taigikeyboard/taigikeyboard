@@ -60,7 +60,7 @@ The `custom_search_key` side table backs cross-input-mode (three-index TL / POJ 
 
 ## CRUD Operations
 
-Engine ops (`UserDataRequest`, `engine/protos/proto/user_data.proto`), reached through each platform's `UserDataClient` (iOS `Lexicon/Services/UserDataClient.swift`, Android `ime/dictionary/UserDataClient.kt`, macOS `Lexicon/UserDataClient.swift`):
+Engine ops (`UserDataRequest`, `engine/protos/proto/user_data.proto`), reached through each platform's `UserDataClient` (iOS `Lexicon/Services/UserDataClient.swift`, Android `ime/dictionary/UserDataClient.kt`; macOS routes through `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto` `UserData` and `taigi-desktop-core` via `macos/Sources/TaigiInputMethodCore/Lexicon/UserDataClient.swift`):
 
 | Operation | Engine op | iOS / Android `UserDataClient` |
 |-----------|-----------|-----|
@@ -108,7 +108,7 @@ A `.taigi` file is a single plain-text **JSON** document carrying all **four** u
 | iOS `App/Tabs/Dictionary/Utilities/BackupDocument.swift` + `UserDataClient.exportBackup` / `importBackup` | file document; `UTType.taigiBackup` = `tw.taigikeyboard.backup` |
 | Android `ui/tabs/dictionary/DataManagementViewModel.kt` + `UserDataClient.exportBackup` / `importBackup` | file picker / share, bytes to the engine |
 | Windows / Linux `taigi-desktop-core` `settings/learning_records.rs` (`export_backup_job` / `import_backup_job`) + each settings window's Learning Records pane | save / open dialog (open accepts `.taigi` and `.json`), bytes to the engine; a restore reloads Custom Dictionary too |
-| macOS `Lexicon/LearningRecordsPage.swift` (`LearningRecordsPageModel.exportBackup` / `importBackup`, the Swift twin of the row above) + `EngineUserDataClient.exportBackup` / `importBackup` | save / open panel on the exported `tw.taigikeyboard.backup` type (open accepts `.taigi` and `.json`), bytes to the engine; Custom Dictionary loads afresh when next shown |
+| macOS `Lexicon/LearningRecordsPage.swift` (`LearningRecordsPageModel.exportBackup` / `importBackup`) + `EngineUserDataClient.exportBackup` / `importBackup` (via `taigi-desktop-core`) | save / open panel on `tw.taigikeyboard.backup` (`UserDataRules.backupOpenExtensions`), open passes the chosen file path to `desktop-core`; Custom Dictionary loads afresh when next shown |
 
 ### Format
 

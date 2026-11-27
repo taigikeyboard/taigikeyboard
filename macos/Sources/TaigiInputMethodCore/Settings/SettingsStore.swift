@@ -794,6 +794,7 @@ final class SettingsStore: @unchecked Sendable {
         _ key: SettingsKey<Value>,
         _ spellings: [(value: Value, spelling: String)],
     ) {
+        guard !spellings.isEmpty else { return }
         userDefaults.set(spellings.first { $0.value == value }?.spelling, forKey: key.name)
     }
 

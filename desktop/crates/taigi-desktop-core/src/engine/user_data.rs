@@ -355,7 +355,7 @@ pub fn list_learning_records(
         user_data_request::Method::ListLearningRecords(ListLearningRecords {
             kind: kind as i32,
             filter: filter.to_owned(),
-            limit: clamped(limit),
+            limit: clamped(limit.max(1)),
             offset: clamped(offset),
             order: order as i32,
         }),

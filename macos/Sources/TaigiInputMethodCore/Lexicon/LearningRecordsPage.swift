@@ -190,7 +190,7 @@ final class LearningRecordsPageModel {
         guard beginWork() else { return }
         defer { activity = .idle }
         guard let url = await panels.chooseFileToOpen(
-            contentTypes: [UserDataFilePanels.backupContentType, .json],
+            contentTypes: UserDataFilePanels.backupOpenContentTypes,
             in: window,
         ) else { return }
         await importBackup(at: url)

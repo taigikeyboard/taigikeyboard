@@ -41,6 +41,8 @@ pub(crate) enum Refusal {
     /// A field the request cannot run without was left unset (proto3 would
     /// otherwise read it as zero / empty and run anyway).
     Missing(&'static str),
+    /// A field or enum wire value carried an unrecognized value.
+    Invalid(&'static str),
     /// The compiled-in symbol table did not validate: the picker has no list
     /// (`symbols::SymbolTable::bundled`).
     NoSymbolTable,
@@ -75,8 +77,8 @@ impl Shell {
         if let Some(answer) = key_rules::answer(&request, snapshot) {
             return answer;
         }
-        // Answered before Configure and outside the session lock so pre-open
-        // error contracts hold and SQLite I/O cannot block the key path.
+        // Answered before Configure and without taking `Shell::session`; the
+        // engine's own store locks order concurrent user-data and composing accesses.
         if let Some(answer) = user_data::answer(&request) {
             return answer;
         }
@@ -141,8 +143,8 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
-            // Answered by `key_rules::answer` or `dictionary_search::answer`
-            // before the session is locked.
+            // Answered by `key_rules::answer`, `dictionary_search::answer`, or
+            // `user_data::answer` before the session is locked.
             Request::DictionarySearch(_)
             | Request::UserData(_)
             | Request::UserDataRules(_)

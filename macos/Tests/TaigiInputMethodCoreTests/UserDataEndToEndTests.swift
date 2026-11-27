@@ -1,5 +1,6 @@
 import AppKit
 import InputMethodKit
+import os
 @testable import TaigiInputMethodCore
 import XCTest
 
@@ -39,32 +40,40 @@ final class UserDataEndToEndTests: XCTestCase {
         environment[Self.childEnvKey] = "1"
         process.environment = environment
 
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = outputPipe
 
+        let timedOut = OSAllocatedUnfairLock(initialState: false)
+        let deadline = DispatchWorkItem {
+            timedOut.withLock { $0 = true }
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(30), execute: deadline)
         try process.run()
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        deadline.cancel()
 
-        let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
-        let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        XCTAssertFalse(
+            timedOut.withLock { $0 },
+            "Isolated child xctest timed out after 30s\n--- output ---\n\(output)",
+        )
         XCTAssertEqual(
             process.terminationStatus,
             0,
             """
             Isolated child xctest failed with status \(process.terminationStatus)
-            --- stdout ---
-            \(stdout)
-            --- stderr ---
-            \(stderr)
+            --- output ---
+            \(output)
             """,
         )
         XCTAssertTrue(
-            stdout.contains("passed") || stderr.contains("passed"),
-            "expected child xctest output to confirm execution\nstdout:\n\(stdout)\nstderr:\n\(stderr)",
+            output.contains("Executed 1 test, with 0 failures"),
+            "expected child xctest output to confirm execution\noutput:\n\(output)",
         )
     }
 

@@ -3,8 +3,8 @@
 //! the word edits, CSV import / export — answers. The
 //! shells own the widgets, the timers, and the work slot a job runs in —
 //! Windows holds one per page, Linux one per window so an outcome outlives a
-//! page rebuilt under it. macOS keeps a Swift twin:
-//! `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
+//! page rebuilt under it. macOS drives the same core ops through
+//! `DesktopCoreBridge` from `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
 
 use super::listing::{self, write_export, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
 use super::presentation::PageMessage;

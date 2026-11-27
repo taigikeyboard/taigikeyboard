@@ -85,6 +85,14 @@ enum UserDataFilePanels {
     /// iOS exports).
     static let backupContentType = UTType(exportedAs: "tw.taigikeyboard.backup", conformingTo: .json)
 
+    /// Content types accepted by the backup open panel, derived from
+    /// `desktop-core` (`BACKUP_OPEN_EXTENSIONS`).
+    static var backupOpenContentTypes: [UTType] {
+        UserDataRules.backupOpenExtensions.compactMap { ext in
+            ext == "taigi" ? backupContentType : UTType(filenameExtension: ext)
+        }
+    }
+
     /// The panels themselves, for a page model that takes `UserDataFilePresenting`.
     struct System: UserDataFilePresenting {
         func chooseFileToOpen(contentTypes: [UTType], in window: NSWindow) async -> URL? {

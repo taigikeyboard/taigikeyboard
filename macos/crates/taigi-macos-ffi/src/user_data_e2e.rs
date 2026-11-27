@@ -219,12 +219,12 @@ fn user_data_and_symbol_swap_end_to_end() {
             ])
             .output()
             .expect("spawn isolated E2E child process");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
-            output.status.success(),
-            "isolated E2E child failed (status {:?})\n--- stdout ---\n{}\n--- stderr ---\n{}",
+            output.status.success() && stdout.contains("test result: ok. 1 passed"),
+            "isolated E2E child failed (status {:?})\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}",
             output.status.code(),
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr),
         );
         return;
     }
@@ -397,8 +397,10 @@ fn phase_custom_dictionary_lifecycle(scratch_dir: &Path) {
     assert_eq!(edited.id, saved.id);
     assert_eq!(edited.hanji, "苦瓜");
 
-    // 3. List across TL, POJ, TPS (including `or` -> `ㄜ` per TPS_OR_MAPS_TO_ER).
-    for (mode, expected) in [("tl", "khór"), ("poj", "khór"), ("tps", "ㄎㄜˋ")] {
+    // 3. List under TL and TPS (`or` -> `ㄜ` when TPS_OR_MAPS_TO_ER = true,
+    //    `engine/phonetics/src/tps.rs:54,622`), plus a temporary `tâi-uân` entry
+    //    checking TL vs POJ (`ua` -> `oa`, `taigi-phonetics-reference.md` §3.2).
+    for (mode, expected) in [("tl", "khór"), ("tps", "ㄎㄜˋ")] {
         let listed = match user_data_ok(user_data_request::Method::ListCustomEntries(
             ListCustomEntriesRequest {
                 filter: "kh".to_owned(),
@@ -413,6 +415,35 @@ fn phase_custom_dictionary_lifecycle(scratch_dir: &Path) {
         assert_eq!(listed.matching_total, 1);
         assert_eq!(listed.entries[0].display_roman, expected);
     }
+
+    let taiuan = match user_data_ok(user_data_request::Method::SaveCustomEntry(
+        SaveCustomEntryRequest {
+            id: String::new(),
+            roman: "tâi-uân".to_owned(),
+            hanji: "台灣".to_owned(),
+        },
+    )) {
+        user_data_reply::Result::CustomEntrySaved(entry) => entry,
+        other => panic!("expected CustomEntrySaved, got {other:?}"),
+    };
+    for (mode, expected) in [("tl", "tâi-uân"), ("poj", "tâi-oân")] {
+        let listed = match user_data_ok(user_data_request::Method::ListCustomEntries(
+            ListCustomEntriesRequest {
+                filter: "台灣".to_owned(),
+                limit: 10,
+                offset: 0,
+                input_mode: mode.to_owned(),
+            },
+        )) {
+            user_data_reply::Result::CustomEntries(entries) => entries,
+            other => panic!("expected CustomEntries, got {other:?}"),
+        };
+        assert_eq!(listed.matching_total, 1);
+        assert_eq!(listed.entries[0].display_roman, expected);
+    }
+    let _ = user_data_ok(user_data_request::Method::DeleteCustomEntry(
+        DeleteCustomEntryRequest { id: taiuan.id },
+    ));
 
     // 4. Manage Dictionaries search finds the custom entry.
     match send_ok(
