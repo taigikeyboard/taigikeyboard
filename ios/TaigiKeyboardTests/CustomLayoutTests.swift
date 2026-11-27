@@ -23,6 +23,20 @@ final class CustomLayoutTests: XCTestCase {
     // trace: phahTaigi function slots 0 shift, 1 backspace, 2 numeric, 3 emoji, 4 space, …
     private static let phahTaigiEmoji = CustomLayout.Place.function(3)
 
+    // trace: tps_iPhone (`TaigiLayouts.swift`) has no digit row: rows 0–2 ten glyphs each, row 3 nine
+    // keys (the last `,`) before backspace, row 4 five glyphs between 123 and space.
+    private static let tpsKeys = [
+        "ㆠ", "ˋ", "˪", "ㆣ", "ˊ", "ˇ", "˫", "˙", "ㆪ", "ㆩ",
+        "ㄅ", "ㄉ", "ㄍ", "ㄏ", "ㄧ", "ㄚ", "ㄞ", "ㄤ", "ㆫ", "ㆧ",
+        "ㄆ", "ㄊ", "ㄎ", "ㄗ", "ㄨ", "ㄛ", "ㄠ", "ㆲ", "ㆥ", "ㆮ",
+        "ㄇ", "ㄋ", "ㄫ", "ㄘ", "ㄜ", "ㆦ", "ㄢ", "ㆰ", ",",
+        "ㄌ", "ㆡ", "ㄙ", "ㆨ", "ㆤ",
+    ]
+
+    // trace: `TPSCallouts.glyphActions` of each tpsKeys glyph in table order, digits left out:
+    // ㆪ ㆳ · ㄅ ㆴ · ㄉ ㆵ · ㄍ ㆻ · ㄏ ㆷ · ㄗ ㄐ · ㆮ ㆯ · ㄇ ㆬ · ㄋ ㄣ · ㄫ ㆭ ㄥ · ㄘ ㄑ · ㆰ ㆱ · ㆡ ㆢ · ㄙ ㄒ · ㆤ ㄝ.
+    private static let tpsVariants = ["ㆳ", "ㆴ", "ㆵ", "ㆻ", "ㆷ", "ㄐ", "ㆯ", "ㆬ", "ㄣ", "ㆭ", "ㄥ", "ㄑ", "ㆱ", "ㆢ", "ㄒ", "ㄝ"]
+
     private var suiteName: String!
     private var defaults: UserDefaults!
 
@@ -420,18 +434,100 @@ final class CustomLayoutTests: XCTestCase {
 
     func testCustomLayout_decodedRecordValidation() throws {
         let id = UUID().uuidString
-        func decode(base: String, keys: [Any]) throws -> CustomLayout {
-            let json = try JSONSerialization.data(withJSONObject: [
-                "id": id, "name": "x", "base": base, "script": "tl", "keys": keys,
-            ])
-            return try JSONDecoder().decode(CustomLayout.self, from: json)
+        func decode(base: String, keys: [Any], isUniversal: Bool? = nil) throws -> CustomLayout {
+            var record: [String: Any] = ["id": id, "name": "x", "base": base, "script": "tl", "keys": keys]
+            record["isUniversal"] = isUniversal
+            return try JSONDecoder().decode(CustomLayout.self, from: JSONSerialization.data(withJSONObject: record))
         }
         XCTAssertTrue(try decode(base: "phahTaigi", keys: Self.phahTaigiKeys).isValid)
         XCTAssertTrue(try decode(base: "phahTaigi", keys: [NSNull()] + Self.phahTaigiKeys.dropFirst().map { $0 as Any }).isValid, "removed key")
         XCTAssertFalse(try decode(base: "phahTaigi", keys: Array(Self.phahTaigiKeys.dropLast())).isValid, "slot count")
         XCTAssertFalse(try decode(base: "phahTaigi", keys: ["e"] + Self.phahTaigiKeys.dropFirst()).isValid, "duplicate")
         XCTAssertFalse(try decode(base: "phahTaigi", keys: ["😀"] + Self.phahTaigiKeys.dropFirst()).isValid, "unknown key")
-        XCTAssertFalse(try decode(base: "tps", keys: Self.phahTaigiKeys).isValid, "TPS base")
+        XCTAssertTrue(try decode(base: "tps", keys: Self.tpsKeys).isValid, "TPS base")
+        XCTAssertFalse(try decode(base: "tps", keys: Self.phahTaigiKeys).isValid, "romanization keys on TPS")
+        XCTAssertFalse(try decode(base: "tps", keys: ["a"] + Self.tpsKeys.dropFirst()).isValid, "Latin letter on TPS")
+        XCTAssertFalse(try decode(base: "phahTaigi", keys: ["ㆴ"] + Self.phahTaigiKeys.dropFirst()).isValid, "TPS glyph on romanization")
+        XCTAssertFalse(try decode(base: "tps", keys: Self.tpsKeys).isUniversal, "TPS never universal")
+        XCTAssertFalse(try decode(base: "tps", keys: Self.tpsKeys, isUniversal: true).isUniversal, "stored flag ignored on TPS")
+        var tps = CustomLayout(base: .tps, script: .tl)
+        tps.use = .universal
+        XCTAssertFalse(tps.isUniversal, "use setter keeps TPS out of universal")
+        XCTAssertEqual(tps.use, .tps)
+    }
+
+    // MARK: - TPS
+
+    func testTps_freshLayoutIsTheTpsTableWithEveryRowEditable() {
+        let layout = CustomLayout(base: .tps, script: .tl)
+        XCTAssertEqual(layout.rows(withGlobe: false), TaigiLayouts.Alphabetic.tps_iPhone)
+        XCTAssertTrue(layout.isValid)
+        XCTAssertEqual(layout.use, .tps)
+        XCTAssertFalse(layout.isUniversal)
+        // trace: no digit row, so row 0's ten glyphs are slots 0–9; row 3 backspace is function 0.
+        let places = CustomLayout.places(of: layout.editorRows)
+        XCTAssertEqual(places[0], (0 ..< 10).map(CustomLayout.Place.key))
+        XCTAssertEqual(places[3][9], .function(0))
+        XCTAssertEqual(layout.keyDef(at: .key(10)), .char("ㄅ"))
+    }
+
+    func testTps_trayOffersVariantsAsLettersAndBoardGlyphsWithDigitsForLongPress() {
+        let layout = CustomLayout(base: .tps, script: .tl)
+        XCTAssertEqual(layout.spareLetters, Self.tpsVariants)
+        // trace: every board glyph (tpsKeys minus the symbol-page `,`), then 1…9, 0.
+        XCTAssertEqual(layout.trayTpsCallouts, Self.tpsKeys.filter { $0 != "," } + "1234567890".map(String.init))
+        XCTAssertEqual(CustomLayout(base: .phahTaigi, script: .tl).trayTpsCallouts, [])
+    }
+
+    func testTps_placementKeepsGlyphsAndLettersApart() {
+        var tps = CustomLayout(base: .tps, script: .tl)
+        XCTAssertTrue(tps.canReplace(.key(0), with: "ㆴ"), "variant")
+        XCTAssertTrue(tps.canReplace(.key(0), with: "~"), "symbol page")
+        XCTAssertTrue(tps.canReplace(.key(0), with: "{"), "second symbol page")
+        XCTAssertFalse(tps.canReplace(.key(0), with: "a"), "Latin letter")
+        XCTAssertFalse(tps.canReplace(.key(0), with: "1"), "digit")
+        XCTAssertFalse(tps.canReplace(.key(0), with: "ㄅ"), "already on the board")
+        let romanization = CustomLayout(base: .phahTaigi, script: .tl)
+        XCTAssertFalse(romanization.canReplace(.key(0), with: "ㆴ"))
+        XCTAssertTrue(romanization.canReplace(.key(0), with: "q"))
+
+        tps.replace(.key(10), with: "ㆴ")
+        XCTAssertEqual(tps.keyDef(at: .key(10)), .char("ㆴ"))
+        XCTAssertTrue(tps.spareLetters.contains("ㄅ"))
+        XCTAssertTrue(tps.isValid)
+    }
+
+    func testTps_firstRowAllRemovedStaysEditable() {
+        var layout = CustomLayout(base: .tps, script: .tl)
+        for slot in 0 ..< 10 {
+            layout.remove(.key(slot))
+        }
+        // trace: row 0 is ten empty removed slots, not a digit row, so it keeps its places.
+        XCTAssertEqual(CustomLayout.places(of: layout.editorRows)[0], (0 ..< 10).map(CustomLayout.Place.key))
+        XCTAssertEqual(layout.rows(withGlobe: false), Array(TaigiLayouts.Alphabetic.tps_iPhone.dropFirst()))
+        layout.replace(.key(0), with: "ㆠ")
+        XCTAssertEqual(layout.keyDef(at: .key(0)), .char("ㆠ"))
+        XCTAssertTrue(layout.isValid)
+    }
+
+    func testTps_movedKeyKeepsItsBuiltInLongPress() {
+        var layout = CustomLayout(base: .tps, script: .tl)
+        layout.swap(.key(0), .key(10))
+        // trace: TPSCallouts.calloutChars — glyph first, then its variants; ㆠ keeps its digit 1.
+        XCTAssertEqual(layout.callouts(for: "ㄅ"), ["ㄅ", "ㆴ"])
+        XCTAssertEqual(layout.callouts(for: "ㆠ"), ["ㆠ", "1"])
+        XCTAssertEqual(layout.keyDef(at: .key(0)), .char("ㄅ"))
+    }
+
+    @MainActor
+    func testTps_customListHidesBuiltInHint() {
+        var layout = CustomLayout(base: .tps, script: .tl)
+        layout.setCallouts(["ㄅ", "ㆴ", "1"], for: "ㄅ")
+        let context = KeyboardContext(settings: KeyboardSettings())
+        let provider = ButtonTextProvider(keyboardContext: context, settings: tpsSnapshot(activeCustomLayout: layout))
+        XCTAssertNil(provider.buttonHintText(for: .character("ㄅ")), "custom list")
+        // trace: ㄉ keeps the built-in list, so its hint stays the variant.
+        XCTAssertEqual(provider.buttonHintText(for: .character("ㄉ")), "ㆵ")
     }
 
     // MARK: - Store
@@ -548,6 +644,60 @@ final class CustomLayoutTests: XCTestCase {
         XCTAssertTrue(settings.saveCustomLayout(CustomLayout(base: .moe1, script: .tl)))
         settings.resetToDefaults()
         XCTAssertNil(settings.selectedCustomLayoutId)
+        XCTAssertEqual(settings.loadCustomLayouts().count, 1)
+    }
+
+    func testSharedSettings_tpsLayoutKeepsRomanizationSelection() throws {
+        let settings = try makeSettings()
+        let romanization = CustomLayout(base: .qwerty, script: .tl)
+        let tps = CustomLayout(base: .tps, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(romanization))
+        XCTAssertTrue(settings.saveCustomLayout(tps))
+        XCTAssertEqual(settings.inputMode, .tps)
+        XCTAssertEqual(settings.keyboardLayoutType, .tps)
+        XCTAssertEqual(settings.activeCustomLayout, tps)
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.keyboardLayoutType, .qwerty)
+        XCTAssertEqual(settings.activeCustomLayout, romanization)
+        settings.inputMode = .tps
+        XCTAssertEqual(settings.activeCustomLayout, tps)
+    }
+
+    func testSharedSettings_tpsLayoutLeavesToTheModeBeforeIt() throws {
+        let settings = try makeSettings()
+        settings.inputMode = .poj
+        XCTAssertTrue(settings.saveCustomLayout(CustomLayout(base: .tps, script: .tl)))
+        // A layout-only card (no script) leaves TPS to the saved mode.
+        settings.keyboardLayoutType = .phahTaigi
+        XCTAssertEqual(settings.inputMode, .poj)
+        XCTAssertNil(settings.activeCustomLayout)
+    }
+
+    func testSharedSettings_tpsCardInsideTpsEndsOnlyTheTpsSelection() throws {
+        let settings = try makeSettings()
+        let romanization = CustomLayout(base: .qwerty, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(romanization))
+        XCTAssertTrue(settings.saveCustomLayout(CustomLayout(base: .tps, script: .tl)))
+        settings.keyboardLayoutType = .tps
+        XCTAssertNil(settings.tpsCustomLayoutId)
+        XCTAssertNil(settings.activeCustomLayout)
+        XCTAssertEqual(settings.selectedCustomLayoutId, romanization.id)
+        settings.inputMode = .tl
+        XCTAssertEqual(settings.activeCustomLayout, romanization)
+    }
+
+    func testSharedSettings_deleteAndResetClearTheTpsSelection() throws {
+        let settings = try makeSettings()
+        let tps = CustomLayout(base: .tps, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(tps))
+        XCTAssertTrue(settings.deleteCustomLayout(id: tps.id))
+        XCTAssertNil(settings.tpsCustomLayoutId)
+        XCTAssertEqual(settings.keyboardLayoutType, .tps)
+
+        let other = CustomLayout(base: .tps, script: .tl)
+        XCTAssertTrue(settings.saveCustomLayout(other))
+        settings.resetToDefaults()
+        XCTAssertNil(settings.tpsCustomLayoutId)
         XCTAssertEqual(settings.loadCustomLayouts().count, 1)
     }
 
@@ -757,5 +907,23 @@ final class CustomLayoutTests: XCTestCase {
 
     private func makeSettings() throws -> SharedSettings {
         try SharedSettings(userDefaults: defaults, themesContainerURL: makeDirectory())
+    }
+
+    private func tpsSnapshot(activeCustomLayout: CustomLayout?) -> SettingsSnapshot {
+        SettingsSnapshot(
+            inputMode: .tps,
+            fontType: .keyboardDefault,
+            keyboardLayoutType: .tps,
+            activeCustomLayout: activeCustomLayout,
+            isHanjiFirst: true,
+            isTpsOrMappedToER: true,
+            isNasalMarkerUppercaseEnabled: false,
+            keyFontSizeScale: 1,
+            keyCornerRadius: 5,
+            colorSettings: .default,
+            candidateTextSizeScale: 1,
+            keyBorderWidth: 0,
+            keyShadowIntensity: nil,
+        )
     }
 }

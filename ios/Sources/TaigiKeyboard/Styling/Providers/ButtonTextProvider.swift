@@ -66,6 +66,17 @@ final class ButtonTextProvider {
         // (mirrors `TaigiCallouts.taigiCalloutActions`).
         guard settings.inputMode != .english else { return nil }
 
+        // A custom layout's own long-press list replaces the built-in one, so no built-in hint
+        // may advertise it (TPS included). Digit-row keys are never in a layout's keys.
+        if TaigiCallouts.customCalloutChars(
+            for: char,
+            inputMode: settings.inputMode,
+            keyboardType: keyboardContext.keyboardType,
+            customLayout: settings.activeCustomLayout,
+        ) != nil {
+            return nil
+        }
+
         // TPS layout: show callout variants as hint
         if layoutType == .tps {
             return tpsHintText(for: char)
@@ -74,17 +85,6 @@ final class ButtonTextProvider {
         // Tone diacritics for number keys
         if let tone = toneHintText(for: char) {
             return tone
-        }
-
-        // A custom layout's own long-press list replaces the built-in one, so no built-in hint
-        // may advertise it.
-        if TaigiCallouts.customCalloutChars(
-            for: char,
-            inputMode: settings.inputMode,
-            keyboardType: keyboardContext.keyboardType,
-            customLayout: settings.activeCustomLayout,
-        ) != nil {
-            return nil
         }
 
         // MOE1/MOE2 punctuation hints

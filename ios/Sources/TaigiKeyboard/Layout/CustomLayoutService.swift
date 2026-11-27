@@ -85,9 +85,13 @@ class CustomLayoutService {
         }
 
         // TPS mode or layout — inputMode takes priority over keyboardLayoutType. TPS rows get no
-        // input-type key (Android `tps_halfwidth.json` has none).
+        // input-type key (Android `tps_halfwidth.json` has none). A TPS custom layout replaces the
+        // table; the guard keeps a romanization one (live only while the layout is not TPS) out.
         let layoutType = settings.keyboardLayoutType
         if settings.inputMode == .tps || layoutType == .tps {
+            if let custom = settings.activeCustomLayout, custom.base == .tps {
+                return custom.rows(withGlobe: needsGlobe)
+            }
             return layouts.table(.tps, script: .tl, withGlobe: needsGlobe)
         }
 

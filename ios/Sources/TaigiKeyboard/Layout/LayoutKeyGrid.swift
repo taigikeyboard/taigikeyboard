@@ -5,8 +5,8 @@ import UIKit
 // preview on the Layout tab and in the keyboard's layout picker. Not the KeyboardKit view, so
 // a key can be selected and nothing is typed.
 
-/// With an `interaction`, the keys at a `CustomLayout.Place` (every key below the digit row but
-/// globe) take taps; without one the grid is an inert preview.
+/// With an `interaction`, the keys at a `CustomLayout.Place` (every key below the digit row, if
+/// any, but globe) take taps; without one the grid is an inert preview.
 struct LayoutKeyGrid: View {
     /// The editor board's state and callbacks.
     struct Interaction {

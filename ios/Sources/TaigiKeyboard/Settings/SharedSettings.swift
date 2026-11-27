@@ -116,9 +116,11 @@ final class SharedSettings {
     private static let selectedThemeIdKey: SettingsKey<String> = .string("selectedThemeId", default: ThemeId.default)
     private static let themeRevisionKey: SettingsKey<Int> = .int("themeRevision", default: 0)
 
-    // Custom layouts (`UserLayoutStore`): the selected one's UUID ("" while a built-in layout is
-    // selected) and a revision bumped on every store write. Internal: the Layout tab observes both.
+    // Custom layouts (`UserLayoutStore`): the selected romanization one's UUID ("" while a built-in
+    // layout is selected), the selected TPS one's (its own slot, so entering and leaving TPS keeps
+    // both), and a revision bumped on every store write. Internal: the Layout tab observes them.
     static let selectedCustomLayoutIdKey: SettingsKey<String> = .string("selectedCustomLayoutId", default: "")
+    static let tpsCustomLayoutIdKey: SettingsKey<String> = .string("tpsCustomLayoutId", default: "")
     static let layoutRevisionKey: SettingsKey<Int> = .int("layoutRevision", default: 0)
     // Per-script layout memory (`LayoutScriptMemory`): the script the live selection belongs to
     // ("" = the input mode's), and each script's selection while the other one is live ("" = none).
@@ -324,10 +326,16 @@ final class SharedSettings {
         // Choosing a layout (a built-in card, the keyboard picker, reset) ends a custom selection;
         // `applyCustomLayout(_:)` re-selects one afterwards. `setInputMode(_:)` changes it only
         // when entering the other romanization script (`enterLayoutScript`).
-        if selectedCustomLayoutId != nil {
+        // Inside TPS the TPS card or picker ends only a TPS custom selection; the romanization one,
+        // suspended, resumes on leaving TPS. Entering TPS this way picks the built-in TPS layout.
+        let oldLayout = keyboardLayoutType
+        if newLayout == .tps, tpsCustomLayoutId != nil {
+            userDefaults.remove(Self.tpsCustomLayoutIdKey)
+        }
+        let staysInTps = oldLayout == .tps && newLayout == .tps
+        if selectedCustomLayoutId != nil, !staysInTps {
             userDefaults.remove(Self.selectedCustomLayoutIdKey)
         }
-        let oldLayout = keyboardLayoutType
         // Read before the layout write: while the layout is still TPS this is the backup.
         let modeAfterLeavingTps = romanizationInputMode
         userDefaults.set(newLayout, for: Self.keyboardLayoutTypeKey)
@@ -758,19 +766,41 @@ final class SharedSettings {
         return layouts
     }
 
-    /// The selected custom layout's id; nil while a built-in layout is selected.
+    /// The selected romanization custom layout's id; nil while a built-in layout is selected.
     var selectedCustomLayoutId: UUID? {
         UUID(uuidString: userDefaults.value(for: Self.selectedCustomLayoutIdKey))
     }
 
-    /// The custom layout the keyboard shows (`CustomLayout.active`).
-    var activeCustomLayout: CustomLayout? {
-        CustomLayout.active(in: loadCustomLayouts(), selectedId: selectedCustomLayoutId, layoutType: keyboardLayoutType)
+    /// The selected TPS custom layout's id; nil while the built-in TPS layout is selected.
+    var tpsCustomLayoutId: UUID? {
+        UUID(uuidString: userDefaults.value(for: Self.tpsCustomLayoutIdKey))
     }
 
-    /// Selects `layout`: its script's input mode first, like a Tâi-lô / Pe̍h-ōe-jī card (a universal
-    /// layout keeps the mode), then its base through the TPS-aware setter, then its id.
+    /// The custom layout the keyboard shows (`CustomLayout.active`): the TPS slot's while the
+    /// layout is TPS, else the romanization one's.
+    var activeCustomLayout: CustomLayout? {
+        CustomLayout.active(
+            in: loadCustomLayouts(),
+            romanizationId: selectedCustomLayoutId,
+            tpsId: tpsCustomLayoutId,
+            layoutType: keyboardLayoutType,
+        )
+    }
+
+    /// Selects `layout`. A TPS one enters TPS as the input mode does, so the romanization selection
+    /// stays and resumes on leaving; the mode to leave to is saved first (`setInputMode(_:)` keeps
+    /// only the layout's backup). Otherwise its script's input mode first, like a Tâi-lô /
+    /// Pe̍h-ōe-jī card (a universal layout keeps the mode), then its base through the TPS-aware
+    /// setter, then its id.
     func applyCustomLayout(_ layout: CustomLayout) {
+        if layout.base == .tps {
+            if inputMode != .tps {
+                inputModeBeforeTps = inputMode
+            }
+            setInputMode(.tps)
+            userDefaults.set(layout.id.uuidString, for: Self.tpsCustomLayoutIdKey)
+            return
+        }
         if !layout.isUniversal {
             setInputMode(layout.script.inputMode)
         }
@@ -800,6 +830,9 @@ final class SharedSettings {
         guard userLayoutStore.delete(id: id) else { return false }
         if selectedCustomLayoutId == id {
             userDefaults.remove(Self.selectedCustomLayoutIdKey)
+        }
+        if tpsCustomLayoutId == id {
+            userDefaults.remove(Self.tpsCustomLayoutIdKey)
         }
         return true
     }
@@ -848,6 +881,7 @@ final class SharedSettings {
         // After the pair above: its setters run the TPS state machine, which reads these backups.
         userDefaults.remove(Self.inputModeBeforeTpsKey)
         userDefaults.remove(Self.layoutBeforeTpsKey)
+        userDefaults.remove(Self.tpsCustomLayoutIdKey)
         userDefaults.remove(Self.layoutScriptOwnerKey)
         userDefaults.remove(Self.tlLayoutSelectionKey)
         userDefaults.remove(Self.pojLayoutSelectionKey)
