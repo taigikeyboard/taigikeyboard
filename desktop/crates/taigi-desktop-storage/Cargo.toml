@@ -1,6 +1,6 @@
 [package]
 name = "taigi-desktop-storage"
-description = "Desktop-only data on disk (Windows, Linux): settings file, user fonts, data directory"
+description = "Desktop-only data on disk (macOS, Windows, Linux): settings file, user fonts, data directory"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
