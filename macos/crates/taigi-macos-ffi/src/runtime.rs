@@ -25,7 +25,7 @@ use crate::proto::{
 };
 use crate::session::Session;
 use crate::settings::{self, SnapshotSettings};
-use crate::{dictionary_search, key_rules};
+use crate::{dictionary_search, key_rules, user_data};
 
 /// Which desktop this is: every desktop-core rule that differs per desktop
 /// is handed it (roadmap D6) — the `DELETE` user-data journal, the Mac
@@ -73,6 +73,11 @@ impl Shell {
         snapshot: Option<&SettingsSnapshot>,
     ) -> Result<desktop_response::Reply, Refusal> {
         if let Some(answer) = key_rules::answer(&request, snapshot) {
+            return answer;
+        }
+        // Answered before Configure and outside the session lock so pre-open
+        // error contracts hold and SQLite I/O cannot block the key path.
+        if let Some(answer) = user_data::answer(&request) {
             return answer;
         }
         // Before the session lock: a search may come from a background
@@ -139,6 +144,9 @@ impl Shell {
             // Answered by `key_rules::answer` or `dictionary_search::answer`
             // before the session is locked.
             Request::DictionarySearch(_)
+            | Request::UserData(_)
+            | Request::UserDataRules(_)
+            | Request::UserDataExportFileName(_)
             | Request::Press(_)
             | Request::Chord(_)
             | Request::ComposingShortcuts(_)
@@ -496,5 +504,52 @@ mod tests {
             panel: Some(PanelState::default()),
         }));
         assert!(key.handled && key.is_composing);
+    }
+
+    #[test]
+    fn user_data_requests_answer_before_configure_without_applying_snapshot() {
+        use crate::proto::{
+            desktop_response, user_data_request, ImportBackupFileRequest,
+            UserDataExportFileNameRequest, UserDataExportKind, UserDataRequest,
+            UserDataRulesRequest,
+        };
+        let shell = Shell::default();
+        let bad = snapshot(vec![text("autoSpaceEnabled", "yes")]);
+        // Even with an invalid snapshot attached, user_data answers without
+        // parsing/applying it or gating on Configure.
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::UserDataRules(UserDataRulesRequest {}),
+                Some(&bad),
+            ),
+            Ok(desktop_response::Reply::UserDataRules(reply)) if reply.page_size == 10
+        ));
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::UserDataExportFileName(UserDataExportFileNameRequest {
+                    kind: UserDataExportKind::CustomCsv as i32,
+                    local_date: "2026-11-27".to_owned(),
+                }),
+                None,
+            ),
+            Ok(desktop_response::Reply::UserDataExportFileName(reply))
+                if reply.file_name == "taigi_custom_dictionary_2026-11-27.csv"
+        ));
+        let missing_backup = shell.serve(
+            desktop_request::Request::UserData(UserDataRequest {
+                method: Some(user_data_request::Method::ImportBackupFile(
+                    ImportBackupFileRequest {
+                        path: "/nonexistent/taigi/missing.taigi".to_owned(),
+                    },
+                )),
+            }),
+            None,
+        );
+        assert!(matches!(
+            missing_backup,
+            Ok(desktop_response::Reply::UserData(reply)) if reply.error.is_some()
+        ));
+        assert_eq!(input_mode(&shell), InputMode::DEFAULT);
+        assert!(shell.runtime.get().is_none());
     }
 }
