@@ -2,7 +2,6 @@
 
 import AppKit
 import CoreText
-import Darwin
 
 /// One typeface the user added, as the library holds it.
 ///
@@ -109,32 +108,31 @@ final class CustomFontLibrary {
     enum RemovalFailure: Error, CustomStringConvertible {
         case stillInUse(String)
         case invalidFileName
+        case notRemoved(String)
 
         var description: String {
             switch self {
             case let .stillInUse(reason): "the typeface is still in use: \(reason)"
             case .invalidFileName: "invalid typeface file name"
+            case let .notRemoved(reason): "could not remove the typeface file: \(reason)"
             }
         }
     }
 
-    /// What a font file may be named. Collections are taken in as well as
-    /// single faces; a `.ttc` contributes its first face to the picker, and its
-    /// others are checked for name collisions because registering the URL
-    /// registers the whole collection.
-    nonisolated static let allowedFileExtensions: Set<String> = ["ttf", "otf", "ttc"]
+    /// What a font file may be named (`taigi-desktop-storage::font_library`).
+    nonisolated static var allowedFileExtensions: Set<String> {
+        FontLibraryStorage.allowedExtensions
+    }
 
-    /// The most one file may weigh. The largest bundled face is already over
-    /// 20 MB, so this is generous rather than tight — a screening limit against
-    /// a mistaken pick, not a security boundary.
-    nonisolated static let maximumFileSize = 64 * 1024 * 1024
+    /// The most one file may weigh (`taigi-desktop-storage::font_library`).
+    nonisolated static var maximumFileSize: Int {
+        FontLibraryStorage.maxFileSize
+    }
 
-    /// How many suffixes one stem may be tried with before the import gives up.
-    /// A library with a hundred copies of one name is a mistake, not a use.
-    nonisolated static let maximumNameAttempts = 100
-
-    /// The directory name inside the per-user container.
-    private nonisolated static let directoryName = "Fonts"
+    /// How many name attempts one stem tries before giving up (`taigi-desktop-storage::font_library`).
+    nonisolated static var maximumNameAttempts: Int {
+        FontLibraryStorage.maxNameAttempts
+    }
 
     private let fileManager = FileManager.default
     /// The directory, resolved once. Resolving it creates it, and the container
@@ -179,10 +177,16 @@ final class CustomFontLibrary {
         if let cachedDirectory {
             return cachedDirectory
         }
-        let resolved = try UserDataDirectory.created(
-            directoryOverride
-                ?? UserDataDirectory.standard().appendingPathComponent(Self.directoryName),
-        )
+        let target: URL
+        if let directoryOverride {
+            target = directoryOverride
+        } else {
+            guard let folderName = FontLibraryStorage.fontsFolderName else {
+                throw FontLibraryStorage.BridgeUnavailable.missingFolderName
+            }
+            target = try UserDataDirectory.standard().appendingPathComponent(folderName)
+        }
+        let resolved = try UserDataDirectory.created(target)
         cachedDirectory = resolved
         return resolved
     }
@@ -270,8 +274,8 @@ final class CustomFontLibrary {
         return font
     }
 
-    /// Copies `url`'s typeface into the library, activates it, and answers what
-    /// it became.
+    /// Copies `url`'s typeface into the library via `taigi-desktop-storage`,
+    /// activates it, and answers what it became.
     ///
     /// Validation runs against the COPY, not the file the user picked: the copy
     /// is what will be registered and drawn, and the original may change or go
@@ -279,27 +283,11 @@ final class CustomFontLibrary {
     /// so a refused import leaves no file behind.
     @discardableResult
     func addFont(from url: URL) throws -> CustomFont {
-        let fileExtension = url.pathExtension.lowercased()
-        guard Self.allowedFileExtensions.contains(fileExtension) else {
-            throw ImportFailure.unsupportedFileType(fileExtension)
-        }
-        let sourceFD = try Self.openSourceFile(at: url)
-        defer { _ = Darwin.close(sourceFD) }
-
-        let (destination, destFD) = try createExclusiveFile(for: url)
-        var isDestOpen = true
-        do {
-            try Self.copyBounded(from: sourceFD, to: destFD, maxBytes: Self.maximumFileSize)
-            isDestOpen = false
-            if Darwin.close(destFD) != 0 {
-                throw ImportFailure.notCopied(Self.posixMessage(errno))
-            }
-        } catch {
-            if isDestOpen {
-                _ = Darwin.close(destFD)
-            }
-            try? fileManager.removeItem(at: destination)
-            throw error
+        let dir = try directory()
+        let fileName = try FontLibraryStorage.copyIn(source: url, into: dir)
+        guard let destination = try storedURL(for: fileName) else {
+            try? FontLibraryStorage.removeStored(fileName: fileName, in: dir)
+            throw ImportFailure.notCopied("invalid stored file name")
         }
 
         do {
@@ -307,7 +295,7 @@ final class CustomFontLibrary {
             cachedFonts = nil
             return font
         } catch {
-            discard(destination)
+            discard(destination, in: dir)
             throw error
         }
     }
@@ -321,13 +309,14 @@ final class CustomFontLibrary {
     /// they were built with, so a caller releases those before calling this
     /// (`AppearanceSettingsView.remove`).
     func remove(_ font: CustomFont) throws {
+        let dir = try directory()
         guard let url = try storedURL(for: font.fileName) else {
             throw RemovalFailure.invalidFileName
         }
         if let reason = withdraw(url) {
             throw RemovalFailure.stillInUse(reason)
         }
-        try fileManager.removeItem(at: url)
+        try FontLibraryStorage.removeStored(fileName: font.fileName, in: dir)
         cachedFonts = nil
     }
 
@@ -393,257 +382,31 @@ final class CustomFontLibrary {
     /// and the import's own error is what the user is told. The leftover is a
     /// picker row, which `remove` can retry; the alternative is a dangling
     /// registration nothing can reach.
-    private func discard(_ url: URL) {
+    private func discard(_ url: URL, in dir: URL) {
         if let reason = withdraw(url) {
             logger.error("[FONT] rolled-back import stayed registered: \(reason)")
             return
         }
         do {
-            try fileManager.removeItem(at: url)
+            try FontLibraryStorage.removeStored(fileName: url.lastPathComponent, in: dir)
         } catch {
             logger.error("[FONT] rolled-back import left its copy behind: \(error)")
         }
     }
 
-    /// Whether `fileName` names a single path component inside the library
-    /// rather than a relative traversal (`..`), empty name, or separator path.
-    private nonisolated static func isSinglePathComponent(_ fileName: String) -> Bool {
-        !fileName.isEmpty
-            && fileName != "."
-            && fileName != ".."
-            && !fileName.contains("/")
-            && !fileName.contains("\\")
-            && !fileName.contains("\0")
-    }
-
     /// Resolves `fileName` inside `Fonts/`, returning `nil` when `fileName`
     /// could escape the library directory.
     private func storedURL(for fileName: String) throws -> URL? {
-        guard Self.isSinglePathComponent(fileName) else { return nil }
+        guard let safeName = FontLibraryStorage.sanitizedComponent(fileName) else { return nil }
         let dir = try directory()
-        return dir.appendingPathComponent(fileName, isDirectory: false)
+        return dir.appendingPathComponent(safeName, isDirectory: false)
     }
 
-    private nonisolated static func posixMessage(_ code: Int32 = errno) -> String {
-        var buffer = [CChar](repeating: 0, count: 256)
-        if Darwin.strerror_r(code, &buffer, buffer.count) == 0 {
-            return String(decoding: buffer.prefix { $0 != 0 }.map(UInt8.init(bitPattern:)), as: UTF8.self)
-        }
-        return "error \(code)"
-    }
-
-    /// Opens `url` without following symlinks and validates via `fstat` on the
-    /// open descriptor that it is a regular file within `maximumFileSize`.
-    private nonisolated static func openSourceFile(at url: URL) throws -> Int32 {
-        let fd = url.withUnsafeFileSystemRepresentation { path -> Int32 in
-            guard let path else {
-                errno = ENOENT
-                return -1
-            }
-            return Darwin.open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
-        }
-        if fd < 0 {
-            let code = errno
-            if code == ELOOP || code == EISDIR {
-                throw ImportFailure.notARegularFile
-            }
-            throw ImportFailure.unreadable(posixMessage(code))
-        }
-        var info = Darwin.stat()
-        if Darwin.fstat(fd, &info) != 0 {
-            let code = errno
-            _ = Darwin.close(fd)
-            throw ImportFailure.unreadable(posixMessage(code))
-        }
-        guard (info.st_mode & S_IFMT) == S_IFREG else {
-            _ = Darwin.close(fd)
-            throw ImportFailure.notARegularFile
-        }
-        guard info.st_size >= 0, info.st_size <= Int64(Self.maximumFileSize) else {
-            _ = Darwin.close(fd)
-            throw ImportFailure.tooLarge(bytes: Int(clamping: max(0, info.st_size)))
-        }
-        return fd
-    }
-
-    /// Creates the exclusive destination file in `Fonts/`, suffixed up to
-    /// `maximumNameAttempts` times so concurrent imports never overwrite one another.
-    func createExclusiveFile(for url: URL) throws -> (url: URL, fd: Int32) {
-        let dir = try directory()
-        let fileExtension = url.pathExtension.lowercased()
-        let base = Self.sanitized(url.deletingPathExtension().lastPathComponent)
-        for attempt in 1 ... Self.maximumNameAttempts {
-            let candidate = attempt == 1 ? "\(base).\(fileExtension)" : "\(base)-\(attempt).\(fileExtension)"
-            let destination = dir.appendingPathComponent(candidate, isDirectory: false)
-            let fd = destination.withUnsafeFileSystemRepresentation { path -> Int32 in
-                guard let path else {
-                    errno = EINVAL
-                    return -1
-                }
-                return Darwin.open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, mode_t(0o644))
-            }
-            if fd >= 0 {
-                return (destination, fd)
-            }
-            let code = errno
-            if code == EEXIST {
-                continue
-            }
-            throw ImportFailure.notCopied(Self.posixMessage(code))
-        }
-        throw ImportFailure.noAvailableName
-    }
-
-    /// Streams `sourceFD` into `destFD`, refusing any growth past `maxBytes`
-    /// before writing the excess bytes.
-    nonisolated static func copyBounded(from sourceFD: Int32, to destFD: Int32, maxBytes: Int) throws {
-        let chunkSize = 64 * 1024
-        var buffer = [UInt8](repeating: 0, count: chunkSize)
-        var totalWritten = 0
-        while true {
-            let remainingToCap = maxBytes - totalWritten
-            let requestSize = min(chunkSize, remainingToCap + 1)
-            let bytesRead = buffer.withUnsafeMutableBytes { rawBuffer -> Int in
-                guard let base = rawBuffer.baseAddress else { return 0 }
-                while true {
-                    let count = Darwin.read(sourceFD, base, requestSize)
-                    if count < 0, errno == EINTR {
-                        continue
-                    }
-                    return count
-                }
-            }
-            if bytesRead < 0 {
-                throw ImportFailure.unreadable(posixMessage(errno))
-            }
-            if bytesRead == 0 {
-                return
-            }
-            if totalWritten + bytesRead > maxBytes {
-                throw ImportFailure.tooLarge(bytes: totalWritten + bytesRead)
-            }
-            var offset = 0
-            while offset < bytesRead {
-                let bytesWritten = buffer.withUnsafeBytes { rawBuffer -> Int in
-                    guard let base = rawBuffer.baseAddress else { return -1 }
-                    while true {
-                        let count = Darwin.write(destFD, base.advanced(by: offset), bytesRead - offset)
-                        if count < 0, errno == EINTR {
-                            continue
-                        }
-                        return count
-                    }
-                }
-                if bytesWritten <= 0 {
-                    throw ImportFailure.notCopied(posixMessage(bytesWritten < 0 ? errno : EIO))
-                }
-                offset += bytesWritten
-            }
-            totalWritten += bytesRead
-        }
-    }
-
-    /// `name` reduced to what one path component may hold, keeping as much of
-    /// the picked file's own name as is safe to keep.
-    ///
-    /// The stored name is also the name the picker LISTS (`CustomFont`), so
-    /// this keeps the user's spelling: their capitals, their spaces, their
-    /// script. Everything it removes it removes for a reason a comment can
-    /// give:
-    ///
-    /// - The structural characters become `-`. A separator would let the name
-    ///   escape the directory, and the rest are what Windows refuses in a file
-    ///   name, kept out here too so one library has one naming rule.
-    /// - The invisible characters are dropped outright — controls, the bidi
-    ///   overrides, the line and paragraph separators, the zero-width space and
-    ///   the byte-order mark. A row's title has to look like what it is, and
-    ///   two names that differ only in what nobody can see are two rows a user
-    ///   cannot tell apart. ZWNJ and ZWJ are deliberately NOT in that set: they
-    ///   join letters and emoji, and dropping them rewrites legitimate text.
-    /// - The edges are trimmed of dots, spaces and dashes, and trimmed again
-    ///   after the length cap, so a truncation cannot put one back.
-    /// - A Windows device name (`CON`, `NUL`, `COM1`…) is refused whole,
-    ///   matched the way Windows matches it: on the part before the first dot,
-    ///   ignoring case and trailing spaces.
-    ///
-    /// The cap counts Unicode scalars rather than characters, because Swift's
-    /// `Character` is a grapheme cluster that can hold arbitrarily many of them
-    /// — and the Windows port counts `char`, which is a scalar. One rule, one
-    /// number, both platforms.
+    /// `name` reduced to what one path component may hold, delegated to
+    /// `taigi-desktop-storage::sanitized_stem`.
     nonisolated static func sanitized(_ name: String) -> String {
-        var kept = String.UnicodeScalarView()
-        for scalar in name.unicodeScalars where !isInvisible(scalar) {
-            kept.append(isStructural(scalar) ? "-" : scalar)
-        }
-        let trimmed = String(kept).trimmingCharacters(in: trimmedFromTheEnds)
-        let capped = String(String.UnicodeScalarView(trimmed.unicodeScalars.prefix(maximumStoredNameLength)))
-            .trimmingCharacters(in: trimmedFromTheEnds)
-        guard capped.unicodeScalars.contains(where: isVisible), !isWindowsDeviceName(capped) else {
-            return "typeface"
-        }
-        return capped
+        FontLibraryStorage.sanitizedStem(name)
     }
-
-    /// The longest a stored name may be, before its extension, counted in
-    /// Unicode scalars.
-    private nonisolated static let maximumStoredNameLength = 64
-
-    /// Trimmed from both ends, before and after the length cap. Windows drops a
-    /// trailing dot or space of its own accord, and a name that starts with one
-    /// reads as an accident rather than as a name.
-    private nonisolated static let trimmedFromTheEnds = CharacterSet(charactersIn: "-. ")
-
-    /// Whether `scalar` would make the name more than one path component, or is
-    /// one Windows refuses in a file name at all.
-    private nonisolated static func isStructural(_ scalar: Unicode.Scalar) -> Bool {
-        "/\\<>:\"|?*".unicodeScalars.contains(scalar)
-    }
-
-    /// Whether `scalar` puts a mark on screen — so a name made of nothing but
-    /// joiners and spaces is refused rather than listed as a blank row that
-    /// nothing can be said about.
-    private nonisolated static func isVisible(_ scalar: Unicode.Scalar) -> Bool {
-        !scalar.properties.isDefaultIgnorableCodePoint && !CharacterSet.whitespaces.contains(scalar)
-    }
-
-    /// Whether `scalar` draws nothing, or draws the rest of the name somewhere
-    /// other than where it is written.
-    private nonisolated static func isInvisible(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case 0x00 ... 0x1F, 0x7F ... 0x9F: true // C0, DEL and C1
-        case 0x061C, 0x200B, 0x200E, 0x200F: true // Arabic letter mark, ZWSP, LRM, RLM
-        case 0x2028, 0x2029: true // line and paragraph separators
-        case 0x202A ... 0x202E, 0x2066 ... 0x2069: true // the bidi overrides and isolates
-        case 0xFEFF: true // byte-order mark
-        default: false
-        }
-    }
-
-    /// Whether `stem` is one of the names Windows reserves for a device.
-    ///
-    /// Matched on the part before the first dot — `CON.foo` is `CON` to
-    /// Windows — with trailing spaces ignored and case folded, which is how
-    /// Windows itself resolves one.
-    private nonisolated static func isWindowsDeviceName(_ stem: String) -> Bool {
-        let head = stem.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)[0]
-        let candidate = head.replacingOccurrences(of: " +$", with: "", options: .regularExpression).uppercased()
-        return windowsDeviceNames.contains(candidate)
-    }
-
-    /// `COM` and `LPT` take the superscript digits too, which Windows folds to
-    /// their ASCII forms.
-    private nonisolated static let windowsDeviceNames: Set<String> = {
-        var names: Set = ["CON", "PRN", "AUX", "NUL"]
-        for digit in "123456789" {
-            names.insert("COM\(digit)")
-            names.insert("LPT\(digit)")
-        }
-        for superscript in "¹²³" {
-            names.insert("COM\(superscript)")
-            names.insert("LPT\(superscript)")
-        }
-        return names
-    }()
 
     // MARK: - Core Text
 
@@ -728,21 +491,16 @@ final class CustomFontLibrary {
         return source.standardizedFileURL == url.standardizedFileURL
     }
 
-    /// The directory read straight through, skipping what does not parse.
+    /// The directory read straight through via `taigi-desktop-storage`, skipping
+    /// what does not parse.
     private func scan() -> [CustomFont] {
-        guard let directory = try? directory(),
-              let files = try? fileManager.contentsOfDirectory(
-                  at: directory,
-                  includingPropertiesForKeys: [.isRegularFileKey],
-              )
-        else { return [] }
-        return files
-            .filter { Self.allowedFileExtensions.contains($0.pathExtension.lowercased()) }
-            .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
-            .compactMap(makeFont(at:))
-            // By what the picker shows, with the whole file name as the
-            // tie-break: `mine.ttf` and `mine.otf` list under one title, and a
-            // pair whose order the comparator calls equal must still have one.
+        guard let directory = try? directory() else { return [] }
+        return FontLibraryStorage.listStored(in: directory)
+            .compactMap { makeFont(at: directory.appendingPathComponent($0, isDirectory: false)) }
+            // Keep UI collation in Swift: `taigi-desktop-storage::stored_file_names`
+            // returns deterministic codepoint order, whereas macOS sorts picker rows
+            // by localized Finder-style `displayName` with `fileName` as the
+            // tie-break (`mine.ttf` and `mine.otf` list under one title).
             .sorted {
                 switch $0.displayName.localizedStandardCompare($1.displayName) {
                 case .orderedAscending: true

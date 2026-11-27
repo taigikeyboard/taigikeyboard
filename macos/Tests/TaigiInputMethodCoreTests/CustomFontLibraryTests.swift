@@ -2,7 +2,6 @@
 
 import AppKit
 import CoreText
-import Darwin
 @testable import TaigiInputMethodCore
 import XCTest
 
@@ -138,75 +137,26 @@ final class CustomFontLibraryTests: XCTestCase {
         XCTAssertEqual(try storedFileNames(), [])
     }
 
-    func testCopyBounded_allowsUpToCapAndRefusesOverflowBeforeWritingPastIt() throws {
-        let scratch = try TestFixtures.scratchDirectory()
-        addTeardownBlock { try? FileManager.default.removeItem(at: scratch) }
-
-        func runCopy(sourceBytes: Data, maxBytes: Int) throws -> Data {
-            let src = scratch.appendingPathComponent("src-\(UUID().uuidString)")
-            let dst = scratch.appendingPathComponent("dst-\(UUID().uuidString)")
-            try sourceBytes.write(to: src)
-            FileManager.default.createFile(atPath: dst.path, contents: Data())
-            let srcFD = src.withUnsafeFileSystemRepresentation { Darwin.open($0!, O_RDONLY) }
-            let dstFD = dst.withUnsafeFileSystemRepresentation { Darwin.open($0!, O_WRONLY | O_TRUNC) }
-            XCTAssertGreaterThanOrEqual(srcFD, 0)
-            XCTAssertGreaterThanOrEqual(dstFD, 0)
-            defer {
-                _ = Darwin.close(srcFD)
-                _ = Darwin.close(dstFD)
-            }
-            try CustomFontLibrary.copyBounded(from: srcFD, to: dstFD, maxBytes: maxBytes)
-            return try Data(contentsOf: dst)
-        }
-
-        let exact = Data(repeating: 0x41, count: 16)
-        XCTAssertEqual(try runCopy(sourceBytes: exact, maxBytes: 16), exact)
-
-        let oneOver = Data(repeating: 0x42, count: 17)
-        XCTAssertThrowsError(try runCopy(sourceBytes: oneOver, maxBytes: 16)) { error in
-            guard case CustomFontLibrary.ImportFailure.tooLarge(17) = error else {
-                return XCTFail("unexpected refusal: \(error)")
-            }
-        }
-
-        let multiChunkLimit = 64 * 1024
-        let multiChunkOver = Data(repeating: 0x43, count: multiChunkLimit + 1)
-        let multiSrc = scratch.appendingPathComponent("multi-src")
-        let multiDst = scratch.appendingPathComponent("multi-dst")
-        try multiChunkOver.write(to: multiSrc)
-        FileManager.default.createFile(atPath: multiDst.path, contents: Data())
-        let srcFD = multiSrc.withUnsafeFileSystemRepresentation { Darwin.open($0!, O_RDONLY) }
-        let dstFD = multiDst.withUnsafeFileSystemRepresentation { Darwin.open($0!, O_WRONLY | O_TRUNC) }
-        defer {
-            _ = Darwin.close(srcFD)
-            _ = Darwin.close(dstFD)
-        }
-        XCTAssertThrowsError(try CustomFontLibrary.copyBounded(from: srcFD, to: dstFD, maxBytes: multiChunkLimit)) { error in
-            guard case let CustomFontLibrary.ImportFailure.tooLarge(bytes) = error else {
-                return XCTFail("unexpected refusal: \(error)")
-            }
-            XCTAssertEqual(bytes, multiChunkLimit + 1)
-        }
-        XCTAssertLessThanOrEqual(try Data(contentsOf: multiDst).count, multiChunkLimit)
-    }
-
-    func testCreateExclusiveFile_usesNumericSuffixWithoutOverwritingAndSetsWritablePermissions() throws {
+    func testCopyIn_usesNumericSuffixWithoutOverwritingAndSetsWritablePermissions() throws {
         let existing = directory.appendingPathComponent("mine.ttf")
         try Data([0xAA]).write(to: existing)
-        let source = URL(fileURLWithPath: "/tmp/mine.ttf")
 
-        let (secondURL, secondFD) = try library.createExclusiveFile(for: source)
-        _ = Darwin.close(secondFD)
-        XCTAssertEqual(secondURL.lastPathComponent, "mine-2.ttf")
+        let sourceDir = try TestFixtures.scratchDirectory()
+        addTeardownBlock { try? FileManager.default.removeItem(at: sourceDir) }
+        let source = sourceDir.appendingPathComponent("mine.ttf")
+        try Data([0xBB, 0xCC]).write(to: source)
+
+        let secondName = try FontLibraryStorage.copyIn(source: source, into: directory)
+        XCTAssertEqual(secondName, "mine-2.ttf")
         XCTAssertEqual(try Data(contentsOf: existing), Data([0xAA]))
 
+        let secondURL = directory.appendingPathComponent(secondName)
         let attrs = try FileManager.default.attributesOfItem(atPath: secondURL.path)
         let mode = try XCTUnwrap(attrs[.posixPermissions] as? Int)
         XCTAssertNotEqual(mode & 0o200, 0, "the library copy must be owner-writable")
 
-        let (thirdURL, thirdFD) = try library.createExclusiveFile(for: source)
-        _ = Darwin.close(thirdFD)
-        XCTAssertEqual(thirdURL.lastPathComponent, "mine-3.ttf")
+        let thirdName = try FontLibraryStorage.copyIn(source: source, into: directory)
+        XCTAssertEqual(thirdName, "mine-3.ttf")
     }
 
     func testAddFont_whenAllCollisionSuffixesAreTaken_throwsNoAvailableName() throws {
@@ -282,6 +232,18 @@ final class CustomFontLibraryTests: XCTestCase {
         XCTAssertNil(
             library.activatedFont(fileName: "mine.ttf"),
             "a file in the directory is not a typeface this process activated",
+        )
+    }
+
+    func testInstalledFonts_sortsByLocalizedStandardDisplayNameAndFileNameTieBreak() throws {
+        let bundled = TestFixtures.fontDirectory.appendingPathComponent("iansui_regular.ttf")
+        for name in ["Font 10.ttf", "Font 2.ttf", "alpha.ttf", "alpha.otf"] {
+            try FileManager.default.copyItem(at: bundled, to: directory.appendingPathComponent(name))
+        }
+
+        XCTAssertEqual(
+            library.installedFonts().map(\.fileName),
+            ["alpha.otf", "alpha.ttf", "Font 2.ttf", "Font 10.ttf"],
         )
     }
 
@@ -431,6 +393,83 @@ final class CustomFontLibraryTests: XCTestCase {
         XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "a", count: 200)).unicodeScalars.count, 64)
         XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "字", count: 200)).unicodeScalars.count, 64)
         XCTAssertEqual(CustomFontLibrary.sanitized(String(repeating: "a", count: 63) + " tail"), String(repeating: "a", count: 63))
+    }
+
+    func testSanitized_defaultIgnorableAndUnicodeWhitespaceParity() {
+        for ignorableOrSpace in [
+            "\u{00AD}",
+            "\u{034F}",
+            "\u{115F}",
+            "\u{1160}",
+            "\u{17B4}",
+            "\u{180E}",
+            "\u{200C}",
+            "\u{200D}",
+            "\u{2060}",
+            "\u{3164}",
+            "\u{FE0F}",
+            "\u{FFA0}",
+            "\u{E0100}",
+            "\u{00A0}",
+            "\u{3000}",
+            "\u{00A0}\u{200D}\u{FE0F}\u{3000}\u{00AD}",
+        ] {
+            XCTAssertEqual(CustomFontLibrary.sanitized(ignorableOrSpace), "typeface")
+        }
+        XCTAssertEqual(CustomFontLibrary.sanitized("क\u{200D}ष"), "क\u{200D}ष")
+        XCTAssertEqual(CustomFontLibrary.sanitized("a\u{FE0F}"), "a\u{FE0F}")
+        XCTAssertEqual(CustomFontLibrary.sanitized("a\u{200C}b"), "a\u{200C}b")
+    }
+
+    func testFontLibraryStorage_rulesListSanitizeRemoveAndBridgeUnavailable() throws {
+        XCTAssertEqual(FontLibraryStorage.allowedExtensions, ["ttf", "otf", "ttc"])
+        XCTAssertEqual(FontLibraryStorage.maxFileSize, 64 * 1024 * 1024)
+        XCTAssertEqual(FontLibraryStorage.maxNameAttempts, 100)
+        XCTAssertEqual(FontLibraryStorage.fontsFolderName, "Fonts")
+
+        try Data([1]).write(to: directory.appendingPathComponent("one.ttf"))
+        try Data([2]).write(to: directory.appendingPathComponent("notes.csv"))
+        try FileManager.default.createDirectory(at: directory.appendingPathComponent("two.otf"), withIntermediateDirectories: true)
+        XCTAssertEqual(FontLibraryStorage.listStored(in: directory), ["one.ttf"])
+
+        XCTAssertEqual(FontLibraryStorage.sanitizedComponent("mine.ttf"), "mine.ttf")
+        for unsafeName in ["", ".", "..", "../mine.ttf", "sub/mine.ttf"] {
+            XCTAssertNil(FontLibraryStorage.sanitizedComponent(unsafeName), "expected nil for \(unsafeName)")
+        }
+
+        XCTAssertThrowsError(try FontLibraryStorage.removeStored(fileName: "missing.ttf", in: directory)) { error in
+            guard case CustomFontLibrary.RemovalFailure.notRemoved = error else {
+                return XCTFail("unexpected removal error: \(error)")
+            }
+        }
+
+        let brokenTransport: ([UInt8]) -> [UInt8] = { _ in [] }
+        XCTAssertNil(FontLibraryStorage.fetchRules(transport: brokenTransport))
+        XCTAssertNil(FontLibraryStorage.sanitizedComponent("mine.ttf", transport: brokenTransport))
+        XCTAssertEqual(FontLibraryStorage.listStored(in: directory, transport: brokenTransport), [])
+        XCTAssertEqual(FontLibraryStorage.sanitizedStem("My Font", transport: brokenTransport), "typeface")
+        XCTAssertThrowsError(
+            try FontLibraryStorage.copyIn(
+                source: directory.appendingPathComponent("one.ttf"),
+                into: directory,
+                transport: brokenTransport,
+            ),
+        ) { error in
+            guard case CustomFontLibrary.ImportFailure.notCopied = error else {
+                return XCTFail("unexpected copy error: \(error)")
+            }
+        }
+        XCTAssertThrowsError(
+            try FontLibraryStorage.removeStored(
+                fileName: "one.ttf",
+                in: directory,
+                transport: brokenTransport,
+            ),
+        ) { error in
+            guard case CustomFontLibrary.RemovalFailure.notRemoved = error else {
+                return XCTFail("unexpected removal error: \(error)")
+            }
+        }
     }
 
     // MARK: -
