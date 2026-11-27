@@ -789,8 +789,9 @@ impl ExpandableListModel {
         self.transition.as_ref()
     }
 
-    /// Drops the transition: a list laid out again comes back in the mode it
-    /// was in, which is no change to play.
+    /// Drops the transition: an in-place re-layout or adoption (whether it
+    /// keeps the current mode or auto-expands to hold the selected cell) is
+    /// not a user-initiated mode change to animate.
     pub(crate) fn forget_transition(&mut self) {
         self.transition = None;
     }

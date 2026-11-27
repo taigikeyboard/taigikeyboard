@@ -57,16 +57,26 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         han_lo_row.set_sensitive(document.allows_han_lo_mixed());
     });
     // Under Tone Keys, independent of it: both say what a letter types.
-    context.switch_row(
-        &group,
+    // TPS maps `c` and `f` to phonetic glyphs (`allows_c_affricate`,
+    // `allows_f_hyphen`), so both rows grey out there while keeping their values.
+    let c_affricate_row = context.switch_row_in(
+        |row| group.add(row),
         StringKey::SettingsCAffricate,
         keys::IS_C_AFFRICATE_ENABLED,
     );
-    context.switch_row(
-        &group,
+    c_affricate_row.set_sensitive(context.document.allows_c_affricate());
+    context.on_refresh(move |document| {
+        c_affricate_row.set_sensitive(document.allows_c_affricate());
+    });
+    let f_hyphen_row = context.switch_row_in(
+        |row| group.add(row),
         StringKey::SettingsFHyphen,
         keys::IS_F_HYPHEN_ENABLED,
     );
+    f_hyphen_row.set_sensitive(context.document.allows_f_hyphen());
+    context.on_refresh(move |document| {
+        f_hyphen_row.set_sensitive(document.allows_f_hyphen());
+    });
     context.switch_row(
         &group,
         StringKey::SettingsCandidateWindow,

@@ -235,8 +235,11 @@ impl ListSelection {
                 model.select(kept.min(model.count().saturating_sub(1)));
                 if was_expanded {
                     model.expand();
-                    model.forget_transition();
                 }
+                // Neither an in-place re-layout that preserves expansion nor
+                // one that auto-expands past a narrowed collapsed row should
+                // play an unfold animation.
+                model.forget_transition();
                 self.highlight = Highlight::Expandable(model);
             }
             None if self.expandable().is_some() => {
@@ -349,5 +352,50 @@ mod tests {
     #[test]
     fn an_empty_model_has_no_highlight() {
         assert_eq!(expandable(0).selected_index(), None);
+    }
+
+    #[test]
+    fn an_in_place_relayout_that_auto_expands_a_collapsed_list_drops_its_transition() {
+        use crate::candidates::{CollapsedLayout, ExpandableGeometryInput};
+
+        let mut selection = expandable(20);
+        // `row_model(20)` packs 4 cells into the collapsed row; cell 3 fits without expanding.
+        selection.select(3);
+        let before = selection.expandable().expect("a model");
+        assert_eq!(before.mode(), ExpandableDisplayMode::Collapsed);
+        assert_eq!(before.mode_transition(), None);
+
+        // Widening each cell to 40 under `row_budget(10) = 90` shrinks the collapsed
+        // row to 2 cells, so keeping index 3 auto-expands inside `adopt`.
+        let narrow = ExpandableListModel::new(
+            &[40.0; 20],
+            ExpandableGeometryInput {
+                collapsed: CollapsedLayout::Row,
+                base_width: 10.0,
+                maximum_window_width: 640.0,
+                chrome_width: 20.0,
+                scroller_width: 0.0,
+                item_height: 30.0,
+                page_size: crate::session::PAGE_SIZE,
+                row_columns: 0,
+            },
+        );
+        selection.mark_stale();
+        selection.adopt(Some(narrow), 20);
+        assert_eq!(selection.selected_index(), Some(3));
+        let after = selection.expandable().expect("a model");
+        assert_eq!(after.mode(), ExpandableDisplayMode::Expanded);
+        assert_eq!(after.mode_transition(), None);
+    }
+
+    #[test]
+    fn adopting_an_expandable_model_past_collapsed_row_from_paged_drops_transition() {
+        let mut selection = ListSelection::new(20);
+        selection.select(10);
+        selection.adopt(Some(row_model(20)), 20);
+        assert_eq!(selection.selected_index(), Some(10));
+        let model = selection.expandable().expect("a model");
+        assert_eq!(model.mode(), ExpandableDisplayMode::Expanded);
+        assert_eq!(model.mode_transition(), None);
     }
 }

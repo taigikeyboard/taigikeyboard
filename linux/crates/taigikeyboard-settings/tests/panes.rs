@@ -73,6 +73,7 @@ fn main() -> ExitCode {
     the_read_only_window_writes_nothing(&application);
     the_tps_key_panel_toggles_and_closes_when_tps_is_left(&application);
     general_rows_show_captions_and_tone_keys_updates_live(&window, &store);
+    c_affricate_and_f_hyphen_grey_out_under_tps(&window);
     the_window_fits_a_1280_px_screen_at_double_text_size(&window);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
@@ -788,6 +789,43 @@ fn general_rows_show_captions_and_tone_keys_updates_live(
         document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::System.tag());
     });
     eprintln!("panes: general captions render and Tone Keys swaps live");
+}
+
+fn c_affricate_and_f_hyphen_grey_out_under_tps(window: &Rc<SettingsWindow>) {
+    window.update(|document| {
+        document.reset_general();
+        document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::English.tag());
+        document.set_bool(&keys::IS_C_AFFRICATE_ENABLED, true);
+        document.set_bool(&keys::IS_F_HYPHEN_ENABLED, true);
+        document.set_choice(&keys::INPUT_MODE, InputMode::Tl);
+    });
+    let english = StringResolver::new(DisplayLanguage::English);
+    let general = window.page_widget(SettingsPane::General).expect("general");
+    let switch_row = |key: StringKey| {
+        let title = english.resolve(key);
+        find_all::<adw::SwitchRow>(&general)
+            .into_iter()
+            .find(|row| row.title() == title)
+            .unwrap_or_else(|| panic!("missing switch row {title}"))
+    };
+    let c_row = switch_row(StringKey::SettingsCAffricate);
+    let f_row = switch_row(StringKey::SettingsFHyphen);
+    assert!(c_row.is_sensitive() && c_row.is_active());
+    assert!(f_row.is_sensitive() && f_row.is_active());
+
+    window.update(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps));
+    assert!(!c_row.is_sensitive() && c_row.is_active());
+    assert!(!f_row.is_sensitive() && f_row.is_active());
+
+    window.update(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Poj));
+    assert!(c_row.is_sensitive() && c_row.is_active());
+    assert!(f_row.is_sensitive() && f_row.is_active());
+
+    window.update(|document| {
+        document.reset_general();
+        document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::System.tag());
+    });
+    eprintln!("panes: c/f toggles grey out under TPS and keep their stored values");
 }
 
 /// Runs the main context until `done` answers true or ten seconds pass —

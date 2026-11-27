@@ -187,9 +187,11 @@ export class Settings {
         /** @type {unknown} */ (this.#form.elements)
       );
     const {
+      cAffricateEnabled,
       candidateAppearanceMode,
       candidateDisplayMode,
       candidateTextSize,
+      fHyphenEnabled,
       fontType,
       inputMode,
       hanLoMixedEnabled,
@@ -214,6 +216,10 @@ export class Settings {
     // The row stays in its place outside TPS: the choice waits for the way back.
     const isTyping = inputMode.value === "tps";
     tpsKeyboardShown.disabled = !isTyping;
+    // TPS maps `c` and `f` to phonetic glyphs (`allows_c_affricate`,
+    // `allows_f_hyphen`), while stored switches keep their values.
+    cAffricateEnabled.disabled = isTyping;
+    fHyphenEnabled.disabled = isTyping;
     // No Hanji to lead with (`allows_swap_toggle`) or mark (`shows_hanji`).
     const isRomanOnly = candidateDisplayMode.value === "romanOnly";
     isTranslateSwapped.disabled = isRomanOnly;
