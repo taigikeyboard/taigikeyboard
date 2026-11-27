@@ -1,8 +1,8 @@
 # Custom Layouts — Roadmap
 
-> **Type**: Design record (phases 1–4 done; TPS phases 5–6 open)
+> **Type**: Design record (phases 1–6 done)
 > **Keywords**: `custom layout`, `layout editor`, `romanization keyboard`, `Layout tab`
-> **Status**: Phases 1–4 and follow-up fixes #511 / #513 / #514 merged; device dogfood passed 2026-10-18. TPS layouts (phases 5–6, maintainer 2026-11-27) in progress
+> **Status**: Phases 1–4 and follow-up fixes #511 / #513 / #514 merged; device dogfood passed 2026-10-18. TPS layouts (phases 5–6, maintainer 2026-11-27) merged; device dogfood pending
 
 ---
 
@@ -103,7 +103,7 @@ The layout is built once per keyboard view (`KeyboardViewController.swift`) and 
 | 3 | iOS + Android — tray finals (16 keys, frequency order) | Merged (#508) |
 | 4 | iOS + Android — tray `ee` after `o͘` | Merged (#510) |
 | 5 | iOS — TPS layouts (record, places without a digit row, TPS slot, Phonetic Symbols use, TPS tray) | Merged #1174 `430e9f685` |
-| 6 | Android — TPS layouts on the same record | Pending |
+| 6 | Android — TPS layouts on the same record | Merged #1176 `f0b4438ed` |
 
 The Theme-tab keyboard preview (`KeyboardPreviewPanel.swift`) also calls `CustomLayoutService`.
 
