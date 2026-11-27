@@ -73,6 +73,9 @@ pub fn render_typed_separators(
         return None;
     }
     let mut out = String::with_capacity(roman.len());
+    if let Some(first) = tokens.first() {
+        out.push_str(&roman[..first.start]);
+    }
     for k in 0..tokens.len() {
         out.push_str(&roman[tokens[k].clone()]);
         match typed_run(k) {
@@ -81,6 +84,30 @@ pub fn render_typed_separators(
         }
     }
     Some(out)
+}
+
+/// Prepend a typed leading hyphen run (`-`, `--`, `---`) to a candidate's
+/// romanization without doubling any leading hyphen marker the dictionary row
+/// already carries (`--ah` under `--` stays `--ah`; `--tńg-khì` under `---`
+/// becomes `---tńg-khì`). Runs before [`syllable_joiner_display`] so Space/None
+/// Syllable Separator settings still render `--` as `·`. Borrows when nothing
+/// changes or when `roman` is empty / all hyphens.
+pub fn apply_leading_typed_separator<'a>(
+    roman: &'a str,
+    leading_run: &str,
+) -> std::borrow::Cow<'a, str> {
+    if leading_run.is_empty() || roman.is_empty() {
+        return std::borrow::Cow::Borrowed(roman);
+    }
+    let rest = roman.trim_start_matches('-');
+    let existing_len = roman.len() - rest.len();
+    if rest.is_empty() || (existing_len == leading_run.len() && roman.starts_with(leading_run)) {
+        return std::borrow::Cow::Borrowed(roman);
+    }
+    let mut out = String::with_capacity(leading_run.len() + rest.len());
+    out.push_str(leading_run);
+    out.push_str(rest);
+    std::borrow::Cow::Owned(out)
 }
 
 /// Syllable Separator (`AppConfig.syllable_separator`, `behavioral-invariants.md`
@@ -249,6 +276,39 @@ mod tests {
         assert_eq!(run(3, " "), " \u{00b7}");
         assert_eq!(run(4, " "), " \u{00b7}\u{00b7}");
     }
+
+    #[test]
+    fn apply_leading_typed_separator_prefixes_without_doubling() {
+        use std::borrow::Cow;
+        assert_eq!(apply_leading_typed_separator("ah", "--"), "--ah");
+        assert!(matches!(
+            apply_leading_typed_separator("--ah", "--"),
+            Cow::Borrowed("--ah")
+        ));
+        assert_eq!(apply_leading_typed_separator("tńg-khì", "--"), "--tńg-khì");
+        assert_eq!(
+            apply_leading_typed_separator("tńg--khì", "--"),
+            "--tńg--khì"
+        );
+        assert_eq!(
+            apply_leading_typed_separator("--tńg-khì", "---"),
+            "---tńg-khì"
+        );
+        assert_eq!(apply_leading_typed_separator("tâi", "-"), "-tâi");
+        assert_eq!(apply_leading_typed_separator("Tńg-khì", "--"), "--Tńg-khì");
+        assert!(matches!(
+            apply_leading_typed_separator("", "--"),
+            Cow::Borrowed("")
+        ));
+        assert!(matches!(
+            apply_leading_typed_separator("--", "--"),
+            Cow::Borrowed("--")
+        ));
+        assert!(matches!(
+            apply_leading_typed_separator("ah", ""),
+            Cow::Borrowed("ah")
+        ));
+    }
 }
 
 #[cfg(test)]
@@ -350,5 +410,13 @@ mod render_typed_separators_tests {
                 "{typed} {runs:?} {roman}"
             );
         }
+    }
+
+    #[test]
+    fn preserves_leading_khinsiann_prefix_when_rewriting_interior_separator() {
+        assert_eq!(
+            render(Tl, "pangtanglai", &[(4, 1)], "--pàng tāng-lāi").as_deref(),
+            Some("--pàng-tāng-lāi")
+        );
     }
 }

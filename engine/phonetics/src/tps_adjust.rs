@@ -79,6 +79,9 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
     if last == ' ' || is_syllable_boundary(last) {
         return char_str.to_string();
     }
+    if pending_open_syllable(raw_input).bytes().all(|b| b == b'-') {
+        return char_str.to_string();
+    }
     // Phonotactic gate (all dual-form finals — STOPS ㄅㄉㄍㄏ → ㆴㆵㆻㆷ AND
     // NASALS ㄇㄋㄫ → ㆬㄣㆭ/ㄥ): a dual-form final can attach only to specific
     // nuclei per the entering-tone finals (§3.2.4) + nasal-coda finals

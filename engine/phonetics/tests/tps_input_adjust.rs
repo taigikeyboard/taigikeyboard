@@ -300,3 +300,14 @@ fn tps_adjust_palatalization_every_affricate() {
         );
     }
 }
+
+#[test]
+fn tps_adjust_dual_form_after_leading_or_post_boundary_hyphen_stays_initial() {
+    for (incoming, raw) in [("ㄍ", "-"), ("ㄍ", "--"), ("ㄏ", "ㄒㄧㄚˋ--"), ("ㄇ", "--")] {
+        assert_eq!(
+            tps_adjust(incoming, raw),
+            (incoming.to_string(), None),
+            "{incoming:?} after {raw:?}"
+        );
+    }
+}
