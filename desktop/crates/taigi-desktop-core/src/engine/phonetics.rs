@@ -15,7 +15,7 @@ use super::bridge::{record_failure, roundtrip};
 /// changes it. Sent as `AppConfig.tps_or_maps_to_er`, which the engine renders
 /// both a cell's `tps_text` and its commit with, so the two spell `or` alike.
 /// CROSS-PLATFORM INVARIANT — macOS's Custom Dictionary list sends the same
-/// value (`EngineUserDataClient.isTpsOrMappedToER`, `UserDataClient.swift`).
+/// value through `taigi-macos-ffi`.
 pub const TPS_OR_MAPS_TO_ER: bool = true;
 
 /// The digit-tone spelling of a TL reading that the web dictionaries search

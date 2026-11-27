@@ -21,7 +21,7 @@ pub use clock::{Clock, SystemClock};
 pub use coordinator::{ComposingSessionCoordinator, ContextToken};
 pub use intent_executor::{
     insert_symbol, pass_through_may_consume, pass_through_may_swap, perform_intent, refresh_list,
-    represent_list, represent_list_following, IntentSurface,
+    represent_list, represent_list_following, symbol_may_swap, IntentSurface,
 };
 pub use manager::{ComposingEffectExecutor, ComposingManager, TpsKeyOutcome};
 pub use next_word::{EngineNextWord, NextWordPort};

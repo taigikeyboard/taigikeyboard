@@ -332,6 +332,15 @@ pub fn pass_through_may_swap(snapshot: &KeyEventSnapshot, settings: &SettingsDoc
         && engine::is_attaching_punctuation(punctuation.as_deref().unwrap_or(&typed))
 }
 
+/// Whether a picked `symbol` (`insert_symbol`) would take an armed auto
+/// space's place: the swap's switch on (`spaces_candidate_commits`) and
+/// `symbol` attaching punctuation (`swap_auto_space`). For a shell that
+/// must make the swap's client checks before the pick runs (macOS), and
+/// only asks them when this holds.
+pub fn symbol_may_swap(symbol: &str, settings: &SettingsDocument) -> bool {
+    spaces_candidate_commits(settings) && engine::is_attaching_punctuation(symbol)
+}
+
 /// Re-reads the candidates for the composition as it now stands. With the
 /// Show Candidate Window setting off nothing is fetched, not merely not
 /// shown: a list kept behind no window would hand Space and the slot keys to

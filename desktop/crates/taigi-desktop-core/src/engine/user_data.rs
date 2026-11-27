@@ -5,8 +5,7 @@
 //! `engine::commit_continuous`). Answered only by a shell built with
 //! `dispatch/user-data` (roadmap U11); anywhere else the engine refuses and
 //! these answer `false` (`open`) or `Err(UserDataError::EngineUnavailable)`
-//! (the page ops). macOS keeps a Swift twin:
-//! `RustEngineBridge+UserData.swift` / `UserDataClient.swift`.
+//! (the page ops). macOS reaches these through `taigi-macos-ffi`.
 
 use std::path::Path;
 
@@ -18,7 +17,7 @@ use protos::engine::{
 };
 pub use protos::engine::{
     BackupImported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
-    CustomEntries, LearningRecord, LearningRecordKind, LearningRecordOrder,
+    CustomEntries, LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecords,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -74,7 +73,7 @@ fn journal(platform: DesktopPlatform) -> UserDataJournal {
     }
 }
 
-// ---- The settings window's pages (roadmap P4; macOS twin: `UserDataClient.swift`) ----
+// ---- The settings window's pages (roadmap P4) ----
 
 /// Why a page's request did nothing. The description is the alert's
 /// diagnostic line, English on purpose (`PageMessage::failure`).
@@ -248,7 +247,7 @@ fn reset(reset: ResetUserData) -> Result<(), UserDataError> {
 /// the engine (which skips the rows already stored and stops at the cap).
 /// A file that cannot be read or holds no usable rows is
 /// `UserDataError::Refused`.
-pub(crate) fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserDataError> {
+pub fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserDataError> {
     let size = std::fs::metadata(path)
         .map_err(|error| unreadable(&error))?
         .len();
@@ -282,7 +281,7 @@ pub(crate) fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, U
 }
 
 /// The whole dictionary as `roman,hanji` CSV bytes.
-pub(crate) fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
+pub fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
     let op = "customDictionaryExportCSV";
     match page_request(
         user_data_request::Method::ExportCustomCsv(ExportCustomCsv {}),
@@ -296,7 +295,7 @@ pub(crate) fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
 /// Every store as `.taigi` backup bytes (`ExportBackup`), naming `platform`
 /// and `app_version` as the writer — what the phones export, so a restore on
 /// any platform types the same.
-pub(crate) fn export_backup(
+pub fn export_backup(
     platform: DesktopPlatform,
     app_version: &str,
 ) -> Result<Vec<u8>, UserDataError> {
@@ -316,7 +315,7 @@ pub(crate) fn export_backup(
 /// Restores the `.taigi` file the user picked, merged with what is stored
 /// (`ImportBackup`). Read whole — no size cap, as on the phones. A file that
 /// cannot be read or is not a backup is `UserDataError::Refused`.
-pub(crate) fn import_backup_file(path: &Path) -> Result<BackupImported, UserDataError> {
+pub fn import_backup_file(path: &Path) -> Result<BackupImported, UserDataError> {
     let backup = std::fs::read(path).map_err(|error| unreadable(&error))?;
     let op = "backupImport";
     match page_request(
@@ -341,6 +340,32 @@ fn backup_refused(refusal: BackupRefusal) -> UserDataError {
     refused(CustomDictionaryRefusal::None as i32, detail.to_owned())
 }
 
+/// One page of learned rows of `kind`: `filter` as a substring of a row's
+/// words or readings, `limit` rows from `offset` (pulled back to the last
+/// page that exists) in `order`.
+pub fn list_learning_records(
+    kind: LearningRecordKind,
+    order: LearningRecordOrder,
+    filter: &str,
+    limit: usize,
+    offset: usize,
+) -> Result<LearningRecords, UserDataError> {
+    let op = "learningRecordsList";
+    match page_request(
+        user_data_request::Method::ListLearningRecords(ListLearningRecords {
+            kind: kind as i32,
+            filter: filter.to_owned(),
+            limit: clamped(limit),
+            offset: clamped(offset),
+            order: order as i32,
+        }),
+        op,
+    )? {
+        user_data_response::Result::LearningRecords(listed) => Ok(listed),
+        _ => Err(other_result(op)),
+    }
+}
+
 /// One page of learned rows of `kind` as the settings windows page them:
 /// `filter` as a substring of a row's words or readings, `page_size` rows
 /// from `page` (zero-based) in `order`.
@@ -351,27 +376,15 @@ pub fn list_learning_page(
     page: usize,
     page_size: usize,
 ) -> Result<LearningRecordPage, UserDataError> {
-    let op = "learningRecordsList";
     let page_size = page_size.max(1);
-    match page_request(
-        user_data_request::Method::ListLearningRecords(ListLearningRecords {
-            kind: kind as i32,
-            filter: filter.to_owned(),
-            limit: clamped(page_size),
-            offset: clamped(page * page_size),
-            order: order as i32,
-        }),
-        op,
-    )? {
-        user_data_response::Result::LearningRecords(listed) => Ok(LearningRecordPage::served(
-            listed.offset,
-            page_size,
-            listed.records,
-            listed.matching_total,
-            listed.total,
-        )),
-        _ => Err(other_result(op)),
-    }
+    let listed = list_learning_records(kind, order, filter, page_size, page * page_size)?;
+    Ok(LearningRecordPage::served(
+        listed.offset,
+        page_size,
+        listed.records,
+        listed.matching_total,
+        listed.total,
+    ))
 }
 
 /// Sets `record`'s count and answers the row as stored now — `None` when
@@ -412,7 +425,7 @@ pub fn delete_learning_record(record: LearningRecord) -> Result<bool, UserDataEr
 /// is then forgotten (a frequency row is refused); a word the dictionary holds
 /// already is not added twice. A refusal (no romanization, no search key, a
 /// full dictionary) is `UserDataError::Refused` and keeps the row.
-pub(crate) fn add_learning_record_to_custom_dictionary(
+pub fn add_learning_record_to_custom_dictionary(
     record: LearningRecord,
     roman: &str,
     hanji: &str,
