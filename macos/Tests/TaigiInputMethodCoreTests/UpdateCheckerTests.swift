@@ -96,6 +96,11 @@ final class UpdateCheckerTests: XCTestCase {
         // synthesized decoder throw before the scheme is ever looked at.
         let mistakes = [
             #""packageURL": "http://example.com/TaigiKeyboard-3.6.6.pkg""#,
+            #""packageURL": "https:///TaigiKeyboard-3.6.6.pkg""#,
+            #""packageURL": "https://""#,
+            #""packageURL": "https://:443/TaigiKeyboard-3.6.6.pkg""#,
+            #""packageURL": "https://user@/TaigiKeyboard-3.6.6.pkg""#,
+            #""packageURL": "https:TaigiKeyboard-3.6.6.pkg""#,
             #""packageURL": 42"#,
             #""packageURL": {"url": "https://example.com/p.pkg"}"#,
             #""packageURL": ["https://example.com/p.pkg"]"#,
@@ -138,6 +143,62 @@ final class UpdateCheckerTests: XCTestCase {
         {"version": "3.6.6-beta", "downloadPageURL": "https://example.com/download"}
         """.utf8)
         XCTAssertThrowsError(try UpdateManifest.decode(unparsable))
+    }
+
+    func testManifestDecode_rejectsHostlessHTTPSDownloadPageURL() {
+        let hostlessURLs = [
+            "https:///download",
+            "https://",
+            "https://:443/download",
+            "https://user@/download",
+            "https:download",
+        ]
+        for url in hostlessURLs {
+            let data = Data("""
+            {"version": "3.6.6", "downloadPageURL": "\(url)"}
+            """.utf8)
+            XCTAssertThrowsError(try UpdateManifest.decode(data), "for \(url)") { error in
+                XCTAssertEqual(error as? UpdateManifest.ManifestError, .malformed, "for \(url)")
+            }
+        }
+    }
+
+    func testUpdateHTTP_isHTTPSAndIsAcceptable() throws {
+        let accepted = [
+            "https://taigikeyboard.tw/appcast/macos.json",
+            "HTTPS://EXAMPLE.COM/pkg",
+            "https://[::1]/pkg",
+        ]
+        for raw in accepted {
+            let url = try XCTUnwrap(URL(string: raw), raw)
+            XCTAssertTrue(UpdateHTTP.isHTTPS(url), raw)
+        }
+
+        let rejected = [
+            "http://example.com/pkg",
+            "https:///path",
+            "https://",
+            "https://:443/path",
+            "https://user@/path",
+            "https:path",
+        ]
+        for raw in rejected {
+            let url = try XCTUnwrap(URL(string: raw), raw)
+            XCTAssertFalse(UpdateHTTP.isHTTPS(url), raw)
+        }
+
+        func response(_ urlString: String, statusCode: Int) throws -> HTTPURLResponse {
+            let url = try XCTUnwrap(URL(string: urlString), urlString)
+            return try XCTUnwrap(
+                HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil),
+            )
+        }
+
+        XCTAssertTrue(try UpdateHTTP.isAcceptable(response("https://example.com/pkg", statusCode: 200)))
+        XCTAssertFalse(try UpdateHTTP.isAcceptable(response("https:///pkg", statusCode: 200)))
+        XCTAssertFalse(try UpdateHTTP.isAcceptable(response("https://:443/pkg", statusCode: 200)))
+        XCTAssertFalse(try UpdateHTTP.isAcceptable(response("http://example.com/pkg", statusCode: 200)))
+        XCTAssertFalse(try UpdateHTTP.isAcceptable(response("https://example.com/pkg", statusCode: 404)))
     }
 
     // MARK: - Checker guards

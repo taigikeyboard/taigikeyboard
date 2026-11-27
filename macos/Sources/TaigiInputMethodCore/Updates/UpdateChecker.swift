@@ -49,7 +49,7 @@ struct UpdateManifest: Equatable {
     static func decode(_ data: Data) throws -> UpdateManifest {
         guard let wire = try? JSONDecoder().decode(Wire.self, from: data),
               DottedVersion(wire.version) != nil,
-              wire.downloadPageURL.scheme?.lowercased() == "https"
+              UpdateHTTP.isHTTPS(wire.downloadPageURL)
         else {
             throw ManifestError.malformed
         }
@@ -117,7 +117,7 @@ private extension UpdateManifest.Wire {
         version = try container.decode(String.self, forKey: .version)
         downloadPageURL = try container.decode(URL.self, forKey: .downloadPageURL)
         let package = try? container.decodeIfPresent(URL.self, forKey: .packageURL)
-        packageURL = package?.scheme?.lowercased() == "https" ? package : nil
+        packageURL = package.flatMap { UpdateHTTP.isHTTPS($0) ? $0 : nil }
     }
 }
 

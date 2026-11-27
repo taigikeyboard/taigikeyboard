@@ -157,14 +157,30 @@ enum UpdatePackageVerifier {
         }
 
         let declared = try declaredBundle(of: package)
-        guard declared.bundleIdentifier == expected.bundleIdentifier,
-              declared.shortVersion == expected.shortVersion
-        else {
+        guard matchesDeclaredBundle(declared, expected: expected) else {
             throw Rejection.wrongPackage(
                 bundleIdentifier: declared.bundleIdentifier,
                 shortVersion: declared.shortVersion,
             )
         }
+    }
+
+    /// Whether `declared` matches `expected`'s bundle identifier and version.
+    ///
+    /// Versions are compared as `DottedVersion` (`3.6.5` == `3.6.5.0`,
+    /// unparsable versions never match), matching `UpdateChecker` and
+    /// `windows/crates/taigi-windows-update/src/verify.rs`.
+    static func matchesDeclaredBundle(
+        _ declared: DeclaredBundle,
+        expected: UpdatePackageIdentity,
+    ) -> Bool {
+        guard declared.bundleIdentifier == expected.bundleIdentifier,
+              let declaredVersion = DottedVersion(declared.shortVersion),
+              let expectedVersion = DottedVersion(expected.shortVersion)
+        else {
+            return false
+        }
+        return declaredVersion == expectedVersion
     }
 
     // MARK: - The signing certificate

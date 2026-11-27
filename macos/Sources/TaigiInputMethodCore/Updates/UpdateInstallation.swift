@@ -2,6 +2,7 @@
 
 import AppKit
 import Foundation
+import os
 
 /// The in-app half of updating: fetches the package the manifest names, proves
 /// it is this project's own, and hands it to Installer.app.
@@ -256,11 +257,9 @@ final class UpdateInstallation {
 enum UpdatePackageDownload {
     /// Largest package this will keep. The 3.6.5 release is 47 MB, so this is
     /// generous room for growth and still far under "a hostile server filled
-    /// the disk". It is checked after the transfer rather than during: the CDN
-    /// serving our releases sends no `Content-Length` (measured), so there is no
-    /// declared size to refuse up front, and `URLSession` reports no progress
-    /// for a task driven by the async API — which is also why the pane shows an
-    /// indeterminate spinner rather than a percentage.
+    /// the disk". Enforced chunk-by-chunk while streaming (matching the 200 MiB
+    /// streaming cap in `desktop/crates/taigi-desktop-update/src/transport.rs`),
+    /// and also upfront when the server declares `Content-Length`.
     static let maximumPackageBytes: Int64 = 200 * 1024 * 1024
 
     /// `~/Library/Caches/<bundle id>/Updates`.
@@ -300,7 +299,7 @@ enum UpdatePackageDownload {
         try? FileManager.default.removeItem(at: directory)
     }
 
-    enum Failure: LocalizedError {
+    enum Failure: LocalizedError, Equatable {
         /// The server answered, but not with a package we asked for.
         case rejected
         /// More bytes arrived than `maximumPackageBytes` allows.
@@ -319,24 +318,47 @@ enum UpdatePackageDownload {
     /// A long resource timeout, because tens of megabytes on a slow line is
     /// normal rather than a hang.
     static func run(from url: URL, to destination: URL) async throws {
-        let session = UpdateHTTP.session(requestTimeout: 30, resourceTimeout: 20 * 60)
-        defer { session.finishTasksAndInvalidate() }
+        try await download(
+            from: url,
+            to: destination,
+            maximumBytes: maximumPackageBytes,
+            configuration: UpdateHTTP.configuration(requestTimeout: 30, resourceTimeout: 20 * 60),
+        )
+    }
 
-        let (temporary, response) = try await session.download(from: url)
-        guard UpdateHTTP.isAcceptable(response) else {
-            try? FileManager.default.removeItem(at: temporary)
-            throw Failure.rejected
+    /// Streams `url` into `destination`, cancelling immediately if the declared
+    /// length or received byte count exceeds `maximumBytes`.
+    static func download(
+        from url: URL,
+        to destination: URL,
+        maximumBytes: Int64,
+        configuration: URLSessionConfiguration,
+    ) async throws {
+        precondition(maximumBytes >= 0, "maximumBytes must be non-negative")
+        let queue = OperationQueue()
+        queue.name = "TaigiKeyboard.UpdatePackageDownload"
+        queue.maxConcurrentOperationCount = 1
+
+        let delegate = BoundedDownloadDelegate(destination: destination, maximumBytes: maximumBytes)
+        let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: queue)
+        // `URLSession` holds a strong reference to its delegate until invalidated;
+        // invalidating here releases both once the awaited transfer settles.
+        defer { session.invalidateAndCancel() }
+
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                delegate.start(url: url, in: session, continuation: continuation)
+            }
+        } onCancel: {
+            delegate.cancel()
         }
-        // Moved before anything else looks at it: `URLSession` owns that
-        // temporary file only until this returns.
-        try FileManager.default.moveItem(at: temporary, to: destination)
 
-        let size = try FileManager.default.attributesOfItem(atPath: destination.path)[.size] as? Int64
-        guard let size, size <= maximumPackageBytes else {
+        do {
+            try markAsDownloaded(destination)
+        } catch {
             try? FileManager.default.removeItem(at: destination)
-            throw Failure.tooLarge
+            throw error
         }
-        try markAsDownloaded(destination)
     }
 
     /// Records that the package came from the internet.
@@ -355,5 +377,233 @@ enum UpdatePackageDownload {
             kLSQuarantineAgentNameKey as String: "TaigiKeyboard",
         ]
         try package.setResourceValues(values)
+    }
+}
+
+/// Streams a `URLSessionDataTask` straight into `destination` while enforcing
+/// an upper byte limit on both the response header and every incoming chunk.
+///
+/// File descriptor and filesystem operations stay on the serial delegate
+/// `OperationQueue`; `cancel()` only sets a flag and cancels the task so
+/// cancellation never races with `FileHandle` writes.
+private final class BoundedDownloadDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    private struct State {
+        var continuation: CheckedContinuation<Void, Error>?
+        var task: URLSessionDataTask?
+        var cancelled = false
+        var acceptedResponse = false
+        var fileHandle: FileHandle?
+        var bytesWritten: Int64 = 0
+        var failure: Error?
+        var completed = false
+    }
+
+    private let destination: URL
+    private let maximumBytes: Int64
+    private let lock = OSAllocatedUnfairLock(initialState: State())
+
+    init(destination: URL, maximumBytes: Int64) {
+        self.destination = destination
+        self.maximumBytes = maximumBytes
+    }
+
+    func start(
+        url: URL,
+        in session: URLSession,
+        continuation: CheckedContinuation<Void, Error>,
+    ) {
+        let task = lock.withLockUnchecked { state -> URLSessionDataTask? in
+            if state.cancelled {
+                state.completed = true
+                return nil
+            }
+            let created = session.dataTask(with: url)
+            state.continuation = continuation
+            state.task = created
+            return created
+        }
+        guard let task else {
+            continuation.resume(throwing: CancellationError())
+            return
+        }
+        task.resume()
+    }
+
+    func cancel() {
+        let task = lock.withLockUnchecked { state -> URLSessionDataTask? in
+            state.cancelled = true
+            return state.task
+        }
+        task?.cancel()
+    }
+
+    func urlSession(
+        _: URLSession,
+        dataTask _: URLSessionDataTask,
+        didReceive response: URLResponse,
+        completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void,
+    ) {
+        let earlyAbort = lock.withLockUnchecked { state -> Bool in
+            if state.cancelled || state.completed || state.failure != nil {
+                return true
+            }
+            if state.acceptedResponse {
+                state.failure = UpdatePackageDownload.Failure.rejected
+                return true
+            }
+            return false
+        }
+        if earlyAbort {
+            completionHandler(.cancel)
+            return
+        }
+
+        guard UpdateHTTP.isAcceptable(response) else {
+            recordFailureAndCancel(UpdatePackageDownload.Failure.rejected, completionHandler: completionHandler)
+            return
+        }
+        if response.expectedContentLength > maximumBytes {
+            recordFailureAndCancel(UpdatePackageDownload.Failure.tooLarge, completionHandler: completionHandler)
+            return
+        }
+
+        let fd = destination.withUnsafeFileSystemRepresentation { path -> Int32 in
+            guard let path else {
+                errno = EINVAL
+                return -1
+            }
+            return Darwin.open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
+        }
+        guard fd >= 0 else {
+            let openError = POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+            recordFailureAndCancel(openError, completionHandler: completionHandler)
+            return
+        }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+
+        let racedWithCancel = lock.withLockUnchecked { state -> Bool in
+            guard !state.cancelled, !state.completed, state.failure == nil else {
+                return true
+            }
+            state.acceptedResponse = true
+            state.fileHandle = handle
+            return false
+        }
+        if racedWithCancel {
+            try? handle.close()
+            try? FileManager.default.removeItem(at: destination)
+            completionHandler(.cancel)
+            return
+        }
+        completionHandler(.allow)
+    }
+
+    func urlSession(_: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard !data.isEmpty else { return }
+        let chunkLength = Int64(data.count)
+        enum ChunkDecision {
+            case ignore
+            case write(FileHandle)
+            case exceedCap(FileHandle?)
+        }
+
+        let decision = lock.withLockUnchecked { state -> ChunkDecision in
+            guard state.acceptedResponse, !state.cancelled, !state.completed, state.failure == nil,
+                  let handle = state.fileHandle
+            else {
+                return .ignore
+            }
+            guard chunkLength <= maximumBytes - state.bytesWritten else {
+                state.failure = UpdatePackageDownload.Failure.tooLarge
+                state.fileHandle = nil
+                return .exceedCap(handle)
+            }
+            state.bytesWritten += chunkLength
+            return .write(handle)
+        }
+
+        switch decision {
+        case .ignore:
+            return
+        case let .exceedCap(handle):
+            try? handle?.close()
+            try? FileManager.default.removeItem(at: destination)
+            dataTask.cancel()
+        case let .write(handle):
+            do {
+                try handle.write(contentsOf: data)
+            } catch {
+                let handleToClose = lock.withLockUnchecked { state -> FileHandle? in
+                    if state.failure == nil {
+                        state.failure = error
+                    }
+                    let current = state.fileHandle
+                    state.fileHandle = nil
+                    return current
+                }
+                try? handleToClose?.close()
+                try? FileManager.default.removeItem(at: destination)
+                dataTask.cancel()
+            }
+        }
+    }
+
+    func urlSession(_: URLSession, task _: URLSessionTask, didCompleteWithError error: Error?) {
+        let finished = lock.withLockUnchecked { state -> (
+            continuation: CheckedContinuation<Void, Error>,
+            handle: FileHandle?,
+            failure: Error?,
+            cancelled: Bool,
+            acceptedResponse: Bool,
+        )? in
+            guard !state.completed, let continuation = state.continuation else { return nil }
+            state.completed = true
+            state.continuation = nil
+            let handle = state.fileHandle
+            state.fileHandle = nil
+            return (continuation, handle, state.failure, state.cancelled, state.acceptedResponse)
+        }
+        guard let finished else { return }
+
+        if let failure = finished.failure {
+            cleanup(finished.handle, removeDestination: finished.acceptedResponse)
+            finished.continuation.resume(throwing: failure)
+        } else if finished.cancelled {
+            cleanup(finished.handle, removeDestination: finished.acceptedResponse)
+            finished.continuation.resume(throwing: CancellationError())
+        } else if let error {
+            cleanup(finished.handle, removeDestination: finished.acceptedResponse)
+            finished.continuation.resume(throwing: error)
+        } else if !finished.acceptedResponse {
+            cleanup(finished.handle, removeDestination: false)
+            finished.continuation.resume(throwing: UpdatePackageDownload.Failure.rejected)
+        } else {
+            do {
+                try finished.handle?.close()
+                finished.continuation.resume()
+            } catch {
+                try? FileManager.default.removeItem(at: destination)
+                finished.continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    private func recordFailureAndCancel(
+        _ error: Error,
+        completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void,
+    ) {
+        lock.withLockUnchecked { state in
+            if state.failure == nil {
+                state.failure = error
+            }
+        }
+        completionHandler(.cancel)
+    }
+
+    private func cleanup(_ handle: FileHandle?, removeDestination: Bool) {
+        try? handle?.close()
+        if removeDestination {
+            try? FileManager.default.removeItem(at: destination)
+        }
     }
 }
