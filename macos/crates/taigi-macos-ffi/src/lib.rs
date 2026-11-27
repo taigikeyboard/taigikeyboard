@@ -1,27 +1,22 @@
 //! The one static library the macOS input method links
 //! (docs/architecture/macos-desktop-core-roadmap.md D1, D2).
 //!
-//! Two swift-bridge seams in one archive: the engine's, unchanged, from
-//! `engine/swift-ffi` (`process_request_bytes` and the logger calls), and the
-//! desktop shell's, `desktop_request_bytes`, defined here. Both are bytes in,
-//! bytes out — protobuf envelopes, no handle crosses, no `unsafe` here
-//! (docs/contributing/rust-ffi-safety.md §1.1). The shell's requests reach
-//! the `taigi-desktop-core` runtime (`runtime.rs`), the composing session
+//! Single swift-bridge seam (`desktop_request_bytes`, `install_logger_sink`,
+//! `set_log_level`, `panic_for_test`): bytes in, bytes out — protobuf envelopes,
+//! no handle crosses, `unsafe` is confined to `logger.rs`'s `SinkCell`
+//! (`docs/contributing/rust-ffi-safety.md` §1.1, §3). The shell's requests
+//! reach the `taigi-desktop-core` runtime (`runtime.rs`), the composing session
 //! (`session.rs`, with `key_translation.rs`), the key rules (`key_rules.rs`),
 //! the Manage Dictionaries search (`dictionary_search.rs`), UserData ops and
-//! rules (`user_data.rs`), and the key-path settings snapshot each request
-//! may carry (`settings.rs`).
-
-// Links the engine seam into this archive. Nothing here calls into it; without
-// the `extern crate` rustc would not link an rlib this crate never names, and
-// the archive would lack the engine's exports.
-extern crate rust_taigi;
+//! rules (`user_data.rs`), and the key-path settings snapshot each request may
+//! carry (`settings.rs`).
 
 #[cfg(test)]
 mod chord_rules;
 mod dictionary_search;
 mod key_rules;
 mod key_translation;
+mod logger;
 mod runtime;
 mod session;
 mod settings;
@@ -33,7 +28,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::LazyLock;
 
 use prost::Message;
-use protos::engine::ErrorCode;
 
 /// prost types for `proto/desktop_shell.proto` (package `taigi.desktop_shell`).
 #[allow(clippy::all, clippy::pedantic)]
@@ -41,7 +35,7 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/taigi.desktop_shell.rs"));
 }
 
-use proto::{DesktopRequest, DesktopResponse};
+use proto::{DesktopRequest, DesktopResponse, ErrorCode};
 use runtime::Shell;
 
 /// The one shell the bridge serves (the runtime is a process singleton,
@@ -54,15 +48,51 @@ static SHELL: LazyLock<Shell> = LazyLock::new(Shell::default);
 // `desktop_request_bytes`: decodes a `taigi.desktop_shell.DesktopRequest`,
 // answers with an encoded `taigi.desktop_shell.DesktopResponse`. Always a
 // decodable response — never panics across the seam.
+//
+// `install_logger_sink` / `set_log_level`: Swift-side `log::Log` registration
+// and runtime max-level control (`logger.rs`).
+//
+// `panic_for_test`: T1 panic injector. Always present in the API surface
+// because swift-bridge does not support `#[cfg(feature = "...")]` on bridge
+// items; without `panic-injector` it returns `FAIL_INVARIANT`.
 #[swift_bridge::bridge]
 mod ffi {
     extern "Rust" {
         fn desktop_request_bytes(bytes: &[u8]) -> Vec<u8>;
+        fn install_logger_sink(sink: SwiftLoggerSink);
+        fn set_log_level(level: u8);
+        fn panic_for_test() -> Vec<u8>;
+    }
+
+    extern "Swift" {
+        type SwiftLoggerSink;
+        fn log(&self, level: u8, category: String, message: String);
     }
 }
 
 fn desktop_request_bytes(bytes: &[u8]) -> Vec<u8> {
     answer(|| respond(&SHELL, bytes))
+}
+
+fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
+    logger::install(sink);
+}
+
+fn set_log_level(level: u8) {
+    logger::set_level(level);
+}
+
+fn panic_for_test() -> Vec<u8> {
+    answer(|| {
+        #[cfg(feature = "panic-injector")]
+        {
+            panic!("intentional T1 panic at taigi-macos-ffi boundary");
+        }
+        #[cfg(not(feature = "panic-injector"))]
+        {
+            error_response(ErrorCode::FailInvariant)
+        }
+    })
 }
 
 /// The seam's panic boundary (rust-ffi-safety.md §1.2): a panic in `respond`
@@ -293,6 +323,24 @@ mod tests {
     #[test]
     fn panic_answers_fail_internal() {
         let response = decode(&answer(|| panic!("injected panic")));
+
+        assert_eq!(response.error, ErrorCode::FailInternal as i32);
+        assert_eq!(response.reply, None);
+    }
+
+    #[cfg(not(feature = "panic-injector"))]
+    #[test]
+    fn panic_for_test_returns_fail_invariant_without_feature() {
+        let response = decode(&panic_for_test());
+
+        assert_eq!(response.error, ErrorCode::FailInvariant as i32);
+        assert_eq!(response.reply, None);
+    }
+
+    #[cfg(feature = "panic-injector")]
+    #[test]
+    fn panic_for_test_returns_fail_internal_with_feature() {
+        let response = decode(&panic_for_test());
 
         assert_eq!(response.error, ErrorCode::FailInternal as i32);
         assert_eq!(response.reply, None);

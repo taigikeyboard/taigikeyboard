@@ -3,13 +3,19 @@ syntax = "proto3";
 // The macOS desktop-shell seam: what Swift sends through
 // `desktop_request_bytes` (macos/crates/taigi-macos-ffi/src/lib.rs) and what
 // it gets back. Design: docs/architecture/macos-desktop-core-roadmap.md D2 / D3.
-// One request in, one response out; the engine's own requests keep going
-// through `process_request_bytes` and `taigi.engine.Request`.
+// One request in, one response out.
 package taigi.desktop_shell;
 
-// For `taigi.engine.ErrorCode` — one error vocabulary for both seams
-// (docs/contributing/rust-ffi-safety.md §1.5).
-import "envelope.proto";
+// Same error vocabulary and wire values as `engine/protos/proto/envelope.proto`
+// (docs/contributing/rust-ffi-safety.md §1.5), owned locally so the macOS
+// desktop-shell seam has no proto dependency on the engine's FFI envelope.
+enum ErrorCode {
+  OK = 0;
+  FAIL_PARSE = 1;
+  FAIL_INTERNAL = 2;
+  FAIL_IO = 3;
+  FAIL_INVARIANT = 4;
+}
 
 message DesktopRequest {
   // The whole-snapshot settings request of P6, now `settings` below.
@@ -134,7 +140,7 @@ message DesktopResponse {
   reserved 4;
 
   // OK, or why there is no reply.
-  taigi.engine.ErrorCode error = 1;
+  ErrorCode error = 1;
   oneof reply {
     VersionReply version = 2;
     ConfigureReply configure = 3;

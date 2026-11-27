@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             exit(0)
         }
 
-        RustEngineBridge.installLoggerSink()
+        DesktopCoreBridge.installLoggerSink()
         // A bundle assembled without its fonts shows only as a picker whose
         // every option draws alike, so it is worth one line at launch. About the
         // BUNDLED roster only — a user's own typeface that fails to activate is

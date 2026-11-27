@@ -1,16 +1,13 @@
 // Proves the desktop shell seam links and round-trips from Swift.
 
 import Foundation
+import RustTaigiSwift
 import SwiftProtobuf
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// `desktop_request_bytes` lives in the same static archive as the engine's
-/// `process_request_bytes` (docs/architecture/macos-desktop-core-roadmap.md D1).
-/// These cases push bytes through it and back: the generated
-/// `RustTaigiDesktop.swift` wrapper, the shared `RustTaigi` C module, and the
-/// prost decoder in `macos/crates/taigi-macos-ffi`. `EngineFfiSmokeTests` does
-/// the same for the engine's seam in the same process.
+/// Smoke tests for `macos/crates/taigi-macos-ffi` over the `RustTaigi` C module:
+/// `desktop_request_bytes`, `install_logger_sink`, and `set_log_level`.
 final class DesktopCoreFfiSmokeTests: XCTestCase {
     func testVersionRequest_answersTheLibraryVersion() throws {
         var request = Taigi_DesktopShell_DesktopRequest()
@@ -36,5 +33,76 @@ final class DesktopCoreFfiSmokeTests: XCTestCase {
         let response = try Taigi_DesktopShell_DesktopResponse(serializedBytes: Data(responseBytes))
 
         XCTAssertEqual(response.error, .failParse)
+    }
+
+    private final class LogCapture: @unchecked Sendable {
+        private let lock = NSLock()
+        private var entries: [(UInt8, String, String)] = []
+
+        func append(_ entry: (UInt8, String, String)) {
+            lock.lock()
+            entries.append(entry)
+            lock.unlock()
+        }
+
+        func snapshot() -> [(UInt8, String, String)] {
+            lock.lock()
+            defer { lock.unlock() }
+            return entries
+        }
+    }
+
+    private static func restoreDefaultLoggerSink() {
+        install_logger_sink(SwiftLoggerSink(handleRecord: DesktopCoreBridge.forwardEngineRecord))
+        set_log_level(DesktopCoreBridge.defaultLogFilter)
+    }
+
+    func testInstallLoggerSink_isIdempotent() {
+        DesktopCoreBridge.installLoggerSink()
+
+        let capture = LogCapture()
+        install_logger_sink(SwiftLoggerSink { level, category, message in
+            capture.append((level, category, message))
+        })
+        defer { Self.restoreDefaultLoggerSink() }
+
+        set_log_level(0)
+        // A second `installLoggerSink()` must be a no-op rather than
+        // replacing the already-installed sink or resetting the log filter.
+        DesktopCoreBridge.installLoggerSink()
+        set_log_level(3)
+
+        let records = capture.snapshot()
+        XCTAssertTrue(
+            records.contains { $0.0 == 2 && $0.2.contains("Info") },
+            "second installLoggerSink() unexpectedly replaced active sink, got \(records)",
+        )
+    }
+
+    /// Negative/round-trip control (rust-ffi-safety.md §6 T6): Rust `log::info!`
+    /// emitted by `set_log_level(3)` crosses the swift-bridge `SwiftLoggerSink`.
+    func testLoggerSink_receivesRustLogRecords() {
+        let capture = LogCapture()
+        install_logger_sink(SwiftLoggerSink { level, category, message in
+            capture.append((level, category, message))
+        })
+        defer { Self.restoreDefaultLoggerSink() }
+
+        set_log_level(3)
+        let records = capture.snapshot()
+        XCTAssertTrue(
+            records.contains { $0.0 == 2 && $0.2.contains("Info") },
+            "expected Rust info log record from set_log_level(3), got \(records)",
+        )
+    }
+
+    /// Negative control (rust-ffi-safety.md §6 T1): without `panic-injector`,
+    /// `panic_for_test` answers `FAIL_INVARIANT` with no reply and never panics.
+    func testPanicForTest_returnsFailInvariantInReleaseArchive() throws {
+        let responseBytes = panic_for_test().toArray()
+        let response = try Taigi_DesktopShell_DesktopResponse(serializedBytes: Data(responseBytes))
+
+        XCTAssertEqual(response.error, .failInvariant)
+        XCTAssertNil(response.reply)
     }
 }

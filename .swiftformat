@@ -12,7 +12,6 @@
 --exclude ios/Sources/TaigiKeyboard/Engine/Generated
 --exclude ios/Sources/TaigiKeyboard/Strings/Generated
 --exclude ios/RustEngine
---exclude macos/Sources/TaigiInputMethodCore/Engine/Generated
 --exclude macos/Sources/TaigiInputMethodCore/DesktopCore/Generated
 --exclude macos/Sources/TaigiInputMethodCore/Strings/Generated
 --exclude macos/RustEngine
