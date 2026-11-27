@@ -4,10 +4,10 @@ import Foundation
 import RustTaigiSwift
 import SwiftProtobuf
 
-/// Thin wrapper around the single bytes-in / bytes-out FFI function the Rust
-/// shared core exports. Named after the iOS `RustEngineBridge` because it plays
-/// the same role. One typed slice is left, user data (`+UserData`):
-/// desktop-core drives composing, next-word and the lexicon.
+/// Thin wrapper around the engine FFI's logger installation and raw
+/// `process_request_bytes` seam (used by `EngineFfiSmokeTests`). All
+/// composing, next-word, lexicon, and user-data requests route through
+/// `taigi-desktop-core` (`DesktopCoreBridge`).
 enum RustEngineBridge {
     /// Severity of a record arriving FROM Rust. Mirrors the iOS constants in
     /// `ios/Sources/TaigiKeyboard/Engine/SwiftLoggerSink.swift`.

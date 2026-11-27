@@ -20,11 +20,13 @@ import UniformTypeIdentifiers
 @MainActor
 @Observable
 final class LearningRecordsPageModel {
-    /// The largest count the sheet offers. CROSS-PLATFORM INVARIANT — the
-    /// engine clamps a set count to the same (`SetLearningRecordCount`).
-    nonisolated static let maxCount = 1_000_000
+    /// The largest count the sheet offers, from `desktop-core`
+    /// (`settings::learning_records::MAX_COUNT`).
+    nonisolated static var maxCount: Int {
+        UserDataRules.learningRecordMaxCount
+    }
 
-    private(set) var list = UserDataPagedList<Taigi_Engine_LearningRecord>()
+    private(set) var list = UserDataPagedList<Taigi_DesktopShell_LearningRecord>()
     private(set) var activity: UserDataPageActivity = .idle
     /// Word frequency or learned phrases. No next-word association: the
     /// desktop predicts no next word, so those rows rank nothing here.
@@ -35,7 +37,7 @@ final class LearningRecordsPageModel {
     /// does: row ids are per store, so the same id in the other store is a
     /// different word. Kind and order start from, and are kept in, the
     /// settings store, so the page reopens on the last pick (#773).
-    var kind: Taigi_Engine_LearningRecordKind {
+    var kind: Taigi_DesktopShell_LearningRecordKind {
         didSet {
             if oldValue != kind {
                 list.invalidate()
@@ -45,7 +47,7 @@ final class LearningRecordsPageModel {
         }
     }
 
-    var order: Taigi_Engine_LearningRecordOrder {
+    var order: Taigi_DesktopShell_LearningRecordOrder {
         didSet {
             if oldValue != order {
                 list.invalidate()
@@ -67,7 +69,7 @@ final class LearningRecordsPageModel {
 
     /// The table's selection, held by the list so a load drops it once its
     /// row is off screen (`UserDataPagedList.selectedID`).
-    var selectedRowID: Taigi_Engine_LearningRecord.ID? {
+    var selectedRowID: Taigi_DesktopShell_LearningRecord.ID? {
         get { list.selectedID }
         set { list.selectedID = newValue }
     }
@@ -128,13 +130,13 @@ final class LearningRecordsPageModel {
         await load()
     }
 
-    func setCount(of record: Taigi_Engine_LearningRecord, to count: Int) async {
+    func setCount(of record: Taigi_DesktopShell_LearningRecord, to count: Int) async {
         await perform { try $0.setLearningRecordCount(record, count: count) }
     }
 
     /// Forgets `record`; the keyboard learns it again on the next pick.
     /// No confirmation, as deleting one custom word has none.
-    func delete(_ record: Taigi_Engine_LearningRecord) async {
+    func delete(_ record: Taigi_DesktopShell_LearningRecord) async {
         await perform { try $0.deleteLearningRecord(record) }
     }
 
@@ -142,7 +144,7 @@ final class LearningRecordsPageModel {
     /// what the user left in the Add Word sheet the action opens; the engine
     /// then forgets the learned phrase (a frequency row is refused). The receipt
     /// is always said — added or already stored — as desktop-core's job does.
-    func addToCustomDictionary(_ record: Taigi_Engine_LearningRecord, roman: String, hanji: String) async {
+    func addToCustomDictionary(_ record: Taigi_DesktopShell_LearningRecord, roman: String, hanji: String) async {
         await perform(receipt: .done(.dictionaryLearningRecordsAddedToCustomDictionary)) {
             try $0.addLearningRecordToCustomDictionary(record, roman: roman, hanji: hanji)
             return true
@@ -170,7 +172,7 @@ final class LearningRecordsPageModel {
             let backup = try await UserDataRequests.run(on: client) { try $0.exportBackup() }
             try await panels.write(
                 backup,
-                suggestedName: UserDataFilePanels.exportFileName(prefix: "taigi_backup", extension: "taigi"),
+                suggestedName: UserDataFilePanels.exportFileName(kind: .backup),
                 contentTypes: [UserDataFilePanels.backupContentType],
                 in: window,
             )
@@ -245,15 +247,15 @@ final class LearningRecordsPageModel {
     /// never: the engine offers no frequency row, so a button that could never
     /// turn on is left out. Each row's `canAddToCustomDictionary` still
     /// decides whether it is enabled for the selection.
-    nonisolated static func offersAddToCustomDictionary(for kind: Taigi_Engine_LearningRecordKind) -> Bool {
-        kind == .learnedPhrase
+    nonisolated static func offersAddToCustomDictionary(for kind: Taigi_DesktopShell_LearningRecordKind) -> Bool {
+        UserDataRules.offersAddToCustomDictionary(for: kind)
     }
 
     /// The note under the count field. Word frequency's ranking boost stops
     /// growing at count 40 (`engine/ranking/src/score.rs` `MAX_BOOST`); the
     /// other kinds make no such promise, so they say nothing.
-    nonisolated static func countNoteKey(for kind: Taigi_Engine_LearningRecordKind) -> StringKey? {
-        kind == .frequency ? .dictionaryLearningRecordsCountCapInfo : nil
+    nonisolated static func countNoteKey(for kind: Taigi_DesktopShell_LearningRecordKind) -> StringKey? {
+        UserDataRules.countNoteKey(for: kind)
     }
 
     /// The day a row was last used, `yyyy-MM-dd` in `timeZone` — the same
@@ -270,9 +272,9 @@ struct LearningRecordsPage: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     @State private var model: LearningRecordsPageModel
-    @State private var editing: Taigi_Engine_LearningRecord?
+    @State private var editing: Taigi_DesktopShell_LearningRecord?
     /// The row whose word the Add Word sheet is filing.
-    @State private var adding: Taigi_Engine_LearningRecord?
+    @State private var adding: Taigi_DesktopShell_LearningRecord?
 
     init(client: any UserDataClient) {
         _model = State(initialValue: LearningRecordsPageModel(client: client, settings: SettingsStore()))
@@ -282,16 +284,18 @@ struct LearningRecordsPage: View {
         Form {
             Section {
                 Picker(language.string(.dictionaryLearningRecords), selection: $model.kind) {
-                    Text(language.string(.dictionaryLearningRecordsFrequency))
-                        .tag(Taigi_Engine_LearningRecordKind.frequency)
-                    Text(language.string(.dictionaryLearningRecordsPhrases))
-                        .tag(Taigi_Engine_LearningRecordKind.learnedPhrase)
+                    ForEach(UserDataRules.learningRecordKinds, id: \.kind) { rule in
+                        if let key = StringKey(rawValue: rule.labelKey) {
+                            Text(language.string(key)).tag(rule.kind)
+                        }
+                    }
                 }
                 Picker(language.string(.dictionaryLearningRecordsOrder), selection: $model.order) {
-                    Text(language.string(.dictionaryLearningRecordsOrderMostUsed))
-                        .tag(Taigi_Engine_LearningRecordOrder.mostUsed)
-                    Text(language.string(.dictionaryLearningRecordsOrderMostRecent))
-                        .tag(Taigi_Engine_LearningRecordOrder.mostRecent)
+                    ForEach(UserDataRules.learningRecordOrders, id: \.order) { rule in
+                        if let key = StringKey(rawValue: rule.labelKey) {
+                            Text(language.string(key)).tag(rule.order)
+                        }
+                    }
                 }
             }
 
@@ -394,7 +398,7 @@ struct LearningRecordsPage: View {
                 emptyState
             }
         }
-        .contextMenu(forSelectionType: Taigi_Engine_LearningRecord.ID.self) { ids in
+        .contextMenu(forSelectionType: Taigi_DesktopShell_LearningRecord.ID.self) { ids in
             if let record = record(for: ids.first) {
                 Button(language.string(.dictionaryLearningRecordsEditCount)) { editing = record }
                 if record.canAddToCustomDictionary {
@@ -460,7 +464,7 @@ struct LearningRecordsPage: View {
         )
     }
 
-    private func record(for id: Taigi_Engine_LearningRecord.ID?) -> Taigi_Engine_LearningRecord? {
+    private func record(for id: Taigi_DesktopShell_LearningRecord.ID?) -> Taigi_DesktopShell_LearningRecord? {
         model.list.rows.first { $0.id == id }
     }
 }
@@ -484,11 +488,13 @@ struct LearningRecordCountSheet: View {
     @State private var tab = Tab.count
     @State private var roman: String
     @State private var hanji: String
-    private let record: Taigi_Engine_LearningRecord
+    private let record: Taigi_DesktopShell_LearningRecord
     private let onSave: (Int) -> Void
     private let onAdd: (String, String) -> Void
 
-    private static let countRange = 1 ... LearningRecordsPageModel.maxCount
+    private static var countRange: ClosedRange<Int> {
+        1 ... LearningRecordsPageModel.maxCount
+    }
 
     private enum Tab: Hashable {
         case count
@@ -501,7 +507,7 @@ struct LearningRecordCountSheet: View {
     }
 
     init(
-        record: Taigi_Engine_LearningRecord,
+        record: Taigi_DesktopShell_LearningRecord,
         onSave: @escaping (Int) -> Void,
         onAdd: @escaping (String, String) -> Void,
     ) {

@@ -71,10 +71,14 @@ enum UserDataFilePanels {
         return url
     }
 
-    /// `taigi_frequency_2026-08-17.csv` and friends. POSIX-fixed so the date
-    /// in the name is the same shape whatever calendar the user runs.
-    static func exportFileName(prefix: String, extension fileExtension: String) -> String {
-        "\(prefix)_\(dateFormatter.string(from: Date())).\(fileExtension)"
+    /// `taigi_custom_dictionary_2026-08-17.csv` and `taigi_backup_2026-08-17.taigi`,
+    /// formatted by `desktop-core`. POSIX-fixed so the date in the name is the same
+    /// shape whatever calendar the user runs.
+    static func exportFileName(
+        kind: Taigi_DesktopShell_UserDataExportKind,
+        date: Date = Date(),
+    ) -> String {
+        UserDataRules.exportFileName(kind: kind, localDate: dateFormatter.string(from: date)) ?? ""
     }
 
     /// The `.taigi` backup, as `Info.plist` exports it (the same identifier

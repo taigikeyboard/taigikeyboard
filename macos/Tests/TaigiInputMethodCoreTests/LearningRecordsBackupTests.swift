@@ -26,8 +26,8 @@ final class LearningRecordsBackupTests: XCTestCase {
     }
 
     /// A frequency record, as the page opens on word frequency.
-    private func record(id: Int64) -> Taigi_Engine_LearningRecord {
-        var record = Taigi_Engine_LearningRecord()
+    private func record(id: Int64) -> Taigi_DesktopShell_LearningRecord {
+        var record = Taigi_DesktopShell_LearningRecord()
         record.kind = .frequency
         record.id = id
         record.text = "字\(id)"
