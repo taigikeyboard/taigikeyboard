@@ -188,6 +188,51 @@ final class ComposingBackendTests: XCTestCase {
         XCTAssertTrue(isSwapCheckAsked, "TPS: } writes an attaching 』")
     }
 
+    func testTheSymbolSwapCheck_followsDesktopCoreVerdict() throws {
+        let store = try makeScratchSettingsStore()
+        store.isAutoSpaceEnabled = false
+        store.userDefaults.set(false, forKey: SettingsStore.Keys.isOutputBothScripts.name)
+
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("，", in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "Auto-Space and brackets off: attaching symbol does not ask swap")
+        XCTAssertFalse(try lastPanel().swapAvailable)
+
+        store.isAutoSpaceEnabled = true
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("（", in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "opening bracket does not attach")
+
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("，", in: request(settings: store, armed: true))
+        XCTAssertTrue(isSwapCheckAsked, "Auto-Space on + attaching symbol asks swap")
+        XCTAssertTrue(try lastPanel().swapAvailable)
+
+        isSwapCheckAsked = false
+        store.isAutoSpaceEnabled = false
+        store.userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
+        store.candidateDisplayMode = .sideBySide
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("，", in: request(settings: store, armed: true))
+        XCTAssertTrue(isSwapCheckAsked, "effective brackets keep candidate spacing swap active")
+        XCTAssertTrue(try lastPanel().swapAvailable)
+
+        isSwapCheckAsked = false
+        store.candidateDisplayMode = .romanOnly
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("，", in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "roman-only disables effective brackets")
+
+        store.isAutoSpaceEnabled = true
+        store.switchInputMode(.pick(.tps))
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("}", in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "picked literal } is not translated under SymbolSwap")
+        _ = try activatedBackend(composing: false)
+            .insertSymbol("』", in: request(settings: store, armed: true))
+        XCTAssertTrue(isSwapCheckAsked, "picked attaching 』 asks swap under TPS too")
+    }
+
     /// The highlight goes whether or not a list is up — the picker commit is
     /// chosen by it — the slots only while one is.
     func testThePanel_carriesTheHighlightAlways_andTheSlotsWithAList() throws {
@@ -229,10 +274,12 @@ final class ComposingBackendTests: XCTestCase {
                     return []
                 }
                 sent.append(request)
-                if case .passThroughSwap = request.request {
+                switch request.request {
+                case .passThroughSwap, .symbolSwap:
                     return DesktopCoreBridge.send(bytes)
+                default:
+                    return answer(request)
                 }
-                return answer(request)
             },
         )
         var reply = Taigi_DesktopShell_SessionReply()
@@ -275,6 +322,7 @@ final class ComposingBackendTests: XCTestCase {
         switch sent.last?.request {
         case let .key(key): key.panel
         case let .commitForSymbolPicker(commit): commit.panel
+        case let .insertSymbol(insert): insert.panel
         default: throw NoPanel()
         }
     }

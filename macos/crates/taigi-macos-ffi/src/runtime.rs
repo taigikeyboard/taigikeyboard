@@ -146,6 +146,7 @@ impl Shell {
             | Request::SwitchInputMode(_)
             | Request::TpsKeyboardRows(_)
             | Request::PassThroughSwap(_)
+            | Request::SymbolSwap(_)
             | Request::SymbolPickerSymbols(_)
             | Request::NoteRecentSymbol(_) => Err(Refusal::Missing("a session request")),
         }
@@ -217,7 +218,7 @@ impl Shell {
 mod tests {
     use super::*;
     use crate::proto::{ReleaseRequest, SettingEntry};
-    use crate::test_support::{configure_request, text, version};
+    use crate::test_support::{boolean, configure_request, text, version};
     use std::path::Path;
     use taigi_desktop_core::settings::{InputMode, SettingChoice, SettingsProvider};
 
@@ -371,7 +372,7 @@ mod tests {
     /// they answer or refuse.
     #[test]
     fn the_key_rules_never_put_their_snapshot_in_force() {
-        use crate::proto::{ComposingShortcutsRequest, SymbolPickerKeyRequest};
+        use crate::proto::{ComposingShortcutsRequest, SymbolPickerKeyRequest, SymbolSwapRequest};
         use crate::test_support::key_event;
         let shell = Shell::default();
         shell
@@ -391,6 +392,18 @@ mod tests {
             reply.slot_keys, "123456789",
             "read under the snapshot it carried"
         );
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::SymbolSwap(SymbolSwapRequest {
+                    symbol: "，".to_owned(),
+                }),
+                Some(&snapshot(vec![
+                    text("inputMode", "tl"),
+                    boolean("autoSpaceEnabled", true),
+                ])),
+            ),
+            Ok(desktop_response::Reply::SymbolSwap(reply)) if reply.may_swap
+        ));
         let refused = snapshot(vec![text("inputMode", "tl"), text("notASetting", "")]);
         assert!(shell
             .serve(

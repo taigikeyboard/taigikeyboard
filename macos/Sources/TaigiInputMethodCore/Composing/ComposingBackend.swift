@@ -156,7 +156,7 @@ final class ComposingBackend {
         var message = Taigi_DesktopShell_InsertSymbolRequest()
         message.token = request.session.value
         message.symbol = symbol
-        message.panel = Self.panel(request, attaches: RustEngineBridge.isAttachingPunctuation(symbol))
+        message.panel = Self.panel(request, attaches: symbolMaySwap(symbol, settings: request.settings))
         return session(.insertSymbol(message), in: request, op: "insertSymbol")?.effects
     }
 
@@ -315,7 +315,7 @@ final class ComposingBackend {
     /// client check — two client queries — is asked only when a swap can
     /// happen: an arm and what the request writes attaches (`attaches`, read
     /// last). The switch the swap reads (Auto-Space, or Annotate in Brackets) is
-    /// the core's: `pass_through_may_swap` on the key path, `swap_auto_space`
+    /// the core's: `pass_through_may_swap` on the key path, `symbol_may_swap`
     /// for a picked symbol.
     private static func panel(
         _ request: ComposingRequest,
@@ -347,18 +347,42 @@ final class ComposingBackend {
     private func passThroughMaySwap(_ key: KeyEventSnapshot, settings: SettingsStore) -> Bool {
         var message = Taigi_DesktopShell_PassThroughSwapRequest()
         message.event = Taigi_DesktopShell_KeyEvent(key)
-        let op = "passThroughSwap"
+        return maySwap(op: "passThroughSwap", request: .passThroughSwap(message), settings: settings) {
+            guard case let .passThroughSwap(reply) = $0 else { return nil }
+            return reply.maySwap
+        }
+    }
+
+    private func symbolMaySwap(_ symbol: String, settings: SettingsStore) -> Bool {
+        var message = Taigi_DesktopShell_SymbolSwapRequest()
+        message.symbol = symbol
+        return maySwap(op: "symbolSwap", request: .symbolSwap(message), settings: settings) {
+            guard case let .symbolSwap(reply) = $0 else { return nil }
+            return reply.maySwap
+        }
+    }
+
+    private func maySwap(
+        op: String,
+        request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
+        settings: SettingsStore,
+        extract: (Taigi_DesktopShell_DesktopResponse.OneOf_Reply) -> Bool?,
+    ) -> Bool {
         guard case let .success(response) = DesktopCoreBridge.response(
-            to: .passThroughSwap(message),
+            to: request,
             settings: snapshot(in: settings.userDefaults),
             op: op,
             transport: transport,
         ) else { return false }
-        guard response.error == .ok, case let .passThroughSwap(reply) = response.reply else {
+        guard
+            response.error == .ok,
+            let reply = response.reply,
+            let verdict = extract(reply)
+        else {
             Self.logger.error("[\(op)] no verdict: \(response.error)")
             return false
         }
-        return reply.maySwap
+        return verdict
     }
 
     // MARK: - Effects

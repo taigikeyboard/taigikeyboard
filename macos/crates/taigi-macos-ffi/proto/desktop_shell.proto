@@ -40,6 +40,7 @@ message DesktopRequest {
     PassThroughSwapRequest pass_through_swap = 22;
     SymbolPickerSymbolsRequest symbol_picker_symbols = 23;
     NoteRecentSymbolRequest note_recent_symbol = 24;
+    SymbolSwapRequest symbol_swap = 25;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -146,6 +147,7 @@ message DesktopResponse {
     PassThroughSwapReply pass_through_swap = 14;
     SymbolPickerSymbolsReply symbol_picker_symbols = 15;
     NoteRecentSymbolReply note_recent_symbol = 16;
+    SymbolSwapReply symbol_swap = 17;
   }
 }
 
@@ -598,6 +600,19 @@ message PassThroughSwapRequest {
 }
 
 message PassThroughSwapReply {
+  bool may_swap = 1;
+}
+
+// Whether a symbol picked from the symbol picker would take the place of an
+// armed auto space, read under the settings snapshot this request must carry
+// (`symbol_may_swap`): what Swift asks before it makes the swap's client
+// checks for an InsertSymbol request's `PanelState.swap_available`.
+// Refused without a symbol or a snapshot.
+message SymbolSwapRequest {
+  string symbol = 1;
+}
+
+message SymbolSwapReply {
   bool may_swap = 1;
 }
 
