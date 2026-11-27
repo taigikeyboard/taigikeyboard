@@ -562,3 +562,446 @@ final class UpdatePackageVerifierTests: XCTestCase {
         }
     }
 }
+
+/// Request-keyed `URLProtocol` test double so streaming download tests drive real
+/// `URLSession` delegate callbacks without touching the network or colliding
+/// across cases.
+private final class MockPackageURLProtocol: URLProtocol, @unchecked Sendable {
+    struct Script: @unchecked Sendable {
+        let start: @Sendable (MockPackageURLProtocol, URLRequest) -> Void
+        let stop: @Sendable () -> Void
+    }
+
+    private static let handlers = OSAllocatedUnfairLock<[String: Script]>(initialState: [:])
+
+    static func register(path: String, script: Script) {
+        handlers.withLock { $0[path] = script }
+    }
+
+    static func unregister(path: String) {
+        _ = handlers.withLock { $0.removeValue(forKey: path) }
+    }
+
+    override class func canInit(with _: URLRequest) -> Bool {
+        true
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    private var activePath: String?
+
+    override func startLoading() {
+        let path = request.url?.path ?? ""
+        activePath = path
+        guard let script = Self.handlers.withLock({ $0[path] }) else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badURL))
+            return
+        }
+        script.start(self, request)
+    }
+
+    override func stopLoading() {
+        guard let path = activePath,
+              let script = Self.handlers.withLock({ $0[path] })
+        else { return }
+        script.stop()
+    }
+}
+
+/// Streaming cap, HTTP/host checks, cleanup, and task cancellation for
+/// `UpdatePackageDownload.download(from:to:maximumBytes:configuration:)`.
+final class UpdatePackageDownloadTests: XCTestCase {
+    private var stagingRoot: URL!
+    private var registeredPaths: [String] = []
+
+    override func setUp() async throws {
+        try await super.setUp()
+        stagingRoot = try TestFixtures.scratchDirectory()
+        registeredPaths = []
+    }
+
+    override func tearDown() async throws {
+        for path in registeredPaths {
+            MockPackageURLProtocol.unregister(path: path)
+        }
+        try? FileManager.default.removeItem(at: stagingRoot)
+        try await super.tearDown()
+    }
+
+    private func mockConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockPackageURLProtocol.self]
+        return configuration
+    }
+
+    private func makeDestination(_ name: String = "package.pkg") -> URL {
+        stagingRoot.appendingPathComponent(name)
+    }
+
+    private func uniqueURL(scheme: String = "https", host: String? = "example.com") -> (url: URL, path: String) {
+        let path = "/\(UUID().uuidString)/TaigiKeyboard.pkg"
+        let hostPart = host ?? ""
+        return (URL(string: "\(scheme)://\(hostPart)\(path)")!, path)
+    }
+
+    private static func mockResponse(
+        url: URL,
+        statusCode: Int = 200,
+        contentLength: Int64? = nil,
+    ) -> HTTPURLResponse {
+        // An explicit binary Content-Type stops CFNetwork from buffering the
+        // initial response headers while MIME-sniffing an empty or tiny body.
+        var headers = ["Content-Type": "application/octet-stream"]
+        if let contentLength {
+            headers["Content-Length"] = String(contentLength)
+        }
+        return HTTPURLResponse(
+            url: url,
+            statusCode: statusCode,
+            httpVersion: "HTTP/1.1",
+            headerFields: headers,
+        )!
+    }
+
+    private func register(
+        path: String,
+        start: @escaping @Sendable (MockPackageURLProtocol, URLRequest) -> Void,
+        stop: @escaping @Sendable () -> Void = {},
+    ) {
+        registeredPaths.append(path)
+        MockPackageURLProtocol.register(
+            path: path,
+            script: MockPackageURLProtocol.Script(start: start, stop: stop),
+        )
+    }
+
+    func testDownload_exactCap_writesFileAndMarksQuarantine() async throws {
+        let (url, path) = uniqueURL()
+        let destination = makeDestination()
+        let chunkA = Data(repeating: 0x41, count: 600)
+        let chunkB = Data(repeating: 0x42, count: 400)
+        var expected = chunkA
+        expected.append(chunkB)
+
+        register(path: path) { protocolInstance, _ in
+            let response = Self.mockResponse(url: url)
+            protocolInstance.client?.urlProtocol(
+                protocolInstance,
+                didReceive: response,
+                cacheStoragePolicy: .notAllowed,
+            )
+            protocolInstance.client?.urlProtocol(protocolInstance, didLoad: chunkA)
+            protocolInstance.client?.urlProtocol(protocolInstance, didLoad: chunkB)
+            protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
+        }
+
+        try await UpdatePackageDownload.download(
+            from: url,
+            to: destination,
+            maximumBytes: Int64(expected.count),
+            configuration: mockConfiguration(),
+        )
+
+        XCTAssertEqual(try Data(contentsOf: destination), expected)
+        let values = try destination.resourceValues(forKeys: [.quarantinePropertiesKey])
+        XCTAssertNotNil(values.quarantineProperties)
+    }
+
+    func testDownload_chunkedStreamExceedingCap_abortsMidStreamAndRemovesFile() async throws {
+        let (url, path) = uniqueURL()
+        let destination = makeDestination()
+        let state = OSAllocatedUnfairLock(initialState: (chunksDelivered: 0, stopped: false))
+        let stopSemaphore = DispatchSemaphore(value: 0)
+
+        register(
+            path: path,
+            start: { protocolInstance, _ in
+                DispatchQueue.global().async {
+                    let response = Self.mockResponse(url: url)
+                    protocolInstance.client?.urlProtocol(
+                        protocolInstance,
+                        didReceive: response,
+                        cacheStoragePolicy: .notAllowed,
+                    )
+
+                    let chunks = [
+                        Data(repeating: 0x41, count: 400),
+                        Data(repeating: 0x42, count: 400),
+                        Data(repeating: 0x43, count: 300),
+                    ]
+                    for chunk in chunks {
+                        if state.withLock({ $0.stopped }) {
+                            return
+                        }
+                        state.withLock { $0.chunksDelivered += 1 }
+                        protocolInstance.client?.urlProtocol(protocolInstance, didLoad: chunk)
+                    }
+
+                    // Wait for `stopLoading()` triggered by the streaming cap abort
+                    // before attempting to send a fourth chunk.
+                    let waited = stopSemaphore.wait(timeout: .now() + 2)
+                    guard waited == .success, state.withLock({ $0.stopped }) else {
+                        state.withLock { $0.chunksDelivered += 1 }
+                        protocolInstance.client?.urlProtocol(
+                            protocolInstance,
+                            didLoad: Data(repeating: 0x44, count: 400),
+                        )
+                        protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
+                        return
+                    }
+                }
+            },
+            stop: {
+                state.withLock { $0.stopped = true }
+                stopSemaphore.signal()
+            },
+        )
+
+        do {
+            try await UpdatePackageDownload.download(
+                from: url,
+                to: destination,
+                maximumBytes: 1000,
+                configuration: mockConfiguration(),
+            )
+            XCTFail("expected Failure.tooLarge")
+        } catch let failure as UpdatePackageDownload.Failure {
+            XCTAssertEqual(failure, .tooLarge)
+        }
+
+        for _ in 0 ..< 400 {
+            if state.withLock({ $0.stopped }) {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let snapshot = state.withLock { $0 }
+        XCTAssertTrue(snapshot.stopped, "URLProtocol should be stopped mid-stream")
+        XCTAssertEqual(snapshot.chunksDelivered, 3, "fourth chunk must never be sent after abort")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    func testDownload_declaredOversizedContentLength_rejectsBeforeWritingBody() async throws {
+        let (url, path) = uniqueURL()
+        let destination = makeDestination()
+        let state = OSAllocatedUnfairLock(initialState: (stopped: false, loadedBody: false))
+        let stopSemaphore = DispatchSemaphore(value: 0)
+
+        register(
+            path: path,
+            start: { protocolInstance, _ in
+                DispatchQueue.global().async {
+                    let response = Self.mockResponse(url: url, contentLength: 1001)
+                    protocolInstance.client?.urlProtocol(
+                        protocolInstance,
+                        didReceive: response,
+                        cacheStoragePolicy: .notAllowed,
+                    )
+                    if stopSemaphore.wait(timeout: .now() + 2) != .success {
+                        state.withLock { $0.loadedBody = true }
+                        protocolInstance.client?.urlProtocol(
+                            protocolInstance,
+                            didLoad: Data(repeating: 0x41, count: 100),
+                        )
+                        protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
+                    }
+                }
+            },
+            stop: {
+                state.withLock { $0.stopped = true }
+                stopSemaphore.signal()
+            },
+        )
+
+        do {
+            try await UpdatePackageDownload.download(
+                from: url,
+                to: destination,
+                maximumBytes: 1000,
+                configuration: mockConfiguration(),
+            )
+            XCTFail("expected Failure.tooLarge")
+        } catch let failure as UpdatePackageDownload.Failure {
+            XCTAssertEqual(failure, .tooLarge)
+        }
+
+        for _ in 0 ..< 400 {
+            if state.withLock({ $0.stopped }) {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        let snapshot = state.withLock { $0 }
+        XCTAssertTrue(snapshot.stopped)
+        XCTAssertFalse(snapshot.loadedBody)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    func testDownload_non200OrInvalidHTTPS_rejectsAndLeavesNoFile() async throws {
+        let cases: [(url: URL, path: String, statusCode: Int)] = [
+            {
+                let (url, path) = uniqueURL()
+                return (url, path, 500)
+            }(),
+            {
+                let (url, path) = uniqueURL(scheme: "http")
+                return (url, path, 200)
+            }(),
+            {
+                let (url, path) = uniqueURL(scheme: "https", host: nil)
+                return (url, path, 200)
+            }(),
+        ]
+
+        for (index, testCase) in cases.enumerated() {
+            let destination = makeDestination("rejected-\(index).pkg")
+            register(path: testCase.path) { protocolInstance, _ in
+                let response = Self.mockResponse(url: testCase.url, statusCode: testCase.statusCode)
+                protocolInstance.client?.urlProtocol(
+                    protocolInstance,
+                    didReceive: response,
+                    cacheStoragePolicy: .notAllowed,
+                )
+                protocolInstance.client?.urlProtocol(
+                    protocolInstance,
+                    didLoad: Data("body".utf8),
+                )
+                protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
+            }
+
+            do {
+                try await UpdatePackageDownload.download(
+                    from: testCase.url,
+                    to: destination,
+                    maximumBytes: 1000,
+                    configuration: mockConfiguration(),
+                )
+                XCTFail("expected Failure.rejected for \(testCase.url)")
+            } catch let failure as UpdatePackageDownload.Failure {
+                XCTAssertEqual(failure, .rejected, "for \(testCase.url)")
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path), "for \(testCase.url)")
+        }
+    }
+
+    func testDownload_transportErrorMidStream_removesPartialFile() async throws {
+        let (url, path) = uniqueURL()
+        let destination = makeDestination()
+
+        register(path: path) { protocolInstance, _ in
+            let response = Self.mockResponse(url: url)
+            protocolInstance.client?.urlProtocol(
+                protocolInstance,
+                didReceive: response,
+                cacheStoragePolicy: .notAllowed,
+            )
+            protocolInstance.client?.urlProtocol(
+                protocolInstance,
+                didLoad: Data(repeating: 0x41, count: 256),
+            )
+            protocolInstance.client?.urlProtocol(
+                protocolInstance,
+                didFailWithError: URLError(.networkConnectionLost),
+            )
+        }
+
+        do {
+            try await UpdatePackageDownload.download(
+                from: url,
+                to: destination,
+                maximumBytes: 1000,
+                configuration: mockConfiguration(),
+            )
+            XCTFail("expected URLError")
+        } catch let error as URLError {
+            XCTAssertEqual(error.code, .networkConnectionLost)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    func testDownload_empty200Response_writesEmptyFile() async throws {
+        let (url, path) = uniqueURL()
+        let destination = makeDestination()
+
+        register(path: path) { protocolInstance, _ in
+            let response = Self.mockResponse(url: url)
+            protocolInstance.client?.urlProtocol(
+                protocolInstance,
+                didReceive: response,
+                cacheStoragePolicy: .notAllowed,
+            )
+            protocolInstance.client?.urlProtocolDidFinishLoading(protocolInstance)
+        }
+
+        try await UpdatePackageDownload.download(
+            from: url,
+            to: destination,
+            maximumBytes: 1000,
+            configuration: mockConfiguration(),
+        )
+
+        XCTAssertEqual(try Data(contentsOf: destination), Data())
+        let values = try destination.resourceValues(forKeys: [.quarantinePropertiesKey])
+        XCTAssertNotNil(values.quarantineProperties)
+    }
+
+    func testDownload_taskCancellation_abortsAndRemovesPartialFile() async throws {
+        let (url, path) = uniqueURL()
+        let destination = makeDestination()
+        let stopSemaphore = DispatchSemaphore(value: 0)
+
+        register(
+            path: path,
+            start: { protocolInstance, _ in
+                DispatchQueue.global().async {
+                    let response = Self.mockResponse(url: url)
+                    protocolInstance.client?.urlProtocol(
+                        protocolInstance,
+                        didReceive: response,
+                        cacheStoragePolicy: .notAllowed,
+                    )
+                    protocolInstance.client?.urlProtocol(
+                        protocolInstance,
+                        didLoad: Data(repeating: 0x41, count: 128),
+                    )
+                    _ = stopSemaphore.wait(timeout: .now() + 2)
+                }
+            },
+            stop: {
+                stopSemaphore.signal()
+            },
+        )
+
+        let configuration = mockConfiguration()
+        let downloadTask = Task {
+            try await UpdatePackageDownload.download(
+                from: url,
+                to: destination,
+                maximumBytes: 1000,
+                configuration: configuration,
+            )
+        }
+
+        for _ in 0 ..< 400 {
+            if FileManager.default.fileExists(atPath: destination.path) {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertTrue(
+            FileManager.default.fileExists(atPath: destination.path),
+            "partial file should be written before task cancellation",
+        )
+        downloadTask.cancel()
+
+        do {
+            try await downloadTask.value
+            XCTFail("expected CancellationError")
+        } catch is CancellationError {
+            // Expected.
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+}

@@ -5,16 +5,30 @@ import Foundation
 /// Shared by the manifest check and the package download, so the one clause
 /// that carries the security here is written once.
 enum UpdateHTTP {
+    /// Ephemeral session configuration that leaves no cache or cookies behind
+    /// and sets both per-request idle and whole-transfer resource timeouts.
+    static func configuration(
+        requestTimeout: TimeInterval,
+        resourceTimeout: TimeInterval,
+    ) -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = requestTimeout
+        configuration.timeoutIntervalForResource = resourceTimeout
+        return configuration
+    }
+
     /// A session that leaves nothing behind.
     ///
     /// Ephemeral, so no cache or cookie outlives the transfer, and both timeouts
     /// set: `timeoutIntervalForRequest` alone bounds only the wait for the next
     /// byte, never the whole transfer.
     static func session(requestTimeout: TimeInterval, resourceTimeout: TimeInterval) -> URLSession {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = requestTimeout
-        configuration.timeoutIntervalForResource = resourceTimeout
-        return URLSession(configuration: configuration)
+        URLSession(
+            configuration: configuration(
+                requestTimeout: requestTimeout,
+                resourceTimeout: resourceTimeout,
+            ),
+        )
     }
 
     /// Whether `url` uses `https` and names a non-empty host.
