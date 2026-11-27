@@ -1,11 +1,11 @@
 //! The typefaces the user added themselves: where they are kept, what may join
 //! them, and the copy that puts one there. Shared by macOS (over
-//! `taigi-macos-ffi` / `DesktopCoreBridge`), Windows, and Linux.
+//! `taigi-macos-ffi` / `DesktopCoreBridge`) and Windows.
 //!
 //! The FILE half only. Whether a copied file is really a typeface — and what
 //! its family or PostScript name is — belongs to each platform's font stack
 //! (Core Text on macOS, DirectWrite on Windows); this module is pure so it
-//! holds one authority for storage rules across all desktop platforms.
+//! holds one storage authority for custom fonts across both platforms.
 //!
 //! No index file beside the copies: the directory IS the list, and the face
 //! names are read back out of the files. One authority, nothing to reconcile.
@@ -169,37 +169,17 @@ pub fn stored_file_names(directory: &Path) -> Vec<String> {
 /// user cannot delete. Creating it here gives the copy this process's own
 /// default permissions.
 ///
-/// The open descriptor's metadata is re-checked (`fstat`, and `(dev, ino)` on
-/// Unix) and the copy is bounded, rather than trusting the initial `lstat`
-/// alone: a source replaced by a symlink or grown between `lstat` and `read`
+/// The open descriptor's metadata is re-checked (`O_NOFOLLOW | O_NONBLOCK` +
+/// `fstat` on Unix, preventing symlink traversal and FIFO blocking; `lstat` +
+/// `fstat` on non-Unix) and the copy is bounded, rather than trusting an initial
+/// `lstat` alone: a source replaced by a symlink or grown between check and read
 /// cannot bypass the regular-file check or the size ceiling.
 pub fn copy_in(directory: &Path, source: &Path) -> Result<String, ImportError> {
     let extension = extension_of(source);
     if !ALLOWED_EXTENSIONS.contains(&extension.as_str()) {
         return Err(ImportError::UnsupportedFileType(extension));
     }
-    let lstat = std::fs::symlink_metadata(source).map_err(ImportError::Unreadable)?;
-    if !lstat.is_file() {
-        return Err(ImportError::NotARegularFile);
-    }
-    if lstat.len() > MAX_FILE_SIZE {
-        return Err(ImportError::TooLarge(lstat.len()));
-    }
-    let mut reader = std::fs::File::open(source).map_err(ImportError::Unreadable)?;
-    let fstat = reader.metadata().map_err(ImportError::Unreadable)?;
-    if !fstat.is_file() {
-        return Err(ImportError::NotARegularFile);
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        if (lstat.dev(), lstat.ino()) != (fstat.dev(), fstat.ino()) {
-            return Err(ImportError::NotARegularFile);
-        }
-    }
-    if fstat.len() > MAX_FILE_SIZE {
-        return Err(ImportError::TooLarge(fstat.len()));
-    }
+    let mut reader = open_source_file(source)?;
     let (stored, mut writer) = create_unused_file(directory, source, &extension)?;
     let copy_result = copy_bounded(&mut reader, &mut writer, MAX_FILE_SIZE)
         .and_then(|_| writer.flush().map_err(ImportError::NotCopied));
@@ -210,6 +190,54 @@ pub fn copy_in(directory: &Path, source: &Path) -> Result<String, ImportError> {
         return Err(discarding(directory, &stored, error));
     }
     Ok(stored)
+}
+
+#[cfg(unix)]
+fn open_source_file(source: &Path) -> Result<std::fs::File, ImportError> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    // `O_NOFOLLOW | O_NONBLOCK` refuses symlinks at open time and avoids blocking
+    // on FIFOs / special files; `metadata()` (`fstat`) then validates regular
+    // file type and size on the open descriptor.
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
+        .open(source)
+        .map_err(|error| {
+            if matches!(error.raw_os_error(), Some(libc::ELOOP | libc::EISDIR)) {
+                ImportError::NotARegularFile
+            } else {
+                ImportError::Unreadable(error)
+            }
+        })?;
+    let metadata = file.metadata().map_err(ImportError::Unreadable)?;
+    if !metadata.is_file() {
+        return Err(ImportError::NotARegularFile);
+    }
+    if metadata.len() > MAX_FILE_SIZE {
+        return Err(ImportError::TooLarge(metadata.len()));
+    }
+    Ok(file)
+}
+
+#[cfg(not(unix))]
+fn open_source_file(source: &Path) -> Result<std::fs::File, ImportError> {
+    let lstat = std::fs::symlink_metadata(source).map_err(ImportError::Unreadable)?;
+    if !lstat.is_file() {
+        return Err(ImportError::NotARegularFile);
+    }
+    if lstat.len() > MAX_FILE_SIZE {
+        return Err(ImportError::TooLarge(lstat.len()));
+    }
+    let file = std::fs::File::open(source).map_err(ImportError::Unreadable)?;
+    let fstat = file.metadata().map_err(ImportError::Unreadable)?;
+    if !fstat.is_file() {
+        return Err(ImportError::NotARegularFile);
+    }
+    if fstat.len() > MAX_FILE_SIZE {
+        return Err(ImportError::TooLarge(fstat.len()));
+    }
+    Ok(file)
 }
 
 /// Streams `reader` into `writer`, refusing any growth past `max_bytes` before
@@ -679,6 +707,25 @@ mod tests {
 
         assert!(matches!(
             copy_in(&library, &link).unwrap_err(),
+            ImportError::NotARegularFile
+        ));
+        assert_eq!(stored_file_names(&library), Vec::<String>::new());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn copy_in_refuses_fifo_without_blocking() {
+        let library = scratch();
+        let elsewhere = scratch();
+        let fifo = elsewhere.join("pipe.ttf");
+        let status = std::process::Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .expect("mkfifo should run");
+        assert!(status.success(), "mkfifo failed: {status}");
+
+        assert!(matches!(
+            copy_in(&library, &fifo).unwrap_err(),
             ImportError::NotARegularFile
         ));
         assert_eq!(stored_file_names(&library), Vec::<String>::new());

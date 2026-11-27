@@ -66,9 +66,6 @@ fn serve_font_library(request: &FontLibraryRequest) -> Result<FontLibraryReply, 
             };
             match storage::remove_stored(Path::new(&req.directory), file_name) {
                 Ok(()) => Ok(ok_reply(ReplyResult::Ack(FontLibraryAck {}))),
-                Err(error) if error.kind() == std::io::ErrorKind::InvalidInput => {
-                    Ok(error_reply(font_library_error::Kind::InvalidFileName(true)))
-                }
                 Err(error) => Ok(error_reply(font_library_error::Kind::NotRemoved(
                     error.to_string(),
                 ))),
@@ -404,6 +401,22 @@ mod tests {
         .unwrap();
         assert!(matches!(
             missing_remove.error,
+            Some(FontLibraryError {
+                kind: Some(font_library_error::Kind::NotRemoved(_)),
+            })
+        ));
+
+        let invalid_dir_remove = serve_font_library(&FontLibraryRequest {
+            method: Some(font_library_request::Method::RemoveStored(
+                RemoveStoredFontRequest {
+                    directory: "/tmp/bad\0dir".to_owned(),
+                    file_name: "Iansui.ttf".to_owned(),
+                },
+            )),
+        })
+        .unwrap();
+        assert!(matches!(
+            invalid_dir_remove.error,
             Some(FontLibraryError {
                 kind: Some(font_library_error::Kind::NotRemoved(_)),
             })

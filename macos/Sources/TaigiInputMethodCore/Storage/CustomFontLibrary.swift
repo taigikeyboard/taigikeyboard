@@ -159,6 +159,9 @@ final class CustomFontLibrary {
     /// still never reach the candidate window.
     private struct Registration {
         let font: CustomFont
+        /// Validated stored URL captured when registered, so `activatedFont`
+        /// only pays one `stat` without crossing the FFI seam.
+        let url: URL
         /// Every family the file carries — all of a `.ttc`'s, since registering
         /// the URL registered every face in it. Read when the file was, so the
         /// Manage Fonts pane's exclusion costs no parse (`registeredFamilies`).
@@ -226,8 +229,7 @@ final class CustomFontLibrary {
     /// the user threw away is a lie.
     func activatedFont(fileName: String) -> CustomFont? {
         guard let registration = registrations[fileName], registration.isDrawable,
-              let url = try? storedURL(for: fileName),
-              fileManager.fileExists(atPath: url.path)
+              fileManager.fileExists(atPath: registration.url.path(percentEncoded: false))
         else { return nil }
         return registration.font
     }
@@ -259,7 +261,9 @@ final class CustomFontLibrary {
         // Ownership is recorded on the registration, not on the verdict below:
         // a registration this process made is this process's to withdraw even
         // when the withdrawal fails, and `remove` is what retries it.
-        registrations[fileName] = Registration(font: font, families: Set(faces.map(\.familyName)), isDrawable: false)
+        registrations[fileName] = Registration(
+            font: font, url: url, families: Set(faces.map(\.familyName)), isDrawable: false,
+        )
         // Registered is not drawn: a name a system face also carries resolves
         // to that face instead, and a row drawing in someone else's typeface is
         // worse than one that fell back.
@@ -360,7 +364,7 @@ final class CustomFontLibrary {
         // Before the verdict below, so a `didNotResolve` throw reaches
         // `discard` with the registration owned rather than orphaned.
         registrations[font.fileName] = Registration(
-            font: font, families: Set(faces.map(\.familyName)), isDrawable: false,
+            font: font, url: url, families: Set(faces.map(\.familyName)), isDrawable: false,
         )
         // Resolving is not enough: the name has to resolve to THIS file. A name
         // another face already carries would otherwise pass the check while the

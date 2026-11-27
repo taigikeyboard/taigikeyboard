@@ -2753,6 +2753,7 @@ dependencies = [
 name = "taigi-desktop-storage"
 version = "3.9.0"
 dependencies = [
+ "libc",
  "log",
  "serde_json",
  "taigi-desktop-core",

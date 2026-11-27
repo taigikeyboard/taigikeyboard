@@ -11,7 +11,7 @@ android/  ios/  macos/  windows/  linux/   # platform apps
                    # macos/ links one Rust archive, macos/crates/taigi-macos-ffi (over taigi-desktop-core + -storage)
 engine/            # Shared Rust engine — Cargo workspace; FFI to iOS / Android / macOS, linked in-process by Windows / Linux
 web/               # Web version — taigi-web (wasm32) over taigi-desktop-core + engine, its own Cargo workspace
-desktop/           # Rust crates shared by the desktops — taigi-desktop-core (all three), -storage (font library on macOS; full storage on Windows + Linux), -update (Windows)
+desktop/           # Rust crates shared by the desktops — taigi-desktop-core (all three), -storage (font library on macOS + Windows; settings file + data directory on Windows + Linux), -update (Windows)
 dictionary/        # Dictionary sources + build pipeline + output artifacts
 assets/            # Committed shipped data every platform packages — dictionaries/ (pipeline output), fonts/, symbols/
 docs/              # engine/, architecture/, contributing/, phonetics/ (TL/POJ/TPS reference), ui/, references/, reports/, roadmap.md
