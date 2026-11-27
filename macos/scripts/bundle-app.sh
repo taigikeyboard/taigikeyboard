@@ -243,11 +243,10 @@ for objc_class in "$CONTROLLER_CLASS" "$PRINCIPAL_CLASS"; do
 done
 
 echo "==> Checking the Rust engine linked in"
-# Both seams of the one archive: the engine's and the desktop shell's
-# (docs/architecture/macos-desktop-core-roadmap.md D7). The executable keeps an
-# entry point only while production code calls it, so a missing one is a
-# caller that went away or an archive that did not link.
-for entry in process_request_bytes desktop_request_bytes; do
+# Single desktop-shell seam + logger sink from `taigi-macos-ffi`. The
+# executable keeps an entry point only while production code calls it, so a
+# missing one is a caller that went away or an archive that did not link.
+for entry in desktop_request_bytes install_logger_sink set_log_level; do
     if ! grep -q "__swift_bridge__[\$]${entry}\$" <<< "$EXPORTED_SYMBOLS"; then
         echo "error: swift-bridge FFI entry point $entry missing — RustTaigi.xcframework did not link" >&2
         exit 1

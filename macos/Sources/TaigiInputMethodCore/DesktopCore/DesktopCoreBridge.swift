@@ -3,12 +3,66 @@
 import Foundation
 import RustTaigiSwift
 
-/// Thin wrapper around `desktop_request_bytes`, the second bytes-in / bytes-out
-/// function in the Rust archive, beside the engine's (`RustEngineBridge`).
-/// It carries `taigi.desktop_shell` envelopes
-/// (`macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`; requests in
-/// docs/architecture/macos-desktop-core-roadmap.md D3).
+/// Thin wrapper around the macOS Rust archive (`macos/crates/taigi-macos-ffi`):
+/// the desktop-shell protobuf seam (`desktop_request_bytes`,
+/// `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`; requests in
+/// docs/architecture/macos-desktop-core-roadmap.md D3) and the Rust logger sink.
 enum DesktopCoreBridge {
+    /// Severity of a record arriving FROM Rust. Mirrors the iOS constants in
+    /// `ios/Sources/TaigiKeyboard/Engine/SwiftLoggerSink.swift`.
+    private enum EngineLogRecordLevel {
+        static let error: UInt8 = 0
+        static let warning: UInt8 = 1
+        static let info: UInt8 = 2
+    }
+
+    /// Threshold sent TO Rust via `set_log_level`. A DIFFERENT scale from
+    /// `EngineLogRecordLevel` — it is shifted by one and reserves 0 for Off,
+    /// which no record ever carries (`taigi-macos-ffi` `set_log_level`).
+    /// Naming both is what keeps a bare `4` from meaning Debug in one call and
+    /// Trace in the other.
+    private enum EngineLogFilter {
+        static let off: UInt8 = 0
+        static let debug: UInt8 = 4
+    }
+
+    private static let installLock = NSLock()
+    private nonisolated(unsafe) static var isLoggerSinkInstalled = false
+
+    /// Idempotent. Routes Rust `log::*` records into `DebugLogger`, so they
+    /// obey the same release-builds-log-nothing rule as native call sites.
+    /// Called once at bootstrap; the underlying Rust `log::set_logger` is
+    /// one-shot.
+    static func installLoggerSink() {
+        installLock.lock()
+        defer { installLock.unlock() }
+        guard !isLoggerSinkInstalled else { return }
+        install_logger_sink(SwiftLoggerSink(handleRecord: forwardEngineRecord))
+        // Release silences Rust at the source. Leaving the Rust default of Warn
+        // in place would still marshal every warning across the FFI seam and
+        // build two Swift strings, only for `DebugLogger` to discard them.
+        set_log_level(isDebugBuild ? EngineLogFilter.debug : EngineLogFilter.off)
+        isLoggerSinkInstalled = true
+    }
+
+    private static var isDebugBuild: Bool {
+        #if DEBUG
+            true
+        #else
+            false
+        #endif
+    }
+
+    private static func forwardEngineRecord(level: UInt8, category: String, message: String) {
+        let logger = DebugLogger(category: category)
+        switch level {
+        case EngineLogRecordLevel.error: logger.error(message)
+        case EngineLogRecordLevel.warning: logger.warning(message)
+        case EngineLogRecordLevel.info: logger.info(message)
+        default: logger.debug(message)
+        }
+    }
+
     /// Sends an encoded `taigi.desktop_shell.DesktopRequest` across the seam
     /// and returns the encoded `DesktopResponse`. The Rust side catches its
     /// own panics and always answers with a decodable response.
