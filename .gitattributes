@@ -17,7 +17,6 @@
 #   dictionary         make dict
 android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/** linguist-generated
 ios/Sources/TaigiKeyboard/Engine/Generated/** linguist-generated
-macos/Sources/TaigiInputMethodCore/Engine/Generated/** linguist-generated
 macos/Sources/TaigiInputMethodCore/DesktopCore/Generated/** linguist-generated
 android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/generated/** linguist-generated
 android/app/src/main/res/values*/strings_i18n.xml linguist-generated

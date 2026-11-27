@@ -1,16 +1,13 @@
 // Proves the desktop shell seam links and round-trips from Swift.
 
 import Foundation
+import RustTaigiSwift
 import SwiftProtobuf
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// `desktop_request_bytes` lives in the same static archive as the engine's
-/// `process_request_bytes` (docs/architecture/macos-desktop-core-roadmap.md D1).
-/// These cases push bytes through it and back: the generated
-/// `RustTaigiDesktop.swift` wrapper, the shared `RustTaigi` C module, and the
-/// prost decoder in `macos/crates/taigi-macos-ffi`. `EngineFfiSmokeTests` does
-/// the same for the engine's seam in the same process.
+/// Smoke tests for `macos/crates/taigi-macos-ffi` over the `RustTaigi` C module:
+/// `desktop_request_bytes`, `install_logger_sink`, and `set_log_level`.
 final class DesktopCoreFfiSmokeTests: XCTestCase {
     func testVersionRequest_answersTheLibraryVersion() throws {
         var request = Taigi_DesktopShell_DesktopRequest()
@@ -36,5 +33,47 @@ final class DesktopCoreFfiSmokeTests: XCTestCase {
         let response = try Taigi_DesktopShell_DesktopResponse(serializedBytes: Data(responseBytes))
 
         XCTAssertEqual(response.error, .failParse)
+    }
+
+    func testInstallLoggerSink_isIdempotent() {
+        DesktopCoreBridge.installLoggerSink()
+        DesktopCoreBridge.installLoggerSink()
+    }
+
+    /// Negative/round-trip control (rust-ffi-safety.md §6 T6): Rust `log::info!`
+    /// emitted by `set_log_level(3)` crosses the swift-bridge `SwiftLoggerSink`.
+    func testLoggerSink_receivesRustLogRecords() {
+        final class LogCapture: @unchecked Sendable {
+            private let lock = NSLock()
+            private var entries: [(UInt8, String, String)] = []
+
+            func append(_ entry: (UInt8, String, String)) {
+                lock.lock()
+                entries.append(entry)
+                lock.unlock()
+            }
+
+            func snapshot() -> [(UInt8, String, String)] {
+                lock.lock()
+                defer { lock.unlock() }
+                return entries
+            }
+        }
+
+        let capture = LogCapture()
+        install_logger_sink(SwiftLoggerSink { level, category, message in
+            capture.append((level, category, message))
+        })
+        defer {
+            set_log_level(0)
+            install_logger_sink(SwiftLoggerSink { _, _, _ in })
+        }
+
+        set_log_level(3)
+        let records = capture.snapshot()
+        XCTAssertTrue(
+            records.contains { $0.0 == 2 && $0.2.contains("Info") },
+            "expected Rust info log record from set_log_level(3), got \(records)",
+        )
     }
 }
