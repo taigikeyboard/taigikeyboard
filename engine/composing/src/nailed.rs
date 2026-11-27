@@ -149,6 +149,7 @@ fn nailed_join_with_oracle(
     let joiner = syllable_joiner.unwrap_or("-");
     let mut s = String::new();
     let mut j = 0;
+    let mut in_neutral = false;
     while j < nailed.len() {
         let prev_hyphen = s.ends_with('-');
         let run_len = if prev_hyphen {
@@ -157,7 +158,7 @@ fn nailed_join_with_oracle(
             longest_compound_run(&nailed[j..], text, &is_compound)
         };
 
-        let insert_hanji_khinsiann = if j > 0 && !prev_hyphen {
+        let leading_khinsiann = if j > 0 && !prev_hyphen {
             push_inter_segment_boundary(
                 &mut s,
                 text.of(&nailed[j - 1]),
@@ -165,22 +166,30 @@ fn nailed_join_with_oracle(
                 text,
                 output_both_scripts,
                 khinsiann_in_hanji,
+                in_neutral,
                 syllable_joiner,
             )
         } else {
-            false
+            phonetics::api::LeadingKhinsiann::None
         };
         for k in 0..run_len {
+            let seg = &nailed[j + k];
             if k > 0 {
-                push_boundary(&mut s, &nailed[j + k], text, joiner, syllable_joiner);
-                s.push_str(text.of(&nailed[j + k]));
-            } else {
-                phonetics::api::push_hanji_with_interword_khinsiann(
-                    &mut s,
-                    text.of(&nailed[j]),
-                    insert_hanji_khinsiann,
+                push_boundary(&mut s, seg, text, joiner, syllable_joiner);
+                s.push_str(text.of(seg));
+            } else if leading_khinsiann != phonetics::api::LeadingKhinsiann::None {
+                let rendered = phonetics::api::render_hanji_khinsiann_with_leading(
+                    text.of(seg),
+                    &seg.association_tl,
+                    true,
+                    leading_khinsiann,
                 );
+                s.push_str(&rendered);
+            } else {
+                s.push_str(text.of(seg));
             }
+            let seg_leading = typed_leading_khinsiann(&seg.raw_text, in_neutral, j + k > 0);
+            in_neutral = phonetics::api::ends_in_khinsiann(&seg.association_tl, seg_leading);
         }
         j += run_len;
     }
@@ -188,9 +197,11 @@ fn nailed_join_with_oracle(
 }
 
 /// Emit the word-level separator between `prev_rendered` and `next`, returning
-/// `true` when the caller should insert an inter-word Hanji `--` before `next`.
-/// `prev_rendered` is the previous segment itself (the last compound member),
-/// rather than the tail of the accumulated string.
+/// the [`phonetics::api::LeadingKhinsiann`] context when the caller should
+/// render an inter-word Hanji `--` / `-` before `next`. `prev_rendered` is the
+/// previous segment itself (the last compound member), rather than the tail of
+/// the accumulated string.
+#[allow(clippy::too_many_arguments)]
 fn push_inter_segment_boundary(
     s: &mut String,
     prev_rendered: &str,
@@ -198,8 +209,9 @@ fn push_inter_segment_boundary(
     text: SegmentText,
     output_both_scripts: bool,
     khinsiann_in_hanji: bool,
+    prev_in_neutral: bool,
     syllable_joiner: Option<&str>,
-) -> bool {
+) -> phonetics::api::LeadingKhinsiann {
     let next_rendered = text.of(next);
     let word_space = match text {
         SegmentText::Display => {
@@ -209,7 +221,7 @@ fn push_inter_segment_boundary(
     };
     if word_space {
         push_boundary(s, next, text, " ", syllable_joiner);
-        return false;
+        return phonetics::api::LeadingKhinsiann::None;
     }
     let run = typed_separator_run(&next.raw_text);
     if !run.is_empty() && starts_with_romanization(next_rendered) {
@@ -219,9 +231,11 @@ fn push_inter_segment_boundary(
         // the neutral-tone dot.
         let joiner = syllable_joiner.map(|_| "");
         push_boundary(s, next, text, "", joiner);
-        false
+        phonetics::api::LeadingKhinsiann::None
+    } else if khinsiann_in_hanji && text == SegmentText::Display {
+        typed_leading_khinsiann(&next.raw_text, prev_in_neutral, true)
     } else {
-        khinsiann_in_hanji && text == SegmentText::Display && run.len() >= 2
+        phonetics::api::LeadingKhinsiann::None
     }
 }
 
@@ -272,6 +286,35 @@ fn push_boundary(
 pub(crate) fn typed_separator_run(raw_text: &str) -> &str {
     let n = raw_text.bytes().take_while(|&b| b == b'-').count();
     &raw_text[..n]
+}
+
+/// Neutral-tone continuation context entering a segment whose raw slice is
+/// `raw_text`, given whether the preceding segment ended inside an open
+/// neutral-tone span (`prev_in_neutral`).
+pub(crate) fn typed_leading_khinsiann(
+    raw_text: &str,
+    prev_in_neutral: bool,
+    allow_continue_hyphen: bool,
+) -> phonetics::api::LeadingKhinsiann {
+    let run = typed_separator_run(raw_text).len();
+    if run >= 2 {
+        phonetics::api::LeadingKhinsiann::DoubleDash
+    } else if allow_continue_hyphen && run == 1 && prev_in_neutral {
+        phonetics::api::LeadingKhinsiann::ContinueHyphen
+    } else {
+        phonetics::api::LeadingKhinsiann::None
+    }
+}
+
+/// Whether the last segment of `nailed` ended inside an open neutral-tone
+/// span (no word-space reset after its neutral marker).
+pub(crate) fn nailed_ends_in_khinsiann(nailed: &[NailedSegment]) -> bool {
+    let mut in_neutral = false;
+    for (idx, seg) in nailed.iter().enumerate() {
+        let leading = typed_leading_khinsiann(&seg.raw_text, in_neutral, idx > 0);
+        in_neutral = phonetics::api::ends_in_khinsiann(&seg.association_tl, leading);
+    }
+    in_neutral
 }
 
 /// Upper bound on the longest-match compound scan. Matches the
@@ -534,8 +577,8 @@ mod tests {
     //! these unit-pin the predicate matrix directly.
 
     use super::{
-        combined_display, combined_display_with_tail, nailed_prefix, nailed_prefix_with_oracle,
-        AppConfig, NailedSegment, SegmentText,
+        combined_display, combined_display_with_tail, nailed_ends_in_khinsiann, nailed_prefix,
+        nailed_prefix_with_oracle, AppConfig, NailedSegment, SegmentText,
     };
 
     fn seg(display: &str) -> NailedSegment {
@@ -1316,5 +1359,117 @@ mod tests {
         assert_eq!(combined_display(&[seg("guá")], "123", &config), "guá123");
         assert_eq!(nailed_prefix(&[seg("guá"), seg("123")], &config), "guá123");
         assert_eq!(nailed_prefix(&[seg("123"), seg("guá")], &config), "123guá");
+    }
+
+    #[test]
+    fn nailed_ends_in_khinsiann_tracks_typed_and_dictionary_neutral_tails() {
+        assert!(!nailed_ends_in_khinsiann(&[]));
+        assert!(!nailed_ends_in_khinsiann(&[seg_raw("講", "kóng", "kong")]));
+        assert!(nailed_ends_in_khinsiann(&[
+            seg_raw("講", "kóng", "kong"),
+            seg_raw("--一", "tsi̍t", "--tsit"),
+        ]));
+        assert!(nailed_ends_in_khinsiann(&[
+            seg_raw("講", "kóng", "kong"),
+            seg_raw("--一", "tsi̍t", "--tsit"),
+            seg_raw("-聲", "siann", "-siann"),
+        ]));
+        // Word without a typed separator resets neutral tone.
+        assert!(!nailed_ends_in_khinsiann(&[
+            seg_raw("講", "kóng", "kong"),
+            seg_raw("--一", "tsi̍t", "--tsit"),
+            seg_raw("聲", "siann", "siann"),
+        ]));
+        // Dictionary word ending in `--` opens neutral tone; a space word resets it.
+        assert!(nailed_ends_in_khinsiann(&[seg_raw(
+            "會記--得",
+            "ē-kì--tit",
+            "ekitit"
+        )]));
+        assert!(!nailed_ends_in_khinsiann(&[seg_raw(
+            "九--月重陽",
+            "káu--ge̍h tiông-iông",
+            "kaugehtiongiong"
+        )]));
+    }
+
+    #[test]
+    fn nailed_join_with_khinsiann_adds_mid_word_hyphens_and_avoids_doubling() {
+        let join = |segs: &[NailedSegment], both| {
+            super::nailed_join_with_oracle(
+                segs,
+                SegmentText::Display,
+                both,
+                true,
+                None,
+                |_, _, _| false,
+            )
+        };
+        // Plain segments (as in unit tests) get `--` and interior `-`.
+        assert_eq!(
+            join(
+                &[
+                    seg_raw("寫", "siá", "sia"),
+                    seg_raw("出來", "tshut-lâi", "--tshutlai"),
+                ],
+                false
+            ),
+            "寫--出-來"
+        );
+        // Non-dictionary `-`-chained segments continue neutral tone.
+        assert_eq!(
+            join(
+                &[
+                    seg_raw("講", "kóng", "kong"),
+                    seg_raw("一", "tsi̍t", "--tsit"),
+                    seg_raw("聲", "siann", "-siann"),
+                ],
+                false
+            ),
+            "講--一-聲"
+        );
+        // Dictionary `--`-ending word followed by `-`.
+        assert_eq!(
+            join(
+                &[
+                    seg_raw("會記--得", "ē-kì--tit", "ekitit"),
+                    seg_raw("矣", "ah", "-ah"),
+                ],
+                false
+            ),
+            "會記--得-矣"
+        );
+        // Pre-rendered candidate strip cells do not double `--` / `-`, including with brackets.
+        assert_eq!(
+            join(
+                &[
+                    seg_raw("--出-來", "tshut-lâi", "--tshutlai"),
+                    seg_raw("-聲", "siann", "-siann"),
+                ],
+                false
+            ),
+            "--出-來-聲"
+        );
+        assert_eq!(
+            join(
+                &[
+                    seg_raw("寫 (siá)", "siá", "sia"),
+                    seg_raw("--出-來 (tshut-lâi)", "tshut-lâi", "--tshutlai"),
+                ],
+                true
+            ),
+            "寫 (siá)--出-來 (tshut-lâi)"
+        );
+        assert_eq!(
+            join(
+                &[
+                    seg_raw("講 (kóng)", "kóng", "kong"),
+                    seg_raw("--一 (tsi̍t)", "tsi̍t", "--tsit"),
+                    seg_raw("-聲 (siann)", "siann", "-siann"),
+                ],
+                true
+            ),
+            "講 (kóng)--一 (tsi̍t)-聲 (siann)"
+        );
     }
 }

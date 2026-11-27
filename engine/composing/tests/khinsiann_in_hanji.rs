@@ -433,9 +433,9 @@ fn typed_double_dash_in_composition_walk_and_nailing_and_learned_phrase() {
         assert!(mid.response.is_composing);
 
         // Now raw pending tail is `--tngkhi`: `--tńg-khì` is admitted alongside
-        // `tńg--khì` and `tńg-khì`. With `khinsiann_in_hanji` on, all 3 cells
-        // (`--轉-去`, `轉--去`, `轉去`) are distinct; with it off, all 3 merge
-        // into a single `轉去` cell.
+        // `tńg--khì` and `tńg-khì`. With `khinsiann_in_hanji` on, `--tńg-khì`
+        // and `tńg-khì` both render `--轉-去` and merge into 1 cell while
+        // `tńg--khì` renders `--轉--去`; with it off, all 3 merge into `轉去`.
         let list2 = requests::apply(
             Fetch {
                 literal_roman_candidate_disabled: true,
@@ -450,7 +450,7 @@ fn typed_double_dash_in_composition_walk_and_nailing_and_learned_phrase() {
         .candidates;
         let tail_hanjis: Vec<&str> = list2.iter().filter_map(|c| c.hanji.as_deref()).collect();
         if khinsiann {
-            assert_eq!(tail_hanjis, vec!["--轉-去", "轉--去", "轉去"]);
+            assert_eq!(tail_hanjis, vec!["--轉-去", "--轉--去"]);
         } else {
             assert_eq!(tail_hanjis, vec!["轉去"]);
         }
@@ -527,10 +527,12 @@ fn typed_double_dash_between_normal_words_emits_marker_when_enabled() {
         .continuous
         .unwrap()
         .candidates;
+        let expected_tail_gua = if khinsiann { "--我" } else { "我" };
         let gua = list2
             .iter()
-            .find(|c| c.hanji.as_deref() == Some("我"))
-            .expect("我");
+            .find(|c| c.hanji.as_deref() == Some(expected_tail_gua))
+            .unwrap_or_else(|| panic!("missing {expected_tail_gua} in {list2:?}"));
+        assert_eq!(gua.display_text, "我");
         let fin = pick_candidate(&mut engine, gua, &cfg, CommitScript::Lead);
         assert_eq!(
             commit_text(&fin.response).as_deref(),
