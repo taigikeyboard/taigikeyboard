@@ -1531,3 +1531,65 @@ fn symbol_may_swap_follows_attaching_punctuation_and_commit_spacing_switches() {
     );
     assert!(!symbol_may_swap("，", &settings));
 }
+
+#[test]
+fn leading_hyphen_then_space_commits_without_candidate_window_or_swap_arm() {
+    let mut rig = configured_rig(true, |settings| {
+        settings.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, true);
+        settings.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
+    });
+    let hyphen = KeyEventSnapshot::text("-", KeyModifiers::NONE);
+    assert!(rig.run(ComposingKeyIntent::Input("-".to_owned()), &hyphen));
+    assert!(
+        rig.list.is_empty(),
+        "hyphen-only buffer must not open candidate window"
+    );
+    assert_eq!(rig.calls(), ["list 0"]);
+    rig.surface.calls.clear();
+
+    let bindings = ComposingKeyBindings::from_document(&rig.settings, DesktopPlatform::MacOS);
+    let space = KeyEventSnapshot::text(" ", KeyModifiers::NONE);
+    let space_intent = ComposingKeyIntent::intent(
+        &space,
+        rig.manager.is_composing(),
+        !rig.list.is_empty(),
+        &bindings,
+        DesktopPlatform::MacOS,
+    );
+    assert!(rig.run(space_intent, &space));
+    assert_eq!(rig.calls(), ["commit - ", "list closed"]);
+    assert!(!rig.manager.is_composing());
+}
+
+#[test]
+fn tps_leading_hyphen_then_space_commits_hyphen_and_space() {
+    let mut rig = configured_tps_rig(|_| {});
+    rig.type_tps("-");
+    assert!(rig.list.is_empty());
+    rig.surface.calls.clear();
+
+    let space = KeyEventSnapshot::text(" ", KeyModifiers::NONE);
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &space));
+    assert_eq!(rig.calls(), ["commit - ", "list closed"]);
+    assert!(!rig.manager.is_composing());
+}
+
+#[test]
+fn leading_double_dash_then_ah_composes_in_buffer_without_duplicating() {
+    let mut rig = configured_rig(false, |settings| {
+        settings.set_bool(&keys::IS_HANJI_FIRST, true);
+        settings.set_bool(&keys::IS_KAUTIAN_ENABLED, true);
+        settings.set_bool(&keys::IS_KHINSIANN_IN_HANJI_ENABLED, true);
+    });
+    rig.type_word("--ah");
+    assert!(rig.manager.is_composing());
+    assert_eq!(rig.manager.raw_input(), "--ah");
+    assert_eq!(rig.manager.display_text(), "--ah");
+    assert!(
+        rig.list.cells().iter().all(|c| !c.text.contains("----")),
+        "must not duplicate leading --: {:?}",
+        rig.list.cells()
+    );
+    assert!(rig.run(ComposingKeyIntent::Commit, &no_key()));
+    assert_eq!(rig.calls(), ["commit --ah", "list closed"]);
+}

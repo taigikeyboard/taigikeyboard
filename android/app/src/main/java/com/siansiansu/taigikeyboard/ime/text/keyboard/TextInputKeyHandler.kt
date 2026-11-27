@@ -553,18 +553,16 @@ internal class TextInputKeyHandler(
                 }
                 candidateCoordinator.updateTaigiCandidates()
             } else {
-                if (char == "-" && smartbarManager.isShowingNextWordCandidates()) {
-                    ic.commitText("-", 1)
-                    logger.debug(TAG) { "[INPUT] '-' committed in NextWord mode, keeping suggestions" }
-                } else {
-                    if (isTps) manager.tpsKey(char, ic) else manager.startComposing(char, ic)
-                    if (consumesSingleShift(char)) releaseSingleShift()
-                    if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
-                    logger.debug("PERF") {
-                        "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms"
-                    }
-                    candidateCoordinator.updateTaigiCandidates()
+                if (smartbarManager.isShowingNextWordCandidates()) {
+                    smartbarManager.clearCandidates()
                 }
+                if (isTps) manager.tpsKey(char, ic) else manager.startComposing(char, ic)
+                if (consumesSingleShift(char)) releaseSingleShift()
+                if (prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
+                logger.debug("PERF") {
+                    "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms"
+                }
+                candidateCoordinator.updateTaigiCandidates()
             }
         } else if (manager.isComposing() && char.length == 1 && char[0].isDigit()) {
             if (isTps) manager.tpsKey(char, ic) else manager.appendCharacter(char, ic)

@@ -69,20 +69,14 @@ extension ActionHandler {
                     composingManager.appendCharacter(processedChar)
                 }
             } else {
-                // Not composing: check NextWord state
-                if processedChar == "-", nextWordController.isShowing {
-                    // "-" during NextWord: output directly, keep NextWord suggestions
-                    hostText.insert("-")
-                    logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
+                // Not composing: clear any NextWord suggestions before entering composing
+                if nextWordController.isShowing {
+                    nextWordController.clearDisplay()
+                }
+                if isTPS {
+                    composingManager.tpsKey(processedChar)
                 } else {
-                    if nextWordController.isShowing {
-                        nextWordController.clearDisplay()
-                    }
-                    if isTPS {
-                        composingManager.tpsKey(processedChar)
-                    } else {
-                        composingManager.startComposing(with: processedChar)
-                    }
+                    composingManager.startComposing(with: processedChar)
                 }
             }
         } else if composingManager.isComposing, processedChar.first?.isNumber == true {

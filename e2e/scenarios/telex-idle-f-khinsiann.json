@@ -1,6 +1,6 @@
 {
   "id": "telex-idle-f-khinsiann",
-  "source": "INVARIANT_F_TYPES_HYPHEN (2026-11-10, docs/architecture/behavioral-invariants.md): with Type - with f on, an idle `f` is the `-` key, so `ff` types the neutral-tone marker `--` as a literal (§21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL) and `ah` composes; Enter commits the preedit as typed. `telex-idle-z` is the control that an idle tone letter still passes through.",
+  "source": "INVARIANT_F_TYPES_HYPHEN / INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER (§62 / §21, docs/architecture/behavioral-invariants.md): with Type - with f on, an idle `f` is the `-` key, so `ff` enters composing as `--` and `ah` continues in-buffer to `--ah`; Enter commits the preedit as typed. `telex-idle-z` is the control that an idle tone letter still passes through.",
   "settings": { "romanization": "tl", "continuous_input": true, "output": "roman", "show_typed_text_first": true, "tone_input": "telex", "f_hyphen": true },
   "steps": [
     { "type": "text", "value": "ffah" },
