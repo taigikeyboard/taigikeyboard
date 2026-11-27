@@ -746,7 +746,6 @@ dependencies = [
  "log",
  "prost",
  "prost-build",
- "protos",
  "swift-bridge",
  "swift-bridge-build",
  "swift-ffi",

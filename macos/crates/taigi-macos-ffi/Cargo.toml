@@ -24,7 +24,6 @@ panic-injector = ["swift-ffi/panic-injector"]
 # (user-data-engine-roadmap P7b).
 swift-ffi = { workspace = true }
 dispatch = { workspace = true }
-protos = { workspace = true }
 taigi-desktop-core = { workspace = true }
 log = { workspace = true }
 prost = { workspace = true }
