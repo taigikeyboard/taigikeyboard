@@ -34,7 +34,7 @@ pub(crate) fn augment_insert(
     if text.chars().any(char::is_whitespace) {
         return AugmentedInsert {
             text: text.to_owned(),
-            leaves_trailing_auto_space: text == " ",
+            leaves_trailing_auto_space: text == " " && should_append_space(composing_display_text),
         };
     }
     if !should_append_space(composing_display_text) {
@@ -92,6 +92,12 @@ mod tests {
         let hyphen = augment_insert("?", "guá-", true);
         assert_eq!(hyphen.text, "?");
         assert!(!hyphen.leaves_trailing_auto_space);
+        let leading_hyphen_space = augment_insert(" ", "-", true);
+        assert_eq!(leading_hyphen_space.text, " ");
+        assert!(
+            !leading_hyphen_space.leaves_trailing_auto_space,
+            "a trailing-hyphen buffer followed by Space does not arm an auto-space swap"
+        );
         let off = augment_insert("?", "guá", false);
         assert_eq!(off.text, "?");
         assert!(!off.leaves_trailing_auto_space);

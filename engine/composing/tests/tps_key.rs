@@ -219,7 +219,7 @@ fn typed_keys_leave_the_expected_buffer() {
         ("ㄏㄧㄫㄉㄧㄅ", "ㄏㄧㄥㄉㄧㆴ"),
         ("ㄚ0123456789", "ㄚ0123456789"), // digits after a digit stay literal
         ("ㄍㄚ-ㄇ", "ㄍㄚ-ㆬ"),           // hyphen is no syllable boundary
-        ("-ㄍ", "ㄍ"),                    // leading hyphen went to the document
+        ("-ㄍ", "-ㄍ"),                   // leading hyphen enters the buffer (§21)
         ("ㄒㄧㄍ˙ ", "ㄒㄧㆻ\u{307}"),    // Space after the tone-8 dot refused
         ("ㆮㄧㆮ", "ㆮㄧㆯ"),
     ] {
@@ -279,13 +279,22 @@ fn space_is_inserted_at_a_caret_inside_the_tail() {
     assert_eq!(raw_of(&engine), "ㄍㄚ ㄙㄚ");
 }
 
-// INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL (§21) — as `Append` does.
+// INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER (§21) — a leading hyphen from
+// Idle enters composing; Space immediately after `-` / `--` is refused because
+// no syllable precedes it.
 #[test]
-fn leading_hyphen_from_idle_is_a_document_literal() {
+fn leading_hyphen_from_idle_begins_composition() {
     let mut engine = Engine::new();
     let resp = tps_key(&mut engine, "-");
-    assert!(!resp.is_composing);
-    assert_eq!(common::commit_text(&resp), Some("-".to_string()));
+    assert!(resp.is_composing);
+    assert_eq!(common::commit_text(&resp), None);
+    assert_eq!(raw_of(&engine), "-");
+    assert!(tps_key(&mut engine, " ").effect.is_empty());
+
+    let resp2 = tps_key(&mut engine, "-");
+    assert!(resp2.is_composing);
+    assert_eq!(raw_of(&engine), "--");
+    assert!(tps_key(&mut engine, " ").effect.is_empty());
 }
 
 // trace: "ㄍㄚˋ", caret stepped left to before ˋ — a separator there would part

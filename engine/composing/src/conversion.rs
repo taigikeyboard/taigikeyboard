@@ -340,6 +340,8 @@ pub(crate) fn convert(
     previous: Option<PreviousTail<'_>>,
     raw: &str,
     caret: usize,
+    at_buffer_start: bool,
+    prev_in_neutral: bool,
     config: &AppConfig,
     frequency: Option<&dyn ConversionFrequency>,
 ) -> (Option<Conversion>, usize) {
@@ -425,7 +427,14 @@ pub(crate) fn convert(
                 .unwrap_or_default();
             ctx.freq_map = &rows.0;
             ctx.now_ms = rows.1;
-            walk_closed_part(closed, &continuous_keys, inventory, &ctx)
+            walk_closed_part(
+                closed,
+                &continuous_keys,
+                inventory,
+                &ctx,
+                at_buffer_start,
+                prev_in_neutral,
+            )
         };
         // The closed part runs to the furthest closing end; it is walked
         // as a buffer of its own.
@@ -627,27 +636,64 @@ fn walk_closed_part(
     continuous_keys: &ContinuousKeys,
     inventory: &SyllableInventory,
     ctx: &ContinuousFetchCtx<'_>,
+    at_buffer_start: bool,
+    prev_in_neutral: bool,
 ) -> Option<Vec<ConvertedSegment>> {
     let shadow_to_raw_end = &continuous_keys.shadow_to_raw_end;
     let path = walk_buffer(continuous_keys, inventory, ctx)?;
+    let raw_leading_run = if at_buffer_start {
+        crate::nailed::typed_separator_run(closed)
+    } else {
+        ""
+    };
     let mut start = 0;
+    let mut in_neutral = ctx.khinsiann_in_hanji && prev_in_neutral;
     Some(
         path.edges
             .iter()
             .zip(path.choices)
-            .map(|(&(_, end), choice)| {
+            .enumerate()
+            .map(|(edge_idx, (&(s, end), choice))| {
                 let raw_span = (start, with_separator_run(closed, shadow_to_raw_end[end]));
                 start = raw_span.1;
+                let typed_run = continuous_keys
+                    .hyphen_runs
+                    .iter()
+                    .find(|&&(b, _)| b == s)
+                    .map_or(0, |&(_, run)| run);
+                let leading = if !ctx.khinsiann_in_hanji {
+                    phonetics::api::LeadingKhinsiann::None
+                } else if typed_run >= 2 {
+                    phonetics::api::LeadingKhinsiann::DoubleDash
+                } else if typed_run == 1 && in_neutral {
+                    phonetics::api::LeadingKhinsiann::ContinueHyphen
+                } else {
+                    phonetics::api::LeadingKhinsiann::None
+                };
                 let hanji = choice.hanji.map(|h| {
-                    match phonetics::api::render_hanji_khinsiann(
+                    let rendered = phonetics::api::render_hanji_khinsiann_with_leading(
                         &h,
                         &choice.canonical_tl,
                         ctx.khinsiann_in_hanji,
-                    ) {
-                        std::borrow::Cow::Borrowed(_) => h,
-                        std::borrow::Cow::Owned(rendered) => rendered,
+                        leading,
+                    );
+                    if edge_idx == 0 && !raw_leading_run.is_empty() && typed_run > 0 {
+                        match phonetics::api::apply_leading_literal_hyphens(
+                            &rendered,
+                            raw_leading_run,
+                        ) {
+                            std::borrow::Cow::Owned(prefixed) => prefixed,
+                            std::borrow::Cow::Borrowed(_) => rendered.into_owned(),
+                        }
+                    } else {
+                        match rendered {
+                            std::borrow::Cow::Borrowed(_) => h,
+                            std::borrow::Cow::Owned(rendered) => rendered,
+                        }
                     }
                 });
+                in_neutral = ctx.khinsiann_in_hanji
+                    && phonetics::api::ends_in_khinsiann(&choice.canonical_tl, leading);
                 let display_text = hanji
                     .clone()
                     .unwrap_or_else(|| tps_slice_display(&closed[raw_span.0..raw_span.1]));

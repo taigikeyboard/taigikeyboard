@@ -123,13 +123,15 @@ fn apply_hanji_display(
     raw: &str,
     khinsiann: bool,
     leading: phonetics::api::LeadingKhinsiann,
+    leading_literal: &str,
     mode: phonetics::InputMode,
 ) {
     let renders = khinsiann || mode == phonetics::InputMode::Poj;
+    let has_leading_literal = !leading_literal.is_empty();
     // A buffer typed without a capital has no case to raise: the common path
     // stays a render-only (or no-op) pass.
     let recases = raw.chars().any(char::is_uppercase);
-    if !renders && !recases {
+    if !renders && !recases && !has_leading_literal {
         return;
     }
     for cand in candidates {
@@ -147,6 +149,13 @@ fn apply_hanji_display(
                 )
             {
                 *hanji = rendered;
+            }
+        }
+        if has_leading_literal {
+            if let std::borrow::Cow::Owned(prefixed) =
+                phonetics::api::apply_leading_literal_hyphens(hanji, leading_literal)
+            {
+                *hanji = prefixed;
             }
         }
         if recases {
@@ -198,6 +207,7 @@ pub(crate) fn assemble_candidates(
     config: &protos::engine::AppConfig,
     shape: ListShape,
     prev_in_neutral: bool,
+    at_buffer_start: bool,
 ) -> Assembled {
     let raw_len = raw.len() as u32;
     let enabled_sources_bitmask = crate::requests::source_filter_bitmask(config);
@@ -205,8 +215,10 @@ pub(crate) fn assemble_candidates(
     let force_lowercase_nasal_marker = config.force_lowercase_nasal_marker;
     let dedupe_commit_hanji = super::dedupe::should_dedupe_commit_hanji(config, mode);
     let khinsiann_in_hanji = config.khinsiann_in_hanji;
+    let raw_leading_run = crate::nailed::typed_separator_run(raw);
+    let hanji_leading_literal = if at_buffer_start { raw_leading_run } else { "" };
     let leading_khinsiann = if khinsiann_in_hanji {
-        crate::nailed::typed_leading_khinsiann(raw, prev_in_neutral, true)
+        crate::nailed::typed_leading_khinsiann(raw, prev_in_neutral, !at_buffer_start)
     } else {
         phonetics::api::LeadingKhinsiann::None
     };
@@ -336,6 +348,7 @@ pub(crate) fn assemble_candidates(
                     raw,
                     khinsiann_in_hanji,
                     leading_khinsiann,
+                    hanji_leading_literal,
                     mode,
                 );
                 partial
@@ -398,7 +411,14 @@ pub(crate) fn assemble_candidates(
                     cand.roman = recase_roman(&cand.roman, seg);
                 }
             }
-            apply_hanji_display(&mut c, raw, khinsiann_in_hanji, leading_khinsiann, mode);
+            apply_hanji_display(
+                &mut c,
+                raw,
+                khinsiann_in_hanji,
+                leading_khinsiann,
+                hanji_leading_literal,
+                mode,
+            );
             // ---- Step 4: walker slot-0 prepend (all modes).
             // v3.5.8 S2 — whole-sentence walker. The synthesized
             // full-buffer best path is explicitly prepended at slot 0
@@ -452,10 +472,16 @@ pub(crate) fn assemble_candidates(
                     };
                     synth = synth_cut(raw_len, continuous_keys, inv, ctx)
                         .filter(|cut| shape == ListShape::Sentence || cut.path.edges.len() == 1);
-                    if let Some(slot0) = synth
-                        .as_ref()
-                        .map(|cut| walker_slot0(raw, continuous_keys, ctx, cut, prev_in_neutral))
-                    {
+                    if let Some(slot0) = synth.as_ref().map(|cut| {
+                        walker_slot0(
+                            raw,
+                            continuous_keys,
+                            ctx,
+                            cut,
+                            prev_in_neutral,
+                            at_buffer_start,
+                        )
+                    }) {
                         let composed_from_edges = slot0.edge_count >= 2;
                         // R2 identity sidechannel: read the canonical TL the
                         // walker already folded once (`WalkerSlot0.canonical_tl`,
@@ -682,7 +708,14 @@ pub(crate) fn assemble_candidates(
                         ctx,
                         fetch_partial_prefix_candidates_unbounded,
                     );
-                    apply_hanji_display(&mut ext, raw, khinsiann_in_hanji, leading_khinsiann, mode);
+                    apply_hanji_display(
+                        &mut ext,
+                        raw,
+                        khinsiann_in_hanji,
+                        leading_khinsiann,
+                        hanji_leading_literal,
+                        mode,
+                    );
                     // Borrowed key shape — `c` is not mutated during the
                     // retain on `ext`, so HashSet entries can hold &str
                     // slices into `c` and avoid per-keystroke String allocs.
@@ -741,6 +774,7 @@ pub(crate) fn assemble_candidates(
                     raw,
                     khinsiann_in_hanji,
                     leading_khinsiann,
+                    hanji_leading_literal,
                     mode,
                 );
                 retain_absent_from(&candidates, &mut abbrev);
@@ -810,6 +844,28 @@ pub(crate) fn assemble_candidates(
                     &cand.canonical_tl,
                     &cand.roman,
                 ) {
+                    cand.roman = roman;
+                    typed_separators_rendered = true;
+                }
+            }
+        }
+        // Preserve a typed leading `-` / `--` run on `cand.roman` at buffer start
+        // (including single `-`), and `--` / `---` on a pending tail, before POJ
+        // render, Syllable Separator (`--` → `·`), nasal case, and dedupe.
+        let roman_leading_run = if matches!(
+            mode,
+            phonetics::InputMode::Tl | phonetics::InputMode::Poj | phonetics::InputMode::Tps
+        ) && (at_buffer_start || raw_leading_run.len() >= 2)
+        {
+            raw_leading_run
+        } else {
+            ""
+        };
+        if !roman_leading_run.is_empty() {
+            for cand in &mut candidates {
+                if let std::borrow::Cow::Owned(roman) =
+                    phonetics::api::apply_leading_typed_separator(&cand.roman, roman_leading_run)
+                {
                     cand.roman = roman;
                     typed_separators_rendered = true;
                 }
@@ -892,6 +948,7 @@ pub(crate) fn assemble_candidates(
             || syllable_joiner.is_some()
             || typed_separators_rendered
             || leading_khinsiann != phonetics::api::LeadingKhinsiann::None
+            || !hanji_leading_literal.is_empty()
         {
             dedupe_rendered_continuous(&mut candidates);
         }

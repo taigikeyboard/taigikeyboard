@@ -8,7 +8,7 @@ use crate::common::{
     empty_association_bin, fetch_at_pos_response, install_lexicon, Fetch, Row,
 };
 use composing::api::{CommitScript, Engine};
-use composing::{requests, Intent, Phase};
+use composing::{requests, Intent};
 use lexicon::{CustomEntry, LearnedEntry};
 use protos::engine::{AppConfig, CandidateDisplayMode, CandidateMessage, SyllableSeparator};
 use test_support::{engine_install_lock, write_temp};
@@ -462,29 +462,37 @@ fn custom_khinsiann_collision_respects_toggle() {
     );
 }
 
+// INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER (§21) — typing `--` from Idle
+// stays in the buffer (`--` emits zero candidates, then `--tngkhi` lists
+// `--轉-去` and `--轉--去` without duplicating `----`).
 #[test]
-fn typed_leading_double_dash_from_idle_still_commits_literally() {
+fn typed_leading_double_dash_from_idle_composes_in_buffer() {
     let _lock = engine_install_lock();
     install_fixture();
     let on = hanji_config(true, false);
 
     let mut engine = Engine::new();
     let first = engine.apply(Intent::AppendHyphen, &on);
-    assert_eq!(commit_text(&first).as_deref(), Some("-"));
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
+    assert!(first.is_composing);
+    assert_eq!(commit_text(&first), None);
+    assert_eq!(first.preedit.unwrap().raw_input, "-");
 
     let second = engine.apply(Intent::AppendHyphen, &on);
-    assert_eq!(commit_text(&second).as_deref(), Some("-"));
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
+    assert!(second.is_composing);
+    assert_eq!(commit_text(&second), None);
+    assert_eq!(second.preedit.unwrap().raw_input, "--");
 
-    // Subsequent `tngkhi` composes without the already committed hyphens.
-    // The dictionary's leading `--` remains optional for matching.
-    engine.apply(
-        Intent::Start {
-            text: "tngkhi".into(),
-        },
-        &on,
-    );
+    let empty_fetch = requests::apply(Fetch::default().intent(), &mut engine, &on)
+        .continuous
+        .unwrap()
+        .candidates;
+    assert!(empty_fetch.is_empty(), "hyphen-only buffer lists nothing");
+
+    for ch in "tngkhi".chars() {
+        engine.apply(Intent::Append { ch: ch.to_string() }, &on);
+    }
+    assert_eq!(engine.snapshot(&on).preedit.unwrap().raw_input, "--tngkhi");
+
     let cands = requests::apply(
         Fetch {
             literal_roman_candidate_disabled: true,
@@ -498,7 +506,28 @@ fn typed_leading_double_dash_from_idle_still_commits_literally() {
     .unwrap()
     .candidates;
     let hanjis: Vec<&str> = cands.iter().filter_map(|c| c.hanji.as_deref()).collect();
-    assert_eq!(hanjis, vec!["--轉-去", "轉--去", "轉去"]);
+    assert_eq!(hanjis, vec!["--轉-去", "--轉--去"]);
+    let romans: Vec<&str> = cands.iter().map(|c| c.roman.as_str()).collect();
+    assert_eq!(romans, vec!["--tńg-khì", "--tńg--khì"]);
+
+    let off = hanji_config(false, false);
+    let cands_off = requests::apply(
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            ..Default::default()
+        }
+        .intent(),
+        &mut engine,
+        &off,
+    )
+    .continuous
+    .unwrap()
+    .candidates;
+    let hanjis_off: Vec<&str> = cands_off
+        .iter()
+        .filter_map(|c| c.hanji.as_deref())
+        .collect();
+    assert_eq!(hanjis_off, vec!["--轉去"]);
 }
 
 #[test]
@@ -773,7 +802,7 @@ fn non_khinsiann_dictionary_words_prepended_with_double_dash_add_middle_hyphens(
 
     // 2. Annotate in Brackets (both Hanji-first and Roman-first).
     for (hanji_first, expected) in [
-        (true, "寫 (siá)--出-來 (tshut-lâi)"),
+        (true, "寫 (siá)--出-來 (--tshut-lâi)"),
         (false, "siá (寫)--tshut-lâi (--出-來)"),
     ] {
         let mut cfg = hanji_config(true, true);

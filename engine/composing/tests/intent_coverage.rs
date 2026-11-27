@@ -1,4 +1,4 @@
-//! The proto decode of every composing method, the §21 leading-hyphen literal
+//! The proto decode of every composing method, §21 in-buffer leading hyphens
 //! through `requests::handle`, and the desktop Telex key path.
 
 use composing::CommitScript;
@@ -12,11 +12,10 @@ use protos::engine::{
 use crate::common;
 use crate::common::{commit_text, config_tl, req};
 
-// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading `--` typed from
-// Idle is a document literal, NOT composing input (MOE-style). Production sends
-// one char at a time, so the first `-` arrives as Start{"-"}.
+// §21 INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER — a leading hyphen typed from
+// Idle enters the composing buffer just like any other composing keystroke.
 #[test]
-fn intent_start_leading_hyphen_inserts_literal_stays_idle() {
+fn intent_start_leading_hyphen_begins_composing() {
     let mut engine = Engine::new();
     let resp = requests::handle(
         &req(Method::Start(Start { text: "-".into() })),
@@ -24,14 +23,15 @@ fn intent_start_leading_hyphen_inserts_literal_stays_idle() {
         &config_tl(),
     )
     .unwrap();
-    assert!(!resp.is_composing, "leading `-` must not enter composing");
-    assert_eq!(commit_text(&resp), Some("-".to_string()));
-    // No preedit underline for the literal hyphen.
-    assert_eq!(resp.preedit.unwrap_or_default().display_text, "");
+    assert!(resp.is_composing, "leading `-` enters composing");
+    assert_eq!(commit_text(&resp), None);
+    let preedit = resp.preedit.unwrap();
+    assert_eq!(preedit.raw_input, "-");
+    assert_eq!(preedit.display_text, "-");
 }
 
 #[test]
-fn intent_append_leading_hyphen_in_idle_inserts_literal() {
+fn intent_append_leading_hyphen_in_idle_begins_composing() {
     let mut engine = Engine::new();
     let resp = requests::handle(
         &req(Method::Append(Append { char: "-".into() })),
@@ -39,14 +39,15 @@ fn intent_append_leading_hyphen_in_idle_inserts_literal() {
         &config_tl(),
     )
     .unwrap();
-    assert!(!resp.is_composing);
-    assert_eq!(commit_text(&resp), Some("-".to_string()));
+    assert!(resp.is_composing);
+    assert_eq!(commit_text(&resp), None);
+    assert_eq!(resp.preedit.unwrap().raw_input, "-");
 }
 
-// Multi-char Start (engine API / test path): split the leading hyphen run,
-// insert it literally, then compose the syllable remainder.
+// Multi-char Start (engine API / test path): the entire `--ah` stays in the
+// composing buffer with no premature literal commit.
 #[test]
-fn intent_start_leading_hyphens_then_syllable_splits() {
+fn intent_start_leading_hyphens_then_syllable_composes_together() {
     let mut engine = Engine::new();
     let resp = requests::handle(
         &req(Method::Start(Start {
@@ -56,9 +57,11 @@ fn intent_start_leading_hyphens_then_syllable_splits() {
         &config_tl(),
     )
     .unwrap();
-    assert!(resp.is_composing, "the syllable remainder composes");
-    assert_eq!(commit_text(&resp), Some("--".to_string()));
-    assert_eq!(resp.preedit.unwrap().raw_input, "ah");
+    assert!(resp.is_composing);
+    assert_eq!(commit_text(&resp), None);
+    let preedit = resp.preedit.unwrap();
+    assert_eq!(preedit.raw_input, "--ah");
+    assert_eq!(preedit.display_text, "--ah");
 }
 
 // Every proto method decodes to its intent. The transition each intent
@@ -311,11 +314,11 @@ fn intent_append_f_is_a_plain_letter_when_the_setting_is_off() {
     }
 }
 
-// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — with the setting on, an
-// idle `f` is the `-` key: it types the neutral-tone marker as a document
-// literal and stays Idle.
+// §21 INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER + §62 INVARIANT_F_TYPES_HYPHEN —
+// with `f_types_hyphen` on, an idle `f` writes `-` into the composing buffer,
+// just as typing `-` does.
 #[test]
-fn intent_append_idle_f_inserts_a_literal_hyphen_and_stays_idle() {
+fn intent_append_idle_f_enters_composing_with_a_hyphen() {
     for key in ["f", "F"] {
         let config = config_f_hyphen("tl");
         let mut engine = Engine::new();
@@ -325,34 +328,39 @@ fn intent_append_idle_f_inserts_a_literal_hyphen_and_stays_idle() {
             &config,
         )
         .unwrap();
-        assert!(!resp.is_composing, "{key}");
-        assert_eq!(commit_text(&resp), Some("-".to_string()), "{key}");
-        assert_eq!(resp.preedit.unwrap_or_default().display_text, "", "{key}");
+        assert!(resp.is_composing, "{key}");
+        assert_eq!(commit_text(&resp), None, "{key}");
+        let preedit = resp.preedit.unwrap();
+        assert_eq!(preedit.raw_input, "-", "{key}");
+        assert_eq!(preedit.display_text, "-", "{key}");
     }
 }
 
 #[test]
-fn intent_append_idle_ff_then_syllable_is_the_khinsiann_marker() {
-    // trace: each idle `f` commits one `-` and stays Idle, so `f f` commits
-    // `--`; `a` then starts a composition and `h` appends to it.
+fn intent_append_idle_ff_then_syllable_composes_khinsiann_in_buffer() {
+    // trace: each idle/leading `f` appends `-` inside the composing buffer, so
+    // `f f a h` produces `--ah` in-buffer with zero premature document commits.
     for mode in ["tl", "poj"] {
         let config = config_f_hyphen(mode);
         let mut engine = Engine::new();
-        for _ in 0..2 {
+        for expected in ["-", "--"] {
             let resp = requests::handle(
                 &req(Method::Append(Append { char: "f".into() })),
                 &mut engine,
                 &config,
             )
             .unwrap();
-            assert!(!resp.is_composing, "{mode}");
-            assert_eq!(commit_text(&resp), Some("-".to_string()), "{mode}");
+            assert!(resp.is_composing, "{mode}");
+            assert_eq!(commit_text(&resp), None, "{mode}");
+            assert_eq!(resp.preedit.unwrap().raw_input, expected, "{mode}");
         }
         append(&mut engine, "a", &config);
         append(&mut engine, "h", &config);
         let resp = engine.snapshot(&config);
         assert!(resp.is_composing, "{mode}");
-        assert_eq!(resp.preedit.unwrap().raw_input, "ah", "{mode}");
+        let preedit = resp.preedit.unwrap();
+        assert_eq!(preedit.raw_input, "--ah", "{mode}");
+        assert_eq!(preedit.display_text, "--ah", "{mode}");
     }
 }
 

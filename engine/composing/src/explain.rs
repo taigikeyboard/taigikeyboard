@@ -168,6 +168,7 @@ pub fn mechanism(
             listed.mode,
             config.khinsiann_in_hanji,
             listed.prev_in_neutral,
+            listed.at_buffer_start,
         )
     };
     if listed.shift > 0 {

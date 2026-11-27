@@ -318,6 +318,9 @@ pub(crate) struct Listed {
     /// Whether the nailed segment immediately before `segment_raw` ended inside
     /// an open neutral-tone span (`khinsiann_in_hanji` enabled).
     pub(crate) prev_in_neutral: bool,
+    /// Whether `segment_raw` starts at the very beginning of the composition
+    /// (nothing nailed and not a mid-tail word list).
+    pub(crate) at_buffer_start: bool,
     /// Hanji leaked into the buffer: an empty list, no cut.
     pub(crate) blocked: bool,
 }
@@ -343,6 +346,7 @@ struct ListingBuffer {
     shape: ListShape,
     mode: phonetics::InputMode,
     prev_in_neutral: bool,
+    at_buffer_start: bool,
 }
 
 fn listing_buffer(engine: &Engine, config: &AppConfig) -> Option<ListingBuffer> {
@@ -390,6 +394,7 @@ fn listing_buffer(engine: &Engine, config: &AppConfig) -> Option<ListingBuffer> 
             Some(WordListStart::InTail(start)) if start > 0 => false,
             _ => crate::nailed::nailed_ends_in_khinsiann(nailed),
         };
+    let at_buffer_start = nailed.is_empty() && list_start == 0;
     Some(ListingBuffer {
         tail: tail.clone(),
         listed,
@@ -397,6 +402,7 @@ fn listing_buffer(engine: &Engine, config: &AppConfig) -> Option<ListingBuffer> 
         shape,
         mode,
         prev_in_neutral,
+        at_buffer_start,
     })
 }
 
@@ -508,6 +514,7 @@ pub(crate) fn listed_candidates(
         shape,
         mode,
         prev_in_neutral,
+        at_buffer_start,
     } = listing_buffer(engine, config)?;
     let raw = listed.as_str();
     // v3.5.8 Phase 9 Item 11 — hanji guard (§15.3.E). The only input
@@ -530,6 +537,7 @@ pub(crate) fn listed_candidates(
             walker_moved: false,
             roman_twins: false,
             prev_in_neutral: false,
+            at_buffer_start: false,
             blocked: true,
         });
     }
@@ -567,6 +575,7 @@ pub(crate) fn listed_candidates(
         config,
         shape,
         prev_in_neutral,
+        at_buffer_start,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
@@ -632,6 +641,7 @@ pub(crate) fn listed_candidates(
         walker_moved,
         roman_twins,
         prev_in_neutral,
+        at_buffer_start,
         blocked: false,
     })
 }
@@ -720,6 +730,9 @@ fn literal_roman_candidate(
     mode: phonetics::InputMode,
 ) -> Option<RawCandidate> {
     if !matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj) {
+        return None;
+    }
+    if raw.bytes().all(|b| b == b'-') {
         return None;
     }
     let literal = crate::derived::derived_display(raw, config);

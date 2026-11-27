@@ -431,6 +431,7 @@ pub(super) fn walker_slot0(
     ctx: &ContinuousFetchCtx<'_>,
     cut: &SynthCut,
     prev_in_neutral: bool,
+    at_buffer_start: bool,
 ) -> WalkerSlot0 {
     let crate::shadow::ContinuousKeys {
         shadow,
@@ -498,6 +499,7 @@ pub(super) fn walker_slot0(
         ctx.khinsiann_in_hanji,
         edges,
         prev_in_neutral,
+        at_buffer_start,
     );
     // v3.5.9 B-4 (Codex pre-impl BLOCK #2 close): the walker
     // greedy-longest OOV synth builds `roman` from the
@@ -628,8 +630,14 @@ pub(crate) fn sentence_hanji(
     khinsiann_in_hanji: bool,
     edges: bool,
     prev_in_neutral: bool,
+    at_buffer_start: bool,
 ) -> Option<String> {
     let shadow_to_raw_end = &continuous_keys.shadow_to_raw_end;
+    let raw_leading_run = if at_buffer_start {
+        crate::nailed::typed_separator_run(raw)
+    } else {
+        ""
+    };
     let edge_piece =
         |s: usize, e: usize, choice: &crate::lattice::EdgeChoice, part: &str| -> String {
             match (&choice.hanji, mode) {
@@ -679,6 +687,18 @@ pub(crate) fn sentence_hanji(
                 ),
                 _ => std::borrow::Cow::Owned(edge_piece(s, e, choice, part)),
             };
+            let piece = if edge_idx == 0
+                && !raw_leading_run.is_empty()
+                && typed_run > 0
+                && choice.hanji.is_some()
+            {
+                match phonetics::api::apply_leading_literal_hyphens(&piece, raw_leading_run) {
+                    std::borrow::Cow::Owned(prefixed) => std::borrow::Cow::Owned(prefixed),
+                    std::borrow::Cow::Borrowed(_) => piece,
+                }
+            } else {
+                piece
+            };
             // A Han-Lo edge's Taigi romanized words (a learned Hàn-Lô lām
             // phrase, `啥mih`) in the case typed for the edge, as a
             // romanization edge's `part` already is; a custom edge's Hanji
@@ -713,6 +733,14 @@ pub(crate) fn sentence_hanji(
                 // A `-` / `--` the user typed in front of a romanized word
                 // stays, as the nailed commit keeps it (`我tsia̍h--lâi`).
                 out.extend(std::iter::repeat_n('-', typed_run));
+                out.push_str(&piece);
+            } else if edge_idx == 0
+                && !raw_leading_run.is_empty()
+                && typed_run > 0
+                && choice.hanji.is_none()
+                && !piece.starts_with('-')
+            {
+                out.push_str(raw_leading_run);
                 out.push_str(&piece);
             } else {
                 push_sentence_piece(&mut out, &piece);
