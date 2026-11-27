@@ -273,7 +273,8 @@ private fun LabelContent(
         val centerX = w / 2.0f
         val centerY = h / 2.0f + (labelPaint.textSize - labelPaint.descent()) / 2.0f
 
-        val isTpsWithPopup = keyboardLayoutType == "tps" && data.isTpsGlyphWithPopup()
+        // A key with its own custom long-press list shows no built-in hint (iOS ButtonTextProvider).
+        val isTpsWithPopup = keyboardLayoutType == "tps" && data.isTpsGlyphWithPopup() && !hasCustomCallouts
 
         drawIntoCanvas { compose ->
             val nativeCanvas = compose.nativeCanvas
@@ -314,12 +315,14 @@ private fun LabelContent(
                 drawCentred(nativeCanvas, label, centerX, centerY, labelPaint, inkRect)
             }
 
-            // TPS punctuation hint (e.g., "。" hint above "，").
+            // TPS punctuation hint: "。" above the TPS table's own "，" only (iOS punctuationActions), so a
+            // symbol key moved onto a TPS custom layout draws none.
             if (keyboardLayoutType == "tps" &&
                 mode == KeyboardMode.CHARACTERS &&
                 data.type == KeyType.CHARACTER &&
-                data.code != 0 &&
-                data.popup.isNotEmpty()
+                data.label == "，" &&
+                data.popup.isNotEmpty() &&
+                !hasCustomCallouts
             ) {
                 hintPaint.textSize = baseTextSize * 0.52f
                 hintPaint.color = labelPaint.color

@@ -16,6 +16,7 @@ import com.siansiansu.taigikeyboard.ime.popup.tpsPopupWithBaseGlyph
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
+import com.siansiansu.taigikeyboard.ime.text.key.isTpsGlyphWithPopup
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -93,8 +94,12 @@ internal class ImeKeyEventDispatcher(
         // TPS glyph keys get their own glyph prepended to the long-press popup
         // so the base letter stays selectable (base-first; parity with iOS
         // Callouts.TPSCallouts.calloutChars). Applied at anchor resolution, not
-        // in the layout JSON, because the keycap hint draws data.popup directly.
-        val anchorData = tpsPopupWithBaseGlyph(bounds.data, prefs.isTpsLayout)
+        // in the layout JSON, because the keycap hint draws data.popup directly. A custom layout's own
+        // list is shown as stored, so it gets no prepend. Runs on every key-down: the label set is read
+        // only for a TPS glyph key (no symbol-page key is one, so the keyboard mode needs no check).
+        val isPrependCandidate = prefs.isTpsLayout && bounds.data.isTpsGlyphWithPopup()
+        val anchorData =
+            tpsPopupWithBaseGlyph(bounds.data, isPrependCandidate && bounds.data.label !in prefs.customCalloutLabels(inputMode))
 
         // Popup cells are only consumed by the long-press extend() path, so
         // build them lazily; a plain tap never runs buildPopupCells. Caps state

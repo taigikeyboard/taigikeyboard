@@ -71,7 +71,10 @@ class LayoutAssets(
         return arrangement
     }
 
-    /** The letter keyboard of [layoutType] in [inputMode] (TL / POJ): digit row, letter rows, modifier rows. */
+    /**
+     * The letter keyboard of [layoutType] in [inputMode] (TL / POJ / TPS): digit row ([hasDigitRow]),
+     * letter rows, modifier rows.
+     */
     fun letterKeyboard(
         layoutType: String,
         inputMode: String,
@@ -81,10 +84,16 @@ class LayoutAssets(
         merge(
             load(LayoutType.CHARACTERS, characterLayoutName(layoutType, inputMode, isFullWidthPunctuation)),
             load(LayoutType.CHARACTERS_MOD, characterModifierName(layoutType, inputMode, isFullWidthPunctuation)),
-            load(LayoutType.EXTENSION, "number_row"),
+            if (hasDigitRow(layoutType, inputMode)) load(LayoutType.EXTENSION, "number_row") else null,
         )
 
     companion object {
+        /** Whether the letter keyboard opens with the `number_row` extension: TPS has enough rows without it. */
+        fun hasDigitRow(
+            layoutType: String,
+            inputMode: String,
+        ): Boolean = inputMode != CustomLayout.TPS_BASE && layoutType != CustomLayout.TPS_BASE
+
         /** Thread-safe and reusable. */
         val moshi: Moshi =
             Moshi

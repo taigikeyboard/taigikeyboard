@@ -79,8 +79,9 @@ class LayoutManager(
             if (custom == null) merged else compositionRoot.customLayoutTables.substitute(merged, custom, isFullWidthPunctuation)
 
         if (keyboardMode == KeyboardMode.CHARACTERS) {
-            // The engine's tone marks by key label (TL / POJ only; `custom` is null in other modes): a
-            // universal custom layout's are both scripts'. Each key gets fresh entries.
+            // The engine's tone marks by key label (TL / POJ only; English and TPS get none, a TPS
+            // custom layout is never universal): a universal custom layout's are both scripts'. Each
+            // key gets fresh entries.
             val tones = compositionRoot.toneVariations()
             val toneMarks =
                 if (custom?.isUniversal == true) tones.universal else LayoutScript.fromStorage(prefs.inputMode)?.toneMarks(tones).orEmpty()
@@ -120,8 +121,10 @@ class LayoutManager(
         val inputMode = overrideInputMode ?: prefs.inputMode
         val modSuffix = if (isFullWidthPunctuation) "fullwidth" else "halfwidth"
         val symbolsSuffix = if (isFullWidthPunctuation) "fullwidth" else "default"
-        // English and TPS keep their own tables; a custom layout only replaces a romanization one.
-        val custom = if (keyboardMode == KeyboardMode.CHARACTERS && (inputMode == "tl" || inputMode == "poj")) prefs.activeCustomLayout else null
+        // English keeps its own table; a romanization custom layout replaces a TL / POJ table, a TPS
+        // one the TPS table (CustomLayout.shown).
+        val custom =
+            if (keyboardMode == KeyboardMode.CHARACTERS) CustomLayout.shown(prefs.activeCustomLayout, inputMode, prefs.keyboardLayoutType) else null
 
         when (keyboardMode) {
             KeyboardMode.CHARACTERS -> {
@@ -133,8 +136,7 @@ class LayoutManager(
                 }
                 main = LTN(LayoutType.CHARACTERS, layoutName)
                 modifier = LTN(LayoutType.CHARACTERS_MOD, LayoutAssets.characterModifierName(layoutType, inputMode, isFullWidthPunctuation))
-                // TPS layout already has enough rows — skip number row
-                if (inputMode != "tps" && prefs.keyboardLayoutType != "tps") {
+                if (LayoutAssets.hasDigitRow(layoutType, inputMode)) {
                     extension = LTN(LayoutType.EXTENSION, "number_row")
                 }
             }
@@ -171,7 +173,9 @@ class LayoutManager(
             }
         }
 
-        val result = mergeLayouts(keyboardMode, main, modifier, extension, custom, isFullWidthPunctuation)
+        // TPS types full-width punctuation whatever the override (the Theme-tab preview passes half
+        // width), so a symbol key on a TPS custom layout takes its full-width form, as the TPS table's `，`.
+        val result = mergeLayouts(keyboardMode, main, modifier, extension, custom, isFullWidthPunctuation || custom?.isTps == true)
 
         // 文/A is dropped where it could flip nothing — Romanization Only (always half-width)
         // and TPS (always full-width) — from every mode's rows (characters +

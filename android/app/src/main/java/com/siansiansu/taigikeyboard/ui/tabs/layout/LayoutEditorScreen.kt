@@ -72,7 +72,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayout
 import com.siansiansu.taigikeyboard.ime.text.layout.CustomLayoutTables
 import com.siansiansu.taigikeyboard.ime.text.layout.FunctionKey
 import com.siansiansu.taigikeyboard.ime.text.layout.GridKey
-import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOptions
+import com.siansiansu.taigikeyboard.ime.text.layout.KeyboardLayoutOption
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGrid
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutKeyGridInteraction
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutPlace
@@ -339,7 +339,7 @@ fun LayoutEditorScreen(
                     .then(if (scrollsWhole) Modifier.verticalScroll(scrollState) else Modifier),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                BaseChips(selectedBase = draft.base, onSelect = ::restart)
+                BaseChips(bases = draft.editorBases, selectedBase = draft.base, onSelect = ::restart)
 
                 LayoutKeyGrid(
                     rows = remember(draft) { tables.editorRows(draft) },
@@ -417,7 +417,7 @@ fun LayoutEditorScreen(
                         .padding(horizontal = EDITOR_PADDING, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(28.dp),
                 ) {
-                    val letters = remember(draft) { draft.spares(tables.trayLetters) }
+                    val letters = remember(draft) { tables.trayLetters(draft) }
                     val (halfWidth, fullWidth) = remember(draft) { tables.traySymbols(draft).partition { !isFullWidthSymbol(it) } }
                     if (!draft.hasEmojiKey || letters.isNotEmpty()) {
                         // Tap restores the emoji key at once.
@@ -437,7 +437,13 @@ fun LayoutEditorScreen(
                             }
                         SpareGrid(letters, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare, leading = emojiChip)
                     }
-                    TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, isDimmed = ::isDimmed, marked = markedSpare, onTap = ::markSpare) }
+                    if (draft.isTps) {
+                        // The board's glyphs and the digits, for long-press lists (the spare glyphs show with the letters).
+                        val tpsCallouts = remember(draft) { tables.trayTpsCallouts(draft) }
+                        TraySection(L10n.settingsTpsMode) { SpareGrid(tpsCallouts, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare) }
+                    } else {
+                        TraySection(L10n.layoutTrayTones) { ToneGrid(tables.toneRows, isDimmed = ::isDimmed, marked = markedSpare, onTap = ::markSpare) }
+                    }
                     TraySection(L10n.symbolHalfWidth) { SpareGrid(halfWidth, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare) }
                     TraySection(L10n.symbolFullWidth) { SpareGrid(fullWidth, onTap = ::markSpare, isDimmed = ::isDimmed, marked = markedSpare) }
                 }
@@ -457,13 +463,15 @@ fun LayoutEditorScreen(
                 },
                 onDismiss = { showNameDialog = false },
             ) {
-                UseMenu(selected = pendingUse, onSelect = { pendingUse = it })
+                // A TPS layout stays TPS: no menu.
+                if (draft.editorUses.size > 1) {
+                    UseMenu(uses = draft.editorUses, selected = pendingUse, onSelect = { pendingUse = it })
+                }
             }
         }
     }
 }
 
-/** The four romanization bases; picking one restarts the draft from it. */
 @OptIn(ExperimentalMaterial3Api::class)
 // Icon-only pill matching the iOS `.bordered` / `.borderedProminent` capsule, gray when disabled.
 @Composable
@@ -492,8 +500,10 @@ private fun ActionPill(
     }
 }
 
+/** The romanization bases, or a TPS layout's one base ([CustomLayout.editorBases]); picking one restarts the draft from it. */
 @Composable
 private fun BaseChips(
+    bases: List<KeyboardLayoutOption>,
     selectedBase: String,
     onSelect: (String) -> Unit,
 ) {
@@ -504,7 +514,7 @@ private fun BaseChips(
                 .padding(horizontal = EDITOR_PADDING),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        KeyboardLayoutOptions.romanization.forEach { option ->
+        bases.forEach { option ->
             val isSelected = option.key == selectedBase
             // Same capsule as the iOS base chips.
             Surface(
@@ -523,10 +533,15 @@ private fun BaseChips(
     }
 }
 
-/** Where the layout shows (Universal / Tâi-lô / Pe̍h-ōe-jī): a dropdown under the name field. Mirrors the iOS details sheet's menu picker. */
+/**
+ * Where the layout shows, among [uses] (Universal / Tâi-lô / Pe̍h-ōe-jī / Phonetic Symbols when creating,
+ * a romanization layout's three when editing): a dropdown under the name field. Mirrors the iOS details
+ * sheet's menu picker.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun UseMenu(
+    uses: List<LayoutUse>,
     selected: LayoutUse,
     onSelect: (LayoutUse) -> Unit,
 ) {
@@ -542,7 +557,7 @@ internal fun UseMenu(
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            LayoutUse.entries.forEach { use ->
+            uses.forEach { use ->
                 DropdownMenuItem(
                     text = { Text(stringRes(use.labelKey)) },
                     onClick = {
