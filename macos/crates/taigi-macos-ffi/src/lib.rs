@@ -26,6 +26,8 @@ mod runtime;
 mod session;
 mod settings;
 mod user_data;
+#[cfg(test)]
+mod user_data_e2e;
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::LazyLock;
