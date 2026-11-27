@@ -101,7 +101,7 @@ The layout is built once per keyboard view (`KeyboardViewController.swift`) and 
 | 2b | Android — editing ops + Compose editor (swap / tray / remove / emoji / function keys / drag) + Layout tab shelf + in-keyboard picker; i18n `layout.editorTitleNew` / `layout.nameHeader` gain Android scope; delete `layout.comingSoon` | Merged (#507) |
 | 3 | iOS + Android — tray finals (16 keys, frequency order) | Merged (#508) |
 | 4 | iOS + Android — tray `ee` after `o͘` | Merged (#510) |
-| 5 | iOS — TPS layouts (record, places without a digit row, TPS slot, Phonetic Symbols use, TPS tray) | In progress |
+| 5 | iOS — TPS layouts (record, places without a digit row, TPS slot, Phonetic Symbols use, TPS tray) | Merged #1174 `430e9f685` |
 | 6 | Android — TPS layouts on the same record | Pending |
 
 The Theme-tab keyboard preview (`KeyboardPreviewPanel.swift`) also calls `CustomLayoutService`.
