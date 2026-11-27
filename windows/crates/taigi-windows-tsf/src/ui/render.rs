@@ -305,15 +305,14 @@ impl RenderFactory {
     /// what an AppContainer host with no `%APPDATA%` gets — because resolving
     /// it CREATES it, and this runs per candidate window.
     fn custom_font_path(&self, file_name: &str) -> Option<PathBuf> {
-        let component = Path::new(file_name).file_name()?;
-        if component != std::ffi::OsStr::new(file_name) {
+        if !taigi_desktop_storage::is_single_path_component(file_name) {
             return None;
         }
         let mut cached = self.fonts_directory.borrow_mut();
         let directory = cached
             .get_or_insert_with(|| taigi_desktop_storage::fonts_directory().ok())
             .as_ref()?;
-        Some(directory.join(component))
+        taigi_desktop_storage::stored_path(directory, file_name)
     }
 }
 
