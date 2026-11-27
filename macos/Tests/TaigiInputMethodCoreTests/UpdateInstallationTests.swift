@@ -494,4 +494,71 @@ final class UpdatePackageVerifierTests: XCTestCase {
             UpdatePackageVerifier.signingLeafCertificates(inTableOfContents: tableOfContents).isEmpty,
         )
     }
+
+    func testMatchesDeclaredBundle_comparesShortVersionAsDottedVersion() {
+        let expected = UpdatePackageIdentity(
+            teamIdentifier: "257NDUUBD3",
+            bundleIdentifier: "com.siansiansu.inputmethod.TaigiKeyboard",
+            shortVersion: "3.6.5",
+        )
+        let exact = UpdatePackageVerifier.DeclaredBundle(
+            bundleIdentifier: expected.bundleIdentifier,
+            shortVersion: "3.6.5",
+        )
+        XCTAssertTrue(UpdatePackageVerifier.matchesDeclaredBundle(exact, expected: expected))
+
+        let trailingZero = UpdatePackageVerifier.DeclaredBundle(
+            bundleIdentifier: expected.bundleIdentifier,
+            shortVersion: "3.6.5.0",
+        )
+        XCTAssertTrue(UpdatePackageVerifier.matchesDeclaredBundle(trailingZero, expected: expected))
+
+        let shortExpected = UpdatePackageIdentity(
+            teamIdentifier: "257NDUUBD3",
+            bundleIdentifier: expected.bundleIdentifier,
+            shortVersion: "3.6",
+        )
+        let zeroPaddedDeclared = UpdatePackageVerifier.DeclaredBundle(
+            bundleIdentifier: expected.bundleIdentifier,
+            shortVersion: "3.6.0",
+        )
+        XCTAssertTrue(
+            UpdatePackageVerifier.matchesDeclaredBundle(zeroPaddedDeclared, expected: shortExpected),
+        )
+
+        let differentVersion = UpdatePackageVerifier.DeclaredBundle(
+            bundleIdentifier: expected.bundleIdentifier,
+            shortVersion: "3.6.6",
+        )
+        XCTAssertFalse(
+            UpdatePackageVerifier.matchesDeclaredBundle(differentVersion, expected: expected),
+        )
+
+        let differentBundle = UpdatePackageVerifier.DeclaredBundle(
+            bundleIdentifier: "com.example.Other",
+            shortVersion: "3.6.5",
+        )
+        XCTAssertFalse(
+            UpdatePackageVerifier.matchesDeclaredBundle(differentBundle, expected: expected),
+        )
+
+        for unparsable in ["3.6.5-beta", ""] {
+            let unparsableDeclared = UpdatePackageVerifier.DeclaredBundle(
+                bundleIdentifier: expected.bundleIdentifier,
+                shortVersion: unparsable,
+            )
+            let unparsableExpected = UpdatePackageIdentity(
+                teamIdentifier: "257NDUUBD3",
+                bundleIdentifier: expected.bundleIdentifier,
+                shortVersion: unparsable,
+            )
+            XCTAssertFalse(
+                UpdatePackageVerifier.matchesDeclaredBundle(
+                    unparsableDeclared,
+                    expected: unparsableExpected,
+                ),
+                "unparsable version '\(unparsable)' must not match",
+            )
+        }
+    }
 }
