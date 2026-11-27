@@ -277,10 +277,12 @@ struct UserDataImportExportRow: View {
 /// little short rather than cutting a row off, because the count is the input.
 enum UserDataListMetrics {
     /// How many rows one page of an engine-paged list holds (Custom
-    /// Dictionary, Learning Records). Chosen with the table's height rather
-    /// than against it (`tableHeight(rows:)`): the point of paging is that a
-    /// page never needs a scroller of its own.
-    static let pageSize = 10
+    /// Dictionary, Learning Records), from `desktop-core` (`listing::PAGE_SIZE`).
+    /// Computed dynamically so a transient `UserDataRules` seam miss never
+    /// freezes a wrong size for the process.
+    static var pageSize: Int {
+        UserDataRules.pageSize
+    }
 
     static let tableRowHeight: CGFloat = 24
     static let tableHeaderHeight: CGFloat = 28
@@ -295,7 +297,9 @@ enum UserDataListMetrics {
     /// it stay on screen at the window's floor height. Derived from the page
     /// size rather than the page size guessed from a height, so a page always
     /// shows every row it holds.
-    static let pagedTableHeight = tableHeight(rows: pageSize)
+    static var pagedTableHeight: CGFloat {
+        tableHeight(rows: pageSize)
+    }
 
     /// Large enough that an empty list's symbol reads as a state rather than as
     /// a control the user is meant to press.

@@ -27,9 +27,12 @@ enum DesktopCoreBridge {
         _ request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
         settings: Taigi_DesktopShell_SettingsSnapshot? = nil,
         op: String,
+        transport: ([UInt8]) -> [UInt8] = send,
         expected: (Taigi_DesktopShell_DesktopResponse.OneOf_Reply) -> Reply?,
     ) -> Reply? {
-        guard case let .success(response) = response(to: request, settings: settings, op: op) else { return nil }
+        guard case let .success(response) = response(to: request, settings: settings, op: op, transport: transport) else {
+            return nil
+        }
         guard response.error == .ok else {
             recordFailure(op: op, message: "core returned \(response.error)")
             return nil

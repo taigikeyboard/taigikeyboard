@@ -51,7 +51,7 @@ pub const ORDERS: [LearningRecordOrder; 2] = [
 ];
 
 /// The kind the page reopens on (`keys::LEARNING_RECORDS_KIND`). `ALL` / `DEFAULT`
-/// mirror [`KINDS`] (tested); Swift twin: `SettingsStore.swift` `learningRecordsKind`.
+/// mirror [`KINDS`] (tested); macOS reads them from `UserDataRules`.
 impl SettingChoice for LearningRecordKind {
     const ALL: &'static [Self] = &[KINDS[0].0, KINDS[1].0];
     const DEFAULT: Self = KINDS[0].0;
@@ -64,7 +64,7 @@ impl SettingChoice for LearningRecordKind {
 }
 
 /// The order the page reopens on (`keys::LEARNING_RECORDS_ORDER`). `ALL` / `DEFAULT`
-/// mirror [`ORDERS`] (tested); Swift twin: `SettingsStore.swift` `learningRecordsOrder`.
+/// mirror [`ORDERS`] (tested); macOS reads them from `UserDataRules`.
 impl SettingChoice for LearningRecordOrder {
     const ALL: &'static [Self] = &ORDERS;
     const DEFAULT: Self = ORDERS[0];

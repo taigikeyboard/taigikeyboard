@@ -40,6 +40,10 @@ message DesktopRequest {
     PassThroughSwapRequest pass_through_swap = 22;
     SymbolPickerSymbolsRequest symbol_picker_symbols = 23;
     NoteRecentSymbolRequest note_recent_symbol = 24;
+    SymbolSwapRequest symbol_swap = 25;
+    UserDataRequest user_data = 26;
+    UserDataRulesRequest user_data_rules = 27;
+    UserDataExportFileNameRequest user_data_export_file_name = 28;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -146,6 +150,10 @@ message DesktopResponse {
     PassThroughSwapReply pass_through_swap = 14;
     SymbolPickerSymbolsReply symbol_picker_symbols = 15;
     NoteRecentSymbolReply note_recent_symbol = 16;
+    SymbolSwapReply symbol_swap = 17;
+    UserDataReply user_data = 18;
+    UserDataRulesReply user_data_rules = 19;
+    UserDataExportFileNameReply user_data_export_file_name = 20;
   }
 }
 
@@ -601,6 +609,19 @@ message PassThroughSwapReply {
   bool may_swap = 1;
 }
 
+// Whether a symbol picked from the symbol picker would take the place of an
+// armed auto space, read under the settings snapshot this request must carry
+// (`symbol_may_swap`): what Swift asks before it makes the swap's client
+// checks for an InsertSymbol request's `PanelState.swap_available`.
+// Refused without a symbol or a snapshot.
+message SymbolSwapRequest {
+  string symbol = 1;
+}
+
+message SymbolSwapReply {
+  bool may_swap = 1;
+}
+
 // The list the symbol picker opens with (`symbols::symbol_picker_symbols`,
 // the Windows and Linux one): the recents that are still in the compiled-in
 // table, most recent first, then the rest in file order. The stored
@@ -663,4 +684,245 @@ message DictionarySearchHit {
   // Unset when the reading makes no URL (`engine::external_lookup`).
   optional string moe_url = 5;
   optional string chhoe_url = 6;
+}
+
+// ---- UserData (Custom Dictionary, Learning Records, Backups) ----
+//
+// Mirrored over `desktop_shell.proto` from `taigi-desktop-core` (`engine/user_data.rs`,
+// `settings/learning_records.rs`, `settings/custom_dictionary.rs`, `settings/listing.rs`)
+// so macOS reaches the exact same behavior as Windows, Linux, and Web without
+// touching `engine/protos/proto/user_data.proto` or importing it across seams.
+
+enum CustomDictionaryRefusal {
+  CUSTOM_DICTIONARY_REFUSAL_NONE = 0;
+  CUSTOM_DICTIONARY_REFUSAL_FULL = 1;
+  CUSTOM_DICTIONARY_REFUSAL_EMPTY_ROMAN = 2;
+  CUSTOM_DICTIONARY_REFUSAL_UNSEARCHABLE = 3;
+  CUSTOM_DICTIONARY_REFUSAL_FILE_TOO_LARGE = 4;
+  CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8 = 5;
+  CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS = 6;
+}
+
+enum LearningRecordKind {
+  LEARNING_RECORD_KIND_FREQUENCY = 0;
+  LEARNING_RECORD_KIND_LEARNED_PHRASE = 1;
+}
+
+enum LearningRecordOrder {
+  LEARNING_RECORD_ORDER_MOST_USED = 0;
+  LEARNING_RECORD_ORDER_MOST_RECENT = 1;
+}
+
+enum UserDataExportKind {
+  USER_DATA_EXPORT_KIND_UNSPECIFIED = 0;
+  USER_DATA_EXPORT_KIND_CUSTOM_CSV = 1;
+  USER_DATA_EXPORT_KIND_BACKUP = 2;
+}
+
+message CustomDictionaryEntry {
+  string id = 1;
+  string roman = 2;
+  string hanji = 3;
+  string display_roman = 4;
+}
+
+message LearningRecord {
+  LearningRecordKind kind = 1;
+  int64 id = 2;
+  string text = 3;
+  string tl = 4;
+  int64 count = 5;
+  int64 last_used_ms = 6;
+  bool can_add_to_custom_dictionary = 7;
+}
+
+message UserDataRequest {
+  oneof method {
+    ListCustomEntriesRequest list_custom_entries = 1;
+    SaveCustomEntryRequest save_custom_entry = 2;
+    DeleteCustomEntryRequest delete_custom_entry = 3;
+    DeleteAllCustomEntriesRequest delete_all_custom_entries = 4;
+    ExportCustomCsvRequest export_custom_csv = 5;
+    ImportCustomCsvFileRequest import_custom_csv_file = 6;
+    ExportBackupRequest export_backup = 7;
+    ImportBackupFileRequest import_backup_file = 8;
+    ClearLearningRecordsRequest clear_learning_records = 9;
+    ListLearningRecordsRequest list_learning_records = 10;
+    SetLearningRecordCountRequest set_learning_record_count = 11;
+    DeleteLearningRecordRequest delete_learning_record = 12;
+    AddLearningRecordToCustomDictionaryRequest add_learning_record_to_custom_dictionary = 13;
+  }
+}
+
+message ListCustomEntriesRequest {
+  string filter = 1;
+  uint32 limit = 2;
+  uint32 offset = 3;
+  string input_mode = 4;
+}
+
+message SaveCustomEntryRequest {
+  string id = 1;
+  string roman = 2;
+  string hanji = 3;
+}
+
+message DeleteCustomEntryRequest {
+  string id = 1;
+}
+
+message DeleteAllCustomEntriesRequest {}
+
+message ExportCustomCsvRequest {}
+
+message ImportCustomCsvFileRequest {
+  string path = 1;
+}
+
+message ExportBackupRequest {
+  string app_version = 1;
+}
+
+message ImportBackupFileRequest {
+  string path = 1;
+}
+
+message ClearLearningRecordsRequest {}
+
+message ListLearningRecordsRequest {
+  LearningRecordKind kind = 1;
+  LearningRecordOrder order = 2;
+  string filter = 3;
+  uint32 limit = 4;
+  uint32 offset = 5;
+}
+
+message SetLearningRecordCountRequest {
+  LearningRecord record = 1;
+  int64 count = 2;
+}
+
+message DeleteLearningRecordRequest {
+  LearningRecord record = 1;
+}
+
+message AddLearningRecordToCustomDictionaryRequest {
+  LearningRecord record = 1;
+  string roman = 2;
+  string hanji = 3;
+}
+
+message UserDataError {
+  oneof kind {
+    string engine_unavailable_op = 1;
+    UserDataRefusal refused = 2;
+    UserDataNotEmptied not_emptied = 3;
+  }
+}
+
+message UserDataRefusal {
+  CustomDictionaryRefusal refusal = 1;
+  string detail = 2;
+}
+
+message UserDataNotEmptied {
+  repeated string failures = 1;
+}
+
+message UserDataReply {
+  UserDataError error = 1;
+  oneof result {
+    CustomEntries custom_entries = 2;
+    CustomDictionaryEntry custom_entry_saved = 3;
+    UserDataAck ack = 4;
+    CustomCsvExported custom_csv_exported = 5;
+    CustomCsvImported custom_csv_imported = 6;
+    BackupExported backup_exported = 7;
+    BackupImported backup_imported = 8;
+    LearningRecords learning_records = 9;
+    LearningRecordSaved learning_record_saved = 10;
+    LearningRecordDeleted learning_record_deleted = 11;
+  }
+}
+
+message CustomEntries {
+  repeated CustomDictionaryEntry entries = 1;
+  uint32 total = 2;
+  uint32 matching_total = 3;
+  uint32 offset = 4;
+}
+
+message UserDataAck {}
+
+message CustomCsvExported {
+  bytes csv = 1;
+}
+
+message CustomCsvImported {
+  uint32 imported = 1;
+  uint32 skipped = 2;
+}
+
+message BackupExported {
+  bytes backup = 1;
+}
+
+message BackupImported {
+  uint32 custom_dictionary = 1;
+  uint32 frequency = 2;
+  uint32 association = 3;
+  uint32 learned_phrases = 4;
+}
+
+message LearningRecords {
+  repeated LearningRecord records = 1;
+  uint32 total = 2;
+  uint32 matching_total = 3;
+  uint32 offset = 4;
+}
+
+message LearningRecordSaved {
+  optional LearningRecord record = 1;
+}
+
+message LearningRecordDeleted {
+  bool removed = 1;
+}
+
+// Desktop-core's non-key-path rules and enum metadata shared by Custom
+// Dictionary and Learning Records pages. Answered purely from constants/rules;
+// needs no Configure or snapshot.
+message UserDataRulesRequest {}
+
+message UserDataRulesReply {
+  uint32 page_size = 1;
+  uint64 custom_csv_max_file_bytes = 2;
+  int64 learning_record_max_count = 3;
+  repeated LearningRecordKindRule learning_record_kinds = 4;
+  repeated LearningRecordOrderRule learning_record_orders = 5;
+  repeated string backup_open_extensions = 6;
+}
+
+message LearningRecordKindRule {
+  LearningRecordKind kind = 1;
+  string stored_spelling = 2;
+  string label_key = 3;
+  bool offers_add_to_custom_dictionary = 4;
+  optional string count_note_key = 5;
+}
+
+message LearningRecordOrderRule {
+  LearningRecordOrder order = 1;
+  string stored_spelling = 2;
+  string label_key = 3;
+}
+
+// Export/backup filename rendered by `desktop-core`'s one formatter.
+message UserDataExportFileNameRequest {
+  UserDataExportKind kind = 1;
+  string local_date = 2;
+}
+
+message UserDataExportFileNameReply {
+  string file_name = 1;
 }

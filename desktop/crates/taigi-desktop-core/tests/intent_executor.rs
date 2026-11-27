@@ -9,8 +9,8 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
     insert_symbol, pass_through_may_consume, pass_through_may_swap, perform_intent, represent_list,
-    represent_list_following, CandidateSource, ComposingEffectExecutor, ComposingManager,
-    EngineNextWord, IntentSurface, SystemClock,
+    represent_list_following, symbol_may_swap, CandidateSource, ComposingEffectExecutor,
+    ComposingManager, EngineNextWord, IntentSurface, SystemClock,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
@@ -1499,4 +1499,35 @@ fn brackets_are_inert_under_tps() {
     // trace (read by running): with brackets on this wrote `好 (ㄏㄛˋ) 人 (ㄌㄤˊ)`.
     assert_eq!(rig.calls(), ["commit 好人", "list closed"]);
     assert!(!pass_through_may_swap(&comma(), &rig.settings));
+}
+
+#[test]
+fn symbol_may_swap_follows_attaching_punctuation_and_commit_spacing_switches() {
+    let mut settings = SettingsDocument::default();
+    assert!(!symbol_may_swap("，", &settings));
+    assert!(!symbol_may_swap("?", &settings));
+
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
+    assert!(symbol_may_swap("，", &settings));
+    assert!(symbol_may_swap("?", &settings));
+    assert!(!symbol_may_swap("★", &settings));
+    assert!(!symbol_may_swap("}", &settings));
+    assert!(!symbol_may_swap("", &settings));
+
+    // Under TPS, picked symbols bypass the full-width map: `}` stays `}`
+    // (non-attaching), while `』` itself attaches.
+    settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+    assert!(!symbol_may_swap("}", &settings));
+    assert!(symbol_may_swap("』", &settings));
+
+    // Auto-Space off, Annotate in Brackets on: swaps outside Romanization Only.
+    settings.set_choice(&keys::INPUT_MODE, InputMode::Tl);
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false);
+    settings.set_bool(&keys::OUTPUT_BOTH_SCRIPTS, true);
+    assert!(symbol_may_swap("，", &settings));
+    settings.set_choice(
+        &keys::CANDIDATE_DISPLAY_MODE,
+        CandidateDisplayMode::RomanOnly,
+    );
+    assert!(!symbol_may_swap("，", &settings));
 }

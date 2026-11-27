@@ -25,7 +25,7 @@ use crate::proto::{
 };
 use crate::session::Session;
 use crate::settings::{self, SnapshotSettings};
-use crate::{dictionary_search, key_rules};
+use crate::{dictionary_search, key_rules, user_data};
 
 /// Which desktop this is: every desktop-core rule that differs per desktop
 /// is handed it (roadmap D6) — the `DELETE` user-data journal, the Mac
@@ -41,6 +41,8 @@ pub(crate) enum Refusal {
     /// A field the request cannot run without was left unset (proto3 would
     /// otherwise read it as zero / empty and run anyway).
     Missing(&'static str),
+    /// A field or enum wire value carried an unrecognized value.
+    Invalid(&'static str),
     /// The compiled-in symbol table did not validate: the picker has no list
     /// (`symbols::SymbolTable::bundled`).
     NoSymbolTable,
@@ -73,6 +75,11 @@ impl Shell {
         snapshot: Option<&SettingsSnapshot>,
     ) -> Result<desktop_response::Reply, Refusal> {
         if let Some(answer) = key_rules::answer(&request, snapshot) {
+            return answer;
+        }
+        // Answered before Configure and without taking `Shell::session`; the
+        // engine's own store locks order concurrent user-data and composing accesses.
+        if let Some(answer) = user_data::answer(&request) {
             return answer;
         }
         // Before the session lock: a search may come from a background
@@ -136,9 +143,12 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
-            // Answered by `key_rules::answer` or `dictionary_search::answer`
-            // before the session is locked.
+            // Answered by `key_rules::answer`, `dictionary_search::answer`, or
+            // `user_data::answer` before the session is locked.
             Request::DictionarySearch(_)
+            | Request::UserData(_)
+            | Request::UserDataRules(_)
+            | Request::UserDataExportFileName(_)
             | Request::Press(_)
             | Request::Chord(_)
             | Request::ComposingShortcuts(_)
@@ -146,6 +156,7 @@ impl Shell {
             | Request::SwitchInputMode(_)
             | Request::TpsKeyboardRows(_)
             | Request::PassThroughSwap(_)
+            | Request::SymbolSwap(_)
             | Request::SymbolPickerSymbols(_)
             | Request::NoteRecentSymbol(_) => Err(Refusal::Missing("a session request")),
         }
@@ -217,7 +228,7 @@ impl Shell {
 mod tests {
     use super::*;
     use crate::proto::{ReleaseRequest, SettingEntry};
-    use crate::test_support::{configure_request, text, version};
+    use crate::test_support::{boolean, configure_request, text, version};
     use std::path::Path;
     use taigi_desktop_core::settings::{InputMode, SettingChoice, SettingsProvider};
 
@@ -371,7 +382,7 @@ mod tests {
     /// they answer or refuse.
     #[test]
     fn the_key_rules_never_put_their_snapshot_in_force() {
-        use crate::proto::{ComposingShortcutsRequest, SymbolPickerKeyRequest};
+        use crate::proto::{ComposingShortcutsRequest, SymbolPickerKeyRequest, SymbolSwapRequest};
         use crate::test_support::key_event;
         let shell = Shell::default();
         shell
@@ -391,6 +402,18 @@ mod tests {
             reply.slot_keys, "123456789",
             "read under the snapshot it carried"
         );
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::SymbolSwap(SymbolSwapRequest {
+                    symbol: "，".to_owned(),
+                }),
+                Some(&snapshot(vec![
+                    text("inputMode", "tl"),
+                    boolean("autoSpaceEnabled", true),
+                ])),
+            ),
+            Ok(desktop_response::Reply::SymbolSwap(reply)) if reply.may_swap
+        ));
         let refused = snapshot(vec![text("inputMode", "tl"), text("notASetting", "")]);
         assert!(shell
             .serve(
@@ -483,5 +506,52 @@ mod tests {
             panel: Some(PanelState::default()),
         }));
         assert!(key.handled && key.is_composing);
+    }
+
+    #[test]
+    fn user_data_requests_answer_before_configure_without_applying_snapshot() {
+        use crate::proto::{
+            desktop_response, user_data_request, ImportBackupFileRequest,
+            UserDataExportFileNameRequest, UserDataExportKind, UserDataRequest,
+            UserDataRulesRequest,
+        };
+        let shell = Shell::default();
+        let bad = snapshot(vec![text("autoSpaceEnabled", "yes")]);
+        // Even with an invalid snapshot attached, user_data answers without
+        // parsing/applying it or gating on Configure.
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::UserDataRules(UserDataRulesRequest {}),
+                Some(&bad),
+            ),
+            Ok(desktop_response::Reply::UserDataRules(reply)) if reply.page_size == 10
+        ));
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::UserDataExportFileName(UserDataExportFileNameRequest {
+                    kind: UserDataExportKind::CustomCsv as i32,
+                    local_date: "2026-11-27".to_owned(),
+                }),
+                None,
+            ),
+            Ok(desktop_response::Reply::UserDataExportFileName(reply))
+                if reply.file_name == "taigi_custom_dictionary_2026-11-27.csv"
+        ));
+        let missing_backup = shell.serve(
+            desktop_request::Request::UserData(UserDataRequest {
+                method: Some(user_data_request::Method::ImportBackupFile(
+                    ImportBackupFileRequest {
+                        path: "/nonexistent/taigi/missing.taigi".to_owned(),
+                    },
+                )),
+            }),
+            None,
+        );
+        assert!(matches!(
+            missing_backup,
+            Ok(desktop_response::Reply::UserData(reply)) if reply.error.is_some()
+        ));
+        assert_eq!(input_mode(&shell), InputMode::DEFAULT);
+        assert!(shell.runtime.get().is_none());
     }
 }

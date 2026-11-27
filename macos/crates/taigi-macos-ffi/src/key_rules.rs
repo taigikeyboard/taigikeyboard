@@ -9,7 +9,7 @@
 //! read for its one answer and never installed, so the key path keeps what
 //! the last session request carried, a panic here included.
 
-use taigi_desktop_core::composing::pass_through_may_swap;
+use taigi_desktop_core::composing::{pass_through_may_swap, symbol_may_swap};
 use taigi_desktop_core::keys::{
     evaluate_press, shortcut_labels, tps_keyboard_rows, ChordRejection, ComposingAction,
     ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
@@ -26,8 +26,8 @@ use crate::proto::{
     NoteRecentSymbolReply, NoteRecentSymbolRequest, PassThroughSwapReply, PassThroughSwapRequest,
     PressReply, PressRequest, RecorderAction, SettingsSnapshot, SwitchInputModeReply,
     SwitchInputModeRequest, SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply,
-    SymbolPickerSymbolsReply, SymbolPickerSymbolsRequest, TpsKeyCap, TpsKeyboardRow,
-    TpsKeyboardRowsReply,
+    SymbolPickerSymbolsReply, SymbolPickerSymbolsRequest, SymbolSwapReply, SymbolSwapRequest,
+    TpsKeyCap, TpsKeyboardRow, TpsKeyboardRowsReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
@@ -54,6 +54,7 @@ pub(crate) fn answer(
         Request::PassThroughSwap(swap) => {
             pass_through_swap(swap, snapshot).map(Reply::PassThroughSwap)
         }
+        Request::SymbolSwap(swap) => symbol_swap(swap, snapshot).map(Reply::SymbolSwap),
         Request::SymbolPickerSymbols(symbols) => {
             symbol_picker_symbols_reply(symbols).map(Reply::SymbolPickerSymbols)
         }
@@ -184,6 +185,22 @@ fn pass_through_swap(
     let document = document(snapshot)?;
     Ok(PassThroughSwapReply {
         may_swap: pass_through_may_swap(&key_translation::snapshot(event), &document),
+    })
+}
+
+/// Whether a symbol picked from the symbol picker would take an armed auto
+/// space's place under `snapshot` (`symbol_may_swap`) — asked before Swift
+/// makes the swap's client checks.
+fn symbol_swap(
+    request: &SymbolSwapRequest,
+    snapshot: Option<&SettingsSnapshot>,
+) -> Result<SymbolSwapReply, Refusal> {
+    if request.symbol.is_empty() {
+        return Err(Refusal::Missing("symbol"));
+    }
+    let document = document(snapshot)?;
+    Ok(SymbolSwapReply {
+        may_swap: symbol_may_swap(&request.symbol, &document),
     })
 }
 
@@ -873,5 +890,66 @@ mod tests {
             ),
             Some(Ok(desktop_response::Reply::NoteRecentSymbol(_)))
         ));
+    }
+
+    fn symbol_may_swap_under(symbol: &str, entries: Vec<crate::proto::SettingEntry>) -> bool {
+        symbol_swap(
+            &SymbolSwapRequest {
+                symbol: symbol.to_owned(),
+            },
+            Some(&SettingsSnapshot { entries }),
+        )
+        .expect("answered")
+        .may_swap
+    }
+
+    #[test]
+    fn the_symbol_swap_gate_reads_a_symbol_under_the_snapshot_it_carries() {
+        let auto_space = || boolean(keys::IS_AUTO_SPACE_ENABLED.name, true);
+        assert!(symbol_may_swap_under("，", vec![auto_space()]));
+        assert!(symbol_may_swap_under("?", vec![auto_space()]));
+        assert!(!symbol_may_swap_under("★", vec![auto_space()]));
+        assert!(!symbol_may_swap_under("}", vec![auto_space()]));
+        assert!(!symbol_may_swap_under(
+            "，",
+            vec![boolean(keys::IS_AUTO_SPACE_ENABLED.name, false)]
+        ));
+
+        // Under TPS, picked symbols bypass the full-width map: `}` attaches
+        // to nothing while `』` itself attaches.
+        let tps = || text(keys::INPUT_MODE.name, "tps");
+        assert!(!symbol_may_swap_under("}", vec![auto_space(), tps()]));
+        assert!(symbol_may_swap_under("』", vec![auto_space(), tps()]));
+
+        // Annotate in Brackets keeps the swap with Auto-Space off, except
+        // under Romanization Only.
+        let brackets = || boolean(keys::OUTPUT_BOTH_SCRIPTS.name, true);
+        assert!(symbol_may_swap_under("，", vec![brackets()]));
+        assert!(!symbol_may_swap_under(
+            "，",
+            vec![
+                brackets(),
+                text(keys::CANDIDATE_DISPLAY_MODE.name, "romanOnly")
+            ]
+        ));
+
+        assert_eq!(
+            symbol_swap(
+                &SymbolSwapRequest {
+                    symbol: String::new(),
+                },
+                Some(&SettingsSnapshot::default())
+            ),
+            Err(Refusal::Missing("symbol"))
+        );
+        assert_eq!(
+            symbol_swap(
+                &SymbolSwapRequest {
+                    symbol: "，".to_owned(),
+                },
+                None
+            ),
+            Err(Refusal::Missing("settings"))
+        );
     }
 }

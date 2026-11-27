@@ -2,12 +2,11 @@
 
 import Foundation
 import RustTaigiSwift
-import SwiftProtobuf
 
-/// Thin wrapper around the single bytes-in / bytes-out FFI function the Rust
-/// shared core exports. Named after the iOS `RustEngineBridge` because it plays
-/// the same role. One typed slice is left, user data (`+UserData`):
-/// desktop-core drives composing, next-word and the lexicon.
+/// Thin wrapper around the engine FFI's logger installation and raw
+/// `process_request_bytes` seam (used by `EngineFfiSmokeTests`). All
+/// composing, next-word, lexicon, and user-data requests route through
+/// `taigi-desktop-core` (`DesktopCoreBridge`).
 enum RustEngineBridge {
     /// Severity of a record arriving FROM Rust. Mirrors the iOS constants in
     /// `ios/Sources/TaigiKeyboard/Engine/SwiftLoggerSink.swift`.
@@ -71,78 +70,5 @@ enum RustEngineBridge {
         requestBytes.withUnsafeBufferPointer { buffer in
             process_request_bytes(buffer).toArray()
         }
-    }
-
-    // MARK: - Envelope round-trip
-
-    private static let requestIDLock = NSLock()
-    private nonisolated(unsafe) static var lastRequestID: UInt32 = 0
-
-    private static func nextRequestID() -> UInt32 {
-        requestIDLock.lock()
-        defer { requestIDLock.unlock() }
-        lastRequestID &+= 1
-        return lastRequestID
-    }
-
-    /// Encodes one request, sends it, and returns the response payload when the
-    /// engine reported success. `nil` means the round-trip failed rather than
-    /// "the engine had nothing to say" — callers must keep the two apart,
-    /// because a failed round-trip leaves the engine's state untouched and any
-    /// snapshot synthesized here would contradict it.
-    ///
-    /// The user-data slice and the attaching-punctuation check are what macOS
-    /// still sends itself; desktop-core drives composing and next-word. These
-    /// requests carry neither a generation nor a config snapshot.
-    static func roundtrip(
-        payload: Taigi_Engine_Request.OneOf_Payload,
-        op: String,
-    ) -> Taigi_Engine_Response.OneOf_Payload? {
-        var request = Taigi_Engine_Request()
-        request.id = nextRequestID()
-        request.payload = payload
-
-        let requestBytes: [UInt8]
-        do {
-            requestBytes = try Array(request.serializedData())
-        } catch {
-            recordFailure(op: op, message: "encode failed: \(error)")
-            return nil
-        }
-
-        logger.debug("[FFI->] op=\(op) id=\(request.id)")
-        guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(processRequest(requestBytes)),
-        ) else {
-            recordFailure(op: op, message: "response decode failed")
-            return nil
-        }
-        // The seam is synchronous and single-threaded per call, so a mismatched
-        // id means the response belongs to some other request — reading its
-        // payload would apply another operation's state to this one.
-        guard response.id == request.id else {
-            recordFailure(op: op, message: "response id \(response.id) does not match request \(request.id)")
-            return nil
-        }
-        guard response.error == .ok else {
-            recordFailure(op: op, message: "engine returned \(response.error)")
-            return nil
-        }
-        guard let responsePayload = response.payload else {
-            recordFailure(op: op, message: "response carried no payload")
-            return nil
-        }
-        return responsePayload
-    }
-
-    private static let logger = DebugLogger(category: "RustEngineBridge")
-
-    /// One place for every bridge failure, so a degraded engine is visible in
-    /// `make log` instead of surfacing only as candidates that never appear.
-    /// Deliberately no `assertionFailure`: the malformed-input tests drive these
-    /// paths on purpose, and a debug-only trap would fail the suite that proves
-    /// the failure handling works.
-    static func recordFailure(op: String, message: String) {
-        logger.error("[\(op)] \(message)")
     }
 }

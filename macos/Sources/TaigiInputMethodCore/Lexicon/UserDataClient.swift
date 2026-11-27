@@ -1,6 +1,7 @@
-// What the settings pages ask of the user's data, which the engine owns.
+// What the settings pages ask of the user's data, which desktop-core and the engine own.
 
 import Foundation
+import os
 
 /// One page of a user-data list — custom words or learning records — and
 /// the two counts the page shows.
@@ -35,10 +36,9 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
     case engineUnavailable(op: String)
     /// Something the user can be told — a full dictionary, an unusable file —
     /// in the engine's own words (`custom dictionary is full (max 30000
-    /// entries)`), or desktop-core's where the engine answers only a code (a
-    /// refused backup) or never saw the file (one that could not be read,
-    /// whose tail is the system's reason, in the system's language).
-    case refused(refusal: Taigi_Engine_CustomDictionaryRefusal = .none, detail: String)
+    /// entries)`), or desktop-core's, including file-read errors
+    /// (`could not read the file: ...`, shared with Windows and Linux).
+    case refused(refusal: Taigi_DesktopShell_CustomDictionaryRefusal = .none, detail: String)
     /// A reset that emptied some stores and not others, one line per store
     /// that failed (`user_frequency: <error>`).
     case notEmptied([String])
@@ -52,12 +52,112 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
     }
 }
 
+/// Desktop-core's shared UserData rules, pickers metadata, and export file
+/// naming (`desktop/crates/taigi-desktop-core/src/settings/learning_records.rs`,
+/// `custom_dictionary.rs`, `listing.rs`).
+enum UserDataRules {
+    private static let cachedReply = OSAllocatedUnfairLock<Taigi_DesktopShell_UserDataRulesReply?>(initialState: nil)
+
+    /// Cached read from `desktop-core`; never caches `nil` so a transient failure
+    /// retries on the next caller.
+    static func load() -> Taigi_DesktopShell_UserDataRulesReply? {
+        if let cached = cachedReply.withLock({ $0 }) {
+            return cached
+        }
+        guard let fetched = fetch(transport: DesktopCoreBridge.send) else { return nil }
+        return cachedReply.withLock { state in
+            if let existing = state {
+                return existing
+            }
+            state = fetched
+            return fetched
+        }
+    }
+
+    static func fetch(
+        transport: ([UInt8]) -> [UInt8] = DesktopCoreBridge.send,
+    ) -> Taigi_DesktopShell_UserDataRulesReply? {
+        DesktopCoreBridge.roundtrip(.userDataRules(.init()), op: "userDataRules", transport: transport) {
+            if case let .userDataRules(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }
+    }
+
+    static var pageSize: Int {
+        max(1, Int(load()?.pageSize ?? 1))
+    }
+
+    static var maxImportFileBytes: Int {
+        Int(load()?.customCsvMaxFileBytes ?? 0)
+    }
+
+    static var learningRecordMaxCount: Int {
+        max(1, Int(load()?.learningRecordMaxCount ?? 1))
+    }
+
+    static var learningRecordKinds: [Taigi_DesktopShell_LearningRecordKindRule] {
+        load()?.learningRecordKinds ?? []
+    }
+
+    static var learningRecordOrders: [Taigi_DesktopShell_LearningRecordOrderRule] {
+        load()?.learningRecordOrders ?? []
+    }
+
+    static var learningRecordKindSpellings: [(value: Taigi_DesktopShell_LearningRecordKind, spelling: String)] {
+        learningRecordKinds.map { ($0.kind, $0.storedSpelling) }
+    }
+
+    static var learningRecordOrderSpellings: [(value: Taigi_DesktopShell_LearningRecordOrder, spelling: String)] {
+        learningRecordOrders.map { ($0.order, $0.storedSpelling) }
+    }
+
+    static var backupOpenExtensions: [String] {
+        load()?.backupOpenExtensions ?? []
+    }
+
+    static func offersAddToCustomDictionary(for kind: Taigi_DesktopShell_LearningRecordKind) -> Bool {
+        learningRecordKinds.first { $0.kind == kind }?.offersAddToCustomDictionary ?? false
+    }
+
+    static func countNoteKey(for kind: Taigi_DesktopShell_LearningRecordKind) -> StringKey? {
+        guard
+            let rule = learningRecordKinds.first(where: { $0.kind == kind }),
+            rule.hasCountNoteKey
+        else { return nil }
+        return StringKey(rawValue: rule.countNoteKey)
+    }
+
+    static func exportFileName(
+        kind: Taigi_DesktopShell_UserDataExportKind,
+        localDate: String,
+        transport: ([UInt8]) -> [UInt8] = DesktopCoreBridge.send,
+    ) -> String? {
+        var req = Taigi_DesktopShell_UserDataExportFileNameRequest()
+        req.kind = kind
+        req.localDate = localDate
+        return DesktopCoreBridge.roundtrip(
+            .userDataExportFileName(req),
+            op: "userDataExportFileName",
+            transport: transport,
+        ) {
+            if case let .userDataExportFileName(reply) = $0 {
+                reply.fileName
+            } else {
+                nil
+            }
+        }
+    }
+}
+
 /// The user-data requests the settings pages make. Synchronous: every call
-/// is an engine round-trip that may touch SQLite, so callers run it off the
-/// main actor. A protocol so the page's paging and work-slot logic can be
-/// driven from tests without opening the process-wide user data — the test
-/// process shares one engine, and an open there would reach every later
-/// fetch in the run.
+/// is a `desktop-core` / engine round-trip that may touch SQLite, so callers
+/// run it off the main actor. A protocol so the page's paging and work-slot
+/// logic can be driven from tests without opening the process-wide user data
+/// — the test process shares one engine, and an open there would reach every
+/// later fetch in the run.
 protocol UserDataClient: Sendable {
     /// One page of the words `filter` matches, each row's `displayRoman`
     /// spelled in `inputMode`.
@@ -82,17 +182,17 @@ protocol UserDataClient: Sendable {
     /// engine's own records, handed back whole by the two writes below: the
     /// engine applies a write only while the row still holds what was listed.
     func listLearningRecords(
-        kind: Taigi_Engine_LearningRecordKind,
-        order: Taigi_Engine_LearningRecordOrder,
+        kind: Taigi_DesktopShell_LearningRecordKind,
+        order: Taigi_DesktopShell_LearningRecordOrder,
         filter: String,
         limit: Int,
         offset: Int,
-    ) throws -> UserDataListing<Taigi_Engine_LearningRecord>
+    ) throws -> UserDataListing<Taigi_DesktopShell_LearningRecord>
     /// False when the row is gone — deleted, evicted, or its id taken by
     /// another word since it was listed.
-    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool
+    func setLearningRecordCount(_ record: Taigi_DesktopShell_LearningRecord, count: Int) throws -> Bool
     /// False when the row is gone, as for `setLearningRecordCount`.
-    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool
+    func deleteLearningRecord(_ record: Taigi_DesktopShell_LearningRecord) throws -> Bool
     /// Adds a row's word to the custom dictionary, filed as `roman` / `hanji`
     /// (the word as the user edited it in the Add Word sheet; the engine
     /// trims both) — unless the word is stored there already — then forgets
@@ -100,34 +200,37 @@ protocol UserDataClient: Sendable {
     /// a full dictionary, a reading that cannot be searched) keeps the row
     /// and is thrown as `UserDataClientError.refused`.
     func addLearningRecordToCustomDictionary(
-        _ record: Taigi_Engine_LearningRecord,
+        _ record: Taigi_DesktopShell_LearningRecord,
         roman: String,
         hanji: String,
     ) throws
 }
 
-/// The shipped client: the engine's user-data ops.
+/// The shipped client: `desktop-core`'s UserData operations via `DesktopCoreBridge`.
 struct EngineUserDataClient: UserDataClient {
-    /// The largest file an import reads. CROSS-PLATFORM INVARIANT — the
-    /// engine refuses the same size (`engine/userdata/src/csv.rs`); checked
-    /// here too so a huge file is refused before it is read into memory.
-    static let maxImportFileBytes = 5 * 1024 * 1024
+    private let transport: @Sendable ([UInt8]) -> [UInt8]
 
-    /// How TPS spells the vowel `or`: ㄜ. No desktop setting changes it.
-    /// CROSS-PLATFORM INVARIANT — desktop-core's `TPS_OR_MAPS_TO_ER`
-    /// (`engine/phonetics.rs`), which the engine config sends.
-    static let isTpsOrMappedToER = true
+    init(transport: @escaping @Sendable ([UInt8]) -> [UInt8] = DesktopCoreBridge.send) {
+        self.transport = transport
+    }
 
     func list(filter: String, limit: Int, offset: Int, inputMode: InputMode) throws -> UserDataListing<CustomDictionaryRow> {
-        guard let page = RustEngineBridge.customDictionaryList(
-            filter: filter,
-            limit: limit,
-            offset: offset,
-            inputMode: inputMode.rawValue,
-            isTpsOrMappedToER: Self.isTpsOrMappedToER,
-        ) else { throw UserDataClientError.engineUnavailable(op: "customDictionaryList") }
+        let page = try perform(op: "customDictionaryList", {
+            var req = Taigi_DesktopShell_ListCustomEntriesRequest()
+            req.filter = filter
+            req.limit = UInt32(clamping: max(0, limit))
+            req.offset = UInt32(clamping: max(0, offset))
+            req.inputMode = inputMode.rawValue
+            $0.listCustomEntries = req
+        }) {
+            if case let .customEntries(entries) = $0 {
+                entries
+            } else {
+                nil
+            }
+        }
         return UserDataListing(
-            rows: page.entries.map(CustomDictionaryRow.init),
+            rows: page.entries,
             total: Int(page.total),
             matchingTotal: Int(page.matchingTotal),
             offset: Int(page.offset),
@@ -135,52 +238,71 @@ struct EngineUserDataClient: UserDataClient {
     }
 
     func save(_ row: CustomDictionaryRow) throws {
-        guard let saved = RustEngineBridge.customDictionarySave(
-            id: row.id,
-            roman: row.roman,
-            hanji: row.hanji,
-        ) else { throw UserDataClientError.engineUnavailable(op: "customDictionarySave") }
-        guard saved.refusal == .none else {
-            throw UserDataClientError.refused(refusal: saved.refusal, detail: saved.detail)
+        _ = try perform(op: "customDictionarySave", {
+            var req = Taigi_DesktopShell_SaveCustomEntryRequest()
+            req.id = row.id
+            req.roman = row.roman
+            req.hanji = row.hanji
+            $0.saveCustomEntry = req
+        }) {
+            if case let .customEntrySaved(saved) = $0 {
+                saved
+            } else {
+                nil
+            }
         }
     }
 
     func delete(id: String) throws {
-        guard RustEngineBridge.customDictionaryDelete(id: id) != nil else {
-            throw UserDataClientError.engineUnavailable(op: "customDictionaryDelete")
+        _ = try perform(op: "customDictionaryDelete", {
+            var req = Taigi_DesktopShell_DeleteCustomEntryRequest()
+            req.id = id
+            $0.deleteCustomEntry = req
+        }) {
+            if case let .ack(ack) = $0 {
+                ack
+            } else {
+                nil
+            }
         }
     }
 
     func deleteAll() throws {
-        try reset { $0.customDictionary = true }
+        _ = try perform(op: "userDataReset", {
+            $0.deleteAllCustomEntries = .init()
+        }) {
+            if case let .ack(ack) = $0 {
+                ack
+            } else {
+                nil
+            }
+        }
     }
 
     func exportCSV() throws -> Data {
-        guard let csv = RustEngineBridge.customDictionaryExportCSV() else {
-            throw UserDataClientError.engineUnavailable(op: "customDictionaryExportCSV")
+        let exported = try perform(op: "customDictionaryExportCSV", {
+            $0.exportCustomCsv = .init()
+        }) {
+            if case let .customCsvExported(csv) = $0 {
+                csv
+            } else {
+                nil
+            }
         }
-        return csv
+        return exported.csv
     }
 
     func importCSV(at url: URL) throws -> CustomDictionaryImportResult {
-        let size: Int
-        do {
-            size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        } catch {
-            throw Self.unreadable(error)
-        }
-        guard size <= Self.maxImportFileBytes else {
-            throw UserDataClientError.refused(refusal: .fileTooLarge, detail: "file is larger than 5 MB")
-        }
-        guard let imported = try RustEngineBridge.customDictionaryImportCSV(Self.read(url)) else {
-            throw UserDataClientError.engineUnavailable(op: "customDictionaryImportCSV")
-        }
-        return try Self.importCSVResult(from: imported)
-    }
-
-    static func importCSVResult(from imported: Taigi_Engine_CustomCsvImported) throws -> CustomDictionaryImportResult {
-        guard imported.refusal == .none else {
-            throw UserDataClientError.refused(refusal: imported.refusal, detail: imported.detail)
+        let imported = try perform(op: "customDictionaryImportCSV", {
+            var req = Taigi_DesktopShell_ImportCustomCsvFileRequest()
+            req.path = url.path(percentEncoded: false)
+            $0.importCustomCsvFile = req
+        }) {
+            if case let .customCsvImported(imported) = $0 {
+                imported
+            } else {
+                nil
+            }
         }
         return CustomDictionaryImportResult(
             imported: Int(imported.imported),
@@ -189,19 +311,31 @@ struct EngineUserDataClient: UserDataClient {
     }
 
     func exportBackup() throws -> Data {
-        guard let backup = RustEngineBridge.backupExport(appVersion: AppVersion.installed) else {
-            throw UserDataClientError.engineUnavailable(op: "backupExport")
+        let exported = try perform(op: "backupExport", {
+            var req = Taigi_DesktopShell_ExportBackupRequest()
+            req.appVersion = AppVersion.installed
+            $0.exportBackup = req
+        }) {
+            if case let .backupExported(backup) = $0 {
+                backup
+            } else {
+                nil
+            }
         }
-        return backup
+        return exported.backup
     }
 
-    /// Read whole, with no size cap, as on the other platforms.
     func importBackup(at url: URL) throws -> BackupImportResult {
-        guard let imported = try RustEngineBridge.backupImport(Self.read(url)) else {
-            throw UserDataClientError.engineUnavailable(op: "backupImport")
-        }
-        guard imported.refusal == .none else {
-            throw UserDataClientError.refused(detail: Self.refusalDetail(imported.refusal))
+        let imported = try perform(op: "backupImport", {
+            var req = Taigi_DesktopShell_ImportBackupFileRequest()
+            req.path = url.path(percentEncoded: false)
+            $0.importBackupFile = req
+        }) {
+            if case let .backupImported(imported) = $0 {
+                imported
+            } else {
+                nil
+            }
         }
         return BackupImportResult(
             customDictionary: Int(imported.customDictionary),
@@ -210,51 +344,40 @@ struct EngineUserDataClient: UserDataClient {
         )
     }
 
-    /// The alert's line for a refused backup. The engine answers only the
-    /// refusal, so the words are desktop-core's (`backup_refused`,
-    /// `engine/user_data.rs`), which are `userdata::backup::BackupError`'s.
-    /// CROSS-PLATFORM INVARIANT: the same words on every desktop.
-    static func refusalDetail(_ refusal: Taigi_Engine_BackupRefusal) -> String {
-        refusal == .unsupportedVersion ? "unsupported backup version" : "not a .taigi backup"
-    }
-
-    /// The file the user picked, or a refusal saying why it could not be read.
-    private static func read(_ url: URL) throws -> Data {
-        do {
-            return try Data(contentsOf: url)
-        } catch {
-            throw unreadable(error)
-        }
-    }
-
-    /// desktop-core's words for a file it could not read (`unreadable`,
-    /// `engine/user_data.rs`), with the system's reason after them.
-    private static func unreadable(_ error: Error) -> UserDataClientError {
-        .refused(detail: "could not read the file: \(error.localizedDescription)")
-    }
-
     func clearLearningRecords() throws {
-        try reset {
-            $0.frequency = true
-            $0.association = true
-            $0.learnedPhrases = true
+        _ = try perform(op: "userDataReset", {
+            $0.clearLearningRecords_p = .init()
+        }) {
+            if case let .ack(ack) = $0 {
+                ack
+            } else {
+                nil
+            }
         }
     }
 
     func listLearningRecords(
-        kind: Taigi_Engine_LearningRecordKind,
-        order: Taigi_Engine_LearningRecordOrder,
+        kind: Taigi_DesktopShell_LearningRecordKind,
+        order: Taigi_DesktopShell_LearningRecordOrder,
         filter: String,
         limit: Int,
         offset: Int,
-    ) throws -> UserDataListing<Taigi_Engine_LearningRecord> {
-        guard let page = RustEngineBridge.learningRecordsList(
-            kind: kind,
-            order: order,
-            filter: filter,
-            limit: limit,
-            offset: offset,
-        ) else { throw UserDataClientError.engineUnavailable(op: "learningRecordsList") }
+    ) throws -> UserDataListing<Taigi_DesktopShell_LearningRecord> {
+        let page = try perform(op: "learningRecordsList", {
+            var req = Taigi_DesktopShell_ListLearningRecordsRequest()
+            req.kind = kind
+            req.order = order
+            req.filter = filter
+            req.limit = UInt32(clamping: max(0, limit))
+            req.offset = UInt32(clamping: max(0, offset))
+            $0.listLearningRecords = req
+        }) {
+            if case let .learningRecords(records) = $0 {
+                records
+            } else {
+                nil
+            }
+        }
         return UserDataListing(
             rows: page.records,
             total: Int(page.total),
@@ -263,56 +386,117 @@ struct EngineUserDataClient: UserDataClient {
         )
     }
 
-    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool {
-        guard let saved = RustEngineBridge.learningRecordSetCount(record, count: count) else {
-            throw UserDataClientError.engineUnavailable(op: "learningRecordSetCount")
+    func setLearningRecordCount(_ record: Taigi_DesktopShell_LearningRecord, count: Int) throws -> Bool {
+        let saved = try perform(op: "learningRecordSetCount", {
+            var req = Taigi_DesktopShell_SetLearningRecordCountRequest()
+            req.record = record
+            req.count = Int64(count)
+            $0.setLearningRecordCount = req
+        }) {
+            if case let .learningRecordSaved(saved) = $0 {
+                saved
+            } else {
+                nil
+            }
         }
         return saved.hasRecord
     }
 
-    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool {
-        guard let removed = RustEngineBridge.learningRecordDelete(record) else {
-            throw UserDataClientError.engineUnavailable(op: "learningRecordDelete")
+    func deleteLearningRecord(_ record: Taigi_DesktopShell_LearningRecord) throws -> Bool {
+        let deleted = try perform(op: "learningRecordDelete", {
+            var req = Taigi_DesktopShell_DeleteLearningRecordRequest()
+            req.record = record
+            $0.deleteLearningRecord = req
+        }) {
+            if case let .learningRecordDeleted(deleted) = $0 {
+                deleted
+            } else {
+                nil
+            }
         }
-        return removed
+        return deleted.removed
     }
 
     func addLearningRecordToCustomDictionary(
-        _ record: Taigi_Engine_LearningRecord,
+        _ record: Taigi_DesktopShell_LearningRecord,
         roman: String,
         hanji: String,
     ) throws {
-        guard let added = RustEngineBridge.learningRecordAddToCustomDictionary(
-            record,
-            roman: roman,
-            hanji: hanji,
-        ) else {
-            throw UserDataClientError.engineUnavailable(op: "learningRecordAddToCustomDictionary")
-        }
-        guard added.refusal == .none else {
-            throw UserDataClientError.refused(refusal: added.refusal, detail: added.detail)
+        _ = try perform(op: "learningRecordAddToCustomDictionary", {
+            var req = Taigi_DesktopShell_AddLearningRecordToCustomDictionaryRequest()
+            req.record = record
+            req.roman = roman
+            req.hanji = hanji
+            $0.addLearningRecordToCustomDictionary = req
+        }) {
+            if case let .ack(ack) = $0 {
+                ack
+            } else {
+                nil
+            }
         }
     }
 
-    /// Empties the stores `select` names; every one is attempted, and the
-    /// ones that could not be emptied are reported together.
-    private func reset(_ select: (inout Taigi_Engine_ResetUserData) -> Void) throws {
-        var request = Taigi_Engine_ResetUserData()
-        select(&request)
-        guard let removed = RustEngineBridge.userDataReset(request) else {
-            throw UserDataClientError.engineUnavailable(op: "userDataReset")
+    private func perform<Result>(
+        op: String,
+        _ build: (inout Taigi_DesktopShell_UserDataRequest) -> Void,
+        extract: (Taigi_DesktopShell_UserDataReply.OneOf_Result) -> Result?,
+    ) throws -> Result {
+        var request = Taigi_DesktopShell_UserDataRequest()
+        build(&request)
+        guard let reply = DesktopCoreBridge.roundtrip(.userData(request), op: op, transport: transport, expected: {
+            if case let .userData(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }) else {
+            throw UserDataClientError.engineUnavailable(op: op)
         }
-        guard removed.failures.isEmpty else { throw UserDataClientError.notEmptied(removed.failures) }
+        if reply.hasError {
+            throw Self.clientError(from: reply.error, fallbackOp: op)
+        }
+        guard let result = reply.result.flatMap(extract) else {
+            throw UserDataClientError.engineUnavailable(op: op)
+        }
+        return result
+    }
+
+    private static func clientError(
+        from error: Taigi_DesktopShell_UserDataError,
+        fallbackOp: String,
+    ) -> UserDataClientError {
+        switch error.kind {
+        case let .engineUnavailableOp(op):
+            .engineUnavailable(op: op)
+        case let .refused(refused):
+            .refused(refusal: refused.refusal, detail: refused.detail)
+        case let .notEmptied(notEmptied):
+            .notEmptied(notEmptied.failures)
+        case nil:
+            .engineUnavailable(op: fallbackOp)
+        }
     }
 }
 
-extension CustomDictionaryRow {
-    init(_ entry: Taigi_Engine_CustomDictionaryEntry) {
-        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji, displayRoman: entry.displayRoman)
+typealias CustomDictionaryRow = Taigi_DesktopShell_CustomDictionaryEntry
+
+extension CustomDictionaryRow: Identifiable {
+    init(
+        id: String = "",
+        roman: String,
+        hanji: String,
+        displayRoman: String = "",
+    ) {
+        self.init()
+        self.id = id
+        self.roman = roman
+        self.hanji = hanji
+        self.displayRoman = displayRoman
     }
 }
 
 /// A learned row is addressed by the store's row id on the page that listed
 /// it — a table selection, never the word's identity (`(text, tl)`, which the
 /// engine checks on every write).
-extension Taigi_Engine_LearningRecord: Identifiable {}
+extension Taigi_DesktopShell_LearningRecord: Identifiable {}

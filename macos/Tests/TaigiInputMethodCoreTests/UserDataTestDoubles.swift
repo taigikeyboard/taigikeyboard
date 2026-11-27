@@ -55,8 +55,12 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
 
     func save(_ row: CustomDictionaryRow) throws {
         try applyCustomWrite {
-            rows.removeAll { $0.id == row.id }
-            rows.insert(row, at: 0)
+            var stored = row
+            if stored.id.isEmpty {
+                stored.id = UUID().uuidString
+            }
+            rows.removeAll { $0.id == stored.id }
+            rows.insert(stored, at: 0)
         }
     }
 
@@ -79,7 +83,15 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         if let error = lock.withLock({ csvImportError }) {
             throw error
         }
-        let imported = lock.withLock { rowsToImport }
+        let imported = lock.withLock {
+            rowsToImport.map { row in
+                var stored = row
+                if stored.id.isEmpty {
+                    stored.id = UUID().uuidString
+                }
+                return stored
+            }
+        }
         try applyCustomWrite { rows.insert(contentsOf: imported, at: 0) }
         return CustomDictionaryImportResult(imported: imported.count, skipped: 0)
     }
@@ -87,7 +99,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     /// What `exportBackup` answers.
     var backupToExport = Data("{\"version\":4}".utf8)
     /// What `importBackup` adds to the learning records.
-    var backupRecordsToImport: [Taigi_Engine_LearningRecord] = []
+    var backupRecordsToImport: [Taigi_DesktopShell_LearningRecord] = []
     /// Set to make both backup requests throw it before they touch the store
     /// — an engine that did not answer, a refused file.
     var backupError: UserDataClientError?
@@ -152,11 +164,11 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
 
     // MARK: - Learning records
 
-    private var learningRecords: [Taigi_Engine_LearningRecord] = []
+    private var learningRecords: [Taigi_DesktopShell_LearningRecord] = []
     /// What the last list request asked for, as `(kind, order, filter)`.
     private(set) var lastLearningRecordsQuery: (
-        kind: Taigi_Engine_LearningRecordKind,
-        order: Taigi_Engine_LearningRecordOrder,
+        kind: Taigi_DesktopShell_LearningRecordKind,
+        order: Taigi_DesktopShell_LearningRecordOrder,
         filter: String,
     )?
     /// Set to make every list request fail, as an unreadable store does.
@@ -168,17 +180,17 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     /// Called as a list request reaches the store, before the gate.
     var onLearningRecordsListEntered: (@Sendable () -> Void)?
 
-    func seedLearningRecords(_ records: [Taigi_Engine_LearningRecord]) {
+    func seedLearningRecords(_ records: [Taigi_DesktopShell_LearningRecord]) {
         lock.withLock { learningRecords = records }
     }
 
     func listLearningRecords(
-        kind: Taigi_Engine_LearningRecordKind,
-        order: Taigi_Engine_LearningRecordOrder,
+        kind: Taigi_DesktopShell_LearningRecordKind,
+        order: Taigi_DesktopShell_LearningRecordOrder,
         filter: String,
         limit: Int,
         offset: Int,
-    ) throws -> UserDataListing<Taigi_Engine_LearningRecord> {
+    ) throws -> UserDataListing<Taigi_DesktopShell_LearningRecord> {
         onLearningRecordsListEntered?()
         learningRecordsListGate?.wait()
         return try lock.withLock {
@@ -208,7 +220,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
 
     /// Applies only while the row still holds what was listed, as the engine
     /// does.
-    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool {
+    func setLearningRecordCount(_ record: Taigi_DesktopShell_LearningRecord, count: Int) throws -> Bool {
         lock.withLock {
             guard let index = learningRecords.firstIndex(where: { Self.isSameRow($0, record) }) else { return false }
             learningRecords[index].count = Int64(count)
@@ -216,7 +228,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         }
     }
 
-    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool {
+    func deleteLearningRecord(_ record: Taigi_DesktopShell_LearningRecord) throws -> Bool {
         lock.withLock {
             guard let index = learningRecords.firstIndex(where: { Self.isSameRow($0, record) }) else { return false }
             learningRecords.remove(at: index)
@@ -232,7 +244,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     /// refusal keeps it — as the engine does (which refuses a frequency row;
     /// the page never sends one).
     func addLearningRecordToCustomDictionary(
-        _ record: Taigi_Engine_LearningRecord,
+        _ record: Taigi_DesktopShell_LearningRecord,
         roman: String,
         hanji: String,
     ) throws {
@@ -243,13 +255,13 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
             let roman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
             let hanji = hanji.trimmingCharacters(in: .whitespacesAndNewlines)
             if !rows.contains(where: { $0.roman == roman && $0.hanji == hanji }) {
-                rows.insert(CustomDictionaryRow(roman: roman, hanji: hanji), at: 0)
+                rows.insert(CustomDictionaryRow(id: UUID().uuidString, roman: roman, hanji: hanji), at: 0)
             }
             learningRecords.removeAll { Self.isSameRow($0, record) }
         }
     }
 
-    private static func isSameRow(_ stored: Taigi_Engine_LearningRecord, _ listed: Taigi_Engine_LearningRecord) -> Bool {
+    private static func isSameRow(_ stored: Taigi_DesktopShell_LearningRecord, _ listed: Taigi_DesktopShell_LearningRecord) -> Bool {
         stored.kind == listed.kind && stored.id == listed.id && stored.text == listed.text && stored.tl == listed.tl
     }
 }

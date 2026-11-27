@@ -96,10 +96,7 @@ final class CustomDictionaryPageModel {
             let csv = try await UserDataRequests.run(on: client) { try $0.exportCSV() }
             try await panels.write(
                 csv,
-                suggestedName: UserDataFilePanels.exportFileName(
-                    prefix: "taigi_custom_dictionary",
-                    extension: "csv",
-                ),
+                suggestedName: UserDataFilePanels.exportFileName(kind: .customCsv),
                 contentTypes: [.commaSeparatedText],
                 in: window,
             )
@@ -238,7 +235,7 @@ struct CustomDictionaryPage: View {
             Task { await model.load() }
         }
         .sheet(item: $editing) { row in
-            CustomDictionaryEntrySheet(row: row, isNew: row.roman.isEmpty) { edited in
+            CustomDictionaryEntrySheet(row: row, isNew: row.id.isEmpty) { edited in
                 Task { await model.save(edited) }
             }
         }

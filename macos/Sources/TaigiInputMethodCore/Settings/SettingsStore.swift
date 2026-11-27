@@ -303,11 +303,11 @@ final class SettingsStore: @unchecked Sendable {
         /// `LEARNING_RECORDS_ORDER`), not the proto's integers.
         static let learningRecordsKind = SettingsKey(
             name: "learningRecordsKind",
-            defaultValue: Taigi_Engine_LearningRecordKind.frequency,
+            defaultValue: Taigi_DesktopShell_LearningRecordKind.frequency,
         )
         static let learningRecordsOrder = SettingsKey(
             name: "learningRecordsOrder",
-            defaultValue: Taigi_Engine_LearningRecordOrder.mostUsed,
+            defaultValue: Taigi_DesktopShell_LearningRecordOrder.mostUsed,
         )
 
         /// The candidate window's layout. Presentation-only — the engine never
@@ -762,18 +762,18 @@ final class SettingsStore: @unchecked Sendable {
     }
 
     /// The kind the Learning Records page reopens on.
-    var learningRecordsKind: Taigi_Engine_LearningRecordKind {
-        get { spelledChoice(Keys.learningRecordsKind, Taigi_Engine_LearningRecordKind.storedSpellings) }
+    var learningRecordsKind: Taigi_DesktopShell_LearningRecordKind {
+        get { spelledChoice(Keys.learningRecordsKind, UserDataRules.learningRecordKindSpellings) }
         set {
-            setSpelledChoice(newValue, Keys.learningRecordsKind, Taigi_Engine_LearningRecordKind.storedSpellings)
+            setSpelledChoice(newValue, Keys.learningRecordsKind, UserDataRules.learningRecordKindSpellings)
         }
     }
 
     /// The order the Learning Records page reopens on.
-    var learningRecordsOrder: Taigi_Engine_LearningRecordOrder {
-        get { spelledChoice(Keys.learningRecordsOrder, Taigi_Engine_LearningRecordOrder.storedSpellings) }
+    var learningRecordsOrder: Taigi_DesktopShell_LearningRecordOrder {
+        get { spelledChoice(Keys.learningRecordsOrder, UserDataRules.learningRecordOrderSpellings) }
         set {
-            setSpelledChoice(newValue, Keys.learningRecordsOrder, Taigi_Engine_LearningRecordOrder.storedSpellings)
+            setSpelledChoice(newValue, Keys.learningRecordsOrder, UserDataRules.learningRecordOrderSpellings)
         }
     }
 
@@ -794,6 +794,7 @@ final class SettingsStore: @unchecked Sendable {
         _ key: SettingsKey<Value>,
         _ spellings: [(value: Value, spelling: String)],
     ) {
+        guard !spellings.isEmpty else { return }
         userDefaults.set(spellings.first { $0.value == value }?.spelling, forKey: key.name)
     }
 
@@ -1035,22 +1036,4 @@ private final class DefaultsKeyObserver: NSObject {
         }
         onChange()
     }
-}
-
-extension Taigi_Engine_LearningRecordKind {
-    /// Each kind the page lists, with its stored spelling — desktop-core's
-    /// `SettingChoice` raw strings (`settings/learning_records.rs`).
-    static let storedSpellings: [(value: Self, spelling: String)] = [
-        (.frequency, "frequency"),
-        (.learnedPhrase, "learnedPhrase"),
-    ]
-}
-
-extension Taigi_Engine_LearningRecordOrder {
-    /// Each order the page offers, with its stored spelling — desktop-core's
-    /// `SettingChoice` raw strings (`settings/learning_records.rs`).
-    static let storedSpellings: [(value: Self, spelling: String)] = [
-        (.mostUsed, "mostUsed"),
-        (.mostRecent, "mostRecent"),
-    ]
 }

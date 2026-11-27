@@ -25,12 +25,12 @@ final class LearningRecordsPageTests: XCTestCase {
     }
 
     private func record(
-        _ kind: Taigi_Engine_LearningRecordKind,
+        _ kind: Taigi_DesktopShell_LearningRecordKind,
         id: Int64,
         count: Int64 = 1,
         lastUsedMs: Int64 = 0,
-    ) -> Taigi_Engine_LearningRecord {
-        var record = Taigi_Engine_LearningRecord()
+    ) -> Taigi_DesktopShell_LearningRecord {
+        var record = Taigi_DesktopShell_LearningRecord()
         record.kind = kind
         record.id = id
         record.text = "字\(id)"
@@ -40,7 +40,7 @@ final class LearningRecordsPageTests: XCTestCase {
         return record
     }
 
-    private func makeModel(_ records: [Taigi_Engine_LearningRecord]) -> (LearningRecordsPageModel, FakeUserDataClient) {
+    private func makeModel(_ records: [Taigi_DesktopShell_LearningRecord]) -> (LearningRecordsPageModel, FakeUserDataClient) {
         let client = FakeUserDataClient()
         client.seedLearningRecords(records)
         return (LearningRecordsPageModel(client: client, settings: settings), client)
