@@ -3,9 +3,9 @@
 The pure Rust the macOS (`../macos`, IMKit, through `macos/crates/taigi-macos-ffi`),
 Windows (`../windows`, TSF) and Linux (`../linux`, Fcitx5 + IBus) input methods
 link, over the shared engine in `../engine` — `taigi-desktop-core` on all three,
-`-storage` on Windows + Linux, `-update` on Windows. One workspace, three
-crates, no OS handle anywhere — everything here builds and tests natively on
-the maintainer's Mac.
+`-storage` on all three (font library on macOS; full storage on Windows + Linux),
+`-update` on Windows. One workspace, three crates, no OS handle anywhere —
+everything here builds and tests natively on the maintainer's Mac.
 
 | Crate | Role |
 |---|---|
