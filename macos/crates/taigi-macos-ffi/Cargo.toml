@@ -1,6 +1,6 @@
 [package]
 name = "taigi-macos-ffi"
-description = "The static library the macOS input method links: the desktop-shell swift-bridge seam over taigi-desktop-core and the engine"
+description = "The static library the macOS input method links: the desktop-shell swift-bridge seam over taigi-desktop-core, taigi-desktop-storage, and the engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -23,6 +23,7 @@ panic-injector = []
 # SQLite; docs/architecture/user-data-engine-roadmap.md U11).
 dispatch = { workspace = true, features = ["user-data"] }
 taigi-desktop-core = { workspace = true }
+taigi-desktop-storage = { workspace = true }
 log = { workspace = true }
 prost = { workspace = true }
 swift-bridge = { workspace = true }

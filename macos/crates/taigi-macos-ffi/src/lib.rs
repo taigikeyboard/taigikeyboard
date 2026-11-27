@@ -8,12 +8,14 @@
 //! reach the `taigi-desktop-core` runtime (`runtime.rs`), the composing session
 //! (`session.rs`, with `key_translation.rs`), the key rules (`key_rules.rs`),
 //! the Manage Dictionaries search (`dictionary_search.rs`), UserData ops and
-//! rules (`user_data.rs`), and the key-path settings snapshot each request may
-//! carry (`settings.rs`).
+//! rules (`user_data.rs`), custom font file storage (`font_library.rs`, over
+//! `taigi-desktop-storage`), and the key-path settings snapshot each request
+//! may carry (`settings.rs`).
 
 #[cfg(test)]
 mod chord_rules;
 mod dictionary_search;
+mod font_library;
 mod key_rules;
 mod key_translation;
 mod logger;

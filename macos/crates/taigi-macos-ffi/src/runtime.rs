@@ -25,7 +25,7 @@ use crate::proto::{
 };
 use crate::session::Session;
 use crate::settings::{self, SnapshotSettings};
-use crate::{dictionary_search, key_rules, user_data};
+use crate::{dictionary_search, font_library, key_rules, user_data};
 
 /// Which desktop this is: every desktop-core rule that differs per desktop
 /// is handed it (roadmap D6) — the `DELETE` user-data journal, the Mac
@@ -80,6 +80,11 @@ impl Shell {
         // Answered before Configure and without taking `Shell::session`; the
         // engine's own store locks order concurrent user-data and composing accesses.
         if let Some(answer) = user_data::answer(&request) {
+            return answer;
+        }
+        // Pure filesystem/validation helpers over `taigi-desktop-storage`,
+        // answered before Configure and without taking `Shell::session`.
+        if let Some(answer) = font_library::answer(&request) {
             return answer;
         }
         // Before the session lock: a search may come from a background
@@ -143,12 +148,13 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
-            // Answered by `key_rules::answer`, `dictionary_search::answer`, or
-            // `user_data::answer` before the session is locked.
+            // Answered by `key_rules::answer`, `dictionary_search::answer`,
+            // `user_data::answer`, or `font_library::answer` before the session is locked.
             Request::DictionarySearch(_)
             | Request::UserData(_)
             | Request::UserDataRules(_)
             | Request::UserDataExportFileName(_)
+            | Request::FontLibrary(_)
             | Request::Press(_)
             | Request::Chord(_)
             | Request::ComposingShortcuts(_)
@@ -550,6 +556,52 @@ mod tests {
         assert!(matches!(
             missing_backup,
             Ok(desktop_response::Reply::UserData(reply)) if reply.error.is_some()
+        ));
+        assert_eq!(input_mode(&shell), InputMode::DEFAULT);
+        assert!(shell.runtime.get().is_none());
+    }
+
+    #[test]
+    fn font_library_requests_answer_before_configure_without_applying_snapshot() {
+        use crate::proto::{
+            desktop_response, font_library_reply, font_library_request, FontLibraryRequest,
+            FontLibraryRulesRequest, SanitizedFontStemRequest,
+        };
+        let shell = Shell::default();
+        let bad = snapshot(vec![text("autoSpaceEnabled", "yes")]);
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::FontLibrary(FontLibraryRequest {
+                    method: Some(font_library_request::Method::Rules(
+                        FontLibraryRulesRequest {},
+                    )),
+                }),
+                Some(&bad),
+            ),
+            Ok(desktop_response::Reply::FontLibrary(reply))
+                if matches!(
+                    reply.result,
+                    Some(font_library_reply::Result::Rules(ref rules))
+                        if rules.fonts_folder_name == "Fonts"
+                )
+        ));
+        assert!(matches!(
+            shell.serve(
+                desktop_request::Request::FontLibrary(FontLibraryRequest {
+                    method: Some(font_library_request::Method::SanitizedStem(
+                        SanitizedFontStemRequest {
+                            name: "../../My Font".to_owned(),
+                        },
+                    )),
+                }),
+                Some(&bad),
+            ),
+            Ok(desktop_response::Reply::FontLibrary(reply))
+                if matches!(
+                    reply.result,
+                    Some(font_library_reply::Result::SanitizedStem(ref stem))
+                        if stem.stem == "My Font"
+                )
         ));
         assert_eq!(input_mode(&shell), InputMode::DEFAULT);
         assert!(shell.runtime.get().is_none());

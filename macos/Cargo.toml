@@ -1,8 +1,8 @@
 # macOS input method — its own Cargo workspace, like `linux/` and `windows/`:
 # `taigi-macos-ffi` is the one static library the Swift app links. It holds
-# `../desktop` (`taigi-desktop-core`) and the engine (`../engine/dispatch`) in
-# ONE archive, so the engine's process-wide state exists once
-# (docs/architecture/macos-desktop-core-roadmap.md D1).
+# `../desktop` (`taigi-desktop-core`, `taigi-desktop-storage`) and the engine
+# (`../engine/dispatch`) in ONE archive, so the engine's process-wide state
+# exists once (docs/architecture/macos-desktop-core-roadmap.md D1).
 #
 # Version is the desktop release train's (macOS + Windows + Linux share one
 # number); the macOS app's own number is `macos/App/Info.plist`.
@@ -25,6 +25,7 @@ publish = false
 # only enabled on `taigi-macos-ffi`'s edge (user-data-engine-roadmap.md U11).
 dispatch = { path = "../engine/dispatch", default-features = false }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
+taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
 log = "0.4"
 prost = "0.14"
 prost-build = "0.14"

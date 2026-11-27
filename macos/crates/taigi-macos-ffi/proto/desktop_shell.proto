@@ -50,6 +50,7 @@ message DesktopRequest {
     UserDataRequest user_data = 26;
     UserDataRulesRequest user_data_rules = 27;
     UserDataExportFileNameRequest user_data_export_file_name = 28;
+    FontLibraryRequest font_library = 29;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -160,6 +161,7 @@ message DesktopResponse {
     UserDataReply user_data = 18;
     UserDataRulesReply user_data_rules = 19;
     UserDataExportFileNameReply user_data_export_file_name = 20;
+    FontLibraryReply font_library = 21;
   }
 }
 
@@ -931,4 +933,96 @@ message UserDataExportFileNameRequest {
 
 message UserDataExportFileNameReply {
   string file_name = 1;
+}
+
+// ---- Font library storage (taigi-desktop-storage::font_library) ----
+//
+// File storage rules shared across desktop platforms (`copy_in`, `remove_stored`,
+// `stored_file_names`, `sanitized_stem`, `sanitized_component`, and constants).
+// Answered before Configure and without taking `Shell::session` or mutating
+// `Shell::settings`.
+
+message FontLibraryRequest {
+  oneof method {
+    FontLibraryRulesRequest rules = 1;
+    CopyInFontRequest copy_in = 2;
+    RemoveStoredFontRequest remove_stored = 3;
+    ListStoredFontsRequest list_stored = 4;
+    SanitizedFontStemRequest sanitized_stem = 5;
+    SanitizedFontComponentRequest sanitized_component = 6;
+  }
+}
+
+message FontLibraryRulesRequest {}
+
+message CopyInFontRequest {
+  string directory = 1;
+  string source = 2;
+}
+
+message RemoveStoredFontRequest {
+  string directory = 1;
+  string file_name = 2;
+}
+
+message ListStoredFontsRequest {
+  string directory = 1;
+}
+
+message SanitizedFontStemRequest {
+  string name = 1;
+}
+
+message SanitizedFontComponentRequest {
+  string file_name = 1;
+}
+
+message FontLibraryError {
+  oneof kind {
+    string unsupported_file_type = 1;
+    bool not_a_regular_file = 2;
+    uint64 too_large_bytes = 3;
+    string unreadable = 4;
+    string not_copied = 5;
+    bool no_available_name = 6;
+    bool invalid_file_name = 7;
+    string not_removed = 8;
+  }
+}
+
+message FontLibraryReply {
+  FontLibraryError error = 1;
+  oneof result {
+    FontLibraryRules rules = 2;
+    CopyInFontResult copied = 3;
+    FontLibraryAck ack = 4;
+    StoredFonts stored_fonts = 5;
+    SanitizedFontStem sanitized_stem = 6;
+    SanitizedFontComponent sanitized_component = 7;
+  }
+}
+
+message FontLibraryRules {
+  repeated string allowed_extensions = 1;
+  uint64 max_file_size = 2;
+  uint32 max_name_attempts = 3;
+  string fonts_folder_name = 4;
+}
+
+message CopyInFontResult {
+  string file_name = 1;
+}
+
+message FontLibraryAck {}
+
+message StoredFonts {
+  repeated string file_names = 1;
+}
+
+message SanitizedFontStem {
+  string stem = 1;
+}
+
+message SanitizedFontComponent {
+  optional string file_name = 1;
 }

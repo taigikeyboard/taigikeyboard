@@ -728,6 +728,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "taigi-desktop-storage"
+version = "3.9.0"
+dependencies = [
+ "log",
+ "serde_json",
+ "taigi-desktop-core",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "taigi-macos-ffi"
 version = "3.9.0"
 dependencies = [
@@ -738,6 +749,7 @@ dependencies = [
  "swift-bridge",
  "swift-bridge-build",
  "taigi-desktop-core",
+ "taigi-desktop-storage",
  "tempfile",
 ]
 

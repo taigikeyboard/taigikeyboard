@@ -699,6 +699,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .userDataExportFileName(newValue)}
   }
 
+  public var fontLibrary: Taigi_DesktopShell_FontLibraryRequest {
+    get {
+      if case .fontLibrary(let v)? = request {return v}
+      return Taigi_DesktopShell_FontLibraryRequest()
+    }
+    set {request = .fontLibrary(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -746,6 +754,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case userData(Taigi_DesktopShell_UserDataRequest)
     case userDataRules(Taigi_DesktopShell_UserDataRulesRequest)
     case userDataExportFileName(Taigi_DesktopShell_UserDataExportFileNameRequest)
+    case fontLibrary(Taigi_DesktopShell_FontLibraryRequest)
 
   }
 
@@ -1125,6 +1134,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     set {reply = .userDataExportFileName(newValue)}
   }
 
+  public var fontLibrary: Taigi_DesktopShell_FontLibraryReply {
+    get {
+      if case .fontLibrary(let v)? = reply {return v}
+      return Taigi_DesktopShell_FontLibraryReply()
+    }
+    set {reply = .fontLibrary(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Reply: Equatable, Sendable {
@@ -1146,6 +1163,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     case userData(Taigi_DesktopShell_UserDataReply)
     case userDataRules(Taigi_DesktopShell_UserDataRulesReply)
     case userDataExportFileName(Taigi_DesktopShell_UserDataExportFileNameReply)
+    case fontLibrary(Taigi_DesktopShell_FontLibraryReply)
 
   }
 
@@ -3295,6 +3313,404 @@ public nonisolated struct Taigi_DesktopShell_UserDataExportFileNameReply: Sendab
   public init() {}
 }
 
+public nonisolated struct Taigi_DesktopShell_FontLibraryRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var method: Taigi_DesktopShell_FontLibraryRequest.OneOf_Method? = nil
+
+  public var rules: Taigi_DesktopShell_FontLibraryRulesRequest {
+    get {
+      if case .rules(let v)? = method {return v}
+      return Taigi_DesktopShell_FontLibraryRulesRequest()
+    }
+    set {method = .rules(newValue)}
+  }
+
+  public var copyIn: Taigi_DesktopShell_CopyInFontRequest {
+    get {
+      if case .copyIn(let v)? = method {return v}
+      return Taigi_DesktopShell_CopyInFontRequest()
+    }
+    set {method = .copyIn(newValue)}
+  }
+
+  public var removeStored: Taigi_DesktopShell_RemoveStoredFontRequest {
+    get {
+      if case .removeStored(let v)? = method {return v}
+      return Taigi_DesktopShell_RemoveStoredFontRequest()
+    }
+    set {method = .removeStored(newValue)}
+  }
+
+  public var listStored: Taigi_DesktopShell_ListStoredFontsRequest {
+    get {
+      if case .listStored(let v)? = method {return v}
+      return Taigi_DesktopShell_ListStoredFontsRequest()
+    }
+    set {method = .listStored(newValue)}
+  }
+
+  public var sanitizedStem: Taigi_DesktopShell_SanitizedFontStemRequest {
+    get {
+      if case .sanitizedStem(let v)? = method {return v}
+      return Taigi_DesktopShell_SanitizedFontStemRequest()
+    }
+    set {method = .sanitizedStem(newValue)}
+  }
+
+  public var sanitizedComponent: Taigi_DesktopShell_SanitizedFontComponentRequest {
+    get {
+      if case .sanitizedComponent(let v)? = method {return v}
+      return Taigi_DesktopShell_SanitizedFontComponentRequest()
+    }
+    set {method = .sanitizedComponent(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Method: Equatable, Sendable {
+    case rules(Taigi_DesktopShell_FontLibraryRulesRequest)
+    case copyIn(Taigi_DesktopShell_CopyInFontRequest)
+    case removeStored(Taigi_DesktopShell_RemoveStoredFontRequest)
+    case listStored(Taigi_DesktopShell_ListStoredFontsRequest)
+    case sanitizedStem(Taigi_DesktopShell_SanitizedFontStemRequest)
+    case sanitizedComponent(Taigi_DesktopShell_SanitizedFontComponentRequest)
+
+  }
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_FontLibraryRulesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_CopyInFontRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var directory: String = String()
+
+  public var source: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_RemoveStoredFontRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var directory: String = String()
+
+  public var fileName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_ListStoredFontsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var directory: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_SanitizedFontStemRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var name: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_SanitizedFontComponentRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var fileName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_FontLibraryError: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var kind: Taigi_DesktopShell_FontLibraryError.OneOf_Kind? = nil
+
+  public var unsupportedFileType: String {
+    get {
+      if case .unsupportedFileType(let v)? = kind {return v}
+      return String()
+    }
+    set {kind = .unsupportedFileType(newValue)}
+  }
+
+  public var notARegularFile: Bool {
+    get {
+      if case .notARegularFile(let v)? = kind {return v}
+      return false
+    }
+    set {kind = .notARegularFile(newValue)}
+  }
+
+  public var tooLargeBytes: UInt64 {
+    get {
+      if case .tooLargeBytes(let v)? = kind {return v}
+      return 0
+    }
+    set {kind = .tooLargeBytes(newValue)}
+  }
+
+  public var unreadable: String {
+    get {
+      if case .unreadable(let v)? = kind {return v}
+      return String()
+    }
+    set {kind = .unreadable(newValue)}
+  }
+
+  public var notCopied: String {
+    get {
+      if case .notCopied(let v)? = kind {return v}
+      return String()
+    }
+    set {kind = .notCopied(newValue)}
+  }
+
+  public var noAvailableName: Bool {
+    get {
+      if case .noAvailableName(let v)? = kind {return v}
+      return false
+    }
+    set {kind = .noAvailableName(newValue)}
+  }
+
+  public var invalidFileName: Bool {
+    get {
+      if case .invalidFileName(let v)? = kind {return v}
+      return false
+    }
+    set {kind = .invalidFileName(newValue)}
+  }
+
+  public var notRemoved: String {
+    get {
+      if case .notRemoved(let v)? = kind {return v}
+      return String()
+    }
+    set {kind = .notRemoved(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Kind: Equatable, Sendable {
+    case unsupportedFileType(String)
+    case notARegularFile(Bool)
+    case tooLargeBytes(UInt64)
+    case unreadable(String)
+    case notCopied(String)
+    case noAvailableName(Bool)
+    case invalidFileName(Bool)
+    case notRemoved(String)
+
+  }
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_FontLibraryReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var error: Taigi_DesktopShell_FontLibraryError {
+    get {_error ?? Taigi_DesktopShell_FontLibraryError()}
+    set {_error = newValue}
+  }
+  /// Returns true if `error` has been explicitly set.
+  public var hasError: Bool {self._error != nil}
+  /// Clears the value of `error`. Subsequent reads from it will return its default value.
+  public mutating func clearError() {self._error = nil}
+
+  public var result: Taigi_DesktopShell_FontLibraryReply.OneOf_Result? = nil
+
+  public var rules: Taigi_DesktopShell_FontLibraryRules {
+    get {
+      if case .rules(let v)? = result {return v}
+      return Taigi_DesktopShell_FontLibraryRules()
+    }
+    set {result = .rules(newValue)}
+  }
+
+  public var copied: Taigi_DesktopShell_CopyInFontResult {
+    get {
+      if case .copied(let v)? = result {return v}
+      return Taigi_DesktopShell_CopyInFontResult()
+    }
+    set {result = .copied(newValue)}
+  }
+
+  public var ack: Taigi_DesktopShell_FontLibraryAck {
+    get {
+      if case .ack(let v)? = result {return v}
+      return Taigi_DesktopShell_FontLibraryAck()
+    }
+    set {result = .ack(newValue)}
+  }
+
+  public var storedFonts: Taigi_DesktopShell_StoredFonts {
+    get {
+      if case .storedFonts(let v)? = result {return v}
+      return Taigi_DesktopShell_StoredFonts()
+    }
+    set {result = .storedFonts(newValue)}
+  }
+
+  public var sanitizedStem: Taigi_DesktopShell_SanitizedFontStem {
+    get {
+      if case .sanitizedStem(let v)? = result {return v}
+      return Taigi_DesktopShell_SanitizedFontStem()
+    }
+    set {result = .sanitizedStem(newValue)}
+  }
+
+  public var sanitizedComponent: Taigi_DesktopShell_SanitizedFontComponent {
+    get {
+      if case .sanitizedComponent(let v)? = result {return v}
+      return Taigi_DesktopShell_SanitizedFontComponent()
+    }
+    set {result = .sanitizedComponent(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Result: Equatable, Sendable {
+    case rules(Taigi_DesktopShell_FontLibraryRules)
+    case copied(Taigi_DesktopShell_CopyInFontResult)
+    case ack(Taigi_DesktopShell_FontLibraryAck)
+    case storedFonts(Taigi_DesktopShell_StoredFonts)
+    case sanitizedStem(Taigi_DesktopShell_SanitizedFontStem)
+    case sanitizedComponent(Taigi_DesktopShell_SanitizedFontComponent)
+
+  }
+
+  public init() {}
+
+  fileprivate var _error: Taigi_DesktopShell_FontLibraryError? = nil
+}
+
+public nonisolated struct Taigi_DesktopShell_FontLibraryRules: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var allowedExtensions: [String] = []
+
+  public var maxFileSize: UInt64 = 0
+
+  public var maxNameAttempts: UInt32 = 0
+
+  public var fontsFolderName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_CopyInFontResult: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var fileName: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_FontLibraryAck: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_StoredFonts: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var fileNames: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_SanitizedFontStem: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var stem: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_SanitizedFontComponent: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var fileName: String {
+    get {_fileName ?? String()}
+    set {_fileName = newValue}
+  }
+  /// Returns true if `fileName` has been explicitly set.
+  public var hasFileName: Bool {self._fileName != nil}
+  /// Clears the value of `fileName`. Subsequent reads from it will return its default value.
+  public mutating func clearFileName() {self._fileName = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _fileName: String? = nil
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "taigi.desktop_shell"
@@ -3341,7 +3757,7 @@ nonisolated extension Taigi_DesktopShell_UserDataExportKind: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{3}symbol_picker_symbols\0\u{3}note_recent_symbol\0\u{3}symbol_swap\0\u{3}user_data\0\u{3}user_data_rules\0\u{3}user_data_export_file_name\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{3}symbol_picker_symbols\0\u{3}note_recent_symbol\0\u{3}symbol_swap\0\u{3}user_data\0\u{3}user_data_rules\0\u{3}user_data_export_file_name\0\u{3}font_library\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -3688,6 +4104,19 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .userDataExportFileName(v)
         }
       }()
+      case 29: try {
+        var v: Taigi_DesktopShell_FontLibraryRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .fontLibrary(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .fontLibrary(v)
+        }
+      }()
       default: break
       }
     }
@@ -3808,6 +4237,10 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .userDataExportFileName?: try {
       guard case .userDataExportFileName(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 28)
+    }()
+    case .fontLibrary?: try {
+      guard case .fontLibrary(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 29)
     }()
     default: break
     }
@@ -4180,7 +4613,7 @@ nonisolated extension Taigi_DesktopShell_LexiconStats: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{3}symbol_picker_symbols\0\u{3}note_recent_symbol\0\u{3}symbol_swap\0\u{3}user_data\0\u{3}user_data_rules\0\u{3}user_data_export_file_name\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}dictionary_search\0\u{3}pass_through_swap\0\u{3}symbol_picker_symbols\0\u{3}note_recent_symbol\0\u{3}symbol_swap\0\u{3}user_data\0\u{3}user_data_rules\0\u{3}user_data_export_file_name\0\u{3}font_library\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -4423,6 +4856,19 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
           self.reply = .userDataExportFileName(v)
         }
       }()
+      case 21: try {
+        var v: Taigi_DesktopShell_FontLibraryReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .fontLibrary(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .fontLibrary(v)
+        }
+      }()
       default: break
       }
     }
@@ -4508,6 +4954,10 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
     case .userDataExportFileName?: try {
       guard case .userDataExportFileName(let v)? = self.reply else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
+    }()
+    case .fontLibrary?: try {
+      guard case .fontLibrary(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     case nil: break
     }
@@ -8354,6 +8804,777 @@ nonisolated extension Taigi_DesktopShell_UserDataExportFileNameReply: SwiftProto
 
   public static func ==(lhs: Taigi_DesktopShell_UserDataExportFileNameReply, rhs: Taigi_DesktopShell_UserDataExportFileNameReply) -> Bool {
     if lhs.fileName != rhs.fileName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_FontLibraryRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FontLibraryRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rules\0\u{3}copy_in\0\u{3}remove_stored\0\u{3}list_stored\0\u{3}sanitized_stem\0\u{3}sanitized_component\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Taigi_DesktopShell_FontLibraryRulesRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .rules(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .rules(v)
+        }
+      }()
+      case 2: try {
+        var v: Taigi_DesktopShell_CopyInFontRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .copyIn(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .copyIn(v)
+        }
+      }()
+      case 3: try {
+        var v: Taigi_DesktopShell_RemoveStoredFontRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .removeStored(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .removeStored(v)
+        }
+      }()
+      case 4: try {
+        var v: Taigi_DesktopShell_ListStoredFontsRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .listStored(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .listStored(v)
+        }
+      }()
+      case 5: try {
+        var v: Taigi_DesktopShell_SanitizedFontStemRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .sanitizedStem(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .sanitizedStem(v)
+        }
+      }()
+      case 6: try {
+        var v: Taigi_DesktopShell_SanitizedFontComponentRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .sanitizedComponent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .sanitizedComponent(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.method {
+    case .rules?: try {
+      guard case .rules(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .copyIn?: try {
+      guard case .copyIn(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .removeStored?: try {
+      guard case .removeStored(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .listStored?: try {
+      guard case .listStored(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .sanitizedStem?: try {
+      guard case .sanitizedStem(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .sanitizedComponent?: try {
+      guard case .sanitizedComponent(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_FontLibraryRequest, rhs: Taigi_DesktopShell_FontLibraryRequest) -> Bool {
+    if lhs.method != rhs.method {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_FontLibraryRulesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FontLibraryRulesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_FontLibraryRulesRequest, rhs: Taigi_DesktopShell_FontLibraryRulesRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_CopyInFontRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CopyInFontRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}directory\0\u{1}source\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.directory) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.source) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.directory.isEmpty {
+      try visitor.visitSingularStringField(value: self.directory, fieldNumber: 1)
+    }
+    if !self.source.isEmpty {
+      try visitor.visitSingularStringField(value: self.source, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_CopyInFontRequest, rhs: Taigi_DesktopShell_CopyInFontRequest) -> Bool {
+    if lhs.directory != rhs.directory {return false}
+    if lhs.source != rhs.source {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_RemoveStoredFontRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RemoveStoredFontRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}directory\0\u{3}file_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.directory) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.fileName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.directory.isEmpty {
+      try visitor.visitSingularStringField(value: self.directory, fieldNumber: 1)
+    }
+    if !self.fileName.isEmpty {
+      try visitor.visitSingularStringField(value: self.fileName, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_RemoveStoredFontRequest, rhs: Taigi_DesktopShell_RemoveStoredFontRequest) -> Bool {
+    if lhs.directory != rhs.directory {return false}
+    if lhs.fileName != rhs.fileName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_ListStoredFontsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ListStoredFontsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}directory\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.directory) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.directory.isEmpty {
+      try visitor.visitSingularStringField(value: self.directory, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_ListStoredFontsRequest, rhs: Taigi_DesktopShell_ListStoredFontsRequest) -> Bool {
+    if lhs.directory != rhs.directory {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SanitizedFontStemRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SanitizedFontStemRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SanitizedFontStemRequest, rhs: Taigi_DesktopShell_SanitizedFontStemRequest) -> Bool {
+    if lhs.name != rhs.name {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SanitizedFontComponentRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SanitizedFontComponentRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}file_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.fileName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.fileName.isEmpty {
+      try visitor.visitSingularStringField(value: self.fileName, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SanitizedFontComponentRequest, rhs: Taigi_DesktopShell_SanitizedFontComponentRequest) -> Bool {
+    if lhs.fileName != rhs.fileName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_FontLibraryError: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FontLibraryError"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}unsupported_file_type\0\u{3}not_a_regular_file\0\u{3}too_large_bytes\0\u{1}unreadable\0\u{3}not_copied\0\u{3}no_available_name\0\u{3}invalid_file_name\0\u{3}not_removed\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .unsupportedFileType(v)
+        }
+      }()
+      case 2: try {
+        var v: Bool?
+        try decoder.decodeSingularBoolField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .notARegularFile(v)
+        }
+      }()
+      case 3: try {
+        var v: UInt64?
+        try decoder.decodeSingularUInt64Field(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .tooLargeBytes(v)
+        }
+      }()
+      case 4: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .unreadable(v)
+        }
+      }()
+      case 5: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .notCopied(v)
+        }
+      }()
+      case 6: try {
+        var v: Bool?
+        try decoder.decodeSingularBoolField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .noAvailableName(v)
+        }
+      }()
+      case 7: try {
+        var v: Bool?
+        try decoder.decodeSingularBoolField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .invalidFileName(v)
+        }
+      }()
+      case 8: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .notRemoved(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.kind {
+    case .unsupportedFileType?: try {
+      guard case .unsupportedFileType(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    }()
+    case .notARegularFile?: try {
+      guard case .notARegularFile(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 2)
+    }()
+    case .tooLargeBytes?: try {
+      guard case .tooLargeBytes(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularUInt64Field(value: v, fieldNumber: 3)
+    }()
+    case .unreadable?: try {
+      guard case .unreadable(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    }()
+    case .notCopied?: try {
+      guard case .notCopied(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 5)
+    }()
+    case .noAvailableName?: try {
+      guard case .noAvailableName(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 6)
+    }()
+    case .invalidFileName?: try {
+      guard case .invalidFileName(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 7)
+    }()
+    case .notRemoved?: try {
+      guard case .notRemoved(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 8)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_FontLibraryError, rhs: Taigi_DesktopShell_FontLibraryError) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_FontLibraryReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FontLibraryReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}rules\0\u{1}copied\0\u{1}ack\0\u{3}stored_fonts\0\u{3}sanitized_stem\0\u{3}sanitized_component\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._error) }()
+      case 2: try {
+        var v: Taigi_DesktopShell_FontLibraryRules?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .rules(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .rules(v)
+        }
+      }()
+      case 3: try {
+        var v: Taigi_DesktopShell_CopyInFontResult?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .copied(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .copied(v)
+        }
+      }()
+      case 4: try {
+        var v: Taigi_DesktopShell_FontLibraryAck?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .ack(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .ack(v)
+        }
+      }()
+      case 5: try {
+        var v: Taigi_DesktopShell_StoredFonts?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .storedFonts(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .storedFonts(v)
+        }
+      }()
+      case 6: try {
+        var v: Taigi_DesktopShell_SanitizedFontStem?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .sanitizedStem(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .sanitizedStem(v)
+        }
+      }()
+      case 7: try {
+        var v: Taigi_DesktopShell_SanitizedFontComponent?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .sanitizedComponent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .sanitizedComponent(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._error {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    switch self.result {
+    case .rules?: try {
+      guard case .rules(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .copied?: try {
+      guard case .copied(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .ack?: try {
+      guard case .ack(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .storedFonts?: try {
+      guard case .storedFonts(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .sanitizedStem?: try {
+      guard case .sanitizedStem(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .sanitizedComponent?: try {
+      guard case .sanitizedComponent(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_FontLibraryReply, rhs: Taigi_DesktopShell_FontLibraryReply) -> Bool {
+    if lhs._error != rhs._error {return false}
+    if lhs.result != rhs.result {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_FontLibraryRules: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FontLibraryRules"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}allowed_extensions\0\u{3}max_file_size\0\u{3}max_name_attempts\0\u{3}fonts_folder_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.allowedExtensions) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.maxFileSize) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.maxNameAttempts) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.fontsFolderName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.allowedExtensions.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.allowedExtensions, fieldNumber: 1)
+    }
+    if self.maxFileSize != 0 {
+      try visitor.visitSingularUInt64Field(value: self.maxFileSize, fieldNumber: 2)
+    }
+    if self.maxNameAttempts != 0 {
+      try visitor.visitSingularUInt32Field(value: self.maxNameAttempts, fieldNumber: 3)
+    }
+    if !self.fontsFolderName.isEmpty {
+      try visitor.visitSingularStringField(value: self.fontsFolderName, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_FontLibraryRules, rhs: Taigi_DesktopShell_FontLibraryRules) -> Bool {
+    if lhs.allowedExtensions != rhs.allowedExtensions {return false}
+    if lhs.maxFileSize != rhs.maxFileSize {return false}
+    if lhs.maxNameAttempts != rhs.maxNameAttempts {return false}
+    if lhs.fontsFolderName != rhs.fontsFolderName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_CopyInFontResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CopyInFontResult"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}file_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.fileName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.fileName.isEmpty {
+      try visitor.visitSingularStringField(value: self.fileName, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_CopyInFontResult, rhs: Taigi_DesktopShell_CopyInFontResult) -> Bool {
+    if lhs.fileName != rhs.fileName {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_FontLibraryAck: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FontLibraryAck"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_FontLibraryAck, rhs: Taigi_DesktopShell_FontLibraryAck) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_StoredFonts: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".StoredFonts"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}file_names\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedStringField(value: &self.fileNames) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.fileNames.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.fileNames, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_StoredFonts, rhs: Taigi_DesktopShell_StoredFonts) -> Bool {
+    if lhs.fileNames != rhs.fileNames {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SanitizedFontStem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SanitizedFontStem"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}stem\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.stem) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.stem.isEmpty {
+      try visitor.visitSingularStringField(value: self.stem, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SanitizedFontStem, rhs: Taigi_DesktopShell_SanitizedFontStem) -> Bool {
+    if lhs.stem != rhs.stem {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SanitizedFontComponent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SanitizedFontComponent"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}file_name\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self._fileName) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._fileName {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SanitizedFontComponent, rhs: Taigi_DesktopShell_SanitizedFontComponent) -> Bool {
+    if lhs._fileName != rhs._fileName {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
