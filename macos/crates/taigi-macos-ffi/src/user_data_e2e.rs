@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use std::thread;
 
 use prost::Message;
-use protos::engine::ErrorCode;
 
 use crate::desktop_request_bytes;
 use crate::proto::{
@@ -11,12 +10,12 @@ use crate::proto::{
     user_data_request, ActivateRequest, AddLearningRecordToCustomDictionaryRequest, CancelRequest,
     ClearLearningRecordsRequest, ConfigureRequest, CustomDictionaryRefusal,
     DeleteAllCustomEntriesRequest, DeleteCustomEntryRequest, DeleteLearningRecordRequest,
-    DesktopRequest, DesktopResponse, DictionarySearchRequest, Effect, ExportBackupRequest,
-    ExportCustomCsvRequest, ImportBackupFileRequest, ImportCustomCsvFileRequest,
-    InsertSymbolRequest, KeyEvent, KeyRequest, LearningRecordKind, LearningRecordOrder,
-    ListCustomEntriesRequest, ListLearningRecordsRequest, PanelState, PrepareRequest,
-    SaveCustomEntryRequest, SessionReply, SetLearningRecordCountRequest, SettingEntry,
-    SettingValue, SettingsSnapshot, SymbolSwapRequest, UserDataExportFileNameRequest,
+    DesktopRequest, DesktopResponse, DictionarySearchRequest, Effect, ErrorCode,
+    ExportBackupRequest, ExportCustomCsvRequest, ImportBackupFileRequest,
+    ImportCustomCsvFileRequest, InsertSymbolRequest, KeyEvent, KeyRequest, LearningRecordKind,
+    LearningRecordOrder, ListCustomEntriesRequest, ListLearningRecordsRequest, PanelState,
+    PrepareRequest, SaveCustomEntryRequest, SessionReply, SetLearningRecordCountRequest,
+    SettingEntry, SettingValue, SettingsSnapshot, SymbolSwapRequest, UserDataExportFileNameRequest,
     UserDataExportKind, UserDataReply, UserDataRequest, UserDataRulesRequest,
 };
 

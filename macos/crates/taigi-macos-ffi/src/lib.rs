@@ -33,7 +33,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::LazyLock;
 
 use prost::Message;
-use protos::engine::ErrorCode;
 
 /// prost types for `proto/desktop_shell.proto` (package `taigi.desktop_shell`).
 #[allow(clippy::all, clippy::pedantic)]
@@ -41,7 +40,7 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/taigi.desktop_shell.rs"));
 }
 
-use proto::{DesktopRequest, DesktopResponse};
+use proto::{DesktopRequest, DesktopResponse, ErrorCode};
 use runtime::Shell;
 
 /// The one shell the bridge serves (the runtime is a process singleton,

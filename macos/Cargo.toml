@@ -25,7 +25,6 @@ publish = false
 # through `swift-ffi`, whose own `dispatch` edge always turns it on.
 swift-ffi = { path = "../engine/swift-ffi" }
 dispatch = { path = "../engine/dispatch", default-features = false }
-protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 log = "0.4"
 prost = "0.14"

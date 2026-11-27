@@ -110,7 +110,7 @@ final class ComposingBackendTests: XCTestCase {
     /// recurring would otherwise eat every keystroke.
     func testARefusal_handsTheKeyBackAndKeepsTheComposition() throws {
         let backend = try activatedBackend(composing: true)
-        for error: Taigi_Engine_ErrorCode in [.failInvariant, .failParse] {
+        for error: Taigi_DesktopShell_ErrorCode in [.failInvariant, .failParse] {
             answer = { _ in Self.failed(error) }
 
             XCTAssertNil(backend.key(Self.key("a"), in: request()), "\(error)")
@@ -347,7 +347,7 @@ final class ComposingBackendTests: XCTestCase {
         return encode(response)
     }
 
-    private static func failed(_ error: Taigi_Engine_ErrorCode) -> [UInt8] {
+    private static func failed(_ error: Taigi_DesktopShell_ErrorCode) -> [UInt8] {
         var response = Taigi_DesktopShell_DesktopResponse()
         response.error = error
         return encode(response)

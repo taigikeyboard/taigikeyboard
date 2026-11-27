@@ -25,6 +25,55 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
   typealias Version = _2
 }
 
+/// Same error vocabulary and wire values as `engine/protos/proto/envelope.proto`
+/// (docs/contributing/rust-ffi-safety.md §1.5), owned locally so the macOS
+/// desktop-shell seam has no proto dependency on the engine's FFI envelope.
+public nonisolated enum Taigi_DesktopShell_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case ok // = 0
+  case failParse // = 1
+  case failInternal // = 2
+  case failIo // = 3
+  case failInvariant // = 4
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .ok
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .ok
+    case 1: self = .failParse
+    case 2: self = .failInternal
+    case 3: self = .failIo
+    case 4: self = .failInvariant
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .ok: return 0
+    case .failParse: return 1
+    case .failInternal: return 2
+    case .failIo: return 3
+    case .failInvariant: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_DesktopShell_ErrorCode] = [
+    .ok,
+    .failParse,
+    .failInternal,
+    .failIo,
+    .failInvariant,
+  ]
+
+}
+
 public nonisolated enum Taigi_DesktopShell_SettingKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
@@ -928,7 +977,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
   // methods supported on all messages.
 
   /// OK, or why there is no reply.
-  public var error: Taigi_Engine_ErrorCode = .ok
+  public var error: Taigi_DesktopShell_ErrorCode = .ok
 
   public var reply: Taigi_DesktopShell_DesktopResponse.OneOf_Reply? = nil
 
@@ -3249,6 +3298,10 @@ public nonisolated struct Taigi_DesktopShell_UserDataExportFileNameReply: Sendab
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "taigi.desktop_shell"
+
+nonisolated extension Taigi_DesktopShell_ErrorCode: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0OK\0\u{1}FAIL_PARSE\0\u{1}FAIL_INTERNAL\0\u{1}FAIL_IO\0\u{1}FAIL_INVARIANT\0")
+}
 
 nonisolated extension Taigi_DesktopShell_SettingKind: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SETTING_KIND_UNSPECIFIED\0\u{1}SETTING_KIND_BOOLEAN\0\u{1}SETTING_KIND_TEXT\0")
