@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 # Swift-bridge artifact post-processing shared by the iOS and macOS xcframework
-# builds. Both link the `engine/swift-ffi` bridge, so the header/modulemap
-# layout and the generated Swift wrappers must be produced identically for
-# both platforms — drift between them is a silent cross-platform bug. macOS
-# links one more bridge into the same archive (`taigi-macos-ffi`'s
-# `RustTaigiDesktop`), passed as an extra (out_dir, bridge_name) pair; iOS
-# passes none.
+# builds. Both platforms stage one `RustTaigi` bridge (`engine/swift-ffi` on iOS,
+# `macos/crates/taigi-macos-ffi` on macOS) with the same header/modulemap
+# layout and generated Swift wrapper patches.
 #
 # Sourced, never executed. Callers set `set -euo pipefail` and source by
 # absolute path:
@@ -81,57 +78,22 @@ print(unique[0])
     printf '%s\n' "$out_dir"
 }
 
-# Every bridge's build script writes its own copy of the shared runtime
-# (`SwiftBridgeCore.{h,swift}`); one module can hold it only once. Staging the
-# first copy is safe only while the others are byte-identical — which they
-# are when every bridge crate resolves the same swift-bridge version.
-#
-# Usage: _swift_bridge_assert_same_core <bridge_out_dir> [<extra_out_dir> <extra_bridge_name>]...
-_swift_bridge_assert_same_core() {
-    local bridge_out_dir="$1"
-    shift
-    if (($# % 2)); then
-        echo "error: extra bridges come in (out_dir, bridge_name) pairs, got: $*" >&2
-        return 1
-    fi
-    while (($#)); do
-        local file
-        for file in SwiftBridgeCore.h SwiftBridgeCore.swift; do
-            if ! cmp -s "$bridge_out_dir/$file" "$1/$file"; then
-                echo "error: $1/$file differs from $bridge_out_dir/$file — bridges built against different swift-bridge versions" >&2
-                return 1
-            fi
-        done
-        shift 2
-    done
-}
-
 # Copy the C headers into `headers_dir` and write the modulemap that exposes
-# them as the `<framework_name>` Clang module. swift-bridge nests per-bridge
-# artefacts under `<OUT>/<bridge_name>/`; the first bridge is the engine's,
-# named after the module:
+# them as the `<framework_name>` Clang module. swift-bridge nests the bridge
+# artefacts under `<OUT>/<framework_name>/`:
 #   <OUT>/SwiftBridgeCore.{h,swift}
 #   <OUT>/<framework_name>/<framework_name>.{h,swift}
-# Each extra (out_dir, bridge_name) pair adds `<bridge_name>.h` to the module.
 #
-# Usage: swift_bridge_stage_headers <bridge_out_dir> <headers_dir> <framework_name> [<extra_out_dir> <extra_bridge_name>]...
+# Usage: swift_bridge_stage_headers <bridge_out_dir> <headers_dir> <framework_name>
 swift_bridge_stage_headers() {
     local bridge_out_dir="$1" headers_dir="$2" framework_name="$3"
-    shift 3
-    _swift_bridge_assert_same_core "$bridge_out_dir" "$@" || return
     mkdir -p "$headers_dir"
     cp "$bridge_out_dir/SwiftBridgeCore.h" "$headers_dir/"
     cp "$bridge_out_dir/$framework_name/$framework_name.h" "$headers_dir/"
-    local header_lines="    header \"$framework_name.h\""
-    while (($#)); do
-        cp "$1/$2/$2.h" "$headers_dir/"
-        header_lines+=$'\n'"    header \"$2.h\""
-        shift 2
-    done
     cat > "$headers_dir/module.modulemap" <<EOF
 module $framework_name {
     header "SwiftBridgeCore.h"
-$header_lines
+    header "$framework_name.h"
     export *
 }
 EOF
@@ -157,26 +119,18 @@ _swift_bridge_inject_import() {
     fi
 }
 
-# Copy the generated Swift wrappers — the shared runtime once, then one per
-# bridge — into `out_dir` and apply both patches swift-bridge's output needs
-# before it compiles cleanly. Extra (out_dir, bridge_name) pairs as in
-# `swift_bridge_stage_headers`, which callers run first: it is what checks the
-# pairs and that every bridge's shared runtime is the same.
+# Copy the generated Swift wrappers — the shared runtime and the bridge — into
+# `out_dir` and apply both patches swift-bridge's output needs before it
+# compiles cleanly.
 #
-# Usage: swift_bridge_stage_wrappers <bridge_out_dir> <out_dir> <framework_name> [<extra_out_dir> <extra_bridge_name>]...
+# Usage: swift_bridge_stage_wrappers <bridge_out_dir> <out_dir> <framework_name>
 swift_bridge_stage_wrappers() {
     local bridge_out_dir="$1" out_dir="$2" framework_name="$3"
-    shift 3
     cp "$bridge_out_dir/SwiftBridgeCore.swift" "$out_dir/"
     cp "$bridge_out_dir/$framework_name/$framework_name.swift" "$out_dir/"
 
     _swift_bridge_inject_import "$out_dir/$framework_name.swift" "$framework_name"
     _swift_bridge_inject_import "$out_dir/SwiftBridgeCore.swift" "$framework_name"
-    while (($#)); do
-        cp "$1/$2/$2.swift" "$out_dir/"
-        _swift_bridge_inject_import "$out_dir/$2.swift" "$framework_name"
-        shift 2
-    done
 
     # Swift 5.9+ warns when a module declares conformance of an imported type to
     # an imported protocol unless the conformance is annotated `@retroactive`.

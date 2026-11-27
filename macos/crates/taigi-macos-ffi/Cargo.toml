@@ -1,6 +1,6 @@
 [package]
 name = "taigi-macos-ffi"
-description = "The static library the macOS input method links: the engine's swift-bridge seam plus the desktop shell's, in one archive"
+description = "The static library the macOS input method links: the desktop-shell swift-bridge seam over taigi-desktop-core and the engine"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,22 +9,20 @@ repository.workspace = true
 publish.workspace = true
 
 [lib]
-# Not `rust_taigi`: that is `swift-ffi`'s library name, which this crate links.
 name = "taigi_macos_ffi"
 crate-type = ["staticlib"]
 
 [features]
-# Forwarded to the engine seam. Release archives build with neither;
-# build-macos-xcframework.sh asserts the trace is absent.
-e2e-trace = ["swift-ffi/e2e-trace"]
-panic-injector = ["swift-ffi/panic-injector"]
+# Release archives build with neither; build-macos-xcframework.sh asserts the
+# trace is absent.
+e2e-trace = ["dispatch/e2e-trace"]
+panic-injector = []
 
 [dependencies]
-# The engine seam; it always carries the user-data stores
-# (user-data-engine-roadmap P7b).
-swift-ffi = { workspace = true }
-dispatch = { workspace = true }
-taigi-desktop-core = { workspace = true }
+# macOS always ships the engine-owned user-data stores (bundled SQLite;
+# docs/architecture/user-data-engine-roadmap.md P7b).
+dispatch = { workspace = true, features = ["user-data"] }
+taigi-desktop-core = { workspace = true, features = ["user-data"] }
 log = { workspace = true }
 prost = { workspace = true }
 swift-bridge = { workspace = true }
@@ -36,5 +34,11 @@ tempfile = { workspace = true }
 prost-build = { workspace = true }
 swift-bridge-build = { workspace = true }
 
-[lints]
-workspace = true
+# JUSTIFICATION: FFI logger sink (`src/logger.rs` `SinkCell`) overrides workspace
+# `unsafe_code = "forbid"` per `docs/contributing/rust-ffi-safety.md` §3. Every
+# `unsafe` impl in this crate carries a `// SAFETY:` comment per the same rule.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

@@ -252,6 +252,10 @@ for entry in desktop_request_bytes install_logger_sink set_log_level; do
         exit 1
     fi
 done
+if grep -q "__swift_bridge__[\$]process_request_bytes\$" <<< "$EXPORTED_SYMBOLS"; then
+    echo "error: legacy engine FFI entry point process_request_bytes is still linked into executable" >&2
+    exit 1
+fi
 
 echo "==> Checking dynamic library dependencies"
 # The bundle embeds no frameworks, so any @rpath dependency would fail to load

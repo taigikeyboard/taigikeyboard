@@ -76,4 +76,14 @@ final class DesktopCoreFfiSmokeTests: XCTestCase {
             "expected Rust info log record from set_log_level(3), got \(records)",
         )
     }
+
+    /// Negative control (rust-ffi-safety.md §6 T1): without `panic-injector`,
+    /// `panic_for_test` answers `FAIL_INVARIANT` with no reply and never panics.
+    func testPanicForTest_returnsFailInvariantInReleaseArchive() throws {
+        let responseBytes = panic_for_test().toArray()
+        let response = try Taigi_DesktopShell_DesktopResponse(serializedBytes: Data(responseBytes))
+
+        XCTAssertEqual(response.error, .failInvariant)
+        XCTAssertNil(response.reply)
+    }
 }

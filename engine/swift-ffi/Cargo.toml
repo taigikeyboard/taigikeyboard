@@ -17,11 +17,8 @@ all = { level = "warn", priority = -1 }
 
 [lib]
 name = "rust_taigi"
-# `staticlib` is what iOS links. `rlib` lets macOS link this crate INTO its own
-# archive (`macos/crates/taigi-macos-ffi`) instead of beside it, so the engine
-# exists once in that process (docs/architecture/macos-desktop-core-roadmap.md D1;
-# the `linux/crates/taigi-linux-ffi` shape).
-crate-type = ["staticlib", "rlib"]
+# `staticlib` for iOS (`RustTaigi.xcframework`).
+crate-type = ["staticlib"]
 # No runnable doc examples (doc fences are `text`); skip the rustdoc pass.
 doctest = false
 
@@ -34,9 +31,8 @@ panic-injector = []
 e2e-trace = ["dispatch/e2e-trace"]
 
 [dependencies]
-# Both Apple consumers — the iOS app + keyboard and the macOS input method —
-# always ship the engine-owned user-data stores (bundled SQLite;
-# docs/architecture/user-data-engine-roadmap.md P6 / P7b).
+# iOS (host app + keyboard extension) always ships the engine-owned user-data
+# stores (bundled SQLite; docs/architecture/user-data-engine-roadmap.md P6).
 dispatch = { workspace = true, features = ["user-data"] }
 protos = { workspace = true }
 log = { workspace = true }

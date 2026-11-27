@@ -1,8 +1,8 @@
 # macOS input method — its own Cargo workspace, like `linux/` and `windows/`:
-# `taigi-macos-ffi` is the one static library the Swift app links. It holds the
-# engine (`../engine/swift-ffi`, linked as an rlib) and the
-# desktop core (`../desktop`) in ONE archive, so the engine's process-wide state
-# exists once (docs/architecture/macos-desktop-core-roadmap.md D1).
+# `taigi-macos-ffi` is the one static library the Swift app links. It holds
+# `../desktop` (`taigi-desktop-core`) and the engine (`../engine/dispatch`) in
+# ONE archive, so the engine's process-wide state exists once
+# (docs/architecture/macos-desktop-core-roadmap.md D1).
 #
 # Version is the desktop release train's (macOS + Windows + Linux share one
 # number); the macOS app's own number is `macos/App/Info.plist`.
@@ -21,9 +21,8 @@ repository = "https://github.com/taigikeyboard/taigikeyboard"
 publish = false
 
 [workspace.dependencies]
-# `default-features = false` on `dispatch`: the archive gets `user-data` only
-# through `swift-ffi`, whose own `dispatch` edge always turns it on.
-swift-ffi = { path = "../engine/swift-ffi" }
+# `default-features = false` on `dispatch` so `taigi-desktop-core` keeps its
+# default feature graph; `taigi-macos-ffi` turns `user-data` on directly.
 dispatch = { path = "../engine/dispatch", default-features = false }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 log = "0.4"

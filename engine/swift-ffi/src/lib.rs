@@ -1,4 +1,4 @@
-//! iOS / macOS swift-bridge entry point. Thin wrapper around
+//! iOS swift-bridge entry point. Thin wrapper around
 //! `dispatch::process_request` plus a logger sink registration.
 //!
 //! Everything that crosses the FFI seam is wrapped in `catch_unwind` per
