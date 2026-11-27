@@ -85,6 +85,125 @@ fn fixture_rows() -> Vec<Row> {
             syll: 1,
             freq: 2000,
         },
+        Row {
+            toneless_key: "sia",
+            hanji: "寫",
+            tl: "siá",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "tshutlai",
+            hanji: "出來",
+            tl: "tshut-lâi",
+            syll: 2,
+            freq: 1500,
+        },
+        Row {
+            toneless_key: "tshim",
+            hanji: "深",
+            tl: "tshim",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "tsittiama",
+            hanji: "一點仔",
+            tl: "tsi̍t-tiám-á",
+            syll: 3,
+            freq: 1500,
+        },
+        Row {
+            toneless_key: "kong",
+            hanji: "講",
+            tl: "kóng",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "tsit",
+            hanji: "一",
+            tl: "tsi̍t",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "siann",
+            hanji: "聲",
+            tl: "siann",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "kue",
+            hanji: "過",
+            tl: "kuè",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "bo",
+            hanji: "無",
+            tl: "bô",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "kui",
+            hanji: "幾",
+            tl: "kuí",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "kang",
+            hanji: "工",
+            tl: "kang",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "pangtanglai",
+            hanji: "放重利",
+            tl: "pàng tāng-lāi",
+            syll: 3,
+            freq: 1500,
+        },
+        Row {
+            toneless_key: "tshintsiann",
+            hanji: "親tsiânn",
+            tl: "tshin-tsiânn",
+            syll: 2,
+            freq: 1500,
+        },
+        Row {
+            toneless_key: "sikhae",
+            hanji: "四腳--ê",
+            tl: "sì-kha--ê",
+            syll: 3,
+            freq: 1500,
+        },
+        Row {
+            toneless_key: "kiann",
+            hanji: "行",
+            tl: "kiânn",
+            syll: 1,
+            freq: 2000,
+        },
+        Row {
+            toneless_key: "kuelai",
+            hanji: "過來",
+            tl: "kuè--lâi",
+            syll: 2,
+            freq: 1500,
+        },
+        Row {
+            toneless_key: "kuelai",
+            hanji: "過來",
+            tl: "kuè-lâi",
+            syll: 2,
+            freq: 1200,
+        },
     ]
 }
 
@@ -97,6 +216,9 @@ fn install_fixture() {
         "khinsiann-syll.fst",
         &std::fs::read(crate::common::build_syllables_fst(&[
             "tng2", "khi3", "e7", "ki3", "tit4", "lit4", "lit8", "tsau2", "hoo7", "gua2", "ah4",
+            "sia2", "tshut4", "lai5", "tshim1", "tsit8", "tiam2", "a2", "kong2", "siann1", "kue3",
+            "bo5", "kui2", "kang1", "pang3", "tang7", "lai7", "tshin1", "tsiann5", "si3", "kha1",
+            "e5", "kiann5", "tai5", "pak4", "lang5",
         ]))
         .unwrap(),
     );
@@ -539,5 +661,442 @@ fn typed_double_dash_between_normal_words_emits_marker_when_enabled() {
             Some(expected),
             "khinsiann={khinsiann}: nailed hoo + --gua"
         );
+    }
+}
+
+fn fetch_with(cfg: &AppConfig, raw: &str, fetch: Fetch) -> Vec<CandidateMessage> {
+    fetch_at_pos_response(
+        cfg,
+        raw,
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            ..fetch
+        },
+    )
+    .continuous
+    .expect("continuous response")
+    .candidates
+}
+
+fn start_and_fetch(engine: &mut Engine, raw: &str, cfg: &AppConfig) -> Vec<CandidateMessage> {
+    engine.apply(Intent::Start { text: raw.into() }, cfg);
+    requests::apply(
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            ..Default::default()
+        }
+        .intent(),
+        engine,
+        cfg,
+    )
+    .continuous
+    .expect("continuous response")
+    .candidates
+}
+
+fn fetch_pending(engine: &mut Engine, cfg: &AppConfig) -> Vec<CandidateMessage> {
+    requests::apply(
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            ..Default::default()
+        }
+        .intent(),
+        engine,
+        cfg,
+    )
+    .continuous
+    .expect("continuous response")
+    .candidates
+}
+
+fn find_hanji<'a>(cands: &'a [CandidateMessage], hanji: &str) -> &'a CandidateMessage {
+    cands
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some(hanji))
+        .unwrap_or_else(|| panic!("missing {hanji:?} in {cands:?}"))
+}
+
+#[test]
+fn non_khinsiann_dictionary_words_prepended_with_double_dash_add_middle_hyphens() {
+    let _lock = engine_install_lock();
+    install_fixture();
+
+    // 1. Walker + nailing + learned phrase on 寫--出-來 and 深--一-點-仔.
+    for (raw, head_hanji, expected_tail, expected_sentence, expected_learned_hanji, expected_tl) in [
+        (
+            "sia--tshutlai",
+            "寫",
+            "--出-來",
+            "寫--出-來",
+            "寫出來",
+            "siá--tshut-lâi",
+        ),
+        (
+            "tshim--tsittiama",
+            "深",
+            "--一-點-仔",
+            "深--一-點-仔",
+            "深一點仔",
+            "tshim--tsi̍t-tiám-á",
+        ),
+    ] {
+        let on = hanji_config(true, false);
+        let cands_on = fetch_candidates(&on, raw, vec![]);
+        assert_eq!(cands_on[0].hanji.as_deref(), Some(expected_sentence));
+        assert_eq!(cands_on[0].display_text, expected_learned_hanji);
+        assert_eq!(cands_on[0].roman, expected_tl);
+        assert_eq!(cands_on[0].canonical_tl, expected_tl.replace("--", " "));
+
+        let off = hanji_config(false, false);
+        let cands_off = fetch_candidates(&off, raw, vec![]);
+        assert_eq!(cands_off[0].hanji.as_deref(), Some(expected_learned_hanji));
+
+        let mut engine = Engine::new();
+        let list1 = start_and_fetch(&mut engine, raw, &on);
+        let head = find_hanji(&list1, head_hanji);
+        let mid = pick_candidate(&mut engine, head, &on, CommitScript::Lead);
+        assert!(mid.response.is_composing);
+
+        let list2 = fetch_pending(&mut engine, &on);
+        let tail = find_hanji(&list2, expected_tail);
+        assert_eq!(tail.hanji.as_deref(), Some(expected_tail));
+        assert_ne!(tail.display_text, expected_tail);
+        let fin = pick_candidate(&mut engine, tail, &on, CommitScript::Lead);
+        assert_eq!(
+            commit_text(&fin.response).as_deref(),
+            Some(expected_sentence)
+        );
+        let learned = fin.learned.expect("learned phrase");
+        assert_eq!(learned.hanji, expected_learned_hanji);
+        assert_eq!(learned.canonical_tl, expected_tl);
+    }
+
+    // 2. Annotate in Brackets (both Hanji-first and Roman-first).
+    for (hanji_first, expected) in [
+        (true, "寫 (siá)--出-來 (tshut-lâi)"),
+        (false, "siá (寫)--tshut-lâi (--出-來)"),
+    ] {
+        let mut cfg = hanji_config(true, true);
+        cfg.is_hanji_first = hanji_first;
+        let mut engine = Engine::new();
+        let list1 = start_and_fetch(&mut engine, "sia--tshutlai", &cfg);
+        let head = find_hanji(&list1, "寫");
+        pick_candidate(&mut engine, head, &cfg, CommitScript::Lead);
+        let list2 = fetch_pending(&mut engine, &cfg);
+        let tail = find_hanji(&list2, "--出-來");
+        let fin = pick_candidate(&mut engine, tail, &cfg, CommitScript::Lead);
+        assert_eq!(commit_text(&fin.response).as_deref(), Some(expected));
+    }
+
+    // 3. POJ mode renders Han-Lo romanization in POJ alongside `--` / `-`.
+    let mut poj_cfg = hanji_config(true, false);
+    poj_cfg.input_mode = "poj".into();
+    let poj_cands = fetch_candidates(&poj_cfg, "sia--chhinchiann", vec![]);
+    assert_eq!(
+        poj_cands[0].hanji.as_deref(),
+        Some("寫--親-chi\u{e2}\u{207f}")
+    );
+    let mut engine = Engine::new();
+    let list1 = start_and_fetch(&mut engine, "sia--chhinchiann", &poj_cfg);
+    pick_candidate(
+        &mut engine,
+        find_hanji(&list1, "寫"),
+        &poj_cfg,
+        CommitScript::Lead,
+    );
+    let list2 = fetch_pending(&mut engine, &poj_cfg);
+    let tail = find_hanji(&list2, "--親-chi\u{e2}\u{207f}");
+    assert_eq!(tail.display_text, "親tsiânn");
+    let fin = pick_candidate(&mut engine, tail, &poj_cfg, CommitScript::Lead);
+    assert_eq!(
+        commit_text(&fin.response).as_deref(),
+        Some("寫--親-chi\u{e2}\u{207f}")
+    );
+}
+
+#[test]
+fn non_dictionary_hyphen_chained_neutral_spans_render_in_walker_and_nailing() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = hanji_config(true, false);
+
+    // 1. 講--一-聲 (一聲 is not in the fixture): walker slot 0 = 講--一-聲.
+    let walker = fetch_candidates(&on, "kong--tsit-siann", vec![]);
+    assert_eq!(walker[0].hanji.as_deref(), Some("講--一-聲"));
+
+    // Nailing segment-by-segment: list2 shows `--一`, list3 (`-siann`) shows `-聲`,
+    // commits `講--一-聲`, and learns `("講一聲", "kóng--tsi̍t-siann")`.
+    let mut engine = Engine::new();
+    let list1 = start_and_fetch(&mut engine, "kong--tsit-siann", &on);
+    pick_candidate(
+        &mut engine,
+        find_hanji(&list1, "講"),
+        &on,
+        CommitScript::Lead,
+    );
+    let list2 = fetch_pending(&mut engine, &on);
+    pick_candidate(
+        &mut engine,
+        find_hanji(&list2, "--一"),
+        &on,
+        CommitScript::Lead,
+    );
+    let list3 = fetch_pending(&mut engine, &on);
+    let siann = find_hanji(&list3, "-聲");
+    assert_eq!(siann.display_text, "聲");
+    let fin = pick_candidate(&mut engine, siann, &on, CommitScript::Lead);
+    assert_eq!(commit_text(&fin.response).as_deref(), Some("講--一-聲"));
+    let learned = fin.learned.expect("learned phrase emitted");
+    assert_eq!(learned.hanji, "講一聲");
+    assert_eq!(learned.canonical_tl, "kóng--tsi̍t-siann");
+
+    // Recalling the learned phrase from `kongtsitsiann` surfaces `講--一-聲`.
+    let recalled = fetch_with(
+        &on,
+        "kongtsitsiann",
+        Fetch {
+            learned: vec![learned],
+            ..Default::default()
+        },
+    );
+    let _ = find_hanji(&recalled, "講--一-聲");
+
+    // 2. No typed `-` resets neutral tone at the word boundary.
+    let reset = fetch_candidates(&on, "kong--tsitsiann", vec![]);
+    assert_eq!(reset[0].hanji.as_deref(), Some("講--一聲"));
+
+    // 3. 3-word chained neutral span: 過--無-幾-工 (walker + nailing).
+    assert_eq!(
+        fetch_candidates(&on, "kue--bo-kui-kang", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("過--無-幾-工")
+    );
+    let mut eng3 = Engine::new();
+    let l1 = start_and_fetch(&mut eng3, "kue--bo-kui-kang", &on);
+    pick_candidate(&mut eng3, find_hanji(&l1, "過"), &on, CommitScript::Lead);
+    let l2 = fetch_pending(&mut eng3, &on);
+    pick_candidate(&mut eng3, find_hanji(&l2, "--無"), &on, CommitScript::Lead);
+    let l3 = fetch_pending(&mut eng3, &on);
+    pick_candidate(&mut eng3, find_hanji(&l3, "-幾"), &on, CommitScript::Lead);
+    let l4 = fetch_pending(&mut eng3, &on);
+    let fin3 = pick_candidate(&mut eng3, find_hanji(&l4, "-工"), &on, CommitScript::Lead);
+    assert_eq!(commit_text(&fin3.response).as_deref(), Some("過--無-幾-工"));
+
+    // 4. Continuing with `-` into a multi-syllable dictionary word (`講--一-出-來`).
+    assert_eq!(
+        fetch_candidates(&on, "kong--tsit-tshutlai", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("講--一-出-來")
+    );
+    let mut eng4 = Engine::new();
+    let l1 = start_and_fetch(&mut eng4, "kong--tsit-tshutlai", &on);
+    pick_candidate(&mut eng4, find_hanji(&l1, "講"), &on, CommitScript::Lead);
+    let l2 = fetch_pending(&mut eng4, &on);
+    pick_candidate(&mut eng4, find_hanji(&l2, "--一"), &on, CommitScript::Lead);
+    let l3 = fetch_pending(&mut eng4, &on);
+    let fin4 = pick_candidate(
+        &mut eng4,
+        find_hanji(&l3, "-出-來"),
+        &on,
+        CommitScript::Lead,
+    );
+    assert_eq!(commit_text(&fin4.response).as_deref(), Some("講--一-出-來"));
+
+    // 5. Continuing with `-` after a dictionary `--`-ending word (`會記--得-矣`).
+    assert_eq!(
+        fetch_candidates(&on, "ekitit-ah", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("會記--得-矣")
+    );
+    let mut eng5 = Engine::new();
+    let l1 = start_and_fetch(&mut eng5, "ekitit-ah", &on);
+    pick_candidate(
+        &mut eng5,
+        find_hanji(&l1, "會記--得"),
+        &on,
+        CommitScript::Lead,
+    );
+    let l2 = fetch_pending(&mut eng5, &on);
+    let fin5 = pick_candidate(&mut eng5, find_hanji(&l2, "-矣"), &on, CommitScript::Lead);
+    assert_eq!(commit_text(&fin5.response).as_deref(), Some("會記--得-矣"));
+
+    // 6. Plain `-` without an open neutral tone adds no hyphens in Hanji.
+    assert_eq!(
+        fetch_candidates(&on, "kong-tsit-siann", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("講一聲")
+    );
+    assert_eq!(
+        fetch_candidates(&on, "sia-tshutlai", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("寫出來")
+    );
+}
+
+#[test]
+fn internal_double_dash_stays_distinct_and_custom_learned_space_rules_align() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = hanji_config(true, false);
+
+    // 1. Internal `--` is kept separate from `-`: `kuè--lâi` (1500) vs `kuè-lâi` (1200).
+    let kuelai = fetch_candidates(&on, "kiann--kuelai", vec![]);
+    assert_eq!(kuelai[0].hanji.as_deref(), Some("行--過--來"));
+    let mut engine = Engine::new();
+    let l1 = start_and_fetch(&mut engine, "kiann--kuelai", &on);
+    pick_candidate(&mut engine, find_hanji(&l1, "行"), &on, CommitScript::Lead);
+    let l2 = fetch_pending(&mut engine, &on);
+    let tail_hanjis: Vec<&str> = l2.iter().filter_map(|c| c.hanji.as_deref()).collect();
+    assert_eq!(tail_hanjis, vec!["--過--來", "--過-來", "--過"]);
+
+    // Han-Lo with internal `--` (`四腳--ê` `sì-kha--ê`).
+    assert_eq!(
+        fetch_candidates(&on, "sia--sikhae", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("寫--四-腳--ê")
+    );
+
+    // 2. Builtin space-separated entry resets neutral tone after the space.
+    assert_eq!(
+        fetch_candidates(&on, "sia--pangtanglai", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("寫--放重利")
+    );
+
+    // 3. Custom and learned entries follow the same alignment and space-reset rules.
+    let custom_point = vec![CustomEntry {
+        roman: "tsi̍t-tiám-á".into(),
+        hanji: Some("一点仔".into()),
+    }];
+    assert_eq!(
+        fetch_with(
+            &on,
+            "tshim--tsittiama",
+            Fetch {
+                custom: custom_point.clone(),
+                edge_custom: custom_point,
+                ..Default::default()
+            }
+        )[0]
+        .hanji
+        .as_deref(),
+        Some("深--一-点-仔")
+    );
+
+    let custom_internal_dd = vec![CustomEntry {
+        roman: "ē-kì--tit".into(),
+        hanji: Some("會--記得".into()),
+    }];
+    assert_eq!(
+        fetch_with(
+            &on,
+            "sia--ekitit",
+            Fetch {
+                custom: custom_internal_dd.clone(),
+                edge_custom: custom_internal_dd,
+                ..Default::default()
+            }
+        )[0]
+        .hanji
+        .as_deref(),
+        Some("寫--會--記得")
+    );
+
+    for (custom_hanji, expected) in [("台北人", "寫--台-北人"), ("台北 人", "寫--台-北 人")]
+    {
+        let row = vec![CustomEntry {
+            roman: "tâi-pak lâng".into(),
+            hanji: Some(custom_hanji.into()),
+        }];
+        assert_eq!(
+            fetch_with(
+                &on,
+                "sia--taipaklang",
+                Fetch {
+                    custom: row.clone(),
+                    edge_custom: row,
+                    ..Default::default()
+                }
+            )[0]
+            .hanji
+            .as_deref(),
+            Some(expected)
+        );
+    }
+
+    // 4. Custom `--出-來` collapses with builtin `出來` under `--tshutlai`, even with brackets on.
+    // Nail `寫` first so `--tshutlai` is mid-composing.
+    let brackets_on = hanji_config(true, true);
+    let mut eng_mid = Engine::new();
+    let first = start_and_fetch(&mut eng_mid, "sia--tshutlai", &brackets_on);
+    pick_candidate(
+        &mut eng_mid,
+        find_hanji(&first, "寫"),
+        &brackets_on,
+        CommitScript::Lead,
+    );
+    let custom_dup = vec![CustomEntry {
+        roman: "tshut-lâi".into(),
+        hanji: Some("--出-來".into()),
+    }];
+    let tail_cands = requests::apply(
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            custom: custom_dup,
+            ..Default::default()
+        }
+        .intent(),
+        &mut eng_mid,
+        &brackets_on,
+    )
+    .continuous
+    .expect("continuous")
+    .candidates;
+    assert_eq!(
+        tail_cands
+            .iter()
+            .filter(|c| c.hanji.as_deref() == Some("--出-來"))
+            .count(),
+        1,
+        "custom --出-來 must collapse with rendered builtin --出-來: {tail_cands:?}"
+    );
+}
+
+#[test]
+fn explain_mechanism_matches_mid_composing_khinsiann_words_and_slot0() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = hanji_config(true, false);
+
+    for (raw, expected_words, expected_sentence) in [
+        ("sia--tshutlai", vec!["寫", "--出-來"], "寫--出-來"),
+        ("kong--tsit-siann", vec!["講", "--一", "-聲"], "講--一-聲"),
+    ] {
+        let mut engine = Engine::new();
+        engine.apply(Intent::Start { text: raw.into() }, &on);
+        let mech = composing::explain::mechanism(
+            &engine,
+            0,
+            &composing::UserRows::default(),
+            ranking::ContextRanks::empty(),
+            true,
+            &on,
+        )
+        .expect("mechanism");
+        let word_hanjis: Vec<&str> = mech
+            .words
+            .iter()
+            .filter_map(|w| w.hanji.as_deref())
+            .collect();
+        assert_eq!(word_hanjis, expected_words);
+        assert_eq!(mech.candidates[0].role, "sentence");
+        assert_eq!(mech.candidates[0].hanji.as_deref(), Some(expected_sentence));
     }
 }
