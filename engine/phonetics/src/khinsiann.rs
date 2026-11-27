@@ -134,6 +134,20 @@ pub fn align_hanji_syllables<'a>(
     Some((htoks, htrail, ttoks))
 }
 
+/// Neutral-tone continuation context entering a Hanji word from a preceding
+/// typed separator (`--`, or `-` continuing an open neutral tail).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeadingKhinsiann {
+    /// No preceding neutral-tone boundary (only mark `--` present in `canonical_tl`).
+    None,
+    /// Prepended with `--` mid-composing: opens a neutral-tone span (`--`
+    /// before syllable 0, `-` between hyphen-joined syllables until a word space).
+    DoubleDash,
+    /// Follows a typed `-` while already inside an open neutral-tone span
+    /// (`-` before syllable 0 and between hyphen-joined syllables until a word space).
+    ContinueHyphen,
+}
+
 /// Apply LKK / BONG報 neutral-tone hyphenation (`--` and `-`) to `hanji` using
 /// `canonical_tl` when `enabled` is true, borrowing `hanji` without allocation
 /// whenever disabled or unchanged.
@@ -142,16 +156,62 @@ pub fn render_hanji_khinsiann<'a>(
     canonical_tl: &str,
     enabled: bool,
 ) -> Cow<'a, str> {
-    if !enabled || hanji.is_empty() || hanji.contains("--") || !canonical_tl.contains("--") {
+    render_hanji_khinsiann_with_leading(hanji, canonical_tl, enabled, LeadingKhinsiann::None)
+}
+
+/// [`render_hanji_khinsiann`] with an optional [`LeadingKhinsiann`] boundary
+/// typed immediately before the word.
+///
+/// When `leading` is [`LeadingKhinsiann::DoubleDash`] or
+/// [`LeadingKhinsiann::ContinueHyphen`], syllable 0 opens with `--` or `-`
+/// and hyphen-joined syllables inside the same word carry `-` until a word
+/// space resets neutral tone; any internal `--` in `canonical_tl` or `hanji`
+/// is kept as `--`.
+pub fn render_hanji_khinsiann_with_leading<'a>(
+    hanji: &'a str,
+    canonical_tl: &str,
+    enabled: bool,
+    leading: LeadingKhinsiann,
+) -> Cow<'a, str> {
+    if !enabled || hanji.is_empty() {
+        return Cow::Borrowed(hanji);
+    }
+    if leading == LeadingKhinsiann::None {
+        if hanji.contains("--") || !canonical_tl.contains("--") {
+            return Cow::Borrowed(hanji);
+        }
+    } else if hanji.starts_with('-') {
         return Cow::Borrowed(hanji);
     }
     let Some((htoks, htrail, ttoks)) = align_hanji_syllables(hanji, canonical_tl) else {
-        return Cow::Borrowed(hanji);
+        return match leading {
+            LeadingKhinsiann::None => Cow::Borrowed(hanji),
+            LeadingKhinsiann::DoubleDash => Cow::Owned(format!("--{hanji}")),
+            LeadingKhinsiann::ContinueHyphen => Cow::Owned(format!("-{hanji}")),
+        };
     };
 
+    let has_existing_dd = hanji.contains("--");
+    let mut preserve_rest = false;
     let mut out = String::with_capacity(hanji.len() + 8);
     let mut in_neutral = false;
     for (i, (htok, ttok)) in htoks.iter().zip(ttoks.iter()).enumerate() {
+        if i == 0 && leading != LeadingKhinsiann::None {
+            in_neutral = true;
+            match leading {
+                LeadingKhinsiann::DoubleDash => out.push_str("--"),
+                LeadingKhinsiann::ContinueHyphen => out.push('-'),
+                LeadingKhinsiann::None => {}
+            }
+            out.push_str(htok.token);
+            continue;
+        }
+        if has_existing_dd && (preserve_rest || htok.leading_sep.contains("--")) {
+            preserve_rest = true;
+            out.push_str(htok.leading_sep);
+            out.push_str(htok.token);
+            continue;
+        }
         let tsep = ttok.leading_sep;
         if let Some((_, suffix)) = tsep.rsplit_once(' ') {
             if suffix.contains("--") {
@@ -183,6 +243,17 @@ pub fn render_hanji_khinsiann<'a>(
         Cow::Borrowed(hanji)
     } else {
         Cow::Owned(out)
+    }
+}
+
+/// Whether a word with reading `canonical_tl` entered under `leading` ends
+/// inside an open neutral-tone span (no space reset after the last neutral
+/// marker).
+pub fn ends_in_khinsiann(canonical_tl: &str, leading: LeadingKhinsiann) -> bool {
+    if let Some((_, last_word)) = canonical_tl.rsplit_once(' ') {
+        last_word.contains("--")
+    } else {
+        leading != LeadingKhinsiann::None || canonical_tl.contains("--")
     }
 }
 
@@ -352,5 +423,78 @@ mod tests {
         let mut leading = String::from("走");
         push_hanji_with_interword_khinsiann(&mut leading, "--轉-去", true);
         assert_eq!(leading, "走--轉-去");
+    }
+
+    #[test]
+    fn double_dash_leading_marks_non_khinsiann_and_preserves_internal_double_dash() {
+        let dd = |hanji, tl| {
+            render_hanji_khinsiann_with_leading(hanji, tl, true, LeadingKhinsiann::DoubleDash)
+                .into_owned()
+        };
+        // Non-khinsiann multi-syllable words get `--` + interior `-`.
+        assert_eq!(dd("出來", "tshut-lâi"), "--出-來");
+        assert_eq!(dd("一點仔", "tsi̍t-tiám-á"), "--一-點-仔");
+        assert_eq!(dd("落去", "lo̍h-khì"), "--落-去");
+        assert_eq!(dd("我", "guá"), "--我");
+        // Already `--`-opening or pre-marked.
+        assert_eq!(dd("轉去", "--tńg-khì"), "--轉-去");
+        assert_eq!(dd("--轉-去", "--tńg-khì"), "--轉-去");
+        // Internal `--` is kept separate, never flattened to `-`.
+        assert_eq!(dd("轉去", "tńg--khì"), "--轉--去");
+        assert_eq!(dd("會記得", "ē-kì--tit"), "--會-記--得");
+        assert_eq!(dd("過來", "kuè--lâi"), "--過--來");
+        // Han-Lo and custom entries with internal `--`.
+        assert_eq!(dd("四腳--ê", "sì-kha--ê"), "--四-腳--ê");
+        assert_eq!(dd("啥mih", "siánn-mih"), "--啥-mih");
+        assert_eq!(dd("邊--a", "pinn--a"), "--邊--a");
+        assert_eq!(dd("會--記得", "ē-kì--tit"), "--會--記得");
+        assert_eq!(dd("tso̍h日", "tso̍h--ji̍t"), "--tso̍h--日");
+        // Word spaces reset neutral tone.
+        assert_eq!(dd("放重利", "pàng tāng-lāi"), "--放重利");
+        assert_eq!(dd("台北人", "tâi-pak lâng"), "--台-北人");
+        assert_eq!(dd("台北 人", "tâi-pak lâng"), "--台-北 人");
+        assert_eq!(dd("九月重陽", "káu--ge̍h tiông-iông"), "--九--月重陽");
+        // Unalignable or non-Hanji entries still take the leading `--`.
+        assert_eq!(dd("轉/去", "tńg-khì"), "--轉/去");
+        assert_eq!(dd("OK", "o-khe"), "--OK");
+        assert_eq!(dd("", "tshut-lâi"), "");
+        assert!(matches!(
+            render_hanji_khinsiann_with_leading(
+                "出來",
+                "tshut-lâi",
+                false,
+                LeadingKhinsiann::DoubleDash
+            ),
+            Cow::Borrowed("出來")
+        ));
+    }
+
+    #[test]
+    fn continue_hyphen_chains_inside_open_neutral_span() {
+        let cont = |hanji, tl| {
+            render_hanji_khinsiann_with_leading(hanji, tl, true, LeadingKhinsiann::ContinueHyphen)
+                .into_owned()
+        };
+        assert_eq!(cont("聲", "siann"), "-聲");
+        assert_eq!(cont("出來", "tshut-lâi"), "-出-來");
+        assert_eq!(cont("會記得", "ē-kì--tit"), "-會-記--得");
+        assert_eq!(cont("台北人", "tâi-pak lâng"), "-台-北人");
+        assert_eq!(cont("--轉-去", "--tńg-khì"), "--轉-去");
+        assert_eq!(cont("-聲", "siann"), "-聲");
+        assert_eq!(cont("OK", "o-khe"), "-OK");
+    }
+
+    #[test]
+    fn ends_in_khinsiann_tracks_open_neutral_spans_and_space_resets() {
+        use LeadingKhinsiann::{ContinueHyphen, DoubleDash, None};
+        assert!(!ends_in_khinsiann("siá", None));
+        assert!(!ends_in_khinsiann("tshut-lâi", None));
+        assert!(ends_in_khinsiann("tsi̍t", DoubleDash));
+        assert!(ends_in_khinsiann("tshut-lâi", DoubleDash));
+        assert!(ends_in_khinsiann("siann", ContinueHyphen));
+        assert!(ends_in_khinsiann("ē-kì--tit", None));
+        assert!(!ends_in_khinsiann("pàng tāng-lāi", DoubleDash));
+        assert!(!ends_in_khinsiann("káu--ge̍h tiông-iông", DoubleDash));
+        assert!(ends_in_khinsiann("iōng sai--ê", None));
     }
 }

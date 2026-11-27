@@ -5,7 +5,9 @@ use std::borrow::Cow;
 
 use crate::api::{capitalize_first, InputMode, System};
 use crate::case_transform::{full_uppercase_tone_string, raise_case, LetterCase};
-use crate::khinsiann::{is_roman_syllable_char, render_hanji_khinsiann};
+use crate::khinsiann::{
+    is_roman_syllable_char, render_hanji_khinsiann_with_leading, LeadingKhinsiann,
+};
 use crate::poj::to_poj;
 use crate::syllable::{
     is_stop_tone, normalize_to_tl, normalize_to_tl_keep_tl_finals, split_initial_final,
@@ -39,7 +41,25 @@ pub fn render_hanji_display<'a>(
     khinsiann: bool,
     poj_roman: bool,
 ) -> Cow<'a, str> {
-    let marked = render_hanji_khinsiann(hanji, canonical_tl, khinsiann);
+    render_hanji_display_with_leading(
+        hanji,
+        canonical_tl,
+        khinsiann,
+        LeadingKhinsiann::None,
+        poj_roman,
+    )
+}
+
+/// [`render_hanji_display`] with an optional [`LeadingKhinsiann`] boundary
+/// typed immediately before the word.
+pub fn render_hanji_display_with_leading<'a>(
+    hanji: &'a str,
+    canonical_tl: &str,
+    khinsiann: bool,
+    leading: LeadingKhinsiann,
+    poj_roman: bool,
+) -> Cow<'a, str> {
+    let marked = render_hanji_khinsiann_with_leading(hanji, canonical_tl, khinsiann, leading);
     if !poj_roman {
         return marked;
     }
@@ -349,5 +369,19 @@ mod tests {
                 "{hanji}"
             );
         }
+    }
+
+    #[test]
+    fn render_hanji_display_with_leading_combines_khinsiann_and_poj_han_lo() {
+        assert_eq!(
+            render_hanji_display_with_leading(
+                "親tsiânn",
+                "tshin-tsiânn",
+                true,
+                LeadingKhinsiann::DoubleDash,
+                true,
+            ),
+            "--親-chi\u{e2}\u{207f}"
+        );
     }
 }
