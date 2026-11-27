@@ -257,9 +257,9 @@ final class UpdateInstallation {
 enum UpdatePackageDownload {
     /// Largest package this will keep. The 3.6.5 release is 47 MB, so this is
     /// generous room for growth and still far under "a hostile server filled
-    /// the disk". Enforced upfront when the server declares `Content-Length`,
-    /// and chunk-by-chunk while streaming when it does not or understates it
-    /// (matching `desktop/crates/taigi-desktop-update/src/transport.rs`).
+    /// the disk". Enforced chunk-by-chunk while streaming (matching the 200 MiB
+    /// streaming cap in `desktop/crates/taigi-desktop-update/src/transport.rs`),
+    /// and also upfront when the server declares `Content-Length`.
     static let maximumPackageBytes: Int64 = 200 * 1024 * 1024
 
     /// `~/Library/Caches/<bundle id>/Updates`.
@@ -566,16 +566,16 @@ private final class BoundedDownloadDelegate: NSObject, URLSessionDataDelegate, @
         guard let finished else { return }
 
         if let failure = finished.failure {
-            cleanup(finished.handle)
+            cleanup(finished.handle, removeDestination: finished.acceptedResponse)
             finished.continuation.resume(throwing: failure)
         } else if finished.cancelled {
-            cleanup(finished.handle)
+            cleanup(finished.handle, removeDestination: finished.acceptedResponse)
             finished.continuation.resume(throwing: CancellationError())
         } else if let error {
-            cleanup(finished.handle)
+            cleanup(finished.handle, removeDestination: finished.acceptedResponse)
             finished.continuation.resume(throwing: error)
         } else if !finished.acceptedResponse {
-            cleanup(finished.handle)
+            cleanup(finished.handle, removeDestination: false)
             finished.continuation.resume(throwing: UpdatePackageDownload.Failure.rejected)
         } else {
             do {
@@ -600,8 +600,10 @@ private final class BoundedDownloadDelegate: NSObject, URLSessionDataDelegate, @
         completionHandler(.cancel)
     }
 
-    private func cleanup(_ handle: FileHandle?) {
+    private func cleanup(_ handle: FileHandle?, removeDestination: Bool) {
         try? handle?.close()
-        try? FileManager.default.removeItem(at: destination)
+        if removeDestination {
+            try? FileManager.default.removeItem(at: destination)
+        }
     }
 }
