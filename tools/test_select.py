@@ -22,8 +22,7 @@ macOS has two gates: `macos-rust` (the macOS Cargo workspace's native tests +
 clippy + fmt) and `macos` (the Swift suite). An input of the archive the app
 links — `macos/crates/**`, the workspace manifest / lockfile / toolchain, and
 `desktop/**` — selects both, behind `make build`; an engine change reaching
-swift-ffi selects `macos-rust`, as one reaching dispatch selects the desktop
-shells.
+`dispatch` selects `macos-rust`, as it selects the other desktop shells.
 
 A path no rule covers is reported as unmapped (exit 2): add its rule here.
 
@@ -91,9 +90,6 @@ MACOS_RUST_PATHS = (
     "macos/Cargo.lock",
     "macos/rust-toolchain.toml",
 )
-# The engine crate whose closure the macOS archive links (with dispatch and
-# protos, both below it).
-MACOS_LINKED_CRATE = "swift-ffi"
 ADMIN_LANE_NOTE = "no build/test gate (admin lane)"
 
 # Top-level directories whose files need no build or test gate.
@@ -410,9 +406,7 @@ def select(paths: Iterable[str], graph: EngineGraph) -> Selection:
     )
     selected = shipped | effects.engine_leaf_crates
     if DESKTOP_LINKED_CRATE in shipped:
-        platforms |= {"desktop", "windows", "linux", "web"}
-    if MACOS_LINKED_CRATE in shipped:
-        platforms.add("macos-rust")
+        platforms |= {"desktop", "windows", "linux", "web", "macos-rust"}
     if effects.wire_surface:
         platforms |= {"ios", "android", "macos"}
     prerequisites = []

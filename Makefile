@@ -41,10 +41,12 @@ build:
 	@echo ""
 	@echo "✓ build complete — Xcode: Clean Build Folder ⇧⌘K → Build"
 
-# Regenerate the committed Swift (iOS + macOS) and Java protobuf bindings from
-# engine/protos/proto/, then drop the protos crate's build cache so the next
-# native build recompiles it. Needs protoc 36.2 and protoc-gen-swift; with any
-# other protoc the binding step is skipped with a warning (gen-platform-protos.sh).
+# Regenerate the committed iOS Swift + Android Java bindings from
+# engine/protos/proto/, and the macOS Swift binding from
+# macos/crates/taigi-macos-ffi/proto/, then drop the protos crate's build cache
+# so the next native build recompiles it. Needs protoc 36.2 and
+# protoc-gen-swift; with any other protoc the engine binding step is skipped
+# with a warning (gen-platform-protos.sh).
 protos:
 	@echo "==> Regenerating platform proto (Swift + Java)"
 	bash $(ENGINE)/scripts/gen-platform-protos.sh
