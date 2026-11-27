@@ -682,17 +682,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "swift-ffi"
-version = "0.1.0"
-dependencies = [
- "dispatch",
- "log",
- "protos",
- "swift-bridge",
- "swift-bridge-build",
-]
-
-[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -748,7 +737,6 @@ dependencies = [
  "prost-build",
  "swift-bridge",
  "swift-bridge-build",
- "swift-ffi",
  "taigi-desktop-core",
  "tempfile",
 ]

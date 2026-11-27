@@ -100,7 +100,6 @@ ios/RustEngine/RustTaigi.swift
 ios/RustEngine/SwiftBridgeCore.swift
 macos/RustEngine/RustTaigi.xcframework/
 macos/RustEngine/RustTaigi.swift
-macos/RustEngine/RustTaigiDesktop.swift
 macos/RustEngine/SwiftBridgeCore.swift
 android/app/src/main/jniLibs/**/*.so
 
