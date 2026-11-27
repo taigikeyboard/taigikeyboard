@@ -17,14 +17,27 @@ enum UpdateHTTP {
         return URLSession(configuration: configuration)
     }
 
-    /// Whether this is a 200 that actually arrived over HTTPS.
+    /// Whether `url` uses `https` and names a non-empty host.
     ///
-    /// The scheme is read back off the response rather than trusted from the
+    /// Foundation's `URL(string:)` accepts hostless forms such as `https:///path`
+    /// (`host == nil`) and `https://:443/path` or `https://user@/path` (`host == ""`),
+    /// so checking the scheme alone is not enough.
+    static func isHTTPS(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https",
+              let host = url.host(percentEncoded: false),
+              !host.isEmpty
+        else { return false }
+        return true
+    }
+
+    /// Whether this is a 200 that actually arrived over HTTPS with a non-empty host.
+    ///
+    /// The URL is read back off the response rather than trusted from the
     /// request, because the release CDN redirects (measured: `github.com` →
-    /// `release-assets.githubusercontent.com`). The only scheme that says
+    /// `release-assets.githubusercontent.com`). The only URL that says
     /// anything about how the bytes travelled is the one they arrived under.
     static func isAcceptable(_ response: URLResponse) -> Bool {
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return false }
-        return response.url?.scheme?.lowercased() == "https"
+        return response.url.map(isHTTPS) ?? false
     }
 }
