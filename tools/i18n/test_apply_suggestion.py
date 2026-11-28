@@ -15,9 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from apply_suggestion import (
     FORM_LABELS,
-    LABEL_CURRENT,
-    LABEL_KEY,
-    LABEL_LANGUAGE,
     LABEL_REASON,
     LABEL_SUGGESTION,
     SuggestionError,
@@ -36,15 +33,14 @@ WORKFLOW = REPO_ROOT / ".github" / "workflows" / "i18n-suggestion.yml"
 KEY = "nav.tabHome"
 
 
-def form_body(key=KEY, language="en", suggestion="Start page", reason="_No response_", newline="\n"):
+def title(key=KEY, language="en"):
+    # The title the translate page fills in.
+    return f"[i18n] {key} ({language})"
+
+
+def form_body(suggestion="Start page", reason="_No response_", newline="\n"):
     # The shape GitHub renders an issue form into.
-    sections = [
-        (LABEL_KEY, key),
-        (LABEL_LANGUAGE, language),
-        (LABEL_CURRENT, "_No response_"),
-        (LABEL_SUGGESTION, suggestion),
-        (LABEL_REASON, reason),
-    ]
+    sections = [(LABEL_SUGGESTION, suggestion), (LABEL_REASON, reason)]
     return newline.join(f"### {label}{newline}{newline}{value}{newline}" for label, value in sections)
 
 
@@ -54,14 +50,14 @@ class FormLabelsTest(unittest.TestCase):
         self.assertEqual(tuple(labels), FORM_LABELS)
 
     def test_workflow_starts_only_for_the_form(self):
-        # The job's `if:` matches the key heading; a rename that misses it would silence the workflow.
-        self.assertIn(f"contains(github.event.issue.body, '### {LABEL_KEY}')", WORKFLOW.read_text(encoding="utf-8"))
+        # The job's `if:` matches the suggestion heading; a rename that misses it would silence the workflow.
+        self.assertIn(f"contains(github.event.issue.body, '### {LABEL_SUGGESTION}')", WORKFLOW.read_text(encoding="utf-8"))
 
 
 class ParseBodyTest(unittest.TestCase):
     def test_sections_and_no_response(self):
         sections = parse_body(form_body())
-        self.assertEqual(sections[LABEL_KEY], KEY)
+        self.assertEqual(sections[LABEL_SUGGESTION], "Start page")
         self.assertEqual(sections[LABEL_REASON], "")
 
     def test_crlf_and_lone_cr_become_line_feeds(self):
@@ -76,8 +72,8 @@ class ParseBodyTest(unittest.TestCase):
         self.assertEqual(sections[LABEL_SUGGESTION], "### Start\npage")
 
     def test_a_repeated_form_heading_cannot_override_a_field(self):
-        sections = parse_body(form_body(reason=f"### {LABEL_LANGUAGE}\n\nja"))
-        self.assertEqual(sections[LABEL_LANGUAGE], "en")
+        sections = parse_body(form_body(reason=f"### {LABEL_SUGGESTION}\n\nOther"))
+        self.assertEqual(sections[LABEL_SUGGESTION], "Start page")
 
 
 class ApplyTest(unittest.TestCase):
@@ -100,16 +96,16 @@ class ApplyTest(unittest.TestCase):
     def english(self):
         return json.loads(self.nav.read_text(encoding="utf-8"))["keys"]["tabHome"]["values"]["en"]
 
-    def assert_rejected(self, body, fragment):
+    def assert_rejected(self, body, fragment, issue_title=None):
         with self.assertRaises(SuggestionError) as caught:
-            apply(self.root, body)
+            apply(self.root, issue_title or title(), body)
         self.assertIn(fragment, str(caught.exception))
         self.assertEqual(self.nav.read_text(encoding="utf-8"), self.original)
 
     def test_changes_only_that_value(self):
         old = self.english()
         new = old + " page"
-        outputs = apply(self.root, form_body(suggestion=new))
+        outputs = apply(self.root, title(), form_body(suggestion=new))
         self.assertEqual(outputs, {"status": "ok", "key": KEY, "language": "en", "path": "i18n/nav.json"})
         # Same bytes except the one value: the hand formatting survives.
         expected = self.original.replace(
@@ -117,27 +113,30 @@ class ApplyTest(unittest.TestCase):
         )
         self.assertEqual(self.nav.read_text(encoding="utf-8"), expected)
 
-    def test_language_is_case_and_space_insensitive(self):
-        self.assertEqual(apply(self.root, form_body(language="  EN "))["language"], "en")
+    def test_title_language_is_case_and_space_insensitive(self):
+        self.assertEqual(apply(self.root, f"  [i18n] {KEY} ( EN ) ", form_body())["language"], "en")
 
     def test_escapes_quotes_and_backslashes(self):
-        apply(self.root, form_body(suggestion='Start "main" \\ page'))
+        apply(self.root, title(), form_body(suggestion='Start "main" \\ page'))
         self.assertEqual(self.english(), 'Start "main" \\ page')
 
     def test_non_form_is_skipped(self):
-        self.assertEqual(apply(self.root, "Some other report"), {"status": "skip"})
+        self.assertEqual(apply(self.root, title(), "Some other report"), {"status": "skip"})
 
     def test_unknown_namespace(self):
-        self.assert_rejected(form_body(key="../secrets.tabHome"), "text key")
+        self.assert_rejected(form_body(), "title", title(key="../secrets.tabHome"))
 
     def test_unknown_key(self):
-        self.assert_rejected(form_body(key="nav.noSuchKey"), "text key")
+        self.assert_rejected(form_body(), "title", title(key="nav.noSuchKey"))
 
     def test_content_files_are_not_keys(self):
-        self.assert_rejected(form_body(key="content.faqs"), "text key")
+        self.assert_rejected(form_body(), "title", title(key="content.faqs"))
 
     def test_unknown_language(self):
-        self.assert_rejected(form_body(language="zh"), "language")
+        self.assert_rejected(form_body(), "title", title(language="zh"))
+
+    def test_edited_title(self):
+        self.assert_rejected(form_body(), "title", "Please fix the home tab")
 
     def test_empty_suggestion(self):
         self.assert_rejected(form_body(suggestion="_No response_"), "empty")
@@ -191,9 +190,9 @@ class MainTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
-    def run_main(self, body):
+    def run_main(self, issue_title, body):
         event, output, message = (self.root / name for name in ("event.json", "output.txt", "message.md"))
-        event.write_text(json.dumps({"issue": {"body": body}}), encoding="utf-8")
+        event.write_text(json.dumps({"issue": {"title": issue_title, "body": body}}), encoding="utf-8")
         output.write_text("", encoding="utf-8")
         message.unlink(missing_ok=True)
         environment = dict(os.environ, GITHUB_EVENT_PATH=str(event), GITHUB_OUTPUT=str(output))
@@ -202,12 +201,12 @@ class MainTest(unittest.TestCase):
         return outputs, (message.read_text(encoding="utf-8") if message.exists() else None)
 
     def test_invalid_writes_only_the_status_and_a_reply(self):
-        outputs, message = self.run_main(form_body(language="zh"))
+        outputs, message = self.run_main(title(language="zh"), form_body())
         self.assertEqual(outputs, {"status": "invalid"})
-        self.assertIn("language", message)
+        self.assertIn("title", message)
 
     def test_non_form_is_skipped(self):
-        outputs, message = self.run_main("Not a form")
+        outputs, message = self.run_main("Crash on start", "Not a form")
         self.assertEqual(outputs, {"status": "skip"})
         self.assertIsNone(message)
 

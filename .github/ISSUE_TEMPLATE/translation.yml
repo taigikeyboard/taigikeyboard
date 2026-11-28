@@ -7,34 +7,15 @@ body:
     attributes:
       value: |
         Write in Taiwanese, Mandarin, English, or Japanese. 台語、華語、英文抑是日文攏會使。
-        Browse every piece of app text at https://taigikeyboard.tw/translate/. Its Fix buttons fill in this form for you.
+        Start from https://taigikeyboard.tw/translate/. Its Fix buttons fill in the title and this form for you. The title names the text, so keep it as filled in.
+        請對 https://taigikeyboard.tw/translate/ 揤「修正」開始，標題會自動填好，請毋通改。
 
         Sending this form opens a pull request automatically, signed with your GitHub account. The suggested text is submitted exactly as written, so put explanations under Why.
         送出了後會自動開 PR，用你的 GitHub 帳號署名。建議的文字會照你寫的提交，說明請寫佇「原因」。
-  # The ids below are the URL query parameters taigikeyboard.tw/translate prefills
-  # (`key`, `language`, `current`, `suggestion`). Rename one only together with that page.
-  # The labels are parsed by tools/i18n/apply_suggestion.py (.github/workflows/i18n-suggestion.yml);
-  # rename one only together with that script.
-  - type: input
-    id: key
-    attributes:
-      label: Text key（文字代號）
-      description: Shown on the translate page, for example `settings.resetFailed`.
-      placeholder: settings.resetFailed
-    validations:
-      required: true
-  - type: input
-    id: language
-    attributes:
-      label: Language（語言）
-      description: hanji, tailo, poj, en, or ja.
-      placeholder: hanji
-    validations:
-      required: true
-  - type: textarea
-    id: current
-    attributes:
-      label: Current text（目前的文字）
+  # The issue title `[i18n] <namespace>.<key> (<language>)` and the `suggestion` id are the URL
+  # query parameters taigikeyboard.tw/translate prefills; change them only together with that page.
+  # The title and the labels are parsed by tools/i18n/apply_suggestion.py
+  # (.github/workflows/i18n-suggestion.yml); change them only together with that script.
   - type: textarea
     id: suggestion
     attributes:

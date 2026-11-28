@@ -4,6 +4,8 @@
 #
 # Default mode reads the issue from $GITHUB_EVENT_PATH and writes `status` to $GITHUB_OUTPUT:
 #   skip    — the body is not a translation form (any other issue)
+# The text is named by the title the translate page fills in, `[i18n] <namespace>.<key> (<language>)`;
+# the form body carries only the suggested text and its reason.
 #   invalid — the contributor's input was rejected; the reply for the issue is in --message-file
 #   ok      — one value changed in place; `key`, `language`, `path` are written too, validated only
 # `--check-changes PATH` runs after generate.py: it stages the change and fails when the worktree
@@ -25,13 +27,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # The form's field labels, as GitHub renders them into `### <label>` body headings. Keep in step
 # with translation.yml (test_apply_suggestion.py checks).
-LABEL_KEY = "Text key（文字代號）"
-LABEL_LANGUAGE = "Language（語言）"
-LABEL_CURRENT = "Current text（目前的文字）"
 LABEL_SUGGESTION = "Suggested text（建議的文字）"
 LABEL_REASON = "Why（原因）"
-FORM_LABELS = (LABEL_KEY, LABEL_LANGUAGE, LABEL_CURRENT, LABEL_SUGGESTION, LABEL_REASON)
+FORM_LABELS = (LABEL_SUGGESTION, LABEL_REASON)
 NO_RESPONSE = "_No response_"
+TITLE_RE = re.compile(r"\[i18n\]\s*(\S+)\s*\(\s*([A-Za-z]+)\s*\)")
 
 # Longest value today is about 1,200 characters (web.intro, tailo).
 MAX_LENGTH = 3000
@@ -43,7 +43,10 @@ REJECTED_CATEGORIES = {"Cc", "Cf", "Zl", "Zp", "Cs", "Co", "Cn"}
 # Only the form's own headings delimit sections, so a `### ` line the contributor typed stays text.
 HEADING_RE = re.compile(r"^### (" + "|".join(re.escape(label) for label in FORM_LABELS) + r")[ \t]*$", re.M)
 
-UNKNOWN_KEY = "The text key is not one the app uses. Copy it from the translate page."
+UNKNOWN_KEY = (
+    "The issue title does not name a text the app uses. Start again from the Fix button on the "
+    "translate page and keep the title it fills in, like `[i18n] nav.tabHome (hanji)`."
+)
 
 
 class SuggestionError(ValueError):
@@ -51,7 +54,7 @@ class SuggestionError(ValueError):
 
 
 def parse_body(body: str):
-    """Returns {label: value} for every form section, or None when the key field is absent."""
+    """Returns {label: value} for every form section, or None when the suggestion field is absent."""
     body = body.replace("\r\n", "\n").replace("\r", "\n")
     parts = HEADING_RE.split(body)
     sections = {}
@@ -60,7 +63,7 @@ def parse_body(body: str):
         value = value.strip("\n")
         # The form renders each field once, in order; a repeat typed into a later field is ignored.
         sections.setdefault(label, "" if value.strip() == NO_RESPONSE else value)
-    return sections if LABEL_KEY in sections else None
+    return sections if LABEL_SUGGESTION in sections else None
 
 
 def check_characters(text: str) -> None:
@@ -81,13 +84,16 @@ def replace_value(text: str, key: str, language: str, old: str, new: str) -> str
     return text[:at] + f'"{language}": {json.dumps(new, ensure_ascii=False)}' + text[at + len(needle):]
 
 
-def apply(repo_root: Path, body: str) -> dict:
+def apply(repo_root: Path, title: str, body: str) -> dict:
     """Applies the suggestion in place and returns the workflow outputs."""
     sections = parse_body(body)
     if sections is None:
         return {"status": "skip"}
 
-    key_id = sections.get(LABEL_KEY, "").strip()
+    named = TITLE_RE.fullmatch(title.strip())
+    if named is None:
+        raise SuggestionError(UNKNOWN_KEY)
+    key_id = named.group(1)
     namespace, _, key = key_id.partition(".")
     path = repo_root / "i18n" / f"{namespace}.json"
     namespaces = {source.stem for source in (repo_root / "i18n").glob("*.json")}
@@ -96,9 +102,9 @@ def apply(repo_root: Path, body: str) -> dict:
     if data is None or key not in data["keys"]:
         raise SuggestionError(UNKNOWN_KEY)
 
-    language = sections.get(LABEL_LANGUAGE, "").strip().lower()
+    language = named.group(2).lower()
     if language not in PRODUCTION_LANGUAGES:
-        raise SuggestionError(f"The language must be one of: {', '.join(PRODUCTION_LANGUAGES)}.")
+        raise SuggestionError(UNKNOWN_KEY)
 
     new = sections.get(LABEL_SUGGESTION, "").strip()
     if not new:
@@ -169,7 +175,8 @@ def main() -> int:
 
     event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
     try:
-        outputs = apply(REPO_ROOT, event["issue"].get("body") or "")
+        issue = event["issue"]
+        outputs = apply(REPO_ROOT, issue.get("title") or "", issue.get("body") or "")
     except SuggestionError as exc:
         args.message_file.write_text(rejection_comment(str(exc)), encoding="utf-8")
         outputs = {"status": "invalid"}
