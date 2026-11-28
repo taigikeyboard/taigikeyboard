@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # Applies one translation-suggestion issue (.github/ISSUE_TEMPLATE/translation.yml) to i18n/*.json.
-# Run by .github/workflows/i18n-suggestion.yml on the default branch; the issue body is untrusted.
+# Run by .github/workflows/i18n-suggestion.yml on the default branch; the issue title and body are
+# untrusted.
 #
 # Default mode reads the issue from $GITHUB_EVENT_PATH and writes `status` to $GITHUB_OUTPUT:
 #   skip    — the body is not a translation form (any other issue)
-# The text is named by the title the translate page fills in, `[i18n] <namespace>.<key> (<language>)`;
-# the form body carries only the suggested text and its reason.
 #   invalid — the contributor's input was rejected; the reply for the issue is in --message-file
 #   ok      — one value changed in place; `key`, `language`, `path` are written too, validated only
+# The text is named by the title the translate page fills in, `[i18n] <namespace>.<key> (<language>)`;
+# the form body carries only the suggested text and its reason.
 # `--check-changes PATH` runs after generate.py: it stages the change and fails when the worktree
 # differs anywhere other than PATH and the generated artifacts.
 
@@ -31,7 +32,10 @@ LABEL_SUGGESTION = "Suggested text（建議的文字）"
 LABEL_REASON = "Why（原因）"
 FORM_LABELS = (LABEL_SUGGESTION, LABEL_REASON)
 NO_RESPONSE = "_No response_"
+TITLE_PREFIX = "[i18n] "
 TITLE_RE = re.compile(r"\[i18n\]\s*(\S+)\s*\(\s*([A-Za-z]+)\s*\)")
+# A Taiwanese or Japanese keyboard types full-width parentheses when someone retypes the title.
+FULL_WIDTH_PARENTHESES = str.maketrans({"（": "(", "）": ")"})
 
 # Longest value today is about 1,200 characters (web.intro, tailo).
 MAX_LENGTH = 3000
@@ -90,7 +94,7 @@ def apply(repo_root: Path, title: str, body: str) -> dict:
     if sections is None:
         return {"status": "skip"}
 
-    named = TITLE_RE.fullmatch(title.strip())
+    named = TITLE_RE.fullmatch(title.translate(FULL_WIDTH_PARENTHESES).strip())
     if named is None:
         raise SuggestionError(UNKNOWN_KEY)
     key_id = named.group(1)
@@ -104,7 +108,7 @@ def apply(repo_root: Path, title: str, body: str) -> dict:
 
     language = named.group(2).lower()
     if language not in PRODUCTION_LANGUAGES:
-        raise SuggestionError(UNKNOWN_KEY)
+        raise SuggestionError(f"{UNKNOWN_KEY} The language in parentheses is one of: {', '.join(PRODUCTION_LANGUAGES)}.")
 
     new = sections.get(LABEL_SUGGESTION, "").strip()
     if not new:

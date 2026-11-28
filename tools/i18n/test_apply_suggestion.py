@@ -15,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from apply_suggestion import (
     FORM_LABELS,
+    TITLE_PREFIX,
+    TITLE_RE,
     LABEL_REASON,
     LABEL_SUGGESTION,
     SuggestionError,
@@ -34,8 +36,8 @@ KEY = "nav.tabHome"
 
 
 def title(key=KEY, language="en"):
-    # The title the translate page fills in.
-    return f"[i18n] {key} ({language})"
+    # The title the translate page fills in (assets/translate.js in the website repository).
+    return f"{TITLE_PREFIX}{key} ({language})"
 
 
 def form_body(suggestion="Start page", reason="_No response_", newline="\n"):
@@ -48,6 +50,11 @@ class FormLabelsTest(unittest.TestCase):
     def test_labels_match_the_issue_template(self):
         labels = re.findall(r"^\s+label: (.+)$", TEMPLATE.read_text(encoding="utf-8"), re.M)
         self.assertEqual(tuple(labels), FORM_LABELS)
+
+    def test_template_title_is_the_prefix_the_script_parses(self):
+        template_title = re.search(r'^title: "(.*)"$', TEMPLATE.read_text(encoding="utf-8"), re.M).group(1)
+        self.assertEqual(template_title, TITLE_PREFIX)
+        self.assertIsNotNone(TITLE_RE.fullmatch(title()))
 
     def test_workflow_starts_only_for_the_form(self):
         # The job's `if:` matches the suggestion heading; a rename that misses it would silence the workflow.
@@ -132,8 +139,11 @@ class ApplyTest(unittest.TestCase):
     def test_content_files_are_not_keys(self):
         self.assert_rejected(form_body(), "title", title(key="content.faqs"))
 
-    def test_unknown_language(self):
-        self.assert_rejected(form_body(), "title", title(language="zh"))
+    def test_unknown_language_lists_the_languages(self):
+        self.assert_rejected(form_body(), "hanji, en, ja, tailo, poj", title(language="zh"))
+
+    def test_full_width_parentheses_are_accepted(self):
+        self.assertEqual(apply(self.root, f"[i18n] {KEY}（en）", form_body())["key"], KEY)
 
     def test_edited_title(self):
         self.assert_rejected(form_body(), "title", "Please fix the home tab")
