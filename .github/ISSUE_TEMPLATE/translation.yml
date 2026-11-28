@@ -1,0 +1,43 @@
+name: Translation suggestion（翻譯建議）
+description: Better wording for a piece of text the app shows.
+title: "[i18n] "
+labels: ["i18n"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in Taiwanese, Mandarin, English, or Japanese. 台語、華語、英文抑是日文攏會使。
+        Browse every piece of app text at https://taigikeyboard.tw/translate/. Its Suggest buttons fill in this form for you.
+  # The ids below are the URL query parameters taigikeyboard.tw/translate prefills
+  # (`key`, `language`, `current`). Rename one only together with that page.
+  - type: input
+    id: key
+    attributes:
+      label: Text key（文字代號）
+      description: Shown on the translate page, for example `settings.resetFailed`.
+      placeholder: settings.resetFailed
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language（語言）
+      description: hanji, tailo, poj, en, or ja.
+      placeholder: hanji
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current text（目前的文字）
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text（建議的文字）
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why（原因）
+      description: Optional. Where you saw it, or why the new wording reads better.
