@@ -6,7 +6,8 @@ name: i18n suggestion
 #
 # The issue body is untrusted: only apply_suggestion.py reads it, from the event file.
 # Nothing from it reaches a command line; the PR body and comments carry fixed text plus
-# the validated key and language. Every issue starts the job; the script skips non-forms.
+# the validated key and language. Only issues carrying the form's key heading start the job
+# (test_apply_suggestion.py keeps it in step with the form and the script).
 #
 # An edited issue is tried again only while no PR is open for it (fixing a rejected
 # suggestion); once a PR exists the branch is the maintainer's.
@@ -27,6 +28,7 @@ jobs:
     if: >-
       github.event.issue.state == 'open' &&
       github.event.issue.user.type == 'User' &&
+      contains(github.event.issue.body, '### Text key（文字代號）') &&
       (github.event.action == 'opened' || github.event.changes.body != null)
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -29,6 +29,7 @@ from apply_suggestion import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "translation.yml"
+WORKFLOW = REPO_ROOT / ".github" / "workflows" / "i18n-suggestion.yml"
 
 # Any real key works; the tests read its current values from the copied sources, so a later wording
 # change to it (including one this automation opens) keeps them green.
@@ -51,6 +52,10 @@ class FormLabelsTest(unittest.TestCase):
     def test_labels_match_the_issue_template(self):
         labels = re.findall(r"^\s+label: (.+)$", TEMPLATE.read_text(encoding="utf-8"), re.M)
         self.assertEqual(tuple(labels), FORM_LABELS)
+
+    def test_workflow_starts_only_for_the_form(self):
+        # The job's `if:` matches the key heading; a rename that misses it would silence the workflow.
+        self.assertIn(f"contains(github.event.issue.body, '### {LABEL_KEY}')", WORKFLOW.read_text(encoding="utf-8"))
 
 
 class ParseBodyTest(unittest.TestCase):
