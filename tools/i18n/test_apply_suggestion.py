@@ -9,10 +9,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import apply_suggestion
 from apply_suggestion import (
     FORM_LABELS,
     TITLE_PREFIX,
@@ -168,6 +170,19 @@ class ApplyTest(unittest.TestCase):
         self.assert_rejected(form_body(suggestion="Start {count}"), "app text rule")
 
 
+class OneValueGuardTest(unittest.TestCase):
+    def test_edit_landing_elsewhere_is_refused(self):
+        # If the textual replace ever hit another occurrence, the parsed result would not match.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shutil.copytree(REPO_ROOT / "i18n", root / "i18n")
+            original = (root / "i18n" / "nav.json").read_text(encoding="utf-8")
+            with mock.patch.object(apply_suggestion, "replace_value", lambda text, *_: text.replace('"en": "', '"en": "x', 1)):
+                with self.assertRaises(RuntimeError):
+                    apply(root, title(key="nav.tabTheme"), form_body(suggestion="Looks"))
+            self.assertEqual((root / "i18n" / "nav.json").read_text(encoding="utf-8"), original)
+
+
 class ContentApplyTest(unittest.TestCase):
     # i18n/content/*.json: nested FAQ / feature text, addressed as content.<file>.<item id>.<field>.
     @classmethod
@@ -207,6 +222,23 @@ class ContentApplyTest(unittest.TestCase):
         apply(self.root, title(self.key(f"paragraph{number}.attachment")), form_body(suggestion="See the steps."))
         paragraph = json.loads(self.faq.read_text(encoding="utf-8"))["faqs"][0]["paragraphs"][number - 1]
         self.assertEqual(paragraph["attachment"]["text"]["en"], "See the steps.")
+
+    def test_single_line_fields_reject_line_breaks(self):
+        for field in ("title", "paragraph1.attachment"):
+            if field.endswith("attachment") and "text" not in (self.item["paragraphs"][0].get("attachment") or {}):
+                continue
+            with self.subTest(field=field), self.assertRaises(SuggestionError) as caught:
+                apply(self.root, title(self.key(field)), form_body(suggestion="one\ntwo"))
+            self.assertIn("line break", str(caught.exception))
+
+    def test_paragraph_keeps_line_breaks(self):
+        apply(self.root, title(self.key("paragraph1")), form_body(suggestion="one\ntwo"))
+        self.assertEqual(json.loads(self.faq.read_text(encoding="utf-8"))["faqs"][0]["paragraphs"][0]["text"]["en"], "one\ntwo")
+
+    def test_non_canonical_file_is_an_internal_error(self):
+        self.faq.write_text(self.original + "\n", encoding="utf-8")
+        with self.assertRaises(RuntimeError):
+            apply(self.root, title(self.key("title")), form_body(suggestion="Changed"))
 
     def test_unknown_item_field_or_paragraph(self):
         for key_id in ("content.faq.noSuchItem.title", self.key("icon"), self.key("paragraph0"),

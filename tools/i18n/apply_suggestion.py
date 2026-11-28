@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# Applies one translation-suggestion issue (.github/ISSUE_TEMPLATE/translation.yml) to i18n/*.json.
+# Applies one translation-suggestion issue (.github/ISSUE_TEMPLATE/translation.yml) to i18n/*.json
+# or i18n/content/*.json.
 # Run by .github/workflows/i18n-suggestion.yml on the default branch; the issue title and body are
 # untrusted.
 #
@@ -46,7 +47,10 @@ REJECTED_CATEGORIES = {"Cc", "Cf", "Zl", "Zp", "Cs", "Co", "Cn"}
 # Only the form's own headings delimit sections, so a `### ` line the contributor typed stays text.
 HEADING_RE = re.compile(r"^### (" + "|".join(re.escape(label) for label in FORM_LABELS) + r")[ \t]*$", re.M)
 
+# Checked before the namespace lookup: a future i18n/content.json namespace would be shadowed.
 CONTENT_PREFIX = "content."
+# Single-line content fields: list rows, navigation titles and labels in the apps.
+CONTENT_SINGLE_LINE_RE = re.compile(r"\.(title|summary|paragraph[0-9]+\.attachment)$")
 CONTENT_FIELD_RE = re.compile(r"(title|summary)|paragraph([1-9][0-9]*)(\.attachment)?")
 
 UNKNOWN_KEY = (
@@ -158,17 +162,21 @@ def apply(repo_root: Path, title: str, body: str) -> dict:
     if len(new) > MAX_LENGTH:
         raise SuggestionError(f"The suggested text is longer than {MAX_LENGTH} characters.")
     check_characters(new)
+    if is_content and CONTENT_SINGLE_LINE_RE.search(key_id) and "\n" in new:
+        raise SuggestionError("This text is shown on one line in the app, so the suggestion cannot contain a line break.")
     old = values[language]
     if new == old:
         raise SuggestionError("The suggested text is the same as the current text.")
 
     original = path.read_text(encoding="utf-8")
+    if is_content and original != json.dumps(data, ensure_ascii=False, indent=2):
+        # Re-serializing moves only one value only while the file is canonical (test_i18n.py checks).
+        raise RuntimeError(f"{path.name} is not in canonical json.dumps(indent=2) form")
     # `values` lives inside `data`, which was parsed from `original`: after this assignment `data` is
     # the original document with exactly that one value replaced.
     values[language] = new
     if is_content:
-        # Content files are stored as canonical json.dumps(indent=2) (test_i18n.py checks), so a
-        # re-serialization moves nothing else. No generator reads them.
+        # Canonical (checked above), so re-serializing moves nothing else. No generator reads them.
         updated = json.dumps(data, ensure_ascii=False, indent=2)
     else:
         updated = replace_value(original, key_id.partition(".")[2], language, old, new)
@@ -176,17 +184,16 @@ def apply(repo_root: Path, title: str, body: str) -> dict:
         raise RuntimeError(f"editing {key_id} changed more than {language}")
 
     path.write_text(updated, encoding="utf-8")
-    if is_content:
-        return {"status": "ok", "key": key_id, "language": language, "path": path.relative_to(repo_root).as_posix()}
-    try:
-        # The generator's own rules (placeholders, punctuation, completeness) judge the new value.
-        build_outputs(repo_root, enforce_production_completeness=True)
-    except ValueError as exc:
-        path.write_text(original, encoding="utf-8")
-        raise SuggestionError(f"The suggested text breaks an app text rule:\n\n{exc}") from exc
-    except BaseException:
-        path.write_text(original, encoding="utf-8")
-        raise
+    if not is_content:
+        try:
+            # The generator's own rules (placeholders, punctuation, completeness) judge the new value.
+            build_outputs(repo_root, enforce_production_completeness=True)
+        except ValueError as exc:
+            path.write_text(original, encoding="utf-8")
+            raise SuggestionError(f"The suggested text breaks an app text rule:\n\n{exc}") from exc
+        except BaseException:
+            path.write_text(original, encoding="utf-8")
+            raise
     return {"status": "ok", "key": key_id, "language": language, "path": path.relative_to(repo_root).as_posix()}
 
 
@@ -234,7 +241,7 @@ def main() -> int:
     except SuggestionError as exc:
         args.message_file.write_text(rejection_comment(str(exc)), encoding="utf-8")
         outputs = {"status": "invalid"}
-    # Every value is single-line by construction: a fixed status word, an identifier-shaped key,
+    # Every value is single-line by construction: a fixed status word, a key that names an existing text,
     # a language from PRODUCTION_LANGUAGES, a path built from both.
     with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
         for name, value in outputs.items():
