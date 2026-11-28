@@ -246,6 +246,16 @@ pub fn render_hanji_khinsiann_with_leading<'a>(
     }
 }
 
+/// Preserve a buffer-initial literal hyphen run (`-`, `--`, `---`) on a Hanji
+/// display form without doubling an existing leading hyphen (`--轉-去`, `-聲`,
+/// custom `--返-去`).
+pub fn apply_leading_literal_hyphens<'a>(hanji: &'a str, leading_run: &str) -> Cow<'a, str> {
+    if leading_run.is_empty() || hanji.is_empty() || hanji.starts_with('-') {
+        return Cow::Borrowed(hanji);
+    }
+    Cow::Owned(format!("{leading_run}{hanji}"))
+}
+
 /// Whether a word with reading `canonical_tl` entered under `leading` ends
 /// inside an open neutral-tone span (no space reset after the last neutral
 /// marker).
@@ -496,5 +506,28 @@ mod tests {
         assert!(!ends_in_khinsiann("pàng tāng-lāi", DoubleDash));
         assert!(!ends_in_khinsiann("káu--ge̍h tiông-iông", DoubleDash));
         assert!(ends_in_khinsiann("iōng sai--ê", None));
+    }
+
+    #[test]
+    fn leading_literal_hyphens_prefixes_plain_hanji_without_doubling() {
+        assert_eq!(apply_leading_literal_hyphens("高雄", "-"), "-高雄");
+        assert_eq!(apply_leading_literal_hyphens("出來", "--"), "--出來");
+        assert_eq!(apply_leading_literal_hyphens("矣", "---"), "---矣");
+        assert!(matches!(
+            apply_leading_literal_hyphens("--轉-去", "--"),
+            Cow::Borrowed("--轉-去")
+        ));
+        assert!(matches!(
+            apply_leading_literal_hyphens("-聲", "-"),
+            Cow::Borrowed("-聲")
+        ));
+        assert!(matches!(
+            apply_leading_literal_hyphens("", "--"),
+            Cow::Borrowed("")
+        ));
+        assert!(matches!(
+            apply_leading_literal_hyphens("高雄", ""),
+            Cow::Borrowed("高雄")
+        ));
     }
 }

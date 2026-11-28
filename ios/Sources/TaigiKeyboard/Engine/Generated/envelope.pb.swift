@@ -306,10 +306,10 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   public var cTypesAffricate: Bool = false
 
   /// The desktop "Type - with f" setting (opt-in, 2026-11-10): an `Append` of
-  /// `f` / `F` writes the syllable hyphen `-`, as the `-` key does — idle, the
-  /// neutral-tone (khinsiann) marker, a document literal — under either tone
-  /// scheme (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset,
-  /// `f` is an ordinary letter.
+  /// `f` / `F` writes `-` into the composing buffer, as the `-` key does
+  /// (including idle leading `-` / `--`, §21, §62), under either tone scheme
+  /// (`engine/composing/src/f_hyphen.rs`). TPS never reads it. Unset, `f` is
+  /// an ordinary letter.
   public var fTypesHyphen: Bool = false
 
   /// Opt-in 輕聲 (`--` / `-`) in Hanji output (#911). When true, pure-Hanji

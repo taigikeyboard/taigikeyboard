@@ -541,3 +541,63 @@ fn commit_raw_still_writes_the_glyphs() {
     let response = engine.apply(Intent::CommitRaw, &config);
     assert_eq!(commit_text(&response).as_deref(), Some("ㄒㄧˋㄒㄧ"));
 }
+
+#[test]
+fn buffer_initial_leading_hyphens_convert_and_preserve_markers() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    for khinsiann in [true, false] {
+        let mut cfg = config_converting("tps");
+        cfg.khinsiann_in_hanji = khinsiann;
+
+        let (_, resp) = composing_engine("--ㄒㄧˋ", &cfg);
+        assert_eq!(display(&resp), "--死", "khinsiann={khinsiann}");
+
+        let (_, resp_compound) = composing_engine("--ㄍㄧㄣ ㄚˋㆢㄧㆵ˙", &cfg);
+        assert_eq!(
+            display(&resp_compound),
+            if khinsiann {
+                "--今-仔-日"
+            } else {
+                "--今仔日"
+            },
+            "khinsiann={khinsiann}"
+        );
+
+        let (_, resp_chain) = composing_engine("--ㄒㄧˋ-ㄒㄧ ", &cfg);
+        assert_eq!(
+            display(&resp_chain),
+            if khinsiann { "--死-詩" } else { "--死詩" },
+            "khinsiann={khinsiann}"
+        );
+
+        let (_, resp_single) = composing_engine("-ㄍㄧㄣ ㄚˋㆢㄧㆵ˙", &cfg);
+        assert_eq!(display(&resp_single), "-今仔日", "khinsiann={khinsiann}");
+    }
+}
+
+#[test]
+fn tps_key_typing_leading_hyphens_before_dual_form_initial_converts() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    for khinsiann in [true, false] {
+        let mut cfg = config_converting("tps");
+        cfg.khinsiann_in_hanji = khinsiann;
+        let mut engine = Engine::new();
+        for k in ["-", "-", "ㄍ"] {
+            let r = tps_key(&mut engine, k, &cfg);
+            assert!(r.is_composing);
+        }
+        assert_eq!(raw_input(&engine.snapshot(&cfg)), "--ㄍ");
+        for k in ["ㄧ", "ㄣ"] {
+            tps_key(&mut engine, k, &cfg);
+        }
+        let resp = tps_key(&mut engine, " ", &cfg);
+        assert_eq!(display(&resp), "--今", "khinsiann={khinsiann}");
+        let words: Vec<String> = converted_words(&engine)
+            .into_iter()
+            .map(|(_, w)| w)
+            .collect();
+        assert_eq!(words, vec!["--今"]);
+    }
+}

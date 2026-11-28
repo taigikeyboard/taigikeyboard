@@ -8,7 +8,7 @@ use crate::common::{
     empty_association_bin, fetch_at_pos_response, install_lexicon, Fetch, Row,
 };
 use composing::api::{CommitScript, Engine};
-use composing::{requests, Intent, Phase};
+use composing::{requests, Intent};
 use lexicon::{CustomEntry, LearnedEntry};
 use protos::engine::{AppConfig, CandidateDisplayMode, CandidateMessage, SyllableSeparator};
 use test_support::{engine_install_lock, write_temp};
@@ -462,29 +462,37 @@ fn custom_khinsiann_collision_respects_toggle() {
     );
 }
 
+// INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER (§21) — typing `--` from Idle
+// stays in the buffer (`--` emits zero candidates, then `--tngkhi` lists
+// `--轉-去` and `--轉--去` without duplicating `----`).
 #[test]
-fn typed_leading_double_dash_from_idle_still_commits_literally() {
+fn typed_leading_double_dash_from_idle_composes_in_buffer() {
     let _lock = engine_install_lock();
     install_fixture();
     let on = hanji_config(true, false);
 
     let mut engine = Engine::new();
     let first = engine.apply(Intent::AppendHyphen, &on);
-    assert_eq!(commit_text(&first).as_deref(), Some("-"));
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
+    assert!(first.is_composing);
+    assert_eq!(commit_text(&first), None);
+    assert_eq!(first.preedit.unwrap().raw_input, "-");
 
     let second = engine.apply(Intent::AppendHyphen, &on);
-    assert_eq!(commit_text(&second).as_deref(), Some("-"));
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
+    assert!(second.is_composing);
+    assert_eq!(commit_text(&second), None);
+    assert_eq!(second.preedit.unwrap().raw_input, "--");
 
-    // Subsequent `tngkhi` composes without the already committed hyphens.
-    // The dictionary's leading `--` remains optional for matching.
-    engine.apply(
-        Intent::Start {
-            text: "tngkhi".into(),
-        },
-        &on,
-    );
+    let empty_fetch = requests::apply(Fetch::default().intent(), &mut engine, &on)
+        .continuous
+        .unwrap()
+        .candidates;
+    assert!(empty_fetch.is_empty(), "hyphen-only buffer lists nothing");
+
+    for ch in "tngkhi".chars() {
+        engine.apply(Intent::Append { ch: ch.to_string() }, &on);
+    }
+    assert_eq!(engine.snapshot(&on).preedit.unwrap().raw_input, "--tngkhi");
+
     let cands = requests::apply(
         Fetch {
             literal_roman_candidate_disabled: true,
@@ -498,7 +506,28 @@ fn typed_leading_double_dash_from_idle_still_commits_literally() {
     .unwrap()
     .candidates;
     let hanjis: Vec<&str> = cands.iter().filter_map(|c| c.hanji.as_deref()).collect();
-    assert_eq!(hanjis, vec!["--轉-去", "轉--去", "轉去"]);
+    assert_eq!(hanjis, vec!["--轉-去", "--轉--去"]);
+    let romans: Vec<&str> = cands.iter().map(|c| c.roman.as_str()).collect();
+    assert_eq!(romans, vec!["--tńg-khì", "--tńg--khì"]);
+
+    let off = hanji_config(false, false);
+    let cands_off = requests::apply(
+        Fetch {
+            literal_roman_candidate_disabled: true,
+            ..Default::default()
+        }
+        .intent(),
+        &mut engine,
+        &off,
+    )
+    .continuous
+    .unwrap()
+    .candidates;
+    let hanjis_off: Vec<&str> = cands_off
+        .iter()
+        .filter_map(|c| c.hanji.as_deref())
+        .collect();
+    assert_eq!(hanjis_off, vec!["--轉去"]);
 }
 
 #[test]
@@ -773,7 +802,7 @@ fn non_khinsiann_dictionary_words_prepended_with_double_dash_add_middle_hyphens(
 
     // 2. Annotate in Brackets (both Hanji-first and Roman-first).
     for (hanji_first, expected) in [
-        (true, "寫 (siá)--出-來 (tshut-lâi)"),
+        (true, "寫 (siá)--出-來 (--tshut-lâi)"),
         (false, "siá (寫)--tshut-lâi (--出-來)"),
     ] {
         let mut cfg = hanji_config(true, true);
@@ -1098,5 +1127,432 @@ fn explain_mechanism_matches_mid_composing_khinsiann_words_and_slot0() {
         assert_eq!(word_hanjis, expected_words);
         assert_eq!(mech.candidates[0].role, "sentence");
         assert_eq!(mech.candidates[0].hanji.as_deref(), Some(expected_sentence));
+    }
+}
+
+#[test]
+fn buffer_initial_double_dash_regression_matrix_never_duplicates() {
+    let _lock = engine_install_lock();
+    install_fixture();
+
+    for khinsiann in [true, false] {
+        for literal_disabled in [false, true] {
+            for (input_mode, separator, display_mode, hanji_first, han_lo_mixed, both_scripts) in [
+                (
+                    "tl",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::SideBySide,
+                    true,
+                    false,
+                    false,
+                ),
+                (
+                    "tl",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::SideBySide,
+                    false,
+                    false,
+                    false,
+                ),
+                (
+                    "tl",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::RomanOnly,
+                    false,
+                    false,
+                    false,
+                ),
+                (
+                    "tl",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::Combined,
+                    true,
+                    false,
+                    false,
+                ),
+                (
+                    "tl",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::SideBySide,
+                    true,
+                    true,
+                    true,
+                ),
+                (
+                    "poj",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::SideBySide,
+                    true,
+                    false,
+                    false,
+                ),
+                (
+                    "tl",
+                    SyllableSeparator::Space,
+                    CandidateDisplayMode::SideBySide,
+                    false,
+                    false,
+                    false,
+                ),
+                (
+                    "tl",
+                    SyllableSeparator::None,
+                    CandidateDisplayMode::SideBySide,
+                    false,
+                    false,
+                    false,
+                ),
+                (
+                    "tps",
+                    SyllableSeparator::Hyphen,
+                    CandidateDisplayMode::SideBySide,
+                    true,
+                    false,
+                    false,
+                ),
+            ] {
+                let mut cfg = config(input_mode);
+                cfg.khinsiann_in_hanji = khinsiann;
+                cfg.candidate_display_mode = display_mode as i32;
+                cfg.syllable_separator = separator as i32;
+                cfg.is_hanji_first = hanji_first;
+                cfg.han_lo_mixed = han_lo_mixed;
+                cfg.output_both_scripts = both_scripts;
+
+                for raw in ["--ah", "--tngkhi"] {
+                    let cands = fetch_with(
+                        &cfg,
+                        raw,
+                        Fetch {
+                            literal_roman_candidate_disabled: literal_disabled,
+                            ..Default::default()
+                        },
+                    );
+                    assert!(
+                        !cands.is_empty(),
+                        "{raw} {input_mode} khinsiann={khinsiann}"
+                    );
+                    let mut seen_roman = std::collections::HashSet::new();
+                    for c in &cands {
+                        assert!(
+                            !c.roman.contains("----"),
+                            "roman duplicated `--`: {raw} {c:?}"
+                        );
+                        if let Some(h) = &c.hanji {
+                            assert!(!h.contains("----"), "hanji duplicated `--`: {raw} {c:?}");
+                        }
+                        if !c.tps_text.is_empty() {
+                            assert!(
+                                !c.tps_text.contains("\u{02d9}\u{02d9}"),
+                                "tps_text duplicated neutral mark: {raw} {c:?}"
+                            );
+                        }
+                        if display_mode == CandidateDisplayMode::RomanOnly {
+                            assert!(
+                                seen_roman.insert(c.roman.clone()),
+                                "duplicate roman cell under RomanOnly for {raw}: {cands:?}"
+                            );
+                        }
+                    }
+
+                    if raw == "--ah" {
+                        let expected_roman = match separator {
+                            SyllableSeparator::Space | SyllableSeparator::None
+                                if input_mode != "tps" =>
+                            {
+                                "\u{00b7}ah"
+                            }
+                            _ => "--ah",
+                        };
+                        assert!(
+                            cands
+                                .iter()
+                                .any(|c| c.hanji.as_deref() == Some("--矣") && c.roman == expected_roman),
+                            "missing rendered --矣 / {expected_roman} for {raw} ({input_mode}, {separator:?}): {cands:?}"
+                        );
+                        if !literal_disabled && input_mode != "tps" {
+                            assert_eq!(cands[0].roman, expected_roman);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Space / None separators also shape `--tngkhi`, and custom `--返-去` never doubles `--`.
+    for (separator, expected_roman) in [
+        (SyllableSeparator::Hyphen, "--tńg-khì"),
+        (SyllableSeparator::Space, "\u{00b7}tńg khì"),
+        (SyllableSeparator::None, "\u{00b7}tńgkhì"),
+    ] {
+        let mut cfg = hanji_config(true, false);
+        cfg.syllable_separator = separator as i32;
+        let cands = fetch_candidates(&cfg, "--tngkhi", vec![]);
+        assert_eq!(cands[0].hanji.as_deref(), Some("--轉-去"));
+        assert_eq!(cands[0].roman, expected_roman);
+    }
+
+    for khinsiann in [true, false] {
+        let cfg = hanji_config(khinsiann, false);
+        let custom = vec![CustomEntry {
+            roman: "--tńg-khì".into(),
+            hanji: Some("--返-去".into()),
+        }];
+        let cands = fetch_candidates(&cfg, "--tngkhi", custom);
+        assert!(
+            cands
+                .iter()
+                .all(|c| !c.hanji.as_deref().unwrap_or_default().contains("----")),
+            "khinsiann={khinsiann}: {cands:?}"
+        );
+        assert!(
+            cands.iter().any(|c| c.hanji.as_deref() == Some("--返-去")),
+            "custom --返-去 missing for khinsiann={khinsiann}: {cands:?}"
+        );
+    }
+
+    // TPS layout carries `--` onto `tps_text` (`--矣` for Hanji, `˙ㄉㆭˋㄎㄧ˪` for a roman-only row).
+    let tps_cfg = config("tps");
+    let tps_cands = fetch_candidates(
+        &tps_cfg,
+        "--tngkhi",
+        vec![CustomEntry {
+            roman: "tńg-khì".into(),
+            hanji: None,
+        }],
+    );
+    assert!(
+        tps_cands
+            .iter()
+            .any(|c| c.tps_text == "\u{02d9}ㄉㆭˋ \u{02d9}ㄎㄧ˪"),
+        "expected ˙ㄉㆭˋ ˙ㄎㄧ˪ in tps_text: {tps_cands:?}"
+    );
+    assert!(
+        tps_cands.iter().any(|c| c.tps_text == "--轉去"),
+        "expected --轉去 in tps_text: {tps_cands:?}"
+    );
+}
+
+#[test]
+fn buffer_initial_double_dash_matches_pr_1171_mid_composing_rules() {
+    let _lock = engine_install_lock();
+    install_fixture();
+
+    // 1. `--tshutlai` across khinsiann toggle, POJ, Space, and None.
+    let on = hanji_config(true, false);
+    let off = hanji_config(false, false);
+    let cands_on = fetch_candidates(&on, "--tshutlai", vec![]);
+    assert_eq!(cands_on[0].hanji.as_deref(), Some("--出-來"));
+    assert_eq!(cands_on[0].roman, "--tshut-lâi");
+    let cands_off = fetch_candidates(&off, "--tshutlai", vec![]);
+    assert_eq!(cands_off[0].hanji.as_deref(), Some("--出來"));
+    assert_eq!(cands_off[0].roman, "--tshut-lâi");
+
+    let mut poj_cfg = hanji_config(true, false);
+    poj_cfg.input_mode = "poj".into();
+    let poj_cands = fetch_candidates(&poj_cfg, "--chhutlai", vec![]);
+    assert_eq!(poj_cands[0].hanji.as_deref(), Some("--出-來"));
+    assert_eq!(poj_cands[0].roman, "--chhut-lâi");
+
+    for (sep, expected_roman) in [
+        (SyllableSeparator::Space, "\u{00b7}tshut lâi"),
+        (SyllableSeparator::None, "\u{00b7}tshutlâi"),
+    ] {
+        let mut sep_cfg = hanji_config(true, false);
+        sep_cfg.syllable_separator = sep as i32;
+        let c = fetch_candidates(&sep_cfg, "--tshutlai", vec![]);
+        assert_eq!(c[0].roman, expected_roman);
+        assert_eq!(c[0].hanji.as_deref(), Some("--出-來"));
+    }
+
+    // 2. `--tsit-siann`: slot 0 chains `-` (`--一-聲`), nailing learns `--tsi̍t-siann`.
+    assert_eq!(
+        fetch_candidates(&on, "--tsit-siann", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("--一-聲")
+    );
+    assert_eq!(
+        fetch_candidates(&off, "--tsit-siann", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("--一聲")
+    );
+    let mut engine = Engine::new();
+    let list1 = start_and_fetch(&mut engine, "--tsit-siann", &on);
+    let first = find_hanji(&list1, "--一");
+    let mid = pick_candidate(&mut engine, first, &on, CommitScript::Lead);
+    assert!(mid.response.is_composing);
+    let list2 = fetch_pending(&mut engine, &on);
+    let second = find_hanji(&list2, "-聲");
+    let fin = pick_candidate(&mut engine, second, &on, CommitScript::Lead);
+    assert_eq!(commit_text(&fin.response).as_deref(), Some("--一-聲"));
+    let learned = fin.learned.expect("learned phrase");
+    assert_eq!(learned.hanji, "一聲");
+    assert_eq!(learned.canonical_tl, "--tsi̍t-siann");
+
+    // 3. `--kuelai` keeps internal `--` distinct; `--pangtanglai` resets on word space.
+    let kuelai: Vec<Option<String>> = fetch_candidates(&on, "--kuelai", vec![])
+        .into_iter()
+        .map(|c| c.hanji)
+        .collect();
+    assert_eq!(
+        &kuelai[..2],
+        &[Some("--過--來".to_owned()), Some("--過-來".to_owned())]
+    );
+    assert_eq!(
+        fetch_candidates(&on, "--pangtanglai", vec![])[0]
+            .hanji
+            .as_deref(),
+        Some("--放重利")
+    );
+
+    // 4. POJ Han-Lo at buffer start: `--chhinchiann` -> `--親-chiâⁿ`.
+    let chhin = fetch_candidates(&poj_cfg, "--chhinchiann", vec![]);
+    assert_eq!(chhin[0].hanji.as_deref(), Some("--親-chi\u{e2}\u{207f}"));
+
+    // 5. Casing preserves leading `--` (`--Tngkhi` -> `--Tńg-khì`, `--TNGKHI` -> `--TŃG-KHÌ`).
+    let title = fetch_candidates(&on, "--Tngkhi", vec![]);
+    assert_eq!(title[0].roman, "--Tńg-khì");
+    let upper = fetch_candidates(&on, "--TNGKHI", vec![]);
+    assert_eq!(upper[0].roman, "--T\u{0143}G-KH\u{00cc}");
+}
+
+#[test]
+fn buffer_initial_single_and_triple_hyphens_and_mid_composing_control() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = hanji_config(true, false);
+    let off = hanji_config(false, false);
+
+    // Buffer-initial single `-`: keeps literal `-` prefix, no neutral-tone interior `-`.
+    for cfg in [&on, &off] {
+        let cands = fetch_candidates(cfg, "-tshutlai", vec![]);
+        assert_eq!(cands[0].hanji.as_deref(), Some("-出來"));
+        assert_eq!(cands[0].roman, "-tshut-lâi");
+        assert_eq!(cands[0].display_text, "出來");
+    }
+
+    // `-tngkhi`: rejects `--tńg-khì` (§52), keeps `-轉去` and `-轉--去`.
+    let tng_on: Vec<String> = fetch_candidates(&on, "-tngkhi", vec![])
+        .into_iter()
+        .filter_map(|c| c.hanji)
+        .collect();
+    assert!(
+        !tng_on.iter().any(|h| h == "--轉-去"),
+        "single `-` must reject --tńg-khì: {tng_on:?}"
+    );
+    assert_eq!(tng_on, vec!["-轉--去".to_owned(), "-轉去".to_owned()]);
+
+    // Triple `---ah`: roman keeps `---ah`; Hanji shows `--矣` (`true`) / `---矣` (`false`).
+    let triple_on = fetch_candidates(&on, "---ah", vec![]);
+    assert_eq!(triple_on[0].hanji.as_deref(), Some("--矣"));
+    assert_eq!(triple_on[0].roman, "---ah");
+    let triple_off = fetch_candidates(&off, "---ah", vec![]);
+    assert_eq!(triple_off[0].hanji.as_deref(), Some("---矣"));
+    assert_eq!(triple_off[0].roman, "---ah");
+
+    // Control: mid-composing single `-` remains a syllable separator (`寫出來`, not `寫-出來`).
+    for cfg in [&on, &off] {
+        let cands = fetch_candidates(cfg, "sia-tshutlai", vec![]);
+        assert_eq!(cands[0].hanji.as_deref(), Some("寫出來"));
+    }
+}
+
+#[test]
+fn hyphen_only_buffers_emit_zero_candidates_and_commit_cleanly() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let cfg = config("tl");
+
+    for count in [1usize, 2, 3] {
+        let expected_raw = "-".repeat(count);
+        let mut engine = Engine::new();
+        for _ in 0..count {
+            let resp = engine.apply(Intent::AppendHyphen, &cfg);
+            assert!(resp.is_composing);
+            assert_eq!(commit_text(&resp), None);
+        }
+        assert_eq!(
+            engine.snapshot(&cfg).preedit.unwrap().raw_input,
+            expected_raw
+        );
+
+        // Zero candidates even when literal roman candidate is enabled.
+        let fetch = requests::apply(Fetch::default().intent(), &mut engine, &cfg)
+            .continuous
+            .unwrap();
+        assert!(
+            fetch.candidates.is_empty(),
+            "hyphen-only {expected_raw:?} must emit 0 candidates: {:?}",
+            fetch.candidates
+        );
+
+        // `CommitRaw` commits the exact hyphen run.
+        let committed = engine.apply(Intent::CommitRaw, &cfg);
+        assert!(!committed.is_composing);
+        assert_eq!(
+            commit_text(&committed).as_deref(),
+            Some(expected_raw.as_str())
+        );
+    }
+
+    // Backspace from `"-"` returns cleanly to Idle with no document commit.
+    let mut back_eng = Engine::new();
+    back_eng.apply(Intent::AppendHyphen, &cfg);
+    let back = back_eng.apply(Intent::DeleteBackward, &cfg);
+    assert!(!back.is_composing);
+    assert_eq!(commit_text(&back), None);
+
+    // Space confirm-then-insert on `"-"` writes `"- "` without arming an auto-space swap.
+    let mut space_eng = Engine::new();
+    space_eng.apply(Intent::AppendHyphen, &cfg);
+    let space_resp = space_eng.apply(
+        Intent::ConfirmCompositionThenInsert {
+            candidate: None,
+            text: " ".into(),
+            auto_space_enabled: true,
+            candidate_spacing_enabled: true,
+        },
+        &cfg,
+    );
+    assert!(!space_resp.is_composing);
+    assert_eq!(commit_text(&space_resp).as_deref(), Some("- "));
+    assert!(!space_resp.commit.unwrap().leaves_trailing_auto_space);
+}
+
+#[test]
+fn explain_mechanism_matches_buffer_initial_leading_hyphens() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    let on = hanji_config(true, false);
+
+    for (raw, expected_words, expected_sentence) in [
+        ("--tshutlai", vec!["--出-來"], "--出-來"),
+        ("--tsit-siann", vec!["--一", "-聲"], "--一-聲"),
+        ("-tshutlai", vec!["-出來"], "-出來"),
+    ] {
+        let mut engine = Engine::new();
+        engine.apply(Intent::Start { text: raw.into() }, &on);
+        let mech = composing::explain::mechanism(
+            &engine,
+            0,
+            &composing::UserRows::default(),
+            ranking::ContextRanks::empty(),
+            true,
+            &on,
+        )
+        .expect("mechanism");
+        let word_hanjis: Vec<&str> = mech
+            .words
+            .iter()
+            .filter_map(|w| w.hanji.as_deref())
+            .collect();
+        assert_eq!(word_hanjis, expected_words, "{raw}");
+        assert_eq!(
+            mech.candidates[0].hanji.as_deref(),
+            Some(expected_sentence),
+            "{raw}"
+        );
     }
 }

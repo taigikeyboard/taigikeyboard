@@ -101,7 +101,12 @@ pub fn perform_intent(
                 TpsKeyOutcome::Refused {
                     is_caret_at_end: true,
                 } if key == " " => {
-                    if settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
+                    if !manager.display_text().is_empty()
+                        && manager.display_text().bytes().all(|b| b == b'-')
+                    {
+                        manager.confirm_composition_then_insert(None, " ", false, false, surface);
+                        close_list(list, surface);
+                    } else if settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
                         refresh(settings, manager, list, surface);
                     } else {
                         manager.commit_composition(surface);

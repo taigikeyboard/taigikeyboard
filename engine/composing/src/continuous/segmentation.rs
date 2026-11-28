@@ -60,6 +60,7 @@ impl Default for Segmentation {
 /// slot 0 was built from, or none when the list carries no synth (an
 /// unfinished buffer, a suppressed synth, a several-word path in a word
 /// list). It never walks the buffer itself.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn explain_segmentation(
     raw: &str,
     keys: Option<&ContinuousKeys>,
@@ -68,6 +69,7 @@ pub(crate) fn explain_segmentation(
     mode: phonetics::InputMode,
     khinsiann_in_hanji: bool,
     prev_in_neutral: bool,
+    at_buffer_start: bool,
 ) -> Segmentation {
     let Some(keys) = keys else {
         return Segmentation::default();
@@ -92,9 +94,15 @@ pub(crate) fn explain_segmentation(
                 khinsiann_in_hanji,
                 edges,
                 prev_in_neutral,
+                at_buffer_start,
             )
         })
         .flatten();
+    let raw_leading_run = if at_buffer_start {
+        crate::nailed::typed_separator_run(raw)
+    } else {
+        ""
+    };
     let (cut_by, words): (&'static str, Vec<WordCut>) = match words {
         SynthWords::Edges => {
             let mut in_neutral = khinsiann_in_hanji && prev_in_neutral;
@@ -102,7 +110,8 @@ pub(crate) fn explain_segmentation(
                 .edges
                 .iter()
                 .zip(&path.choices)
-                .filter_map(|(&(start, end), choice)| {
+                .enumerate()
+                .filter_map(|(edge_idx, (&(start, end), choice))| {
                     let typed_run = keys
                         .hyphen_runs
                         .iter()
@@ -137,6 +146,20 @@ pub(crate) fn explain_segmentation(
                             leading,
                             shows_poj_roman_in_hanji(mode, choice.is_custom),
                         );
+                        let rendered =
+                            if edge_idx == 0 && !raw_leading_run.is_empty() && typed_run > 0 {
+                                match phonetics::api::apply_leading_literal_hyphens(
+                                    &rendered,
+                                    raw_leading_run,
+                                ) {
+                                    std::borrow::Cow::Owned(prefixed) => {
+                                        std::borrow::Cow::Owned(prefixed)
+                                    }
+                                    std::borrow::Cow::Borrowed(_) => rendered,
+                                }
+                            } else {
+                                rendered
+                            };
                         recase_hanji(&rendered, &text, choice.is_custom).into_owned()
                     });
                     let khinsiann_before = typed_run >= 2;

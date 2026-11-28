@@ -172,15 +172,15 @@ pub use crate::display_rewrite::{
 };
 pub use crate::hanji::{is_hanji, is_roman_only_spelling, CJK_RANGES};
 pub use crate::khinsiann::{
-    align_hanji_syllables, ends_in_khinsiann, learning_hanji_key,
+    align_hanji_syllables, apply_leading_literal_hyphens, ends_in_khinsiann, learning_hanji_key,
     push_hanji_with_interword_khinsiann, render_hanji_khinsiann,
     render_hanji_khinsiann_with_leading, strip_khinsiann_hanji, HanjiToken, HanjiTokenKind,
     LeadingKhinsiann, TlToken,
 };
 pub use crate::reading_key::{roman_reading_eq, stored_roman_mode, toneless_reading_key};
 pub use crate::separators::{
-    opens_with_neutral_mark, push_syllable_joiner_run, render_typed_separators,
-    syllable_joiner_display, syllable_joiner_in_hanji,
+    apply_leading_typed_separator, opens_with_neutral_mark, push_syllable_joiner_run,
+    render_typed_separators, syllable_joiner_display, syllable_joiner_in_hanji,
 };
 pub use crate::tone_render::{
     consumed_tone_digit_offsets, literal_learning_text, normalize_tone, to_tone_marks,

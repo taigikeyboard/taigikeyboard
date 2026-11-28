@@ -1,7 +1,7 @@
 //! The desktop "Type - with f" setting (`AppConfig.f_types_hyphen`): a typed
-//! `f` writes the syllable hyphen, as the `-` key does. Neither romanization
-//! spells a syllable with `f`, so the key is free; idle, the hyphen is the
-//! neutral-tone (khinsiann) marker, a document literal (§21).
+//! `f` writes `-` into the composing buffer, just as the `-` key does (including
+//! idle leading `-` / `--`, §21). Neither romanization spells a syllable with `f`,
+//! so the key is free.
 //!
 //! Independent of the tone scheme: an `Append` carries it under Standard and
 //! Telex alike. Under Standard `f` is also a candidate slot key; the desktop

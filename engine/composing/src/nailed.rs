@@ -186,6 +186,13 @@ fn nailed_join_with_oracle(
                 );
                 s.push_str(&rendered);
             } else {
+                if j == 0
+                    && text == SegmentText::AssociationTl
+                    && typed_separator_run(&seg.raw_text).len() >= 2
+                    && !seg.association_tl.starts_with('-')
+                {
+                    s.push_str("--");
+                }
                 s.push_str(text.of(seg));
             }
             let seg_leading = typed_leading_khinsiann(&seg.raw_text, in_neutral, j + k > 0);

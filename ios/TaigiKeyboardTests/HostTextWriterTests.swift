@@ -120,8 +120,8 @@ final class HostTextWriterTests: XCTestCase {
     }
 
     func testHostTextWriter_commitWithoutMarkedTextInEvent_insertsImmediately() {
-        // A leading hyphen from Idle: the engine commits with no preedit,
-        // then composition begins — the insert must land before the mark.
+        // An un-preedited commit followed by a fresh composition in the same
+        // event: the insert must land before the mark.
         writer.beginEvent()
         writer.commit("-")
         writer.update("a")

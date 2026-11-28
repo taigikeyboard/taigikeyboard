@@ -16,8 +16,9 @@ pub(crate) struct AugmentedInsert {
 /// Rewrites the external text a mid-composition punctuation key inserts:
 /// attaching punctuation lands before the space (`guá? `) — a full-width
 /// mark in place of it (`guá？`), arming nothing — everything else after it
-/// (`guá (`). A typed space is left alone (the engine already
-/// appends it) but still arms the swap. `composing_display_text` is the
+/// (`guá (`). A typed space is left alone (the engine already appends it) and
+/// arms the swap only when `should_append_space(composing_display_text)` holds
+/// (so a trailing-`-` display arms nothing). `composing_display_text` is the
 /// preedit about to be committed — its trailing hyphen is the committed
 /// text's trailing hyphen.
 pub(crate) fn augment_insert(
@@ -34,7 +35,7 @@ pub(crate) fn augment_insert(
     if text.chars().any(char::is_whitespace) {
         return AugmentedInsert {
             text: text.to_owned(),
-            leaves_trailing_auto_space: text == " ",
+            leaves_trailing_auto_space: text == " " && should_append_space(composing_display_text),
         };
     }
     if !should_append_space(composing_display_text) {
@@ -92,6 +93,12 @@ mod tests {
         let hyphen = augment_insert("?", "guá-", true);
         assert_eq!(hyphen.text, "?");
         assert!(!hyphen.leaves_trailing_auto_space);
+        let leading_hyphen_space = augment_insert(" ", "-", true);
+        assert_eq!(leading_hyphen_space.text, " ");
+        assert!(
+            !leading_hyphen_space.leaves_trailing_auto_space,
+            "a trailing-hyphen buffer followed by Space does not arm an auto-space swap"
+        );
         let off = augment_insert("?", "guá", false);
         assert_eq!(off.text, "?");
         assert!(!off.leaves_trailing_auto_space);

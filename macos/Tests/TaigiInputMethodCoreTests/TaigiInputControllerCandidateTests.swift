@@ -159,10 +159,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
 
     // MARK: - Type - with f
 
-    /// INVARIANT_F_TYPES_HYPHEN: with the setting on, an idle `f` is the `-`
-    /// key under either scheme — each one writes a literal `-` and no
-    /// composition starts, so `ff` types the khinsiann marker `--`; `ah`
-    /// then composes.
+    /// INVARIANT_F_TYPES_HYPHEN / INVARIANT_LEADING_HYPHENS_COMPOSE_IN_BUFFER:
+    /// with the setting on, an idle `f` is the `-` key under either scheme —
+    /// `ff` composes `"--"` in-buffer with no premature inserts and no
+    /// candidate bar, then `ah` renders marked text `"--ah"`.
     func testTypeHyphenWithF_anIdleF_typesTheKhinsiannMarker_underEitherScheme() throws {
         try withSetting(SettingsStore.Keys.isFHyphenEnabled.name, to: true) {
             for scheme in ToneInputScheme.allCases {
@@ -174,8 +174,12 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
                         )
                         XCTAssertTrue(handled, "\(scheme)")
                     }
-                    XCTAssertEqual(session.client.insertedTexts, ["-", "-"], "\(scheme)")
-                    XCTAssertNil(session.presenter.shownContent, "\(scheme): no composition")
+                    XCTAssertEqual(session.client.insertedTexts, [], "\(scheme)")
+                    XCTAssertNil(session.presenter.shownContent, "\(scheme): hyphen-only buffer lists nothing")
+                    guard case let .setMarkedText(markedHyphens, _) = try XCTUnwrap(session.client.writes.last) else {
+                        return XCTFail("\(scheme): expected marked '--' — got \(session.client.writes)")
+                    }
+                    XCTAssertEqual(markedHyphens, "--", "\(scheme)")
 
                     for character in ["a", "h"] {
                         _ = try session.controller.handle(
@@ -185,7 +189,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
                     guard case let .setMarkedText(marked, _) = try XCTUnwrap(session.client.writes.last) else {
                         return XCTFail("\(scheme): expected a composition — got \(session.client.writes)")
                     }
-                    XCTAssertEqual(marked, "ah", "\(scheme)")
+                    XCTAssertEqual(marked, "--ah", "\(scheme)")
                 }
             }
         }

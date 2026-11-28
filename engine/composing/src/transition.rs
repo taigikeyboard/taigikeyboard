@@ -73,19 +73,13 @@ pub(crate) fn apply(
     let response = match intent {
         Intent::Start { text } => match &state.phase {
             Phase::Continuous { .. } => start_under_continuous(state, text, config, frequency),
-            // §21: a leading `--` neutral-tone marker typed from Idle is a document
-            // literal, not composing input (see helper).
-            Phase::Idle => {
-                begin_composition_or_insert_leading_hyphens(state, text, config, frequency)
-            }
+            Phase::Idle => begin_composition(state, text, config, frequency),
         },
         Intent::Append { ch } => {
             let ch = crate::affricate::expand(ch, config);
             let ch = crate::f_hyphen::expand(ch, config);
             match &state.phase {
-                Phase::Idle => {
-                    begin_composition_or_insert_leading_hyphens(state, ch, config, frequency)
-                }
+                Phase::Idle => begin_composition(state, ch, config, frequency),
                 Phase::Continuous {
                     raw, caret, nailed, ..
                 } => append_continuous(
@@ -356,7 +350,7 @@ fn tps_key_before_caret(raw: &str, caret: usize, key: &str) -> Option<(String, u
     let prefix = &raw[..caret];
     if key == TPS_SEPARATOR {
         let closes_syllable = |c: char| c == ' ' || phonetics::is_tps_tone_mark(c);
-        if closes_syllable(prefix.chars().next_back()?) {
+        if closes_syllable(prefix.chars().next_back()?) || prefix.bytes().all(|b| b == b'-') {
             return None;
         }
         if raw[caret..].chars().next().is_some_and(closes_syllable) {
@@ -471,7 +465,18 @@ fn set_continuous(
         }),
         _ => None,
     };
-    let (conversion, caret) = crate::conversion::convert(previous, &raw, caret, config, frequency);
+    let at_buffer_start = nailed.is_empty();
+    let prev_in_neutral =
+        config.khinsiann_in_hanji && crate::nailed::nailed_ends_in_khinsiann(&nailed);
+    let (conversion, caret) = crate::conversion::convert(
+        previous,
+        &raw,
+        caret,
+        at_buffer_start,
+        prev_in_neutral,
+        config,
+        frequency,
+    );
     state.phase = Phase::Continuous {
         raw,
         caret,
@@ -525,55 +530,9 @@ fn step_continuous(
     step_response(phase_preedit(&state.phase, config))
 }
 
-/// §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading ASCII-hyphen run
-/// typed from `Phase::Idle` (no syllable content yet) is the neutral-tone (khinsiann)
-/// marker `--` (e.g. `--ah` 矣). It is a **document literal**, not composing
-/// input: insert the run verbatim and — if a syllable remainder follows in the
-/// same text — begin a composition with the remainder. The underlined preedit then
-/// covers only the convertible syllable, matching the candidate strip and the
-/// reference IME (MOE).
-///
-/// Internal hyphens (typed AFTER syllable content, e.g. the hyphen in `tai-bak`)
-/// never reach this fn — the buffer is already `Phase::Continuous`, so they stay
-/// composing-boundary delimiters via the `Append` Continuous arm.
-///
-/// Production keystrokes arrive one char at a time, so the common case is
-/// `text == "-"` (remainder empty → pure literal insert, stay Idle). The
-/// split also covers a multi-char `Start { text: "--ah" }` from the engine API
-/// / tests so no old-model entry survives.
-fn begin_composition_or_insert_leading_hyphens(
-    state: &mut EngineState,
-    text: String,
-    config: &AppConfig,
-    frequency: Frequency<'_>,
-) -> ComposingResponse {
-    let hyphen_len = text.bytes().take_while(|&b| b == b'-').count();
-    if hyphen_len == 0 {
-        return begin_composition(state, text, config, frequency);
-    }
-    let (run, remainder) = text.split_at(hyphen_len);
-    if remainder.is_empty() {
-        // All hyphens — insert the literal run, stay Idle (no preedit).
-        return exit_to_idle(state, vec![commit_text_replacing_preedit(run.to_string())]);
-    }
-    // Leading run + syllable remainder (multi-char `Start` / engine-API /
-    // test path ONLY — the platform sends one char per keystroke, so a
-    // production leading `-` always arrives as `Start{"-"}` with an empty
-    // remainder above). Insert the literal run first, then compose the
-    // remainder. This emits a mixed commit+composing transition; callers MUST
-    // feed leading-hyphen input char-by-char, not as one multi-char `Start`:
-    // a mixed transition can desync Android's `onUpdateSelection` clear-hook
-    // (commit fires before the preedit lands). Engine/proto level is correct
-    // and tested; the contract is char-by-char at the platform boundary.
-    let mut resp = begin_composition(state, remainder.to_string(), config, frequency);
-    resp.effect
-        .insert(0, commit_text_replacing_preedit(run.to_string()));
-    resp
-}
-
-/// `Intent::TpsKey` — see the `TpsKey` proto comment. From Idle a glyph begins
-/// the composition as `Append` does (a leading hyphen stays a document
-/// literal, §21); under Continuous the nailed segments stay untouched.
+/// `Intent::TpsKey` — see the `TpsKey` proto comment. From Idle any accepted key
+/// (including a leading hyphen) enters composing; under Continuous the nailed
+/// segments stay untouched.
 fn tps_key(
     state: &mut EngineState,
     key: &str,
@@ -582,9 +541,7 @@ fn tps_key(
 ) -> ComposingResponse {
     match &state.phase {
         Phase::Idle => match tps_key_before_caret("", 0, key) {
-            Some((text, _)) => {
-                begin_composition_or_insert_leading_hyphens(state, text, config, frequency)
-            }
+            Some((text, _)) => begin_composition(state, text, config, frequency),
             None => noop(state, config),
         },
         Phase::Continuous {
@@ -852,7 +809,7 @@ fn noop(state: &EngineState, config: &AppConfig) -> ComposingResponse {
 /// `Intent::Start { text }` arriving while in `Phase::Continuous`. Codex
 /// post-impl finding #3: silently dropping `text` would lose user input.
 /// Treats the intent as "drop continuous state, then begin a fresh
-/// composition with `text`" (no §21 leading-hyphen split here). Emits the
+/// composition with `text`". Emits the
 /// abort trio followed by the regular step effects; final state is
 /// `Phase::Continuous { raw: text, nailed: [] }` (or Idle if `text` is empty).
 fn start_under_continuous(

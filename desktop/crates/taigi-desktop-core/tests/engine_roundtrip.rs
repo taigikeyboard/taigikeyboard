@@ -179,13 +179,12 @@ fn tps_key_composes_glyphs_and_space_is_taken_once() {
 fn every_layout_glyph_begins_a_composition_the_engine_takes() {
     // D2's hand check, automated against engine-table drift: each glyph the
     // layout types, sent alone from idle, is taken and lands in the buffer.
-    // The hyphen alone is §21's document literal, not a composition.
     use taigi_desktop_core::keys::{tps_glyph_for_event, KeyEventSnapshot, KeyModifiers};
     let _engine = engine();
     let settings = tps_settings();
     let keys = ('a'..='z')
         .chain('0'..='9')
-        .chain(",;/.-".chars())
+        .chain(",;/.-=".chars())
         .map(|key| (key.to_string(), KeyModifiers::NONE))
         .chain(
             "!#EDRY*)OPUJ(L^>?_"
