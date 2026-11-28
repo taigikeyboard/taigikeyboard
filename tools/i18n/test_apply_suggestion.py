@@ -17,7 +17,6 @@ from apply_suggestion import (
     FORM_LABELS,
     TITLE_PREFIX,
     TITLE_RE,
-    LABEL_REASON,
     LABEL_SUGGESTION,
     SuggestionError,
     apply,
@@ -40,10 +39,9 @@ def title(key=KEY, language="en"):
     return f"{TITLE_PREFIX}{key} ({language})"
 
 
-def form_body(suggestion="Start page", reason="_No response_", newline="\n"):
+def form_body(suggestion="Start page", newline="\n"):
     # The shape GitHub renders an issue form into.
-    sections = [(LABEL_SUGGESTION, suggestion), (LABEL_REASON, reason)]
-    return newline.join(f"### {label}{newline}{newline}{value}{newline}" for label, value in sections)
+    return f"### {LABEL_SUGGESTION}{newline}{newline}{suggestion}{newline}"
 
 
 class FormLabelsTest(unittest.TestCase):
@@ -65,7 +63,9 @@ class ParseBodyTest(unittest.TestCase):
     def test_sections_and_no_response(self):
         sections = parse_body(form_body())
         self.assertEqual(sections[LABEL_SUGGESTION], "Start page")
-        self.assertEqual(sections[LABEL_REASON], "")
+
+    def test_no_response_is_empty(self):
+        self.assertEqual(parse_body(form_body(suggestion="_No response_"))[LABEL_SUGGESTION], "")
 
     def test_crlf_and_lone_cr_become_line_feeds(self):
         sections = parse_body(form_body(suggestion="one\rtwo", newline="\r\n"))
@@ -79,7 +79,7 @@ class ParseBodyTest(unittest.TestCase):
         self.assertEqual(sections[LABEL_SUGGESTION], "### Start\npage")
 
     def test_a_repeated_form_heading_cannot_override_a_field(self):
-        sections = parse_body(form_body(reason=f"### {LABEL_SUGGESTION}\n\nOther"))
+        sections = parse_body(form_body(suggestion=f"Start page\n### {LABEL_SUGGESTION}\n\nOther"))
         self.assertEqual(sections[LABEL_SUGGESTION], "Start page")
 
 
