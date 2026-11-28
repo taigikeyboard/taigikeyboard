@@ -12,7 +12,8 @@ tool generates the platform artifacts; **do not hand-edit the generated files.**
 
 Translation suggestions: an issue filled from the translation form (`.github/ISSUE_TEMPLATE/translation.yml`,
 linked from taigikeyboard.tw/translate) becomes a PR through `.github/workflows/i18n-suggestion.yml`, which runs
-`apply_suggestion.py` (validates the input, changes the one value in place) and `generate.py`.
+`apply_suggestion.py` (validates the input, changes the one value in place, in `i18n/*.json` or `i18n/content/*.json`)
+and `generate.py`.
 
 Staleness is guarded automatically by `tools/i18n/check.py` (fails when any committed artifact differs
 from what `i18n/*.json` generates):

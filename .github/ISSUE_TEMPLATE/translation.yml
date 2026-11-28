@@ -3,7 +3,8 @@ description: Better wording for a piece of text the app shows.
 title: "[i18n] "
 labels: ["i18n"]
 body:
-  # The issue title `[i18n] <namespace>.<key> (<language>)` and the `suggestion` id are the URL
+  # The issue title `[i18n] <namespace>.<key> (<language>)` (or `content.<file>.<item id>.<field>`)
+  # and the `suggestion` id are the URL
   # query parameters taigikeyboard.tw/translate prefills; change them only together with that page.
   # The title and the label are parsed by tools/i18n/apply_suggestion.py
   # (.github/workflows/i18n-suggestion.yml); change them only together with that script.
