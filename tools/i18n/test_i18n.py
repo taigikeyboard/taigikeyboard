@@ -381,6 +381,31 @@ class InnoMessagesTest(unittest.TestCase):
             _write_namespace(repo, "probe", {"k": _all_platform_key({"hanji": "字", "tailo": "jī", "poj": "jī", "en": "x", "ja": "字"})})
             self.assertNotIn(WINDOWS_INSTALLER_MESSAGES_FILE, build_outputs(repo))
 
+    def test_plural_is_refused(self):
+        # An unlowered plural arm would reach Messages.iss verbatim, where `{#…}` is an ISPP directive.
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            _write_app_name_namespace(repo)
+            _write_namespace(
+                repo,
+                "desktop",
+                {
+                    "installerCount": {
+                        "scope": {"platforms": ["windows"], "surfaces": ["host"]},
+                        "placeholders": {"step": "int"},
+                        "values": {
+                            "hanji": "{step} 步",
+                            "tailo": "{step} pōo",
+                            "poj": "{step} pō͘",
+                            "en": "{step, plural, other {#Exec('calc.exe')}}",
+                            "ja": "{step} 手順",
+                        },
+                    },
+                },
+            )
+            with self.assertRaisesRegex(ValueError, "Windows installer"):
+                build_outputs(repo)
+
 
 class PlaceholderValidationTest(unittest.TestCase):
     def _validate(self, keys):

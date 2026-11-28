@@ -16,6 +16,7 @@ on:
     paths:
       - 'i18n/**'
       - 'tools/i18n/**'
+      - '.github/ISSUE_TEMPLATE/translation.yml'
       - 'ios/Localizable.xcstrings'
       - 'ios/**/*.swift'
       - 'ios/.swift-version'
@@ -39,6 +40,7 @@ on:
     paths:
       - 'i18n/**'
       - 'tools/i18n/**'
+      - '.github/ISSUE_TEMPLATE/translation.yml'
       - 'ios/Localizable.xcstrings'
       - 'ios/**/*.swift'
       - 'ios/.swift-version'
@@ -114,8 +116,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Codegen unit tests
-        run: python3 tools/i18n/test_i18n.py
+      # Every tools/i18n/test_*.py: codegen core + suggestion apply.
+      - name: i18n unit tests
+        run: python3 -m unittest discover -s tools/i18n -p 'test_*.py'
 
       # Same check Gradle's `checkI18nGenerated` runs before every Android
       # build: the committed outputs must match what i18n/*.json generates.
