@@ -8,7 +8,7 @@
 #   invalid — the contributor's input was rejected; the reply for the issue is in --message-file
 #   ok      — one value changed in place; `key`, `language`, `path` are written too, validated only
 # The text is named by the title the translate page fills in, `[i18n] <namespace>.<key> (<language>)`;
-# the form body carries only the suggested text and its reason.
+# the form body carries only the suggested text.
 # `--check-changes PATH` runs after generate.py: it stages the change and fails when the worktree
 # differs anywhere other than PATH and the generated artifacts.
 
@@ -29,8 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # The form's field labels, as GitHub renders them into `### <label>` body headings. Keep in step
 # with translation.yml (test_apply_suggestion.py checks).
 LABEL_SUGGESTION = "Suggested text（建議的文字）"
-LABEL_REASON = "Why（原因）"
-FORM_LABELS = (LABEL_SUGGESTION, LABEL_REASON)
+FORM_LABELS = (LABEL_SUGGESTION,)
 NO_RESPONSE = "_No response_"
 TITLE_PREFIX = "[i18n] "
 TITLE_RE = re.compile(r"\[i18n\]\s*(\S+)\s*\(\s*([A-Za-z]+)\s*\)")

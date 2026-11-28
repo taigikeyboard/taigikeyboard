@@ -109,7 +109,7 @@ jobs:
           LANGUAGE: ${{ steps.apply.outputs.language }}
         run: |
           set -euo pipefail
-          body="Translation suggestion for \`$KEY\` (\`$LANGUAGE\`). The wording and its reason are in the issue.
+          body="Translation suggestion for \`$KEY\` (\`$LANGUAGE\`). The wording is in the issue.
 
           Closes #$NUMBER"
           url=$(GH_TOKEN="$APP_TOKEN" gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
