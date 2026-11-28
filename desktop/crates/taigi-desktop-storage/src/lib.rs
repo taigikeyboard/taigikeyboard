@@ -21,8 +21,9 @@ mod settings_writer;
 
 pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};
 pub use font_library::{
-    copy_in, fonts_directory, remove_stored, sanitized_stem, stored_file_names, ImportError,
-    ALLOWED_EXTENSIONS, FONTS_FOLDER_NAME, MAX_FILE_SIZE,
+    copy_in, fonts_directory, is_single_path_component, remove_stored, sanitized_component,
+    sanitized_stem, stored_file_names, stored_path, ImportError, ALLOWED_EXTENSIONS,
+    FONTS_FOLDER_NAME, MAX_FILE_SIZE, MAX_NAME_ATTEMPTS,
 };
 pub use replace_file::replace_file;
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
