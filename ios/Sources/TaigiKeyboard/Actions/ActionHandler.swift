@@ -249,16 +249,9 @@ public class ActionHandler: StandardKeyboardActionHandler {
     }
 
     /// Align with Android: skip autocomplete to preserve NextWord suggestions
-    /// when not composing and pressing space or "-" during NextWord
+    /// when not composing and pressing space during NextWord.
     private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
-        guard !composingManager.isComposing else { return false }
-        if action == .space {
-            return true
-        }
-        if case .character("-") = action, nextWordController.isShowing {
-            return true
-        }
-        return false
+        !composingManager.isComposing && action == .space
     }
 
     // KeyboardKit entry for a candidate tap: English mode replaces the word before the caret, Taigi mode takes our path.

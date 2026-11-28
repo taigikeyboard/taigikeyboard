@@ -16,8 +16,9 @@ pub(crate) struct AugmentedInsert {
 /// Rewrites the external text a mid-composition punctuation key inserts:
 /// attaching punctuation lands before the space (`guá? `) — a full-width
 /// mark in place of it (`guá？`), arming nothing — everything else after it
-/// (`guá (`). A typed space is left alone (the engine already
-/// appends it) but still arms the swap. `composing_display_text` is the
+/// (`guá (`). A typed space is left alone (the engine already appends it) and
+/// arms the swap only when `should_append_space(composing_display_text)` holds
+/// (so a trailing-`-` display arms nothing). `composing_display_text` is the
 /// preedit about to be committed — its trailing hyphen is the committed
 /// text's trailing hyphen.
 pub(crate) fn augment_insert(
