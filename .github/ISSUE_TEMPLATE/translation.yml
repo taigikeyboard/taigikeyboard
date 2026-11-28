@@ -12,7 +12,7 @@ body:
         Sending this form opens a pull request automatically, signed with your GitHub account. The suggested text is submitted exactly as written, so put explanations under Why.
         送出了後會自動開 PR，用你的 GitHub 帳號署名。建議的文字會照你寫的提交，說明請寫佇「原因」。
   # The ids below are the URL query parameters taigikeyboard.tw/translate prefills
-  # (`key`, `language`, `current`). Rename one only together with that page.
+  # (`key`, `language`, `current`, `suggestion`). Rename one only together with that page.
   # The labels are parsed by tools/i18n/apply_suggestion.py (.github/workflows/i18n-suggestion.yml);
   # rename one only together with that script.
   - type: input
