@@ -187,6 +187,7 @@ jobs:
 
       # Last step: no repository code runs while the App token exists. Repo-level
       # secret, not env `release`, so the daily run needs no approval.
+      # i18n-suggestion.yml mints the same App token to open translation PRs.
       - name: Mint the kautian App token
         id: app
         if: steps.refresh.outputs.branch != '' || steps.refresh.outputs.retry != ''

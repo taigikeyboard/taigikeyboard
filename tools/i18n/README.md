@@ -8,13 +8,18 @@ tool generates the platform artifacts; **do not hand-edit the generated files.**
 | Command | Effect |
 |---|---|
 | `make i18n` | Regenerate all artifacts from `i18n/*.json` (commit the result). |
-| `make i18n-test` | Run the codegen unit tests (`test_i18n.py`). |
+| `make i18n-test` | Run every `tools/i18n/test_*.py` (codegen core and suggestion apply). |
+
+Translation suggestions: an issue filled from the translation form (`.github/ISSUE_TEMPLATE/translation.yml`,
+linked from taigikeyboard.tw/translate) becomes a PR through `.github/workflows/i18n-suggestion.yml`, which runs
+`apply_suggestion.py` (validates the input, changes the one value in place) and `generate.py`.
 
 Staleness is guarded automatically by `tools/i18n/check.py` (fails when any committed artifact differs
 from what `i18n/*.json` generates):
 
-- **CI** — the `i18n` job of `.github/workflows/codegen-lint.yml` runs `test_i18n.py` + `check.py` on every
-  PR / push that touches `i18n/**`, `tools/i18n/**` or `ios/Localizable.xcstrings`. This is the only
+- **CI** — the `i18n` job of `.github/workflows/codegen-lint.yml` runs every `tools/i18n/test_*.py` and
+  `check.py` on every PR / push that touches `i18n/**`, `tools/i18n/**`, `ios/Localizable.xcstrings` or the
+  translation issue form. This is the only
   gate for iOS, which has no build-time guard.
 - **Root lint** — `make lint` (`make lint-i18n`) runs `tools/i18n/check.py`.
 - **Android** — the Gradle `checkI18nGenerated` task runs `check.py` on `preBuild`, so

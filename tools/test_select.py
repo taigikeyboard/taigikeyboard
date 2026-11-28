@@ -392,7 +392,7 @@ PLATFORM_COMMANDS = {
         Command("android/gradlew -p android :app:spotlessCheck :app:testDebugUnitTest")
     ],
     "i18n": [
-        Command("python3 tools/i18n/test_i18n.py"),
+        Command("python3 -m unittest discover -s tools/i18n -p 'test_*.py'"),
         Command("python3 tools/i18n/check.py"),
     ],
     "converter": [Command("npm test", "taigi-converter")],

@@ -1,0 +1,129 @@
+name: i18n suggestion
+
+# Translation-suggestion issue → PR; the steps are in tools/i18n/apply_suggestion.py.
+# The branch is pushed with GITHUB_TOKEN and the kautian App opens the PR: GITHUB_TOKEN
+# may not create PRs here, and an App-opened PR runs its checks (kautian-watch.yml).
+#
+# The issue body is untrusted: only apply_suggestion.py reads it, from the event file.
+# Nothing from it reaches a command line; the PR body and comments carry fixed text plus
+# the validated key and language. Only issues carrying the form's key heading start the job
+# (test_apply_suggestion.py keeps it in step with the form and the script).
+#
+# An edited issue is tried again only while no PR is open for it (fixing a rejected
+# suggestion); once a PR exists the branch is the maintainer's.
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: i18n-suggestion-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: apply suggestion, open PR
+    if: >-
+      github.event.issue.state == 'open' &&
+      github.event.issue.user.type == 'User' &&
+      contains(github.event.issue.body, '### Text key（文字代號）') &&
+      (github.event.action == 'opened' || github.event.changes.body != null)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NUMBER: ${{ github.event.issue.number }}
+      BRANCH: automation/i18n-issue-${{ github.event.issue.number }}
+    steps:
+      - name: Check for an open PR
+        id: existing
+        run: |
+          open=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&head=$GITHUB_REPOSITORY_OWNER:$BRANCH" --jq length)
+          echo "open=$open" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.existing.outputs.open == '0'
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: steps.existing.outputs.open == '0'
+        with:
+          python-version: '3.13'
+
+      - name: Apply suggestion
+        id: apply
+        if: steps.existing.outputs.open == '0'
+        run: python3 tools/i18n/apply_suggestion.py --message-file "$RUNNER_TEMP/message.md"
+
+      - name: Reply to a rejected suggestion
+        if: steps.apply.outputs.status == 'invalid'
+        run: gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/message.md"
+
+      - name: Regenerate and push branch
+        id: push
+        if: steps.apply.outputs.status == 'ok'
+        env:
+          AUTHOR_LOGIN: ${{ github.event.issue.user.login }}
+          AUTHOR_ID: ${{ github.event.issue.user.id }}
+          KEY: ${{ steps.apply.outputs.key }}
+          LANGUAGE: ${{ steps.apply.outputs.language }}
+          SOURCE: ${{ steps.apply.outputs.path }}
+        run: |
+          set -euo pipefail
+          python3 tools/i18n/generate.py
+          python3 tools/i18n/apply_suggestion.py --check-changes "$SOURCE"
+          git switch -c "$BRANCH"
+          # The contributor is the author, so the account appears in Contributors.
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit --author "$AUTHOR_LOGIN <$AUTHOR_ID+$AUTHOR_LOGIN@users.noreply.github.com>" \
+            -m "fix(i18n): $KEY ($LANGUAGE) wording" -m "Closes #$NUMBER"
+          # A branch left by a closed, unmerged PR is replaced.
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # Last step: no repository code runs while the App token exists.
+      - name: Mint the kautian App token
+        id: app
+        if: steps.push.outputs.pushed == 'true'
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
+        with:
+          client-id: ${{ vars.KAUTIAN_APP_CLIENT_ID }}
+          private-key: ${{ secrets.KAUTIAN_APP_PRIVATE_KEY }}
+          owner: taigikeyboard
+          repositories: taigikeyboard
+          permission-contents: read
+          permission-pull-requests: write
+
+      - name: Open PR
+        if: steps.app.outputs.token != ''
+        env:
+          APP_TOKEN: ${{ steps.app.outputs.token }}
+          KEY: ${{ steps.apply.outputs.key }}
+          LANGUAGE: ${{ steps.apply.outputs.language }}
+        run: |
+          set -euo pipefail
+          body="Translation suggestion for \`$KEY\` (\`$LANGUAGE\`). The wording and its reason are in the issue.
+
+          Closes #$NUMBER"
+          url=$(GH_TOKEN="$APP_TOKEN" gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
+            --title "fix(i18n): $KEY ($LANGUAGE) wording" --body "$body")
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body "Thanks! A pull request is open for review: $url
+          Edits to this issue are not applied while it is open. Comment on the pull request instead.
+
+          多謝！已經開 PR 等審查：$url
+          PR 開咧的時陣，改這个 issue 袂閣套用，有欲改的請佇 PR 留言。"
+
+      # A failure after validation (generator, push, PR) is ours, not the contributor's: say so
+      # instead of leaving the issue silent. The red run is in the Actions tab.
+      - name: Report an internal failure
+        if: failure() && steps.apply.outputs.status == 'ok'
+        run: |
+          gh issue comment "$NUMBER" --repo "$GITHUB_REPOSITORY" --body "Something went wrong on our side while applying this suggestion. The maintainer will look into it, so there is nothing to change here.
+          套用這个建議的時出問題，毋是你的錯，維護者會處理。"

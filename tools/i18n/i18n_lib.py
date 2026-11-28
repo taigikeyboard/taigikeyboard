@@ -419,6 +419,14 @@ def _has_plural(nodes: list) -> bool:
     return any(node[0] == "plural" for node in nodes)
 
 
+def _refuse_plural(entries, target: str) -> None:
+    # For an emitter whose target has no plural runtime: the first plural value is an authoring error.
+    for namespace, key, entry in entries:
+        for lang, value in entry["values"].items():
+            if _has_plural(parse_message(value)):
+                raise ValueError(f"{namespace}:{key}: '{lang}' uses plural, which {target} cannot render")
+
+
 def _placeholder_names_in_order(text: str) -> list:
     # Names of the placeholders, de-duplicated, in order of first appearance. The base-language text
     # defines the canonical positional order shared by every language (Fork 6: substitute by name).
@@ -1224,6 +1232,9 @@ def inno_escape(text: str, placeholder_order: list[str]) -> str:
 
 
 def _emit_inno_messages(entries) -> str:
+    # Inno has no plural runtime, and an unlowered plural arm would pass `{`…`}` through verbatim —
+    # where `{#…}` is an ISPP directive the release build's ISCC evaluates. No installer key uses one.
+    _refuse_plural(entries, "the Windows installer")
     lines = [f"; {GENERATED_HEADER}", "; Included by TaigiKeyboard.iss; the [Languages] section there names these languages.", "", "[CustomMessages]"]
     for _namespace, key, entry in entries:
         placeholder_order = list(entry.get("placeholders", {}))
@@ -1361,10 +1372,7 @@ def _emit_rust_strings(entries) -> str:
 
 def _emit_web_strings(entries) -> str:
     # Plural arms would need a runtime the page does not have: no web key uses one, so refuse the first.
-    for namespace, key, entry in entries:
-        for lang, value in entry["values"].items():
-            if _has_plural(parse_message(value)):
-                raise ValueError(f"{namespace}:{key}: '{lang}' uses plural, which the web page cannot render")
+    _refuse_plural(entries, "the web page")
     strings = {
         lang: {
             f"{namespace}.{key}": entry["values"][lang]

@@ -118,10 +118,11 @@ dict:
 i18n:
 	python3 tools/i18n/generate.py
 
-# Unit tests for the i18n codegen core (validation, escaping, scope filter, GeneratedMap, format/plural).
+# Unit tests under tools/i18n: codegen core (validation, escaping, scope filter, GeneratedMap,
+# format/plural) and the translation-suggestion apply script.
 # Pure-Python, no Android/iOS toolchain needed — runs the same logic the platform builds compile against.
 i18n-test:
-	python3 tools/i18n/test_i18n.py
+	python3 -m unittest discover -s tools/i18n -p 'test_*.py'
 
 # Generate continuous-input dogfood test table (TL/POJ/TPS + 漢字) from the
 # built dictionary.csv. Random each run; prints to stdout for manual on-device
