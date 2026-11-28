@@ -168,6 +168,54 @@ class ApplyTest(unittest.TestCase):
         self.assert_rejected(form_body(suggestion="Start {count}"), "app text rule")
 
 
+class ContentApplyTest(unittest.TestCase):
+    # i18n/content/*.json: nested FAQ / feature text, addressed as content.<file>.<item id>.<field>.
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.root = Path(cls.tmp.name)
+        shutil.copytree(REPO_ROOT / "i18n", cls.root / "i18n")
+        cls.faq = cls.root / "i18n" / "content" / "faq.json"
+        cls.original = cls.faq.read_text(encoding="utf-8")
+        cls.item = json.loads(cls.original)["faqs"][0]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def tearDown(self):
+        self.faq.write_text(self.original, encoding="utf-8")
+
+    def key(self, field):
+        return f"content.faq.{self.item['id']}.{field}"
+
+    def test_title_changes_only_that_value(self):
+        new = self.item["title"]["en"] + " now"
+        outputs = apply(self.root, title(self.key("title")), form_body(suggestion=new))
+        self.assertEqual(outputs["path"], "i18n/content/faq.json")
+        wanted = json.loads(self.original)
+        wanted["faqs"][0]["title"]["en"] = new
+        # Canonical form kept, so the diff is that one line.
+        self.assertEqual(self.faq.read_text(encoding="utf-8"), json.dumps(wanted, ensure_ascii=False, indent=2))
+
+    def test_paragraph_is_one_based(self):
+        apply(self.root, title(self.key("paragraph1")), form_body(suggestion="First paragraph."))
+        self.assertEqual(json.loads(self.faq.read_text(encoding="utf-8"))["faqs"][0]["paragraphs"][0]["text"]["en"], "First paragraph.")
+
+    def test_attachment_text(self):
+        number = next(index for index, paragraph in enumerate(self.item["paragraphs"], 1) if "text" in (paragraph.get("attachment") or {}))
+        apply(self.root, title(self.key(f"paragraph{number}.attachment")), form_body(suggestion="See the steps."))
+        paragraph = json.loads(self.faq.read_text(encoding="utf-8"))["faqs"][0]["paragraphs"][number - 1]
+        self.assertEqual(paragraph["attachment"]["text"]["en"], "See the steps.")
+
+    def test_unknown_item_field_or_paragraph(self):
+        for key_id in ("content.faq.noSuchItem.title", self.key("icon"), self.key("paragraph0"),
+                       self.key(f"paragraph{len(self.item['paragraphs']) + 1}"), "content.nofile.x.title"):
+            with self.subTest(key_id=key_id), self.assertRaises(SuggestionError):
+                apply(self.root, title(key_id), form_body())
+        self.assertEqual(self.faq.read_text(encoding="utf-8"), self.original)
+
+
 class ChangeGuardTest(unittest.TestCase):
     def test_source_and_artifacts_pass(self):
         changed = {"i18n/nav.json", "a.kt"}
